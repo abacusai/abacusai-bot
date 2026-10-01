@@ -2,49 +2,70 @@
 export const BOT_PARITY = [
   {
     id: "P1",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P2",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity; workspace switch retired (PLAN)",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P3",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P4",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (gap fix)",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P5",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (PLAN route tree)",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P6",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (gap fix)",
     consumer: "src/renderer-next/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P7",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -53,6 +74,8 @@ export const BOT_PARITY = [
   {
     id: "P8",
     status: "retired",
+    reason: "Retired (F15)",
+    visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",
     consumer:
@@ -61,6 +84,8 @@ export const BOT_PARITY = [
   {
     id: "P9",
     status: "retired",
+    reason: "Retired (canvas)",
+    visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (canvas)",
     consumer:
@@ -68,7 +93,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P10",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (canvas BotDetails)",
     consumer:
@@ -76,7 +104,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P11",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "New",
     consumer:
@@ -84,7 +115,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P12",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (F8)",
     consumer:
@@ -92,7 +126,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P13",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity; count retired (canvas)",
     consumer:
@@ -100,7 +137,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P14",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (needs-you group, PLAN)",
     consumer:
@@ -108,7 +148,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P15",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -116,7 +159,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P16",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity (canvas geometry)",
     consumer:
@@ -124,7 +170,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P17",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -132,7 +181,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P18",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity + canvas",
     consumer:
@@ -140,7 +192,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P19",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -148,7 +203,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P20",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -156,7 +214,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P21",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity + New (Mark as unread, Duplicate, Pause)",
     consumer:
@@ -164,7 +225,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P22",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (bug fix)",
     consumer:
@@ -172,7 +236,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P23",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (PLAN)",
     consumer:
@@ -180,7 +247,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P24",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -188,7 +258,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P25",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
     consumer:
@@ -197,6 +270,8 @@ export const BOT_PARITY = [
   {
     id: "P26",
     status: "retired",
+    reason: "Retired (F15)",
+    visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",
     consumer:
@@ -204,7 +279,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P27",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "New",
     consumer:
@@ -212,7 +290,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P28",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity with foundation",
     consumer:
@@ -220,91 +301,130 @@ export const BOT_PARITY = [
   },
   {
     id: "P29",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity (canvas geometry)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P30",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity + New (marks)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P31",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P32",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P33",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P34",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity; max added (gap fix)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P35",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Changed (gap fix)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P36",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P37",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P38",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity + New (accessory)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P39",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P40",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P41",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus:
       "Parity; custom display changed (gap fix, value still untouched)",
@@ -312,28 +432,40 @@ export const BOT_PARITY = [
   },
   {
     id: "P42",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P43",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P44",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: 'Changed (PLAN "Bot model")',
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P45",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity (hook only)",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
@@ -341,146 +473,211 @@ export const BOT_PARITY = [
   {
     id: "P46",
     status: "deferred",
+    owner: "release manager",
+    plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
+    reason: "Acceptance remains open in the phase report.",
+    visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Deferred to phase 6",
     consumer: "src/renderer-next/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P47",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P48",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P49",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P50",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P51",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P52",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P53",
-    status: "partial",
+    status: "deferred",
+    owner: "release manager",
+    plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
+    reason: "Acceptance remains open in the phase report.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (URL preview needs phase 4's browser surface, §24.13)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P54",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P55",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P56",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P57",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P58",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P59",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P60",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity + New (button)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P61",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity; Revoke moves",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P62",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P63",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P64",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Changed (canvas BotApproval, 02)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P65",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
     consumer: "src/renderer-next/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P66",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity + New (entry point)",
     consumer:
@@ -488,7 +685,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P67",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
     consumer:
@@ -496,7 +696,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P68",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
     consumer:
@@ -504,7 +707,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P69",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
     consumer:
@@ -512,7 +718,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P70",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
     consumer:
@@ -520,14 +729,20 @@ export const BOT_PARITY = [
   },
   {
     id: "P71",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "components/bot-avatar/index.tsx",
     specStatus: 'Changed (PLAN "Nuked")',
     consumer: "src/renderer-next/components/bot-avatar/index.tsx#BotAvatar",
   },
   {
     id: "P72",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "New",
     consumer:
@@ -535,7 +750,10 @@ export const BOT_PARITY = [
   },
   {
     id: "P73",
-    status: "implemented",
+    status: "green",
+    evidence:
+      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+    visible: false,
     target: "components/bot-avatar/index.tsx",
     specStatus: "New (PLAN)",
     consumer:

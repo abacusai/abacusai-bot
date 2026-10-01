@@ -41,6 +41,7 @@ import {
   type LegacyDestination,
 } from "#shared/contract/legacy-map";
 
+import { resolveConsumer } from "../../../../scripts/cutover/parity-consumers.mjs";
 import { createBridge } from "./bridge";
 
 const DESKTOP = join(import.meta.dirname, "../..");
@@ -130,6 +131,7 @@ const PROCEDURE_PATHS = new Set(contractProcedures().map((p) => p.path));
 
 /** A row that names a procedure must name one the contract has. */
 const problemsWith = (key: string, row: LegacyDestination): string[] => {
+  resolveConsumer(row.consumer, DESKTOP);
   if (row.kind === "R")
     return row.reason.trim().length > 0
       ? []
@@ -185,26 +187,28 @@ const renderParity = (bridge: string[], topLevel: string[]): string => {
     "`apps/desktop/src/shared/contract/legacy-map.ts`. Do not edit by hand:",
     "change the map, then run it with `UPDATE_PARITY=1`.",
     "",
+    "Implementation signed off at 9fd37868 plus the C5 completion commit. Packaged acceptance remains open. See spec 07 §11.",
+    "",
     "Kinds: **Q** query, **M** mutation, **S** event-iterator subscription,",
     "**T** served by a DB table (sub-slice B), **R** retired (its legacy",
     "handler stays until the cut-over).",
     "",
     `## \`window.api.agent.*\` (${bridge.length}: ${summary(bridgeRows)})`,
     "",
-    "| # | Legacy | Defined at | Procedure | Kind | Notes |",
-    "|---|---|---|---|---|---|",
+    "| # | Legacy | Defined at | Procedure | Kind | Notes | Consumer |",
+    "|---|---|---|---|---|---|---|",
     ...bridge.map(
       (key, index) =>
-        `| ${index + 1} | \`${key}\` | ${locate("src/preload/bridge.ts", key)} | ${destinationCells(bridgeRows[index]!)} |`
+        `| ${index + 1} | \`${key}\` | ${locate("src/preload/bridge.ts", key)} | ${destinationCells(bridgeRows[index]!)} | \`${bridgeRows[index]!.consumer}\` |`
     ),
     "",
     `## Top-level \`window.api.*\` (${topLevel.length}: ${summary(topRows)})`,
     "",
-    "| # | Legacy | Defined at | Procedure | Kind | Notes |",
-    "|---|---|---|---|---|---|",
+    "| # | Legacy | Defined at | Procedure | Kind | Notes | Consumer |",
+    "|---|---|---|---|---|---|---|",
     ...topLevel.map(
       (key, index) =>
-        `| ${index + 1} | \`${key}\` | ${locate("src/preload/index.ts", key)} | ${destinationCells(topRows[index]!)} |`
+        `| ${index + 1} | \`${key}\` | ${locate("src/preload/index.ts", key)} | ${destinationCells(topRows[index]!)} | \`${topRows[index]!.consumer}\` |`
     ),
     "",
     `## \`IpcEvent\` variants (${Object.keys(LEGACY_EVENT_MAP).length})`,
@@ -300,6 +304,16 @@ describe("parity with the legacy bridge (A-T6)", () => {
   });
 
   it("renders PARITY.md (written with UPDATE_PARITY=1; the committed file must match)", async () => {
+    const enumerations = {
+      bridge: bridgeKeys(),
+      topLevel: await topLevelKeys(),
+      events: ipcEventTypes(),
+      channels: pushChannels(),
+    };
+    const frozen = join(REPO, "scripts/cutover/bridge-ids.json");
+    if (process.env.UPDATE_PARITY === "1")
+      writeFileSync(frozen, JSON.stringify(enumerations, null, 2) + "\n");
+    expect(JSON.parse(readFileSync(frozen, "utf8"))).toEqual(enumerations);
     const markdown = renderParity(bridgeKeys(), await topLevelKeys());
     expect(markdown).toContain("| `getMetadata` |");
     expect(markdown).not.toContain("undefined");

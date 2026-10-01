@@ -13,31 +13,50 @@ import type { AgentApi, IpcEvent } from "../contracts";
 
 export type LegacyKind = "Q" | "M" | "S" | "T" | "R";
 
-export type LegacyDestination =
+export type LegacyDestination = { consumer: string } & (
   | { kind: "Q" | "M" | "S" | "T"; procedure: string; note?: string }
-  | { kind: "R"; reason: string };
+  | { kind: "R"; reason: string }
+);
 
+const consumerFor = (procedure: string): string => {
+  const domain = procedure.split(".")[0]!;
+  const files: Record<string, string> = {
+    localModels: "local-models",
+    durableState: "durable-state",
+  };
+  return procedure.startsWith("(")
+    ? "src/main/rpc/router.ts#createRouter"
+    : `src/main/rpc/procedures/${files[domain] ?? domain}.ts#${domain}Router`;
+};
 const q = (procedure: string, note?: string): LegacyDestination => ({
   kind: "Q",
   procedure,
+  consumer: consumerFor(procedure),
   ...(note == null ? {} : { note }),
 });
 const m = (procedure: string, note?: string): LegacyDestination => ({
   kind: "M",
   procedure,
+  consumer: consumerFor(procedure),
   ...(note == null ? {} : { note }),
 });
 const s = (procedure: string, note?: string): LegacyDestination => ({
   kind: "S",
   procedure,
+  consumer: consumerFor(procedure),
   ...(note == null ? {} : { note }),
 });
 const t = (procedure: string, note?: string): LegacyDestination => ({
   kind: "T",
   procedure,
+  consumer: consumerFor(procedure),
   ...(note == null ? {} : { note }),
 });
-const r = (reason: string): LegacyDestination => ({ kind: "R", reason });
+const r = (reason: string): LegacyDestination => ({
+  kind: "R",
+  reason,
+  consumer: `retired: ${reason.replace(/[.!?]$/, "")}.`,
+});
 
 const NO_CALLER = "no renderer caller";
 
@@ -444,6 +463,7 @@ export const LEGACY_TOP_LEVEL_MAP: Record<string, LegacyDestination> = {
   ),
   getPathForFile: {
     kind: "M",
+    consumer: "src/main/rpc/procedures/durable-state.ts#durableStateRouter",
     procedure: "(preload) window.abacusHost.getPathForFile",
     note: "needs webUtils in the preload; the only non-port preload export",
   },

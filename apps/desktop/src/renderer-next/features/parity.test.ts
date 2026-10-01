@@ -81,3 +81,17 @@ it("R7-T25 resolves every consumer declaration in the new tree or main", () => {
     resolves("src/renderer-next/features/settings/companion.tsx#Missing")
   ).toBe(false);
 });
+
+it("R7-T25 requires final status metadata and preserves acceptance gaps", () => {
+  for (const row of rows) {
+    const metadata = row as unknown as Record<string, unknown>;
+    expect(["green", "retired", "deferred"]).toContain(row.status);
+    expect(typeof metadata.visible).toBe("boolean");
+    if (row.status === "green") expect(metadata.evidence).toBeTruthy();
+    else expect(metadata.reason).toBeTruthy();
+    if (row.status === "deferred") {
+      expect(metadata.owner).toBeTruthy();
+      expect(metadata.plan).toBe("docs/rewrite/PLAN.md#phases-and-pr-stack");
+    }
+  }
+});
