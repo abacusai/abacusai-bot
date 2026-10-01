@@ -9,7 +9,12 @@ import { createQueryClient } from "#next/data/query-client";
 import { getTransport } from "#next/data/transport";
 import { createChatRuntime } from "#next/features/chat";
 import { createTransportLostHandler } from "#next/lib/bootstrap";
-import { initI18n, changeLanguage, resolveLanguage } from "#next/lib/i18n";
+import {
+  initI18n,
+  changeLanguage,
+  resolveLanguage,
+  i18n,
+} from "#next/lib/i18n";
 import { applyTheme } from "#next/lib/theme";
 
 import { createNotchRouter } from "./notch-router";
@@ -25,11 +30,7 @@ const start = async () => {
       notify: () => undefined,
       reload: () => location.reload(),
       showError: () => {
-        root.render(
-          <p role="alert">
-            Companion connection lost. Reopen the app to retry.
-          </p>
-        );
+        root.render(<p role="alert">{i18n.t("shell.connectionLost")}</p>);
       },
       storage: sessionStorage,
     })

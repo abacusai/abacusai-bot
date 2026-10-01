@@ -7,7 +7,7 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-wing { background: #000; display: flex; align-items: center; gap: 6px; flex: 1; padding: 0 12px; min-width: 0; }
 .notch-wing:first-child { border-radius: 0 0 0 18px; }
 .notch-wing:last-child { border-radius: 0 0 18px 0; justify-content: flex-end; }
-.notch-body { background: #000; border-radius: 0 0 22px 22px; padding: 6px 14px 12px; }
+.notch-body { position: relative; background: #000; border-radius: 0 0 22px 22px; padding: 6px 14px 12px; }
 .notch-shape button { border-radius: 999px; min-height: 26px; color: #f2f2f3; background: #2a2a2e; }
 .notch-shape p { color: #b8b8bd; }
 .notch-shape h2 { color: #f2f2f3; font-size: 12px; font-weight: 600; }
