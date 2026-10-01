@@ -1570,8 +1570,8 @@
     "welcomeConnectors": "100+ Connectors",
     "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
-    "frame.progress": "Step {{n}} of 5",
-    "frame.failed": "Something went wrong. Try again.",
+    "frame.progress": "5단계 중 {{n}}단계",
+    "frame.failed": "문제가 발생했습니다. 다시 시도하세요.",
     "pages.connectedLabel": "Connected",
     "pages.connectLabel": "Connect",
     "pages.more": "{{count}}+ more in Settings",
@@ -1580,39 +1580,39 @@
     "pages.skip": "Not now",
     "pages.keyPrivate": "Stored on this machine only.",
     "pages.retry": "Try again",
-    "pages.connect.title": "Connecting your account",
-    "pages.connect.body": "Finish signing in in the browser window.",
-    "pages.connect.waiting": "Waiting for sign-in…",
-    "pages.connected.body": "Your account is ready. Your bot works across your models, files and tools.",
-    "pages.connected.promise1": "An open-source AI agent",
-    "pages.connected.promise2": "Powerful models, including free options",
-    "pages.connected.promise3": "Work across your tools and services",
-    "pages.connected.promise4": "Runs locally. Chat wherever you work.",
+    "pages.connect.title": "계정 연결 중",
+    "pages.connect.body": "Finish signing in in your browser…",
+    "pages.connect.waiting": "Finish signing in in your browser…",
+    "pages.connected.body": "계정이 준비되었습니다. 봇이 모델, 파일, 도구를 사용해 작업합니다.",
+    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
+    "pages.connected.promise2": "Access Access to free models",
+    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
+    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
     "pages.models.title": "Hook up your AI",
-    "pages.models.body": "Connect models to unlock more inside your bot.",
+    "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.title": "Connect your tools and services",
-    "pages.connectors.body": "Chat where you work.",
-    "pages.first-bot.title": "Meet your first bot",
-    "pages.first-bot.body": "A Chief of Staff to help you plan your day.",
-    "pages.done.title": "You're ready",
-    "pages.done.body": "Start a conversation or make something new.",
-    "pages.deferred": "Finish after setup",
-    "pages.removed": "This bot was removed",
-    "pages.checkIn": "Weekday check-ins at 08:00",
-    "pages.noCheckIn": "No check-ins",
-    "pages.hello": "Say hello",
-    "pages.scratch": "Start from scratch",
-    "pages.message": "Message {{name}}",
-    "pages.addKey": "Add API key",
-    "pages.keyTitle": "Connect Gemini",
-    "pages.openGemini": "Open Google AI Studio",
-    "pages.pairing": "Finish connecting {{platform}}",
-    "pages.finishPairing": "Finish connecting",
-    "pages.localModels": "Local models",
-    "pages.localDetails": "Use a model running on this machine."
+    "pages.connectors.title": "Connect with your tools & services",
+    "pages.connectors.body": "Chat where you work",
+    "pages.first-bot.title": "첫 번째 봇을 만나보세요",
+    "pages.first-bot.body": "메일·캘린더·Slack을 아우르며 하루를 관리하고 결정은 당신에게 맡깁니다.",
+    "pages.done.title": "준비 완료",
+    "pages.done.body": "대화를 시작하거나 새로운 것을 만들어 보세요.",
+    "pages.deferred": "설정 후 완료",
+    "pages.removed": "이 봇은 삭제되었습니다",
+    "pages.checkIn": "평일 08:00에 체크인",
+    "pages.noCheckIn": "체크인 없음",
+    "pages.hello": "인사하기",
+    "pages.scratch": "처음부터 시작",
+    "pages.message": "{{name}}에게 메시지",
+    "pages.addKey": "API 키 추가",
+    "pages.keyTitle": "Go to {{provider}} and get your API key",
+    "pages.openGemini": "Open provider site",
+    "pages.pairing": "{{platform}} 연결 완료",
+    "pages.finishPairing": "연결 완료",
+    "pages.localModels": "Use a local model",
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
   },
   "openFile": {
     "failed": "해당 파일을 열지 못했습니다.",
@@ -2049,24 +2049,24 @@
         "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다."
       },
       "memory": {
-        "title": "메모리",
+        "title": "Memory",
         "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요."
       },
       "artifacts": {
-        "title": "결과물",
+        "title": "산출물",
         "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
       },
       "welcome": {
-        "title": "Welcome to AbacusAI Bot",
-        "body": "A quick lap around the window. {{n}} stops; leave at any time."
+        "title": "AbacusAI Bot에 오신 것을 환영합니다",
+        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다."
       },
       "talk": {
-        "title": "Talk to your bot",
-        "body": "Give your bot a task here. It can ask questions and show its work."
+        "title": "봇과 대화하기",
+        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다."
       },
       "notch": {
-        "title": "Your companion",
-        "body": "Replies and approvals can appear above your workspace. Open the app for the full conversation."
+        "title": "나의 도우미",
+        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요."
       }
     }
   },
@@ -2681,23 +2681,23 @@
     },
     "general": {
       "notch": {
-        "title": "Notch companion",
-        "description": "Live status, replies and approvals from the notch",
-        "windowsDescription": "Live status, replies and approvals from a capsule by the clock",
-        "failed": "The notch companion couldn't start.",
-        "metricsUnavailable": "The notch companion couldn't measure this screen.",
-        "retry": "Try again",
-        "idle": "Show when idle",
-        "displays": "On every display",
-        "haptics": "Haptics",
-        "shortcut": "Shortcut",
-        "shortcutUnavailable": "In use by another app"
+        "title": "노치 도우미",
+        "description": "노치에 상태, 답장 및 승인 표시",
+        "windowsDescription": "시계 옆에 상태, 답장 및 승인 표시",
+        "failed": "도우미를 시작할 수 없습니다.",
+        "metricsUnavailable": "이 화면을 측정할 수 없습니다.",
+        "retry": "다시 시도",
+        "idle": "대기 중에도 표시",
+        "displays": "모든 화면에 표시",
+        "haptics": "햅틱 피드백",
+        "shortcut": "단축키",
+        "shortcutUnavailable": "다른 앱에서 사용 중"
       }
     },
     "notifications": {
       "showInNotch": {
-        "title": "Show in the notch",
-        "description": "Replies and approvals appear in the notch companion"
+        "title": "노치에 표시",
+        "description": "답장과 승인이 노치 도우미에 표시됩니다"
       }
     }
   },
@@ -2778,7 +2778,8 @@
       "label": "오류",
       "open": "Open",
       "retry": "재시도",
-      "switchModel": "Switch model"
+      "switchModel": "Switch model",
+      "rateLimited": "요청 한도에 도달했습니다"
     },
     "message": {
       "credits_one": "Used {{count}} credit",
@@ -2986,51 +2987,51 @@
   },
   "notch": {
     "a11y": {
-      "region": "Companion"
+      "region": "도우미"
     },
     "actions": {
-      "open": "Open in app",
-      "message": "Message",
-      "call": "Call",
+      "open": "앱에서 열기",
+      "message": "메시지",
+      "call": "말하기",
       "pause": "Pause check-ins",
       "resume": "Resume check-ins"
     },
     "wings": {
-      "idle": "Ready when you are",
-      "question": "A quick question",
+      "idle": "언제든 준비 완료",
+      "question": "간단한 질문",
       "approval": "Needs you",
-      "connector-ask": "Connect a tool",
-      "failed": "That did not work",
-      "working": "Working on it",
-      "reply": "A reply for you",
-      "done": "All done"
+      "connector-ask": "도구 연결",
+      "failed": "문제가 발생했습니다",
+      "working": "작업 중",
+      "reply": "나에게 온 답변",
+      "done": "모두 완료"
     },
     "approval": {
-      "answerInApp": "Answer in app",
+      "answerInApp": "앱에서 답변",
       "notNow": "Not now",
-      "reviewOnly": "Review this request in the app.",
-      "review": "Review",
-      "noResponse": "Couldn't send your response. Try again."
+      "reviewOnly": "앱에서 이 요청을 검토하세요.",
+      "review": "검토",
+      "noResponse": "No response from the agent. Try again."
     },
     "reply": {
-      "placeholder": "Reply…",
-      "failed": "Couldn't send. Your reply is still here.",
-      "openFailed": "Couldn't open the chat"
+      "placeholder": "답장…",
+      "failed": "보낼 수 없습니다. 답장은 여기에 남아 있습니다.",
+      "openFailed": "채팅을 열 수 없습니다"
     },
     "quiet": {
-      "until": "Quiet until {{time}}"
+      "until": "{{time}}까지 조용히"
     },
     "listening": {
-      "end": "End",
-      "title": "Listening…",
+      "end": "종료",
+      "title": "듣는 중…",
       "transcribing": "Transcribing…",
-      "error": "Couldn't use the microphone. Check permission in System Settings → Privacy."
+      "error": "Microphone access was denied. Allow it in system settings."
     },
     "done": {
-      "title": "Finished"
+      "title": "완료"
     },
     "failed": {
-      "title": "Something went wrong"
+      "title": "문제가 발생했습니다"
     }
   }
 }

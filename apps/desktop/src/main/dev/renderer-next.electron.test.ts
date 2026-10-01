@@ -26,6 +26,8 @@ import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
+  mkdirSync,
+  writeFileSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -203,6 +205,11 @@ beforeAll(async () => {
     if (state !== "ok") throw new Error(`acceptance build unusable: ${state}`);
   }
   scratch = mkdtempSync(join(tmpdir(), "renderer-next-accept-"));
+  mkdirSync(join(scratch, "home"), { recursive: true });
+  writeFileSync(
+    join(scratch, "home", "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   const electron = createRequire(import.meta.url)(
     "electron"
   ) as unknown as string;
