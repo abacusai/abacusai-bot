@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilePreview, previewKind } from "#next/components/file-preview";
@@ -143,7 +143,10 @@ export const FilesTab = ({
     if (path.endsWith("/")) setTrash(path);
     else void doTrash(path).catch((e) => setError(String(e)));
   };
-  const paths = flattenFiles([...(tree.data?.fileTree ?? []), ...children]);
+  const paths = useMemo(
+    () => flattenFiles([...(tree.data?.fileTree ?? []), ...children]),
+    [tree.data?.fileTree, children]
+  );
   return (
     <div className="flex size-full min-h-0">
       <aside className="flex w-[232px] min-w-[180px] shrink-0 flex-col gap-2 border-r p-2">
@@ -170,6 +173,7 @@ export const FilesTab = ({
           ))
         ) : (
           <FileTreeView
+            checkoutIdentity={`${row.workspaceId}:${row.id}:${row.worktreeId ?? "primary"}:${root}`}
             paths={paths}
             gitStatus={git?.gitChanges.map((c) => ({
               path: c.path,
