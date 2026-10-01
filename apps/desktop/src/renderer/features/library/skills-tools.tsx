@@ -362,10 +362,17 @@ export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   return (
     <AreaPage
       title={
-        set ? t(`capabilities.toolsets.${set.labelKey}.label`) : toolsetName
+        set
+          ? t(`capabilities.toolsets.${set.labelKey}.label`)
+          : t("phase5.unavailable")
       }
     >
       <AppLink to="/library/tools">{t("phase5.allTools")}</AppLink>
+      {!set?.tools.length && (
+        <p className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
+          {t("phase5.toolsUnavailable")}
+        </p>
+      )}
       {set?.tools.map((tool) => (
         <SettingRow
           key={tool.name}

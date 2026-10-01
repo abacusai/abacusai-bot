@@ -32,3 +32,14 @@
 @media (prefers-reduced-motion: reduce) { .first-bot-egg, .first-bot-glow { animation: none; } .first-bot-confetti { display: none; } }
 [data-reduced-motion=true] .first-bot-egg, [data-reduced-motion=true] .first-bot-glow { animation: none; }
 [data-reduced-motion=true] .first-bot-confetti { display: none; }
+
+.onboarding-progress { position: sticky; top: 0; z-index: 10; background: var(--background); }
+.onboarding-step { padding-top: 24px; gap: 16px; }
+.onboarding-step > .onboarding-continue { position: sticky; bottom: 12px; z-index: 2; box-shadow: 0 0 0 8px var(--background); }
+@media (max-height: 720px) {
+  .onboarding-step { padding: 12px 32px 24px; gap: 12px; }
+  .onboarding-step h1 { font-size: 28px; }
+  .onboarding-step > div:first-child { zoom: .7; }
+  .onboarding-step .p-4 { padding: 12px; }
+  .onboarding-parade { min-height: 80px; }
+}

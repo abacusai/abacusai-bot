@@ -125,7 +125,10 @@ export const SettingsSidebar = () => {
                 key={page}
                 to={`/settings/${page}`}
                 active={
-                  matchRoute({ to: `/settings/${page}` } as never) !== false
+                  matchRoute({
+                    to: `/settings/${page}`,
+                    fuzzy: true,
+                  } as never) !== false
                 }
                 title={t(`settings.pages.${page}`)}
               />

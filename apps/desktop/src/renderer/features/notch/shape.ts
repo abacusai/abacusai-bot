@@ -7,9 +7,9 @@ export const SHAPES = {
   quiet: [90, 0],
   working: [150, 0],
   done: [150, 0],
-  failed: [140, 0],
-  approval: [120, 76],
-  reply: [130, 132],
+  failed: [170, 0],
+  approval: [160, 132],
+  reply: [160, 144],
   call: [130, 132],
   hovered: [180, 76],
 } as const;
@@ -23,7 +23,7 @@ export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
         : (p.route.slice(1) as "idle" | "working" | "call" | "done" | "failed");
   const [compactWing, body] = SHAPES[key] ?? SHAPES.idle;
   const wing = p.expanded
-    ? Math.max(compactWing, SHAPES.hovered[0])
+    ? Math.max(compactWing, key === "idle" ? SHAPES.hovered[0] : 160)
     : compactWing;
   const gap = layout.notch?.width ?? 0;
   return {
@@ -32,11 +32,7 @@ export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
     height: Math.min(
       layout.maxShape.height,
       (layout.notch?.height ?? 36) +
-        (p.expanded
-          ? key === "approval"
-            ? layout.maxShape.height
-            : body || SHAPES.hovered[1]
-          : 0)
+        (p.expanded ? body || SHAPES.hovered[1] : 0)
     ),
   };
 };

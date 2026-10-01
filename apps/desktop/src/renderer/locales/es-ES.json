@@ -434,7 +434,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "Conversación de respuesta automática: {{bot}} responde a {{sender}} aquí en tu nombre. Puedes mirar pero no escribir; para cambiar cómo responde, díselo a {{bot}} en su propio chat.",
-      "openError": "No se ha podido abrir el chat del bot."
+      "openError": "No se ha podido abrir el chat del bot.",
+      "senderReadOnlyFallback": "{{bot}} responde en esta conversación."
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1038,15 +1039,12 @@
     "welcomeTagline": "Tu compañero de IA personal y de código abierto con memoria persistente",
     "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
     "connectedTitleName": "AbacusAI Bot",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "continueWithBrowser": "Continuar con {{browser}} · {{profile}}",
     "signInAnotherWay": "Iniciar sesión de otra forma",
-    "haveAccountContinueWith": "Ya tengo una cuenta · Continuar con {{browser}}",
     "signInOptions": "Otras formas de iniciar sesión",
     "usesBrowserSessions": "El inicio de sesión con Google, Microsoft y Apple usa tus cuentas de {{browser}}.",
     "welcomeModels": "Access",
@@ -1287,7 +1285,12 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "Manual",
+      "schedule": "Programada",
+      "webhook": "Webhook"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
@@ -2393,7 +2396,6 @@
     "thisWeek": "This week",
     "usageNumbers": "{{requests}} requests · {{tokens}} tokens · ${{cost}}",
     "dailyActivity": "Actividad diaria",
-    "dailyNumbers": "{{date}} · {{requests}} requests · {{errors}} errors · {{tokens}} tokens",
     "date": "Date",
     "requests": "Requests",
     "errors": "Errors",
@@ -2717,6 +2719,7 @@
       "image": "Imágenes",
       "link": "Enlaces"
     },
-    "connecting": "Loading"
+    "connecting": "Loading",
+    "toolsUnavailable": "Estas herramientas no están disponibles en esta versión."
   }
 }

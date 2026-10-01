@@ -449,6 +449,40 @@ function prepareSeedHome(home) {
       },
     ],
   }));
+  const usageDir = path.join(home, "agent", "sessions", "ui-audit");
+  fs.mkdirSync(usageDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(usageDir, "usage.jsonl"),
+    Array.from({ length: 7 }, (_, i) =>
+      JSON.stringify({
+        type: "message",
+        id: `audit-usage-${i}`,
+        timestamp: new Date(Date.now() - i * 86400000).toISOString(),
+        message: {
+          role: "assistant",
+          provider: "openrouter",
+          model: "audit-model",
+          api: "openai-completions",
+          stopReason: "stop",
+          timestamp: Date.now() - i * 86400000,
+          usage: {
+            input: 1000 + i * 120,
+            output: 250,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 1250 + i * 120,
+            cost: {
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cacheWrite: 0,
+              total: 0.025,
+            },
+          },
+        },
+      })
+    ).join("\n") + "\n"
+  );
   fs.mkdirSync(path.join(home, "threads"), { recursive: true });
   for (const id of [
     "ui-audit-session",
@@ -957,6 +991,10 @@ async function interactions(cdp, size, theme) {
           await click(cdp, 'button[aria-label="Add tab"]');
           await clickText(cdp, kind[0].toUpperCase() + kind.slice(1));
           await sleep(3000);
+          await cdp.evaluate(
+            `(()=>{const tabs=[...document.querySelectorAll('[role="tab"]')];tabs.findLast(e=>e.textContent?.trim().startsWith(${JSON.stringify(kind[0].toUpperCase() + kind.slice(1))}))?.click()})()`
+          );
+          await sleep(500);
         }
       );
   for (const [state, text] of [
@@ -998,19 +1036,41 @@ async function interactions(cdp, size, theme) {
   try {
     await navigate(cdp, "/settings/general");
     await clickText(cdp, "Take the tour");
-    const stops = [
-      ...read("features/tour/stops.ts").matchAll(/id: "([^"]+)"/g),
-    ].map((m) => m[1]);
-    for (const stop of stops) {
-      await sleep(600);
+    const seen = new Set();
+    for (let i = 0; i < 16; i++) {
+      for (let wait = 0; wait < 300; wait++) {
+        if (
+          await cdp.evaluate(
+            `!!document.querySelector('[data-tour-stop]') && document.querySelector('[data-slot="tour-spotlight"] [role="dialog"]')?.getAttribute('aria-busy') === 'false'`
+          )
+        )
+          break;
+        await sleep(100);
+      }
+      if (
+        await cdp.evaluate(
+          `document.querySelector('[data-slot="tour-spotlight"] [role="dialog"]')?.getAttribute('aria-busy') === 'true'`
+        )
+      )
+        throw new Error("Tour preparation did not settle");
+      const stop = await cdp.evaluate(
+        `document.querySelector('[data-tour-stop]')?.getAttribute('data-tour-stop')`
+      );
+      if (!stop || seen.has(stop)) break;
+      seen.add(stop);
+      await sleep(350);
       await capture(
         cdp,
         { area: "tour", state: stop, route: "guided tour" },
         size,
         theme,
-        "Click Take the tour in Settings; advance using Next"
+        "Live guided tour; unavailable targets are skipped"
       );
-      if (stop !== stops.at(-1)) await clickText(cdp, "Next");
+      const label = await cdp.evaluate(
+        `document.querySelector('[data-tour-next]')?.textContent`
+      );
+      if (label === "Finish") break;
+      await click(cdp, "[data-tour-next]");
     }
   } catch (e) {
     report.failures.push(`Tour ${size.join("x")} ${theme}: ${e.message}`);
@@ -1040,6 +1100,11 @@ async function notchCapture(main, size, theme, child) {
     // window. This permits deterministic attention/listening states without a
     // remote model run. No gallery document is substituted into the window.
     const findShell = `const e=document.querySelector('.notch-shape');let f=e?.[Object.keys(e).find(k=>k.startsWith('__reactFiber'))];while(f&&!f.memoizedProps?.context?.layout)f=f.return;if(!f)throw new Error('NotchShell fiber unavailable');const hooks=[];for(let h=f.memoizedState;h;h=h.next)hooks.push(h);`;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      if (await cdp.evaluate("Boolean(document.querySelector('.notch-shape'))"))
+        break;
+      await sleep(100);
+    }
     const layout = await cdp.evaluate(
       `(()=>{${findShell}return f.memoizedProps.context.layout})()`
     );
@@ -1090,7 +1155,15 @@ async function notchCapture(main, size, theme, child) {
               errorCode: "UI_AUDIT_SAMPLE",
               runId: "audit-run",
             }
-          : null;
+          : state === "reply"
+            ? {
+                kind: "reply",
+                sessionId,
+                since: Date.now(),
+                botId: "ui-audit-bot",
+                canReply: true,
+              }
+            : null;
       const p = {
         route,
         sessionId:
@@ -1584,10 +1657,16 @@ async function run(pass, size) {
             await cdp.evaluate(
               `document.querySelector('[data-testid="gallery"]')?.scrollTo({top:${c.scrollBottom ? "100000" : "0"}})`
             );
+            if (args.includes("--scroll-bottom"))
+              await cdp.evaluate(
+                `document.querySelectorAll('*').forEach(e => { if(e.scrollHeight > e.clientHeight && /auto|scroll/.test(getComputedStyle(e).overflowY)) e.scrollTop = e.scrollHeight; })`
+              );
             await sleep(100);
             await capture(
               cdp,
-              c,
+              args.includes("--scroll-bottom")
+                ? { ...c, state: c.state + "-bottom" }
+                : c,
               size,
               theme,
               pass === "gallery"

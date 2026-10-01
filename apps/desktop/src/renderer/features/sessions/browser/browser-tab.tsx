@@ -1,11 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, RotateCw, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCw,
+  ExternalLink,
+  Ellipsis,
+} from "lucide-react";
 import { useEffect, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BrowserSurface } from "#renderer/components/browser-surface";
 import { followNotices } from "#renderer/data/queries/live";
 import { Button } from "#renderer/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import type { SessionRow } from "#shared/contract/rows";
 import type { BrowserRuntimeState } from "#shared/contracts";
@@ -127,11 +139,11 @@ export const BrowserTab = ({
     }
   };
   return (
-    <div className="flex size-full min-h-0 flex-col gap-2 p-2">
-      <div className="flex items-center gap-1">
+    <div className="flex size-full min-h-0 min-w-0 flex-col gap-2 p-2">
+      <div className="flex min-w-0 shrink-0 items-center gap-1">
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           aria-label={t("sessions.browser.back")}
           disabled={!state?.canGoBack || !!file}
           onClick={() => void action({ action: "back" })}
@@ -140,7 +152,7 @@ export const BrowserTab = ({
         </Button>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           aria-label={t("sessions.browser.forward")}
           disabled={!state?.canGoForward || !!file}
           onClick={() => void action({ action: "forward" })}
@@ -149,7 +161,7 @@ export const BrowserTab = ({
         </Button>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           aria-label={t("sessions.browser.reload")}
           onClick={() =>
             void action({ action: state?.loading ? "stop" : "reload" })
@@ -163,7 +175,7 @@ export const BrowserTab = ({
           </span>
         ) : (
           <Input
-            className="rounded-full"
+            className="min-w-0 flex-1 rounded-lg"
             aria-label={t("sessions.browser.address")}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -180,7 +192,7 @@ export const BrowserTab = ({
         )}
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           aria-label={t("sessions.browser.external")}
           onClick={() =>
             void transport.client.system.openExternal({
@@ -191,9 +203,10 @@ export const BrowserTab = ({
           <ExternalLink />
         </Button>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex min-w-0 shrink-0 items-center justify-between gap-1">
         {!file ? (
           <select
+            className="bg-card max-w-full min-w-0 flex-1 rounded-lg border px-2 py-1 text-xs"
             aria-label={t("sessions.browser.profile")}
             value={profile ?? ""}
             onChange={(e) => setProfile(e.target.value || undefined)}
@@ -206,25 +219,38 @@ export const BrowserTab = ({
             ))}
           </select>
         ) : null}
-        {(
-          [
-            "zoom-out",
-            "zoom-reset",
-            "zoom-in",
-            "open-devtools",
-            "clear-site-data",
-          ] as const
-        ).map((command) => (
-          <Button
-            key={command}
-            size="sm"
-            variant="ghost"
-            disabled={!state}
-            onClick={() => void action({ action: command })}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("phase5.manage")}
+              />
+            }
           >
-            {t(`sessions.browser.${command}`)}
-          </Button>
-        ))}
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {(
+              [
+                "zoom-out",
+                "zoom-reset",
+                "zoom-in",
+                "open-devtools",
+                "clear-site-data",
+              ] as const
+            ).map((command) => (
+              <DropdownMenuItem
+                key={command}
+                disabled={!state}
+                onClick={() => void action({ action: command })}
+              >
+                {t(`sessions.browser.${command}`)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {error ? (
         <div role="alert">

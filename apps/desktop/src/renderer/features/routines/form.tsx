@@ -236,7 +236,7 @@ export const RoutineDialog = ({
         }}
       >
         <DialogContent
-          className="max-h-[calc(100vh-48px)] overflow-auto rounded-2xl p-5 sm:max-w-[640px]"
+          className="flex max-h-[calc(100dvh-48px)] flex-col overflow-hidden rounded-2xl p-5 sm:max-w-[640px]"
           data-testid="routine-dialog"
         >
           <DialogHeader>
@@ -246,12 +246,13 @@ export const RoutineDialog = ({
             <DialogDescription>{t("phase5.freshSession")}</DialogDescription>
           </DialogHeader>
           <form
+            className="flex min-h-0 flex-col"
             onSubmit={(e) => {
               e.preventDefault();
               void form.handleSubmit();
             }}
           >
-            <FieldGroup>
+            <FieldGroup className="min-h-0 overflow-y-auto pr-1">
               <form.AppField name="name">
                 {(f) => (
                   <f.TextField
@@ -510,24 +511,24 @@ export const RoutineDialog = ({
                   ) : null
                 }
               </form.Subscribe>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    if (changed()) setDiscardOpen(true);
-                    else close();
-                  }}
-                >
-                  {t("phase5.cancel")}
-                </Button>
-                <form.AppForm>
-                  <form.SubmitButton
-                    label={t(routineId ? "phase5.save" : "phase5.create")}
-                  />
-                </form.AppForm>
-              </DialogFooter>
             </FieldGroup>
+            <DialogFooter className="mt-4 shrink-0 border-t pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  if (changed()) setDiscardOpen(true);
+                  else close();
+                }}
+              >
+                {t("phase5.cancel")}
+              </Button>
+              <form.AppForm>
+                <form.SubmitButton
+                  label={t(routineId ? "phase5.save" : "phase5.create")}
+                />
+              </form.AppForm>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

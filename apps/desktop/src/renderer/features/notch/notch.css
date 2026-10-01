@@ -7,7 +7,7 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-wing { display: flex; align-items: center; gap: 6px; flex: 1 1 0; padding: 0 14px; min-width: 0; overflow: hidden; }
 
 .notch-wing:last-child { justify-content: flex-end; }
-.notch-body { position: relative; padding: 6px 20px 12px; min-width: 0; }
+.notch-body { position: relative; padding: 8px 20px 16px; min-width: 0; overflow-y: auto; box-sizing: border-box; }
 .notch-shape button { border-radius: 999px; min-height: 26px; color: #f2f2f3; background: #2a2a2e; }
 .notch-shape p { color: #b8b8bd; }
 .notch-shape h2 { color: #f2f2f3; font-size: 12px; font-weight: 600; }
@@ -35,3 +35,7 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 
 .notch-reply { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; }
 .notch-reply > p, .notch-reply > input { flex-basis: 100%; }
+
+.notch-body > div { display: flex; flex-direction: column; gap: 8px; }
+.notch-body > .notch-reply { flex-direction: row; }
+.notch-reply > input { width: 100%; min-width: 0; }

@@ -9,7 +9,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
-  AlertDialogAction,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 export const ConfirmAction = ({
@@ -42,7 +41,12 @@ export const ConfirmAction = ({
           {children ?? label}
         </Button>
       )}
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!busy) setOpen(next);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -53,7 +57,8 @@ export const ConfirmAction = ({
             <AlertDialogCancel disabled={busy}>
               {t("phase5.cancel")}
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
+              variant="destructive"
               disabled={busy}
               onClick={() => {
                 setBusy(true);
@@ -69,7 +74,7 @@ export const ConfirmAction = ({
               }}
             >
               {label}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

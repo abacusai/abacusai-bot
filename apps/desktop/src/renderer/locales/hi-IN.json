@@ -434,7 +434,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
-      "openError": "बॉट की चैट नहीं खुल सकी।"
+      "openError": "बॉट की चैट नहीं खुल सकी।",
+      "senderReadOnlyFallback": "{{bot}} इस बातचीत में जवाब देता है।"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1038,15 +1039,12 @@
     "welcomeTagline": "स्थायी मेमोरी वाला आपका निजी ओपन-सोर्स AI सहकर्मी",
     "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
     "connectedTitleName": "AbacusAI Bot",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "continueWithBrowser": "{{browser}} · {{profile}} के साथ जारी रखें",
     "signInAnotherWay": "किसी और तरीके से साइन इन करें",
-    "haveAccountContinueWith": "मेरा पहले से खाता है · {{browser}} के साथ जारी रखें",
     "signInOptions": "साइन इन करने के अन्य तरीके",
     "usesBrowserSessions": "Google, Microsoft और Apple साइन-इन आपके {{browser}} खातों का उपयोग करता है।",
     "welcomeModels": "Access",
@@ -1287,7 +1285,12 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "मैन्युअल",
+      "schedule": "निर्धारित",
+      "webhook": "वेबहुक"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
@@ -2393,7 +2396,6 @@
     "thisWeek": "This week",
     "usageNumbers": "{{requests}} requests · {{tokens}} tokens · ${{cost}}",
     "dailyActivity": "दैनिक गतिविधि",
-    "dailyNumbers": "{{date}} · {{requests}} requests · {{errors}} errors · {{tokens}} tokens",
     "date": "Date",
     "requests": "Requests",
     "errors": "Errors",
@@ -2717,6 +2719,7 @@
       "image": "इमेज",
       "link": "लिंक"
     },
-    "connecting": "Loading"
+    "connecting": "Loading",
+    "toolsUnavailable": "इस संस्करण में ये टूल उपलब्ध नहीं हैं।"
   }
 }

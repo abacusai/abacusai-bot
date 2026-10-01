@@ -151,7 +151,8 @@ export const closeTab = (key: string, ref: string): string | undefined => {
 };
 export const reconcileTerminals = (
   key: string,
-  states: TerminalSessionSnapshot[]
+  states: TerminalSessionSnapshot[],
+  title = "Terminal"
 ): void => {
   updateTabs(key, (s) =>
     removeRefs(
@@ -170,7 +171,7 @@ export const reconcileTerminals = (
   for (const state of states)
     openTab(key, {
       ref: `terminal:${state.terminalId}`,
-      title: state.terminalId,
+      title,
     });
   updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
 };
