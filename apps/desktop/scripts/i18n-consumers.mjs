@@ -1,0 +1,70 @@
+import fs from "node:fs";
+import path from "node:path";
+
+import { parseSync } from "oxc-parser";
+export const flatten = (tree, prefix = "") =>
+  Object.entries(tree).flatMap(([key, value]) =>
+    typeof value === "string"
+      ? [prefix + key]
+      : flatten(value, prefix + key + ".")
+  );
+const plurals = ["_one", "_other", "_zero", "_two", "_few", "_many"];
+const walk = (node, fn) => {
+  if (!node || typeof node !== "object") return;
+  fn(node);
+  for (const value of Object.values(node))
+    if (Array.isArray(value)) value.forEach((n) => walk(n, fn));
+    else if (value && typeof value === "object") walk(value, fn);
+};
+export const consumers = (keys, sources, dynamic = []) => {
+  const used = new Set(),
+    literals = new Set(),
+    templates = new Set();
+  for (const [file, source] of Object.entries(sources))
+    walk(parseSync(file, source).program, (node) => {
+      if (node.type === "Literal" && typeof node.value === "string")
+        literals.add(node.value);
+      if (
+        node.type === "CallExpression" &&
+        (node.callee?.name === "t" || node.callee?.property?.name === "t") &&
+        node.arguments[0]?.type === "TemplateLiteral"
+      ) {
+        const prefix = node.arguments[0].quasis[0].value.cooked;
+        if (prefix) templates.add(prefix);
+        else if (!dynamic.some((row) => row.prefix === ""))
+          throw new Error(`Unbounded translation template in ${file}`);
+      }
+    });
+  for (const key of keys)
+    if (
+      literals.has(key) ||
+      plurals.some(
+        (s) => key.endsWith(s) && literals.has(key.slice(0, -s.length))
+      )
+    )
+      used.add(key);
+  for (const row of dynamic)
+    for (const value of row.values)
+      if (keys.includes(row.prefix + value)) used.add(row.prefix + value);
+  for (const prefix of templates)
+    if (!dynamic.some((row) => row.prefix === prefix))
+      for (const key of keys) if (key.startsWith(prefix)) used.add(key);
+  return used;
+};
+export const sourceFiles = (dir) => {
+  const sources = {};
+  const visit = (directory) => {
+    for (const e of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (e.name === "locales" || e.name === "ui") continue;
+      const file = path.join(directory, e.name);
+      if (e.isDirectory()) visit(file);
+      else if (
+        /\.tsx?$/.test(file) &&
+        !/(?:\.test\.|\.d\.ts$|dynamic-keys\.ts$)/.test(file)
+      )
+        sources[file] = fs.readFileSync(file, "utf8");
+    }
+  };
+  visit(dir);
+  return sources;
+};

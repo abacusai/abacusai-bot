@@ -38,7 +38,7 @@
   "scripts": {
     "build": "vite build",
     "check:i18n": "node scripts/check-jsx-i18n.js",
-    "check:locales": "node scripts/sync-locales.js --check",
+    "check:locales": "node scripts/sync-locales.js --check && node --test scripts/i18n-dynamic-keys.test.mjs",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "check:ui-registry": "node scripts/shadcn-registry-snapshot.mjs --check",
@@ -142,6 +142,7 @@
     "lucide-react": "^1.49.0",
     "motion": "^13.4.6",
     "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
+    "oxc-parser": "0.150.0",
     "oxc-transform-react": "0.145.0",
     "react": "catalog:",
     "react-dom": "catalog:",

@@ -1,5 +1,5 @@
 /** R3-T11,T21,T29,T30: boundaries, parity destinations and mapped locale sources. */
-const { existsSync, readFileSync } = (
+const { existsSync } = (
   globalThis as unknown as {
     process: {
       getBuiltinModule(id: "node:fs"): {
@@ -88,37 +88,5 @@ describe("bots architecture", () => {
       expect(existsSync(`src/renderer/${row.target}`), row.id).toBe(true);
       expect(row.status).toBeTruthy();
     }
-  });
-  it("every bots keymap source exists in every locale", () => {
-    const keymap = JSON.parse(
-      readFileSync("scripts/locale-keymap.json", "utf8")
-    ) as Record<string, string>;
-    const locales = import.meta.glob<{ default: Record<string, unknown> }>(
-      "../../locales/*.json",
-      { eager: true }
-    );
-    expect(Object.keys(locales)).toHaveLength(11);
-    const value = (object: Record<string, unknown>, key: string): unknown =>
-      key
-        .split(".")
-        .reduce<unknown>(
-          (o, k) =>
-            typeof o === "object" && o !== null
-              ? (o as Record<string, unknown>)[k]
-              : undefined,
-          object
-        );
-    for (const [target, source] of Object.entries(keymap))
-      if (target.startsWith("bots."))
-        for (const [locale, module] of Object.entries(locales)) {
-          expect(
-            value(module.default, source),
-            `${locale}:${source}`
-          ).not.toBeUndefined();
-          expect(
-            value(module.default, target),
-            `${locale}:${target}`
-          ).not.toBeUndefined();
-        }
   });
 });
