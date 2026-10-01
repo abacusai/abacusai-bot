@@ -3,7 +3,7 @@ import {
   Terminal,
   FitAddon,
   terminalTheme,
-  repaint,
+  installTerminalTheme,
 } from "#next/components/terminal/ghostty";
 export interface TerminalView {
   term: Terminal;
@@ -36,17 +36,7 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(element);
-      const updateTheme = () => {
-        const theme = terminalTheme();
-        term.options.theme = theme;
-        term.renderer?.setTheme(theme);
-        repaint(term);
-      };
-      const themeObserver = new MutationObserver(updateTheme);
-      themeObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme"],
-      });
+      const disposeTheme = installTerminalTheme(term);
       return {
         term,
         fit,
@@ -54,7 +44,7 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         offset: undefined,
         generation: null,
         received: 0,
-        disposeTheme: () => themeObserver.disconnect(),
+        disposeTheme,
       };
     })();
     views.set(key, view);

@@ -1,19 +1,19 @@
 import type { TerminalOutputChunk } from "#shared/contract/terminal";
 export interface OutputView {
   offset: number | undefined;
-  write(data: string): void;
+  write(data: string): void | Promise<void>;
   reset(): void;
 }
-export const applyTerminalOutput = (
+export const applyTerminalOutput = async (
   view: OutputView,
   chunk: TerminalOutputChunk
-): void => {
+): Promise<void> => {
   if (chunk.type === "snapshot") {
     if (chunk.from !== view.offset) view.reset();
-    view.write(chunk.data);
+    await view.write(chunk.data);
     view.offset = chunk.offset;
   } else if (chunk.type === "data") {
-    view.write(chunk.data);
+    await view.write(chunk.data);
     view.offset = chunk.offset;
   }
 };
@@ -38,7 +38,7 @@ export const pumpOutput = async (
           onTerminal(chunk);
           return;
         }
-        applyTerminalOutput(view, chunk);
+        await applyTerminalOutput(view, chunk);
         failures = 0;
       }
       if (!signal.aborted)
