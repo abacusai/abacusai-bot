@@ -68,3 +68,33 @@ it("R5-T20 MCP form refreshes untouched fields twice and retains the edited comm
     },
   });
 });
+it("R5-T20 MCP transport shows only its fields and rejects a non-HTTP URL", async () => {
+  const add = vi.fn(async () => ({ success: true }));
+  app = await renderApp("/library/mcp?server=new", {
+    procedures: {
+      mcp: {
+        list: os.mcp.list.handler(() => []),
+        add: os.mcp.add.handler(add),
+      },
+    },
+  });
+  expect(await screen.findByLabelText("Command")).not.toBeNull();
+  expect(screen.queryByLabelText("URL")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Transport"), {
+    target: { value: "http" },
+  });
+  fireEvent.change(await screen.findByLabelText("URL"), {
+    target: { value: "file:///private/config" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
+    target: { value: "server" },
+  });
+  expect(screen.queryByLabelText("Command")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(
+    await screen.findByText(
+      "Enter a name and a command, or a valid HTTP(S) URL."
+    )
+  ).not.toBeNull();
+  expect(add).not.toHaveBeenCalled();
+});

@@ -259,7 +259,17 @@ export const McpPage = () => {
                   <StatePill>
                     {server.config.disabled
                       ? t("phase5.disabled")
-                      : (live?.status ?? t("phase5.notConnected"))}
+                      : t(
+                          live?.status === "connected"
+                            ? "phase5.connected"
+                            : live?.status === "connecting"
+                              ? "phase5.connecting"
+                              : live?.status === "error"
+                                ? "phase5.failed"
+                                : live?.status === "auth-required"
+                                  ? "phase5.authRequired"
+                                  : "phase5.notConnected"
+                        )}
                   </StatePill>
                   <Button
                     size="sm"
@@ -578,46 +588,77 @@ export const McpServerDialog = ({
                   </Field>
                 )}
               </form.Field>
-              {(
-                [
-                  "name",
-                  "command",
-                  "url",
-                  "args",
-                  "env",
-                  "headers",
-                  "clientId",
-                  "clientSecret",
-                  "scope",
-                ] as const
-              ).map((key) => (
-                <form.Field key={key} name={key}>
-                  {(f) => (
-                    <Field>
-                      <FieldLabel htmlFor={`mcp-${key}`}>
-                        {t(`phase5.mcpFields.${key}`)}
-                      </FieldLabel>
-                      {["args", "env", "headers"].includes(key) ? (
-                        <Textarea
-                          id={`mcp-${key}`}
-                          value={f.state.value}
-                          onChange={(e) => f.handleChange(e.target.value)}
-                          onBlur={f.handleBlur}
-                        />
-                      ) : (
-                        <Input
-                          id={`mcp-${key}`}
-                          value={f.state.value}
-                          disabled={key === "name" && name !== "new"}
-                          type={key === "clientSecret" ? "password" : "text"}
-                          onChange={(e) => f.handleChange(e.target.value)}
-                          onBlur={f.handleBlur}
-                        />
-                      )}
-                    </Field>
-                  )}
-                </form.Field>
-              ))}
+              <form.Subscribe selector={(state) => state.values.transport}>
+                {(transport) => (
+                  <>
+                    {(
+                      [
+                        "name",
+                        "command",
+                        "url",
+                        "args",
+                        "env",
+                        "headers",
+                        "clientId",
+                        "clientSecret",
+                        "scope",
+                      ] as const
+                    )
+                      .filter(
+                        (key) =>
+                          key === "name" ||
+                          (transport === "stdio"
+                            ? ["command", "args", "env"].includes(key)
+                            : [
+                                "url",
+                                "headers",
+                                "clientId",
+                                "clientSecret",
+                                "scope",
+                              ].includes(key))
+                      )
+                      .map((key) => (
+                        <form.Field key={key} name={key}>
+                          {(f) => (
+                            <Field>
+                              <FieldLabel htmlFor={`mcp-${key}`}>
+                                {t(`phase5.mcpFields.${key}`)}
+                              </FieldLabel>
+                              {["args", "env", "headers"].includes(key) ? (
+                                <Textarea
+                                  id={`mcp-${key}`}
+                                  value={f.state.value}
+                                  onChange={(e) =>
+                                    f.handleChange(e.target.value)
+                                  }
+                                  onBlur={f.handleBlur}
+                                />
+                              ) : (
+                                <Input
+                                  id={`mcp-${key}`}
+                                  value={f.state.value}
+                                  disabled={key === "name" && name !== "new"}
+                                  type={
+                                    key === "clientSecret" ? "password" : "text"
+                                  }
+                                  onChange={(e) =>
+                                    f.handleChange(e.target.value)
+                                  }
+                                  onBlur={f.handleBlur}
+                                />
+                              )}
+                            </Field>
+                          )}
+                        </form.Field>
+                      ))}
+                  </>
+                )}
+              </form.Subscribe>
+              <form.Subscribe selector={(state) => state.isValid}>
+                {(valid) =>
+                  valid ? null : <p role="alert">{t("phase5.invalidMcp")}</p>
+                }
+              </form.Subscribe>
               {error && <p role="alert">{error}</p>}
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={close}>
