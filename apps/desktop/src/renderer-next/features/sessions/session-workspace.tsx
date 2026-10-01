@@ -24,7 +24,9 @@ import { useAgentLifecycle } from "./data/agent-start";
 import {
   useWorkspace,
   useSessionsTransport,
-  sessionsQueries,
+  useCheckoutQueries,
+  useCheckoutWatch,
+  effectiveCheckoutIdentity,
 } from "./data/queries";
 import { DeviceTab } from "./device/device-tab";
 import { openTab } from "./dock/panel-tabs-store";
@@ -58,7 +60,7 @@ export const SessionWorkspace = ({
   const workspace = useWorkspace(row.workspaceId);
   const checkout = { workspaceId: row.workspaceId, sessionId: row.id };
   const status = useQuery(
-    sessionsQueries(transport.orpc).checkoutStatus(checkout)
+    useCheckoutQueries(checkout).checkoutStatus(checkout)
   );
   const root = status.data?.path ?? row.worktreePath ?? workspace?.path ?? "";
   const key = sessionConversationKey(row.workspaceId, row.id);
@@ -72,20 +74,12 @@ export const SessionWorkspace = ({
   useEffect(() => {
     if (status.data?.exists === false) controller.unavailable();
   }, [status.data?.exists, controller]);
-  useEffect(() => {
-    const abort = new AbortController();
-    void (async () => {
-      try {
-        for await (const _ of await transport.client.git.watch(
-          { checkout: { workspaceId: row.workspaceId, sessionId: row.id } },
-          { signal: abort.signal }
-        )) {
-          if (abort.signal.aborted) break;
-        }
-      } catch {}
-    })();
-    return () => abort.abort();
-  }, [transport, row.workspaceId, row.id]);
+  const checkoutIdentity = effectiveCheckoutIdentity(
+    row.workspaceId,
+    row,
+    workspace?.path
+  );
+  useCheckoutWatch(transport, checkout, checkoutIdentity);
   const select = (tab: string, extra: Record<string, unknown> = {}) =>
     void navigate({
       to: ".",

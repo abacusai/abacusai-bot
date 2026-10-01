@@ -13,7 +13,7 @@ import { AgentMode } from "#shared/agent-types";
 import type { SessionRow } from "#shared/contract/rows";
 import { resolveConfiguredModel } from "#shared/models";
 
-import { sessionsQueries, useSessionsTransport } from "./queries";
+import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";
 export const useSessionComposerModel = (row?: SessionRow) => {
   const { t } = useTranslation();
@@ -21,7 +21,10 @@ export const useSessionComposerModel = (row?: SessionRow) => {
   const prefs = usePrefs();
   const transport = useSessionsTransport();
   const navigate = useAppNavigate();
-  const options = sessionsQueries(transport.orpc);
+  const options = useCheckoutQueries({
+    workspaceId: row?.workspaceId ?? "none",
+    sessionId: row?.id,
+  });
   const catalog = useQuery(options.models());
   const settings = useQuery(options.settings());
   const sandbox = useQuery(options.sandbox());
