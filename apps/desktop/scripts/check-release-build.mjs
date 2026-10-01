@@ -1,11 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { assertUpgradeVersion } from "./check-release-versions.mjs";
 const desktop = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   ".."
 );
 export const checkReleaseBuild = (dist = path.join(desktop, "dist")) => {
+  assertUpgradeVersion(
+    JSON.parse(fs.readFileSync(path.join(desktop, "package.json"), "utf8"))
+      .version
+  );
   const policy = JSON.parse(
     fs.readFileSync(path.join(dist, "renderer", "release-build.json"), "utf8")
   );

@@ -1,6 +1,6 @@
 {
   "name": "@abacus-ai/desktop",
-  "version": "1.0.13",
+  "version": "1.0.86",
   "private": true,
   "description": "AbacusAI Bot: free, open-source personal agents for your messaging apps, tools and services.",
   "homepage": "https://github.com/abacusai/abacusai-bot",
@@ -60,6 +60,7 @@
     "dev:fixtures": "VITE_NEXT_DB_FIXTURES=1 vite",
     "screenshots": "node scripts/screenshots.mjs",
     "check:release": "node scripts/check-release-build.mjs",
+    "check:release-versions": "node scripts/check-release-versions.mjs",
     "generate:notices": "node scripts/generate-notices.js",
     "generate:routes": "node scripts/generate-routes.mjs",
     "check:chat-bundle": "node scripts/check-chat-bundle.mjs",
