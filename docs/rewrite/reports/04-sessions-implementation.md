@@ -2,38 +2,55 @@
 
 **Phase 4 is not acceptance complete.** The route/start/checkout/dock/resource paths work in the native smoke run, but several parity details and the full R4 matrix remain unfinished. Do not mark this slice done or use it as a cut-over gate.
 
-Base `33301dc9`, branch `codex-sessions`. Main/shared/agent source was not modified. Legacy renderer changes are additive locale keys. Chat, bots and shell amendments have separate commits; the final sessions composition commit includes route wiring.
+Continuation base `fa80344a`, branch `codex-sessions`. Merge `96dd016d` includes the chat-kit and bots fixes through `d68076ce` and the subsequent incoming progress update. Continuation edits do not change main or agent source; the merge carries the incoming branch’s existing changes. The authorized main B-T4 amendment is test-only. Terminal protocol helpers now live in shared code; two legacy adapters are pinned compatibility shims.
 
 ## Implemented behavior
 
-- Awaited collection loaders; workspace resolution; new-session kit composer with starters, worktree/exec tray, checkout-scoped mentions and history.
-- Persisted stage machine and caller message/run IDs; model/mode insert; idempotent materialization reconciliation; scope promotion; kit envelope handoff and Continue/Discard.
-- Session chat kit composition, connector card/controller, agent lifecycle backoff and incarnation restoration, missing checkout/read-only handling, tab-reference search validation and scoped masked full diff.
-- Own bounded dock reducer, recursive minima/folding, pixel preference writes, Chat-first compact strip, action-based hotkeys and singleton tab protection.
-- Ghostty terminal module views and offset pump, hidden live output, repaint adapter; shared document native browser presenter with captures and stale-candidate guards; guarded materializeFile previews.
-- Checkout files/search/rename/trash, fingerprint/scope Changes/Staged/Merged lists, Keep/Undo, git/tool full diff, public-kit Agents list/detail/Continue, initial H.264/MJPEG device player and Simulator-window fallback.
-- Shared run-finished feed/sound player, unread/attention, background previews, additive locale keys and gallery inventory.
+The original route, persisted creation stage machine, checkout-scoped chat/diffs, dock, terminal output pump, native browser presenter, files and agents remain. This continuation adds:
+
+- A common sidebar action list for row and context menus, title rename, four recent sessions with shared relative stamps, a visible model-setup CTA, missing-workspace relocation/deletion, routine navigation, PR hover/checks, tasks and a successful-run ChangesCard.
+- Four dock edge drop zones and tab reorder destinations, duplicate-title ordinals, shell selection, terminal links opening embedded browser tabs, DEC mouse reporting through shared encoders, terminal-generation reattachment, ordered bounded UTF-8 writes and an empty-snapshot guard for Ghostty’s zero-byte allocator. Default cell colors update in place with the document theme; the cursor follows the foreground token.
+- Embedded bots browser integration through `registerBrowserOpen`. Registration stays mounted when another panel is selected. Browser profiles, zoom, devtools, site-data clearing, materialization Retry, stale-result guards and a 500 ms capture deadline.
+- Folder Trash confirmation, file tree menus including Rename, drag moves, git decorations, and the incoming shared `components/file-preview` PPTX deck viewer.
+- Device controls, a five-second first-frame watchdog, H264 decoder reopen after queue overflow, ten-second hidden grace, bottom-anchored simulator crop, source retries, a permission-denied latch and screenshot fallback. Simulator capture boots first; failed playback stops media tracks.
+- A merged needs-you group, notification-click navigation and keyless active-session/bot preview consumption. Completion notices wait for table snapshots; the shared resume cursor advances only after buffered listeners settle.
+- Real resource gallery components, a 53-entry legacy translation keymap, and native-layout accessibility measurements. Light-mode contrast and tablist semantics found by axe were corrected.
+
+## Merge resolution
+
+| Conflicted file | Combined behavior |
+|---|---|
+| `features/bots/watcher.tsx` | Incoming snapshot buffering and bot/routine attribution; shared document run-finished subscription. |
+| `features/chat/index.ts` | Incoming lazy gallery/runtime exports and the sessions public kit APIs. |
+| `features/chat/kit/context.tsx` | Incoming dictation state and sessions composer modes, blocked state, history and durable envelope callback. |
+| `features/chat/kit/tools/tool-line.tsx` | Incoming mounted tool windows/skins/first-seen bookkeeping and scoped sessions subagent diff resolution. |
+| `features/shell/hotkeys.tsx` | Incoming shared `useAppHotkey` and sessions action IDs/terminal chords; action dispatch lives in the shared hotkey module. |
+| `features/shell/index.ts` | Incoming URL registry plus sessions dock/presenter exports; no duplicate hotkey export. |
+| `routeTree.gen.ts` | Regenerated through the router plugin. Review is a sibling redirect; diff remains masked under the session. Its snapshot was updated. |
+| `routes/_shell/(sessions)/sessions.$sessionId.tsx` | Sessions composition using the incoming RouterContext chat runtime. |
+| `test-support/app-harness.tsx` | Incoming browser events plus sessions browser/runtime/files test controls. |
+| `docs/rewrite/PROGRESS.md` | Incoming version, with only the phase-4 row updated. |
 
 ## Validation
 
-The first full direct-binary run with `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1` covered renderer-next/main/shared/main-serial: 4,013 passed, 9 failed, 7 todo; 365 passed files, 4 failed files, 1 skipped file. Eight renderer failures were corrected in targeted checks. Remaining main B-T4 failure expects `ws-1` while the checkout-aware collection correctly keys `ws-1:primary`. No main source was edited.
+Prerequisites built: connectors, agent plus `write-runtime-package.js`, updater. Install used `pnpm install --pm-on-fail=ignore`. Checks use direct binaries; hooks still report that lefthook is absent.
 
-TypeScript, lint (legacy warnings only), formatting, registry, legacy-diff, knip, JSX i18n and locales checks were run. Final rerun counts are appended below. Connectors, agent (including runtime package writer) and updater dist prerequisites were built. Electron was installed through its install script.
+The first continuation full renderer-next/main/shared run had **3,859 passed, one stale route snapshot failed, seven todo**, across 379 passed files, one failed and one skipped. The corrected route snapshot passes all 17 router tests. Final gates and native results are recorded below.
 
-`apps/desktop/e2e/sessions-real.mjs` uses real main and PTY, an isolated canonical-path profile and a loopback fake provider. Eight smoke checks passed; these only partially cover R4-T13/T29/T30/T34. The macOS `/var` scratch alias initially caused main materialization to report Worktree not found; canonicalizing the scratch path resolved it.
+The native driver uses an isolated canonical-path profile, real main and PTY, a fake model provider and a loopback HTML server. It now tests hidden unbroken 5 MB output from a quiet foreground producer (avoiding interactive-shell resize redraws), same-document output reconnect, retained-tail document reload, native browser capture pixels and Retina-scaled dimensions, guarded local HTML rendering, worktree Keep, masked diff and live deletion. Browser pixel assertions allow an RGB tolerance of two for macOS color management. It records real-layout axe including color contrast, rather than disabling that rule as in jsdom.
 
 ## Change requests and unfinished work
 
-1. Main test owner: update B-T4's gitState expected key in `src/main/rpc/tables/collections.e2e.test.ts` to checkout identity. This is a stale test expectation, not a missing procedure.
-2. Main/agent owner: §26.3 joined concurrent agent.start readiness still needs its main-side implementation/proof. Renderer uses the existing contract.
-3. Main settings owner: settings.events has credentials changes, no exec-backend event. Picker applies returned state immediately; cross-window invalidation requires an event.
-4. Ownership conflict: §26.9 requests shared terminal encoders and legacy compatibility wrappers, while this task prohibits shared/old renderer source edits. Local renderer handling exists; shared DEC mouse parity/extraction remains open.
-5. Renderer: full sidebar/context menus, title rename, collapsed recent list, no-model CTA, workspace relocate/delete pane, PR hover/checks, tasks, last-run ChangesCard, sandbox/network attach and routine navigation remain incomplete.
-6. Dock/terminal: complete pointer drop/reorder zones, shell picker, links, DEC mouse parity, superseded-generation reattach and retained-tail/repaint-control proof remain incomplete.
-7. Browser: bots presenter migration; profile/zoom/devtools/site-data controls; materialization Retry; capture deadlines; all native rect/pixel/occlusion/local-file proofs remain incomplete.
-8. Files/device: folder Trash confirmation, full menus/drag/git decoration and actual PPTX deck viewer; full device controls, 5-second watchdog, overflow reopen, 10-second hidden grace, crop/retries/permission latch and snapshot fallback remain incomplete.
-9. Preview/attention: full keyless bot/start routing, visible duplicate identity, merged needs-you group and notification-click navigation remain incomplete.
-10. Acceptance: the dedicated cases below, complete gallery states (some resource sections are placeholders), i18n migration keymap, computed contrast and real-layout axe remain incomplete. New locale copy currently has English fallback; existing starter names/details retain translations.
+1. **Done:** B-T4 expects checkout identity `ws-1:primary`; main test-only amendment.
+2. **Other owner / absent contract:** joined concurrent `agent.start` readiness. The renderer uses the existing contract; no assumption that the follow-up has landed.
+3. **Other owner / absent contract:** settings exec-backend event. Picker applies returned state; no invented event for cross-window invalidation.
+4. **Done implementation:** shared terminal key/mouse helpers and one-line legacy wrappers with exact-commit allow-list pins. Native platform-byte coverage remains partial.
+5. **Implemented:** session action menus, title rename, collapsed recent list, no-model CTA, workspace recovery pane, PR hover/checks, tasks, ChangesCard and routine navigation. Workspace menus, search highlighting and folder drop are now implemented. The separately committed kit permission-action slot links only to an identified terminal already in this dock. ChangesCard now joins the latest outcome’s written paths to git stats; regression tests exclude unrelated files, cleared changes, failed runs and unavailable history fences. **Remaining:** complete UI proof.
+6. **Implemented:** drop/reorder zones, shell picker, URL links, DEC mouse, generation reattach. Native retained-tail reload has the same generation/offset and retained marker. **Remaining:** exact full-buffer comparison, real pointer-drag/menu-equivalence matrix, multiple PTY/promotion cases, Windows/ConPTY key-byte proof and repaint-disabled checksum control.
+7. **Implemented:** bots presenter/URL registry migration, profile/zoom/devtools/site-data controls, Retry and capture deadline. Native viewport dimensions, loopback pixels and guarded local HTML are measured. **Remaining:** native two-owner/zoom/occlusion matrix and local-file escape/security UI cases.
+8. **Implemented:** folder confirmation, menus/drag/git marks, shared PPTX viewer, device controls/watchdog/overflow/grace/crop/retries/latch/snapshots. **Remaining:** complete file mutation/viewer matrix and real device permission, reconnect, hidden-grace and controls proof; no physical device was available.
+9. **Implemented:** active session and bot keyless routing, visible duplicate identity, merged needs-you, notification navigation. Start-draft resources now consume keyless events in draft scope; the foreign-scope regression passes. **Remaining:** complete background/keyless/de-duplication integration matrix.
+10. **Implemented:** resource fixtures, translation reuse keymap and native axe/contrast checks. **Remaining:** all gallery board states/overlays, motion/transition-count acceptance and the dedicated R4 cases below. Unmatched new locale copy retains English fallback.
 
 ## R4 status
 
@@ -41,7 +58,7 @@ Partial evidence does not mean the entire acceptance row passed. Browser placeho
 
 | ID | Status and evidence |
 |---|---|
-| R4-T1 | Partial / not fully covered: Route snapshot and native masked dock mounting; reload/back/scroll/draft matrix pending. |
+| R4-T1 | Partial / not fully covered: Generated route snapshot, native masked dock mounting and real-session route snapshot after correcting parameter-change hydration; full reload/back/scroll/draft matrix pending. |
 | R4-T2 | Partial / not fully covered: Existing nav-type suite runs; dedicated session matrix pending. |
 | R4-T3 | Partial / not fully covered: Loaders await tables and avoid hydrate on preload; delayed-snapshot/error Retry tests pending. |
 | R4-T4 | Partial / not fully covered: Native live deletion; delayed unknown/editor/owned redirect tests pending. |
@@ -50,7 +67,7 @@ Partial evidence does not mean the entire acceptance row passed. Browser placeho
 | R4-T7 | Partial / not fully covered: Real creation exercised; complete actions/prefs rollback matrix pending. |
 | R4-T8 | Partial / not fully covered: Three lifecycle tests; readiness-joined start proof outside renderer scope. |
 | R4-T9 | Partial / not fully covered: Attention precedence test; unread/run integration matrix pending. |
-| R4-T10 | Partial / not fully covered: Two sidebar tests; complete states/menu/search matrix pending. |
+| R4-T10 | Partial / not fully covered: Common seven-action row/context menu, merged needs-you and relative stamps; Workspace menus/recovery, highlighted search and folder drop implemented; complete action/prefs rollback matrix pending. |
 | R4-T11 | Partial / not fully covered: Structure and traversal guards; full AST forbidden-error-pattern checks pending. |
 | R4-T12 | Partial / not fully covered: Stage reconciliation unit test and native new worktree; picker/reload/detach cases pending. |
 | R4-T13 | Partial / not fully covered: Caller IDs and one native first admission; acceptance-before-clear reload not exercised. |
@@ -58,28 +75,28 @@ Partial evidence does not mean the entire acceptance row passed. Browser placeho
 | R4-T15 | Partial / not fully covered: Reducer/bands tests; pixel restore/back-forward matrix pending. |
 | R4-T16 | Partial / not fully covered: Tab persistence exists; promotion/existence/eviction dedicated tests pending. |
 | R4-T17 | Partial / not fully covered: Output append/replacement test; resync/retired/exit UI matrix pending. |
-| R4-T18 | Partial / not fully covered: Basic native presenter recovery; delayed stale candidate/profile/overlay tests pending. |
-| R4-T19 | Partial / not fully covered: Checkout-aware operations; complete files UI/mutation/viewer tests pending. |
-| R4-T20 | Partial / not fully covered: Native terminal pixels visible; checksum control and computed contrast missing. |
-| R4-T21 | Partial / not fully covered: Reducer limits; real pointer drag and menu equivalence pending. |
-| R4-T22 | Partial / not fully covered: Literal keys and starter byte identity; migration keymap missing. |
-| R4-T23 | Partial / not fully covered: Four gallery axe cases; all sections/overlays and real contrast missing. |
-| R4-T24 | Partial / not fully covered: Code/markdown/image previews exist; actual PPTX deck viewer missing. |
-| R4-T25 | Partial / not fully covered: Diff-kind/review fingerprint tests and native Keep; full scopes/Undo/ChangesCard test missing. |
-| R4-T26 | Partial / not fully covered: session-view implementation; exact Electron transition counts not measured. |
+| R4-T18 | Partial / not fully covered: Capture deadline and equivalent-lease candidate regression pass; bots URL integration covered; delayed stale/profile/overlay matrix pending. |
+| R4-T19 | Partial / not fully covered: Folder confirmation, inline/menu rename, drag moves and git marks; complete file mutation matrix pending. |
+| R4-T20 | Partial / not fully covered: Actual canvas background pixels match both themes; computed terminal-default/diff-add/diff-delete contrast passes at two widths. ANSI/explicit-color matrix and repaint-disabled checksum control remain pending. |
+| R4-T21 | Partial / not fully covered: Four-edge/reorder reducer tests and semantic dock toolbar; real pointer drag/menu equivalence pending. |
+| R4-T22 | Partial / not fully covered: 53-entry translation keymap, locale guard and existing starter byte identity; full copy audit pending. |
+| R4-T23 | Partial / not fully covered: Four jsdom axe cases plus native-layout contrast/axe across two widths and schemes; all gallery states/overlays pending. |
+| R4-T24 | Partial / not fully covered: Incoming PPTX deck viewer reused through FilePreview; full actual-deck session acceptance pending. |
+| R4-T25 | Partial / not fully covered: Native Keep, scoped fingerprints and successful-run ChangesCard; Latest-outcome message fences and written-path join tested; full scopes/Undo UI matrix pending. |
+| R4-T26 | Partial / not fully covered: Real chat navigation records one nav-lateral transition; session-view split/full transition-count matrix pending. |
 | R4-T27 | Partial / not fully covered: Reduced-motion global rules; dedicated motion tests absent. |
 | R4-T28 | Partial / not fully covered: Import structure scan passes; stronger complete AST checks pending. |
-| R4-T29 | Partial / not fully covered: macOS real hidden 5 MB and same-document reconnect pass; retained-tail reload/multiple PTYs/promotion/resize/Windows pending. |
-| R4-T30 | Partial / not fully covered: Real native materialization and placeholder geometry; actual native rect/zoom/occlusion/two-owner/local-file proof missing. |
+| R4-T29 | Partial / not fully covered: macOS hidden unbroken 5 MB, no-replay reconnect and quiet retained-tail document reload pass (generation/offset/marker). Exact full-buffer equality, multiple PTYs/promotion/resize/Windows remain pending. |
+| R4-T30 | Partial / not fully covered: Real native loopback pixels and scaled viewport dimensions, guarded checkout HTML pixels; zoom/occlusion/two-owner/escape matrix pending. |
 | R4-T31 | Pass inventory: Inventory test: all 111 rows with targets and explicit statuses. Does not claim green parity. |
-| R4-T32 | Partial / not fully covered: SPS/keyframe test; full decoder/fallback/crop/permission/hidden cases pending. |
-| R4-T33 | Partial / not fully covered: Existing main checkout suites run and native worktree Keep; renderer mutation isolation matrix pending. Main B-T4 key expectation stale. |
-| R4-T34 | Partial / not fully covered: Native smoke: repo/new worktree/one first message/PTY/browser/Keep/masked diff/delete; Supervised permission/ChangesCard/localhost/legacy comparison pending. |
+| R4-T32 | Partial / not fully covered: SPS/keyframe, first-frame watchdog/disposal, queue-overflow decoder reopen and crop tests; physical-device lifecycle matrix pending. |
+| R4-T33 | Partial / not fully covered: Checkout suites and native worktree Keep pass; B-T4 expectation corrected. Renderer mutation isolation matrix pending. |
+| R4-T34 | Partial / not fully covered: Native first admission/PTY/browser/local HTML/Keep/masked diff/delete; supervised permissions/ChangesCard/legacy comparison pending. |
 | R4-T35 | Partial / not fully covered: Shared refresh-before-respond connector sequence reused; session suspended-turn case missing. |
-| R4-T36 | Partial / not fully covered: Registry/background preview paths exist; full bot/start keyless and duplicate matrix incomplete. |
+| R4-T36 | Partial / not fully covered: Bots embedded URL registry integration, keyless active session/bot and duplicate labels; Start draft-scope URL regression passes; background full matrix pending. |
 | R4-T37 | Partial / not fully covered: Bounded historical resolver exists; migrated/paging/reload dedicated tests missing. |
 | R4-T38 | Partial / not fully covered: Authoritative main outcome suites run; sessions-specific complete scenario test absent. |
-| R4-T39 | Partial / not fully covered: Platform handling unit case; Electron PTY key bytes and shared compatibility extraction missing. |
+| R4-T39 | Partial / not fully covered: Shared key/mouse helpers and pinned compatibility wrappers; existing legacy mouse tests pass. Native Electron key-byte/Windows matrix pending. |
 
 ## Per-item inventory
 
@@ -207,24 +224,62 @@ All §2 rows are mirrored in `features/sessions/parity.ts`, each naming an exist
 
 `git log --oneline 33301dc9..HEAD` lists Chat public API amendments, bots shared service extraction, shell override/hotkeys/presenter/folding, sessions data/runtime/composition, validation and report commits. Hooks reported `Can't find lefthook in PATH`; checks were called directly.
 
-## Concluding gate results
+## Continuation gate results
 
-| Gate | Result |
+The acceptance status above remains partial. Automated gates are green; they do not replace the missing R4 scenarios.
+
+| Gate | Final result |
 |---|---|
-| TypeScript `tsc -b` | Pass |
-| Root oxlint | Pass; seven existing legacy React-hook warnings |
-| Root oxfmt / format check | Pass |
-| check:ui-registry | Pass, 41 files match |
-| check:legacy-diff | Pass, legacy changes additions only |
-| check:knip-next | Pass; configuration hints only |
-| check:i18n / check:locales | Pass |
-| Native sessions smoke | 8 checks passed; 16 screenshots |
-| Concluding full Vitest | **Not green:** 4,014 passed, 2 failed, 7 skipped, 7 todo; 367 passed files, 3 failed files, 1 skipped file; 311.58 seconds |
-| Follow-up structure/parity checks | 2 tests passed after the guard fix |
+| Desktop `tsc -b` | Pass. |
+| Renderer-next + main + shared, CI with two workers | **3,868 passed, 7 todo; 384 files passed, 1 skipped** (159.30 s). |
+| Terminal follow-up after the empty-write fix | **5 passed in 3 files**; UTF-8 boundaries, empty reconnect and awaited cursor advancement. |
+| Main-serial, `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1` | **293 passed in 10 files** (128.40 s). |
+| Native sessions driver | **10 checks passed**; 16 PNGs, actual terminal canvas pixels, native browser/local HTML pixels. |
+| Real-layout axe | **12 runs, zero violations**; sidebar/start/changes, 1280/900, light/dark, color-contrast enabled. Coverage follows the responsive layout; the narrow folded dock is not a diff-overlay audit. |
+| Computed colors | Terminal default **19.80/18.97**, diff add **8.31/11.46**, diff delete **6.75/8.56** (light/dark), both widths; all exceed 4.5:1. |
+| Root oxlint | Pass; seven existing legacy hook warnings, no errors. |
+| Root oxfmt | Pass. |
+| Registry | **41 files** match. |
+| Legacy diff | Pass; **19 additions/authorized pinned adapters**. |
+| Knip-next | Pass; three existing configuration hints. |
+| Locales | **2,384 keys in each of 11 locales**, no missing/extra keys or unresolved `t()` calls. |
 
-The concluding run began before the final structure guard correction, so its renderer failure is stale relative to commit `64f6cdce`; the follow-up passes. The main B-T4 key assertion still fails. The third failed file is the existing main-serial browser-snapshot suite: its tools/page-script beforeAll stalled beyond the harness's 120-second timeout; this run's Electron child was killed after more than two minutes so Vitest could complete. Seven cases were skipped by the failed hook. The first full run had completed this native suite. The native sessions driver uses a separate isolated profile and passed independently; it does not replace the failed existing harness or the missing R4 matrix.
+Earlier full runs exposed a stale generated route snapshot and timing failures under heavy parallel load. An initial main-serial run had four failures: one stalled Electron scrollback child and three chat cases. The session loader now hydrates parameter changes even when Router labels the navigation `stay`; the final full serial run above is green. No continuation main-source edits were made.
 
-No full-green claim is made. Build outputs in the untracked `.build/` are local scratch products; delivered screenshots/results are committed under this report's directory.
+Visual inspection caught terminal WASM errors missed by the original text-buffer probe. The final driver rejects both `RangeError` and `RuntimeError`. The fix skips empty reconnect writes, bounds/yields large UTF-8 copies, and awaits each write before advancing the cursor. The default-color adapter targets the installed Ghostty 0.4 render-line shape; its RGB matching cannot distinguish an explicitly chosen color identical to an original default. That color-identity case and the complete ANSI palette remain open under R4-T20.
+
+[Native results](04-sessions-native-results.json) and [screenshot manifest](04-sessions-screenshots/manifest.json) record the passing measurements. The `.build` directory is generated and left untracked.
+
+Continuation commits through the final terminal fix (first-parent order):
+
+```text
+96dd016d Merge rewrite/renderer into sessions, preserving chat and bots fixes
+ef5157ed refactor(terminal): share protocol helpers and legacy adapters
+47df9764 chore(terminal): pin authorized legacy compatibility shims
+f70a7f64 feat(browser): add runtime controls, materialization retry and capture deadline
+30192543 fix(bots): open URL deliverables in the embedded session browser
+5c7a9161 feat(sessions): finish navigation, tray actions and resource dock controls
+4e072fab feat(files): add tree menus, git decorations and folder trash confirmation
+26c52535 feat(device): recover streams and add controls and snapshot fallback
+33dbdf33 fix(bots): retain browser routing while another panel is selected
+f86fe832 fix(sessions): identify duplicate tabs and reuse legacy translations
+41b60833 fix(notices): acknowledge completion only after buffered attribution
+dc8c5668 feat(sessions): expose model setup and replace resource gallery placeholders
+6bfa17fd fix(sessions): type gallery reader and latch simulator capture permission
+73b76320 fix(sessions): expose file rename and preserve relative recent stamps
+1ca6ce99 fix(browser): retain native candidate across equivalent runtime leases
+8bf736c8 fix(device): reopen overloaded decoder behind a keyframe barrier
+e3dbdd44 fix(sessions): address real-layout contrast and tablist semantics
+b082308c feat(chat): expose route-owned permission card actions for sessions
+4aaa52be feat(sessions): add workspace recovery menus and scoped permission terminal links
+71ab9b99 feat(sessions): route start previews through the draft resource scope
+8cb62976 fix(sessions): hydrate parameter changes before route snapshots and keep reviewed text readable
+4f60b0d1 fix(sessions): attribute ChangesCard to the latest completed run
+0c55eb4c fix(terminal): resolve token colors and follow document theme changes
+7ab67a86 fix(terminal): bound ordered replays and skip empty WASM writes
+```
+
+Evidence commit `be58b6c6` contains the native driver, updated screenshots and results JSON. The following report commit updates this document and only the phase-4 progress row.
 
 Implementation commits before this report:
 
