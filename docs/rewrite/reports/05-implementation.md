@@ -17,21 +17,36 @@ The removed chat fixture export was adapted to public `loadFixtureRuntime`. A su
 - Artifacts: local-day list headings, shared preview/card/context actions, clear-search action, a 2,000-row fixture and viewport-sized card budget. The original 400-card initial window missed the FPS budget; the measured window now mounts 44 cards at 1280 px.
 - Library: persisted deferred-pairing banner with navigation/dismiss, all-flow watchdog, Chrome warning after a successful required connector, running-session refresh guards, scoped MCP logs/runtime, dormant masked credentials, visible-field validation and successive untouched-field refresh.
 - Settings: logical shortcut recording, terminal binding IDs, per-binding unbind/reset, live context/sequence conflicts; sounds preview through the shared engine; memory loading/error/retry; usage empty/refresh behavior; invite validation and channel isolation; credits tier/TTL/counter resets; install-and-use return/adoption for existing bot/session targets with late-result guards.
-- Updates: public `UpdatePill`, failedPhase state labels, retry after a rejected install, paused/stopped critical countdown and installStalled stand-down. The 300-second countdown is tested with fake timers. Ambient title-bar placement is still an integration gap.
+- Updates: public `UpdatePill`, failedPhase state labels, retry after a rejected install, paused/stopped critical countdown and installStalled stand-down. The 300-second countdown is tested with fake timers. The root now registers the ambient pill through the global end-action API, with route-persistence regression coverage.
 - i18n/architecture: 196 mappings reuse existing translations; three new validation messages translated in all shipped locales; static/dynamic/retired accounting, browser registry build probe and dedicated AST dependency/error-text guards.
 
-## Remaining work and integration requests
+## Round 1 fix pass
 
-1. **Chat public API, outside ownership:** real model picker and upgrade entry callbacks, public start-draft adoption and refreshed slash-command disk baseline. Existing bot/session route targets work; `for=draft:` cannot adopt through the current public API.
-2. **Shell global action slot, outside the allowed shell exception:** the tested public UpdatePill cannot occupy a persistent title-bar end slot because `useTopBarActions` replaces the complete route action list. About/critical/stalled surfaces work.
-3. **Notification metadata, outside ownership:** the contract contains sessionId/workspaceId only. `notifyAttention` owns gates and dedupe, and routine clicks use a live session join; kind/bot/routine click routing needs a contract/main change.
-4. **Acceptance coverage still incomplete:** one-source invalidation counts; collection failure/rollback matrix; every schedule/template field state; report switching and connector ask lifecycle; all platform/import/OAuth/skills mutations; rendered settings-search bijection; complete shortcut/quiet-hours tables; full motion choreography and §27 state galleries. Auto-reply grants without a conversation still use inline actions rather than the specified row-menu entry.
-5. **Native gate remainder:** preference restart and legacy theme/language parity, artifact reveal, scheduled-no-fire assertion, update fake-feed progression, explicit Sheet transition case and Windows launch-at-login/density hardware run.
-6. **Translations:** keymap reuse is complete for existing matching copy, but new phase-5 copy remains largely English fallback. Of 503 phase5 leaves, 422–431 are byte-identical to English in each non-English locale (includes labels/proper names). Do not treat locale synchronization as completed translation.
-7. **Required main-serial failure:** `src/main/dev/renderer-next.electron.test.ts` requests `/artifacts?type=deck`; r3 permits only file/image/link, so the route validates that old filter away and its settlement helper times out. Updating that main-source test is outside ownership. The filesystem watcher timeout passed on the targeted retry.
-8. **Phase 6:** Replay tour remains deferred to its owner. Sound's one-context consolidation is now implemented here; it is no longer an outstanding phase-5 sound-engine request.
+The renderer follow-ups were merged in `f6e671fd`. Only `PROGRESS.md` conflicted; the resolution retained both progress records. Route generation produced no route-tree change. The per-finding record is [the implementation fixes log](../specs/reviews/05-routines-artifacts-library-settings.impl-fixes-r1.md).
 
-## Validation
+All 18 review findings have behavioral regression coverage. Four repairs were already present in the continuation: editor remounting, MCP scope cleanup, the 190 px aligned artifact window, and side-panel action metadata. Removal checks failed for each. New repairs cover stored-key sign-out, parsed form resets, failed connector responses, retained global routine subscriptions, direct setup settlement, remote unlink, MCP outcomes, counter freshness, install retries, appearance consumers, Stop bindings, affected-context conflicts, late artifact observation and explicit global skills scope.
+
+The cross-owner API requests are closed. The root consumes the global end-action API; routine producers use typed kind metadata and the shell owns click routing; Models consumes public draft adoption and returns to its requester; backend events invalidate backend/sandbox queries. Incoming chat tests verify the public local-model entry callbacks and disk skills baseline fallback. Bot/session route owners still need to supply those props at their excluded composition sites; this pass does not claim those call sites changed.
+
+Required Electron computed-style coverage verifies transcript/composer text size and bubble tint using real preferences. The test failed in a build without the new stylesheet and passed with it. The obsolete main-serial artifact filter expectation now uses `type=file`; only test source changed in main.
+
+## Remaining acceptance work
+
+1. **Acceptance coverage still incomplete:** one-source invalidation counts; collection failure/rollback matrix; every schedule/template field state; report switching and connector ask lifecycle; all platform/import/OAuth/skills mutations; rendered settings-search bijection; complete shortcut/quiet-hours tables; full motion choreography and §27 state galleries. Auto-reply grants without a conversation still use inline actions rather than the specified row-menu entry.
+2. **Native gate remainder:** preference restart and legacy theme/language parity, artifact reveal, scheduled-no-fire assertion, update fake-feed progression, explicit Sheet transition case and Windows launch-at-login/density hardware run.
+3. **Translations:** keymap reuse is complete for existing matching copy, but new phase-5 copy remains largely English fallback. Of 503 phase5 leaves, 422–431 are byte-identical to English in each non-English locale (includes labels/proper names). Do not treat locale synchronization as completed translation.
+4. **Phase 6:** Replay tour remains deferred to its owner. Sound's one-context consolidation is now implemented here; it is no longer an outstanding phase-5 sound-engine request.
+
+## Round 1 validation
+
+- Desktop direct TypeScript, route generation and production gallery build passed. Route generation left the generated tree unchanged.
+- Final full renderer-next/main/shared run: **403 files passed, one skipped; 4,058 tests passed, seven todo, no unhandled errors**. The initial full run exposed a Messaging cleanup rejection; the repair passed 12 targeted tests before full confirmation.
+- Required main-serial full run: **nine files passed, one failed; 293 tests passed, one failed**. The failure was test isolation: appearance coverage left the shared app on the gallery route before reconnection coverage expected the shell. Restoring the route made the entire corrected file pass **11/11**. Combined evidence covers all **294 tests across ten files**, with no full second main-serial run claimed. The obsolete deck-filter expectation is fixed.
+- All 18 review findings have tests that fail without their fixes. Four were already repaired and received removal checks. Required native appearance coverage failed with its stylesheet removed and passed after restoration.
+- Root lint and formatting passed. Lint retains seven legacy warnings. Registry matches 42 files; legacy-diff, knip, i18n and locale checks passed, with two existing knip hints and all 2,735 locale leaves synchronized.
+- Ownership audit since `f6e671fd` found no chat/bots/sessions/agent/main implementation edits. Main changes are test-only. Historical screenshot, axe and performance evidence below was not rerun in this fix pass.
+
+## Prior continuation validation
 
 - `pnpm install --pm-on-fail=ignore` passed despite installed 12.8.1 versus pinned 12.6.0. Connectors, agent runtime package and updater were built before dist-dependent suites.
 - Desktop direct `tsc -b`: passed, including the final source changes.
@@ -68,42 +83,42 @@ The native AudioContext spy proves two oscillators; exact cue frequencies are co
 | R5-T2 | Partial | Foundation classifier and native Settings enter/out/lateral pass; complete phase-5 search-key matrix and changelog back case remain. |
 | R5-T3 | Partial | Delayed owned snapshots, 22 preload paths with no mutation/hydration, and no premature gone view pass. Run-entry hydration and foreign-run matrix remain. |
 | R5-T4 | Partial | Remote deletion closes an open routine editor without an error boundary. Complete run/artifact/MCP deletion-batch matrix remains. |
-| R5-T5 | Partial | Owned subscriptions and scope guards are wired; the one-source-at-a-time refetch-count matrix remains. |
+| R5-T5 | Partial | Owned subscriptions and scope guards are wired; the new exec-backend event invalidates only backend/sandbox query families. The full one-source-at-a-time refetch-count matrix remains. |
 | R5-T6 | Partial | State precedence and local-day/future-fire unit coverage pass. Dedicated minute-clock rerender coverage remains. |
 | R5-T7 | Partial | Real form writes and row Pause/Resume/confirm pass. Create CONFLICT, BAD_REQUEST field mapping, mutation rollback and all failure toasts remain unproved. |
-| R5-T8 | Partial | Real form whitespace/trim, discard, two successive remote updates and edited-only save pass. Every preset, template replacement and field blur matrix remain. |
+| R5-T8 | Partial | Real create/edit whitespace saves now navigate without a dirty blocker; discard, two successive remote updates and edited-only save pass. Every preset, template replacement and field blur matrix remain. |
 | R5-T9 | Partial | Inherited shared/main parser tests pass. Contract currently exposes CronParseError detail/message, not the requested code-family API; complete round-trip matrix remains. |
-| R5-T10 | Partial | Native streamed read-only report, hidden first envelope, timeout folding, retained Activity and resized width are implemented. Run-switch hydration and connector-request response matrix remain. |
+| R5-T10 | Partial | Native streamed read-only report, hidden first envelope, timeout folding, retained Activity and resized width are implemented. Failed connector hops, thrown hops and unsuccessful refreshes respond failed with errors. Run-switch hydration and the complete response matrix remain. |
 | R5-T11 | Pass | Dedicated AST guard scans owned features/molecules for feature/data boundaries, forbidden imports, window.api and error-text branches; typed file-result discriminants are explicit exceptions. |
-| R5-T12 | Pass | Four real-memory-transport cases cover trimmed exact-once send, pending disable, restored ten-exchange history and NOT_FOUND/TIMEOUT/INTERNAL_SERVER_ERROR. |
+| R5-T12 | Pass | Real-memory-transport cases cover trimmed exact-once send, pending disable, restored ten-exchange history and NOT_FOUND/TIMEOUT/INTERNAL_SERVER_ERROR; routine navigation isolates history and drafts, with a failing key-removal check. |
 | R5-T13 | Partial | 56 px state identities, shared context/ellipsis actions, real Pause/Resume and delete cancel pass. Exhaustive sidebar states and grant-without-session menu remain. |
 | R5-T14 | Partial | Provenance, session-label filters, local-midnight grouping and navigation target tests pass. Full rendered filter/window/source matrix remains. |
 | R5-T15 | Partial | Five typed probe cases and native generated-file preview pass. Real directory/reveal/filesRouter matrix remains. |
 | R5-T16 | Partial | Deferred banner/dismiss, exact-once settlement, three-minute watchdog and real credential connect pass. Catalogue-wide failure/cancel/Chrome-warning matrix remains. |
-| R5-T17 | Partial | Native connector states and dormant fields exist; complete platform pairing/QR/approval/revoke matrix remains. |
+| R5-T17 | Partial | Native connector states plus direct Connect closure on Escape, Done and navigation; shared unlink precedes disable and preserves activation on failure. Complete platform pairing/QR/approval/revoke matrix remains. |
 | R5-T18 | Partial | Gateway-before-platform flow, dormant credentials, translated field validation and ownership writes are implemented. All platform settings/cancel branches remain unproved. |
-| R5-T19 | Partial | Native STDIO MCP connected in a running session, then disabled and removed. Scope generation guards/log caps exist; rollback/import/OAuth iterator matrix remains. |
-| R5-T20 | Partial | Real untouched-field remote refresh twice, preserved edit, http(s) validation and visible-transport required fields pass. Complete args/env/OAuth/success:false matrix remains. |
-| R5-T21 | Partial | Disk baseline/nonempty-live selector and library install invalidation exist. Chat slash-menu baseline integration still needs a public chat API. |
+| R5-T19 | Partial | Native STDIO MCP lifecycle plus scope loss and stale-server response guards pass. Refresh/restart/OAuth failure and cancellation outcomes are checked. Full rollback/import/OAuth success matrix remains. |
+| R5-T20 | Partial | Real untouched-field refresh twice, preserved edit, HTTP(S) validation, visible-transport required fields and unsuccessful operation outcomes pass. Complete args/env and successful OAuth/import matrices remain. |
+| R5-T21 | Partial | Merged chat public tests cover disk baseline fallback for absent/empty live skills. Library install invalidation exists; caller-populated baseline and live install-refresh matrix remain. |
 | R5-T22 | Partial | Back to the app skips Settings history and returns to the remembered requester. Full nav group/default-target matrix remains. |
-| R5-T23 | Partial | Credits eligibility/reset, memory states, invite validation and installed/downloaded model adoption for both existing session and bot targets pass. Start-draft/picker API and exhaustive page rollback matrix remain. |
+| R5-T23 | Partial | Fresh-counter requests are isolated by exhaustion mark; old positive counters cannot clear a later warning. Stored-key sign-out, memory/invite states, installed/downloaded session/bot adoption and draft adoption/return pass. Full page rollback and real picker-to-Settings caller matrix remain. |
 | R5-T24 | Partial | Actual mode/device labels, accent folding, dynamic targets and key existence pass. Complete rendered-row/index bijection remains. |
-| R5-T25 | Partial | Real recorder/cancel, independent terminal unbind/reset, window-vs-terminal live conflicts and fixed sequence conflict pass. Full platform/restart/reserved/conflict-theft matrix remains. |
+| R5-T25 | Partial | Real recorder/cancel, terminal unbind/reset, all affected conflict contexts and self-registration exclusion pass. Mounted chat Stop honors unbinding/rebinding and focus. Full platform/restart/reserved/conflict-theft matrix remains. |
 | R5-T26 | Partial | One shared native AudioContext, preview gate bypass, live attempt dedupe and nonzero OfflineAudioContext routine-fired synthesis pass. Exhaustive kind × level × quiet-boundary table remains. |
-| R5-T27 | Partial | Public pill state table, exact 300-second critical countdown, rejected-install retry and installStalled stand-down pass. Global pill mounting and complete seed/event/About matrix remain. |
+| R5-T27 | Partial | Global pill persists across route actions; critical countdown, rejected install, historical-error retry event sequence and installStalled stand-down pass. Complete seed/event/About matrix remains. |
 | R5-T28 | Inherited pass | Merged main requirements passed in the full main/shared run. No main implementation was changed in this continuation. |
 | R5-T29 | Inherited pass | Merged prefs contracts/provenance passed in the full main/shared run. |
 | R5-T30 | Partial | Real light/dark width captures detected and verified the repaired routine row contrast. Full state-token computed ratio table remains. |
-| R5-T31 | Pass | Native 2,000-row/300-image fixture: sub-400 ms paint, ≥50 median FPS, 44-card maximum and near-viewport thumbnail gate; recorded metrics below. |
+| R5-T31 | Pass | Historical native 2,000-row/300-image budget evidence remains; new rendered eviction anchors use the 190 px full-row stride, and an initially empty list observes later resizes. No new performance capture is claimed. |
 | R5-T32 | Partial | 18 production real-layout axe checks and width/theme capture matrix; routine contrast fix rechecked in 35 clean captures. Every §27 overlay/state remains unbuilt or untested. |
 | R5-T33 | Partial | Isolated Vite browser registry probe rejects Node built-ins; every catalogue entry returns a known connectUi enum. Exact per-entry §12.4 expected-table assertion remains. |
 | R5-T34 | Partial | Reduced-motion cuts and existing typed motion imports remain green. Full report/preview choreography and all dedicated motion assertions remain. |
 | R5-T35 | Pass | All 2,735 leaves synchronized; static/dynamic/keymap/retained-leaf accounting passes, template/keymap guards pass. This is key accounting, not full translation completion. |
 | R5-T36 | Partial | Real-main fake-provider create/run/report/chat edit/pause/artifact preview, credential connect and live-session MCP lifecycle pass. Reveal, scheduled-no-fire proof, preference restart/legacy parity, fake update feed and Windows hardware run remain. |
 | R5-T37 | Pass | Dedicated AST feature/molecule boundary guard and post-merge ownership diff audit pass; no chat/bots/sessions/main/agent implementation edits. |
-| R5-T38 | Pass | All 89 parity inventory rows name existing consumers and explicit status; ST18 now correctly partial for the unmounted global pill. |
+| R5-T38 | Pass | All 89 parity inventory rows name existing consumers and explicit status; ST18 now names a mounted global update action. |
 | R5-T39 | Partial | Native one typed transition for Settings in/out/lateral, pane+sidebar groups; none for report, preview and dialogs. Explicit connector Sheet case remains. |
-| R5-T40 | Partial | Central notifyAttention gates/dedupe and routine ownership implemented. Kind-based clicks require notification contract metadata outside ownership; exhaustive reconnect table remains. |
+| R5-T40 | Partial | Cold Settings buffers early fires/completions and retains global routines; routine metadata is typed by kind and shell click routing needs no session join. Exhaustive gating/reconnect table remains. |
 | R5-T41 | Inherited pass | Merged migration/cron attempt requirements passed in the main run; renderer attempt folding tests pass. |
 
 ## Per-item parity inventory
@@ -191,7 +206,7 @@ These are the §2 rows, also stored in each owned feature's parity.ts. “Implem
 | ST15 | implemented | `features/settings/index.tsx` |
 | ST16 | partial | `features/settings/index.tsx` |
 | ST17 | implemented | `features/settings/index.tsx` |
-| ST18 | partial | `features/settings/index.tsx` |
+| ST18 | implemented | `features/settings/index.tsx` |
 | ST19 | implemented | `features/settings/index.tsx` |
 | ST20 | implemented | `features/settings/index.tsx` |
 | ST21 | implemented | `features/settings/index.tsx` |
