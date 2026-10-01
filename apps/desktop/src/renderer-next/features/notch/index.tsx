@@ -11,7 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#next/components/bot-avatar";
-import { cueForNotice } from "#next/lib/attention/cues";
+import { cueForNotice, permissionCueKey } from "#next/lib/attention/cues";
 import { runErrorCopy } from "#next/lib/attention/error-copy";
 import { resolveLook } from "#next/lib/bots/avatar";
 import { isCheckInRoutine } from "#next/lib/bots/check-in";
@@ -277,20 +277,23 @@ export const NotchShell = ({
     const next = new Map<string, string>();
     for (const session of inputs.sessions) {
       if (session.turn?.phase !== "waiting_permission") continue;
-      next.set(session.id, session.turn.updatedAt);
+      const summary = inputs.summaries.get(session.id);
+      if (!summary) continue;
+      const key = permissionCueKey(summary);
+      next.set(session.id, key);
       if (
         previousWaiting.current !== null &&
-        previousWaiting.current.get(session.id) !== session.turn.updatedAt &&
+        previousWaiting.current.get(session.id) !== key &&
         audio.current
       )
         player.current?.play("needs-you", {
           threadId: session.id,
-          dedupeKey: `${session.id}:${session.turn.updatedAt}`,
+          dedupeKey: key,
           botId: botForSession(session, current.current.inputs.routines),
         });
     }
     previousWaiting.current = next;
-  }, [inputs.sessions]);
+  }, [inputs.sessions, inputs.summaries]);
   const faceStyle = useSharedElementName(
     shown.faces[0]?.botId ? `bot-identity-${shown.faces[0].botId}` : null
   );

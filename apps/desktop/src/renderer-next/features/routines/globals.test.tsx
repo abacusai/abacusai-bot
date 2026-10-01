@@ -78,6 +78,7 @@ it("cold Settings buffers fires and completions until routines hydrate and retai
     await waitFor(() =>
       expect(sound.play).toHaveBeenCalledWith("done", {
         threadId: "early-thread",
+        dedupeKey: "early-run",
         botId: row.botId,
       })
     );
