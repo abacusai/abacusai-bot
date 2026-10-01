@@ -72,12 +72,44 @@ export const routeMasks = [
   }),
   createRouteMask({
     routeTree,
+    from: "/routines/$routineId/edit",
+    to: "/routines/$routineId",
+    params: true,
+    search: true,
+  }),
+  createRouteMask({
+    routeTree,
     from: "/bots/$botId/check-in",
     to: "/bots/$botId",
     params: true,
     search: true,
   }),
   createRouteMask({ routeTree, from: "/routines/new", to: "/routines" }),
+  createRouteMask({
+    routeTree,
+    from: "/library/messaging",
+    to: "/library/messaging",
+    search: ({ platform: _platform, ...rest }) => rest,
+  }),
+  createRouteMask({
+    routeTree,
+    from: "/library/mcp",
+    to: "/library/mcp",
+    search: ({ server: _server, ...rest }) => rest,
+  }),
+  createRouteMask({
+    routeTree,
+    from: "/library/skills",
+    to: "/library/skills",
+    search: ({ marketplace: _marketplace, ...rest }) => rest,
+  }),
+  createRouteMask({
+    routeTree,
+    from: "/settings/account",
+    to: "/settings/account",
+    search: ({ invite: _invite, ...rest }) => rest,
+  }),
+
   createRouteMask({
     routeTree,
     from: "/library/connectors",

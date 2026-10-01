@@ -1,0 +1,539 @@
+{
+  "sha": "198ba813",
+  "exitStatus": 0,
+  "failures": [],
+  "probes": {
+    "vibrancy": [
+      {
+        "theme": "light",
+        "file": "os-window-bots-new@1280-light.png",
+        "bounds": {
+          "left": 255,
+          "top": 40,
+          "width": 1280,
+          "height": 800
+        },
+        "surface": {
+          "html": "rgba(0, 0, 0, 0)",
+          "shell": "oklab(0.985 0 0 / 0.35)",
+          "platform": "darwin",
+          "titlebar": "overlay"
+        }
+      },
+      {
+        "theme": "dark",
+        "file": "os-window-bots-new@1280-dark.png",
+        "bounds": {
+          "left": 255,
+          "top": 40,
+          "width": 1280,
+          "height": 800
+        },
+        "surface": {
+          "html": "rgba(0, 0, 0, 0)",
+          "shell": "oklab(0.205 0 0 / 0.35)",
+          "platform": "darwin",
+          "titlebar": "overlay"
+        }
+      }
+    ],
+    "fullScreen": {
+      "fullScreen": true,
+      "paddingLeft": 0,
+      "topbar": 40,
+      "toolbar": 40,
+      "overlayVisible": false
+    },
+    "nativeFrame": "skipped: not linux"
+  },
+  "shots": [
+    {
+      "file": "routines@1280-light.png",
+      "route": "/routines",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "routines-new@1280-light.png",
+      "route": "/routines/new",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-routine-report@1280-light.png",
+      "route": "/__ui?fixture=routine-report",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "-ui-fixture-artifacts-grid@1280-light.png",
+      "route": "/__ui?fixture=artifacts-grid",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "library-connectors@1280-light.png",
+      "route": "/library/connectors",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "settings-general@1280-light.png",
+      "route": "/settings/general",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "settings-models@1280-light.png",
+      "route": "/settings/models",
+      "width": 1280,
+      "theme": "light",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": false
+      }
+    },
+    {
+      "file": "collapsed@1280-light.png",
+      "state": "collapsed",
+      "width": 1280,
+      "theme": "light",
+      "collapsed": {
+        "slot": {
+          "left": 56,
+          "top": 40,
+          "right": 56.34375,
+          "bottom": 800,
+          "width": 0.34375,
+          "height": 760
+        },
+        "pane": {
+          "left": 56.34375,
+          "top": 40,
+          "right": 1272,
+          "bottom": 792,
+          "width": 1215.65625,
+          "height": 752
+        },
+        "rail": {
+          "left": 0,
+          "top": 40,
+          "right": 56,
+          "bottom": 800,
+          "width": 56,
+          "height": 760
+        },
+        "occupied": "0px",
+        "floating": true,
+        "stable": true,
+        "pinnedPane": {
+          "left": 336,
+          "top": 40,
+          "right": 1272,
+          "bottom": 792,
+          "width": 936,
+          "height": 752
+        }
+      }
+    },
+    {
+      "file": "floating@1280-light.png",
+      "state": "floating",
+      "width": 1280,
+      "theme": "light",
+      "floating": {
+        "railW": 56,
+        "toolbar": 40,
+        "rect": {
+          "left": 60,
+          "top": 44,
+          "right": 340,
+          "bottom": 796,
+          "width": 280,
+          "height": 752
+        },
+        "stable": true
+      }
+    },
+    {
+      "file": "routines@1280-dark.png",
+      "route": "/routines",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "routines-new@1280-dark.png",
+      "route": "/routines/new",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-routine-report@1280-dark.png",
+      "route": "/__ui?fixture=routine-report",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "-ui-fixture-artifacts-grid@1280-dark.png",
+      "route": "/__ui?fixture=artifacts-grid",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "library-connectors@1280-dark.png",
+      "route": "/library/connectors",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "settings-general@1280-dark.png",
+      "route": "/settings/general",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "settings-models@1280-dark.png",
+      "route": "/settings/models",
+      "width": 1280,
+      "theme": "dark",
+      "geometry": {
+        "occupied": "280px",
+        "pane": {
+          "left": 336,
+          "width": 936
+        },
+        "identity": {
+          "left": 336
+        },
+        "leading": {
+          "right": 336
+        },
+        "toolbar": 40,
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "supports": true,
+        "dark": true
+      }
+    },
+    {
+      "file": "collapsed@1280-dark.png",
+      "state": "collapsed",
+      "width": 1280,
+      "theme": "dark",
+      "collapsed": {
+        "slot": {
+          "left": 56,
+          "top": 40,
+          "right": 56.3046875,
+          "bottom": 800,
+          "width": 0.3046875,
+          "height": 760
+        },
+        "pane": {
+          "left": 56.3046875,
+          "top": 40,
+          "right": 1272,
+          "bottom": 792,
+          "width": 1215.6953125,
+          "height": 752
+        },
+        "rail": {
+          "left": 0,
+          "top": 40,
+          "right": 56,
+          "bottom": 800,
+          "width": 56,
+          "height": 760
+        },
+        "occupied": "0px",
+        "floating": true,
+        "stable": true,
+        "pinnedPane": {
+          "left": 336,
+          "top": 40,
+          "right": 1272,
+          "bottom": 792,
+          "width": 936,
+          "height": 752
+        }
+      }
+    },
+    {
+      "file": "floating@1280-dark.png",
+      "state": "floating",
+      "width": 1280,
+      "theme": "dark",
+      "floating": {
+        "railW": 56,
+        "toolbar": 40,
+        "rect": {
+          "left": 60,
+          "top": 44,
+          "right": 340,
+          "bottom": 796,
+          "width": 280,
+          "height": 752
+        },
+        "stable": true
+      }
+    },
+    {
+      "file": "os-window-bots-new@1280-light.png",
+      "state": "os-window",
+      "width": 1280,
+      "theme": "light"
+    },
+    {
+      "file": "os-window-bots-new@1280-dark.png",
+      "state": "os-window",
+      "width": 1280,
+      "theme": "dark"
+    },
+    {
+      "file": "fullscreen@1280-light.png",
+      "state": "fullscreen",
+      "width": 1280,
+      "probe": {
+        "fullScreen": true,
+        "paddingLeft": 0,
+        "topbar": 40,
+        "toolbar": 40,
+        "overlayVisible": false
+      }
+    },
+    {
+      "file": "compact-sessions-new@1280-light.png",
+      "state": "compact",
+      "route": "/sessions/new",
+      "width": 1280,
+      "theme": "light",
+      "compact": {
+        "toolbar": 32,
+        "topbar": 32,
+        "rows": [24, 24, 24, 24]
+      }
+    },
+    {
+      "file": "compact-bots-new@1280-light.png",
+      "state": "compact",
+      "route": "/bots/new",
+      "width": 1280,
+      "theme": "light",
+      "compact": {
+        "toolbar": 32,
+        "topbar": 32,
+        "rows": [24, 24, 24, 24]
+      }
+    },
+    {
+      "file": "compact-sessions-new@1280-dark.png",
+      "state": "compact",
+      "route": "/sessions/new",
+      "width": 1280,
+      "theme": "dark",
+      "compact": {
+        "toolbar": 32,
+        "topbar": 32,
+        "rows": [24, 24, 24, 24]
+      }
+    },
+    {
+      "file": "compact-bots-new@1280-dark.png",
+      "state": "compact",
+      "route": "/bots/new",
+      "width": 1280,
+      "theme": "dark",
+      "compact": {
+        "toolbar": 32,
+        "topbar": 32,
+        "rows": [24, 24, 24, 24]
+      }
+    }
+  ]
+}

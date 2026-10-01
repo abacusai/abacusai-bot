@@ -7,8 +7,9 @@ interface Feed {
   listeners: Set<(notice: RunFinishedNotice) => void | Promise<void>>;
   abort: AbortController;
 }
+const resumePoints = new WeakMap<Transport, string>();
 const feeds = new WeakMap<Transport, Feed>();
-/** Both areas share one lossless resumed subscription in each document. */
+/** Bots, sessions and routines share one resumed subscription per transport. */
 export const subscribeRunFinished = (
   transport: Transport,
   listener: (notice: RunFinishedNotice) => void | Promise<void>
@@ -18,7 +19,7 @@ export const subscribeRunFinished = (
     feed = { listeners: new Set(), abort: new AbortController() };
     feeds.set(transport, feed);
     const active = feed;
-    let lastEventId: string | undefined;
+    let lastEventId = resumePoints.get(transport);
     let delivery = Promise.resolve();
     const queued = new Set<string>();
     void followNotices(
@@ -36,6 +37,7 @@ export const subscribeRunFinished = (
           .then(async () => {
             await Promise.all(listeners.map((fn) => fn(notice)));
             lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
+            if (lastEventId) resumePoints.set(transport, lastEventId);
             if (queued.size > 10_000)
               queued.delete(queued.values().next().value!);
           });

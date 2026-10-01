@@ -69,7 +69,7 @@ export interface NotifyDeps {
 }
 
 export interface AttentionNotice {
-  kind: "needs-you" | "done";
+  kind: "needs-you" | "done" | "failed";
   dedupeKey: string;
   botId: string | null;
   title: string;
@@ -80,8 +80,7 @@ export interface AttentionNotice {
 const DEDUPE_CAP = 500;
 
 /** A per-document notifier; `notify` returns whether it sent. */
-export const createNotifier = (deps: NotifyDeps) => {
-  const seen = new Set<string>();
+export const createNotifier = (deps: NotifyDeps, seen = new Set<string>()) => {
   return {
     notify(notice: AttentionNotice): boolean {
       if (deps.isWindowFocused()) return false;
@@ -111,3 +110,9 @@ export const createNotifier = (deps: NotifyDeps) => {
 };
 
 export type Notifier = ReturnType<typeof createNotifier>;
+
+/** Call the owning document notifier; all gates are centralized here. */
+export const notifyAttention = (
+  notifier: Notifier,
+  notice: AttentionNotice
+): boolean => notifier.notify(notice);

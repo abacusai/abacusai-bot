@@ -80,7 +80,7 @@ describe("ShellLayout", () => {
   it("puts the side panel in layout at xl with pixel sizes, persisted after the debounce", async () => {
     const seed = defaultSeed();
     seed.prefs = fixturePrefs({ panes: { "side-panel": 420 } });
-    await at(1280, "/library/connectors?tab=details", seed);
+    await at(1280, "/bots/chief-of-staff?tab=details", seed);
     const panel = document.querySelector(
       '[data-slot="side-panel"][data-mode="layout"]'
     );
@@ -121,7 +121,7 @@ describe("ShellLayout", () => {
   });
 
   it("uses a non-modal drawer with data-side-panel below xl, and a scrim only there", async () => {
-    await at(1000, "/library/connectors?tab=details");
+    await at(1000, "/bots/chief-of-staff?tab=details");
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -147,7 +147,7 @@ describe("ShellLayout", () => {
   });
 
   it("has no scrim at xl", async () => {
-    await at(1280, "/library/connectors?tab=details");
+    await at(1280, "/bots/chief-of-staff?tab=details");
     expect(document.querySelector('[data-slot="side-panel-scrim"]')).toBeNull();
   });
 
@@ -420,7 +420,7 @@ describe("the title bar", () => {
   });
 
   it("panel tabs are borderless chips at the bar's control height (V7)", async () => {
-    await at(1280, "/library/connectors?tab=details");
+    await at(1280, "/bots/chief-of-staff?tab=details");
     const tabs = within(
       document.querySelector<HTMLElement>('[data-slot="topbar"]')!
     ).getAllByRole("tab");

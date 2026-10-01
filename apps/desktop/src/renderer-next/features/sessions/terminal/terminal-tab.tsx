@@ -1,5 +1,5 @@
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useContext, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { repaint, writeTerminalData } from "#next/components/terminal/ghostty";
@@ -8,6 +8,7 @@ import {
   type TerminalAction,
 } from "#next/components/terminal/keys";
 import { followNotices } from "#next/data/queries/live";
+import { TerminalActionBindingsContext } from "#next/lib/keyboard/action-bindings";
 import type { SessionRow } from "#shared/contract/rows";
 import {
   sessionConversationKey,
@@ -41,7 +42,14 @@ export const TerminalTab = ({
   const key = sessionConversationKey(row.workspaceId, row.id);
   const [error, setError] = useState<string | null>(null);
   const focused = useRef(false);
-  const action = useEffectEvent(dispatch);
+  const bindings = useContext(TerminalActionBindingsContext);
+  const handleKey = useEffectEvent(
+    (
+      event: KeyboardEvent,
+      platform: "mac" | "windows" | "linux",
+      term: Parameters<typeof terminalKeyHandler>[2]
+    ) => terminalKeyHandler(platform, dispatch, term, bindings)(event)
+  );
   const openUrl = useEffectEvent(onUrl);
   const close = useEffectEvent(onClose);
   useEffect(() => {
@@ -90,14 +98,14 @@ export const TerminalTab = ({
         });
         disposers.push(() => input.dispose());
         const platform = document.documentElement.dataset.platform;
-        view.term.attachCustomKeyEventHandler(
-          terminalKeyHandler(
+        view.term.attachCustomKeyEventHandler((event) =>
+          handleKey(
+            event,
             platform === "darwin"
               ? "mac"
               : platform === "win32"
                 ? "windows"
                 : "linux",
-            (id) => action(id),
             view.term
           )
         );
@@ -250,6 +258,7 @@ export const TerminalTab = ({
   return (
     <div
       className="flex size-full flex-col"
+      data-hotkeys="terminal"
       role="region"
       aria-label={t("sessions.terminal.title")}
       onFocusCapture={() => {

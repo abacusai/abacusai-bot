@@ -10,7 +10,12 @@
  * (bold) when `guardRichText` is set.
  */
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { useEffect, useEffectEvent } from "react";
+import { useContext, useEffect, useEffectEvent } from "react";
+
+import {
+  ActionBindingsContext,
+  TerminalActionBindingsContext,
+} from "./keyboard/action-bindings";
 
 const actions = new Map<string, () => void>();
 export const dispatchHotkeyAction = (id: string): void => {
@@ -30,19 +35,32 @@ const isRichTextTarget = (target: EventTarget | null): boolean => {
 };
 
 export const useAppHotkey = (
-  binding: string,
+  binding: string | null,
   handler: () => void,
   options: {
     guardRichText?: boolean;
     enabled?: boolean;
     actionId?: string;
+    context?: "window" | "terminal";
   } = {}
 ): void => {
+  const windowBindings = useContext(ActionBindingsContext);
+  const terminalBindings = useContext(TerminalActionBindingsContext);
+  const bindings =
+    options.context === "terminal" ? terminalBindings : windowBindings;
+  // The chat kit's pre-migration Stop chord has one action identity. Resolving
+  // here keeps its enabled/focused guard and prevents a competing handler.
+  const actionId =
+    options.actionId ?? (binding === "Mod+." ? "stop-run" : undefined);
+  const resolved =
+    actionId && bindings && Object.hasOwn(bindings, actionId)
+      ? bindings[actionId]!
+      : binding;
   const run = useEffectEvent(handler);
   const enabled = options.enabled ?? true;
-  const id = options.actionId ?? binding;
+  const id = actionId ?? binding;
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || id == null) return;
     const action = () => run();
     actions.set(id, action);
     return () => {
@@ -50,8 +68,16 @@ export const useAppHotkey = (
     };
   }, [id, enabled]);
   useHotkey(
-    binding as never,
+    (resolved ?? "F24") as never,
     (event) => {
+      // The terminal adapter resolves its own context and dispatches once.
+      const target = event.target as HTMLElement | null;
+      if (
+        options.context !== "terminal" &&
+        actionId != null &&
+        target?.closest?.('[data-hotkeys="terminal"]')
+      )
+        return;
       if (options.guardRichText === true && isRichTextTarget(event.target))
         return;
       event.preventDefault();
@@ -60,7 +86,8 @@ export const useAppHotkey = (
     {
       // App shortcuts fire in inputs and textareas too (§7.9 table).
       ignoreInputs: false,
-      enabled: options.enabled ?? true,
+      enabled: resolved != null && (options.enabled ?? true),
+      meta: { actionId },
     }
   );
 };

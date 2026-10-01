@@ -13,11 +13,18 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useAppHotkey } from "#next/lib/hotkeys";
+import {
+  ActionBindingsContext,
+  TerminalActionBindingsContext,
+} from "#next/lib/keyboard/action-bindings";
+import { resolveKeymap } from "#next/lib/keyboard/actions";
 import { toHotkeyPlatform } from "#next/lib/platform";
 import { Popover, PopoverContent, PopoverTrigger } from "#next/ui/popover";
 import { Toaster, toast } from "#next/ui/toast";
 
 import {
+  dispatchAppHotkey,
   APP_HOTKEYS,
   AppHotkeys,
   AppHotkeysProvider,
@@ -194,4 +201,47 @@ describe("app hotkeys", () => {
     press(document.body, "k", "KeyK", { meta: true });
     expect(spies.openCommand).toHaveBeenCalledOnce();
   });
+});
+
+it("dispatches shell and dock identities after rebinding, while terminal targets keep their context", () => {
+  const spies = actions();
+  const close = vi.fn();
+  const Dock = () => {
+    useAppHotkey("Mod+W", close, { actionId: "close-tab" });
+    return null;
+  };
+  const keymap = resolveKeymap(
+    { "command-menu": "Mod+L", "close-tab": "Mod+E" },
+    "windows"
+  );
+  render(
+    <AppHotkeysProvider platform="windows">
+      <ActionBindingsContext value={keymap.window}>
+        <TerminalActionBindingsContext value={keymap.terminal}>
+          <AppHotkeys actions={spies} />
+          <Dock />
+          <div data-hotkeys="terminal">
+            <textarea data-testid="terminal-input" />
+          </div>
+        </TerminalActionBindingsContext>
+      </ActionBindingsContext>
+    </AppHotkeysProvider>
+  );
+  press(document.body, "k", "KeyK", { ctrl: true });
+  expect(spies.openCommand).not.toHaveBeenCalled();
+  press(document.body, "l", "KeyL", { ctrl: true });
+  expect(spies.openCommand).toHaveBeenCalledOnce();
+  press(document.body, "e", "KeyE", { ctrl: true });
+  expect(close).toHaveBeenCalledOnce();
+  const event = press(screen.getByTestId("terminal-input"), "n", "KeyN", {
+    ctrl: true,
+  });
+  expect(event.defaultPrevented).toBe(false);
+  expect(spies.newInArea).not.toHaveBeenCalled();
+  act(() => {
+    dispatchAppHotkey("command");
+    dispatchAppHotkey("closeTab");
+  });
+  expect(spies.openCommand).toHaveBeenCalledTimes(2);
+  expect(close).toHaveBeenCalledTimes(2);
 });

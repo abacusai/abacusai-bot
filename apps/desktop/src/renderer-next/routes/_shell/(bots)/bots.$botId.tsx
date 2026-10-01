@@ -44,11 +44,15 @@ import { BotBrowser, BotBrowserRegistration } from "./-browser";
 type Fixture = ReturnType<
   Awaited<ReturnType<typeof loadFixtureRuntime>>
 > | null;
-let fixture: Fixture = null;
+const fixtureState: { current: Fixture } = { current: null };
 const fixtureReady: Promise<void> | null =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((fixtureRuntime) => {
-        fixture = fixtureRuntime("bot-golden-plain", {}, "fixture-bot");
+        fixtureState.current = fixtureRuntime(
+          "bot-golden-plain",
+          {},
+          "fixture-bot"
+        );
       })
     : null;
 
@@ -109,7 +113,10 @@ const ComposedChat = ({
 }) => {
   const { t } = useTranslation();
   const { chat } = Route.useRouteContext();
-  const runtime = fixture && bot.sessionId == null ? fixture.runtime : chat;
+  const runtime =
+    fixtureState.current && bot.sessionId == null
+      ? fixtureState.current.runtime
+      : chat;
   const host = useThreadHost(runtime.session(sessionId));
   useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
   const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
@@ -227,14 +234,14 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
     staleReloadMode: "blocking",
     handler: async ({ context, params, preload }) => {
       if (fixtureReady != null) await fixtureReady;
-      if (fixture) {
+      if (fixtureState.current) {
         await context.db.collections.bots.preload();
         return {
           ready: true as const,
           botId: params.botId,
           sessionId:
             context.db.collections.bots.get(params.botId)?.sessionId ??
-            fixture.threadId,
+            fixtureState.current.threadId,
         };
       }
       return loadBotChat(
