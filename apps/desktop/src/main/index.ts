@@ -34,10 +34,7 @@ import type { AbacusAccountInfo, UsageSnapshot } from "#shared/contracts";
 
 import { NotchController } from "./notch/controller";
 import { wireMainNotchEvents } from "./notch/main-events";
-import {
-  NOTCH_BANNER_SUPPRESSION,
-  NotchNotificationPolicy,
-} from "./notch/notifications";
+import { NotchNotificationPolicy } from "./notch/notifications";
 
 /**
  * Where Playwright's default `chrome` channel looks for Google Chrome (stable
@@ -105,7 +102,6 @@ import {
   rendererEntry,
   type RendererBase,
 } from "./renderer-entry";
-import { RENDERER_GENERATION } from "./renderer-generation";
 import {
   RendererHost,
   RendererSwapScheduler,
@@ -353,40 +349,12 @@ function revealMainWindow(): BaseWindow | null {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
-  backgroundTaskNotified = false;
   return win;
 }
 
 setBringToFront(() => {
   revealMainWindow();
 });
-
-// One notification per background stint. Main-process strings stay in
-// English: i18n is renderer-only.
-let backgroundTaskNotified = false;
-function notifyTaskRunningInBackground(): void {
-  if (
-    backgroundTaskNotified ||
-    (RENDERER_GENERATION === "wco" &&
-      NOTCH_BANNER_SUPPRESSION &&
-      notchController?.hasSeen())
-  )
-    return;
-  const prefs = readNotificationSettings();
-  if (!prefs.enabled) return;
-  backgroundTaskNotified = true;
-  try {
-    const notification = new Notification({
-      title: "Task still running",
-      body: "We'll notify you when it finishes.",
-      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
-    });
-    notification.on("click", () => revealMainWindow());
-    notification.show();
-  } catch {
-    // Headless or unsupported environments; non-fatal.
-  }
-}
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running.
@@ -487,13 +455,10 @@ let chromeCapability: ChromeCapability = "native-frame";
 
 function currentChromeInput() {
   return {
-    mode: RENDERER_GENERATION,
     platform: process.platform,
     dark: nativeTheme.shouldUseDarkColors,
     reducedTransparency: nativeTheme.prefersReducedTransparency,
-    overlayHeight: toolbarHeight(
-      RENDERER_GENERATION === "wco" ? getTitlebarDensity() : "comfortable"
-    ),
+    overlayHeight: toolbarHeight(getTitlebarDensity()),
     linuxMode: activeLinuxChromeMode,
   };
 }
@@ -621,14 +586,11 @@ async function createWindow(restored?: RecreatedWindowState) {
   }
 
   activeLinuxChromeMode =
-    RENDERER_GENERATION === "wco" &&
-    process.platform === "linux" &&
-    useLinuxNativeFrame()
+    process.platform === "linux" && useLinuxNativeFrame()
       ? "native-frame"
       : linuxChromeMode(process.env);
   chromeCapability =
-    RENDERER_GENERATION === "legacy" ||
-    (process.platform === "linux" && activeLinuxChromeMode === "native-frame")
+    process.platform === "linux" && activeLinuxChromeMode === "native-frame"
       ? "native-frame"
       : "overlay-pending";
 
@@ -637,7 +599,6 @@ async function createWindow(restored?: RecreatedWindowState) {
   // scheme's (transparent only under vibrancy/mica). The legacy renderer
   // sets its own theme through `theme:set`; its options are unchanged.
   const windowOptions = mainWindowOptions({
-    generation: RENDERER_GENERATION,
     prefs: prefsStore,
     nativeTheme,
     chromeInput: currentChromeInput,
@@ -659,7 +620,7 @@ async function createWindow(restored?: RecreatedWindowState) {
   // The renderer lives in the RendererHost's view, so an update can replace it.
   const mainWindow = new BaseWindow(windowOptions);
   mainWindowRef = mainWindow;
-  if (RENDERER_GENERATION === "wco") {
+  {
     const unsubscribeChromeTheme = subscribeWindowChromeTheme(
       nativeTheme,
       refreshWindowChrome
@@ -760,7 +721,6 @@ async function createWindow(restored?: RecreatedWindowState) {
 
     if (process.platform === "darwin") {
       event.preventDefault();
-      if (taskRunning) notifyTaskRunningInBackground();
       // Hiding a full-screen window leaves its Space behind as a black
       // screen; leave full screen first and hide after the transition.
       if (mainWindow.isFullScreen()) {
@@ -789,7 +749,6 @@ async function createWindow(restored?: RecreatedWindowState) {
     if (choice === 0) {
       event.preventDefault();
       mainWindow.hide();
-      notifyTaskRunningInBackground();
     }
   });
 
@@ -889,14 +848,10 @@ async function createWindow(restored?: RecreatedWindowState) {
       if (!isVisible) {
         mainWindow.center();
       }
-      if (RENDERER_GENERATION === "wco")
-        publishChromeCapability(chromeCapability);
+      publishChromeCapability(chromeCapability);
       // A silent update restart of a hidden window comes back hidden.
       if (!startHiddenAfterUpdate) mainWindow.show();
-      if (
-        RENDERER_GENERATION === "wco" &&
-        chromeCapability === "overlay-pending"
-      ) {
+      if (chromeCapability === "overlay-pending") {
         let retryTimer: ReturnType<typeof setTimeout> | undefined;
         mainWindow.once("closed", () => clearTimeout(retryTimer));
         const probeAfterShow = (): void => {
@@ -1110,8 +1065,8 @@ async function createWindow(restored?: RecreatedWindowState) {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
       sandbox: false,
       backgroundThrottling: false,
-      webviewTag: true,
       spellcheck: true,
+      webviewTag: true,
     },
     window: mainWindow,
     wire: wireRendererContents,
@@ -1431,7 +1386,7 @@ const appOperations: AppOperations = {
         const notification = new Notification({
           title,
           body,
-          silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
+          silent: notificationSilent(),
         });
         notification.on("click", () => {
           const win = revealMainWindow();
@@ -1609,12 +1564,12 @@ const appOperations: AppOperations = {
 
   async setTitlebarDensity(value) {
     const density = setTitlebarDensity(value);
-    if (RENDERER_GENERATION === "wco") {
+    {
       refreshWindowChrome();
       publishChromeState();
       if (process.platform === "darwin") await recreateMainWindow();
     }
-    return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+    return { density, appliesOnRestart: false };
   },
 
   loginItem: createLoginItem(app),
@@ -1645,14 +1600,12 @@ function publishChromeState(): void {
   if (contents == null) return;
   const chrome: WindowChromeState = chromeState();
   // The legacy renderer: the live view only, as before.
-  if (RENDERER_GENERATION === "wco")
-    // Every view in the window, a swap candidate included.
-    publishToWindowViews(
-      emitBusChannel,
-      rpcTransport?.registeredIds("main") ?? [],
-      contents.id,
-      { type: "chrome", chrome }
-    );
+  publishToWindowViews(
+    emitBusChannel,
+    rpcTransport?.registeredIds("main") ?? [],
+    contents.id,
+    { type: "chrome", chrome }
+  );
 }
 
 /** Null until whenReady has registered the IPC handlers. */
@@ -1678,7 +1631,6 @@ function installRpc(
 ): void {
   notchController = new NotchController({
     platform: process.platform,
-    generation: RENDERER_GENERATION,
     packaged: app.isPackaged,
     preload: join(import.meta.dirname, "../preload/index.cjs"),
     prefs: () => prefsStore.get(),
@@ -2051,7 +2003,7 @@ app
             ? "no main renderer"
             : rendererReadiness.failureReason(contents.id),
         companion: () =>
-          process.platform === "linux" || RENDERER_GENERATION === "legacy"
+          process.platform === "linux" || false
             ? "n/a"
             : (notchController?.smokeOutcome() ?? "pending"),
         log: (line) => console.log(line),

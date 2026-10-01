@@ -106,8 +106,6 @@ const MAIN_ROOT_FILES = [
   // Which renderer generation and document the window loads (spec 01 §3.6).
   "renderer-entry.test.ts",
   "renderer-entry.ts",
-  "renderer-generation.test.ts",
-  "renderer-generation.ts",
   "renderer-csp.test.ts",
   "renderer-csp.ts",
   // The main window's renderer view, its swap machinery, and the send-to-

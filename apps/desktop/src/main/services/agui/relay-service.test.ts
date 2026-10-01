@@ -1203,7 +1203,6 @@ describe("wire selection (review r1)", () => {
       host: host(new ScriptedAgent()),
       files: new ThreadStore({ home: () => home, log: () => undefined }),
       aguiForEverySpawn: defaultWire({
-        generation: "wco",
         isPackaged: true,
         env: {},
       }),

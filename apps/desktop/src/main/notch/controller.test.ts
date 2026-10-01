@@ -143,7 +143,7 @@ const setup = async (overrides: Partial<NotchControllerOptions> = {}) => {
   const waiters = new Map<number, (result: "ready" | "timeout") => void>();
   const options = {
     platform: "win32",
-    generation: "wco",
+
     packaged: false,
     preload: "/preload",
     prefs: () => prefs,
@@ -198,7 +198,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("R6-T25/T28 controller lifecycle and ownership", () => {
-  it.each([{ generation: "legacy" }, { platform: "linux" }])(
+  it.each([{ platform: "linux" }])(
     "creates nothing for %j",
     async (override) => {
       const { controller } = await setup(override);

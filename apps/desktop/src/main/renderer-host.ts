@@ -621,10 +621,3 @@ export const rendererWebContents = (): WebContents | null => {
  * Reaches only the app's renderer: getAllWindows() would also message the
  * connectors' hidden BrowserWindows.
  */
-export const sendToRenderer = (channel: string, ...args: unknown[]): void => {
-  try {
-    rendererWebContents()?.send(channel, ...args);
-  } catch {
-    // The renderer can go away between the check and the send.
-  }
-};
