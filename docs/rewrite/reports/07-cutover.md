@@ -207,3 +207,9 @@ Milliseconds in this table are displayed to three decimals. Decisions use the un
 The prior static M6 proxy remains 1,001,567 bytes old versus 1,253,383 bytes candidate, +25.14%, failing its 1,001,567-byte budget. The new observed CDP result is 1,001,567 versus 1,256,227 bytes, +25.43%, and also fails.
 
 No additional user login or fetch-instrumentation approval is needed for these local measurements. Windows 11 x64 reference measurements, Linux Xvfb reporting, signed RC and physical platform acceptance still need hardware or the release pipeline. Theme-frame and companion-RSS checks need implementation. Spec §19's unresolved release-policy and cap decisions remain separate user/coordinator work.
+
+## Implementation continuation
+
+| PR | Implementation checks | Release evidence |
+| --- | --- | --- |
+| C5 completion | Bridge consumers resolve to implementing main routers; exact bridge enumerations frozen; final feature metadata and visible-note generator. Focused: 11 tests. | Hardware, signed, comparative and packaged acceptance gaps above remain open. Green rows record implementation checks only; partial acceptance is deferred. |
