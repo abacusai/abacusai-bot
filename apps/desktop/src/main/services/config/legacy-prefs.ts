@@ -475,18 +475,6 @@ export const importLegacySoundOptOut = (
   return "reset";
 };
 
-/** `config.json`'s sound opt-out and its writes (`setNotificationSettings`). */
-export interface LegacySoundSource {
-  read(): unknown;
-  onWrite(listener: () => void): () => void;
-}
-
-/** The legacy side of the live sync: `RendererStateStore`'s read face. */
-export interface LegacyStateSource {
-  get(key: string): string | undefined;
-  onSet(listener: (key: string, value: string | null) => void): () => void;
-}
-
 /** Read-only startup import kept through release N, including after N+1. */
 export const importLegacyPrefsAtStartup = (
   source: string,
@@ -502,52 +490,4 @@ export const importLegacyPrefsAtStartup = (
     LEGACY_PREFS_FIELDS,
     new Set(Object.keys(retired?.keys ?? {}))
   );
-};
-
-/**
- * The live legacy sync (spec 00 C.4 point 2), for the transition only: the
- * old renderer stays the shipped UI until the cut-over, so every change it
- * makes to a mapped key is carried into `prefs.json` as it happens. Starts
- * with a full import, which also covers a launch whose migration step failed
- * and anything an older build changed while this one was not running.
- * Returns the unsubscribe.
- */
-export const installLegacyPrefsSync = (
-  legacy: LegacyStateSource,
-  prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">,
-  log: (message: string, error: unknown) => void = (message, error) =>
-    console.error(message, error),
-  sound?: LegacySoundSource,
-  sourceFile?: string
-): (() => void) => {
-  const read = (key: string): string | undefined => legacy.get(key);
-  const syncSound = (): void => {
-    if (sound == null) return;
-    try {
-      importLegacySoundOptOut(prefs, sound.read());
-    } catch (error) {
-      log("[legacy-prefs] sound opt-out sync failed", error);
-    }
-  };
-  try {
-    if (sourceFile === undefined) importLegacyPrefs(prefs, read);
-    else importLegacyPrefsAtStartup(sourceFile, prefs);
-  } catch (error) {
-    log("[legacy-prefs] startup import failed", error);
-  }
-  syncSound();
-  const offState = legacy.onSet((key) => {
-    const fields = LEGACY_PREFS_KEYS.get(key);
-    if (fields === undefined) return;
-    try {
-      importLegacyPrefs(prefs, read, fields);
-    } catch (error) {
-      log(`[legacy-prefs] sync of ${key} failed`, error);
-    }
-  });
-  const offSound = sound?.onWrite(syncSound) ?? (() => undefined);
-  return () => {
-    offState();
-    offSound();
-  };
 };

@@ -13,7 +13,6 @@ import { browser } from "./browser";
 import { connectors } from "./connectors";
 import { db } from "./db";
 import { devices } from "./devices";
-import { durableState } from "./durable-state";
 import { files } from "./files";
 import { git } from "./git";
 import { localModels } from "./local-models";
@@ -62,7 +61,6 @@ export const contract = {
   window,
   update,
   skills,
-  durableState,
   db,
 };
 

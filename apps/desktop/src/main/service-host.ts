@@ -1733,7 +1733,6 @@ export class ServiceHost {
           emittedAt: new Date().toISOString(),
         });
     };
-    this.transcriptService.setOnPersist(persisted);
     // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
     this.threadStore.onAguiPersist(persisted);
     this.debugSyncService.sweepOnStartup();
@@ -2674,10 +2673,6 @@ export class ServiceHost {
   readTranscript(sessionId: string): TranscriptSegment[] {
     return (this.transcriptService.read(sessionId)?.segments ??
       []) as TranscriptSegment[];
-  }
-
-  writeTranscript(sessionId: string, segments: TranscriptSegment[]): void {
-    this.transcriptService.write(sessionId, segments);
   }
 
   submitTurnFeedback(

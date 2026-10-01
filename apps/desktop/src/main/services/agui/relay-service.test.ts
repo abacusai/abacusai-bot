@@ -16,8 +16,8 @@ import type { AgentSessionStatus } from "#shared/contracts";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";
+import { LegacyTranscriptFixture as TranscriptService } from "../session/legacy-transcript-fixture.test-support";
 import { ThreadStore } from "../session/thread-store";
-import { TranscriptService } from "../session/transcript-service";
 import { AguiRelayService, type AguiRelayHost } from "./relay-service";
 
 type Command = { type: string } & Record<string, unknown>;
@@ -1136,23 +1136,6 @@ describe("streams, checkpoints and cancel (review r1)", () => {
       });
     await stream.return?.(undefined);
     await resumed.return?.(undefined);
-  });
-
-  it("the v1 dual-write never replaces the relay's agui file, even right after the relay wrote it", () => {
-    const { agent, store } = setup();
-    agent.boot();
-    for (const event of [...started("run-1"), finished("run-1")])
-      agent.emit("s1", event);
-    expect(store.readCurrentFile("s1")?.source.kind).toBe("agui");
-
-    store.writeFromV1("s1", {
-      updatedAt: new Date().toISOString(),
-      segments: [],
-    });
-
-    const file = store.readCurrentFile("s1");
-    expect(file?.source.kind).toBe("agui");
-    expect(file?.runs).toEqual([expect.objectContaining({ runId: "run-1" })]);
   });
 });
 
