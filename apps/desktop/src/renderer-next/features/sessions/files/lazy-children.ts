@@ -24,7 +24,7 @@ export const useLazyChildren = (
       return {
         ...query,
         queryKey: [...query.queryKey!, revision],
-        gcTime: 60000,
+        gcTime: 0,
       };
     }),
     combine: (results) => results.flatMap((result) => result.data ?? []),

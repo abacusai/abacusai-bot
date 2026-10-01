@@ -7,7 +7,13 @@ import {
   RouterProvider,
   useParams,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 const retained = new WeakMap<FileTree, FileTreeOptions>();
@@ -40,6 +46,8 @@ vi.mock("@pierre/trees/react", async (original) => {
     ),
   };
 });
+import { renderApp } from "#next/test-support/app-harness";
+
 import { FileTreeView } from "./index";
 
 it("renames in B after A → B through a mounted router and recreates checkout models", async () => {
@@ -110,4 +118,55 @@ it("reads current callbacks in the same checkout and preserves expansion for equ
   );
   const expanded = model.getItem("dir/")!;
   expect("isExpanded" in expanded && expanded.isExpanded()).toBe(true);
+});
+
+it("production session router sends rename only to B's checkout after A → B", async () => {
+  const rename = vi.fn(async () => {});
+  const harness = await renderApp("/sessions/spreadsheet?tab=files", {
+    fileTree: [
+      {
+        kind: "directory",
+        id: "dir",
+        absolutePath: "/repo/dir",
+        hasChildren: true,
+        name: "dir",
+        relativePath: "dir",
+        children: [
+          {
+            kind: "file",
+            id: "file",
+            absolutePath: "/repo/dir/file.txt",
+            hasChildren: false,
+            name: "file.txt",
+            relativePath: "dir/file.txt",
+          },
+        ],
+      },
+    ],
+    renameFile: rename,
+  });
+  try {
+    await screen.findByRole("button", { name: "Rename" });
+    const a = model;
+    await act(async () => {
+      await harness.router.navigate({
+        to: "/sessions/$sessionId",
+        params: { sessionId: "flights" },
+        search: { tab: "files" },
+      });
+    });
+    await screen.findByRole("button", { name: "Rename" });
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    await waitFor(() =>
+      expect(rename).toHaveBeenCalledExactlyOnceWith({
+        checkout: { workspaceId: "default", sessionId: "flights" },
+        fromPath: "dir/file.txt",
+        toPath: "dir/renamed.txt",
+      })
+    );
+    expect(model).not.toBe(a);
+  } finally {
+    harness.view.unmount();
+    await harness.cleanup();
+  }
 });
