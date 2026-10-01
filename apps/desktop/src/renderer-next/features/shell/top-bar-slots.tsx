@@ -4,19 +4,22 @@
  * as data, so the bar can render them as buttons or fold them into ⋯ at sm.
  */
 import { Store, useStore } from "@tanstack/react-store";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export interface TopBarAction {
   id: string;
   label: string;
   icon?: ReactNode;
+  /** Custom expanded control; folding uses label/icon/onSelect. */
+  render?: ReactNode;
   onSelect(): void;
 }
 
 interface SlotState {
   identity: HTMLElement | null;
   actions: TopBarAction[];
+  endActions: Map<symbol, TopBarAction[]>;
   /** Status beside the identity; only an entity route sets one (V4). */
   status: string | null;
 }
@@ -24,6 +27,7 @@ interface SlotState {
 const topBarSlots = new Store<SlotState>({
   identity: null,
   actions: [],
+  endActions: new Map(),
   status: null,
 });
 
@@ -51,8 +55,28 @@ export const useTopBarActions = (actions: TopBarAction[]): void => {
   }, [actions]);
 };
 
-export const useTopBarActionList = (): TopBarAction[] =>
-  useStore(topBarSlots, (state) => state.actions);
+/** Global controls appended after route actions, with independent lifetimes. */
+export const useTopBarEndActions = (actions: TopBarAction[]): void => {
+  const [owner] = useState(() => Symbol("top-bar-end"));
+  useEffect(() => {
+    topBarSlots.setState((state) => ({
+      ...state,
+      endActions: new Map(state.endActions).set(owner, actions),
+    }));
+    return () =>
+      topBarSlots.setState((state) => {
+        const endActions = new Map(state.endActions);
+        endActions.delete(owner);
+        return { ...state, endActions };
+      });
+  }, [owner, actions]);
+};
+
+export const useTopBarActionList = (): TopBarAction[] => {
+  const actions = useStore(topBarSlots, (state) => state.actions);
+  const endActions = useStore(topBarSlots, (state) => state.endActions);
+  return [...actions, ...[...endActions.values()].flat()];
+};
 
 /**
  * Show `status` beside the identity while the route is mounted (a running

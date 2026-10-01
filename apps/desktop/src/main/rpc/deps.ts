@@ -8,6 +8,7 @@
  */
 import type { AccountState } from "#shared/account";
 import type {
+  NotificationMetadata,
   SetDensityResult,
   WindowChromeState,
   WindowState,
@@ -86,7 +87,7 @@ export interface AppOperations {
   showNotification(
     title: string,
     body: string,
-    metadata?: { workspaceId?: string; sessionId?: string }
+    metadata?: NotificationMetadata
   ): void;
   readImageAsDataUrl(args: HostFileArgs): Promise<{
     success: boolean;
