@@ -271,6 +271,27 @@ it("R18 preserves a corrupt archive index and reconstructs completed archive evi
     ).archived.s1
   ).toBeUndefined();
 });
+for (const damage of ["manifest", "completion", "directory"] as const) {
+  it(`aborts restore with ${damage} evidence missing or invalid without replacing the index`, async () => {
+    seed(base);
+    await migrate(base);
+    const attempt = completedAttempts(base).find((a) => a.manifest.step === 4)!;
+    const index = path.join(backupsRoot(base), "restore-index.jsonl");
+    const before = fs.readFileSync(index, "utf8");
+    if (damage === "manifest")
+      write(path.join(attempt.directory, "attempt.json"), "{");
+    else
+      fs.rmSync(
+        damage === "directory"
+          ? attempt.directory
+          : path.join(attempt.directory, "completed.json"),
+        { recursive: true }
+      );
+    await expect(restoreLegacyHome(base)).rejects.toThrow(/evidence/i);
+    expect(fs.readFileSync(index, "utf8")).toBe(before);
+    expect(fs.existsSync(path.join(base, "transcripts/s1.json"))).toBe(false);
+  });
+}
 it("R18 reconstruction does not re-archive destinations consumed by an earlier restore", async () => {
   seed(base);
   await migrate(base);

@@ -16,6 +16,7 @@ import {
   type MigrationIo,
 } from "./backup";
 import type { CommitJournal } from "./journal";
+import { readRecordState } from "./record";
 
 const digest = v.pipe(v.string(), v.regex(/^[a-f0-9]{64}$/));
 const relative = v.pipe(
@@ -215,16 +216,33 @@ export const rebuildRestoreIndex = (
   io: MigrationIo = nodeIo,
   log?: (message: string) => void
 ): RestoreIndexEntry[] => {
-  const entries = completedAttempts(home, io, log).flatMap(
-    ({ directory, manifest }) =>
-      manifest.ops.map((op) => ({
-        ...op,
-        directory: path.basename(directory),
-        attempt: manifest.attempt,
-        step: manifest.step,
-        stamp: manifest.stamp,
-        roots: manifest.roots,
-      }))
+  const attempts = completedAttempts(home, io, log);
+  const state = readRecordState(home, io);
+  if (state.status === "ok") {
+    const required = [
+      ...state.record.applied.filter((entry) => !entry.restoredAt),
+      ...(state.record.partial ?? []),
+    ].filter((entry) => [3, 4].includes(entry.id) && entry.attempt);
+    for (const entry of required)
+      if (
+        !attempts.some(
+          ({ manifest }) =>
+            manifest.attempt === entry.attempt && manifest.step === entry.id
+        )
+      )
+        throw new Error(
+          `Missing or invalid restore evidence for step ${entry.id}, attempt ${entry.attempt}`
+        );
+  }
+  const entries = attempts.flatMap(({ directory, manifest }) =>
+    manifest.ops.map((op) => ({
+      ...op,
+      directory: path.basename(directory),
+      attempt: manifest.attempt,
+      step: manifest.step,
+      stamp: manifest.stamp,
+      roots: manifest.roots,
+    }))
   );
   const file = path.join(backupsRoot(home), "restore-index.jsonl");
   const text = entries.map((entry) => JSON.stringify(entry) + "\n").join("");
