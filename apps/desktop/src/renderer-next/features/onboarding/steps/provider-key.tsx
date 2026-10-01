@@ -113,7 +113,7 @@ export const OnboardingProviderKey = ({
                     <FieldDescription id="onboarding-key-error" role="alert">
                       {error === "validation"
                         ? t("onboarding.setupKeyInvalid")
-                        : `${t("settings.saveFailed")}. ${t("onboarding.pages.retry")}`}
+                        : `${t("phase5.saveFailed")}. ${t("onboarding.pages.retry")}`}
                     </FieldDescription>
                   )}
                 </Field>
