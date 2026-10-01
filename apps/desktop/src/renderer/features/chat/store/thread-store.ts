@@ -30,8 +30,6 @@ export type {
   ToolDisplayData,
 };
 
-export type ThreadSkin = "bot" | "session";
-
 /** `(subagentRunId ?? "", toolCallId)`, agent spec §3.5.4. */
 export type ToolKey = `${string}\u0000${string}`;
 

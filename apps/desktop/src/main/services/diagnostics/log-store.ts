@@ -22,8 +22,6 @@ const FLUSH_INTERVAL_MS = 1000;
 /** Each stream is its own file so one can be read without the others. */
 export type LogStream = "main" | "renderer" | "agent";
 
-const STREAMS: LogStream[] = ["main", "renderer", "agent"];
-
 /** `YYYY-MM-DD` in local time, the day a reader would call it. */
 export const dayKey = (at: Date = new Date()): string =>
   `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
@@ -183,8 +181,6 @@ export class LogStore {
     this.timer.unref?.();
   }
 }
-
-export const LOG_STREAMS = STREAMS;
 
 let shared: LogStore | null = null;
 

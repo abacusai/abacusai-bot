@@ -24,7 +24,6 @@
 import type { Terminal as GhosttyTerminal } from "ghostty-web";
 
 import { encodeMouse } from "#shared/terminal/mouse";
-export { encodeMouse } from "#shared/terminal/mouse";
 
 /** DEC private modes a program sets to ask for any of this. */
 const MODE = {

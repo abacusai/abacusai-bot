@@ -11,14 +11,21 @@
         "src/**/*.test.{ts,tsx}",
         "scripts/before-pack.cjs",
         "scripts/build-experience.js",
+        "scripts/check-chat-bundle.mjs",
         "scripts/check-jsx-i18n.js",
         "scripts/check-packaged-resources.js",
         "scripts/check-react-compiler.mjs",
+        "scripts/check-release-build.mjs",
         "scripts/download-llama-server.js",
         "scripts/download-scrcpy.js",
         "scripts/download-wa-js.js",
+        "scripts/generate-notices.js",
+        "scripts/generate-routes.mjs",
+        "scripts/measure-release-size.mjs",
+        "scripts/rpc-ws-smoke.mjs",
         "scripts/screenshots.mjs",
         "scripts/shadcn-registry-snapshot.mjs",
+        "scripts/sync-chat-fixtures.mjs",
         "scripts/sync-locales.js"
       ],
       "project": [
@@ -32,7 +39,17 @@
         "src/renderer/notchRouteTree.gen.ts",
         "src/renderer/ui/**"
       ],
-      "ignoreExportsUsedInFile": true
+      "ignoreExportsUsedInFile": true,
+      "ignoreDependencies": [
+        "@testing-library/dom",
+        "@fontsource-variable/inter",
+        "@fontsource-variable/jetbrains-mono",
+        "tailwindcss",
+        "tw-animate-css"
+      ],
+      "paths": {
+        "ort-dist/*": ["../../node_modules/onnxruntime-web/dist/*"]
+      }
     }
   },
   "tags": ["-public"]

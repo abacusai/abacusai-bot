@@ -34,11 +34,7 @@ export interface V1ToolCall {
   endpoint?: string;
 }
 
-export type {
-  V1ToolResultData,
-  V1ToolRejection,
-  V1ToolResult,
-} from "./tool-result";
+export type { V1ToolResult } from "./tool-result";
 import type { V1ToolResult } from "./tool-result";
 
 export interface V1NotificationAction {

@@ -9,12 +9,12 @@ export {
   createChatRuntime,
   type ChatRuntime,
 } from "./runtime/runtime";
-export { ChatView, type ChatViewProps } from "./kit/view";
+export { ChatView } from "./kit/view";
 export { useThreadHost } from "./runtime/host";
 export { deriveSessionTitle } from "./runtime/send";
 export { PermissionList } from "./kit/permissions/permission-list";
 export { adoptDraftModel } from "./composer/draft-store";
-export { Composer, useComposerExpanded } from "./composer/composer";
+export { useComposerExpanded } from "./composer/composer";
 /**
  * The fixture player, for the dev fixture build only: a dynamic import, so
  * the recorded goldens never reach the shipped bundle (a call behind
@@ -25,24 +25,8 @@ export const loadFixtureRuntime = async () => {
     return (await import("./fixtures/player")).fixtureRuntime;
   throw new Error("Chat fixtures require VITE_NEXT_DB_FIXTURES=1");
 };
-export type {
-  ComposerConfig,
-  ModelChipBinding,
-  ModelGroup,
-  ChatViewSlots,
-  MessageDecoration,
-  MessageDecorationContext,
-} from "./kit/context";
-export type {
-  AgentState,
-  PermissionDescriptor,
-  QueueEntry,
-  ThreadSkin,
-  ThreadStoreState,
-} from "./store/thread-store";
 
-export type { SubmissionEnvelope } from "./runtime/admission";
-export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";
+export { updateDraft } from "./composer/draft-store";
 
 export { StartComposer } from "./composer/start-composer";
 export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
@@ -72,10 +56,3 @@ export const chatGallerySections =
           play: boolean;
         }) => null,
       };
-
-export { useThreadStore } from "./store/selectors";
-
-export { notchAcceptable } from "./kit/permissions/notch-acceptable";
-export { encodeAnswers as encodeQuestionAnswers } from "./kit/permissions/decisions";
-
-export { runErrorCopy } from "#renderer/lib/attention/error-copy";

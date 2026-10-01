@@ -13,6 +13,8 @@ const RENDERER_BANNED_PACKAGES = [
   "monaco-editor",
   "@monaco-editor/react",
   "uuid",
+  "clsx",
+  "tailwind-merge",
   "@lobehub/icons-static-svg",
 ];
 
@@ -95,7 +97,7 @@ export default defineConfig({
             })),
             patterns: [
               {
-                group: ["@base-ui/react/*"],
+                group: ["@dicebear/*", "@tsparticles/*", "@radix-ui/*"],
                 message: "renderer does not import the old tree.",
               },
             ],

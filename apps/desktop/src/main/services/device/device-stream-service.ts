@@ -24,13 +24,6 @@ export const MAX_SCREENRECORD_RESTARTS = 3;
 export const RESTART_WINDOW_MS = 60_000;
 const RESTART_DELAY_MS = 150;
 
-export interface DeviceStreamChunkPayload {
-  streamId: number;
-  /** One Annex-B access unit; keyframes are prefixed with SPS/PPS. */
-  data: Uint8Array;
-  isKey: boolean;
-}
-
 export class DeviceStreamService {
   private proc: ChildProcessByStdio<null, Readable, Readable> | null = null;
   private target: { serial: string } | null = null;

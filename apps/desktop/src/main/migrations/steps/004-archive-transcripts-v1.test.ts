@@ -315,7 +315,6 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       home: () => home,
       log: () => undefined,
       isWriteBlocked: () => false,
-      v1Archived: true,
     });
     expect(
       (await cutOver.readCurrent("kept")).map((message) => message.id)

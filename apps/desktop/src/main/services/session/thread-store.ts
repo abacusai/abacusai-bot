@@ -290,7 +290,6 @@ export interface ThreadStoreOptions {
    * The cut-over build sets this once step 4 has archived `transcripts/`:
    * a v1-derived twin is then served without its v1 file.
    */
-  v1Archived?: boolean;
 }
 
 type V1Read =

@@ -19,13 +19,13 @@ export { useBotChatSlots } from "./chat/slots";
 export { DetailsTab, MemoryTab, FilesTab } from "./panel/bot-side-panel";
 export { useBot, botsQueries } from "./data/queries";
 export { loadBot, loadBotChat, loadSenderChat } from "./data/loaders";
-export { openChatOnce, forgetOpenChat } from "./data/open-chat";
+export { forgetOpenChat } from "./data/open-chat";
 export { NewBotSearch, NEW_BOT_DEFAULTS } from "./data/search";
 export { selectTemplate } from "./form/draft-store";
 
-export { getDraft, clearDraft, updateDraft } from "./form/draft-store";
+export { getDraft } from "./form/draft-store";
 export { botsGallerySections, isBotsGalleryFixture } from "./gallery/sections";
 
-export { createBotFromTemplate, deleteBot } from "./data/bot-actions";
+export { createBotFromTemplate } from "./data/bot-actions";
 
 export { useBotChatActivity } from "./chat/activity";
