@@ -221,7 +221,10 @@ export const McpPage = () => {
               scope &&
               void transport.client.mcp
                 .refresh(scope)
-                .then(() => showInfo(t("phase5.refreshed")))
+                .then((result) => {
+                  if (result.success) showInfo(t("phase5.refreshed"));
+                  else showError(result.error ?? t("phase5.failed"));
+                })
                 .catch(() => showError(t("phase5.failed")))
             }
           >
@@ -324,10 +327,16 @@ export const McpPage = () => {
                     disabled={!scope || server.config.disabled}
                     onClick={() =>
                       scope &&
-                      void transport.client.mcp.restart({
-                        ...scope,
-                        serverId: server.id,
-                      })
+                      void transport.client.mcp
+                        .restart({
+                          ...scope,
+                          serverId: server.id,
+                        })
+                        .then((result) => {
+                          if (!result.success)
+                            showError(result.error ?? t("phase5.failed"));
+                        })
+                        .catch(() => showError(t("phase5.failed")))
                     }
                   >
                     {t("phase5.restart")}
@@ -357,9 +366,20 @@ export const McpPage = () => {
                     onClick={() =>
                       void transport.client.mcp
                         .oauthSignIn({ mode: "code", name: server.name })
-                        .then(
-                          () => scope && transport.client.mcp.refresh(scope)
-                        )
+                        .then(async (result) => {
+                          if (result.cancelled) return;
+                          if (!result.success) {
+                            showError(result.error ?? t("phase5.failed"));
+                            return;
+                          }
+                          if (scope) {
+                            const refreshed =
+                              await transport.client.mcp.refresh(scope);
+                            if (!refreshed.success)
+                              showError(refreshed.error ?? t("phase5.failed"));
+                          }
+                        })
+                        .catch(() => showError(t("phase5.failed")))
                     }
                   >
                     {t("phase5.signIn")}
