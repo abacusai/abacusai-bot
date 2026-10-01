@@ -9,8 +9,23 @@ export const probeSource = (fixture) => `(() => {
     for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') state.paintAt = performance.timeOrigin + entry.startTime;
   }).observe({ type: 'paint', buffered: true });
   const check = () => {
-    const name = [...document.querySelectorAll('a,button,[role="button"]')].some(node => visible(node) && node.textContent.includes(fixture.botName));
+    const candidates = [...document.querySelectorAll('a,button,[role="button"]')];
+    const matchesBot = node => visible(node) && node.textContent.includes(fixture.botName);
+    const bot = candidates.find(node => node.getAttribute('data-id')?.startsWith('bot-item-') && matchesBot(node)) ?? candidates.find(node => node.tagName === 'A' && matchesBot(node)) ?? candidates.find(matchesBot);
+    const name = !!bot;
     const composer = [...document.querySelectorAll('textarea,[contenteditable="true"]')].find(visible);
+    if (!state.interactiveAt && fixture.initialSessionName) {
+      if (!composer) {
+        const section = candidates.find(node => node.tagName !== 'A' && visible(node) && /^Sessions(?:[0-9]+)?$/.test(node.textContent.trim()));
+        if (section && section.getAttribute('aria-expanded') === 'false') section.click();
+        if (!section && bot && (!state.botSelectedAt || absoluteNow() - state.botSelectedAt > 2000)) { state.botSelectedAt = absoluteNow(); bot.click(); }
+        const session = candidates.find(node => visible(node) && node.textContent.includes(fixture.initialSessionName));
+        if (session && (!state.sessionSelectedAt || absoluteNow() - state.sessionSelectedAt > 2000)) { state.sessionSelectedAt = absoluteNow(); session.click(); }
+      } else {
+        const section = candidates.find(node => node.tagName !== 'A' && visible(node) && /^Bots(?:[0-9]+)?$/.test(node.textContent.trim()));
+        if (section && section.getAttribute('aria-expanded') === 'false') section.click();
+      }
+    } else if (!state.interactiveAt && !composer && bot && (!state.botSelectedAt || absoluteNow() - state.botSelectedAt > 2000)) { state.botSelectedAt = absoluteNow(); bot.click(); }
     if (!state.interactiveAt && name && composer && !composer.disabled) {
       composer.focus({ preventScroll: true });
       if (document.activeElement === composer) state.interactiveAt = absoluteNow();
@@ -26,9 +41,17 @@ export const probeSource = (fixture) => `(() => {
 })()`;
 
 export const clickLongThreadSource = (fixture) => `(() => {
+  if (window.__cutoverProbe.threadClickedAt) return true;
+  const section = [...document.querySelectorAll('button,[role="button"]')].find(node => node.getClientRects().length && /^Sessions(?:[0-9]+)?$/.test(node.textContent.trim()));
+  if (section && section.getAttribute('aria-expanded') === 'false') section.click();
+  if (!section) {
+    const link = [...document.querySelectorAll('a')].find(node => node.getClientRects().length && ['/sessions','/sessions/','/sessions/new'].includes((node.getAttribute('href') ?? '').split('#')[1]));
+    if (link && !location.hash.startsWith('#/sessions')) link.click();
+  }
   const node = [...document.querySelectorAll('a,button,[role="button"]')].find(node => node.getClientRects().length && node.textContent.includes(${JSON.stringify(fixture.longSessionName)}));
-  if (!node) throw new Error('Fixture long-session control is absent');
+  if (!node) return false;
   window.__cutoverProbe.threadClickedAt = performance.timeOrigin + performance.now(); node.click();
+  return true;
 })()`;
 export function summarize(samples) {
   if (!samples.length || samples.some((value) => !Number.isFinite(value)))
