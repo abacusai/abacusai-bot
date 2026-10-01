@@ -96,7 +96,11 @@ describe("migrating a legacy home", () => {
       expect({ file, hash: after[file] }).toEqual({ file, hash });
     expect(
       Object.keys(after)
-        .filter((file) => !(file in before))
+        .filter(
+          (file) =>
+            !(file in before) &&
+            !file.startsWith(path.join("backups", "migrations"))
+        )
         .sort()
     ).toEqual([
       "migrations.json",
@@ -104,7 +108,7 @@ describe("migrating a legacy home", () => {
       path.join("threads", "sess-fixture-1.json"),
     ]);
     expect(fs.existsSync(migratingRoot(home))).toBe(false);
-    expect(fs.existsSync(backupsRoot(home))).toBe(false);
+    expect(fs.existsSync(backupsRoot(home))).toBe(true);
 
     // What the old UI shows, read through the prefs store.
     const row = new PrefsStore({ file: path.join(home, "prefs.json") }).get();

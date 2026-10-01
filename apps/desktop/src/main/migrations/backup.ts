@@ -245,6 +245,8 @@ export interface PruneOptions {
    * Omitted: every backup directory counts (the runner always passes it).
    */
   referenced?: ReadonlySet<string>;
+  /** Completed attempts inside the rollback window, including partial commits. */
+  retained?: ReadonlySet<string>;
   /** Backups older than this go (30 days). */
   maxAgeDays?: number;
   /** Per step, only the newest this many applied commits keep theirs (3). */
@@ -305,6 +307,7 @@ export const pruneBackups = (home: string, options: PruneOptions): string[] => {
     const match = BACKUP_DIR.exec(name);
     const at = match == null ? null : parseStamp(match[1] ?? "");
     if (match == null || at == null) continue;
+    if (options.retained?.has(name)) continue;
     if (now - at.getTime() > maxAge) {
       removeTree(root, name, io, removed);
       continue;

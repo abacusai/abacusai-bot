@@ -283,7 +283,10 @@ describe("R5-T41 step 5 routine-attempt-ids", () => {
     fs.writeFileSync(cronjobs(), "{corrupt");
     await run({ rerun: [5] });
     expect(fs.readFileSync(cronjobs(), "utf8")).toBe("{corrupt");
-    expect(fs.existsSync(backupsRoot(home))).toBe(false);
+    // No legacy file backup; the empty commit still retains its manifest.
+    expect(
+      fs.readdirSync(backupsRoot(home)).some((name) => name.endsWith(".jsonl"))
+    ).toBe(true);
   });
 
   // Claude r1 #6 / Codex r1 #17: the step did not run (an earlier step

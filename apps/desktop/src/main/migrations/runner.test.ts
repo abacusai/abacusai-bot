@@ -30,6 +30,13 @@ import {
 } from "./runner";
 import type { MigrationContext, MigrationStep, WriteKind } from "./types";
 
+const backupNames = () =>
+  fs
+    .readdirSync(backupsRoot(home))
+    .filter((name) =>
+      fs.statSync(path.join(backupsRoot(home), name)).isDirectory()
+    );
+
 let root: string;
 let home: string;
 let userData: string;
@@ -401,7 +408,7 @@ describe("C-T3 runner", () => {
       expect(read(derived)).toBe("DERIVED-NEW");
       expect(fs.existsSync(migratingRoot(home))).toBe(false);
       // The attempt's backups went with it.
-      expect(fs.readdirSync(backupsRoot(home))).toEqual([]);
+      expect(backupNames()).toEqual([]);
     });
 
     it("undoes by rule when no done line was written (moved, not logged)", async () => {
@@ -566,7 +573,7 @@ describe("C-T3 runner", () => {
     it("never restores a damaged backup: the attempt stays unresolved and every file is kept", async () => {
       const { user, step } = setupThree();
       await run([step], { hooks: { beforeRecord: () => "crash" } });
-      const [dir] = fs.readdirSync(backupsRoot(home));
+      const [dir] = backupNames();
       const backup = path.join(
         backupsRoot(home),
         dir ?? "",
@@ -634,7 +641,7 @@ describe("C-T3 runner", () => {
       // Re-planned from the current file, not rolled back to OLD.
       expect(calls).toEqual(["one", "one"]);
       expect(read(a)).toBe("NEW");
-      const backups = fs.readdirSync(backupsRoot(home));
+      const backups = backupNames();
       const latest = backups.sort().at(-1) ?? "";
       expect(read(path.join(backupsRoot(home), latest, "home", "a.json"))).toBe(
         "LATER"
@@ -687,7 +694,7 @@ describe("C-T3 runner", () => {
       // A later launch does not prune the backups it may need.
       const again = await run([], { now: () => new Date("2027-12-01") });
       expect(again.unresolved).toHaveLength(1);
-      expect(fs.readdirSync(backupsRoot(home))).toHaveLength(1);
+      expect(backupNames()).toHaveLength(1);
     });
 
     it.each([
@@ -870,7 +877,7 @@ describe("C-T3 runner", () => {
 
     await run([step]);
     expect(read(old)).toBeNull();
-    const [backup] = fs.readdirSync(backupsRoot(home));
+    const [backup] = backupNames();
     expect(
       read(
         path.join(
@@ -909,10 +916,12 @@ describe("C-T3 runner", () => {
         { dest: fresh, content: "F", kind: "create" },
       ]),
     ]);
-    const [dir] = fs.readdirSync(backupsRoot(home));
+    const [dir] = backupNames();
     expect(dir).toBe(readRecord(home).applied[0]?.backup);
     expect(tree(path.join(backupsRoot(home), dir ?? ""))).toEqual({
       [path.join("home", "electron", "state.json")]: "MINE",
+      "attempt.json": expect.any(String),
+      "completed.json": expect.any(String),
     });
   });
 
@@ -972,9 +981,12 @@ describe("C-T3 runner", () => {
 
       const result = await run([], { now: () => now });
       expect(result).toMatchObject({ failed: null, unresolved: [] });
-      expect(fs.readdirSync(backups).sort()).toEqual(
-        [...applied.slice(0, 3), orphanNew, "unrelated"].sort()
-      );
+      expect(
+        fs
+          .readdirSync(backups)
+          .filter((name) => name !== "restore-index.jsonl")
+          .sort()
+      ).toEqual([...applied.slice(0, 3), orphanNew, "unrelated"].sort());
       expect(fs.existsSync(path.join(backups, orphanOld))).toBe(false);
     });
 
@@ -1053,15 +1065,19 @@ describe("C-T3 runner: pending work", () => {
     ]);
 
     const first = await run([step, after]);
-    expect(first).toMatchObject({ applied: [8], partial: [7], failed: null });
+    expect(first).toMatchObject({ applied: [], partial: [7], failed: null });
     expect(read(out)).toBe("launch 1");
-    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([8]);
+    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([]);
     expect(fs.existsSync(migratingRoot(home))).toBe(false);
 
     const second = await run([step, after]);
-    expect(second).toMatchObject({ applied: [7], partial: [], failed: null });
+    expect(second).toMatchObject({
+      applied: [7, 8],
+      partial: [],
+      failed: null,
+    });
     expect([read(out), read(later)]).toEqual(["launch 1", "launch 2"]);
-    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([8, 7]);
+    expect(readRecord(home).applied.map((entry) => entry.id)).toEqual([7, 8]);
     expect(await run([step, after])).toMatchObject({
       applied: [],
       partial: [],
