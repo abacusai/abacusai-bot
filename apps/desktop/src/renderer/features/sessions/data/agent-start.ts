@@ -1,13 +1,14 @@
 // Explicit memoization owns an imperative controller, including its disposal.
 // eslint-disable-next-line no-restricted-imports
-import { useEffect, useMemo } from "react";
+import { useEffect, useEffectEvent, useMemo } from "react";
 
 import type { AppClient } from "#renderer/data/transport/types";
 import type { SessionRow } from "#shared/contract/rows";
 export const agentLifecycle = (
   client: AppClient,
   report: (error: unknown | null) => void,
-  identity?: string
+  identity?: string,
+  startOnObserve = true
 ) => {
   let generation = 0;
   let suppressed = false;
@@ -107,7 +108,11 @@ export const agentLifecycle = (
       lastStatus = row.status;
       const incarnationChanged = incarnation !== ready;
       incarnation = ready;
-      if (changed && (row.status === "stopped" || row.status === "error")) {
+      if (
+        startOnObserve &&
+        changed &&
+        (row.status === "stopped" || row.status === "error")
+      ) {
         void start(row);
       } else if (ready && starting !== generation) {
         if (incarnationChanged) cancel();
@@ -138,16 +143,33 @@ export const agentLifecycle = (
 
 export const useAgentLifecycle = (
   client: AppClient,
-  row: Pick<SessionRow, "id" | "workspaceId">,
+  row: SessionRow,
   report: (error: unknown | null) => void
 ) => {
   const controller = useMemo(
-    () => agentLifecycle(client, report, `${row.workspaceId}:${row.id}`),
+    () => agentLifecycle(client, report, `${row.workspaceId}:${row.id}`, false),
     [client, row.workspaceId, row.id, report]
   );
   useEffect(() => {
     report(null);
     return () => controller.dispose();
   }, [controller, report]);
+  const warm = useEffectEvent(() => {
+    if (row.status === "stopped" || row.status === "error")
+      controller.retry(row);
+  });
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        !(event.target instanceof Element) ||
+        !event.target.closest('textarea,[contenteditable="true"]')
+      )
+        return;
+      document.removeEventListener("keydown", onKey);
+      warm();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [controller]);
   return controller;
 };

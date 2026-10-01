@@ -71,7 +71,7 @@ try {
   );
   // Inspector overhead makes this a diagnostic timeline, not an M1 sample.
   await inspector.evaluate(
-    "import('electron').then(({app}) => { setTimeout(() => app.quit(), 0); return true; })"
+    "(() => { const {app} = process.getBuiltinModule('module').createRequire(process.execPath)('electron'); setTimeout(() => app.quit(), 0); return true; })()"
   );
   await delay(500);
 } finally {
