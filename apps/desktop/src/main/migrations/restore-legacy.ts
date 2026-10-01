@@ -6,11 +6,13 @@ import path from "node:path";
 import {
   readArchiveIndexStrict,
   ARCHIVE_INDEX_NAME,
+  type ArchiveIndex,
 } from "../services/session/thread-store";
 import { rebuildRestoreIndex } from "./attempt-records";
 import {
   backupsRoot,
   formatStamp,
+  parseStamp,
   sha256File,
   nodeIo,
   inside,
@@ -142,7 +144,51 @@ export const restoreLegacyHome = async (
   };
   const consumed = new Set<string>();
   const destinations: string[] = [];
-  const index = readArchiveIndexStrict(path.join(home, "threads"));
+  let index: ArchiveIndex;
+  try {
+    index = readArchiveIndexStrict(path.join(home, "threads"));
+  } catch (error) {
+    // Only malformed bytes are recoverable. I/O errors must still abort.
+    if (
+      !(error instanceof Error) ||
+      !/is not (JSON|an index)$/.test(error.message)
+    )
+      throw error;
+    const file = path.join(home, "threads", ARCHIVE_INDEX_NAME);
+    fs.copyFileSync(
+      file,
+      `${file}.corrupt-${formatStamp(now)}-${randomUUID()}`
+    );
+    index = { version: 1, archived: {} };
+    for (const entry of entries) {
+      if (
+        entry.step !== 4 ||
+        entry.op !== "remove" ||
+        !entry.source.startsWith(`transcripts${path.sep}`) ||
+        !entry.originalSha256
+      )
+        continue;
+      // A completed removal records the exact v1 fingerprint even if its backup
+      // is damaged. Keep it archived until that destination is restored.
+      const destination = safePath(
+        entry.root === "home" ? home : userData,
+        entry.source
+      );
+      if (
+        generations.some(
+          (generation) =>
+            generation.destinations.includes(destination) &&
+            generation.consumed.includes(entry.attempt)
+        )
+      )
+        continue;
+      index.archived[path.basename(entry.source, ".json")] = {
+        fingerprint: entry.originalSha256,
+        updatedAt: parseStamp(entry.stamp)!.toISOString(),
+      };
+    }
+    writeFileAtomic(file, JSON.stringify(index), nodeIo);
+  }
   for (const [destination, entry] of latest) {
     const backup = safePath(
       path.join(backupsRoot(home), entry.directory),
