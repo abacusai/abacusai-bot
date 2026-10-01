@@ -350,106 +350,134 @@ export const SessionDock = ({
             if (typeof value === "string") select(value);
           }}
         >
-          <TabsList
-            variant="line"
-            className="w-full justify-start overflow-auto px-2"
-          >
-            {!split && dockLeaves(shown)[0]?.id === node.id ? (
-              <TabsTrigger value="chat">{t("sessions.dock.chat")}</TabsTrigger>
-            ) : null}
-            {node.tabs.map((ref) => {
-              const tab = entries.tabs.find((tab) => tab.ref === ref);
-              return tab ? (
-                <div
-                  key={ref}
-                  className="flex shrink-0 items-center"
-                  draggable
-                  onDragStart={() => setDrag(ref)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (drag && drag !== ref)
-                      move(drag, node.id, undefined, ref);
-                  }}
-                  onDragEnd={() => setDrag(null)}
-                  onAuxClick={(e) => {
-                    if (e.button === 1) close(ref);
-                  }}
-                >
-                  <TabsTrigger
-                    value={ref}
-                    onKeyDown={(e) => {
-                      if (e.shiftKey && e.key === "F10") {
-                        e.preventDefault();
-                        (
-                          e.currentTarget.parentElement?.querySelector(
-                            "[data-tab-menu]"
-                          ) as HTMLButtonElement | null
-                        )?.click();
-                      }
+          <div data-tab-header className="flex items-center">
+            <TabsList
+              variant="line"
+              className="w-full justify-start overflow-auto px-2"
+            >
+              {!split && dockLeaves(shown)[0]?.id === node.id ? (
+                <TabsTrigger value="chat">
+                  {t("sessions.dock.chat")}
+                </TabsTrigger>
+              ) : null}
+              {node.tabs.map((ref) => {
+                const tab = entries.tabs.find((tab) => tab.ref === ref);
+                return tab ? (
+                  <div
+                    key={ref}
+                    className="flex shrink-0 items-center"
+                    draggable
+                    onDragStart={() => setDrag(ref)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (drag && drag !== ref)
+                        move(drag, node.id, undefined, ref);
+                    }}
+                    onDragEnd={() => setDrag(null)}
+                    onAuxClick={(e) => {
+                      if (e.button === 1) close(ref);
                     }}
                   >
-                    {tab.title}
-                    {entries.tabs.filter((t) => t.title === tab.title).length >
-                    1
-                      ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
-                      : ""}
-                  </TabsTrigger>
-                  {/^(terminal|browser|preview):/.test(ref) ? (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("sessions.dock.closeTab", {
-                        name: tab.title,
-                      })}
-                      onClick={() => close(ref)}
+                    <TabsTrigger
+                      value={ref}
+                      onKeyDown={(e) => {
+                        if (e.shiftKey && e.key === "F10") {
+                          e.preventDefault();
+                          select(ref);
+                          const header =
+                            e.currentTarget.closest("[data-tab-header]");
+                          setTimeout(
+                            () =>
+                              (
+                                header?.querySelector(
+                                  "[data-tab-menu]"
+                                ) as HTMLButtonElement | null
+                              )?.click(),
+                            0
+                          );
+                        }
+                      }}
                     >
-                      <X />
-                    </Button>
-                  ) : null}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          data-tab-menu
-                          size="icon-sm"
-                          variant="ghost"
-                          aria-label={t("sessions.dock.move")}
-                        />
-                      }
-                    >
-                      ⋯
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuGroup>
-                        <DropdownMenuItem
-                          onClick={() => move(ref, node.id, "right")}
-                        >
-                          {t("sessions.dock.moveRight")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => move(ref, node.id, "bottom")}
-                        >
-                          {t("sessions.dock.moveBelow")}
-                        </DropdownMenuItem>
-                        {dockLeaves(tree)
-                          .filter((l) => l.id !== node.id)
-                          .map((leaf) => (
-                            <DropdownMenuItem
-                              key={leaf.id}
-                              onClick={() => move(ref, leaf.id)}
-                            >
-                              {t("sessions.dock.movePane", { name: leaf.id })}
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : null;
-            })}
-          </TabsList>
+                      {tab.title}
+                      {entries.tabs.filter((t) => t.title === tab.title)
+                        .length > 1
+                        ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
+                        : ""}
+                    </TabsTrigger>
+                  </div>
+                ) : null;
+              })}
+            </TabsList>
+            <div
+              className="flex items-center"
+              role="group"
+              aria-label={t("sessions.dock.move")}
+            >
+              {node.tabs.map((ref) => {
+                const tab = entries.tabs.find((tab) => tab.ref === ref);
+                const selected = node.tabs.includes(active ?? "")
+                  ? active
+                  : node.active;
+                return tab && ref === selected ? (
+                  <div key={ref} className="flex items-center">
+                    {" "}
+                    {/^(terminal|browser|preview):/.test(ref) ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t("sessions.dock.closeTab", {
+                          name: tab.title,
+                        })}
+                        onClick={() => close(ref)}
+                      >
+                        <X />
+                      </Button>
+                    ) : null}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            data-tab-menu
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label={t("sessions.dock.move")}
+                          />
+                        }
+                      >
+                        ⋯
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem
+                            onClick={() => move(ref, node.id, "right")}
+                          >
+                            {t("sessions.dock.moveRight")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => move(ref, node.id, "bottom")}
+                          >
+                            {t("sessions.dock.moveBelow")}
+                          </DropdownMenuItem>
+                          {dockLeaves(tree)
+                            .filter((l) => l.id !== node.id)
+                            .map((leaf) => (
+                              <DropdownMenuItem
+                                key={leaf.id}
+                                onClick={() => move(ref, leaf.id)}
+                              >
+                                {t("sessions.dock.movePane", { name: leaf.id })}
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
         </Tabs>
         <div className="relative min-h-0 flex-1">
           {node.tabs.map((ref) => {

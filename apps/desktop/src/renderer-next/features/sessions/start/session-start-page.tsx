@@ -183,7 +183,7 @@ export const SessionStartPage = ({
           </div>
         ) : null}
         <div>
-          <p className="text-muted-foreground mb-2 text-xs">
+          <p className="text-foreground/75 mb-2 text-xs">
             {t("sessions.start.try")}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -204,7 +204,7 @@ export const SessionStartPage = ({
                 }}
               >
                 <span>{t(`sessions.start.starters.${starter.id}.name`)}</span>
-                <span className="text-muted-foreground text-xs font-normal">
+                <span className="text-foreground/75 text-xs font-normal">
                   {t(`sessions.start.starters.${starter.id}.detail`)}
                 </span>
               </Button>
