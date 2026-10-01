@@ -38,6 +38,7 @@ import type {
 } from "#shared/contracts";
 
 import { NotchController } from "./notch/controller";
+import { wireMainNotchEvents } from "./notch/main-events";
 import {
   NOTCH_BANNER_SUPPRESSION,
   NotchNotificationPolicy,
@@ -736,6 +737,7 @@ async function createWindow(restored?: RecreatedWindowState) {
       console.warn("[browser-runtime] cleanup failed", error);
     }
   });
+  wireMainNotchEvents(mainWindow, () => notchController?.appChanged());
 
   // Spellcheck languages: the OS locale when supported, en-US as fallback.
   // The dictionary download goes through the proxy-aware shim in
