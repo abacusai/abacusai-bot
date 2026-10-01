@@ -178,16 +178,6 @@ export const ChangesTab = ({
             <Button
               variant={selected === r ? "secondary" : "ghost"}
               className="text-foreground/75 h-12 w-full flex-col items-start gap-0.5"
-              style={
-                isReviewed(
-                  row.id,
-                  r.change.path,
-                  r.scope,
-                  r.change.fingerprints?.[r.scope]
-                )
-                  ? { opacity: 0.6 }
-                  : undefined
-              }
               onClick={() => select(i)}
             >
               <span className="max-w-full truncate">{r.change.path}</span>

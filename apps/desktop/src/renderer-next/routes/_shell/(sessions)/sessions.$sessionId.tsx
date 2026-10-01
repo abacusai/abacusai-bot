@@ -202,8 +202,17 @@ const SessionRoute = () => {
   const { t } = useTranslation();
   const navigate = useAppNavigate();
   const collections = useCollections();
-  const row = useSession(sessionId);
-  const workspace = useWorkspace(row?.workspaceId ?? "");
+  const observedRow = useSession(sessionId);
+  // The loader has already admitted this collection row. A new live-query
+  // subscription catches up after commit; do not flash Gone in that interval.
+  const row =
+    observedRow?.id === sessionId
+      ? observedRow
+      : collections.sessions.get(sessionId);
+  const observedWorkspace = useWorkspace(row?.workspaceId ?? "");
+  const workspace =
+    observedWorkspace ??
+    (row ? collections.workspaces.get(row.workspaceId) : undefined);
   const model = useSessionComposerModel(row);
   const session = runtime.session(sessionId);
   const host = useSelector(session.hostStore, (s) => s);
@@ -423,8 +432,9 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/$sessionId")({
         params: { botId: row.owner.botId },
         replace: true,
       });
-    if (!preload && cause !== "stay")
-      await context.chat.session(params.sessionId).load();
+    const session = context.chat.session(params.sessionId);
+    // The router also calls parameter changes "stay" for this route id.
+    if (!preload && (cause !== "stay" || !session.ready)) await session.load();
   },
   notFoundComponent: SessionGone,
   component: SessionRoute,
