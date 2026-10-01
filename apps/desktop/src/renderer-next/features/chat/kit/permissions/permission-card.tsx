@@ -156,7 +156,8 @@ export const PermissionCard = ({
   onAnswered,
 }: PermissionCardProps) => {
   const { t } = useTranslation();
-  const { session, runtime, threadId, skin, notchEnabled } = useChatView();
+  const { session, runtime, threadId, skin, notchEnabled, slots } =
+    useChatView();
   const request = descriptor.metadata.abacus.request as PermissionRequest;
   const model = present(request);
   const titleId = useId();
@@ -347,6 +348,7 @@ export const PermissionCard = ({
           </Button>
         ) : null}
       </div>
+      {slots.permissionActions?.(descriptor)}
       {skin === "bot" && notchEnabled ? (
         <div className="text-muted-foreground text-end text-xs">
           {t("chat.permission.alsoInNotch")}

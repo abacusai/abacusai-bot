@@ -12,6 +12,7 @@ import type { AgentMode } from "#shared/agent-types";
 import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";
 import type { ThreadSession } from "../runtime/session";
+import type { PermissionDescriptor } from "../store/thread-store";
 
 interface ModelGroupItem {
   id: string;
@@ -117,6 +118,8 @@ export interface ChatViewSlots {
   composerContext?: ReactNode;
   /** The route's pieces after the last run's outcome (the Changes card, phase 4). */
   runTail?: ReactNode;
+  /** Route-owned actions beside the permission card (sessions §17.1). */
+  permissionActions?: (descriptor: PermissionDescriptor) => ReactNode;
   typingCaption?: (activity: Activity) => ReactNode;
 }
 
