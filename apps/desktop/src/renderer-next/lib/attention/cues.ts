@@ -1,4 +1,7 @@
-import type { RunFinishedNotice } from "#shared/contract";
+import type { AttentionSummary, RunFinishedNotice } from "#shared/contract";
+export const permissionCueKey = (summary: AttentionSummary): string =>
+  `${summary.threadId}:${summary.incarnation}:${summary.oldestAt}`;
+
 export const cueForNotice = (
   notice: RunFinishedNotice,
   _ctx: { checkInRoutineIds: ReadonlySet<string> }

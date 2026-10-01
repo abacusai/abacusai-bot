@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { followNotices } from "#next/data/queries/live";
+import { permissionCueKey } from "#next/lib/attention/cues";
 import { createNotifier, notifyAttention } from "#next/lib/notify";
 import { createReadinessQueue } from "#next/lib/readiness-queue";
 import { subscribeRunFinished } from "#next/lib/run-finished";
@@ -42,6 +43,10 @@ export const RoutinesGlobals = () => {
       isWindowFocused: () => document.hasFocus(),
       prefs: sounds,
       now: () => Date.now(),
+      claim: (cueId, threadId) =>
+        transport.client.window
+          .claimCue({ cueId, threadId })
+          .then((result) => result.play),
     });
     const unlock = () => player.unlock();
     document.addEventListener("pointerdown", unlock);
@@ -85,7 +90,11 @@ export const RoutinesGlobals = () => {
       const session = db.collections.sessions.get(threadId);
       const routine = db.collections.routines.get(session?.routineId ?? "");
       if (!routineOwns(routine) || !routine) return;
-      player.play("needs-you", { threadId, botId: routine.botId ?? null });
+      player.play("needs-you", {
+        threadId,
+        botId: routine.botId ?? null,
+        dedupeKey: key,
+      });
       notifyAttention(notifier, {
         kind: "needs-you",
         dedupeKey: key,
@@ -106,7 +115,7 @@ export const RoutinesGlobals = () => {
         readiness.run(() => {
           if (event.type === "upsert") {
             const summary = event.item;
-            const key = `${summary.threadId}:${summary.incarnation}:${summary.oldestAt}`;
+            const key = permissionCueKey(summary);
             if (!waiting.has(key)) {
               waiting.add(key);
               attention(summary.threadId, key);
@@ -151,6 +160,7 @@ export const RoutinesGlobals = () => {
         if (!target) return;
         player.play(target.kind, {
           threadId: notice.threadId,
+          dedupeKey: notice.runId,
           botId: target.routine.botId ?? null,
         });
         notifyAttention(notifier, {
