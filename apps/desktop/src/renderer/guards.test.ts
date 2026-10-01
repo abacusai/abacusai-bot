@@ -9,7 +9,7 @@ import { readSourceFiles } from "#renderer/test-support/source-files";
  * no `ipcRenderer` identifier, no import of electron, the old renderer
  * (except `#locales/*`), framer-motion, zustand or sonner; Base UI only
  * under ui/; only the shell's sidebar map and the dev gallery compose other
- * features. Routes and bootstrap import focused feature modules so loaders
+ * features. Routes and bootstrap import approved focused public modules so loaders
  * do not pull unrelated presentation code through feature barrels.
  */
 import { CONTINUITY_STORES } from "./lib/continuity/registry";
@@ -55,6 +55,149 @@ const importsOf = (ast: unknown): string[] => {
 };
 
 const BANNED = ["electron", "framer-motion", "zustand", "sonner"];
+
+// Approved focused public modules keep route loaders separate from presentation.
+// Additions require a boundary review; directory prefixes are never allowlisted.
+const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
+  artifacts: ["gallery"],
+  bots: [
+    "chat/activity",
+    "chat/identity",
+    "chat/slots",
+    "check-in/check-in-dialog",
+    "data/bot-actions",
+    "data/loaders",
+    "data/open-chat",
+    "data/queries",
+    "data/search",
+    "form/bot-form",
+    "form/draft-store",
+    "gallery/sections",
+    "panel/bot-side-panel",
+    "sidebar/bots-sidebar",
+    "start/bot-start-page",
+    "watcher",
+  ],
+  chat: [
+    "composer/composer",
+    "composer/draft-store",
+    "composer/start-composer",
+    "fixture-runtime",
+    "kit/lazy-view",
+    "kit/permissions/permission-list",
+    "kit/subagents/detail",
+    "kit/subagents/use-subagents",
+    "runtime/host",
+    "runtime/lazy-runtime",
+    "runtime/runtime",
+    "runtime/send",
+    "runtime/tool-diff",
+  ],
+  gallery: ["gallery", "search"],
+  library: [
+    "connect-flow",
+    "connectors",
+    "globals",
+    "mcp",
+    "messaging",
+    "search",
+    "skills-tools",
+  ],
+  notch: ["gallery"],
+  onboarding: [
+    "actions",
+    "connect",
+    "gallery",
+    "machine",
+    "pairing-banner",
+    "steps/local-models",
+    "steps/provider-key",
+    "store",
+  ],
+  routines: ["form", "gallery", "globals", "page", "run-requests", "sidebar"],
+  sessions: [
+    "browser/browser-tab",
+    "changes/changes-card",
+    "changes/full-diff-dialog",
+    "context/context-tray",
+    "context/permission-terminal-action",
+    "context/tasks",
+    "data/composer-model",
+    "data/queries",
+    "data/unread-store",
+    "dock/panel-tabs-store",
+    "gallery/sections",
+    "globals",
+    "session-workspace",
+    "sessions-pages",
+    "sessions-sidebar",
+    "start/session-start-page",
+    "start/start-resources",
+  ],
+  settings: [
+    "account-usage",
+    "changelog",
+    "environment",
+    "invite",
+    "keyboard",
+    "models",
+    "personal",
+    "search",
+    "updates",
+  ],
+  shell: [
+    "app-root",
+    "app-toaster",
+    "browser-open",
+    "hotkeys",
+    "native-presenter",
+    "preview-consumers",
+    "rail",
+    "screens",
+    "shell-layout",
+    "shell-store",
+    "side-panel",
+    "side-panel-slot",
+    "top-bar",
+    "top-bar-slots",
+  ],
+  tour: ["gallery", "store"],
+};
+
+const featureBoundaryHits = (
+  candidates: Array<{ path: string; ast: unknown }>
+): string[] => {
+  const hits: string[] = [];
+  for (const file of candidates) {
+    const own = /^features\/([^/]+)\//.exec(file.path)?.[1];
+    for (const specifier of importsOf(file.ast)) {
+      const target = /^#renderer\/features\/([^/]+)(\/.*)?$/.exec(specifier);
+      if (target == null) continue;
+      const [, feature, subpath] = target;
+      if (
+        feature === own ||
+        /\.test\.tsx?$/.test(file.path) ||
+        file.path.startsWith("test-support/")
+      )
+        continue;
+      const allowed =
+        file.path.startsWith("routes/") ||
+        file.path.startsWith("notch-routes/") ||
+        ["router.tsx", "notch.tsx", "notch-context.ts"].includes(file.path) ||
+        file.path === "main.tsx" ||
+        file.path === "features/shell/sidebars.ts" ||
+        own === "gallery";
+      if (!allowed) hits.push(`${file.path}: ${specifier} (other feature)`);
+      else if (
+        subpath != null &&
+        subpath !== "/index" &&
+        !FOCUSED_ENTRYPOINTS[feature!]?.includes(subpath.slice(1))
+      )
+        hits.push(`${file.path}: ${specifier} (private entrypoint)`);
+    }
+  }
+  return hits;
+};
 
 describe("renderer guards", () => {
   it("parses every file", () => {
@@ -103,27 +246,40 @@ describe("renderer guards", () => {
   });
 
   it("keeps feature composition at designated boundaries", () => {
-    const hits: string[] = [];
-    for (const file of files) {
-      const own = /^features\/([^/]+)\//.exec(file.path)?.[1];
-      for (const specifier of importsOf(file.ast)) {
-        const target = /^#renderer\/features\/([^/]+)(\/.*)?$/.exec(specifier);
-        if (target == null) continue;
-        const [, feature] = target;
-        if (feature === own) continue;
-        const allowed =
-          file.path.startsWith("routes/") ||
-          file.path === "main.tsx" ||
-          file.path.endsWith(".test.ts") ||
-          file.path.endsWith(".test.tsx") ||
-          file.path.startsWith("test-support/") ||
-          file.path === "features/shell/sidebars.ts" ||
-          own === "gallery";
-        if (own != null && !allowed)
-          hits.push(`${file.path}: ${specifier} (other feature)`);
-      }
+    expect(featureBoundaryHits(files)).toEqual([]);
+  });
+
+  it("rejects unapproved internals even at feature composition boundaries", () => {
+    const paths = [
+      "routes/canary.tsx",
+      "main.tsx",
+      "features/shell/sidebars.ts",
+      "features/gallery/canary.tsx",
+      "components/canary.tsx",
+      "features/bots/canary.tsx",
+    ];
+    for (const path of paths) {
+      const source = `import "#renderer/features/sessions/private/canary";
+        export * from "#renderer/features/sessions/private/exports";
+        const viewer = import("#renderer/features/sessions/private/viewer");`;
+      expect(
+        featureBoundaryHits([{ path, ast: parseAst(source) }])
+      ).toHaveLength(3);
     }
-    expect(hits).toEqual([]);
+  });
+
+  it("permits approved focused entrypoints only at composition boundaries", () => {
+    const source = 'import "#renderer/features/sessions/session-workspace";';
+    const ast = parseAst(source);
+    expect(featureBoundaryHits([{ path: "routes/canary.tsx", ast }])).toEqual(
+      []
+    );
+    expect(
+      featureBoundaryHits([{ path: "features/bots/canary.tsx", ast }])
+    ).toHaveLength(1);
+    expect(
+      featureBoundaryHits([{ path: "features/sessions/canary.tsx", ast }])
+    ).toEqual([]);
   });
 });
 
