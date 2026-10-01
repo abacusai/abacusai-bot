@@ -162,7 +162,12 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
         expect(row.accept, JSON.stringify(row)).toBe(true);
       if (row.size === "long")
         expect(row.accept, JSON.stringify(row)).toBe(false);
-      if (row.accept)
+      if (row.type === "question") {
+        expect(row.buttons.includes("OneFirst"), JSON.stringify(row)).toBe(
+          row.size === "short"
+        );
+      }
+      if (row.accept || row.buttons.includes("OneFirst"))
         expect(row.visibleOverflow, JSON.stringify(row)).toBe(false);
       expect(row.font).toContain("Inter");
     }
