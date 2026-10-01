@@ -631,3 +631,13 @@ Versioning follows the existing public convention: `build-experience.js` reads `
 | NDJSON goldens / `.build/` | All 24 agent goldens byte-identical to `c92812e7`; nothing under `.build/` committed. |
 
 The earlier gate tables remain historical evidence. This section supersedes their local-test status, including the earlier broad-unit failures, while preserving their unresolved release gaps.
+
+## Codex r2 fixes
+
+Fast-forwarded `rewrite/renderer` to `5f1806c5` before this pass. Each minor r2 finding has a separate commit and a regression observed failing before its fix.
+
+- `23124024`: reserve one live debug-sync upload slot alongside the two startup catch-up slots. The blocked-catch-up regression verifies live admission, debounce coalescing and the live concurrency bound.
+- `141dac79`: enforce exact approved focused public feature entrypoints at composition boundaries, with static import, re-export and dynamic import canaries. Foundation §3, folder rules and R1-T15 now describe the allowlist.
+- This commit: mount the real lazy Files and preview viewers with lightweight data/UI mocks and a delayed BrowserTab mock. Await all three resource elements, assert distinct owner IDs, and preserve both IDs and DOM identities across rerenders. Removing the owner suffix also produces a failing regression.
+
+Validation passes: root `tsc -b`, tools typecheck, affected Vitest files (3 files, 12 tests), renderer and main unit projects with `--maxWorkers=2` (466 files, 3,906 tests), oxlint, oxfmt, and Node tooling (49 tests). JSX i18n, locales, UI registry, production knip, audit, deletion inventory, removed dependencies, executable entries, React Compiler, release graph and chat bundle checks pass. Existing installer/feed/experience version stamps agree at 1.0.86. No `.build/` files are committed. The release-acceptance gaps recorded above remain open.
