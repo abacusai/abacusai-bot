@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-form";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { Button } from "#renderer/ui/button";
 import {
   Field,
@@ -13,7 +14,6 @@ import {
   FieldDescription,
 } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { Spinner } from "#renderer/ui/spinner";
 import { Textarea } from "#renderer/ui/textarea";
 const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();

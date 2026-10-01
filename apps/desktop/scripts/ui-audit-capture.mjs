@@ -645,7 +645,7 @@ async function capture(cdp, c, size, theme, reached) {
   const [width, height] = size;
   const file = `${c.area}--${c.state}--${width}x${height}--${theme}.png`;
   const geometry = await cdp.evaluate(
-    `({width:innerWidth,height:innerHeight,href:location.hash,theme:document.documentElement.className,pending:!!document.querySelector('[data-testid="pending-pane"],[data-slot="skeleton"]'),text:document.body.innerText.slice(0,2000),dockRects:[...document.querySelectorAll('[data-slot="session-dock"],[data-tab-header],canvas')].map(e=>({slot:e.getAttribute("data-slot"),tag:e.tagName,rect:e.getBoundingClientRect().toJSON()}))})`
+    `({width:innerWidth,height:innerHeight,href:location.hash,theme:document.documentElement.className,pending:!!document.querySelector('[data-testid="pending-pane"]'),shell:!!document.querySelector('[data-slot="shell"]'),scrollWidth:document.documentElement.scrollWidth,text:document.body.innerText.slice(0,2000),dockRects:[...document.querySelectorAll('[data-slot="session-dock"],[data-tab-header],canvas')].map(e=>({slot:e.getAttribute("data-slot"),tag:e.tagName,rect:e.getBoundingClientRect().toJSON()}))})`
   );
   if (geometry.width !== width || geometry.height !== height)
     throw new Error(`Wrong viewport ${geometry.width}x${geometry.height}`);
@@ -693,6 +693,20 @@ async function capture(cdp, c, size, theme, reached) {
   )
     report.failures.push(
       `${prefix} Dock tab header has zero width on this branch; PNG records the visible shell, not the hidden pane.`
+    );
+  if (
+    c.state.endsWith("-pending") &&
+    (!geometry.pending ||
+      (!c.route.startsWith("/onboarding") &&
+        !c.route.startsWith("/__ui") &&
+        !geometry.shell))
+  )
+    report.failures.push(
+      `${prefix} Pending capture must show the pending pane and shell navigation.`
+    );
+  if (geometry.scrollWidth > width)
+    report.failures.push(
+      `${prefix} Page exceeds the viewport by ${geometry.scrollWidth - width}px.`
     );
   report.shots = report.shots.filter((s) => s.file !== file);
   report.shots.push({
@@ -1090,6 +1104,20 @@ async function notchCapture(main, size, theme, child) {
         reached =
           "Screen Recording/native capture failed; real companion document via CDP; local presentation injection";
       }
+      if (
+        c.state.endsWith("-pending") &&
+        (!geometry.pending ||
+          (!c.route.startsWith("/onboarding") &&
+            !c.route.startsWith("/__ui") &&
+            !geometry.shell))
+      )
+        report.failures.push(
+          `${prefix} Pending capture must show the pending pane and shell navigation.`
+        );
+      if (geometry.scrollWidth > width)
+        report.failures.push(
+          `${prefix} Page exceeds the viewport by ${geometry.scrollWidth - width}px.`
+        );
       report.shots = report.shots.filter((s) => s.file !== file);
       report.shots.push({ file, area: "notch", state, route, reached });
       save();

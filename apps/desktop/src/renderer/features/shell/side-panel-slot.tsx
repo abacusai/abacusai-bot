@@ -11,6 +11,7 @@ import { Store, useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { PaneBoundary } from "#renderer/components/page-state";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
 
 interface PanelSlotState {
@@ -72,7 +73,10 @@ export const SidePanelContent = ({
     return () => count(tab, -1);
   }, [tab]);
   if (target == null || search.tab !== tab) return null;
-  return createPortal(children, target);
+  return createPortal(
+    <PaneBoundary resetKey={tab}>{children}</PaneBoundary>,
+    target
+  );
 };
 
 const overrides = new Store(0);

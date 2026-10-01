@@ -14,12 +14,14 @@ export const AreaPage = ({
   actions?: ReactNode;
   testId?: string;
 }) => (
-  <div className="size-full overflow-auto" data-testid={testId}>
-    <main className="mx-auto flex w-[min(680px,calc(100%-48px))] flex-col gap-4 pt-10 pb-16">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-[22px] font-semibold">{title}</h1>
+  <div className="size-full min-w-0 overflow-auto" data-testid={testId}>
+    <main className="mx-auto flex w-[min(680px,calc(100%-48px))] min-w-0 flex-col gap-4 pt-10 pb-16">
+      <PageToolbar>
+        <h1 className="min-w-0 text-[22px] font-semibold break-words">
+          {title}
+        </h1>
         {actions}
-      </div>
+      </PageToolbar>
       {description && (
         <p className="text-muted-foreground mb-2 text-[13px]">{description}</p>
       )}
@@ -34,7 +36,7 @@ export const GroupCard = ({
   children: ReactNode;
   title?: string;
 }) => (
-  <div className="bg-card flex flex-col divide-y rounded-[14px] px-1">
+  <div className="bg-card border-border/60 flex min-w-0 flex-col divide-y rounded-xl border px-1">
     {title && <h2 className="px-3 py-3 text-[13px] font-semibold">{title}</h2>}
     {children}
   </div>
@@ -52,21 +54,35 @@ export const SettingRow = ({
 }) => (
   <div
     data-setting-id={id}
-    className="flex min-h-[52px] items-center justify-between gap-3 px-3 py-2"
+    className="@container/setting flex min-h-[52px] min-w-0 flex-wrap items-center justify-between gap-3 px-3 py-3"
   >
-    <div className="min-w-0 flex-1">
-      <div id={`${id}-label`} className="text-[13px] font-medium">
+    <div className="min-w-0 flex-[1_1_140px]">
+      <div id={`${id}-label`} className="text-[13px] font-medium break-words">
         {title}
       </div>
       {detail && (
-        <p id={`${id}-detail`} className="text-muted-foreground text-xs">
+        <p
+          id={`${id}-detail`}
+          className="text-muted-foreground text-xs break-words"
+        >
           {detail}
         </p>
       )}
     </div>
-    <div className="flex shrink-0 items-center gap-2">{children}</div>
+    <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 [&>[data-slot=native-select-wrapper]]:max-w-full [&>[data-slot=native-select-wrapper]]:min-w-0">
+      {children}
+    </div>
   </div>
 );
 export const StatePill = ({ children }: { children: ReactNode }) => (
   <Badge variant="secondary">{children}</Badge>
+);
+
+export const PageToolbar = ({ children }: { children: ReactNode }) => (
+  <div
+    data-slot="page-toolbar"
+    className="flex min-w-0 flex-wrap items-center justify-between gap-3 [&>button]:shrink-0"
+  >
+    {children}
+  </div>
 );

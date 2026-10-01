@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RoutePending } from "#renderer/components/page-state";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { Button } from "#renderer/ui/button";
-import { Skeleton } from "#renderer/ui/skeleton";
 import type { BotRow } from "#shared/contract/rows";
 
 import { BotFace } from "../avatar";
@@ -29,17 +29,8 @@ export const BotGone = ({ chat = false }: { chat?: boolean }) => {
     </div>
   );
 };
-export const BotPending = () => (
-  <div
-    data-testid="pending-pane"
-    aria-busy
-    className="mx-auto flex max-w-[720px] flex-col gap-4 p-8"
-  >
-    <Skeleton className="mx-auto size-14 rounded-full" />
-    <Skeleton className="h-24 w-3/4" />
-    <Skeleton className="h-24 w-1/2 self-end" />
-  </div>
-);
+export const BotPending = RoutePending;
+
 export const BotIdentity = ({
   bot,
   docked = true,

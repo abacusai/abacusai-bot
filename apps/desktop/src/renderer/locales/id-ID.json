@@ -1067,10 +1067,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "Akun Anda siap. Bot Anda bekerja dengan model, file, dan alat Anda.",
-    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
-    "pages.connected.promise2": "Access Access to free models",
-    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
-    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
+    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
+    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
+    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
+    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1095,7 +1095,8 @@
     "pages.pairing": "Selesaikan koneksi {{platform}}",
     "pages.finishPairing": "Selesaikan koneksi",
     "pages.localModels": "Use a local model",
-    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "welcomeFreeBadge": "Mulai secara gratis"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1276,7 +1277,7 @@
       "emptyTitle": "No routines yet",
       "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
       "routineTitle": "Routine",
-      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "routineDescription": "Tinjau jadwal, instruksi, dan riwayat eksekusi rutinitas ini.",
       "createTitle": "Rutinitas baru",
       "createDescription": "Say what it should do and when."
     },
@@ -1339,22 +1340,28 @@
       "try": "Try one of these",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store"
+          "name": "Build an online store",
+          "detail": "Buat toko dan keranjang belanja."
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic"
+          "name": "Turn a repo into an infographic",
+          "detail": "Jelaskan basis kode dengan gambaran visual."
         },
         "find-flights": {
-          "name": "Find me flights"
+          "name": "Find me flights",
+          "detail": "Bandingkan rute, tanggal, dan harga."
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet"
+          "name": "Clean up a spreadsheet",
+          "detail": "Bersihkan data dan rangkum hasilnya."
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw"
+          "name": "Restyle Excalidraw",
+          "detail": "Perbarui antarmuka aplikasi yang sudah ada."
         },
         "review-pull-requests": {
-          "name": "Review my pull requests"
+          "name": "Review my pull requests",
+          "detail": "Periksa perubahan untuk menemukan bug dan pengujian yang belum ada."
         }
       },
       "recent": "Pick up where you left off in {{workspace}}"
@@ -1536,7 +1543,8 @@
   },
   "theme": {
     "dark": "Gelap",
-    "light": "Terang"
+    "light": "Terang",
+    "system": "Sistem"
   },
   "tour": {
     "finish": "Mulai bekerja",
@@ -1547,40 +1555,52 @@
     "skip": "Lewati tur",
     "stops": {
       "rail": {
-        "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan."
+        "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan.",
+        "title": "Bot"
       },
       "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
+        "title": "Who do you need?"
       },
       "workspaces": {
-        "body": "Setiap folder yang pernah dibuka dan setiap percakapan di dalamnya. Ganti workspace di sini, atau buka lagi sesi minggu lalu."
+        "body": "Setiap folder yang pernah dibuka dan setiap percakapan di dalamnya. Ganti workspace di sini, atau buka lagi sesi minggu lalu.",
+        "title": "Sesi"
       },
       "start-session": {
-        "body": "Membuka komposer kosong di workspace ini. Satu sesi per tugas menjaga konteksnya tetap pada pekerjaan yang bersangkutan."
+        "body": "Membuka komposer kosong di workspace ini. Satu sesi per tugas menjaga konteksnya tetap pada pekerjaan yang bersangkutan.",
+        "title": "Sesi baru"
       },
       "connectors": {
-        "body": "Sambungkan alat yang memang sudah Anda pakai. Akun Abacus.AI gratis memasang satu set sekaligus dengan sekali klik."
+        "body": "Sambungkan alat yang memang sudah Anda pakai. Akun Abacus.AI gratis memasang satu set sekaligus dengan sekali klik.",
+        "title": "Konektor"
       },
       "changes": {
-        "body": "Setiap suntingan agen, sebagai diff yang bisa Anda baca sebelum apa pun dikirim. Tab di sebelahnya berisi berkas Anda dan subagen yang sedang berjalan."
+        "body": "Setiap suntingan agen, sebagai diff yang bisa Anda baca sebelum apa pun dikirim. Tab di sebelahnya berisi berkas Anda dan subagen yang sedang berjalan.",
+        "title": "Changes"
       },
       "preview-terminal": {
-        "body": "Shell sungguhan di workspace Anda, di folder yang sama dengan tempat agen bekerja. Tombol terminal di bilah judul menampilkan dan menyembunyikannya."
+        "body": "Shell sungguhan di workspace Anda, di folder yang sama dengan tempat agen bekerja. Tombol terminal di bilah judul menampilkan dan menyembunyikannya.",
+        "title": "Terminal"
       },
       "memory": {
-        "body": "Apa yang diingat agen antar sesi, dan instruksi tetap yang ia ikuti. Baca, sunting, dan hapus yang sudah tidak berlaku."
+        "body": "Apa yang diingat agen antar sesi, dan instruksi tetap yang ia ikuti. Baca, sunting, dan hapus yang sudah tidak berlaku.",
+        "title": "Memory"
       },
       "artifacts": {
-        "body": "Berkas yang dihasilkan sebuah sesi (dokumen, gambar, laporan) terkumpul di satu tempat, bukan berserak di transkrip."
+        "body": "Berkas yang dihasilkan sebuah sesi (dokumen, gambar, laporan) terkumpul di satu tempat, bukan berserak di transkrip.",
+        "title": "Artefak"
       },
       "welcome": {
-        "body": "Tur singkat jendela. {{n}} perhentian; Anda dapat keluar kapan saja."
+        "body": "Tur singkat jendela. {{n}} perhentian; Anda dapat keluar kapan saja.",
+        "title": "Welcome to AbacusAI Bot"
       },
       "talk": {
-        "body": "Berikan tugas kepada bot Anda di sini. Bot dapat bertanya dan menunjukkan pekerjaannya."
+        "body": "Berikan tugas kepada bot Anda di sini. Bot dapat bertanya dan menunjukkan pekerjaannya.",
+        "title": "What should we build?"
       },
       "notch": {
-        "body": "Balasan dan persetujuan dapat muncul di atas ruang kerja Anda. Buka aplikasi untuk melihat percakapan lengkap."
+        "body": "Balasan dan persetujuan dapat muncul di atas ruang kerja Anda. Buka aplikasi untuk melihat percakapan lengkap.",
+        "title": "Pendamping"
       }
     }
   },
@@ -1699,7 +1719,7 @@
     },
     "panel": {
       "label": "Side panel",
-      "emptyDescription": "This panel fills in with a later update.",
+      "emptyDescription": "Pilih item untuk melihat detailnya di sini.",
       "tabs": {
         "changes": "Changes",
         "terminal": "Terminal",
@@ -2542,36 +2562,36 @@
     "allTools": "All tools",
     "alwaysOn": "Always on",
     "approve": "Setujui",
-    "artifactGone": "Artifact gone",
+    "artifactGone": "This file is no longer on disk.",
     "artifactPreview": "Artifact preview",
     "artifactView": "Artifact view",
     "auto": "Auto",
     "category": "Category",
     "closePreview": "Close preview",
-    "connectName": "Connect name",
-    "connectWaiting": "Connect waiting",
-    "connectorsDescription": "Connectors description",
-    "credentialsLocal": "Credentials local",
+    "connectName": "Hubungkan {{name}}",
+    "connectWaiting": "Selesaikan proses masuk untuk menghubungkan layanan ini.",
+    "connectorsDescription": "Hubungkan layanan yang dapat digunakan agen untuk menyelesaikan tugas.",
+    "credentialsLocal": "Kredensial disimpan di komputer ini.",
     "defaultWorkspace": "Default workspace",
     "deliverToBot": "Deliver to bot",
     "details": "Details",
-    "disconnectDescription": "Disconnect description",
-    "disconnectTitle": "Disconnect title",
+    "disconnectDescription": "Agen Anda akan kehilangan akses ke layanan ini. Anda dapat menghubungkannya kembali nanti.",
+    "disconnectTitle": "Putuskan koneksi {{name}}?",
     "documentation": "Documentation",
     "done": "Selesai",
     "editSkill": "Edit skill",
     "executionShell": "Execution shell",
-    "fileMissing": "File missing",
+    "fileMissing": "This file is no longer on disk.",
     "followWorkspace": "Follow workspace",
     "fullAccess": "Full access",
     "global": "Global",
-    "goSession": "Go session",
+    "goSession": "Open as a session",
     "grid": "Grid",
-    "items": "Items",
-    "linkQr": "Link qr",
+    "items": "{{count}} item",
+    "linkQr": "Kode QR untuk menautkan akun Anda",
     "list": "List",
     "marketplace": "Marketplace",
-    "messagingDescription": "Messaging description",
+    "messagingDescription": "Pilih tempat bot Anda menerima dan mengirim pesan.",
     "messagingEnabled": "Perpesanan aktif",
     "noBot": "No bot",
     "nothingMatches": "Tidak ada yang cocok",
@@ -2580,26 +2600,26 @@
     "openLogin": "Open login",
     "openSharedChat": "Open shared chat",
     "planned": "Planned",
-    "poweredSkills": "Powered skills",
+    "poweredSkills": "Jelajahi skills.sh",
     "reject": "Tolak",
-    "remoteUnattended": "Remote unattended",
-    "remoteWarning": "Remote warning",
-    "respondInbound": "Respond inbound",
-    "restartSkills": "Restart skills",
+    "remoteUnattended": "Izinkan tugas jarak jauh tanpa pengawasan",
+    "remoteWarning": "Permintaan jarak jauh dapat menjalankan perintah dan mengubah file tanpa meminta izin Anda.",
+    "respondInbound": "Balas pesan masuk",
+    "restartSkills": "Mulai ulang aplikasi untuk memuat keterampilan yang diperbarui.",
     "reveal": "Reveal",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search konektor",
     "searchSkills": "Search skills",
     "searchTools": "Search tools",
-    "skillsDescription": "Skills description",
+    "skillsDescription": "Pasang instruksi yang dapat digunakan ulang oleh agen, secara global atau untuk ruang kerja tertentu.",
     "sort": "Sort",
-    "toolsDescription": "Tools description",
+    "toolsDescription": "Pilih alat yang dapat digunakan agen.",
     "uninstall": "Uninstall",
     "uninstallSkill": "Copot pemasangan skill",
-    "uninstallSkillDescription": "Uninstall skill description",
+    "uninstallSkillDescription": "Hapus /{{id}} dari komputer ini? Anda dapat memasangnya lagi nanti.",
     "unlink": "Unlink",
-    "unlinkDescription": "Unlink description",
-    "unlinkTitle": "Unlink title",
+    "unlinkDescription": "Pesan dari akun ini tidak akan lagi diterima bot Anda.",
+    "unlinkTitle": "Putuskan tautan akun ini?",
     "whatItCanDo": "What it can do",
     "workspace": "Ruang kerja",
     "connectGmail": "Connect Gmail",
@@ -2628,7 +2648,7 @@
     "terminalShell": "Terminal shell",
     "thisVersion": "This version",
     "whatsNew": "What's new",
-    "draftModelUnavailable": "The chat kit has not exposed draft model adoption yet.",
+    "draftModelUnavailable": "Pilih kembali model dalam percakapan.",
     "threadGone": "This thread was removed.",
     "inviteChannels": {
       "link": "Invite link",
@@ -2647,7 +2667,7 @@
       "web": "Web"
     },
     "formats": {
-      "pdf": "Pdf",
+      "pdf": "PDF",
       "word": "Word",
       "spreadsheet": "Spreadsheet",
       "slides": "Slides",
@@ -2691,6 +2711,12 @@
     "unbind": "Unbind",
     "invalidMcp": "Masukkan nama dan perintah, atau URL HTTP(S) yang valid.",
     "chooseRecipients": "Pilih setidaknya satu penerima.",
-    "authRequired": "Autentikasi diperlukan"
+    "authRequired": "Autentikasi diperlukan",
+    "artifactTypes": {
+      "file": "Berkas",
+      "image": "Gambar",
+      "link": "Tautan"
+    },
+    "connecting": "Loading"
   }
 }

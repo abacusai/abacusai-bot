@@ -197,10 +197,13 @@ const Skeleton = ({ rows = 6 }: { rows?: number }) => (
   <div
     data-testid="nav-list-skeleton"
     aria-busy="true"
-    className="flex flex-col pt-2"
+    className="flex flex-col gap-2 px-2 pt-3"
   >
     {Array.from({ length: rows }, (_, index) => (
-      <RegistrySkeleton key={index} className="h-(--row-h) rounded-lg" />
+      <div key={index} className="flex h-(--row-h) items-center gap-2">
+        <RegistrySkeleton className="size-5 shrink-0 rounded-md" />
+        <RegistrySkeleton className={index % 2 ? "h-3 w-3/5" : "h-3 w-4/5"} />
+      </div>
     ))}
   </div>
 );

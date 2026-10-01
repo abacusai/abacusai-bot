@@ -1067,10 +1067,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "계정이 준비되었습니다. 봇이 모델, 파일, 도구를 사용해 작업합니다.",
-    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
-    "pages.connected.promise2": "Access Access to free models",
-    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
-    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
+    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
+    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
+    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
+    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1095,7 +1095,8 @@
     "pages.pairing": "{{platform}} 연결 완료",
     "pages.finishPairing": "연결 완료",
     "pages.localModels": "Use a local model",
-    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out."
+    "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "welcomeFreeBadge": "무료로 시작하기"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1276,7 +1277,7 @@
       "emptyTitle": "No routines yet",
       "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
       "routineTitle": "Routine",
-      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "routineDescription": "이 루틴의 일정, 지침 및 실행 기록을 확인하세요.",
       "createTitle": "새 루틴",
       "createDescription": "Say what it should do and when."
     },
@@ -1339,22 +1340,28 @@
       "try": "Try one of these",
       "starters": {
         "build-a-store": {
-          "name": "Build an online store"
+          "name": "Build an online store",
+          "detail": "상점과 장바구니를 만드세요."
         },
         "design-an-infographic": {
-          "name": "Turn a repo into an infographic"
+          "name": "Turn a repo into an infographic",
+          "detail": "코드베이스를 시각적으로 요약하세요."
         },
         "find-flights": {
-          "name": "Find me flights"
+          "name": "Find me flights",
+          "detail": "경로, 날짜 및 가격을 비교하세요."
         },
         "process-a-spreadsheet": {
-          "name": "Clean up a spreadsheet"
+          "name": "Clean up a spreadsheet",
+          "detail": "데이터를 정리하고 결과를 요약하세요."
         },
         "restyle-a-repo": {
-          "name": "Restyle Excalidraw"
+          "name": "Restyle Excalidraw",
+          "detail": "기존 앱의 인터페이스를 새롭게 꾸미세요."
         },
         "review-pull-requests": {
-          "name": "Review my pull requests"
+          "name": "Review my pull requests",
+          "detail": "변경 사항에서 버그와 빠진 테스트를 확인하세요."
         }
       },
       "recent": "Pick up where you left off in {{workspace}}"
@@ -1536,7 +1543,8 @@
   },
   "theme": {
     "dark": "다크",
-    "light": "라이트"
+    "light": "라이트",
+    "system": "시스템"
   },
   "tour": {
     "finish": "시작하기",
@@ -1547,40 +1555,52 @@
     "skip": "둘러보기 건너뛰기",
     "stops": {
       "rail": {
-        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요."
+        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
+        "title": "봇"
       },
       "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
+        "title": "Who do you need?"
       },
       "workspaces": {
-        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다."
+        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다.",
+        "title": "세션"
       },
       "start-session": {
-        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다."
+        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다.",
+        "title": "새 세션"
       },
       "connectors": {
-        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다."
+        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다.",
+        "title": "커넥터"
       },
       "changes": {
-        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다."
+        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다.",
+        "title": "Changes"
       },
       "preview-terminal": {
-        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다."
+        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다.",
+        "title": "Terminal"
       },
       "memory": {
-        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요."
+        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요.",
+        "title": "Memory"
       },
       "artifacts": {
-        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
+        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다.",
+        "title": "산출물"
       },
       "welcome": {
-        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다."
+        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다.",
+        "title": "Welcome to AbacusAI Bot"
       },
       "talk": {
-        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다."
+        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다.",
+        "title": "What should we build?"
       },
       "notch": {
-        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요."
+        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요.",
+        "title": "도우미"
       }
     }
   },
@@ -1699,7 +1719,7 @@
     },
     "panel": {
       "label": "Side panel",
-      "emptyDescription": "This panel fills in with a later update.",
+      "emptyDescription": "항목을 선택하면 여기에 세부 정보가 표시됩니다.",
       "tabs": {
         "changes": "Changes",
         "terminal": "Terminal",
@@ -2542,36 +2562,36 @@
     "allTools": "All tools",
     "alwaysOn": "Always on",
     "approve": "승인",
-    "artifactGone": "Artifact gone",
+    "artifactGone": "This file is no longer on disk.",
     "artifactPreview": "Artifact preview",
     "artifactView": "Artifact view",
     "auto": "Auto",
     "category": "Category",
     "closePreview": "Close preview",
-    "connectName": "Connect name",
-    "connectWaiting": "Connect waiting",
-    "connectorsDescription": "Connectors description",
-    "credentialsLocal": "Credentials local",
+    "connectName": "{{name}} 연결",
+    "connectWaiting": "로그인을 완료하여 이 서비스를 연결하세요.",
+    "connectorsDescription": "에이전트가 작업을 완료하는 데 사용할 서비스를 연결하세요.",
+    "credentialsLocal": "인증 정보는 이 컴퓨터에 저장됩니다.",
     "defaultWorkspace": "Default workspace",
     "deliverToBot": "Deliver to bot",
     "details": "Details",
-    "disconnectDescription": "Disconnect description",
-    "disconnectTitle": "Disconnect title",
+    "disconnectDescription": "에이전트가 이 서비스에 접근할 수 없게 됩니다. 나중에 다시 연결할 수 있습니다.",
+    "disconnectTitle": "{{name}} 연결을 해제할까요?",
     "documentation": "Documentation",
     "done": "완료",
     "editSkill": "Edit skill",
     "executionShell": "Execution shell",
-    "fileMissing": "File missing",
+    "fileMissing": "This file is no longer on disk.",
     "followWorkspace": "Follow workspace",
     "fullAccess": "Full access",
     "global": "전역",
-    "goSession": "Go session",
+    "goSession": "Open as a session",
     "grid": "Grid",
-    "items": "Items",
-    "linkQr": "Link qr",
+    "items": "{{count}}개 항목",
+    "linkQr": "계정 연결용 QR 코드",
     "list": "List",
     "marketplace": "Marketplace",
-    "messagingDescription": "Messaging description",
+    "messagingDescription": "봇이 메시지를 주고받을 곳을 선택하세요.",
     "messagingEnabled": "메시징 사용",
     "noBot": "No bot",
     "nothingMatches": "일치하는 항목 없음",
@@ -2580,26 +2600,26 @@
     "openLogin": "Open login",
     "openSharedChat": "Open shared chat",
     "planned": "Planned",
-    "poweredSkills": "Powered skills",
+    "poweredSkills": "skills.sh 둘러보기",
     "reject": "거부",
-    "remoteUnattended": "Remote unattended",
-    "remoteWarning": "Remote warning",
-    "respondInbound": "Respond inbound",
-    "restartSkills": "Restart skills",
+    "remoteUnattended": "무인 원격 작업 허용",
+    "remoteWarning": "원격 요청은 확인 없이 명령을 실행하고 파일을 변경할 수 있습니다.",
+    "respondInbound": "수신 메시지에 답장",
+    "restartSkills": "업데이트된 스킬을 불러오려면 앱을 다시 시작하세요.",
     "reveal": "Reveal",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search 커넥터",
     "searchSkills": "Search skills",
     "searchTools": "Search tools",
-    "skillsDescription": "Skills description",
+    "skillsDescription": "에이전트가 재사용할 지침을 전체 또는 특정 작업 공간에 설치하세요.",
     "sort": "Sort",
-    "toolsDescription": "Tools description",
+    "toolsDescription": "에이전트가 사용할 수 있는 도구를 선택하세요.",
     "uninstall": "Uninstall",
     "uninstallSkill": "스킬 제거",
-    "uninstallSkillDescription": "Uninstall skill description",
+    "uninstallSkillDescription": "이 컴퓨터에서 /{{id}}을(를) 제거할까요? 나중에 다시 설치할 수 있습니다.",
     "unlink": "Unlink",
-    "unlinkDescription": "Unlink description",
-    "unlinkTitle": "Unlink title",
+    "unlinkDescription": "이 계정의 메시지가 더 이상 봇에 전달되지 않습니다.",
+    "unlinkTitle": "이 계정의 연결을 해제할까요?",
     "whatItCanDo": "What it can do",
     "workspace": "작업 공간",
     "connectGmail": "Connect Gmail",
@@ -2628,7 +2648,7 @@
     "terminalShell": "Terminal shell",
     "thisVersion": "This version",
     "whatsNew": "What's new",
-    "draftModelUnavailable": "The chat kit has not exposed draft model adoption yet.",
+    "draftModelUnavailable": "대화에서 모델을 다시 선택하세요.",
     "threadGone": "This thread was removed.",
     "inviteChannels": {
       "link": "Invite link",
@@ -2647,7 +2667,7 @@
       "web": "Web"
     },
     "formats": {
-      "pdf": "Pdf",
+      "pdf": "PDF",
       "word": "Word",
       "spreadsheet": "Spreadsheet",
       "slides": "Slides",
@@ -2691,6 +2711,12 @@
     "unbind": "Unbind",
     "invalidMcp": "이름과 명령 또는 유효한 HTTP(S) URL을 입력하세요.",
     "chooseRecipients": "받는 사람을 한 명 이상 선택하세요.",
-    "authRequired": "인증이 필요합니다"
+    "authRequired": "인증이 필요합니다",
+    "artifactTypes": {
+      "file": "파일",
+      "image": "이미지",
+      "link": "링크"
+    },
+    "connecting": "Loading"
   }
 }
