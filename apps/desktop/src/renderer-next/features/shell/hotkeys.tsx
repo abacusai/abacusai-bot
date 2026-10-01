@@ -10,7 +10,7 @@
 import { formatForDisplay, HotkeysProvider } from "@tanstack/react-hotkeys";
 import type { ReactNode } from "react";
 
-import { useAppHotkey } from "#next/lib/hotkeys";
+import { dispatchHotkeyAction, useAppHotkey } from "#next/lib/hotkeys";
 import type { HotkeyPlatform } from "#next/lib/platform";
 
 export const APP_HOTKEYS = {
@@ -20,6 +20,9 @@ export const APP_HOTKEYS = {
   togglePanel: "Mod+Alt+B",
   settings: "Mod+,",
   escape: "Escape",
+  closeTab: "Mod+W",
+  nextTab: "Control+Tab",
+  previousTab: "Control+Shift+Tab",
 } as const;
 
 export const AppHotkeysProvider = ({
@@ -40,6 +43,23 @@ export const AppHotkeysProvider = ({
 
 /** Re-exported: the one registration path for app shortcuts (§7.9). */
 export { useAppHotkey };
+export const dispatchAppHotkey = (
+  id: keyof typeof APP_HOTKEYS | "newTerminalTab"
+): void =>
+  dispatchHotkeyAction(
+    {
+      command: "command-menu",
+      new: "new-in-area",
+      toggleSidebar: "toggle-sidebar",
+      togglePanel: "toggle-side-panel",
+      settings: "open-settings",
+      escape: APP_HOTKEYS.escape,
+      closeTab: "close-tab",
+      nextTab: "next-tab",
+      previousTab: "previous-tab",
+      newTerminalTab: "new-terminal-tab",
+    }[id]
+  );
 
 export interface ShellActions {
   openCommand(): void;

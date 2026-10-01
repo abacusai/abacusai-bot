@@ -15,9 +15,12 @@ import {
   finishCompletion,
 } from "#next/features/onboarding";
 import { PairingQueueBanner } from "#next/features/onboarding";
+import { SessionsGlobals } from "#next/features/sessions";
+import { dispatchPreview } from "#next/features/shell";
 import { ShellLayout } from "#next/features/shell";
 import { TourHost, startTour, useTourState } from "#next/features/tour";
 import { OpenTargetBridge } from "#next/lib/attention/open-target";
+import { useDocumentSoundOwner } from "#next/lib/document-sound";
 import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#next/lib/navigation/search";
 import { useChromeState } from "#next/lib/window-chrome/chrome-state";
@@ -28,6 +31,7 @@ const initialsOf = (home: string): string =>
 
 const ShellRoute = () => {
   const { transport, system, db, queryClient } = Route.useRouteContext();
+  useDocumentSoundOwner(transport);
   const router = useRouter();
   const tour = useTourState();
   useEffect(() => {
@@ -58,6 +62,7 @@ const ShellRoute = () => {
       <TourHost />
       <OpenTargetBridge />
       <PairingQueueBanner suppressed={tour != null} />
+      <SessionsGlobals preview={dispatchPreview} />
     </>
   );
 };

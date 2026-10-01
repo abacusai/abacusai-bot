@@ -1,22 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { SessionIdentity, SessionReviewPage } from "#next/features/sessions";
-import { TopBarSlot } from "#next/features/shell";
-
-const SessionReviewRoute = () => {
-  const { sessionId } = Route.useParams();
-  return (
-    <>
-      <TopBarSlot>
-        <SessionIdentity sessionId={sessionId} />
-      </TopBarSlot>
-      <SessionReviewPage />
-    </>
-  );
-};
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
   "/_shell/(sessions)/sessions/$sessionId_/review"
 )({
-  component: SessionReviewRoute,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/sessions/$sessionId",
+      params,
+      search: { tab: "changes" },
+      replace: true,
+    });
+  },
 });

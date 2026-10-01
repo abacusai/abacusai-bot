@@ -10,9 +10,17 @@
  * (bold) when `guardRichText` is set.
  */
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { useContext } from "react";
+import { useContext, useEffect, useEffectEvent } from "react";
 
-import { ActionBindingsContext } from "./keyboard/action-bindings";
+import {
+  ActionBindingsContext,
+  TerminalActionBindingsContext,
+} from "./keyboard/action-bindings";
+
+const actions = new Map<string, () => void>();
+export const dispatchHotkeyAction = (id: string): void => {
+  actions.get(id)?.();
+};
 
 /** A contenteditable target, or one inside `[data-hotkeys="text"]`. */
 const isRichTextTarget = (target: EventTarget | null): boolean => {
@@ -33,9 +41,13 @@ export const useAppHotkey = (
     guardRichText?: boolean;
     enabled?: boolean;
     actionId?: string;
+    context?: "window" | "terminal";
   } = {}
 ): void => {
-  const bindings = useContext(ActionBindingsContext);
+  const windowBindings = useContext(ActionBindingsContext);
+  const terminalBindings = useContext(TerminalActionBindingsContext);
+  const bindings =
+    options.context === "terminal" ? terminalBindings : windowBindings;
   // The chat kit's pre-migration Stop chord has one action identity. Resolving
   // here keeps its enabled/focused guard and prevents a competing handler.
   const actionId =
@@ -44,9 +56,28 @@ export const useAppHotkey = (
     actionId && bindings && Object.hasOwn(bindings, actionId)
       ? bindings[actionId]!
       : binding;
+  const run = useEffectEvent(handler);
+  const enabled = options.enabled ?? true;
+  const id = actionId ?? binding;
+  useEffect(() => {
+    if (!enabled || id == null) return;
+    const action = () => run();
+    actions.set(id, action);
+    return () => {
+      if (actions.get(id) === action) actions.delete(id);
+    };
+  }, [id, enabled]);
   useHotkey(
     (resolved ?? "F24") as never,
     (event) => {
+      // The terminal adapter resolves its own context and dispatches once.
+      const target = event.target as HTMLElement | null;
+      if (
+        options.context !== "terminal" &&
+        actionId != null &&
+        target?.closest?.('[data-hotkeys="terminal"]')
+      )
+        return;
       if (options.guardRichText === true && isRichTextTarget(event.target))
         return;
       event.preventDefault();

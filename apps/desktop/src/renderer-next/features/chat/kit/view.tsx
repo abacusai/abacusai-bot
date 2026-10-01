@@ -5,13 +5,15 @@
  */
 import "../chat.css";
 import type { UIMessage } from "@tanstack/ai-client";
-import { useEffect, useState, type ComponentType } from "react";
+import { useSelector } from "@tanstack/react-store";
+import { useEffect, useEffectEvent, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
 
+import { draftStore, updateDraft } from "../composer/draft-store";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { prefetchMath } from "../markdown/math";
@@ -39,6 +41,7 @@ export interface ChatViewProps {
   workspaceRoot: string | null;
   onOpenFile?: (absPath: string) => void;
   onOpenSubagent?: (subagentRunId: string) => void;
+  onOpenDiff?: (path: string, toolKey?: string) => void;
   /** Whether this is the focused thread view (Mod+. applies here). */
   focused?: boolean;
   notchEnabled?: boolean;
@@ -112,6 +115,14 @@ export const ChatView = (props: ChatViewProps) => {
   const { threadId, skin, runtime } = props;
   const session = runtime.session(threadId);
   const [inline] = useState(createInlineRegistry);
+  const pending = useSelector(
+    draftStore,
+    (state) => state[threadId]?.pendingSubmit
+  );
+  const acceptedFirstSend = useEffectEvent((text: string) =>
+    props.composer.onFirstSend?.(text)
+  );
+  const admitting = useState(() => new Set<string>())[0];
   const ready = useHost(session, (state) => state.ready);
   const phase = useHost(session, (state) => state.phase);
   const notFound = useHost(session, (state) => state.notFound);
@@ -121,6 +132,31 @@ export const ChatView = (props: ChatViewProps) => {
     prefetchMath();
     session.load().catch(() => {});
   }, [session]);
+  useEffect(() => {
+    if (!ready || !pending || admitting.has(pending.runId)) return;
+    admitting.add(pending.runId);
+    void session
+      .admitEnvelope(pending)
+      .then((result) => {
+        if (["started", "duplicate"].includes(result.kind))
+          acceptedFirstSend(
+            pending.parts
+              .filter((p) => p.type === "text")
+              .map((p) => p.content)
+              .join("\n")
+          );
+        if (
+          ["started", "queued", "rejected", "duplicate"].includes(result.kind)
+        )
+          updateDraft(threadId, (draft) => {
+            if (draft.pendingSubmit?.runId !== pending.runId) return draft;
+            const { pendingSubmit: _pending, ...rest } = draft;
+            return rest;
+          });
+      })
+      .catch(() => {})
+      .finally(() => admitting.delete(pending.runId));
+  }, [ready, pending, session, threadId, admitting]);
   const value: ChatViewContextValue = {
     threadId,
     skin,
@@ -133,6 +169,7 @@ export const ChatView = (props: ChatViewProps) => {
     ...(props.onOpenSubagent != null
       ? { onOpenSubagent: props.onOpenSubagent }
       : {}),
+    ...(props.onOpenDiff ? { onOpenDiff: props.onOpenDiff } : {}),
     focused: props.focused ?? true,
     notchEnabled: props.notchEnabled ?? false,
     inline,

@@ -276,7 +276,7 @@ const Dictate = () => {
 
 const SendOrStop = () => {
   const { t } = useTranslation();
-  const { skin } = useChatView();
+  const { skin, composer: config } = useChatView();
   const { draft, busy, submit, stop, cancelling } = useComposer();
   const hasText = draft.text.trim() !== "" || draft.attachments.length > 0;
   if (busy && !hasText)
@@ -299,7 +299,7 @@ const SendOrStop = () => {
     <Button
       size="icon-lg"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
-      disabled={!hasText}
+      disabled={!hasText || !!config.blocked}
       className={cn(
         "size-9 rounded-full",
         skin === "bot" &&
@@ -378,6 +378,10 @@ export const ThreadComposer = () => {
               : "resting";
 
   const submit = (): void => {
+    if (config.blocked) {
+      config.onBlocked?.();
+      return;
+    }
     const route = routeSubmit({
       text: draft.text,
       attachments: draft.attachments,
@@ -385,8 +389,10 @@ export const ThreadComposer = () => {
       readOnly: config.readOnly != null || gone,
       questionPending: question,
       preStart: config.preStart === true,
-      hydrated,
-      ...(draft.mode != null ? { mode: draft.mode } : {}),
+      hydrated: hydrated || config.preStart === true,
+      ...((draft.mode ?? config.defaultMode) != null
+        ? { mode: draft.mode ?? config.defaultMode }
+        : {}),
       ...(draft.model != null ? { model: draft.model } : {}),
       ...(config.fixedMode != null ? { fixedMode: config.fixedMode } : {}),
     });
@@ -416,8 +422,21 @@ export const ThreadComposer = () => {
           restoreDraft(threadId, clearedRevision, saved);
           setError(message);
         };
-        session
-          .submit(route.text, route.forwardedProps)
+        void config.history?.add(route.text);
+        const admission = config.onSubmitEnvelope
+          ? config
+              .onSubmitEnvelope({
+                runId: crypto.randomUUID(),
+                messageId: crypto.randomUUID(),
+                parts: [{ type: "text", content: route.text }],
+                forwardedProps: {
+                  ...route.forwardedProps,
+                  model: config.model?.value ?? null,
+                },
+              })
+              .then(() => ({ kind: "started" as const }))
+          : session.submit(route.text, route.forwardedProps);
+        admission
           .then((result) => {
             if (result.kind === "rejected")
               restore(t("chat.composer.rejected"));
@@ -456,6 +475,8 @@ export const ThreadComposer = () => {
     );
   };
 
+  const historyIndex = useRef(-1);
+  const historyItems = useRef<string[]>([]);
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     const mod = event.metaKey || event.ctrlKey;
@@ -470,6 +491,31 @@ export const ThreadComposer = () => {
     if (event.key === "ArrowUp" && draft.text === "" && queue.length > 0) {
       event.preventDefault();
       setQueueEditing(threadId, queue.at(-1)!.id);
+      return;
+    }
+    if (
+      config.history &&
+      queue.length === 0 &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown") &&
+      event.currentTarget.selectionStart === 0
+    ) {
+      event.preventDefault();
+      void config.history.list().then((items) => {
+        historyItems.current = items;
+        historyIndex.current = Math.max(
+          -1,
+          Math.min(
+            items.length - 1,
+            historyIndex.current + (event.key === "ArrowUp" ? 1 : -1)
+          )
+        );
+        setText(
+          historyIndex.current < 0
+            ? ""
+            : (items[items.length - 1 - historyIndex.current] ?? ""),
+          null
+        );
+      });
       return;
     }
     if (event.key === "Escape") {
@@ -533,8 +579,9 @@ export const ThreadComposer = () => {
   };
   const mode = config.showModeChip ? (
     <ModeChip
+      availableModes={config.availableModes}
       value={liveMode}
-      draft={draft.mode}
+      draft={draft.mode ?? config.defaultMode}
       live={incarnation != null}
       onDraft={(next: AgentMode) =>
         updateDraft(threadId, (current) => ({ ...current, mode: next }))

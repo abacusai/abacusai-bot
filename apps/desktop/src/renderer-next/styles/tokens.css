@@ -298,3 +298,12 @@ html:active-view-transition-type(notch-contract)::view-transition-old(notch-body
 html:active-view-transition-type(notch-swap)::view-transition-new(notch-body) { animation: 120ms vt-fade-in both; }
 html:active-view-transition-type(notch-expand)::view-transition-new(notch-body),
 html:active-view-transition-type(notch-contract)::view-transition-new(notch-body) { animation: 120ms vt-fade-in 350ms both; }
+
+html:active-view-transition-type(session-view)::view-transition-group(.session-view) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+html:active-view-transition-type(session-view)::view-transition-old(.session-view),
+html:active-view-transition-type(session-view)::view-transition-new(.session-view) {
+  animation-duration: 120ms;
+}

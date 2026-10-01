@@ -2,15 +2,19 @@ import { getEventMeta } from "@orpc/client";
 
 import { followNotices } from "#next/data/queries/live";
 import type { Transport } from "#next/data/transport";
-import type { RunFinishedNotice } from "#shared/contract";
+import type { RunFinishedNotice } from "#shared/contract/ai";
+
+type Listener = (notice: RunFinishedNotice) => void | Promise<void>;
 const feeds = new WeakMap<Transport, ReturnType<typeof createFeed>>();
+
 const createFeed = (transport: Transport) => {
-  const listeners = new Set<(notice: RunFinishedNotice) => void>();
+  const listeners = new Set<Listener>();
+  const seen = new Set<string>();
   let abort: AbortController | null = null;
   let lastEventId: string | undefined;
-  const seen = new Set<string>();
+  let delivery = Promise.resolve();
   return {
-    subscribe(listener: (notice: RunFinishedNotice) => void): () => void {
+    subscribe(listener: Listener): () => void {
       listeners.add(listener);
       if (!abort) {
         abort = new AbortController();
@@ -19,25 +23,41 @@ const createFeed = (transport: Transport) => {
           ({ signal }) =>
             transport.client.ai.runFinished(
               lastEventId ? { lastEventId } : {},
-              { signal }
+              {
+                signal,
+              }
             ),
           (notice) => {
-            lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
             if (seen.has(notice.runId)) return;
             seen.add(notice.runId);
-            if (seen.size > 500) seen.delete(seen.values().next().value!);
-            for (const receive of listeners) {
-              try {
-                receive(notice);
-              } catch (error) {
-                console.warn("[run-finished] consumer failed", error);
-              }
-            }
+            const recipients = [...listeners];
+            delivery = delivery
+              .catch(() => {})
+              .then(async () => {
+                await Promise.all(
+                  recipients.map(async (receive) => {
+                    try {
+                      await receive(notice);
+                    } catch (error) {
+                      console.warn("[run-finished] consumer failed", error);
+                    }
+                  })
+                );
+                lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
+                if (seen.size > 10_000)
+                  seen.delete(seen.values().next().value!);
+              });
+            void delivery.catch((error) =>
+              console.warn("Run notice delivery failed", error)
+            );
           },
           abort.signal
         );
       }
+      let subscribed = true;
       return () => {
+        if (!subscribed) return;
+        subscribed = false;
         listeners.delete(listener);
         if (!listeners.size) {
           abort?.abort();
@@ -47,6 +67,8 @@ const createFeed = (transport: Transport) => {
     },
   };
 };
+
+/** Bots, sessions, routines and notch share one stream and persistent resume state. */
 export const runFinishedFeed = (transport: Transport) => {
   let feed = feeds.get(transport);
   if (!feed) {
@@ -56,8 +78,7 @@ export const runFinishedFeed = (transport: Transport) => {
   return feed;
 };
 
-/** All completion consumers share the same resumable stream. */
 export const subscribeRunFinished = (
   transport: Transport,
-  listener: (notice: RunFinishedNotice) => void
+  listener: Listener
 ): (() => void) => runFinishedFeed(transport).subscribe(listener);

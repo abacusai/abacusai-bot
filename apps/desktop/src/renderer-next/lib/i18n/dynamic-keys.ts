@@ -1,6 +1,44 @@
 /** Finite translation families resolved from runtime enums and catalogues. */
 export const DYNAMIC_KEYS = [
   {
+    pattern: "sessions.pr.*",
+    sources: ["features/sessions/context/context-tray.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.changes.*",
+    sources: ["features/sessions/changes/changes-tab.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.browser.*",
+    sources: [
+      "features/sessions/browser/browser-tab.tsx",
+      "features/sessions/browser/ask-host.tsx",
+    ],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.dock.device",
+    sources: ["features/sessions/dock/session-dock.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.start.starters.*.detail",
+    sources: ["features/sessions/start/session-start-page.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.start.starters.*.name",
+    sources: ["features/sessions/start/session-start-page.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
+    pattern: "sessions.attention.*",
+    sources: ["features/sessions/sessions-sidebar.tsx"],
+    reason: "Runtime session status, command or catalogue translation family.",
+  },
+  {
     pattern: "bots.avatar.accessories.*",
     sources: ["features/bots/form/look-picker.tsx"],
     reason: "Runtime enum or catalogue key at these translation calls.",
