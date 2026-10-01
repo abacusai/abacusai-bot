@@ -1,5 +1,6 @@
-import "./onboarding.css";
 import { CONNECTORS } from "@abacus-ai/connectors/registry";
+
+import "./onboarding.css";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
@@ -25,6 +26,7 @@ import {
   firstBotStore,
   type FirstBotResult,
 } from "./first-bot";
+import { FirstBotHatch } from "./hatch";
 import { next, connectedProviders, type FlowFacts } from "./machine";
 import { onboardingStore } from "./store";
 export {
@@ -212,18 +214,28 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
         <Parade />
       ) : (
         <div
-          className={step === "first-bot" ? "onboarding-hatch" : undefined}
+          className={step === "first-bot" ? "relative" : undefined}
           style={shared}
         >
-          <BotAvatar
-            look={resolveLook({
-              name: bot?.name ?? "Abacus",
-              avatarShape: bot?.avatarShape ?? "mochi",
-              avatarColor: bot?.avatarColor ?? "blue",
-            })}
-            size={96}
-            mood={step === "connect" ? "waiting" : "idle"}
-          />
+          {step === "first-bot" && bot ? (
+            <FirstBotHatch
+              look={resolveLook({
+                name: bot.name,
+                avatarShape: bot.avatarShape,
+                avatarColor: bot.avatarColor,
+              })}
+            />
+          ) : (
+            <BotAvatar
+              look={resolveLook({
+                name: bot?.name ?? "Abacus",
+                avatarShape: bot?.avatarShape ?? "mochi",
+                avatarColor: bot?.avatarColor ?? "blue",
+              })}
+              size={96}
+              mood={step === "connect" ? "waiting" : "idle"}
+            />
+          )}
         </div>
       )}
       <h1 ref={heading} tabIndex={-1}>

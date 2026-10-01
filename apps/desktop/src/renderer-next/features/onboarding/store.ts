@@ -32,7 +32,7 @@ export const startSignIn = (
     .start({ intent, ...(profileId ? { browserProfileId: profileId } : {}) })
     .catch((): AbacusAuthOutcome => ({
       ok: false,
-      error: "unidentified-account",
+      error: "auth-failed",
     }))
     .then((outcome) => {
       if (onboardingStore.state.signIn?.id !== attempt.id) return;

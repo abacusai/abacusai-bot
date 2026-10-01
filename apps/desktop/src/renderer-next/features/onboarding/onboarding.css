@@ -19,3 +19,16 @@
 @keyframes onboarding-hatch { 0%, 20%, 40%, 60% { transform: rotate(-6deg); } 10%, 30%, 50% { transform: rotate(6deg); } 70% { transform: scaleY(.9); } 85% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .onboarding-step > *, .onboarding-parade > *, .onboarding-hatch { animation: none; } .onboarding-progress span { transition: none; } }
 [data-reduced-motion=true] .onboarding-step > *, [data-reduced-motion=true] .onboarding-parade > *, [data-reduced-motion=true] .onboarding-hatch { animation: none; }
+
+.onboarding-step .bg-muted p { color: var(--foreground); }
+
+.first-bot-hatch { position: relative; display: grid; place-items: center; height: 112px; width: 220px; }
+.first-bot-glow { position: absolute; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklch, var(--primary) 20%, transparent), transparent 70%); animation: first-bot-glow 2s ease-in-out infinite; }
+.first-bot-egg { animation: first-bot-wobble 220ms ease-in-out 3; }
+.first-bot-confetti { position: absolute; top: 20px; width: 8px; height: 12px; border-radius: 2px; opacity: 0; animation: first-bot-confetti 2.4s ease-out both; }
+@keyframes first-bot-wobble { 0%,100% { rotate: -6deg; } 50% { rotate: 6deg; } }
+@keyframes first-bot-glow { 50% { opacity: .5; } }
+@keyframes first-bot-confetti { 0% { opacity: 0; transform: translateY(-20px) rotate(0); } 12%,70% { opacity: 1; } 100% { opacity: 0; transform: translateY(140px) rotate(320deg); } }
+@media (prefers-reduced-motion: reduce) { .first-bot-egg, .first-bot-glow { animation: none; } .first-bot-confetti { display: none; } }
+[data-reduced-motion=true] .first-bot-egg, [data-reduced-motion=true] .first-bot-glow { animation: none; }
+[data-reduced-motion=true] .first-bot-confetti { display: none; }

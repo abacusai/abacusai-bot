@@ -38,7 +38,8 @@ const ShellRoute = () => {
         transport,
         queryClient,
         navigate: async () => undefined,
-        startTour: () => startTour({ origin: router.state.location.href }),
+        startTour: () =>
+          startTour({ origin: router.state.location.href, onboarded: true }),
       },
       exit
     ).catch((error) => console.warn("[onboarding] tail deferred", error));

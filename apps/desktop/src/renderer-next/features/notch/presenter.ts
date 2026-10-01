@@ -97,7 +97,9 @@ export const presentNotch = (
     const botId = botForSession(session, inputs.routines);
     const summary = inputs.summaries.get(session.id);
     if (summary || session.turn?.phase === "waiting_permission") {
-      const key = summary ? `${session.id}:${summary.incarnation}` : session.id;
+      const key = summary
+        ? `${session.id}:${summary.incarnation}:${summary.oldestAt}`
+        : session.id;
       if (!inputs.snoozed.has(key))
         add({
           kind: summary?.questions ? "question" : "approval",
