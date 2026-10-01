@@ -95,8 +95,34 @@ export interface CatalogSupplement {
   contextWindow: number;
   maxTokens: number;
   thinkingLevelMap?: Record<string, string | null>;
-  compat?: Record<string, boolean>;
+  headers?: Record<string, string>;
+  compat?: Record<string, boolean | string>;
 }
+
+/**
+ * An NVIDIA-hosted model, shaped like pi's own NVIDIA rows. NVIDIA's model
+ * list gives ids only, so the window is the smallest these serve elsewhere.
+ */
+const nvidiaModel = (id: string, name: string): CatalogSupplement => ({
+  id,
+  name,
+  api: "openai-completions",
+  baseUrl: "https://integrate.api.nvidia.com/v1",
+  // Hold the request open rather than answer 202 and expect a poll.
+  headers: { "NVCF-POLL-SECONDS": "3600" },
+  reasoning: true,
+  input: ["text"],
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  contextWindow: 262_144,
+  maxTokens: 32_768,
+  compat: {
+    supportsStore: false,
+    supportsDeveloperRole: false,
+    supportsReasoningEffort: false,
+    maxTokensField: "max_tokens",
+    supportsStrictMode: false,
+  },
+});
 
 /**
  * Models newer than the bundled pi release, per provider; pi's remote overlay
@@ -117,6 +143,42 @@ export const CATALOG_SUPPLEMENTS: Record<string, CatalogSupplement[]> = {
       maxTokens: 128_000,
       thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
       compat: { forceAdaptiveThinking: true, supportsStrictTools: true },
+    },
+  ],
+  // Served on NVIDIA's free tier (checked 2026-10-01); pi's rows for older
+  // versions answer 410 Gone.
+  nvidia: [
+    nvidiaModel("moonshotai/kimi-k3", "Kimi K3"),
+    nvidiaModel("z-ai/glm-5.3", "GLM-5.3"),
+    nvidiaModel("deepseek-ai/deepseek-v4.1-flash", "DeepSeek V4.1 Flash"),
+  ],
+  // The Qwen both serve now (checked 2026-10-01), after pi's 3.6 rows.
+  cerebras: [
+    {
+      id: "qwen-3.8-27b",
+      name: "Qwen 3.8 27B",
+      api: "openai-completions",
+      baseUrl: "https://api.cerebras.ai/v1",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 65_536,
+      maxTokens: 32_768,
+      compat: { supportsStore: false, supportsDeveloperRole: false },
+    },
+  ],
+  groq: [
+    {
+      id: "qwen/qwen3.8-27b",
+      name: "Qwen3.8 27B",
+      api: "openai-completions",
+      baseUrl: "https://api.groq.com/openai/v1",
+      reasoning: true,
+      input: ["text", "image"],
+      cost: { input: 0.6, output: 3, cacheRead: 0.3, cacheWrite: 0 },
+      contextWindow: 131_072,
+      maxTokens: 16_384,
+      thinkingLevelMap: { off: "none", high: "default" },
     },
   ],
 };

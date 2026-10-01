@@ -76,6 +76,7 @@ import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
 } from "./memory-store.js";
+import { endedOnLeakedToolCall } from "./openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
   OPENLLM_CONTINUATION_TYPE,
@@ -1729,7 +1730,8 @@ export class AbacusBotSession {
   ): { failure: string; nextId: string } | null {
     if (!this.openLlmActive || this.interrupted) return null;
 
-    const failure = endedOnProviderError(messages);
+    const failure =
+      endedOnProviderError(messages) ?? endedOnLeakedToolCall(messages);
 
     if (failure == null) return null;
 
@@ -2318,6 +2320,7 @@ export class AbacusBotSession {
         }
 
         this.reportFailedCall(event.message);
+        this.router.recordReply(event.message);
 
         const full = messageText(event.message);
         // A final text that does not extend the deltas means an extension

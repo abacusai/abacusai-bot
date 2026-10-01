@@ -2,20 +2,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useState, type JSX } from "react";
 
-import { PROVIDER_KEY_FIELDS } from "#shared/settings";
+import type { FreePoolProvider } from "#shared/free-pool";
+import { PROVIDER_KEY_FIELDS, type ProviderKeyField } from "#shared/settings";
 
 import { ProviderKeyDialog } from "../components/settings/provider-key-dialog";
 import { settingsQueryKeys } from "../lib/settings-query-keys";
 
-/** The free-pool sources a user can add themselves, in the order offered. */
-export type FreeSource = "openrouter" | "gemini";
+/**
+ * The two sources the out-of-credits cards offer. The model picker offers
+ * every FREE_POOL_PROVIDERS entry.
+ */
+export type FreeSource = Extract<FreePoolProvider, "openrouter" | "gemini">;
 export const FREE_SOURCES: FreeSource[] = ["openrouter", "gemini"];
 
-/** Google's key is pasted by hand; the dialog carries the link to it. */
-const GEMINI_FIELD =
-  PROVIDER_KEY_FIELDS.find((field) => field.provider === "gemini") ?? null;
+const keyField = (source: FreePoolProvider): ProviderKeyField | null =>
+  PROVIDER_KEY_FIELDS.find((field) => field.provider === source) ?? null;
 
-/** The free sources the pool could still gain, OpenRouter first. */
+/** The cards' free sources the pool could still gain, OpenRouter first. */
 export const missingFreeSources = (
   configured: Record<string, boolean> | undefined
 ): FreeSource[] =>
@@ -25,27 +28,28 @@ export const missingFreeSources = (
  * One way to connect a free source, shared by the model picker's rows and
  * the out-of-credits cards: the same OAuth hop and the same fallbacks, so
  * the cards cannot drift from the picker. Resolves true only when the source
- * is connected and the catalog re-read; Google's key is pasted into the
- * dialog this returns, which the caller must render, so that path resolves
- * false and the user carries on once the key is in.
+ * is connected and the catalog re-read. OpenRouter signs in through the
+ * browser; every other source's key is pasted into the dialog this returns,
+ * which the caller must render, so that path resolves false and the user
+ * carries on once the key is in.
  */
 export const useConnectFreeProvider = (): {
-  connect: (source: FreeSource) => Promise<boolean>;
-  connecting: FreeSource | null;
+  connect: (source: FreePoolProvider) => Promise<boolean>;
+  connecting: FreePoolProvider | null;
   /** Render this: the key dialog, open only while a paste is being asked for. */
   keyDialog: JSX.Element;
 } => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [connecting, setConnecting] = useState<FreeSource | null>(null);
-  const [askingKey, setAskingKey] = useState(false);
+  const [connecting, setConnecting] = useState<FreePoolProvider | null>(null);
+  const [askingKey, setAskingKey] = useState<ProviderKeyField | null>(null);
 
   const connect = useCallback(
-    async (source: FreeSource): Promise<boolean> => {
-      if (source === "gemini") {
+    async (source: FreePoolProvider): Promise<boolean> => {
+      if (source !== "openrouter") {
         // The same dialog onboarding and the Models page use, opened here
         // rather than sending the user to Settings; it carries the link.
-        setAskingKey(true);
+        setAskingKey(keyField(source));
         return false;
       }
       setConnecting(source);
@@ -77,9 +81,9 @@ export const useConnectFreeProvider = (): {
 
   const keyDialog = (
     <ProviderKeyDialog
-      field={GEMINI_FIELD}
-      open={askingKey}
-      onClose={() => setAskingKey(false)}
+      field={askingKey}
+      open={askingKey != null}
+      onClose={() => setAskingKey(null)}
       onSaved={async () => {
         await window.api.agent.listModels(true);
         await queryClient.invalidateQueries({
