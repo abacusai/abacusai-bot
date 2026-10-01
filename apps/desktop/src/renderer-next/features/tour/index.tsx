@@ -10,6 +10,7 @@ import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
 
+import { completeTour } from "./completion";
 import { TOUR_STOPS } from "./stops";
 import { startTour, tourStore, useTourState } from "./store";
 /** @public Phase-5 sign-out integration. */
@@ -34,16 +35,15 @@ export const TourHost = () => {
   const stop = active
     ? stops[Math.min(active.stopIndex, stops.length - 1)]
     : null;
-  const end = async (result: "done" | "skipped") => {
-    const running = tourStore.state.active;
-    if (!running) return;
-    await db.updatePrefs({ tour: { status: result, at: Date.now() } });
-    await transport.client.system.funnelStep({
-      step: result === "done" ? "tour_done" : "tour_skipped",
+  const end = (result: "done" | "skipped") =>
+    completeTour(result, {
+      persist: (status) => db.updatePrefs({ tour: { status, at: Date.now() } }),
+      telemetry: (status) =>
+        transport.client.system.funnelStep({
+          step: status === "done" ? "tour_done" : "tour_skipped",
+        }),
+      navigate: (href) => navigate({ href }),
     });
-    tourStore.setState(() => ({ active: null }));
-    await navigate({ href: running.origin });
-  };
   const dismiss = () => {
     void end("skipped");
   };

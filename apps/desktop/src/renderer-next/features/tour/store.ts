@@ -1,6 +1,12 @@
 import { Store, useSelector } from "@tanstack/react-store";
+let nextRun = 0;
 export const tourStore = new Store<{
-  active: { stopIndex: number; origin: string; startedAt: number } | null;
+  active: {
+    runId: number;
+    stopIndex: number;
+    origin: string;
+    startedAt: number;
+  } | null;
 }>({ active: null });
 export const startTour = ({
   origin,
@@ -11,7 +17,7 @@ export const startTour = ({
 }): void => {
   if (!onboarded || tourStore.state.active) return;
   tourStore.setState(() => ({
-    active: { stopIndex: 0, origin, startedAt: Date.now() },
+    active: { runId: ++nextRun, stopIndex: 0, origin, startedAt: Date.now() },
   }));
 };
 export const tourSignedOut = (): void =>
