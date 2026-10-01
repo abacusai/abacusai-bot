@@ -162,10 +162,12 @@ const Identity = ({
     {children === undefined ? (
       <div
         ref={setIdentityTarget}
-        className="flex min-w-0 items-center gap-2"
+        className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
       />
     ) : (
-      <div className="flex min-w-0 items-center gap-2">{children}</div>
+      <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink">
+        {children}
+      </div>
     )}
     {status && statusText != null && (
       <span
@@ -211,7 +213,10 @@ const Actions = ({
       </DropdownMenu>
     );
   return (
-    <div data-slot="topbar-actions" className="flex items-center gap-0.5">
+    <div
+      data-slot="topbar-actions"
+      className="flex shrink-0 items-center gap-0.5"
+    >
       {actions.map((action) =>
         action.render != null ? (
           <Fragment key={action.id}>{action.render}</Fragment>
@@ -249,7 +254,7 @@ const PanelTabs = ({
     <Tabs
       value={value}
       onValueChange={(next) => onChange(next as SidePanelTabId)}
-      className="titlebar-nodrag mr-2"
+      className="titlebar-nodrag mr-2 shrink-0"
     >
       <TabsList
         data-tour="topbar-panel-tabs"

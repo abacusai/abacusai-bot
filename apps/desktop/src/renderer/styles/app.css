@@ -156,3 +156,26 @@
   color: oklch(0.15 0 0);
   background-color: oklch(0.75 0.17 25);
 }
+
+/* This viewport starts below the title bar, so the stack grows downward. */
+[data-testid="toast-viewport"] [data-slot="toast"] {
+  top: 0;
+  bottom: auto;
+  transform-origin: top;
+  --offset-y: calc(var(--toast-offset-y) + var(--toast-index) * var(--gap) + var(--toast-swipe-movement-y));
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(calc(var(--toast-swipe-movement-y) + var(--toast-index) * var(--peek))) scale(var(--scale));
+}
+[data-testid="toast-viewport"] [data-slot="toast"][data-expanded] {
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--offset-y));
+}
+[data-testid="toast-viewport"] [data-slot="toast"][data-starting-style],
+[data-testid="toast-viewport"] [data-slot="toast"][data-ending-style] {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+[data-testid="toast-viewport"] [data-slot="toast-content"] {
+  max-height: calc((100dvh - var(--toolbar-h) - 80px) / 3);
+  overflow-y: auto;
+}
+[data-testid="toast-viewport"] [data-slot="toast-title"],
+[data-testid="toast-viewport"] [data-slot="toast-description"] { overflow-wrap: anywhere; }

@@ -35,6 +35,7 @@ export const AccountPage = () => {
   const settings = useQuery(
     transport.orpc.settings.get.queryOptions({ input: {} })
   );
+  const inviteLink = referrals.data?.inviteLink;
   const canSignOut = canSignOutOfAbacus(settings.data ?? null);
   const [pending, setPending] = useState(false);
   const [removeOthers, setRemoveOthers] = useState(true);
@@ -197,12 +198,13 @@ export const AccountPage = () => {
         <SettingRow id="inviteLink" title={t("phase5.inviteLink")}>
           <Button
             size="sm"
-            disabled={!referrals.data?.inviteLink}
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(referrals.data!.inviteLink)
-                .then(() => showInfo(t("phase5.copied")))
-            }
+            disabled={!inviteLink}
+            onClick={() => {
+              if (inviteLink)
+                void navigator.clipboard
+                  .writeText(inviteLink)
+                  .then(() => showInfo(t("phase5.copied")));
+            }}
           >
             {t("phase5.copy")}
           </Button>

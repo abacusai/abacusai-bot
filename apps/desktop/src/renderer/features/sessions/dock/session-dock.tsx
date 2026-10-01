@@ -16,6 +16,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { usePanelRef } from "react-resizable-panels";
 
+import { PaneBoundary } from "#renderer/components/page-state";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
@@ -118,7 +119,8 @@ export const SessionDock = ({
     transport.orpc.terminal.shell.get.queryOptions({ input: {} })
   );
   const split =
-    size.width + 56 >= 1100 &&
+    window.innerWidth >= 1100 &&
+    size.width >= 728 &&
     (full?.key === key && full.from === search.view
       ? full.view
       : search.view) !== "full" &&
@@ -136,25 +138,28 @@ export const SessionDock = ({
   };
   const shown = foldedDock(
     tree,
-    split ? size.width - 360 : size.width,
-    size.height,
+    split ? size.width - 368 : size.width,
+    size.height - (active ? 36 : 0),
     active ?? null
   );
   const chatPanel = usePanelRef();
   const minimumDockWidth = Math.max(360, dockMinimum(shown, "width"));
   const restoreChatSize = useEffectEvent(() => {
-    if (split)
-      chatPanel.current?.resize(
-        clampChatWidth(
-          prefs.panes["sessions.chat"] ?? 480,
-          size.width,
-          minimumDockWidth + 8
-        )
-      );
+    chatPanel.current?.resize(
+      !showChat
+        ? 0
+        : !split
+          ? "100%"
+          : clampChatWidth(
+              prefs.panes["sessions.chat"] ?? 480,
+              size.width,
+              minimumDockWidth + 8
+            )
+    );
   });
   useEffect(() => {
     restoreChatSize();
-  }, [split, size.width, minimumDockWidth]);
+  }, [split, showChat, size.width, minimumDockWidth]);
   const chatWriter = useState(() =>
     createPaneWidthWriter(db, "sessions.chat")
   )[0];
@@ -315,8 +320,8 @@ export const SessionDock = ({
       id: crypto.randomUUID(),
     });
     if (
-      dockMinimum(next, "width") > (split ? size.width - 360 : size.width) ||
-      dockMinimum(next, "height") > size.height
+      dockMinimum(next, "width") > (split ? size.width - 368 : size.width) ||
+      dockMinimum(next, "height") > size.height - 36
     )
       return;
     updateTabs(key, (s) => ({ ...s, tree: next }));
@@ -324,7 +329,11 @@ export const SessionDock = ({
   };
   const renderTree = (node: DockNode): ReactNode =>
     node.kind === "split" ? (
-      <ResizablePanelGroup orientation={node.orientation} key={node.id}>
+      <ResizablePanelGroup
+        orientation={node.orientation}
+        key={node.id}
+        className="min-h-0 min-w-0"
+      >
         {node.children.map((child, i) => (
           <Fragment key={child.id}>
             {i ? <ResizableHandle /> : null}
@@ -349,7 +358,7 @@ export const SessionDock = ({
       </ResizablePanelGroup>
     ) : (
       <div
-        className="relative flex size-full flex-col"
+        className="relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -362,10 +371,10 @@ export const SessionDock = ({
             if (typeof value === "string") select(value);
           }}
         >
-          <div data-tab-header className="flex items-center">
+          <div data-tab-header className="flex min-w-0 items-center">
             <TabsList
               variant="line"
-              className="w-full justify-start overflow-auto px-2"
+              className="min-w-0 flex-1 justify-start overflow-auto px-2"
             >
               {!split && dockLeaves(shown)[0]?.id === node.id ? (
                 <TabsTrigger value="chat">
@@ -394,6 +403,8 @@ export const SessionDock = ({
                   >
                     <TabsTrigger
                       value={ref}
+                      className="max-w-48 truncate"
+                      title={tab.title}
                       onKeyDown={(e) => {
                         if (e.shiftKey && e.key === "F10") {
                           e.preventDefault();
@@ -423,7 +434,7 @@ export const SessionDock = ({
               })}
             </TabsList>
             <div
-              className="flex items-center"
+              className="flex min-w-0 items-center"
               role="group"
               aria-label={t("sessions.dock.move")}
             >
@@ -433,7 +444,7 @@ export const SessionDock = ({
                   ? active
                   : node.active;
                 return tab && ref === selected ? (
-                  <div key={ref} className="flex items-center">
+                  <div key={ref} className="flex min-w-0 items-center">
                     {" "}
                     {/^(terminal|browser|preview):/.test(ref) ? (
                       <Button
@@ -491,7 +502,7 @@ export const SessionDock = ({
             </div>
           </div>
         </Tabs>
-        <div className="relative min-h-0 flex-1">
+        <div className="relative min-h-0 min-w-0 flex-1">
           {node.tabs.map((ref) => {
             const tab = entries.tabs.find((tab) => tab.ref === ref);
             const visible =
@@ -502,10 +513,14 @@ export const SessionDock = ({
             return tab ? (
               <div
                 key={ref}
-                className="size-full"
+                data-dock-pane={ref}
+                data-visible={visible}
+                className="size-full min-w-0"
                 style={{ display: visible ? undefined : "none" }}
               >
-                {renderTab(tab, visible, () => close(ref))}
+                <PaneBoundary resetKey={tab.ref}>
+                  {renderTab(tab, visible, () => close(ref))}
+                </PaneBoundary>
               </div>
             ) : null;
           })}
@@ -536,7 +551,7 @@ export const SessionDock = ({
         ref={host}
         data-slot="session-dock"
         data-view={split ? "split" : "full"}
-        className="relative flex size-full min-h-0 flex-col"
+        className="relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
         {registerHotkeys(
           () => cycle(1),
@@ -632,11 +647,35 @@ export const SessionDock = ({
             </Button>
           </div>
         ) : null}
-        <ResizablePanelGroup orientation="horizontal">
+        {active === "chat" && !split ? (
+          <Tabs
+            value="chat"
+            onValueChange={(value) => select(String(value))}
+            className="min-w-0 shrink-0"
+          >
+            <TabsList className="max-w-full justify-start overflow-x-auto">
+              <TabsTrigger value="chat">{t("sessions.dock.chat")}</TabsTrigger>
+              {entries.tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.ref}
+                  value={tab.ref}
+                  className="max-w-48 truncate"
+                >
+                  {tab.title}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        ) : null}
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="min-h-0 min-w-0 flex-1"
+        >
           <ResizablePanel
             id="session-chat"
             panelRef={chatPanel}
-            minSize={showChat ? 360 : 0}
+            minSize={showChat ? Math.min(360, size.width) : 0}
+            maxSize={!showChat ? 0 : undefined}
             defaultSize={
               split
                 ? clampChatWidth(
@@ -644,7 +683,9 @@ export const SessionDock = ({
                     size.width,
                     dockMinimum(shown, "width") + 8
                   )
-                : size.width
+                : showChat
+                  ? "100%"
+                  : 0
             }
             groupResizeBehavior="preserve-pixel-size"
             onResize={(size) => {
@@ -657,21 +698,18 @@ export const SessionDock = ({
             }}
             style={
               !showChat
-                ? {
-                    position: "absolute",
-                    right: 22,
-                    bottom: 22,
-                    width: 420,
-                    height: "auto",
-                    zIndex: 10,
-                  }
-                : split
-                  ? undefined
-                  : { flex: 1 }
+                ? { position: "static", overflow: "visible" }
+                : undefined
             }
           >
-            <div className={!showChat ? "session-dock-mini" : "h-full"}>
-              {chat}
+            <div
+              className={
+                !showChat
+                  ? "session-dock-mini absolute right-4 bottom-4 z-10 w-[min(420px,calc(100%-32px))]"
+                  : "h-full min-w-0"
+              }
+            >
+              <PaneBoundary resetKey={key}>{chat}</PaneBoundary>
             </div>
           </ResizablePanel>
           {split ? <ResizableHandle disableDoubleClick /> : null}
@@ -682,29 +720,6 @@ export const SessionDock = ({
             >
               {renderTree(shown)}
             </ResizablePanel>
-          ) : active === "chat" ? (
-            <div className="absolute inset-x-0 top-9 h-9">
-              <Tabs value="chat">
-                <TabsList>
-                  <TabsTrigger value="chat">
-                    {t("sessions.dock.chat")}
-                  </TabsTrigger>
-                  {entries.tabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab.ref}
-                      value={tab.ref}
-                      onClick={() => select(tab.ref)}
-                    >
-                      {tab.title}
-                      {entries.tabs.filter((t) => t.title === tab.title)
-                        .length > 1
-                        ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
-                        : ""}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
           ) : null}
         </ResizablePanelGroup>
       </div>
