@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { NotificationsPage } from "#renderer/features/settings";
-import { TopBarSlot } from "#renderer/features/shell";
+import { NotificationsPage } from "#renderer/features/settings/personal";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const NotificationsSettingsRoute = () => {
   const { t } = useTranslation();

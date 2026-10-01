@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as v from "valibot";
 
-import { RoutineCreateDialog } from "#renderer/features/routines";
+import { RoutineCreateDialog } from "#renderer/features/routines/form";
 import { optionalField } from "#renderer/lib/navigation/search";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 export const Route = createFileRoute("/_shell/(routines)/routines/_list/new")({

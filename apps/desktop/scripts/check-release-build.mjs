@@ -46,6 +46,46 @@ export const checkReleaseBuild = (dist = path.join(desktop, "dist")) => {
           `Development code in release: ${path.relative(dist, file)}`
         );
     }
+  // Guard the boot graph, including HTML modulepreloads. Route guards may stay
+  // eager; presentation code must wait for its route or user interaction.
+  const chunks = JSON.parse(
+    fs.readFileSync(path.join(dist, "renderer", "chunk-sizes.json"), "utf8")
+  );
+  const initial = new Set(
+    [
+      ...fs
+        .readFileSync(path.join(dist, "renderer", "index.html"), "utf8")
+        .matchAll(/(?:src|href)="([^"?#]+\.js)"/g),
+    ].map((match) => match[1].replace(/^\.?\//, ""))
+  );
+  const visit = (file) => {
+    const chunk = chunks.find((entry) => entry.file === file);
+    for (const dependency of chunk?.imports ?? []) {
+      if (!initial.has(dependency)) {
+        initial.add(dependency);
+        visit(dependency);
+      }
+    }
+  };
+  for (const file of initial) visit(file);
+  const bootModules = chunks
+    .filter((chunk) => initial.has(chunk.file))
+    .flatMap((chunk) => chunk.modules.map((module) => module.id));
+  const deferred =
+    /(?:\/components\/(?:editor|terminal)\/|\/ghostty-web\/|\/features\/chat\/markdown\/|\/@tanstack\/(?:markdown|highlight)\/|\/features\/notch\/|\/kit\/permissions\/notch-list\.|\/features\/onboarding\/(?:steps\/|gallery\.|index\.|hatch\.)|\/features\/tour\/(?:index\.|gallery\.)|\/features\/gallery\/)/;
+  const eager = bootModules.filter((id) => deferred.test(id));
+  if (eager.length)
+    throw new Error(
+      `Deferred presentation code in initial bundle: ${eager.join(", ")}`
+    );
+  // Only the shell's named icons belong here, never the full icon catalog.
+  const icons = bootModules.filter((id) =>
+    /\/lucide-react\/.*\/icons\//.test(id)
+  );
+  if (icons.length > 100)
+    throw new Error(
+      `Heavy icon catalog in initial bundle: ${icons.length} icons`
+    );
   return policy;
 };
 if (

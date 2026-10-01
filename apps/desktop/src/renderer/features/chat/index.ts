@@ -20,17 +20,14 @@ export { useComposerExpanded } from "./composer/composer";
  * the recorded goldens never reach the shipped bundle (a call behind
  * `import.meta.env.VITE_NEXT_DB_FIXTURES === "1"` is dropped with its chunk).
  */
-export const loadFixtureRuntime = async () => {
-  if (import.meta.env.VITE_NEXT_DB_FIXTURES === "1")
-    return (await import("./fixtures/player")).fixtureRuntime;
-  throw new Error("Chat fixtures require VITE_NEXT_DB_FIXTURES=1");
-};
+export { loadFixtureRuntime } from "./fixture-runtime";
 
 export { updateDraft } from "./composer/draft-store";
 
 export { StartComposer } from "./composer/start-composer";
 export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
-export { SubagentDetail, useSubagents } from "./kit/subagents/detail";
+export { SubagentDetail } from "./kit/subagents/detail";
+export { useSubagents } from "./kit/subagents/use-subagents";
 /**
  * The `/__ui` gallery entries (spec 02 §11.2), loaded on first render: the
  * gallery replays recorded scenarios, and a static import would put every

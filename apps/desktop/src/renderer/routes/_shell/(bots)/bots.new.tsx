@@ -1,16 +1,18 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
+import { botsQueries } from "#renderer/features/bots/data/queries";
 import {
-  BotStartPage,
-  BotSetupForm,
   NewBotSearch,
   NEW_BOT_DEFAULTS,
-  botsQueries,
+} from "#renderer/features/bots/data/search";
+import { BotSetupForm } from "#renderer/features/bots/form/bot-form";
+import {
   selectTemplate,
   getDraft,
-} from "#renderer/features/bots";
-import { TopBarSlot } from "#renderer/features/shell";
+} from "#renderer/features/bots/form/draft-store";
+import { BotStartPage } from "#renderer/features/bots/start/bot-start-page";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 const NewRoute = () => {
   const { t } = useTranslation();
   const search = Route.useSearch();

@@ -2,7 +2,7 @@ import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ArtifactsPage } from "#renderer/features/artifacts";
-import { TopBarSlot } from "#renderer/features/shell";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
 import { ArtifactsSearch } from "#renderer/lib/navigation/search";
 

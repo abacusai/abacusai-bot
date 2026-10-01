@@ -5,8 +5,8 @@ import {
   ConnectorSheet,
   ConnectorsPage,
   ConnectorFieldsDialog,
-} from "#renderer/features/library";
-import { TopBarSlot } from "#renderer/features/shell";
+} from "#renderer/features/library/connectors";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { ConnectorsSearch } from "#renderer/lib/navigation/search";
 
 const ConnectorsRoute = () => {

@@ -5,18 +5,15 @@
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect } from "react";
 
-import { LibraryGlobals } from "#renderer/features/library";
-import { RoutinesGlobals } from "#renderer/features/routines";
+import { LibraryGlobals } from "#renderer/features/library/globals";
+import { RoutinesGlobals } from "#renderer/features/routines/globals";
 import {
   CriticalUpdateDialog,
   useUpdatePillAction,
-} from "#renderer/features/settings";
-import {
-  AppRoot,
-  NotFound,
-  RootError,
-  useTopBarEndActions,
-} from "#renderer/features/shell";
+} from "#renderer/features/settings/updates";
+import { AppRoot } from "#renderer/features/shell/app-root";
+import { NotFound, RootError } from "#renderer/features/shell/screens";
+import { useTopBarEndActions } from "#renderer/features/shell/top-bar-slots";
 import { ActionBindingsProvider } from "#renderer/lib/keyboard/action-bindings";
 import { installLogRing } from "#renderer/lib/log-ring";
 import type { RouterContext } from "#renderer/router";

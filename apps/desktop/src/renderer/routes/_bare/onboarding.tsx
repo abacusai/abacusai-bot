@@ -5,10 +5,8 @@ import {
   useMatches,
 } from "@tanstack/react-router";
 
-import {
-  OnboardingFrame,
-  accountStateQuery,
-} from "#renderer/features/onboarding";
+import { OnboardingFrame } from "#renderer/features/onboarding";
+import { accountStateQuery } from "#renderer/features/onboarding/actions";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 const Layout = () => {
   const matches = useMatches();

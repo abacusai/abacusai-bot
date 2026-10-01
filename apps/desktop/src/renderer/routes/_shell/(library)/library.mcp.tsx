@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { McpPage, McpSearch } from "#renderer/features/library";
-import { TopBarSlot } from "#renderer/features/shell";
+import { McpPage } from "#renderer/features/library/mcp";
+import { McpSearch } from "#renderer/features/library/search";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const McpRoute = () => {
   const { t } = useTranslation();

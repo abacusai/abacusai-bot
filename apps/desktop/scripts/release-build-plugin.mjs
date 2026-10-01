@@ -1,4 +1,5 @@
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 
 import { buildProvenance } from "../../../scripts/build-provenance.mjs";
 export const releaseBuildPlugin = (root, release, flags) => ({
@@ -25,6 +26,27 @@ export const releaseBuildPlugin = (root, release, flags) => ({
         )
       ),
     ].sort();
+    this.emitFile({
+      type: "asset",
+      fileName: "chunk-sizes.json",
+      source: JSON.stringify(
+        Object.values(bundle)
+          .filter((c) => c.type === "chunk")
+          .map((c) => ({
+            file: c.fileName,
+            gzipBytes: gzipSync(c.code).length,
+            imports: c.imports,
+            dynamicImports: c.dynamicImports,
+            modules: Object.entries(c.modules)
+              .filter(([, info]) => info.renderedLength > 0)
+              .map(([id, info]) => ({
+                id: id.replaceAll("\\", "/").replace(root, "<desktop>"),
+                renderedBytes: info.renderedLength,
+              }))
+              .sort((a, b) => b.renderedBytes - a.renderedBytes),
+          }))
+      ),
+    });
     this.emitFile({
       type: "asset",
       fileName: "build.json",

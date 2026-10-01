@@ -1,5 +1,7 @@
 import { useSelector } from "@tanstack/react-store";
 import {
+  lazy,
+  Suspense,
   useEffect,
   useEffectEvent,
   useState,
@@ -13,7 +15,9 @@ import { Button } from "#renderer/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 import { draftConversationKey } from "#shared/conversation-scope";
 
-import { BrowserTab } from "../browser/browser-tab";
+const BrowserTab = lazy(() =>
+  import("../browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
+);
 import { useWorkspace } from "../data/queries";
 import { isRelativePath } from "../data/search";
 import {
@@ -22,7 +26,9 @@ import {
   panelTabsStore,
   EMPTY_TABS,
 } from "../dock/panel-tabs-store";
-import { SessionFilePreview } from "../files/files-tab";
+const SessionFilePreview = lazy(() =>
+  import("../files/files-tab").then((m) => ({ default: m.SessionFilePreview }))
+);
 import { startDraftStore } from "./start-session";
 
 export const SessionStartResources = ({
@@ -79,66 +85,69 @@ export const SessionStartResources = ({
     <div className="flex size-full min-h-0 flex-wrap">
       <div className="min-w-0 flex-1">{children}</div>
       {active && key && workspace?.path ? (
-        <aside
-          className="flex min-h-0 w-[min(480px,100%)] flex-col border-l"
-          aria-label={t("sessions.files.preview")}
-        >
-          <Tabs
-            value={active.ref}
-            onValueChange={(value) => {
-              if (typeof value === "string") setSelected(value);
-            }}
+        <Suspense fallback={null}>
+          <aside
+            className="flex min-h-0 w-[min(480px,100%)] flex-col border-l"
+            aria-label={t("sessions.files.preview")}
           >
-            <TabsList className="w-full justify-start overflow-auto">
-              {entries.tabs.map((tab) => (
-                <TabsTrigger key={tab.ref} value={tab.ref}>
-                  {tab.title}
-                  {entries.tabs.filter((t) => t.title === tab.title).length > 1
-                    ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
-                    : ""}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => closeTab(key, active.ref)}
-          >
-            {t("sessions.dock.closeTab", { name: active.title })}
-          </Button>
-          <div className="min-h-0 flex-1">
-            {active.path ? (
-              <SessionFilePreview
-                root={workspace.path}
-                path={active.path}
-                renderLocal={(file) => (
-                  <BrowserTab
-                    row={{ workspaceId: workspace.id, id: draft.id }}
-                    scope={key}
-                    id={active.ref.slice(active.ref.indexOf(":") + 1)}
-                    root={workspace.path!}
-                    file={file}
-                    visible
-                    presenter={presenter}
-                    blocked={blocked}
-                  />
-                )}
-              />
-            ) : (
-              <BrowserTab
-                row={{ workspaceId: workspace.id, id: draft.id }}
-                scope={key}
-                id={active.ref.slice(active.ref.indexOf(":") + 1)}
-                root={workspace.path}
-                url={active.url}
-                visible
-                presenter={presenter}
-                blocked={blocked}
-              />
-            )}
-          </div>
-        </aside>
+            <Tabs
+              value={active.ref}
+              onValueChange={(value) => {
+                if (typeof value === "string") setSelected(value);
+              }}
+            >
+              <TabsList className="w-full justify-start overflow-auto">
+                {entries.tabs.map((tab) => (
+                  <TabsTrigger key={tab.ref} value={tab.ref}>
+                    {tab.title}
+                    {entries.tabs.filter((t) => t.title === tab.title).length >
+                    1
+                      ? ` (${entries.tabs.filter((t) => t.title === tab.title).findIndex((t) => t.ref === tab.ref) + 1})`
+                      : ""}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => closeTab(key, active.ref)}
+            >
+              {t("sessions.dock.closeTab", { name: active.title })}
+            </Button>
+            <div className="min-h-0 flex-1">
+              {active.path ? (
+                <SessionFilePreview
+                  root={workspace.path}
+                  path={active.path}
+                  renderLocal={(file) => (
+                    <BrowserTab
+                      row={{ workspaceId: workspace.id, id: draft.id }}
+                      scope={key}
+                      id={active.ref.slice(active.ref.indexOf(":") + 1)}
+                      root={workspace.path!}
+                      file={file}
+                      visible
+                      presenter={presenter}
+                      blocked={blocked}
+                    />
+                  )}
+                />
+              ) : (
+                <BrowserTab
+                  row={{ workspaceId: workspace.id, id: draft.id }}
+                  scope={key}
+                  id={active.ref.slice(active.ref.indexOf(":") + 1)}
+                  root={workspace.path}
+                  url={active.url}
+                  visible
+                  presenter={presenter}
+                  blocked={blocked}
+                />
+              )}
+            </div>
+          </aside>
+        </Suspense>
       ) : null}
     </div>
   );

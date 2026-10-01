@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { SettingsSearch } from "#renderer/features/settings";
+import { SettingsSearch } from "#renderer/features/settings/search";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 /** Settings take over the sidebar slot (canvas `SettingsInPlace`). */

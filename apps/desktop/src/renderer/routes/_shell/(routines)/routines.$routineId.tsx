@@ -6,17 +6,13 @@ import {
 } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { ChatView, chatRuntimeFor } from "#renderer/features/chat";
-import {
-  useConnectFlow,
-  ConnectorFieldsDialog,
-} from "#renderer/features/library";
-import {
-  RoutinePage,
-  RoutineGone,
-  RunRequests,
-} from "#renderer/features/routines";
-import { TopBarSlot } from "#renderer/features/shell";
+import { ChatView } from "#renderer/features/chat/kit/lazy-view";
+import { chatRuntimeFor } from "#renderer/features/chat/runtime/runtime";
+import { useConnectFlow } from "#renderer/features/library/connect-flow";
+import { ConnectorFieldsDialog } from "#renderer/features/library/connectors";
+import { RoutinePage, RoutineGone } from "#renderer/features/routines/page";
+import { RunRequests } from "#renderer/features/routines/run-requests";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { RoutineSearch } from "#renderer/lib/navigation/search";
 const RoutineRoute = () => {
   const { t } = useTranslation();

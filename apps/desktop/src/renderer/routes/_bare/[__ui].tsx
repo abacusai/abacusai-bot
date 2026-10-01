@@ -3,49 +3,45 @@ import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { SoundSynthesisProbe } from "#renderer/components/sound-preview/probe";
 import {
   ArtifactsPage,
-  artifactGalleryRows,
   ArtifactsStressGallery,
 } from "#renderer/features/artifacts";
-import {
-  useBot,
-  useBotChatSlots,
-  BotTranscriptIdentity,
-} from "#renderer/features/bots";
+import { artifactGalleryRows } from "#renderer/features/artifacts/gallery";
+import { BotTranscriptIdentity } from "#renderer/features/bots/chat/identity";
+import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
+import { useBot } from "#renderer/features/bots/data/queries";
 import {
   botsGallerySections,
   isBotsGalleryFixture,
-} from "#renderer/features/bots";
-import {
-  useComposerExpanded,
-  ChatView,
-  loadFixtureRuntime,
-} from "#renderer/features/chat";
+} from "#renderer/features/bots/gallery/sections";
+import { loadFixtureRuntime } from "#renderer/features/chat";
 import { chatGallerySections } from "#renderer/features/chat";
+import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
+import { ChatView } from "#renderer/features/chat/kit/lazy-view";
+import { Gallery } from "#renderer/features/gallery/gallery";
 import {
-  Gallery,
   GallerySearch,
   galleryEnabled,
-} from "#renderer/features/gallery";
-import { ConnectorsPage } from "#renderer/features/library";
-import { NotchGallery } from "#renderer/features/notch";
-import { OnboardingGallery } from "#renderer/features/onboarding";
+} from "#renderer/features/gallery/search";
+import { ConnectorsPage } from "#renderer/features/library/connectors";
+import { NotchGallery } from "#renderer/features/notch/gallery";
+import { OnboardingGallery } from "#renderer/features/onboarding/gallery";
 import {
   Phase5GalleryNav,
   phase5FixtureIds,
   RoutineSidebarGallery,
-  RunReportFrame,
-} from "#renderer/features/routines";
+} from "#renderer/features/routines/gallery";
+import { RunReportFrame } from "#renderer/features/routines/page";
 import {
   sessionsGallerySections,
   isSessionsGalleryFixture,
-} from "#renderer/features/sessions";
+} from "#renderer/features/sessions/gallery/sections";
+import { KeyboardPage } from "#renderer/features/settings/keyboard";
+import { ModelsPage } from "#renderer/features/settings/models";
 import {
   GeneralPage,
-  ModelsPage,
   NotificationsPage,
-  KeyboardPage,
-} from "#renderer/features/settings";
-import { TourGallery } from "#renderer/features/tour";
+} from "#renderer/features/settings/personal";
+import { TourGallery } from "#renderer/features/tour/gallery";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,

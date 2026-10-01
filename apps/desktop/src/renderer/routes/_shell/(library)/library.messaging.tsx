@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { MessagingPage, MessagingSearch } from "#renderer/features/library";
-import { TopBarSlot } from "#renderer/features/shell";
+import { MessagingPage } from "#renderer/features/library/messaging";
+import { MessagingSearch } from "#renderer/features/library/search";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const MessagingRoute = () => {
   const { t } = useTranslation();

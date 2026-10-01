@@ -1,11 +1,11 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
-import { resolveToolDiff } from "#renderer/features/chat";
+import { resolveSessionToolDiff as resolveToolDiff } from "#renderer/features/chat/runtime/tool-diff";
+import { FullDiffDialog } from "#renderer/features/sessions/changes/full-diff-dialog";
 import {
-  FullDiffDialog,
   useSession,
   useWorkspace,
-} from "#renderer/features/sessions";
+} from "#renderer/features/sessions/data/queries";
 import { DiffSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 

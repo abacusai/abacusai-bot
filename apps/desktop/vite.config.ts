@@ -105,7 +105,7 @@ export default defineConfig(({ command }) => {
         routesDirectory: "./src/renderer/notch-routes",
         generatedRouteTree: "./src/renderer/notchRouteTree.gen.ts",
         routeFileIgnorePrefix: "-",
-        autoCodeSplitting: false,
+        autoCodeSplitting: true,
         quoteStyle: "double",
       }),
       tailwindcss(),

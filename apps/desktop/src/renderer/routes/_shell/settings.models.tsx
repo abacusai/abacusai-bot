@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { adoptDraftModel } from "#renderer/features/chat";
-import { ModelsPage, ModelsSearch } from "#renderer/features/settings";
-import { TopBarSlot, shellStore } from "#renderer/features/shell";
+import { adoptDraftModel } from "#renderer/features/chat/composer/draft-store";
+import { ModelsPage } from "#renderer/features/settings/models";
+import { ModelsSearch } from "#renderer/features/settings/search";
+import { shellStore } from "#renderer/features/shell/shell-store";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 const ModelsSettingsRoute = () => {

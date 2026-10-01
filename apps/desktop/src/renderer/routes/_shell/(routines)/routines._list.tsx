@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { RoutinesListBody } from "#renderer/features/routines";
-import { TopBarSlot } from "#renderer/features/shell";
+import { RoutinesListBody } from "#renderer/features/routines/page";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 /**
  * The routines page body stays mounted under the masked create sheet: the

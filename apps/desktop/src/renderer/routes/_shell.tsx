@@ -4,21 +4,26 @@ import {
   redirect,
   useRouter,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
-import { BotsGlobals } from "#renderer/features/bots";
+import { BotsGlobals } from "#renderer/features/bots/watcher";
 import {
   accountStateQuery,
+  finishCompletion,
+} from "#renderer/features/onboarding/actions";
+import {
   needsOnboarding,
   onboardingTarget,
-  finishCompletion,
-} from "#renderer/features/onboarding";
-import { PairingQueueBanner } from "#renderer/features/onboarding";
-import { SessionsGlobals } from "#renderer/features/sessions";
-import { dispatchPreview } from "#renderer/features/shell";
-import { ShellLayout } from "#renderer/features/shell";
-import { TourHost, startTour, useTourState } from "#renderer/features/tour";
+} from "#renderer/features/onboarding/machine";
+import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
+import { SessionsGlobals } from "#renderer/features/sessions/globals";
+import { dispatchPreview } from "#renderer/features/shell/preview-consumers";
+import { ShellLayout } from "#renderer/features/shell/shell-layout";
+import { startTour, useTourState } from "#renderer/features/tour/store";
+const TourHost = lazy(() =>
+  import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
+);
 import { OpenTargetBridge } from "#renderer/lib/attention/open-target";
 import { useDocumentSoundOwner } from "#renderer/lib/document-sound";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
@@ -59,7 +64,11 @@ const ShellRoute = () => {
         initials={initialsOf(system.homeDir)}
       />
       <BotsGlobals />
-      <TourHost />
+      {tour && (
+        <Suspense fallback={null}>
+          <TourHost />
+        </Suspense>
+      )}
       <OpenTargetBridge />
       <PairingQueueBanner suppressed={tour != null} />
       <SessionsGlobals preview={dispatchPreview} />
