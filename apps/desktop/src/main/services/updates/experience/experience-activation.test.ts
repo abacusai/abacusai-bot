@@ -151,7 +151,7 @@ type Outcome = import("../../../renderer-host").SwapOutcome;
 const VERSION = (n: number) => String(n).repeat(64).slice(0, 64);
 const SHA = (n: number) => `${"f".repeat(63)}${n}`;
 /** The barrier index.ts derives from the shipped FOUNDATION_API. */
-const SHIPPED_BARRIER = FOUNDATION_API >= 2 ? "subscriptions" : "first-commit";
+const SHIPPED_BARRIER = "subscriptions";
 
 beforeEach(() => {
   paths.userData = fs.mkdtempSync(path.join(os.tmpdir(), "experience-"));
@@ -308,16 +308,16 @@ describe("experience activation is transactional with renderer readiness", () =>
     }
   );
 
-  it("the swap's first-commit barrier rejects a candidate that never signals", async () => {
+  it("the swap's subscriptions barrier rejects a candidate that never signals", async () => {
     vi.useFakeTimers();
     const host = makeHost();
     const first = host.webContents;
     fakes.behaviour.silent = ["app://silent/"];
     const swapping = host.swap(new URL("app://silent/"), {
-      barrier: "first-commit",
+      barrier: "subscriptions",
     });
     const rejected = expect(swapping).rejects.toBeInstanceOf(SwapNotReady);
-    await vi.advanceTimersByTimeAsync(6_000);
+    await vi.advanceTimersByTimeAsync(11_000);
     await rejected;
     expect(host.webContents).toBe(first);
   });

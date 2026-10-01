@@ -392,13 +392,6 @@ type BusDispatcher = <C extends BusChannel>(
   payload: BusChannels[C]
 ) => void;
 
-/** Assistant prose, as opposed to tool cards, status and errors. */
-const isAgentText = (payload: DesktopEvent): boolean =>
-  payload.type === "event" &&
-  (payload.event.type === "text_delta" ||
-    payload.event.type === "thinking_delta" ||
-    payload.event.type === "thinking_complete");
-
 /** The bot each self lane gets on first link, one per platform. */
 const SELF_LANE_BOTS: Record<
   SelfLanePlatform,
@@ -1412,11 +1405,10 @@ export class ServiceHost {
     emitAguiExit: (_workspaceId, sessionId, exit) => {
       this.aguiRelay.runtimeExited(sessionId, exit);
     },
-    emitNdjson: (workspaceId, sessionId, payload, origin) => {
+    emitNdjson: (workspaceId, sessionId, payload) => {
       // An agui runtime serves only the new renderer (spec 00-agent-agui
       // §2.1): its compat lines feed main's taps below, never the old
       // renderer's `local-cli-ndjson` stream.
-      const toOldRenderer = origin?.wire !== "agui";
       // Recorded before the filter: a stopped session is exactly one whose
       // log somebody is about to want.
       if (payload.type === "ready" && payload.agentSessionId != null) {
@@ -1438,18 +1430,7 @@ export class ServiceHost {
       if (passedFilter) {
         // A relayed turn's own words are notes around a <reply> tag, addressed
         // to nobody; the gateway echoes what it actually sent instead.
-        if (
-          toOldRenderer &&
-          (!isAgentText(payload) ||
-            !this.messagingGatewayService.relayingSession(sessionId))
-        )
-          this.emitEvent({
-            type: "local-cli-ndjson",
-            workspaceId,
-            sessionId,
-            payload,
-            emittedAt: new Date().toISOString(),
-          });
+
         // Same filtered stream, so a post-Stop tail cannot file cancelled work.
         this.sessionArtifactsService.recordFromNdjson(
           workspaceId,
@@ -1538,19 +1519,6 @@ export class ServiceHost {
         const conversation = this.conversationKeyForSession(sessionId);
         if (conversation != null)
           this.connectorGate.release(conversation, ended);
-        this.emitEvent({
-          type: "local-cli-ndjson",
-          workspaceId,
-          sessionId,
-          payload: {
-            type: "event",
-            event: {
-              type: "error",
-              error: { message: "Something went wrong." },
-            },
-          },
-          emittedAt: new Date().toISOString(),
-        });
       }
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
@@ -1740,23 +1708,6 @@ export class ServiceHost {
       // Actually stop it, or the slow tool's events would still be forwarded
       // when it finally lands and the session would go busy again.
       this.stopAgentTurn({ workspaceId, sessionId });
-      this.emitEvent({
-        type: "local-cli-ndjson",
-        workspaceId,
-        sessionId,
-        payload: {
-          type: "event",
-          event: {
-            type: "error",
-            error: {
-              message:
-                `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}. ` +
-                `The turn was stopped. Send a message to pick it back up.`,
-            },
-          },
-        },
-        emittedAt: new Date().toISOString(),
-      });
     }
   );
 

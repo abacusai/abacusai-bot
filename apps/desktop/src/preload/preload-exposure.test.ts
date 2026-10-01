@@ -30,7 +30,7 @@ vi.mock("electron", () => ({
 }));
 
 describe("the preload (A-T4)", () => {
-  it("still exposes window.api, and adds abacusHost after the handshake", async () => {
+  it("exposes only abacusHost after the handshake", async () => {
     const fakeWindow = {
       addEventListener: (type: string) => {
         order.push(`listen:${type}`);
@@ -49,15 +49,7 @@ describe("the preload (A-T4)", () => {
     expect(windowListeners).toEqual(["message"]);
     // The handshake listener exists before anything reaches the page.
     expect(order[0]).toBe("listen:message");
-    expect(order).toContain("expose:api");
-    expect(order).toContain("expose:abacusHost");
-
-    const api = exposed.get("api") as Record<string, unknown>;
-    expect(typeof api.agent).toBe("object");
-    expect(typeof api.openFolderDialog).toBe("function");
-    expect(typeof api.getPathForFile).toBe("function");
-    expect(api.durableState).toMatchObject({ snapshot: { theme: "dark" } });
-
+    expect([...exposed.keys()]).toEqual(["abacusHost"]);
     const host = exposed.get("abacusHost") as {
       getPathForFile: (file: unknown) => string;
     };

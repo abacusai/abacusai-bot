@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { app, ipcMain } from "electron";
+import { app } from "electron";
 
 /** Writes past either cap are dropped with a warning. */
 const MAX_VALUE_BYTES = 512 * 1024;
@@ -198,18 +198,6 @@ export const registerRendererState = (): RendererStateStore => {
     path.join(app.getPath("userData"), "renderer-state.json")
   );
 
-  ipcMain.on("renderer-state:snapshot", (event) => {
-    event.returnValue = store.snapshot();
-  });
-  ipcMain.on("renderer-state:set", (_event, key: unknown, value: unknown) => {
-    if (typeof key !== "string") return;
-
-    if (value === null) store.set(key, null);
-    else if (typeof value === "string") store.set(key, value);
-  });
-  ipcMain.on("renderer-state:clear", () => {
-    store.clear();
-  });
   app.on("before-quit", () => {
     store.flushSync();
   });

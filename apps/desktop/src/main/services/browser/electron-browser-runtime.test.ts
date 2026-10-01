@@ -166,7 +166,6 @@ vi.mock("electron", () => ({
   session: { fromPartition: mocks.fromPartition },
 }));
 
-import { IpcChannels } from "#shared/channels";
 import {
   draftConversationKey,
   sessionConversationKey,
@@ -264,7 +263,7 @@ describe("Electron browser runtime", () => {
       dataUrl: "data:image/jpeg;base64,c2NyZWVuc2hvdA==",
     });
     expect(send).toHaveBeenCalledWith(
-      IpcChannels.Event,
+      "agent:event",
       expect.objectContaining({
         type: "browser-runtime-state-updated",
         state: expect.objectContaining({ url: "https://example.com/" }),

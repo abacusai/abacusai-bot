@@ -27,17 +27,17 @@ export class SwapNotReady extends Error {
 }
 
 /**
- * What a candidate must reach before the flip. `first-commit` is the legacy
- * renderer's `renderer-ready` within READY_TIMEOUT_MS.
+ * What a candidate must reach before the flip. `subscriptions` is the legacy
+ * renderer's `window.ready` within SWAP_READY_TIMEOUT_MS.
  * `subscriptions` is the oRPC renderer's `window.ready` barrier: transport,
  * shell tables and visible thread live (spec 00 A.4.6).
  */
-export type SwapBarrier = "first-commit" | "subscriptions";
+export type SwapBarrier = "subscriptions";
 
 export interface SwapOptions {
   /** Checked right before the flip; true rejects with SwapAborted. */
   shouldAbort?: () => boolean;
-  /** Default `first-commit`. */
+  /** Only the subscriptions barrier is supported. */
   barrier?: SwapBarrier;
 }
 
@@ -68,11 +68,10 @@ const discard = (view: WebContentsView): void => {
 };
 
 /**
- * Wait for the new renderer's first-commit signal, after which its IPC
+ * Wait for the new renderer's subscription readiness, after which its IPC
  * subscriptions exist. A bundle that never signals within this is not ready
  * (`SwapNotReady("timeout")`), and the old renderer stays.
  */
-const READY_TIMEOUT_MS = 5_000;
 
 /** How long an oRPC-contract candidate has to report ready after loading. */
 export const SWAP_READY_TIMEOUT_MS = 10_000;
@@ -349,29 +348,6 @@ const delay = (ms: number): Promise<void> =>
     setTimeout(resolve, ms).unref();
   });
 
-const rendererReady = (
-  contents: WebContents
-): { cancel: () => void; promise: Promise<void> } => {
-  let onMessage: ((event: unknown, channel: string) => void) | undefined;
-  const promise = new Promise<void>((resolve) => {
-    onMessage = (_event: unknown, channel: string): void => {
-      if (channel !== "renderer-ready") return;
-
-      resolve();
-    };
-    contents.on("ipc-message", onMessage);
-  });
-
-  return {
-    cancel: () => {
-      if (onMessage !== undefined && !contents.isDestroyed()) {
-        contents.off("ipc-message", onMessage);
-      }
-    },
-    promise,
-  };
-};
-
 /**
  * Focus, caret and scroll cross the swap via globals from ui-continuity.ts.
  * Best-effort: anything missing or unanswered degrades to a plain swap.
@@ -455,8 +431,8 @@ export class RendererHost {
 
   /**
    * Whether the live renderer's first document (a new window's) reaches
-   * `barrier` within SWAP_TIMEOUT_MS of this call: `renderer-ready` for
-   * `first-commit`, a `window.ready` report for `subscriptions`. Call it
+   * `barrier` within SWAP_TIMEOUT_MS of this call: `window.ready` for
+   * `subscriptions`, a `window.ready` report for `subscriptions`. Call it
    * before the document starts loading. Null means the window closed,
    * so activation can wait for its replacement.
    */
@@ -470,26 +446,20 @@ export class RendererHost {
       onDestroyed = () => resolve(null);
       contents.on("destroyed", onDestroyed);
     });
-    const ready = barrier === "first-commit" ? rendererReady(contents) : null;
+    void barrier;
     try {
       const readiness =
-        ready != null
-          ? Promise.race([
-              ready.promise.then(() => true),
-              delay(SWAP_TIMEOUT_MS).then(() => false),
-            ])
-          : this.#options.readiness == null
-            ? Promise.resolve(false)
-            : this.#options.readiness
-                .wait(contents.id, SWAP_TIMEOUT_MS)
-                .then((outcome) => outcome === "ready");
+        this.#options.readiness == null
+          ? Promise.resolve(false)
+          : this.#options.readiness
+              .wait(contents.id, SWAP_TIMEOUT_MS)
+              .then((outcome) => outcome === "ready");
       const outcome = await Promise.race([readiness, closed]);
       return destroyed() ? null : outcome;
     } catch (error) {
       if (destroyed()) return null;
       throw error;
     } finally {
-      ready?.cancel();
       contents.off("destroyed", onDestroyed);
     }
   }
@@ -550,22 +520,10 @@ export class RendererHost {
     next.setBounds(current.getBounds());
 
     let timer: NodeJS.Timeout | undefined;
-    const ready = rendererReady(next.webContents);
-    const barrier = options?.barrier ?? "first-commit";
 
     try {
       await Promise.race([
         next.webContents.loadURL(target.href).then(async () => {
-          if (barrier === "first-commit") {
-            // A candidate that never signals is not flipped in (spec 07
-            // review r1 #9): its activation must not be committed.
-            const signalled = await Promise.race([
-              ready.promise.then(() => true),
-              delay(READY_TIMEOUT_MS).then(() => false),
-            ]);
-            if (!signalled) throw new SwapNotReady("timeout");
-            return;
-          }
           // No flip on a guess: a candidate that never says its data is
           // live, or says it failed, is discarded (its port closes with it).
           const outcome = await this.readiness(next.webContents);
@@ -595,7 +553,6 @@ export class RendererHost {
       throw error;
     } finally {
       clearTimeout(timer);
-      ready.cancel();
     }
 
     if (window.isDestroyed()) {

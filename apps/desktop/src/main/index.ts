@@ -23,7 +23,6 @@ import {
   Notification,
   powerMonitor,
   Menu,
-  clipboard,
   crashReporter,
   autoUpdater as nativeAutoUpdater,
   webContents as electronWebContents,
@@ -31,11 +30,7 @@ import {
 import type { WebContents } from "electron";
 import Store from "electron-store";
 
-import type {
-  AbacusAccountInfo,
-  OpenFilePathResult,
-  UsageSnapshot,
-} from "#shared/contracts";
+import type { AbacusAccountInfo, UsageSnapshot } from "#shared/contracts";
 
 import { NotchController } from "./notch/controller";
 import { wireMainNotchEvents } from "./notch/main-events";
@@ -80,29 +75,19 @@ export function hasGoogleChrome(
   });
 }
 import type { WindowChromeState, WindowState } from "#shared/contract";
-import { FOUNDATION_API } from "#shared/experience";
 import { funnelDetail, isFunnelStep } from "#shared/funnel";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
-import type {
-  ImportLocalSkillsRequest,
-  InstallSkillRequest,
-  ListInstalledSkillsRequest,
-  OpenSkillFileRequest,
-  RemoveSkillRequest,
-  SearchMarketplaceSkillsRequest,
-} from "#shared/skills-types";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
-import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
 import {
   disposeLocalModels,
-  registerIpcHandlers,
+  wireHostEvents,
   type HostOperations,
 } from "./handler";
-import { followMainAgentBusy, registerKeepAwakeHandlers } from "./keep-awake";
+import { followMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
@@ -141,7 +126,6 @@ import {
 } from "./rpc/transports/message-port";
 import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
-import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
@@ -186,7 +170,6 @@ import {
 } from "./services/updates/experience/runtime";
 import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
-import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { runSmoke } from "./smoke";
@@ -407,11 +390,7 @@ function notifyTaskRunningInBackground(): void {
 
 const workspaceServiceHost = new ServiceHost();
 // A downloaded update restarts only when nothing user-visible is running.
-const legacySmokeReady = new Set<number>();
-if (process.env.ABACUSAI_BOT_SMOKE_TEST === "1")
-  ipcMain.on("renderer-ready", (event) =>
-    legacySmokeReady.add(event.sender.id)
-  );
+
 const updateService = new UpdateService({
   isSafeToRestart: () =>
     !workspaceServiceHost.hasActiveAgentTurn() &&
@@ -428,9 +407,6 @@ let reloadRendererContent: (() => void) | null = null;
 // while input is recent.
 const RENDERER_ACTIVITY_HOLD_MS = 15_000;
 let lastRendererActivity = 0;
-ipcMain.on("renderer-activity", () => {
-  appOperations.markRendererActivity();
-});
 
 /**
  * Swap to a newly activated renderer bundle at the first quiet moment. The
@@ -453,7 +429,7 @@ const rendererSwaps = new RendererSwapScheduler({
     Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.
-  barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+  barrier: "subscriptions",
   // Activation is transactional with readiness (spec 07 review r1 #9).
   onOutcome: (version, outcome, detail) => {
     const store = experienceRuntime?.store;
@@ -700,10 +676,7 @@ async function createWindow(restored?: RecreatedWindowState) {
   setMainWindow(mainWindow);
   const publishFullScreenState = (): void => {
     if (mainWindow.isDestroyed()) return;
-    rendererWebContents()?.send(
-      "window:full-screen-changed",
-      mainWindow.isFullScreen()
-    );
+
     publishWindowState();
     publishChromeState();
   };
@@ -1673,14 +1646,13 @@ function publishChromeState(): void {
   const chrome: WindowChromeState = chromeState();
   // The legacy renderer: the live view only, as before.
   if (RENDERER_GENERATION === "wco")
-    contents.send("window:chrome-changed", chrome);
-  // Every view in the window, a swap candidate included.
-  publishToWindowViews(
-    emitBusChannel,
-    rpcTransport?.registeredIds("main") ?? [],
-    contents.id,
-    { type: "chrome", chrome }
-  );
+    // Every view in the window, a swap candidate included.
+    publishToWindowViews(
+      emitBusChannel,
+      rpcTransport?.registeredIds("main") ?? [],
+      contents.id,
+      { type: "chrome", chrome }
+    );
 }
 
 /** Null until whenReady has registered the IPC handlers. */
@@ -1871,7 +1843,6 @@ app
     if (sessionPrefs !== prefsFile())
       prefsStore = new PrefsStore({ file: sessionPrefs });
 
-    registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
     // A profile relaunch lands here already signed in, so the sign-in handler
     // that normally restores the stash never ran.
@@ -1898,7 +1869,7 @@ app
       },
       path.join(app.getPath("userData"), "renderer-state.json")
     );
-    const hostOperations = registerIpcHandlers(workspaceServiceHost);
+    const hostOperations = wireHostEvents(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
     // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
@@ -1912,10 +1883,7 @@ app
         isPackaged: app.isPackaged,
       });
     }
-    registerBrowserRuntimeIpcHandlers(
-      browserRuntime,
-      () => rendererWebContents()?.id ?? null
-    );
+
     workspaceServiceHost.startCronScheduler();
 
     // Reap devices a previous run booted but never shut down (force quit and
@@ -1924,7 +1892,6 @@ app
       .shutdownDevicesBootedByUs()
       .catch(() => undefined);
 
-    registerKeepAwakeHandlers();
     // Keep-awake follows the relay's run state too, re-evaluated at every
     // AG-UI run start and terminal (spec 07 review r1 #10), starting from the
     // value it already has (the relay and the cron scheduler started above).
@@ -1969,19 +1936,6 @@ app
         /* cleanup is non-essential */
       }
     })();
-    ipcMain.handle("open-external", (_event, url: string) =>
-      appOperations.openExternal(url)
-    );
-
-    ipcMain.handle(
-      "open-file-path",
-      (_event, filePath: string): Promise<OpenFilePathResult> =>
-        appOperations.openFilePath(filePath)
-    );
-
-    ipcMain.handle("show-item-in-folder", (_event, filePath: string) => {
-      appOperations.showItemInFolder(filePath);
-    });
 
     app.setAboutPanelOptions({
       applicationName: APP_DISPLAY_NAME,
@@ -2016,63 +1970,17 @@ app
         ])
       );
     }
-    ipcMain.handle("get-app-version", () => appOperations.appVersion());
-    ipcMain.handle("window:show-about", () => appOperations.showAboutPanel());
-    ipcMain.handle(
-      "window:is-full-screen",
-      () => mainWindowRef?.isFullScreen() ?? false
-    );
 
     // Relaunch after adding skills so new agent processes load them at startup.
-    ipcMain.handle("restart-app", () => {
-      appOperations.restartApp();
-    });
-
-    ipcMain.handle("get-home-dir", () => appOperations.homeDir());
-
-    ipcMain.handle("has-google-chrome", () => appOperations.hasGoogleChrome());
-
-    ipcMain.handle(
-      "theme:set",
-      (_event, source: "system" | "light" | "dark") => {
-        if (source !== "system" && source !== "light" && source !== "dark") {
-          throw new Error("Invalid theme source");
-        }
-        nativeTheme.themeSource = source;
-
-        refreshWindowChrome();
-
-        return nativeTheme.shouldUseDarkColors;
-      }
-    );
 
     // The same state the oRPC renderer reads through `window.chrome`.
-    ipcMain.handle("window:chrome", () => chromeState());
-    if (RENDERER_GENERATION === "wco")
-      ipcMain.handle("window:recreate", () => recreateMainWindow());
-    ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
-      appOperations.setTitlebarDensity(value)
-    );
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.
-    ipcMain.on("append-logs", (_event, lines: unknown) => {
-      appOperations.appendLogs(lines);
-    });
-
-    ipcMain.handle("save-logs", (_event, rendererLogs: string) =>
-      appOperations.saveLogs(rendererLogs)
-    );
 
     // The local account; see shared/account.ts for why it is optional.
-    ipcMain.handle("account:get", () => appOperations.account.get());
-    ipcMain.handle("account:skip", () => appOperations.account.skip());
-    ipcMain.handle("account:sign-out", () => appOperations.account.signOut());
-    ipcMain.handle("account:forget", () => appOperations.account.forget());
 
     // First-run milestones; see services/debug-sync/funnel-beacon.ts.
-    ipcMain.on("funnel:step", (_event, step: unknown, detail: unknown) => {
-      appOperations.reportFunnelStep(step, detail);
-    });
+
     reportFunnelStep(
       "app_opened",
       (readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "").trim().length >
@@ -2081,174 +1989,14 @@ app
         : "signed_out"
     );
 
-    ipcMain.handle("open-folder-dialog", () =>
-      appOperations.openFolderDialog()
-    );
-
-    ipcMain.handle(
-      "files:read-image-as-data-url",
-      (_event, args: { filePath?: string; hostRoot?: string }) =>
-        appOperations.readImageAsDataUrl(args)
-    );
-
-    ipcMain.handle(
-      "files:read-file-as-text",
-      (
-        _event,
-        args: { filePath?: string; hostRoot?: string; maxBytes?: number }
-      ) => appOperations.readFileAsText(args)
-    );
-
-    ipcMain.handle(
-      "files:read-pptx",
-      (_event, args: { filePath?: string; hostRoot?: string }) =>
-        appOperations.readPptx(args)
-    );
-
-    ipcMain.handle("open-files-dialog", (_event, kind?: "all" | "image") =>
-      appOperations.openFilesDialog(kind)
-    );
-
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.
-    ipcMain.handle("read-clipboard-image", () =>
-      readClipboardImage({
-        read: () => clipboard.read(),
-        toPNG: (data) => nativeImage.createFromBuffer(data).toPNG(),
-        logError: (error) =>
-          console.error("[clipboard] failed to read image", error),
-      })
-    );
 
     // A user-directed fetch of a user-typed address for staging as an
     // attachment. http/https only, and capped so an endless body cannot wedge
     // the app.
-    ipcMain.handle("fetch-url-attachment", async (_event, rawUrl: string) => {
-      const MAX_BYTES = 25 * 1024 * 1024;
-      let url: URL;
-      try {
-        url = new URL(String(rawUrl ?? "").trim());
-      } catch {
-        return { success: false, error: "That is not a valid URL." };
-      }
-      if (url.protocol !== "http:" && url.protocol !== "https:") {
-        return {
-          success: false,
-          error: "Only http:// and https:// URLs can be attached.",
-        };
-      }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30_000);
-      try {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          redirect: "follow",
-        });
-        if (!response.ok) {
-          return {
-            success: false,
-            error: `Request failed (${response.status} ${response.statusText}).`,
-          };
-        }
-        const declared = Number(response.headers.get("content-length") ?? "0");
-        if (Number.isFinite(declared) && declared > MAX_BYTES) {
-          return { success: false, error: "That file is larger than 25 MB." };
-        }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.length > MAX_BYTES) {
-          return { success: false, error: "That file is larger than 25 MB." };
-        }
-
-        const mimeType = (
-          response.headers.get("content-type") ?? "application/octet-stream"
-        )
-          .split(";")[0]
-          .trim();
-        // Falls back to the host so a URL ending in "/" is still recognisable.
-        const base = path.basename(url.pathname).trim();
-        const hasExt = base.includes(".") && !base.endsWith(".");
-        const extFromMime =
-          mimeType === "text/html"
-            ? ".html"
-            : mimeType === "application/pdf"
-              ? ".pdf"
-              : mimeType.startsWith("image/")
-                ? `.${mimeType.slice("image/".length)}`
-                : mimeType.startsWith("text/")
-                  ? ".txt"
-                  : "";
-        const name =
-          base.length > 0 && hasExt
-            ? base
-            : `${(base.length > 0 ? base : url.hostname).replace(/[^\w.-]+/g, "-")}${extFromMime}`;
-
-        return { success: true, file: { name, data: buffer, mimeType } };
-      } catch (err) {
-        const aborted =
-          (err as { name?: string } | null)?.name === "AbortError";
-        return {
-          success: false,
-          error: aborted
-            ? "The request timed out."
-            : `Could not fetch that URL: ${err instanceof Error ? err.message : String(err)}`,
-        };
-      } finally {
-        clearTimeout(timeout);
-      }
-    });
-
-    ipcMain.handle(
-      "show-notification",
-      (
-        _event,
-        title: string,
-        body: string,
-        metadata?: { tab?: string; workspaceId?: string; sessionId?: string }
-      ) => {
-        appOperations.showNotification(title, body, metadata);
-      }
-    );
-
-    ipcMain.handle(
-      "save-pasted-temp-files",
-      (
-        _event,
-        baseFolder: string,
-        files: Array<{ name: string; data: Uint8Array }>
-      ) => appOperations.savePastedTempFiles(baseFolder, files)
-    );
 
     // Skills management and marketplace (api.skills.*).
-    ipcMain.handle(
-      "skills-list-installed",
-      (_event, request: ListInstalledSkillsRequest) => {
-        return workspaceServiceHost.skillsService.listInstalled(request ?? {});
-      }
-    );
-    ipcMain.handle(
-      "skills-search-marketplace",
-      (_event, request: SearchMarketplaceSkillsRequest) => {
-        return workspaceServiceHost.skillsService.searchMarketplace(request);
-      }
-    );
-    ipcMain.handle("skills-install", (_event, request: InstallSkillRequest) => {
-      return workspaceServiceHost.skillsService.install(request);
-    });
-    ipcMain.handle("skills-remove", (_event, request: RemoveSkillRequest) => {
-      return workspaceServiceHost.skillsService.remove(request);
-    });
-    ipcMain.handle(
-      "skills-open-file",
-      (_event, request: OpenSkillFileRequest) => {
-        return workspaceServiceHost.skillsService.openFile(request);
-      }
-    );
-    ipcMain.handle(
-      "skills-import-local",
-      (_event, request: ImportLocalSkillsRequest) =>
-        appOperations.importLocalSkills(request)
-    );
 
     // Global skills layout at startup, even if the Skills dialog never opens.
     try {
@@ -2295,18 +2043,9 @@ app
       const contents = rendererWebContents();
       const exit = await runSmoke({
         renderer: () =>
-          RENDERER_GENERATION === "wco"
-            ? contents == null
-              ? Promise.resolve("failed")
-              : rendererReadiness.wait(contents.id, 90_000)
-            : new Promise((resolve) => {
-                const poll = () => {
-                  if (contents && legacySmokeReady.has(contents.id))
-                    resolve("ready");
-                  else setTimeout(poll, 100);
-                };
-                poll();
-              }),
+          contents == null
+            ? Promise.resolve("failed")
+            : rendererReadiness.wait(contents.id, 90_000),
         rendererReason: () =>
           contents == null
             ? "no main renderer"
