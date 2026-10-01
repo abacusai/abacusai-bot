@@ -217,6 +217,7 @@ const SessionRoute = () => {
   const session = runtime.session(sessionId);
   const host = useSelector(session.hostStore, (s) => s);
   const incarnation = useSelector(host.store, (s) => s.incarnation);
+  const outcomes = useSelector(host.store, (s) => s.runs.outcomes);
   const completed = useSelector(
     host.store,
     (s) => s.runs.active === null && s.runs.outcomes.at(-1)?.kind === "success"
@@ -333,6 +334,9 @@ const SessionRoute = () => {
                 <SessionChangesCard
                   row={row}
                   finished={completed}
+                  messages={host.messages}
+                  outcomes={outcomes}
+                  root={root ?? ""}
                   review={() => select("changes")}
                 />
               ),

@@ -10,7 +10,7 @@ const components = import.meta.glob<string>(
 );
 it("R4-T11/R4-T28 session feature and component imports respect ownership", () => {
   for (const [file, source] of Object.entries(sessions)) {
-    if (file.endsWith(".test.ts")) continue;
+    if (/\.test\.tsx?$/.test(file)) continue;
     expect(source, file).not.toMatch(
       /from\s+["']#next\/features\/(?!sessions)/
     );
