@@ -55,3 +55,25 @@ The full unit and main-serial suites ran once with two unit workers to reduce sh
 ## Remaining acceptance work
 
 The report's R6 table keeps partial and unrun cases explicit. In particular, this pass adds native mounted listening control bounds, automatic resize after child replacement, and logic-level Space recovery. It does not prove ordinary/full-screen Space compositor behavior, real OS click-through, Windows activation/switcher behavior, external-display changes, a recorded fresh install, Whisper under the notch CSP, or three-person cue recognition. Banner suppression remains disabled.
+
+## r2
+
+Fixed all three majors in `06-onboarding-tour-notch.impl-codex-r2.md`. Merge `f1693ccb` brings in `rewrite/renderer` at `632ebec7`. That branch had advanced from the requested `b4c45342` by one progress-document commit. The only merge conflict was the phase-6 row in `docs/rewrite/PROGRESS.md`; its resolution retains the existing implementation evidence and records the r2 pass.
+
+| Finding | Fix commit | Change and failing regression |
+| --- | --- | --- |
+| 1 | `e7cf88b6` | Track pointer presence separately from visual hover. Pointer leave disables native interaction immediately; re-entry restores it even while `hovered` remains true. The mounted shell test leaves a manual reply, re-enters after 100 ms and advances past the 300 ms collapse deadline. Without the fix, the last native interaction request remains false. With the fix, interaction returns and the reply remains open. |
+| 2 | `4d3dfd0b` | Quiet-hours entry aborts pending message work, cancels hover/collapse timers and clears manual, hovered and focused state before requesting native focus release. The release has no state-changing response callback. Two mounted tests hold that release pending while quiet hours end, then either retain automatic attention or launch and focus a replacement listening view. The old implementation restores the old manual reply. A separate negative mutation that restores response-time cleanup after synchronous clearing fails the replacement focus assertion. The synchronous state update has a narrow lint suppression explaining its dependency on native IPC. |
+| 3 | `25d23345` | `RoutinesGlobals` supplies `window.claimCue` to the existing sound-player arbitration branch. Completion cues use the run ID; connector attention uses the request ID; permission attention in both routines and notch uses the same thread/incarnation/oldest-at key. The notch waits for the attention summary before claiming a permission cue. Four mounted tests send success, error, permission and connector events to both production consumers, using the real sound player with separate test audio engines. Each verifies two matching claims and exactly one synthesized cue. All four fail with the old routines wiring. |
+
+Dependencies installed with `pnpm install --pm-on-fail=ignore` using installed pnpm 12.8.1 against the 12.6.0 pin. Checks used the direct binaries specified for this pass.
+
+| Check | Result |
+| --- | --- |
+| Relevant notch suites, routines globals/notification logic and sound player | 12 files / 49 tests passed, including seven new regressions. |
+| Focused shell, dual-consumer audio, routines globals and sound rerun after restoring the negative mutation | Four files / 23 tests passed. These repeat cases from the 49-test run. |
+| Desktop `../../node_modules/.bin/tsc -b` | Passed. |
+| Root `node_modules/.bin/oxlint .` | Passed with seven existing legacy hook warnings. |
+| Root `node_modules/.bin/oxfmt .` and `git diff --check` | Passed. |
+
+No negative mutation remains. This pass uses targeted tests and does not repeat the full r1 unit/native acceptance run. The phase acceptance gate remains open for the previously recorded hardware and human-review evidence.
