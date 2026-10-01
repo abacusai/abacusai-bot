@@ -37,6 +37,11 @@ const clickButton = async (
 };
 
 const submitText = async (text: string, action = "Send"): Promise<void> => {
+  await app.until(
+    `document.querySelector('[data-slot="composer"] textarea') != null`,
+    15000,
+    "rendered composer after route loading"
+  );
   await app.evaluate(
     `document.querySelector('[data-slot="composer"] textarea').focus()`
   );

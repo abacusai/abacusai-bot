@@ -191,12 +191,25 @@ window.__notchGeometryFit = async () => {
               reduced
             >
               <NotchHeader
+                reduced
                 layout={layout}
                 left={
                   <div className="notch-wing">
                     <i style={{ width: 20, flexShrink: 0 }} />
                     <span className="notch-label truncate">
-                      {i18n.t("notch.wings.idle")}
+                      {route === "/approval/$id" && expanded
+                        ? "Notch audit"
+                        : i18n.t(
+                            route === "/call"
+                              ? "notch.listening.title"
+                              : route === "/reply/$id"
+                                ? "notch.wings.reply"
+                                : route === "/approval/$id"
+                                  ? "notch.wings.approval"
+                                  : route === "/working"
+                                    ? "notch.wings.working"
+                                    : "notch.wings.idle"
+                          )}
                     </span>
                   </div>
                 }
