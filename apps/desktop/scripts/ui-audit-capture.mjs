@@ -672,7 +672,7 @@ async function navigate(cdp, route) {
   await sleep(300);
 }
 async function capture(cdp, c, size, theme, reached) {
-  if (!c.state.endsWith("-pending"))
+  if (!(c.state.endsWith("-pending") && !c.route.startsWith("/__ui")))
     await cdp.evaluate(
       `Promise.race([new Promise(r=>setTimeout(r,700)),Promise.all(document.getAnimations().filter(a=>a.playState==='running'&&a.effect?.getComputedTiming().endTime!==Infinity).map(a=>a.finished.catch(()=>undefined)))])`
     );
@@ -694,6 +694,7 @@ async function capture(cdp, c, size, theme, reached) {
     throw new Error("Screenshot PNG dimensions do not match requested size");
   fs.writeFileSync(path.join(shotsDir, file), png);
   const prefix = `${c.area} ${c.state} ${size.join("x")} ${theme}:`;
+  const routeAttempt = ` ${c.route} ${size.join("x")} ${theme}:`;
   const oldActivity =
     c.area === "bots" && c.state.startsWith("live-")
       ? `Live local-provider ${c.state.slice(5)} ${size.join("x")} ${theme}:`
@@ -707,6 +708,7 @@ async function capture(cdp, c, size, theme, reached) {
   for (const failure of report.failures.filter(
     (f) =>
       f.startsWith(prefix) ||
+      f.includes(routeAttempt) ||
       (oldActivity && f.startsWith(oldActivity)) ||
       (flowPrefix && f.startsWith(flowPrefix))
   ))
@@ -715,6 +717,7 @@ async function capture(cdp, c, size, theme, reached) {
     (f) =>
       !(
         f.startsWith(prefix) ||
+        f.includes(routeAttempt) ||
         (oldActivity && f.startsWith(oldActivity)) ||
         (flowPrefix && f.startsWith(flowPrefix))
       )
@@ -730,6 +733,7 @@ async function capture(cdp, c, size, theme, reached) {
     );
   if (
     c.state.endsWith("-pending") &&
+    !c.route.startsWith("/__ui") &&
     (!geometry.pending ||
       (!c.route.startsWith("/onboarding") &&
         !c.route.startsWith("/__ui") &&
@@ -772,7 +776,7 @@ async function capture(cdp, c, size, theme, reached) {
       /full-view|workspace-(files|changes|terminal|browser)|dock-/.test(
         c.state
       ) &&
-      !c.state.endsWith("-pending") &&
+      !(c.state.endsWith("-pending") && !c.route.startsWith("/__ui")) &&
       panes.length === 0
     )
       report.failures.push(
@@ -842,6 +846,18 @@ async function interactions(cdp, size, theme) {
     if (opt("--flows") && !opt("--flows").split(",").includes(state)) return;
     try {
       if (route) await navigate(cdp, route);
+      if (
+        area === "bots" &&
+        ["search", "dropdown-menu", "context-menu", "delete-dialog"].includes(
+          state
+        ) &&
+        !(await cdp.evaluate(
+          `!!document.querySelector('[data-bot-row="ui-audit-bot"]')`
+        ))
+      ) {
+        await click(cdp, '[data-testid="sidebar-toggle"]');
+        await sleep(350);
+      }
       await action();
       await capture(
         cdp,
@@ -887,6 +903,18 @@ async function interactions(cdp, size, theme) {
     async () => {
       await click(cdp, 'button[aria-label="Options for UI audit assistant"]');
       await click(cdp, '[data-menu-item="delete"]');
+    }
+  );
+  await shot(
+    "bots",
+    "jump-to-bottom",
+    "/bots/ui-audit-bot/chats/ui-audit-sender-thread",
+    "Scroll a long transcript away from its end to expose the jump control",
+    async () => {
+      await cdp.evaluate(
+        `(() => { const viewport = document.querySelector('[data-continuity-scroll="chat-transcript"]'); if(viewport) viewport.scrollTo({top: Math.max(0, viewport.scrollHeight - viewport.clientHeight - 240)}); })()`
+      );
+      await sleep(500);
     }
   );
   for (const area of ["bots", "sessions", "routines", "artifacts", "library"]) {
@@ -1136,6 +1164,7 @@ async function notchCapture(main, size, theme, child) {
       "reply",
       "attention",
       "listening",
+      ...(args.includes("--morph-frames") ? ["contracted"] : []),
     ]) {
       const route =
         state === "reply"
@@ -1166,10 +1195,9 @@ async function notchCapture(main, size, theme, child) {
             : null;
       const p = {
         route,
-        sessionId:
-          state === "collapsed" || state === "hover-expanded"
-            ? null
-            : sessionId,
+        sessionId: ["collapsed", "contracted", "hover-expanded"].includes(state)
+          ? null
+          : sessionId,
         identity: "audit-" + state,
         faces: [
           {
@@ -1178,7 +1206,7 @@ async function notchCapture(main, size, theme, child) {
           },
         ],
         remaining: 0,
-        expanded: !["collapsed", "attention"].includes(state),
+        expanded: !["collapsed", "contracted", "attention"].includes(state),
         hidden: false,
         quietUntil: null,
         attention,
@@ -1187,6 +1215,34 @@ async function notchCapture(main, size, theme, child) {
       await cdp.evaluate(
         `(()=>{${findShell}const app=hooks.find(h=>h.queue?.dispatch&&h.memoizedState&&typeof h.memoizedState.mainFocused==='boolean');app?.queue.dispatch({mainFocused:false});const index=hooks.findLastIndex(h=>h.queue?.dispatch&&h.memoizedState?.route&&h.memoizedState?.identity);if(index<0)throw new Error('Presentation hook unavailable');const manual=hooks.slice(0,index).reverse().find(h=>h.queue?.dispatch);if(!manual)throw new Error('Manual hook unavailable');manual.queue.dispatch(${JSON.stringify(p)});return true;})()`
       );
+      if (
+        args.includes("--morph-frames") &&
+        ["hover-expanded", "contracted"].includes(state)
+      ) {
+        for (const delay of [33, 67]) {
+          await sleep(delay);
+          const frame = await cdp.send("Page.captureScreenshot", {
+            format: "png",
+          });
+          const file = `notch-morph--${state}-${delay === 33 ? 33 : 100}ms--${size.join("x")}--${theme}.png`;
+          fs.writeFileSync(
+            path.join(shotsDir, file),
+            Buffer.from(frame.data, "base64")
+          );
+          report.shots = report.shots.filter((entry) => entry.file !== file);
+          report.shots.push({
+            file,
+            area: "notch-morph",
+            state,
+            route,
+            reached: "Real companion during silhouette transition",
+            geometry: await cdp.evaluate(
+              `({ width: innerWidth, height: innerHeight, header: getComputedStyle(document.querySelector('.notch-wings')).visibility, body: document.querySelector('.notch-body') ? getComputedStyle(document.querySelector('.notch-body')).visibility : null })`
+            ),
+          });
+          save();
+        }
+      }
       await sleep(state === "listening" ? 250 : 1000);
       await cdp.evaluate(
         `(()=>{${findShell}return f.memoizedProps.context.transport.client.notch.focus({focus:true})})()`
@@ -1441,8 +1497,14 @@ async function run(pass, size) {
   const root = copy?.root ?? fs.mkdtempSync(path.join(out, "scratch-empty-"));
   const home = copy?.home ?? path.join(root, "home");
   fs.mkdirSync(home, { recursive: true });
-  if (["seeded", "interactions", "notch", "activity"].includes(pass))
-    prepareSeedHome(home);
+  try {
+    if (["seeded", "interactions", "notch", "activity"].includes(pass))
+      prepareSeedHome(home);
+  } catch (error) {
+    if (copy) copy.dispose();
+    else fs.rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
   let provider;
   if (pass === "activity") {
     const { stripTypeScriptTypes } = await import("node:module");
@@ -1747,8 +1809,9 @@ function verifyInventory() {
     const png = fs.readFileSync(file);
     if (
       !match ||
-      png.readUInt32BE(16) !== Number(match[1]) ||
-      png.readUInt32BE(20) !== Number(match[2])
+      (shot.area !== "notch-morph" &&
+        (png.readUInt32BE(16) !== Number(match[1]) ||
+          png.readUInt32BE(20) !== Number(match[2])))
     )
       throw new Error("Wrong PNG dimensions: " + shot.file);
     const key = shot.area + "--" + shot.state;

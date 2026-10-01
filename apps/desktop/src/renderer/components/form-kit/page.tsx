@@ -74,8 +74,25 @@ export const SettingRow = ({
     </div>
   </div>
 );
-export const StatePill = ({ children }: { children: ReactNode }) => (
-  <Badge variant="secondary">{children}</Badge>
+export const StatePill = ({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "warning";
+}) => (
+  <Badge
+    variant="secondary"
+    className={
+      tone === "success"
+        ? "border border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+        : tone === "warning"
+          ? "border border-amber-600/40 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          : undefined
+    }
+  >
+    {children}
+  </Badge>
 );
 
 export const PageToolbar = ({ children }: { children: ReactNode }) => (

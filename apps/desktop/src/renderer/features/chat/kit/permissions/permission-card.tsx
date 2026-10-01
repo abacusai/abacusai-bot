@@ -215,9 +215,11 @@ export const PermissionCard = ({
   };
   const problem = problemKey(answering);
   const labelFor = (action: CardAction) =>
-    skin === "bot" && action.label === "allowOnce"
-      ? t("chat.permission.action.allow")
-      : t(`chat.permission.action.${action.label}`, action.values);
+    action.label.startsWith("alwaysAllow") && action.values
+      ? t("chat.permission.action.alwaysAllow")
+      : skin === "bot" && action.label === "allowOnce"
+        ? t("chat.permission.action.allow")
+        : t(`chat.permission.action.${action.label}`, action.values);
   const leading = model.stacked
     ? actions
     : actions.filter((action) => action.variant !== "deny");
@@ -348,6 +350,18 @@ export const PermissionCard = ({
           </Button>
         ) : null}
       </div>
+      {actions
+        .filter(
+          (action) => action.label.startsWith("alwaysAllow") && action.values
+        )
+        .map((action) => (
+          <p
+            key={action.id}
+            className="text-muted-foreground text-xs break-words"
+          >
+            {t(`chat.permission.action.${action.label}`, action.values)}
+          </p>
+        ))}
       {slots.permissionActions?.(descriptor)}
       {skin === "bot" && notchEnabled ? (
         <div className="text-muted-foreground text-end text-xs">

@@ -119,7 +119,10 @@ export const SettingsSidebar = () => {
         </NavList.Rows>
       ) : (
         GROUPS.map((group) => (
-          <NavList.Group key={group.label} label={t(group.label)}>
+          <NavList.Group
+            key={group.label}
+            label={group.pages.length > 1 ? t(group.label) : ""}
+          >
             {group.pages.map((page) => (
               <NavList.Item
                 key={page}
@@ -136,7 +139,7 @@ export const SettingsSidebar = () => {
           </NavList.Group>
         ))
       )}
-      <NavList.Group label={t("settings.sidebar.capabilities")}>
+      <NavList.Group label="">
         <NavList.Item
           to="/library/connectors"
           transition="settings-out"

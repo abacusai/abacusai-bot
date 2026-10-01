@@ -253,10 +253,35 @@ export const RoutineDialog = ({
             }}
           >
             <FieldGroup className="min-h-0 overflow-y-auto pr-1">
+              {!routineId && (
+                <div>
+                  <h2 className="mb-2 text-sm font-medium">
+                    {t("bots.start.templates")}
+                  </h2>
+                  <div className="flex flex-wrap gap-1">
+                    {ROUTINE_TEMPLATES.map((x) => (
+                      <Button
+                        key={x.id}
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (changed()) setReplacement(x);
+                          else applyTemplate(x);
+                        }}
+                      >
+                        {t(`routines.templates.${x.id}.name`)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <form.AppField name="name">
                 {(f) => (
                   <f.TextField
                     label={t("phase5.name")}
+                    placeholder={t("routines.templates.morning-brief.name")}
                     max={80}
                     errorKeyPrefix="phase5.validation"
                   />
@@ -484,24 +509,6 @@ export const RoutineDialog = ({
                   );
                 }}
               </form.Subscribe>
-              {!routineId && (
-                <div className="flex flex-wrap gap-1">
-                  {ROUTINE_TEMPLATES.map((x) => (
-                    <Button
-                      key={x.id}
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        if (changed()) setReplacement(x);
-                        else applyTemplate(x);
-                      }}
-                    >
-                      {t(`routines.templates.${x.id}.name`)}
-                    </Button>
-                  ))}
-                </div>
-              )}
               {remote && <p role="status">{t("phase5.remoteChanged")}</p>}
               {error && <p role="alert">{error}</p>}
               <form.Subscribe selector={(s) => s.errors}>

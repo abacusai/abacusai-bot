@@ -1,4 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createRootRoute,
+  createRouter,
+  createMemoryHistory,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
@@ -68,11 +74,18 @@ it("internal decoder configuration failure stops streaming, disposes and starts 
     },
   };
   const qc = new QueryClient();
-  const view = render(
-    <QueryClientProvider client={qc}>
-      <DeviceTab visible />
-    </QueryClientProvider>
-  );
+  const routeTree = createRootRoute({
+    component: () => (
+      <QueryClientProvider client={qc}>
+        <DeviceTab visible />
+      </QueryClientProvider>
+    ),
+  });
+  const router = createRouter({
+    routeTree,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  const view = render(<RouterProvider router={router} />);
   try {
     fireEvent.click(await screen.findByRole("button", { name: "iPhone" }));
     await waitFor(() => expect(source).toHaveBeenCalledOnce());

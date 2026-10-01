@@ -362,8 +362,12 @@ export const ThreadComposer = () => {
   const hasDraft = draft.text !== "" || draft.attachments.length > 0;
   const expanded =
     config.mode === "full" && skin === "session"
-      ? !menuOpen
-      : focused || hasDraft || modelMenuOpen || config.dictating === true;
+      ? true
+      : focused ||
+        hasDraft ||
+        menuOpen ||
+        modelMenuOpen ||
+        config.dictating === true;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"

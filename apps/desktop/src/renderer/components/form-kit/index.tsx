@@ -21,11 +21,13 @@ const TextField = ({
   label,
   max,
   multiline = false,
+  placeholder,
   errorKeyPrefix = "bots.form.validation",
 }: {
   label: string;
   max: number;
   multiline?: boolean;
+  placeholder?: string;
   errorKeyPrefix?: string;
 }) => {
   const { t } = useTranslation();
@@ -41,6 +43,7 @@ const TextField = ({
   const props = {
     id,
     name: field.name,
+    placeholder,
     "data-continuity-id": id,
     value: field.state.value,
     onBlur: field.handleBlur,
@@ -94,7 +97,8 @@ const SubmitButton = ({ label }: { label: string }) => {
       {([canSubmit, busy, attempts]) => (
         <Button
           type="submit"
-          className="bot-accent-control"
+          className="bot-accent-control aria-busy:opacity-100"
+          aria-busy={busy}
           disabled={busy || (!canSubmit && attempts > 0)}
         >
           {busy && <Spinner />}

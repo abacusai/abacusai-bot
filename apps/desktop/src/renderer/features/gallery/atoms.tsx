@@ -148,7 +148,7 @@ export const ButtonSection = () => (
       </Row>
     ))}
     <Row label="loading">
-      <Button disabled>
+      <Button disabled aria-busy className="disabled:opacity-100">
         <Spinner /> Saving
       </Button>
     </Row>

@@ -101,6 +101,7 @@ export const ModeChip = ({
           <Button
             variant="ghost"
             size="sm"
+            data-slot="chat-mode-picker"
             aria-haspopup="menu"
             className={cn(
               "h-[30px] rounded-full px-2.5 text-[13px]",
@@ -159,12 +160,15 @@ export const ModelChip = ({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [offset, setOffset] = useState(12);
   const pref = useMotionPreference();
   const label = binding.label;
   const trigger = (
     <Button
       variant="ghost"
       size={compact ? "icon" : "sm"}
+      ref={triggerRef}
       data-slot="chat-model-picker"
       aria-haspopup="listbox"
       aria-label={
@@ -181,6 +185,20 @@ export const ModelChip = ({
     <Popover
       open={open}
       onOpenChange={(next) => {
+        if (next && triggerRef.current) {
+          const button = triggerRef.current;
+          const composer = button.closest('[data-slot="composer"]');
+          setOffset(
+            composer
+              ? Math.max(
+                  12,
+                  button.getBoundingClientRect().top -
+                    composer.getBoundingClientRect().top +
+                    12
+                )
+              : 12
+          );
+        }
         setOpen(next);
         onOpenChange?.(next);
         if (!next) setQuery("");
@@ -205,7 +223,12 @@ export const ModelChip = ({
         )}
         {compact ? null : <ChevronDown aria-hidden className="opacity-60" />}
       </PopoverTrigger>
-      <PopoverContent className="w-[340px] p-1.5" side="top" align="end">
+      <PopoverContent
+        className="max-h-[min(420px,var(--available-height))] w-[min(340px,calc(100vw-32px))] overflow-y-auto p-1.5"
+        side="top"
+        sideOffset={offset}
+        align="end"
+      >
         <ModelOptions
           binding={binding}
           query={query}

@@ -61,7 +61,7 @@ export const EnvironmentPage = () => {
               }
             >
               {query.data?.selected === backend.id ? (
-                <StatePill>{t("phase5.inUse")}</StatePill>
+                <StatePill tone="success">{t("phase5.inUse")}</StatePill>
               ) : (
                 <Button
                   size="sm"
@@ -148,7 +148,7 @@ export const EnvironmentPage = () => {
           title={t("phase5.sandbox")}
           detail={sandbox.data?.reason ?? undefined}
         >
-          <StatePill>
+          <StatePill tone={sandbox.data?.available ? "success" : "warning"}>
             {t(
               sandbox.data?.available
                 ? "phase5.available"

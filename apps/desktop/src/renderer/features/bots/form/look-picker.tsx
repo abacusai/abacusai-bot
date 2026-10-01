@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -36,14 +37,20 @@ export const LookPicker = ({
             key={shape}
             value={shape}
             aria-label={t(`bots.avatar.shapes.${shape}`)}
-            className={`size-9 p-1 ${value.shape === shape ? "bot-accent-control" : ""}`}
+            className={`border-border size-9 rounded-lg border p-1 ${value.shape === shape ? "bot-accent-control" : ""}`}
           >
             <BotAvatar size={26} look={{ ...value, shape }} />
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <Button variant="ghost" size="sm" onClick={() => setMore(!more)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-expanded={more}
+        onClick={() => setMore(!more)}
+      >
         {t("bots.form.moreShapes")}
+        {more ? <ChevronUp /> : <ChevronDown />}
       </Button>
       <ToggleGroup
         value={[value.color]}
@@ -58,7 +65,7 @@ export const LookPicker = ({
             key={color}
             value={color}
             aria-label={t(`bots.avatar.colors.${colorId}`)}
-            className="bot-accent-control data-pressed:ring-foreground size-5 rounded-full p-0 data-pressed:ring-2 data-pressed:ring-offset-2"
+            className="bot-accent-control data-pressed:ring-foreground size-5 rounded-full p-0 data-pressed:ring-2 data-pressed:ring-offset-1"
             style={{ backgroundColor: color }}
           />
         ))}
@@ -76,7 +83,7 @@ export const LookPicker = ({
           <ToggleGroupItem
             key={accessory}
             value={accessory}
-            className="h-7 rounded-full text-xs"
+            className="border-border h-7 rounded-lg border text-xs"
           >
             {t(`bots.avatar.accessories.${accessory}`)}
           </ToggleGroupItem>

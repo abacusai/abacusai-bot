@@ -101,6 +101,7 @@ export const ArtifactsSidebar = () => {
   ];
   return (
     <NavList.Root label={t("artifacts.sidebar.label")}>
+      <NavList.Header title={t("artifacts.sidebar.label")} />
       <Input
         aria-label={t("phase5.searchArtifacts")}
         placeholder={t("phase5.searchArtifacts")}
@@ -122,21 +123,23 @@ export const ArtifactsSidebar = () => {
           />
         ))}
       </NavList.Group>
-      <NavList.Group label={t("artifacts.sidebar.source")}>
-        {refs.map((ref) => (
-          <NavList.Item
-            key={ref.id}
-            to="/artifacts"
-            search={{
-              ...search,
-              from: search.from === ref.id ? undefined : ref.id,
-            }}
-            transition="none"
-            title={ref.label}
-            active={search.from === ref.id}
-          />
-        ))}
-      </NavList.Group>
+      {refs.length > 0 && (
+        <NavList.Group label={t("artifacts.sidebar.source")}>
+          {refs.map((ref) => (
+            <NavList.Item
+              key={ref.id}
+              to="/artifacts"
+              search={{
+                ...search,
+                from: search.from === ref.id ? undefined : ref.id,
+              }}
+              transition="none"
+              title={ref.label}
+              active={search.from === ref.id}
+            />
+          ))}
+        </NavList.Group>
+      )}
     </NavList.Root>
   );
 };
@@ -240,9 +243,14 @@ export const ArtifactsPage = ({
     ];
   };
   const actions = (a: ArtifactRow) => (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-2 border-b px-3 pb-3">
       {actionItems(a).map((item) => (
-        <Button key={item.label} size="sm" variant="ghost" onClick={item.run}>
+        <Button
+          key={item.label}
+          size="sm"
+          variant="secondary"
+          onClick={item.run}
+        >
           {item.label}
         </Button>
       ))}
@@ -458,6 +466,8 @@ export const ArtifactsPage = ({
                     <code>{selected.location}</code>
                   ) : (
                     <FilePreview
+                      onOpenExternally={() => void open(selected)}
+                      showActions={false}
                       path={selected.location}
                       hostRoot={dirname(selected.location)}
                       read={{
@@ -498,12 +508,6 @@ export const ArtifactsPage = ({
                             hostRoot,
                           }),
                       }}
-                      onOpenExternally={() => void open(selected)}
-                      onReveal={() =>
-                        void transport.client.system.showItemInFolder({
-                          path: selected.location,
-                        })
-                      }
                     />
                   )}
                 </div>
