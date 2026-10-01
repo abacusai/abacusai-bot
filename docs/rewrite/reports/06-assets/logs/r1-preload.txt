@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop
+
+
+ Test Files  6 passed (6)
+      Tests  15 passed (15)
+   Start at  09:40:01
+   Duration  252ms (transform 251ms, setup 0ms, import 391ms, tests 65ms, environment 0ms)
+

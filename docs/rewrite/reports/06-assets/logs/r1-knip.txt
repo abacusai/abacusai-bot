@@ -1,0 +1,4 @@
+Configuration hints (3)
+src/renderer-next/routeTree.gen.ts       apps/desktop  knip.json  Remove from ignore                                    
+src/renderer-next/notchRouteTree.gen.ts  apps/desktop  knip.json  Remove from ignore                                    
+.css                                     apps/desktop  knip.json  Compiled extension excluded by project (imports not f…
