@@ -71,17 +71,6 @@ export default defineConfig({
     },
     projects: [
       {
-        plugins: [react()],
-        resolve: { alias },
-        test: {
-          name: "renderer",
-          environment: "jsdom",
-          ...ciTimeouts,
-          include: ["src/renderer/**/*.test.{ts,tsx}"],
-          setupFiles: ["./src/renderer/test-support/setup.ts"],
-        },
-      },
-      {
         // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
         plugins: [
           react({

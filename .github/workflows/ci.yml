@@ -87,7 +87,6 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run check:knip-next
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
-      - run: pnpm --filter @abacus-ai/desktop run check:legacy-diff
       - name: i18n and locale guards
         run: |
           pnpm --filter @abacus-ai/desktop run check:i18n

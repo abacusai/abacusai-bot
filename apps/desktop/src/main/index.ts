@@ -445,8 +445,7 @@ const rendererSwaps = new RendererSwapScheduler({
   target: (version) =>
     experienceRuntime?.store.version === version
       ? experienceEntryUrl(
-          experienceRuntime.activeRendererUrl(),
-          RENDERER_GENERATION
+          experienceRuntime.activeRendererUrl()
         )
       : null,
   host: () => rendererHost,
@@ -852,7 +851,7 @@ async function createWindow(restored?: RecreatedWindowState) {
         // A verified installed experience supersedes the asar baseline.
         console.log(`[experience] serving renderer from ${base.url.href}`);
       notchBase = base;
-      const entry = rendererEntry(base, RENDERER_GENERATION);
+      const entry = rendererEntry(base);
       void (
         entry.kind === "url"
           ? contents.loadURL(entry.url)

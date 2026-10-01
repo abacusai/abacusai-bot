@@ -333,7 +333,7 @@ const connect = async (port) => {
       ).json();
       page = targets.find(
         (target) =>
-          target.type === "page" && target.url.includes("index-next.html")
+          target.type === "page" && target.url.includes("index.html")
       );
     } catch {
       // Not listening yet.

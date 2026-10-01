@@ -264,29 +264,14 @@ describe("composeLegacyPrefs", () => {
   });
 
   it("matches the old renderer's onboarding steps and homepage rule", () => {
-    // Read as text: main's project does not compile renderer files.
-    const steps = fs.readFileSync(
-      path.join(
-        __dirname,
-        "../../../renderer/components/onboarding/onboarding-steps.ts"
-      ),
-      "utf8"
-    );
-    const order = /STEP_ORDER = \[([^\]]*)\]/.exec(steps)?.[1] ?? "";
-    expect(LEGACY_ONBOARDING_STEPS).toEqual(
-      [...order.matchAll(/"([^"]+)"/g)].map((match) => match[1])
-    );
-    const source = fs.readFileSync(
-      path.join(__dirname, "../../../renderer/lib/browser-homepage.ts"),
-      "utf8"
-    );
-    // The same parse: a scheme-less value gains https://, only http(s) pass.
-    expect(source).toContain(
-      "/^[a-z][a-z\\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`"
-    );
-    expect(source).toContain(
-      'if (url.protocol !== "http:" && url.protocol !== "https:") return null;'
-    );
+    // Frozen from C5 d8bccf17. Homepage scheme/protocol cases below preserve its rule.
+    expect(LEGACY_ONBOARDING_STEPS).toEqual([
+      "auth",
+      "welcome",
+      "connectors",
+      "models",
+      "explainer",
+    ]);
     expect(normalizeBrowserHomepage("example.com")).toBe(
       "https://example.com/"
     );

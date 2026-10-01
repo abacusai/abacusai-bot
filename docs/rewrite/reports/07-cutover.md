@@ -213,3 +213,4 @@ No additional user login or fetch-instrumentation approval is needed for these l
 | PR | Implementation checks | Release evidence |
 | --- | --- | --- |
 | C5 completion | Bridge consumers resolve to implementing main routers; exact bridge enumerations frozen; final feature metadata and visible-note generator. Focused: 11 tests. | Hardware, signed, comparative and packaged acceptance gaps above remain open. Green rows record implementation checks only; partial acceptance is deferred. |
+| C6 | Deleted legacy renderer except locales, froze preference/starter oracles, single main entry plus notch, moved shared tool result types, removed legacy build/test/lint project. Focused: 49 tests. | Build and packaged/screenshot evidence deferred to final gates; hardware gaps remain. |

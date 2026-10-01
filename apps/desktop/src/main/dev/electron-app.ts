@@ -42,7 +42,7 @@ const assets = (): string[] => {
 
 /** "ok", or why the current dist/ cannot serve an acceptance run. */
 const buildState = (): string => {
-  if (!existsSync(join(DESKTOP, "dist/renderer/index-next.html")))
+  if (!existsSync(join(DESKTOP, "dist/renderer/index.html")))
     return "no renderer-next build";
   if (!existsSync(join(DESKTOP, "dist/main/index.js"))) return "no main build";
   const sources = assets();
