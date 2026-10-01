@@ -171,6 +171,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   }, [bots, liveFirst, props.preview]);
   const shownBot = useRef<string | null>(null);
   useEffect(() => {
+    if (step !== "first-bot") {
+      shownBot.current = null;
+      return;
+    }
     if (props.preview || step !== "first-bot" || liveFirst.state !== "ready")
       return;
     const id = liveFirst.result.bot.id;
