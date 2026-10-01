@@ -3,11 +3,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 export const executableScripts = (repo, workspace) => {
   const result = new Set();
-  const scan = (source, directory) => {
+  const scan = (source, directory, allowRootFallback = false) => {
     for (const match of source.matchAll(
       /(?:node\s+|["']|beforePack:\s*)(scripts\/[\w./-]+\.(?:js|mjs|cjs))/g
     )) {
-      const file = path.resolve(directory, match[1]);
+      let file = path.resolve(directory, match[1]);
+      if (
+        allowRootFallback &&
+        !fs.existsSync(file) &&
+        fs.existsSync(path.resolve(repo, match[1]))
+      )
+        file = path.resolve(repo, match[1]);
       if (file.startsWith(workspace + path.sep))
         result.add(path.relative(workspace, file));
     }
@@ -24,7 +30,8 @@ export const executableScripts = (repo, workspace) => {
   for (const file of fs.readdirSync(path.join(repo, ".github/workflows")))
     scan(
       fs.readFileSync(path.join(repo, ".github/workflows", file), "utf8"),
-      workspace
+      workspace,
+      true
     );
   scan(fs.readFileSync(path.join(repo, "turbo.json"), "utf8"), workspace);
   return [...result].sort();

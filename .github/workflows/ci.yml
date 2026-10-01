@@ -200,8 +200,7 @@ jobs:
       - name: The agent speaks AG-UI with a compat stream
         shell: bash
         run: |
-          cd packages/agent
-          ../../node_modules/.bin/vitest run --project e2e src/agui/agui-spawn.e2e.test.ts --testNamePattern 'same bytes on fd 3'
+          node scripts/cutover/agui-smoke.mjs
 
   # renderer's screenshot gate (spec 01 §10.2) in the real Electron
   # window: every route and band, the collapsed, floating, split, compact and
