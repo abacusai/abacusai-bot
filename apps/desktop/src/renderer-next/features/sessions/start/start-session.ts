@@ -3,6 +3,7 @@ import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#next/data/db";
 import type { AppClient } from "#next/data/transport/types";
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 import type { AgentMode } from "#shared/agent-types";
 import type { SessionRow } from "#shared/contract/rows";
 import {
@@ -180,3 +181,8 @@ export const startSession = async (
     running.delete(store);
   }
 };
+
+bindContinuityStore(KEY, {
+  read: () => startDraftStore.state,
+  write: (value) => startDraftStore.setState(() => value as StartDraft),
+});

@@ -41,6 +41,7 @@ const TextField = ({
   const props = {
     id,
     name: field.name,
+    "data-continuity-id": id,
     value: field.state.value,
     onBlur: field.handleBlur,
     onChange: (

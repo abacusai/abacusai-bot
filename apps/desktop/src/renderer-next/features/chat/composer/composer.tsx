@@ -656,6 +656,7 @@ export const ThreadComposer = () => {
           </label>
           <textarea
             ref={field}
+            data-continuity-id={`composer:${threadId}`}
             id={fieldId}
             aria-label={config.placeholder}
             title={

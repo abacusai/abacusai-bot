@@ -1,4 +1,6 @@
 import { Store } from "@tanstack/react-store";
+
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 const KEY = "abacus.sessions.reviews";
 const load = (): Record<string, Record<string, string>> => {
   try {
@@ -33,3 +35,9 @@ export const isReviewed = (
 ): boolean =>
   fingerprint !== undefined &&
   reviewStore.state[id]?.[reviewKey(path, scope)] === fingerprint;
+
+bindContinuityStore(KEY, {
+  read: () => reviewStore.state,
+  write: (value) =>
+    reviewStore.setState(() => value as Record<string, Record<string, string>>),
+});

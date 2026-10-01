@@ -3,6 +3,7 @@ import { Store, useSelector } from "@tanstack/react-store";
 import { defaultLook, resolveLook } from "#next/lib/bots/avatar";
 import { DEFAULT_CHECK_IN } from "#next/lib/bots/check-in";
 import { BOT_TEMPLATES } from "#next/lib/bots/templates";
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 
 import { newBotId } from "../data/bot-actions";
 import type { BotFormValues } from "./schema";
@@ -82,4 +83,45 @@ export const selectTemplate = (
       }),
     },
   });
+};
+
+bindContinuityStore(storageKey, {
+  read: () => draftStore.state,
+  write: (value) => draftStore.setState(() => value as BotDraft | null),
+});
+
+interface EditDraft {
+  values: BotFormValues;
+  baseline: BotFormValues;
+}
+const EDIT_KEY = "abacus.bots.edits";
+const readEdits = (): Record<string, EditDraft> => {
+  try {
+    return JSON.parse(sessionStorage.getItem(EDIT_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+};
+export const editDraftStore = new Store<Record<string, EditDraft>>(readEdits());
+editDraftStore.subscribe((value) => {
+  try {
+    sessionStorage.setItem(EDIT_KEY, JSON.stringify(value));
+  } catch {}
+});
+bindContinuityStore(EDIT_KEY, {
+  read: () => editDraftStore.state,
+  write: (value) =>
+    editDraftStore.setState(() => value as Record<string, EditDraft>),
+});
+export const clearEditDraft = (id: string) =>
+  editDraftStore.setState((state) => {
+    const { [id]: _removed, ...rest } = state;
+    return rest;
+  });
+
+export const subscribeDraft = (
+  listener: (draft: BotDraft | null) => void
+): (() => void) => {
+  const subscription = draftStore.subscribe((draft) => listener(draft));
+  return () => subscription.unsubscribe();
 };

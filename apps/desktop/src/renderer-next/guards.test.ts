@@ -1,3 +1,6 @@
+import { parseAst } from "rolldown/parseAst";
+import { describe, expect, it } from "vitest";
+
 /**
  * R1-T15 (covers spec 00 A-T7 for data/**): every renderer-next source file
  * parsed to an ESTree AST. No `window.api` (or `globalThis.api`/`self.api`),
@@ -7,8 +10,7 @@
  * shell's sidebar map and the dev gallery import other features at all);
  * routes import only feature index files.
  */
-import { parseAst } from "rolldown/parseAst";
-import { describe, expect, it } from "vitest";
+import { CONTINUITY_STORES } from "./lib/continuity/registry";
 
 const sources = import.meta.glob<string>(
   ["./**/*.{ts,tsx}", "!./**/*.d.ts", "!./routeTree.gen.ts"],
@@ -133,4 +135,79 @@ describe("renderer-next guards", () => {
     }
     expect(hits).toEqual([]);
   });
+});
+
+const unregisteredSessionKeys = (source: string, ast: unknown): string[] => {
+  const constants = new Map<string, Node>();
+  walk(ast, (node) => {
+    if (
+      node.type === "VariableDeclarator" &&
+      (node.id as Node)?.type === "Identifier"
+    )
+      constants.set((node.id as Node).name as string, node.init as Node);
+  });
+  const keyOf = (node: Node | undefined): string | null => {
+    if (!node) return null;
+    if (node.type === "Identifier")
+      return keyOf(constants.get(node.name as string));
+    if (typeof node.value === "string") return node.value;
+    if (node.type === "TemplateLiteral")
+      return (
+        ((node.quasis as Node[])[0]?.value as { raw?: string })?.raw ?? null
+      );
+    return null;
+  };
+  const keys: string[] = [];
+  walk(ast, (node) => {
+    if (node.type !== "CallExpression") return;
+    const callee = node.callee as Node;
+    if (
+      callee?.type !== "MemberExpression" ||
+      !["getItem", "setItem", "removeItem"].includes(
+        (callee.property as Node)?.name as string
+      )
+    )
+      return;
+    const object = callee.object as Node;
+    if (
+      !(
+        object?.name === "sessionStorage" ||
+        (object?.property as Node)?.name === "sessionStorage"
+      )
+    )
+      return;
+    const key = keyOf((node.arguments as Node[])[0]);
+    if (
+      key == null ||
+      !CONTINUITY_STORES.some((s) =>
+        s.prefix ? key.startsWith(s.storage) : key === s.storage
+      )
+    )
+      keys.push(key ?? "unresolved");
+  });
+  void source;
+  return keys;
+};
+it("every persisted sessionStorage draft has a continuity schema", () => {
+  const hits = files
+    .filter(
+      (f) =>
+        !/\.test\.tsx?$/.test(f.path) &&
+        !f.path.startsWith("test-support/") &&
+        !f.path.startsWith("lib/continuity")
+    )
+    .flatMap((f) =>
+      unregisteredSessionKeys(f.source, f.ast).map((key) => `${f.path}: ${key}`)
+    );
+  expect(hits).toEqual([]);
+});
+it("the session-store guard catches an extra unregistered key beside a registered one", () => {
+  const source =
+    'const KEY = "abacus.chat.drafts"; sessionStorage.setItem(KEY, "{}"); globalThis.sessionStorage?.setItem("forgotten.draft", "x");';
+  expect(
+    unregisteredSessionKeys(
+      source,
+      parseAst(source, { lang: "ts" }, "canary.ts")
+    )
+  ).toEqual(["forgotten.draft"]);
 });

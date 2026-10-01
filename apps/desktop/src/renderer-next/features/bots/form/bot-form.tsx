@@ -42,7 +42,15 @@ import { saveErrorOf } from "../data/bot-actions";
 import { useBot, useCheckIn } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { ModelPicker, useBotModelBinding } from "../model/picker";
-import { getDraft, useBotDraft, updateDraft, clearDraft } from "./draft-store";
+import {
+  getDraft,
+  useBotDraft,
+  updateDraft,
+  clearDraft,
+  editDraftStore,
+  clearEditDraft,
+  subscribeDraft,
+} from "./draft-store";
 import { LookPicker } from "./look-picker";
 import {
   BotFormSchema,
@@ -70,14 +78,21 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
   const transport = useBotsTransport();
   const navigate = useAppNavigate();
   const routine = useCheckIn(bot?.id ?? "");
-  const [baseline] = useState(() => ({ ...initial }));
+  const [baseline] = useState(() =>
+    structuredClone(
+      bot ? (editDraftStore.state[bot.id]?.baseline ?? initial) : initial
+    )
+  );
+  const [startingValues] = useState(() =>
+    bot ? (editDraftStore.state[bot.id]?.values ?? initial) : initial
+  );
 
   const [error, setError] = useState<string | null>(null);
   const saving = useRef(false);
   const id = bot?.id ?? getDraft().id;
   const shared = useSharedElementName(`bot-identity-${id}`);
   const form = useAppForm({
-    defaultValues: initial,
+    defaultValues: startingValues,
     validationLogic: revalidateLogic({
       mode: "blur",
       modeAfterSubmission: "change",
@@ -110,6 +125,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
           }),
         navigate: async (botId: string) => {
           if (!bot) clearDraft();
+          else clearEditDraft(bot.id);
           await navigate({
             to: "/bots/$botId",
             params: { botId },
@@ -188,12 +204,31 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
     }
   }, [bot, routine, form, baseline]);
   useEffect(() => {
-    if (bot) return;
-    const subscription = form.store.subscribe(() =>
-      updateDraft({ values: form.state.values })
-    );
-    return () => subscription.unsubscribe();
-  }, [bot, form]);
+    const subscription = form.store.subscribe(() => {
+      if (!bot) updateDraft({ values: form.state.values });
+      else if (!saving.current)
+        editDraftStore.setState((state) => ({
+          ...state,
+          [bot.id]: { values: form.state.values, baseline },
+        }));
+    });
+    const restoreNew = subscribeDraft((draft) => {
+      if (!bot && draft && !equalValue(draft.values, form.state.values))
+        form.reset(draft.values);
+    });
+    const restore = editDraftStore.subscribe(() => {
+      const draft = bot && editDraftStore.state[bot.id];
+      if (draft && !equalValue(draft.values, form.state.values)) {
+        Object.assign(baseline, structuredClone(draft.baseline));
+        form.reset(draft.values);
+      }
+    });
+    return () => {
+      subscription.unsubscribe();
+      restoreNew();
+      restore.unsubscribe();
+    };
+  }, [bot, form, baseline]);
   return (
     <form
       className="flex size-full min-h-0 flex-col overflow-auto"
@@ -328,7 +363,13 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
             >
               {t("bots.form.keepEditing")}
             </Button>
-            <Button variant="destructive" onClick={() => blocker.proceed?.()}>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (bot) clearEditDraft(bot.id);
+                blocker.proceed?.();
+              }}
+            >
               {t("bots.form.discard")}
             </Button>
           </AlertDialogFooter>

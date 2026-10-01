@@ -161,6 +161,8 @@ const run = async (): Promise<Record<string, unknown>> => {
   ).catch(() => false);
   const afterSwap = {
     swapped,
+    flippedAt: Date.now(),
+    continuity: await host.webContents.executeJavaScript("window.__restored"),
     replaced: host.webContents !== before,
     oldDestroyed,
     page: await pageReport(host.webContents),

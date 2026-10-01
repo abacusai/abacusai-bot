@@ -15,6 +15,7 @@ import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { createQueryClient } from "#next/data/query-client";
 import { getTransport, type Transport } from "#next/data/transport";
 import { BootFailure, isToasterMounted } from "#next/features/shell";
+import { installActivity } from "#next/lib/activity";
 import {
   bootstrap,
   createTransportLostHandler,
@@ -22,6 +23,7 @@ import {
   reportFailedBoot,
   type BootError,
 } from "#next/lib/bootstrap";
+import { installUiContinuity } from "#next/lib/continuity";
 import {
   changeLanguage,
   i18n,
@@ -29,6 +31,7 @@ import {
   fixedT,
   resolveLanguage,
 } from "#next/lib/i18n";
+import { installLogRing } from "#next/lib/log-ring";
 import { guardSingleViewTransition } from "#next/lib/navigation/single-transition";
 import { installTransitionTypes } from "#next/lib/navigation/transition-types";
 import { applyTheme, DARK_QUERY, resolveTheme } from "#next/lib/theme";
@@ -141,6 +144,9 @@ const start = async (): Promise<void> => {
       return;
     }
     const { boot } = result;
+    installActivity(boot.transport);
+    installUiContinuity();
+    installLogRing(boot.transport);
 
     // 6. Theme and language from prefs. A locale chunk that fails to load
     // keeps the bundled English.

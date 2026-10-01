@@ -15,6 +15,7 @@ import {
   resolveLanguage,
   i18n,
 } from "#next/lib/i18n";
+import { installLogRing } from "#next/lib/log-ring";
 import { applyTheme } from "#next/lib/theme";
 
 import { createNotchRouter } from "./notch-router";
@@ -23,6 +24,7 @@ const root = createRoot(document.getElementById("root")!);
 const start = async () => {
   await initI18n();
   const transport = await getTransport();
+  installLogRing(transport);
   const db = createDb(async () => transport);
   transport.onClose(
     createTransportLostHandler({

@@ -389,21 +389,26 @@ const captureContinuity = async (contents: WebContents): Promise<unknown> => {
   }
 };
 
-const restoreContinuity = async (
+export const restoreContinuity = async (
   contents: WebContents,
   snapshot: unknown
-): Promise<void> => {
-  if (snapshot == null) return;
-
+): Promise<"restored" | "timeout" | "none"> => {
+  if (snapshot == null) return "none";
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([
+    return await Promise.race([
       contents.executeJavaScript(
-        `window.__restoreUiContinuity?.(${JSON.stringify(snapshot)})`
-      ) as Promise<unknown>,
-      delay(RESTORE_TIMEOUT_MS),
+        `window.__restoreUiContinuity ? Promise.resolve(window.__restoreUiContinuity(${JSON.stringify(snapshot)})).then(() => "restored") : "none"`
+      ) as Promise<"restored" | "none">,
+      new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), RESTORE_TIMEOUT_MS);
+        timer.unref();
+      }),
     ]);
   } catch {
-    // A restore that cannot run degrades to a plain swap.
+    return "none";
+  } finally {
+    clearTimeout(timer);
   }
 };
 
@@ -602,7 +607,17 @@ export class RendererHost {
     // Restore while still hidden, so the flip reveals a converged page.
     const continuity = await captureContinuity(current.webContents);
 
-    await restoreContinuity(next.webContents, continuity);
+    if (
+      continuity != null &&
+      typeof continuity === "object" &&
+      (continuity as { tooLarge?: boolean }).tooLarge === true
+    ) {
+      window.contentView.removeChildView(next);
+      discard(next);
+      throw new SwapAborted();
+    }
+    const restored = await restoreContinuity(next.webContents, continuity);
+    console.log(`[experience] continuity restore: ${restored}`);
     await delay(SETTLE_MS);
 
     if (window.isDestroyed()) {

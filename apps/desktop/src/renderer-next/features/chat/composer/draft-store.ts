@@ -6,6 +6,7 @@
  */
 import { Store } from "@tanstack/react-store";
 
+import { bindContinuityStore } from "#next/lib/continuity/registry";
 import type { AgentMode } from "#shared/agent-types";
 
 export interface DraftAttachment {
@@ -106,3 +107,8 @@ export const restoreDraft = (
 export const adoptDraftModel = (key: string, model: string | null): void => {
   updateDraft(key, (draft) => ({ ...draft, model }));
 };
+
+bindContinuityStore(KEY, {
+  read: () => draftStore.state,
+  write: (value) => draftStore.setState(() => value as Record<string, Draft>),
+});

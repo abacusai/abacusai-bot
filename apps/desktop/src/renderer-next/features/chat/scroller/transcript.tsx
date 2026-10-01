@@ -561,6 +561,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           animation (change request on `lib/dev/settle.ts`). */}
       <MessageScrollerViewport
         ref={viewportRef}
+        data-continuity-scroll="chat-transcript"
         preserveScrollOnPrepend
         style={{ overflowAnchor: "none" }}
         aria-label={t("chat.transcript.label")}
