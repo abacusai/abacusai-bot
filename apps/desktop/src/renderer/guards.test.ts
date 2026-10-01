@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
  * parsed to an ESTree AST. No `window.api` (or `globalThis.api`/`self.api`),
  * no `ipcRenderer` identifier, no import of electron, the old renderer
  * (except `#locales/*`), framer-motion, zustand or sonner; Base UI only
- * under ui/; features import only other features' index files (and only the
- * shell's sidebar map and the dev gallery import other features at all);
- * routes import only feature index files.
+ * under ui/; only the shell's sidebar map and the dev gallery compose other
+ * features. Routes and bootstrap import focused feature modules so loaders
+ * do not pull unrelated presentation code through feature barrels.
  */
 import { CONTINUITY_STORES } from "./lib/continuity/registry";
 
@@ -100,20 +100,15 @@ describe("renderer guards", () => {
     expect(hits).toEqual([]);
   });
 
-  it("keeps features apart and routes on feature index files", () => {
+  it("keeps feature composition at designated boundaries", () => {
     const hits: string[] = [];
     for (const file of files) {
       const own = /^features\/([^/]+)\//.exec(file.path)?.[1];
       for (const specifier of importsOf(file.ast)) {
         const target = /^#renderer\/features\/([^/]+)(\/.*)?$/.exec(specifier);
         if (target == null) continue;
-        const [, feature, rest] = target;
+        const [, feature] = target;
         if (feature === own) continue;
-        const testCode =
-          file.path.startsWith("test-support/") ||
-          /\.test\.tsx?$/.test(file.path);
-        if (!testCode && rest != null && rest !== "" && rest !== "/index")
-          hits.push(`${file.path}: ${specifier} (internal)`);
         const allowed =
           file.path.startsWith("routes/") ||
           file.path === "main.tsx" ||

@@ -1,11 +1,11 @@
 {
-  "commit": "b602258d70ae70c6899d01bd9eacefd469a096b8",
-  "measuredAt": "2026-10-01T11:34:27.756Z",
+  "commit": "0ac598012dc24015fff5e0b3ed17bb3ab4984566",
+  "measuredAt": "2026-10-01T11:59:46.258Z",
   "entries": [
     {
       "name": "Main initial",
       "path": [
-        "./assets/main-wW5oA3eg.js",
+        "./assets/main-B8GhJyzD.js",
         "./assets/rolldown-runtime-Dd_uD5pT.js",
         "./assets/shim-DwPmJfDH.js",
         "./assets/utils-DX25cmng.js",
@@ -118,12 +118,12 @@
         "./assets/bot-avatar-tazUtPIO.css",
         "./assets/main-CMAYOTMG.css"
       ],
-      "gzipBytes": 545899
+      "gzipBytes": 545937
     },
     {
       "name": "Notch initial",
       "path": [
-        "./assets/notch-pFRZAYlh.js",
+        "./assets/notch-BVryp3Da.js",
         "./assets/rolldown-runtime-Dd_uD5pT.js",
         "./assets/shim-DwPmJfDH.js",
         "./assets/utils-DX25cmng.js",
@@ -182,13 +182,14 @@
         "./assets/bot-avatar-CHSd05jv.js",
         "./assets/use-dictation-Bm9UG_WC.js",
         "./assets/useBaseUiId-DpeuSfcH.js",
-        "./assets/useRegisterFieldControl-CheV6qKn.js",
-        "./assets/input-v-fY1tgY.js",
+        "./assets/useValueChanged-CA16pYK_.js",
+        "./assets/useRegisterFieldControl-DBku90zZ.js",
+        "./assets/input-CQJyti_J.js",
         "./assets/transition-types-B8Ger0ke.css",
         "./assets/bot-avatar-tazUtPIO.css",
         "./assets/notch-DNnXb795.css"
       ],
-      "gzipBytes": 392464
+      "gzipBytes": 392641
     },
     {
       "name": "Largest lazy chunk",
