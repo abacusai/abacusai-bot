@@ -25,6 +25,7 @@ export const FullDiffDialog = ({
   path,
   scope = "unstaged",
   source,
+  toolKey,
   mode = "unified",
   resolveTool,
   onClose,
@@ -36,6 +37,7 @@ export const FullDiffDialog = ({
   path: string;
   scope?: "staged" | "unstaged";
   source: "git" | "tool";
+  toolKey?: string;
   mode?: "unified" | "split";
   resolveTool: () => Promise<
     | { state: "ready"; original: string; final: string }
@@ -58,6 +60,7 @@ export const FullDiffDialog = ({
       path,
       scope,
       source,
+      toolKey,
       fingerprint,
     ],
     queryFn: async () => {

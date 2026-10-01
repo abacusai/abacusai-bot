@@ -27,6 +27,9 @@ Merged `rewrite/renderer` at `5ca86069` into `ad345ea0` as `8a699b21`. The reque
 | 15, major | Fixed before this pass; regression added | Merged tree already resolves CSS colors through canvas to RGB hex in the shared Ghostty adapter. Added light/dark token conversion regression; native ANSI/pixel acceptance remains partial. |
 | 16, major | Fixed | Local resource IDs include their stable dock owner, with checkout-scoped React keys. File runtimes close on owner cleanup, including late materialization. Mounted workspace regression asserts three distinct stable IDs; browser test asserts separate materialization/close leases. |
 | 17, major | Fixed | Surface effect already depended on lease fields at merge. Added equivalent serialized lease regression and made equivalent presenter re-registration retain desired ownership. Presenter regression selects A then updates B without stealing presentation. |
+| 18, major | Fixed | FullDiffDialog receives toolKey from the route and keys historical patches on it. Mounted dialog switches edits on the same path and renders the second patch. |
+| 19, major | Fixed | Session route passes starting/running state separately from turn busy; trigger and mutation handler both guard it. Open-picker regression locks on an idle running agent and allows mutation after stop. |
+| Main exec-backend event | Wired | Shared invalidation bridge invalidates settings.execBackend.get on the now-present event. Context tray and its picker share that query. Event-to-key regression passes. |
 | 7, major | Fixed | Files paths are memoized; equal topology skips reset; changed topology passes expanded directory paths to the installed reset API. Regression covers equal paths and added children without collapse. |
 
 Both file-tree tests fail against the pre-fix component and pass with the fixes. Typecheck passes.
