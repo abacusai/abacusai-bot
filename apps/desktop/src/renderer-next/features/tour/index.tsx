@@ -12,7 +12,9 @@ import { Button } from "#next/ui/button";
 
 import { TOUR_STOPS } from "./stops";
 import { startTour, tourStore, useTourState } from "./store";
-export { startTour, tourSignedOut, useTourState } from "./store";
+/** @public Phase-5 sign-out integration. */
+export { tourSignedOut } from "./store";
+export { startTour, useTourState } from "./store";
 export const TourHost = () => {
   const router = useRouter();
   const { transport } = router.options.context;
@@ -163,7 +165,7 @@ export const TourHost = () => {
   );
 };
 
-/** Settings/command-menu integration seam: replay is available only after account completion. */
+/** @public Settings/command-menu replay, available only after account completion. */
 export const useStartTour = () => {
   const router = useRouter();
   const { transport } = router.options.context;

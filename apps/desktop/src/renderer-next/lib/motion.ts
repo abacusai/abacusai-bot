@@ -88,6 +88,7 @@ export const reducedTransition = {
 } as const;
 
 // Design canvas OnboardMotion and NotchRules. Dwell limits are spec 06 policy.
+/** @public Canvas motion tokens and their CSS mirrors. */
 export const onboarding = {
   stepExit: 160,
   stepEnter: 320,
@@ -95,10 +96,12 @@ export const onboarding = {
   rise: 12,
   shellScaleFrom: 0.98,
 } as const;
+/** @public Canvas motion tokens and their CSS mirrors. */
 export const spotlight = {
   mask: { type: "spring", mass: 1, stiffness: 80, damping: 14 },
   cardLag: 40,
 } as const;
+/** @public Canvas motion tokens and their CSS mirrors. */
 export const hatch = {
   wobbleCycles: 3,
   wobbleMs: 220,
@@ -108,6 +111,7 @@ export const hatch = {
   confettiMs: 2400,
   confettiPieces: 7,
 } as const;
+/** @public Canvas motion tokens and their CSS mirrors. */
 export const notch = {
   shape: 350,
   contentFade: 120,

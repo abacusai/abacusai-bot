@@ -3,7 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { placeCard, type Box } from "./geometry";
-export { placeCard, waitForAnchor } from "./geometry";
+export { waitForAnchor } from "./geometry";
 export const Spotlight = ({
   rect,
   children,

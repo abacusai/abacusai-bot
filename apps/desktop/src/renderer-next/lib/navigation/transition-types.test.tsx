@@ -9,7 +9,7 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { durations, offsets } from "#next/lib/motion";
+import { durations, offsets, notch } from "#next/lib/motion";
 import { renderApp, type AppHarness } from "#next/test-support/app-harness";
 
 import { inferNavType, ROUTE_RANK } from "./nav-type";
@@ -343,7 +343,7 @@ describe("motion constants", () => {
       ),
     ].map((m) => Number(m[1]));
     expect(new Set(ms)).toEqual(
-      new Set([durations.crossFade, durations.drill])
+      new Set([durations.crossFade, durations.drill, notch.contentFade])
     );
     expect(tokensCss).toContain(
       `${durations.reduced}ms vt-fade-out both !important`

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#next/components/bot-avatar";
+import { ConnectorMark } from "#next/components/connector-mark";
 import { useDb } from "#next/data/db";
 import { usePrefs } from "#next/data/db/prefs";
 import type { Transport } from "#next/data/transport";
@@ -17,6 +18,12 @@ import type { OnboardingStepId } from "#next/lib/navigation/areas";
 import { useSharedElementName } from "#next/lib/navigation/shared-element";
 import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "#next/ui/dropdown-menu";
 import { Spinner } from "#next/ui/spinner";
 
 import type { OnboardingExit } from "./actions";
@@ -29,13 +36,7 @@ import {
 import { FirstBotHatch } from "./hatch";
 import { next, connectedProviders, type FlowFacts } from "./machine";
 import { onboardingStore } from "./store";
-export {
-  needsOnboarding,
-  onboardingTarget,
-  resumeStep,
-  guardStep,
-  ONBOARDING_FLOW,
-} from "./machine";
+export { needsOnboarding, onboardingTarget, guardStep } from "./machine";
 export {
   accountStateQuery,
   completeOnboarding,
@@ -146,6 +147,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     enabled: step === "connectors",
   });
   const { data: bots } = useLiveQuery(db.collections.bots);
+  const defaultProfile = profiles.data?.find((profile) => profile.isDefault);
   const connected = connectedProviders(
     (models.data ?? []).filter((m) => m.configured),
     keys.data ?? []
@@ -280,27 +282,54 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
           </div>
           {button(t("onboarding.connectCta"), () => props.signIn("signup"))}
-          {button(
-            t("onboarding.haveAccountCta"),
-            () =>
-              props.signIn(
-                "signin",
-                profiles.data?.find((p) => p.isDefault)?.id
-              ),
-            true
+          <div className="flex items-center gap-1">
+            {button(
+              defaultProfile
+                ? t("onboarding.haveAccountContinueWith", {
+                    browser: defaultProfile.browserName,
+                  })
+                : t("onboarding.haveAccountCta"),
+              () => props.signIn("signin", defaultProfile?.id),
+              true
+            )}
+            {!!profiles.data?.length && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="secondary"
+                      aria-label={t("onboarding.signInOptions")}
+                    />
+                  }
+                >
+                  ⌄
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {profiles.data.map((profile) => (
+                    <DropdownMenuItem
+                      key={profile.id}
+                      onClick={() => props.signIn("signin", profile.id)}
+                    >
+                      {t("onboarding.continueWithBrowser", {
+                        browser: profile.browserName,
+                        profile: profile.profileName,
+                      })}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuItem onClick={() => props.signIn("signin")}>
+                    {t("onboarding.signInAnotherWay")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          {defaultProfile && (
+            <p>
+              {t("onboarding.usesBrowserSessions", {
+                browser: defaultProfile.browserName,
+              })}
+            </p>
           )}
-          {profiles.data?.map((profile) => (
-            <Button
-              key={profile.id}
-              variant="ghost"
-              onClick={() => props.signIn("signin", profile.id)}
-            >
-              {t("onboarding.continueWithBrowser", {
-                browser: profile.browserName,
-              })}{" "}
-              · {profile.profileName}
-            </Button>
-          ))}
           <Button variant="ghost" onClick={skip}>
             {t("onboarding.pages.skip")}
           </Button>
@@ -402,6 +431,13 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
             {props.localModel}
           </div>
+          <div className="w-full rounded-xl border p-4">
+            <h2>{t("onboarding.setupExistingTitle")}</h2>
+            <p>{t("onboarding.setupExistingBody")}</p>
+            <Button variant="ghost" onClick={advance}>
+              {t("onboarding.setupExistingLater")}
+            </Button>
+          </div>
           {button(t("onboarding.setupDoneCta"), advance)}
         </>
       )}
@@ -417,6 +453,20 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                   key={c.id}
                   className="bg-muted flex flex-col items-center gap-3 rounded-xl border p-4"
                 >
+                  <ConnectorMark
+                    id={
+                      (
+                        {
+                          "google-drive": "drive",
+                          "google-calendar": "calendar",
+                        } as Record<string, string>
+                      )[c.logo ?? ""] ??
+                      c.logo ??
+                      c.id
+                    }
+                    initial={c.name.slice(0, 1)}
+                    size={28}
+                  />
                   <span>{c.name}</span>
                   {statuses.data?.[c.id]?.state === "connected" ? (
                     <Badge>{t("onboarding.pages.connectedLabel")}</Badge>
