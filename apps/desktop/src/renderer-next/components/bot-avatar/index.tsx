@@ -293,6 +293,7 @@ const HatchingAvatar = ({
 }) => {
   const reduced = useMotionPreference() === "reduced";
   const [egg, setEgg] = useState(true);
+  const [settled, setSettled] = useState(false);
   useEffect(() => {
     const timer = setTimeout(
       () => setEgg(false),
@@ -312,10 +313,16 @@ const HatchingAvatar = ({
             ? { opacity: 0 }
             : { scale: hatchMotion.squash }
       }
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{
+        opacity: 1,
+        scale: egg || reduced || settled ? 1 : hatchMotion.pop,
+      }}
       transition={reduced ? { duration: 0.12 } : hatchMotion.settle}
       onAnimationComplete={() => {
-        if (!egg) hatch.onDone();
+        if (!egg) {
+          if (reduced || settled) hatch.onDone();
+          else setSettled(true);
+        }
       }}
     >
       <AvatarBody

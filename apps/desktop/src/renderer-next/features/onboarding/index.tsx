@@ -536,9 +536,12 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               {button(
                 t("tour.replay"),
                 () =>
-                  void perform(() =>
-                    props.complete({ to: "bot-tour", botId: bot.id })
-                  ),
+                  void perform(async () => {
+                    await transport.client.system.funnelStep({
+                      step: "first_bot_kept",
+                    });
+                    await props.complete({ to: "bot-tour", botId: bot.id });
+                  }),
                 true
               )}
               <Button

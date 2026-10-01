@@ -30,7 +30,11 @@ export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
             <Button>{t("localModels.useLocal")}</Button>
           </div>
         }
-        previewBot={bot ? { bot, checkInRoutineId: null } : undefined}
+        previewBot={
+          bot
+            ? { bot, checkInRoutineId: "fixture-weekday-check-in" }
+            : undefined
+        }
         navigate={async () => {}}
         signIn={() => {}}
         cancelSignIn={async () => {}}
