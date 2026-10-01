@@ -280,6 +280,19 @@ describe("R6-T25/T28 controller lifecycle and ownership", () => {
     expect(x.controller.seen(1)).toBe(true);
     f.space?.();
     expect(x.controller.seen(1)).toBe(false);
+    expect(x.options.publish).toHaveBeenCalledWith(1, {
+      type: "visibility-request",
+      epoch: 1,
+    });
+    x.controller.visibility(1, true, 0);
+    expect(x.controller.canPlay(1)).toBe(false);
+    x.controller.visibility(1, true, 1);
+    expect(x.controller.canPlay(1)).toBe(true);
+    f.space?.();
+    x.controller.visibility(1, true, 1);
+    expect(x.controller.seen(1)).toBe(false);
+    x.controller.visibility(1, true, 2);
+    expect(x.controller.seen(1)).toBe(true);
   });
 });
 

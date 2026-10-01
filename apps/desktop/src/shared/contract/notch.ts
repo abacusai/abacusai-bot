@@ -16,7 +16,8 @@ export type NotchEvent =
   | { type: "app"; mainVisible: boolean; mainFocused: boolean }
   | { type: "reaction"; sessionId: string; reaction: "wink" }
   | { type: "shortcut" }
-  | { type: "preview" };
+  | { type: "preview" }
+  | { type: "visibility-request"; epoch: number };
 const id = v.pipe(v.string(), v.nonEmpty());
 export const OpenTargetSchema = v.variant("kind", [
   v.object({ kind: v.literal("bot"), botId: id, sessionId: v.optional(id) }),
@@ -53,7 +54,12 @@ export const notch = {
   events: subscription.input(NoInput).output(eventIterator(type<NotchEvent>())),
   setShape: mutation.input(ShapeSchema).output(type<NotchLayout>()),
   visibility: mutation
-    .input(v.object({ documentVisible: v.boolean() }))
+    .input(
+      v.object({
+        documentVisible: v.boolean(),
+        epoch: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0)), 0),
+      })
+    )
     .output(type<void>()),
   setInteractive: mutation
     .input(v.object({ interactive: v.boolean() }))
