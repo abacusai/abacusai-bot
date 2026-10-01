@@ -49,13 +49,13 @@ Commit numbering follows the spec's C1–C14 headings. The task brings the resto
 - C2: `afaf2ba9`.
 - C3: `75842556`.
 - C4: `6b5d2f59`.
-- C5: partial implementation, not a completed release-candidate sign-off. C6–C14 have not been implemented. This worktree is **not release N complete**.
+- C5: `fa3c9ae7`, partial implementation, not a completed release-candidate sign-off. C6–C14 have not been implemented. This worktree is **not release N complete**.
 
 ## Local package and source-artifact observations
 
 `electron-builder --config electron-builder.yml --dir --mac --arm64 --publish never` produced the real unsigned macOS app, with code-signing discovery disabled. The production checker passes after clearing `dist/main` explicitly; before that fix it correctly refused a stale mutation-harness chunk left by an acceptance build. The experience builder produced an API-2 archive from the production dist and agreeing renderer/agent provenance.
 
-Launching the packaged app on an isolated empty synthetic home printed `[smoke] main process ready`, `[smoke] renderer ready`, and `[smoke] notch ready`, then exited 0. The same log contains an updater ENOENT/unhandled-rejection pattern because the unsigned `--dir` app lacks `Contents/Resources/app-update.yml`. Therefore R7-T16's no-fatal-pattern condition is **not proven**. The package is not signed or notarized, and the companion-ready outcome does not establish notched-display geometry or hardware behavior.
+Launching the packaged app on an isolated empty synthetic home printed `[smoke] main process ready`, `[smoke] renderer ready`, and `[smoke] notch ready`, then exited 0. The same log contains an updater ENOENT/unhandled-rejection pattern because the unsigned `--dir` app lacks `Contents/Resources/app-update.yml`. Therefore R7-T16's no-fatal-pattern condition is **not proven**. This artifact was built from the dirty local C5 tree before the C5 commit and before local-history fixups; it is not exact-final-commit evidence. The package is not signed or notarized, and the companion-ready outcome does not establish notched-display geometry or hardware behavior.
 
 The original shipped v1.0.85 macOS arm64 archive was downloaded and launched on a separate empty synthetic home. CDP reached its actual renderer and enumerated its `window.api`; the owned process was stopped afterward. [Artifact provenance](07-shipped-artifact.json) records the binary hash. This is an observation of the real source build, **not** a completed §13 content fixture. The 12 bots, 40 sessions, 2,000 histories, oversized/corrupt histories, profiles, routines, memories, grants, dormant drift and completed onboarding/stub account fixtures still need the generator and acceptance runs. No real user data was used.
 
