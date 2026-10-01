@@ -31,6 +31,7 @@ import {
   type NotchPresentation,
 } from "./presenter";
 import { shapeFor } from "./shape";
+import { activeSnoozes, permissionLineageKey, type Snooze } from "./snooze";
 export { NotchDirector } from "./director";
 const choosePresentation = (
   automatic: NotchPresentation,
@@ -86,8 +87,27 @@ export const NotchShell = ({
     undefined
   );
   const [acks, setAcks] = useState<ReadonlySet<string>>(new Set());
-  const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
-  const inputs = useNotchInputs(transport, app, hovered, acks, snoozed);
+  const heldSessions = useRef(
+    new Map<string, ReturnType<typeof chat.session>>()
+  );
+  const [snoozes, setSnoozes] = useState<ReadonlyMap<string, Snooze>>(
+    new Map()
+  );
+  const lineageFor = (id: string) => {
+    const descriptor =
+      heldSessions.current.get(id)?.hostStore.state.store.state.permissions
+        .items[0];
+    return descriptor
+      ? permissionLineageKey(descriptor.metadata.abacus.lineage)
+      : undefined;
+  };
+  const inputs = useNotchInputs(
+    transport,
+    app,
+    hovered,
+    acks,
+    activeSnoozes(snoozes, Date.now(), lineageFor)
+  );
   const [manual, setManual] = useState<NotchPresentation | null>(null);
   const automatic = presentNotch(inputs, inputs.now ?? 0);
   const target = choosePresentation(
@@ -114,8 +134,15 @@ export const NotchShell = ({
   const director = useRef<NotchDirector | null>(null);
   useEffect(() => {
     const value = new NotchDirector({
-      load: (id, signal) => chat.session(id).load({ signal }),
-      retire: (id) => chat.session(id).retire(),
+      load: (id, signal) => {
+        const session = chat.session(id);
+        heldSessions.current.set(id, session);
+        return session.load({ signal });
+      },
+      retire: (id) => {
+        heldSessions.current.get(id)?.retire();
+        heldSessions.current.delete(id);
+      },
       setShape: (s, signal) => transport.client.notch.setShape(s, { signal }),
       navigate: (p) => current.current.navigate(p),
       audio: () => audio.current,
@@ -360,7 +387,30 @@ export const NotchShell = ({
     const key = current.current.shown.attention?.descriptorId;
     const runId = current.current.shown.attention?.runId;
     if (runId) setAcks((state) => new Set([...state, runId].slice(-500)));
-    if (key) setSnoozed((state) => new Set([...state, key].slice(-500)));
+    const attention = current.current.shown.attention;
+    if (key && attention) {
+      const connector = attention.kind === "connector-ask";
+      const lineage = connector ? key : lineageFor(attention.sessionId);
+      if (lineage)
+        setSnoozes(
+          (state) =>
+            new Map(
+              [
+                ...state,
+                [
+                  lineage,
+                  {
+                    lineage,
+                    summaryKey: key,
+                    sessionId: attention.sessionId,
+                    expiresAt: Date.now() + 600_000,
+                    connector,
+                  },
+                ] as const,
+              ].slice(-500)
+            )
+        );
+    }
     setHovered(false);
     void transport.client.notch.focus({ focus: false });
   };

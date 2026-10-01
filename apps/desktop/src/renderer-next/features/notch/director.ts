@@ -88,6 +88,7 @@ export class NotchDirector {
       this.#current &&
       p.queue.some(
         (item) =>
+          !item.snoozed &&
           item.sessionId === this.#current?.sessionId &&
           (item.descriptorId ?? item.runId ?? "") ===
             (this.#current?.attention?.descriptorId ??
@@ -138,6 +139,7 @@ export class NotchDirector {
       held.add(p.sessionId);
     const next = p.queue.find(
       (item) =>
+        !item.snoozed &&
         item.sessionId !== p.sessionId &&
         ["question", "approval", "reply"].includes(item.kind)
     );
