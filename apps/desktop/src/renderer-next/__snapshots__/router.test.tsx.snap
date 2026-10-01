@@ -135,12 +135,12 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/(sessions)/sessions/$sessionId",
   },
   {
-    "fullPath": "/sessions/$sessionId/diff",
-    "id": "/_shell/(sessions)/sessions/$sessionId/diff",
+    "fullPath": "/sessions/$sessionId/review",
+    "id": "/_shell/(sessions)/sessions/$sessionId_/review",
   },
   {
-    "fullPath": "/sessions/$sessionId/review",
-    "id": "/_shell/(sessions)/sessions/$sessionId/review",
+    "fullPath": "/sessions/$sessionId/diff",
+    "id": "/_shell/(sessions)/sessions/$sessionId/diff",
   },
   {
     "fullPath": "/sessions/new",
