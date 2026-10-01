@@ -197,11 +197,16 @@ export class NotchController {
       return;
     for (const d of eligible) {
       const e = this.#entries.get(d.id);
-      if (!e) this.#create(d, base);
-      else {
-        this.#apply(e, e.shape);
-        if (JSON.stringify(e.base) !== JSON.stringify(base) && !e.standby)
-          this.#swap(e, base);
+      try {
+        if (!e) this.#create(d, base);
+        else {
+          this.#apply(e, e.shape);
+          if (JSON.stringify(e.base) !== JSON.stringify(base) && !e.standby)
+            this.#swap(e, base);
+        }
+      } catch (error) {
+        console.warn("[notch] window creation failed", error);
+        this.#failed();
       }
     }
     if (this.#shortcut === "off")
@@ -254,7 +259,12 @@ export class NotchController {
     win.on("closed", () => {
       if (!e.disposed) this.#remove(d.id, e);
     });
-    this.#boot(e, view, base, false);
+    try {
+      this.#boot(e, view, base, false);
+    } catch (error) {
+      this.#remove(d.id, e);
+      throw error;
+    }
   }
   #boot(
     e: Entry,
@@ -282,10 +292,11 @@ export class NotchController {
       this.#failed();
     });
     const entry = notchEntry(base);
-    const loaded =
+    const loaded = Promise.resolve().then(() =>
       entry.kind === "file"
         ? view.webContents.loadFile(entry.path)
-        : view.webContents.loadURL(entry.url);
+        : view.webContents.loadURL(entry.url)
+    );
     void loaded
       .then(() => this.#o.readiness.wait(view.webContents.id, 10_000))
       .then((outcome) => {
@@ -341,7 +352,13 @@ export class NotchController {
     view.setVisible(false);
     e.win.contentView.addChildView(view);
     fitView(e.win, view);
-    this.#boot(e, view, base, true);
+    try {
+      this.#boot(e, view, base, true);
+    } catch (error) {
+      e.standby = null;
+      disposeView(e.win, view, (id) => this.#forget(id));
+      throw error;
+    }
   }
   #failed(): void {
     this.#failures.push(Date.now());
