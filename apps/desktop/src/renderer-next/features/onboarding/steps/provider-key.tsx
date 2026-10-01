@@ -30,14 +30,15 @@ export const OnboardingProviderKey = ({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState("gemini");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"validation" | "save" | null>(null);
   const form = useForm({
     defaultValues: { key: "" },
     onSubmit: async ({ value }) => {
       if (!isPlausibleApiKey(value.key)) {
-        setError(true);
+        setError("validation");
         return;
       }
+      setError(null);
       try {
         await transport.client.settings.keys.save({
           provider,
@@ -46,7 +47,7 @@ export const OnboardingProviderKey = ({
         await saved();
         setOpen(false);
       } catch {
-        setError(true);
+        setError("save");
       }
     },
   });
@@ -64,7 +65,7 @@ export const OnboardingProviderKey = ({
                 key={entry.provider}
                 onClick={() => {
                   setProvider(entry.provider);
-                  setError(false);
+                  setError(null);
                   form.reset();
                   setOpen(true);
                 }}
@@ -94,7 +95,7 @@ export const OnboardingProviderKey = ({
           >
             <form.Field name="key">
               {(f) => (
-                <Field data-invalid={error}>
+                <Field data-invalid={error === "validation"}>
                   <FieldLabel htmlFor="onboarding-key">
                     {t("onboarding.pages.addKey")}
                   </FieldLabel>
@@ -103,14 +104,16 @@ export const OnboardingProviderKey = ({
                     type="password"
                     value={f.state.value}
                     onChange={(event) => f.handleChange(event.target.value)}
-                    aria-invalid={error}
+                    aria-invalid={error === "validation"}
                     aria-describedby={
                       error ? "onboarding-key-error" : undefined
                     }
                   />
                   {error && (
                     <FieldDescription id="onboarding-key-error" role="alert">
-                      {t("onboarding.setupKeyInvalid")}
+                      {error === "validation"
+                        ? t("onboarding.setupKeyInvalid")
+                        : `${t("settings.saveFailed")}. ${t("onboarding.pages.retry")}`}
                     </FieldDescription>
                   )}
                 </Field>
