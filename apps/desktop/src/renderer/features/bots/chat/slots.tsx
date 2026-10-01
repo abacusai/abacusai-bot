@@ -110,19 +110,16 @@ export const useBotChatSlots = (
       ),
     `model:${bot.id}`
   );
+  const senderLabel = senderInfo?.senderName?.trim() || session?.label?.trim();
+  const readOnlyReason = senderLabel
+    ? t("bots.chat.senderReadOnly", { bot: bot.name, sender: senderLabel })
+    : t("bots.chat.senderReadOnlyFallback", { bot: bot.name });
   const pairing = sender ? (
     <Button
       variant="secondary"
       size="sm"
       disabled={!senderInfo?.userId}
-      title={
-        !senderInfo?.userId
-          ? t("bots.chat.senderReadOnly", {
-              bot: bot.name,
-              sender: session?.label ?? "",
-            })
-          : undefined
-      }
+      title={!senderInfo?.userId ? readOnlyReason : undefined}
       onClick={() =>
         void transport.client.messaging
           .decidePairing({
@@ -153,10 +150,7 @@ export const useBotChatSlots = (
       ? { reason: t("routines.runReadOnly") }
       : sender
         ? {
-            reason: t("bots.chat.senderReadOnly", {
-              bot: bot.name,
-              sender: senderInfo?.senderName ?? session?.label ?? "",
-            }),
+            reason: readOnlyReason,
             ...(pairing ? { action: pairing } : {}),
           }
         : bot.channel
@@ -241,7 +235,9 @@ export const useBotChatSlots = (
     },
     composer: {
       mode: "full" as const,
-      placeholder: t("bots.chat.placeholder", { name: bot.name }),
+      placeholder: t("bots.chat.placeholder", {
+        name: bot.name.length > 40 ? bot.name.slice(0, 39) + "…" : bot.name,
+      }),
       attachmentsBase: workspaceRoot,
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,

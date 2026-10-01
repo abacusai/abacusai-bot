@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { Spinner } from "#renderer/components/spinner";
+import { useDb } from "#renderer/data/db";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
 
@@ -82,12 +83,72 @@ const Rows = ({ count = 4 }: { count?: number }) => (
 
 /** Reserve the same page frame, header and composer space as the destination. */
 export const RoutePending = () => {
-  const pathname = useLocation({ select: (location) => location.pathname });
+  const location = useLocation();
+  const pathname = location.pathname;
+  const db = useDb();
+  const setup =
+    pathname.endsWith("/edit") ||
+    (location.search as { step?: string }).step === "setup";
   const { t } = useTranslation();
   const area = pathname.split("/")[1];
   const start = /\/(new|welcome)$/.test(pathname);
   let content: ReactNode;
-  if (
+  if (area === "bots" && setup) {
+    content = (
+      <div className="flex size-full min-h-0 flex-col">
+        <div className="bot-form-columns flex min-h-0 flex-1 overflow-hidden">
+          <aside className="bg-muted/40 flex w-[300px] shrink-0 flex-col items-center gap-3 px-6 pt-10">
+            <Skeleton className="size-24 rounded-full" />
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-8 w-40" />
+          </aside>
+          <div className="flex min-w-0 flex-1 flex-col gap-5 p-5 xl:px-8">
+            {[36, 96, 96, 36, 48, 32].map((height, i) => (
+              <div key={i}>
+                <Skeleton className="mb-2 h-4 w-24" />
+                <Skeleton style={{ height }} className="w-full rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex shrink-0 justify-end gap-2 border-t p-4">
+          <Skeleton className="h-7 w-16" />
+          <Skeleton className="h-7 w-24" />
+        </div>
+      </div>
+    );
+  } else if (
+    area === "sessions" &&
+    !start &&
+    (location.search as { tab?: string }).tab
+  ) {
+    content = (
+      <div className="flex size-full min-h-0">
+        {(location.search as { view?: string }).view !== "full" && (
+          <div className="hidden w-[480px] shrink-0 flex-col justify-between border-r p-4 min-[1100px]:flex">
+            <Lines />
+            <Skeleton className="h-28 w-full rounded-2xl" />
+          </div>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="ml-auto h-5 w-16" />
+          </div>
+          <div className="flex min-h-0 flex-1">
+            <div className="w-[min(220px,32%)] shrink-0 space-y-4 border-r p-3">
+              <Skeleton className="h-7 w-full" />
+              <Lines />
+              <Lines />
+            </div>
+            <div className="min-w-0 flex-1 p-5">
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (
     (area === "bots" || area === "sessions") &&
     !start &&
     !pathname.endsWith("/edit")
@@ -127,10 +188,19 @@ export const RoutePending = () => {
   } else if (area === "bots" && start) {
     content = (
       <div className="mx-auto flex w-[calc(100%-48px)] max-w-[760px] flex-col items-center gap-5 py-8">
+        {db.collections.bots.size === 0 && (
+          <>
+            <Skeleton className="h-7 w-52" />
+            <Skeleton className="h-10 w-full max-w-[420px]" />
+          </>
+        )}
         <Skeleton className="size-24 rounded-full" />
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-[52px] w-full max-w-[480px] rounded-full" />
-        <Skeleton className="h-7 w-full" />
+        <div className="flex w-full flex-col gap-3">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-7 w-full" />
+        </div>
         <div className="grid w-full grid-cols-2 gap-2 xl:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((n) => (
             <Skeleton key={n} className="h-32 rounded-2xl" />

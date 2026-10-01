@@ -231,7 +231,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
   }, [bot, form, baseline]);
   return (
     <form
-      className="flex size-full min-h-0 flex-col overflow-auto"
+      className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
       style={accentVars(look)}
       onSubmit={(event) => {
         event.preventDefault();
@@ -239,10 +239,10 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
         void form.handleSubmit();
       }}
     >
-      <div className="bot-form-columns flex flex-1">
+      <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
         <aside className="bg-muted/40 flex w-[300px] shrink-0 flex-col items-center gap-3 px-6 pt-10">
           <div style={shared}>
-            <BotFace look={look} size={wide ? 96 : 72} mood="happy" />
+            <BotFace look={look} size={wide ? 96 : 56} mood="happy" />
           </div>
           <h2 className="text-base font-semibold">{name}</h2>
           <p className="text-muted-foreground text-center text-xs">
@@ -276,7 +276,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
             }
           </form.AppField>
         </aside>
-        <div className="flex-1 p-8 lg:px-10">
+        <div className="min-w-0 flex-1 p-5 xl:px-8">
           <FieldGroup>
             {(
               [
@@ -318,7 +318,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
           </FieldGroup>
         </div>
       </div>
-      <footer className="flex items-center justify-end gap-2 border-t p-4">
+      <footer className="bg-background flex shrink-0 flex-wrap items-center justify-end gap-2 border-t p-4">
         {changed && (
           <p role="status" className="text-muted-foreground mr-auto text-xs">
             {t("bots.form.remoteChange")}

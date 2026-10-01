@@ -17,7 +17,11 @@ import { canSignOutOfAbacus } from "#shared/settings";
 
 import { ABACUS_PLAN_URL, ABACUS_BUY_CREDITS_URL } from "./credits";
 export const AccountPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const number = (value: unknown) =>
+    new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(
+      Number(value) || 0
+    );
   const { transport } = useAppContext();
   const cache = useQueryClient();
   const navigate = useAppNavigate();
@@ -164,8 +168,8 @@ export const AccountPage = () => {
           detail={
             account.data.credits_granted
               ? t("phase5.creditUsage", {
-                  used: account.data.credits_used,
-                  granted: account.data.credits_granted,
+                  used: number(account.data.credits_used),
+                  granted: number(account.data.credits_granted),
                 })
               : undefined
           }
@@ -248,7 +252,11 @@ export const AccountPage = () => {
   );
 };
 export const UsagePage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const number = (value: unknown) =>
+    new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(
+      Number(value) || 0
+    );
   const { transport } = useAppContext();
   const query = useQuery({
     ...transport.orpc.account.usage.queryOptions({ input: {} }),
@@ -261,6 +269,25 @@ export const UsagePage = () => {
     refetchInterval: 300000,
   });
   const snapshot = query.data;
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - 13 + i);
+    const iso = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+    return {
+      date: iso,
+      requests: snapshot?.daily.find((day) => day.date === iso)?.requests ?? 0,
+      label: new Intl.DateTimeFormat(i18n.language, {
+        month: "short",
+        day: "numeric",
+      }).format(date),
+    };
+  });
+  const maxRequests = Math.max(1, ...days.map((day) => day.requests));
   return (
     <AreaPage
       title={t("settings.pages.usage")}
@@ -283,23 +310,31 @@ export const UsagePage = () => {
       ) : (
         <>
           {snapshot.totals.requests === 0 && <p>{t("usage.empty")}</p>}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             <GroupCard>
               <SettingRow
                 id="abacusCredits"
                 title={t("phase5.credits")}
-                detail={String(account.data?.credits_used ?? 0)}
+                detail={
+                  account.data
+                    ? number(account.data.credits_used)
+                    : t("phase5.unavailable")
+                }
               />
             </GroupCard>
             <GroupCard>
               <SettingRow
                 id="openrouterUsage"
                 title={t("phase5.openrouterBrand")}
-                detail={t(
-                  snapshot.openrouter?.isFreeTier
-                    ? "phase5.freeTier"
-                    : "phase5.purchasedCredits"
-                )}
+                detail={
+                  snapshot.openrouter == null
+                    ? t("phase5.unavailable")
+                    : t(
+                        snapshot.openrouter.isFreeTier
+                          ? "phase5.freeTier"
+                          : "phase5.purchasedCredits"
+                      )
+                }
               />
             </GroupCard>
             <GroupCard>
@@ -307,77 +342,106 @@ export const UsagePage = () => {
                 id="weekUsage"
                 title={t("phase5.thisWeek")}
                 detail={t("phase5.usageNumbers", {
-                  ...snapshot.totals,
-                  tokens: snapshot.totals.input + snapshot.totals.output,
+                  requests: number(snapshot.totals.requests),
+                  cost: number(snapshot.totals.cost),
+                  tokens: number(
+                    snapshot.totals.input + snapshot.totals.output
+                  ),
                 })}
               />
             </GroupCard>
           </div>
-          <GroupCard title={t("phase5.dailyActivity")}>
-            <svg
-              role="img"
-              aria-label={t("phase5.dailyActivity")}
-              viewBox="0 0 620 140"
-              className="w-full p-3"
-            >
-              {snapshot.daily.map((day, i) => {
-                const height = day.requests
-                  ? Math.max(
-                      3,
-                      (day.requests /
-                        Math.max(...snapshot.daily.map((x) => x.requests), 1)) *
-                        100
-                    )
-                  : 0;
-                return (
-                  <rect
-                    key={day.date}
-                    x={(i * 620) / Math.max(snapshot.daily.length, 1)}
-                    y={120 - height}
-                    width={Math.max(
-                      2,
-                      600 / Math.max(snapshot.daily.length, 1) - 2
+          {snapshot.totals.requests > 0 && (
+            <GroupCard title={t("phase5.dailyActivity")}>
+              <svg
+                role="img"
+                aria-label={t("phase5.dailyActivity")}
+                viewBox="0 0 620 160"
+                className="w-full p-3 text-xs"
+              >
+                <text
+                  x="30"
+                  y="16"
+                  textAnchor="end"
+                  fill="var(--muted-foreground)"
+                >
+                  {number(maxRequests)}
+                </text>
+                <text
+                  x="30"
+                  y="122"
+                  textAnchor="end"
+                  fill="var(--muted-foreground)"
+                >
+                  {number(0)}
+                </text>
+                <path d="M36 14V120H610" fill="none" stroke="var(--border)" />
+                {days.map((day, i) => (
+                  <g key={day.date}>
+                    <rect
+                      x={42 + i * 40}
+                      y={120 - (day.requests / maxRequests) * 100}
+                      width={24}
+                      height={(day.requests / maxRequests) * 100}
+                      rx={3}
+                      fill="var(--primary)"
+                    >
+                      <title>
+                        {day.label}: {number(day.requests)}
+                      </title>
+                    </rect>
+                    {(i % 4 === 0 || i === 13) && (
+                      <text
+                        x={54 + i * 40}
+                        y="146"
+                        textAnchor="middle"
+                        fill="var(--muted-foreground)"
+                      >
+                        {day.label}
+                      </text>
                     )}
-                    height={height}
-                    fill="var(--primary)"
-                  >
-                    <title>{t("phase5.dailyNumbers", { ...day })}</title>
-                  </rect>
-                );
-              })}
-            </svg>
-            <table className="sr-only">
-              <caption>{t("phase5.dailyActivity")}</caption>
-              <thead>
-                <tr>
-                  <th>{t("phase5.date")}</th>
-                  <th>{t("phase5.requests")}</th>
-                  <th>{t("phase5.errors")}</th>
-                  <th>{t("phase5.tokens")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {snapshot.daily.map((d) => (
-                  <tr key={d.date}>
-                    <td>{d.date}</td>
-                    <td>{d.requests}</td>
-                    <td>{d.errors}</td>
-                    <td>{d.tokens}</td>
-                  </tr>
+                  </g>
                 ))}
-              </tbody>
-            </table>
-          </GroupCard>
-          <GroupCard title={t("phase5.byModel")}>
-            {snapshot.models.map((model) => (
-              <SettingRow
-                id={`usage-${model.id}`}
-                key={model.id}
-                title={model.modelId}
-                detail={t("phase5.usageNumbers", { ...model })}
-              />
-            ))}
-          </GroupCard>
+              </svg>
+              <table className="sr-only">
+                <caption>{t("phase5.dailyActivity")}</caption>
+                <thead>
+                  <tr>
+                    <th>{t("phase5.date")}</th>
+                    <th>{t("phase5.requests")}</th>
+                    <th>{t("phase5.errors")}</th>
+                    <th>{t("phase5.tokens")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {snapshot.daily.map((d) => (
+                    <tr key={d.date}>
+                      <td>{d.date}</td>
+                      <td>{d.requests}</td>
+                      <td>{d.errors}</td>
+                      <td>{d.tokens}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </GroupCard>
+          )}
+          {snapshot.models.length > 0 && (
+            <GroupCard title={t("phase5.byModel")}>
+              {snapshot.models.map((model) => (
+                <SettingRow
+                  id={`usage-${model.id}`}
+                  key={model.id}
+                  title={model.modelId}
+                  detail={t("phase5.usageNumbers", {
+                    requests: number(model.requests),
+                    cost: number(model.cost),
+                    tokens: number(model.input + model.output),
+                  })}
+                />
+              ))}
+            </GroupCard>
+          )}
         </>
       )}
     </AreaPage>

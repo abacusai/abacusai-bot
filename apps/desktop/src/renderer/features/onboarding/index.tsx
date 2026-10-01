@@ -214,7 +214,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const button = (label: string, action: () => void, secondary = false) => (
     <Button
       size="lg"
-      className="h-11 rounded-xl px-6"
+      className={
+        secondary
+          ? "h-10 rounded-xl px-5"
+          : "onboarding-continue h-11 rounded-xl px-6"
+      }
       variant={secondary ? "secondary" : "default"}
       disabled={busy}
       onClick={action}
@@ -283,11 +287,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           {button(t("onboarding.connectCta"), () => props.signIn("signup"))}
           <div className="flex items-center gap-1">
             {button(
-              defaultProfile
-                ? t("onboarding.haveAccountContinueWith", {
-                    browser: defaultProfile.browserName,
-                  })
-                : t("onboarding.haveAccountCta"),
+              t("onboarding.haveAccountCta"),
               () => props.signIn("signin", defaultProfile?.id),
               true
             )}
@@ -356,7 +356,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               props.signIn(attempt.intent, attempt.profileId)
             )}
           <Button
-            variant="ghost"
+            variant="default"
             onClick={() => void transport.client.auth.abacus.openInBrowser({})}
           >
             {t("onboarding.openInBrowserCta")}
@@ -430,19 +430,13 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
             {props.localModel}
           </div>
-          <div className="w-full rounded-xl border p-4">
-            <h2>{t("onboarding.setupExistingTitle")}</h2>
-            <p>{t("onboarding.setupExistingBody")}</p>
-            <Button variant="ghost" onClick={advance}>
-              {t("onboarding.setupExistingLater")}
-            </Button>
-          </div>
+          <p className="text-sm">{t("onboarding.setupExistingBody")}</p>
           {button(t("onboarding.setupDoneCta"), advance)}
         </>
       )}
       {step === "connectors" && (
         <>
-          <div className="grid w-full grid-cols-3 gap-3">
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
             {CONNECTORS.filter(
               (c) => c.onboarding || (more && c.kind === "platform")
             )

@@ -189,7 +189,16 @@ export const RoutinePage = ({
             {runs.some((r) => r.sessionId === lastRun) ? (
               renderRunReport?.(lastRun)
             ) : (
-              <p role="status">{t("phase5.runGone")}</p>
+              <div className="flex h-full items-center justify-center p-6">
+                <EmptyState
+                  title={t("phase5.runGone")}
+                  action={
+                    <Button variant="secondary" onClick={clear}>
+                      {t("phase5.closeRun")}
+                    </Button>
+                  }
+                />
+              </div>
             )}
           </RunReportFrame>
         ) : null
@@ -369,9 +378,17 @@ export const RoutinePage = ({
                         minute: "2-digit",
                       })}
                     </time>
-                    <span className="min-w-0 flex-1 truncate">{a.result}</span>
+                    <span className="line-clamp-2 min-w-32 flex-1">
+                      {a.result && !/^[a-f0-9-]{32,}$/.test(a.result)
+                        ? a.result
+                        : t(`phase5.outcomes.${a.outcome}`)}
+                    </span>
                     <span className="text-muted-foreground text-xs">
-                      {a.trigger}
+                      {t(
+                        ["manual", "schedule", "webhook"].includes(a.trigger)
+                          ? `routines.triggers.${a.trigger}`
+                          : "routines.triggers.schedule"
+                      )}
                     </span>
                   </>
                 );
@@ -379,7 +396,7 @@ export const RoutinePage = ({
                   <Button
                     key={a.id}
                     variant={run === a.sessionId ? "secondary" : "ghost"}
-                    className="h-12 justify-start"
+                    className="h-auto min-h-14 min-w-0 flex-wrap justify-start gap-x-3 gap-y-1 py-2 text-left whitespace-normal"
                     aria-pressed={run === a.sessionId}
                     onClick={() =>
                       void navigate({

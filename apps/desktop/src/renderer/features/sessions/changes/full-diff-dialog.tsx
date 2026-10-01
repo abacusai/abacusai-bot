@@ -84,16 +84,25 @@ export const FullDiffDialog = ({
   });
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[90vh] w-[90vw] max-w-[1200px] flex-col">
+      <DialogContent className="flex max-h-[calc(100dvh-64px)] w-[calc(100vw-64px)] flex-col overflow-hidden sm:max-w-[1200px]">
         <DialogHeader>
-          <DialogTitle>{path}</DialogTitle>
+          <DialogTitle className="pr-8 break-all">{path}</DialogTitle>
           <DialogDescription>{t("sessions.changes.diff")}</DialogDescription>
         </DialogHeader>
         {result.data?.kind === "patch" ? (
-          <DiffView patch={result.data.patch ?? ""} mode={mode} />
+          <div className="max-h-[70dvh] min-h-40 overflow-auto">
+            <DiffView patch={result.data.patch ?? ""} mode={mode} />
+          </div>
         ) : (
-          <div role="status">
-            {t("sessions.changes.unavailable")}
+          <div
+            role="status"
+            className="flex min-h-40 flex-col items-center justify-center gap-4"
+          >
+            {t(
+              result.isPending
+                ? "common.loading"
+                : "sessions.changes.unavailable"
+            )}
             <Button variant="secondary" onClick={onGit}>
               {t("sessions.changes.gitFallback")}
             </Button>

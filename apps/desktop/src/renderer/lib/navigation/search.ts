@@ -115,8 +115,7 @@ export const ConnectorsSearch = v.object({
 
 /** The side-panel tabs each area offers (title-bar tabs, ⌘⌥B). */
 export const AREA_PANEL_TABS = {
-  // `browser` is accepted in the URL but has no bots surface until phase 4.
-  bots: ["details", "memory", "files"],
+  bots: ["details", "memory", "files", "browser"],
   sessions: ["changes", "terminal", "files", "browser"],
   routines: [],
   artifacts: [],

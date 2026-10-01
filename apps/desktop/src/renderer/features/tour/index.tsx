@@ -75,7 +75,7 @@ export const TourHost = () => {
             (s) => s.owner == null && s.routineId == null
           );
           if (session)
-            href = `/sessions/${encodeURIComponent(session.id)}?tab=${stop.id === "changes" ? "changes" : "terminal"}`;
+            href = `/sessions/${encodeURIComponent(session.id)}?tab=${stop.id === "changes" ? "changes" : "files"}`;
         }
         if (href) await navigate({ href });
         if (abort.signal.aborted) return;
@@ -84,6 +84,26 @@ export const TourHost = () => {
           ? await waitForAnchor(stop.anchor, 2000, abort.signal)
           : null;
         if (abort.signal.aborted) return;
+        if (
+          stop.anchor &&
+          (!element ||
+            element.getBoundingClientRect().right <= 0 ||
+            element.getBoundingClientRect().left >= window.innerWidth)
+        ) {
+          tourStore.setState((state) => ({
+            active: state.active
+              ? {
+                  ...state.active,
+                  stopIndex: Math.min(
+                    state.active.stopIndex + 1,
+                    stops.length - 1
+                  ),
+                }
+              : null,
+          }));
+          setBusy(false);
+          return;
+        }
         element?.scrollIntoView?.({ block: "nearest" });
         measure(element);
         observer = new ResizeObserver(refresh);
@@ -105,7 +125,7 @@ export const TourHost = () => {
       window.removeEventListener("resize", refresh);
       window.removeEventListener("scroll", refresh, true);
     };
-  }, [stop, db, transport, navigate]);
+  }, [stop, db, transport, navigate, stops.length]);
   if (!active || !stop) return null;
   const move = (delta: number) =>
     tourStore.setState((state) => ({
@@ -125,7 +145,7 @@ export const TourHost = () => {
       bodyId="tour-body"
     >
       <div className="flex items-center justify-between gap-3">
-        <h2 id="tour-title" className="font-semibold">
+        <h2 data-tour-stop={stop.id} id="tour-title" className="font-semibold">
           {t(`tour.stops.${stop.id}.title`)}
         </h2>
         <span className="text-muted-foreground text-xs">

@@ -434,7 +434,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "自動返信の会話です。{{bot}} がここであなたに代わって {{sender}} に返信します。閲覧はできますが入力はできません。返信の仕方を変えるには、{{bot}} 自身のチャットで伝えてください。",
-      "openError": "ボットのチャットを開けませんでした。"
+      "openError": "ボットのチャットを開けませんでした。",
+      "senderReadOnlyFallback": "{{bot}} はこの会話で返信します。"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1038,15 +1039,12 @@
     "welcomeTagline": "永続メモリを備えた、あなた専用のオープンソースAIコワーカー",
     "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
     "connectedTitleName": "AbacusAI Bot",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "continueWithBrowser": "{{browser}} · {{profile}} で続行",
     "signInAnotherWay": "別の方法でサインイン",
-    "haveAccountContinueWith": "アカウントをお持ちの方 · {{browser}} で続行",
     "signInOptions": "その他のサインイン方法",
     "usesBrowserSessions": "Google・Microsoft・Apple でのサインインには {{browser}} のアカウントを使います。",
     "welcomeModels": "Access",
@@ -1287,7 +1285,12 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "手動",
+      "schedule": "スケジュール",
+      "webhook": "Webhook"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
@@ -2393,7 +2396,6 @@
     "thisWeek": "This week",
     "usageNumbers": "{{requests}} requests · {{tokens}} tokens · ${{cost}}",
     "dailyActivity": "日別アクティビティ",
-    "dailyNumbers": "{{date}} · {{requests}} requests · {{errors}} errors · {{tokens}} tokens",
     "date": "Date",
     "requests": "Requests",
     "errors": "Errors",
@@ -2717,6 +2719,7 @@
       "image": "画像",
       "link": "リンク"
     },
-    "connecting": "Loading"
+    "connecting": "Loading",
+    "toolsUnavailable": "このバージョンでは、これらのツールは利用できません。"
   }
 }

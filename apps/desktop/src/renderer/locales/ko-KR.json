@@ -434,7 +434,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "자동 답장 대화입니다. {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
-      "openError": "봇의 채팅을 열지 못했습니다."
+      "openError": "봇의 채팅을 열지 못했습니다.",
+      "senderReadOnlyFallback": "{{bot}}이(가) 이 대화에서 답장합니다."
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1038,15 +1039,12 @@
     "welcomeTagline": "지속 메모리를 갖춘 나만의 오픈소스 AI 동료",
     "welcomeTitle": "Welcome to AbacusAI Bot",
     "connectedCta": "Continue",
-    "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
     "connectedTitleName": "AbacusAI Bot",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "continueWithBrowser": "{{browser}} · {{profile}}(으)로 계속",
     "signInAnotherWay": "다른 방법으로 로그인",
-    "haveAccountContinueWith": "이미 계정이 있습니다 · {{browser}}(으)로 계속",
     "signInOptions": "다른 로그인 방법",
     "usesBrowserSessions": "Google, Microsoft, Apple 로그인은 {{browser}}의 계정을 사용합니다.",
     "welcomeModels": "Access",
@@ -1287,7 +1285,12 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "수동",
+      "schedule": "예약됨",
+      "webhook": "웹훅"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
@@ -2393,7 +2396,6 @@
     "thisWeek": "This week",
     "usageNumbers": "{{requests}} requests · {{tokens}} tokens · ${{cost}}",
     "dailyActivity": "일별 활동",
-    "dailyNumbers": "{{date}} · {{requests}} requests · {{errors}} errors · {{tokens}} tokens",
     "date": "Date",
     "requests": "Requests",
     "errors": "Errors",
@@ -2717,6 +2719,7 @@
       "image": "이미지",
       "link": "링크"
     },
-    "connecting": "Loading"
+    "connecting": "Loading",
+    "toolsUnavailable": "이 버전에서는 이 도구를 사용할 수 없습니다."
   }
 }

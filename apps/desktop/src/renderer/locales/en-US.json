@@ -434,7 +434,8 @@
       "channelReadOnly": "This bot replies on {{app}}.",
       "channelReadOnlyWhatsapp": "This bot replies on WhatsApp.",
       "senderReadOnly": "{{bot}} replies to {{sender}} here.",
-      "openError": "Couldn't open this bot"
+      "openError": "Couldn't open this bot",
+      "senderReadOnlyFallback": "{{bot}} replies in this conversation."
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1038,15 +1039,12 @@
     "welcomeTagline": "Open Source Agent And AI Co-Worker",
     "welcomeTitle": "AbacusAI Bot",
     "connectedCta": "Get Started",
-    "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
-    "setupExistingLater": "Connect later",
     "connectedTitleName": "AbacusAI Bot",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
     "continueWithBrowser": "Continue with {{browser}} · {{profile}}",
     "signInAnotherWay": "Sign in another way",
-    "haveAccountContinueWith": "I already have an account · Continue with {{browser}}",
     "signInOptions": "Other ways to sign in",
     "usesBrowserSessions": "Google, Microsoft and Apple sign-in use your {{browser}} accounts.",
     "welcomeModels": "100+ AI Models",
@@ -1287,7 +1285,12 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "Manual",
+      "schedule": "Scheduled",
+      "webhook": "Webhook"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
@@ -2393,7 +2396,6 @@
     "thisWeek": "This week",
     "usageNumbers": "{{requests}} requests · {{tokens}} tokens · ${{cost}}",
     "dailyActivity": "Daily activity",
-    "dailyNumbers": "{{date}} · {{requests}} requests · {{errors}} errors · {{tokens}} tokens",
     "date": "Date",
     "requests": "Requests",
     "errors": "Errors",
@@ -2717,6 +2719,7 @@
       "image": "Images",
       "link": "Links"
     },
-    "connecting": "Loading"
+    "connecting": "Loading",
+    "toolsUnavailable": "These tools are not available in this version."
   }
 }

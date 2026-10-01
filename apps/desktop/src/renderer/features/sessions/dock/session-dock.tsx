@@ -233,12 +233,12 @@ export const SessionDock = ({
         transport.client.terminal.events({ conversationKey: key }, { signal }),
       (event) => {
         if (event.type === "snapshot") {
-          reconcileTerminals(key, event.states);
+          reconcileTerminals(key, event.states, t("sessions.dock.terminal"));
           setTerminalSnapshot(key);
         } else
           openTab(key, {
             ref: `terminal:${event.state.terminalId}`,
-            title: event.state.terminalId,
+            title: t("sessions.dock.terminal"),
           });
       },
       abort.signal
@@ -258,7 +258,7 @@ export const SessionDock = ({
       abort.signal
     );
     return () => abort.abort();
-  }, [transport, key]);
+  }, [transport, key, t]);
   const normalizeSelection = useEffectEvent(select);
   useEffect(() => {
     if (active === "chat" && split)
@@ -698,17 +698,11 @@ export const SessionDock = ({
             }}
             style={
               !showChat
-                ? { position: "static", overflow: "visible" }
+                ? { visibility: "hidden", overflow: "hidden" }
                 : undefined
             }
           >
-            <div
-              className={
-                !showChat
-                  ? "session-dock-mini absolute right-4 bottom-4 z-10 w-[min(420px,calc(100%-32px))]"
-                  : "h-full min-w-0"
-              }
-            >
+            <div className={!showChat ? "hidden" : "h-full min-w-0"}>
               <PaneBoundary resetKey={key}>{chat}</PaneBoundary>
             </div>
           </ResizablePanel>

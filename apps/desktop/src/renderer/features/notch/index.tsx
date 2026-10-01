@@ -125,6 +125,16 @@ export const NotchShell = ({
     app.mainFocused
   );
   const [shown, setShown] = useState(target);
+  const [bodySize, setBodySize] = useState<{
+    identity: string;
+    height: number;
+  } | null>(null);
+  const requestedShape = shapeFor(target, layout);
+  if (target.expanded && bodySize?.identity === target.identity)
+    requestedShape.height = Math.min(
+      layout.maxShape.height,
+      requestedShape.compactHeight + bodySize.height
+    );
   const [shape, setShape] = useState<{ width: number; height: number }>(() =>
     shapeFor(target, layout)
   );
@@ -184,15 +194,15 @@ export const NotchShell = ({
       director.current = null;
     };
   }, [chat, transport, prepareChat]);
-  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${layout.mode}:${layout.notch?.width}:${layout.notch?.height}:${layout.notch?.x}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
+  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${bodySize?.identity === target.identity ? bodySize.height : ""}:${layout.mode}:${layout.notch?.width}:${layout.notch?.height}:${layout.notch?.x}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
   const lastSignature = useRef<string | null>(null);
   useEffect(() => {
     if (lastSignature.current === signature) return;
     lastSignature.current = signature;
     void director.current
-      ?.present(target, shapeFor(target, layout))
+      ?.present(target, requestedShape)
       .catch((error) => console.warn("[notch] presentation failed", error));
-  }, [signature, target, layout, director]);
+  }, [signature, target, requestedShape, director]);
   useEffect(() => {
     director.current?.lock(hovered || focused);
   }, [hovered, focused, director]);
@@ -554,6 +564,7 @@ export const NotchShell = ({
               }}
             >
               <NotchHeader
+                reduced={reduced}
                 layout={layout}
                 left={
                   <div className="notch-wing" style={faceStyle}>
@@ -580,7 +591,14 @@ export const NotchShell = ({
                         />
                       );
                     })}
-                    <span className="notch-label truncate">
+                    <span
+                      className="notch-label truncate"
+                      title={
+                        shown.quietUntil
+                          ? t("notch.quiet.until", { time: shown.quietUntil })
+                          : t(`notch.wings.${shown.attention?.kind ?? "idle"}`)
+                      }
+                    >
                       {shown.route === "/approval/$id" &&
                       shown.expanded &&
                       !shown.quietUntil
@@ -590,8 +608,8 @@ export const NotchShell = ({
                         : shown.quietUntil
                           ? t("notch.quiet.until", { time: shown.quietUntil })
                           : t(
-                              shown.attention?.kind === "failed"
-                                ? runErrorCopy(shown.attention.errorCode)
+                              shown.route === "/call"
+                                ? "notch.listening.title"
                                 : `notch.wings.${shown.attention?.kind ?? "idle"}`
                             )}
                     </span>
@@ -612,7 +630,19 @@ export const NotchShell = ({
                 }
               />
               {shown.expanded && (
-                <NotchBody shape={shape} reduced={reduced}>
+                <NotchBody
+                  headerHeight={layout.notch?.height ?? 36}
+                  shape={shape}
+                  reduced={reduced}
+                  onHeight={(height) =>
+                    setBodySize((previous) =>
+                      previous?.identity === shown.identity &&
+                      previous.height === height
+                        ? previous
+                        : { identity: shown.identity, height }
+                    )
+                  }
+                >
                   {children}
                 </NotchBody>
               )}
@@ -644,7 +674,7 @@ export const ReplyView = ({
   text: string;
   submit(text: string): Promise<{ kind: string }>;
 }) => {
-  const { presentation, transport, open, dictationError } = useNotch();
+  const { presentation, transport, dictationError } = useNotch();
   const id = presentation.sessionId ?? "";
   const accepted = use(ReplyAcceptedContext);
   const { t } = useTranslation();
@@ -734,7 +764,11 @@ export const ReplyView = ({
         <p role="alert">{t("notch.listening.error")}</p>
       )}
       {error && <p role="alert">{t("notch.reply.failed")}</p>}
-      <Button onClick={open}>{t("notch.actions.open")}</Button>
+      {presentation.attention?.canReply && (
+        <Button disabled={sending || !draft.trim()} onClick={() => void send()}>
+          {t("chat.composer.send")}
+        </Button>
+      )}
     </div>
   );
 };
