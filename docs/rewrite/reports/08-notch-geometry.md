@@ -71,3 +71,39 @@ Logs and the scratch capture/build scripts remain in the capture directory. No s
 ## Checks needing physical eyes
 
 This machine was measured at one actual scaling mode, 1710 × 1107 at 2×. Other scale factors, asymmetric displays and auto-hide geometry are covered by tests, not by changing this user's display settings. There is no connected external display to inspect. Fullscreen Space joining is configured but a physical fullscreen/Space-switch pass remains useful. Screenshots capture the composited framebuffer, not the opaque camera housing itself; the final visual merge against the real bezel and rapid hover reversal should be checked on the MacBook. The signed-in desktop captures can include other applications active during the audit; the controlled captures isolate the silhouette with a backdrop.
+
+## Follow-up audit, after2
+
+The reviewer was right about the old captures. I opened both live PNGs and inspected the replacement captures, including every sampled transition frame. The previous paragraph claiming that the live captures independently confirmed the silhouette was too strong. A second Electron from the UI-audit worktree was drawing an older notch behind this one. Hiding that companion removed the extra bottom strip. The new controlled captures put their neutral backdrop above other companion windows; the live captures temporarily hide the other audit companion. Its temporary style was removed after capture. No other audit process was killed.
+
+The replacement evidence is in `/Users/rajaniraiyn/work/abacusai-bot/.build/ui-audit/notch/after2/`. All 27 PNGs are real `screencapture -x -R 515,0,680,280` captures, with no page-capture fallback. Signed-in runs use fresh `copyPerfHome` copies; the controlled component harness uses an empty temporary Chromium profile. The source home is untouched. Capture processes and disposable profiles are cleaned up. No `.build` files belong in the commit.
+
+The frame now owns the only black background. The ears and body are transparent children, and the notched compact height uses the measured hardware height exactly, including measurements below 32 points. On this display the single silhouette ends at y=33. Both compact and expanded states use twelve-point concave shoulders and continuous cubic bottom curves. The bottom radius is bounded by the available height so shorter camera measurements cannot reverse a vertical segment. The native test checks actual Chromium hit geometry inside and outside those curves, including the transparent space below the bottom edge.
+
+Expanded ears have 180 points each, capped by the existing 560-point panel limit. This gives a 545-point panel around the measured 185-point camera. The header label has a flexible width, `min-width: 0` and no inherited maximum; avatars retain their size. The complete English idle header fits in the left ear. Longer labels truncate only within that ear. The middle 185 points remain empty, and the body starts below y=33. Idle name and actions are centered with an eight-point gap. Listening controls and reply actions also share a centered alignment, while the reply field uses the body's width.
+
+`NotchSurface` and `NotchHeader` are shared between production and the native regression harness. The native matrix checks 24-, 33- and 40-point exclusions, compact and expanded presentations, and idle, working, listening, reply and approval dimensions. It verifies header fit, ear separation, body placement, action centering, shoulders, bottom curves and the absence of a second surface below the measured floor. Separately, the recorded bounds of every button and input in the five controlled captures were checked against the global housing rectangle `(763,0,185,33)`; none intersects it.
+
+| State | Capture | Visible size, points | Native frame, points |
+| --- | --- | --- | --- |
+| Collapsed | `after2/collapsed.png`, `after2/live-collapsed.png` | 281 × 33 | 691, 0, 329, 65 |
+| Hover expanded | `after2/hover-expanded.png`, `after2/live-hover-expanded.png` | 545 × 109 | 559, 0, 593, 141 |
+| Listening | `after2/listening.png` | 545 × 165 | 559, 0, 593, 197 |
+| Reply | `after2/reply.png` | 545 × 165 | 559, 0, 593, 197 |
+| Attention | `after2/attention.png` | 545 × 220 | 559, 0, 593, 252 |
+
+### Motion evidence
+
+`morph-expand-{000,016,032,050,075,100,150,200,249,250}.png` and the corresponding `morph-collapse-*` files include eight intermediate frames per direction plus the endpoints. The harness pauses the actual CSS transitions and seeks their current time; it does not draw substitute geometry. To allow real screen capture at each sample, the harness extends the director's 350 ms fallback timer to 60 seconds and holds hover during expansion. Production retains its 250 ms transition and 350 ms fallback. Earlier invalid attempts allowed hover to expire or the fallback to shrink the native window while paused; the final files replace those attempts.
+
+The final `morph-frames.json` records y=0 at every sample and monotonic width/height changes. The exclusion edges remain at 763 and 948 points, with at most 0.008 points of Chromium layout rounding. Both shoulders remain attached to the screen top. `NotchBody` observes the rendered surface and hides its children until the full target dimensions fit, preventing partially clipped buttons during expansion. In the sampled expansion it becomes visible at 200 ms, when the surface is within half a point of its final dimensions. Collapse removes the body before shrinking. The reviewed frames show no second outline, top-edge jump or clipped body controls. Header truncation during the narrow intermediate frames is intentional and remains outside the camera gap.
+
+### Follow-up validation
+
+- Root `tsc -b` passes.
+- Renderer/main Vitest passes 467 files and 3,927 tests with `--maxWorkers=2`.
+- The focused notch run passes 22 files and 126 tests with `--maxWorkers=2`.
+- Oxlint, repository oxfmt, i18n, locales, React compiler, UI registry, release graph, chat bundle, dependency audit and knip checks pass. Logs are under `after2/`.
+- The final main-serial native suite passes, including all 30 new geometry cases and the existing lifecycle, permission-fit, listening and audio checks. Its test window includes the production 32-point transparent bottom margin so bottom-edge hit testing does not run outside the viewport.
+- `check:packaged` and `check:release-versions` were invoked but cannot pass without packaged release artifacts. The first reports a missing `release/` directory; the second requires installer metadata, update YAML and an experience manifest. This UI task did not package a release. Their logs preserve those errors.
+- All Electron processes started by this follow-up have exited. The other worktree's companion isolation style was removed, as recorded in `restore.log`.

@@ -23,8 +23,8 @@ it.each([185, 200, 240])(
     const open = shapeFor({ ...p, expanded: true }, layout);
     expect(closed.height).toBe(40);
     expect(closed.width - width).toBe(96);
-    expect(open.width - width).toBe(260);
-    expect(open.height).toBe(108);
+    expect(open.width).toBe(Math.min(layout.maxShape.width, width + 360));
+    expect(open.height).toBe(116);
   }
 );
 it.each([
@@ -42,8 +42,8 @@ it.each([
   expect(path.match(/curve to/g)).toHaveLength(4);
 });
 it("uses percentages so every intermediate animation size stays clipped", () => {
-  expect(notchOutline()).toContain("calc(100% - 6px)");
-  expect(notchOutline()).toContain("calc(100% - 20px)");
+  expect(notchOutline()).toContain("calc(100% - 12px)");
+  expect(notchOutline()).toContain("min(20px, calc(100% - 12px))");
 });
 it("gives a notchless capsule enough room for controls", () => {
   const shape = shapeFor(
