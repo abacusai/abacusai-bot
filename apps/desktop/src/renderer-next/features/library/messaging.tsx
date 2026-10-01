@@ -202,12 +202,16 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     );
   };
   const close = async () => {
-    await flow.settlePairing(platform);
-    await navigate({
-      to: "/library/messaging",
-      search: { platform: undefined },
-      transition: "none",
-    });
+    try {
+      await flow.settlePairing(platform);
+      await navigate({
+        to: "/library/messaging",
+        search: { platform: undefined },
+        transition: "none",
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("phase5.failed"));
+    }
   };
   useEffect(() => {
     let live = true;
@@ -231,7 +235,10 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     });
     return () => {
       live = false;
-      void flowRef.current.settlePairing(platform);
+      void flowRef.current.settlePairing(platform).catch((e) => {
+        if (transport.state !== "closed")
+          showError(e instanceof Error ? e.message : t("phase5.failed"));
+      });
     };
   }, [platform, transport, cache, sharedId, t]);
   return (
