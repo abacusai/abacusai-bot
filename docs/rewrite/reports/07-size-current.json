@@ -1,11 +1,11 @@
 {
-  "commit": "005d7d99f54d01fc9ebe3f65bd49e1284db6b8c0",
-  "measuredAt": "2026-10-01T11:11:19.831Z",
+  "commit": "4f64865a74e9b005cce95b41b42149b27b012412",
+  "measuredAt": "2026-10-01T11:24:05.250Z",
   "entries": [
     {
       "name": "Main initial",
       "path": [
-        "./assets/main-C3sevh4l.js",
+        "./assets/main-CuEP4ihd.js",
         "./assets/rolldown-runtime-Dd_uD5pT.js",
         "./assets/shim-DwPmJfDH.js",
         "./assets/utils-DX25cmng.js",
@@ -119,12 +119,12 @@
         "./assets/bot-avatar-tazUtPIO.css",
         "./assets/main-CMAYOTMG.css"
       ],
-      "gzipBytes": 547519
+      "gzipBytes": 547524
     },
     {
       "name": "Notch initial",
       "path": [
-        "./assets/notch-DDYsWN7i.js",
+        "./assets/notch-DLtfhKxk.js",
         "./assets/rolldown-runtime-Dd_uD5pT.js",
         "./assets/shim-DwPmJfDH.js",
         "./assets/utils-DX25cmng.js",
@@ -189,7 +189,7 @@
         "./assets/bot-avatar-tazUtPIO.css",
         "./assets/notch-DNnXb795.css"
       ],
-      "gzipBytes": 393747
+      "gzipBytes": 393749
     },
     {
       "name": "Largest lazy chunk",
