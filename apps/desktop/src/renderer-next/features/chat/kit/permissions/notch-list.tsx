@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "#next/ui/button";
@@ -13,6 +13,8 @@ export interface NotchPermissionProps {
   onReview?(): void;
   onSnooze?(): void;
   maxHeight?: number;
+  focused?: boolean;
+  onHaptic?(key: string): void;
 }
 export const NotchPermissionList = ({
   runtime,
@@ -20,6 +22,8 @@ export const NotchPermissionList = ({
   onReview,
   onSnooze,
   maxHeight = 220,
+  focused = false,
+  onHaptic,
 }: NotchPermissionProps) => {
   const { t } = useTranslation();
   const session = runtime.session(threadId);
@@ -56,7 +60,41 @@ export const NotchPermissionList = ({
             line.scrollHeight <= (Number(line.dataset.lines) || 2) * 16
         )
     );
-  }, [descriptor, maxHeight, step]);
+  }, [descriptor, maxHeight, step, questions]);
+  useEffect(() => {
+    if (!descriptor) return;
+    const lineage = descriptor.metadata.abacus.lineage;
+    onHaptic?.(
+      `${lineage.threadId}:${lineage.incarnation}:${lineage.turnSeq}:${lineage.permissionId}:${step}`
+    );
+  }, [descriptor, step, onHaptic]);
+  useEffect(() => {
+    if (!focused || !descriptor) return;
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onSnooze?.();
+      }
+      if (
+        event.key !== "Enter" ||
+        !(event.metaKey || event.ctrlKey) ||
+        !fits ||
+        descriptor.metadata.abacus.request.type === "ask_user_question"
+      )
+        return;
+      if (
+        notchAcceptable(descriptor, () => fits).ok &&
+        descriptor.metadata.abacus.allowed.includes("accept")
+      ) {
+        event.preventDefault();
+        void runtime
+          .respondPermission(threadId, descriptor, "accept")
+          .catch(() => undefined);
+      }
+    };
+    document.addEventListener("keydown", keys);
+    return () => document.removeEventListener("keydown", keys);
+  }, [focused, descriptor, fits, onSnooze, runtime, threadId]);
   if (!descriptor) return null;
   const pending = answering[descriptor.id];
   const q = questions?.[step];
@@ -122,7 +160,14 @@ export const NotchPermissionList = ({
                     });
                 }}
               >
-                {o.label}
+                <span>
+                  {o.label}
+                  {o.description && (
+                    <span className="block text-xs font-normal">
+                      {o.description}
+                    </span>
+                  )}
+                </span>
               </Button>
             ))}
           </div>
