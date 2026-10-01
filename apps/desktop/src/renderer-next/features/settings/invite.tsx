@@ -67,10 +67,15 @@ export const InviteDialog = ({
     validators: { onSubmit: schema },
     onSubmit: async ({ value }) => {
       try {
+        setError(null);
         const parsed = v.parse(schema, value);
         const emails = [
           ...new Set([...selected, ...inviteEmails(parsed.emails)]),
         ];
+        if ((channel === "gmail" ? emails : selected).length === 0) {
+          setError(t("phase5.chooseRecipients"));
+          return;
+        }
         if (
           channel === "gmail" &&
           !emails.every(
@@ -159,13 +164,15 @@ export const InviteDialog = ({
                 <Button
                   type="button"
                   onClick={() =>
-                    void connectGmail().then(() =>
-                      cache.invalidateQueries({
-                        queryKey: transport.orpc.referrals.summary.queryKey({
-                          input: {},
-                        }),
-                      })
-                    )
+                    void connectGmail()
+                      .then(() =>
+                        cache.invalidateQueries({
+                          queryKey: transport.orpc.referrals.summary.queryKey({
+                            input: {},
+                          }),
+                        })
+                      )
+                      .catch((e) => setError(errorText(e)))
                   }
                 >
                   {t("phase5.connectGmail")}
