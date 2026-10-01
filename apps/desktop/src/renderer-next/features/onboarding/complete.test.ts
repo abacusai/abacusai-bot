@@ -9,9 +9,10 @@ import {
 describe("R6-T6 completion persistence boundaries", () => {
   const setup = (failAt = "") => {
     const calls: string[] = [];
+    let failure = failAt;
     const call = async (name: string) => {
       calls.push(name);
-      if (name === failAt) throw new Error("offline");
+      if (name === failure) throw new Error("offline");
     };
     const deps = {
       db: {
@@ -46,7 +47,13 @@ describe("R6-T6 completion persistence boundaries", () => {
         calls.push("tour");
       },
     } as unknown as CompletionDeps;
-    return { deps, calls };
+    return {
+      deps,
+      calls,
+      recover: () => {
+        failure = "";
+      },
+    };
   };
   it("persists exit first and clears only after commit and tour activation", async () => {
     const { deps, calls } = setup();
@@ -74,9 +81,12 @@ describe("R6-T6 completion persistence boundaries", () => {
     expect(calls).toEqual(["funnel", "step", "commit", "tour", "clear"]);
   });
   it("commits the destination but retains the target if step cleanup fails", async () => {
-    const { deps, calls } = setup("step");
+    const { deps, calls, recover } = setup("step");
     await completeOnboarding(deps, { to: "new-session" });
     expect(calls).toEqual(["exit", "account", "funnel", "step", "commit"]);
+    recover();
+    await finishCompletion(deps, { to: "new-session" });
+    expect(calls.slice(-4)).toEqual(["funnel", "step", "commit", "clear"]);
   });
   it.each(["exit", "account", "funnel", "commit"])(
     "retains recoverable target when %s fails",

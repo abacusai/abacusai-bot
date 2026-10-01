@@ -44,6 +44,7 @@ export const finishCompletion = (
   const key = JSON.stringify(exit);
   const existing = runs.get(key);
   if (existing) return existing;
+  let completed = false;
   const work = (async () => {
     await deps.transport.client.system.funnelStep({
       step: "onboarding_done",
@@ -58,10 +59,18 @@ export const finishCompletion = (
     }
     await deps.navigate(exit);
     if (exit.to === "bot-tour") deps.startTour();
-    if (cleaned) await deps.db.updatePrefs({ onboardingExit: null });
+    if (cleaned) {
+      await deps.db.updatePrefs({ onboardingExit: null });
+      completed = true;
+    }
   })();
   runs.set(key, work);
-  void work.catch(() => runs.delete(key));
+  void work.then(
+    () => {
+      if (!completed) runs.delete(key);
+    },
+    () => runs.delete(key)
+  );
   return work;
 };
 export const completeOnboarding = async (
