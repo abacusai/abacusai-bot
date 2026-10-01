@@ -1065,10 +1065,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "आपका खाता तैयार है। आपका बॉट आपके मॉडल, फ़ाइलों और टूल के साथ काम करता है।",
-    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
-    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
-    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
+    "pages.connected.promise1": "आपका खाता जुड़ गया है।",
+    "pages.connected.promise2": "इस्तेमाल करने के लिए मॉडल चुनें।",
+    "pages.connected.promise3": "ज़रूरत पड़ने पर अपने ऐप जोड़ें।",
+    "pages.connected.promise4": "ऐसे निर्देश जोड़ें जिन्हें एजेंट याद रखे।",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1782,7 +1782,6 @@
       "label": "Settings",
       "personal": "Personal",
       "app": "App",
-      "capabilities": "Capabilities",
       "openLibrary": "Open the Library",
       "models": "Models",
       "environment": "Environment"
@@ -2063,7 +2062,8 @@
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
-      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
+      "done_zero": "{{duration}} में पूरा हुआ"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -2720,6 +2720,7 @@
       "link": "लिंक"
     },
     "connecting": "Loading",
-    "toolsUnavailable": "इस संस्करण में ये टूल उपलब्ध नहीं हैं।"
+    "toolsUnavailable": "इस संस्करण में ये टूल उपलब्ध नहीं हैं।",
+    "noInstalledSkills": "इस दायरे में कोई स्किल इंस्टॉल नहीं है। स्किल इम्पोर्ट करें या मार्केटप्लेस देखें।"
   }
 }

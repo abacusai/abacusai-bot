@@ -10,6 +10,7 @@ import { EmptyState } from "#renderer/components/empty-state";
 import { Spinner } from "#renderer/components/spinner";
 import { useDb } from "#renderer/data/db";
 import { Button } from "#renderer/ui/button";
+import { Dialog, DialogContent } from "#renderer/ui/dialog";
 import { Skeleton } from "#renderer/ui/skeleton";
 
 /** A failure belongs to the smallest independently usable pane. */
@@ -71,7 +72,7 @@ const Lines = () => (
   </div>
 );
 const Rows = ({ count = 4 }: { count?: number }) => (
-  <div className="bg-card flex flex-col divide-y rounded-xl px-1">
+  <div className="bg-card border-border/60 flex flex-col divide-y rounded-xl border px-1">
     {Array.from({ length: count }, (_, n) => (
       <div key={n} className="flex min-h-[52px] items-center gap-4 px-3 py-3">
         <Lines />
@@ -98,7 +99,7 @@ export const RoutePending = () => {
       <div className="flex size-full min-h-0 flex-col">
         <div className="bot-form-columns flex min-h-0 flex-1 overflow-hidden">
           <aside className="bg-muted/40 flex w-[300px] shrink-0 flex-col items-center gap-3 px-6 pt-10">
-            <Skeleton className="size-24 rounded-full" />
+            <Skeleton className="size-24 rounded-full max-[999px]:size-14" />
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-8 w-40" />
           </aside>
@@ -219,16 +220,36 @@ export const RoutePending = () => {
         {area === "library" && pathname.endsWith("/connectors") && (
           <Skeleton className="h-14 w-full rounded-lg" />
         )}
-        <Rows
-          count={
-            pathname.endsWith("/appearance")
-              ? 5
-              : pathname.endsWith("/general")
-                ? 6
-                : 4
-          }
-        />
-        {!pathname.endsWith("/appearance") && <Rows />}
+        {pathname.endsWith("/memory") ? (
+          <>
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-10 w-full" />
+            <div className="bg-card rounded-xl border p-4">
+              <Skeleton className="mb-4 h-4 w-52" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="mt-3 h-7 w-14" />
+            </div>
+          </>
+        ) : pathname.endsWith("/keyboard") ? (
+          <Rows count={13} />
+        ) : (
+          <>
+            <Rows
+              count={
+                pathname.endsWith("/messaging")
+                  ? 3
+                  : pathname.endsWith("/appearance")
+                    ? 5
+                    : pathname.endsWith("/general")
+                      ? 6
+                      : 4
+              }
+            />
+            {!pathname.endsWith("/appearance") && (
+              <Rows count={pathname.endsWith("/messaging") ? 5 : 4} />
+            )}
+          </>
+        )}
       </div>
     );
   } else if (area === "artifacts") {
@@ -238,19 +259,85 @@ export const RoutePending = () => {
           <Skeleton className="h-6 w-28" />
           <Skeleton className="ml-auto h-7 w-48" />
         </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5 p-5">
-          {[0, 1, 2, 3, 4, 5].map((n) => (
-            <Skeleton key={n} className="h-[180px] rounded-xl" />
-          ))}
-        </div>
+        {(location.search as { item?: string }).item ? (
+          <div className="flex min-h-0 flex-1 gap-3 px-5 pb-4">
+            <div className="hidden w-[396px] shrink-0 space-y-3 lg:block">
+              <Skeleton className="h-4 w-28" />
+              <Rows count={2} />
+            </div>
+            <div className="bg-card min-w-0 flex-1 space-y-4 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="ml-auto h-6 w-12" />
+              </div>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map((n) => (
+                  <Skeleton key={n} className="h-7 w-20" />
+                ))}
+              </div>
+              <div className="border-t pt-4">
+                <Lines />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5 p-5">
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <Skeleton key={n} className="h-[180px] rounded-xl" />
+            ))}
+          </div>
+        )}
       </div>
+    );
+  } else if (area === "routines" && (start || setup)) {
+    content = (
+      <Dialog open>
+        <DialogContent
+          showCloseButton={false}
+          aria-label={t("common.loading")}
+          className="flex max-h-[calc(100dvh-48px)] flex-col gap-4 overflow-hidden rounded-2xl p-5 sm:max-w-[640px]"
+        >
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-64" />
+          {start && <Skeleton className="h-12 w-full" />}
+          <div className="space-y-4">
+            {[32, 96, 64, 40].map((height, i) => (
+              <div key={i}>
+                <Skeleton className="mb-2 h-3 w-20" />
+                <Skeleton style={{ height }} className="w-full" />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-7 w-16" />
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   } else if (area === "routines" || pathname.endsWith("/edit")) {
     content = (
       <div className="flex flex-col gap-5 p-6">
-        <Skeleton className="h-10 w-2/3" />
-        <Rows />
-        <Skeleton className="h-32 w-full rounded-xl" />
+        <div className="flex h-10 items-center gap-3">
+          <Skeleton className="size-10 rounded-lg" />
+          <Skeleton className="h-6 w-56" />
+          <Skeleton className="ml-auto h-7 w-48" />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[0, 1, 2].map((n) => (
+            <Skeleton key={n} className="h-16 rounded-xl" />
+          ))}
+        </div>
+        <div>
+          <Skeleton className="mb-3 h-4 w-24" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+        <div>
+          <Skeleton className="mb-3 h-5 w-16" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="mt-3 h-10 w-full" />
+        </div>
+        <Skeleton className="h-24 w-full rounded-xl" />
       </div>
     );
   } else {

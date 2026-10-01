@@ -84,11 +84,18 @@ export const RunReportFrame = ({
       aria-label={t("phase5.runReport")}
       className="[&_.min-h-13>span]:text-foreground flex h-full flex-col"
     >
-      <header className="flex h-11 items-center justify-between gap-2 border-b px-4">
-        <span>{t("phase5.runReport")}</span>
-        <AppLink to="/sessions/$sessionId" params={{ sessionId: runId }}>
+      <header className="flex min-h-11 min-w-0 flex-wrap items-center gap-2 border-b px-3 py-2 text-sm">
+        <span className="mr-auto font-semibold">{t("phase5.runReport")}</span>
+        <Button
+          size="sm"
+          variant="secondary"
+          nativeButton={false}
+          render={
+            <AppLink to="/sessions/$sessionId" params={{ sessionId: runId }} />
+          }
+        >
           {t("phase5.openSession")}
-        </AppLink>
+        </Button>
         <Button
           size="sm"
           variant="ghost"
@@ -98,9 +105,6 @@ export const RunReportFrame = ({
           {t("phase5.close")}
         </Button>
       </header>
-      <p className="text-muted-foreground px-4 py-2 text-xs">
-        {t("phase5.readOnlyRun")}
-      </p>
       <div className="min-h-0 flex-1">{children}</div>
     </section>
   );
@@ -250,19 +254,22 @@ export const RoutinePage = ({
             >
               {t("phase5.edit")}
             </Button>
-            <Switch
-              aria-label={t("phase5.routineOn")}
-              checked={row.enabled}
-              onCheckedChange={(enabled) =>
-                void db.collections.routines
-                  .update(row.id, (d) => {
-                    d.enabled = enabled;
-                  })
-                  .isPersisted.promise.catch(() =>
-                    showError(t("phase5.failed"))
-                  )
-              }
-            />
+            <label className="flex items-center gap-2 text-xs">
+              <span>{t("routines.enabled")}</span>
+              <Switch
+                aria-label={t("phase5.routineOn")}
+                checked={row.enabled}
+                onCheckedChange={(enabled) =>
+                  void db.collections.routines
+                    .update(row.id, (d) => {
+                      d.enabled = enabled;
+                    })
+                    .isPersisted.promise.catch(() =>
+                      showError(t("phase5.failed"))
+                    )
+                }
+              />
+            </label>
             <ConfirmAction
               title={t("phase5.deleteRoutine")}
               description={t("phase5.deleteRoutineDescription", {
@@ -379,7 +386,10 @@ export const RoutinePage = ({
                       })}
                     </time>
                     <span className="line-clamp-2 min-w-32 flex-1">
-                      {a.result && !/^[a-f0-9-]{32,}$/.test(a.result)
+                      {a.result &&
+                      !/^(?:started session\s+)?[a-f0-9-]{32,}$/i.test(
+                        a.result.trim()
+                      )
                         ? a.result
                         : t(`phase5.outcomes.${a.outcome}`)}
                     </span>

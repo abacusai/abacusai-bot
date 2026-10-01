@@ -80,7 +80,7 @@ const Group = ({
   if (open === undefined)
     return (
       <div role="group" aria-label={label} className="mt-2 first:mt-0">
-        <div className={headingClass}>{heading}</div>
+        {label && <div className={headingClass}>{heading}</div>}
         <div className="flex flex-col">{children}</div>
       </div>
     );

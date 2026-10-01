@@ -186,6 +186,17 @@ describe("R2-T25 composer", () => {
     expect(relay.stats.send[0]!.forwardedProps).toEqual({ mode: "PLAN" });
   });
 
+  it("keeps the full composer and its trigger mounted while the mode menu is open", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(relay, "session");
+    const trigger = await screen.findByRole("button", { name: /Supervised/ });
+    fireEvent.click(trigger);
+    expect(await screen.findByRole("menu")).toBeTruthy();
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    expect(trigger.isConnected).toBe(true);
+  });
+
   it("the mode menu: five modes with descriptions; choosing sets the mode, a silent agent reverts", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const setMode = vi.fn(() => Promise.resolve());

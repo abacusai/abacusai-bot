@@ -13,7 +13,10 @@ export const SHAPES = {
   call: [130, 132],
   hovered: [180, 76],
 } as const;
-export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
+export const shapeFor = (
+  p: Pick<NotchPresentation, "route" | "expanded" | "quietUntil">,
+  layout: NotchLayout
+) => {
   const key = p.quietUntil
     ? "quiet"
     : p.route.startsWith("/approval")

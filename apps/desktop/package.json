@@ -67,7 +67,8 @@
     "measure:size": "node scripts/measure-release-size.mjs",
     "smoke:rpc": "node scripts/rpc-ws-smoke.mjs",
     "sync:chat-fixtures": "node scripts/sync-chat-fixtures.mjs",
-    "ui:add": "shadcn add"
+    "ui:add": "shadcn add",
+    "ui:audit": "node scripts/ui-audit-capture.mjs"
   },
   "dependencies": {
     "@ff-labs/fff-node": "^0.9.6",

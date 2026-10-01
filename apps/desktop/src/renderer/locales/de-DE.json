@@ -1065,10 +1065,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "Dein Konto ist bereit. Dein Bot arbeitet mit deinen Modellen, Dateien und Tools.",
-    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
-    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
-    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
+    "pages.connected.promise1": "Dein Konto ist verbunden.",
+    "pages.connected.promise2": "Wähle die gewünschten Modelle aus.",
+    "pages.connected.promise3": "Verbinde deine Apps bei Bedarf.",
+    "pages.connected.promise4": "Füge Anweisungen hinzu, die sich der Agent merken soll.",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1782,7 +1782,6 @@
       "label": "Settings",
       "personal": "Personal",
       "app": "App",
-      "capabilities": "Capabilities",
       "openLibrary": "Open the Library",
       "models": "Models",
       "environment": "Environment"
@@ -2063,7 +2062,8 @@
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
-      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
+      "done_zero": "Fertig in {{duration}}"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -2720,6 +2720,7 @@
       "link": "Links"
     },
     "connecting": "Loading",
-    "toolsUnavailable": "Diese Werkzeuge sind in dieser Version nicht verfügbar."
+    "toolsUnavailable": "Diese Werkzeuge sind in dieser Version nicht verfügbar.",
+    "noInstalledSkills": "In diesem Bereich sind keine Skills installiert. Importiere einen Skill oder öffne den Marktplatz."
   }
 }

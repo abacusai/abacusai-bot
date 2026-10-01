@@ -125,12 +125,20 @@ export const SkillsPage = () => {
             </Button>
           ))}
         </div>
-        {["project", "global"].map((source) => (
+        {(workspacePath ? ["project", "global"] : ["global"]).map((source) => (
           <section key={source}>
             <h2 className="mb-2 text-sm font-semibold">
               {t(source === "project" ? "phase5.workspace" : "phase5.global")}
             </h2>
             <GroupCard>
+              {!query.isPending &&
+                !query.data?.skills.some(
+                  (skill) => skill.source === source
+                ) && (
+                  <p className="text-muted-foreground p-4 text-sm">
+                    {t("phase5.noInstalledSkills")}
+                  </p>
+                )}
               {query.data?.skills
                 .filter((s) => s.source === source)
                 .map((s) => (
@@ -333,12 +341,19 @@ export const ToolsPage = () => {
             title={t(`capabilities.toolsets.${s.labelKey}.label`)}
             detail={s.tools.map((tool) => tool.name).join(", ")}
           >
-            <AppLink
-              to="/library/tools/$toolsetId"
-              params={{ toolsetId: s.id }}
+            <Button
+              size="sm"
+              variant="secondary"
+              nativeButton={false}
+              render={
+                <AppLink
+                  to="/library/tools/$toolsetId"
+                  params={{ toolsetId: s.id }}
+                />
+              }
             >
               {t("phase5.details")}
-            </AppLink>
+            </Button>
             {s.alwaysOn || s.status === "planned" ? (
               <StatePill>
                 {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}

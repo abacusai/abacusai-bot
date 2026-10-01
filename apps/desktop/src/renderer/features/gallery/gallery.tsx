@@ -323,8 +323,8 @@ const OcclusionSection = () => {
         data-testid="fake-native-surface"
       >
         Fake native surface
-        {OVERLAY_EXAMPLES.popover()}
-        {OVERLAY_EXAMPLES.dialog()}
+        <OVERLAY_EXAMPLES.popover />
+        <OVERLAY_EXAMPLES.dialog />
         <Atoms.ToastSection />
       </div>
       <p

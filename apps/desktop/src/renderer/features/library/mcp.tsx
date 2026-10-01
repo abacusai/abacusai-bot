@@ -320,7 +320,7 @@ export const McpPage = () => {
                     }
                   />
                 </SettingRow>
-                <div className="flex gap-1 px-3 pb-2">
+                <div className="bg-muted/30 flex flex-wrap gap-2 border-t px-3 py-2">
                   <Button
                     size="sm"
                     variant="ghost"

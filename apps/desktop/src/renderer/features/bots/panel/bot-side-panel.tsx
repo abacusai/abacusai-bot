@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { BotMemoryList } from "#renderer/components/bot-memory-list";
 import { ConnectorMark } from "#renderer/components/connector-mark";
+import { EmptyState } from "#renderer/components/empty-state";
 import {
   FilePreview,
   containmentRootFor,
@@ -73,6 +74,14 @@ export const DetailsTab = ({
   const check = checkInFromRoutine(routine);
   const pinned = prefs.pinned.botIds.includes(bot.id);
   const senderRows = (senders.data ?? []).filter((row) => row.botId === bot.id);
+  const reachable =
+    messaging.data?.platforms.filter(
+      (platform) =>
+        platform.id === bot.channel ||
+        messaging.data.approved.some(
+          (row) => row.platform === platform.id && row.botId === bot.id
+        )
+    ) ?? [];
   const memoryCount =
     memory.data?.find((row) => row.botId === bot.id)?.entries.length ?? 0;
   return (
@@ -133,7 +142,7 @@ export const DetailsTab = ({
         </AppLink>
         <Button
           variant="ghost"
-          className="h-11 justify-between rounded-none border-b"
+          className="h-11 justify-between rounded-none border-b px-3 text-xs font-normal"
           onClick={() => setTab("memory")}
         >
           <span>{t("bots.panel.memoryTitle")}</span>
@@ -143,37 +152,38 @@ export const DetailsTab = ({
         </Button>
         <Button
           variant="ghost"
-          className="h-11 justify-between"
+          className="h-11 justify-between rounded-none px-3 text-xs font-normal"
           onClick={() => setTab("files")}
         >
           <span>{t("bots.panel.filesTitle")}</span>
           <span className="text-muted-foreground text-xs">{files.length}</span>
         </Button>
       </div>
-      {routine && (
-        <section>
-          <h3 className="text-muted-foreground mb-2 text-xs">
-            {t("bots.panel.checkIns")}
-          </h3>
-          {sessions
-            .filter((s) => s.routineId === routine.id)
-            .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
-            .slice(0, 5)
-            .map((session) => (
-              <AppLink
-                key={session.id}
-                to="/bots/$botId/chats/$sessionId"
-                params={{ botId: bot.id, sessionId: session.id }}
-                className="flex h-11 items-center justify-between text-xs"
-              >
-                <span>
-                  {new Date(session.createdAt).toLocaleString(i18n.language)}
-                </span>
-                <span>{session.runOutcome}</span>
-              </AppLink>
-            ))}
-        </section>
-      )}
+      {routine &&
+        sessions.some((session) => session.routineId === routine.id) && (
+          <section>
+            <h3 className="text-muted-foreground mb-2 text-xs">
+              {t("bots.panel.checkIns")}
+            </h3>
+            {sessions
+              .filter((s) => s.routineId === routine.id)
+              .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .slice(0, 5)
+              .map((session) => (
+                <AppLink
+                  key={session.id}
+                  to="/bots/$botId/chats/$sessionId"
+                  params={{ botId: bot.id, sessionId: session.id }}
+                  className="flex h-11 items-center justify-between text-xs"
+                >
+                  <span>
+                    {new Date(session.createdAt).toLocaleString(i18n.language)}
+                  </span>
+                  <span>{session.runOutcome}</span>
+                </AppLink>
+              ))}
+          </section>
+        )}
       {senderRows.length > 0 && (
         <section>
           <h3 className="text-muted-foreground text-xs">
@@ -187,7 +197,10 @@ export const DetailsTab = ({
               className="flex h-11 items-center gap-2 text-xs"
             >
               <ConnectorMark id={row.platform} size={20} />
-              <span className="flex-1">{row.senderName}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {row.senderName?.trim() ||
+                  t("bots.chat.senderReadOnlyFallback", { bot: bot.name })}
+              </span>
               <span>
                 {t(
                   row.autoReply === "approved"
@@ -199,30 +212,22 @@ export const DetailsTab = ({
           ))}
         </section>
       )}
-      {messaging.data && (
+      {reachable.length > 0 && (
         <section>
           <h3 className="text-muted-foreground text-xs">
             {t("bots.panel.reachable")}
           </h3>
-          {messaging.data.platforms
-            .filter(
-              (platform) =>
-                platform.id === bot.channel ||
-                messaging.data.approved.some(
-                  (row) => row.platform === platform.id && row.botId === bot.id
-                )
-            )
-            .map((platform) => (
-              <AppLink
-                key={platform.id}
-                to="/library/messaging"
-                className="flex h-11 items-center gap-2 text-xs"
-              >
-                <ConnectorMark id={platform.id} size={20} />
-                <span>{platform.id}</span>
-                <span className="ml-auto">{t("bots.panel.connected")}</span>
-              </AppLink>
-            ))}
+          {reachable.map((platform) => (
+            <AppLink
+              key={platform.id}
+              to="/library/messaging"
+              className="flex h-11 items-center gap-2 text-xs"
+            >
+              <ConnectorMark id={platform.id} size={20} />
+              <span>{platform.id}</span>
+              <span className="ml-auto">{t("bots.panel.connected")}</span>
+            </AppLink>
+          ))}
         </section>
       )}
       <div className="bg-background sticky bottom-0 z-10 -mx-4 -mb-6 flex min-w-0 flex-wrap gap-2 border-t px-4 py-3">
@@ -271,19 +276,29 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
   }, [db]);
   return (
     <div className="flex flex-col gap-3 p-4">
-      <p className="text-muted-foreground text-xs">
-        {t("bots.panel.memoryIntro", { name: bot.name })}
-      </p>
-      <BotMemoryList
-        entries={entries}
-        onForget={(row) =>
-          void forgetMemory(db.collections.memories, row)
-            .then((result) => {
-              if (result === "stale") showInfo(t("bots.errors.memoryConflict"));
-            })
-            .catch(() => showError(t("bots.errors.memory")))
-        }
-      />
+      {!entries.length ? (
+        <EmptyState
+          title={t("bots.panel.memory.empty")}
+          description={t("bots.panel.memoryIntro", { name: bot.name })}
+        />
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          {t("bots.panel.memoryIntro", { name: bot.name })}
+        </p>
+      )}
+      {entries.length > 0 && (
+        <BotMemoryList
+          entries={entries}
+          onForget={(row) =>
+            void forgetMemory(db.collections.memories, row)
+              .then((result) => {
+                if (result === "stale")
+                  showInfo(t("bots.errors.memoryConflict"));
+              })
+              .catch(() => showError(t("bots.errors.memory")))
+          }
+        />
+      )}
       {noteDays > 0 && (
         <p className="text-muted-foreground text-xs">
           {t("bots.panel.memory.notes", { count: noteDays })}
@@ -405,12 +420,14 @@ export const FilesTab = ({
     );
   return (
     <div className="flex flex-col gap-3 p-4">
-      <p className="text-muted-foreground text-xs">
-        {t("bots.panel.filesIntro")}
-      </p>
-      {files.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          {t("bots.panel.filesEmpty")}
+      {files.length === 0 ? (
+        <EmptyState
+          title={t("bots.panel.filesEmpty")}
+          description={t("bots.panel.filesIntro")}
+        />
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          {t("bots.panel.filesIntro")}
         </p>
       )}
       {files.map((file) => (

@@ -154,33 +154,68 @@ const Identity = ({
   badge?: ReactNode;
   /** Static content instead of the routes' portal slot (the gallery). */
   children?: ReactNode;
-}) => (
-  <div
-    data-slot="topbar-identity"
-    className="flex min-w-0 flex-1 items-center gap-2 pr-2"
-  >
-    {children === undefined ? (
-      <div
-        ref={setIdentityTarget}
-        className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
-      />
-    ) : (
-      <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink">
-        {children}
-      </div>
-    )}
-    {status && statusText != null && (
-      <span
-        data-slot="topbar-status"
-        className="shell-lg:inline hidden truncate"
-      >
-        {statusText}
-      </span>
-    )}
-    {badge}
-  </div>
-);
-
+}) => {
+  const { t } = useTranslation();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const area = pathname.split("/")[1];
+  const fallback =
+    area === "bots"
+      ? t("shell.rail.bots")
+      : area === "sessions"
+        ? t("shell.rail.sessions")
+        : area === "routines"
+          ? t("shell.rail.routines")
+          : area === "artifacts"
+            ? t("shell.rail.artifacts")
+            : area === "library"
+              ? t("shell.rail.library")
+              : area === "settings"
+                ? t(
+                    pathname.split("/")[2] === "keyboard"
+                      ? "settings.pages.keyboard"
+                      : pathname.split("/")[2] === "language"
+                        ? "settings.pages.language"
+                        : pathname.split("/")[2] === "browser"
+                          ? "settings.pages.browser"
+                          : pathname.split("/")[2] === "devices"
+                            ? "settings.pages.devices"
+                            : "settings.sidebar.label"
+                  )
+                : t("shell.appName");
+  return (
+    <div
+      data-slot="topbar-identity"
+      className="flex min-w-0 flex-1 items-center gap-2 pr-2"
+    >
+      {children === undefined ? (
+        <>
+          <div
+            ref={setIdentityTarget}
+            className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden empty:hidden [&:not(:empty)+span]:hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
+          />
+          <span className="text-sidebar-foreground min-w-0 truncate font-medium">
+            {fallback}
+          </span>
+        </>
+      ) : (
+        <div className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink">
+          {children}
+        </div>
+      )}
+      {status && statusText != null && (
+        <span
+          data-slot="topbar-status"
+          className="shell-lg:inline hidden truncate"
+        >
+          {statusText}
+        </span>
+      )}
+      {badge}
+    </div>
+  );
+};
 const Actions = ({
   folded,
   tabs = [],

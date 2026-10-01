@@ -3,6 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { Spotlight, waitForAnchor } from "#renderer/components/spotlight";
 import type { Box } from "#renderer/components/spotlight/geometry";
 import { useDb } from "#renderer/data/db";
@@ -148,7 +149,7 @@ export const TourHost = () => {
         <h2 data-tour-stop={stop.id} id="tour-title" className="font-semibold">
           {t(`tour.stops.${stop.id}.title`)}
         </h2>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
           {t("tour.progress", {
             current: active.stopIndex + 1,
             total: stops.length,
@@ -170,12 +171,15 @@ export const TourHost = () => {
           </Button>
         )}
         <Button
+          aria-busy={busy}
+          className="aria-busy:opacity-100"
           data-tour-next
           disabled={busy}
           onClick={() =>
             active.stopIndex === stops.length - 1 ? void end("done") : move(1)
           }
         >
+          {busy && <Spinner />}
           {t(
             active.stopIndex === stops.length - 1 ? "tour.finish" : "tour.next"
           )}

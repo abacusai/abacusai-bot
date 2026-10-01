@@ -1065,10 +1065,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "계정이 준비되었습니다. 봇이 모델, 파일, 도구를 사용해 작업합니다.",
-    "pages.connected.promise1": "Where requests go. RouteLLM chooses unless you pick a model in the composer.",
-    "pages.connected.promise2": "Read, write, and edit files, and search the workspace by name or contents.",
-    "pages.connected.promise3": "Let the agent see which of your connectors are attached, and offer you a Connect button for one it needs. Its turn waits for you.",
-    "pages.connected.promise4": "What the agent has chosen to remember across sessions, and what you tell every session.",
+    "pages.connected.promise1": "계정이 연결되었습니다.",
+    "pages.connected.promise2": "사용할 모델을 선택하세요.",
+    "pages.connected.promise3": "필요할 때 앱을 연결하세요.",
+    "pages.connected.promise4": "에이전트가 기억할 지침을 추가하세요.",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1782,7 +1782,6 @@
       "label": "Settings",
       "personal": "Personal",
       "app": "App",
-      "capabilities": "Capabilities",
       "openLibrary": "Open the Library",
       "models": "Models",
       "environment": "Environment"
@@ -2063,7 +2062,8 @@
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
-      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
+      "done_zero": "{{duration}} 만에 완료"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -2720,6 +2720,7 @@
       "link": "링크"
     },
     "connecting": "Loading",
-    "toolsUnavailable": "이 버전에서는 이 도구를 사용할 수 없습니다."
+    "toolsUnavailable": "이 버전에서는 이 도구를 사용할 수 없습니다.",
+    "noInstalledSkills": "이 범위에 설치된 스킬이 없습니다. 스킬을 가져오거나 마켓플레이스를 둘러보세요."
   }
 }

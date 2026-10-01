@@ -126,7 +126,10 @@ export const BusyLine = ({
 export const Typing = ({ caption }: { caption?: string | null }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2" data-slot="typing">
+    <div
+      className="flex max-w-full min-w-0 flex-col items-start gap-1.5"
+      data-slot="typing"
+    >
       <div
         role="img"
         aria-label={t("chat.busy.typing")}
@@ -137,7 +140,10 @@ export const Typing = ({ caption }: { caption?: string | null }) => {
         <span className="chat-typing-dot" />
       </div>
       {caption != null && caption !== "" ? (
-        <span className="text-muted-foreground truncate text-xs">
+        <span
+          title={caption}
+          className="text-muted-foreground max-w-full min-w-0 truncate text-xs"
+        >
           {caption}
         </span>
       ) : null}

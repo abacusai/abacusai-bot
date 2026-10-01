@@ -37,7 +37,12 @@ export const ConfirmAction = ({
   return (
     <>
       {controlledOpen === undefined && (
-        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setOpen(true)}
+        >
           {children ?? label}
         </Button>
       )}

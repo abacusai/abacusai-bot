@@ -390,9 +390,14 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       )}
       {step === "connected" && (
         <>
-          {[1, 2, 3, 4].map((n) => (
-            <p key={n}>{t(`onboarding.pages.connected.promise${n}`)}</p>
-          ))}
+          <ul className="bg-card w-full space-y-3 rounded-xl border p-5 text-left text-sm">
+            {[1, 2, 3, 4].map((n) => (
+              <li key={n} className="flex gap-3">
+                <span aria-hidden>✓</span>
+                <span>{t(`onboarding.pages.connected.promise${n}`)}</span>
+              </li>
+            ))}
+          </ul>
           {button(t("onboarding.connectedCta"), advance)}
         </>
       )}
@@ -444,19 +449,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               .map((c) => (
                 <div
                   key={c.id}
-                  className="bg-muted flex flex-col items-center gap-3 rounded-xl border p-4"
+                  className="bg-card flex min-h-32 flex-col items-center gap-3 rounded-xl border p-4 [&>span:not([data-slot])]:flex-1 [&>span:not([data-slot])]:content-center"
                 >
                   <ConnectorMark
-                    id={
-                      (
-                        {
-                          "google-drive": "drive",
-                          "google-calendar": "calendar",
-                        } as Record<string, string>
-                      )[c.logo ?? ""] ??
-                      c.logo ??
-                      c.id
-                    }
+                    id={c.logo ?? c.id}
                     initial={c.name.slice(0, 1)}
                     size={28}
                   />

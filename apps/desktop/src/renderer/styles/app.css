@@ -181,3 +181,11 @@
 [data-testid="toast-viewport"] [data-slot="toast-description"] { overflow-wrap: anywhere; }
 
 @font-face { font-family: "Symbols Nerd Font Mono"; src: url("../assets/fonts/symbols-nerd-font-mono.ttf") format("truetype"); font-display: swap; }
+
+/* Preserve destructive meaning in translucent registry menus. */
+@layer utilities {
+  [data-slot="context-menu-content"] [data-slot="context-menu-item"][data-variant="destructive"],
+  [data-slot="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-variant="destructive"] {
+    color: var(--destructive) !important;
+  }
+}

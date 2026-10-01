@@ -617,6 +617,12 @@ export const NotchShell = ({
                 }
                 right={
                   <div className="notch-wing">
+                    {!shown.sessionId && !shown.expanded && (
+                      <span
+                        aria-hidden
+                        className="ml-auto size-1.5 rounded-full bg-white/40"
+                      />
+                    )}
                     {shown.remaining > 0 && <span>{shown.remaining}</span>}
                     {shown.sessionId && (
                       <Button onClick={open}>{t("notch.actions.open")}</Button>

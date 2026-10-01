@@ -327,6 +327,94 @@ export const SessionDock = ({
     updateTabs(key, (s) => ({ ...s, tree: next }));
     setDrag(null);
   };
+  const controls = (
+    <div className="flex shrink-0 items-center gap-1 px-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("sessions.dock.add")}
+            />
+          }
+        >
+          <Plus />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            {terminalShellsForPlatform(
+              (document.documentElement.dataset.platform ??
+                "darwin") as NodeJS.Platform
+            ).map((shell) => (
+              <DropdownMenuItem
+                key={shell.id}
+                disabled={
+                  shells.data?.statuses.find((s) => s.id === shell.id)
+                    ?.available === false
+                }
+                onClick={() =>
+                  void transport.client.terminal.shell
+                    .set({ shell: shell.id as TerminalShellId })
+                    .then(() => add("terminal", shell.id))
+                }
+              >
+                {t("sessions.terminal.newShell", {
+                  shell: t(`terminalShells.${shell.labelKey}`),
+                })}
+              </DropdownMenuItem>
+            ))}
+            {[
+              "browser",
+              "terminal",
+              "files",
+              ...(git?.gitChanges.length ? ["changes"] : []),
+              "agents",
+              ...(device.data?.enabled ? ["device"] : []),
+            ].map((kind) => (
+              <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+                {t(`sessions.dock.${kind}`)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("sessions.dock.full")}
+        aria-pressed={!split}
+        onClick={() => {
+          const view = split ? "full" : "split";
+          const pending = { key, from: search.view, view };
+          startTransition(() => {
+            addTransitionType("session-view");
+            setFull(pending);
+          });
+          void navigate({
+            to: ".",
+            search: (p: Record<string, unknown>) => ({ ...p, view }),
+            replace: true,
+            transition: "none",
+          } as never)
+            .finally(() =>
+              setFull((current) => (current === pending ? null : current))
+            )
+            .catch(() => {});
+        }}
+      >
+        {split ? <Maximize /> : <Minimize />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("sessions.dock.close")}
+        onClick={() => select(undefined)}
+      >
+        <X />
+      </Button>
+    </div>
+  );
   const renderTree = (node: DockNode): ReactNode =>
     node.kind === "split" ? (
       <ResizablePanelGroup
@@ -433,6 +521,7 @@ export const SessionDock = ({
                 ) : null;
               })}
             </TabsList>
+            {dockLeaves(shown)[0]?.id === node.id && controls}
             <div
               className="flex min-w-0 items-center"
               role="group"
@@ -559,101 +648,13 @@ export const SessionDock = ({
           () => active && active !== "chat" && close(active),
           () => add("terminal")
         )}
-        {active ? (
-          <div className="flex h-9 shrink-0 items-center justify-end gap-1 border-b px-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t("sessions.dock.add")}
-                  />
-                }
-              >
-                <Plus />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuGroup>
-                  {terminalShellsForPlatform(
-                    (document.documentElement.dataset.platform ??
-                      "darwin") as NodeJS.Platform
-                  ).map((shell) => (
-                    <DropdownMenuItem
-                      key={shell.id}
-                      disabled={
-                        shells.data?.statuses.find((s) => s.id === shell.id)
-                          ?.available === false
-                      }
-                      onClick={() =>
-                        void transport.client.terminal.shell
-                          .set({ shell: shell.id as TerminalShellId })
-                          .then(() => add("terminal", shell.id))
-                      }
-                    >
-                      {t("sessions.terminal.newShell", {
-                        shell: t(`terminalShells.${shell.labelKey}`),
-                      })}
-                    </DropdownMenuItem>
-                  ))}
-                  {[
-                    "browser",
-                    "terminal",
-                    "files",
-                    ...(git?.gitChanges.length ? ["changes"] : []),
-                    "agents",
-                    ...(device.data?.enabled ? ["device"] : []),
-                  ].map((kind) => (
-                    <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                      {t(`sessions.dock.${kind}`)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("sessions.dock.full")}
-              aria-pressed={!split}
-              onClick={() => {
-                const view = split ? "full" : "split";
-                const pending = { key, from: search.view, view };
-                startTransition(() => {
-                  addTransitionType("session-view");
-                  setFull(pending);
-                });
-                void navigate({
-                  to: ".",
-                  search: (p: Record<string, unknown>) => ({ ...p, view }),
-                  replace: true,
-                  transition: "none",
-                } as never)
-                  .finally(() =>
-                    setFull((current) => (current === pending ? null : current))
-                  )
-                  .catch(() => {});
-              }}
-            >
-              {split ? <Maximize /> : <Minimize />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("sessions.dock.close")}
-              onClick={() => select(undefined)}
-            >
-              <X />
-            </Button>
-          </div>
-        ) : null}
         {active === "chat" && !split ? (
           <Tabs
             value="chat"
             onValueChange={(value) => select(String(value))}
-            className="min-w-0 shrink-0"
+            className="min-w-0 shrink-0 flex-row items-center border-b"
           >
-            <TabsList className="max-w-full justify-start overflow-x-auto">
+            <TabsList className="min-w-0 flex-1 justify-start overflow-x-auto">
               <TabsTrigger value="chat">{t("sessions.dock.chat")}</TabsTrigger>
               {entries.tabs.map((tab) => (
                 <TabsTrigger
@@ -665,6 +666,7 @@ export const SessionDock = ({
                 </TabsTrigger>
               ))}
             </TabsList>
+            {controls}
           </Tabs>
         ) : null}
         <ResizablePanelGroup
