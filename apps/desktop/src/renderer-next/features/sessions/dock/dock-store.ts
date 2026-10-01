@@ -132,6 +132,12 @@ export const dockReducer = (tree: DockNode, action: DockAction): DockNode => {
     return tree;
   if (
     result.kind === "split" &&
+    result.orientation === "vertical" &&
+    result.children.some((child) => child.kind !== "leaf")
+  )
+    return tree;
+  if (
+    result.kind === "split" &&
     result.children.some(
       (c) => c.kind === "split" && c.orientation === "horizontal"
     )

@@ -100,3 +100,26 @@ it("reorders within a leaf without duplicating tabs and accepts all edge directi
     expect(dockLeaves(split)).toHaveLength(2);
   }
 });
+it("refuses a second vertical split in a single column", () => {
+  const root: DockNode = {
+    kind: "leaf",
+    id: "root",
+    tabs: ["files", "changes", "device"],
+    active: "files",
+  };
+  const rows = dockReducer(root, {
+    type: "move",
+    tab: "files",
+    target: "root",
+    edge: "bottom",
+    id: "lower",
+  });
+  const threeRows = dockReducer(rows, {
+    type: "move",
+    tab: "changes",
+    target: "root",
+    edge: "bottom",
+    id: "third",
+  });
+  expect(threeRows).toBe(rows);
+});

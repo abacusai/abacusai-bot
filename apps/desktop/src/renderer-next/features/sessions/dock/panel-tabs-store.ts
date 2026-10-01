@@ -38,6 +38,41 @@ export const updateTabs = (
 ): void => {
   panelTabsStore.setState((s) => ({ ...s, [key]: fn(s[key] ?? EMPTY_TABS) }));
 };
+const removeRefs = (s: PanelTabs, refs: string[]): PanelTabs => {
+  let tree = s.tree;
+  for (const ref of refs)
+    if (tree) tree = dockReducer(tree, { type: "close", tab: ref });
+  const tabs = s.tabs.filter((tab) => !refs.includes(tab.ref));
+  const index = s.tabs.findIndex((tab) => tab.ref === s.last);
+  const next =
+    s.tabs.slice(index + 1).find((tab) => !refs.includes(tab.ref)) ??
+    s.tabs
+      .slice(0, index)
+      .reverse()
+      .find((tab) => !refs.includes(tab.ref));
+  return {
+    ...s,
+    tabs,
+    tree,
+    last: tabs.some((tab) => tab.ref === s.last)
+      ? s.last
+      : (next?.ref ?? tabs[0]?.ref ?? null),
+  };
+};
+export const focusTab = (key: string, ref: string) =>
+  updateTabs(key, (s) => {
+    if (
+      !s.tabs.some((tab) => tab.ref === ref) ||
+      (s.last === ref &&
+        (!s.tree || dockLeaves(s.tree).some((leaf) => leaf.active === ref)))
+    )
+      return s;
+    return {
+      ...s,
+      last: ref,
+      tree: s.tree ? dockReducer(s.tree, { type: "focus", tab: ref }) : s.tree,
+    };
+  });
 export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
   updateTabs(key, (s) => {
     const exists = s.tabs.find((t) => t.ref === tab.ref);
@@ -45,9 +80,13 @@ export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
       ? s.tabs.map((t) => (t.ref === tab.ref ? { ...t, ...tab } : t))
       : [...s.tabs, { ...tab, openedAt: Date.now() }];
     const previews = tabs.filter((t) => t.ref.startsWith("preview:"));
-    if (previews.length > 50)
-      tabs = tabs.filter((t) => t.ref !== previews[0]?.ref);
-    let tree = s.tree;
+    const evicted =
+      previews.length > 50
+        ? previews.slice(0, previews.length - 50).map((tab) => tab.ref)
+        : [];
+    const repaired = removeRefs({ ...s, tabs }, evicted);
+    tabs = repaired.tabs;
+    let tree = repaired.tree;
     if (tree && !dockLeaves(tree).some((leaf) => leaf.tabs.includes(tab.ref))) {
       const first = dockLeaves(tree)[0]!;
       tree = dockReducer(tree, {
@@ -62,13 +101,9 @@ export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
 export const closeTab = (key: string, ref: string): string | undefined => {
   let next: string | undefined;
   updateTabs(key, (s) => {
-    const i = s.tabs.findIndex((t) => t.ref === ref);
-    next = s.tabs[i + 1]?.ref ?? s.tabs[i - 1]?.ref;
-    return {
-      ...s,
-      tabs: s.tabs.filter((t) => t.ref !== ref),
-      last: next ?? null,
-    };
+    const repaired = removeRefs(s, [ref]);
+    next = repaired.last ?? undefined;
+    return repaired;
   });
   return next;
 };
@@ -76,22 +111,25 @@ export const reconcileTerminals = (
   key: string,
   states: TerminalSessionSnapshot[]
 ): void => {
-  updateTabs(key, (s) => ({
-    ...s,
-    tabs: s.tabs.filter(
-      (t) =>
-        !t.ref.startsWith("terminal:") ||
-        Date.now() - t.openedAt < 5000 ||
-        states.some((v) => `terminal:${v.terminalId}` === t.ref)
-    ),
-  }));
+  updateTabs(key, (s) =>
+    removeRefs(
+      s,
+      s.tabs
+        .filter(
+          (tab) =>
+            tab.ref.startsWith("terminal:") &&
+            !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
+        )
+        .map((tab) => tab.ref)
+    )
+  );
   const previousLast = panelTabsStore.state[key]?.last;
   for (const state of states)
     openTab(key, {
       ref: `terminal:${state.terminalId}`,
       title: state.terminalId,
     });
-  if (previousLast) updateTabs(key, (s) => ({ ...s, last: previousLast }));
+  updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
 };
 export const promoteTabs = (from: string, to: string): void =>
   panelTabsStore.setState((s) => {
