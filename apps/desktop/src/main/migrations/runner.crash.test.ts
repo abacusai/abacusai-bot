@@ -14,12 +14,28 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { backupsRoot, migratingRoot, nodeIo, type MigrationIo } from "./backup";
 import { readRecord } from "./record";
 import { runMigrations, type RunMigrationsOptions } from "./runner";
 import type { MigrationStep } from "./types";
+
+vi.mock("electron", () => ({
+  app: { getPath: () => os.tmpdir(), on: vi.fn() },
+  ipcMain: {},
+}));
+import { transcriptsV2 } from "./steps/001-transcripts-v2";
+import { finalLegacyPrefs } from "./steps/003-final-legacy-prefs";
+import { archiveTranscriptsV1 } from "./steps/004-archive-transcripts-v1";
 
 class Killed extends Error {}
 
@@ -823,7 +839,13 @@ describe(
         async (where) => {
           const next = await run([], {});
           expect(next.failed, where).toBeNull();
-          expect(fs.readdirSync(backups).sort(), where).toEqual(expected);
+          expect(
+            fs
+              .readdirSync(backups)
+              .filter((name) => name !== "restore-index.jsonl")
+              .sort(),
+            where
+          ).toEqual(expected);
           // What is kept is whole.
           for (const name of expected)
             expect(filesUnder(path.join(backups, name)), where).toHaveLength(3);
@@ -848,3 +870,58 @@ describe(
     });
   }
 );
+
+for (const crossVolume of [false, true]) {
+  it(`R7-T14: real steps 3 and 4 recover at every runner mutation (EXDEV=${crossVolume})`, async () => {
+    fs.mkdirSync(userData, { recursive: true });
+    fs.mkdirSync(path.join(home, "transcripts"), { recursive: true });
+    fs.writeFileSync(
+      path.join(userData, "renderer-state.json"),
+      JSON.stringify({ theme: "dark", unmapped: "keep" })
+    );
+    fs.writeFileSync(
+      path.join(home, "transcripts", "s.json"),
+      JSON.stringify({
+        version: 1,
+        sessionId: "s",
+        updatedAt: "2026-09-01T00:00:00.000Z",
+        segments: [
+          { type: "text", id: "u", source: "user", content: "synthetic" },
+        ],
+      })
+    );
+    await run([transcriptsV2()], {});
+    const snap = snapshot();
+    const steps = [finalLegacyPrefs(), archiveTranscriptsV1()];
+    const result = await run(steps, {});
+    expect(result.failed).toBeNull();
+    const expected = userState();
+    await everyKill(
+      snap,
+      crossVolume,
+      (io) => run(steps, { io }),
+      async (where) => {
+        await settle(steps, crossVolume, where);
+        const actual = userState();
+        // Attempt ids and timestamps are regenerated after a rolled-back retirement.
+        for (const state of [actual, expected]) {
+          const retired = state["userdata/renderer-state.retired.json"];
+          if (retired !== undefined) {
+            const parsed = JSON.parse(retired);
+            delete parsed.attempt;
+            delete parsed.at;
+            state["userdata/renderer-state.retired.json"] =
+              JSON.stringify(parsed);
+          }
+          const prefs = state["home/prefs.json"];
+          if (prefs !== undefined) {
+            const parsed = JSON.parse(prefs);
+            parsed.row.updatedAt = "masked";
+            state["home/prefs.json"] = JSON.stringify(parsed);
+          }
+        }
+        expect(actual, where).toEqual(expected);
+      }
+    );
+  });
+}

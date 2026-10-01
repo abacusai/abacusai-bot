@@ -879,3 +879,29 @@ describe("C-T7 through ServiceHost", () => {
     }
   }, 30_000);
 });
+
+it("R7-T14: only matching per-thread archive evidence authorizes an absent v1", async () => {
+  const log = vi.fn();
+  const { threads, transcripts } = make({ v1Archived: true, log });
+  transcripts.write("archived", SEGMENTS);
+  threads.flush();
+  const twin = readJson(v2File("archived"));
+  fs.rmSync(v1File("archived"));
+  expect(await threads.readCurrent("archived")).toEqual([]);
+  const index = path.join(home, "threads", ".archive-index.json");
+  put(index, {
+    version: 1,
+    archived: {
+      archived: {
+        fingerprint: twin.source.fingerprint,
+        updatedAt: twin.source.updatedAt,
+      },
+    },
+  });
+  expect(ids(await threads.readCurrent("archived"))).toEqual(["u1", "b1"]);
+  put(index, "{torn");
+  expect(await threads.readCurrent("archived")).toEqual([]);
+  expect(log).toHaveBeenCalledWith(
+    expect.stringContaining("archive index unavailable")
+  );
+});

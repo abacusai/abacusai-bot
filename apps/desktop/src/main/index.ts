@@ -1891,10 +1891,16 @@ app
     const rendererState = registerRendererState();
     // The old renderer is the shipped UI until the cut-over: its durable
     // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(rendererState, prefsStore, undefined, {
-      read: readLegacySoundOptOut,
-      onWrite: onNotificationSettingsWritten,
-    });
+    installLegacyPrefsSync(
+      rendererState,
+      prefsStore,
+      undefined,
+      {
+        read: readLegacySoundOptOut,
+        onWrite: onNotificationSettingsWritten,
+      },
+      path.join(app.getPath("userData"), "renderer-state.json")
+    );
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
@@ -2312,6 +2318,7 @@ app.on("before-quit", (event) => {
   notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.
   disposeMigrationProgress();
+  workspaceServiceHost.threadStore.flush();
   logStore().flush();
   try {
     browserRuntime.disposeAll();

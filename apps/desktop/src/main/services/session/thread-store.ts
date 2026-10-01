@@ -253,10 +253,14 @@ export const readArchiveIndexStrict = (threadsDir: string): ArchiveIndex => {
 };
 
 /** For reads: a damaged index serves nothing from it (nothing is removed). */
-export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
+export const readArchiveIndex = (
+  threadsDir: string,
+  log: (message: string) => void = console.error
+): ArchiveIndex => {
   try {
     return readArchiveIndexStrict(threadsDir);
-  } catch {
+  } catch (error) {
+    log(`archive index unavailable: ${String(error)}`);
     return { version: 1, archived: {} };
   }
 };
@@ -325,7 +329,6 @@ export class ThreadStore {
   private readonly dualWriteDelayMs: number;
   private readonly maxTranscriptBytes: number;
   private readonly maxStreamedBytes: number;
-  private readonly v1Archived: boolean;
   /** Writes and removals, journalled while a migration holds the file. */
   readonly held: HeldFiles;
   /**
@@ -348,7 +351,6 @@ export class ThreadStore {
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
     this.maxStreamedBytes =
       options.maxStreamedBytes ?? MAX_STREAMED_TRANSCRIPT_BYTES;
-    this.v1Archived = options.v1Archived ?? false;
     this.held = new HeldFiles({
       dir: () => path.join(this.home(), THREADS_DIR_NAME, ".pending"),
       isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
@@ -722,9 +724,10 @@ export class ThreadStore {
     twin: Extract<ThreadTwin, { status: "ok" }>
   ): boolean {
     if (twin.source.kind !== "transcript-v1") return false;
-    if (this.v1Archived) return true;
-    const entry = readArchiveIndex(path.join(this.home(), THREADS_DIR_NAME))
-      .archived[sessionId];
+    const entry = readArchiveIndex(
+      path.join(this.home(), THREADS_DIR_NAME),
+      this.log
+    ).archived[sessionId];
     if (entry === undefined) return false;
     // The twin holds the archived bytes (by time for a pre-fingerprint twin).
     return twin.source.fingerprint !== undefined

@@ -20,6 +20,10 @@ import {
 } from "../../services/config/legacy-prefs";
 import { PrefsStore } from "../../services/config/prefs-store";
 import { readRendererStateFile } from "../../services/config/renderer-state";
+import {
+  readRetiredPrefs,
+  RETIRED_PREFS_FILE,
+} from "../../services/config/retired-prefs";
 import { exists } from "../backup";
 import type { MigrationStep } from "../types";
 
@@ -72,7 +76,15 @@ export const prefsFromRendererState = (
       file: staged,
       ...(options.now == null ? {} : { now: options.now }),
     });
-    const stats = importLegacyPrefs(prefs, (key) => legacy.get(key));
+    const retired = readRetiredPrefs(
+      path.join(ctx.userData, RETIRED_PREFS_FILE)
+    );
+    const stats = importLegacyPrefs(
+      prefs,
+      (key) => legacy.get(key),
+      undefined,
+      new Set(Object.keys(retired?.keys ?? {}))
+    );
     const sound = importLegacySoundOptOut(
       prefs,
       readSoundOptOut(path.join(ctx.home, CONFIG_FILE_NAME))
