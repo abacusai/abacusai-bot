@@ -27,6 +27,7 @@ import {
   useSessionComposerModel,
   SessionContextTray,
   SessionTasks,
+  SessionPermissionAction,
   SessionChangesCard,
   openSessionOnce,
   openTab,
@@ -45,7 +46,7 @@ import { AppLink } from "#next/lib/navigation/app-link";
 import { SESSION_DEFAULTS, SessionSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
-import type { AgentMode } from "#shared/agent-types";
+import type { AgentMode, PermissionRequest } from "#shared/agent-types";
 import { SessionId } from "#shared/contract/ids";
 import { sessionConversationKey } from "#shared/conversation-scope";
 
@@ -304,6 +305,15 @@ const SessionRoute = () => {
               } as never)
             }
             slots={{
+              permissionActions: (descriptor) => (
+                <SessionPermissionAction
+                  request={
+                    descriptor.metadata.abacus.request as PermissionRequest
+                  }
+                  conversationKey={key}
+                  open={select}
+                />
+              ),
               banner:
                 model.blocked === "no-model" ? (
                   <Button onClick={model.onBlocked}>

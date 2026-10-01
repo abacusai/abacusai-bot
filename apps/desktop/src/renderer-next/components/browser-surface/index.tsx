@@ -1,5 +1,5 @@
 import { useSelector, type Store } from "@tanstack/react-store";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { BrowserRuntimeLease } from "#shared/contracts";
@@ -29,10 +29,6 @@ export const BrowserSurface = ({
 }) => {
   const { t } = useTranslation();
   const { conversationKey, resourceId, generation } = lease;
-  const stableLease = useMemo(
-    () => ({ conversationKey, resourceId, generation }),
-    [conversationKey, resourceId, generation]
-  );
   const [id] = useState(() => `surface:${crypto.randomUUID()}`);
   const node = useRef<HTMLDivElement>(null);
   const live = useRef({ visible, blocked });
@@ -44,7 +40,7 @@ export const BrowserSurface = ({
   useEffect(() => {
     const unregister = presenter.register({
       id,
-      lease: stableLease,
+      lease: { conversationKey, resourceId, generation },
       bounds: () => {
         const r = node.current!.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
@@ -90,7 +86,7 @@ export const BrowserSurface = ({
       window.removeEventListener("resize", refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, [stableLease, presenter, id]);
+  }, [conversationKey, resourceId, generation, presenter, id]);
   useEffect(() => {
     void presenter.refresh();
   }, [visible, presenter]);
