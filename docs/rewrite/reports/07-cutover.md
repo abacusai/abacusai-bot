@@ -457,3 +457,35 @@ alternating pairs and the warm-up discarded.
 Focused transcript/parts/Markdown tests (35), typecheck, affected lint/format,
 production build/package and release checks pass. Final broad gates follow
 dependency remediation.
+
+### Performance pass: goal 5, dependency overrides
+
+Major-specific pnpm overrides set undici floors to 6.28.1 / 7.29.1 / 8.10.2
+and brace-expansion floors to 1.1.21 / 2.1.7 / 5.0.12. The regenerated lockfile
+resolves brace-expansion@1.1.21, brace-expansion@2.1.7, brace-expansion@5.0.12, undici@6.29.0, undici@7.30.0, undici@8.11.2. A frozen-lockfile install
+passes. The audit checker also forwards the requested package-manager flag.
+
+[Audit evidence](07-audit-goal5.json) shows high advisories falling from 16
+to 4, moderate from 24 to 10 and low from 7 to 0. No undici or brace-expansion
+advisories remain. Raw audit still exits nonzero for other advisories. The
+high/critical checker passes with the same four documented exceptions for
+image-size and extract-zip; no new exception was added. These exceptions have
+existing call-site defenses and expire when their patched releases ship.
+Primary advisories: [undici parser](https://github.com/nodejs/undici/security/advisories/GHSA-rfgv-xxqx-mfg5)
+and [brace-expansion recursion](https://github.com/juliangruber/brace-expansion/security/advisories/GHSA-qhr7-859c-m2p7).
+
+Connectors, agent (including runtime package writer) and updater were rebuilt
+before the dist-dependent validation. The production package was remeasured
+in [goal-5 samples](07-perf-goal5-final.json), using four alternating pairs
+with the warm-up discarded.
+
+| Metric | Shipped median | Candidate median / p90 |
+| --- | ---: | ---: |
+| M1, ms | 1345.8 | 1205.9 / 1210.9 |
+| M2, ms | 935.2 | 752.6 / 809.2 |
+| M3, bytes | 863961088.0 | 817348608.0 / 818987008.0 |
+| M4, bytes | 22522184.0 | 24675248.0 / 24734876.0 |
+| M5, ms | 502.1 | 59.1 / 62.4 |
+| M6, bytes | 1001567.0 | 750736.0 / 750736.0 |
+
+Final broad gates and the consolidated budget/process table follow below.
