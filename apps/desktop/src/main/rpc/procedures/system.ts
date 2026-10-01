@@ -1,6 +1,10 @@
 import { CONTRACT_VERSION, type SystemEvent } from "#shared/contract";
 import { FOUNDATION_API } from "#shared/experience";
 
+import {
+  pendingLegacyDrafts,
+  acknowledgeLegacyDrafts,
+} from "../../services/config/legacy-drafts";
 import { conflict } from "../errors";
 import { impl, onChannel, stream } from "./impl";
 
@@ -42,6 +46,7 @@ export const systemRouter = impl.system.router({
     const homeDir = app.homeDir();
     return {
       appVersion: app.appVersion(),
+      legacyComposerDrafts: pendingLegacyDrafts(app.botHome()),
       platform: process.platform,
       arch: process.arch,
       versions: { ...process.versions },
@@ -56,6 +61,10 @@ export const systemRouter = impl.system.router({
       foundationApi: FOUNDATION_API,
     };
   }),
+  acknowledgeLegacyDrafts: impl.system.acknowledgeLegacyDrafts.handler(
+    ({ input, context }) =>
+      acknowledgeLegacyDrafts(context.deps.app.botHome(), input.keys)
+  ),
   restart: impl.system.restart.handler(({ context }) => {
     context.deps.app.restartApp();
   }),
