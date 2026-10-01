@@ -14,7 +14,6 @@ export const resolveLocal = (specifier, importer, desktop) => {
     "#shared/": "shared",
     "#preload/": "preload",
     "#renderer/": "renderer",
-    "#renderer/": "renderer",
     "#locales/": "renderer/locales",
   };
   let target;

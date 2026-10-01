@@ -6,17 +6,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 export const buildConstants = () => {
   const experience = read("apps/desktop/src/shared/experience.ts");
-  const generation = read("apps/desktop/src/main/renderer-generation.ts");
   const foundationApi = Number(
     experience.match(/FOUNDATION_API\s*=\s*(\d+)/)?.[1]
   );
   const protocol = experience.match(/EXPERIENCE_PROTOCOL\s*=\s*"([^"]+)"/)?.[1];
-  const renderer = generation.match(
-    /DEFAULT_RENDERER_GENERATION[^=]*=\s*"(legacy|wco)"/
-  )?.[1];
-  if (!foundationApi || !protocol || !renderer)
+  if (!foundationApi || !protocol)
     throw new Error("Cannot read source build compatibility constants");
-  return { foundationApi, protocol, generation: renderer };
+  return { foundationApi, protocol, generation: "wco" };
 };
 export const buildProvenance = (env = process.env) => {
   const pinned = env.ABACUS_BUILD_COMMIT;

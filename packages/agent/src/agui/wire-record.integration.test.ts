@@ -59,9 +59,10 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wire-record-"));
       const file = path.join(dir, "record.jsonl");
 
-      // --wire ndjson, recording.
+      // AG-UI with compat recording.
       const recorded = await prepare(scenario);
       let bytes: string;
+      const sentLines: string[] = [];
 
       process.env[WIRE_RECORD_ENV] = file;
       try {
@@ -81,6 +82,11 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
               log: () => undefined,
             })
         );
+        const driverWrite = host.write.bind(host);
+        host.write = (line) => {
+          sentLines.push(line);
+          driverWrite(line);
+        };
         await drive(
           { ...scenario, steps: scenario.aguiSteps ?? scenario.steps },
           host,
@@ -110,15 +116,7 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
         entries
           .filter((entry) => entry.dir === "in")
           .map((entry) => (entry as { line: string }).line)
-      ).toEqual(
-        (scenario.aguiSteps ?? scenario.steps)
-          .filter((step) => "send" in step)
-          .map((step) => {
-            const sent = (step as { send: unknown }).send;
-
-            return typeof sent === "string" ? sent : JSON.stringify(sent);
-          })
-      );
+      ).toEqual(sentLines);
       // The internal facts ride beside the events that carry them.
       const internals = entries
         .filter((entry) => entry.dir === "internal")

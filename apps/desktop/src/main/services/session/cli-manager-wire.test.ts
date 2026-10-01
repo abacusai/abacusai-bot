@@ -173,7 +173,7 @@ describe("spawning with a wire", () => {
   }, 30_000);
 
   it("agui: a last line without its newline still reaches the relay, before the exit", async () => {
-    const { service, agui } = manager(SCRIPTS.lastLine, "agui");
+    const { service, agui } = manager(SCRIPTS.lastLine);
 
     try {
       await service.startSession({

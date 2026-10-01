@@ -217,8 +217,8 @@ const fakeTarget = {
 };
 /** Off for the cases about a runtime that cannot create a view. */
 let materializeEnabled = true;
-vi.mock("#main/renderer-host", () => ({
-  sendToRenderer: (_channel: string, payload: unknown) => {
+vi.mock("#main/rpc/emit", () => ({
+  emitHostEvent: (payload: unknown) => {
     rendererEvents.push(payload);
   },
 }));

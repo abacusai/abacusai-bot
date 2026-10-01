@@ -157,9 +157,11 @@ const mocks = vi.hoisted(() => {
     refusedUrls,
     sessions,
     fromPartition,
+    publish: vi.fn(),
   };
 });
 
+vi.mock("#main/rpc/emit", () => ({ publishIpcEvent: mocks.publish }));
 vi.mock("electron", () => ({
   WebContentsView: mocks.FakeWebContentsView,
   BaseWindow: mocks.FakeBaseWindow,
@@ -262,8 +264,7 @@ describe("Electron browser runtime", () => {
     await expect(runtime.capture(state.lease)).resolves.toEqual({
       dataUrl: "data:image/jpeg;base64,c2NyZWVuc2hvdA==",
     });
-    expect(send).toHaveBeenCalledWith(
-      "agent:event",
+    expect(mocks.publish).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "browser-runtime-state-updated",
         state: expect.objectContaining({ url: "https://example.com/" }),

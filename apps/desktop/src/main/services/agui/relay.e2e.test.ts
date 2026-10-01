@@ -131,6 +131,7 @@ const build = (_options: { unused?: boolean } = {}): Stack => {
   const marks: string[] = [];
   const store = new ThreadStore({ home: () => home, log: () => undefined });
 
+  let relay!: AguiRelayService;
   const manager = new AgentManagerService({
     resolveWorkspacePath: () => workspace,
     resolveArtifact: () => ({
@@ -339,7 +340,7 @@ const writeThenReply: (index: number) => Reply = (index) =>
 
 describe("main's AG-UI relay with a spawned agent", () => {
   it("send → permission → respond → RUN_FINISHED, into a ChatClient; compat still feeds the taps", async () => {
-    const { client, relay, store, compat, marks } = build();
+    const { client, store, compat, marks } = build();
     replies = writeThenReply;
     const window = await Window.open(client);
 
@@ -543,7 +544,7 @@ describe("main's AG-UI relay with a spawned agent", () => {
   }, 120_000);
 
   it("converts text, multi-line and attachment-only UIMessages at the boundary, keeping the client ids (spec 02 §14.2)", async () => {
-    const { client, relay } = build();
+    const { client } = build();
     replies = () => ({ say: "ok" });
     const window = await Window.open(client);
     const cases = [
@@ -675,7 +676,7 @@ describe("main's AG-UI relay with a spawned agent", () => {
   }, 90_000);
 
   it("in the new-renderer build, a spawn no ai.* call asked for speaks AG-UI and the new UI drives it (review r1)", async () => {
-    const { client, manager, relay } = build({});
+    const { client, manager } = build({});
     replies = () => ({ say: "ok" });
 
     // A routine, a bot reply or a restored session: started by main itself.

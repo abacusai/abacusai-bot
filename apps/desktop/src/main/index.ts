@@ -32,9 +32,11 @@ import Store from "electron-store";
 
 import type { AbacusAccountInfo, UsageSnapshot } from "#shared/contracts";
 
+import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
 import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
+import { profileBaseDir } from "./profile-home";
 
 /**
  * Where Playwright's default `chrome` channel looks for Google Chrome (stable
@@ -1753,6 +1755,18 @@ app
       app.on("second-instance", () => {
         revealMainWindow();
       });
+    }
+
+    if (process.argv.includes("--restore-legacy-files")) {
+      try {
+        const report = await restoreLegacyFiles(profileBaseDir());
+        console.log(JSON.stringify(report, null, 2));
+        app.exit(report.some((profile) => profile.skipped.length > 0) ? 1 : 0);
+      } catch (error) {
+        console.error("[restore-legacy-files]", error);
+        app.exit(1);
+      }
+      return;
     }
 
     app.setAppUserModelId("ai.abacus.bot");

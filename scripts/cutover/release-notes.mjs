@@ -21,17 +21,14 @@ export const visibleNotes = (files) =>
         if (!row.id || !row.reason)
           throw new Error(`Missing note metadata in ${file}`);
         rows.push(
-          `- ${row.id}: ${row.reason}${row.status === "deferred" ? " Not in this version." : ""}`
+          `- ${row.reason}${row.status === "deferred" ? " Not in this version." : ""}`
         );
       }
     });
     return rows;
   });
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const tree = fs.existsSync("apps/desktop/src/renderer/features")
-    ? "renderer"
-    : "renderer";
-  const base = `apps/desktop/src/${tree}/features`;
+  const base = "apps/desktop/src/renderer/features";
   const files = fs
     .readdirSync(base)
     .map((area) => path.join(base, area, "parity.ts"))

@@ -136,7 +136,6 @@ const { ExperienceStore, REJECTION_TTL_MS } =
   await import("./experience-store");
 const { rendererChangeNeedsReadiness } = await import("./experience-updater");
 const { rendererUrl } = await import("./app-protocol");
-const { FOUNDATION_API } = await import("#shared/experience");
 const { rendererReadiness } = await import("../../../rpc/readiness");
 const {
   MAX_SWAP_READINESS_ATTEMPTS,

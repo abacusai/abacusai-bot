@@ -14,8 +14,8 @@ test("notes include only visible retirements and deferrals", () => {
       `export const rows=[{id:'A',status:'retired',reason:'Removed.',visible:true},{id:'B',status:'deferred',reason:'Later.',visible:true},{id:'C',status:'green',visible:true},{id:'D',status:'retired',visible:false}]`
     );
     assert.deepEqual(visibleNotes([file]), [
-      "- A: Removed.",
-      "- B: Later. Not in this version.",
+      "- Removed.",
+      "- Later. Not in this version.",
     ]);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });

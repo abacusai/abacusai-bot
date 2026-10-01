@@ -1,10 +1,10 @@
 /**
- * The spawned-process check of spec §7.2: `dist/main.js --wire agui` against
- * `--wire ndjson` for the same script. fd 3 is a real Node-created pipe, as
+ * The spawned-process check of spec §7.2: `dist/main.js with the AG-UI default and explicit flag,
+ * against frozen NDJSON compat baselines. fd 3 is a real Node-created pipe, as
  * main passes it; closing it before spawn exercises the inline fallback.
  * Masked: the pi session id and file only (as in the in-process goldens).
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as path from "node:path";
 import type { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -107,7 +107,20 @@ afterAll(async () => {
 });
 
 describe("dist/main.js", () => {
-  it("--wire agui --compat-fd 3 writes the same bytes on fd 3 after the preamble", async () => {
+  it("refuses --wire ndjson with structured stderr and exit 64", () => {
+    const result = spawnSync(process.execPath, [AGENT, "--wire", "ndjson"], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(64);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr.trim())).toEqual({
+      type: "error",
+      code: "wire_unsupported",
+    });
+  });
+  it("the default wire is AG-UI and fd 3 preserves frozen compat bytes", async () => {
     const { context, provider, restore } = await prepare({
       name: "spawn-fd",
       reply: () => ({ say: "Hello there." }),
@@ -116,7 +129,7 @@ describe("dist/main.js", () => {
 
     try {
       const run = await runAgent(
-        ["--wire", "agui", "--thread-id", "t-1", "--compat-fd", "3"],
+        ["--thread-id", "t-1", "--compat-fd", "3"],
         context.cwd,
         true
       );

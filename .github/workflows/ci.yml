@@ -266,14 +266,12 @@ jobs:
       - name: Reject React Compiler bailouts
         run: pnpm --filter @abacus-ai/desktop run check:react-compiler
 
-      - name: Package unpacked app
-        env:
-          - name: Bundle budgets
+      - name: Bundle budgets
         run: pnpm --dir apps/desktop run measure:size && pnpm exec size-limit
 
-      # Without this, electron-builder picks up whatever identity happens to
-          # be in the runner keychain and fails confusingly. Unsigned is the
-          # correct outcome for a build from this repo.
+      - name: Package unpacked app
+        env:
+          # Use an unsigned package in public CI.
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: pnpm --filter @abacus-ai/desktop run package:dir
 

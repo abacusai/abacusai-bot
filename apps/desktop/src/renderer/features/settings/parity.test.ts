@@ -22,7 +22,7 @@ describe("R5-T38 phase-5 inventory", () => {
               : `features/${path.replace(/^\.\.\//, "")}`) === row.target
         )
       ).toBe(true);
-      expect(["implemented", "partial", "retired"]).toContain(row.status);
+      expect(["green", "deferred", "retired"]).toContain(row.status);
     }
   );
 });

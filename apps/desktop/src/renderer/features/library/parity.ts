@@ -213,7 +213,7 @@ export const PHASE5_PARITY = [
   {
     id: "LB21",
     status: "retired",
-    reason: 'Retired (PLAN "Nuked")',
+    reason: "Legacy ?view=capabilities and ?view=messaging links are retired.",
     visible: true,
     target: "features/library/index.tsx",
     specStatus: 'Retired (PLAN "Nuked")',

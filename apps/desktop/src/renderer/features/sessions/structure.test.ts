@@ -12,7 +12,7 @@ it("R4-T11/R4-T28 session feature and component imports respect ownership", () =
   for (const [file, source] of Object.entries(sessions)) {
     if (/\.test\.tsx?$/.test(file)) continue;
     expect(source, file).not.toMatch(
-      /from\s+["']#next\/features\/(?!sessions)/
+      /from\s+["']#renderer\/features\/(?!sessions)/
     );
     expect(source, file).not.toMatch(/\.message\s*(?:\.includes\(|===)/);
     expect(source, file).not.toMatch(
@@ -21,6 +21,8 @@ it("R4-T11/R4-T28 session feature and component imports respect ownership", () =
     expect(source, file).not.toMatch(/<webview/);
   }
   for (const [file, source] of Object.entries(components)) {
-    expect(source, file).not.toMatch(/from\s+["']#next\/(?:features|data)\//);
+    expect(source, file).not.toMatch(
+      /from\s+["']#renderer\/(?:features|data)\//
+    );
   }
 });
