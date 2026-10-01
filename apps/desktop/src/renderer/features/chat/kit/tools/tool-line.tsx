@@ -32,7 +32,10 @@ import {
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
 
-import { highlightCode, languageForPath } from "../../markdown/highlighter";
+import {
+  useCodeHighlighter,
+  languageForPath,
+} from "../../markdown/highlighter";
 import { Markdown } from "../../markdown/markdown";
 import { useToolWindow } from "../../scroller/row-context";
 import { descriptorFor, useHost, useThreadStore } from "../../store/selectors";
@@ -222,6 +225,7 @@ const DiffView = ({
   limit?: number;
 }) => {
   const { t } = useTranslation();
+  const highlightCode = useCodeHighlighter();
   const [all, setAll] = useState(false);
   const shown = limit != null && !all ? lines.slice(0, limit) : lines;
   return (
@@ -306,6 +310,7 @@ const ReadBody = ({
 }) => {
   const { t } = useTranslation();
   const { onOpenFile, workspaceRoot } = useChatView();
+  const highlightCode = useCodeHighlighter();
   const content = tool.read?.content ?? tool.text;
   const path =
     tool.read?.filePath ??

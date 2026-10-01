@@ -23,7 +23,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 
-import { highlight } from "./highlighter";
+import { useCodeHighlighter } from "./highlighter";
 import { renderMath, useMathVersion } from "./math";
 import { MATH_SENTINEL, pathFromHref, prepass } from "./prepass";
 
@@ -224,6 +224,9 @@ export const Markdown = ({
   // React Compiler memoises the element on its props, so the version is
   // the key: a new version is a new element, not a cached one.
   const mathVersion = useMathVersion();
+  const codeHighlighter = useCodeHighlighter();
+  const highlight = (...args: Parameters<typeof codeHighlighter>) =>
+    args[1] === "math" ? renderMath(args[0], true) : codeHighlighter(...args);
   const source = prepass(content, { workspaceRoot });
   return (
     <StreamingContext value={streaming}>

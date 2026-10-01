@@ -72,7 +72,7 @@ export const NotchShell = ({
   navigate(p: NotchPresentation): Promise<void>;
   children: ReactNode;
 }) => {
-  const { transport, chat, db } = context;
+  const { transport, chat, db, prepareChat } = context;
   const { t } = useTranslation();
   const reduced = useMotionPreference() === "reduced";
   const [layout, setLayout] = useState(context.layout);
@@ -143,7 +143,9 @@ export const NotchShell = ({
   const director = useRef<NotchDirector | null>(null);
   useEffect(() => {
     const value = new NotchDirector({
-      load: (id, signal) => {
+      load: async (id, signal) => {
+        await prepareChat?.();
+        signal.throwIfAborted();
         const session = chat.session(id);
         heldSessions.current.set(id, session);
         return session.load({ signal });
@@ -179,7 +181,7 @@ export const NotchShell = ({
       value.dispose();
       director.current = null;
     };
-  }, [chat, transport]);
+  }, [chat, transport, prepareChat]);
   const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${layout.mode}:${layout.notch?.width}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
   const lastSignature = useRef<string | null>(null);
   useEffect(() => {
@@ -390,6 +392,8 @@ export const NotchShell = ({
         { botId },
         { signal: abort.signal }
       );
+      check();
+      await prepareChat?.();
       check();
       await chat.session(handle.sessionId).load({ signal: abort.signal });
       check();

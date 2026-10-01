@@ -367,3 +367,50 @@ Validation: desktop typecheck, 93 focused renderer tests in nine files, nine
 Node bundle/probe/sampler tests, affected lint and format, production build,
 unsigned directory package and release checker pass. All 24 NDJSON goldens
 remain byte-identical to `c92812e7`. Final broad gates follow the other goals.
+
+### Performance pass: goal 2b, retained memory
+
+An idle companion imported the transcript runtime before it had a thread. It
+now shares one retryable preparation promise and prepares before presenting a
+thread or sending commands. Cancellation is checked after preparation. The
+command menu loads on first use and stays mounted for exit/focus restoration.
+The closed model picker no longer constructs the full options tree. PPTX
+export loads its generator only when exporting. Syntax grammars load only
+when a rendered code block needs them, with escaped code replaced by token
+HTML on completion. The chat's unconditional idle math prefetch is removed;
+closed math still loads temml and updates through the existing subscription.
+No attention, transcript, tool, language, export or companion feature is removed.
+
+[Goal-2b samples](07-perf-goal2b-demand-final.json) use four alternating pairs,
+with the warm-up discarded. Earlier completed exploratory measurements remain
+private and are not the final evidence for this commit.
+
+| Metric | Shipped median | Candidate median / p90 |
+| --- | ---: | ---: |
+| M1, ms | 1354.9 | 1199.5 / 1201.0 |
+| M2, ms | 944.1 | 751.0 / 753.8 |
+| M3, bytes | 864698368.0 | 818429952.0 / 819560448.0 |
+| M4, bytes | 22531704.0 | 24691228.0 / 24699532.0 |
+| M5, ms | 499.2 | 56.0 / 59.7 |
+| M6, bytes | 1001567.0 | 752449.0 / 752449.0 |
+
+| Candidate process role | Median MB (decimal) |
+| --- | ---: |
+| main | 274.0 |
+| GPU | 113.9 |
+| network | 45.0 |
+| renderer | 237.1 |
+| notch/companion | 147.2 |
+
+The candidate has no idle agent, so its total RSS is also its agent-excluded
+RSS. M3 remains above the fixed 761,049,907-byte cap. The separate required
+notch renderer is the largest additional process relative to shipped, which
+had no notch renderer. Main, GPU and network are of similar scale to shipped;
+the main renderer is smaller. Removing the companion would change required
+behaviour. Process medians need not sum to the median total. M4 is now below the
+fixed 24,768,555-byte cap; it is measured after the same explicit GC as shipped.
+
+Validation: notch/runtime, model-picker, PPTX, Markdown and chat-view focused
+tests, desktop typecheck, affected lint/format and production build/package
+pass. Both deferred grammar and math rendering retain their update tests.
+Final broad gates follow the remaining goals.

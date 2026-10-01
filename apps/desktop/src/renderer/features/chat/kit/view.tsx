@@ -16,7 +16,6 @@ import { Skeleton } from "#renderer/ui/skeleton";
 import { draftStore, updateDraft } from "../composer/draft-store";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
-import { prefetchMath } from "../markdown/math";
 import { useThreadHost } from "../runtime/host";
 import type { ChatRuntime } from "../runtime/runtime";
 import { useHost } from "../store/selectors";
@@ -129,7 +128,6 @@ export const ChatView = (props: ChatViewProps) => {
   useEffect(() => session.pin(), [session]);
   useEffect(() => {
     injectTheme();
-    prefetchMath();
     session.load().catch(() => {});
   }, [session]);
   useEffect(() => {

@@ -69,12 +69,3 @@ export const renderMath = (tex: string, displayMode: boolean): string => {
   if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!);
   return html;
 };
-
-/** Idle prefetch after the first chat view mounts (§7.3). */
-export const prefetchMath = (): void => {
-  const idle = (
-    globalThis as { requestIdleCallback?: (cb: () => void) => void }
-  ).requestIdleCallback;
-  if (idle != null) idle(() => void loadMath());
-  else setTimeout(() => void loadMath(), 2000);
-};
