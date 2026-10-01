@@ -348,6 +348,9 @@ const SessionRoute = () => {
                     sessionId={sessionId}
                     mode={row.mode}
                     busy={row.turn?.isBusy === true}
+                    agentRunning={
+                      row.status === "running" || row.status === "starting"
+                    }
                   />
                 </>
               ),

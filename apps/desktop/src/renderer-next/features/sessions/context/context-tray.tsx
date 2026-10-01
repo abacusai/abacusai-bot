@@ -25,6 +25,7 @@ export const SessionContextTray = ({
   sessionId,
   mode,
   busy = false,
+  agentRunning = false,
   worktree,
   onWorkspace,
   onWorktree,
@@ -33,11 +34,13 @@ export const SessionContextTray = ({
   sessionId?: string;
   mode?: string | null;
   busy?: boolean;
+  agentRunning?: boolean;
   worktree?: StartDraft["worktree"];
   onWorkspace?: (id: string) => void;
   onWorktree?: (choice: StartDraft["worktree"]) => void;
 }) => {
   const { t } = useTranslation();
+  const execLocked = busy || agentRunning;
   const transport = useSessionsTransport();
   const queryClient = useQueryClient();
   const db = useDb();
@@ -232,8 +235,8 @@ export const SessionContextTray = ({
             <Button
               size="sm"
               variant="ghost"
-              disabled={busy}
-              title={busy ? t("sessions.tray.restartTarget") : undefined}
+              disabled={execLocked}
+              title={execLocked ? t("sessions.tray.restartTarget") : undefined}
             />
           }
         >
@@ -250,10 +253,12 @@ export const SessionContextTray = ({
               variant="ghost"
               className="w-full justify-start"
               disabled={
+                execLocked ||
                 exec.data?.statuses.find((s) => s.id === backend)?.ready ===
-                false
+                  false
               }
-              onClick={() =>
+              onClick={() => {
+                if (execLocked) return;
                 void transport.client.settings.execBackend
                   .set({ backend })
                   .then((state) => {
@@ -263,7 +268,8 @@ export const SessionContextTray = ({
                         t("sessions.tray.targetFallback", { name: backend })
                       );
                   })
-              }
+                  .catch((error) => setError(String(error)));
+              }}
             >
               {backend === "local" ? t("sessions.tray.local") : "Docker"}
             </Button>
