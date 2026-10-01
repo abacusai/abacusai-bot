@@ -67,6 +67,22 @@ export const useCheckoutIdentity = (checkout: CheckoutRef) => {
     workspace?.path
   );
 };
+const watchCheckout = async (
+  transport: Transport,
+  workspaceId: string,
+  sessionId: string | undefined,
+  signal: AbortSignal
+) => {
+  try {
+    for await (const _ of await transport.client.git.watch(
+      { checkout: { workspaceId, ...(sessionId ? { sessionId } : {}) } },
+      { signal: signal }
+    )) {
+      if (signal.aborted) break;
+    }
+  } catch {}
+};
+
 export const useCheckoutWatch = (
   transport: Transport,
   checkout: CheckoutRef,
@@ -75,16 +91,7 @@ export const useCheckoutWatch = (
   const { workspaceId, sessionId } = checkout;
   useEffect(() => {
     const abort = new AbortController();
-    void (async () => {
-      try {
-        for await (const _ of await transport.client.git.watch(
-          { checkout: { workspaceId, ...(sessionId ? { sessionId } : {}) } },
-          { signal: abort.signal }
-        )) {
-          if (abort.signal.aborted) break;
-        }
-      } catch {}
-    })();
+    void watchCheckout(transport, workspaceId, sessionId, abort.signal);
     return () => abort.abort();
   }, [transport, workspaceId, sessionId, identity]);
 };

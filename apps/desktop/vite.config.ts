@@ -8,7 +8,13 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
-import { alias, NEXT_MODULES, NEXT_SRC, NODE_MODULES } from "./vite.shared.ts";
+import {
+  alias,
+  NEXT_MODULES,
+  NEXT_APP_SRC,
+  NEXT_REGISTRY_SRC,
+  NODE_MODULES,
+} from "./vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
@@ -100,8 +106,14 @@ export default defineConfig({
     // instance last. Each sets oxc's refresh flag in its `config` hook and the
     // last one wins, so reversed, the old renderer loses Fast Refresh. The
     // compiler instance does its own refresh for the files it compiles.
-    react({ include: NEXT_MODULES, compiler: { logDiagnostics: true } }),
-    react({ exclude: [NODE_MODULES, NEXT_SRC] }),
+    // Generated registry files can use syntax the compiler cannot lower.
+    // Keep their bytes intact and refresh them with the plain instance.
+    react({
+      include: NEXT_MODULES,
+      exclude: NEXT_REGISTRY_SRC,
+      compiler: { logDiagnostics: true },
+    }),
+    react({ exclude: [NODE_MODULES, NEXT_APP_SRC] }),
     ...electron(
       simpleOptions({
         main: {
