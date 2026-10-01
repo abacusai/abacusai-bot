@@ -31,6 +31,7 @@ const ciTimeouts = process.env.CI
   : {};
 
 const CONTENDS_FOR_THE_MACHINE = [
+  "src/main/window-chrome.electron.test.ts",
   "src/main/services/browser/browser-snapshot.browser.test.ts",
   "src/main/services/mcp/mcp-browser-server.test.ts",
   // About renderer code, but it spawns the same Electron: the terminal grid

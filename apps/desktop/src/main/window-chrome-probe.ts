@@ -63,3 +63,25 @@ export async function probeWindowChrome(
     );
   }
 }
+
+/** Park a probe on a native state event instead of polling an invisible window. */
+export function waitForChromeProbeWindow(
+  window: {
+    isVisible(): boolean;
+    isMinimized(): boolean;
+    isFullScreen(): boolean;
+    once(event: string, listener: () => void): unknown;
+  },
+  probe: () => void
+): boolean {
+  const event = window.isMinimized()
+    ? "restore"
+    : window.isFullScreen()
+      ? "leave-full-screen"
+      : !window.isVisible()
+        ? "show"
+        : null;
+  if (event === null) return false;
+  window.once(event, probe);
+  return true;
+}

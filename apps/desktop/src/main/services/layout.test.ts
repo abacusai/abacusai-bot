@@ -123,6 +123,7 @@ const MAIN_ROOT_FILES = [
   "window-chrome-settings.test.ts",
   "window-chrome-settings.ts",
   "window-chrome.electron.test.ts",
+  "window-chrome.e2e-entry.ts",
 ];
 
 const entries = readdirSync(SERVICES, { withFileTypes: true });

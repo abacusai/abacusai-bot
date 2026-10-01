@@ -108,6 +108,11 @@ export class UpdateService {
 
   /** Consecutive checks that did not offer the downloaded build. */
   private notOfferedStrikes = 0;
+  private transferToken: { cancel(): void } | null = null;
+  private checkingFeed: Promise<
+    Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>
+  > | null = null;
+  private withdrawnDownloads = new Set<string>();
 
   constructor(private readonly deps: UpdateServiceDeps = {}) {
     this.setupAutoUpdater();
@@ -120,7 +125,8 @@ export class UpdateService {
       console.error("[UpdateService] Failed to set feed URL:", err);
     }
 
-    // autoDownload / autoInstallOnAppQuit: see setUpdaterHasPendingBuild().
+    autoUpdater.autoInstallOnAppQuit = false;
+    // autoDownload: see setUpdaterHasPendingBuild().
 
     autoUpdater.logger = {
       info: () => {},
@@ -142,6 +148,7 @@ export class UpdateService {
         `[UpdateService] ${info.version} available (running ${app.getVersion()}), downloading`
       );
       this.notOfferedStrikes = 0;
+      this.withdrawnDownloads.delete(info.version);
       // Installing a superseded build would relaunch straight into another
       // "Relaunch to update"; the pill comes down until the replacement lands.
       if (
@@ -168,6 +175,15 @@ export class UpdateService {
       );
       this.status.checking = false;
       this.status.available = false;
+
+      if (this.status.downloading) {
+        if (this.status.updateInfo != null)
+          this.withdrawnDownloads.add(this.status.updateInfo.version);
+        this.transferToken?.cancel();
+        this.transferToken = null;
+        this.status.downloading = false;
+        this.dropDownloadedBuild("feed withdrew the active download");
+      }
       this.status.updateInfo = { version: info.version };
       // A build the feed stops offering is a pulled release: drop it. On the
       // second consecutive answer, since one stale CDN edge right after a
@@ -212,7 +228,9 @@ export class UpdateService {
     });
 
     autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
+      if (this.withdrawnDownloads.has(info.version)) return;
       console.log(`[UpdateService] ${info.version} downloaded, pill is up`);
+      this.transferToken = null;
       this.notOfferedStrikes = 0;
       this.status.downloading = false;
       this.status.downloaded = true;
@@ -244,8 +262,9 @@ export class UpdateService {
    * staged it.
    */
   private setUpdaterHasPendingBuild(pending: boolean): void {
-    autoUpdater.autoDownload = !pending;
-    autoUpdater.autoInstallOnAppQuit = pending;
+    autoUpdater.autoDownload = !pending && !this.status.downloading;
+    // Every quit goes through installUpdate and its fresh admission check.
+    autoUpdater.autoInstallOnAppQuit = false;
   }
 
   // Wait for a moment when a restart destroys nothing and take it silently;
@@ -328,6 +347,25 @@ export class UpdateService {
     }
   }
 
+  private async checkFeed(
+    metadataOnly = false
+  ): Promise<Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>> {
+    // A concurrent older check cannot authorize an install; await it, then fetch again.
+    if (metadataOnly && this.checkingFeed != null) await this.checkingFeed;
+    if (this.checkingFeed != null) return this.checkingFeed;
+    const previous = autoUpdater.autoDownload;
+    if (metadataOnly || this.status.downloading || this.status.downloaded)
+      autoUpdater.autoDownload = false;
+    this.checkingFeed = autoUpdater.checkForUpdates();
+    try {
+      return await this.checkingFeed;
+    } finally {
+      this.checkingFeed = null;
+      autoUpdater.autoDownload =
+        previous && !this.status.downloaded && !this.status.downloading;
+    }
+  }
+
   async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
     try {
       this.status.error = null;
@@ -337,7 +375,9 @@ export class UpdateService {
 
       void this.refreshReleaseMetadata();
 
-      await autoUpdater.checkForUpdates();
+      const result = await this.checkFeed();
+      if (result?.downloadPromise != null)
+        this.transferToken = result.cancellationToken;
       return { success: true };
     } catch (error) {
       const fullMsg = error instanceof Error ? error.message : String(error);
@@ -365,6 +405,20 @@ export class UpdateService {
       // A second ShipIt process makes the first abort on macOS.
       if (this.status.installing) {
         return { success: true };
+      }
+      const version = this.downloadedVersion;
+      const offer = await this.checkFeed(true);
+      if (
+        offer == null ||
+        !offer.isUpdateAvailable ||
+        offer.updateInfo.version !== version ||
+        !this.status.downloaded ||
+        this.downloadedVersion !== version
+      ) {
+        this.dropDownloadedBuild("fresh feed check refused install");
+        throw new Error(
+          "The downloaded update is no longer offered to this client"
+        );
       }
       this.status.installing = true;
       this.emitStatusUpdate();
@@ -448,7 +502,7 @@ export class UpdateService {
     if (this.checkTimer != null) return;
 
     this.checkTimer = setInterval(() => {
-      if (this.status.installing || this.status.downloading) return;
+      if (this.status.installing) return;
 
       this.checkForUpdates();
     }, UPDATE_CHECK_INTERVAL_MS);
