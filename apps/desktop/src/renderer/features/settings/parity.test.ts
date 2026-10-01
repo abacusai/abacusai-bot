@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 import { PHASE5_PARITY as artifacts } from "../artifacts/parity";
 import { PHASE5_PARITY as library } from "../library/parity";
 import { PHASE5_PARITY as routines } from "../routines/parity";
 import { PHASE5_PARITY as settings } from "./parity";
 
-const sources = import.meta.glob("../*/index.{ts,tsx}", {
-  query: "?raw",
-  import: "default",
-});
+const sources = readSourceFiles("../*/**/*.{ts,tsx}", import.meta.dirname);
 
 describe("R5-T38 phase-5 inventory", () => {
   it.each([...routines, ...artifacts, ...library, ...settings])(

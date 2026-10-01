@@ -1,3 +1,4 @@
+import { readSourceFiles } from "#renderer/test-support/source-files";
 /** R3-T11,T21,T29,T30: boundaries, parity destinations and mapped locale sources. */
 const { existsSync } = (
   globalThis as unknown as {
@@ -14,11 +15,11 @@ import { parseAst } from "rolldown/parseAst";
 import { describe, expect, it } from "vitest";
 
 import { BOT_PARITY } from "./parity";
-const sources = import.meta.glob<string>(
+const sources = readSourceFiles(
   ["./**/*.{ts,tsx}", "!./**/*.test.*"],
-  { query: "?raw", import: "default", eager: true }
+  import.meta.dirname
 );
-const molecules = import.meta.glob<string>(
+const molecules = readSourceFiles(
   [
     "../../components/bot-avatar/**/*.{ts,tsx}",
     "../../components/connector-mark/**/*.{ts,tsx}",
@@ -27,7 +28,7 @@ const molecules = import.meta.glob<string>(
     "../../components/connector-request-card/**/*.{ts,tsx}",
     "!../../components/**/*.test.*",
   ],
-  { query: "?raw", import: "default", eager: true }
+  import.meta.dirname
 );
 const visit = (
   value: unknown,

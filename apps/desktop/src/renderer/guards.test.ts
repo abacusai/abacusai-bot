@@ -1,6 +1,8 @@
 import { parseAst } from "rolldown/parseAst";
 import { describe, expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 /**
  * R1-T15 (covers spec 00 A-T7 for data/**): every renderer source file
  * parsed to an ESTree AST. No `window.api` (or `globalThis.api`/`self.api`),
@@ -12,9 +14,9 @@ import { describe, expect, it } from "vitest";
  */
 import { CONTINUITY_STORES } from "./lib/continuity/registry";
 
-const sources = import.meta.glob<string>(
+const sources = readSourceFiles(
   ["./**/*.{ts,tsx}", "!./**/*.d.ts", "!./routeTree.gen.ts"],
-  { query: "?raw", import: "default", eager: true }
+  import.meta.dirname
 );
 
 type Node = { type: string; [key: string]: unknown };

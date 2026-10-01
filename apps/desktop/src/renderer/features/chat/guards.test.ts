@@ -11,18 +11,16 @@
 import { parseAst } from "rolldown/parseAst";
 import { describe, expect, it } from "vitest";
 
-const sources = import.meta.glob<string>(
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
+const sources = readSourceFiles(
   [
     "../../**/*.{ts,tsx}",
     "!../../**/*.d.ts",
     "!../../routeTree.gen.ts",
     "!../../**/*.test.{ts,tsx}",
   ],
-  {
-    query: "?raw",
-    import: "default",
-    eager: true,
-  }
+  import.meta.dirname
 );
 
 type Node = { type: string; [key: string]: unknown };

@@ -1,6 +1,8 @@
 /** R1-T9: the overlay slot lists against the installed registry output and tokens.css. */
 import { describe, expect, it } from "vitest";
 
+import { readSourceFiles } from "#renderer/test-support/source-files";
+
 import {
   NO_DRAG_ONLY_SLOTS,
   NO_DRAG_SELECTOR,
@@ -11,13 +13,9 @@ import {
 
 import tokensCss from "../../styles/tokens.css?raw";
 
-const sources = import.meta.glob<string>(
+const sources = readSourceFiles(
   ["../../ui/*.tsx", "../../components/spotlight/*.tsx"],
-  {
-    query: "?raw",
-    import: "default",
-    eager: true,
-  }
+  import.meta.dirname
 );
 
 const installed = new Set(

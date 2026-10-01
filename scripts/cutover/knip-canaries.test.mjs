@@ -17,33 +17,8 @@ test(
       (area) =>
         `apps/desktop/${area}/__cutover_knip_canary/unused.${area.startsWith("scripts") ? "mjs" : "ts"}`
     );
-    const configFile = "cutover-knip-canaries.json";
+    const productionConfig = fs.readFileSync("knip.json", "utf8");
     try {
-      const config = JSON.parse(fs.readFileSync("knip.json", "utf8"));
-      const workspace = config.workspaces["apps/desktop"];
-      // Check the production project globs without test readers and entry scripts
-      // that inspect all source files. Production mode excludes these untagged globs.
-      workspace.entry = [];
-      workspace.node = false;
-      workspace.vitest = false;
-      workspace.vite = false;
-      workspace.typescript = false;
-      workspace.oxlint = false;
-      workspace.oxfmt = false;
-      config.workspaces["."] = {
-        entry: [],
-        project: [],
-        node: false,
-        vitest: false,
-        typescript: false,
-        vite: false,
-        "github-actions": false,
-        pnpm: false,
-        turbo: false,
-        oxlint: false,
-        oxfmt: false,
-      };
-      fs.writeFileSync(configFile, JSON.stringify(config));
       for (const file of files) {
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, "export const cutoverCanary = true;\n");
@@ -55,7 +30,7 @@ test(
           "exec",
           "knip",
           "--config",
-          configFile,
+          "knip.json",
           "--workspace",
           "apps/desktop",
           "--include",
@@ -75,7 +50,7 @@ test(
           `${file} absent from knip results`
         );
     } finally {
-      fs.rmSync(configFile, { force: true });
+      assert.equal(fs.readFileSync("knip.json", "utf8"), productionConfig);
       for (const file of files)
         fs.rmSync(path.dirname(file), { force: true, recursive: true });
     }
