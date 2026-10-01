@@ -10,7 +10,7 @@ export const SHAPES = {
   failed: [140, 0],
   approval: [120, 76],
   reply: [130, 84],
-  call: [110, 0],
+  call: [130, 132],
   hovered: [130, 46],
 } as const;
 export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {

@@ -18,3 +18,5 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-wave span { width: 4px; border-radius: 2px; background: currentColor; animation: notch-wave .9s ease-in-out infinite alternate; }
 @keyframes notch-wave { to { transform: scaleY(.5); } }
 .notch-shape[data-reduced=true] .notch-wave span { animation: none; }
+
+.notch-listening { display: flex; flex-direction: column; gap: 4px; }

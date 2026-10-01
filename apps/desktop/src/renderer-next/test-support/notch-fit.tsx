@@ -63,3 +63,74 @@ window.__phase6Fit = async (request, width, language) => {
     font: getComputedStyle(body).fontFamily,
   };
 };
+
+/** Mounted listening controls, measured by Chromium with the shipped shape. */
+import { ListeningControls } from "#next/features/notch/listening";
+import { shapeFor } from "#next/features/notch/shape";
+import type { NotchLayout } from "#shared/contract/notch";
+declare global {
+  interface Window {
+    __phase6ListeningFit(
+      mode: NotchLayout["mode"],
+      language: SupportedLanguage
+    ): Promise<{ controls: number; visible: boolean; height: number }>;
+  }
+}
+window.__phase6ListeningFit = async (mode, language) => {
+  await initI18n();
+  await changeLanguage(language);
+  await document.fonts.ready;
+  const layout: NotchLayout = {
+    displayId: 1,
+    mode,
+    growth: mode === "capsule" ? "up" : "down",
+    notch: mode === "notch" ? { width: 200, height: 32 } : null,
+    maxShape: { width: 560, height: 220 },
+  };
+  const shape = shapeFor(
+    { route: "/call", quietUntil: null, expanded: true } as never,
+    layout
+  );
+  root.render(
+    <div
+      className="notch-shape"
+      data-mode={mode}
+      data-reduced="true"
+      style={shape}
+    >
+      <div
+        className="notch-wings"
+        style={{ height: mode === "capsule" ? 36 : 32 }}
+      />
+      <div className="notch-body">
+        <ListeningControls
+          state="recording"
+          level={0.5}
+          end={() => {}}
+          cancel={() => {}}
+        />
+      </div>
+    </div>
+  );
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const bounds = node
+    .querySelector<HTMLElement>(".notch-shape")!
+    .getBoundingClientRect();
+  const controls = [...node.querySelectorAll("button")];
+  return {
+    controls: controls.length,
+    height: bounds.height,
+    visible: controls.every((control) => {
+      const rect = control.getBoundingClientRect();
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.left >= bounds.left &&
+        rect.right <= bounds.right &&
+        rect.top >= bounds.top &&
+        rect.bottom <= bounds.bottom &&
+        getComputedStyle(control).visibility === "visible"
+      );
+    }),
+  };
+};

@@ -95,9 +95,12 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
                   />
                 ))}
               <span className="truncate">
-                {state === "quiet"
-                  ? t("notch.quiet.until", { time: "08:00" })
-                  : t(`notch.wings.${kind}`)}
+                {expanded &&
+                ["approval", "truncated", "question"].includes(state)
+                  ? "Chief of Staff"
+                  : state === "quiet"
+                    ? t("notch.quiet.until", { time: "08:00" })
+                    : t(`notch.wings.${kind}`)}
               </span>
             </div>
             {mode === "notch" && (
