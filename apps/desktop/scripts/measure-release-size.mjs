@@ -18,8 +18,8 @@ const initial = (html) =>
       .readFileSync(path.join(dist, html), "utf8")
       .matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))"/g),
   ].map((m) => m[1].replace(/^\//, ""));
-const mainHtml = fs.existsSync(path.join(dist, "index-next.html"))
-  ? "index-next.html"
+const mainHtml = fs.existsSync(path.join(dist, "index.html"))
+  ? "index.html"
   : "index.html";
 const entryResources = new Set(
   [mainHtml, "index.html", "notch.html"]
@@ -37,8 +37,8 @@ const entries = [
   {
     name: "Main initial",
     path: initial(
-      fs.existsSync(path.join(dist, "index-next.html"))
-        ? "index-next.html"
+      fs.existsSync(path.join(dist, "index.html"))
+        ? "index.html"
         : "index.html"
     ),
   },

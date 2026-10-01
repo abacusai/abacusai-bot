@@ -74,7 +74,7 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     const renderer = join(desktop, "dist/renderer");
     const css = [
       ...[
-        readFileSync(join(renderer, "index-next.html"), "utf8"),
+        readFileSync(join(renderer, "index.html"), "utf8"),
         readFileSync(join(renderer, "notch.html"), "utf8"),
       ]
         .join("\n")

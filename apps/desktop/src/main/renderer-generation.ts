@@ -16,11 +16,10 @@ export const resolveRendererGeneration = (
   isPackaged: boolean,
   fallback: WindowChromeMode = DEFAULT_RENDERER_GENERATION
 ): WindowChromeMode => {
-  if (!isPackaged) {
-    if (env.ABACUSBOT_RENDERER_GENERATION === "legacy") return "legacy";
-    if (env.ABACUSBOT_RENDERER_GENERATION === "wco") return "wco";
-  }
-  return fallback;
+  void env;
+  void isPackaged;
+  void fallback;
+  return "wco";
 };
 
 export const RENDERER_GENERATION: WindowChromeMode = resolveRendererGeneration(

@@ -79,7 +79,6 @@ export default defineConfig(({ command }) => {
       rolldownOptions: {
         input: {
           main: resolve(root, "index.html"),
-          next: resolve(root, "index-next.html"),
           notch: resolve(root, "notch.html"),
         },
       },

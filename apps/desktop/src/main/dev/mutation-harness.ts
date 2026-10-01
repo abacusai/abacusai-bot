@@ -96,7 +96,7 @@ export const dropRendererPortViaReconnect = async (): Promise<unknown> => {
     await import("../rpc/transports/message-port");
   const contents = electron.webContents
     .getAllWebContents()
-    .find((candidate) => candidate.getURL().includes("index-next.html"));
+    .find((candidate) => candidate.getURL().includes("index.html"));
   if (contents == null) throw new Error("no renderer-next webContents");
   const channel = new electron.MessageChannelMain();
   electron.ipcMain.emit(RPC_CONNECT_CHANNEL, {

@@ -40,9 +40,6 @@
     "check:ui-registry": {
       "cache": false
     },
-    "check:legacy-diff": {
-      "cache": false
-    },
     "dev": {
       "dependsOn": ["^build", "^vendor", "vendor"],
       "cache": false,

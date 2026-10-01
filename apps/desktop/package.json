@@ -45,14 +45,11 @@
   "scripts": {
     "build": "vite build",
     "check:i18n": "node scripts/check-jsx-i18n.js",
-    "check:legacy-diff": "node scripts/check-legacy-renderer-diff.mjs",
     "check:locales": "node scripts/sync-locales.js --check",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "check:ui-registry": "node scripts/shadcn-registry-snapshot.mjs --check",
     "dev": "vite",
-    "dev:next": "ABACUSBOT_RENDERER_GENERATION=wco vite",
-    "dev:next:fixtures": "ABACUSBOT_RENDERER_GENERATION=wco VITE_NEXT_DB_FIXTURES=1 vite",
     "experience": "node scripts/build-experience.js",
     "package": "electron-builder --config electron-builder.yml",
     "package:dir": "electron-builder --config electron-builder.yml --dir",
@@ -64,10 +61,11 @@
     "sync:locales": "node scripts/sync-locales.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:unit": "vitest run --project shared --project main --project renderer --project renderer-next",
+    "test:unit": "vitest run --project shared --project main --project renderer-next",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
-    "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js"
+    "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js",
+    "dev:fixtures": "VITE_NEXT_DB_FIXTURES=1 vite"
   },
   "dependencies": {
     "@ff-labs/fff-node": "^0.9.6",

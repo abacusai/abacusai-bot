@@ -16,9 +16,9 @@ describe("resolveRendererGeneration", () => {
     expect(resolveRendererGeneration({}, true)).toBe("wco");
   });
 
-  it("honours ABACUSBOT_RENDERER_GENERATION=legacy only when unpackaged", () => {
+  it("ignores the removed legacy override", () => {
     const env = { ABACUSBOT_RENDERER_GENERATION: "legacy" };
-    expect(resolveRendererGeneration(env, false)).toBe("legacy");
+    expect(resolveRendererGeneration(env, false)).toBe("wco");
     expect(resolveRendererGeneration(env, true)).toBe("wco");
   });
 
