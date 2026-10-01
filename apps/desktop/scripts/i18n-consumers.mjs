@@ -16,7 +16,12 @@ const walk = (node, fn) => {
     if (Array.isArray(value)) value.forEach((n) => walk(n, fn));
     else if (value && typeof value === "object") walk(value, fn);
 };
-export const consumers = (keys, sources, dynamic = []) => {
+export const consumers = (
+  keys,
+  sources,
+  dynamic = [],
+  referenceKeys = keys
+) => {
   const used = new Set(),
     literals = new Set(),
     templates = new Set();
@@ -47,9 +52,35 @@ export const consumers = (keys, sources, dynamic = []) => {
       )
     )
       used.add(key);
+  const known = new Set(keys);
+  const families = new Map();
+  for (const key of referenceKeys) {
+    const suffix = plurals.find((suffix) => key.endsWith(suffix));
+    if (!suffix) continue;
+    const stem = key.slice(0, -suffix.length);
+    const members = families.get(stem) ?? new Set();
+    members.add(key);
+    families.set(stem, members);
+  }
+  const requireKey = (key) => {
+    if (!known.has(key)) throw new Error(`Missing translation key: ${key}`);
+    used.add(key);
+  };
+  const requireFamily = (stem) => {
+    const members = families.get(stem);
+    if (!members) return false;
+    for (const member of new Set([...members, stem + "_other"]))
+      requireKey(member);
+    return true;
+  };
   for (const row of dynamic)
-    for (const value of row.values)
-      if (keys.includes(row.prefix + value)) used.add(row.prefix + value);
+    for (const value of row.values) {
+      const key = row.prefix + value;
+      const suffix = plurals.find((suffix) => key.endsWith(suffix));
+      const stem = suffix ? key.slice(0, -suffix.length) : key;
+      if (!requireFamily(stem)) requireKey(key);
+    }
+  for (const literal of literals) requireFamily(literal);
   for (const prefix of templates)
     if (!dynamic.some((row) => row.prefix === prefix))
       for (const key of keys) if (key.startsWith(prefix)) used.add(key);

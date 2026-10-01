@@ -44,13 +44,55 @@ test("R7-T26 every remaining leaf belongs to the final consumer set", () => {
   const manifest = JSON.parse(
     fs.readFileSync(path.join(root, "scripts/i18n-dynamic-keys.json"))
   );
-  const used = consumers(
-    keys,
-    sourceFiles(path.join(root, "src/renderer")),
-    manifest
-  );
+  const sources = sourceFiles(path.join(root, "src/renderer"));
+  for (const locale of fs.readdirSync(
+    path.join(root, "src/renderer/locales")
+  )) {
+    if (!locale.endsWith(".json")) continue;
+    const localeKeys = flatten(
+      JSON.parse(
+        fs.readFileSync(path.join(root, "src/renderer/locales", locale))
+      )
+    );
+    assert.doesNotThrow(
+      () => consumers(localeKeys, sources, manifest, keys),
+      locale
+    );
+  }
+  const used = consumers(keys, sources, manifest);
   assert.deepEqual(
     keys.filter((key) => !used.has(key)),
     []
+  );
+});
+test("rejects missing declared dynamic keys and incomplete plural families in every locale", () => {
+  const sources = {
+    "fixture.ts": "t(`family.${value}`); t('items', {count: 2});",
+  };
+  const dynamic = [{ prefix: "family.", values: ["a", "deleted"] }];
+  assert.throws(
+    () => consumers(["family.a", "items_one", "items_other"], sources, dynamic),
+    /family.deleted/
+  );
+  assert.throws(() => consumers(["items_one"], sources), /items_other/);
+  const reference = ["family.a", "family.deleted", "items_one", "items_other"];
+  assert.throws(
+    () =>
+      consumers(
+        ["family.a", "family.deleted", "items_other"],
+        sources,
+        dynamic,
+        reference
+      ),
+    /items_one/
+  );
+});
+test("a declared plural member requires its complete family", () => {
+  assert.throws(
+    () =>
+      consumers(["family.count_one"], {}, [
+        { prefix: "family.", values: ["count_one"] },
+      ]),
+    /family.count_other/
   );
 });
