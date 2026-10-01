@@ -90,13 +90,12 @@ it("exec-backend events invalidate the query shared by the context tray and pick
     expect(
       keysFor(transport.orpc, {
         source: "settings",
-        event: {
-          type: "exec-backend",
-          backend: { selected: "docker", effective: "docker", statuses: [] },
-        } as never,
+        event: { type: "exec-backend", backend: "docker" },
       })
     ).toEqual([
       transport.orpc.settings.execBackend.get.queryOptions({ input: {} })
+        .queryKey,
+      transport.orpc.settings.sandboxSupport.queryOptions({ input: {} })
         .queryKey,
     ]);
   } finally {
