@@ -61,3 +61,23 @@ The rows below distinguish new repairs from repairs already present in the conti
 | `989bc358` | Restore the shell after native appearance checks, preserving test isolation. |
 
 The final documentation commit updates this log, review disposition, implementation report and R5/progress tables.
+
+## r2
+
+Review source: `05-routines-artifacts-library-settings.impl-codex-r2.md`. Merged `rewrite/renderer` by fast-forward from `7ceff436` to `4d3d3cf7` before this pass. All four major findings are fixed.
+
+| Finding | Repair and regression evidence |
+|---|---|
+| 1 | Artifacts supplies `localUrl` through `browser.runtime.materializeFile`, using the artifact's workspace/session conversation key and a resource id per artifact. It closes the returned lease before handing the host URL to the viewer. Rendered PDF and HTML tests use the real `FilePreview` reader path, assert the materialization request and lease release, and both failed before the fix. |
+| 2 | Snapshot and event normalization preserve `installStalled` when main emits it alongside `installing`. Stalled status takes precedence and releases the critical dialog. The rendered snapshot regression failed before the fix; event coverage also checks that the watchdog replaces the dialog with the stalled banner. The historical install-failure retry regression still passes. |
+| 3 | Replacement starts settlement of the captured previous pairing record, clears its watchdog, and retains that record through deferred setup and cleanup. Concurrent cleanup shares one settlement promise. The previous caller resolves and an unfinished platform is disabled once, while only the current record can update flow state. Direct-route watchdogs check their captured id. A fake-timer flow test checks caller settlement, platform cleanup and timer removal. A rendered WhatsApp-to-Telegram route transition holds WhatsApp setup, checks its eventual disable, and proves Telegram survives the old deadline until its own watchdog fires. Both regressions failed with the old implementation. |
+| 4 | The editor collects distinct conflicts across every affected context and checks live registrations even when stored bindings conflict. Fixed bindings and sequences prevent reassignment. "Use anyway" clears all displaced bindings and sets the new chord in one preferences write. Rendered Linux coverage reassigns a chord from `new-in-area` and `close-tab@terminal` to `toggle-sidebar`; a second test rejects a fixed live sequence alongside a stored rebindable conflict. Both failed before the fix. |
+
+Validation used the requested direct binaries and targeted renderer files. `pnpm install --pm-on-fail=ignore` passed with installed pnpm 12.8.1. Final combined run passed 10 files and 53 tests, with no unhandled errors. Desktop `tsc -b`, root `oxlint .`, root `oxfmt .`, and `git diff --check` passed. Lint retains seven legacy warnings. Earlier focused green runs covered 16 settings tests, 16 artifacts tests, 11 pairing tests and 10 keyboard tests; these overlap the final 53 and are not additional tests. The pre-existing untracked `.build/` directory remains untouched.
+
+| Commit | Scope |
+|---|---|
+| `9b799891` | Preserve stalled quit-watchdog status in snapshots and events. |
+| `595c22e8` | Materialize Artifacts PDF/HTML previews and release their leases. |
+| `18194c25` | Settle superseded pairing records and guard direct-route watchdogs. |
+| `0a3e108d` | Clear every affected keymap conflict atomically and reject fixed conflicts. |
