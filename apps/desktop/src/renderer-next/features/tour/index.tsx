@@ -73,7 +73,7 @@ export const TourHost = () => {
             (s) => s.owner == null && s.routineId == null
           );
           if (session)
-            href = `/sessions/${encodeURIComponent(session.id)}?tab=changes`;
+            href = `/sessions/${encodeURIComponent(session.id)}?tab=${stop.id === "changes" ? "changes" : "terminal"}`;
         }
         if (href) await navigate({ href });
         if (abort.signal.aborted) return;
@@ -176,3 +176,5 @@ export const useStartTour = () => {
       onboarded: account.data?.onboarded === true,
     });
 };
+
+export { TourGallery } from "./gallery";

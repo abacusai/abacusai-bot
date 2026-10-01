@@ -1,24 +1,20 @@
-import { connectorById } from "@abacus-ai/connectors/registry";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as v from "valibot";
 
-import { DEFAULT_PREFS } from "#next/data/db/prefs";
 import { createBotFromTemplate } from "#next/features/bots";
 import {
   OnboardingStepPage,
+  connectOnboarding,
   completeOnboarding,
   guardStep,
   onboardingStore,
   startSignIn,
   cancelSignIn,
 } from "#next/features/onboarding";
-import {
-  enterStep,
-  type OnboardingExit,
-} from "#next/features/onboarding/actions";
-import { OnboardingLocalModels } from "#next/features/onboarding/steps/local-models";
-import { OnboardingProviderKey } from "#next/features/onboarding/steps/provider-key";
+import { enterStep, type OnboardingExit } from "#next/features/onboarding";
+import { OnboardingLocalModels } from "#next/features/onboarding";
+import { OnboardingProviderKey } from "#next/features/onboarding";
 import { startTour } from "#next/features/tour";
 import {
   ONBOARDING_STEPS,
@@ -40,10 +36,15 @@ const OnboardingRoute = () => {
       replace: true,
       transition: "onboarding-step",
     });
+  const entered = useRef<OnboardingStepId | null>(null);
   useEffect(() => {
-    void enterStep(db, transport, step).catch((error) =>
-      console.warn("[onboarding] enter failed", error)
-    );
+    if (entered.current !== step) {
+      entered.current = step;
+      void enterStep(db, transport, step).catch((error) => {
+        entered.current = null;
+        console.warn("[onboarding] enter failed", error);
+      });
+    }
     return () => {
       if (step === "models") {
         void transport.client.auth.openRouter.cancel({});
@@ -116,21 +117,7 @@ const OnboardingRoute = () => {
       id,
       checkIn: { preset: "weekdays", time: "08:00" },
     });
-  const connect = async (id: string) => {
-    const connector = connectorById(id);
-    const outcome = await transport.client.connectors.connect({
-      connectorId: id,
-    });
-    if (connector?.kind === "messaging" && outcome.ok) {
-      const prefs = db.collections.prefs.get("app") ?? DEFAULT_PREFS;
-      await db.updatePrefs({
-        onboardingPairing: [
-          ...new Set([...(prefs.onboardingPairing ?? []), connector.platform]),
-        ],
-      });
-    }
-    return outcome;
-  };
+  const connect = (id: string) => connectOnboarding(db, transport, id);
   return (
     <OnboardingStepPage
       step={step}

@@ -65,6 +65,19 @@ describe("R6-T6 completion persistence boundaries", () => {
       once: true,
     });
   });
+  it("shares the completion tail with a concurrent shell resume", async () => {
+    const { deps, calls } = setup();
+    await Promise.all([
+      finishCompletion(deps, { to: "bot-tour", botId: "b" }),
+      finishCompletion(deps, { to: "bot-tour", botId: "b" }),
+    ]);
+    expect(calls).toEqual(["funnel", "step", "commit", "tour", "clear"]);
+  });
+  it("commits the destination but retains the target if step cleanup fails", async () => {
+    const { deps, calls } = setup("step");
+    await completeOnboarding(deps, { to: "new-session" });
+    expect(calls).toEqual(["exit", "account", "funnel", "step", "commit"]);
+  });
   it.each(["exit", "account", "funnel", "commit"])(
     "retains recoverable target when %s fails",
     async (failure) => {

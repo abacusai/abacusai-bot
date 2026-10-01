@@ -160,6 +160,25 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   useEffect(() => {
     if (
       !props.preview &&
+      liveFirst.state === "ready" &&
+      bots &&
+      !bots.some((item) => item.id === liveFirst.result.bot.id)
+    ) {
+      firstBotStore.setState(() => ({ state: "removed" }));
+    }
+  }, [bots, liveFirst, props.preview]);
+  const shownBot = useRef<string | null>(null);
+  useEffect(() => {
+    if (props.preview || step !== "first-bot" || liveFirst.state !== "ready")
+      return;
+    const id = liveFirst.result.bot.id;
+    if (shownBot.current === id) return;
+    shownBot.current = id;
+    void transport.client.system.funnelStep({ step: "first_bot_shown" });
+  }, [step, liveFirst, transport, props.preview]);
+  useEffect(() => {
+    if (
+      !props.preview &&
       step === "first-bot" &&
       liveFirst.state === "skipped"
     ) {
@@ -290,7 +309,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       {step === "connect" && (
         <>
           <div role="status" className="flex items-center gap-2">
-            {attempt?.status === "pending" && <Spinner />}
+            {(props.preview || attempt?.status === "pending") && <Spinner />}
             {t("onboarding.pages.connect.waiting")}
           </div>
           {attempt?.status === "failed" && (
@@ -430,6 +449,14 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       {step === "first-bot" && (
         <>
           {first.state === "pending" && <Spinner />}
+          {first.state === "removed" && (
+            <>
+              <p>{t("onboarding.pages.removed")}</p>
+              {button(t("onboarding.connectorsContinue"), () =>
+                props.navigate("done")
+              )}
+            </>
+          )}
           {bot && (
             <>
               <div className="bg-muted w-full rounded-xl border p-5">
@@ -517,3 +544,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     </section>
   );
 };
+
+export { PairingQueueBanner } from "./pairing-banner";
+export { OnboardingLocalModels } from "./steps/local-models";
+export { OnboardingProviderKey } from "./steps/provider-key";
+export { OnboardingGallery } from "./gallery";
+export { enterStep, type OnboardingExit } from "./actions";
+
+export { connectOnboarding } from "./connect";
