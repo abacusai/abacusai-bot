@@ -113,12 +113,14 @@ export const RoutineSidebarRow = ({
             to="/routines/$routineId"
             params={{ routineId: row.id }}
             aria-current={active ? "page" : undefined}
-            className={`hover:bg-sidebar-accent/60 flex h-14 items-center gap-2 rounded-lg pr-9 pl-2 ${active ? "bg-sidebar-accent" : ""} ${state === "paused" ? "opacity-60" : ""}`}
+            className={`hover:bg-sidebar-accent/60 flex h-14 items-center gap-2 rounded-lg pr-9 pl-2 ${active ? "bg-sidebar-accent" : ""}`}
           >
-            <RoutineIdentity bot={bot} state={state} />
+            <span className={state === "paused" ? "opacity-60" : undefined}>
+              <RoutineIdentity bot={bot} state={state} />
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px]">{row.name}</span>
-              <span className="text-muted-foreground block truncate text-[11px]">
+              <span className="text-sidebar-foreground/80 block truncate text-[11px]">
                 {label}
               </span>
             </span>

@@ -87,13 +87,13 @@ export const PHASE5_PARITY = [
   },
   {
     id: "LB15",
-    status: "partial",
+    status: "implemented",
     target: "features/library/index.tsx",
     specStatus: "Parity + confirm (gap fix)",
   },
   {
     id: "LB16",
-    status: "partial",
+    status: "implemented",
     target: "features/library/index.tsx",
     specStatus: "Parity + URL check (gap fix)",
   },
