@@ -1,5 +1,9 @@
-import { useQueries, type UseQueryOptions } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  useQueries,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import type { FileTreeNode } from "#shared/contracts";
 
@@ -11,35 +15,35 @@ export const useLazyChildren = (
 ) => {
   const [loaded, setLoaded] = useState({
     identity,
-    revision,
     paths: [] as string[],
   });
-  const paths =
-    loaded.identity === identity && loaded.revision === revision
-      ? loaded.paths
-      : [];
+  const paths = loaded.identity === identity ? loaded.paths : [];
   const children = useQueries({
     queries: paths.map((directory) => {
       const query = options(directory);
       return {
         ...query,
-        queryKey: [...query.queryKey!, revision],
         gcTime: 0,
       };
     }),
-    combine: (results) => results.flatMap((result) => result.data ?? []),
+    combine: (results) =>
+      results.flatMap((result) => (result.isError ? [] : (result.data ?? []))),
   });
+  const qc = useQueryClient();
+  const invalidate = useEffectEvent(() => {
+    for (const directory of paths)
+      void qc.invalidateQueries({ queryKey: options(directory).queryKey });
+  });
+  useEffect(() => {
+    invalidate();
+  }, [identity, revision]);
   return {
     children,
     load(directory: string) {
       setLoaded((previous) => {
-        const paths =
-          previous.identity === identity && previous.revision === revision
-            ? previous.paths
-            : [];
+        const paths = previous.identity === identity ? previous.paths : [];
         return {
           identity,
-          revision,
           paths: [
             ...paths.filter((path) => path !== directory),
             directory,

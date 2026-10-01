@@ -46,7 +46,7 @@ vi.mock("@pierre/trees/react", async (original) => {
     ),
   };
 });
-import { renderApp } from "#next/test-support/app-harness";
+import { defaultSeed, renderApp } from "#next/test-support/app-harness";
 
 import { FileTreeView } from "./index";
 
@@ -121,8 +121,23 @@ it("reads current callbacks in the same checkout and preserves expansion for equ
 });
 
 it("production session router sends rename only to B's checkout after A → B", async () => {
-  const rename = vi.fn(async () => {});
+  const files = new Map([
+    ["spreadsheet", "dir/file.txt"],
+    ["flights", "dir/file.txt"],
+  ]);
+  const rename = vi.fn(
+    async (input: { checkout?: { sessionId?: string }; toPath: string }) => {
+      files.set(input.checkout!.sessionId!, input.toPath);
+    }
+  );
+  const seed = defaultSeed();
+  seed.sessions = seed.sessions?.map((row) => ({
+    ...row,
+    worktreeId: `checkout-${row.id}`,
+    worktreePath: `/repo/${row.id}`,
+  }));
   const harness = await renderApp("/sessions/spreadsheet?tab=files", {
+    seed,
     fileTree: [
       {
         kind: "directory",
@@ -165,6 +180,8 @@ it("production session router sends rename only to B's checkout after A → B", 
       })
     );
     expect(model).not.toBe(a);
+    expect(files.get("spreadsheet")).toBe("dir/file.txt");
+    expect(files.get("flights")).toBe("dir/renamed.txt");
   } finally {
     harness.view.unmount();
     await harness.cleanup();
