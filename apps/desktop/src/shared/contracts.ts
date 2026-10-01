@@ -718,6 +718,8 @@ export type IpcEvent =
       sessionId: string;
       content: string;
     } & IpcEventBase)
+  // Backend and shell changes invalidate execution settings in every window.
+  | ({ type: "exec-backend"; backend: BackendId } & IpcEventBase)
   // A credential was stored or removed by any surface. Onboarding overlays an
   // already-mounted app, so credential-derived state must re-read on this.
   | ({
