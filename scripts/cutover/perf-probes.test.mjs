@@ -25,7 +25,16 @@ test("the common probe requires a visible fixture bot and a composer that can ta
     querySelectorAll: (selector) =>
       selector.includes("textarea")
         ? nodes
-        : [{ textContent: "Fixture bot 01", getClientRects: () => [1] }],
+        : [
+            {
+              textContent: "Fixture bot 01",
+              getClientRects: () => [1],
+              click() {},
+              getAttribute() {
+                return null;
+              },
+            },
+          ],
   };
   const composer = {
     disabled: false,
@@ -58,16 +67,61 @@ test("the common probe requires a visible fixture bot and a composer that can ta
   callbacks.shift()();
   assert.equal(context.window.__cutoverProbe.interactiveAt, 1050);
 });
-test("the long-thread probe fails when the fixture session is absent", () => {
-  const context = { document: { querySelectorAll: () => [] }, window: {} };
-  assert.throws(
-    () =>
-      vm.runInNewContext(
-        clickLongThreadSource({ longSessionName: "missing" }),
-        context
-      ),
-    /absent/
+test("the long-thread probe does not start timing an absent session", () => {
+  const context = {
+    document: { querySelectorAll: () => [] },
+    window: { __cutoverProbe: {} },
+  };
+  assert.equal(
+    vm.runInNewContext(
+      clickLongThreadSource({ longSessionName: "missing" }),
+      context
+    ),
+    false
   );
+  assert.equal(context.window.__cutoverProbe.threadClickedAt, undefined);
+});
+
+test("user-login admission is distinct and public evidence omits credential manifests", async () => {
+  const { validatePerfProducer, publicProducer } =
+    await import("./perf-home.mjs");
+  const producer = {
+    kind: "perf",
+    status: "complete",
+    provenance: "user-login",
+    sourceVersion: "v1.0.85",
+    sourceGenerated: false,
+    shellObserved: true,
+    workload: { longSessionMessages: 1000 },
+    fixture: { botName: "Fixture bot 01" },
+    files: { "account.json": "private-credential-file-hash" },
+    gaps: [],
+  };
+  assert.equal(validatePerfProducer(producer), true);
+  assert.equal(
+    validatePerfProducer({ ...producer, sourceGenerated: true }),
+    false
+  );
+  assert.equal(
+    validatePerfProducer({ ...producer, shellObserved: false }),
+    false
+  );
+  assert.equal(
+    validatePerfProducer({ ...producer, provenance: "unknown" }),
+    false
+  );
+  assert.equal(
+    validatePerfProducer({
+      ...producer,
+      workload: { longSessionMessages: 999 },
+    }),
+    false
+  );
+  assert.equal(
+    JSON.stringify(publicProducer(producer)).includes("account.json"),
+    false
+  );
+  assert.equal(publicProducer(producer).provenance, "user-login");
 });
 
 test("the driver refuses M1–M5 on an incomplete onboarding fixture before launch", async () => {

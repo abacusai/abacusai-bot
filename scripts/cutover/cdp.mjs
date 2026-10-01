@@ -83,10 +83,11 @@ export async function launch({
 }) {
   if (
     !path.isAbsolute(home) ||
-    !fs.existsSync(path.join(home, ".synthetic-cutover-home"))
+    (!fs.existsSync(path.join(home, ".synthetic-cutover-home")) &&
+      !fs.existsSync(path.join(home, ".user-login-cutover-copy")))
   )
     throw new Error(
-      "Refusing an unmarked home; use a fresh synthetic fixture directory"
+      "Refusing an unmarked home; use a fresh synthetic fixture or marked user-login scratch copy"
     );
   const output = fs.openSync(log, "w");
   const spawnedAt = Date.now();
@@ -158,64 +159,85 @@ export async function launch({
           `http://127.0.0.1:${port}/json/version`
         ).then((r) => r.json());
         const browser = await connect(version.webSocketDebuggerUrl);
-        let page;
-        const resources = new Map();
-        let offset;
-        const initialized = new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () => reject(new Error("No attached main page")),
-            30_000
-          );
-          browser.onEvent(async (event) => {
-            if (event.method === "Target.attachedToTarget") {
-              const { sessionId, targetInfo } = event.params;
-              if (targetInfo.type !== "page" || page) {
-                await browser
-                  .send("Runtime.runIfWaitingForDebugger", {}, sessionId)
-                  .catch(() => {});
-                return;
-              }
-              page = { sessionId, targetInfo };
-              try {
-                await browser.send("Network.enable", {}, sessionId);
-                await browser.send("Page.enable", {}, sessionId);
-                if (initScript)
-                  await browser.send(
-                    "Page.addScriptToEvaluateOnNewDocument",
-                    { source: initScript },
-                    sessionId
-                  );
+        const pages = new Map();
+        browser.onEvent(async (event) => {
+          if (event.method === "Target.attachedToTarget") {
+            const { sessionId, targetInfo } = event.params;
+            if (targetInfo.type !== "page") {
+              await browser
+                .send("Runtime.runIfWaitingForDebugger", {}, sessionId)
+                .catch(() => {});
+              return;
+            }
+            const page = {
+              sessionId,
+              targetInfo,
+              resources: new Map(),
+              ready: false,
+            };
+            pages.set(sessionId, page);
+            try {
+              await browser.send("Network.enable", {}, sessionId);
+              await browser.send("Page.enable", {}, sessionId);
+              if (initScript)
                 await browser.send(
-                  "Runtime.runIfWaitingForDebugger",
-                  {},
+                  "Page.addScriptToEvaluateOnNewDocument",
+                  { source: initScript },
                   sessionId
                 );
-                clearTimeout(timer);
-                resolve(page);
-              } catch (error) {
-                clearTimeout(timer);
-                reject(error);
-              }
+              await browser.send(
+                "Runtime.runIfWaitingForDebugger",
+                {},
+                sessionId
+              );
+              page.ready = true;
+            } catch {
+              // A transient startup page can disappear before the main document opens.
+              pages.delete(sessionId);
             }
-            if (!page || event.sessionId !== page.sessionId) return;
-            const params = event.params;
-            if (event.method === "Network.requestWillBeSent") {
-              offset = params.wallTime * 1000 - params.timestamp * 1000;
-              resources.set(params.requestId, { url: params.request.url });
-            }
-            if (event.method === "Network.loadingFinished") {
-              const resource = resources.get(params.requestId);
-              if (resource && offset !== undefined)
-                resource.loadedAt = params.timestamp * 1000 + offset;
-            }
-          });
+          }
+          const page = pages.get(event.sessionId);
+          if (!page) return;
+          const params = event.params;
+          if (event.method === "Network.requestWillBeSent") {
+            page.offset = params.wallTime * 1000 - params.timestamp * 1000;
+            page.resources.set(params.requestId, { url: params.request.url });
+          }
+          if (event.method === "Network.loadingFinished") {
+            const resource = page.resources.get(params.requestId);
+            if (resource && page.offset !== undefined)
+              resource.loadedAt = params.timestamp * 1000 + page.offset;
+          }
         });
         await browser.send("Target.setAutoAttach", {
           autoAttach: true,
           waitForDebuggerOnStart: false,
           flatten: true,
         });
-        const attached = await initialized;
+        let attached;
+        for (let j = 0; j < 300; j++) {
+          const { targetInfos } = await browser.send("Target.getTargets");
+          const main = targetInfos.find(
+            (t) =>
+              t.type === "page" &&
+              /\/index(?:-next)?\.html(?:[?#]|$)/.test(t.url)
+          );
+          attached =
+            main &&
+            [...pages.values()].find(
+              (p) => p.ready && p.targetInfo.targetId === main.targetId
+            );
+          if (attached) {
+            attached.targetInfo = main;
+            break;
+          }
+          await delay(100);
+        }
+        if (!attached) {
+          browser.close();
+          throw new Error("No attached main document");
+        }
+        const resources = attached.resources;
         const send = (method, params = {}) =>
           browser.send(method, params, attached.sessionId);
         const cdp = {
@@ -241,8 +263,20 @@ export async function launch({
           );
           if (!target) throw new Error("Attached source page vanished");
           const direct = await connect(target.webSocketDebuggerUrl);
-          browser.close();
-          return { child, spawnedAt, stop, cdp: direct, target, resources };
+          const closeDirect = direct.close;
+          direct.close = () => {
+            closeDirect();
+            browser.close();
+          };
+          return {
+            child,
+            spawnedAt,
+            stop,
+            cdp: direct,
+            target,
+            resources,
+            stopResourceTracking: () => browser.close(),
+          };
         }
         return {
           child,
