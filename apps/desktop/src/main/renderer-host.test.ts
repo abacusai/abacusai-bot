@@ -153,6 +153,10 @@ const makeHost = (
     webPreferences: {},
     window: window as never,
     wire,
+    readiness: {
+      wait: async () =>
+        mocks.FakeWebContents.signalsReady ? "ready" : "timeout",
+    },
   }),
   window,
 });
@@ -332,7 +336,7 @@ describe("RendererSwapScheduler adoption and targets", () => {
       target: () => new URL("app://bundle.new/"),
       host: () => null,
       busy: () => false,
-      barrier: "first-commit",
+      barrier: "subscriptions",
       onOutcome,
     });
     scheduler.schedule("v2");
@@ -358,7 +362,7 @@ describe("RendererSwapScheduler adoption and targets", () => {
         target: () => target,
         host: () => host,
         busy: () => false,
-        barrier: "first-commit",
+        barrier: "subscriptions",
         onOutcome,
       });
       scheduler.schedule("v2");
