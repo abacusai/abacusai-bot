@@ -1,0 +1,167 @@
+/** Spec §2 inventory. Partial rows are explained in the implementation report. */
+export const PHASE5_PARITY = [
+  {
+    id: "ST1",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Changed (canvas, user decision)",
+  },
+  {
+    id: "ST2",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Changed (foundation)",
+  },
+  {
+    id: "ST3",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: 'Changed (PLAN "Nuked: `staticData.titleKey`")',
+  },
+  {
+    id: "ST4",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST5",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity + System option (foundation \u00a79.2)",
+  },
+  {
+    id: "ST6",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity (canvas)",
+  },
+  {
+    id: "ST7",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Changed (canvas placement)",
+  },
+  {
+    id: "ST8",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity + confirm",
+  },
+  {
+    id: "ST9",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Changed (canvas)",
+  },
+  {
+    id: "ST10",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity (canvas placement)",
+  },
+  {
+    id: "ST11",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST12",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity + confirm",
+  },
+  {
+    id: "ST13",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus:
+      "Changed (PLAN Sound, F12); the old sound opt-out is imported (\u00a731.5 i)",
+  },
+  {
+    id: "ST14",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST15",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity (canvas layout)",
+  },
+  {
+    id: "ST16",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST17",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity + New (install)",
+  },
+  {
+    id: "ST18",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus:
+      "Parity + New (manual check, About); composer strip and home banner Retired (canvas: pill + About cover them)",
+  },
+  {
+    id: "ST19",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST20",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Changed (canvas)",
+  },
+  {
+    id: "ST21",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+  {
+    id: "ST22",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Deferred to phase 6",
+  },
+  {
+    id: "ST23",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "New",
+  },
+  {
+    id: "ST24",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "New",
+  },
+  {
+    id: "ST25",
+    status: "implemented",
+    target: "features/settings/index.tsx",
+    specStatus: "New",
+  },
+  {
+    id: "ST26",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "New",
+  },
+  {
+    id: "ST27",
+    status: "partial",
+    target: "features/settings/index.tsx",
+    specStatus: "Parity",
+  },
+] as const;

@@ -11,6 +11,8 @@
 import type { FileRoutesById } from "#next/routeTree.gen";
 
 export const PANE_BOUNDARIES = {
+  "/_shell/(routines)/routines/$routineId": "routine:$routineId",
+  "/_shell/(routines)/routines/$routineId/edit": "routine:$routineId",
   "/_shell/(routines)/routines/_list/": "routines-list",
   "/_shell/(routines)/routines/_list/new": "routines-list",
   "/_shell/(bots)/bots/$botId": "bot:$botId",

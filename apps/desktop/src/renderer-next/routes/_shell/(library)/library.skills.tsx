@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { LibraryPageEmpty } from "#next/features/library";
+import { SkillsPage, SkillsSearch } from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
 
 const SkillsRoute = () => {
@@ -13,11 +13,12 @@ const SkillsRoute = () => {
           {t("library.pages.skills")}
         </span>
       </TopBarSlot>
-      <LibraryPageEmpty page="skills" />
+      <SkillsPage />
     </>
   );
 };
 
 export const Route = createFileRoute("/_shell/(library)/library/skills")({
+  validateSearch: SkillsSearch,
   component: SkillsRoute,
 });

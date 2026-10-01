@@ -35,6 +35,7 @@ export interface SoundPlayer {
     cue: Cue,
     options?: { threadId?: string; botId?: string | null; dedupeKey?: string }
   ): void;
+  preview(cue: Cue): void;
   unlock(): void;
   unlocked(): boolean;
   dispose(): void;
@@ -43,10 +44,16 @@ export interface SoundPlayer {
 /** A burst of cues inside this window plays once. */
 export const COALESCE_MS = 400;
 
+// All document players, including previews, share the native engine.
+let documentAudio: AudioContext | null = null;
+let audioUsers = 0;
+let documentLastPlayed = Number.NEGATIVE_INFINITY;
 export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
   let lastPlayedAt = Number.NEGATIVE_INFINITY;
   let audio: unknown = null;
   let disposed = false;
+  const shared =
+    ctx.createAudioContext === undefined && ctx.synth === undefined;
 
   const synth =
     ctx.synth ??
@@ -76,8 +83,10 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       )
         return;
       const now = ctx.now();
-      if (now - lastPlayedAt < COALESCE_MS) return;
+      if (now - (shared ? documentLastPlayed : lastPlayedAt) < COALESCE_MS)
+        return;
       lastPlayedAt = now;
+      if (shared) documentLastPlayed = now;
       if (ctx.claim && cue !== "sent" && cue !== "routine-fired") {
         if (!audio && !ctx.synth) return;
         void ctx
@@ -91,6 +100,13 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
           .catch(() => undefined);
       } else synth(cue);
     },
+    preview(cue) {
+      if (disposed) return;
+      this.unlock();
+      const resume = (audio as AudioContext | null)?.resume;
+      if (resume != null) void resume.call(audio).catch(() => undefined);
+      synth(cue);
+    },
     unlock() {
       if (audio !== null || disposed) return;
       const create =
@@ -98,7 +114,11 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
         (() =>
           typeof AudioContext === "undefined" ? null : new AudioContext());
       try {
-        audio = create();
+        if (shared) {
+          documentAudio ??= create() as AudioContext | null;
+          audio = documentAudio;
+          if (audio) audioUsers++;
+        } else audio = create();
         const context = audio as { resume?: () => Promise<void> } | null;
         void Promise.resolve(context?.resume?.())
           .then(() => {
@@ -121,7 +141,17 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
       );
     },
     dispose() {
+      if (disposed) return;
       disposed = true;
+      if (shared && audio) {
+        audioUsers--;
+        if (audioUsers > 0) {
+          audio = null;
+          return;
+        }
+        documentAudio = null;
+        documentLastPlayed = Number.NEGATIVE_INFINITY;
+      }
       const close = (audio as { close?: () => Promise<void> } | null)?.close;
       if (close != null) void close.call(audio).catch(() => undefined);
       audio = null;

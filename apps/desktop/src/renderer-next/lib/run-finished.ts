@@ -55,3 +55,9 @@ export const runFinishedFeed = (transport: Transport) => {
   }
   return feed;
 };
+
+/** All completion consumers share the same resumable stream. */
+export const subscribeRunFinished = (
+  transport: Transport,
+  listener: (notice: RunFinishedNotice) => void
+): (() => void) => runFinishedFeed(transport).subscribe(listener);

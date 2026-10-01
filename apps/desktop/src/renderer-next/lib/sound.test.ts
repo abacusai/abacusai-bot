@@ -74,3 +74,94 @@ describe("createSoundPlayer", () => {
     player.play("done");
   });
 });
+
+it("R5-T26 all native players and previews use one engine, with two audible routine-fired tones", () => {
+  const frequencies: number[] = [];
+  const start = vi.fn();
+  const close = vi.fn(async () => undefined);
+  const engine = vi.fn(function () {
+    return {
+      currentTime: 0,
+      destination: {},
+      resume: async () => undefined,
+      close,
+      createOscillator: () => ({
+        frequency: {
+          setValueAtTime: (frequency: number) => frequencies.push(frequency),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        start,
+        stop: vi.fn(),
+      }),
+      createGain: () => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      }),
+    };
+  });
+  vi.stubGlobal("AudioContext", engine);
+  const ctx: SoundContext = {
+    isThreadVisible: () => false,
+    isWindowFocused: () => false,
+    prefs: () => ({
+      enabled: false,
+      perEvent: { "routine-fired": false },
+      quietHours: { enabled: true, start: "00:00", end: "23:59" },
+    }),
+    now: () => 1000,
+  };
+  const a = createSoundPlayer(ctx);
+  const b = createSoundPlayer(ctx);
+  try {
+    a.unlock();
+    b.unlock();
+    expect(engine).toHaveBeenCalledTimes(1);
+    a.play("routine-fired");
+    expect(start).not.toHaveBeenCalled();
+    b.preview("routine-fired");
+    expect(frequencies).toEqual([587, 784]);
+    expect(start).toHaveBeenCalledTimes(2);
+    a.dispose();
+    expect(close).not.toHaveBeenCalled();
+    b.dispose();
+    expect(close).toHaveBeenCalledTimes(1);
+  } finally {
+    a.dispose();
+    b.dispose();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("previews bypass gates and arbitration while attention cues retain dedupe claims", async () => {
+  let enabled = false;
+  const claim = vi.fn(async () => true);
+  const onUnlocked = vi.fn();
+  const { ctx, synth, advance } = context({
+    prefs: () => ({ enabled, perEvent: {} }),
+    claim,
+    onUnlocked,
+    createAudioContext: () => ({
+      state: "running",
+      resume: async () => undefined,
+      close: async () => undefined,
+    }),
+  });
+  const player = createSoundPlayer(ctx);
+  player.preview("done");
+  expect(player.unlocked()).toBe(true);
+  await Promise.resolve();
+  expect(onUnlocked).toHaveBeenCalledOnce();
+  expect(claim).not.toHaveBeenCalled();
+  expect(synth).toHaveBeenCalledExactlyOnceWith("done");
+  enabled = true;
+  advance(COALESCE_MS);
+  player.play("done", { threadId: "t", dedupeKey: "run-1" });
+  await Promise.resolve();
+  expect(claim).toHaveBeenCalledExactlyOnceWith("done:run-1", "t");
+  expect(synth).toHaveBeenCalledTimes(2);
+  player.dispose();
+});

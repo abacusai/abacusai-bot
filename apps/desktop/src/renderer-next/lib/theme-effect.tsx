@@ -6,6 +6,8 @@
 import { useStore } from "@tanstack/react-store";
 import { useEffect, useSyncExternalStore } from "react";
 
+import "./chat-appearance.css";
+
 import { usePrefs } from "#next/data/db/prefs";
 
 import { applyTheme, DARK_QUERY, resolveTheme, themeOverride } from "./theme";
@@ -35,6 +37,15 @@ export const ThemeEffect = (): null => {
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = reduce;
   }, [reduce]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--chat-font-size",
+      `${prefs.appearance?.textSize ?? 14}px`
+    );
+    document.documentElement.dataset.bubbleTint =
+      prefs.appearance?.bubbleTint === false ? "off" : "on";
+  }, [prefs.appearance]);
 
   return null;
 };

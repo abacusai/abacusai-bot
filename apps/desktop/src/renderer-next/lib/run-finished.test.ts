@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 import type { Transport } from "#next/data/transport";
 import type { RunFinishedNotice } from "#shared/contract";
 
-import { runFinishedFeed } from "./run-finished";
+import { runFinishedFeed, subscribeRunFinished } from "./run-finished";
 
 it("R6-T15 one iterator feeds three consumers, dedupes and closes after the last leaves", async () => {
   let receive:
@@ -33,8 +33,10 @@ it("R6-T15 one iterator feeds three consumers, dedupes and closes after the last
     client: { ai: { runFinished: open } },
   } as unknown as Transport;
   const listeners = [vi.fn(), vi.fn(), vi.fn()];
-  const stops = listeners.map((listener) =>
-    runFinishedFeed(transport).subscribe(listener)
+  const stops = listeners.map((listener, index) =>
+    index === 1
+      ? subscribeRunFinished(transport, listener)
+      : runFinishedFeed(transport).subscribe(listener)
   );
   for (let i = 0; i < 4; i += 1) await Promise.resolve();
   expect(open).toHaveBeenCalledOnce();

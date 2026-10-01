@@ -127,6 +127,10 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/(routines)/routines/$routineId",
   },
   {
+    "fullPath": "/routines/$routineId/edit",
+    "id": "/_shell/(routines)/routines/$routineId/edit",
+  },
+  {
     "fullPath": "/sessions",
     "id": "/_shell/(sessions)/sessions",
   },
@@ -159,6 +163,10 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/settings/about",
   },
   {
+    "fullPath": "/settings/about/changelog",
+    "id": "/_shell/settings/about_/changelog",
+  },
+  {
     "fullPath": "/settings/account",
     "id": "/_shell/settings/account",
   },
@@ -167,12 +175,28 @@ exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
     "id": "/_shell/settings/appearance",
   },
   {
+    "fullPath": "/settings/browser",
+    "id": "/_shell/settings/browser",
+  },
+  {
+    "fullPath": "/settings/devices",
+    "id": "/_shell/settings/devices",
+  },
+  {
     "fullPath": "/settings/environment",
     "id": "/_shell/settings/environment",
   },
   {
     "fullPath": "/settings/general",
     "id": "/_shell/settings/general",
+  },
+  {
+    "fullPath": "/settings/keyboard",
+    "id": "/_shell/settings/keyboard",
+  },
+  {
+    "fullPath": "/settings/language",
+    "id": "/_shell/settings/language",
   },
   {
     "fullPath": "/settings/memory",

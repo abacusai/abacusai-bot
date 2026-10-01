@@ -35,3 +35,8 @@ Paths below are relative to `apps/desktop/src/renderer-next`; lines refer to `50
 17. **Minor — `features/library/skills-tools.tsx:47`** — Selecting Global removes `workspace`, after which the resolver immediately falls back to `prefs.lastPickedWorkspaceId`. Global cannot be selected when a default workspace exists. Preserve an explicit global scope and test the resulting `listInstalled` input.
 
 18. **Minor — `features/shell/hotkeys.tsx:125`** — Toggle side panel omits `actionId` metadata. Recording its existing chord makes live conflict detection identify its own registration as an unknown fixed action, producing a Cancel-only conflict. Supply its action metadata and test that editing excludes every registration of the same action.
+
+
+## Fix-pass disposition
+
+The round-1 fix pass on `codex-phase5` addresses findings 1–18 against spec r3. Findings 3, 8, 15 and 18 had already been repaired in the continuation and now have removal-checked regressions. The other findings have new repairs and tests that fail without them. [The per-finding log](05-routines-artifacts-library-settings.impl-fixes-r1.md) records implementation and validation evidence. Closing this review does not imply every R5 acceptance matrix has passed; the [implementation report](../../reports/05-implementation.md) keeps those remaining gaps explicit.
