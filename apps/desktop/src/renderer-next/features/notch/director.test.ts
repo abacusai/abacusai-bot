@@ -244,8 +244,7 @@ it("unlock revalidates the proposed attention against the latest queue", async (
     { width: 200, height: 200 }
   );
   director.lock(false);
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   expect(d.navigate).toHaveBeenCalledTimes(1);
   director.dispose();
 });
