@@ -1,6 +1,6 @@
 # Phase 6 implementation
 
-Implemented on `codex-phase6` from `rewrite/renderer`, against spec 06 r4 including the three review-response tables and §23. Implementation is ready for diff review. **The PLAN phase-6 acceptance gate remains open.** Cross-slice integration and the recorded hardware/end-to-end cases below must finish before marking the phase done.
+Implemented on `codex-phase6` from `rewrite/renderer`, against spec 06 r4 including the three review-response tables and §23. The 17 Codex implementation r1 findings and the duplicate approval label are fixed. Per-finding changes and negative regression checks are recorded in [the r1 fix log](../specs/reviews/06-onboarding-tour-notch.impl-fixes-r1.md). **The PLAN phase-6 acceptance gate remains open.** Cross-slice integration and the recorded hardware/end-to-end cases below must finish before marking the phase done.
 
 ## Delivered scope
 
@@ -23,6 +23,8 @@ Implemented on `codex-phase6` from `rewrite/renderer`, against spec 06 r4 includ
 | §23 amendments | Minimal separate commits add bots template creation/shared cue adoption, chat permission/cancellable load seams and BotAvatar hatch API, shell anchors/banner/sound owner, main wiring and legacy contract map. | No files under features sessions/routines/artifacts/library/settings or packages/agent were edited. React Compiler remains enabled; UI registry snapshot unchanged. |
 
 ## Validation
+
+The original delivery results below are historical. Current r1 fix-pass results are recorded in the fix log and the validation update below. The r1 regressions include the production director/runtime retirement test, every awaited presentation stage, main event wiring, same-database cleanup retry, descriptor expiry, mounted reply/quiet-hours behavior and native listening control bounds.
 
 Dependencies installed with `pnpm install --pm-on-fail=ignore`. Connectors, agent runtime and updater distribution outputs were built before distribution-dependent tests; no agent source was edited. `rewrite/renderer` was merged at the start, during implementation, and checked again immediately before the final suite.
 
@@ -54,29 +56,29 @@ The first broad renderer-next/main/shared run had 3,963 passing, 13 failing and 
 | R6-T3 | Partial | Loaders and readiness tests, once completion funnel and no done-entry report. No dedicated full mutation-spy matrix across every cold step. |
 | R6-T4 | Partial | Machine tests cover transitions/guards; not exhaustive Cartesian facts and every ignored pair. |
 | R6-T5 | Partial | Machine resume tests and existing main migration/preferences tests pass in broad suite; dedicated combined legacy-vs-live provenance scenario not added here. |
-| R6-T6 | Partial | jsdom persistence failure boundaries and completion single flight pass. No Electron process-kill/relaunch matrix. |
+| R6-T6 | Partial | jsdom persistence failure boundaries, completion single flight and same-database retry after failed cleanup pass. No Electron process-kill/relaunch matrix. |
 | R6-T7 | Partial | Token/store and actual-router retained failure/cancellation tests pass. Not every specified restart/double-click/error-code case has a real-router assertion. |
 | R6-T8 | Partial | Deferred messaging test and real no-model walkthrough pass. Registry filtering/provider union implemented; complete key/local-model/browser cancellation/banner matrix unrecorded. |
 | R6-T9 | Partial | First-bot persistence tests pass, including held deletion and missing rows; weekday template and no-model route verified. Full Strict Mode/funnel/removal matrix not all rendered. |
 | R6-T10 | Partial | Entry guard and typed funnel names implemented; no dedicated once-per-entry test for every step. |
 | R6-T11 | Passed | Seven jsdom card-placement cases. |
 | R6-T12 | Partial | Spotlight portal/inert/focus/escape behavior test passes; no explicit 40 ms timing/reduced-motion assertion for every stop. |
-| R6-T13 | Partial | Tour store and stop implementation; full host navigation/completion/replay matrix and other-owner integrations pending. |
+| R6-T13 | Partial | Tour store and completion token checks pass, including sign-out/replacement during persistence and telemetry; full host navigation/completion/replay matrix and other-owner integrations pending. |
 | R6-T14 | Pending integration | Shell/bots/composer anchors added. Phase-4/5 placement tests and exact owner anchors require their merge. |
 | R6-T15 | Partial | Shared feed test verifies one iterator/duplicate suppression/last-consumer close; notch inputs implemented. Sessions feed adoption is phase-4-owned. |
-| R6-T16 | Partial | Pure presenter tests pass. Full every-kind/dwell/quiet/hidden Cartesian matrix not exhaustive. |
-| R6-T17 | Partial | Director generation/deadline/settle tests and real chat cancellable load tests pass. Complete lock/hover/invalid-item scenario matrix pending. |
+| R6-T16 | Partial | Pure presenter and ten-minute descriptor snooze/count tests pass, including replacement lineage at equal timestamps. Full every-kind/dwell/quiet/hidden Cartesian matrix not exhaustive. |
+| R6-T17 | Partial | Director tests bound hydration, both shape IPC calls, navigation and settling by 8 s; clear stale queued work and revalidate on unlock. Mounted quiet-hours and immediate click-through regressions pass. Real chat cancellable load tests pass. Complete lock/hover/invalid-item scenario matrix pending. |
 | R6-T18 | Partial | Chat per-type safety tests and native question/permission specimens pass. Question progress/answers reset on lineage change (one additional regression passed). Full mounted response rejection/keyboard/connector-ask matrix pending. |
-| R6-T19 | Passed | Twenty real kit sessions, at most two open subscription iterators, explicit retirement/reload. |
-| R6-T20 | Partial | Bounded click-only Message/Call and draft-preserving reply implemented. Full mounted reply interaction matrix missing. |
+| R6-T19 | Passed | Production NotchDirector with real ChatRuntime/FakeRelay drives twenty queue changes, cancellation and disposal; peak two iterators, explicit production retirement and return to zero. This replaces the original test that manually enforced its own limit. |
+| R6-T20 | Partial | Mounted manual reply/listening quiet-hours tests, started/queued submission, run acknowledgement, focus release and wink pass. Native listening controls fit all nine mode/locale specimens. Full routine-toggle/call-draft interaction matrix remains incomplete. |
 | R6-T21 | Partial | Voice operation tests pass for normal End, late media/transcript and disposal. Full view timer and ported recorder/Whisper suite not complete. |
 | R6-T22 | Partial | Main arbiter/shared mapping tests pass; six real OfflineAudioContext cues pass energy/duration checks. Full three-notch shuffled-delivery integration not exercised with native documents. |
 | R6-T23 | Partial | Geometry tests cover platform placements, unknown metrics and bounds. Physical mixed-scale/taskbar/above-left arrangements not exercised. |
 | R6-T24 | Partial | Parser/cache failure tests plus real notched-Mac fixture pass. Additional physical empty-rect/non-notched selector fixtures unavailable. |
-| R6-T25 | Partial | Main lifecycle/standby/retry tests and 20 real child-viewport/disposal cycles pass. Five forced readiness failures/live RPC baseline and Windows close native case not recorded. |
+| R6-T25 | Partial | Main lifecycle/standby/retry tests, superseded standby base test, automatic resize after child replacement and 20 real child-viewport/disposal cycles pass without manual fit calls. Five forced readiness failures/live RPC baseline and Windows close native case not recorded. |
 | R6-T26 | Partial | Interaction and central lineage/step haptic dedupe tests pass. Exhaustive multi-display shortcut selection native runs pending. |
 | R6-T27 | Not run | Fake-microphone WAV transcription under notch CSP and before/during/two-minute memory sampling not implemented/run. |
-| R6-T28 | Partial | Controller/provenance/open stream/notification tests pass. Complete live main transport contract/publish exclusion/wink/latency matrix not exercised. |
+| R6-T28 | Partial | Controller/provenance/open stream/notification tests pass. Main focus/blur/show/hide/close wiring, insertion-order command acknowledgement under equal/rollback clocks, failed-ack replay and Space epoch request/report recovery now have regressions. Complete live main transport contract/publish exclusion/wink/latency matrix not exercised. |
 | R6-T29 | Passed | Production AST enumeration/trust audit plus dispatcher/preload tests pass. |
 | R6-T30 | Partial | Real macOS viewport/grow/shrink/disposal passes. Activation, OS click-through, menu exclusion, compositor full-screen/occlusion/Space recording **not run**. Suppression remains off. |
 | R6-T31 | Partial, hardware | Available host Mac15,13, macOS 26.6.2: strict probe gives 1710×1107 frame, top 33, left 763, right 762 (185×33 cut-out), 201 ms. Twenty haptic samples recorded. Top-150-pixel native state captures and fake-provider approval/reply not recorded. |
@@ -89,7 +91,7 @@ The first broad renderer-next/main/shared run had 3,963 passing, 13 failing and 
 | R6-T38 | Passed | Source AST structure guard plus foundation import boundaries pass. |
 | R6-T39 | Passed | AST forbidden import/API guards pass. |
 | R6-T40 | Passed (accounting) | Every parity row has a status and existing consumer or explicit other-phase owner. Behavioral completion is governed by this matrix. |
-| R6-T41 | Partial | Real shipped fonts/CSS, 51 request/question samples across en/de/ja, narrow/short/long, no visible inline Allow when body overflows. Complete 19-variant just-below/at/above both-dimension matrix missing. |
+| R6-T41 | Partial | Real shipped fonts/CSS, 51 request/question samples across en/de/ja, narrow/short/long, no visible inline Allow when body overflows; nine mounted listening specimens keep End/Cancel inside the shape. Complete 19-variant just-below/at/above both-dimension matrix missing. |
 | R6-T42 | Partial | Director envelope/settle unit tests, real child grow/shrink/mixed-origin viewport. Native interrupted/reduced/unchanged screenshot sequence and Windows upward sequence not recorded. |
 | R6-T43 | Human review gap | Three people with laptop speakers/headphones unavailable. Own cue parameters are provisional pending listening sign-off. |
 | R6-T44 | Partial | Main relay atomic attention tests in broad suite; client stale-revision reducer tests and presenter question priority pass. Full overflow/reconnect/incarnation race integration matrix not all added here. |
@@ -110,3 +112,11 @@ Native options and lifetime behavior derive from [Electron BaseWindow](https://w
 Implementation and minimal adjacent feature seams are committed separately. The attached commit list contains only phase-6 branch commits relative to the current `rewrite/renderer`, including synchronization merges. Screenshot evidence and this report are delivered in the final documentation commit.
 
 [Commit list](06-assets/commits.txt). [Final unit log](06-assets/logs/full-unit-final.txt), [full Electron log](06-assets/logs/full-electron.txt), [native fit rerun](06-assets/logs/native-delivery.txt), [post-fix regression/safety tests](06-assets/logs/lineage-final.txt).
+
+## Implementation r1 validation update
+
+The r1 pass merged renderer history at `169c21bb`, resolved only the progress-table conflict, and regenerated the route tree. All 17 review findings and the duplicate label have fixes and negative regression evidence in the [fix log](../specs/reviews/06-onboarding-tour-notch.impl-fixes-r1.md). The final full unit projects passed **439 files / 4,223 tests**, with seven todo cases and one skipped file. Required main-serial initially passed **294 tests** with one real `fs.watch` timeout; its isolated required rerun passed, giving passing evidence for all **295 distinct cases**, with no Electron skips. Preload passed **15 tests**. Subsequent quiet-hours failure recovery and stronger event assertions passed targeted reruns without adding distinct cases.
+
+Desktop TypeScript, WCO build, root oxlint/oxfmt and UI registry, legacy diff, JSX i18n, locale-schema and knip checks pass. Seven legacy hook warnings and three knip hints remain. This pass adds nine native listening control bounds cases and automatic child resize after replacement; those are assertions within the existing native test, not nine extra Vitest cases. The complete R6 hardware/end-to-end acceptance gate remains open.
+
+[Unit log](06-assets/logs/r1-unit-final.txt), [main-serial log](06-assets/logs/r1-main-serial-final.txt), [watcher rerun](06-assets/logs/r1-main-serial-retry.txt), [negative regression summaries](06-assets/logs/r1-negative-regressions.txt).
