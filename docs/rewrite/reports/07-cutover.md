@@ -590,3 +590,44 @@ overrides remove the vulnerable undici/brace-expansion versions.
 codes, scoped repairs, resource exclusions, budgets and process medians.
 Unsigned macOS implementation evidence does not close the separately recorded
 signing, platform or rollout gaps.
+
+## Codex r1 fixes
+
+Release N is not ready to ship. These fixes build on the performance commits already in this worktree; they do not close C5–C14 release acceptance. The last recorded M3 sample is 810,221,568 bytes against a 761,049,907-byte cap. No new performance comparison was taken in this fix pass. Signed RC, Windows reference/upgrade acceptance, Linux packaged acceptance, physical-device checks and rollout evidence remain open.
+
+The r1 review was merged first in `59440995`. The table records one commit per implementation finding. Each regression was observed failing before its fix; the expanded tap coverage was verified by individually disabling all seven production consumers and observing seven failing runs, then restoring production code.
+
+| Finding | Commit | Fix and regression test |
+| --- | --- | --- |
+| 1 | This report commit | Keep release acceptance closed; `release-gate-report.test.mjs` rejects an absent fixes section or missing release gaps. |
+| 2 | e0511d8c | Conflict restores retain the retirement marker and canonical destination evidence until canonical success; `restore-legacy.test.ts` exercises both restore attempts. |
+| 3 | 5e5d237c | Preserve corrupt archive-index bytes and reconstruct archive evidence from completed transcript removals; recovery and already-consumed-entry regressions in `restore-legacy.test.ts`. |
+| 4 | a2eefa73 | Abort on missing/corrupt required attempt evidence instead of writing an empty success index; three invalid-evidence regressions in `restore-legacy.test.ts`. |
+| 5 | 83fcba7d | Derive download admission from current state and mark actual transfers; `update-supersede.test.ts` covers withdrawal, re-offer and a second download. |
+| 6 | 703df0de | Import durable `composer.draft:<key>` values before mounting and record accepted imports once; synthetic legacy source and renderer persistence regressions in both `legacy-drafts.test.ts` files. |
+| 7 | 36de3381 | Default foundation 1.0.86; installer/feed/experience stamp equality and upgrade checks in `release-versions.test.mjs`, including a pipeline-stamped version and rejection of old/mismatched versions. |
+| 8 | 4d91acc6 | Run five-area canaries with unchanged production knip configuration; remove inventory-glob dependency masking and verify with `knip-canaries.test.mjs`. |
+| 9 | fc504dee | Spawn the real built agent over fd and inline transport; `cli-manager-taps.test.ts` compares frozen streams and `cli-manager-production-taps.test.ts` asserts artifact, messaging, routine, waiter, browser, host-service and watchdog effects. Seven consumer mutations fail. |
+| 10 | cf0dcc7a | Check every declared dynamic key and plural family in every locale against the reference family; missing-key, incomplete-family and missing-member regressions in `i18n-dynamic-keys.test.mjs`. |
+| 11 | 658331ed | CI runs the complete renamed AG-UI spawned-agent suite and requires executed, unskipped tests; `agui-smoke.test.mjs` rejects empty/skipped results and `knip-entries.test.mjs` distinguishes root CI scripts from desktop scripts. |
+
+Versioning follows the existing public convention: `build-experience.js` reads `apps/desktop/package.json` and documents that private `build.sh` stamps that same field before packaging. The private bot pipeline checkout was not found locally, so its exact override implementation is unverified. The checker accepts any consistently stamped numeric release version above shipped 1.0.85, including the synthetic 1.0.99 override regression.
+
+| Gate | Result |
+| --- | --- |
+| Release acceptance | Not green; M3, signed RC, Windows, Linux, physical-device and rollout evidence remain open. |
+| Root `tsc -b` / tools typecheck | Pass. |
+| Desktop unit projects, `--maxWorkers=2` | Pass: 493 files, 4,330 tests, including preload. |
+| Agent / updater / connector units | Pass: 1,733 (two existing skips) / 14 / 14 tests. |
+| Required main-serial, `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1` | Pass: 12 files, 302 tests; two platform skips. |
+| Node tooling and canaries | Pass: 49 tests; unchanged-config canary and CI smoke also pass. |
+| oxlint / oxfmt | Pass. |
+| JSX i18n / locales / UI registry / React Compiler | Pass. |
+| Production knip / executable entries / deletion inventory / removed dependencies | Pass. |
+| Audit | Pass with four documented high/critical exceptions. |
+| Production build / release checker / chat bundle / gzip size limits | Pass; 291 chat chunks checked. |
+| Unsigned macOS arm64 package / packaged resources | Pass; all ten required paths present, bundled rg and fd execute. This is local implementation evidence. |
+| Installer / feed / experience version stamps | Pass at 1.0.86, greater than shipped 1.0.85; package.json extracted from the generated installer ZIP, generated latest-mac.yml and rebuilt experience manifest agree. The checker first rejected a stale experience stamp; aligned agent/desktop provenance rebuild resolved it. |
+| NDJSON goldens / `.build/` | All 24 agent goldens byte-identical to `c92812e7`; nothing under `.build/` committed. |
+
+The earlier gate tables remain historical evidence. This section supersedes their local-test status, including the earlier broad-unit failures, while preserving their unresolved release gaps.
