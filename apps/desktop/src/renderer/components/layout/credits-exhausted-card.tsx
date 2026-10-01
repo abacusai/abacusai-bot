@@ -4,6 +4,7 @@ import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { AbacusAccountInfo } from "#shared/contracts";
+import { FREE_POOL_PROVIDERS } from "#shared/free-pool";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
 
 import { useAbacusAccountQuery } from "../../hooks/use-abacus-account";
@@ -36,12 +37,21 @@ export {
 } from "../../lib/abacus-credits";
 
 /** Free-pool sources: a key here is already spent when the pool is exhausted. */
-const FREE_POOL_PROVIDERS = new Set(["abacus", "gemini", "openrouter"]);
+const POOL_PROVIDERS = new Set<string>(["abacus", ...FREE_POOL_PROVIDERS]);
 
+/** Google and OpenRouter name themselves; the rest are "Connect <name>". */
 const CONNECT_LABEL: Record<FreeSource, string> = {
-  openrouter: "workspace.modelPicker.connectOpenRouter",
   gemini: "workspace.modelPicker.connectGoogleAi",
+  openrouter: "workspace.modelPicker.connectOpenRouter",
+  mistral: "workspace.modelPicker.connectProvider",
+  nvidia: "workspace.modelPicker.connectProvider",
+  cerebras: "workspace.modelPicker.connectProvider",
+  groq: "workspace.modelPicker.connectProvider",
 };
+
+const providerLabel = (provider: string): string =>
+  PROVIDER_KEY_FIELDS.find((field) => field.provider === provider)?.label ??
+  provider;
 
 /** A paid tier: the card would be selling them what they already have. */
 const isPaidTier = (account: AbacusAccountInfo | null | undefined): boolean =>
@@ -112,7 +122,7 @@ export const alternativeProviderLabels = (
   PROVIDER_KEY_FIELDS.filter(
     (field) =>
       field.kind === "model" &&
-      !FREE_POOL_PROVIDERS.has(field.provider) &&
+      !POOL_PROVIDERS.has(field.provider) &&
       configured?.[field.provider] === true
   ).map((field) => field.label);
 
@@ -224,7 +234,9 @@ export const CreditsExhaustedCard = (): JSX.Element | null => {
             ? {
                 actions: missing.map((source) => ({
                   id: source,
-                  label: t(CONNECT_LABEL[source]),
+                  label: t(CONNECT_LABEL[source], {
+                    provider: providerLabel(source),
+                  }),
                   icon: <ProviderMark provider={source} className="size-3.5" />,
                   disabled: connecting != null,
                   onClick: () => void connect(source),

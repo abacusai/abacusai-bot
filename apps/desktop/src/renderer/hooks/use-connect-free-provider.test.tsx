@@ -33,10 +33,26 @@ beforeEach(() => {
 });
 
 describe("missingFreeSources", () => {
-  it("lists the free sources not yet connected, OpenRouter first", () => {
-    expect(missingFreeSources(undefined)).toEqual(["openrouter", "gemini"]);
-    expect(missingFreeSources({ openrouter: true })).toEqual(["gemini"]);
-    expect(missingFreeSources({ openrouter: true, gemini: true })).toEqual([]);
+  it("offers the next two sources not yet connected, in the pool's order", () => {
+    expect(missingFreeSources(undefined)).toEqual(["gemini", "openrouter"]);
+    expect(missingFreeSources({ gemini: true })).toEqual([
+      "openrouter",
+      "mistral",
+    ]);
+    expect(missingFreeSources({ gemini: true, openrouter: true })).toEqual([
+      "mistral",
+      "nvidia",
+    ]);
+    expect(
+      missingFreeSources({
+        gemini: true,
+        openrouter: true,
+        mistral: true,
+        nvidia: true,
+        cerebras: true,
+        groq: true,
+      })
+    ).toEqual([]);
   });
 });
 

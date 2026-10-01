@@ -214,8 +214,32 @@ describe("CreditsExhaustedCard", () => {
     ).not.toBeNull();
   });
 
-  it("offers a local model once every free source is connected", async () => {
+  it("offers the next two sources once Gemini and OpenRouter are in", () => {
     providers.configured = { abacus: true, openrouter: true, gemini: true };
+    useCreditsStore.getState().markExhausted();
+    renderCard();
+
+    const actions = [
+      ...(card()?.querySelectorAll(
+        '[data-id^="sidebar-credits-card-action-"]'
+      ) ?? []),
+    ].map((node) => node.getAttribute("data-id"));
+    expect(actions).toEqual([
+      "sidebar-credits-card-action-mistral",
+      "sidebar-credits-card-action-nvidia",
+    ]);
+  });
+
+  it("offers a local model once every free source is connected", async () => {
+    providers.configured = {
+      abacus: true,
+      gemini: true,
+      openrouter: true,
+      mistral: true,
+      nvidia: true,
+      cerebras: true,
+      groq: true,
+    };
     useCreditsStore.getState().markExhausted();
     renderCard();
 
@@ -231,7 +255,15 @@ describe("CreditsExhaustedCard", () => {
   });
 
   it("points at the picker instead on a build without the local runtime", () => {
-    providers.configured = { abacus: true, openrouter: true, gemini: true };
+    providers.configured = {
+      abacus: true,
+      gemini: true,
+      openrouter: true,
+      mistral: true,
+      nvidia: true,
+      cerebras: true,
+      groq: true,
+    };
     localModels.runtimeAvailable = false;
     useCreditsStore.getState().markExhausted();
     renderCard();

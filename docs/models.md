@@ -60,16 +60,18 @@ eligible models available through your keys, tried in this order:
 | --- | --- |
 | Abacus.AI | The platform's low-cost models |
 | Google AI Studio | Gemini on the key's daily free quota |
+| OpenRouter | Its `:free` models |
 | Mistral | Devstral, Mistral Medium, Codestral and Mistral Small (free tier: one request a second) |
 | NVIDIA | Kimi, GLM, DeepSeek and Nemotron models served free on build.nvidia.com |
 | Cerebras | GPT-OSS 120B and Qwen 3.8 (free trial) |
-| OpenRouter | Its `:free` models |
 | Groq | GPT-OSS and Qwen. The free tier allows 8K tokens a minute, less than one agent request, so this helps only on a paid Groq plan |
 | On this machine | Local models, last |
 
-On the free plan the model picker offers a "Connect" row for each source not
-yet connected. Every source but OpenRouter (which signs in through the browser)
-takes a pasted API key.
+Every pooled model takes tool calls. On the free plan the model picker offers
+a "Connect" row for each source not yet connected, and the out-of-credits card
+offers the next two in this order. Every source but OpenRouter (which signs in
+through the browser) takes a pasted API key, and a connected source joins the
+pool from the next message, with no restart.
 
 The router keeps count of each source's published free limits (calls and
 tokens per minute and per day) and skips a model whose window is spent instead
