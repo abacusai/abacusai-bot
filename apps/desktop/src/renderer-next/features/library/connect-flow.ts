@@ -87,26 +87,31 @@ export const disablePlatform = async (
 };
 export const createConnectFlow = (deps: FlowDeps) => {
   const store = new Store<FlowState>({ connectorId: null, phase: "idle" });
-  let active: {
+  type PairingRecord = {
     id: number;
     connectorId: string;
     platform?: MessagingPlatformId;
     resolve(outcome: ConnectorOutcome): void;
     timer?: ReturnType<typeof setTimeout>;
     ready?: Promise<void>;
-  } | null = null;
+    settlement?: Promise<void>;
+  };
+  let active: PairingRecord | null = null;
   let serial = 0;
-  const finish = (id: number, result: ConnectorOutcome) => {
-    if (active?.id !== id) return;
-    const a = active;
-    active = null;
+  const finishRecord = (a: PairingRecord, result: ConnectorOutcome) => {
     if (a.timer) clearTimeout(a.timer);
-    store.setState(() => ({
-      connectorId: a.connectorId,
-      phase: "idle",
-      ...(!result.ok && !result.cancelled ? { error: result.error } : {}),
-    }));
+    if (active?.id === a.id) {
+      active = null;
+      store.setState(() => ({
+        connectorId: a.connectorId,
+        phase: "idle",
+        ...(!result.ok && !result.cancelled ? { error: result.error } : {}),
+      }));
+    }
     a.resolve(result);
+  };
+  const finish = (id: number, result: ConnectorOutcome) => {
+    if (active?.id === id) finishRecord(active, result);
   };
   const refresh = async () => {
     await Promise.allSettled(
@@ -150,12 +155,40 @@ export const createConnectFlow = (deps: FlowDeps) => {
     if (a.platform) await disablePlatform(deps, a.platform);
     else await deps.transport.client.connectors.cancelConnect({});
   };
+  const settleRecord = (a: PairingRecord): Promise<void> => {
+    if (a.settlement) return a.settlement;
+    if (a.timer) clearTimeout(a.timer);
+    a.settlement = (async () => {
+      try {
+        await a.ready;
+        const fresh = await deps.queryClient.fetchQuery({
+          ...deps.transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
+          staleTime: 0,
+        });
+        const ok = isMessagingPlatformConnected(fresh, a.platform!);
+        finishRecord(
+          a,
+          ok
+            ? { ok: true }
+            : { ok: false, cancelled: true, error: "not-linked" }
+        );
+        if (ok) await refresh();
+        else await disablePlatform(deps, a.platform!);
+      } catch (e) {
+        finishRecord(a, { ok: false, error: errorText(e) });
+        await disablePlatform(deps, a.platform!);
+      }
+    })();
+    return a.settlement;
+  };
   // Direct routes and catalogue flows share one settlement owner.
   const registerPairing = (
     platform: MessagingPlatformId,
     setup: () => Promise<void>
   ) => {
     if (active?.platform !== platform) {
+      if (active?.platform) void settleRecord(active).catch(() => undefined);
+      else if (active) void cancel().catch(() => undefined);
       const id = ++serial;
       active = {
         id,
@@ -163,6 +196,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
         platform,
         resolve: () => {},
         timer: setTimeout(() => {
+          if (active?.id !== id) return;
           void cancel().catch(() => undefined);
         }, CONNECT_WATCHDOG_MS),
       };
@@ -188,27 +222,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
         });
       return;
     }
-    const id = a.id;
-    try {
-      await a.ready;
-      if (active?.id !== id) return;
-      const fresh = await deps.queryClient.fetchQuery({
-        ...deps.transport.orpc.messaging.snapshot.queryOptions({ input: {} }),
-        staleTime: 0,
-      });
-      if (active?.id !== id) return;
-      const ok = isMessagingPlatformConnected(fresh, platform);
-      finish(
-        id,
-        ok ? { ok: true } : { ok: false, cancelled: true, error: "not-linked" }
-      );
-      if (ok) await refresh();
-      else await disablePlatform(deps, platform);
-    } catch (e) {
-      if (active?.id !== id) return;
-      finish(id, { ok: false, error: errorText(e) });
-      await disablePlatform(deps, platform);
-    }
+    await settleRecord(a);
   };
   const start = async (
     connectorId: string,
