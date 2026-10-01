@@ -11,7 +11,6 @@ import {
   subscribeWindowChromeTheme,
   toolbarHeight,
   windowChromeOptions,
-  windowChromeState,
   type WindowChromeInput,
 } from "./window-chrome-options";
 

@@ -21,9 +21,8 @@ vi.mock("electron", () => ({
 
 import { AgentMode } from "#shared/agent-types";
 
-import { installLegacyPrefsSync } from "../services/config/legacy-prefs";
+import { importLegacyPrefsAtStartup } from "../services/config/legacy-prefs";
 import { PrefsStore } from "../services/config/prefs-store";
-import { RendererStateStore } from "../services/config/renderer-state";
 import { ThreadStore } from "../services/session/thread-store";
 import { backupsRoot, migratingRoot } from "./backup";
 import { readRecord } from "./record";
@@ -172,13 +171,17 @@ describe("migrating a legacy home", () => {
     expect(hashes(home)).toEqual(settled);
   });
 
-  it("keeps prefs.json following the old UI after the migration", async () => {
+  it("imports drift on startup after a downgrade", async () => {
     await migrate();
     const prefs = new PrefsStore({ file: path.join(home, "prefs.json") });
-    const legacy = new RendererStateStore(
-      path.join(userData, "renderer-state.json")
-    );
-    installLegacyPrefsSync(legacy, prefs);
+    const legacyFile = path.join(userData, "renderer-state.json");
+    const legacy = {
+      set(key: string, value: string) {
+        const data = JSON.parse(fs.readFileSync(legacyFile, "utf8"));
+        data[key] = value;
+        fs.writeFileSync(legacyFile, JSON.stringify(data));
+      },
+    };
 
     // The old UI switches theme, unpins the bot and changes language.
     legacy.set("theme", "light");
@@ -201,6 +204,7 @@ describe("migrating a legacy home", () => {
       JSON.stringify({ state: { languageCode: "ko-KR" }, version: 0 })
     );
 
+    importLegacyPrefsAtStartup(legacyFile, prefs);
     const reread = new PrefsStore({
       file: path.join(home, "prefs.json"),
     }).get();
@@ -212,7 +216,6 @@ describe("migrating a legacy home", () => {
       models: { favoriteModelIds: [] },
       workspaceExpanded: {},
     });
-    legacy.flushSync();
   });
 
   it("does not record step 2 when renderer-state.json exists but cannot be read; the next launch imports it", async () => {

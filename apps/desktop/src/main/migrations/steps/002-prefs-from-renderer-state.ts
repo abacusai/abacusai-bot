@@ -7,9 +7,8 @@
  * The write is `create` when `prefs.json` does not exist yet, else
  * `replace-user` (it may hold choices made in the new UI), so the runner
  * backs it up. Nothing is written when the import changes nothing.
- * `renderer-state.json` is only read; the old renderer keeps using it until
- * the cut-over, and the live sync (`installLegacyPrefsSync`) keeps
- * `prefs.json` current after this step.
+ * `renderer-state.json` is read only. The provenance-aware startup import
+ * merges later legacy drift into prefs.
  */
 import fs from "node:fs";
 import path from "node:path";

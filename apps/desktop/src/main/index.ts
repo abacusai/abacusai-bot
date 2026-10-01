@@ -124,18 +124,16 @@ import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
-import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import {
+  importLegacyPrefsAtStartup,
+  importLegacySoundOptOut,
+} from "./services/config/legacy-prefs";
 import { createLoginItem } from "./services/config/login-item";
 import { notificationSilent } from "./services/config/notification-policy";
 import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
-  registerRendererState,
-  type RendererStateStore,
-} from "./services/config/renderer-state";
-import {
   readNotificationSettings,
   readLegacySoundOptOut,
-  onNotificationSettingsWritten,
   readSettings,
 } from "./services/config/settings";
 import {
@@ -1625,10 +1623,7 @@ function wireNotchContents(contents: WebContents): void {
   rpcTransport?.registerRendererContents(contents, "notch");
 }
 
-function installRpc(
-  host: HostOperations,
-  rendererState: RendererStateStore
-): void {
+function installRpc(host: HostOperations): void {
   notchController = new NotchController({
     platform: process.platform,
     packaged: app.isPackaged,
@@ -1673,7 +1668,6 @@ function installRpc(
     app: appOperations,
     browserRuntime,
     update: updateService,
-    rendererState,
     windows: {
       mainRendererId: () => rendererWebContents()?.id ?? null,
       contents: (id) => {
@@ -1808,22 +1802,18 @@ app
         );
     });
     workspaceServiceHost.start();
-    const rendererState = registerRendererState();
-    // The old renderer is the shipped UI until the cut-over: its durable
-    // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(
-      rendererState,
-      prefsStore,
-      undefined,
-      {
-        read: readLegacySoundOptOut,
-        onWrite: onNotificationSettingsWritten,
-      },
-      path.join(app.getPath("userData"), "renderer-state.json")
-    );
+    try {
+      importLegacyPrefsAtStartup(
+        path.join(app.getPath("userData"), "renderer-state.json"),
+        prefsStore
+      );
+      importLegacySoundOptOut(prefsStore, readLegacySoundOptOut());
+    } catch (error) {
+      console.error("[legacy-prefs] startup import failed", error);
+    }
     const hostOperations = wireHostEvents(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
-    installRpc(hostOperations, rendererState);
+    installRpc(hostOperations);
     // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
     // does for the legacy renderer.
     followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
@@ -2048,7 +2038,6 @@ app.on("before-quit", (event) => {
   notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.
   disposeMigrationProgress();
-  workspaceServiceHost.threadStore.flush();
   logStore().flush();
   try {
     browserRuntime.disposeAll();
