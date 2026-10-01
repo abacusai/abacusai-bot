@@ -12,14 +12,14 @@ it("R4-T17 appends offset snapshots and replaces an unavailable retained positio
       content = "";
     },
   };
-  applyTerminalOutput(view, {
+  await applyTerminalOutput(view, {
     type: "snapshot",
     from: 3,
     offset: 6,
     data: "new",
   });
   expect(content).toBe("oldnew");
-  applyTerminalOutput(view, {
+  await applyTerminalOutput(view, {
     type: "snapshot",
     from: 8,
     offset: 12,
@@ -47,4 +47,30 @@ it("R4-T17 appends offset snapshots and replaces an unavailable retained positio
   );
   expect(offsets).toEqual([12, 13]);
   expect(content).toBe("tail!?");
+});
+
+it("advances the cursor only after an asynchronous replay completes", async () => {
+  let release!: () => void;
+  const written: string[] = [];
+  const view = {
+    offset: 3 as number | undefined,
+    write: async (data: string) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      written.push(data);
+    },
+    reset: () => {},
+  };
+  const applying = applyTerminalOutput(view, {
+    type: "data",
+    data: "tail",
+    offset: 7,
+  });
+  expect(view.offset).toBe(3);
+  expect(written).toEqual([]);
+  release();
+  await applying;
+  expect(view.offset).toBe(7);
+  expect(written).toEqual(["tail"]);
 });

@@ -1,8 +1,8 @@
-import { UrlRegexProvider } from "ghostty-web";
+import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { repaint } from "#next/components/terminal/ghostty";
+import { repaint, writeTerminalData } from "#next/components/terminal/ghostty";
 import {
   terminalKeyHandler,
   type TerminalAction,
@@ -52,6 +52,8 @@ export const TerminalTab = ({
       .then(async (view) => {
         if (abort.signal.aborted) return;
         container.current?.append(view.element);
+        const initialSize = view.fit.proposeDimensions();
+        if (initialSize) view.term.resize(initialSize.cols, initialSize.rows);
         const start = await transport.client.terminal.start({
           terminalId: id,
           conversationKey: key,
@@ -90,19 +92,23 @@ export const TerminalTab = ({
             view.term
           )
         );
-        const links = new UrlRegexProvider(view.term);
-        view.term.registerLinkProvider({
-          provideLinks(y, callback) {
-            links.provideLinks(y, (found) =>
-              callback(
-                found?.map((link) => ({
-                  ...link,
-                  activate: () => openUrl(link.text),
-                }))
-              )
-            );
-          },
-        });
+        const links = [
+          new UrlRegexProvider(view.term),
+          new OSC8LinkProvider(view.term),
+        ];
+        for (const provider of links)
+          view.term.registerLinkProvider({
+            provideLinks(y, callback) {
+              provider.provideLinks(y, (found) =>
+                callback(
+                  found?.map((link) => ({
+                    ...link,
+                    activate: () => openUrl(link.text),
+                  }))
+                )
+              );
+            },
+          });
         const removeMouse = installMouseReporting(view.term, view.element);
         let outputAbort: AbortController | undefined;
         const connectOutput = () => {
@@ -116,11 +122,13 @@ export const TerminalTab = ({
               set offset(n) {
                 view.offset = n;
               },
-              write: (data) => {
+              write: async (data) => {
                 view.received += data.length;
-                view.term.write(data);
+                await writeTerminalData(view.term, data, outputAbort!.signal);
               },
-              reset: () => view.term.reset(),
+              reset: () => {
+                if (view.offset !== undefined) view.term.reset();
+              },
             },
             (offset, signal) =>
               transport.client.terminal.output(
@@ -199,7 +207,7 @@ export const TerminalTab = ({
           observer.disconnect();
           input.dispose();
           removeMouse();
-          links.dispose();
+          for (const provider of links) provider.dispose();
           if (timer) clearTimeout(timer);
           view.element.remove();
         };
