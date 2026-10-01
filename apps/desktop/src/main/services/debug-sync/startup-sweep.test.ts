@@ -55,3 +55,37 @@ it("yields before reading histories and bounds offline catch-up uploads", async 
   expect(uploads).toHaveBeenCalledTimes(2);
   expect(readTranscript).toHaveBeenCalledTimes(2);
 });
+
+it("admits a live upload while both catch-up uploads are blocked", async () => {
+  vi.useFakeTimers();
+  home = fs.mkdtempSync(path.join(os.tmpdir(), "sync-live-"));
+  process.env.ABACUSAI_BOT_HOME = home;
+  fs.mkdirSync(path.join(home, "threads"));
+  for (const id of ["a", "b", "c", "live"])
+    fs.writeFileSync(path.join(home, "threads", `${id}.json`), "{}");
+  const started: string[] = [];
+  const uploads = vi.fn((_url: string, init: RequestInit) => {
+    started.push(JSON.parse(String(init.body)).session_id);
+    return new Promise<Response>(() => {});
+  });
+  vi.stubGlobal("fetch", uploads);
+  const service = new DebugSyncService({
+    readTranscript: (sessionId) => ({
+      version: 1,
+      sessionId,
+      updatedAt: "",
+      segments: [{ id: `${sessionId}-text`, type: "text" }],
+    }),
+    clientVersion: "1",
+  });
+  service.sweepOnStartup();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(started).toEqual(["a", "b"]);
+  service.enqueue("live");
+  service.enqueue("live");
+  await vi.advanceTimersByTimeAsync(1_501);
+  expect(started).toEqual(["a", "b", "live"]);
+  service.enqueue("another-live");
+  await vi.advanceTimersByTimeAsync(1_501);
+  expect(started).toEqual(["a", "b", "live"]);
+});
