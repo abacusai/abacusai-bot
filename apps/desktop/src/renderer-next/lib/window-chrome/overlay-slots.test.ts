@@ -11,11 +11,14 @@ import {
 
 import tokensCss from "../../styles/tokens.css?raw";
 
-const sources = import.meta.glob<string>("../../ui/*.tsx", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
+const sources = import.meta.glob<string>(
+  ["../../ui/*.tsx", "../../components/spotlight/*.tsx"],
+  {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }
+);
 
 const installed = new Set(
   Object.values(sources).flatMap((source) =>

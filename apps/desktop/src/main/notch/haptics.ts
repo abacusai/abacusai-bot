@@ -1,7 +1,7 @@
 import { execFile, type ChildProcess } from "node:child_process";
 // AppKit's alignment feedback pattern and immediate performance time.
 export const HAPTIC_JXA =
-  "ObjC.import('AppKit'); $.NSHapticFeedbackManager.defaultPerformer.performFeedbackPatternPerformanceTime(0, 0);";
+  "ObjC['import']('AppKit'); $.NSHapticFeedbackManager.defaultPerformer.performFeedbackPatternPerformanceTime(0, 0);";
 export class Haptics {
   readonly #keys = new Map<string, number>();
   readonly #children = new Set<ChildProcess>();

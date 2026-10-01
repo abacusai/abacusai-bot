@@ -5,7 +5,7 @@ import {
 import type { AccountState } from "#shared/account";
 import type { PrefsRow } from "#shared/contract";
 export const ONBOARDING_FLOW = ONBOARDING_STEPS;
-export const ONBOARDING_FLOW_VERSION = 2;
+const ONBOARDING_FLOW_VERSION = 2;
 export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;

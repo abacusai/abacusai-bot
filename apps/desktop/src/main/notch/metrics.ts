@@ -14,7 +14,7 @@ export type ProbeResult =
       reason: "selectors-unavailable" | "timeout" | "exit" | "parse";
     };
 // Derived directly from AppKit NSScreen's struct fields, never inferred from model names.
-export const METRICS_JXA = `ObjC.import('AppKit');
+export const METRICS_JXA = `ObjC['import']('AppKit');
 function rect(r) { return {x:r.origin.x,y:r.origin.y,width:r.size.width,height:r.size.height}; }
 var list = $.NSScreen.screens, screens = [], ok = true;
 for (var i = 0; i < list.count; i++) {

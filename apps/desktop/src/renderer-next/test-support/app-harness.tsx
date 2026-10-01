@@ -273,9 +273,15 @@ export const createHarness = async (
   resetShellStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
-  const transport = createMemoryTransport(shellRouter(SYSTEM_INFO, options), {
-    calls,
-  });
+  const transport = createMemoryTransport(
+    shellRouter(SYSTEM_INFO, {
+      onboarded: !path.startsWith("/onboarding"),
+      ...options,
+    }),
+    {
+      calls,
+    }
+  );
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
   const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });

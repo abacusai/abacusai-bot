@@ -196,5 +196,6 @@ export const synthCue = (
 };
 
 /** Settings preview is local and never claims an attention cue. */
+/** @public Phase-5 Settings preview; intentionally bypasses cross-window arbitration. */
 export const previewCue = (audio: AudioContextLike, cue: Cue): void =>
   synthCue(audio, cue);
