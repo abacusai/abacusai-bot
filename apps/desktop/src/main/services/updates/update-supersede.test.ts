@@ -217,3 +217,37 @@ it("R7-T33: the same fresh offer can install", async () => {
   expect((await service.installUpdate()).success).toBe(true);
   expect(quit).toHaveBeenCalledOnce();
 });
+it("withdrawal and re-offer start a second transfer, and an offer alone is not downloading", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+  let offered = true;
+  let transfers = 0;
+  const cancel = vi.fn();
+  checkForUpdates.mockImplementation(async () => {
+    autoUpdater.emit(offered ? "update-available" : "update-not-available", {
+      version: offered ? "1.0.19" : "1.0.18",
+    });
+    if (!offered || !autoUpdater.autoDownload) return null;
+    transfers++;
+    return {
+      cancellationToken: { cancel },
+      downloadPromise: new Promise(() => {}),
+    } as never;
+  });
+  const service = new UpdateService();
+  autoUpdater.emit("update-available", { version: "1.0.19" });
+  expect(service.getStatus().downloading).toBe(false);
+  await service.checkForUpdates();
+  expect(transfers).toBe(1);
+  expect(service.getStatus().downloading).toBe(true);
+  offered = false;
+  await service.checkForUpdates();
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(service.getStatus().downloading).toBe(false);
+  expect(autoUpdater.autoDownload).toBe(true);
+  offered = true;
+  await service.checkForUpdates();
+  expect(transfers).toBe(2);
+  expect(service.getStatus().downloading).toBe(true);
+  checkForUpdates.mockImplementation(() => Promise.resolve(null));
+  vi.unstubAllGlobals();
+});

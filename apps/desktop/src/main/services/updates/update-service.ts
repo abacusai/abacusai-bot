@@ -165,8 +165,6 @@ export class UpdateService {
 
       this.status.checking = false;
       this.status.available = true;
-      // The flag also keeps the periodic check from disturbing the transfer.
-      if (!this.status.downloaded) this.status.downloading = true;
       this.status.updateInfo = { version: info.version };
       this.emitStatusUpdate();
     });
@@ -220,6 +218,7 @@ export class UpdateService {
     });
 
     autoUpdater.on("download-progress", (progress) => {
+      this.status.downloading = true;
       this.status.progress = {
         percent: progress.percent,
         bytesPerSecond: progress.bytesPerSecond,
@@ -355,16 +354,26 @@ export class UpdateService {
     // A concurrent older check cannot authorize an install; await it, then fetch again.
     if (metadataOnly && this.checkingFeed != null) await this.checkingFeed;
     if (this.checkingFeed != null) return this.checkingFeed;
-    const previous = autoUpdater.autoDownload;
-    if (metadataOnly || this.status.downloading || this.status.downloaded)
-      autoUpdater.autoDownload = false;
+    autoUpdater.autoDownload =
+      !metadataOnly &&
+      !this.status.downloading &&
+      !this.status.downloaded &&
+      !this.status.installing;
     this.checkingFeed = autoUpdater.checkForUpdates();
     try {
-      return await this.checkingFeed;
+      const result = await this.checkingFeed;
+      if (result?.downloadPromise != null && !this.status.downloaded) {
+        this.status.downloading = true;
+        this.transferToken = result.cancellationToken;
+        this.emitStatusUpdate();
+      }
+      return result;
     } finally {
       this.checkingFeed = null;
       autoUpdater.autoDownload =
-        previous && !this.status.downloaded && !this.status.downloading;
+        !this.status.downloaded &&
+        !this.status.downloading &&
+        !this.status.installing;
     }
   }
 
