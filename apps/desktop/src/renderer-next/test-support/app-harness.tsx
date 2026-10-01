@@ -26,6 +26,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#next/data/transport/memory";
+import type { AppClient } from "#next/data/transport/types";
 import { fixtureRuntime } from "#next/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#next/features/shell/readiness";
 import { resetShellStore } from "#next/features/shell/shell-store";
@@ -40,6 +41,7 @@ import {
 import type { RunFinishedNotice } from "#shared/contract/ai";
 import type { MaterializeBrowserRuntimeFileRequest } from "#shared/contract/browser";
 import type { FilesEvent } from "#shared/contract/files";
+import type { TerminalEvent } from "#shared/contract/terminal";
 /**
  * The whole app over test doubles: a memory transport answering the handful
  * of procedures the shell calls (system.info, window.chrome, window.ready,
@@ -48,6 +50,7 @@ import type { FilesEvent } from "#shared/contract/files";
  */
 import type {
   AbacusAuthOutcome,
+  FileTreeNode,
   DefaultAgentMode,
   BrowserRuntimeState,
 } from "#shared/contracts";
@@ -109,6 +112,20 @@ const shellRouter = (
     },
     settings: {
       keys: { listProviders: os.settings.keys.listProviders.handler(() => []) },
+      sandboxSupport: os.settings.sandboxSupport.handler(() => ({
+        available: true,
+        reason: null,
+      })),
+      execBackend: {
+        get: os.settings.execBackend.get.handler(
+          () =>
+            ({
+              selected: "local",
+              effective: "local",
+              statuses: [{ id: "local", ready: true }],
+            }) as never
+        ),
+      },
       events: os.settings.events.handler(quiet as never),
       get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
       defaultMode: {
@@ -137,7 +154,36 @@ const shellRouter = (
       }),
     },
     browser: {
+      events: os.browser.events.handler(quiet as never),
+      profiles: { list: os.browser.profiles.list.handler(() => []) },
       runtime: {
+        materialize: os.browser.runtime.materialize.handler(
+          ({ input, context }) => {
+            context.calls.push(["browser.runtime.materialize", input]);
+            return {
+              lease: {
+                conversationKey: input.conversationKey,
+                resourceId: input.resourceId,
+                generation: 1,
+              },
+              url: input.url ?? "about:blank",
+              loading: false,
+              canGoBack: false,
+              canGoForward: false,
+            } as BrowserRuntimeState;
+          }
+        ),
+        present: os.browser.runtime.present.handler(({ input, context }) => {
+          context.calls.push(["browser.runtime.present", input]);
+          return {
+            lease: input.lease,
+            url: "about:blank",
+          } as BrowserRuntimeState;
+        }),
+        hide: os.browser.runtime.hide.handler(() => {}),
+        capture: os.browser.runtime.capture.handler(
+          () => ({ dataUrl: null }) as never
+        ),
         materializeFile: os.browser.runtime.materializeFile.handler(
           ({ input }) => {
             if (!options.materializeFile)
@@ -215,8 +261,66 @@ const shellRouter = (
         servingId: null,
       })),
     },
+    workspaces: {
+      checkPath: os.workspaces.checkPath.handler(({ input }) => ({
+        workspaceId: input.workspaceId,
+        path: "/repo",
+        exists: true,
+      })),
+      ensureSessionHome: os.workspaces.ensureSessionHome.handler(
+        ({ context }) => {
+          context.calls.push(["workspaces.ensureSessionHome", null]);
+          return { workspaceId: "default" };
+        }
+      ),
+    },
+    git: {
+      checkoutStatus: os.git.checkoutStatus.handler(() => ({
+        kind: "primary",
+        path: "/repo",
+        exists: true,
+        workspaceExists: true,
+      })),
+      watch: os.git.watch.handler(quiet as never),
+      currentBranch: os.git.currentBranch.handler(
+        () => ({ currentBranch: "main" }) as never
+      ),
+      branches: os.git.branches.handler(() => ({ branches: [] }) as never),
+      prInfo: os.git.prInfo.handler(() => null),
+      worktrees: {
+        list: os.git.worktrees.list.handler(() => ({ worktrees: [] }) as never),
+      },
+      diff: os.git.diff.handler(() => ({ kind: "none" })),
+    },
+    devices: {
+      status: os.devices.status.handler(
+        () => ({ available: false, enabled: false }) as never
+      ),
+      list: os.devices.list.handler(() => []),
+    },
+    terminal: {
+      events: os.terminal.events.handler(
+        options.terminalEvents ?? (quiet as never)
+      ),
+    },
+    agent: {
+      start: os.agent.start.handler(({ context, input }) => {
+        context.calls.push(["agent.start", input]);
+        return { success: true } as never;
+      }),
+      switchConversation: os.agent.switchConversation.handler(() => {}),
+    },
     files: {
       events: os.files.events.handler(options.filesEvents ?? (quiet as never)),
+      treeRoot: os.files.treeRoot.handler(() => ({
+        fileTree: options.fileTree ?? [],
+        lastUpdatedAt: "now",
+      })),
+      search: os.files.search.handler(() => ({ items: [] })),
+      rename: os.files.rename.handler(async ({ input, context }) => {
+        context.calls.push(["files.rename", input]);
+        await options.renameFile?.(input);
+      }),
     },
     ai: {
       send: os.ai.send.handler(({ input, context }) => {
@@ -266,6 +370,11 @@ export interface HarnessOptions {
   ai?: AiClient;
   runFinished?: () => AsyncGenerator<RunFinishedNotice>;
   filesEvents?: () => AsyncGenerator<FilesEvent>;
+  terminalEvents?: () => AsyncGenerator<TerminalEvent>;
+  fileTree?: FileTreeNode[];
+  renameFile?: (
+    input: Parameters<AppClient["files"]["rename"]>[0]
+  ) => Promise<void>;
   openExternal?: (url: string) => void;
 }
 

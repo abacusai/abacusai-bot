@@ -29,6 +29,10 @@ import {
   RunReportFrame,
 } from "#next/features/routines";
 import {
+  sessionsGallerySections,
+  isSessionsGalleryFixture,
+} from "#next/features/sessions";
+import {
   GeneralPage,
   ModelsPage,
   NotificationsPage,
@@ -91,6 +95,7 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
+      <sessionsGallerySections.Nav {...props} />
       <Phase5GalleryNav {...props} />
       <div className="my-3 font-semibold">
         {"Phase 6" /* i18n-ignore: dev-only gallery label */}
@@ -133,6 +138,8 @@ const extension = {
       <NotchGallery state={props.fixture.slice(6)} />
     ) : props.fixture.startsWith("tour") ? (
       <TourGallery stop={props.fixture.slice(5) || "welcome"} />
+    ) : isSessionsGalleryFixture(props.fixture) ? (
+      <sessionsGallerySections.View {...props} />
     ) : phase5FixtureIds.some((id) => id === props.fixture) ? (
       <Phase5View fixture={props.fixture} />
     ) : props.fixture === "bots-chat" ? (

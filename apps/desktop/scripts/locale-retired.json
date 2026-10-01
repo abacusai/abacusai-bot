@@ -3475,5 +3475,20 @@
   },
   "notch.done.title": {
     "reason": "Phase-6 completion title retained for additive locale compatibility; the companion currently renders the dynamic notch.wings.done label."
+  },
+  "sessions.page.newDescription": {
+    "reason": "Retained legacy placeholder page copy; sessions now uses the start page, live session identity and review pane."
+  },
+  "sessions.page.sessionTitle": {
+    "reason": "Retained legacy placeholder page copy; sessions now uses the start page, live session identity and review pane."
+  },
+  "sessions.page.sessionDescription": {
+    "reason": "Retained legacy placeholder page copy; sessions now uses the start page, live session identity and review pane."
+  },
+  "sessions.page.reviewTitle": {
+    "reason": "Retained legacy placeholder page copy; sessions now uses the start page, live session identity and review pane."
+  },
+  "sessions.page.reviewDescription": {
+    "reason": "Retained legacy placeholder page copy; sessions now uses the start page, live session identity and review pane."
   }
 }

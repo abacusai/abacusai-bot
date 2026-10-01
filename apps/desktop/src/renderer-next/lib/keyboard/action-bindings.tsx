@@ -11,6 +11,11 @@ export const ActionBindingsContext = createContext<Record<
   string | null
 > | null>(null);
 
+export const TerminalActionBindingsContext = createContext<Record<
+  string,
+  string | null
+> | null>(null);
+
 /** Supplies action bindings to chord-based consumers during the renderer migration. */
 export const ActionBindingsProvider = ({
   children,
@@ -22,8 +27,12 @@ export const ActionBindingsProvider = ({
   const bindings = resolveKeymap(
     prefs.keymap,
     toHotkeyPlatform(system.platform)
-  ).window;
+  );
   return (
-    <ActionBindingsContext value={bindings}>{children}</ActionBindingsContext>
+    <ActionBindingsContext value={bindings.window}>
+      <TerminalActionBindingsContext value={bindings.terminal}>
+        {children}
+      </TerminalActionBindingsContext>
+    </ActionBindingsContext>
   );
 };

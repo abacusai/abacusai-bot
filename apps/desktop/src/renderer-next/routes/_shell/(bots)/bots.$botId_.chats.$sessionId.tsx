@@ -16,11 +16,12 @@ import {
   TopBarSlot,
   SidePanelContent,
   requestBrowserOpen,
-  BrowserOpenPlaceholder,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { BotId, SessionId } from "#shared/contract/ids";
+
+import { BotBrowser, BotBrowserRegistration } from "./-browser";
 const ReadySender = () => {
   const { botId, sessionId } = Route.useParams();
   const bot = useBot(botId);
@@ -43,6 +44,7 @@ const Sender = ({
   if (!slots.session) return <BotGone chat />;
   return (
     <div className="size-full" style={accentVars(resolveLook(bot))}>
+      <BotBrowserRegistration sessionId={sessionId} />
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
@@ -60,7 +62,7 @@ const Sender = ({
         composer={slots.composer}
       />
       <SidePanelContent tab="browser">
-        <BrowserOpenPlaceholder sessionId={sessionId} />
+        <BotBrowser sessionId={sessionId} />
       </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab

@@ -39,6 +39,8 @@ import {
   discardEntry,
   retryEntry,
   submit as submitAdmission,
+  admitEnvelope,
+  type SubmissionEnvelope,
   type AdmissionHost,
   type AdmissionResult,
   type OutboxEntry,
@@ -331,6 +333,11 @@ export class ThreadSession {
     forwardedProps?: Record<string, unknown>
   ): Promise<AdmissionResult> {
     return submitAdmission(this.#admission, text, forwardedProps).result;
+  }
+
+  async admitEnvelope(envelope: SubmissionEnvelope): Promise<AdmissionResult> {
+    await this.load();
+    return admitEnvelope(this.#admission, envelope);
   }
 
   retryOutbox(entryId: string): Promise<AdmissionResult> {

@@ -59,6 +59,7 @@ import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/
 import { Route as ShellroutinesRoutinesRoutineIdEditRouteImport } from "./routes/_shell/(routines)/routines.$routineId.edit"
 import { Route as ShellroutinesRoutinesListIndexRouteImport } from "./routes/_shell/(routines)/routines._list.index"
 import { Route as ShellroutinesRoutinesListNewRouteImport } from "./routes/_shell/(routines)/routines._list.new"
+import { Route as ShellsessionsSessionsSessionIdDiffRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.diff"
 import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId_.review"
 import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from "./routes/_shell/(bots)/bots.$botId_.chats.$sessionId"
 
@@ -329,6 +330,12 @@ const ShellroutinesRoutinesListNewRoute =
     path: "/new",
     getParentRoute: () => ShellroutinesRoutinesListRoute,
   } as any)
+const ShellsessionsSessionsSessionIdDiffRoute =
+  ShellsessionsSessionsSessionIdDiffRouteImport.update({
+    id: "/diff",
+    path: "/diff",
+    getParentRoute: () => ShellsessionsSessionsSessionIdRoute,
+  } as any)
 const ShellsessionsSessionsSessionIdReviewRoute =
   ShellsessionsSessionsSessionIdReviewRouteImport.update({
     id: "/$sessionId_/review",
@@ -375,7 +382,7 @@ export interface FileRoutesByFullPath {
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
   "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
-  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
   "/settings/about/changelog": typeof ShellSettingsAboutChangelogRoute
   "/artifacts/": typeof ShellartifactsArtifactsIndexRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByFullPath {
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/routines/": typeof ShellroutinesRoutinesListIndexRoute
@@ -420,7 +428,7 @@ export interface FileRoutesByTo {
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
   "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
-  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
   "/settings/about/changelog": typeof ShellSettingsAboutChangelogRoute
   "/artifacts": typeof ShellartifactsArtifactsIndexRoute
@@ -433,6 +441,7 @@ export interface FileRoutesByTo {
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools": typeof ShelllibraryLibraryToolsIndexRoute
   "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
@@ -474,7 +483,7 @@ export interface FileRoutesById {
   "/_shell/(library)/library/skills": typeof ShelllibraryLibrarySkillsRoute
   "/_shell/(routines)/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   "/_shell/(routines)/routines/_list": typeof ShellroutinesRoutinesListRouteWithChildren
-  "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/_shell/(sessions)/sessions/new": typeof ShellsessionsSessionsNewRoute
   "/_shell/settings/about_/changelog": typeof ShellSettingsAboutChangelogRoute
   "/_shell/(artifacts)/artifacts/": typeof ShellartifactsArtifactsIndexRoute
@@ -487,6 +496,7 @@ export interface FileRoutesById {
   "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/_shell/(routines)/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/_shell/(routines)/routines/_list/new": typeof ShellroutinesRoutinesListNewRoute
+  "/_shell/(sessions)/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/_shell/(sessions)/sessions/$sessionId_/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/_shell/(library)/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/_shell/(routines)/routines/_list/": typeof ShellroutinesRoutinesListIndexRoute
@@ -540,6 +550,7 @@ export interface FileRouteTypes {
     | "/library/tools/$toolsetId"
     | "/routines/$routineId/edit"
     | "/routines/new"
+    | "/sessions/$sessionId/diff"
     | "/sessions/$sessionId/review"
     | "/library/tools/"
     | "/routines/"
@@ -585,6 +596,7 @@ export interface FileRouteTypes {
     | "/library/tools/$toolsetId"
     | "/routines/$routineId/edit"
     | "/routines/new"
+    | "/sessions/$sessionId/diff"
     | "/sessions/$sessionId/review"
     | "/library/tools"
     | "/bots/$botId/chats/$sessionId"
@@ -638,6 +650,7 @@ export interface FileRouteTypes {
     | "/_shell/(library)/library/tools/$toolsetId"
     | "/_shell/(routines)/routines/$routineId/edit"
     | "/_shell/(routines)/routines/_list/new"
+    | "/_shell/(sessions)/sessions/$sessionId/diff"
     | "/_shell/(sessions)/sessions/$sessionId_/review"
     | "/_shell/(library)/library/tools/"
     | "/_shell/(routines)/routines/_list/"
@@ -1001,6 +1014,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellroutinesRoutinesListNewRouteImport
       parentRoute: typeof ShellroutinesRoutinesListRoute
     }
+    "/_shell/(sessions)/sessions/$sessionId/diff": {
+      id: "/_shell/(sessions)/sessions/$sessionId/diff"
+      path: "/diff"
+      fullPath: "/sessions/$sessionId/diff"
+      preLoaderRoute: typeof ShellsessionsSessionsSessionIdDiffRouteImport
+      parentRoute: typeof ShellsessionsSessionsSessionIdRoute
+    }
     "/_shell/(sessions)/sessions/$sessionId_/review": {
       id: "/_shell/(sessions)/sessions/$sessionId_/review"
       path: "/$sessionId/review"
@@ -1202,15 +1222,31 @@ const ShellroutinesRoutinesRouteWithChildren =
     ShellroutinesRoutinesRouteChildren,
   )
 
+interface ShellsessionsSessionsSessionIdRouteChildren {
+  ShellsessionsSessionsSessionIdDiffRoute: typeof ShellsessionsSessionsSessionIdDiffRoute
+}
+
+const ShellsessionsSessionsSessionIdRouteChildren: ShellsessionsSessionsSessionIdRouteChildren =
+  {
+    ShellsessionsSessionsSessionIdDiffRoute:
+      ShellsessionsSessionsSessionIdDiffRoute,
+  }
+
+const ShellsessionsSessionsSessionIdRouteWithChildren =
+  ShellsessionsSessionsSessionIdRoute._addFileChildren(
+    ShellsessionsSessionsSessionIdRouteChildren,
+  )
+
 interface ShellsessionsSessionsRouteChildren {
-  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRoute
+  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRouteWithChildren
   ShellsessionsSessionsNewRoute: typeof ShellsessionsSessionsNewRoute
   ShellsessionsSessionsIndexRoute: typeof ShellsessionsSessionsIndexRoute
   ShellsessionsSessionsSessionIdReviewRoute: typeof ShellsessionsSessionsSessionIdReviewRoute
 }
 
 const ShellsessionsSessionsRouteChildren: ShellsessionsSessionsRouteChildren = {
-  ShellsessionsSessionsSessionIdRoute: ShellsessionsSessionsSessionIdRoute,
+  ShellsessionsSessionsSessionIdRoute:
+    ShellsessionsSessionsSessionIdRouteWithChildren,
   ShellsessionsSessionsNewRoute: ShellsessionsSessionsNewRoute,
   ShellsessionsSessionsIndexRoute: ShellsessionsSessionsIndexRoute,
   ShellsessionsSessionsSessionIdReviewRoute:

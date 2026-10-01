@@ -44,6 +44,7 @@ export interface ModeChipProps {
   onRevert?: () => void;
   /** Opens with the menu shown (gallery "permission mode open"). */
   defaultOpen?: boolean;
+  availableModes?: AgentMode[];
 }
 
 export const ModeChip = ({
@@ -55,6 +56,7 @@ export const ModeChip = ({
   onOpenChange,
   onRevert,
   defaultOpen = false,
+  availableModes,
 }: ModeChipProps) => {
   const { t } = useTranslation();
   const [optimistic, setOptimistic] = useState<AgentMode | null>(null);
@@ -117,7 +119,9 @@ export const ModeChip = ({
         ) : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[340px]" align="start" side="top">
-        {MODE_ORDER.map((mode) => (
+        {MODE_ORDER.filter(
+          (mode) => availableModes == null || availableModes.includes(mode)
+        ).map((mode) => (
           <DropdownMenuItem
             key={mode}
             onClick={() => choose(mode)}

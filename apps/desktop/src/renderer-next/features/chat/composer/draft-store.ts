@@ -20,7 +20,10 @@ export interface DraftAttachment {
   preview?: string;
 }
 
+import type { SubmissionEnvelope } from "../runtime/admission";
+
 export interface Draft {
+  pendingSubmit?: SubmissionEnvelope;
   text: string;
   attachments: DraftAttachment[];
   mode?: AgentMode;

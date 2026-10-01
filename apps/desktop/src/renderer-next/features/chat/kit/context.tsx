@@ -9,9 +9,13 @@ import { createContext, use, type ReactNode } from "react";
 
 import type { AgentMode } from "#shared/agent-types";
 
+import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";
 import type { ThreadSession } from "../runtime/session";
-import type { SkillMetadata } from "../store/thread-store";
+import type {
+  PermissionDescriptor,
+  SkillMetadata,
+} from "../store/thread-store";
 
 interface ModelGroupItem {
   id: string;
@@ -45,6 +49,12 @@ export interface MentionSource {
 
 export interface ComposerConfig {
   mode: "full" | "mini";
+  availableModes?: AgentMode[];
+  defaultMode?: AgentMode;
+  blocked?: "no-model" | "loading";
+  onBlocked?: () => void;
+  history?: { list(): Promise<string[]>; add(text: string): Promise<void> };
+  onSubmitEnvelope?: (envelope: SubmissionEnvelope) => Promise<void>;
   /** Host-owned dictation preview; recording is a later slice. */
   dictating?: boolean;
   readOnly?: { reason: ReactNode; action?: ReactNode };
@@ -115,6 +125,8 @@ export interface ChatViewSlots {
   composerContext?: ReactNode;
   /** The route's pieces after the last run's outcome (the Changes card, phase 4). */
   runTail?: ReactNode;
+  /** Route-owned actions beside the permission card (sessions §17.1). */
+  permissionActions?: (descriptor: PermissionDescriptor) => ReactNode;
   typingCaption?: (activity: Activity) => ReactNode;
 }
 
@@ -128,6 +140,7 @@ export interface ChatViewContextValue {
   workspaceRoot: string | null;
   onOpenFile?: (absPath: string) => void;
   onOpenSubagent?: (subagentRunId: string) => void;
+  onOpenDiff?: (path: string, toolKey?: string) => void;
   /** This view is the focused thread (Mod+. stops only here). */
   focused: boolean;
   /** Bots: the canvas's "Also in the notch" note on approval cards (phase 6). */

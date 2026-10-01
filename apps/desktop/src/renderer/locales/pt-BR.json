@@ -1858,7 +1858,7 @@
     "yesterday": "Yesterday",
     "daysAgo": "{{count}} days ago",
     "page": {
-      "newTitle": "New session",
+      "newTitle": "Nova sessão",
       "newDescription": "Pick a folder and tell the agent what to do.",
       "sessionTitle": "Session",
       "sessionDescription": "The conversation opens here in a coming update.",
@@ -1866,10 +1866,233 @@
       "reviewDescription": "Keep or undo what the agent changed."
     },
     "sidebar": {
-      "label": "Sessions",
-      "new": "New session",
-      "pinned": "Pinned",
-      "empty": "Nenhuma sessão ainda"
+      "label": "Sessões",
+      "new": "Nova sessão",
+      "pinned": "Fixados",
+      "empty": "Nenhuma sessão ainda",
+      "search": "Buscar sessões…",
+      "actions": "Session actions for {{name}}",
+      "rename": "Rename session",
+      "name": "Session name",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "copyId": "Copy session ID",
+      "delete": "Delete session",
+      "deleteBody": "This session and its transcript will be deleted. This cannot be undone.",
+      "markUnread": "Mark as unread",
+      "openBeside": "Open beside this chat",
+      "newWorktree": "New worktree from here",
+      "emptyDescription": "Start one with {{key}}, or drop a folder here."
+    },
+    "gone": "This session was deleted",
+    "untitled": "Untitled",
+    "common": {
+      "retry": "Tentar novamente",
+      "cancel": "Cancel",
+      "save": "Salvar"
+    },
+    "notify": {
+      "done": "The agent finished your request.",
+      "needsYou": "The agent needs your answer."
+    },
+    "attention": {
+      "needs-you": "Needs you",
+      "running": "Running",
+      "error": "Failed",
+      "unread": "Unread",
+      "idle": "Idle"
+    },
+    "start": {
+      "heading": "What should we build?",
+      "placeholder": "Tell the agent what to do…",
+      "finishing": "Finishing your last session…",
+      "continue": "Continue",
+      "discard": "Discard",
+      "try": "Try one of these",
+      "starters": {
+        "build-a-store": {
+          "name": "Build an online store",
+          "detail": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+        },
+        "design-an-infographic": {
+          "name": "Turn a repo into an infographic",
+          "detail": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+        },
+        "find-flights": {
+          "name": "Find me flights",
+          "detail": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+        },
+        "process-a-spreadsheet": {
+          "name": "Clean up a spreadsheet",
+          "detail": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+        },
+        "restyle-a-repo": {
+          "name": "Restyle Excalidraw",
+          "detail": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+        },
+        "review-pull-requests": {
+          "name": "Review my pull requests",
+          "detail": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+        }
+      },
+      "recent": "Pick up where you left off in {{workspace}}"
+    },
+    "model": {
+      "choose": "Choose a model",
+      "default": "Default",
+      "appDefault": "App default",
+      "favorites": "Favorites",
+      "local": "On this machine",
+      "free": "Free",
+      "connectOpenRouter": "Conectar OpenRouter",
+      "connectGoogleAi": "Connect Google AI",
+      "configure": "Configure a model"
+    },
+    "dock": {
+      "add": "Add tab",
+      "chat": "Chat",
+      "changes": "Changes",
+      "files": "Files",
+      "agents": "Agents",
+      "device": "Dispositivo",
+      "terminal": "Terminal",
+      "browser": "Browser",
+      "close": "Fechar painel",
+      "closeTab": "Close {{name}}",
+      "full": "Toggle full view",
+      "move": "Move tab",
+      "moveRight": "Split right",
+      "moveBelow": "Split below",
+      "movePane": "Move to pane {{name}}"
+    },
+    "browser": {
+      "activate": "Click to use this browser",
+      "title": "Browser",
+      "address": "Web address",
+      "back": "Back",
+      "forward": "Forward",
+      "reload": "Reload or stop loading",
+      "external": "Open externally",
+      "unavailable": "Browser unavailable",
+      "permission": "Allow browser access?",
+      "allow": "Allow",
+      "deny": "Deny",
+      "session": "Allow until quit",
+      "always": "Never ask",
+      "profile": "Perfil do navegador",
+      "defaultProfile": "Default profile",
+      "zoom-in": "Zoom in",
+      "zoom-out": "Zoom out",
+      "zoom-reset": "Reset zoom",
+      "open-devtools": "Developer tools",
+      "clear-site-data": "Clear site data"
+    },
+    "files": {
+      "filter": "Filter files…",
+      "preview": "Open preview",
+      "trash": "Move to Trash",
+      "select": "Select a file to preview.",
+      "openEditor": "Open in editor",
+      "copyPath": "Copy path",
+      "trashFolder": "Move folder to Trash?",
+      "trashFolderBody": "Move {{path}} and all its contents to Trash?",
+      "rename": "Rename"
+    },
+    "changes": {
+      "staged": "Staged",
+      "unstaged": "Changes",
+      "merged": "Mesclado",
+      "title": "Changes",
+      "empty": "No changes yet",
+      "diff": "File diff",
+      "full": "Open full diff",
+      "fullDiff": "Open full diff",
+      "gitFallback": "Open current git diff",
+      "unavailable": "This tool diff is unavailable.",
+      "keep": "Keep",
+      "undo": "Undo",
+      "undoTitle": "Undo changes to {{file}}?",
+      "undoBody": "This restores the file to HEAD. Added files go to the Trash.",
+      "loading": "Loading diff…",
+      "binary": "Binary file — no text diff",
+      "noSection": "No changes in this scope",
+      "added": "Added line",
+      "removed": "Removed line",
+      "keepAll": "Keep all",
+      "undoAll": "Undo all",
+      "summary": "{{count}} files changed",
+      "review": "Review changes"
+    },
+    "missing": {
+      "worktree": "The worktree folder is missing.",
+      "folder": "The workspace folder is missing.",
+      "primary": "Use primary checkout",
+      "choose": "Escolher pasta",
+      "deleteWorkspace": "Excluir workspace",
+      "deleteBody": "Remove this workspace and its sessions from the app? The folder on disk will remain."
+    },
+    "agents": {
+      "empty": "No sub-agent selected.",
+      "continue": "Continue in chat",
+      "continuePrompt": "Continue the work from {{name}}."
+    },
+    "device": {
+      "empty": "Choose a device to preview.",
+      "permission": "Allow screen recording to preview the simulator.",
+      "screen": "Device screen",
+      "refresh": "Refresh devices",
+      "open": "Open device",
+      "build": "Build and run",
+      "home": "Home",
+      "grant": "Open Screen Recording settings",
+      "type": "Type on device",
+      "send": "Send",
+      "unavailable": "Device stream unavailable"
+    },
+    "terminal": {
+      "title": "Terminal",
+      "exited": "Process exited ({{code}})",
+      "newShell": "New terminal · {{shell}}"
+    },
+    "tray": {
+      "workspaceLabel": "Workspace: {{name}}",
+      "default": "Default workspace",
+      "search": "Buscar espaços de trabalho…",
+      "fixedWorkspace": "This session belongs to this workspace.",
+      "add": "Add workspace",
+      "newWorktree": "New worktree",
+      "noWorktree": "No worktree",
+      "noPr": "No PR",
+      "local": "Local",
+      "sandboxed": "Sandboxed",
+      "restartTarget": "Stop the agent before switching target.",
+      "targetFallback": "{{name}} is unavailable; using Local.",
+      "branchSearch": "Search branches…",
+      "stopFirst": "Stop the agent before switching branches.",
+      "createBranch": "Create branch {{name}}",
+      "tasks": "Tasks {{done}} of {{total}}",
+      "noBranch": "This checkout has no branch."
+    },
+    "routine": {
+      "talk": "Talk to the routine"
+    },
+    "pr": {
+      "approved": "Aprovado",
+      "pending": "Pending",
+      "changes_requested": "Alterações solicitadas",
+      "draft": "Rascunho",
+      "merged": "Mesclado",
+      "closed": "Fechado",
+      "success": "Passed",
+      "failure": "Failed"
+    },
+    "gallery": {
+      "researchAgent": "Research · completed",
+      "testAgent": "Tests · running",
+      "agentDetail": "Research found the checkout isolation issue and supplied a patch."
+    },
+    "permission": {
+      "openTerminal": "Open in Terminal"
     }
   },
   "sidebarNav": {

@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#next/data/db";
 import { usePrefs } from "#next/data/db/prefs";
+import {
+  documentSoundPlayer as soundPlayer,
+  setDocumentSoundPrefs,
+} from "#next/lib/document-sound";
 import { isThreadSeen } from "#next/lib/navigation/visible-thread";
 import { createNotifier } from "#next/lib/notify";
 /**
@@ -13,9 +17,8 @@ import { createNotifier } from "#next/lib/notify";
  * `ai.runFinished` for unread/cues/notifications, and the `waiting_permission`
  * level for needs-you.
  */
-import { runFinishedFeed } from "#next/lib/run-finished";
-import { createSoundPlayer, type SoundPlayer } from "#next/lib/sound";
-import type { PrefsRow } from "#shared/contract/rows";
+import { subscribeRunFinished } from "#next/lib/run-finished";
+import type { SoundPlayer } from "#next/lib/sound";
 
 import { followBotsSources } from "./data/live";
 import { useAllSessions } from "./data/queries";
@@ -29,25 +32,6 @@ import {
   type BotsWatcherDeps,
 } from "./notify";
 
-let player: SoundPlayer | null = null;
-let claim: (
-  cueId: string,
-  threadId: string | null
-) => Promise<boolean> = async () => false;
-let soundPrefs: PrefsRow["sounds"] = { enabled: true, perEvent: {} };
-
-/** The document's player (one AudioContext, unlocked on first pointerdown). */
-const soundPlayer = (): SoundPlayer => {
-  player ??= createSoundPlayer({
-    isThreadVisible: (threadId) => isThreadSeen(threadId, () => true),
-    isWindowFocused: () => document.hasFocus(),
-    prefs: () => soundPrefs,
-    now: () => Date.now(),
-    claim: (cueId, threadId) => claim(cueId, threadId),
-  });
-  return player;
-};
-
 export const playBotCue = (
   cue: Parameters<SoundPlayer["play"]>[0],
   threadId: string,
@@ -57,12 +41,6 @@ export const playBotCue = (
 export const BotsGlobals = () => {
   const { t } = useTranslation();
   const transport = useBotsTransport();
-  useEffect(() => {
-    claim = (cueId, threadId) =>
-      transport.client.window
-        .claimCue({ cueId, threadId })
-        .then((result) => result.play);
-  }, [transport]);
   const queryClient = useQueryClient();
   const db = useDb();
   const prefs = usePrefs();
@@ -71,7 +49,11 @@ export const BotsGlobals = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   useEffect(() => {
-    soundPrefs = prefs.sounds;
+    setDocumentSoundPrefs(prefs.sounds);
+  }, [prefs.sounds]);
+  const soundPrefs = useRef(prefs.sounds);
+  useEffect(() => {
+    soundPrefs.current = prefs.sounds;
   }, [prefs.sounds]);
   const notificationsOn = useRef(true);
   useEffect(() => {
@@ -89,7 +71,7 @@ export const BotsGlobals = () => {
       notifier: createNotifier({
         isWindowFocused: () => document.hasFocus(),
         notificationsEnabled: () => notificationsOn.current,
-        sounds: () => soundPrefs,
+        sounds: () => soundPrefs.current,
         now: () => new Date(),
         send: (input) => transport.client.system.notify(input),
       }),
@@ -144,22 +126,21 @@ export const BotsGlobals = () => {
     };
     let delivery = ready();
     const queued = new Set<string>();
-    const stopFinished = runFinishedFeed(transport).subscribe((notice) => {
+    const unsubscribeFinished = subscribeRunFinished(transport, (notice) => {
       if (queued.has(notice.runId)) return;
       queued.add(notice.runId);
       if (queued.size > 10_000) queued.delete(queued.values().next().value!);
       delivery = delivery.then(() => {
-        if (!abort.signal.aborted && deps.current)
+        if (!abort.signal.aborted && deps.current != null)
           handleRunFinished(deps.current, notice);
       });
-      void delivery.catch(() => undefined);
+      return delivery;
     });
-
+    abort.signal.addEventListener("abort", unsubscribeFinished, { once: true });
     const unlock = (): void => soundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {
       abort.abort();
-      stopFinished();
       window.removeEventListener("pointerdown", unlock);
     };
   }, [transport, queryClient, db]);

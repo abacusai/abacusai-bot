@@ -71,7 +71,7 @@ export class FixtureDb {
     );
     this.artifacts = new FixtureTable((row) => row.id, seed.artifacts);
     this.memories = new FixtureTable((row) => row.id, seed.memories);
-    this.gitState = new FixtureTable((row) => row.workspaceId, seed.gitState);
+    this.gitState = new FixtureTable((row) => row.checkoutKey, seed.gitState);
   }
 
   /** Main's merge (spec 00 B.2): a group takes only the leaves it names. */
@@ -161,6 +161,37 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
       delete: ({ id }: { id: string }) => db.bots.remove(id),
     }),
     sessions: tableClient(db.sessions, {
+      insert: (input: {
+        id: string;
+        workspaceId: string;
+        model?: string | null;
+        mode?: SessionRow["mode"];
+      }) => {
+        const now = new Date().toISOString();
+        return db.sessions.upsert({
+          id: input.id,
+          workspaceId: input.workspaceId,
+          label: "",
+          conversationId: null,
+          createdAt: now,
+          updatedAt: now,
+          status: "stopped",
+          agentStatus: "idle" as SessionRow["agentStatus"],
+          model: input.model ?? null,
+          mode: input.mode ?? null,
+          worktreeId: null,
+          worktreePath: null,
+          worktreeBranch: null,
+          worktreeOperationId: null,
+          routineId: null,
+          runOutcome: null,
+          runTrigger: null,
+          editorFor: null,
+          botOwned: false,
+          owner: null,
+          turn: null,
+        });
+      },
       update: ({ id, patch }: { id: string; patch: Partial<SessionRow> }) =>
         db.updateRow(db.sessions, id, patch, () => ({
           updatedAt: new Date().toISOString(),

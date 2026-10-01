@@ -41,6 +41,12 @@ export type {
   ThreadStoreState,
 } from "./store/thread-store";
 
+export type { SubmissionEnvelope } from "./runtime/admission";
+export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";
+
+export { StartComposer } from "./composer/start-composer";
+export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
+export { SubagentDetail, useSubagents } from "./kit/subagents/detail";
 /**
  * The `/__ui` gallery entries (spec 02 §11.2), loaded on first render: the
  * gallery replays recorded scenarios, and a static import would put every

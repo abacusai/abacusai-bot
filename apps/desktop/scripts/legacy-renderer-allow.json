@@ -1,5 +1,5 @@
 {
-  "$comment": "Sanctioned legacy sign-in product work and spec 03 §24.9 shared-helper re-export shims, each pinned to its own implementation commit. check-legacy-renderer-diff accepts a listed file only while it is exactly as that commit left it; any later edit fails again.",
+  "$comment": "Sanctioned legacy sign-in product work and spec 03 \u00a724.9 shared-helper re-export shims, each pinned to its own implementation commit. check-legacy-renderer-diff accepts a listed file only while it is exactly as that commit left it; any later edit fails again.",
   "allow": [
     {
       "path": "src/renderer/components/onboarding/onboarding-flow.tsx",
@@ -30,6 +30,18 @@
       "path": "src/renderer/components/settings/routine-schedule.ts",
       "commit": "426123829bec09be4709d41a3e479a2348aefd19",
       "why": "Spec 03 \u00a724.9 pure shared bots helper re-export shim"
+    }
+  ],
+  "terminalAllow": [
+    {
+      "path": "src/renderer/terminals/terminal-keys.ts",
+      "commit": "ef5157edc58b52bdc1dd79c4069be117934589fd",
+      "why": "Spec 04 \u00a726.9 shared terminal compatibility shim"
+    },
+    {
+      "path": "src/renderer/terminals/terminal-mouse.ts",
+      "commit": "ef5157edc58b52bdc1dd79c4069be117934589fd",
+      "why": "Spec 04 \u00a726.9 shared terminal compatibility shim"
     }
   ]
 }
