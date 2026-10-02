@@ -137,16 +137,16 @@ const nameHash = (name: string): number => {
 
 /** Deterministic defaults so a bot keeps its look across edits. */
 export const defaultAvatarColor = (name: string): string =>
-  BOT_AVATAR_COLORS[nameHash(name) % BOT_AVATAR_COLORS.length];
+  BOT_AVATAR_COLORS[nameHash(name) % BOT_AVATAR_COLORS.length]!;
 
 export const defaultAvatarShape = (name: string): string =>
   // A different stride than the color, so collisions on one axis differ.
-  BOT_AVATAR_SHAPES[(nameHash(name) >> 3) % BOT_AVATAR_SHAPES.length];
+  BOT_AVATAR_SHAPES[(nameHash(name) >> 3) % BOT_AVATAR_SHAPES.length]!;
 
 /** Up to two initials, for rendering over the avatar swatch. */
 export const botInitials = (name: string): string => {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase();
 };

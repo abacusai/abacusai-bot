@@ -15,6 +15,7 @@ import type {
   SkillMutationResult,
 } from "#shared/skills-types";
 import type { UpdateStatus } from "#shared/update";
+import type { WindowChromeState } from "#shared/window-chrome-state";
 
 // Lets a clicked OS notification focus the originating session.
 export type NotificationMetadata = {
@@ -39,6 +40,11 @@ interface CustomAPI {
   platform: NodeJS.Platform;
   isFullScreen: () => Promise<boolean>;
   onFullScreenChange: (callback: (fullScreen: boolean) => void) => () => void;
+  getWindowChrome: () => Promise<WindowChromeState>;
+  onWindowChromeChange: (
+    callback: (state: WindowChromeState) => void
+  ) => () => void;
+  recreateMainWindow: () => Promise<void>;
   showAboutPanel: () => Promise<void>;
   setThemeSource: (source: "system" | "light" | "dark") => Promise<boolean>;
   openFolderDialog: () => Promise<string | null>;
@@ -176,9 +182,16 @@ interface CustomAPI {
   signalRendererReady?: () => void;
 }
 
+/** What the preload exposes to the oRPC renderer besides its port. */
+interface AbacusHostAPI {
+  getPathForFile: (file: File) => string;
+}
+
 declare global {
   interface Window {
     api: CustomAPI;
+    /** Optional: an older shell's preload predates it. */
+    abacusHost?: AbacusHostAPI;
   }
 }
 export {};

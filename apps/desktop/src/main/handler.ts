@@ -64,7 +64,11 @@ import type {
   SetSessionWorktreeRequest,
   WorkspaceGitContext,
   AbacusAccountInfo,
+  AbacusAuthOutcome,
+  AbacusSignOutResult,
   DefaultAgentMode,
+  LocalModelInstallOutcome,
+  OpenRouterAuthOutcome,
 } from "#shared/contracts";
 import {
   ABACUS_CONNECTORS_SERVER_NAME,
@@ -90,7 +94,8 @@ import {
   legacyProfileKeyFor,
   profileKeyFor,
 } from "./profile-home";
-import { sendToRenderer } from "./renderer-host";
+import { deviceChunkSender } from "./rpc/device-chunks";
+import { emitBusChannel, emitIpcEvent } from "./rpc/emit";
 import { ServiceHost } from "./service-host";
 import {
   addPromptToHistory,
@@ -150,13 +155,17 @@ export const disposeLocalModels = (): void => {
   localModels = null;
 };
 
-export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
-  const dispatchEvent = (event: IpcEvent): void => {
-    sendToRenderer(IpcChannels.Event, event);
-  };
-
-  serviceHost.setEventDispatcher(dispatchEvent);
-
+/**
+ * What the legacy IPC handlers do beyond forwarding to ServiceHost, as named
+ * operations. The `ipcMain` handlers below and the oRPC procedures (main/rpc)
+ * both call these, so neither path carries its own copy of the logic. The
+ * module-level services the handlers call are listed too, so main/rpc reaches
+ * them through here rather than importing them (and Electron) itself.
+ */
+export const createHostOperations = (
+  serviceHost: ServiceHost,
+  dispatchEvent: (event: IpcEvent) => void
+) => {
   /** The connector gateway MCP entry exists exactly while an Abacus key does. */
   const syncAbacusGateway = (key?: string): void => {
     if (key != null && key.trim().length > 0) {
@@ -201,18 +210,6 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
       emittedAt: new Date().toISOString(),
     });
   };
-
-  // The connector flow stores agent credentials through the same path a
-  // pasted key takes, so the announcement above happens for those too.
-  serviceHost.setCredentialSaver((provider, value) => {
-    saveApiKey(provider, value);
-    credentialsChanged(provider, value);
-  });
-
-  // A profile relaunch bypasses the credential-save IPC; reconcile from disk.
-  syncAbacusGateway(
-    readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? undefined
-  );
 
   /** Resolve a newly stored key past the short propagation delay after signup. */
   const identifyAbacusAccount = async (): Promise<AbacusAccountInfo | null> => {
@@ -320,6 +317,205 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     return { stashedSessions, settings };
   };
 
+  /**
+   * A key the platform has revoked is cleared here, since every signed-in
+   * check reads the stored key. Only an outright refusal counts; a timeout or
+   * a 500 keeps the session.
+   */
+  const getAbacusAccount = async (
+    refresh?: boolean
+  ): Promise<AbacusAccountInfo | null> => {
+    const account = await fetchAbacusAccount(refresh === true);
+    if (account != null || !abacusCredentialRejected()) return account;
+
+    const stored = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "";
+    if (stored.trim().length === 0) return null;
+
+    await clearAbacusCredential(account);
+
+    return null;
+  };
+
+  const storeApiKey = async (
+    provider: string,
+    key: string
+  ): Promise<ReturnType<typeof readSettings>> => {
+    if (provider === "abacus") {
+      if (key.trim().length === 0)
+        return (await clearAbacusCredential()).settings;
+
+      const result = await adoptAbacusCredential(key);
+      if (result.ok === false) throw new Error(result.error);
+      return readSettings();
+    }
+    const settings = saveApiKey(provider, key);
+    credentialsChanged(provider, key);
+    return settings;
+  };
+
+  const signInToOpenRouter = async (): Promise<OpenRouterAuthOutcome> => {
+    const result = await startOpenRouterAuth();
+    if (result.ok !== true) {
+      return {
+        ok: false,
+        error: result.error,
+        ...(result.cancelled === true ? { cancelled: true } : {}),
+      };
+    }
+
+    // Stored exactly like a pasted key: one code path however it arrived.
+    saveApiKey("openrouter", result.key);
+    credentialsChanged("openrouter");
+    // The free-model list is only fetchable once a key exists.
+    await listAvailableModels(true);
+    return { ok: true };
+  };
+
+  const signInToAbacus = async (
+    intent: unknown,
+    browserProfileId: unknown
+  ): Promise<AbacusAuthOutcome> => {
+    const result = await startAbacusAuth(
+      intent === "signin" ? "signin" : "signup",
+      // Only an id from the listing resolves to a profile; anything else is
+      // a plain sign-in.
+      typeof browserProfileId === "string" ? browserProfileId : undefined
+    );
+    if (result.ok !== true) {
+      return {
+        ok: false,
+        error: result.error,
+        ...(result.cancelled === true ? { cancelled: true } : {}),
+      };
+    }
+
+    const adopted = await adoptAbacusCredential(result.key, result.surface);
+    if (!adopted.ok) return adopted;
+
+    // Warm the catalog for same-profile sign-ins. A profile switch relaunches,
+    // and the new renderer reads it normally from the target profile.
+    await listAvailableModels(true);
+    return adopted;
+  };
+
+  const signOutAbacus = async (options: {
+    keepOtherApiKeys: boolean;
+  }): Promise<AbacusSignOutResult> => {
+    const { stashedSessions } = await clearAbacusCredential();
+
+    const removedProviders: string[] = [];
+    if (options?.keepOtherApiKeys !== true) {
+      for (const provider of storedKeyProviders()) {
+        if (provider === "abacus") continue;
+        saveApiKey(provider, "");
+        credentialsChanged(provider);
+        removedProviders.push(provider);
+      }
+    }
+
+    // One catalog refresh after all key changes.
+    await listAvailableModels(true);
+    return { stashedSessions, removedProviders };
+  };
+
+  const runRoutine = async (
+    id: string,
+    trigger?: "manual" | "create"
+  ): Promise<void> => {
+    await serviceHost.runRoutine(
+      id,
+      trigger === "create" ? "create" : "manual"
+    );
+  };
+
+  const setCustomInstructions = (text: unknown): string => {
+    writeCustomInstructions(typeof text === "string" ? text : "");
+
+    return readCustomInstructions();
+  };
+
+  return {
+    credentialsChanged,
+    syncAbacusGateway,
+    getAbacusAccount,
+    saveApiKey: storeApiKey,
+    startOpenRouterAuth: signInToOpenRouter,
+    startAbacusAuth: signInToAbacus,
+    shouldAutoSignIn,
+    signOutAbacus,
+    runRoutine,
+    /** Straight through to the agent package's store, shared with the terminal client. */
+    getCustomInstructions: (): string => readCustomInstructions(),
+    setCustomInstructions,
+    // Late-bound, so nothing here is read until a caller asks for it.
+    listModels: (refresh?: boolean) => listAvailableModels(refresh === true),
+    getUsageSnapshot: () => getUsageSnapshot(),
+    readSettings: () => readSettings(),
+    readPromptHistory: (scope: string) => readPromptHistory(scope),
+    addPromptToHistory: (scope: string, prompt: string) =>
+      addPromptToHistory(scope, prompt),
+    storedKeyProviders: () => storedKeyProviders(),
+    setDefaultModel: (modelId: string) => setDefaultModel(modelId),
+    sessionHomePath: () => sessionDefaultWorkspace(),
+    cancelAbacusAuth: () => cancelAbacusAuth(),
+    openAbacusAuthInBrowser: () => openAbacusAuthInBrowser(),
+    listBrowserSignInProfiles: () => listBrowserSignInProfiles(),
+    cancelOpenRouterAuth: () => cancelOpenRouterAuth(),
+    cancelConnectorConnect: () => cancelConnectorConnect(),
+    fetchReferralSummary: () => fetchReferralSummary(),
+    listReferralGmailContacts: () => listReferralGmailContacts(),
+    sendReferralEmailInvites: (emails: unknown, message: unknown) =>
+      sendReferralEmailInvites(emails, message),
+    listReferralWhatsappContacts: () =>
+      serviceHost.listInviteContacts("whatsapp"),
+    sendReferralWhatsappInvites: (chatIds: unknown, message: unknown) =>
+      sendReferralWhatsappInvites(chatIds, message, (chatId, text) =>
+        serviceHost.sendMessagingText("whatsapp", chatId, text)
+      ),
+    requestMicrophoneAccess: () => requestMicrophoneAccess(),
+    localModels: {
+      state: () => localModels?.state(),
+      install: (modelId: string): Promise<LocalModelInstallOutcome> =>
+        localModels == null
+          ? Promise.resolve({
+              ok: false,
+              error: "local models are not available",
+            })
+          : localModels.install(modelId),
+      cancelInstall: (): void => {
+        localModels?.cancelInstall();
+      },
+      remove: (modelId: string): void => {
+        localModels?.remove(modelId);
+      },
+    },
+  };
+};
+
+export type HostOperations = ReturnType<typeof createHostOperations>;
+
+export const registerIpcHandlers = (
+  serviceHost: ServiceHost
+): HostOperations => {
+  // One function feeds both the legacy renderer and the oRPC event bus.
+  serviceHost.setEventDispatcher(emitIpcEvent);
+  // Bus-only pushes (no legacy event), such as a retired terminal generation.
+  serviceHost.setBusDispatcher(emitBusChannel);
+
+  const ops = createHostOperations(serviceHost, emitIpcEvent);
+
+  // The connector flow stores agent credentials through the same path a
+  // pasted key takes, so the announcement above happens for those too.
+  serviceHost.setCredentialSaver((provider, value) => {
+    saveApiKey(provider, value);
+    ops.credentialsChanged(provider, value);
+  });
+
+  // A profile relaunch bypasses the credential-save IPC; reconcile from disk.
+  ops.syncAbacusGateway(
+    readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? undefined
+  );
+
   ipcMain.handle(IpcChannels.GetMetadata, (_event, request) => {
     return serviceHost.getMetadata(request);
   });
@@ -357,26 +553,10 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   });
 
   ipcMain.handle(IpcChannels.ListModels, (_event, refresh?: boolean) =>
-    listAvailableModels(refresh === true)
+    ops.listModels(refresh)
   );
-  /**
-   * A key the platform has revoked is cleared here, since every signed-in
-   * check reads the stored key. Only an outright refusal counts; a timeout or
-   * a 500 keeps the session.
-   */
-  ipcMain.handle(
-    IpcChannels.GetAbacusAccount,
-    async (_event, refresh?: boolean) => {
-      const account = await fetchAbacusAccount(refresh === true);
-      if (account != null || !abacusCredentialRejected()) return account;
-
-      const stored = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "";
-      if (stored.trim().length === 0) return null;
-
-      await clearAbacusCredential(account);
-
-      return null;
-    }
+  ipcMain.handle(IpcChannels.GetAbacusAccount, (_event, refresh?: boolean) =>
+    ops.getAbacusAccount(refresh)
   );
 
   ipcMain.handle(IpcChannels.GetUsageSnapshot, () => getUsageSnapshot());
@@ -398,19 +578,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
 
   ipcMain.handle(
     IpcChannels.SaveApiKey,
-    async (_event, provider: string, key: string) => {
-      if (provider === "abacus") {
-        if (key.trim().length === 0)
-          return (await clearAbacusCredential()).settings;
-
-        const result = await adoptAbacusCredential(key);
-        if (result.ok === false) throw new Error(result.error);
-        return readSettings();
-      }
-      const settings = saveApiKey(provider, key);
-      credentialsChanged(provider, key);
-      return settings;
-    }
+    (_event, provider: string, key: string) => ops.saveApiKey(provider, key)
   );
 
   ipcMain.handle(IpcChannels.SetDefaultModel, (_event, modelId: string) =>
@@ -662,106 +830,50 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
 
   ipcMain.handle(
     IpcChannels.RunRoutine,
-    async (_event, id: string, trigger?: "manual" | "create") => {
-      await serviceHost.runRoutine(
-        id,
-        trigger === "create" ? "create" : "manual"
-      );
-    }
+    (_event, id: string, trigger?: "manual" | "create") =>
+      ops.runRoutine(id, trigger)
   );
 
   localModels = new LocalModelService({
     onProgress: (progress) =>
-      dispatchEvent({
+      emitIpcEvent({
         type: "local-model-progress",
         progress,
         emittedAt: new Date().toISOString(),
       }),
     // The `local` provider entry changed: same path as a stored key, so the
     // catalog is dropped and every running agent re-reads its providers.
-    onProviderChanged: () => credentialsChanged(LOCAL_PROVIDER_ID),
+    onProviderChanged: () => ops.credentialsChanged(LOCAL_PROVIDER_ID),
   });
   void localModels.start().catch((error: unknown) => {
     console.warn("[local-models] endpoint did not start", error);
   });
 
-  ipcMain.handle(IpcChannels.GetLocalModelState, () => localModels?.state());
+  ipcMain.handle(IpcChannels.GetLocalModelState, () => ops.localModels.state());
   ipcMain.handle(IpcChannels.InstallLocalModel, (_event, modelId: string) =>
-    localModels == null
-      ? { ok: false, error: "local models are not available" }
-      : localModels.install(modelId)
+    ops.localModels.install(modelId)
   );
   ipcMain.handle(IpcChannels.CancelLocalModelInstall, () => {
-    localModels?.cancelInstall();
+    ops.localModels.cancelInstall();
   });
   ipcMain.handle(IpcChannels.RemoveLocalModel, (_event, modelId: string) => {
-    localModels?.remove(modelId);
+    ops.localModels.remove(modelId);
   });
 
-  ipcMain.handle(IpcChannels.StartOpenRouterAuth, async () => {
-    const result = await startOpenRouterAuth();
-    if (result.ok !== true) {
-      return {
-        ok: false,
-        error: result.error,
-        ...(result.cancelled === true ? { cancelled: true } : {}),
-      };
-    }
-
-    // Stored exactly like a pasted key: one code path however it arrived.
-    saveApiKey("openrouter", result.key);
-    credentialsChanged("openrouter");
-    // The free-model list is only fetchable once a key exists.
-    await listAvailableModels(true);
-    return { ok: true };
-  });
+  ipcMain.handle(IpcChannels.StartOpenRouterAuth, () =>
+    ops.startOpenRouterAuth()
+  );
 
   ipcMain.handle(
     IpcChannels.StartAbacusAuth,
-    async (_event, intent: unknown, browserProfileId: unknown) => {
-      const result = await startAbacusAuth(
-        intent === "signin" ? "signin" : "signup",
-        // Only an id from the listing resolves to a profile; anything else is
-        // a plain sign-in.
-        typeof browserProfileId === "string" ? browserProfileId : undefined
-      );
-      if (result.ok !== true) {
-        return {
-          ok: false,
-          error: result.error,
-          ...(result.cancelled === true ? { cancelled: true } : {}),
-        };
-      }
-
-      const adopted = await adoptAbacusCredential(result.key, result.surface);
-      if (!adopted.ok) return adopted;
-
-      // Warm the catalog for same-profile sign-ins. A profile switch relaunches,
-      // and the new renderer reads it normally from the target profile.
-      await listAvailableModels(true);
-      return adopted;
-    }
+    (_event, intent: unknown, browserProfileId: unknown) =>
+      ops.startAbacusAuth(intent, browserProfileId)
   );
 
   ipcMain.handle(
     IpcChannels.SignOutAbacus,
-    async (_event, options: { keepOtherApiKeys: boolean }) => {
-      const { stashedSessions } = await clearAbacusCredential();
-
-      const removedProviders: string[] = [];
-      if (options?.keepOtherApiKeys !== true) {
-        for (const provider of storedKeyProviders()) {
-          if (provider === "abacus") continue;
-          saveApiKey(provider, "");
-          credentialsChanged(provider);
-          removedProviders.push(provider);
-        }
-      }
-
-      // One catalog refresh after all key changes.
-      await listAvailableModels(true);
-      return { stashedSessions, removedProviders };
-    }
+    (_event, options: { keepOtherApiKeys: boolean }) =>
+      ops.signOutAbacus(options)
   );
 
   ipcMain.handle(IpcChannels.CancelAbacusAuth, () => {
@@ -776,7 +888,7 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
     listBrowserSignInProfiles()
   );
 
-  ipcMain.handle(IpcChannels.ShouldAutoSignIn, () => shouldAutoSignIn());
+  ipcMain.handle(IpcChannels.ShouldAutoSignIn, () => ops.shouldAutoSignIn());
 
   ipcMain.handle(IpcChannels.CancelOpenRouterAuth, () => {
     cancelOpenRouterAuth();
@@ -825,15 +937,13 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   );
 
   ipcMain.handle(IpcChannels.ListReferralWhatsappContacts, () =>
-    serviceHost.listInviteContacts("whatsapp")
+    ops.listReferralWhatsappContacts()
   );
 
   ipcMain.handle(
     IpcChannels.SendReferralWhatsappInvites,
     (_event, chatIds: unknown, message: unknown) =>
-      sendReferralWhatsappInvites(chatIds, message, (chatId, text) =>
-        serviceHost.sendMessagingText("whatsapp", chatId, text)
-      )
+      ops.sendReferralWhatsappInvites(chatIds, message)
   );
 
   ipcMain.handle(
@@ -1317,14 +1427,12 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   // Straight through to the agent package's store, shared with the terminal
   // client; the agent re-reads the file each turn, so no notification needed.
   ipcMain.handle(IpcChannels.GetCustomInstructions, () =>
-    readCustomInstructions()
+    ops.getCustomInstructions()
   );
 
-  ipcMain.handle(IpcChannels.SetCustomInstructions, (_event, text: string) => {
-    writeCustomInstructions(typeof text === "string" ? text : "");
-
-    return readCustomInstructions();
-  });
+  ipcMain.handle(IpcChannels.SetCustomInstructions, (_event, text: string) =>
+    ops.setCustomInstructions(text)
+  );
 
   ipcMain.handle(IpcChannels.ReadTranscript, (_event, sessionId: string) => {
     return serviceHost.readTranscript(sessionId);
@@ -1409,7 +1517,12 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(
     IpcChannels.StartDeviceStream,
     (event, request: StartDeviceStreamRequest) => {
-      return serviceHost.startDeviceStream(request, event.sender);
+      // Chunks go to this renderer's legacy channel and to the bus, the
+      // same dual delivery `devices.stream.start` uses.
+      return serviceHost.startDeviceStream(
+        request,
+        deviceChunkSender(event.sender, emitBusChannel)
+      );
     }
   );
 
@@ -1459,4 +1572,6 @@ export const registerIpcHandlers = (serviceHost: ServiceHost): void => {
   ipcMain.handle(IpcChannels.OpenAccessibilitySettings, () => {
     return serviceHost.openAccessibilitySettings();
   });
+
+  return ops;
 };

@@ -44,6 +44,11 @@ export { TOOL_NAME_ALIASES, excludedTools } from "./excluded-tools.js";
 // drag pi's whole declaration tree into the dts bundle and break the build.
 export { NdjsonHost } from "./host.js";
 export type { HostOptions } from "./host.js";
+// AguiHost is not exported, for the same reason as openllm.ts: the bot
+// session in its signature drags pi's declaration tree into the dts bundle.
+// main.js is its entry.
+export { INLINE_COMPAT_PREFIX, classifyStdoutLine } from "./agui/channel.js";
+export type * from "./agui/wire.js";
 export {
   MODE_NAMES,
   gateToolCall,

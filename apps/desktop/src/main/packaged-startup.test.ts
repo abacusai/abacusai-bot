@@ -117,6 +117,11 @@ const bareImports = (source: string): string[] => {
     for (const match of source.matchAll(pattern)) {
       const specifier = match[1]!;
       if (!PACKAGE_SPECIFIER.test(specifier)) continue;
+      // A usage example in an inlined package's doc comment
+      // (` * import { parse } from "partial-json";`) is not an import.
+      const lineStart = source.lastIndexOf("\n", match.index) + 1;
+      const line = source.slice(lineStart, match.index + 1).trimStart();
+      if (line.startsWith("*") || line.startsWith("//")) continue;
       if (specifier.startsWith("node:")) continue;
       if (builtinModules.includes(packageOf(specifier))) continue;
       found.add(specifier);

@@ -44,6 +44,7 @@ import {
 import { deckToolEnabled } from "./deck-tool.js";
 import { designToolEnabled } from "./design-tool.js";
 import { documentToolEnabled } from "./document-tool.js";
+import { tagEvent, type EventMeta } from "./event-meta.js";
 import { excludedTools, TOOL_NAME_ALIASES } from "./excluded-tools.js";
 import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import astTools from "./extensions/ast-tools.js";
@@ -66,6 +67,7 @@ import toolTimeouts from "./extensions/tool-timeouts.js";
 import verifyLoop from "./extensions/verify-loop.js";
 import { githubPrompt } from "./github-prompt.js";
 import { HostServiceClient } from "./host-services.js";
+import type { InternalAgentEvent } from "./internal-events.js";
 import {
   connectMcpServers,
   type ConnectedMcp,
@@ -141,6 +143,8 @@ import {
   StallWatch,
   modelStallMs,
 } from "./stall-watch.js";
+import { readTodos } from "./todo-store.js";
+import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
@@ -170,6 +174,17 @@ export interface SessionOptions {
    */
   hostServices?: boolean;
   emit: (event: DesktopEvent) => void;
+  /**
+   * Facts for the AG-UI emitter that never reach the NDJSON wire (message
+   * boundaries, streamed tool calls, gate blocks, plan snapshots). Absent
+   * under `--wire ndjson` and in the CLI.
+   */
+  emitInternal?: (event: InternalAgentEvent) => void;
+}
+
+/** What a host passes with a turn: told once the user-visible turn is over. */
+export interface TurnHandle {
+  settled?: () => void;
 }
 
 interface PendingPermission {
@@ -461,7 +476,7 @@ function componentsPrompt(availableTools: ReadonlySet<string>): string | null {
  * user who stepped away, short enough that an unattended session is not parked
  * forever. ABACUSAI_BOT_APPROVAL_TIMEOUT_MS overrides it; 0 waits forever.
  */
-function approvalTimeoutMs(): number {
+export function approvalTimeoutMs(): number {
   const raw = Number(process.env.ABACUSAI_BOT_APPROVAL_TIMEOUT_MS);
 
   if (Number.isFinite(raw) && raw === 0) {
@@ -626,6 +641,10 @@ export class AbacusBotSession {
    */
   private currentMessageId: string | null = null;
   private messageCounter = 0;
+  /** Streamed tool calls, for the AG-UI emitter only. */
+  private readonly toolCallStream = new ToolCallStream(
+    (name) => TOOL_NAME_ALIASES[name] ?? name
+  );
   /**
    * Component runs currently presented as sub-agents, keyed by the tool call
    * that started them. See componentSubtaskDescription.
@@ -1061,10 +1080,13 @@ export class AbacusBotSession {
     }
 
     if (startupError != null) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: startupError, code: "model_unavailable" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: startupError, code: "model_unavailable" },
+        },
+        { origin: "startup" }
+      );
     }
 
     if (startupNotice != null) {
@@ -1183,7 +1205,7 @@ export class AbacusBotSession {
 
   // ---------------------------------------------------------------- commands
 
-  async send(text: string): Promise<void> {
+  async send(text: string, turn?: TurnHandle): Promise<void> {
     const session = this.requireSession();
 
     // The last turn died on credits or credentials. Whatever the user did
@@ -1241,19 +1263,24 @@ export class AbacusBotSession {
       await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      turn?.settled?.();
     } catch (error) {
       // A thrown provider error gets the same words as a reported turn
       // failure rather than the raw "429: {json}" envelope.
       const raw = describe(error);
       const provider = isProviderFailure(raw);
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: provider ? terminalProviderMessage(raw) : raw,
-          ...(provider ? providerDetail(raw) : {}),
-          ...this.errorActionsFor(raw),
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: provider ? terminalProviderMessage(raw) : raw,
+            ...(provider ? providerDetail(raw) : {}),
+            ...this.errorActionsFor(raw),
+          },
         },
-      });
+        { origin: "turn" }
+      );
+      turn?.settled?.();
     }
   }
 
@@ -1272,10 +1299,13 @@ export class AbacusBotSession {
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
     if (budgetStop != null) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: budgetStop, code: "turn_failed" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: budgetStop, code: "turn_failed" },
+        },
+        { origin: "turn" }
+      );
       return;
     }
 
@@ -1293,19 +1323,22 @@ export class AbacusBotSession {
     const poolExhausted = this.openLlmActive && !isOutOfCredits(message);
     const poolShut = this.openLlmActive && this.isPoolShut();
 
-    this.emitAgentEvent({
-      type: "error",
-      error: {
-        message: poolShut
-          ? OPENLLM_POOL_SHUT_MESSAGE
-          : poolExhausted
-            ? OPENLLM_POOL_EXHAUSTED_MESSAGE
-            : terminalProviderMessage(message),
-        code: "turn_failed",
-        ...(poolExhausted || poolShut ? {} : providerDetail(message)),
-        ...this.errorActionsFor(message),
+    this.emitAgentEvent(
+      {
+        type: "error",
+        error: {
+          message: poolShut
+            ? OPENLLM_POOL_SHUT_MESSAGE
+            : poolExhausted
+              ? OPENLLM_POOL_EXHAUSTED_MESSAGE
+              : terminalProviderMessage(message),
+          code: "turn_failed",
+          ...(poolExhausted || poolShut ? {} : providerDetail(message)),
+          ...this.errorActionsFor(message),
+        },
       },
-    });
+      { origin: "turn" }
+    );
   }
 
   /**
@@ -1541,14 +1574,17 @@ export class AbacusBotSession {
     }
 
     this.stallFailureReported = true;
-    this.emitAgentEvent({
-      type: "error",
-      error: {
-        message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
-        code: "turn_failed",
-        actions: [{ type: "switch-model" }],
+    this.emitAgentEvent(
+      {
+        type: "error",
+        error: {
+          message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
+          code: "turn_failed",
+          actions: [{ type: "switch-model" }],
+        },
       },
-    });
+      { origin: "turn" }
+    );
     this.finishTurn();
   }
 
@@ -1594,13 +1630,16 @@ export class AbacusBotSession {
 
       if (this.pendingOpenLlmRotation != null) return;
 
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: terminalProviderMessage(pending.failure),
-          code: "turn_failed",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: terminalProviderMessage(pending.failure),
+            code: "turn_failed",
+          },
         },
-      });
+        { origin: "turn" }
+      );
       this.finishTurn();
 
       return;
@@ -1674,16 +1713,19 @@ export class AbacusBotSession {
         `Routing failed (${compactProviderError(rotation.failure)}): no model left in the pool.`,
         "warning"
       );
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: this.isPoolShut()
-            ? OPENLLM_POOL_SHUT_MESSAGE
-            : OPENLLM_POOL_EXHAUSTED_MESSAGE,
-          code: "turn_failed",
-          ...this.errorActionsFor(rotation.failure),
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: this.isPoolShut()
+              ? OPENLLM_POOL_SHUT_MESSAGE
+              : OPENLLM_POOL_EXHAUSTED_MESSAGE,
+            code: "turn_failed",
+            ...this.errorActionsFor(rotation.failure),
+          },
         },
-      });
+        { origin: "turn" }
+      );
       this.finishTurn();
 
       return;
@@ -1875,11 +1917,14 @@ export class AbacusBotSession {
     this.turnRunning = false;
     this.stallWatch.clear();
     for (const subtaskId of this.componentSubtasks.values()) {
-      this.emitAgentEvent({
-        type: "subtask_end",
-        id: subtaskId,
-        status: "failed",
-      });
+      this.emitAgentEvent(
+        {
+          type: "subtask_end",
+          id: subtaskId,
+          status: "failed",
+        },
+        { unfinished: true }
+      );
     }
 
     this.componentSubtasks.clear();
@@ -2019,15 +2064,18 @@ export class AbacusBotSession {
     } catch (error) {
       // The desktop keys on `model_unavailable` to release the pick the picker
       // is holding; a throw without that code leaves it held in silence.
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: `Could not switch to ${reference}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-          code: "model_unavailable",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: `Could not switch to ${reference}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            code: "model_unavailable",
+          },
         },
-      });
+        { origin: "turn" }
+      );
     }
   }
 
@@ -2080,13 +2128,16 @@ export class AbacusBotSession {
     }
 
     if (!resolved.model) {
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: resolved.error ?? `Unknown model: ${reference}`,
-          code: "model_unavailable",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: resolved.error ?? `Unknown model: ${reference}`,
+            code: "model_unavailable",
+          },
         },
-      });
+        { origin: "turn" }
+      );
 
       return;
     }
@@ -2095,13 +2146,16 @@ export class AbacusBotSession {
     // a turn on the model they were trying to get away from reads as the pick
     // having done nothing. Say which key is missing and keep the current model.
     if (this.registry?.hasConfiguredAuth(resolved.model) === false) {
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: missingKeyMessage(reference, resolved.model.provider),
-          code: "model_unavailable",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: missingKeyMessage(reference, resolved.model.provider),
+            code: "model_unavailable",
+          },
         },
-      });
+        { origin: "turn" }
+      );
 
       return;
     }
@@ -2135,18 +2189,21 @@ export class AbacusBotSession {
       // pool that has sources but every one used up says so, and the card
       // offers what is still to connect.
       const shut = this.isPoolShut();
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: shut
-            ? OPENLLM_POOL_SHUT_MESSAGE
-            : OPENLLM_POOL_EMPTY_MESSAGE,
-          code: "model_unavailable",
-          actions: shut
-            ? [{ type: "free-pool-out" }, ...this.freeModelSwitches()]
-            : [{ type: "switch-model" }],
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: shut
+              ? OPENLLM_POOL_SHUT_MESSAGE
+              : OPENLLM_POOL_EMPTY_MESSAGE,
+            code: "model_unavailable",
+            actions: shut
+              ? [{ type: "free-pool-out" }, ...this.freeModelSwitches()]
+              : [{ type: "switch-model" }],
+          },
         },
-      });
+        { origin: "turn" }
+      );
 
       return;
     }
@@ -2216,6 +2273,11 @@ export class AbacusBotSession {
         );
       }
     }
+  }
+
+  /** Whether an answer for `permissionId` would release a waiter now. */
+  hasPendingPermission(permissionId: string): boolean {
+    return this.pending.has(permissionId);
   }
 
   respondPermission(permissionId: string, decision: PermissionDecision): void {
@@ -2301,6 +2363,14 @@ export class AbacusBotSession {
         if (isAssistantMessage(event.message)) {
           this.streamedText = "";
           this.currentMessageId = `msg-${++this.messageCounter}`;
+          this.toolCallStream.reset();
+          const messageId = this.aguiMessageId(event.message);
+
+          this.emitInternal({
+            type: "message_open",
+            key: this.currentMessageId,
+            ...(messageId != null ? { messageId } : {}),
+          });
         }
 
         return;
@@ -2338,6 +2408,17 @@ export class AbacusBotSession {
           });
         }
 
+        if (this.currentMessageId != null) {
+          const stopReason = (event.message as { stopReason?: unknown })
+            .stopReason;
+
+          this.emitInternal({
+            type: "message_close",
+            key: this.currentMessageId,
+            ...(typeof stopReason === "string" ? { stopReason } : {}),
+          });
+        }
+
         this.streamedText = "";
         // The next delta belongs to a new message even if its start is missed.
         this.currentMessageId = null;
@@ -2363,12 +2444,15 @@ export class AbacusBotSession {
           const subtaskId = `component-${event.toolCallId}`;
 
           this.componentSubtasks.set(event.toolCallId, subtaskId);
-          this.emitAgentEvent({
-            type: "subtask_start",
-            id: subtaskId,
-            description,
-            kind: "component",
-          });
+          this.emitAgentEvent(
+            {
+              type: "subtask_start",
+              id: subtaskId,
+              description,
+              kind: "component",
+            },
+            { parentToolCallId: event.toolCallId }
+          );
         }
 
         this.toolInputs.set(event.toolCallId, tool.input);
@@ -2407,6 +2491,11 @@ export class AbacusBotSession {
           this.toolInputs.get(event.toolCallId) ?? {}
         );
 
+        const planSet =
+          event.toolName === "todo" &&
+          event.isError !== true &&
+          this.toolInputs.get(event.toolCallId)?.action === "set";
+
         this.toolInputs.delete(event.toolCallId);
         this.heartbeat.ended(event.toolCallId);
         this.rememberCreated(tool, event.isError === true);
@@ -2419,6 +2508,13 @@ export class AbacusBotSession {
             rejected: event.isError,
           },
         });
+
+        if (planSet) {
+          this.emitInternal({
+            type: "plan_changed",
+            todos: readTodos().map((item) => ({ ...item })),
+          });
+        }
 
         // After the result, so the finished card is attributed to the bracket.
         const subtaskId = this.componentSubtasks.get(event.toolCallId);
@@ -2523,6 +2619,14 @@ export class AbacusBotSession {
   }
 
   private onStreamEvent(streamEvent: { type: string; delta?: string }): void {
+    if (streamEvent.type.startsWith("toolcall_")) {
+      for (const internal of this.toolCallStream.handle(streamEvent)) {
+        this.emitInternal(internal);
+      }
+
+      return;
+    }
+
     switch (streamEvent.type) {
       case "text_delta":
         if (streamEvent.delta) {
@@ -2580,6 +2684,14 @@ export class AbacusBotSession {
         event.input as Record<string, unknown>
       );
 
+      this.emitInternal({
+        type: "tool_call_start",
+        toolCallId: event.toolCallId,
+        toolName: tool.name,
+        rawName: event.toolName,
+        input: tool.input,
+      });
+
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
@@ -2597,6 +2709,8 @@ export class AbacusBotSession {
 
       // Asked and answered; the same card again talks over the user.
       if (tool.name === EXIT_PLAN_TOOL_NAME && this.planDeclinedThisTurn) {
+        this.noteBlocked(event.toolCallId, "refused");
+
         return {
           block: true,
           reason:
@@ -2606,6 +2720,8 @@ export class AbacusBotSession {
       }
 
       if (gate.kind === "refuse") {
+        this.noteBlocked(event.toolCallId, "refused");
+
         return { block: true, reason: gate.reason };
       }
 
@@ -2633,6 +2749,7 @@ export class AbacusBotSession {
           outcome: "rejected",
           detail: "no-answerer",
         });
+        this.noteBlocked(event.toolCallId, "rejected");
 
         return {
           block: true,
@@ -2669,7 +2786,13 @@ export class AbacusBotSession {
         outcome: typeof decision === "string" ? decision : decision.type,
       });
 
-      return this.applyDecision(decision, tool, gate.request);
+      const verdict = this.applyDecision(decision, tool, gate.request);
+
+      if (verdict?.block === true) {
+        this.noteBlocked(event.toolCallId, "rejected");
+      }
+
+      return verdict;
     });
   };
 
@@ -3071,6 +3194,29 @@ export class AbacusBotSession {
     } as ToolRequest;
   }
 
+  /** A fact for the AG-UI emitter only; never a legacy line. */
+  private emitInternal(event: InternalAgentEvent): void {
+    this.options.emitInternal?.(event);
+  }
+
+  /** The gate blocked `toolCallId`; the AG-UI result says why. */
+  private noteBlocked(toolCallId: string, cause: "rejected" | "refused"): void {
+    this.emitInternal({ type: "tool_blocked", toolCallId, cause });
+  }
+
+  /**
+   * An assistant message's AG-UI id: the pi session id plus the message's own
+   * timestamp, which pi persists, so it is stable across a reload. Without a
+   * timestamp there is nothing stable here (`msg-N` restarts per process), so
+   * the emitter builds an incarnation-scoped id instead.
+   */
+  private aguiMessageId(message: unknown): string | undefined {
+    const timestamp = (message as { timestamp?: unknown }).timestamp;
+    const base = this.session?.sessionId ?? "session";
+
+    return typeof timestamp === "number" ? `${base}:${timestamp}` : undefined;
+  }
+
   /** The streaming message's id, assigned lazily for a delta with no start. */
   private messageId(): string {
     if (this.currentMessageId == null) {
@@ -3147,7 +3293,8 @@ export class AbacusBotSession {
     this.options.emit({ type: "skills_loaded", skills });
   }
 
-  private emitAgentEvent(event: AgentEvent): void {
+  private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
+    if (meta != null) tagEvent(event, meta);
     this.options.emit({ type: "event", event });
   }
 

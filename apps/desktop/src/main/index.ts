@@ -25,6 +25,7 @@ import {
   clipboard,
   crashReporter,
   autoUpdater as nativeAutoUpdater,
+  webContents as electronWebContents,
 } from "electron";
 import type { WebContents } from "electron";
 import Store from "electron-store";
@@ -70,6 +71,8 @@ export function hasGoogleChrome(
     }
   });
 }
+import type { WindowChromeState, WindowState } from "#shared/contract";
+import { FOUNDATION_API } from "#shared/experience";
 import { funnelDetail, isFunnelStep } from "#shared/funnel";
 import { PROVIDER_ENV_VARS } from "#shared/settings";
 import type {
@@ -80,33 +83,65 @@ import type {
   RemoveSkillRequest,
   SearchMarketplaceSkillsRequest,
 } from "#shared/skills-types";
-import {
-  MACOS_TRAFFIC_LIGHT_POSITION,
-  windowChromeMetrics,
-} from "#shared/window-chrome";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
+import { readClipboardImage } from "./clipboard-image";
 import { installCrashGuard } from "./crash-guard";
+import { installMutationHarness } from "./dev/mutation-harness";
 import { isSafeExternalUrl } from "./external-links";
-import { disposeLocalModels, registerIpcHandlers } from "./handler";
+import {
+  disposeLocalModels,
+  registerIpcHandlers,
+  type HostOperations,
+} from "./handler";
 import { registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import {
+  disposeMigrationProgress,
+  prefsFileAfterMigrations,
+  runStartupMigrations,
+} from "./migrations/startup";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
+import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import {
+  devContentSize,
+  experienceEntryUrl,
+  rendererEntry,
+  type RendererBase,
+} from "./renderer-entry";
+import { RENDERER_GENERATION } from "./renderer-generation";
+import {
   RendererHost,
+  RendererSwapScheduler,
   rendererWebContents,
   setActiveRendererHost,
-  SwapAborted,
 } from "./renderer-host";
 import { agentEntry, resourcePath, resourcesRoot } from "./resources";
+import type { AppOperations, RpcDeps } from "./rpc/deps";
+import { emitBusChannel } from "./rpc/emit";
+import { mainEventBus } from "./rpc/event-bus";
+import { rendererReadiness } from "./rpc/readiness";
+import { createRouter } from "./rpc/router";
+import { createTables } from "./rpc/tables";
+import { createEventTrackers } from "./rpc/trackers";
+import {
+  installMessagePortTransport,
+  type MessagePortTransport,
+} from "./rpc/transports/message-port";
+import { publishToWindowViews } from "./rpc/window-events";
 import { ServiceHost } from "./service-host";
 import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-runtime-handler";
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
-import { registerRendererState } from "./services/config/renderer-state";
+import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import { PrefsStore, prefsFile } from "./services/config/prefs-store";
+import {
+  registerRendererState,
+  type RendererStateStore,
+} from "./services/config/renderer-state";
 import {
   readNotificationSettings,
   readSettings,
@@ -140,6 +175,31 @@ import { registerUpdateHandlers } from "./services/updates/update-handler";
 import { UpdateService } from "./services/updates/update-service";
 import { openHostFile } from "./services/workspace/host-path";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
+import {
+  applyThemedBackground,
+  followPrefsTheme,
+  mainWindowOptions,
+} from "./startup-theme";
+import {
+  applyWindowChrome,
+  linuxChromeMode,
+  subscribeWindowChromeTheme,
+  toolbarHeight,
+  windowChromeState,
+  type ChromeCapability,
+  type LinuxChromeMode,
+} from "./window-chrome-options";
+import {
+  OVERLAY_PROBE_SCRIPT,
+  probeWindowChrome,
+  type OverlayGeometry,
+} from "./window-chrome-probe";
+import {
+  getTitlebarDensity,
+  persistLinuxNativeFrame,
+  setTitlebarDensity,
+  useLinuxNativeFrame,
+} from "./window-chrome-settings";
 
 const APP_DISPLAY_NAME = "AbacusAI Bot";
 
@@ -333,14 +393,13 @@ let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
 /** Null until whenReady; wherever it stays null the packaged baseline runs. */
 let experienceRuntime: ExperienceRuntime | null = null;
-let rendererSwapTimer: NodeJS.Timeout | null = null;
 
 // Throttled input reports from renderer/lib/activity-beacon; a swap defers
 // while input is recent.
 const RENDERER_ACTIVITY_HOLD_MS = 15_000;
 let lastRendererActivity = 0;
 ipcMain.on("renderer-activity", () => {
-  lastRendererActivity = Date.now();
+  appOperations.markRendererActivity();
 });
 
 /**
@@ -348,68 +407,26 @@ ipcMain.on("renderer-activity", () => {
  * gates: an agent mid-turn would lose a reply that exists nowhere else yet, a
  * terminal's scrollback lives in the renderer, and recent input defers it.
  */
+const rendererSwaps = new RendererSwapScheduler({
+  // Development stays on the Vite server.
+  disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
+  target: () =>
+    experienceEntryUrl(
+      experienceRuntime?.activeRendererUrl(),
+      RENDERER_GENERATION
+    ),
+  host: () => rendererHost,
+  busy: () =>
+    workspaceServiceHost.hasActiveAgentTurn() ||
+    workspaceServiceHost.hasLiveTerminalSessions() ||
+    Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
+  // The integrity check admits only experiences built for this shell's
+  // FOUNDATION_API, so this is also the candidate's contract.
+  barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+});
+
 function scheduleRendererSwap(version: string): void {
-  const attempt = (): boolean => {
-    // Development stays on the Vite server.
-    if (process.env.VITE_DEV_SERVER_URL) return true;
-
-    const url = experienceRuntime?.activeRendererUrl();
-
-    if (!url) return true;
-
-    const host = rendererHost;
-
-    if (host === null) return true;
-
-    if (
-      workspaceServiceHost.hasActiveAgentTurn() ||
-      workspaceServiceHost.hasLiveTerminalSessions() ||
-      Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS
-    ) {
-      return false;
-    }
-
-    host
-      .swap(url, {
-        shouldAbort: () =>
-          workspaceServiceHost.hasActiveAgentTurn() ||
-          workspaceServiceHost.hasLiveTerminalSessions() ||
-          Date.now() - lastRendererActivity < RENDERER_ACTIVITY_HOLD_MS,
-      })
-      .then(
-        (swapped) => {
-          if (swapped) {
-            console.log(`[experience] renderer swapped to ${version}`);
-          }
-        },
-        (error: unknown) => {
-          if (error instanceof SwapAborted) {
-            scheduleRendererSwap(version);
-
-            return;
-          }
-
-          console.error("[experience] renderer swap failed", error);
-        }
-      );
-
-    return true;
-  };
-
-  if (rendererSwapTimer !== null) {
-    clearInterval(rendererSwapTimer);
-    rendererSwapTimer = null;
-  }
-
-  if (attempt()) return;
-
-  rendererSwapTimer = setInterval(() => {
-    if (attempt() && rendererSwapTimer !== null) {
-      clearInterval(rendererSwapTimer);
-      rendererSwapTimer = null;
-    }
-  }, 5000);
-  rendererSwapTimer.unref();
+  rendererSwaps.schedule(version);
 }
 // webContents resolves through the host so it stays current across swaps.
 const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
@@ -430,7 +447,93 @@ const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
 const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow);
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 
-async function createWindow() {
+let activeLinuxChromeMode: LinuxChromeMode = "native-frame";
+let chromeCapability: ChromeCapability = "native-frame";
+
+function currentChromeInput() {
+  return {
+    mode: RENDERER_GENERATION,
+    platform: process.platform,
+    dark: nativeTheme.shouldUseDarkColors,
+    reducedTransparency: nativeTheme.prefersReducedTransparency,
+    overlayHeight: toolbarHeight(
+      RENDERER_GENERATION === "wco" ? getTitlebarDensity() : "comfortable"
+    ),
+    linuxMode: activeLinuxChromeMode,
+  };
+}
+
+function refreshWindowChrome(): void {
+  const window = aliveMainWindow();
+  if (window === null) return;
+  const input = currentChromeInput();
+  applyWindowChrome(window, input, rendererHost ?? undefined);
+  // wco: the window and the view follow the resolved scheme.
+  applyThemedBackground(window, input, rendererHost ?? undefined);
+}
+
+interface RecreatedWindowState {
+  url: string;
+  visible: boolean;
+  maximized: boolean;
+  fullScreen: boolean;
+}
+
+function chromeState() {
+  return windowChromeState(
+    currentChromeInput(),
+    chromeCapability,
+    aliveMainWindow()?.isFullScreen() ?? false
+  );
+}
+
+function publishChromeCapability(capability: ChromeCapability): void {
+  chromeCapability = capability;
+  const state = chromeState();
+  publishChromeState();
+  logStore().append(
+    "main",
+    `[window-chrome] ${JSON.stringify({
+      ...state,
+      sessionType: process.env.XDG_SESSION_TYPE,
+      desktop: process.env.XDG_CURRENT_DESKTOP,
+      electron: process.versions.electron,
+    })}`
+  );
+}
+
+const windowLifecycle = mainWindowLifecycle({
+  platform: process.platform,
+  quit: () => app.quit(),
+  capture: (): RecreatedWindowState | null => {
+    const window = aliveMainWindow();
+    if (window === null || rendererHost === null) return null;
+    const bounds = window.getNormalBounds();
+    store.set("windowWidth", bounds.width);
+    store.set("windowHeight", bounds.height);
+    store.set("windowX", bounds.x);
+    store.set("windowY", bounds.y);
+    return {
+      url: rendererHost.webContents.getURL(),
+      visible: window.isVisible(),
+      maximized: window.isMaximized(),
+      fullScreen: window.isFullScreen(),
+    };
+  },
+  destroy: () => aliveMainWindow()?.destroy(),
+  create: createWindow,
+});
+export const recreateMainWindow = windowLifecycle.recreateMainWindow;
+
+/**
+ * `~/.abacusai-bot/prefs.json`, the new renderer's prefs row (spec 00 B.2).
+ * Read before the window exists for the startup theme; served as `db.prefs`.
+ * Nothing reads it before the migrations; if they leave `prefs.json` held by
+ * an unresolved commit, it is replaced by one over a session-only copy.
+ */
+let prefsStore = new PrefsStore();
+
+async function createWindow(restored?: RecreatedWindowState) {
   const Store = (await import("electron-store")).default;
   // A corrupt JSON file would otherwise brick the app on every launch.
   store = new Store<WindowStateSchema>({
@@ -440,7 +543,8 @@ async function createWindow() {
 
   // Set before a silent update restart of a hidden window, so the relaunch
   // stays hidden instead of popping over the user's work.
-  const startHiddenAfterUpdate = consumeRelaunchHidden();
+  const startHiddenAfterUpdate =
+    restored !== undefined ? !restored.visible : consumeRelaunchHidden();
 
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
@@ -481,61 +585,58 @@ async function createWindow() {
     void app.dock?.show();
   }
 
-  const titlebar = windowChromeMetrics(process.platform);
+  activeLinuxChromeMode =
+    RENDERER_GENERATION === "wco" &&
+    process.platform === "linux" &&
+    useLinuxNativeFrame()
+      ? "native-frame"
+      : linuxChromeMode(process.env);
+  chromeCapability =
+    RENDERER_GENERATION === "legacy" ||
+    (process.platform === "linux" && activeLinuxChromeMode === "native-frame")
+      ? "native-frame"
+      : "overlay-pending";
 
-  // Matches the renderer so neither flashes through; transparent where
-  // vibrancy/mica paint the backdrop.
-  const backgroundColor =
-    process.platform === "darwin" || process.platform === "win32"
-      ? "#00000000"
-      : "#2a2a28";
+  // wco: the stored theme is applied before the window exists, so the first
+  // frame is in it (spec 01 §7.7), and the background is the resolved
+  // scheme's (transparent only under vibrancy/mica). The legacy renderer
+  // sets its own theme through `theme:set`; its options are unchanged.
+  const windowOptions = mainWindowOptions({
+    generation: RENDERER_GENERATION,
+    prefs: prefsStore,
+    nativeTheme,
+    chromeInput: currentChromeInput,
+    base: {
+      width,
+      height,
+      x,
+      y,
+      minWidth: 800,
+      minHeight: 600,
+      icon: appIcon,
+      title: APP_DISPLAY_NAME,
+      show: false,
+      autoHideMenuBar: true,
+    },
+  });
+  const { backgroundColor } = windowOptions;
 
   // The renderer lives in the RendererHost's view, so an update can replace it.
-  const mainWindow = new BaseWindow({
-    width,
-    height,
-    x,
-    y,
-    minWidth: 800,
-    minHeight: 600,
-
-    backgroundColor,
-    icon: appIcon,
-    title: APP_DISPLAY_NAME,
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === "darwin"
-      ? {
-          titleBarStyle: "hiddenInset" as const,
-          trafficLightPosition: MACOS_TRAFFIC_LIGHT_POSITION,
-          ...(nativeTheme.prefersReducedTransparency
-            ? {}
-            : {
-                vibrancy: "under-window" as const,
-                visualEffectState: "active" as const,
-              }),
-        }
-      : process.platform === "win32"
-        ? {
-            // Native controls (with Snap) under the renderer's own top bar.
-            titleBarStyle: "hidden" as const,
-            titleBarOverlay: {
-              color: "#00000000",
-              symbolColor: nativeTheme.shouldUseDarkColors
-                ? "#fafafa"
-                : "#171717",
-              height: titlebar.titlebarHeight,
-            },
-            backgroundMaterial: nativeTheme.prefersReducedTransparency
-              ? ("none" as const)
-              : ("mica" as const),
-          }
-        : {
-            // Linux window-manager support for custom overlays is inconsistent.
-            frame: true,
-          }),
-  });
+  const mainWindow = new BaseWindow(windowOptions);
   mainWindowRef = mainWindow;
+  if (RENDERER_GENERATION === "wco") {
+    const unsubscribeChromeTheme = subscribeWindowChromeTheme(
+      nativeTheme,
+      refreshWindowChrome
+    );
+    mainWindow.once("closed", unsubscribeChromeTheme);
+  }
+  if (restored?.maximized) mainWindow.maximize();
+  if (restored?.fullScreen) mainWindow.setFullScreen(true);
+  // Screenshot runs only (spec 01 §10.2): an exact content size, zoom 1.
+  const devSize = devContentSize(process.env, app.isPackaged);
+  if (devSize !== null)
+    mainWindow.setContentSize(devSize.width, devSize.height);
   // Connector login windows hang off this so they share its Space.
   setMainWindow(mainWindow);
   const publishFullScreenState = (): void => {
@@ -544,9 +645,27 @@ async function createWindow() {
       "window:full-screen-changed",
       mainWindow.isFullScreen()
     );
+    publishWindowState();
+    publishChromeState();
+  };
+  // `window.events` for the oRPC renderer: the whole state, to every view
+  // in the window (a swap candidate too, so it flips in current).
+  const publishWindowState = (): void => {
+    const state = mainWindowState();
+    if (state == null) return;
+    publishToWindowViews(
+      emitBusChannel,
+      rpcTransport?.registeredIds() ?? [],
+      rendererWebContents()?.id ?? null,
+      { type: "state", state }
+    );
   };
   mainWindow.on("enter-full-screen", publishFullScreenState);
   mainWindow.on("leave-full-screen", publishFullScreenState);
+  mainWindow.on("focus", publishWindowState);
+  mainWindow.on("blur", publishWindowState);
+  mainWindow.on("maximize", publishWindowState);
+  mainWindow.on("unmaximize", publishWindowState);
   mainWindow.on("closed", () => {
     if (mainWindowRef !== mainWindow) return;
     mainWindowRef = null;
@@ -647,16 +766,32 @@ async function createWindow() {
     const contents = host.webContents;
     const experienceUrl = experienceRuntime?.activeRendererUrl() ?? null;
 
-    if (rendererUrl) {
-      void contents.loadURL(rendererUrl).catch(() => undefined);
-    } else if (experienceUrl !== null) {
-      // A verified installed experience supersedes the asar baseline.
-      console.log(`[experience] serving renderer from ${experienceUrl.href}`);
-      void contents.loadURL(experienceUrl.href).catch(() => undefined);
-    } else {
-      void contents
-        .loadFile(join(import.meta.dirname, "../renderer/index.html"))
-        .catch(() => undefined);
+    // The document is the generation's (spec 01 §3.6); legacy URLs are
+    // exactly what they always were.
+    const base: RendererBase | null =
+      restored !== undefined
+        ? null
+        : rendererUrl
+          ? { kind: "dev", url: rendererUrl }
+          : experienceUrl !== null
+            ? { kind: "experience", url: experienceUrl }
+            : {
+                kind: "file",
+                directory: join(import.meta.dirname, "../renderer"),
+              };
+
+    if (restored !== undefined) {
+      void contents.loadURL(restored.url).catch(() => undefined);
+    } else if (base !== null) {
+      if (base.kind === "experience")
+        // A verified installed experience supersedes the asar baseline.
+        console.log(`[experience] serving renderer from ${base.url.href}`);
+      const entry = rendererEntry(base, RENDERER_GENERATION);
+      void (
+        entry.kind === "url"
+          ? contents.loadURL(entry.url)
+          : contents.loadFile(entry.path)
+      ).catch(() => undefined);
     }
   };
 
@@ -689,9 +824,15 @@ async function createWindow() {
 
   // Runs on the initial view and on each experience swap's replacement.
   const wireRendererContents = (contents: WebContents): void => {
+    // The only place a webContents becomes trusted for an RPC port.
+    rpcTransport?.registerRendererContents(contents, "main");
+
     if (process.argv.includes("--devtools")) {
       contents.openDevTools({ mode: "right" });
     }
+
+    if (devSize !== null)
+      contents.on("did-finish-load", () => contents.setZoomFactor(1));
 
     // BaseWindow has no 'ready-to-show'; any view's first load reveals it.
     contents.once("did-finish-load", () => {
@@ -712,8 +853,71 @@ async function createWindow() {
       if (!isVisible) {
         mainWindow.center();
       }
+      if (RENDERER_GENERATION === "wco")
+        publishChromeCapability(chromeCapability);
       // A silent update restart of a hidden window comes back hidden.
       if (!startHiddenAfterUpdate) mainWindow.show();
+      if (
+        RENDERER_GENERATION === "wco" &&
+        chromeCapability === "overlay-pending"
+      ) {
+        let retryTimer: ReturnType<typeof setTimeout> | undefined;
+        mainWindow.once("closed", () => clearTimeout(retryTimer));
+        const probeAfterShow = (): void => {
+          if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow) return;
+          if (mainWindow.isFullScreen()) {
+            mainWindow.once("leave-full-screen", probeAfterShow);
+            return;
+          }
+          if (mainWindow.isMinimized()) {
+            mainWindow.once("restore", probeAfterShow);
+            return;
+          }
+          void probeWindowChrome(
+            async () => {
+              const current = host.webContents;
+              const geometry = (await current.executeJavaScript(
+                OVERLAY_PROBE_SCRIPT
+              )) as OverlayGeometry | null;
+              if (current !== host.webContents)
+                throw new Error("Renderer swapped during chrome probe");
+              return geometry;
+            },
+            () =>
+              mainWindow.isDestroyed() ||
+              mainWindow.isMinimized() ||
+              mainWindow.isFullScreen() ||
+              !mainWindow.isVisible()
+          )
+            .then(async (result) => {
+              if (mainWindow.isDestroyed() || mainWindowRef !== mainWindow)
+                return;
+              if (
+                result === "retry-later" ||
+                mainWindow.isMinimized() ||
+                mainWindow.isFullScreen() ||
+                !mainWindow.isVisible()
+              ) {
+                retryTimer = setTimeout(probeAfterShow, 250);
+                return;
+              }
+              publishChromeCapability(
+                result === "available" ? "overlay" : "overlay-unavailable"
+              );
+              if (result === "available" || process.platform !== "linux")
+                return;
+              persistLinuxNativeFrame();
+              await recreateMainWindow();
+            })
+            .catch((error) => {
+              console.error("[window-chrome] recreation failed", error);
+            });
+        };
+        // A silent relaunch may stay hidden. Probe only once native controls
+        // can be visible, never mistake a hidden/fullscreen window for failure.
+        if (mainWindow.isVisible()) probeAfterShow();
+        else mainWindow.once("show", probeAfterShow);
+      }
     });
 
     // Spelling suggestions plus the standard editing actions.
@@ -881,11 +1085,566 @@ async function createWindow() {
     },
     window: mainWindow,
     wire: wireRendererContents,
+    readiness: rendererReadiness,
   });
   rendererHost = host;
   setActiveRendererHost(host);
 
   loadAppContent();
+}
+
+/** Extension allow-list for the agent-image reader below. */
+const IMAGE_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".svg": "image/svg+xml",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+};
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
+// Embedded images come back as base64 data URLs, so the payload lands
+// several times larger than the file; 200 MB wedged the renderer.
+const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
+
+const PICKED_FILE_MIME: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".heic": "image/heic",
+  ".tif": "image/tiff",
+  ".tiff": "image/tiff",
+  ".json": "application/json",
+  ".xml": "application/xml",
+  ".csv": "text/csv",
+  ".txt": "text/plain",
+  ".md": "text/markdown",
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "text/javascript",
+  ".ts": "text/typescript",
+  ".jsx": "text/javascript",
+  ".tsx": "text/typescript",
+  ".py": "text/x-python",
+  ".yaml": "text/yaml",
+  ".yml": "text/yaml",
+  ".log": "text/plain",
+  ".sh": "text/x-shellscript",
+  ".bat": "text/x-bat",
+  ".toml": "text/plain",
+  ".ini": "text/plain",
+  ".cfg": "text/plain",
+  ".env": "text/plain",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".pptx":
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".zip": "application/zip",
+  ".gz": "application/gzip",
+  ".tar": "application/x-tar",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+};
+
+/**
+ * The bodies of the top-level `window.api` handlers, as named operations: the
+ * `ipcMain` handlers registered in `whenReady` and the oRPC procedures
+ * (main/rpc) both call these, so neither carries its own copy.
+ */
+const appOperations: AppOperations = {
+  async openFolderDialog() {
+    const result = await showOpenDialogFromApp({
+      properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
+      title: "Select Folder",
+    });
+    return result?.filePaths?.[0] || null;
+  },
+
+  // `kind: 'image'` narrows the picker for the composer's "Images" item.
+  async openFilesDialog(kind) {
+    const imagesOnly = kind === "image";
+    const result = await showOpenDialogFromApp({
+      properties: ["openFile", "multiSelections"],
+      title: imagesOnly ? "Select Images" : "Select Files",
+      ...(imagesOnly
+        ? {
+            filters: [
+              {
+                name: "Images",
+                extensions: [
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "gif",
+                  "webp",
+                  "bmp",
+                  "svg",
+                  "ico",
+                  "heic",
+                  "tiff",
+                ],
+              },
+            ],
+          }
+        : {}),
+    });
+
+    if (result.canceled || !result.filePaths?.length) return null;
+
+    const files = await Promise.all(
+      result.filePaths.map(async (filePath) => {
+        const data = await fs.readFile(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeType = PICKED_FILE_MIME[ext] || "application/octet-stream";
+        return {
+          path: filePath,
+          name: path.basename(filePath),
+          data,
+          mimeType,
+        };
+      })
+    );
+
+    return files;
+  },
+
+  async openExternal(url) {
+    if (!isSafeExternalUrl(url)) {
+      // Refused rather than thrown: the callers are click handlers that do
+      // not await.
+      console.warn("[Shell] Refused to open", url);
+      return;
+    }
+    await shell.openExternal(url);
+  },
+
+  // Restricted to directories the app works in: the paths include file
+  // links out of model-generated markdown.
+  async openFilePath(filePath) {
+    const roots = [
+      ...workspaceServiceHost
+        .getMetadata()
+        .workspaces.filter((w) => w.isRemote !== true && w.path != null)
+        .map((w) => w.path as string),
+      abacusBotHome(),
+      // Shared on Linux; the guard admits only files this user owns.
+      userTempDir(),
+    ];
+    const decision = decideLocalOpen(filePath, roots);
+    if (decision.action === "refuse") {
+      console.warn("[Shell] Refused to open path", filePath);
+      return { outcome: "refused", reason: decision.reason };
+    }
+    // The resolved path, which the checks ran against; a symlink can be
+    // re-pointed between check and open.
+    if (decision.action === "reveal") {
+      shell.showItemInFolder(decision.path);
+      return { outcome: "revealed" };
+    }
+    await shell.openPath(decision.path);
+    return { outcome: "opened" };
+  },
+
+  showItemInFolder(filePath) {
+    shell.showItemInFolder(filePath);
+  },
+
+  appVersion: () => app.getVersion(),
+  homeDir: () => os.homedir(),
+  botHome: () => abacusBotHome(),
+
+  // Relaunch after adding skills so new agent processes load them at startup.
+  restartApp() {
+    app.relaunch();
+    app.quit();
+  },
+
+  hasGoogleChrome: () => hasGoogleChrome(),
+
+  // First-run milestones; see services/debug-sync/funnel-beacon.ts.
+  reportFunnelStep(step, detail) {
+    if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+  },
+
+  // The local account; see shared/account.ts for why it is optional.
+  account: {
+    get: () => readAccountState(),
+    skip: () => skipOnboarding(),
+    signOut: () => signOut(),
+    forget: () => forgetAccount(),
+  },
+
+  // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
+  async savePastedTempFiles(baseFolder, files) {
+    try {
+      if (typeof baseFolder !== "string" || baseFolder.length === 0) {
+        return { success: false, error: "workspace path required" };
+      }
+      const tempDir = path.join(baseFolder, WORKSPACE_DIR_NAME, "temp");
+      mkdirSync(tempDir, { recursive: true });
+      // Self-ignoring: the user's repo does not ignore .abacusai-bot/, and
+      // untracked attachments would read as "the agent created these".
+      await fs
+        .writeFile(path.join(tempDir, ".gitignore"), "*\n")
+        .catch(() => {});
+      // Renderer-supplied names; resolvePastedFilePath keeps writes inside.
+      const paths = files.map((file) =>
+        resolvePastedFilePath(tempDir, file.name)
+      );
+      await Promise.all(
+        files.map((file, i) => fs.writeFile(paths[i], Buffer.from(file.data)))
+      );
+      return { success: true, dir: tempDir, paths };
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  },
+
+  // A summary of this run plus every retained day of logs: the run someone
+  // reports is rarely the one still going.
+  async saveLogs(rendererLogs) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const result = await showSaveDialogFromApp({
+      title: "Save logs",
+      defaultPath: path.join(
+        app.getPath("downloads"),
+        `abacusai-bot-logs-${stamp}.zip`
+      ),
+      filters: [{ name: "Zip Archives", extensions: ["zip"] }],
+    });
+    if (result.canceled || !result.filePath) return { success: false };
+
+    try {
+      const summary = buildLogDump({
+        appVersion: app.getVersion(),
+        isPackaged: app.isPackaged,
+        homeDir: abacusBotHome(),
+        rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
+        sessions: workspaceServiceHost.collectAgentDiagnostics(),
+        environment: collectEnvironmentInfo({
+          resourcesPath: resourcesRoot(),
+          agentEntry: agentEntry(),
+          artifactError: resolveArtifactError(),
+        }),
+        retainedDays: RETENTION_DAYS,
+        account: await collectAccountForDump(),
+        ...(await collectUsageForDump()),
+      });
+
+      const files: ZipFile[] = [
+        { name: "summary.txt", content: Buffer.from(summary, "utf-8") },
+      ];
+
+      // `files()` flushes first, so the lines written a moment ago are in.
+      for (const file of logStore().files()) {
+        try {
+          files.push({
+            name: `logs/${file.name}`,
+            content: await fs.readFile(file.path),
+          });
+        } catch {
+          // A file that vanished mid-dump costs its day, not the bundle.
+        }
+      }
+
+      await fs.writeFile(result.filePath, buildZip(files));
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
+
+  appendLogs(lines) {
+    if (!Array.isArray(lines)) return;
+
+    for (const line of lines) {
+      if (typeof line === "string") logStore().append("renderer", line);
+    }
+  },
+
+  showNotification(title, body, metadata) {
+    // Gated here, the one place every notification passes through.
+    const prefs = readNotificationSettings();
+    if (!prefs.enabled) return;
+    const notification = new Notification({
+      title,
+      body,
+      silent: !prefs.sound,
+    });
+    notification.on("click", () => {
+      const win = revealMainWindow();
+      // Consumed by the onNotificationClicked subscriber in app.tsx.
+      if (win && metadata) {
+        rendererWebContents()?.send("notification-clicked", metadata);
+        emitBusChannel("system", { type: "notification-clicked", metadata });
+      }
+    });
+    notification.show();
+  },
+
+  // Agent-produced image as a data URL. Real paths on both sides, anything
+  // escaping the root refused, extension allow-list, size cap.
+  async readImageAsDataUrl(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeType = IMAGE_MIME[ext];
+      if (!mimeType) {
+        return { success: false, error: "unsupported-extension" };
+      }
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+      if (stat.size > MAX_IMAGE_BYTES) {
+        return {
+          success: false,
+          error: "too-large",
+          sizeBytes: stat.size,
+        };
+      }
+
+      const buf = await fs.readFile(realFile);
+      const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
+      return { success: true, dataUrl, mimeType, sizeBytes: stat.size };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // Same path resolution and sandboxing as the image reader above.
+  async readFileAsText(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+
+      const sizeBytes = stat.size;
+
+      // A null byte in the first 8KB marks a binary file.
+      const fd = await fs.open(realFile, "r");
+      try {
+        const probe = Buffer.alloc(Math.min(8192, sizeBytes));
+        await fd.read(probe, 0, probe.length, 0);
+        if (probe.includes(0)) {
+          return { success: false, error: "binary-file", sizeBytes };
+        }
+      } finally {
+        await fd.close();
+      }
+
+      const truncated = sizeBytes > maxBytes;
+      let content: string;
+      if (truncated) {
+        const buf = Buffer.alloc(maxBytes);
+        const fd2 = await fs.open(realFile, "r");
+        try {
+          await fd2.read(buf, 0, maxBytes, 0);
+        } finally {
+          await fd2.close();
+        }
+        content = buf.toString("utf8");
+      } else {
+        content = await fs.readFile(realFile, "utf8");
+      }
+
+      return { success: true, content, sizeBytes, truncated };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // Parsed here, not in the renderer: sending back slides is cheaper than
+  // shipping a 40 MB deck across IPC. Same sandboxing as the readers above.
+  async readPptx(args) {
+    try {
+      const filePath = args?.filePath;
+      const hostRoot = args?.hostRoot;
+      if (!filePath || !hostRoot) {
+        return {
+          success: false,
+          error: "filePath and hostRoot are required",
+        };
+      }
+
+      const file = await openHostFile(filePath, hostRoot);
+      if (file.ok === false) return { success: false, error: file.error };
+      const { realFile, stat } = file;
+      if (stat.size > MAX_PPTX_BYTES) {
+        return {
+          success: false,
+          error: "too-large",
+          sizeBytes: stat.size,
+        };
+      }
+
+      const buf = await fs.readFile(realFile);
+      const deck = parsePptx(buf);
+      return { success: true, deck, sizeBytes: stat.size };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  },
+
+  // The picker lives here (needs the focused window); the service validates
+  // and copies. Always global scope.
+  async importLocalSkills(request) {
+    const kind = request?.kind === "folder" ? "folder" : "file";
+    const result = await showOpenDialogFromApp({
+      title:
+        kind === "folder" ? "Select skill folder(s)" : "Select skill file(s)",
+      properties:
+        kind === "folder"
+          ? ["openDirectory", "multiSelections", "dontAddToRecent"]
+          : ["openFile", "multiSelections", "dontAddToRecent"],
+      ...(kind === "file"
+        ? { filters: [{ name: "Skill", extensions: ["md"] }] }
+        : {}),
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, cancelled: true };
+    }
+    return workspaceServiceHost.skillsService.importFromPaths({
+      paths: result.filePaths,
+      kind,
+    });
+  },
+
+  showAboutPanel: () => app.showAboutPanel(),
+
+  markRendererActivity() {
+    lastRendererActivity = Date.now();
+  },
+};
+
+/** The main window's state, as `window.state` reports it. */
+function mainWindowState(): WindowState | null {
+  const window = aliveMainWindow();
+  if (window === null) return null;
+  return {
+    fullScreen: window.isFullScreen(),
+    focused: window.isFocused(),
+    maximized: window.isMaximized(),
+  };
+}
+
+/**
+ * Chrome moved (capability, full screen or density): the legacy renderer hears
+ * `window:chrome-changed` only in wco mode; the oRPC renderer gets
+ * `window.events` `{ type: "chrome" }` always.
+ */
+function publishChromeState(): void {
+  const contents = rendererWebContents();
+  if (contents == null) return;
+  const chrome: WindowChromeState = chromeState();
+  // The legacy renderer: the live view only, as before.
+  if (RENDERER_GENERATION === "wco")
+    contents.send("window:chrome-changed", chrome);
+  // Every view in the window, a swap candidate included.
+  publishToWindowViews(
+    emitBusChannel,
+    rpcTransport?.registeredIds() ?? [],
+    contents.id,
+    { type: "chrome", chrome }
+  );
+}
+
+/** Null until whenReady has registered the IPC handlers. */
+let rpcTransport: MessagePortTransport | null = null;
+
+/**
+ * Mount the oRPC router on the MessagePort transport, beside the legacy IPC
+ * (spec 00 A.4). Called once, after the handlers it shares operations with.
+ */
+function installRpc(
+  host: HostOperations,
+  rendererState: RendererStateStore
+): void {
+  const deps: RpcDeps = {
+    serviceHost: workspaceServiceHost,
+    host,
+    app: appOperations,
+    browserRuntime,
+    update: updateService,
+    rendererState,
+    windows: {
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      contents: (id) => {
+        const contents = electronWebContents.fromId(id);
+        return contents == null || contents.isDestroyed() ? null : contents;
+      },
+      // Every window a port is registered for is the main window's renderer
+      // (the live view or a swap candidate); the notch comes later.
+      state: (id) =>
+        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+      chrome: (id) =>
+        rpcTransport?.isRegistered(id) === true ? chromeState() : null,
+      reportReady: (id, report) => rendererReadiness.report(id, report),
+    },
+    bus: mainEventBus,
+    tables: createTables({
+      bus: mainEventBus,
+      sources: workspaceServiceHost,
+      prefsStore,
+    }),
+    ai: workspaceServiceHost.aguiRelay,
+    threads: workspaceServiceHost.threadStore,
+    trackers: createEventTrackers(mainEventBus),
+  };
+  rpcTransport = installMessagePortTransport({
+    ipcMain,
+    router: createRouter(),
+    deps,
+    readiness: rendererReadiness,
+  });
 }
 
 // Before `whenReady`, or a dev run shows "Electron" in the menu bar. Keep the
@@ -947,6 +1706,17 @@ app
       });
     });
 
+    // One-time, versioned migrations (spec 00 C.1): before any service or
+    // store reads the files they derive. Never throws; a failure is recorded
+    // and retried next launch, and every consumer has a fallback.
+    await runStartupMigrations(APP_DISPLAY_NAME);
+    // An unresolved commit that may cover prefs.json: this session writes a
+    // copy, so the next launch's rollback neither overwrites nor is defeated
+    // by what the user changes now.
+    const sessionPrefs = prefsFileAfterMigrations(prefsFile());
+    if (sessionPrefs !== prefsFile())
+      prefsStore = new PrefsStore({ file: sessionPrefs });
+
     registerUpdateHandlers(updateService);
     workspaceServiceHost.initialize();
     // A profile relaunch lands here already signed in, so the sign-in handler
@@ -961,8 +1731,21 @@ app
         );
     });
     workspaceServiceHost.start();
-    registerRendererState();
-    registerIpcHandlers(workspaceServiceHost);
+    const rendererState = registerRendererState();
+    // The old renderer is the shipped UI until the cut-over: its durable
+    // state keeps `prefs.json` current, by provenance (spec 00 C.4).
+    installLegacyPrefsSync(rendererState, prefsStore);
+    const hostOperations = registerIpcHandlers(workspaceServiceHost);
+    // After the dispatcher: the router shares the handlers' operations.
+    installRpc(hostOperations, rendererState);
+    // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
+    // does for the legacy renderer.
+    followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
+    // Development acceptance runs only (spec 01 §12); inert when packaged.
+    installMutationHarness(workspaceServiceHost, {
+      env: process.env,
+      isPackaged: app.isPackaged,
+    });
     registerBrowserRuntimeIpcHandlers(
       browserRuntime,
       () => rendererWebContents()?.id ?? null
@@ -1016,48 +1799,18 @@ app
         /* cleanup is non-essential */
       }
     })();
-    ipcMain.handle("open-external", async (_event, url: string) => {
-      if (!isSafeExternalUrl(url)) {
-        // Refused rather than thrown: the callers are click handlers that do
-        // not await.
-        console.warn("[Shell] Refused to open", url);
-        return;
-      }
-      await shell.openExternal(url);
-    });
+    ipcMain.handle("open-external", (_event, url: string) =>
+      appOperations.openExternal(url)
+    );
 
-    // Restricted to directories the app works in: the paths include file
-    // links out of model-generated markdown.
     ipcMain.handle(
       "open-file-path",
-      async (_event, filePath: string): Promise<OpenFilePathResult> => {
-        const roots = [
-          ...workspaceServiceHost
-            .getMetadata()
-            .workspaces.filter((w) => w.isRemote !== true && w.path != null)
-            .map((w) => w.path as string),
-          abacusBotHome(),
-          // Shared on Linux; the guard admits only files this user owns.
-          userTempDir(),
-        ];
-        const decision = decideLocalOpen(filePath, roots);
-        if (decision.action === "refuse") {
-          console.warn("[Shell] Refused to open path", filePath);
-          return { outcome: "refused", reason: decision.reason };
-        }
-        // The resolved path, which the checks ran against; a symlink can be
-        // re-pointed between check and open.
-        if (decision.action === "reveal") {
-          shell.showItemInFolder(decision.path);
-          return { outcome: "revealed" };
-        }
-        await shell.openPath(decision.path);
-        return { outcome: "opened" };
-      }
+      (_event, filePath: string): Promise<OpenFilePathResult> =>
+        appOperations.openFilePath(filePath)
     );
 
     ipcMain.handle("show-item-in-folder", (_event, filePath: string) => {
-      shell.showItemInFolder(filePath);
+      appOperations.showItemInFolder(filePath);
     });
 
     app.setAboutPanelOptions({
@@ -1093,8 +1846,8 @@ app
         ])
       );
     }
-    ipcMain.handle("get-app-version", () => app.getVersion());
-    ipcMain.handle("window:show-about", () => app.showAboutPanel());
+    ipcMain.handle("get-app-version", () => appOperations.appVersion());
+    ipcMain.handle("window:show-about", () => appOperations.showAboutPanel());
     ipcMain.handle(
       "window:is-full-screen",
       () => mainWindowRef?.isFullScreen() ?? false
@@ -1102,15 +1855,12 @@ app
 
     // Relaunch after adding skills so new agent processes load them at startup.
     ipcMain.handle("restart-app", () => {
-      app.relaunch();
-      app.quit();
+      appOperations.restartApp();
     });
 
-    ipcMain.handle("get-home-dir", () => {
-      return os.homedir();
-    });
+    ipcMain.handle("get-home-dir", () => appOperations.homeDir());
 
-    ipcMain.handle("has-google-chrome", () => hasGoogleChrome());
+    ipcMain.handle("has-google-chrome", () => appOperations.hasGoogleChrome());
 
     ipcMain.handle(
       "theme:set",
@@ -1120,105 +1870,46 @@ app
         }
         nativeTheme.themeSource = source;
 
-        const window = mainWindowRef;
-        if (window != null && !window.isDestroyed()) {
-          if (process.platform === "win32") {
-            window.setTitleBarOverlay({
-              color: "#00000000",
-              symbolColor: nativeTheme.shouldUseDarkColors
-                ? "#fafafa"
-                : "#171717",
-              height: windowChromeMetrics("win32").titlebarHeight,
-            });
-            window.setBackgroundMaterial(
-              nativeTheme.prefersReducedTransparency ? "none" : "mica"
-            );
-          } else if (process.platform === "darwin") {
-            window.setVibrancy(
-              nativeTheme.prefersReducedTransparency ? null : "under-window"
-            );
-          }
-        }
+        refreshWindowChrome();
 
         return nativeTheme.shouldUseDarkColors;
       }
     );
 
+    // The same state the oRPC renderer reads through `window.chrome`.
+    ipcMain.handle("window:chrome", () => chromeState());
+    ipcMain.handle("window:recreate", () => recreateMainWindow());
+    ipcMain.handle(
+      "settings:set-titlebar-density",
+      async (_event, value: unknown) => {
+        const density = setTitlebarDensity(value);
+        if (RENDERER_GENERATION === "wco") {
+          refreshWindowChrome();
+          publishChromeState();
+          if (process.platform === "darwin") await recreateMainWindow();
+        }
+        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+      }
+    );
+
     // `on`, not `handle`: the renderer must never wait on main to log a line.
     ipcMain.on("append-logs", (_event, lines: unknown) => {
-      if (!Array.isArray(lines)) return;
-
-      for (const line of lines) {
-        if (typeof line === "string") logStore().append("renderer", line);
-      }
+      appOperations.appendLogs(lines);
     });
 
-    // A summary of this run plus every retained day of logs: the run someone
-    // reports is rarely the one still going.
-    ipcMain.handle("save-logs", async (_event, rendererLogs: string) => {
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const result = await showSaveDialogFromApp({
-        title: "Save logs",
-        defaultPath: path.join(
-          app.getPath("downloads"),
-          `abacusai-bot-logs-${stamp}.zip`
-        ),
-        filters: [{ name: "Zip Archives", extensions: ["zip"] }],
-      });
-      if (result.canceled || !result.filePath) return { success: false };
-
-      try {
-        const summary = buildLogDump({
-          appVersion: app.getVersion(),
-          isPackaged: app.isPackaged,
-          homeDir: abacusBotHome(),
-          rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
-          sessions: workspaceServiceHost.collectAgentDiagnostics(),
-          environment: collectEnvironmentInfo({
-            resourcesPath: resourcesRoot(),
-            agentEntry: agentEntry(),
-            artifactError: resolveArtifactError(),
-          }),
-          retainedDays: RETENTION_DAYS,
-          account: await collectAccountForDump(),
-          ...(await collectUsageForDump()),
-        });
-
-        const files: ZipFile[] = [
-          { name: "summary.txt", content: Buffer.from(summary, "utf-8") },
-        ];
-
-        // `files()` flushes first, so the lines written a moment ago are in.
-        for (const file of logStore().files()) {
-          try {
-            files.push({
-              name: `logs/${file.name}`,
-              content: await fs.readFile(file.path),
-            });
-          } catch {
-            // A file that vanished mid-dump costs its day, not the bundle.
-          }
-        }
-
-        await fs.writeFile(result.filePath, buildZip(files));
-        return { success: true, filePath: result.filePath };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    });
+    ipcMain.handle("save-logs", (_event, rendererLogs: string) =>
+      appOperations.saveLogs(rendererLogs)
+    );
 
     // The local account; see shared/account.ts for why it is optional.
-    ipcMain.handle("account:get", () => readAccountState());
-    ipcMain.handle("account:skip", () => skipOnboarding());
-    ipcMain.handle("account:sign-out", () => signOut());
-    ipcMain.handle("account:forget", () => forgetAccount());
+    ipcMain.handle("account:get", () => appOperations.account.get());
+    ipcMain.handle("account:skip", () => appOperations.account.skip());
+    ipcMain.handle("account:sign-out", () => appOperations.account.signOut());
+    ipcMain.handle("account:forget", () => appOperations.account.forget());
 
     // First-run milestones; see services/debug-sync/funnel-beacon.ts.
     ipcMain.on("funnel:step", (_event, step: unknown, detail: unknown) => {
-      if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+      appOperations.reportFunnelStep(step, detail);
     });
     reportFunnelStep(
       "app_opened",
@@ -1228,304 +1919,44 @@ app
         : "signed_out"
     );
 
-    ipcMain.handle("open-folder-dialog", async () => {
-      const result = await showOpenDialogFromApp({
-        properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
-        title: "Select Folder",
-      });
-      return result?.filePaths?.[0] || null;
-    });
+    ipcMain.handle("open-folder-dialog", () =>
+      appOperations.openFolderDialog()
+    );
 
-    // Agent-produced image as a data URL. Real paths on both sides, anything
-    // escaping the root refused, extension allow-list, size cap.
-    {
-      const IMAGE_MIME: Record<string, string> = {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
-        ".bmp": "image/bmp",
-        ".ico": "image/x-icon",
-        ".svg": "image/svg+xml",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-      };
-      const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-
-      ipcMain.handle(
-        "files:read-image-as-data-url",
-        async (_event, args: { filePath?: string; hostRoot?: string }) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeType = IMAGE_MIME[ext];
-            if (!mimeType) {
-              return { success: false, error: "unsupported-extension" };
-            }
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-            if (stat.size > MAX_IMAGE_BYTES) {
-              return {
-                success: false,
-                error: "too-large",
-                sizeBytes: stat.size,
-              };
-            }
-
-            const buf = await fs.readFile(realFile);
-            const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
-            return { success: true, dataUrl, mimeType, sizeBytes: stat.size };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // Same path resolution and sandboxing as the image reader above.
-    {
-      const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
-
-      ipcMain.handle(
-        "files:read-file-as-text",
-        async (
-          _event,
-          args: { filePath?: string; hostRoot?: string; maxBytes?: number }
-        ) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-
-            const sizeBytes = stat.size;
-
-            // A null byte in the first 8KB marks a binary file.
-            const fd = await fs.open(realFile, "r");
-            try {
-              const probe = Buffer.alloc(Math.min(8192, sizeBytes));
-              await fd.read(probe, 0, probe.length, 0);
-              if (probe.includes(0)) {
-                return { success: false, error: "binary-file", sizeBytes };
-              }
-            } finally {
-              await fd.close();
-            }
-
-            const truncated = sizeBytes > maxBytes;
-            let content: string;
-            if (truncated) {
-              const buf = Buffer.alloc(maxBytes);
-              const fd2 = await fs.open(realFile, "r");
-              try {
-                await fd2.read(buf, 0, maxBytes, 0);
-              } finally {
-                await fd2.close();
-              }
-              content = buf.toString("utf8");
-            } else {
-              content = await fs.readFile(realFile, "utf8");
-            }
-
-            return { success: true, content, sizeBytes, truncated };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // Parsed here, not in the renderer: sending back slides is cheaper than
-    // shipping a 40 MB deck across IPC. Same sandboxing as the readers above.
-    {
-      // Embedded images come back as base64 data URLs, so the payload lands
-      // several times larger than the file; 200 MB wedged the renderer.
-      const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
-
-      ipcMain.handle(
-        "files:read-pptx",
-        async (_event, args: { filePath?: string; hostRoot?: string }) => {
-          try {
-            const filePath = args?.filePath;
-            const hostRoot = args?.hostRoot;
-            if (!filePath || !hostRoot) {
-              return {
-                success: false,
-                error: "filePath and hostRoot are required",
-              };
-            }
-
-            const file = await openHostFile(filePath, hostRoot);
-            if (file.ok === false) return { success: false, error: file.error };
-            const { realFile, stat } = file;
-            if (stat.size > MAX_PPTX_BYTES) {
-              return {
-                success: false,
-                error: "too-large",
-                sizeBytes: stat.size,
-              };
-            }
-
-            const buf = await fs.readFile(realFile);
-            const deck = parsePptx(buf);
-            return { success: true, deck, sizeBytes: stat.size };
-          } catch (err) {
-            return {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            };
-          }
-        }
-      );
-    }
-
-    // `kind: 'image'` narrows the picker for the composer's "Images" item.
     ipcMain.handle(
-      "open-files-dialog",
-      async (_event, kind?: "all" | "image") => {
-        const imagesOnly = kind === "image";
-        const result = await showOpenDialogFromApp({
-          properties: ["openFile", "multiSelections"],
-          title: imagesOnly ? "Select Images" : "Select Files",
-          ...(imagesOnly
-            ? {
-                filters: [
-                  {
-                    name: "Images",
-                    extensions: [
-                      "png",
-                      "jpg",
-                      "jpeg",
-                      "gif",
-                      "webp",
-                      "bmp",
-                      "svg",
-                      "ico",
-                      "heic",
-                      "tiff",
-                    ],
-                  },
-                ],
-              }
-            : {}),
-        });
+      "files:read-image-as-data-url",
+      (_event, args: { filePath?: string; hostRoot?: string }) =>
+        appOperations.readImageAsDataUrl(args)
+    );
 
-        if (result.canceled || !result.filePaths?.length) return null;
+    ipcMain.handle(
+      "files:read-file-as-text",
+      (
+        _event,
+        args: { filePath?: string; hostRoot?: string; maxBytes?: number }
+      ) => appOperations.readFileAsText(args)
+    );
 
-        const MIME_MAP: Record<string, string> = {
-          ".pdf": "application/pdf",
-          ".png": "image/png",
-          ".jpg": "image/jpeg",
-          ".jpeg": "image/jpeg",
-          ".gif": "image/gif",
-          ".webp": "image/webp",
-          ".svg": "image/svg+xml",
-          ".bmp": "image/bmp",
-          ".ico": "image/x-icon",
-          ".heic": "image/heic",
-          ".tif": "image/tiff",
-          ".tiff": "image/tiff",
-          ".json": "application/json",
-          ".xml": "application/xml",
-          ".csv": "text/csv",
-          ".txt": "text/plain",
-          ".md": "text/markdown",
-          ".html": "text/html",
-          ".css": "text/css",
-          ".js": "text/javascript",
-          ".ts": "text/typescript",
-          ".jsx": "text/javascript",
-          ".tsx": "text/typescript",
-          ".py": "text/x-python",
-          ".yaml": "text/yaml",
-          ".yml": "text/yaml",
-          ".log": "text/plain",
-          ".sh": "text/x-shellscript",
-          ".bat": "text/x-bat",
-          ".toml": "text/plain",
-          ".ini": "text/plain",
-          ".cfg": "text/plain",
-          ".env": "text/plain",
-          ".doc": "application/msword",
-          ".docx":
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          ".xls": "application/vnd.ms-excel",
-          ".xlsx":
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          ".ppt": "application/vnd.ms-powerpoint",
-          ".pptx":
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          ".zip": "application/zip",
-          ".gz": "application/gzip",
-          ".tar": "application/x-tar",
-          ".mp3": "audio/mpeg",
-          ".wav": "audio/wav",
-          ".mp4": "video/mp4",
-          ".mov": "video/quicktime",
-        };
+    ipcMain.handle(
+      "files:read-pptx",
+      (_event, args: { filePath?: string; hostRoot?: string }) =>
+        appOperations.readPptx(args)
+    );
 
-        const files = await Promise.all(
-          result.filePaths.map(async (filePath) => {
-            const data = await fs.readFile(filePath);
-            const ext = path.extname(filePath).toLowerCase();
-            const mimeType = MIME_MAP[ext] || "application/octet-stream";
-            return {
-              path: filePath,
-              name: path.basename(filePath),
-              data,
-              mimeType,
-            };
-          })
-        );
-
-        return files;
-      }
+    ipcMain.handle("open-files-dialog", (_event, kind?: "all" | "image") =>
+      appOperations.openFilesDialog(kind)
     );
 
     // Backs the "Paste image" attach item, which has no paste event to read
     // because the click happens in a menu. Null when there is no image.
-    ipcMain.handle("read-clipboard-image", () => {
-      try {
-        const image = clipboard.readImage();
-        if (image == null || image.isEmpty()) return null;
-        const data = image.toPNG();
-        if (data.length === 0) return null;
-        return {
-          name: `clipboard-${Date.now()}.png`,
-          data,
-          mimeType: "image/png",
-        };
-      } catch {
-        return null;
-      }
-    });
+    ipcMain.handle("read-clipboard-image", () =>
+      readClipboardImage({
+        read: () => clipboard.read(),
+        toPNG: (data) => nativeImage.createFromBuffer(data).toPNG(),
+        logError: (error) =>
+          console.error("[clipboard] failed to read image", error),
+      })
+    );
 
     // A user-directed fetch of a user-typed address for staging as an
     // attachment. http/https only, and capped so an endless body cannot wedge
@@ -1613,58 +2044,17 @@ app
         body: string,
         metadata?: { tab?: string; workspaceId?: string; sessionId?: string }
       ) => {
-        // Gated here, the one place every notification passes through.
-        const prefs = readNotificationSettings();
-        if (!prefs.enabled) return;
-        const notification = new Notification({
-          title,
-          body,
-          silent: !prefs.sound,
-        });
-        notification.on("click", () => {
-          const win = revealMainWindow();
-          // Consumed by the onNotificationClicked subscriber in app.tsx.
-          if (win && metadata) {
-            rendererWebContents()?.send("notification-clicked", metadata);
-          }
-        });
-        notification.show();
+        appOperations.showNotification(title, body, metadata);
       }
     );
 
-    // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
     ipcMain.handle(
       "save-pasted-temp-files",
-      async (
+      (
         _event,
         baseFolder: string,
         files: Array<{ name: string; data: Uint8Array }>
-      ) => {
-        try {
-          if (typeof baseFolder !== "string" || baseFolder.length === 0) {
-            return { success: false, error: "workspace path required" };
-          }
-          const tempDir = path.join(baseFolder, WORKSPACE_DIR_NAME, "temp");
-          mkdirSync(tempDir, { recursive: true });
-          // Self-ignoring: the user's repo does not ignore .abacusai-bot/, and
-          // untracked attachments would read as "the agent created these".
-          await fs
-            .writeFile(path.join(tempDir, ".gitignore"), "*\n")
-            .catch(() => {});
-          // Renderer-supplied names; resolvePastedFilePath keeps writes inside.
-          const paths = files.map((file) =>
-            resolvePastedFilePath(tempDir, file.name)
-          );
-          await Promise.all(
-            files.map((file, i) =>
-              fs.writeFile(paths[i], Buffer.from(file.data))
-            )
-          );
-          return { success: true, dir: tempDir, paths };
-        } catch (err) {
-          return { success: false, error: String(err) };
-        }
-      }
+      ) => appOperations.savePastedTempFiles(baseFolder, files)
     );
 
     // Skills management and marketplace (api.skills.*).
@@ -1692,33 +2082,10 @@ app
         return workspaceServiceHost.skillsService.openFile(request);
       }
     );
-    // The picker lives here (needs the focused window); the service validates
-    // and copies. Always global scope.
     ipcMain.handle(
       "skills-import-local",
-      async (_event, request: ImportLocalSkillsRequest) => {
-        const kind = request?.kind === "folder" ? "folder" : "file";
-        const result = await showOpenDialogFromApp({
-          title:
-            kind === "folder"
-              ? "Select skill folder(s)"
-              : "Select skill file(s)",
-          properties:
-            kind === "folder"
-              ? ["openDirectory", "multiSelections", "dontAddToRecent"]
-              : ["openFile", "multiSelections", "dontAddToRecent"],
-          ...(kind === "file"
-            ? { filters: [{ name: "Skill", extensions: ["md"] }] }
-            : {}),
-        });
-        if (result.canceled || result.filePaths.length === 0) {
-          return { success: false, cancelled: true };
-        }
-        return workspaceServiceHost.skillsService.importFromPaths({
-          paths: result.filePaths,
-          kind,
-        });
-      }
+      (_event, request: ImportLocalSkillsRequest) =>
+        appOperations.importLocalSkills(request)
     );
 
     // Global skills layout at startup, even if the Skills dialog never opens.
@@ -1741,7 +2108,7 @@ app
       console.error("[experience] runtime failed to initialize", error);
     }
   })
-  .then(createWindow)
+  .then(() => createWindow())
   .then(() => {
     updateService.checkForUpdatesOnStartup();
 
@@ -1766,14 +2133,13 @@ app
       // exit, not quit: the shutdown path can hold a probe process open.
       app.exit(0);
     }
-  });
+  })
+  // Once the main window exists, or when the chain failed before it did (the
+  // hidden progress window would otherwise keep the process alive).
+  .finally(disposeMigrationProgress);
 
 // On macOS the app stays in the dock.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+app.on("window-all-closed", windowLifecycle.onWindowAllClosed);
 
 // Squirrel.Mac's quitAndInstall closes all windows before app.quit(), so
 // before-quit has not fired and the darwin 'close' handler would hide the
@@ -1787,6 +2153,8 @@ let quitGracefulInProgress = false;
 app.on("before-quit", (event) => {
   // So the window 'close' handler stops intercepting.
   markQuitting();
+  // The progress window refuses to close by itself; free it before the quit.
+  disposeMigrationProgress();
   logStore().flush();
   try {
     browserRuntime.disposeAll();

@@ -18,6 +18,7 @@ import * as path from "node:path";
 import type { BashOperations } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as backends from "./backends.js";
 import { setCurrentMode } from "./current-mode.js";
 import { AgentMode } from "./protocol.js";
 
@@ -157,8 +158,9 @@ const lastSpawn = (): { file: string; args: string[]; options: unknown } => {
   return { file: call[0], args: call[1], options: call[2] };
 };
 
-const load = async (): Promise<typeof import("./backends.js")> =>
-  import("./backends.js");
+// Compile and load the dependency graph during suite setup. Selection reads
+// the environment on each call; a cold import is not part of that assertion.
+const load = async (): Promise<typeof import("./backends.js")> => backends;
 
 /** Run one command through `operations`, collecting everything it wrote. */
 const exec = async (

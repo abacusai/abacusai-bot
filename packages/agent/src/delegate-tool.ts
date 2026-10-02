@@ -5,6 +5,7 @@
 import { Type } from "typebox";
 
 import { runDelegatedTask, type DelegationContext } from "./delegation.js";
+import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 
 /**
@@ -71,7 +72,7 @@ export function buildDelegateTool(
           "The complete, self-contained task. State what to find and what to report back, as if to someone who has not read this conversation.",
       }),
     }),
-    execute: async (_toolCallId, params, signal) => {
+    execute: async (toolCallId, params, signal) => {
       // Stop can land before the tool starts; a sub-session would outlive the
       // turn.
       if (signal?.aborted) {
@@ -97,19 +98,26 @@ export function buildDelegateTool(
       // Bracketed even on failure, or the card spins in the Agents pane
       // forever.
       const subtaskId = `delegate-${Date.now()}-${++counter}`;
-      emit({
-        type: "subtask_start",
-        id: subtaskId,
-        description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
-        kind: "delegate",
-      });
+      emit(
+        tagEvent(
+          {
+            type: "subtask_start",
+            id: subtaskId,
+            description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
+            kind: "delegate",
+          },
+          { parentToolCallId: toolCallId }
+        )
+      );
+      // Everything the sub-agent does is tagged as its own (AG-UI only).
+      const childEmit = scopeEmit(emit, subtaskId);
 
       let result;
       // Failed until proven otherwise: a throw reaches `finally` without
       // setting it.
       let status: "completed" | "failed" = "failed";
       try {
-        result = await runDelegatedTask(context, task, emit, signal);
+        result = await runDelegatedTask(context, task, childEmit, signal);
         status =
           result.stoppedBy === "error" ||
           result.stoppedBy === "provider-error" ||
@@ -120,7 +128,7 @@ export function buildDelegateTool(
         // Text inside the bracket lands on the sub-agent's card, not the
         // transcript.
         if (result.text.trim().length > 0)
-          emit({ type: "text_delta", content: result.text });
+          childEmit({ type: "text_delta", content: result.text });
       } finally {
         emit({ type: "subtask_end", id: subtaskId, status });
       }

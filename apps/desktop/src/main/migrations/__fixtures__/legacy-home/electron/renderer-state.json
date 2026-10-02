@@ -1,0 +1,9 @@
+{
+  "durable-storage.migrated": "1",
+  "theme": "dark",
+  "abacusai-bot-language": "{\"state\":{\"languageCode\":\"ja-JP\"},\"version\":0}",
+  "local-code-ui-store": "{\"state\":{\"isSidebarVisible\":true,\"selectedModelId\":\"abacus/route-llm-code\",\"favoriteModelIds\":[\"abacus/route-llm-code\"],\"globalSelectedMode\":\"AUTO\",\"workspaceSelectedModelIds\":{},\"workspaceAccordionExpanded\":{\"00000000-0000-4000-8000-000000000003\":true},\"codeSidebarTab\":\"workspaces\",\"pinnedSessionIds\":[\"sess-fixture-1\"],\"pinnedBotIds\":[\"bot-fixture-1\"],\"lastPickedWorkspaceId\":null},\"version\":4}",
+  "sidebar-accordion": "{\"state\":{\"openSection\":\"sessions\"},\"version\":0}",
+  "local-code:bypass-default-retired": "1",
+  "composer.draft:00000000-0000-4000-8000-000000000003": "unsent words"
+}

@@ -1,0 +1,74 @@
+{
+  "prefs": {
+    "provenance": {
+      "browserHomepage": "default",
+      "creditsExhaustedAt": "default",
+      "defaultMode": "legacy",
+      "dismissals.referralCardUntil": "default",
+      "dismissals.upsell": "default",
+      "language": "default",
+      "lastPickedWorkspaceId": "legacy",
+      "models.favoriteModelIds": "legacy",
+      "models.perWorkspace": "legacy",
+      "models.selectedModelId": "legacy",
+      "motion.reduce": "default",
+      "onboardingStep": "default",
+      "panes": "default",
+      "pinned.botIds": "legacy",
+      "pinned.sessionIds": "legacy",
+      "recentFolders": "default",
+      "sidebar.openSection": "legacy",
+      "sidebar.pinned": "legacy",
+      "sounds.enabled": "default",
+      "sounds.perEvent": "default",
+      "theme": "default",
+      "workspaceExpanded": "legacy"
+    },
+    "row": {
+      "browserHomepage": null,
+      "creditsExhaustedAt": null,
+      "defaultMode": "ACCEPTEDITS",
+      "dismissals": {
+        "referralCardUntil": null,
+        "upsell": false
+      },
+      "id": "app",
+      "language": "system",
+      "lastPickedWorkspaceId": null,
+      "models": {
+        "favoriteModelIds": [],
+        "perWorkspace": {},
+        "selectedModelId": null
+      },
+      "motion": {
+        "reduce": "system"
+      },
+      "onboardingStep": null,
+      "panes": {},
+      "pinned": {
+        "botIds": ["bot-a", "bot-b"],
+        "sessionIds": []
+      },
+      "recentFolders": [],
+      "sidebar": {
+        "openSection": null,
+        "pinned": true
+      },
+      "sounds": {
+        "enabled": true,
+        "perEvent": {}
+      },
+      "theme": "system",
+      "updatedAt": "2026-09-30T12:00:00.000Z",
+      "workspaceExpanded": {}
+    }
+  },
+  "stats": {
+    "imported": 6,
+    "invalid": 0,
+    "keptUser": 0,
+    "keys": 2,
+    "reset": 0,
+    "written": 1
+  }
+}

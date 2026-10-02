@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "sessionId": "sess-media",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Draw a cat, then animate it",
+      "at": 1788256800000
+    },
+    {
+      "type": "media",
+      "id": "m-image",
+      "media": {
+        "kind": "image",
+        "url": "https://example.com/cat.png",
+        "width": 1024,
+        "height": 768,
+        "prompt": "a cat",
+        "model": "image-model-1"
+      },
+      "at": 1788256801000
+    },
+    {
+      "type": "media",
+      "id": "m-video",
+      "media": {
+        "kind": "video",
+        "url": "https://example.com/cat.mp4",
+        "width": 1280,
+        "height": 720,
+        "prompt": "a cat walking",
+        "model": "video-model-1",
+        "aspectRatio": "16:9",
+        "duration": 5,
+        "loop": true
+      },
+      "at": 1788256802000
+    },
+    {
+      "type": "media",
+      "id": "m-video-min",
+      "media": {
+        "kind": "video",
+        "url": "https://example.com/min.mp4",
+        "width": 640,
+        "height": 360
+      },
+      "at": 1788256803000
+    }
+  ]
+}

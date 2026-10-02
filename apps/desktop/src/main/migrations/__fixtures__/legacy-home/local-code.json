@@ -1,0 +1,27 @@
+{
+  "migrated_from_default_v1": true,
+  "localCode": {
+    "workspaces": [
+      {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "label": "bot-home",
+        "description": "/Users/fixture-user/.abacusai-bot/bot-home",
+        "status": "idle",
+        "path": "/Users/fixture-user/.abacusai-bot/bot-home",
+        "isRemote": false
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "label": "session-home",
+        "description": "/Users/fixture-user/.abacusai-bot/session-home",
+        "kind": "auto",
+        "status": "active",
+        "path": "/Users/fixture-user/.abacusai-bot/session-home",
+        "isRemote": false
+      }
+    ],
+    "activeWorkspaceId": "00000000-0000-4000-8000-000000000003",
+    "sessionArtifacts": [],
+    "agentSessions": []
+  }
+}

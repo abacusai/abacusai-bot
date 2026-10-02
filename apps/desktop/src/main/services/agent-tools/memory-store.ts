@@ -424,14 +424,23 @@ export const listMemories = (): Record<MemoryTarget, string[]> => ({
 export const forgetEntryAt = (
   target: MemoryTarget,
   index: number,
-  expected: string
+  expected: string,
+  /**
+   * How many copies of `expected` the list held when it was clicked. With
+   * duplicates, index and text alone cannot tell a stale click from a fresh
+   * one: the second of two "a"s slides into the first's slot.
+   */
+  occurrences?: number
 ): Promise<MemoryResult> =>
-  withStoreLock(target, () => forgetEntryAtLocked(target, index, expected));
+  withStoreLock(target, () =>
+    forgetEntryAtLocked(target, index, expected, occurrences)
+  );
 
 const forgetEntryAtLocked = (
   target: MemoryTarget,
   index: number,
-  expected: string
+  expected: string,
+  occurrences?: number
 ): MemoryResult => {
   const entries = readEntries(target);
 
@@ -439,7 +448,11 @@ const forgetEntryAtLocked = (
     return { ok: false, message: "That entry is no longer there.", entries };
   }
 
-  if (entries[index] !== expected) {
+  if (
+    entries[index] !== expected ||
+    (occurrences != null &&
+      entries.filter((entry) => entry === expected).length !== occurrences)
+  ) {
     return {
       ok: false,
       message:
