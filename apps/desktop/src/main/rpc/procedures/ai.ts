@@ -116,9 +116,16 @@ export const aiRouter = impl.ai.router({
       yield* events;
     })();
   }),
-  send: impl.ai.send.handler(({ input, context }) =>
-    context.deps.ai.send(input)
-  ),
+  send: impl.ai.send.handler(async ({ input, context }) => {
+    const result = await context.deps.ai.send(input);
+    if (result.status === "started" || result.status === "queued")
+      context.deps.notch?.broadcast({
+        type: "reaction",
+        sessionId: input.threadId,
+        reaction: "wink",
+      });
+    return result;
+  }),
   hydrate: impl.ai.hydrate.handler(async ({ input, context }) =>
     page(
       input.threadId,

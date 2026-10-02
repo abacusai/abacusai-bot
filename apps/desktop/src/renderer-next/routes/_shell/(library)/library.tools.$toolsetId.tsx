@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import * as v from "valibot";
 
 import { ToolsetPage } from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
@@ -18,7 +17,7 @@ const ToolsetRoute = () => {
           {name}
         </span>
       </TopBarSlot>
-      <ToolsetPage toolsetName={name} />
+      <ToolsetPage toolsetName={toolsetId} />
     </>
   );
 };
@@ -26,10 +25,9 @@ const ToolsetRoute = () => {
 export const Route = createFileRoute(
   "/_shell/(library)/library/tools/$toolsetId"
 )({
-  params: {
-    parse: v.parser(
-      v.object({ toolsetId: v.picklist([...TOOLSETS_BY_ID.keys()]) })
-    ),
+  beforeLoad: ({ params }) => {
+    if (!TOOLSETS_BY_ID.has(params.toolsetId))
+      throw redirect({ to: "/library/tools", replace: true });
   },
   component: ToolsetRoute,
 });

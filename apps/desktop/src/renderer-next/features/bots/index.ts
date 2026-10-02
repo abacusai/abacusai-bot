@@ -27,3 +27,5 @@ export { getDraft, clearDraft, updateDraft } from "./form/draft-store";
 export { botsGallerySections, isBotsGalleryFixture } from "./gallery/sections";
 
 export { createBotFromTemplate, deleteBot } from "./data/bot-actions";
+
+export { useBotChatActivity } from "./chat/activity";

@@ -44,6 +44,7 @@ export interface ModeChipProps {
   onRevert?: () => void;
   /** Opens with the menu shown (gallery "permission mode open"). */
   defaultOpen?: boolean;
+  availableModes?: AgentMode[];
 }
 
 export const ModeChip = ({
@@ -55,6 +56,7 @@ export const ModeChip = ({
   onOpenChange,
   onRevert,
   defaultOpen = false,
+  availableModes,
 }: ModeChipProps) => {
   const { t } = useTranslation();
   const [optimistic, setOptimistic] = useState<AgentMode | null>(null);
@@ -117,7 +119,9 @@ export const ModeChip = ({
         ) : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[340px]" align="start" side="top">
-        {MODE_ORDER.map((mode) => (
+        {MODE_ORDER.filter(
+          (mode) => availableModes == null || availableModes.includes(mode)
+        ).map((mode) => (
           <DropdownMenuItem
             key={mode}
             onClick={() => choose(mode)}
@@ -145,7 +149,9 @@ export const ModelChip = ({
   binding,
   compact = false,
   onOpenChange,
+  onUseLocalModel,
 }: {
+  onUseLocalModel?(): void;
   onOpenChange?(open: boolean): void;
   binding: ModelChipBinding;
   compact?: boolean;
@@ -227,6 +233,20 @@ export const ModelChip = ({
           aria-label={t("chat.composer.models")}
           className="flex max-h-80 flex-col overflow-y-auto"
         >
+          {onUseLocalModel != null && q === "" ? (
+            <button
+              type="button"
+              role="option"
+              aria-selected={false}
+              className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
+              onClick={() => {
+                onUseLocalModel();
+                setOpen(false);
+              }}
+            >
+              {t("localModels.useLocal")}
+            </button>
+          ) : null}
           {groups.map((group) => (
             <div
               key={group.id}

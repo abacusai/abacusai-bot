@@ -8,6 +8,7 @@
 
 /** Portaled surfaces installed in phase 1 that can cover a native view or the title bar. */
 export const OCCLUDER_SLOTS = [
+  "tour-spotlight",
   "dialog-content",
   "dialog-overlay",
   "alert-dialog-content",

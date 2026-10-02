@@ -4,16 +4,23 @@
     "apps/desktop": {
       "entry": [
         "src/renderer-next/main.tsx",
+        "src/renderer-next/notch.tsx",
+        "src/renderer-next/notch-routes/**/*.tsx",
         "src/renderer-next/routes/**/*.tsx",
         "src/renderer-next/features/*/index.ts",
         "src/renderer-next/**/*.test.{ts,tsx}",
         "src/renderer-next/features/chat/index.ts",
         "src/renderer-next/features/bots/index.ts",
-        "src/renderer-next/data/transport/index.ts"
+        "src/renderer-next/data/transport/index.ts",
+        "src/renderer-next/components/route-sheet/index.tsx",
+        "src/renderer-next/features/{routines,artifacts,library,settings}/index.tsx",
+        "src/renderer-next/components/{form-kit,sound-preview,keymap-editor}/index.tsx",
+        "src/renderer-next/lib/{notify,sound,keyboard/actions}.ts"
       ],
       "project": ["src/renderer-next/**/*.{ts,tsx}"],
       "ignore": [
         "src/renderer-next/routeTree.gen.ts",
+        "src/renderer-next/notchRouteTree.gen.ts",
         "src/renderer-next/ui/**"
       ],
       "ignoreExportsUsedInFile": true

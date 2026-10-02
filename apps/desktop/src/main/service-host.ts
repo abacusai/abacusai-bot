@@ -2811,7 +2811,7 @@ export class ServiceHost {
     // The new agent sees the environment as it stands; nothing owed until then.
     environmentNoticeService.markSessionStarted(request.sessionId);
 
-    return this.agentManagerService.startSession(withModel);
+    return this.agentManagerService.startSessionReady(withModel);
   }
 
   stopAgentSession(
@@ -4393,9 +4393,17 @@ export class ServiceHost {
    * should come back with.
    */
   setTerminalShell(shell: TerminalShellId): TerminalShellState {
+    const previous = readTerminalShell();
     setTerminalShell(shell);
-
-    return this.getTerminalShellState();
+    const state = this.getTerminalShellState();
+    if (state.selected !== previous) {
+      this.emitEvent({
+        type: "exec-backend",
+        backend: readExecBackend() ?? "local",
+        emittedAt: new Date().toISOString(),
+      });
+    }
+    return state;
   }
 
   getNotificationSettings(): NotificationSettings {
@@ -4429,9 +4437,17 @@ export class ServiceHost {
   } {
     // The user may have just installed Docker in order to pick it.
     clearBackendProbeCache();
+    const previous = readExecBackend() ?? "local";
     setExecBackend(backend);
-
-    return this.getExecBackendState();
+    const state = this.getExecBackendState();
+    if (state.selected !== previous) {
+      this.emitEvent({
+        type: "exec-backend",
+        backend: state.selected,
+        emittedAt: new Date().toISOString(),
+      });
+    }
+    return state;
   }
 
   listBrowserProfiles(): ReturnType<BrowserProfilesService["listProfiles"]> {

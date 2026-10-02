@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /Users/rajaniraiyn/work/abacusai-bot/.claude/worktrees/codex-phase6/apps/desktop
+
+[rpc] window.state FORBIDDEN This procedure needs a window; this transport has none
+
+ Test Files  439 passed | 1 skipped (440)
+      Tests  4223 passed | 7 todo (4230)
+   Start at  09:33:37
+   Duration  168.78s (transform 12.42s, setup 9.16s, import 62.38s, tests 189.50s, environment 45.00s)
+

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SettingsPageEmpty } from "#next/features/settings";
+import { AboutPage } from "#next/features/settings";
 import { TopBarSlot } from "#next/features/shell";
 
 const AboutSettingsRoute = () => {
@@ -10,10 +10,10 @@ const AboutSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.pages.about")}
+          {t("settings.sidebar.label")}
         </span>
       </TopBarSlot>
-      <SettingsPageEmpty page="about" />
+      <AboutPage />
     </>
   );
 };

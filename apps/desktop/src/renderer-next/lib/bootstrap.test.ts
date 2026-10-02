@@ -30,6 +30,13 @@ const os = implement(contract).$context<{ ready: unknown[] }>();
 
 const routerWith = (info: () => unknown) =>
   ({
+    account: {
+      state: os.account.state.handler(() => ({
+        account: null,
+        apps: [],
+        onboarded: true,
+      })),
+    },
     system: { info: os.system.info.handler(info as never) },
     window: {
       ready: os.window.ready.handler(({ input, context }) => {

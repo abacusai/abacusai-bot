@@ -13,6 +13,7 @@ export { ChatView, type ChatViewProps } from "./kit/view";
 export { useThreadHost } from "./runtime/host";
 export { deriveSessionTitle } from "./runtime/send";
 export { PermissionList } from "./kit/permissions/permission-list";
+export { adoptDraftModel } from "./composer/draft-store";
 export { Composer, useComposerExpanded } from "./composer/composer";
 /**
  * The fixture player, for the dev fixture build only: a dynamic import, so
@@ -40,6 +41,12 @@ export type {
   ThreadStoreState,
 } from "./store/thread-store";
 
+export type { SubmissionEnvelope } from "./runtime/admission";
+export { updateDraft, clearDraft, draftStore } from "./composer/draft-store";
+
+export { StartComposer } from "./composer/start-composer";
+export { resolveSessionToolDiff as resolveToolDiff } from "./runtime/tool-diff";
+export { SubagentDetail, useSubagents } from "./kit/subagents/detail";
 /**
  * The `/__ui` gallery entries (spec 02 §11.2), loaded on first render: the
  * gallery replays recorded scenarios, and a static import would put every
@@ -65,3 +72,10 @@ export const chatGallerySections =
           play: boolean;
         }) => null,
       };
+
+export { useThreadStore } from "./store/selectors";
+
+export { notchAcceptable } from "./kit/permissions/notch-acceptable";
+export { encodeAnswers as encodeQuestionAnswers } from "./kit/permissions/decisions";
+
+export { runErrorCopy } from "#next/lib/attention/error-copy";

@@ -5,6 +5,8 @@
  * discarded candidate's port closes, so its iterators end and the bus is
  * back to baseline; retries are capped per version.
  */
+import { MessageChannel, type MessagePort } from "node:worker_threads";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {

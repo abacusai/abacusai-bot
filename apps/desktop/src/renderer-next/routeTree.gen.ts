@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from "./routes/__root"
 import { Route as BareRouteImport } from "./routes/_bare"
 import { Route as ShellRouteImport } from "./routes/_shell"
 import { Route as BareChar91__uiChar93RouteImport } from "./routes/_bare/[__ui]"
+import { Route as BareOnboardingRouteImport } from "./routes/_bare/onboarding"
 import { Route as ShellIndexRouteImport } from "./routes/_shell/index"
 import { Route as ShellSettingsRouteImport } from "./routes/_shell/settings"
 import { Route as BareOnboardingIndexRouteImport } from "./routes/_bare/onboarding.index"
@@ -25,8 +26,12 @@ import { Route as ShellSettingsIndexRouteImport } from "./routes/_shell/settings
 import { Route as ShellSettingsAboutRouteImport } from "./routes/_shell/settings.about"
 import { Route as ShellSettingsAccountRouteImport } from "./routes/_shell/settings.account"
 import { Route as ShellSettingsAppearanceRouteImport } from "./routes/_shell/settings.appearance"
+import { Route as ShellSettingsBrowserRouteImport } from "./routes/_shell/settings.browser"
+import { Route as ShellSettingsDevicesRouteImport } from "./routes/_shell/settings.devices"
 import { Route as ShellSettingsEnvironmentRouteImport } from "./routes/_shell/settings.environment"
 import { Route as ShellSettingsGeneralRouteImport } from "./routes/_shell/settings.general"
+import { Route as ShellSettingsKeyboardRouteImport } from "./routes/_shell/settings.keyboard"
+import { Route as ShellSettingsLanguageRouteImport } from "./routes/_shell/settings.language"
 import { Route as ShellSettingsMemoryRouteImport } from "./routes/_shell/settings.memory"
 import { Route as ShellSettingsModelsRouteImport } from "./routes/_shell/settings.models"
 import { Route as ShellSettingsNotificationsRouteImport } from "./routes/_shell/settings.notifications"
@@ -45,13 +50,16 @@ import { Route as ShellroutinesRoutinesListRouteImport } from "./routes/_shell/(
 import { Route as ShellsessionsSessionsIndexRouteImport } from "./routes/_shell/(sessions)/sessions.index"
 import { Route as ShellsessionsSessionsSessionIdRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId"
 import { Route as ShellsessionsSessionsNewRouteImport } from "./routes/_shell/(sessions)/sessions.new"
+import { Route as ShellSettingsAboutChangelogRouteImport } from "./routes/_shell/settings.about_.changelog"
 import { Route as ShellbotsBotsBotIdCheckInRouteImport } from "./routes/_shell/(bots)/bots.$botId.check-in"
 import { Route as ShellbotsBotsBotIdDetailsRouteImport } from "./routes/_shell/(bots)/bots.$botId.details"
 import { Route as ShellbotsBotsBotIdEditRouteImport } from "./routes/_shell/(bots)/bots.$botId_.edit"
 import { Route as ShelllibraryLibraryToolsIndexRouteImport } from "./routes/_shell/(library)/library.tools.index"
 import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/_shell/(library)/library.tools.$toolsetId"
+import { Route as ShellroutinesRoutinesRoutineIdEditRouteImport } from "./routes/_shell/(routines)/routines.$routineId.edit"
 import { Route as ShellroutinesRoutinesListIndexRouteImport } from "./routes/_shell/(routines)/routines._list.index"
 import { Route as ShellroutinesRoutinesListNewRouteImport } from "./routes/_shell/(routines)/routines._list.new"
+import { Route as ShellsessionsSessionsSessionIdDiffRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId.diff"
 import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId_.review"
 import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from "./routes/_shell/(bots)/bots.$botId_.chats.$sessionId"
 
@@ -68,6 +76,11 @@ const BareChar91__uiChar93Route = BareChar91__uiChar93RouteImport.update({
   path: "/__ui",
   getParentRoute: () => BareRoute,
 } as any)
+const BareOnboardingRoute = BareOnboardingRouteImport.update({
+  id: "/onboarding",
+  path: "/onboarding",
+  getParentRoute: () => BareRoute,
+} as any)
 const ShellIndexRoute = ShellIndexRouteImport.update({
   id: "/",
   path: "/",
@@ -79,14 +92,14 @@ const ShellSettingsRoute = ShellSettingsRouteImport.update({
   getParentRoute: () => ShellRoute,
 } as any)
 const BareOnboardingIndexRoute = BareOnboardingIndexRouteImport.update({
-  id: "/onboarding/",
-  path: "/onboarding/",
-  getParentRoute: () => BareRoute,
+  id: "/",
+  path: "/",
+  getParentRoute: () => BareOnboardingRoute,
 } as any)
 const BareOnboardingStepRoute = BareOnboardingStepRouteImport.update({
-  id: "/onboarding/$step",
-  path: "/onboarding/$step",
-  getParentRoute: () => BareRoute,
+  id: "/$step",
+  path: "/$step",
+  getParentRoute: () => BareOnboardingRoute,
 } as any)
 const ShellartifactsArtifactsRoute = ShellartifactsArtifactsRouteImport.update({
   id: "/(artifacts)/artifacts",
@@ -133,6 +146,16 @@ const ShellSettingsAppearanceRoute = ShellSettingsAppearanceRouteImport.update({
   path: "/appearance",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
+const ShellSettingsBrowserRoute = ShellSettingsBrowserRouteImport.update({
+  id: "/browser",
+  path: "/browser",
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsDevicesRoute = ShellSettingsDevicesRouteImport.update({
+  id: "/devices",
+  path: "/devices",
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
 const ShellSettingsEnvironmentRoute =
   ShellSettingsEnvironmentRouteImport.update({
     id: "/environment",
@@ -142,6 +165,16 @@ const ShellSettingsEnvironmentRoute =
 const ShellSettingsGeneralRoute = ShellSettingsGeneralRouteImport.update({
   id: "/general",
   path: "/general",
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsKeyboardRoute = ShellSettingsKeyboardRouteImport.update({
+  id: "/keyboard",
+  path: "/keyboard",
+  getParentRoute: () => ShellSettingsRoute,
+} as any)
+const ShellSettingsLanguageRoute = ShellSettingsLanguageRouteImport.update({
+  id: "/language",
+  path: "/language",
   getParentRoute: () => ShellSettingsRoute,
 } as any)
 const ShellSettingsMemoryRoute = ShellSettingsMemoryRouteImport.update({
@@ -244,6 +277,12 @@ const ShellsessionsSessionsNewRoute =
     path: "/new",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
+const ShellSettingsAboutChangelogRoute =
+  ShellSettingsAboutChangelogRouteImport.update({
+    id: "/about_/changelog",
+    path: "/about/changelog",
+    getParentRoute: () => ShellSettingsRoute,
+  } as any)
 const ShellbotsBotsBotIdCheckInRoute =
   ShellbotsBotsBotIdCheckInRouteImport.update({
     id: "/check-in",
@@ -273,6 +312,12 @@ const ShelllibraryLibraryToolsToolsetIdRoute =
     path: "/tools/$toolsetId",
     getParentRoute: () => ShelllibraryLibraryRoute,
   } as any)
+const ShellroutinesRoutinesRoutineIdEditRoute =
+  ShellroutinesRoutinesRoutineIdEditRouteImport.update({
+    id: "/edit",
+    path: "/edit",
+    getParentRoute: () => ShellroutinesRoutinesRoutineIdRoute,
+  } as any)
 const ShellroutinesRoutinesListIndexRoute =
   ShellroutinesRoutinesListIndexRouteImport.update({
     id: "/",
@@ -284,6 +329,12 @@ const ShellroutinesRoutinesListNewRoute =
     id: "/new",
     path: "/new",
     getParentRoute: () => ShellroutinesRoutinesListRoute,
+  } as any)
+const ShellsessionsSessionsSessionIdDiffRoute =
+  ShellsessionsSessionsSessionIdDiffRouteImport.update({
+    id: "/diff",
+    path: "/diff",
+    getParentRoute: () => ShellsessionsSessionsSessionIdRoute,
   } as any)
 const ShellsessionsSessionsSessionIdReviewRoute =
   ShellsessionsSessionsSessionIdReviewRouteImport.update({
@@ -301,6 +352,7 @@ const ShellbotsBotsBotIdChatsSessionIdRoute =
 export interface FileRoutesByFullPath {
   "/": typeof ShellIndexRoute
   "/__ui": typeof BareChar91__uiChar93Route
+  "/onboarding": typeof BareOnboardingRouteWithChildren
   "/settings": typeof ShellSettingsRouteWithChildren
   "/onboarding/$step": typeof BareOnboardingStepRoute
   "/artifacts": typeof ShellartifactsArtifactsRouteWithChildren
@@ -311,8 +363,12 @@ export interface FileRoutesByFullPath {
   "/settings/about": typeof ShellSettingsAboutRoute
   "/settings/account": typeof ShellSettingsAccountRoute
   "/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/settings/browser": typeof ShellSettingsBrowserRoute
+  "/settings/devices": typeof ShellSettingsDevicesRoute
   "/settings/environment": typeof ShellSettingsEnvironmentRoute
   "/settings/general": typeof ShellSettingsGeneralRoute
+  "/settings/keyboard": typeof ShellSettingsKeyboardRoute
+  "/settings/language": typeof ShellSettingsLanguageRoute
   "/settings/memory": typeof ShellSettingsMemoryRoute
   "/settings/models": typeof ShellSettingsModelsRoute
   "/settings/notifications": typeof ShellSettingsNotificationsRoute
@@ -325,9 +381,10 @@ export interface FileRoutesByFullPath {
   "/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
-  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
-  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/settings/about/changelog": typeof ShellSettingsAboutChangelogRoute
   "/artifacts/": typeof ShellartifactsArtifactsIndexRoute
   "/bots/": typeof ShellbotsBotsIndexRoute
   "/library/": typeof ShelllibraryLibraryIndexRoute
@@ -336,7 +393,9 @@ export interface FileRoutesByFullPath {
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/routines/": typeof ShellroutinesRoutinesListIndexRoute
@@ -350,8 +409,12 @@ export interface FileRoutesByTo {
   "/settings/about": typeof ShellSettingsAboutRoute
   "/settings/account": typeof ShellSettingsAccountRoute
   "/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/settings/browser": typeof ShellSettingsBrowserRoute
+  "/settings/devices": typeof ShellSettingsDevicesRoute
   "/settings/environment": typeof ShellSettingsEnvironmentRoute
   "/settings/general": typeof ShellSettingsGeneralRoute
+  "/settings/keyboard": typeof ShellSettingsKeyboardRoute
+  "/settings/language": typeof ShellSettingsLanguageRoute
   "/settings/memory": typeof ShellSettingsMemoryRoute
   "/settings/models": typeof ShellSettingsModelsRoute
   "/settings/notifications": typeof ShellSettingsNotificationsRoute
@@ -364,9 +427,10 @@ export interface FileRoutesByTo {
   "/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/library/skills": typeof ShelllibraryLibrarySkillsRoute
-  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
-  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
+  "/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/settings/about/changelog": typeof ShellSettingsAboutChangelogRoute
   "/artifacts": typeof ShellartifactsArtifactsIndexRoute
   "/bots": typeof ShellbotsBotsIndexRoute
   "/library": typeof ShelllibraryLibraryIndexRoute
@@ -375,7 +439,9 @@ export interface FileRoutesByTo {
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
+  "/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools": typeof ShelllibraryLibraryToolsIndexRoute
   "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
@@ -385,6 +451,7 @@ export interface FileRoutesById {
   "/_bare": typeof BareRouteWithChildren
   "/_shell": typeof ShellRouteWithChildren
   "/_bare/__ui": typeof BareChar91__uiChar93Route
+  "/_bare/onboarding": typeof BareOnboardingRouteWithChildren
   "/_shell/settings": typeof ShellSettingsRouteWithChildren
   "/_shell/": typeof ShellIndexRoute
   "/_bare/onboarding/$step": typeof BareOnboardingStepRoute
@@ -396,8 +463,12 @@ export interface FileRoutesById {
   "/_shell/settings/about": typeof ShellSettingsAboutRoute
   "/_shell/settings/account": typeof ShellSettingsAccountRoute
   "/_shell/settings/appearance": typeof ShellSettingsAppearanceRoute
+  "/_shell/settings/browser": typeof ShellSettingsBrowserRoute
+  "/_shell/settings/devices": typeof ShellSettingsDevicesRoute
   "/_shell/settings/environment": typeof ShellSettingsEnvironmentRoute
   "/_shell/settings/general": typeof ShellSettingsGeneralRoute
+  "/_shell/settings/keyboard": typeof ShellSettingsKeyboardRoute
+  "/_shell/settings/language": typeof ShellSettingsLanguageRoute
   "/_shell/settings/memory": typeof ShellSettingsMemoryRoute
   "/_shell/settings/models": typeof ShellSettingsModelsRoute
   "/_shell/settings/notifications": typeof ShellSettingsNotificationsRoute
@@ -410,10 +481,11 @@ export interface FileRoutesById {
   "/_shell/(library)/library/mcp": typeof ShelllibraryLibraryMcpRoute
   "/_shell/(library)/library/messaging": typeof ShelllibraryLibraryMessagingRoute
   "/_shell/(library)/library/skills": typeof ShelllibraryLibrarySkillsRoute
-  "/_shell/(routines)/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRoute
+  "/_shell/(routines)/routines/$routineId": typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   "/_shell/(routines)/routines/_list": typeof ShellroutinesRoutinesListRouteWithChildren
-  "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRoute
+  "/_shell/(sessions)/sessions/$sessionId": typeof ShellsessionsSessionsSessionIdRouteWithChildren
   "/_shell/(sessions)/sessions/new": typeof ShellsessionsSessionsNewRoute
+  "/_shell/settings/about_/changelog": typeof ShellSettingsAboutChangelogRoute
   "/_shell/(artifacts)/artifacts/": typeof ShellartifactsArtifactsIndexRoute
   "/_shell/(bots)/bots/": typeof ShellbotsBotsIndexRoute
   "/_shell/(library)/library/": typeof ShelllibraryLibraryIndexRoute
@@ -422,7 +494,9 @@ export interface FileRoutesById {
   "/_shell/(bots)/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/_shell/(bots)/bots/$botId_/edit": typeof ShellbotsBotsBotIdEditRoute
   "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
+  "/_shell/(routines)/routines/$routineId/edit": typeof ShellroutinesRoutinesRoutineIdEditRoute
   "/_shell/(routines)/routines/_list/new": typeof ShellroutinesRoutinesListNewRoute
+  "/_shell/(sessions)/sessions/$sessionId/diff": typeof ShellsessionsSessionsSessionIdDiffRoute
   "/_shell/(sessions)/sessions/$sessionId_/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/_shell/(library)/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/_shell/(routines)/routines/_list/": typeof ShellroutinesRoutinesListIndexRoute
@@ -433,6 +507,7 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/__ui"
+    | "/onboarding"
     | "/settings"
     | "/onboarding/$step"
     | "/artifacts"
@@ -443,8 +518,12 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/account"
     | "/settings/appearance"
+    | "/settings/browser"
+    | "/settings/devices"
     | "/settings/environment"
     | "/settings/general"
+    | "/settings/keyboard"
+    | "/settings/language"
     | "/settings/memory"
     | "/settings/models"
     | "/settings/notifications"
@@ -460,6 +539,7 @@ export interface FileRouteTypes {
     | "/routines/$routineId"
     | "/sessions/$sessionId"
     | "/sessions/new"
+    | "/settings/about/changelog"
     | "/artifacts/"
     | "/bots/"
     | "/library/"
@@ -468,7 +548,9 @@ export interface FileRouteTypes {
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
     | "/library/tools/$toolsetId"
+    | "/routines/$routineId/edit"
     | "/routines/new"
+    | "/sessions/$sessionId/diff"
     | "/sessions/$sessionId/review"
     | "/library/tools/"
     | "/routines/"
@@ -482,8 +564,12 @@ export interface FileRouteTypes {
     | "/settings/about"
     | "/settings/account"
     | "/settings/appearance"
+    | "/settings/browser"
+    | "/settings/devices"
     | "/settings/environment"
     | "/settings/general"
+    | "/settings/keyboard"
+    | "/settings/language"
     | "/settings/memory"
     | "/settings/models"
     | "/settings/notifications"
@@ -499,6 +585,7 @@ export interface FileRouteTypes {
     | "/routines/$routineId"
     | "/sessions/$sessionId"
     | "/sessions/new"
+    | "/settings/about/changelog"
     | "/artifacts"
     | "/bots"
     | "/library"
@@ -507,7 +594,9 @@ export interface FileRouteTypes {
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
     | "/library/tools/$toolsetId"
+    | "/routines/$routineId/edit"
     | "/routines/new"
+    | "/sessions/$sessionId/diff"
     | "/sessions/$sessionId/review"
     | "/library/tools"
     | "/bots/$botId/chats/$sessionId"
@@ -516,6 +605,7 @@ export interface FileRouteTypes {
     | "/_bare"
     | "/_shell"
     | "/_bare/__ui"
+    | "/_bare/onboarding"
     | "/_shell/settings"
     | "/_shell/"
     | "/_bare/onboarding/$step"
@@ -527,8 +617,12 @@ export interface FileRouteTypes {
     | "/_shell/settings/about"
     | "/_shell/settings/account"
     | "/_shell/settings/appearance"
+    | "/_shell/settings/browser"
+    | "/_shell/settings/devices"
     | "/_shell/settings/environment"
     | "/_shell/settings/general"
+    | "/_shell/settings/keyboard"
+    | "/_shell/settings/language"
     | "/_shell/settings/memory"
     | "/_shell/settings/models"
     | "/_shell/settings/notifications"
@@ -545,6 +639,7 @@ export interface FileRouteTypes {
     | "/_shell/(routines)/routines/_list"
     | "/_shell/(sessions)/sessions/$sessionId"
     | "/_shell/(sessions)/sessions/new"
+    | "/_shell/settings/about_/changelog"
     | "/_shell/(artifacts)/artifacts/"
     | "/_shell/(bots)/bots/"
     | "/_shell/(library)/library/"
@@ -553,7 +648,9 @@ export interface FileRouteTypes {
     | "/_shell/(bots)/bots/$botId/details"
     | "/_shell/(bots)/bots/$botId_/edit"
     | "/_shell/(library)/library/tools/$toolsetId"
+    | "/_shell/(routines)/routines/$routineId/edit"
     | "/_shell/(routines)/routines/_list/new"
+    | "/_shell/(sessions)/sessions/$sessionId/diff"
     | "/_shell/(sessions)/sessions/$sessionId_/review"
     | "/_shell/(library)/library/tools/"
     | "/_shell/(routines)/routines/_list/"
@@ -588,6 +685,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof BareChar91__uiChar93RouteImport
       parentRoute: typeof BareRoute
     }
+    "/_bare/onboarding": {
+      id: "/_bare/onboarding"
+      path: "/onboarding"
+      fullPath: "/onboarding"
+      preLoaderRoute: typeof BareOnboardingRouteImport
+      parentRoute: typeof BareRoute
+    }
     "/_shell/": {
       id: "/_shell/"
       path: "/"
@@ -604,17 +708,17 @@ declare module "@tanstack/react-router" {
     }
     "/_bare/onboarding/": {
       id: "/_bare/onboarding/"
-      path: "/onboarding"
+      path: "/"
       fullPath: "/onboarding/"
       preLoaderRoute: typeof BareOnboardingIndexRouteImport
-      parentRoute: typeof BareRoute
+      parentRoute: typeof BareOnboardingRoute
     }
     "/_bare/onboarding/$step": {
       id: "/_bare/onboarding/$step"
-      path: "/onboarding/$step"
+      path: "/$step"
       fullPath: "/onboarding/$step"
       preLoaderRoute: typeof BareOnboardingStepRouteImport
-      parentRoute: typeof BareRoute
+      parentRoute: typeof BareOnboardingRoute
     }
     "/_shell/(artifacts)/artifacts": {
       id: "/_shell/(artifacts)/artifacts"
@@ -679,6 +783,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellSettingsAppearanceRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
+    "/_shell/settings/browser": {
+      id: "/_shell/settings/browser"
+      path: "/browser"
+      fullPath: "/settings/browser"
+      preLoaderRoute: typeof ShellSettingsBrowserRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    "/_shell/settings/devices": {
+      id: "/_shell/settings/devices"
+      path: "/devices"
+      fullPath: "/settings/devices"
+      preLoaderRoute: typeof ShellSettingsDevicesRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     "/_shell/settings/environment": {
       id: "/_shell/settings/environment"
       path: "/environment"
@@ -691,6 +809,20 @@ declare module "@tanstack/react-router" {
       path: "/general"
       fullPath: "/settings/general"
       preLoaderRoute: typeof ShellSettingsGeneralRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    "/_shell/settings/keyboard": {
+      id: "/_shell/settings/keyboard"
+      path: "/keyboard"
+      fullPath: "/settings/keyboard"
+      preLoaderRoute: typeof ShellSettingsKeyboardRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
+    "/_shell/settings/language": {
+      id: "/_shell/settings/language"
+      path: "/language"
+      fullPath: "/settings/language"
+      preLoaderRoute: typeof ShellSettingsLanguageRouteImport
       parentRoute: typeof ShellSettingsRoute
     }
     "/_shell/settings/memory": {
@@ -819,6 +951,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellsessionsSessionsNewRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
     }
+    "/_shell/settings/about_/changelog": {
+      id: "/_shell/settings/about_/changelog"
+      path: "/about/changelog"
+      fullPath: "/settings/about/changelog"
+      preLoaderRoute: typeof ShellSettingsAboutChangelogRouteImport
+      parentRoute: typeof ShellSettingsRoute
+    }
     "/_shell/(bots)/bots/$botId/check-in": {
       id: "/_shell/(bots)/bots/$botId/check-in"
       path: "/check-in"
@@ -854,6 +993,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShelllibraryLibraryToolsToolsetIdRouteImport
       parentRoute: typeof ShelllibraryLibraryRoute
     }
+    "/_shell/(routines)/routines/$routineId/edit": {
+      id: "/_shell/(routines)/routines/$routineId/edit"
+      path: "/edit"
+      fullPath: "/routines/$routineId/edit"
+      preLoaderRoute: typeof ShellroutinesRoutinesRoutineIdEditRouteImport
+      parentRoute: typeof ShellroutinesRoutinesRoutineIdRoute
+    }
     "/_shell/(routines)/routines/_list/": {
       id: "/_shell/(routines)/routines/_list/"
       path: "/"
@@ -867,6 +1013,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/routines/new"
       preLoaderRoute: typeof ShellroutinesRoutinesListNewRouteImport
       parentRoute: typeof ShellroutinesRoutinesListRoute
+    }
+    "/_shell/(sessions)/sessions/$sessionId/diff": {
+      id: "/_shell/(sessions)/sessions/$sessionId/diff"
+      path: "/diff"
+      fullPath: "/sessions/$sessionId/diff"
+      preLoaderRoute: typeof ShellsessionsSessionsSessionIdDiffRouteImport
+      parentRoute: typeof ShellsessionsSessionsSessionIdRoute
     }
     "/_shell/(sessions)/sessions/$sessionId_/review": {
       id: "/_shell/(sessions)/sessions/$sessionId_/review"
@@ -885,16 +1038,28 @@ declare module "@tanstack/react-router" {
   }
 }
 
-interface BareRouteChildren {
-  BareChar91__uiChar93Route: typeof BareChar91__uiChar93Route
+interface BareOnboardingRouteChildren {
   BareOnboardingStepRoute: typeof BareOnboardingStepRoute
   BareOnboardingIndexRoute: typeof BareOnboardingIndexRoute
 }
 
-const BareRouteChildren: BareRouteChildren = {
-  BareChar91__uiChar93Route: BareChar91__uiChar93Route,
+const BareOnboardingRouteChildren: BareOnboardingRouteChildren = {
   BareOnboardingStepRoute: BareOnboardingStepRoute,
   BareOnboardingIndexRoute: BareOnboardingIndexRoute,
+}
+
+const BareOnboardingRouteWithChildren = BareOnboardingRoute._addFileChildren(
+  BareOnboardingRouteChildren,
+)
+
+interface BareRouteChildren {
+  BareChar91__uiChar93Route: typeof BareChar91__uiChar93Route
+  BareOnboardingRoute: typeof BareOnboardingRouteWithChildren
+}
+
+const BareRouteChildren: BareRouteChildren = {
+  BareChar91__uiChar93Route: BareChar91__uiChar93Route,
+  BareOnboardingRoute: BareOnboardingRouteWithChildren,
 }
 
 const BareRouteWithChildren = BareRoute._addFileChildren(BareRouteChildren)
@@ -903,26 +1068,36 @@ interface ShellSettingsRouteChildren {
   ShellSettingsAboutRoute: typeof ShellSettingsAboutRoute
   ShellSettingsAccountRoute: typeof ShellSettingsAccountRoute
   ShellSettingsAppearanceRoute: typeof ShellSettingsAppearanceRoute
+  ShellSettingsBrowserRoute: typeof ShellSettingsBrowserRoute
+  ShellSettingsDevicesRoute: typeof ShellSettingsDevicesRoute
   ShellSettingsEnvironmentRoute: typeof ShellSettingsEnvironmentRoute
   ShellSettingsGeneralRoute: typeof ShellSettingsGeneralRoute
+  ShellSettingsKeyboardRoute: typeof ShellSettingsKeyboardRoute
+  ShellSettingsLanguageRoute: typeof ShellSettingsLanguageRoute
   ShellSettingsMemoryRoute: typeof ShellSettingsMemoryRoute
   ShellSettingsModelsRoute: typeof ShellSettingsModelsRoute
   ShellSettingsNotificationsRoute: typeof ShellSettingsNotificationsRoute
   ShellSettingsUsageRoute: typeof ShellSettingsUsageRoute
   ShellSettingsIndexRoute: typeof ShellSettingsIndexRoute
+  ShellSettingsAboutChangelogRoute: typeof ShellSettingsAboutChangelogRoute
 }
 
 const ShellSettingsRouteChildren: ShellSettingsRouteChildren = {
   ShellSettingsAboutRoute: ShellSettingsAboutRoute,
   ShellSettingsAccountRoute: ShellSettingsAccountRoute,
   ShellSettingsAppearanceRoute: ShellSettingsAppearanceRoute,
+  ShellSettingsBrowserRoute: ShellSettingsBrowserRoute,
+  ShellSettingsDevicesRoute: ShellSettingsDevicesRoute,
   ShellSettingsEnvironmentRoute: ShellSettingsEnvironmentRoute,
   ShellSettingsGeneralRoute: ShellSettingsGeneralRoute,
+  ShellSettingsKeyboardRoute: ShellSettingsKeyboardRoute,
+  ShellSettingsLanguageRoute: ShellSettingsLanguageRoute,
   ShellSettingsMemoryRoute: ShellSettingsMemoryRoute,
   ShellSettingsModelsRoute: ShellSettingsModelsRoute,
   ShellSettingsNotificationsRoute: ShellSettingsNotificationsRoute,
   ShellSettingsUsageRoute: ShellSettingsUsageRoute,
   ShellSettingsIndexRoute: ShellSettingsIndexRoute,
+  ShellSettingsAboutChangelogRoute: ShellSettingsAboutChangelogRoute,
 }
 
 const ShellSettingsRouteWithChildren = ShellSettingsRoute._addFileChildren(
@@ -1000,6 +1175,21 @@ const ShelllibraryLibraryRouteChildren: ShelllibraryLibraryRouteChildren = {
 const ShelllibraryLibraryRouteWithChildren =
   ShelllibraryLibraryRoute._addFileChildren(ShelllibraryLibraryRouteChildren)
 
+interface ShellroutinesRoutinesRoutineIdRouteChildren {
+  ShellroutinesRoutinesRoutineIdEditRoute: typeof ShellroutinesRoutinesRoutineIdEditRoute
+}
+
+const ShellroutinesRoutinesRoutineIdRouteChildren: ShellroutinesRoutinesRoutineIdRouteChildren =
+  {
+    ShellroutinesRoutinesRoutineIdEditRoute:
+      ShellroutinesRoutinesRoutineIdEditRoute,
+  }
+
+const ShellroutinesRoutinesRoutineIdRouteWithChildren =
+  ShellroutinesRoutinesRoutineIdRoute._addFileChildren(
+    ShellroutinesRoutinesRoutineIdRouteChildren,
+  )
+
 interface ShellroutinesRoutinesListRouteChildren {
   ShellroutinesRoutinesListNewRoute: typeof ShellroutinesRoutinesListNewRoute
   ShellroutinesRoutinesListIndexRoute: typeof ShellroutinesRoutinesListIndexRoute
@@ -1017,12 +1207,13 @@ const ShellroutinesRoutinesListRouteWithChildren =
   )
 
 interface ShellroutinesRoutinesRouteChildren {
-  ShellroutinesRoutinesRoutineIdRoute: typeof ShellroutinesRoutinesRoutineIdRoute
+  ShellroutinesRoutinesRoutineIdRoute: typeof ShellroutinesRoutinesRoutineIdRouteWithChildren
   ShellroutinesRoutinesListRoute: typeof ShellroutinesRoutinesListRouteWithChildren
 }
 
 const ShellroutinesRoutinesRouteChildren: ShellroutinesRoutinesRouteChildren = {
-  ShellroutinesRoutinesRoutineIdRoute: ShellroutinesRoutinesRoutineIdRoute,
+  ShellroutinesRoutinesRoutineIdRoute:
+    ShellroutinesRoutinesRoutineIdRouteWithChildren,
   ShellroutinesRoutinesListRoute: ShellroutinesRoutinesListRouteWithChildren,
 }
 
@@ -1031,15 +1222,31 @@ const ShellroutinesRoutinesRouteWithChildren =
     ShellroutinesRoutinesRouteChildren,
   )
 
+interface ShellsessionsSessionsSessionIdRouteChildren {
+  ShellsessionsSessionsSessionIdDiffRoute: typeof ShellsessionsSessionsSessionIdDiffRoute
+}
+
+const ShellsessionsSessionsSessionIdRouteChildren: ShellsessionsSessionsSessionIdRouteChildren =
+  {
+    ShellsessionsSessionsSessionIdDiffRoute:
+      ShellsessionsSessionsSessionIdDiffRoute,
+  }
+
+const ShellsessionsSessionsSessionIdRouteWithChildren =
+  ShellsessionsSessionsSessionIdRoute._addFileChildren(
+    ShellsessionsSessionsSessionIdRouteChildren,
+  )
+
 interface ShellsessionsSessionsRouteChildren {
-  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRoute
+  ShellsessionsSessionsSessionIdRoute: typeof ShellsessionsSessionsSessionIdRouteWithChildren
   ShellsessionsSessionsNewRoute: typeof ShellsessionsSessionsNewRoute
   ShellsessionsSessionsIndexRoute: typeof ShellsessionsSessionsIndexRoute
   ShellsessionsSessionsSessionIdReviewRoute: typeof ShellsessionsSessionsSessionIdReviewRoute
 }
 
 const ShellsessionsSessionsRouteChildren: ShellsessionsSessionsRouteChildren = {
-  ShellsessionsSessionsSessionIdRoute: ShellsessionsSessionsSessionIdRoute,
+  ShellsessionsSessionsSessionIdRoute:
+    ShellsessionsSessionsSessionIdRouteWithChildren,
   ShellsessionsSessionsNewRoute: ShellsessionsSessionsNewRoute,
   ShellsessionsSessionsIndexRoute: ShellsessionsSessionsIndexRoute,
   ShellsessionsSessionsSessionIdReviewRoute:

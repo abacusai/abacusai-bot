@@ -1,0 +1,16 @@
+d2ace526 fix(notch): acknowledge in insertion order and reject stale standby builds
+c0fdbf9b fix(notch): publish main app state on window lifecycle events
+c122bf7a fix(notch): request fresh visibility after Space changes
+b51b6206 fix(rpc): forward notch visibility epoch
+08632546 fix(notch): fit current child views on native resize
+d9415311 fix(notch): invalidate queued attention and bound every presentation stage
+2c670170 fix(onboarding): evict incomplete completion tails after settlement
+09ea248b fix(tour): invalidate completion when its run ends
+21e430f6 fix(notch): retry command acknowledgement after committed navigation
+3b6f19a5 fix(notch): expire descriptor snoozes while retaining attention counts
+24ee07ce fix(onboarding): distinguish invalid keys from retryable save failures
+6406a35c fix(agui): publish oldest descriptor lineage for notch snoozes
+50bf084b fix(notch): recover manual interactions and fit listening controls
+6058c683 fix(onboarding): use the existing localized save failure key
+da4497cb fix(notch): retire quiet-hours manual views even when focus release fails
+d7653071 test(notch): wait for queued work when checking unlock validation

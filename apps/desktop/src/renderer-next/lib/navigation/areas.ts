@@ -40,6 +40,10 @@ export const SETTINGS_PAGES = [
   "models",
   "environment",
   "about",
+  "browser",
+  "devices",
+  "language",
+  "keyboard",
 ] as const;
 export type SettingsPageId = (typeof SETTINGS_PAGES)[number];
 
@@ -50,6 +54,7 @@ export const LIBRARY_PAGES = [
   "skills",
   "tools",
 ] as const;
+/** @public Library route page identifiers. */
 export type LibraryPageId = (typeof LIBRARY_PAGES)[number];
 
 /** Canvas page 11. */

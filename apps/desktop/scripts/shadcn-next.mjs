@@ -73,6 +73,7 @@ export const INITIAL_ITEMS = [
   "toggle",
   "toggle-group",
   "switch",
+  "checkbox",
   "select",
   "native-select",
   "toast",

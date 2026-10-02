@@ -8,6 +8,7 @@ import { DeleteKeyNotFoundError } from "@tanstack/db";
 import type { Collections, Db } from "#next/data/db";
 import type { Transport } from "#next/data/transport";
 import { resolveLook } from "#next/lib/bots/avatar";
+import { CHECK_IN_PROMPT } from "#next/lib/bots/check-in";
 import { BOT_TEMPLATES } from "#next/lib/bots/templates";
 import { MAX_BOT_NAME, MAX_BOTS, type BotChangeNotice } from "#shared/bots";
 import type { BotRow, MemoryRow, RoutineRow } from "#shared/contract/rows";
@@ -231,23 +232,31 @@ export const announceChange = (
   });
 };
 
-/** Phase 6's first-bot flow uses the same collection-backed creation path. */
+/** Spec 06 §23.3: persist the bot first; a failed check-in leaves a usable bot. */
 export const createBotFromTemplate = async (
-  bots: Pick<BotsCollection, "insert">,
+  db: Db,
   templateId: string,
-  name: string
-): Promise<string> => {
+  overrides: {
+    id?: string;
+    name?: string;
+    checkIn?: { preset: "weekdays"; time: string };
+  } = {}
+): Promise<{ bot: BotRow; checkInRoutineId: string | null }> => {
   const template = BOT_TEMPLATES.find((row) => row.id === templateId);
   if (!template)
-    throw Object.assign(new Error("Unknown template"), { code: "BAD_REQUEST" });
+    throw Object.assign(new Error("Unknown template"), {
+      code: "NOT_FOUND",
+      data: { entity: "bot-template", id: templateId },
+    });
+  const name = overrides.name ?? template.name;
   const look = resolveLook({
     name,
     avatarShape: template.avatarShape,
     avatarColor: template.avatarColor,
   });
   const now = Date.now();
-  return createBot(bots, {
-    id: newBotId(),
+  const row: BotRow = {
+    id: overrides.id ?? newBotId(),
     name,
     title: template.title,
     persona: template.persona,
@@ -260,5 +269,36 @@ export const createBotFromTemplate = async (
     workspaceId: null,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  await db.collections.bots.insert(row).isPersisted.promise;
+  let checkInRoutineId: string | null = null;
+  if (overrides.checkIn) {
+    const id = newRoutineId();
+    const [hour, minute] = overrides.checkIn.time.split(":").map(Number);
+    try {
+      await db.collections.routines.insert({
+        id,
+        name: `${name} check-in`,
+        schedule: `${minute} ${hour} * * 1-5`,
+        runAt: null,
+        webhookToken: null,
+        prompt: CHECK_IN_PROMPT,
+        workspaceId: null,
+        botId: row.id,
+        enabled: true,
+        createdAt: now,
+        lastRunAt: null,
+        lastResult: null,
+        nextRunAt: null,
+        webhookUrl: null,
+        webhookPublicPending: false,
+        botName: name,
+        recentRuns: [],
+      }).isPersisted.promise;
+      checkInRoutineId = id;
+    } catch (error) {
+      console.warn("[bots] first check-in failed", error);
+    }
+  }
+  return { bot: row, checkInRoutineId };
 };

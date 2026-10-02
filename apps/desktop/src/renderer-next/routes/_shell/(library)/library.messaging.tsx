@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { LibraryPageEmpty } from "#next/features/library";
+import { MessagingPage, MessagingSearch } from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
 
 const MessagingRoute = () => {
@@ -13,11 +13,12 @@ const MessagingRoute = () => {
           {t("library.pages.messaging")}
         </span>
       </TopBarSlot>
-      <LibraryPageEmpty page="messaging" />
+      <MessagingPage />
     </>
   );
 };
 
 export const Route = createFileRoute("/_shell/(library)/library/messaging")({
+  validateSearch: MessagingSearch,
   component: MessagingRoute,
 });
