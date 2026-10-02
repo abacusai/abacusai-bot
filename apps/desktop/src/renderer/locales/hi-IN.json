@@ -450,7 +450,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
-      "openError": "बॉट की चैट नहीं खुल सकी।"
+      "openError": "बॉट की चैट नहीं खुल सकी।",
+      "senderReadOnlyFallback": "{{bot}} इस बातचीत में जवाब देता है।"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1275,10 +1276,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "आपका खाता तैयार है। आपका बॉट आपके मॉडल, फ़ाइलों और टूल के साथ काम करता है।",
-    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
-    "pages.connected.promise2": "Access Access to free models",
-    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
-    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
+    "pages.connected.promise1": "आपका खाता जुड़ गया है।",
+    "pages.connected.promise2": "इस्तेमाल करने के लिए मॉडल चुनें।",
+    "pages.connected.promise3": "ज़रूरत पड़ने पर अपने ऐप जोड़ें।",
+    "pages.connected.promise4": "ऐसे निर्देश जोड़ें जिन्हें एजेंट याद रखे।",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1533,7 +1534,7 @@
       "emptyTitle": "No routines yet",
       "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
       "routineTitle": "Routine",
-      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "routineDescription": "इस रूटीन का शेड्यूल, निर्देश और पिछले रन देखें।",
       "createTitle": "नया रूटीन",
       "createDescription": "Say what it should do and when."
     },
@@ -1543,12 +1544,17 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "मैन्युअल",
+      "schedule": "निर्धारित",
+      "webhook": "वेबहुक"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
     "page": {
-      "newTitle": "New session",
+      "newTitle": "नया सत्र",
       "newDescription": "Pick a folder and tell the agent what to do.",
       "sessionTitle": "Session",
       "sessionDescription": "The conversation opens here in a coming update.",
@@ -1556,9 +1562,9 @@
       "reviewDescription": "Keep or undo what the agent changed."
     },
     "sidebar": {
-      "label": "Sessions",
-      "new": "New session",
-      "pinned": "Pinned",
+      "label": "सत्र",
+      "new": "नया सत्र",
+      "pinned": "पिन किए गए",
       "empty": "अभी तक कोई सत्र नहीं",
       "search": "सत्र खोजें…",
       "actions": "Session actions for {{name}}",
@@ -1602,27 +1608,27 @@
       "starters": {
         "build-a-store": {
           "name": "Build an online store",
-          "detail": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "detail": "स्टोर और शॉपिंग कार्ट बनाएँ।"
         },
         "design-an-infographic": {
           "name": "Turn a repo into an infographic",
-          "detail": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "detail": "कोडबेस को एक दृश्य सारांश से समझाएँ।"
         },
         "find-flights": {
           "name": "Find me flights",
-          "detail": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+          "detail": "रूट, तारीखों और कीमतों की तुलना करें।"
         },
         "process-a-spreadsheet": {
           "name": "Clean up a spreadsheet",
-          "detail": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+          "detail": "डेटा साफ़ करें और नतीजों का सारांश बनाएँ।"
         },
         "restyle-a-repo": {
           "name": "Restyle Excalidraw",
-          "detail": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "detail": "मौजूदा ऐप के इंटरफ़ेस को नया रूप दें।"
         },
         "review-pull-requests": {
           "name": "Review my pull requests",
-          "detail": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "detail": "बदलावों में बग और छूटे हुए टेस्ट की जाँच करें।"
         }
       },
       "recent": "Pick up where you left off in {{workspace}}"
@@ -1840,19 +1846,19 @@
     "stops": {
       "rail": {
         "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
-        "title": "आपके बॉट"
+        "title": "बॉट"
       },
       "make-bot": {
         "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Make a bot"
+        "title": "Who do you need?"
       },
       "workspaces": {
         "body": "हर खुला हुआ फ़ोल्डर और उसके अंदर की हर बातचीत। यहीं से वर्कस्पेस बदलिए या पिछले हफ़्ते का कोई सेशन दोबारा खोलिए।",
-        "title": "आपके वर्कस्पेस"
+        "title": "सत्र"
       },
       "start-session": {
         "body": "मौजूदा वर्कस्पेस में एक खाली कम्पोज़र खोलता है। हर काम के लिए अलग सेशन रखने से संदर्भ उसी काम तक सीमित रहता है।",
-        "title": "नया सेशन"
+        "title": "नया सत्र"
       },
       "connectors": {
         "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।",
@@ -1860,11 +1866,11 @@
       },
       "changes": {
         "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।",
-        "title": "बदलाव"
+        "title": "Changes"
       },
       "preview-terminal": {
         "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।",
-        "title": "टर्मिनल"
+        "title": "Terminal"
       },
       "memory": {
         "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।",
@@ -1876,15 +1882,15 @@
       },
       "welcome": {
         "body": "विंडो का छोटा परिचय। {{n}} पड़ाव; आप कभी भी बाहर निकल सकते हैं।",
-        "title": "AbacusAI Bot में आपका स्वागत है"
+        "title": "Welcome to AbacusAI Bot"
       },
       "talk": {
         "body": "यहाँ अपने बॉट को काम दें। वह सवाल पूछ सकता है और अपना काम दिखा सकता है।",
-        "title": "अपने बॉट से बात करें"
+        "title": "What should we build?"
       },
       "notch": {
         "body": "जवाब और मंज़ूरी के अनुरोध आपके कार्यक्षेत्र के ऊपर दिख सकते हैं। पूरी बातचीत के लिए ऐप खोलें।",
-        "title": "आपका साथी"
+        "title": "साथी"
       }
     },
     "steps": {
@@ -2493,7 +2499,7 @@
     },
     "panel": {
       "label": "Side panel",
-      "emptyDescription": "This panel fills in with a later update.",
+      "emptyDescription": "विवरण देखने के लिए कोई आइटम चुनें।",
       "tabs": {
         "changes": "Changes",
         "terminal": "Terminal",
@@ -2847,7 +2853,8 @@
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
-      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
+      "done_zero": "{{duration}} में पूरा हुआ"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3352,36 +3359,36 @@
     "allTools": "All tools",
     "alwaysOn": "Always on",
     "approve": "स्वीकृत करें",
-    "artifactGone": "Artifact gone",
+    "artifactGone": "This file is no longer on disk.",
     "artifactPreview": "Artifact preview",
     "artifactView": "Artifact view",
     "auto": "Auto",
     "category": "Category",
     "closePreview": "Close preview",
-    "connectName": "Connect name",
-    "connectWaiting": "Connect waiting",
-    "connectorsDescription": "Connectors description",
-    "credentialsLocal": "Credentials local",
+    "connectName": "{{name}} कनेक्ट करें",
+    "connectWaiting": "इस सेवा को कनेक्ट करने के लिए साइन इन पूरा करें।",
+    "connectorsDescription": "वे सेवाएँ कनेक्ट करें जिनसे आपका एजेंट काम पूरे कर सके।",
+    "credentialsLocal": "लॉगिन जानकारी इस कंप्यूटर पर सेव होती है।",
     "defaultWorkspace": "Default workspace",
     "deliverToBot": "Deliver to bot",
     "details": "Details",
-    "disconnectDescription": "Disconnect description",
-    "disconnectTitle": "Disconnect title",
+    "disconnectDescription": "आपका एजेंट इस सेवा का उपयोग नहीं कर पाएगा। आप इसे बाद में फिर कनेक्ट कर सकते हैं।",
+    "disconnectTitle": "{{name}} डिस्कनेक्ट करें?",
     "documentation": "Documentation",
     "done": "हो गया",
     "editSkill": "Edit skill",
     "executionShell": "Execution shell",
-    "fileMissing": "File missing",
+    "fileMissing": "This file is no longer on disk.",
     "followWorkspace": "Follow workspace",
     "fullAccess": "Full access",
     "global": "ग्लोबल",
-    "goSession": "Go session",
+    "goSession": "Open as a session",
     "grid": "Grid",
-    "items": "Items",
-    "linkQr": "Link qr",
+    "items": "{{count}} आइटम",
+    "linkQr": "अपना खाता लिंक करने के लिए QR कोड",
     "list": "List",
     "marketplace": "Marketplace",
-    "messagingDescription": "Messaging description",
+    "messagingDescription": "चुनें कि आपके बॉट कहाँ संदेश प्राप्त करें और भेजें।",
     "messagingEnabled": "मैसेजिंग सक्षम",
     "noBot": "No bot",
     "nothingMatches": "कुछ नहीं मिला",
@@ -3390,26 +3397,26 @@
     "openLogin": "Open login",
     "openSharedChat": "Open shared chat",
     "planned": "Planned",
-    "poweredSkills": "Powered skills",
+    "poweredSkills": "skills.sh देखें",
     "reject": "अस्वीकार करें",
-    "remoteUnattended": "Remote unattended",
-    "remoteWarning": "Remote warning",
-    "respondInbound": "Respond inbound",
-    "restartSkills": "Restart skills",
+    "remoteUnattended": "बिना निगरानी रिमोट कार्यों की अनुमति दें",
+    "remoteWarning": "रिमोट अनुरोध आपसे पूछे बिना कमांड चला सकते हैं और फ़ाइलें बदल सकते हैं।",
+    "respondInbound": "आने वाले संदेशों का जवाब दें",
+    "restartSkills": "अपडेट किए गए स्किल लोड करने के लिए ऐप फिर शुरू करें।",
     "reveal": "Reveal",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search कनेक्टर",
     "searchSkills": "Search skills",
     "searchTools": "Search tools",
-    "skillsDescription": "Skills description",
+    "skillsDescription": "अपने एजेंट के लिए दोबारा उपयोग किए जा सकने वाले निर्देश सभी जगह या किसी वर्कस्पेस के लिए इंस्टॉल करें।",
     "sort": "Sort",
-    "toolsDescription": "Tools description",
+    "toolsDescription": "चुनें कि एजेंट किन टूल का उपयोग कर सकता है।",
     "uninstall": "Uninstall",
     "uninstallSkill": "Skill अनइंस्टॉल करें",
-    "uninstallSkillDescription": "Uninstall skill description",
+    "uninstallSkillDescription": "इस कंप्यूटर से /{{id}} हटाएँ? आप इसे बाद में फिर इंस्टॉल कर सकते हैं।",
     "unlink": "Unlink",
-    "unlinkDescription": "Unlink description",
-    "unlinkTitle": "Unlink title",
+    "unlinkDescription": "इस खाते के संदेश अब आपके बॉट तक नहीं पहुँचेंगे।",
+    "unlinkTitle": "इस खाते को अनलिंक करें?",
     "whatItCanDo": "What it can do",
     "workspace": "वर्कस्पेस",
     "connectGmail": "Connect Gmail",
@@ -3438,7 +3445,7 @@
     "terminalShell": "Terminal shell",
     "thisVersion": "This version",
     "whatsNew": "What's new",
-    "draftModelUnavailable": "The chat kit has not exposed draft model adoption yet.",
+    "draftModelUnavailable": "बातचीत में मॉडल फिर चुनें।",
     "threadGone": "This thread was removed.",
     "inviteChannels": {
       "link": "Invite link",
@@ -3457,7 +3464,7 @@
       "web": "Web"
     },
     "formats": {
-      "pdf": "Pdf",
+      "pdf": "PDF",
       "word": "Word",
       "spreadsheet": "Spreadsheet",
       "slides": "Slides",
@@ -3502,7 +3509,15 @@
     "invalidMcp": "नाम और कमांड या मान्य HTTP(S) URL दर्ज करें।",
     "chooseRecipients": "कम से कम एक प्राप्तकर्ता चुनें।",
     "authRequired": "प्रमाणीकरण आवश्यक है",
-    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire."
+    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire.",
+    "artifactTypes": {
+      "file": "फ़ाइलें",
+      "image": "इमेज",
+      "link": "लिंक"
+    },
+    "connecting": "Loading",
+    "toolsUnavailable": "इस संस्करण में ये टूल उपलब्ध नहीं हैं।",
+    "noInstalledSkills": "इस दायरे में कोई स्किल इंस्टॉल नहीं है। स्किल इम्पोर्ट करें या मार्केटप्लेस देखें।"
   },
   "browserPermission": {
     "allow": "अनुमति दें",

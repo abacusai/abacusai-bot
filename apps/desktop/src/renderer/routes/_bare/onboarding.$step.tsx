@@ -50,11 +50,13 @@ const OnboardingRoute = () => {
     }
     return () => {
       if (step === "models") {
-        void transport.client.auth.openRouter.cancel({});
-        void cancelSignIn(transport);
+        void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
+        void cancelSignIn(transport).catch(() => undefined);
       }
       if (step === "connectors")
-        void transport.client.connectors.cancelConnect({});
+        void transport.client.connectors
+          .cancelConnect({})
+          .catch(() => undefined);
     };
   }, [db, transport, step]);
   const auth = (intent: "signup" | "signin", profileId?: string) => {
@@ -197,9 +199,12 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
         context.queryClient.ensureQueryData(
           context.transport.orpc.models.list.queryOptions({ input: {} })
         ),
-        context.queryClient.ensureQueryData(
-          context.transport.orpc.localModels.state.queryOptions({ input: {} })
-        ),
+        // A local runtime is optional; the pane presents its unavailable state.
+        context.queryClient
+          .ensureQueryData(
+            context.transport.orpc.localModels.state.queryOptions({ input: {} })
+          )
+          .catch(() => undefined),
       ]);
     if (params.step === "connectors")
       await context.queryClient.ensureQueryData(

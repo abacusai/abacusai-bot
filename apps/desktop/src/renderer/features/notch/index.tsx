@@ -14,7 +14,6 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { cueForNotice, permissionCueKey } from "#renderer/lib/attention/cues";
 import { runErrorCopy } from "#renderer/lib/attention/error-copy";
 import { resolveLook } from "#renderer/lib/bots/avatar";
-import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { runFinishedFeed } from "#renderer/lib/run-finished";
@@ -31,6 +30,7 @@ import type { OpenTarget } from "#shared/contract";
 
 import { NotchDirector, shapeSettled } from "./director";
 import { notchDrafts as drafts } from "./drafts";
+import { NotchSurface, NotchHeader, NotchBody } from "./frame";
 import { followNotchEvents, useNotchInputs } from "./inputs";
 import { ListeningControls } from "./listening";
 import {
@@ -125,7 +125,19 @@ export const NotchShell = ({
     app.mainFocused
   );
   const [shown, setShown] = useState(target);
-  const [shape, setShape] = useState(() => shapeFor(target, layout));
+  const [bodySize, setBodySize] = useState<{
+    identity: string;
+    height: number;
+  } | null>(null);
+  const requestedShape = shapeFor(target, layout);
+  if (target.expanded && bodySize?.identity === target.identity)
+    requestedShape.height = Math.min(
+      layout.maxShape.height,
+      requestedShape.compactHeight + bodySize.height
+    );
+  const [shape, setShape] = useState<{ width: number; height: number }>(() =>
+    shapeFor(target, layout)
+  );
   const node = useRef<HTMLDivElement>(null);
   const pointerInside = useRef(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -182,15 +194,15 @@ export const NotchShell = ({
       director.current = null;
     };
   }, [chat, transport, prepareChat]);
-  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${layout.mode}:${layout.notch?.width}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
+  const signature = `${target.identity}:${target.expanded}:${target.hidden}:${target.remaining}:${target.quietUntil}:${bodySize?.identity === target.identity ? bodySize.height : ""}:${layout.mode}:${layout.notch?.width}:${layout.notch?.height}:${layout.notch?.x}:${unlocked}:${target.queue.map((item) => item.descriptorId ?? item.runId ?? item.sessionId).join(",")}`;
   const lastSignature = useRef<string | null>(null);
   useEffect(() => {
     if (lastSignature.current === signature) return;
     lastSignature.current = signature;
     void director.current
-      ?.present(target, shapeFor(target, layout))
+      ?.present(target, requestedShape)
       .catch((error) => console.warn("[notch] presentation failed", error));
-  }, [signature, target, layout, director]);
+  }, [signature, target, requestedShape, director]);
   useEffect(() => {
     director.current?.lock(hovered || focused);
   }, [hovered, focused, director]);
@@ -491,26 +503,22 @@ export const NotchShell = ({
             style={
               layout.growth === "up"
                 ? { position: "absolute", bottom: 32, left: 24, right: 24 }
-                : { paddingInline: 24 }
+                : {
+                    paddingInline: 24,
+                    transform: `translateX(${layout.offsetX ?? 0}px)`,
+                  }
             }
           >
-            <div
+            <NotchSurface
               ref={node}
-              className="notch-shape"
-              data-mode={layout.mode}
-              data-reduced={reduced}
+              layout={layout}
+              shape={shape}
+              reduced={reduced}
+              expanded={shown.expanded}
               role="region"
               aria-label={t("notch.a11y.region")}
               aria-live="off"
-              style={{
-                clipPath:
-                  layout.mode === "notch"
-                    ? `polygon(0 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) 0, calc(50% - ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) ${Math.max(layout.notch?.height ?? 0, 32)}px, calc(50% + ${(layout.notch?.width ?? 0) / 2}px) 0, 100% 0, 100% 100%, 0 100%)`
-                    : undefined,
-                width: shape.width,
-                height: shape.height,
-                visibility: shown.hidden ? "hidden" : "visible",
-              }}
+              style={{ visibility: shown.hidden ? "hidden" : "visible" }}
               onPointerMove={(event) => {
                 const rect = event.currentTarget.getBoundingClientRect();
                 const inside =
@@ -555,74 +563,95 @@ export const NotchShell = ({
                 });
               }}
             >
-              <div
-                className="notch-wings"
-                style={{
-                  height: Math.max(
-                    layout.notch?.height ?? 0,
-                    layout.mode === "capsule" ? 36 : 32
-                  ),
-                }}
-              >
-                <div className="notch-wing" style={faceStyle}>
-                  {shown.faces.map((face, i) => {
-                    const bot = inputs.bots.find((b) => b.id === face.botId);
-                    return (
-                      <BotAvatar
-                        key={face.botId ?? i}
-                        size={20}
-                        look={resolveLook({
-                          name: bot?.name ?? "Abacus",
-                          avatarShape: bot?.avatarShape ?? "mochi",
-                          avatarColor: bot?.avatarColor ?? "blue",
-                        })}
-                        mood={
-                          reaction &&
-                          (reaction.botId
-                            ? reaction.botId === face.botId
-                            : reaction.sessionId === shown.sessionId)
-                            ? "wink"
-                            : face.mood
-                        }
-                        label={bot?.name ?? "AbacusAI Bot"}
+              <NotchHeader
+                reduced={reduced}
+                layout={layout}
+                left={
+                  <div className="notch-wing" style={faceStyle}>
+                    {shown.faces.map((face, i) => {
+                      const bot = inputs.bots.find((b) => b.id === face.botId);
+                      return (
+                        <BotAvatar
+                          key={face.botId ?? i}
+                          size={20}
+                          look={resolveLook({
+                            name: bot?.name ?? "Abacus",
+                            avatarShape: bot?.avatarShape ?? "mochi",
+                            avatarColor: bot?.avatarColor ?? "blue",
+                          })}
+                          mood={
+                            reaction &&
+                            (reaction.botId
+                              ? reaction.botId === face.botId
+                              : reaction.sessionId === shown.sessionId)
+                              ? "wink"
+                              : face.mood
+                          }
+                          label={bot?.name ?? "AbacusAI Bot"}
+                        />
+                      );
+                    })}
+                    <span
+                      className="notch-label truncate"
+                      title={
+                        shown.quietUntil
+                          ? t("notch.quiet.until", { time: shown.quietUntil })
+                          : t(`notch.wings.${shown.attention?.kind ?? "idle"}`)
+                      }
+                    >
+                      {shown.route === "/approval/$id" &&
+                      shown.expanded &&
+                      !shown.quietUntil
+                        ? (inputs.bots.find(
+                            (bot) => bot.id === shown.attention?.botId
+                          )?.name ?? "AbacusAI Bot")
+                        : shown.quietUntil
+                          ? t("notch.quiet.until", { time: shown.quietUntil })
+                          : t(
+                              shown.route === "/call"
+                                ? "notch.listening.title"
+                                : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                            )}
+                    </span>
+                  </div>
+                }
+                right={
+                  <div className="notch-wing">
+                    {!shown.sessionId && !shown.expanded && (
+                      <span
+                        aria-hidden
+                        className="ml-auto size-1.5 rounded-full bg-white/40"
                       />
-                    );
-                  })}
-                  <span className="truncate">
-                    {shown.route === "/approval/$id" &&
-                    shown.expanded &&
-                    !shown.quietUntil
-                      ? (inputs.bots.find(
-                          (bot) => bot.id === shown.attention?.botId
-                        )?.name ?? "AbacusAI Bot")
-                      : shown.quietUntil
-                        ? t("notch.quiet.until", { time: shown.quietUntil })
-                        : t(
-                            shown.attention?.kind === "failed"
-                              ? runErrorCopy(shown.attention.errorCode)
-                              : `notch.wings.${shown.attention?.kind ?? "idle"}`
-                          )}
-                  </span>
-                </div>
-                {layout.notch && (
-                  <div
-                    aria-hidden="true"
-                    style={{ width: layout.notch.width, flexShrink: 0 }}
-                  />
-                )}
-                <div className="notch-wing">
-                  {shown.remaining > 0 && <span>{shown.remaining}</span>}
-                  {shown.sessionId && (
-                    <Button onClick={open}>{t("notch.actions.open")}</Button>
-                  )}
-                  {shown.attention?.kind === "failed" && (
-                    <Button aria-label={t("common.close")} onClick={snooze}>
-                      ×
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {shown.expanded && <div className="notch-body">{children}</div>}
+                    )}
+                    {shown.remaining > 0 && <span>{shown.remaining}</span>}
+                    {shown.sessionId && (
+                      <Button onClick={open}>{t("notch.actions.open")}</Button>
+                    )}
+                    {shown.attention?.kind === "failed" && (
+                      <Button aria-label={t("common.close")} onClick={snooze}>
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                }
+              />
+              {shown.expanded && (
+                <NotchBody
+                  headerHeight={layout.notch?.height ?? 36}
+                  shape={shape}
+                  reduced={reduced}
+                  onHeight={(height) =>
+                    setBodySize((previous) =>
+                      previous?.identity === shown.identity &&
+                      previous.height === height
+                        ? previous
+                        : { identity: shown.identity, height }
+                    )
+                  }
+                >
+                  {children}
+                </NotchBody>
+              )}
               <span className="sr-only" aria-live={focused ? "polite" : "off"}>
                 {focused
                   ? t(
@@ -632,7 +661,7 @@ export const NotchShell = ({
                     )
                   : ""}
               </span>
-            </div>
+            </NotchSurface>
           </div>
         </MotionConfig>
       </ReplyAcceptedContext>
@@ -651,7 +680,7 @@ export const ReplyView = ({
   text: string;
   submit(text: string): Promise<{ kind: string }>;
 }) => {
-  const { presentation, transport, open, dictationError } = useNotch();
+  const { presentation, transport, dictationError } = useNotch();
   const id = presentation.sessionId ?? "";
   const accepted = use(ReplyAcceptedContext);
   const { t } = useTranslation();
@@ -684,7 +713,7 @@ export const ReplyView = ({
     setSending(false);
   };
   return (
-    <div>
+    <div className="notch-reply">
       <p className="line-clamp-3">{text}</p>
       {dictationError && (
         <p role="alert">
@@ -741,84 +770,16 @@ export const ReplyView = ({
         <p role="alert">{t("notch.listening.error")}</p>
       )}
       {error && <p role="alert">{t("notch.reply.failed")}</p>}
-      <Button onClick={open}>{t("notch.actions.open")}</Button>
+      {presentation.attention?.canReply && (
+        <Button disabled={sending || !draft.trim()} onClick={() => void send()}>
+          {t("chat.composer.send")}
+        </Button>
+      )}
     </div>
   );
 };
 
-export const IdleView = () => {
-  const { db, message, transport } = useNotch();
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  const bot = db.collections.bots.toArray.find((bot) => bot.channel == null);
-  const routine = bot
-    ? db.collections.routines.toArray.find((routine) =>
-        isCheckInRoutine(routine, bot.id)
-      )
-    : null;
-  const toggle = async () => {
-    if (!routine || busy) return;
-    setBusy(true);
-    try {
-      await db.collections.routines.update(routine.id, (draft) => {
-        draft.enabled = !routine.enabled;
-      }).isPersisted.promise;
-    } catch {
-      setError(true);
-    }
-    setBusy(false);
-  };
-  const launch = async (call: boolean) => {
-    if (!bot || busy) return;
-    setBusy(true);
-    setError(false);
-    try {
-      await message(bot.id, call);
-    } catch {
-      setError(true);
-    }
-    setBusy(false);
-  };
-  return (
-    <div>
-      <h2>{bot?.name ?? t("notch.wings.idle")}</h2>
-      {bot && (
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={() => void launch(false)}>
-            {t("notch.actions.message")}
-          </Button>
-          <Button disabled={busy} onClick={() => void launch(true)}>
-            {t("notch.actions.call")}
-          </Button>
-          {routine && (
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() => void toggle()}
-            >
-              {t(
-                routine.enabled ? "notch.actions.pause" : "notch.actions.resume"
-              )}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            onClick={() =>
-              void transport.client.notch.openInApp({
-                kind: "bot",
-                botId: bot.id,
-              })
-            }
-          >
-            {t("notch.actions.open")}
-          </Button>
-        </div>
-      )}
-      {error && <p role="alert">{t("notch.reply.openFailed")}</p>}
-    </div>
-  );
-};
+export { IdleView } from "./idle";
 export const CallView = () => {
   const { transport, presentation, endCall } = useNotch();
   const voice = useDictation(transport, presentation.sessionId ?? "", (text) =>

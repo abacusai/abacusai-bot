@@ -11,6 +11,7 @@ import { Store, useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { PaneBoundary } from "#renderer/components/page-state";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
 
 interface PanelSlotState {
@@ -53,7 +54,10 @@ export const SidePanelOutlet = ({ className }: { className?: string }) => (
   <div
     ref={attachOutlet}
     data-slot="side-panel-outlet"
-    className={className ?? "flex min-h-0 flex-1 flex-col overflow-y-auto"}
+    className={
+      className ??
+      "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+    }
   />
 );
 
@@ -72,7 +76,10 @@ export const SidePanelContent = ({
     return () => count(tab, -1);
   }, [tab]);
   if (target == null || search.tab !== tab) return null;
-  return createPortal(children, target);
+  return createPortal(
+    <PaneBoundary resetKey={tab}>{children}</PaneBoundary>,
+    target
+  );
 };
 
 const overrides = new Store(0);

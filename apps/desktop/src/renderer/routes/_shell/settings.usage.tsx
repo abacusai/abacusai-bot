@@ -10,7 +10,7 @@ const UsageSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.sidebar.label")}
+          {t("settings.pages.usage")}
         </span>
       </TopBarSlot>
       <UsagePage />

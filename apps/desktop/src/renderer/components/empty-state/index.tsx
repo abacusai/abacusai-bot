@@ -6,6 +6,7 @@
 import type { ReactNode } from "react";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
+import { cn } from "#renderer/lib/cn";
 import {
   Empty,
   EmptyContent,
@@ -30,18 +31,25 @@ export const EmptyState = ({
   action,
   className,
 }: EmptyStateProps) => (
-  <Empty className={className} data-testid="empty-state">
-    <EmptyHeader>
+  <Empty
+    className={cn("max-w-full min-w-0", className)}
+    data-testid="empty-state"
+  >
+    <EmptyHeader className="max-w-full min-w-0">
       {icon != null && (
         <EmptyMedia variant="icon">
           <AppIcon name={icon} size={18} />
         </EmptyMedia>
       )}
-      <EmptyTitle>{title}</EmptyTitle>
+      <EmptyTitle className="max-w-full break-words">{title}</EmptyTitle>
       {description != null && (
-        <EmptyDescription>{description}</EmptyDescription>
+        <EmptyDescription className="max-w-full break-words">
+          {description}
+        </EmptyDescription>
       )}
     </EmptyHeader>
-    {action != null && <EmptyContent>{action}</EmptyContent>}
+    {action != null && (
+      <EmptyContent className="min-w-0 flex-wrap">{action}</EmptyContent>
+    )}
   </Empty>
 );

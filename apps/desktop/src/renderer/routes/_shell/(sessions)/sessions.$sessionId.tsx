@@ -21,6 +21,7 @@ const SubagentDetail = lazy(() =>
   }))
 );
 
+import { EmptyState } from "#renderer/components/empty-state";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { deriveSessionTitle } from "#renderer/features/chat/runtime/send";
 import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
@@ -73,7 +74,10 @@ const SessionAgents = ({
     <div className="flex size-full min-h-0 flex-col overflow-auto p-3">
       <h2>{t("sessions.dock.agents")}</h2>
       {agents.length === 0 ? (
-        <p>{t("sessions.agents.empty")}</p>
+        <EmptyState
+          title={t("sessions.agents.empty")}
+          className="my-auto [&_[data-slot=empty-title]]:text-sm"
+        />
       ) : (
         agents.map((agent) => (
           <Button
@@ -169,8 +173,14 @@ const SessionGone = () => {
       role="status"
       className="flex h-full flex-col items-center justify-center gap-3"
     >
-      <p>{t("sessions.gone")}</p>
-      <AppLink to="/sessions/new">{t("sessions.sidebar.new")}</AppLink>
+      <EmptyState
+        title={t("sessions.gone")}
+        action={
+          <Button nativeButton={false} render={<AppLink to="/sessions/new" />}>
+            {t("sessions.sidebar.new")}
+          </Button>
+        }
+      />
     </div>
   );
 };

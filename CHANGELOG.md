@@ -14,18 +14,18 @@ A companion around the Mac notch, or by the Windows clock, shows bot activity an
 
 The built-in code editor is replaced by Open in editor. Sessions are grouped by folder, and update notices appear in the title bar.
 
-On first launch, Updating your data may appear while conversations are converted. Release N leaves legacy files in place. Going back to the previous version shows the data left before the update; new conversations and preference changes do not appear there. See the Going back support article before downgrading after release N+1.
+On first launch, Updating your data may appear while conversations are converted. Earlier data files remain in place. Going back to the previous version shows the data from before the update; conversations and settings changed after the update will not appear there. Read the Going back support article before downgrading.
 
 - Artifacts refresh automatically; the Refresh button is removed.
 - The rail opens the Bots sidebar directly.
 - Start a bot chat from its bot page; the start page no longer has a composer.
 - Each rail item has its own sidebar.
-- Legacy ?view=capabilities and ?view=messaging links are retired.
+- Open connectors and messaging from Library.
 - The companion shows ongoing work; the background Task still running notification is removed.
 - Finishing setup opens the saved destination without switching a workspace.
 - Setup no longer resets an open tour.
 - Opening a routine run keeps your current workspace.
-- Legacy /settings/jobs and /routines/chat links are retired; open Routines from the rail.
+- Open scheduled tasks and run reports from Routines in the rail.
 
 
 A smaller download and install: the package no longer carries a second copy

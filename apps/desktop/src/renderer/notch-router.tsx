@@ -1,7 +1,5 @@
 import { createMemoryHistory, createRouter } from "@tanstack/react-router";
 
-import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
-
 import type { NotchRouterContext } from "./notch-context";
 import { routeTree } from "./notchRouteTree.gen";
 export const createNotchRouter = (context: NotchRouterContext) => {
@@ -10,8 +8,8 @@ export const createNotchRouter = (context: NotchRouterContext) => {
     context,
     history: createMemoryHistory({ initialEntries: ["/idle"] }),
     defaultPreload: false,
-    defaultViewTransition: { types: ["notch-swap"] },
+    // Document snapshots escape the bezel clip and cannot follow an interrupted resize.
+    defaultViewTransition: false,
   });
-  installTransitionTypes(router);
   return router;
 };

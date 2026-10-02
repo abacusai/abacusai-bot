@@ -18,4 +18,5 @@ export const clampChatWidth = (
   stored: number,
   groupWidth: number,
   dockMinimum: number
-): number => Math.max(360, Math.min(stored, groupWidth - dockMinimum));
+): number =>
+  Math.max(0, Math.min(Math.max(360, stored), groupWidth - dockMinimum));

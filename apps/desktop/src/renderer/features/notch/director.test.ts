@@ -248,3 +248,21 @@ it("unlock revalidates the proposed attention against the latest queue", async (
   expect(d.navigate).toHaveBeenCalledTimes(1);
   director.dispose();
 });
+
+it("does not shorten a collapsed camera exclusion at a larger display scale", async () => {
+  const d = deps();
+  const director = new NotchDirector(d);
+  await director.present(
+    { ...p("a"), expanded: false },
+    { width: 340, height: 44, compactHeight: 44 }
+  );
+  expect(d.commit).toHaveBeenLastCalledWith(
+    expect.objectContaining({ expanded: false }),
+    expect.objectContaining({ height: 44 })
+  );
+  expect(d.setShape).toHaveBeenLastCalledWith(
+    expect.objectContaining({ phase: "final", height: 44 }),
+    expect.any(AbortSignal)
+  );
+  director.dispose();
+});

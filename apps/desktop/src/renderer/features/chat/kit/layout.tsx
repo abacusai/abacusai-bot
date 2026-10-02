@@ -20,6 +20,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { useAppHotkey } from "#renderer/lib/hotkeys";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { Button } from "#renderer/ui/button";
@@ -27,7 +28,6 @@ import {
   MessageScrollerProvider,
   useMessageScrollerScrollable,
 } from "#renderer/ui/message-scroller";
-import { Spinner } from "#renderer/ui/spinner";
 
 import { ThreadComposer } from "../composer/composer";
 import { queueEditing, setQueueEditing } from "../composer/queue-editing";
@@ -227,12 +227,12 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
       scrollPreviousItemPeek={64}
     >
       <div
-        className="flex size-full min-h-0 flex-col"
+        className="flex size-full min-h-0 min-w-0 flex-col"
         data-slot="chat-layout"
         data-skin={skin}
       >
         {slots.banner}
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <MessagesView>
             {(messages) =>
               messages.length === 0 && slots.empty != null ? (
@@ -245,7 +245,7 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
             }
           </MessagesView>
         </div>
-        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-1.5 pb-4">
+        <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col gap-1.5 pb-4">
           <Notices />
           {skin === "bot" ? (
             <div className="px-4">

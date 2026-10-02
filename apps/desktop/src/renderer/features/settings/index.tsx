@@ -99,6 +99,7 @@ export const SettingsSidebar = () => {
       <NavList.Header title={t("settings.sidebar.label")} />
       <Input
         aria-label={t("phase5.searchSettings")}
+        placeholder={t("phase5.searchSettings")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -118,13 +119,19 @@ export const SettingsSidebar = () => {
         </NavList.Rows>
       ) : (
         GROUPS.map((group) => (
-          <NavList.Group key={group.label} label={t(group.label)}>
+          <NavList.Group
+            key={group.label}
+            label={group.pages.length > 1 ? t(group.label) : ""}
+          >
             {group.pages.map((page) => (
               <NavList.Item
                 key={page}
                 to={`/settings/${page}`}
                 active={
-                  matchRoute({ to: `/settings/${page}` } as never) !== false
+                  matchRoute({
+                    to: `/settings/${page}`,
+                    fuzzy: true,
+                  } as never) !== false
                 }
                 title={t(`settings.pages.${page}`)}
               />
@@ -132,7 +139,7 @@ export const SettingsSidebar = () => {
           </NavList.Group>
         ))
       )}
-      <NavList.Group label={t("settings.sidebar.capabilities")}>
+      <NavList.Group label="">
         <NavList.Item
           to="/library/connectors"
           transition="settings-out"

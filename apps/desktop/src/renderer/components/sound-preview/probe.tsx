@@ -20,5 +20,10 @@ export const SoundSynthesisProbe = () => {
       live = false;
     };
   }, []);
-  return <output data-sound-rms={rms ?? "pending"}>{rms}</output>;
+  return (
+    <output data-sound-rms={rms ?? "pending"}>
+      Routine notification sound · RMS amplitude:{" "}
+      {rms == null ? "Measuring…" : rms.toFixed(4)}
+    </output>
+  );
 };

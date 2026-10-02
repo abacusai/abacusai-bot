@@ -8,6 +8,7 @@ import "../bots.css";
 import type { TFunction } from "i18next";
 import { MoreHorizontal } from "lucide-react";
 import { motion, type Transition } from "motion/react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ACCENT_OUTLINE_CLASS } from "#renderer/components/bot-avatar";
@@ -75,7 +76,15 @@ export const secondaryLine = (
       return { text: t("bots.status.paused"), tone: "muted" };
     default:
       return {
-        text: preview != null && preview !== "" ? preview : bot.title,
+        text: preview?.trim()
+          ? preview
+              .replace(/```[^\n]*\n?/g, " ")
+              .replace(/<\/?reply>/g, "")
+              .replace(/!?(?:\[([^\]]*)\])\([^)]*\)/g, "$1")
+              .replace(/[*_`#>~]/g, "")
+              .replace(/\s+/g, " ")
+              .trim()
+          : bot.title,
         tone: "muted",
       };
   }
@@ -135,6 +144,7 @@ export const BotRowView = ({
   onMenu(id: BotMenuItemId): void;
 }) => {
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const motionPref = useMotionPreference();
   const line = secondaryLine(attention, bot, preview, t);
   const mark = bot.channel != null ? markForPlatform(bot.channel) : null;
@@ -195,7 +205,10 @@ export const BotRowView = ({
                   {bot.name}
                 </span>
                 {mark != null && <ConnectorMark id={mark} size={16} />}
-                <span className="text-muted-foreground ml-auto shrink-0 text-[11px] group-focus-within/row:invisible group-hover/row:invisible">
+                <span
+                  style={{ visibility: menuOpen ? "hidden" : undefined }}
+                  className="text-muted-foreground ml-auto shrink-0 text-[11px] group-focus-within/row:invisible group-hover/row:invisible"
+                >
                   {stamp}
                 </span>
               </span>
@@ -230,7 +243,7 @@ export const BotRowView = ({
           <MenuItems items={menu} onSelect={onMenu} kind="context" />
         </ContextMenuContent>
       </ContextMenu>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           render={
             <Button

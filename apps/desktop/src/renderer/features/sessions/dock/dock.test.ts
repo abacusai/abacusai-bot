@@ -63,7 +63,8 @@ it("R4-T15 folds at 1100 only for a split, keeps chat distinct from closed", () 
     closed: true,
     chatFirst: false,
   });
-  expect(clampChatWidth(480, 800, 488)).toBe(360);
+  expect(clampChatWidth(480, 800, 488)).toBe(312);
+  expect(clampChatWidth(480, 300, 360)).toBe(0);
 });
 it("reorders within a leaf without duplicating tabs and accepts all edge directions", () => {
   const leaf: DockNode = {

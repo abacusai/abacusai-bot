@@ -30,6 +30,18 @@ import { formatElapsed, useSeconds } from "../clock";
 import { useChatView } from "../context";
 import { toolTitle } from "../tools/tool-line";
 
+export const providerMessage = (raw = ""): string => {
+  const start = raw.indexOf("{");
+  if (start < 0) return raw.replace(/^\d{3}\s+/, "");
+  try {
+    const value = JSON.parse(raw.slice(start));
+    const message = value?.error?.message ?? value?.message ?? value?.error;
+    return typeof message === "string" ? message : "";
+  } catch {
+    return "";
+  }
+};
+
 interface ErrorAction {
   type: string;
   model?: string;
@@ -114,7 +126,10 @@ export const BusyLine = ({
 export const Typing = ({ caption }: { caption?: string | null }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2" data-slot="typing">
+    <div
+      className="flex max-w-full min-w-0 flex-col items-start gap-1.5"
+      data-slot="typing"
+    >
       <div
         role="img"
         aria-label={t("chat.busy.typing")}
@@ -125,7 +140,10 @@ export const Typing = ({ caption }: { caption?: string | null }) => {
         <span className="chat-typing-dot" />
       </div>
       {caption != null && caption !== "" ? (
-        <span className="text-muted-foreground truncate text-xs">
+        <span
+          title={caption}
+          className="text-muted-foreground max-w-full min-w-0 truncate text-xs"
+        >
           {caption}
         </span>
       ) : null}
@@ -397,13 +415,39 @@ export const ErrorCard = ({
         />
         <div className="flex min-w-0 flex-col gap-1">
           <div className="font-medium">
-            {crashed ? t("chat.error.crashed") : error.message}
+            {crashed
+              ? t("chat.error.crashed")
+              : providerMessage(error.message) ||
+                t("errors.genericDescription")}
           </div>
           {detail != null && detail !== "" ? (
-            <div className="text-muted-foreground text-xs">{detail}</div>
+            <p className="text-muted-foreground text-xs break-words">
+              {detail}
+            </p>
           ) : null}
         </div>
       </div>
+      {providerMessage(error.message) !== error.message && (
+        <details className="ps-6 text-xs">
+          <summary className="cursor-pointer">{t("phase5.details")}</summary>
+          <pre className="mt-2 max-h-40 overflow-auto break-all whitespace-pre-wrap">
+            {error.message}
+          </pre>
+        </details>
+      )}
+      {/\b40[13]\b|provider.*(?:denied|rejected)/i.test(
+        error.message ?? ""
+      ) && (
+        <div className="ps-6">
+          <Button
+            nativeButton={false}
+            variant="secondary"
+            render={<a href="#/settings/models" />}
+          >
+            {t("settings.pages.models")}
+          </Button>
+        </div>
+      )}
       {buttons.length > 0 ? (
         <div className="flex flex-wrap gap-2 ps-6">{buttons}</div>
       ) : null}
