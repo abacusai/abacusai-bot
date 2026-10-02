@@ -88,10 +88,10 @@ export const MessagingPage = () => {
               key={p.id}
               id={p.id}
               title={t(`messaging.platforms.${p.nameKey}`)}
-              detail={p.errorMessage ?? t(`messaging.states.${p.state}`)}
+              detail={p.errorMessage ?? undefined}
             >
               <ConnectorMark id={p.id} size={28} />
-              <StatePill>{p.state}</StatePill>
+              <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>
               <Button
                 size="sm"
                 variant="secondary"
@@ -258,7 +258,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3 overflow-auto p-4">
-          <StatePill>{p?.state}</StatePill>
+          {p && <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>}
           {(error || p?.errorMessage) && (
             <p role="alert">{error ?? p?.errorMessage}</p>
           )}

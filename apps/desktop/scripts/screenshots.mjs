@@ -44,6 +44,8 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { authenticatedTestHome } from "./authenticated-test-home.mjs";
+
 const desktop = join(import.meta.dirname, "..");
 const repo = join(desktop, "../..");
 const require = createRequire(import.meta.url);
@@ -384,6 +386,7 @@ const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
     readFileSync(join(repo, "node_modules/electron/path.txt"), "utf8").trim()
   );
   const log = join(scratch, `electron-${tag}.log`);
+  const authPreload = authenticatedTestHome(home);
   const child = spawn(
     electron,
     [
@@ -397,6 +400,9 @@ const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
       cwd: desktop,
       env: {
         ...process.env,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${authPreload}`]
+          .filter(Boolean)
+          .join(" "),
         ABACUSAI_BOT_HOME: home,
         ABACUSAI_BOT_USERDATA: join(scratch, `ud-${tag}`),
         ABACUSBOT_RENDERER_GENERATION: "wco",

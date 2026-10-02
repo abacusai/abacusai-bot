@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 
 import { devicePoint, simulatorCrop } from "#renderer/components/device/crop";
 import { DeviceStreamPlayer } from "#renderer/components/device/stream-player";
+import { EmptyState } from "#renderer/components/empty-state";
 import type { Transport } from "#renderer/data/transport";
+import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 import type { LocalDeviceInfo } from "#shared/contracts";
@@ -373,10 +375,29 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
           {t("sessions.device.grant")}
         </Button>
       ) : null}
-      {!device ? <p>{t("sessions.device.empty")}</p> : null}
+      {!device ? (
+        <EmptyState
+          title={t("sessions.device.empty")}
+          className="my-auto [&_[data-slot=empty-title]]:text-sm"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              nativeButton={false}
+              render={<AppLink to="/settings/devices" />}
+            >
+              {t("settings.pages.devices")}
+            </Button>
+          }
+        />
+      ) : null}
       <canvas
         ref={canvas}
-        className="min-h-0 max-w-full flex-1 touch-none object-contain"
+        className={
+          device
+            ? "min-h-0 max-w-full flex-1 touch-none object-contain"
+            : "hidden"
+        }
         tabIndex={0}
         aria-label={t("sessions.device.screen")}
         onPointerDown={(e) => touch(e, "down")}

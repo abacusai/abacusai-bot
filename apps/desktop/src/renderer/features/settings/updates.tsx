@@ -119,7 +119,14 @@ export const AboutPage = () => {
           title={t("onboarding.welcomeTitle")}
           detail={t("phase5.version", {
             version: info.data?.appVersion ?? "",
-            platform: info.data?.platform ?? "",
+            platform:
+              info.data?.platform === "darwin"
+                ? "macOS"
+                : info.data?.platform === "win32"
+                  ? "Windows"
+                  : info.data?.platform === "linux"
+                    ? "Linux"
+                    : "",
           })}
         >
           <Button size="sm" onClick={() => void update.check()}>
@@ -158,7 +165,7 @@ export const AboutPage = () => {
             </Button>
           )}
         </SettingRow>
-        <SettingRow id="logs" title={t("phase5.saveLogs")}>
+        <SettingRow id="logs" title={t("phase5.logs")}>
           <Button
             size="sm"
             variant="secondary"

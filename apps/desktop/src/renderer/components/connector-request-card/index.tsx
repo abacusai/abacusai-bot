@@ -13,10 +13,10 @@ import { Link2, Plug } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import { Spinner } from "#renderer/ui/spinner";
 import type { ConnectorRequest } from "#shared/contracts";
 
 export interface ConnectorRequestCardProps {

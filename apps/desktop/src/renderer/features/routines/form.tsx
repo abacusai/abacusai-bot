@@ -236,7 +236,7 @@ export const RoutineDialog = ({
         }}
       >
         <DialogContent
-          className="max-h-[calc(100vh-48px)] overflow-auto rounded-2xl p-5 sm:max-w-[640px]"
+          className="flex max-h-[calc(100dvh-48px)] flex-col overflow-hidden rounded-2xl p-5 sm:max-w-[640px]"
           data-testid="routine-dialog"
         >
           <DialogHeader>
@@ -246,16 +246,42 @@ export const RoutineDialog = ({
             <DialogDescription>{t("phase5.freshSession")}</DialogDescription>
           </DialogHeader>
           <form
+            className="flex min-h-0 flex-col"
             onSubmit={(e) => {
               e.preventDefault();
               void form.handleSubmit();
             }}
           >
-            <FieldGroup>
+            <FieldGroup className="min-h-0 overflow-y-auto pr-1">
+              {!routineId && (
+                <div>
+                  <h2 className="mb-2 text-sm font-medium">
+                    {t("bots.start.templates")}
+                  </h2>
+                  <div className="flex flex-wrap gap-1">
+                    {ROUTINE_TEMPLATES.map((x) => (
+                      <Button
+                        key={x.id}
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (changed()) setReplacement(x);
+                          else applyTemplate(x);
+                        }}
+                      >
+                        {t(`routines.templates.${x.id}.name`)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <form.AppField name="name">
                 {(f) => (
                   <f.TextField
                     label={t("phase5.name")}
+                    placeholder={t("routines.templates.morning-brief.name")}
                     max={80}
                     errorKeyPrefix="phase5.validation"
                   />
@@ -483,24 +509,6 @@ export const RoutineDialog = ({
                   );
                 }}
               </form.Subscribe>
-              {!routineId && (
-                <div className="flex flex-wrap gap-1">
-                  {ROUTINE_TEMPLATES.map((x) => (
-                    <Button
-                      key={x.id}
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        if (changed()) setReplacement(x);
-                        else applyTemplate(x);
-                      }}
-                    >
-                      {t(`routines.templates.${x.id}.name`)}
-                    </Button>
-                  ))}
-                </div>
-              )}
               {remote && <p role="status">{t("phase5.remoteChanged")}</p>}
               {error && <p role="alert">{error}</p>}
               <form.Subscribe selector={(s) => s.errors}>
@@ -510,24 +518,24 @@ export const RoutineDialog = ({
                   ) : null
                 }
               </form.Subscribe>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    if (changed()) setDiscardOpen(true);
-                    else close();
-                  }}
-                >
-                  {t("phase5.cancel")}
-                </Button>
-                <form.AppForm>
-                  <form.SubmitButton
-                    label={t(routineId ? "phase5.save" : "phase5.create")}
-                  />
-                </form.AppForm>
-              </DialogFooter>
             </FieldGroup>
+            <DialogFooter className="mt-4 shrink-0 border-t pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  if (changed()) setDiscardOpen(true);
+                  else close();
+                }}
+              >
+                {t("phase5.cancel")}
+              </Button>
+              <form.AppForm>
+                <form.SubmitButton
+                  label={t(routineId ? "phase5.save" : "phase5.create")}
+                />
+              </form.AppForm>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

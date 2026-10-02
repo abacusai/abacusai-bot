@@ -1,3 +1,4 @@
+import { useEffect, type ReactNode } from "react";
 /**
  * The app's toast region (spec 01 §7.4): the registry toast atoms, with the
  * viewport placed under the title bar from `useTitlebarArea()` (toolbar
@@ -6,7 +7,7 @@
  * (the port lost during boot) has nowhere to show and goes to a static
  * screen instead.
  */
-import { useEffect, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useTitlebarArea } from "#renderer/lib/window-chrome/use-titlebar-area";
 import {
@@ -45,6 +46,7 @@ export const toastViewportStyle = (area: {
 
 const ToastList = () => {
   const { toasts } = useToastManager();
+  const { t } = useTranslation();
   return toasts.map((item) => (
     <Toast key={item.id} toast={item}>
       <ToastContent>
@@ -53,7 +55,7 @@ const ToastList = () => {
           <ToastDescription />
         </div>
         <ToastAction />
-        <ToastClose />
+        <ToastClose aria-label={t("common.close")} />
       </ToastContent>
     </Toast>
   ));
@@ -75,7 +77,7 @@ export const AppToaster = ({
     };
   }, []);
   return (
-    <ToastProvider toastManager={toast}>
+    <ToastProvider toastManager={toast} limit={3}>
       {children}
       <ToastPortal>
         <ToastViewport

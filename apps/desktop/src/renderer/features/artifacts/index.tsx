@@ -101,6 +101,7 @@ export const ArtifactsSidebar = () => {
   ];
   return (
     <NavList.Root label={t("artifacts.sidebar.label")}>
+      <NavList.Header title={t("artifacts.sidebar.label")} />
       <Input
         aria-label={t("phase5.searchArtifacts")}
         placeholder={t("phase5.searchArtifacts")}
@@ -122,21 +123,23 @@ export const ArtifactsSidebar = () => {
           />
         ))}
       </NavList.Group>
-      <NavList.Group label={t("artifacts.sidebar.source")}>
-        {refs.map((ref) => (
-          <NavList.Item
-            key={ref.id}
-            to="/artifacts"
-            search={{
-              ...search,
-              from: search.from === ref.id ? undefined : ref.id,
-            }}
-            transition="none"
-            title={ref.label}
-            active={search.from === ref.id}
-          />
-        ))}
-      </NavList.Group>
+      {refs.length > 0 && (
+        <NavList.Group label={t("artifacts.sidebar.source")}>
+          {refs.map((ref) => (
+            <NavList.Item
+              key={ref.id}
+              to="/artifacts"
+              search={{
+                ...search,
+                from: search.from === ref.id ? undefined : ref.id,
+              }}
+              transition="none"
+              title={ref.label}
+              active={search.from === ref.id}
+            />
+          ))}
+        </NavList.Group>
+      )}
     </NavList.Root>
   );
 };
@@ -161,7 +164,7 @@ export const ArtifactsPage = ({
     entries.length,
     top,
     columns,
-    list ? 48 : 190,
+    list ? 72 : 190,
     size.height
   );
   const hasViewport = filtered.length > 0;
@@ -181,7 +184,7 @@ export const ArtifactsPage = ({
       (entry) => "artifact" in entry && entry.artifact.id === search.item
     );
     if (index < 0) return;
-    const offset = Math.floor(index / columns) * (list ? 48 : 190);
+    const offset = Math.floor(index / columns) * (list ? 72 : 190);
     if (
       viewport.current &&
       (offset < top || offset > top + viewport.current.clientHeight)
@@ -240,9 +243,14 @@ export const ArtifactsPage = ({
     ];
   };
   const actions = (a: ArtifactRow) => (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-2 border-b px-3 pb-3">
       {actionItems(a).map((item) => (
-        <Button key={item.label} size="sm" variant="ghost" onClick={item.run}>
+        <Button
+          key={item.label}
+          size="sm"
+          variant="secondary"
+          onClick={item.run}
+        >
           {item.label}
         </Button>
       ))}
@@ -258,7 +266,7 @@ export const ArtifactsPage = ({
         <div className="ml-auto">
           <Segments
             label={t("phase5.artifactView")}
-            value={search.view ?? "grid"}
+            value={list ? "list" : "grid"}
             values={[
               { value: "grid", label: t("phase5.grid") },
               { value: "list", label: t("phase5.list") },
@@ -328,7 +336,7 @@ export const ArtifactsPage = ({
                     <div
                       key={entry.day}
                       role="listitem"
-                      className="text-muted-foreground flex h-12 items-center px-3 text-xs font-medium"
+                      className="text-muted-foreground flex h-[72px] items-center px-3 text-xs font-medium"
                     >
                       {new Date(entry.date).toLocaleDateString(i18n.language, {
                         dateStyle: "full",
@@ -349,7 +357,7 @@ export const ArtifactsPage = ({
                           <button
                             className={
                               list
-                                ? "flex h-12 items-center gap-3 px-3 text-left"
+                                ? "flex h-[72px] min-w-0 items-center gap-3 px-3 pr-9 text-left"
                                 : "flex h-[180px] flex-col text-left"
                             }
                             aria-current={
@@ -366,7 +374,7 @@ export const ArtifactsPage = ({
                             }}
                           >
                             {!list && <ArtifactThumbnail artifact={a} />}
-                            <div className="min-w-0 px-3 py-2">
+                            <div className="min-w-0 flex-1 px-3 py-2">
                               <p className="truncate text-[13px] font-medium">
                                 {a.title}
                               </p>
@@ -458,6 +466,8 @@ export const ArtifactsPage = ({
                     <code>{selected.location}</code>
                   ) : (
                     <FilePreview
+                      onOpenExternally={() => void open(selected)}
+                      showActions={false}
                       path={selected.location}
                       hostRoot={dirname(selected.location)}
                       read={{
@@ -498,12 +508,6 @@ export const ArtifactsPage = ({
                             hostRoot,
                           }),
                       }}
-                      onOpenExternally={() => void open(selected)}
-                      onReveal={() =>
-                        void transport.client.system.showItemInFolder({
-                          path: selected.location,
-                        })
-                      }
                     />
                   )}
                 </div>

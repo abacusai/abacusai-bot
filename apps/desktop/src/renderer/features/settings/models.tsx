@@ -164,7 +164,7 @@ export const ModelsPage = ({
       <StatePill>
         {t(
           keys.data?.includes(field.provider)
-            ? "phase5.connected"
+            ? "phase5.saved"
             : "phase5.notConnected"
         )}
       </StatePill>

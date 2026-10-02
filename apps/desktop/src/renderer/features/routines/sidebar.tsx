@@ -63,6 +63,7 @@ export const RoutinesSidebar = () => {
     );
   return (
     <NavList.Root label={t("routines.sidebar.label")}>
+      <NavList.Header title={t("routines.sidebar.label")} />
       <Input
         aria-label={t("phase5.searchRoutines")}
         placeholder={t("phase5.searchRoutines")}

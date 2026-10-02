@@ -7,13 +7,16 @@ export const SHAPES = {
   quiet: [90, 0],
   working: [150, 0],
   done: [150, 0],
-  failed: [140, 0],
-  approval: [120, 76],
-  reply: [130, 84],
+  failed: [170, 0],
+  approval: [160, 132],
+  reply: [160, 144],
   call: [130, 132],
-  hovered: [130, 46],
+  hovered: [180, 76],
 } as const;
-export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
+export const shapeFor = (
+  p: Pick<NotchPresentation, "route" | "expanded" | "quietUntil">,
+  layout: NotchLayout
+) => {
   const key = p.quietUntil
     ? "quiet"
     : p.route.startsWith("/approval")
@@ -21,18 +24,18 @@ export const shapeFor = (p: NotchPresentation, layout: NotchLayout) => {
       : p.route.startsWith("/reply")
         ? "reply"
         : (p.route.slice(1) as "idle" | "working" | "call" | "done" | "failed");
-  const [wing, body] = SHAPES[key] ?? SHAPES.idle;
+  const [compactWing, body] = SHAPES[key] ?? SHAPES.idle;
+  const wing = p.expanded
+    ? Math.max(compactWing, key === "idle" ? SHAPES.hovered[0] : 160)
+    : compactWing;
   const gap = layout.notch?.width ?? 0;
   return {
+    compactHeight: layout.notch?.height ?? 36,
     width: Math.min(layout.maxShape.width, gap + wing * 2),
     height: Math.min(
       layout.maxShape.height,
-      Math.max(layout.notch?.height ?? 0, layout.mode === "capsule" ? 36 : 32) +
-        (p.expanded
-          ? key === "approval"
-            ? layout.maxShape.height
-            : body || SHAPES.hovered[1]
-          : 0)
+      (layout.notch?.height ?? 36) +
+        (p.expanded ? body || SHAPES.hovered[1] : 0)
     ),
   };
 };

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { readSourceFiles } from "#renderer/test-support/source-files";
 
-import { GOLDEN_NAMES, goldenText } from "./goldens";
+import { GOLDEN_NAMES, golden, goldenText } from "./goldens";
 import { fixtureRuntime } from "./player";
 import { SCENARIOS } from "./scenarios";
 
@@ -137,7 +137,11 @@ describe("R2-T29 fixtures", () => {
 
   it("every scenario replays to readiness", async () => {
     for (const scenario of SCENARIOS) {
-      const fixture = fixtureRuntime(scenario.id)!;
+      const fixture = fixtureRuntime(
+        scenario.id,
+        {},
+        `gallery-${scenario.id}`
+      )!;
       const session = fixture.runtime.session(fixture.threadId);
       await session.load();
       expect(session.ready, scenario.id).toBe(true);
@@ -145,4 +149,14 @@ describe("R2-T29 fixtures", () => {
       fixture.runtime.forget(fixture.threadId);
     }
   });
+});
+
+it("normalizes the recorded bot reply through the messaging parser", () => {
+  const text = golden("bot-housekeeping")
+    .flatMap(({ event }) =>
+      event.type === "TEXT_MESSAGE_CONTENT" ? [event.delta] : []
+    )
+    .join("");
+  expect(text).toContain("Hi there");
+  expect(text).not.toMatch(/<\/?reply>/);
 });

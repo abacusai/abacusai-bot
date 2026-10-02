@@ -3,6 +3,11 @@ import { execFile } from "node:child_process";
 import type { DisplayGeometry, Rect } from "./geometry";
 export interface ProbedScreen {
   frame: Rect;
+  displayId?: number;
+  leftArea?: Rect | null;
+  rightArea?: Rect | null;
+  menuBarHeight?: number;
+  scaleFactor?: number;
   top: number;
   left: number;
   right: number;
@@ -20,7 +25,10 @@ var list = $.NSScreen.screens, screens = [], ok = true;
 for (var i = 0; i < list.count; i++) {
  var s = list.objectAtIndex(i);
  if (!s.respondsToSelector('safeAreaInsets') || !s.respondsToSelector('auxiliaryTopLeftArea') || !s.respondsToSelector('auxiliaryTopRightArea')) { ok = false; break; }
- screens.push({frame:rect(s.frame),top:s.safeAreaInsets.top,left:s.auxiliaryTopLeftArea.size.width,right:s.auxiliaryTopRightArea.size.width});
+ var top = s.safeAreaInsets.top;
+ var left = top > 0 ? rect(s.auxiliaryTopLeftArea) : null;
+ var right = top > 0 ? rect(s.auxiliaryTopRightArea) : null;
+ screens.push({displayId:ObjC.unwrap(s.deviceDescription.objectForKey("NSScreenNumber")),frame:rect(s.frame),top:top,left:left ? left.width : 0,right:right ? right.width : 0,leftArea:left,rightArea:right,menuBarHeight:s.frame.origin.y+s.frame.size.height-s.visibleFrame.origin.y-s.visibleFrame.size.height,scaleFactor:s.backingScaleFactor});
 }
 JSON.stringify(ok ? {ok:true,screens:screens} : {ok:false,reason:'selectors-unavailable'});`;
 export const parseProbe = (raw: string): ProbeResult => {
@@ -55,6 +63,18 @@ export const parseProbe = (raw: string): ProbeResult => {
       )
         throw new Error("screen");
     }
+    for (const s of value.screens) {
+      for (const area of [s.leftArea, s.rightArea]) {
+        if (
+          area &&
+          (![area.x, area.y, area.width, area.height].every(Number.isFinite) ||
+            area.width < 0 ||
+            area.height < 0)
+        )
+          throw new Error("area");
+      }
+      if (s.top > s.frame.height) throw new Error("inset");
+    }
     return { kind: "ok", screens: value.screens };
   } catch {
     return { kind: "unavailable", reason: "parse" };
@@ -74,10 +94,15 @@ export const probeNotchMetrics = (): Promise<ProbeResult> =>
         )
     );
   });
-export const metricsFromProbe = (s: ProbedScreen) =>
-  s.top > 0 && s.left > 0 && s.right > 0 && s.frame.width > s.left + s.right
-    ? { width: s.frame.width - s.left - s.right, height: s.top }
+export const metricsFromProbe = (s: ProbedScreen) => {
+  const x = s.leftArea ? s.leftArea.x + s.leftArea.width - s.frame.x : s.left;
+  const right = s.rightArea
+    ? s.rightArea.x - s.frame.x
+    : s.frame.width - s.right;
+  return s.top > 0 && x > 0 && right > x && right < s.frame.width
+    ? { x, width: right - x, height: s.top }
     : null;
+};
 export const matchScreens = (
   screens: ProbedScreen[],
   displays: DisplayGeometry[],
@@ -87,6 +112,7 @@ export const matchScreens = (
     displays.flatMap((d) => {
       const s = screens.find(
         (s) =>
+          (s.displayId === undefined || s.displayId === d.id) &&
           s.frame.x === d.bounds.x &&
           s.frame.width === d.bounds.width &&
           s.frame.height === d.bounds.height &&
@@ -96,7 +122,7 @@ export const matchScreens = (
     })
   );
 export const metricsCacheKey = (d: DisplayGeometry & { scaleFactor: number }) =>
-  `${d.id}:${d.bounds.width}x${d.bounds.height}@${d.scaleFactor}`;
+  `${d.id}:${d.bounds.x},${d.bounds.y}:${d.bounds.width}x${d.bounds.height}@${d.scaleFactor}`;
 export const devMetrics = (value: string | undefined, packaged: boolean) => {
   if (packaged) return null;
   const match = /^(\d+)x(\d+)$/.exec(value ?? "");

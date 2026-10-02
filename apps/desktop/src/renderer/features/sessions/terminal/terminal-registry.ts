@@ -22,12 +22,14 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         installTerminalTheme,
       } = await import("#renderer/components/terminal/ghostty");
       await ghosttyReady();
+      await document.fonts?.load('13px "Symbols Nerd Font Mono"');
       await document.fonts?.ready;
       const element = document.createElement("div");
       element.style.cssText = "width:100%;height:100%";
       const term = new Terminal({
         fontSize: 13,
-        fontFamily: '"JetBrains Mono Variable", monospace',
+        fontFamily:
+          '"JetBrains Mono Variable", "Symbols Nerd Font Mono", monospace',
         cursorBlink: true,
         cursorStyle: "block",
         scrollback: 10000,

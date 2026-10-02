@@ -6,7 +6,7 @@
  * Chromium answers them; every case runs the real app router. Each started
  * transition is recorded with its types: an untyped commit must start none.
  */
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { durations, offsets, notch } from "#renderer/lib/motion";
@@ -142,6 +142,25 @@ describe("inferNavType", () => {
 });
 
 describe("the router's document view transition", () => {
+  it("keeps shell navigation usable after a route loader fails and can retry", async () => {
+    harness = await renderApp("/sessions/new");
+    const route = harness.router.routesById["/_shell/(routines)/routines"];
+    const original = route.options.loader;
+    route.options.loader = () => {
+      throw new Error("Audit loader failure");
+    };
+    try {
+      await go({ to: "/routines" });
+      expect(screen.getByRole("alert")).toBeTruthy();
+      expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();
+      route.options.loader = original;
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+      await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+      expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();
+    } finally {
+      route.options.loader = original;
+    }
+  });
   it("starts none while a slow navigation shows its pending screen, then one with the intent on commit", async () => {
     harness = await renderApp("/sessions/new");
     // BotsGlobals already preloads routines for cross-area Needs you.
@@ -170,6 +189,10 @@ describe("the router's document view transition", () => {
       await new Promise((resolve) => setTimeout(resolve, 400));
     });
     expect(screen.getByTestId("pending-pane")).toBeTruthy();
+    expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-pending-area="routines"]')
+    ).not.toBeNull();
     expect(started).toEqual([]);
     release();
     await act(async () => {
