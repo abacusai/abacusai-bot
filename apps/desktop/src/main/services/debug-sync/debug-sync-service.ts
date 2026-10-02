@@ -20,7 +20,6 @@ import {
   emptySyncState,
   syncStateFromCount,
   syncTranscriptWithRetry,
-  shouldSync,
   type SyncDeps,
   type SyncState,
 } from "./debug-sync.core";
@@ -47,6 +46,11 @@ export class DebugSyncService {
   private readonly readTranscript: (id: string) => StoredTranscript | null;
   private readonly clientVersion: string;
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly pending = new Set<string>();
+  private backgroundUploads = 0;
+  private readonly livePending = new Set<string>();
+  private liveUploads = 0;
+  private swept = false;
   private readonly inFlight = new Set<string>();
   /** sessionId -> what the server holds; a bare count is an older marker. */
   private markers: Record<string, SyncState | number> = {};
@@ -72,14 +76,17 @@ export class DebugSyncService {
       sessionId,
       setTimeout(() => {
         this.timers.delete(sessionId);
-        void this.run(sessionId);
+        this.pending.delete(sessionId);
+        this.livePending.add(sessionId);
+        this.pump();
       }, DEBOUNCE_MS)
     );
   }
 
   /** Upload anything past its marker: offline turns, crashes. Best-effort. */
   sweepOnStartup(): void {
-    if (!this.enabled()) return;
+    if (this.swept || !this.enabled()) return;
+    this.swept = true;
     // v1 transcripts, and AG-UI threads that have none (spec 03 §24.12).
     const ids = new Set<string>();
     for (const dir of [TRANSCRIPTS_DIR(), THREADS_DIR()]) {
@@ -90,11 +97,37 @@ export class DebugSyncService {
         // No such directory yet.
       }
     }
-    for (const sessionId of ids) {
-      const transcript = this.readTranscript(sessionId);
-      if (shouldSync(transcript, this.syncState(sessionId)))
-        this.enqueue(sessionId);
+    for (const sessionId of ids) this.pending.add(sessionId);
+    this.pump();
+  }
+
+  /** Two catch-up slots and a reserved live slot; yield before reading histories. */
+  private pump(): void {
+    if (!this.enabled()) {
+      this.pending.clear();
+      this.livePending.clear();
+      return;
     }
+    const live = this.liveUploads < 1 && this.livePending.size > 0;
+    const queue = live ? this.livePending : this.pending;
+    if (!live && this.backgroundUploads >= 2) return;
+    if (queue.size === 0) return;
+    const sessionId = queue.values().next().value!;
+    queue.delete(sessionId);
+    if (live) this.liveUploads++;
+    else this.backgroundUploads++;
+    setImmediate(() => {
+      void this.run(sessionId)
+        .catch((error: unknown) =>
+          console.warn("[debug-sync] upload failed", error)
+        )
+        .finally(() => {
+          if (live) this.liveUploads--;
+          else this.backgroundUploads--;
+          this.pump();
+        });
+    });
+    this.pump();
   }
 
   private enabled(): boolean {
@@ -163,6 +196,8 @@ export class DebugSyncService {
       clearTimeout(pending);
       this.timers.delete(sessionId);
     }
+    this.pending.delete(sessionId);
+    this.livePending.delete(sessionId);
     await this.run(sessionId);
   }
 
@@ -172,8 +207,7 @@ export class DebugSyncService {
       this.enqueue(sessionId);
       return;
     }
-    const current = this.readTranscript(sessionId);
-    if (!shouldSync(current, this.syncState(sessionId))) return;
+    if (!this.enabled()) return;
 
     this.inFlight.add(sessionId);
     try {

@@ -74,83 +74,8 @@
     }
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
-    "cancel": "रद्द करें",
-    "changeAvatar": "Try another avatar",
-    "create": "बनाएँ",
-    "delete": "हटाएँ",
-    "deleteBody": "इससे {{name}} और उसकी चैट हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।",
-    "deleteBot": "बॉट हटाएँ",
-    "deleteError": "बॉट हटाया नहीं जा सका।",
-    "deleteTitle": "बॉट हटाएँ",
-    "descriptionLabel": "मिशन",
-    "descriptionPlaceholder": "यह बॉट आपके लिए क्या करे?",
-    "descriptionRequired": "मिशन आवश्यक है।",
-    "editBot": "बॉट संपादित करें",
-    "editTitle": "बॉट संपादित करें",
-    "emptyDescription": "एक नाम वाला बॉट बनाएँ, जिसका अपना मिशन हो और एक चैट जो अपना इतिहास याद रखती है।",
-    "emptyTitle": "अभी कोई बॉट नहीं",
-    "home": {
-      "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
-      },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
-      "getStarted": "शुरू करें",
-      "heading": "Create your",
-      "headingAccent": "Bot",
-      "namePlaceholder": "नया बॉट",
-      "subtitle": "Name your bot and get started in seconds.",
-      "suggestions": "सुझाव",
-      "templatesDivider": "Or start with a template"
-    },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
-    "modelLabel": "Model",
-    "nameLabel": "नाम",
-    "namePlaceholder": "जैसे Scout",
-    "nameRequired": "नाम आवश्यक है।",
-    "newBot": "नया बॉट",
-    "newDialog": {
-      "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
-      },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
-    },
     "openError": "बॉट की चैट नहीं खुल सकी।",
-    "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
     "save": "सहेजें",
-    "saveError": "बॉट सहेजा नहीं जा सका।",
-    "senderChat": "{{platform}} पर {{sender}} के साथ स्वतः-उत्तर चैट",
-    "senderChatReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -329,14 +254,6 @@
         "name": "WhatsApp Agent"
       }
     },
-    "title": "बॉट",
-    "titleLabel": "भूमिका",
-    "titlePlaceholder": "जैसे Research Scout",
-    "unpin": "Unpin",
-    "viewBots": "बॉट",
-    "viewSessions": "सत्र",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
     "page": {
       "newTitle": "Make a bot",
       "newDescription": "Give it a name and a mission, and it keeps one chat that remembers.",
@@ -348,7 +265,6 @@
       "detailsDescription": "Mission, persona, model and memory."
     },
     "sidebar": {
-      "label": "बॉट",
       "new": "नया बॉट",
       "empty": "अभी कोई बॉट नहीं",
       "search": "Search bots",
@@ -373,7 +289,8 @@
       "pinned": "Pinned",
       "edit": "बॉट संपादित करें",
       "delete": "बॉट हटाएँ",
-      "emptyTitle": "अभी कोई बॉट नहीं"
+      "emptyTitle": "अभी कोई बॉट नहीं",
+      "label": "बॉट"
     },
     "avatar": {
       "shapes": {
@@ -427,19 +344,19 @@
       }
     },
     "model": {
-      "defaultGroup": "Default",
-      "appDefault": "App default",
       "favorites": "Favorites",
-      "localProvider": "On this machine",
       "connectOpenRouter": "OpenRouter कनेक्ट करें",
       "connectGoogleAi": "Google AI Studio कनेक्ट करें",
-      "tierFree": "Free",
-      "tierLocal": "Local",
       "default": "Default",
       "local": "On this machine",
       "free": "Free",
       "search": "Search models",
-      "favorite": "Favourite {{name}}"
+      "favorite": "Favourite {{name}}",
+      "defaultGroup": "Default",
+      "appDefault": "App default",
+      "localProvider": "On this machine",
+      "tierFree": "Free",
+      "tierLocal": "Local"
     },
     "checkIn": {
       "label": "Scheduled check-ins",
@@ -521,8 +438,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "failed": "Could not connect {{provider}}.",
         "stop": "कनेक्शन रोकें",
+        "failed": "Could not connect {{provider}}.",
         "refreshFailed": "Connected, but the agent couldn't load it: {{error}}"
       },
       "placeholder": "{{name}} को संदेश",
@@ -627,72 +544,92 @@
       "chat": "This chat is gone",
       "bot": "This bot was deleted",
       "make": "Make a bot"
-    }
-  },
-  "browserPermission": {
-    "allow": "अनुमति दें",
-    "deny": "अस्वीकार करें",
-    "never": "कभी न पूछें",
-    "session": "ऐप बंद होने तक अनुमति दें",
-    "title": "ब्राउज़र क्रिया"
-  },
-  "browserSettings": {
-    "approval": {
-      "always": "कभी न पूछें",
-      "ask": "हमेशा पूछें"
     },
-    "approvalSubtitle": "चुनें कि एजेंट ब्राउज़ करने से पहले स्वीकृति मांगे या नहीं।",
-    "approvalTitle": "अनुमोदन",
-    "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    "avatarColor": "Color",
+    "avatarLabel": "Avatar variant",
+    "botOptions": "Bot options",
+    "cancel": "रद्द करें",
+    "changeAvatar": "Try another avatar",
+    "create": "बनाएँ",
+    "delete": "हटाएँ",
+    "deleteBody": "इससे {{name}} और उसकी चैट हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।",
+    "deleteBot": "बॉट हटाएँ",
+    "deleteError": "बॉट हटाया नहीं जा सका।",
+    "deleteTitle": "बॉट हटाएँ",
+    "descriptionLabel": "मिशन",
+    "descriptionPlaceholder": "यह बॉट आपके लिए क्या करे?",
+    "descriptionRequired": "मिशन आवश्यक है।",
+    "editBot": "बॉट संपादित करें",
+    "editTitle": "बॉट संपादित करें",
+    "emptyDescription": "एक नाम वाला बॉट बनाएँ, जिसका अपना मिशन हो और एक चैट जो अपना इतिहास याद रखती है।",
+    "emptyTitle": "अभी कोई बॉट नहीं",
+    "home": {
+      "categories": {
+        "featured": "Featured",
+        "finance": "Finance",
+        "marketing": "Marketing",
+        "personal-assistant": "Personal Assistant",
+        "productivity": "Productivity",
+        "recruiting": "Recruiting",
+        "research": "Research",
+        "social-media": "Social Media"
+      },
+      "categoriesLabel": "Template categories",
+      "createCta": "Create Bot",
+      "getStarted": "शुरू करें",
+      "heading": "Create your",
+      "headingAccent": "Bot",
+      "namePlaceholder": "नया बॉट",
+      "subtitle": "Name your bot and get started in seconds.",
+      "suggestions": "सुझाव",
+      "templatesDivider": "Or start with a template"
     },
-    "clearAction": "सभी ब्राउज़िंग डेटा साफ़ करें",
-    "clearSubtitle": "इन-ऐप ब्राउज़र से साइट डेटा और कैश साफ़ करें",
-    "clearTitle": "ब्राउज़िंग डेटा",
-    "cleared": "ब्राउज़िंग डेटा साफ़ हो गया।",
-    "dataSection": "डेटा",
-    "done": "पूर्ण",
-    "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+    "modelDefault": "App default",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
+    "modelLabel": "Model",
+    "nameLabel": "नाम",
+    "namePlaceholder": "जैसे Scout",
+    "nameRequired": "नाम आवश्यक है।",
+    "newBot": "नया बॉट",
+    "newDialog": {
+      "checkIn": {
+        "daily": "Daily",
+        "hourly": "Hourly",
+        "off": "Off",
+        "weekdays": "Weekdays",
+        "weekly": "Weekly"
+      },
+      "checkInDayLabel": "Day",
+      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
+      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
+      "checkInLabel": "Scheduled check-ins",
+      "checkInRoutineName": "{{name}} check-in",
+      "checkInTimeLabel": "Time",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Keeps track of my research topics",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
+      "moreOptions": "More options: description, scheduled check-ins, model",
+      "namePlaceholder": "Research Buddy",
+      "title": "New bot"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
-    "masterSubtitle": "एजेंट को अंतर्निहित ब्राउज़र नियंत्रित करने दें",
-    "masterTitle": "Browser",
-    "permissionsSection": "अनुमतियाँ",
-    "subtitle": "एजेंट के बिल्ट-इन ब्राउज़र को प्रबंधित करें।",
-    "title": "Browser"
+    "personaLabel": "Persona",
+    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "saveError": "बॉट सहेजा नहीं जा सका।",
+    "senderChat": "{{platform}} पर {{sender}} के साथ स्वतः-उत्तर चैट",
+    "senderChatReadOnly": "स्वतः-उत्तर वार्तालाप: {{bot}} यहाँ आपकी ओर से {{sender}} को उत्तर देता है। आप देख सकते हैं पर लिख नहीं सकते; बदलाव के लिए {{bot}} को उसकी अपनी चैट में बताएँ।",
+    "title": "बॉट",
+    "titleLabel": "भूमिका",
+    "titlePlaceholder": "जैसे Research Scout",
+    "unpin": "Unpin",
+    "viewBots": "बॉट",
+    "viewSessions": "सत्र",
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "capabilities": {
-    "skills": {
-      "emptyDescription": "आपके इंस्टॉल किए गए skills यहाँ दिखेंगे। फ़िलहाल उन्हें सेटिंग्स से मैनेज करें।",
-      "emptyTitle": "अभी कोई skill नहीं"
-    },
-    "tabs": {
-      "label": "Capabilities",
-      "mcp": "MCP",
-      "connectors": "कनेक्टर",
-      "skills": "Skills",
-      "tools": "टूल"
-    },
     "toolDescriptions": {
       "ast_edit": "Structural search-and-replace that cannot break the syntax.",
       "bash": "वर्कस्पेस में शेल कमांड चलाएँ।",
@@ -781,21 +718,6 @@
       "x_search": "Search public posts and threads on X.",
       "xai_video_edit": "Edit an already generated video.",
       "xai_video_extend": "Extend a generated video further."
-    },
-    "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
-      "mcpNote": "जुड़े हुए MCP सर्वर इनके अलावा अपने टूल भी जोड़ते हैं।",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
     },
     "toolsets": {
       "a2a": {
@@ -914,12 +836,33 @@
         "description": "Search public posts and threads on X.",
         "label": "X (Twitter) Search"
       }
+    },
+    "skills": {
+      "emptyDescription": "आपके इंस्टॉल किए गए skills यहाँ दिखेंगे। फ़िलहाल उन्हें सेटिंग्स से मैनेज करें।",
+      "emptyTitle": "अभी कोई skill नहीं"
+    },
+    "tabs": {
+      "label": "Capabilities",
+      "mcp": "MCP",
+      "connectors": "कनेक्टर",
+      "skills": "Skills",
+      "tools": "टूल"
+    },
+    "tools": {
+      "alwaysOn": "Always on",
+      "disabledDetail": "Off. The agent isn't told these tools exist.",
+      "enabledDetail": "On. The agent can call these tools.",
+      "mcpNote": "जुड़े हुए MCP सर्वर इनके अलावा अपने टूल भी जोड़ते हैं।",
+      "noMatches": "No toolset matches that.",
+      "noModelTools": "This capability doesn't add any tools the model calls directly.",
+      "planned": "Not available yet",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
+      "resizePanels": "Resize toolsets and details",
+      "searchPlaceholder": "Search toolsets and tools…",
+      "toolCount_one": "{{count}} tool",
+      "toolCount_other": "{{count}} tools"
     }
-  },
-  "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
   },
   "common": {
     "back": "Back",
@@ -930,16 +873,8 @@
     "sidebar": "Sidebar",
     "toggleSidebar": "Toggle sidebar"
   },
-  "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting…",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
-    "stop": "कनेक्शन रोकें",
-    "title": "{{provider}} is not connected"
-  },
   "connectors": {
+    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
     "abacusConnectCancelled": "Stopped adding {{name}}.",
     "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
@@ -972,7 +907,6 @@
       "web": "Web & Browsers",
       "abacus-connectors": "Abacus.AI Connectors"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
     "clientId": "Client ID",
     "clientSecret": "Client secret (if issued)",
     "connect": "Connect {{name}}",
@@ -1002,115 +936,21 @@
     "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
   "creditsCard": {
+    "paidBody": "Top up your account to keep going.",
+    "paidTitle": "You've used all your Pro Abacus.AI credits",
+    "topUpCta": "Top up",
     "body": "Unlock the full potential",
     "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
     "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
     "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
     "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
     "upsellTitle": "Unlock the full potential on desktop and web",
     "inviteCta": "Or invite friends for free credits"
-  },
-  "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
-    "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
-  },
-  "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
-  },
-  "devicePanel": {
-    "axPermissionNeeded": "सिम्युलेटर की विंडो दिखाए बिना उसे मिरर करने के लिए एक्सेसिबिलिटी अनुमति आवश्यक है।",
-    "boot": "चालू करें",
-    "bootFailed": "डिवाइस चालू नहीं हो सका",
-    "buildDone": "ऐप डिवाइस पर लॉन्च हो गया",
-    "buildFailed": "बिल्ड विफल",
-    "buildRun": "बिल्ड और रन",
-    "buildRunHint": "वर्कस्पेस बिल्ड करें और इस डिवाइस पर चलाएँ",
-    "buildRunUnavailable": "इस वर्कस्पेस में बिल्ड करने के लिए कोई {{platform}} प्रोजेक्ट नहीं है",
-    "captureFailed": "डिवाइस की स्क्रीन कैप्चर नहीं हो सकी",
-    "createDevice": "{{platform}} डिवाइस बनाएँ",
-    "createDeviceFailed": "डिवाइस नहीं बनाया जा सका",
-    "creatingDevice": "बनाया जा रहा है…",
-    "deviceCreated": "{{name}} बनाया गया",
-    "grantAccess": "एक्सेस दें",
-    "howToAddDevice": "{{platform}} डिवाइस कैसे जोड़ें",
-    "installingMaestro": "Maestro इंस्टॉल हो रहा है…",
-    "interactMaestroHint": "iOS सिम्युलेटर के साथ इंटरैक्ट करने के लिए Maestro इंस्टॉल करें",
-    "keyBack": "वापस",
-    "keyHome": "होम",
-    "keyRecents": "हाल की ऐप्स",
-    "maestroInstallFailed": "Maestro इंस्टॉल नहीं हो सका",
-    "maestroInstalled": "Maestro इंस्टॉल हो गया। अब आप iOS सिम्युलेटर के साथ इंटरैक्ट कर सकते हैं",
-    "modeLive": "लाइव",
-    "modePoll": "धीमा (स्क्रीनशॉट)",
-    "noDevices": "कोई डिवाइस नहीं",
-    "noPlatformDevices": "कोई {{platform}} डिवाइस नहीं मिला।",
-    "notBooted": "यह डिवाइस चालू नहीं है। स्क्रीन देखने के लिए इसे चालू करें।",
-    "openNative": "नेटिव सिम्युलेटर विंडो खोलें",
-    "phase": {
-      "booting": "डिवाइस चालू हो रहा है…",
-      "building": "बिल्ड हो रहा है…",
-      "installing": "इंस्टॉल हो रहा है…",
-      "launching": "लॉन्च हो रहा है…"
-    },
-    "refresh": "डिवाइस रीफ़्रेश करें",
-    "screenAlt": "{{name}} की स्क्रीन",
-    "screenPermissionNeeded": "सिम्युलेटर को सुचारू रूप से मिरर करने के लिए स्क्रीन रिकॉर्डिंग अनुमति आवश्यक है।",
-    "selectDevice": "डिवाइस चुनें",
-    "stateShutdown": "बंद",
-    "typeHint": "स्क्रीन पर क्लिक करें, फिर अपने कीबोर्ड से टाइप करें"
-  },
-  "devicePermission": {
-    "title": "डिवाइस क्रिया"
-  },
-  "deviceSettings": {
-    "approvalSubtitle": "एजेंट कब डिवाइस क्रियाएँ चला सकता है",
-    "approvalTitle": "टूल स्वीकृति",
-    "detected": "पहचाना गया",
-    "maestroHint": "iOS सिम्युलेटर पर एजेंट को टैप और टाइप करने देने के लिए Maestro इंस्टॉल करें।",
-    "masterSubtitle": "एजेंट को सिम्युलेटर और एम्युलेटर पर ऐप बनाने, इंस्टॉल करने और परखने की अनुमति देता है",
-    "masterTitle": "डिवाइस टूल सक्षम करें",
-    "notDetected": "नहीं मिला",
-    "subtitle": "Code एजेंट के लिए iOS सिम्युलेटर और Android एम्युलेटर टूल",
-    "title": "डिवाइस",
-    "toolchainAndroid": "Android (adb)",
-    "toolchainIos": "iOS सिम्युलेटर (Xcode)",
-    "toolchainMaestro": "Maestro (iOS इंटरैक्शन)",
-    "toolchainSection": "पहचाने गए टूलचेन"
-  },
-  "deviceSetup": {
-    "androidAvdDesc": "Android SDK मिला लेकिन कोई वर्चुअल डिवाइस नहीं। Android Studio में Tools → Device Manager से एक बनाएँ।",
-    "androidDesc": "Android Studio इंस्टॉल करें, फिर Tools → Device Manager में एक वर्चुअल डिवाइस बनाएँ।",
-    "androidTitle": "Android · Android Studio",
-    "download": "डाउनलोड करें",
-    "iosDesc": "Mac App Store से Xcode इंस्टॉल करें और सेटअप पूरा करने के लिए इसे एक बार खोलें। फिर सिम्युलेटर यहाँ दिखेंगे।",
-    "iosRuntimeDesc": "Xcode इंस्टॉल है लेकिन कोई सिम्युलेटर नहीं मिला। Xcode → Settings → Components खोलें और एक iOS रनटाइम डाउनलोड करें।",
-    "iosTitle": "iOS · Xcode",
-    "recheck": "फिर से जाँचें"
-  },
-  "diff": {
-    "noChanges": "दिखाने के लिए कोई बदलाव नहीं"
-  },
-  "error": {
-    "keepsCrashing": "ऐप में बार-बार वही त्रुटि आ रही है। स्थानीय डेटा रीसेट करने से यह ठीक हो सकता है।",
-    "ouch": "आउच!",
-    "reloadApp": "ऐप पुनः लोड करें",
-    "resetLocalData": "स्थानीय डेटा रीसेट करें",
-    "somethingWrong": "कुछ गलत हो गया",
-    "tryAgain": "पुनः प्रयास करें",
-    "unexpected": "एक अप्रत्याशित त्रुटि हुई।"
   },
   "execBackends": {
     "daytona": {
@@ -1145,112 +985,23 @@
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
-  "firstBot": {
-    "title": "We set up your first bot"
-  },
-  "greeting": {
-    "afternoon": {
-      "1": "शुभ दोपहर",
-      "2": "दोपहर की मेहनत",
-      "3": "गहन कार्य का समय",
-      "4": "शानदार प्रदर्शन",
-      "5": "स्थिर प्रगति"
-    },
-    "dawn": {
-      "1": "जल्दी उठने वाले",
-      "2": "सुबह की पहरेदारी",
-      "3": "सूरज के साथ उठना",
-      "4": "सूर्योदय सत्र",
-      "5": "दुनिया से पहले जागना"
-    },
-    "earlyEvening": {
-      "1": "शाम की पारी",
-      "2": "सुनहरा समय",
-      "3": "समापन",
-      "4": "दिन का अंतिम प्रयास",
-      "5": "लगभग हो गया"
-    },
-    "earlyMorning": {
-      "1": "चाय का समय",
-      "2": "सुबह की ऊर्जा",
-      "3": "ताज़ा शुरुआत",
-      "4": "उठो और चमको",
-      "5": "सुबह की गति"
-    },
-    "evening": {
-      "1": "शुभ संध्या",
-      "2": "शाम का सत्र",
-      "3": "नाइट मोड",
-      "4": "आराम की ओर",
-      "5": "शांत उत्पादकता"
-    },
-    "lateNight": {
-      "1": "गहरी रात",
-      "2": "जादू का समय",
-      "3": "रात की पारी",
-      "4": "समर्पण मोड",
-      "5": "जब दुनिया सोती है"
-    },
-    "lunch": {
-      "1": "दोपहर का चेक-इन",
-      "2": "दोपहर की शुरुआत",
-      "3": "लंच के बाद की ऊर्जा",
-      "4": "रीचार्ज और आगे बढ़ें",
-      "5": "दूसरी हवा शुरू"
-    },
-    "midMorning": {
-      "1": "सुप्रभात",
-      "2": "शीर्ष उत्पादकता",
-      "3": "सुबह का प्रवाह",
-      "4": "कुछ बनाते हैं",
-      "5": "पूरी तरह केंद्रित"
-    },
-    "night": {
-      "1": "रात का उल्लू",
-      "2": "आधी रात का तेल जलाना",
-      "3": "देर रात की मेहनत",
-      "4": "शांत घंटे",
-      "5": "समय के बाद"
-    },
-    "preDawn": {
-      "1": "अभी भी लगे हुए",
-      "2": "भोर से पहले के घंटे",
-      "3": "सुबह होने से पहले",
-      "4": "प्रतिबद्ध",
-      "5": "सच्चा समर्पण"
-    }
-  },
-  "jobs": {
-    "delete": "हटाएँ",
-    "empty": "कुछ निर्धारित नहीं है। चैट में एजेंट से कहें, जैसे “हर कार्यदिवस सुबह 9 बजे मेरा इनबॉक्स समराइज़ करो”, और जॉब यहाँ दिखेगा।",
-    "enabled": "सक्रिय",
-    "lastRun": "पिछला {{time}}",
-    "nextRun": "अगला {{time}}",
-    "runNow": "अभी चलाएँ",
-    "startFailed": "रन शुरू नहीं हो सका।",
-    "started": "शुरू हुआ। यह अपने सत्र में चलता है।"
-  },
   "localModels": {
     "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
     "download": "Download {{size}} and use it",
     "downloading": "{{received}} of {{total}} ({{percent}}%)",
+    "stopDownload": "Stop download",
+    "title": "Use a local model",
+    "unavailable": "This build of the app cannot run models locally.",
+    "use": "Use {{model}}",
+    "useLocal": "Use a local model",
     "installed": "Installed",
     "machine": "This computer has {{memory}} of memory.",
     "onThisMachine": "On this machine",
     "recommended": "Recommended",
     "remove": "Remove",
     "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
     "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
     "verifying": "Checking the download…"
-  },
-  "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
   },
   "mcpManagement": {
     "add": "जोड़ें",
@@ -1486,83 +1237,21 @@
       "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
     }
   },
-  "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
-  },
-  "notifications": {
-    "codeSessionFallback": "कोड सत्र",
-    "permissionRequired": "🔔 अनुमति आवश्यक है",
-    "taskCompleted": "✅ कार्य पूर्ण हुआ",
-    "toolFallback": "टूल",
-    "waitingForApproval": "अनुमोदन की प्रतीक्षा: {{toolName}}"
-  },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "साइन इन या खाता बनाने के लिए आपका ब्राउज़र खुलता है। ऐप को अपनी अलग API कुंजी मिलती है; आपका पासवर्ड कभी ऐप तक नहीं पहुँचता।",
     "connectCta": "साइन अप / साइन इन",
     "openInBrowserCta": "मेरा ब्राउज़र इस्तेमाल करें",
     "haveAccountCta": "मेरा पहले से खाता है",
-    "connectTitle": "Abacus.AI जोड़ें",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
-    "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
-    "signInCta": "Abacus.AI में साइन इन करें",
-    "skipCta": "Not now",
-    "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "स्थायी मेमोरी वाला आपका निजी ओपन-सोर्स AI सहकर्मी",
     "welcomeTitle": "Welcome to AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
     "connectedCta": "Continue",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services",
-    "connectorsSubtitle": "Chat where you work",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "{{count}}+ more in Settings",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
-    "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "{{browser}} · {{profile}} के साथ जारी रखें",
     "signInAnotherWay": "किसी और तरीके से साइन इन करें",
     "haveAccountContinueWith": "मेरा पहले से खाता है · {{browser}} के साथ जारी रखें",
@@ -1615,44 +1304,55 @@
     "pages.finishPairing": "कनेक्शन पूरा करें",
     "pages.localModels": "Use a local model",
     "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "abacusConnected": "Abacus.AI is successfully connected",
+    "connectBody": "साइन इन या खाता बनाने के लिए आपका ब्राउज़र खुलता है। ऐप को अपनी अलग API कुंजी मिलती है; आपका पासवर्ड कभी ऐप तक नहीं पहुँचता।",
+    "connectTitle": "Abacus.AI जोड़ें",
+    "connectorsContinueCta": "Continue",
+    "connectorsSkipCta": "Continue without connectors",
+    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
+    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
+    "setupConnectorsCta": "Browse connectors",
+    "setupConnectorsTitle": "Connectors",
+    "setupKeyHint": "Stored on this machine only.",
+    "setupKeyPlaceholder": "Paste your {{provider}} API key",
+    "setupSaveCta": "Save",
+    "setupSignInCta": "Sign in / Create Free Account",
+    "signInCta": "Abacus.AI में साइन इन करें",
+    "skipCta": "Not now",
+    "welcomeCapabilityModels": "Access",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "connectedPromiseAgent": "The best-in-class open-source AI agent",
+    "connectedPromiseModels": "Access to free models",
+    "connectedPromiseWork": "Gets your work done, and connects to all your services",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
+    "connectedTitleLead": "Welcome to",
+    "connectedPromiseAgentLead": "Best-in-class,",
+    "connectedPromiseModelsLead": "Access",
+    "connectedPromiseWorkLead": "Get work done",
+    "connectedPromiseLocalLead": "Runs locally.",
+    "connectedPromiseLocal": "Chat with it wherever you work.",
+    "connectorsTitleLead": "Connect with your",
+    "connectorsTitleAccent": "tools & services",
+    "connectorsSubtitle": "Chat where you work",
+    "connectorsConnectCta": "Connect",
+    "connectorsConnectedCta": "Connected",
+    "connectorsMore": "{{count}}+ more in Settings",
+    "setupTitleLead": "Hook up your",
+    "setupTitleAccent": "AI",
+    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
+    "setupBlurbAbacusLead": "Get world-class models free",
+    "setupBlurbAbacusAccent": "2000 free credits",
+    "setupBlurbOpenrouterLead": "Unlock",
+    "setupBlurbOpenrouterAccent": "FREE models",
+    "setupBlurbOpenrouterTail": "with one connection",
+    "setupBlurbGeminiLead": "Use Gemini",
+    "setupBlurbGeminiAccent": "free to create anything",
+    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
+    "setupKeyDialogLink": "Open {{provider}}",
     "connectedPromiseChat": "",
     "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord."
-  },
-  "openFile": {
-    "failed": "वह फ़ाइल नहीं खोली जा सकी।",
-    "refusedInvalid": "वह लिंक किसी फ़ाइल को नहीं दर्शाता।",
-    "refusedMissing": "वह फ़ाइल अब मौजूद नहीं है।",
-    "refusedOutside": "वह फ़ाइल आपके वर्कस्पेस के बाहर है, इसलिए उसे नहीं खोला गया।",
-    "revealed": "उस फ़ाइल को खोलने पर वह चल जाती, इसलिए उसे आपके फ़ाइल मैनेजर में दिखाया गया।"
-  },
-  "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
-  },
-  "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
-    "notSignedInShort": "साइन इन नहीं किया"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1846,21 +1546,7 @@
     "onDemand": "On demand"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
-    "emptyDescription": "अपनी पसंद के फ़ोल्डर में एजेंट के साथ काम करने के लिए एक सत्र शुरू करें।",
-    "emptyTitle": "अभी तक कोई सत्र नहीं",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago",
     "page": {
       "newTitle": "New session",
       "newDescription": "Pick a folder and tell the agent what to do.",
@@ -2097,81 +1783,46 @@
     },
     "permission": {
       "openTerminal": "Open in Terminal"
-    }
-  },
-  "sidebarNav": {
-    "app": "App",
-    "artifacts": "आर्टिफ़ैक्ट",
-    "capabilities": "क्षमताएँ",
-    "connectors": "कनेक्टर",
-    "memory": "Memory",
-    "messaging": "Messaging",
-    "newSession": "नया सत्र",
-    "routines": "Routines",
-    "usage": "उपयोग",
-    "whatsNew": "What's new"
-  },
-  "skills": {
-    "appliesToBoth": "स्किल्स हर वर्कस्पेस में एजेंट के लिए उपलब्ध हैं।",
-    "back": "वापस",
-    "browseMarketplace": "मार्केटप्लेस ब्राउज़ करें",
-    "cancel": "रद्द करें",
-    "done": "हो गया",
-    "edit": "Skill फ़ाइल संपादित करें",
-    "install": "इंस्टॉल करें",
-    "installFailed": "इंस्टॉल विफल रहा",
-    "installGlobalTitle": "ग्लोबली इंस्टॉल करें",
-    "installed": "इंस्टॉल किया गया",
-    "installs": "{{count}} इंस्टॉल",
-    "marketplaceTitle": "Skills मार्केटप्लेस",
-    "noResults": "कोई Skills नहीं मिली।",
-    "noSkills": "कोई Skills उपलब्ध नहीं है।",
-    "openFailed": "Skill फ़ाइल खोली नहीं जा सकी।",
-    "poweredBy": "द्वारा संचालित",
-    "removeFailed": "Skill हटाई नहीं जा सकी।",
-    "restartBanner": "अपनी नई जोड़ी गई skills का उपयोग शुरू करने के लिए ऐप को पुनः आरंभ करें।",
-    "restartNote": "नई skills ऐप को पुनः आरंभ करने के बाद लागू होती हैं।",
-    "restartNow": "अभी पुनः आरंभ करें",
-    "searchError": "मार्केटप्लेस तक नहीं पहुँचा जा सका।",
-    "searchPlaceholder": "Skills खोजें…",
-    "searchPrompt": "इंस्टॉल करने के लिए Skills खोजें।",
-    "sources": {
-      "global": "ग्लोबल",
-      "project": "वर्कस्पेस"
     },
-    "title": "Skills",
-    "uninstall": "Skill अनइंस्टॉल करें",
-    "uninstallConfirm": "Skill \"{{id}}\" हटाएँ? इससे Skill फ़ाइल हट जाएगी।",
-    "upload": "अपलोड करें",
-    "uploadFailed": "चयनित Skill इंपोर्ट नहीं हो सकी।",
-    "uploadFromFile": "फ़ाइल से…",
-    "uploadFromFolder": "फ़ोल्डर से…",
-    "uploadTitle": "अपने कंप्यूटर से Skill इंपोर्ट करें"
+    "delete": "Delete session",
+    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
+    "deleteError": "Could not delete that session. Try again.",
+    "deleteTitle": "Delete this session?",
+    "emptyDescription": "अपनी पसंद के फ़ोल्डर में एजेंट के साथ काम करने के लिए एक सत्र शुरू करें।",
+    "emptyTitle": "अभी तक कोई सत्र नहीं",
+    "newSession": "New session",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "sessionOptions": "Session options",
+    "title": "Sessions",
+    "unpin": "Unpin",
+    "today": "Today",
+    "daysAgo": "{{count}} days ago"
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
-      "label": "BusyBox sh"
+      "label": "BusyBox sh",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in."
     },
     "cmd": {
-      "description": "The Windows command prompt.",
-      "label": "Command Prompt"
+      "label": "Command Prompt",
+      "description": "The Windows command prompt."
+    },
+    "powershell": {
+      "label": "Windows PowerShell",
+      "description": "Windows PowerShell, the one that ships with Windows."
+    },
+    "pwsh": {
+      "label": "PowerShell",
+      "description": "PowerShell 7 or later, installed separately."
+    },
+    "system": {
+      "label": "Default shell",
+      "description": "Whatever this machine calls its default shell."
     },
     "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
     "inUse": "In use",
     "notInstalled": "Not found on this machine.",
-    "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
-      "label": "Windows PowerShell"
-    },
-    "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
-      "label": "PowerShell"
-    },
-    "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
-    },
     "title": "Terminal shell"
   },
   "theme": {
@@ -2186,6 +1837,56 @@
     "progress": "चरण {{current}} / {{total}}",
     "replay": "टूर देखें",
     "skip": "टूर छोड़ें",
+    "stops": {
+      "rail": {
+        "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
+        "title": "आपके बॉट"
+      },
+      "make-bot": {
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
+        "title": "Make a bot"
+      },
+      "workspaces": {
+        "body": "हर खुला हुआ फ़ोल्डर और उसके अंदर की हर बातचीत। यहीं से वर्कस्पेस बदलिए या पिछले हफ़्ते का कोई सेशन दोबारा खोलिए।",
+        "title": "आपके वर्कस्पेस"
+      },
+      "start-session": {
+        "body": "मौजूदा वर्कस्पेस में एक खाली कम्पोज़र खोलता है। हर काम के लिए अलग सेशन रखने से संदर्भ उसी काम तक सीमित रहता है।",
+        "title": "नया सेशन"
+      },
+      "connectors": {
+        "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।",
+        "title": "कनेक्टर"
+      },
+      "changes": {
+        "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।",
+        "title": "बदलाव"
+      },
+      "preview-terminal": {
+        "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।",
+        "title": "टर्मिनल"
+      },
+      "memory": {
+        "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।",
+        "title": "Memory"
+      },
+      "artifacts": {
+        "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।",
+        "title": "आर्टिफ़ैक्ट"
+      },
+      "welcome": {
+        "body": "विंडो का छोटा परिचय। {{n}} पड़ाव; आप कभी भी बाहर निकल सकते हैं।",
+        "title": "AbacusAI Bot में आपका स्वागत है"
+      },
+      "talk": {
+        "body": "यहाँ अपने बॉट को काम दें। वह सवाल पूछ सकता है और अपना काम दिखा सकता है।",
+        "title": "अपने बॉट से बात करें"
+      },
+      "notch": {
+        "body": "जवाब और मंज़ूरी के अनुरोध आपके कार्यक्षेत्र के ऊपर दिख सकते हैं। पूरी बातचीत के लिए ऐप खोलें।",
+        "title": "आपका साथी"
+      }
+    },
     "steps": {
       "artifacts": {
         "title": "आर्टिफ़ैक्ट",
@@ -2245,56 +1946,6 @@
       "welcome": {
         "title": "AbacusAI Bot में आपका स्वागत है",
         "body": "विंडो का एक छोटा चक्कर: हर पैनल क्या है और किस काम आता है। पंद्रह छोटे पड़ाव, और आप किसी भी पड़ाव पर बाहर निकल सकते हैं।"
-      }
-    },
-    "stops": {
-      "rail": {
-        "title": "आपके बॉट",
-        "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।"
-      },
-      "make-bot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "workspaces": {
-        "title": "आपके वर्कस्पेस",
-        "body": "हर खुला हुआ फ़ोल्डर और उसके अंदर की हर बातचीत। यहीं से वर्कस्पेस बदलिए या पिछले हफ़्ते का कोई सेशन दोबारा खोलिए।"
-      },
-      "start-session": {
-        "title": "नया सेशन",
-        "body": "मौजूदा वर्कस्पेस में एक खाली कम्पोज़र खोलता है। हर काम के लिए अलग सेशन रखने से संदर्भ उसी काम तक सीमित रहता है।"
-      },
-      "connectors": {
-        "title": "कनेक्टर",
-        "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।"
-      },
-      "changes": {
-        "title": "बदलाव",
-        "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।"
-      },
-      "preview-terminal": {
-        "title": "टर्मिनल",
-        "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।"
-      },
-      "memory": {
-        "title": "Memory",
-        "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।"
-      },
-      "artifacts": {
-        "title": "आर्टिफ़ैक्ट",
-        "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।"
-      },
-      "welcome": {
-        "title": "AbacusAI Bot में आपका स्वागत है",
-        "body": "विंडो का छोटा परिचय। {{n}} पड़ाव; आप कभी भी बाहर निकल सकते हैं।"
-      },
-      "talk": {
-        "title": "अपने बॉट से बात करें",
-        "body": "यहाँ अपने बॉट को काम दें। वह सवाल पूछ सकता है और अपना काम दिखा सकता है।"
-      },
-      "notch": {
-        "title": "आपका साथी",
-        "body": "जवाब और मंज़ूरी के अनुरोध आपके कार्यक्षेत्र के ऊपर दिख सकते हैं। पूरी बातचीत के लिए ऐप खोलें।"
       }
     }
   },
@@ -2364,10 +2015,104 @@
     "theme": "थीम",
     "whatsNew": "What's new"
   },
-  "visualizer": {
-    "loading": "विज़ुअलाइज़ेशन लोड हो रहा है…"
-  },
   "workspace": {
+    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "premiumUpgrade": {
+      "continueOn": "Continue on {{model}} (free)",
+      "exhaustedTitle": "You've used up your free credits",
+      "poolOutTitle": "Every free source is used up for now",
+      "switchNote": "Pick another model in the model picker to keep going",
+      "connectNote": "Connect one of these to keep going. No card needed.",
+      "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
+      "connectCta": "Connect",
+      "continueCta": "Continue",
+      "localMeta": "Free, no limits · downloads once",
+      "localName": "A model on this computer",
+      "setUpCta": "Set up",
+      "sourceCerebras": "Cerebras",
+      "sourceCerebrasMeta": "तेज़ GPT-OSS और Qwen · मुफ़्त ट्रायल कुंजी",
+      "sourceGemini": "Google AI Studio",
+      "sourceGeminiMeta": "Gemini · free API key",
+      "sourceGroq": "Groq",
+      "sourceGroqMeta": "तेज़ ओपन मॉडल · API कुंजी, सीमित मुफ़्त सीमाएँ",
+      "sourceMistral": "Mistral",
+      "sourceMistralMeta": "Devstral और Mistral · मुफ़्त API कुंजी",
+      "sourceNvidia": "NVIDIA",
+      "sourceNvidiaMeta": "Kimi, GLM और DeepSeek · मुफ़्त API कुंजी",
+      "sourceOpenrouter": "OpenRouter",
+      "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
+      "topUpMeta": "Add credits to your account"
+    },
+    "preview": {
+      "pptxSlideFailed": "Slide {{number}} could not be rendered",
+      "addSurface": "Add surface",
+      "address": "Browser address",
+      "addressPlaceholder": "URL या फ़ाइल पथ दर्ज करें…",
+      "back": "पीछे जाएं",
+      "browserProfile": "ब्राउज़र प्रोफ़ाइल",
+      "browserProfileClear": "साफ़ सत्र पर रीसेट करें",
+      "browserProfileCleared": "प्रोफ़ाइल सत्र साफ़ किया गया",
+      "browserProfileImportError": "प्रोफ़ाइल आयात करने में विफल",
+      "browserProfileImported": "प्रोफ़ाइल सफलतापूर्वक आयात हुई",
+      "browserProfileNone": "डिफ़ॉल्ट (कोई प्रोफ़ाइल नहीं)",
+      "browserProfileRefresh": "प्रोफ़ाइल रीफ़्रेश करें",
+      "clearSiteData": "Clear site data",
+      "closeSurface": "Close {{title}}",
+      "developerTools": "Developer tools",
+      "emptyDescription": "एक्सप्लोरर से फ़ाइल खोलें, चैट में किसी लिंक पर क्लिक करें, या वेब ब्राउज़ करें।",
+      "emptyTitle": "कोई पूर्वावलोकन खुला नहीं है",
+      "forward": "आगे जाएं",
+      "hardReload": "Hard reload",
+      "htmlShowRendered": "Show rendered deck",
+      "htmlShowSource": "Show source",
+      "imageError": "Could not show this image here ({{error}}).",
+      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "loading": "लोड हो रहा है…",
+      "mdShowRendered": "Show rendered markdown",
+      "moreActions": "More browser actions",
+      "noProfiles": "कोई ब्राउज़र प्रोफ़ाइल नहीं मिली",
+      "openBrowser": "ब्राउज़र खोलें",
+      "openExternal": "बाहरी ऐप में खोलें",
+      "pageUnavailable": "This page is unavailable",
+      "pptxError": "This presentation could not be read ({{error}}).",
+      "pptxMoreWarnings": "+{{count}} more",
+      "pptxNoNotes": "No speaker notes on this slide.",
+      "pptxNotes": "Notes",
+      "pptxSlideCount": "Slide {{current}} of {{total}}",
+      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
+      "pptxWarnings": "{{count}} rendering warning",
+      "pptxWarnings_other": "{{count}} rendering warnings",
+      "refresh": "रीफ़्रेश करें",
+      "reload": "Reload",
+      "sectionFileCount": "{{count}} फ़ाइलें",
+      "sourceError": "Could not read this file ({{error}}).",
+      "split": "विभाजित",
+      "stop": "लोडिंग रोकें",
+      "toggleTooltip": "पूर्वावलोकन टॉगल करें",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "tryAgain": "Try again",
+      "unified": "एकीकृत",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset zoom"
+    },
+    "renameWorkspace": "कार्यस्थान का नाम बदलें",
+    "voice": {
+      "errors": {
+        "permission-denied": "Microphone access was denied. Allow it in system settings.",
+        "transcription-failed": "Could not transcribe that. Try again.",
+        "microphone-in-use": "The microphone is in use by another app.",
+        "no-microphone": "No microphone was found.",
+        "unsupported": "Recording is not available here."
+      },
+      "downloading": "Downloading the speech model… {{percent}}%",
+      "start": "Dictate",
+      "stop": "Stop and transcribe",
+      "transcribing": "Transcribing…"
+    },
+    "workspaceOptions": "कार्यस्थान विकल्प",
+    "yesterday": "कल",
     "addWorkspace": "कार्यस्थान जोड़ें",
     "ageDays": "{{count}} दि",
     "ageHours": "{{count}} घं",
@@ -2450,7 +2195,6 @@
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
     "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
     "deliverable": {
       "delivered": "Delivered",
       "delivering": "Delivering",
@@ -2568,92 +2312,11 @@
       "pending": "खुला",
       "reviews": "{{approved}} स्वीकृत · {{changes}} बदलाव अनुरोधित · {{requested}} लंबित"
     },
-    "premiumUpgrade": {
-      "connectNote": "Connect one of these to keep going. No card needed.",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going",
-      "connectCta": "Connect",
-      "continueCta": "Continue",
-      "localMeta": "Free, no limits · downloads once",
-      "localName": "A model on this computer",
-      "setUpCta": "Set up",
-      "sourceCerebras": "Cerebras",
-      "sourceCerebrasMeta": "तेज़ GPT-OSS और Qwen · मुफ़्त ट्रायल कुंजी",
-      "sourceGemini": "Google AI Studio",
-      "sourceGeminiMeta": "Gemini · free API key",
-      "sourceGroq": "Groq",
-      "sourceGroqMeta": "तेज़ ओपन मॉडल · API कुंजी, सीमित मुफ़्त सीमाएँ",
-      "sourceMistral": "Mistral",
-      "sourceMistralMeta": "Devstral और Mistral · मुफ़्त API कुंजी",
-      "sourceNvidia": "NVIDIA",
-      "sourceNvidiaMeta": "Kimi, GLM और DeepSeek · मुफ़्त API कुंजी",
-      "sourceOpenrouter": "OpenRouter",
-      "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
-      "topUpMeta": "Add credits to your account"
-    },
-    "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
-      "addressPlaceholder": "URL या फ़ाइल पथ दर्ज करें…",
-      "back": "पीछे जाएं",
-      "browserProfile": "ब्राउज़र प्रोफ़ाइल",
-      "browserProfileClear": "साफ़ सत्र पर रीसेट करें",
-      "browserProfileCleared": "प्रोफ़ाइल सत्र साफ़ किया गया",
-      "browserProfileImportError": "प्रोफ़ाइल आयात करने में विफल",
-      "browserProfileImported": "प्रोफ़ाइल सफलतापूर्वक आयात हुई",
-      "browserProfileNone": "डिफ़ॉल्ट (कोई प्रोफ़ाइल नहीं)",
-      "browserProfileRefresh": "प्रोफ़ाइल रीफ़्रेश करें",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
-      "developerTools": "Developer tools",
-      "emptyDescription": "एक्सप्लोरर से फ़ाइल खोलें, चैट में किसी लिंक पर क्लिक करें, या वेब ब्राउज़ करें।",
-      "emptyTitle": "कोई पूर्वावलोकन खुला नहीं है",
-      "forward": "आगे जाएं",
-      "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
-      "loading": "लोड हो रहा है…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
-      "noProfiles": "कोई ब्राउज़र प्रोफ़ाइल नहीं मिली",
-      "openBrowser": "ब्राउज़र खोलें",
-      "openExternal": "बाहरी ऐप में खोलें",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
-      "refresh": "रीफ़्रेश करें",
-      "reload": "Reload",
-      "sectionFileCount": "{{count}} फ़ाइलें",
-      "sourceError": "Could not read this file ({{error}}).",
-      "split": "विभाजित",
-      "stop": "लोडिंग रोकें",
-      "toggleTooltip": "पूर्वावलोकन टॉगल करें",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
-      "unified": "एकीकृत",
-      "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
-    },
     "refreshModels": "Refresh models",
     "renameChat": "चैट का नाम बदलें",
     "renameChatPlaceholder": "नया चैट नाम दर्ज करें",
     "renameEmptyName": "नाम खाली नहीं हो सकता",
     "renameError": "नाम बदलने में विफल",
-    "renameWorkspace": "कार्यस्थान का नाम बदलें",
     "renameWorkspacePlaceholder": "नया कार्यस्थान नाम दर्ज करें",
     "resizeInspector": "Resize workspace inspector",
     "resizeSidebar": "Resize workspace sidebar",
@@ -2744,19 +2407,6 @@
       "show": "Show the thought process"
     },
     "unpinChat": "चैट अनपिन करें",
-    "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
-      "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
-      },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
-    },
     "welcome": {
       "addWorkspace": "नया वर्कस्पेस जोड़ें",
       "defaultWorkspace": "Default workspace",
@@ -2805,7 +2455,6 @@
       "sendBlocked": "भेजा नहीं जा सकता: {{path}} अब मौजूद नहीं है।",
       "title": "फ़ोल्डर नहीं मिला"
     },
-    "workspaceOptions": "कार्यस्थान विकल्प",
     "workspaceRenamed": "कार्यस्थान का नाम बदला गया",
     "workspaces": "Workspaces",
     "worktree": {
@@ -2814,8 +2463,7 @@
       "description": "Choose which checkout the agent will read and change for this chat.",
       "error": "Worktree operation failed",
       "select": "Select worktree"
-    },
-    "yesterday": "कल"
+    }
   },
   "reactions": {
     "feedback": "इस जवाब पर प्रतिक्रिया दें",
@@ -2861,9 +2509,6 @@
       "loadError": "Couldn't load",
       "retry": "Retry"
     },
-    "status": {
-      "ready": "Ready"
-    },
     "command": {
       "title": "Command menu",
       "placeholder": "Search areas, pages, bots and sessions",
@@ -2882,6 +2527,9 @@
       "title": "Couldn't start",
       "description": "The app couldn't reach its background process.",
       "reload": "Reload"
+    },
+    "status": {
+      "ready": "Ready"
     }
   },
   "errors": {
@@ -2931,7 +2579,6 @@
       "language": "Language",
       "keyboard": "Keyboard"
     },
-    "emptyDescription": "These settings arrive in a coming update.",
     "theme": {
       "label": "Theme",
       "description": "Follow the system, or always light or dark."
@@ -2974,19 +2621,20 @@
         "notch-reply": "Reply in the notch"
       }
     },
-    "backToApp": "Back to the app"
+    "backToApp": "Back to the app",
+    "emptyDescription": "These settings arrive in a coming update."
   },
   "onboardingFlow": {
-    "description": "Onboarding arrives in a coming update.",
     "steps": {
       "welcome": "Welcome",
-      "connect": "Connect",
       "connected": "Connected",
       "models": "Models",
       "connectors": "Connectors",
       "first-bot": "Your first bot",
-      "done": "Done"
-    }
+      "done": "Done",
+      "connect": "Connect"
+    },
+    "description": "Onboarding arrives in a coming update."
   },
   "chat": {
     "announce": {
@@ -3019,12 +2667,10 @@
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "{{name}} को संदेश",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
       "dictate": "Dictate",
-      "dictateSoon": "Dictation arrives soon",
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
@@ -3042,7 +2688,9 @@
       "skills": "Skills",
       "stop": "रोकें",
       "uploading": "Wait for the attachments to finish saving",
-      "pasteUnavailable": "Pasting files isn't available here"
+      "pasteUnavailable": "Pasting files isn't available here",
+      "botPlaceholder": "{{name}} को संदेश",
+      "dictateSoon": "Dictation arrives soon"
     },
     "day": {
       "today": "Today",
@@ -3302,11 +2950,11 @@
       "transcribing": "Transcribing…",
       "error": "Microphone access was denied. Allow it in system settings."
     },
-    "done": {
-      "title": "पूरा"
-    },
     "failed": {
       "title": "कुछ गलत हो गया"
+    },
+    "done": {
+      "title": "पूरा"
     }
   },
   "phase5": {
@@ -3349,7 +2997,6 @@
     "runNow": "अभी चलाएँ",
     "routineOn": "Routine on",
     "runs": "Runs",
-    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire.",
     "showMore": "Show more",
     "runGone": "This run was removed.",
     "routineGone": "This routine is gone.",
@@ -3854,6 +3501,359 @@
     "unbind": "Unbind",
     "invalidMcp": "नाम और कमांड या मान्य HTTP(S) URL दर्ज करें।",
     "chooseRecipients": "कम से कम एक प्राप्तकर्ता चुनें।",
-    "authRequired": "प्रमाणीकरण आवश्यक है"
+    "authRequired": "प्रमाणीकरण आवश्यक है",
+    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire."
+  },
+  "browserPermission": {
+    "allow": "अनुमति दें",
+    "deny": "अस्वीकार करें",
+    "never": "कभी न पूछें",
+    "session": "ऐप बंद होने तक अनुमति दें",
+    "title": "ब्राउज़र क्रिया"
+  },
+  "browserSettings": {
+    "approval": {
+      "always": "कभी न पूछें",
+      "ask": "हमेशा पूछें"
+    },
+    "approvalSubtitle": "चुनें कि एजेंट ब्राउज़ करने से पहले स्वीकृति मांगे या नहीं।",
+    "approvalTitle": "अनुमोदन",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
+    "clearAction": "सभी ब्राउज़िंग डेटा साफ़ करें",
+    "clearSubtitle": "इन-ऐप ब्राउज़र से साइट डेटा और कैश साफ़ करें",
+    "clearTitle": "ब्राउज़िंग डेटा",
+    "cleared": "ब्राउज़िंग डेटा साफ़ हो गया।",
+    "dataSection": "डेटा",
+    "done": "पूर्ण",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
+    "masterSubtitle": "एजेंट को अंतर्निहित ब्राउज़र नियंत्रित करने दें",
+    "masterTitle": "Browser",
+    "permissionsSection": "अनुमतियाँ",
+    "subtitle": "एजेंट के बिल्ट-इन ब्राउज़र को प्रबंधित करें।",
+    "title": "Browser"
+  },
+  "changelog": {
+    "current": "This version",
+    "empty": "No releases to show yet.",
+    "subtitle": "Every release, newest first. The version you are running is marked."
+  },
+  "connectorRequest": {
+    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
+    "connect": "Connect {{provider}}",
+    "connecting": "Connecting…",
+    "decline": "Not now",
+    "failed": "Could not connect {{provider}}.",
+    "stop": "कनेक्शन रोकें",
+    "title": "{{provider}} is not connected"
+  },
+  "deepAgentCard": {
+    "body": "Open DeepAgent on the web",
+    "cta": "Go to Abacus AI Agent",
+    "title": "Go to DeepAgent"
+  },
+  "deliverables": {
+    "files": "Files",
+    "openInBrowser": "Open in browser",
+    "showInFolder": "Show in folder",
+    "showLess": "Show less",
+    "showMore": "+{{count}} more"
+  },
+  "devicePanel": {
+    "axPermissionNeeded": "सिम्युलेटर की विंडो दिखाए बिना उसे मिरर करने के लिए एक्सेसिबिलिटी अनुमति आवश्यक है।",
+    "boot": "चालू करें",
+    "bootFailed": "डिवाइस चालू नहीं हो सका",
+    "buildDone": "ऐप डिवाइस पर लॉन्च हो गया",
+    "buildFailed": "बिल्ड विफल",
+    "buildRun": "बिल्ड और रन",
+    "buildRunHint": "वर्कस्पेस बिल्ड करें और इस डिवाइस पर चलाएँ",
+    "buildRunUnavailable": "इस वर्कस्पेस में बिल्ड करने के लिए कोई {{platform}} प्रोजेक्ट नहीं है",
+    "captureFailed": "डिवाइस की स्क्रीन कैप्चर नहीं हो सकी",
+    "createDevice": "{{platform}} डिवाइस बनाएँ",
+    "createDeviceFailed": "डिवाइस नहीं बनाया जा सका",
+    "creatingDevice": "बनाया जा रहा है…",
+    "deviceCreated": "{{name}} बनाया गया",
+    "grantAccess": "एक्सेस दें",
+    "howToAddDevice": "{{platform}} डिवाइस कैसे जोड़ें",
+    "installingMaestro": "Maestro इंस्टॉल हो रहा है…",
+    "interactMaestroHint": "iOS सिम्युलेटर के साथ इंटरैक्ट करने के लिए Maestro इंस्टॉल करें",
+    "keyBack": "वापस",
+    "keyHome": "होम",
+    "keyRecents": "हाल की ऐप्स",
+    "maestroInstallFailed": "Maestro इंस्टॉल नहीं हो सका",
+    "maestroInstalled": "Maestro इंस्टॉल हो गया। अब आप iOS सिम्युलेटर के साथ इंटरैक्ट कर सकते हैं",
+    "modeLive": "लाइव",
+    "modePoll": "धीमा (स्क्रीनशॉट)",
+    "noDevices": "कोई डिवाइस नहीं",
+    "noPlatformDevices": "कोई {{platform}} डिवाइस नहीं मिला।",
+    "notBooted": "यह डिवाइस चालू नहीं है। स्क्रीन देखने के लिए इसे चालू करें।",
+    "openNative": "नेटिव सिम्युलेटर विंडो खोलें",
+    "phase": {
+      "booting": "डिवाइस चालू हो रहा है…",
+      "building": "बिल्ड हो रहा है…",
+      "installing": "इंस्टॉल हो रहा है…",
+      "launching": "लॉन्च हो रहा है…"
+    },
+    "refresh": "डिवाइस रीफ़्रेश करें",
+    "screenAlt": "{{name}} की स्क्रीन",
+    "screenPermissionNeeded": "सिम्युलेटर को सुचारू रूप से मिरर करने के लिए स्क्रीन रिकॉर्डिंग अनुमति आवश्यक है।",
+    "selectDevice": "डिवाइस चुनें",
+    "stateShutdown": "बंद",
+    "typeHint": "स्क्रीन पर क्लिक करें, फिर अपने कीबोर्ड से टाइप करें"
+  },
+  "devicePermission": {
+    "title": "डिवाइस क्रिया"
+  },
+  "deviceSettings": {
+    "approvalSubtitle": "एजेंट कब डिवाइस क्रियाएँ चला सकता है",
+    "approvalTitle": "टूल स्वीकृति",
+    "detected": "पहचाना गया",
+    "maestroHint": "iOS सिम्युलेटर पर एजेंट को टैप और टाइप करने देने के लिए Maestro इंस्टॉल करें।",
+    "masterSubtitle": "एजेंट को सिम्युलेटर और एम्युलेटर पर ऐप बनाने, इंस्टॉल करने और परखने की अनुमति देता है",
+    "masterTitle": "डिवाइस टूल सक्षम करें",
+    "notDetected": "नहीं मिला",
+    "subtitle": "Code एजेंट के लिए iOS सिम्युलेटर और Android एम्युलेटर टूल",
+    "title": "डिवाइस",
+    "toolchainAndroid": "Android (adb)",
+    "toolchainIos": "iOS सिम्युलेटर (Xcode)",
+    "toolchainMaestro": "Maestro (iOS इंटरैक्शन)",
+    "toolchainSection": "पहचाने गए टूलचेन"
+  },
+  "deviceSetup": {
+    "androidAvdDesc": "Android SDK मिला लेकिन कोई वर्चुअल डिवाइस नहीं। Android Studio में Tools → Device Manager से एक बनाएँ।",
+    "androidDesc": "Android Studio इंस्टॉल करें, फिर Tools → Device Manager में एक वर्चुअल डिवाइस बनाएँ।",
+    "androidTitle": "Android · Android Studio",
+    "download": "डाउनलोड करें",
+    "iosDesc": "Mac App Store से Xcode इंस्टॉल करें और सेटअप पूरा करने के लिए इसे एक बार खोलें। फिर सिम्युलेटर यहाँ दिखेंगे।",
+    "iosRuntimeDesc": "Xcode इंस्टॉल है लेकिन कोई सिम्युलेटर नहीं मिला। Xcode → Settings → Components खोलें और एक iOS रनटाइम डाउनलोड करें।",
+    "iosTitle": "iOS · Xcode",
+    "recheck": "फिर से जाँचें"
+  },
+  "diff": {
+    "noChanges": "दिखाने के लिए कोई बदलाव नहीं"
+  },
+  "error": {
+    "keepsCrashing": "ऐप में बार-बार वही त्रुटि आ रही है। स्थानीय डेटा रीसेट करने से यह ठीक हो सकता है।",
+    "ouch": "आउच!",
+    "reloadApp": "ऐप पुनः लोड करें",
+    "resetLocalData": "स्थानीय डेटा रीसेट करें",
+    "somethingWrong": "कुछ गलत हो गया",
+    "tryAgain": "पुनः प्रयास करें",
+    "unexpected": "एक अप्रत्याशित त्रुटि हुई।"
+  },
+  "firstBot": {
+    "title": "We set up your first bot"
+  },
+  "greeting": {
+    "afternoon": {
+      "1": "शुभ दोपहर",
+      "2": "दोपहर की मेहनत",
+      "3": "गहन कार्य का समय",
+      "4": "शानदार प्रदर्शन",
+      "5": "स्थिर प्रगति"
+    },
+    "dawn": {
+      "1": "जल्दी उठने वाले",
+      "2": "सुबह की पहरेदारी",
+      "3": "सूरज के साथ उठना",
+      "4": "सूर्योदय सत्र",
+      "5": "दुनिया से पहले जागना"
+    },
+    "earlyEvening": {
+      "1": "शाम की पारी",
+      "2": "सुनहरा समय",
+      "3": "समापन",
+      "4": "दिन का अंतिम प्रयास",
+      "5": "लगभग हो गया"
+    },
+    "earlyMorning": {
+      "1": "चाय का समय",
+      "2": "सुबह की ऊर्जा",
+      "3": "ताज़ा शुरुआत",
+      "4": "उठो और चमको",
+      "5": "सुबह की गति"
+    },
+    "evening": {
+      "1": "शुभ संध्या",
+      "2": "शाम का सत्र",
+      "3": "नाइट मोड",
+      "4": "आराम की ओर",
+      "5": "शांत उत्पादकता"
+    },
+    "lateNight": {
+      "1": "गहरी रात",
+      "2": "जादू का समय",
+      "3": "रात की पारी",
+      "4": "समर्पण मोड",
+      "5": "जब दुनिया सोती है"
+    },
+    "lunch": {
+      "1": "दोपहर का चेक-इन",
+      "2": "दोपहर की शुरुआत",
+      "3": "लंच के बाद की ऊर्जा",
+      "4": "रीचार्ज और आगे बढ़ें",
+      "5": "दूसरी हवा शुरू"
+    },
+    "midMorning": {
+      "1": "सुप्रभात",
+      "2": "शीर्ष उत्पादकता",
+      "3": "सुबह का प्रवाह",
+      "4": "कुछ बनाते हैं",
+      "5": "पूरी तरह केंद्रित"
+    },
+    "night": {
+      "1": "रात का उल्लू",
+      "2": "आधी रात का तेल जलाना",
+      "3": "देर रात की मेहनत",
+      "4": "शांत घंटे",
+      "5": "समय के बाद"
+    },
+    "preDawn": {
+      "1": "अभी भी लगे हुए",
+      "2": "भोर से पहले के घंटे",
+      "3": "सुबह होने से पहले",
+      "4": "प्रतिबद्ध",
+      "5": "सच्चा समर्पण"
+    }
+  },
+  "jobs": {
+    "delete": "हटाएँ",
+    "empty": "कुछ निर्धारित नहीं है। चैट में एजेंट से कहें, जैसे “हर कार्यदिवस सुबह 9 बजे मेरा इनबॉक्स समराइज़ करो”, और जॉब यहाँ दिखेगा।",
+    "enabled": "सक्रिय",
+    "lastRun": "पिछला {{time}}",
+    "nextRun": "अगला {{time}}",
+    "runNow": "अभी चलाएँ",
+    "startFailed": "रन शुरू नहीं हो सका।",
+    "started": "शुरू हुआ। यह अपने सत्र में चलता है।"
+  },
+  "logs": {
+    "saveFailed": "Could not save logs: {{error}}",
+    "saved": "Logs saved to {{path}}"
+  },
+  "notificationSettings": {
+    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
+    "enableTitle": "Notify me",
+    "soundSubtitle": "Uses your system notification sound.",
+    "soundTitle": "Play a sound",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
+    "title": "Notifications"
+  },
+  "notifications": {
+    "codeSessionFallback": "कोड सत्र",
+    "permissionRequired": "🔔 अनुमति आवश्यक है",
+    "taskCompleted": "✅ कार्य पूर्ण हुआ",
+    "toolFallback": "टूल",
+    "waitingForApproval": "अनुमोदन की प्रतीक्षा: {{toolName}}"
+  },
+  "openFile": {
+    "failed": "वह फ़ाइल नहीं खोली जा सकी।",
+    "refusedInvalid": "वह लिंक किसी फ़ाइल को नहीं दर्शाता।",
+    "refusedMissing": "वह फ़ाइल अब मौजूद नहीं है।",
+    "refusedOutside": "वह फ़ाइल आपके वर्कस्पेस के बाहर है, इसलिए उसे नहीं खोला गया।",
+    "revealed": "उस फ़ाइल को खोलने पर वह चल जाती, इसलिए उसे आपके फ़ाइल मैनेजर में दिखाया गया।"
+  },
+  "permissions": {
+    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
+    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
+    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
+    "networkHostAlways": "Always allow {{host}} this session",
+    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
+    "sandboxDeniedAlways": "Always allow these this session",
+    "sandboxDeniedHost": "Reach {{host}}",
+    "sandboxDeniedRead": "Read {{path}}",
+    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
+    "sandboxDeniedWrite": "Write {{path}}"
+  },
+  "profile": {
+    "title": "Profile",
+    "connectedAccount": "Abacus.AI account",
+    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
+    "organization": "Organization",
+    "plan": "Plan",
+    "credits": "Credits this month",
+    "creditsValue": "{{used}} of {{granted}} used",
+    "members": "Team members",
+    "dangerZone": "Danger zone",
+    "permissionsTitle": "Default permission mode",
+    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
+    "permissionsFullAccess": "Full access",
+    "permissionsAuto": "Auto",
+    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "notSignedInShort": "साइन इन नहीं किया"
+  },
+  "sidebarNav": {
+    "app": "App",
+    "artifacts": "आर्टिफ़ैक्ट",
+    "capabilities": "क्षमताएँ",
+    "connectors": "कनेक्टर",
+    "memory": "Memory",
+    "messaging": "Messaging",
+    "newSession": "नया सत्र",
+    "routines": "Routines",
+    "usage": "उपयोग",
+    "whatsNew": "What's new"
+  },
+  "skills": {
+    "appliesToBoth": "स्किल्स हर वर्कस्पेस में एजेंट के लिए उपलब्ध हैं।",
+    "back": "वापस",
+    "browseMarketplace": "मार्केटप्लेस ब्राउज़ करें",
+    "cancel": "रद्द करें",
+    "done": "हो गया",
+    "edit": "Skill फ़ाइल संपादित करें",
+    "install": "इंस्टॉल करें",
+    "installFailed": "इंस्टॉल विफल रहा",
+    "installGlobalTitle": "ग्लोबली इंस्टॉल करें",
+    "installed": "इंस्टॉल किया गया",
+    "installs": "{{count}} इंस्टॉल",
+    "marketplaceTitle": "Skills मार्केटप्लेस",
+    "noResults": "कोई Skills नहीं मिली।",
+    "noSkills": "कोई Skills उपलब्ध नहीं है।",
+    "openFailed": "Skill फ़ाइल खोली नहीं जा सकी।",
+    "poweredBy": "द्वारा संचालित",
+    "removeFailed": "Skill हटाई नहीं जा सकी।",
+    "restartBanner": "अपनी नई जोड़ी गई skills का उपयोग शुरू करने के लिए ऐप को पुनः आरंभ करें।",
+    "restartNote": "नई skills ऐप को पुनः आरंभ करने के बाद लागू होती हैं।",
+    "restartNow": "अभी पुनः आरंभ करें",
+    "searchError": "मार्केटप्लेस तक नहीं पहुँचा जा सका।",
+    "searchPlaceholder": "Skills खोजें…",
+    "searchPrompt": "इंस्टॉल करने के लिए Skills खोजें।",
+    "sources": {
+      "global": "ग्लोबल",
+      "project": "वर्कस्पेस"
+    },
+    "title": "Skills",
+    "uninstall": "Skill अनइंस्टॉल करें",
+    "uninstallConfirm": "Skill \"{{id}}\" हटाएँ? इससे Skill फ़ाइल हट जाएगी।",
+    "upload": "अपलोड करें",
+    "uploadFailed": "चयनित Skill इंपोर्ट नहीं हो सकी।",
+    "uploadFromFile": "फ़ाइल से…",
+    "uploadFromFolder": "फ़ोल्डर से…",
+    "uploadTitle": "अपने कंप्यूटर से Skill इंपोर्ट करें"
+  },
+  "visualizer": {
+    "loading": "विज़ुअलाइज़ेशन लोड हो रहा है…"
   }
 }

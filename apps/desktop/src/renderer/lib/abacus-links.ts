@@ -1,0 +1,11 @@
+/**
+ * Abacus.AI account pages the app opens (copied from the old renderer's
+ * `lib/abacus-credits.ts`, which renderer may not import).
+ */
+
+/** Where Upgrade goes: the product page, before a plan picker. */
+export const ABACUS_PLAN_URL = "https://agent.abacus.ai/";
+
+/** Where a Pro account tops up, rather than the plan chooser it has used. */
+export const ABACUS_BUY_CREDITS_URL =
+  "https://apps.abacus.ai/chatllm/admin/profile?buyCredits=true";

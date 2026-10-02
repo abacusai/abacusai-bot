@@ -45,7 +45,7 @@ import {
   readArchiveIndexStrict,
   type ArchiveIndex,
 } from "../../services/session/thread-store";
-import { quarantineRoot } from "../backup";
+import { exists, isAbsentError, quarantineRoot } from "../backup";
 import type { MigrationStep, PlannedWrite } from "../types";
 import {
   inspectTranscript,
@@ -53,6 +53,7 @@ import {
   listThreadFiles,
   listTranscriptFiles,
   readTwinSummary,
+  readClearMarker,
   threadsDir,
   v1PathIsAbsent,
   YIELD_EVERY,
@@ -222,6 +223,39 @@ export const archiveTranscriptsV1 = (
         stats.failed += 1;
         ctx.log(`failed ${name}: ${String(error)}`);
       }
+    }
+
+    // Retire a marker only when this commit leaves no pre-clear source.
+    // A removal that fails rolls the entire commit back, including the marker.
+    let markers: string[];
+    try {
+      markers = fs.readdirSync(threadsDir(ctx.home));
+    } catch (error) {
+      if (!isAbsentError(error)) throw error;
+      markers = [];
+    }
+    for (const name of markers) {
+      if (!name.endsWith(".cleared")) continue;
+      const id = name.slice(0, -".cleared".length);
+      if (!isSafeSessionId(id)) continue;
+      const marker = readClearMarker(ctx.home, id);
+      if (marker === null || marker.token === "") continue;
+      const v1 = path.join(ctx.home, "transcripts", `${id}.json`);
+      const twinFile = path.join(threadsDir(ctx.home), `${id}.json`);
+      if (exists(v1) && !removals.includes(v1)) {
+        const found = inspectTranscript(
+          ctx.home,
+          `${id}.json`,
+          options.maxBytes
+        );
+        if (found.status !== "ok" || isClearedV1(found)) continue;
+      }
+      if (exists(twinFile) && !removals.includes(twinFile)) {
+        const twin = readTwinSummary(twinFile);
+        if (twin.status !== "ok" || twin.source.afterClear !== marker.token)
+          continue;
+      }
+      removals.push(path.join(threadsDir(ctx.home), name));
     }
 
     if (Object.keys(added).length > 0) {

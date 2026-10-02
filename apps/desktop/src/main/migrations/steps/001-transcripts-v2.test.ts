@@ -288,9 +288,16 @@ describe("C-T4 step 1 transcripts-v2", () => {
     );
     // Only the unparseable twin was backed up.
     const backups = hashes(backupsRoot(home));
-    expect(Object.keys(backups).map((file) => path.basename(file))).toEqual([
-      "garbage-twin.json",
-    ]);
+    expect(
+      Object.keys(backups)
+        .map((file) => path.basename(file))
+        .filter(
+          (file) =>
+            !["attempt.json", "completed.json", "restore-index.jsonl"].includes(
+              file
+            )
+        )
+    ).toEqual(["garbage-twin.json"]);
     expect(fs.existsSync(migratingRoot(home))).toBe(false);
 
     const record = readRecord(home);

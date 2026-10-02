@@ -2,7 +2,7 @@
 /**
  * Copies the agent's golden AG-UI streams
  * (packages/agent/src/agui/__fixtures__/*.agui.jsonl) into the chat kit's
- * fixtures (src/renderer-next/features/chat/fixtures/scenarios/), one
+ * fixtures (src/renderer/features/chat/fixtures/scenarios/), one
  * `{"seq":n,"event":{…}}` line per source line, seqs from 1 (spec 02 §11.1).
  * R2-T29 fails when a copy differs from its source.
  *
@@ -19,10 +19,7 @@ import { join } from "node:path";
 
 const desktop = join(import.meta.dirname, "..");
 const source = join(desktop, "../../packages/agent/src/agui/__fixtures__");
-const target = join(
-  desktop,
-  "src/renderer-next/features/chat/fixtures/scenarios"
-);
+const target = join(desktop, "src/renderer/features/chat/fixtures/scenarios");
 const check = process.argv.includes("--check");
 
 export const withSeqs = (text) =>

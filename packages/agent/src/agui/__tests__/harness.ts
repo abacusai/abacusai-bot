@@ -2,7 +2,7 @@
  * In-process harness for the wire goldens (spec 00-agent-agui §7.1-§7.2).
  *
  * A scenario is a command script plus the fake provider's replies. The same
- * scenario is run through `--wire ndjson` (the production NdjsonHost, driven
+ * scenario is run through `--wire ndjson` (the production frozen NDJSON host, driven
  * through process.stdin/stdout exactly as main.ts drives it) and through
  * `--wire agui` (AguiHost with injected streams), and the legacy bytes are
  * compared.
@@ -401,53 +401,6 @@ export async function drive(
 
   host.end();
   await host.done;
-}
-
-/**
- * The production NdjsonHost, reached exactly as main.ts reaches it: through
- * process.stdin and process.stdout.
- */
-export function ndjsonDriver(
-  start: (context: RunContext) => { run(): Promise<void> },
-  context: RunContext
-): HostDriver & { bytes(): string } {
-  const stdin = new PassThrough();
-  let captured = "";
-  const originalStdin = Object.getOwnPropertyDescriptor(process, "stdin");
-  const originalWrite = process.stdout.write.bind(process.stdout);
-
-  Object.defineProperty(process, "stdin", {
-    value: stdin,
-    configurable: true,
-    writable: true,
-  });
-  process.stdout.write = ((chunk: unknown, ...rest: unknown[]) => {
-    captured += String(chunk);
-    const callback = rest.find((arg) => typeof arg === "function") as
-      | (() => void)
-      | undefined;
-    callback?.();
-
-    return true;
-  }) as typeof process.stdout.write;
-
-  const restore = (): void => {
-    process.stdout.write = originalWrite;
-    if (originalStdin != null)
-      Object.defineProperty(process, "stdin", originalStdin);
-  };
-
-  const host = start(context);
-  const done = host.run().finally(restore);
-
-  return {
-    write: (line) => stdin.write(`${line}\n`),
-    end: () => stdin.end(),
-    done,
-    legacy: () =>
-      parseLegacy(captured.slice(0, captured.lastIndexOf("\n") + 1)),
-    bytes: () => captured,
-  };
 }
 
 /** An AguiHost with injected stdio; compat captured as its own byte stream. */

@@ -1,7 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
-import { alias, NEXT_MODULES, NEXT_REGISTRY_SRC } from "./vite.shared.ts";
+import {
+  alias,
+  RENDERER_MODULES,
+  RENDERER_REGISTRY_SRC,
+} from "./vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a
@@ -33,6 +37,7 @@ const ciTimeouts = process.env.CI
 const CONTENDS_FOR_THE_MACHINE = [
   // Spawns several CLI children; fragmented stream timeouts need the machine alone.
   "src/main/services/session/cli-manager-taps.test.ts",
+  "src/main/window-chrome.electron.test.ts",
   "src/main/services/browser/browser-snapshot.browser.test.ts",
   "src/main/services/mcp/mcp-browser-server.test.ts",
   // About renderer code, but it spawns the same Electron: the terminal grid
@@ -45,8 +50,8 @@ const CONTENDS_FOR_THE_MACHINE = [
   // The one real-fs.watch test: FSEvents start-up latency stretches under the
   // parallel main project's load, so it runs here with the machine to itself.
   "src/main/rpc/tables/memories.fs.test.ts",
-  // Drives the built renderer-next in Electron (spec 01 R1-T11b).
-  "src/main/dev/renderer-next.electron.test.ts",
+  // Drives the built renderer in Electron (spec 01 R1-T11b).
+  "src/main/dev/renderer.electron.test.ts",
   "src/main/dev/chat-kit.electron.test.ts",
   "src/main/notch/notch.electron.test.ts",
   "src/main/dev/chat-real-session.electron.test.ts",
@@ -67,40 +72,29 @@ export default defineConfig({
         "**/dist/**",
         "**/*.config.ts",
         "src/renderer/locales/**",
-        "src/renderer-next/routeTree.gen.ts",
-        "src/renderer-next/ui/**",
+        "src/renderer/routeTree.gen.ts",
+        "src/renderer/ui/**",
       ],
     },
     projects: [
       {
-        plugins: [react()],
-        resolve: { alias },
-        test: {
-          name: "renderer",
-          environment: "jsdom",
-          ...ciTimeouts,
-          include: ["src/renderer/**/*.test.{ts,tsx}"],
-          setupFiles: ["./src/renderer/test-support/setup.ts"],
-        },
-      },
-      {
         // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
         plugins: [
           react({
-            include: NEXT_MODULES,
-            exclude: NEXT_REGISTRY_SRC,
+            include: RENDERER_MODULES,
+            exclude: RENDERER_REGISTRY_SRC,
             compiler: true,
           }),
         ],
         resolve: { alias },
         test: {
-          name: "renderer-next",
+          name: "renderer",
           environment: "jsdom",
           // Tests read tokens.css as text (`?raw`); nothing is styled.
           css: { include: [/tokens\.css/] },
           ...ciTimeouts,
-          include: ["src/renderer-next/**/*.test.{ts,tsx}"],
-          setupFiles: ["./src/renderer-next/test-support/setup.ts"],
+          include: ["src/renderer/**/*.test.{ts,tsx}"],
+          setupFiles: ["./src/renderer/test-support/setup.ts"],
         },
       },
       {
@@ -109,7 +103,7 @@ export default defineConfig({
           name: "main",
           environment: "node",
           ...ciTimeouts,
-          include: ["src/main/**/*.test.ts"],
+          include: ["src/main/**/*.test.ts", "scripts/vite-resolution.test.ts"],
           exclude: [...defaultExclude, ...CONTENDS_FOR_THE_MACHINE],
         },
       },

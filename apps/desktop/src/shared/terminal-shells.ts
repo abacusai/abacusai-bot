@@ -56,8 +56,6 @@ export const terminalShellsForPlatform = (
   );
 
 /** The i18n key under `terminalShells` for a shell, or the id if it is new. */
-export const terminalShellLabelKey = (id: TerminalShellId): string =>
-  TERMINAL_SHELLS.find((shell) => shell.id === id)?.labelKey ?? id;
 
 export interface TerminalShellStatus {
   id: TerminalShellId;

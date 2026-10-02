@@ -66,5 +66,3 @@ export const COMMON_ERRORS = {
   TIMEOUT: { status: 504, data: type<RpcErrorData["TIMEOUT"]>() },
   INTERNAL_SERVER_ERROR: { status: 500 },
 } as const;
-
-export const RPC_ERROR_CODES = Object.keys(COMMON_ERRORS) as RpcErrorCode[];

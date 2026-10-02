@@ -10,6 +10,7 @@ export type ReleaseKind = "experience" | "foundation" | "none";
  */
 const EXPERIENCE_PREFIXES = [
   "apps/desktop/index.html",
+  "apps/desktop/notch.html",
   "apps/desktop/src/renderer/",
   "packages/agent/src/",
 ];

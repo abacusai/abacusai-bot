@@ -36,3 +36,6 @@ vendor/
 
 # The PDF component shells out to a Python script under resources/.
 __pycache__/
+
+# Local cut-over build logs, shipped artifacts and synthetic test homes.
+.build/

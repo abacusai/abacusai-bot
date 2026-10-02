@@ -17,7 +17,6 @@ import * as path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { NdjsonHost } from "../host.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { AbacusBotSession } from "../session.js";
 import {
@@ -25,7 +24,6 @@ import {
   drive,
   lines,
   maskVolatile,
-  ndjsonDriver,
   prepare,
   readGolden,
   stopProvider,
@@ -61,22 +59,40 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wire-record-"));
       const file = path.join(dir, "record.jsonl");
 
-      // --wire ndjson, recording.
+      // AG-UI with compat recording.
       const recorded = await prepare(scenario);
       let bytes: string;
+      const sentLines: string[] = [];
 
       process.env[WIRE_RECORD_ENV] = file;
       try {
-        const host = ndjsonDriver(
-          (ctx) =>
-            new NdjsonHost({
-              cwd: ctx.cwd,
-              ...(ctx.mode != null ? { mode: ctx.mode } : {}),
-            }),
-          recorded.context
+        const host = aguiDriver(
+          (io) =>
+            new AguiHost({
+              cwd: recorded.context.cwd,
+              ...(recorded.context.mode != null
+                ? { mode: recorded.context.mode }
+                : {}),
+              threadId: "t-1",
+              incarnation: "inc-1",
+              compat: { mode: "fd", write: io.compatWrite },
+              stdin: io.stdin,
+              writeStdout: io.writeStdout,
+              exit: () => undefined,
+              log: () => undefined,
+            })
         );
-
-        await drive(scenario, host, recorded.provider, recorded.gates);
+        const driverWrite = host.write.bind(host);
+        host.write = (line) => {
+          sentLines.push(line);
+          driverWrite(line);
+        };
+        await drive(
+          { ...scenario, steps: scenario.aguiSteps ?? scenario.steps },
+          host,
+          recorded.provider,
+          recorded.gates
+        );
         bytes = host.bytes();
       } finally {
         delete process.env[WIRE_RECORD_ENV];
@@ -89,6 +105,7 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
 
       const entries = readWireRecording(fs.readFileSync(file, "utf8"));
       const out = entries.filter((entry) => entry.dir === "out");
+      expect(entries.some((entry) => entry.dir === "agui")).toBe(true);
 
       // Pre-strip: stripping (serialising) the recorded events is stdout.
       expect(
@@ -99,15 +116,7 @@ describe("ABACUSAI_BOT_WIRE_RECORD", () => {
         entries
           .filter((entry) => entry.dir === "in")
           .map((entry) => (entry as { line: string }).line)
-      ).toEqual(
-        scenario.steps
-          .filter((step) => "send" in step)
-          .map((step) => {
-            const sent = (step as { send: unknown }).send;
-
-            return typeof sent === "string" ? sent : JSON.stringify(sent);
-          })
-      );
+      ).toEqual(sentLines);
       // The internal facts ride beside the events that carry them.
       const internals = entries
         .filter((entry) => entry.dir === "internal")

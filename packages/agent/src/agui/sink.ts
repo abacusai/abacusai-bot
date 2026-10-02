@@ -1,6 +1,6 @@
 /**
  * `HostSink`: the one `emit()` both wires use (spec §2.4). Every legacy
- * `DesktopEvent` becomes exactly the NDJSON line `NdjsonHost` has always
+ * `DesktopEvent` becomes exactly the NDJSON line `the frozen NDJSON host` has always
  * written, on the compat channel (stdout itself under `--wire ndjson`), and
  * then, under `--wire agui`, the AG-UI events the emitter derives from it.
  */
@@ -9,10 +9,11 @@ import type { DesktopEvent } from "../protocol.js";
 import type { CompatWriter } from "./channel.js";
 import type { AguiEmitter } from "./emit.js";
 import { isRunScoped, serialize } from "./event.js";
+import type { WireRecorder } from "./record.js";
 import type { RunController } from "./runs.js";
 import type { AguiEvent } from "./wire.js";
 
-/** The legacy line for one event: byte-identical to NdjsonHost.emit. */
+/** The legacy line for one event: byte-identical to the frozen NDJSON host.emit. */
 export function toNdjsonWire(event: DesktopEvent): string {
   return `${JSON.stringify(event)}\n`;
 }
@@ -30,7 +31,10 @@ export class HostSink {
   private agui: AguiSide | undefined;
   private closed = false;
 
-  constructor(private readonly compat: CompatWriter) {}
+  constructor(
+    private readonly compat: CompatWriter,
+    private readonly recorder?: WireRecorder
+  ) {}
 
   attach(agui: AguiSide): void {
     this.agui = agui;
@@ -42,6 +46,7 @@ export class HostSink {
   }
 
   emit(event: DesktopEvent): void {
+    this.recorder?.output(event);
     this.compat.write(toNdjsonWire(event));
 
     const agui = this.agui;
@@ -59,6 +64,7 @@ export class HostSink {
   }
 
   internal(event: InternalAgentEvent): void {
+    this.recorder?.internal(event);
     const agui = this.agui;
 
     if (agui == null) return;
@@ -73,6 +79,7 @@ export class HostSink {
     if (agui == null || this.closed) return;
     if (isRunScoped(event) && !agui.runs.isOpen()) return;
 
+    this.recorder?.agui(event);
     agui.write(serialize(event));
   }
 }

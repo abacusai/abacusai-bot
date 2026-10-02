@@ -39,34 +39,25 @@ export interface StoredTranscript {
 
 export interface TranscriptServiceOptions {
   /**
-   * The v2 twin (spec 00 C.3): written after every v1 write and cleared with
-   * the v1 file, for the transition until main persists v2 itself.
+   * Clears the current thread alongside its retained legacy source.
    */
   threads?: ThreadStore;
   /** Defaults to the migration runner's `isMigrationWriteBlocked`. */
   isWriteBlocked?: (file: string) => boolean;
-  /** The clock for `updatedAt` (tests). */
-  now?: () => Date;
   /** Test seam for write failures. */
   writeFile?: (file: string, text: string) => void;
 }
 
 export class TranscriptService {
-  // Fires after the atomic rename; optional so persistence never depends on it.
-  private onPersist?: (sessionId: string) => void;
   private readonly threads?: ThreadStore;
-  private readonly now: () => Date;
   /**
    * The thread store's instance when there is one, memory fallback included,
    * so the store converts exactly the v1 save this service holds.
    */
   private readonly held: HeldFiles;
-  private readonly writeFile: (file: string, text: string) => void;
 
   constructor(options: TranscriptServiceOptions = {}) {
     this.threads = options.threads;
-    this.now = options.now ?? (() => new Date());
-    this.writeFile = options.writeFile ?? writeFileAtomicSync;
     this.held =
       options.threads?.held ??
       new HeldFiles({
@@ -75,10 +66,6 @@ export class TranscriptService {
         writeFile: options.writeFile ?? writeFileAtomicSync,
         log: (message) => console.error(`[transcripts] ${message}`),
       });
-  }
-
-  setOnPersist(callback: (sessionId: string) => void): void {
-    this.onPersist = callback;
   }
 
   read(sessionId: string): StoredTranscript | null {
@@ -94,46 +81,6 @@ export class TranscriptService {
       return parsed;
     } catch {
       return null;
-    }
-  }
-
-  write(sessionId: string, segments: unknown[]): void {
-    const filePath = transcriptPath(sessionId);
-    if (filePath == null) return;
-    // Never overwrite a good file with an empty one: the store is empty for a
-    // moment on every start, before hydration. Deletion goes through `remove`.
-    if (!Array.isArray(segments) || segments.length === 0) return;
-    const payload: StoredTranscript = {
-      version: 1,
-      sessionId,
-      updatedAt: this.now().toISOString(),
-      segments,
-    };
-    const text = JSON.stringify(payload);
-    try {
-      this.held.write(filePath, text, this.writeFile);
-    } catch (error) {
-      console.error("[transcripts] failed to write transcript", error);
-      return;
-    }
-    // A save after a clear is what proves the v1 file is new history.
-    try {
-      this.threads?.noteSave(sessionId, text);
-    } catch (error) {
-      console.error("[transcripts] failed to note the save", error);
-    }
-    // Isolated: a failed v2 write is repaired by the next `readCurrent`, and
-    // must not stop `onPersist`. The fingerprint is of the exact v1 text.
-    try {
-      this.threads?.writeFromV1(sessionId, { ...payload, text });
-    } catch (error) {
-      console.error("[transcripts] failed to write the v2 thread", error);
-    }
-    // Only after a clean persist; a listener error must not reach the write path.
-    try {
-      this.onPersist?.(sessionId);
-    } catch (error) {
-      console.error("[transcripts] onPersist listener threw", error);
     }
   }
 

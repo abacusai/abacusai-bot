@@ -26,7 +26,7 @@ const fakeHost = (): HarnessHost &
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 describe("renderer.dropPort", () => {
-  it("asks main to drop renderer-next's port (R1-T22)", async () => {
+  it("asks main to drop renderer's port (R1-T22)", async () => {
     const dropRendererPort = vi.fn(async () => ({ webContentsId: 3 }));
     await expect(
       runHarnessOp(

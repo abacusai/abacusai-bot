@@ -1,19 +1,10 @@
-/**
- * The one path every main-to-renderer push takes (spec 00 A.4.3): the legacy
- * renderer's channel and the oRPC event bus are fed from the same call, so
- * they cannot diverge. Any new sender uses these, never `sendToRenderer`
- * directly: emit.test.ts fails on `sendToRenderer(IpcChannels.Event` outside
- * this file (oxlint has no `no-restricted-syntax` to say it as a rule).
- */
-import { IpcChannels } from "#shared/channels";
+/** Dispatch host events to the oRPC event bus. */
 import type { IpcEvent } from "#shared/contracts";
 
-import { sendToRenderer } from "../renderer-host";
 import { mainEventBus, type BusChannel, type BusChannels } from "./event-bus";
 
-export const emitIpcEvent = (event: IpcEvent): void => {
+export const emitHostEvent = (event: IpcEvent): void => {
   // The legacy renderer, unchanged.
-  sendToRenderer(IpcChannels.Event, event);
   mainEventBus.dispatch(event);
 };
 

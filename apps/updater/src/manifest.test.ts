@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { test } from "vitest";
 
+import { FOUNDATION_API, PROTOCOL } from "./manifest.ts";
 import { buildManifest } from "./manifest.ts";
 
 const parse = (payload: string): Record<string, unknown> => {
@@ -21,6 +22,18 @@ void test("manifest digests are deterministic and self-consistent", async () => 
   await fs.writeFile(path.join(root, "agent", "index.mjs"), "console.log(1)");
   await fs.writeFile(path.join(root, "renderer", "index.html"), "<html/>");
 
+  for (const dir of ["agent", "renderer"])
+    await fs.writeFile(
+      path.join(root, dir, "build.json"),
+      JSON.stringify({
+        commit: "a".repeat(40),
+        dirty: false,
+        foundationApi: FOUNDATION_API,
+        protocol: PROTOCOL,
+        generation: FOUNDATION_API >= 2 ? "wco" : "legacy",
+        builtAt: "2026-10-01T00:00:00.000Z",
+      })
+    );
   const first = parse(await buildManifest(root, "1.2.3"));
   const second = parse(await buildManifest(root, "1.2.3"));
   assert.deepEqual(first, second);

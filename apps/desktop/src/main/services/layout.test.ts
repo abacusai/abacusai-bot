@@ -81,6 +81,9 @@ const MAIN_ROOT_FILES = [
   "handler.test.ts",
   "handler.ts",
   "index.ts",
+  "build-env.d.ts",
+  "smoke.ts",
+  "smoke.test.ts",
   "keep-awake.test.ts",
   "keep-awake.ts",
   // Registers the app as a login item once per install: an OS setting, made
@@ -107,8 +110,6 @@ const MAIN_ROOT_FILES = [
   // Which renderer generation and document the window loads (spec 01 §3.6).
   "renderer-entry.test.ts",
   "renderer-entry.ts",
-  "renderer-generation.test.ts",
-  "renderer-generation.ts",
   "renderer-csp.test.ts",
   "renderer-csp.ts",
   // The main window's renderer view, its swap machinery, and the send-to-
@@ -127,6 +128,7 @@ const MAIN_ROOT_FILES = [
   "window-chrome-settings.test.ts",
   "window-chrome-settings.ts",
   "window-chrome.electron.test.ts",
+  "window-chrome.e2e-entry.ts",
 ];
 
 const entries = readdirSync(SERVICES, { withFileTypes: true });

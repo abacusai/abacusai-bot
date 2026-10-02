@@ -99,7 +99,7 @@ const setup = (script: string, timeout = 5_000) => {
 };
 
 const READY = JSON.stringify({ type: "ready", model: "m", mode: "DEFAULT" });
-const SCRIPT = `process.stdin.once('data', () => process.stdout.write(${JSON.stringify(READY + "\n")})); setInterval(() => {}, 1000);`;
+const SCRIPT = `process.stdin.once('data', () => require('node:fs').writeSync(3, ${JSON.stringify(READY + "\n")})); setInterval(() => {}, 1000);`;
 
 describe("agent.start joins readiness through the real handler", () => {
   it("joins before configuration completes and waits for ready, with one spawn", async () => {

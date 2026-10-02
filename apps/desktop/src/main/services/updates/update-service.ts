@@ -1,10 +1,12 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 // electron-updater is CommonJS; a named value import fails at load under ESM.
 import electronUpdater, { type UpdateInfo } from "electron-updater";
 
 const { autoUpdater } = electronUpdater;
 import { app, BaseWindow, powerMonitor } from "electron";
 
-import { sendToRenderer } from "#main/renderer-host";
 import { emitBusChannel } from "#main/rpc/emit";
 import type { UpdateFailedPhase, UpdateStatus } from "#shared/update";
 
@@ -109,6 +111,11 @@ export class UpdateService {
 
   /** Consecutive checks that did not offer the downloaded build. */
   private notOfferedStrikes = 0;
+  private transferToken: { cancel(): void } | null = null;
+  private checkingFeed: Promise<
+    Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>
+  > | null = null;
+  private withdrawnDownloads = new Set<string>();
 
   constructor(private readonly deps: UpdateServiceDeps = {}) {
     this.setupAutoUpdater();
@@ -121,7 +128,8 @@ export class UpdateService {
       console.error("[UpdateService] Failed to set feed URL:", err);
     }
 
-    // autoDownload / autoInstallOnAppQuit: see setUpdaterHasPendingBuild().
+    autoUpdater.autoInstallOnAppQuit = false;
+    // autoDownload: see setUpdaterHasPendingBuild().
 
     autoUpdater.logger = {
       info: () => {},
@@ -143,6 +151,7 @@ export class UpdateService {
         `[UpdateService] ${info.version} available (running ${app.getVersion()}), downloading`
       );
       this.notOfferedStrikes = 0;
+      this.withdrawnDownloads.delete(info.version);
       // Installing a superseded build would relaunch straight into another
       // "Relaunch to update"; the pill comes down until the replacement lands.
       if (
@@ -157,8 +166,6 @@ export class UpdateService {
 
       this.status.checking = false;
       this.status.available = true;
-      // The flag also keeps the periodic check from disturbing the transfer.
-      if (!this.status.downloaded) this.status.downloading = true;
       this.status.updateInfo = { version: info.version };
       this.emitStatusUpdate();
     });
@@ -169,6 +176,15 @@ export class UpdateService {
       );
       this.status.checking = false;
       this.status.available = false;
+
+      if (this.status.downloading) {
+        if (this.status.updateInfo != null)
+          this.withdrawnDownloads.add(this.status.updateInfo.version);
+        this.transferToken?.cancel();
+        this.transferToken = null;
+        this.status.downloading = false;
+        this.dropDownloadedBuild("feed withdrew the active download");
+      }
       this.status.updateInfo = { version: info.version };
       // A build the feed stops offering is a pulled release: drop it. On the
       // second consecutive answer, since one stale CDN edge right after a
@@ -203,6 +219,7 @@ export class UpdateService {
     });
 
     autoUpdater.on("download-progress", (progress) => {
+      this.status.downloading = true;
       this.status.progress = {
         percent: progress.percent,
         bytesPerSecond: progress.bytesPerSecond,
@@ -213,7 +230,9 @@ export class UpdateService {
     });
 
     autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
+      if (this.withdrawnDownloads.has(info.version)) return;
       console.log(`[UpdateService] ${info.version} downloaded, pill is up`);
+      this.transferToken = null;
       this.notOfferedStrikes = 0;
       this.status.downloading = false;
       this.status.downloaded = true;
@@ -245,8 +264,9 @@ export class UpdateService {
    * staged it.
    */
   private setUpdaterHasPendingBuild(pending: boolean): void {
-    autoUpdater.autoDownload = !pending;
-    autoUpdater.autoInstallOnAppQuit = pending;
+    autoUpdater.autoDownload = !pending && !this.status.downloading;
+    // Every quit goes through installUpdate and its fresh admission check.
+    autoUpdater.autoInstallOnAppQuit = false;
   }
 
   // Wait for a moment when a restart destroys nothing and take it silently;
@@ -329,6 +349,35 @@ export class UpdateService {
     }
   }
 
+  private async checkFeed(
+    metadataOnly = false
+  ): Promise<Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>> {
+    // A concurrent older check cannot authorize an install; await it, then fetch again.
+    if (metadataOnly && this.checkingFeed != null) await this.checkingFeed;
+    if (this.checkingFeed != null) return this.checkingFeed;
+    autoUpdater.autoDownload =
+      !metadataOnly &&
+      !this.status.downloading &&
+      !this.status.downloaded &&
+      !this.status.installing;
+    this.checkingFeed = autoUpdater.checkForUpdates();
+    try {
+      const result = await this.checkingFeed;
+      if (result?.downloadPromise != null && !this.status.downloaded) {
+        this.status.downloading = true;
+        this.transferToken = result.cancellationToken;
+        this.emitStatusUpdate();
+      }
+      return result;
+    } finally {
+      this.checkingFeed = null;
+      autoUpdater.autoDownload =
+        !this.status.downloaded &&
+        !this.status.downloading &&
+        !this.status.installing;
+    }
+  }
+
   async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
     // A test build stays the build the tester was given. On the stable feed
     // the release of the same number sorts above it (a prerelease is older),
@@ -338,6 +387,15 @@ export class UpdateService {
       console.log("[UpdateService] test build, not checking for updates");
       return { success: false, error: "Test builds do not update." };
     }
+    if (
+      app.isPackaged &&
+      !existsSync(join(process.resourcesPath, "app-update.yml"))
+    ) {
+      console.log(
+        "[UpdateService] app-update.yml absent; updates disabled for this unpacked distribution"
+      );
+      return { success: true };
+    }
     try {
       this.status.error = null;
       this.status.failedPhase = null;
@@ -346,7 +404,16 @@ export class UpdateService {
 
       void this.refreshReleaseMetadata();
 
-      await autoUpdater.checkForUpdates();
+      const result = await this.checkFeed();
+      if (result?.downloadPromise != null) {
+        this.transferToken = result.cancellationToken;
+        // The check resolves before an automatic download. Observe its rejection too.
+        void result.downloadPromise.catch((error: unknown) => {
+          console.warn(
+            `[UpdateService] Download did not complete: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+      }
       return { success: true };
     } catch (error) {
       const fullMsg = error instanceof Error ? error.message : String(error);
@@ -374,6 +441,20 @@ export class UpdateService {
       // A second ShipIt process makes the first abort on macOS.
       if (this.status.installing) {
         return { success: true };
+      }
+      const version = this.downloadedVersion;
+      const offer = await this.checkFeed(true);
+      if (
+        offer == null ||
+        !offer.isUpdateAvailable ||
+        offer.updateInfo.version !== version ||
+        !this.status.downloaded ||
+        this.downloadedVersion !== version
+      ) {
+        this.dropDownloadedBuild("fresh feed check refused install");
+        throw new Error(
+          "The downloaded update is no longer offered to this client"
+        );
       }
       this.status.installing = true;
       this.emitStatusUpdate();
@@ -461,7 +542,7 @@ export class UpdateService {
     if (this.checkTimer != null) return;
 
     this.checkTimer = setInterval(() => {
-      if (this.status.installing || this.status.downloading) return;
+      if (this.status.installing) return;
 
       this.checkForUpdates();
     }, UPDATE_CHECK_INTERVAL_MS);
@@ -477,7 +558,6 @@ export class UpdateService {
   }
 
   private emitStatusUpdate(): void {
-    sendToRenderer("update-status", this.status);
     emitBusChannel("update", this.getStatus());
   }
 }

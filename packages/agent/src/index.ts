@@ -42,8 +42,6 @@ export type {
 export { TOOL_NAME_ALIASES, excludedTools } from "./excluded-tools.js";
 // openllm.ts is not exported: its signatures carry providers.ts types, which
 // drag pi's whole declaration tree into the dts bundle and break the build.
-export { NdjsonHost } from "./host.js";
-export type { HostOptions } from "./host.js";
 // AguiHost is not exported, for the same reason as openllm.ts: the bot
 // session in its signature drags pi's declaration tree into the dts bundle.
 // main.js is its entry.

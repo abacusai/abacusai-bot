@@ -134,9 +134,8 @@ vi.mock("electron", () => ({ WebContentsView: mocks.FakeWebContentsView }));
 
 import {
   RendererHost,
+  restoreContinuity,
   RendererSwapScheduler,
-  rendererWebContents,
-  sendToRenderer,
   setActiveRendererHost,
 } from "./renderer-host";
 import type { RendererHostOptions } from "./renderer-host";
@@ -152,6 +151,10 @@ const makeHost = (
     webPreferences: {},
     window: window as never,
     wire,
+    readiness: {
+      wait: async () =>
+        mocks.FakeWebContents.signalsReady ? "ready" : "timeout",
+    },
   }),
   window,
 });
@@ -270,7 +273,7 @@ describe("RendererHost", () => {
       expect.stringContaining("__captureUiContinuity")
     );
     expect(contentsOf(host).executeJavaScript).toHaveBeenCalledWith(
-      expect.stringContaining('__restoreUiContinuity?.({"focus"')
+      expect.stringContaining('__restoreUiContinuity({"focus"')
     );
   });
 
@@ -287,24 +290,6 @@ describe("RendererHost", () => {
       x: 0,
       y: 0,
     });
-  });
-});
-
-describe("sendToRenderer", () => {
-  it("does nothing without an active host", () => {
-    expect(rendererWebContents()).toBeNull();
-    sendToRenderer("channel", { some: "payload" });
-  });
-
-  it("reaches the active host's live renderer, across swaps", async () => {
-    const { host } = makeHost();
-
-    setActiveRendererHost(host);
-    await host.swap(new URL("app://bundle.new/"));
-    sendToRenderer("channel", "payload");
-
-    expect(rendererWebContents()).toBe(host.webContents);
-    expect(contentsOf(host).send).toHaveBeenCalledWith("channel", "payload");
   });
 });
 
@@ -331,7 +316,7 @@ describe("RendererSwapScheduler adoption and targets", () => {
       target: () => new URL("app://bundle.new/"),
       host: () => null,
       busy: () => false,
-      barrier: "first-commit",
+      barrier: "subscriptions",
       onOutcome,
     });
     scheduler.schedule("v2");
@@ -357,7 +342,7 @@ describe("RendererSwapScheduler adoption and targets", () => {
         target: () => target,
         host: () => host,
         busy: () => false,
-        barrier: "first-commit",
+        barrier: "subscriptions",
         onOutcome,
       });
       scheduler.schedule("v2");
@@ -372,4 +357,85 @@ describe("RendererSwapScheduler adoption and targets", () => {
       vi.useRealTimers();
     }
   });
+});
+
+it("R7-T3: stage 1, capture, awaited stage 2, settle, then flip", async () => {
+  const order: string[] = [];
+  let stage1!: (value: "ready") => void;
+  let stage2!: () => void;
+  const window = new mocks.FakeWindow();
+  const host = new RendererHost({
+    window: window as never,
+    backgroundColor: "#fff",
+    webPreferences: {},
+    readiness: {
+      wait: () => {
+        order.push("stage1");
+        return new Promise((r) => {
+          stage1 = r;
+        });
+      },
+    },
+    wire: (contents) => {
+      (
+        contents as unknown as InstanceType<typeof mocks.FakeWebContents>
+      ).executeJavaScript.mockImplementation(async (script) => {
+        if (script.includes("__capture")) {
+          order.push("capture");
+          return { drafts: {}, scrolls: [] } as never;
+        }
+        order.push("stage2");
+        return await new Promise((r) => {
+          stage2 = () => {
+            order.push("restored");
+            r("restored" as never);
+          };
+        });
+      });
+    },
+  });
+  const first = host.webContents;
+  const swapping = host.swap(new URL("app://new/index.html"), {
+    barrier: "subscriptions",
+  });
+  await vi.waitFor(() => expect(stage1).toBeTypeOf("function"));
+  expect(order).toEqual(["stage1"]);
+  stage1("ready");
+  await vi.waitFor(() => expect(stage2).toBeTypeOf("function"));
+  expect(host.webContents).toBe(first);
+  expect(order).toEqual(["stage1", "capture", "stage2"]);
+  stage2();
+  await swapping;
+  expect(order).toEqual(["stage1", "capture", "stage2", "restored"]);
+  expect(host.webContents).not.toBe(first);
+});
+it("R7-T3: a draft snapshot exceeding the limit stands down without consuming the live view", async () => {
+  const { host, window } = makeHost();
+  const first = contentsOf(host);
+  first.executeJavaScript.mockResolvedValue({ tooLarge: true } as never);
+  await expect(host.swap(new URL("app://new/index.html"))).rejects.toThrow(
+    "stood down"
+  );
+  expect(host.webContents).toBe(first);
+  expect(window.children).toHaveLength(1);
+  expect(first.close).not.toHaveBeenCalled();
+});
+
+it("R7-T3: stage-2 restoration reports none or a bounded timeout", async () => {
+  const { host } = makeHost();
+  expect(await restoreContinuity(host.webContents, null)).toBe("none");
+  vi.useFakeTimers();
+  try {
+    contentsOf(host).executeJavaScript.mockImplementation(
+      () => new Promise(() => {})
+    );
+    const result = restoreContinuity(host.webContents, {
+      drafts: {},
+      scrolls: [],
+    });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(await result).toBe("timeout");
+  } finally {
+    vi.useRealTimers();
+  }
 });

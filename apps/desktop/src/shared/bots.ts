@@ -148,12 +148,6 @@ export const defaultAvatarShape = (name: string): string =>
   BOT_AVATAR_SHAPES[(nameHash(name) >> 3) % BOT_AVATAR_SHAPES.length]!;
 
 /** Up to two initials, for rendering over the avatar swatch. */
-export const botInitials = (name: string): string => {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
-  return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase();
-};
 
 /** Spec 03 §14.1 accessories, including the empty look. */
 export const AVATAR_ACCESSORY_IDS = [

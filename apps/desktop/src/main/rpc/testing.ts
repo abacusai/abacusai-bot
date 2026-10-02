@@ -65,7 +65,6 @@ export interface FakeDepsOverrides {
   app?: object;
   browserRuntime?: object;
   update?: Partial<RpcDeps["update"]>;
-  rendererState?: Partial<RpcDeps["rendererState"]>;
   windows?: Partial<RpcDeps["windows"]>;
   ai?: RpcDeps["ai"];
   threads?: RpcDeps["threads"];
@@ -123,7 +122,6 @@ export const fakeDeps = (overrides: FakeDepsOverrides = {}): RpcDeps => {
       getStatus: () => IDLE_UPDATE_STATUS,
       ...overrides.update,
     }),
-    rendererState: stub("rendererState", overrides.rendererState),
     windows,
     bus,
     ai: overrides.ai ?? new UnavailableAguiSource(),
