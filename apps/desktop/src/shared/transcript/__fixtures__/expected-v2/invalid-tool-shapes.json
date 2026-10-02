@@ -1,0 +1,191 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Shapes",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "bad-name",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "bad-name",
+              "partIndex": 0,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256802000,
+              "id": "nameless",
+              "partIndex": 1,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256803000,
+              "id": "bad-result",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256804000,
+              "extra": {
+                "hint": "kept",
+                "toolCall": {
+                  "retries": 2
+                },
+                "toolResult": {
+                  "elapsedMs": 12,
+                  "toolCallId": "other-id"
+                }
+              },
+              "id": "extras",
+              "partIndex": 3,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256805000,
+              "extra": {
+                "extraField": 1
+              },
+              "id": "th",
+              "partIndex": 5,
+              "type": "thinking"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256801000,
+                "id": "bad-name",
+                "toolCall": {
+                  "args": [1, 2],
+                  "id": "c1",
+                  "name": 7
+                },
+                "type": "tool_call"
+              },
+              "segmentId": "bad-name"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256802000,
+                "id": "nameless",
+                "toolCall": {
+                  "args": {},
+                  "id": "c2",
+                  "name": "",
+                  "status": "success"
+                },
+                "type": "tool_call"
+              },
+              "segmentId": "nameless"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256803000,
+                "id": "bad-result",
+                "toolCall": {
+                  "args": {},
+                  "id": "c3",
+                  "name": "bash",
+                  "status": "success"
+                },
+                "toolResult": "oops",
+                "type": "tool_call"
+              },
+              "segmentId": "bad-result"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "arguments": "{\"command\":\"ls\"}",
+          "id": "c4",
+          "metadata": {
+            "abacus": {
+              "segmentId": "extras",
+              "status": "success"
+            }
+          },
+          "name": "bash",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "x",
+          "id": "extras#result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "complete",
+          "toolCallId": "c4",
+          "type": "tool-result"
+        },
+        {
+          "content": "hmm",
+          "stepId": "th",
+          "type": "thinking"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 6,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-invalid-tool-shapes",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

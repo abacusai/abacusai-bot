@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "sessionId": "sess-user-text-tags",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "b0",
+      "source": "bot",
+      "content": "Welcome.",
+      "at": 1788256799000
+    },
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "[routine] \"Daily digest\" fired. Summarise the news.",
+      "at": 1788256800000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Here is the digest.",
+      "at": 1788256801000
+    },
+    { "type": "credits", "id": "cr1", "creditsUsed": 3, "at": 1788256802000 },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "Look at these\n@/Users/me/project/spec.pdf\n@/Users/me/.abacusai-bot/temp/shot.png\n<system_reminder>cwd is /Users/me/project</system_reminder>",
+      "at": 1788256803000
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "Reading them.",
+      "at": 1788256804000
+    },
+    {
+      "type": "tool_call",
+      "id": "t1",
+      "toolCall": {
+        "id": "call-1",
+        "name": "read",
+        "args": { "file_path": "/Users/me/project/spec.pdf" },
+        "status": "success"
+      },
+      "toolResult": { "toolCallId": "call-1", "output": "ok" },
+      "at": 1788256805000
+    },
+    {
+      "type": "text",
+      "id": "b3",
+      "source": "bot",
+      "content": "Done.",
+      "at": 1788256806000
+    }
+  ]
+}

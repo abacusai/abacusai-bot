@@ -299,12 +299,14 @@ describe("parity with the legacy bridge (A-T6)", () => {
     ).toEqual([]);
   });
 
-  it("renders PARITY.md (written with UPDATE_PARITY=1)", async () => {
+  it("renders PARITY.md (written with UPDATE_PARITY=1; the committed file must match)", async () => {
     const markdown = renderParity(bridgeKeys(), await topLevelKeys());
     expect(markdown).toContain("| `getMetadata` |");
     expect(markdown).not.toContain("undefined");
 
-    if (process.env.UPDATE_PARITY === "1")
-      writeFileSync(join(REPO, "docs/rewrite/PARITY.md"), markdown);
+    const file = join(REPO, "docs/rewrite/PARITY.md");
+    if (process.env.UPDATE_PARITY === "1") writeFileSync(file, markdown);
+    // Drift fails CI: regenerate with UPDATE_PARITY=1 and commit the result.
+    expect(readFileSync(file, "utf8")).toBe(markdown);
   });
 });

@@ -10,13 +10,10 @@ import { Folder, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#next/components/nav-list";
-import { useCollections } from "#next/data/collections";
-import {
-  isListedSession,
-  isListedWorkspace,
-} from "#next/data/collections/filters";
-import { usePrefs, useUpdatePrefs } from "#next/data/collections/prefs";
-import { useCollectionStatus } from "#next/data/collections/status";
+import { useCollections } from "#next/data/db";
+import { isListedSession, isListedWorkspace } from "#next/data/db/filters";
+import { usePrefs, useUpdatePrefs } from "#next/data/db/prefs";
+import { useCollectionStatus } from "#next/data/db/status";
 import { AppLink } from "#next/lib/navigation/app-link";
 import type { SessionRow, WorkspaceRow } from "#shared/contract";
 
@@ -137,11 +134,12 @@ export const SessionsSidebar = () => {
               meta={workspace.description || undefined}
               open={prefs.workspaceExpanded[workspace.id] ?? true}
               onOpenChange={(open) =>
-                void updatePrefs((draft) => {
-                  draft.workspaceExpanded = {
-                    ...draft.workspaceExpanded,
+                void updatePrefs({
+                  // One leaf (a record): the others' state travels as is.
+                  workspaceExpanded: {
+                    ...prefs.workspaceExpanded,
                     [workspace.id]: open,
-                  };
+                  },
                 }).catch(() => undefined)
               }
             >

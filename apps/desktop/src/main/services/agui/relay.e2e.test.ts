@@ -44,7 +44,7 @@ import {
 } from "../../rpc/testing";
 import { AgentManagerService } from "../session/cli-manager-service";
 import { ThreadStore } from "../session/thread-store";
-import { AguiRelayService } from "./relay-service";
+import { AguiRelayService, defaultWire } from "./relay-service";
 
 const AGENT = path.join(
   import.meta.dirname,
@@ -107,7 +107,7 @@ afterEach(async () => {
 });
 
 /** The real manager and relay, as ServiceHost wires them. */
-const build = (): Stack => {
+const build = (options: { aguiForEverySpawn?: boolean } = {}): Stack => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "agui-e2e-"));
   const home = path.join(root, "home");
   const user = path.join(root, "user");
@@ -158,7 +158,7 @@ const build = (): Stack => {
   });
   relay = new AguiRelayService({
     files: store,
-    aguiForEverySpawn: false,
+    aguiForEverySpawn: options.aguiForEverySpawn ?? false,
     startTimeoutMs: 45_000,
     ackTimeoutMs: 20_000,
     log: () => undefined,
@@ -174,7 +174,8 @@ const build = (): Stack => {
             startupTimeoutMs: 45_000,
           })
         ).success,
-      send: (threadId, command) => manager.sendCommand("w1", threadId, command),
+      send: (threadId, command) =>
+        manager.sendCommandToSession(threadId, command),
       markSent: () => marks.push("sent"),
       markStopped: () => marks.push("stopped"),
     },
@@ -629,6 +630,88 @@ describe("main's AG-UI relay with a spawned agent", () => {
         expect(textOf(window.chat.getMessages().at(-1))).toContain("Partial"),
       WAIT
     );
+    await window.disconnect();
+  }, 90_000);
+
+  it("a kill inside a tool call settles the call: the hydrated part is not left streaming (review r1)", async () => {
+    const { client, manager } = build();
+    replies = writeThenReply;
+    const window = await Window.open(client);
+    await client.ai.send({
+      threadId: THREAD,
+      runId: "run-1",
+      messages: [userMessage("u-1", "write a file")],
+    });
+    // The write is announced and waits on its permission.
+    await vi.waitFor(
+      () => expect(window.custom("permission.requested")).toHaveLength(1),
+      WAIT
+    );
+
+    process.kill(manager.getSessionState("w1", THREAD).pid!, "SIGKILL");
+    await vi.waitFor(
+      () => expect(window.has(isTerminal("run-1"))).toBe(true),
+      WAIT
+    );
+
+    const hydrated = await client.ai.hydrate({ threadId: THREAD });
+    const parts = hydrated.messages.flatMap(
+      (message) => message.parts as unknown as Array<Record<string, unknown>>
+    );
+    const call = parts.find((part) => part.type === "tool-call");
+    expect(call).toMatchObject({ name: "write" });
+    expect(["input-streaming", "awaiting-input"]).not.toContain(call!.state);
+    expect(
+      parts.find(
+        (part) => part.type === "tool-result" && part.toolCallId === call!.id
+      )
+    ).toMatchObject({ state: "error" });
+    // The live window ends where the transcript does.
+    await vi.waitFor(
+      () =>
+        expect(timeless(window.chat.getMessages())).toEqual(
+          timeless(hydrated.messages)
+        ),
+      WAIT
+    );
+    await window.disconnect();
+  }, 90_000);
+
+  it("in the new-renderer build, a spawn no ai.* call asked for speaks AG-UI and the new UI drives it (review r1)", async () => {
+    const { client, manager, relay } = build({
+      aguiForEverySpawn: defaultWire({
+        generation: "wco",
+        isPackaged: true,
+        env: {},
+      }),
+    });
+    replies = () => ({ say: "ok" });
+
+    // A routine, a bot reply or a restored session: started by main itself.
+    await expect(
+      manager.startSession({
+        workspaceId: "w1",
+        sessionId: THREAD,
+        mode: AgentMode.Normal,
+        startupTimeoutMs: 45_000,
+      })
+    ).resolves.toMatchObject({ success: true });
+    expect(manager.getRuntimeInfo(THREAD)?.wire).toBe("agui");
+    expect(relay.wireFor("another-thread")).toBe("agui");
+
+    const window = await Window.open(client);
+    await expect(
+      client.ai.send({
+        threadId: THREAD,
+        runId: "run-1",
+        messages: [userMessage("u-1", "hello")],
+      })
+    ).resolves.toEqual({ runId: "run-1", status: "started" });
+    await vi.waitFor(
+      () => expect(window.has(isTerminal("run-1"))).toBe(true),
+      WAIT
+    );
+    expect(textOf(window.chat.getMessages().at(-1))).toBe("ok");
     await window.disconnect();
   }, 90_000);
 });

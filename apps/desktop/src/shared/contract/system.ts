@@ -64,6 +64,16 @@ export const system = {
     .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
     .output(type<void>()),
   info: query.input(NoInput).output(type<SystemInfo>()),
+  /**
+   * Open at login (spec 05 §31.5 c). macOS and Windows only; Linux answers
+   * `PRECONDITION_FAILED { reason: "unsupported-platform" }`.
+   */
+  loginItem: {
+    get: query.input(NoInput).output(type<{ openAtLogin: boolean }>()),
+    set: mutation
+      .input(v.object({ openAtLogin: v.boolean() }))
+      .output(type<{ openAtLogin: boolean }>()),
+  },
   restart: mutation.input(NoInput).output(type<void>()),
   /** First-run milestones; fire-and-forget. */
   funnelStep: mutation
@@ -71,6 +81,11 @@ export const system = {
       v.object({
         step: v.picklist(FUNNEL_STEPS),
         detail: v.optional(v.string()),
+        /**
+         * Report only the first time this install reaches the step (main's
+         * persisted `reportFunnelStepOnce`; spec 06 §6.5).
+         */
+        once: v.optional(v.literal(true)),
       })
     )
     .output(type<void>()),

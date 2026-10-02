@@ -1,0 +1,24 @@
+{"seq":1,"event":{"type":"CUSTOM","name":"session.ready","value":{"model":"fake/fake-1","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>","incarnation":"inc-1"}}}
+{"seq":2,"event":{"type":"STATE_SNAPSHOT","snapshot":{"mode":"YOLO","modeSource":"startup","model":"fake/fake-1","incarnation":"inc-1","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}}}
+{"seq":3,"event":{"type":"CUSTOM","name":"skills.loaded","value":{"skills":[]}}}
+{"seq":4,"event":{"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}}
+{"seq":5,"event":{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<1>","metadata":{"abacus":{"serverInitiated":true}}}}
+{"seq":6,"event":{"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}}
+{"seq":7,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"run it"}}
+{"seq":8,"event":{"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}}
+{"seq":9,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}}
+{"seq":10,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}}
+{"seq":11,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_2>","role":"assistant"}}
+{"seq":12,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_2>","delta":"Let me check."}}
+{"seq":13,"event":{"type":"TOOL_CALL_START","toolCallId":"call-0-0","toolCallName":"bash","parentMessageId":"<MSG_2>","metadata":{"abacus":{"rawName":"bash"}}}}
+{"seq":14,"event":{"type":"TOOL_CALL_ARGS","toolCallId":"call-0-0","delta":"{\"command\":\"echo golden\"}"}}
+{"seq":15,"event":{"type":"TOOL_CALL_END","toolCallId":"call-0-0","metadata":{"tanstack":{"input":{"command":"echo golden"}}}}}
+{"seq":16,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}}
+{"seq":17,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"executing-tool"}}}
+{"seq":18,"event":{"type":"TOOL_CALL_RESULT","messageId":"call-0-0:result","toolCallId":"call-0-0","role":"tool","content":"{\"text\":\"golden\\n\",\"rejected\":false,\"formatted\":\"```console\\ngolden\\n\\n```\"}"}}
+{"seq":19,"event":{"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}}
+{"seq":20,"event":{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"All good."}}
+{"seq":21,"event":{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}}
+{"seq":22,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}
+{"seq":23,"event":{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}}
+{"seq":24,"event":{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}}

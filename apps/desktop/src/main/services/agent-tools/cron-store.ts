@@ -1,9 +1,8 @@
 /**
  * Scheduled and webhook-fired agent runs (routines), persisted to
  * `cronjobs.json`. A job has a five-field cron schedule, a webhook token for
- * `POST /hooks/<token>`, both, or neither (manual). The cron parser is local:
- * eighty lines beat a dependency. Seconds, names and `L`/`W`/`#` are rejected
- * explicitly rather than silently misread.
+ * `POST /hooks/<token>`, both, or neither (manual). The cron parser is
+ * `shared/routines/cron.ts`: eighty lines beat a dependency.
  */
 import crypto from "crypto";
 import fs from "fs";
@@ -11,20 +10,37 @@ import path from "path";
 
 import { ConflictError } from "#shared/conflict";
 import { EntityNotFoundError } from "#shared/not-found";
+import type { RoutineRun, RoutineRunKind } from "#shared/routines";
+import { matches, nextRun, parseCron } from "#shared/routines/cron";
 
+import {
+  isMigrationWriteBlocked,
+  isMigrationWriteBlockedTree,
+} from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";
+import { HeldFiles } from "../session/held-files";
+import {
+  classifyLegacyRuns,
+  isAttempt,
+  legacyKind,
+  mintAttemptId,
+  isStoredRun,
+} from "./routine-attempts";
+
+// One parser for main and the new renderer (spec 05 §31.7).
+export { CronParseError, nextRun, parseCron } from "#shared/routines/cron";
 
 export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 
 /** How an attempt to fire a routine ended before any run began. */
 export type RoutineRunStart = "started" | "skipped" | "failed";
 
-export interface CronRun {
-  at: number;
-  trigger: CronTrigger;
-  /** Short outcome, capped: "started session x", or why it did not. */
-  result: string;
-}
+/**
+ * One history entry (spec 05 §31.5 f): its id is minted once when recorded
+ * and never recomputed; `result` is the short outcome, capped ("started
+ * session x", or why it did not).
+ */
+export type CronRun = RoutineRun;
 
 export interface CronJob {
   id: string;
@@ -57,24 +73,81 @@ export interface CronJob {
 
 const FILE = (): string => path.join(abacusBotHome(), "cronjobs.json");
 
-const read = (): CronJob[] => {
-  try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(FILE(), "utf8"));
+const writeFileAtomic = (file: string, text: string): void => {
+  const temp = `${file}.tmp`;
+  fs.writeFileSync(temp, text, "utf8");
+  fs.renameSync(temp, file);
+};
 
-    if (!Array.isArray(parsed)) return [];
-    // Older files lack the newer fields; they were all plain cron jobs.
-    return (parsed as CronJob[]).map((job) => ({
-      ...job,
-      name: job.name ?? deriveName(job.prompt),
-      schedule: job.schedule ?? null,
-      runAt: job.runAt ?? null,
-      webhookToken: job.webhookToken ?? null,
-      botId: job.botId ?? null,
-      runs: Array.isArray(job.runs) ? job.runs : [],
-    }));
+/**
+ * `cronjobs.json` is a migration destination (step 5): while an unresolved
+ * commit may cover it (spec 00 C.1), a write is journalled beside the
+ * thread store's held writes and every read sees it; it reaches the file
+ * once the block lifts (the startup replay, or the next read or write).
+ */
+const held = new HeldFiles({
+  requireDurableHolding: true,
+  dir: () => path.join(abacusBotHome(), "threads", ".pending"),
+  isWriteBlocked: isMigrationWriteBlocked,
+  writeFile: writeFileAtomic,
+  log: (message) => console.warn(`[cron-store] ${message}`),
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * The jobs on disk (or held), or null when the file is there but cannot be
+ * read as a job list. A missing or blank file is no jobs.
+ */
+const load = (): CronJob[] | null => {
+  const file = held.read(FILE());
+  if (file.status === "missing") return [];
+  if (file.status !== "ok") return null;
+  if (file.text.trim().length === 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(file.text);
   } catch {
-    return [];
+    return null;
   }
+  if (!Array.isArray(parsed)) return null;
+  if (!parsed.every((job) => isRecord(job) && typeof job.id === "string"))
+    return null;
+  // Older files lack the newer fields; they were all plain cron jobs.
+  return (parsed as CronJob[]).map((job) => ({
+    ...job,
+    name:
+      job.name ?? deriveName(typeof job.prompt === "string" ? job.prompt : ""),
+    schedule: job.schedule ?? null,
+    runAt: job.runAt ?? null,
+    webhookToken: job.webhookToken ?? null,
+    botId: job.botId ?? null,
+    // Entries from before ids are given theirs by migration step 5; one
+    // it has not reached (the step failed) gets the same derived id here,
+    // persisted by the next write (the step still fills its links later).
+    // An entry main cannot read is left out of what the app sees.
+    runs: Array.isArray(job.runs)
+      ? classifyLegacyRuns(job.id, (job.runs as unknown[]).filter(isStoredRun))
+          .runs
+      : [],
+  }));
+};
+
+/** What the app lists: an unreadable file lists as no routines. */
+const read = (): CronJob[] => load() ?? [];
+
+/**
+ * The jobs a write starts from. An unreadable file is never replaced by a
+ * list built from nothing: the write is refused and the file kept.
+ */
+const readForWrite = (): CronJob[] => {
+  const jobs = load();
+  if (jobs == null)
+    throw new Error(
+      "cronjobs.json cannot be read, so routines cannot be saved; the file was left as it is."
+    );
+  return jobs;
 };
 
 const writeListeners = new Set<() => void>();
@@ -91,12 +164,42 @@ export const onCronStoreWrite = (listener: () => void): (() => void) => {
 };
 
 const write = (jobs: CronJob[]): void => {
-  const file = FILE();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(jobs, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, file);
+  if (
+    isMigrationWriteBlocked(FILE()) &&
+    isMigrationWriteBlockedTree(
+      path.join(abacusBotHome(), "threads", ".pending")
+    )
+  )
+    throw new Error(
+      "Routines cannot be saved while migration recovery holds their write journal."
+    );
+  // The public list omits entries it cannot interpret. Keep those bytes as
+  // JSON values when saving another edit instead of silently deleting them.
+  const source = held.read(FILE());
+  const raw: Array<{ id: string; runs?: unknown[] }> =
+    source.status === "ok" && source.text.trim() !== ""
+      ? JSON.parse(source.text)
+      : [];
+  const stored = jobs.map((job) => {
+    const old = raw.find((entry) => entry.id === job.id)?.runs;
+    if (!Array.isArray(old)) return job;
+    const malformed = old.filter((entry) => !isStoredRun(entry));
+    if (malformed.length === 0) return job;
+    const previous = classifyLegacyRuns(job.id, old.filter(isStoredRun)).runs;
+    const existing = new Set(previous.map((run) => run.id));
+    const current = new Map(job.runs.map((run) => [run.id, run]));
+    let ordinal = 0;
+    const preserved = old.flatMap((entry) => {
+      if (!isStoredRun(entry)) return [entry];
+      const updated = current.get(previous[ordinal++]!.id);
+      return updated == null ? [] : [updated];
+    });
+    return {
+      ...job,
+      runs: [...job.runs.filter((run) => !existing.has(run.id)), ...preserved],
+    };
+  });
+  held.write(FILE(), `${JSON.stringify(stored, null, 2)}\n`);
   for (const listener of Array.from(writeListeners)) {
     try {
       listener();
@@ -109,154 +212,6 @@ const write = (jobs: CronJob[]): void => {
 const deriveName = (prompt: string): string => {
   const line = prompt.trim().split("\n")[0] ?? "";
   return line.length > 60 ? `${line.slice(0, 57)}…` : line;
-};
-
-// ── Cron parsing ───────────────────────────────────────────────────────────
-
-interface Field {
-  min: number;
-  max: number;
-  values: Set<number>;
-}
-
-const parseField = (
-  raw: string,
-  min: number,
-  max: number,
-  label: string
-): Field => {
-  const values = new Set<number>();
-
-  for (const part of raw.split(",")) {
-    const [range, stepRaw] = part.split("/");
-    const step = stepRaw != null ? Number(stepRaw) : 1;
-
-    if (!Number.isInteger(step) || step < 1)
-      throw new Error(`Bad step "${stepRaw}" in the ${label} field.`);
-
-    let from: number;
-    let to: number;
-
-    if (range === "*") {
-      from = min;
-      to = max;
-    } else if (range.includes("-")) {
-      const [a, b] = range.split("-").map(Number);
-
-      if (!Number.isInteger(a) || !Number.isInteger(b))
-        throw new Error(`Bad range "${range}" in the ${label} field.`);
-
-      from = a;
-      to = b;
-    } else {
-      const single = Number(range);
-
-      if (!Number.isInteger(single))
-        throw new Error(`Bad value "${range}" in the ${label} field.`);
-
-      from = single;
-      to = single;
-    }
-
-    if (from < min || to > max || from > to) {
-      throw new Error(
-        `The ${label} field must be between ${min} and ${max}; got "${part}".`
-      );
-    }
-
-    for (let value = from; value <= to; value += step) values.add(value);
-  }
-
-  return { min, max, values };
-};
-
-interface ParsedCron {
-  minute: Field;
-  hour: Field;
-  dayOfMonth: Field;
-  month: Field;
-  dayOfWeek: Field;
-  /** True when both day fields are restricted, which cron treats as OR, not AND. */
-  bothDaysRestricted: boolean;
-}
-
-export const parseCron = (expression: string): ParsedCron => {
-  const fields = expression.trim().split(/\s+/);
-
-  if (fields.length === 6) {
-    throw new Error(
-      "Six-field expressions (with seconds) are not supported. Use five fields: minute hour day month weekday."
-    );
-  }
-
-  if (fields.length !== 5) {
-    throw new Error(
-      `Expected five fields (minute hour day month weekday), got ${fields.length}.`
-    );
-  }
-
-  if (/[a-zA-Z]/.test(expression)) {
-    throw new Error(
-      "Names like MON or JAN are not supported. Use numbers: 0-6 for weekday, 1-12 for month."
-    );
-  }
-
-  // 7 is Sunday, folded onto 0 after expansion: a textual rewrite would
-  // corrupt "*/7" and "0-7".
-  const dayOfWeek = parseField(fields[4], 0, 7, "weekday");
-
-  if (dayOfWeek.values.has(7)) {
-    dayOfWeek.values.delete(7);
-    dayOfWeek.values.add(0);
-  }
-  dayOfWeek.max = 6;
-
-  return {
-    minute: parseField(fields[0], 0, 59, "minute"),
-    hour: parseField(fields[1], 0, 23, "hour"),
-    dayOfMonth: parseField(fields[2], 1, 31, "day-of-month"),
-    month: parseField(fields[3], 1, 12, "month"),
-    dayOfWeek,
-    bothDaysRestricted: fields[2] !== "*" && fields[4] !== "*",
-  };
-};
-
-const matches = (cron: ParsedCron, at: Date): boolean => {
-  if (!cron.minute.values.has(at.getMinutes())) return false;
-  if (!cron.hour.values.has(at.getHours())) return false;
-  if (!cron.month.values.has(at.getMonth() + 1)) return false;
-
-  const dayMatch = cron.dayOfMonth.values.has(at.getDate());
-  const weekdayMatch = cron.dayOfWeek.values.has(at.getDay());
-
-  // Standard cron quirk: both day fields restricted means EITHER matches.
-  return cron.bothDaysRestricted
-    ? dayMatch || weekdayMatch
-    : dayMatch && weekdayMatch;
-};
-
-/**
- * Next fire strictly after `from`, or null within a year. Minute-by-minute:
- * 525,600 set lookups is milliseconds, and clearer than solving the fields.
- */
-export const nextRun = (
-  expression: string,
-  from: Date = new Date()
-): Date | null => {
-  const cron = parseCron(expression);
-  const at = new Date(from.getTime());
-
-  at.setSeconds(0, 0);
-  at.setMinutes(at.getMinutes() + 1);
-
-  for (let i = 0; i < 366 * 24 * 60; i++) {
-    if (matches(cron, at)) return at;
-
-    at.setMinutes(at.getMinutes() + 1);
-  }
-
-  // Reachable for impossible dates like "30 2 30 2 *" (February 30th).
-  return null;
 };
 
 // ── Job storage ────────────────────────────────────────────────────────────
@@ -299,7 +254,7 @@ export const createJob = (
   if (input.prompt.trim().length === 0)
     throw new Error("A prompt is required.");
 
-  const existing = read();
+  const existing = readForWrite();
   if (id != null && existing.some((job) => job.id === id))
     throw new ConflictError(`A routine with id "${id}" already exists.`);
 
@@ -349,7 +304,7 @@ export const updateJob = (
     >
   > & { webhook?: boolean }
 ): CronJob => {
-  const jobs = read();
+  const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
 
   if (index < 0)
@@ -400,7 +355,7 @@ export const updateJob = (
 };
 
 export const removeJob = (id: string): void => {
-  const jobs = read();
+  const jobs = readForWrite();
   const remaining = jobs.filter((job) => job.id !== id);
 
   if (remaining.length === jobs.length)
@@ -409,25 +364,86 @@ export const removeJob = (id: string): void => {
   write(remaining);
 };
 
+/** What a `started` attempt announces (`routines.events`, spec 05 §31.5 j). */
+export interface RoutineRunStarted {
+  routineId: string;
+  attemptId: string;
+  trigger: CronTrigger;
+  startedAt: number;
+}
+
+const runStartedListeners = new Set<(event: RoutineRunStarted) => void>();
+
+/** Called after a `started` attempt is persisted. */
+export const onRoutineRunStarted = (
+  listener: (event: RoutineRunStarted) => void
+): (() => void) => {
+  runStartedListeners.add(listener);
+  return () => {
+    runStartedListeners.delete(listener);
+  };
+};
+
+export interface RecordRunDetails {
+  /** Defaults to what `result` says (main's own strings). */
+  kind?: RoutineRunKind;
+  sessionId?: string | null;
+  /** A follow-up's attempt. */
+  attemptId?: string | null;
+}
+
+/**
+ * Records one history entry, newest first, with a freshly minted id.
+ * Returns it, or null for a routine that is gone. An attempt also sets the
+ * routine's `lastRunAt`/`lastResult`; so does a follow-up, as before.
+ */
 export const recordRun = (
   id: string,
   result: string,
-  trigger: CronTrigger = "schedule"
-): void => {
-  const jobs = read();
+  trigger: CronTrigger = "schedule",
+  details: RecordRunDetails = {}
+): CronRun | null => {
+  const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
 
-  if (index < 0) return;
+  if (index < 0) return null;
 
   const at = Date.now();
+  const run: CronRun = {
+    id: mintAttemptId(),
+    at,
+    trigger,
+    result: result.slice(0, 300),
+    kind: details.kind ?? legacyKind(result),
+    sessionId: details.sessionId ?? null,
+    attemptId: details.attemptId ?? null,
+  };
   jobs[index] = {
     ...jobs[index],
     lastRunAt: at,
     lastResult: result.slice(0, 500),
-    runs: [{ at, trigger, result: result.slice(0, 300) }, ...jobs[index].runs],
+    runs: [run, ...jobs[index].runs],
   };
   write(jobs);
+  if (run.kind === "started" && isAttempt(run))
+    for (const listener of Array.from(runStartedListeners)) {
+      try {
+        listener({ routineId: id, attemptId: run.id, trigger, startedAt: at });
+      } catch (error) {
+        console.error("[cron-store] run-started listener threw", error);
+      }
+    }
+  return run;
 };
+
+/** The attempt that started `sessionId`, if the routine recorded one. */
+export const attemptOfSession = (
+  routineId: string,
+  sessionId: string
+): CronRun | null =>
+  getJob(routineId)?.runs.find(
+    (run) => isAttempt(run) && run.sessionId === sessionId
+  ) ?? null;
 
 /** Jobs whose schedule matches this minute. Webhook-only jobs never tick. */
 export const dueJobs = (at: Date = new Date()): CronJob[] =>

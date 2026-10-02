@@ -3,28 +3,34 @@
  * between an agent's `--wire agui` stdout and the renderer's `ai.*`
  * procedures. It implements the procedures' `AguiSource`:
  *
- * - **Wire selection.** One protocol per runtime (agent spec §2.1): a thread
- *   the new renderer has asked for (any `ai.*` call) is spawned `--wire agui`
- *   from then on; everything else stays `--wire ndjson`, so the shipped app,
- *   whose old renderer never calls `ai.*`, is unchanged. The
- *   `ABACUSAI_BOT_AGENT_WIRE=agui` env flag selects agui for every spawn
- *   (tests, dogfooding).
+ * - **Wire selection.** One protocol per runtime (agent spec §2.1). In the
+ *   new-renderer build (`RENDERER_GENERATION === "wco"`) every spawn is
+ *   `--wire agui`: anything spawned before the renderer's first `ai.*` call
+ *   (a routine, a bot reply, a restored session) must be drivable from it.
+ *   In the legacy build every spawn stays `--wire ndjson` (its renderer never
+ *   calls `ai.*`), except a thread the new renderer has asked for and, in an
+ *   unpackaged app only, `ABACUSAI_BOT_AGENT_WIRE=agui` (`defaultWire`).
  * - **The relay.** Every AG-UI line goes to its thread's `ThreadRelay`
  *   (transcript, ring, run log, session state), which fans it out to the
  *   subscribers.
  * - **`ai.send`.** `UIMessage`s become AG-UI wire messages with the client's
- *   ids (`uiMessagesToWire`); the agent's `run.ack` for the run id is the
- *   answer. Idempotent by run id across agent incarnations: every run id's
- *   first ack is recorded, and a repeat answers `duplicate` + the original
- *   without writing `run` again (a repeat while the first awaits its ack
- *   waits for it).
+ *   ids (`uiMessagesToWire`), converted before anything is reserved (a
+ *   conversion failure is `BAD_REQUEST`); the agent's `run.ack` for the run
+ *   id is the answer. Idempotent by run id across agent incarnations: the
+ *   duplicate check and the reservation are one synchronous step, every run
+ *   id's first ack is recorded, and a repeat answers `duplicate` + the
+ *   original without writing `run` again (a repeat while the first is in
+ *   flight waits for it).
  * - **The rest.** `cancel`, `respondPermission` and the queue map to agent
- *   commands; queue edits are checked against the live incarnation and the
- *   entry id here, since the agent's queue commands take an index.
+ *   commands; queue edits go to the agent by incarnation and entry id, which
+ *   it checks and applies atomically (spec 02 §14.6).
  * - **Exits.** A runtime that exits with a run open gets a synthesized
  *   `RUN_ERROR` (agent spec §3.8: a signal exit writes no last words), and
- *   its pending permissions and queue are cleared on the stream.
+ *   its pending permissions, queue and activity are cleared on the stream;
+ *   only the admissions written to that process are answered uncertain.
  */
+import * as path from "node:path";
+
 import { ORPCError } from "@orpc/server";
 import { uiMessagesToWire, type UIMessage } from "@tanstack/ai";
 
@@ -32,15 +38,22 @@ import type {
   AiHydration,
   AiSendAck,
   AiSendInput,
+  AttentionEvent,
+  AttentionSummary,
   RunOutcomeRecord,
 } from "#shared/contract";
-import type { AgentSessionStatus } from "#shared/contracts";
+import type { AgentSessionStatus, SessionOwner } from "#shared/contracts";
+import {
+  isPlainNativeId,
+  RESERVED_ID_DELIMITER,
+} from "#shared/transcript/native-ids";
 import type { ThreadFileV2 } from "#shared/transcript/thread-file";
 
 import type {
   AguiSource,
   AiRespondPermissionInput,
   SequencedChunk,
+  SequencedNotice,
 } from "../../rpc/ai/source";
 import { DELIVERY } from "../../rpc/delivery";
 import {
@@ -49,15 +62,22 @@ import {
   unavailable,
   type RpcError,
 } from "../../rpc/errors";
-import { drain, SubscriberQueue } from "../../rpc/subscriber-queue";
+import {
+  drain,
+  SubscriberQueue,
+  resyncRequired,
+} from "../../rpc/subscriber-queue";
 import type { AgentWire, NdjsonOrigin } from "../session/cli-manager-service";
 import {
   SeqClock,
   terminalRunId,
   ThreadRelay,
+  type PendingPermissionsInfo,
   type RelayChunk,
   type RelayEvent,
+  type RunFinishedInfo,
   type ThreadHistory,
+  type ThreadHistoryNotice,
 } from "./thread-relay";
 
 /** What the relay needs from the rest of main. */
@@ -70,17 +90,46 @@ export interface AguiRelayHost {
   ): { wire: AgentWire; status: AgentSessionStatus } | null;
   /** Start the thread's agent (its wire comes from `wireFor`). */
   start(threadId: string): Promise<boolean>;
-  /** One command on the runtime's stdin; false when it cannot be written. */
-  send(threadId: string, command: object): boolean;
+  /**
+   * One command on the live runtime's stdin. Returns the process it was
+   * written to (the identity `ingest`'s origin carries), or null when it
+   * could not be written. That process, not the one stdout last named, is
+   * the one whose exit leaves the command unanswered: a replacement can be
+   * running (its compat `ready` seen) before its `wire.hello` arrives.
+   */
+  send(threadId: string, command: object): object | null;
   /** Main's turn state: a turn was sent (legacy `sendAgentMessage` does this). */
   markSent(threadId: string): void;
   /** Main's turn state: the user stopped the turn (legacy `stopAgentTurn`). */
   markStopped(threadId: string): void;
+  /**
+   * The session's parentage for `ai.runFinished` (bot owner, routine id).
+   * Absent: both null.
+   */
+  ownerOf?(threadId: string): {
+    owner: SessionOwner | null;
+    routineId: string | null;
+  };
+  /**
+   * Every accepted `ai.send`, just before `run` is written (spec 03 §24.10 c):
+   * the host may re-pin the running agent's model. Errors are logged.
+   */
+  beforeRun?(threadId: string): Promise<void>;
 }
 
 /** The thread files (`ThreadStore`). */
 export interface AguiThreadFiles {
   readCurrentFile(threadId: string): ThreadFileV2 | null;
+  /** The v1 transcript file to reveal for a history notice. */
+  transcriptPath?(threadId: string): string | null;
+  /**
+   * `readCurrentFile` plus why a thread shows no history although its v1
+   * file exists (too large to read); the relay surfaces it as a notice.
+   */
+  readCurrentWithNotice?(threadId: string): {
+    file: ThreadFileV2 | null;
+    notice?: ThreadHistoryNotice;
+  };
   writeAgui(
     threadId: string,
     thread: {
@@ -95,7 +144,7 @@ export interface AguiThreadFiles {
 export interface AguiRelayOptions {
   host: AguiRelayHost;
   files: AguiThreadFiles;
-  /** Defaults to `ABACUSAI_BOT_AGENT_WIRE === "agui"`. */
+  /** Every spawn speaks AG-UI (`defaultWire`). Defaults to false. */
   aguiForEverySpawn?: boolean;
   /** How long `ai.send` waits for the runtime to be ready. */
   startTimeoutMs?: number;
@@ -106,10 +155,35 @@ export interface AguiRelayOptions {
   log?: (message: string) => void;
 }
 
+/**
+ * Whether every spawn speaks AG-UI: always in the new-renderer build; in
+ * the legacy build only with `ABACUSAI_BOT_AGENT_WIRE=agui` in an unpackaged
+ * app (tests, dogfooding). A packaged legacy app ignores the variable: its
+ * renderer could not show an AG-UI turn, and the compat stream it needs is
+ * withheld from it for agui runtimes.
+ */
+export const defaultWire = (options: {
+  generation: "legacy" | "wco";
+  isPackaged: boolean;
+  env: NodeJS.ProcessEnv;
+  log?: (message: string) => void;
+}): boolean => {
+  if (options.generation === "wco") return true;
+  const requested = options.env.ABACUSAI_BOT_AGENT_WIRE === "agui";
+  if (requested && options.isPackaged) {
+    options.log?.(
+      "ABACUSAI_BOT_AGENT_WIRE=agui is ignored in a packaged legacy build"
+    );
+    return false;
+  }
+  return requested;
+};
+
 type AckStatus = "started" | "queued" | "rejected";
 
 interface AckRecord {
-  status: AckStatus;
+  /** `unknown`: the agent said `duplicate` for a run main has no answer for. */
+  status: AckStatus | "unknown";
   reason?: AiSendAck["reason"];
   entryId?: string;
 }
@@ -118,6 +192,13 @@ interface Waiter {
   resolve: (ack: AckRecord) => void;
   reject: (error: unknown) => void;
   promise: Promise<AckRecord>;
+  /**
+   * The process `run` was written to, as the host reports it; undefined
+   * until written. Only that process's exit makes the admission uncertain.
+   */
+  runtime?: object;
+  /** Why the admission was abandoned before it was written (the session went). */
+  abandoned?: unknown;
 }
 
 const waiter = (): Waiter => {
@@ -135,9 +216,13 @@ const waiter = (): Waiter => {
 const timeoutError = (ms: number, message: string): RpcError =>
   new ORPCError("TIMEOUT", { status: 504, message, data: { ms } });
 
-/** Run ids whose ack is remembered, per thread. */
-const ACKS_KEPT = 2_000;
+/** Run ids whose first ack is remembered, over every thread. */
+const ACKS_KEPT = 10_000;
+/** Run ids seen starting (answered `duplicate` without an ack), over every thread. */
+const STARTED_RUNS_KEPT = 10_000;
 const POLL_MS = 25;
+/** Run-finished notices kept for a `lastEventId` resume, over every thread. */
+export const NOTICES_KEPT = 1_000;
 
 const REASONS = new Set([
   "regenerate_unsupported",
@@ -148,8 +233,21 @@ const REASONS = new Set([
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value != null && typeof value === "object";
 
-const toHistory = (file: ThreadFileV2 | null): ThreadHistory => {
-  if (file == null) return { messages: [], runs: [] };
+const runKey = (threadId: string, runId: string): string =>
+  `${threadId}\u0000${runId}`;
+
+/** Insertion-ordered set/map trimming: the oldest entries go first. */
+const trim = (collection: Map<string, unknown> | Set<string>, max: number) => {
+  while (collection.size > max)
+    collection.delete(collection.keys().next().value!);
+};
+
+const toHistory = (
+  file: ThreadFileV2 | null,
+  notice?: ThreadHistoryNotice
+): ThreadHistory => {
+  if (file == null)
+    return { messages: [], runs: [], ...(notice != null && { notice }) };
   if (file.source.kind === "agui")
     return {
       messages: file.messages,
@@ -162,7 +260,19 @@ const toHistory = (file: ThreadFileV2 | null): ThreadHistory => {
     messages: file.messages,
     runs: [],
     migratedFrom: { updatedAt: file.source.updatedAt },
+    v1Derived: true,
+    // Freshness is by the v1 bytes, not the clock (a same-millisecond save).
+    ...(file.source.fingerprint !== undefined && {
+      v1Fingerprint: file.source.fingerprint,
+    }),
   };
+};
+
+/** The newest user message's id in an `ai.send`, whose echo the run carries. */
+const newestUserId = (messages: AiSendInput["messages"]): string | null => {
+  for (let index = messages.length - 1; index >= 0; index -= 1)
+    if (messages[index]!.role === "user") return messages[index]!.id;
+  return null;
 };
 
 export class AguiRelayService implements AguiSource {
@@ -180,19 +290,38 @@ export class AguiRelayService implements AguiSource {
   readonly #threads = new Map<string, ThreadRelay>();
   /** Threads the new renderer has asked for: their spawns speak AG-UI. */
   readonly #claimed = new Set<string>();
-  /** runId → threadId, for `joinRun`. */
-  readonly #runThreads = new Map<string, string>();
-  /** threadId → runId → first ack. Survives respawns and eviction. */
-  readonly #acks = new Map<string, Map<string, AckRecord>>();
-  /** threadId → runId → the admission awaiting its ack. */
+  /** runId → threadId, while the run's log is joinable (`joinRun`). */
+  readonly #runOwners = new Map<string, string>();
+  /** `thread\0run` of runs seen starting: not new for `ai.send`. Bounded. */
+  readonly #startedRuns = new Set<string>();
+  /** `thread\0run` → first ack. Survives respawns and eviction. Bounded. */
+  readonly #acks = new Map<string, AckRecord>();
+  /** threadId → runId → the admission in flight (reserved, then written). */
   readonly #waiting = new Map<string, Map<string, Waiter>>();
+  /** threadId → run ids acked `started` whose `RUN_STARTED` has not come. */
+  readonly #awaitingStart = new Map<string, Map<string, object | null>>();
+  /** threadId → the runtime start in progress (one at a time per thread). */
+  readonly #starting = new Map<string, Promise<void>>();
+
+  /** The newest run-finished notices, oldest first, for `lastEventId`. */
+  readonly #notices: SequencedNotice[] = [];
+  #noticeFloor = 0;
+  readonly #forgotten = new Set<string>();
+  readonly #noticeListeners = new Set<(notice: SequencedNotice) => void>();
+  /** `ai.attention`'s table: threads with answerable permissions. */
+  readonly #attention = new Map<string, AttentionSummary>();
+  /** threadId → permission id → when main first saw it pending. */
+  readonly #pendingSince = new Map<string, Map<string, number>>();
+  #attentionRevision = 0;
+  readonly #attentionListeners = new Set<(event: AttentionEvent) => void>();
+  /** The last `busy` reported to `onBusyChange` listeners. */
+  #busy = false;
+  readonly #busyListeners = new Set<(busy: boolean) => void>();
 
   constructor(options: AguiRelayOptions) {
     this.#host = options.host;
     this.#files = options.files;
-    this.#aguiForEverySpawn =
-      options.aguiForEverySpawn ??
-      process.env.ABACUSAI_BOT_AGENT_WIRE === "agui";
+    this.#aguiForEverySpawn = options.aguiForEverySpawn ?? false;
     this.#startTimeoutMs = options.startTimeoutMs ?? 60_000;
     this.#ackTimeoutMs = options.ackTimeoutMs ?? 30_000;
     this.#maxIdleThreads = options.maxIdleThreads ?? 16;
@@ -215,19 +344,38 @@ export class AguiRelayService implements AguiSource {
     event: Record<string, unknown>,
     origin?: NdjsonOrigin
   ): void {
-    if (typeof event.type !== "string") return;
+    if (
+      typeof event.type !== "string" ||
+      this.#forgotten.has(threadId) ||
+      this.#host.workspaceOf(threadId) == null
+    )
+      return;
     const thread = this.#thread(threadId);
     const relayEvent = event as RelayEvent;
-    const chunk = thread.ingest(relayEvent, origin?.runtime ?? null);
+    const runtime = origin?.runtime ?? null;
+    const chunk = thread.ingest(relayEvent, runtime);
+    if (relayEvent.type === "CUSTOM" && relayEvent.name === "wire.hello") {
+      const awaiting = this.#awaitingStart.get(threadId);
+      for (const [runId, process] of awaiting ?? [])
+        if (process !== runtime) awaiting?.delete(runId);
+      if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
+    }
     if (chunk == null) return;
 
     if (
       relayEvent.type === "RUN_STARTED" &&
       typeof relayEvent.runId === "string"
-    )
-      this.#runThreads.set(relayEvent.runId, threadId);
+    ) {
+      this.#runOwners.set(relayEvent.runId, threadId);
+      this.#startedRuns.add(runKey(threadId, relayEvent.runId));
+      trim(this.#startedRuns, STARTED_RUNS_KEPT);
+      const awaiting = this.#awaitingStart.get(threadId);
+      awaiting?.delete(relayEvent.runId);
+      if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
+    }
     if (relayEvent.type === "CUSTOM" && relayEvent.name === "run.ack")
-      this.#settleAck(threadId, relayEvent.value);
+      this.#settleAck(threadId, relayEvent.value, runtime);
+    this.#busyCheck();
   }
 
   /** `AgentManagerService.emitAguiExit`: an agui runtime's process closed. */
@@ -244,22 +392,32 @@ export class AguiRelayService implements AguiSource {
     const crashed =
       !exit.requested &&
       (exit.signal != null || (exit.code != null && exit.code !== 0));
-    if (thread != null)
-      thread.runtimeExited(
+    const current =
+      thread?.runtimeExited(
         exit.origin.runtime,
         crashed ? "agent_crashed" : "agent_exit",
         crashed
           ? `The agent stopped unexpectedly (${exit.signal ?? `exit code ${exit.code}`}).`
           : "The agent exited before the reply finished."
-      );
-    // An admission still waiting for its ack will not get one from this
-    // process. Uncertain for the client: it re-sends the same run id.
-    for (const [runId, pending] of this.#waiting.get(threadId) ?? []) {
+      ) ?? true;
+    // A run acked `started` by this process that never opened will not.
+    const awaiting = this.#awaitingStart.get(threadId);
+    for (const [runId, process] of awaiting ?? [])
+      if (process === exit.origin.runtime || (current && process == null))
+        awaiting?.delete(runId);
+    if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
+    // Only the admissions written to this process are left without an ack;
+    // one still waiting for a runtime, or written to its replacement, keeps
+    // waiting. Uncertain for the client: it re-sends the same run id.
+    const waiting = this.#waiting.get(threadId);
+    for (const [runId, pending] of waiting ?? []) {
+      if (pending.runtime !== exit.origin.runtime) continue;
       pending.reject(
         timeoutError(0, `The agent exited before it answered run ${runId}.`)
       );
+      this.#release(threadId, runId, pending);
     }
-    this.#waiting.get(threadId)?.clear();
+    this.#busyCheck();
   }
 
   /**
@@ -268,11 +426,51 @@ export class AguiRelayService implements AguiSource {
    */
   failActiveRun(threadId: string, code: string, message: string): void {
     this.#threads.get(threadId)?.failActiveRun(code, message);
+    this.#busyCheck();
   }
 
-  /** The conversation was reset or deleted by main (not via the agent). */
+  /** The conversation was reset by main (not via the agent). */
   clearThread(threadId: string): void {
-    this.#threads.get(threadId)?.clearHistory();
+    this.#threads.get(threadId)?.clearByMain();
+    this.#busyCheck();
+  }
+
+  /**
+   * Whether any agui thread has a run open or an admission in flight: the
+   * authoritative busy aggregate (spec 07 review r1 #10), from the relay's
+   * own run state and never from compat turn state, whose pipe (fd 3) is
+   * ordered independently of stdout.
+   */
+  get busy(): boolean {
+    if (this.#waiting.size > 0 || this.#awaitingStart.size > 0) return true;
+    for (const thread of this.#threads.values())
+      if (thread.activeRunId != null) return true;
+    return false;
+  }
+
+  /** Called with the new value whenever `busy` changes. Returns the removal. */
+  onBusyChange(listener: (busy: boolean) => void): () => void {
+    this.#busyListeners.add(listener);
+    return () => this.#busyListeners.delete(listener);
+  }
+
+  #busyCheck(): void {
+    const busy = this.busy;
+    if (busy === this.#busy) return;
+    this.#busy = busy;
+    for (const listener of Array.from(this.#busyListeners)) {
+      try {
+        listener(busy);
+      } catch (error) {
+        this.#log(`a busy listener threw: ${String(error)}`);
+      }
+    }
+  }
+
+  /** Threads with per-thread admission bookkeeping (leak checks, diagnostics). */
+  get admissionThreads(): number {
+    return new Set([...this.#waiting.keys(), ...this.#awaitingStart.keys()])
+      .size;
   }
 
   /** Open `subscribe`/`joinRun` streams on a thread (leak checks, diagnostics). */
@@ -282,11 +480,203 @@ export class AguiRelayService implements AguiSource {
 
   /** The session is gone: forget everything about the thread. */
   forgetThread(threadId: string): void {
+    this.#forgotten.add(threadId);
+    // Admissions still in flight get a definitive answer now: nothing will
+    // ack them, and one not yet written must not start the agent again.
+    const waiting = this.#waiting.get(threadId);
+    this.#waiting.delete(threadId);
+    for (const pending of waiting?.values() ?? []) {
+      const gone = notFound("session", threadId);
+      pending.abandoned = gone;
+      pending.reject(gone);
+    }
     const thread = this.#threads.get(threadId);
-    thread?.clearHistory();
+    thread?.clearByMain();
     if (thread != null && thread.listenerCount === 0) this.#evict(threadId);
     this.#claimed.delete(threadId);
-    this.#acks.delete(threadId);
+    const prefix = runKey(threadId, "");
+    for (const key of this.#acks.keys())
+      if (key.startsWith(prefix)) this.#acks.delete(key);
+    for (const key of this.#startedRuns)
+      if (key.startsWith(prefix)) this.#startedRuns.delete(key);
+    this.#awaitingStart.delete(threadId);
+    // Session deletion: nothing of it waits on the user any more.
+    this.#setAttention(threadId, { incarnation: null, items: [] });
+    this.#busyCheck();
+  }
+
+  // ─── run-finished notices and attention ───────────────────────────────
+
+  runFinished(
+    afterSeq: number | null,
+    signal: AbortSignal
+  ): AsyncIterable<SequencedNotice> {
+    if (afterSeq != null && afterSeq < this.#noticeFloor)
+      throw resyncRequired("ai.runFinished");
+    const queue = new SubscriberQueue<SequencedNotice>({
+      stream: "ai.runFinished",
+      delivery: DELIVERY["ai.runFinished"],
+    });
+    // Registered and replayed in one synchronous step: nothing between.
+    const listener = (notice: SequencedNotice): void => {
+      queue.push(notice);
+      if (queue.failed) unsubscribe();
+    };
+    const unsubscribe = (): void => {
+      this.#noticeListeners.delete(listener);
+    };
+    this.#noticeListeners.add(listener);
+    signal.addEventListener("abort", unsubscribe, { once: true });
+    const replay =
+      afterSeq == null || afterSeq > this.#clock.current
+        ? []
+        : this.#notices.filter((notice) => notice.seq > afterSeq);
+
+    return (async function* () {
+      try {
+        yield* replay;
+        yield* drain(queue, signal, unsubscribe);
+      } finally {
+        unsubscribe();
+      }
+    })();
+  }
+
+  attention(signal: AbortSignal): AsyncIterable<AttentionEvent> {
+    const queue = new SubscriberQueue<AttentionEvent>({
+      stream: "ai.attention",
+      delivery: DELIVERY["ai.attention"],
+    });
+    const listener = (event: AttentionEvent): void => {
+      queue.push(event);
+      if (queue.failed) unsubscribe();
+    };
+    const unsubscribe = (): void => {
+      this.#attentionListeners.delete(listener);
+    };
+    // The snapshot and the registration are one synchronous step.
+    this.#attentionListeners.add(listener);
+    const snapshot: AttentionEvent = {
+      type: "snapshot",
+      revision: this.#attentionRevision,
+      items: [...this.#attention.values()].map((item) => ({ ...item })),
+    };
+    signal.addEventListener("abort", unsubscribe, { once: true });
+
+    return (async function* () {
+      try {
+        yield snapshot;
+        yield* drain(queue, signal, unsubscribe);
+      } finally {
+        unsubscribe();
+      }
+    })();
+  }
+
+  #publishRunFinished(threadId: string, info: RunFinishedInfo): void {
+    let parentage: { owner: SessionOwner | null; routineId: string | null } = {
+      owner: null,
+      routineId: null,
+    };
+    try {
+      parentage = this.#host.ownerOf?.(threadId) ?? parentage;
+    } catch (error) {
+      this.#log(
+        `${threadId}: reading the session owner failed: ${String(error)}`
+      );
+    }
+    const notice: SequencedNotice = {
+      seq: info.seq,
+      notice: {
+        threadId,
+        runId: info.runId,
+        outcome: info.outcome,
+        ...(info.errorCode != null && { errorCode: info.errorCode }),
+        hasVisibleAssistantText: info.hasVisibleAssistantText,
+        owner: parentage.owner,
+        routineId: parentage.routineId,
+        at: info.at,
+      },
+    };
+    this.#notices.push(notice);
+    if (this.#notices.length > NOTICES_KEPT) {
+      const removed = this.#notices.splice(
+        0,
+        this.#notices.length - NOTICES_KEPT
+      );
+      this.#noticeFloor = removed.at(-1)!.seq;
+    }
+    for (const listener of Array.from(this.#noticeListeners)) listener(notice);
+  }
+
+  /** The thread's answerable set changed: its attention row follows. */
+  #setAttention(threadId: string, pending: PendingPermissionsInfo): void {
+    const items = pending.items;
+    const previous = this.#attention.get(threadId);
+    if (items.length === 0) {
+      this.#pendingSince.delete(threadId);
+      if (previous == null) return;
+      this.#attention.delete(threadId);
+      this.#emitAttention({
+        type: "remove",
+        revision: ++this.#attentionRevision,
+        threadId,
+      });
+      return;
+    }
+
+    const incarnation =
+      pending.incarnation ??
+      items[0]!.metadata.abacus.lineage.incarnation ??
+      "";
+    // Another process's pending entries are not this one's: its item goes.
+    if (previous != null && previous.incarnation !== incarnation) {
+      this.#pendingSince.delete(threadId);
+      this.#attention.delete(threadId);
+      this.#emitAttention({
+        type: "remove",
+        revision: ++this.#attentionRevision,
+        threadId,
+      });
+    }
+    const now = Date.now();
+    const seen = this.#pendingSince.get(threadId) ?? new Map<string, number>();
+    const next = new Map<string, number>();
+    for (const item of items) {
+      const id = item.metadata.abacus.lineage.permissionId;
+      next.set(id, seen.get(id) ?? now);
+    }
+    this.#pendingSince.set(threadId, next);
+    const oldest = [...items].sort(
+      (a, b) =>
+        next.get(a.metadata.abacus.lineage.permissionId)! -
+        next.get(b.metadata.abacus.lineage.permissionId)!
+    )[0]!;
+    const questions = items.filter(
+      (item) => item.reason === "abacus:question"
+    ).length;
+    const item: AttentionSummary = {
+      threadId,
+      incarnation,
+      questions,
+      approvals: items.length - questions,
+      oldestAt: next.get(oldest.metadata.abacus.lineage.permissionId)!,
+      firstTitle:
+        typeof oldest.message === "string" && oldest.message !== ""
+          ? oldest.message
+          : null,
+    };
+    this.#attention.set(threadId, item);
+    this.#emitAttention({
+      type: "upsert",
+      revision: ++this.#attentionRevision,
+      item,
+    });
+  }
+
+  #emitAttention(event: AttentionEvent): void {
+    for (const listener of Array.from(this.#attentionListeners))
+      listener(event);
   }
 
   // ─── AguiSource ───────────────────────────────────────────────────────
@@ -294,17 +684,21 @@ export class AguiRelayService implements AguiSource {
   subscribe(
     threadId: string,
     afterSeq: number | null,
-    signal: AbortSignal
+    signal: AbortSignal,
+    epoch?: string
   ): AsyncIterable<SequencedChunk> {
-    this.#claimed.add(threadId);
-    const thread = this.#thread(threadId);
+    const thread = this.#known(threadId);
     const queue = new SubscriberQueue<SequencedChunk>({
       stream: "ai.subscribe",
       delivery: DELIVERY["ai.subscribe"],
     });
-    const { replay, unsubscribe } = thread.subscribe(afterSeq, (chunk) =>
-      queue.push(chunk)
-    );
+    let unsubscribe = (): void => undefined;
+    const subscribed = thread.subscribe(afterSeq, (chunk) => {
+      queue.push(chunk);
+      // Overflowed while the consumer is parked: stop listening now.
+      if (queue.failed) unsubscribe();
+    });
+    unsubscribe = subscribed.unsubscribe;
     // A port that closes before the first read never runs the generator's
     // `finally`: the listener must still go.
     signal.addEventListener("abort", unsubscribe, { once: true });
@@ -318,6 +712,11 @@ export class AguiRelayService implements AguiSource {
         timestamp: Date.now(),
       } as unknown as SequencedChunk["event"],
     });
+    // A resume point from another relay lifetime names other events.
+    const replay =
+      afterSeq != null && epoch != null && epoch !== this.epoch
+        ? "resync"
+        : subscribed.replay;
     const first: SequencedChunk[] = [
       control("abacus.subscribed", { seq: head, epoch: this.epoch }),
       ...(replay === "resync"
@@ -336,10 +735,9 @@ export class AguiRelayService implements AguiSource {
   }
 
   joinRun(runId: string, signal: AbortSignal): AsyncIterable<SequencedChunk> {
-    const threadId = this.#runThreads.get(runId);
+    const threadId = this.#runOwners.get(runId);
     const thread = threadId == null ? null : this.#threads.get(threadId);
     if (thread == null) return (async function* () {})();
-    this.#claimed.add(thread.threadId);
 
     const queue = new SubscriberQueue<SequencedChunk>({
       stream: "ai.joinRun",
@@ -352,12 +750,16 @@ export class AguiRelayService implements AguiSource {
         (terminalRunId(event) ?? runId) === runId
       );
     };
+    let unsubscribe = (): void => undefined;
     const joined = thread.joinRun(runId, (chunk) => {
       queue.push(chunk);
-      if (isOwnTerminal(chunk)) queue.end();
+      if (queue.failed) unsubscribe();
+      else if (isOwnTerminal(chunk)) queue.end();
     });
     if (joined == null) return (async function* () {})();
-    signal.addEventListener("abort", joined.unsubscribe, { once: true });
+    unsubscribe = joined.unsubscribe;
+    this.#claimed.add(thread.threadId);
+    signal.addEventListener("abort", unsubscribe, { once: true });
 
     return (async function* () {
       try {
@@ -366,73 +768,117 @@ export class AguiRelayService implements AguiSource {
           if (isOwnTerminal(chunk)) return;
         }
         if (joined.ended) return;
-        yield* drain(queue, signal, joined.unsubscribe);
+        yield* drain(queue, signal, unsubscribe);
       } finally {
-        joined.unsubscribe();
+        unsubscribe();
       }
     })();
   }
 
   async hydrate(threadId: string): Promise<AiHydration> {
-    this.#claimed.add(threadId);
     const { messages, activeRun, snapshot } =
-      this.#thread(threadId).checkpoint();
+      this.#known(threadId).checkpoint();
     return { messages, activeRun, interrupts: null, abacus: snapshot };
   }
 
   async send(input: AiSendInput): Promise<AiSendAck> {
     const { threadId, runId } = input;
-    this.#claimed.add(threadId);
     if (this.#host.workspaceOf(threadId) == null)
       throw notFound("session", threadId);
-
     const conversationId = input.forwardedProps?.conversationId;
     if (conversationId != null && conversationId !== threadId)
       throw badRequest("forwardedProps.conversationId is not this thread");
 
-    const repeat = await this.#repeatOf(threadId, runId);
-    if (repeat != null) return repeat;
+    // The `#` reservation (spec 00 C.3): the run id (main derives message
+    // ids from it) and the message that enters the thread keep to native
+    // ids, which the v1 mapper's derived ids can never equal.
+    const echoId = newestUserId(input.messages);
+    if (!isPlainNativeId(runId) || (echoId != null && !isPlainNativeId(echoId)))
+      throw badRequest(
+        `Ids containing "${RESERVED_ID_DELIMITER}" or "%" are reserved; use another run or message id`
+      );
 
-    await this.#ensureAguiRuntime(threadId);
-
-    // Checked again: another attempt may have written it while this one
-    // waited for the runtime.
-    const late = await this.#repeatOf(threadId, runId);
-    if (late != null) return late;
-
-    const pending = waiter();
-    this.#waitingFor(threadId).set(runId, pending);
-    this.#host.markSent(threadId);
-    if (!this.#host.send(threadId, this.#runCommand(input))) {
-      this.#waitingFor(threadId).delete(runId);
-      throw unavailable("The agent is not accepting input", 1_000);
+    // Converted before anything is reserved: a message main cannot convert
+    // is a definitive BAD_REQUEST, and nothing is left waiting.
+    let command: object;
+    try {
+      command = this.#runCommand(input);
+    } catch (error) {
+      throw badRequest(
+        `The messages could not be converted: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
-    // A timeout rejects the admission itself, so a repeat waiting on it
-    // gets the same uncertain answer; a late ack is still recorded.
-    const timer = setTimeout(
-      () =>
-        pending.reject(
-          timeoutError(
-            this.#ackTimeoutMs,
-            `The agent did not acknowledge run ${runId}`
-          )
-        ),
-      this.#ackTimeoutMs
-    );
+    this.#claimed.add(threadId);
+    // The duplicate check and the reservation are one synchronous step: a
+    // simultaneous send of the same run id finds this reservation.
+    const repeat = this.#repeatOf(threadId, runId);
+    if (repeat != null) return repeat;
+    const pending = waiter();
+    this.#waitingFor(threadId).set(runId, pending);
+    this.#busyCheck();
+
+    let marked = false;
+    let written = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
+      await this.#ensureAguiRuntime(threadId);
+      // The session was forgotten while the runtime started.
+      if (pending.abandoned !== undefined) throw pending.abandoned;
+
+      // The running agent takes the effective model before this run.
+      if (this.#host.beforeRun != null) {
+        try {
+          await this.#host.beforeRun(threadId);
+        } catch (error) {
+          this.#log(
+            `${threadId}: re-pinning before the run failed: ${String(error)}`
+          );
+        }
+        if (pending.abandoned !== undefined) throw pending.abandoned;
+      }
+
+      const thread = this.#thread(threadId);
+      const echo = newestUserId(input.messages);
+      if (echo != null) thread.expectEcho(runId, echo);
+      this.#host.markSent(threadId);
+      marked = true;
+      // The process the host wrote to, which may not have said hello yet.
+      const target = this.#host.send(threadId, command);
+      if (target == null)
+        throw unavailable("The agent is not accepting input", 1_000);
+      pending.runtime = target;
+      written = true;
+
+      // A timeout rejects the admission itself, so a repeat waiting on it
+      // gets the same uncertain answer; a late ack is still recorded.
+      timer = setTimeout(
+        () =>
+          pending.reject(
+            timeoutError(
+              this.#ackTimeoutMs,
+              `The agent did not acknowledge run ${runId}`
+            )
+          ),
+        this.#ackTimeoutMs
+      );
       const ack = await pending.promise;
-      if (
-        ack.status === "rejected" &&
-        this.#threads.get(threadId)?.activeRunId == null
-      )
+      if (ack.status === "rejected" && thread.activeRunId == null)
         // Nothing runs: undo markSent's pending phase and its watchdog.
         this.#host.markStopped(threadId);
-      return { runId, ...ack };
+      return this.#answer(runId, ack, false);
+    } catch (error) {
+      if (!written) {
+        // Nothing reached the agent: the same definitive answer for any
+        // repeat awaiting this admission, and main's turn state undone.
+        pending.reject(error);
+        if (marked) this.#host.markStopped(threadId);
+      }
+      throw error;
     } finally {
       clearTimeout(timer);
-      if (this.#waiting.get(threadId)?.get(runId) === pending)
-        this.#waiting.get(threadId)?.delete(runId);
+      this.#release(threadId, runId, pending);
+      this.#busyCheck();
     }
   }
 
@@ -446,12 +892,13 @@ export class AguiRelayService implements AguiSource {
       return;
     this.#requireAgui(threadId);
     const thread = this.#threads.get(threadId);
+    // The open run, or an admission that will open it: in flight, or acked
+    // `started` and not yet seen starting. Anything else is stale.
     const current =
       runId == null ||
       thread?.activeRunId === runId ||
       this.#waiting.get(threadId)?.has(runId) === true ||
-      (this.#acks.get(threadId)?.get(runId)?.status === "started" &&
-        thread?.hasFinished(runId) !== true);
+      this.#awaitingStart.get(threadId)?.has(runId) === true;
     // A stale id is still written (the agent ignores it, agent spec §3.8),
     // but must not suppress the running turn's events in main's taps.
     if (current) this.#host.markStopped(threadId);
@@ -478,14 +925,17 @@ export class AguiRelayService implements AguiSource {
       this.#write(threadId, { type: "enqueue", message, hidden: false });
     },
     update: async ({ threadId, incarnation, entryId, message }) => {
-      const index = this.#queueIndex(threadId, incarnation, entryId, "update");
-      if (index != null)
-        this.#write(threadId, { type: "update_queue_item", index, message });
+      if (this.#queueTarget(threadId, incarnation, entryId, "update"))
+        this.#write(threadId, {
+          type: "queue.update",
+          incarnation,
+          entryId,
+          message,
+        });
     },
     remove: async ({ threadId, incarnation, entryId }) => {
-      const index = this.#queueIndex(threadId, incarnation, entryId, "remove");
-      if (index != null)
-        this.#write(threadId, { type: "remove_from_queue", index });
+      if (this.#queueTarget(threadId, incarnation, entryId, "remove"))
+        this.#write(threadId, { type: "queue.remove", incarnation, entryId });
     },
     clear: async (threadId) => {
       this.#requireAgui(threadId);
@@ -499,23 +949,48 @@ export class AguiRelayService implements AguiSource {
 
   // ─── internals ────────────────────────────────────────────────────────
 
+  /** A thread main knows (NOT_FOUND otherwise), claimed and loaded. */
+  #known(threadId: string): ThreadRelay {
+    if (this.#host.workspaceOf(threadId) == null)
+      throw notFound("session", threadId);
+    this.#claimed.add(threadId);
+    return this.#thread(threadId);
+  }
+
   #thread(threadId: string): ThreadRelay {
     const existing = this.#threads.get(threadId);
     if (existing != null) return existing;
 
-    let file: ThreadFileV2 | null = null;
-    try {
-      file = this.#files.readCurrentFile(threadId);
-    } catch (error) {
-      this.#log(
-        `${threadId}: reading the thread file failed: ${String(error)}`
-      );
-    }
+    const read = (): {
+      file: ThreadFileV2 | null;
+      notice?: ThreadHistoryNotice;
+    } => {
+      try {
+        const result =
+          this.#files.readCurrentWithNotice != null
+            ? this.#files.readCurrentWithNotice(threadId)
+            : { file: this.#files.readCurrentFile(threadId) };
+        const transcriptPath =
+          result.notice != null ? this.#files.transcriptPath?.(threadId) : null;
+        return result.notice != null && transcriptPath != null
+          ? {
+              ...result,
+              notice: { ...result.notice, path: path.resolve(transcriptPath) },
+            }
+          : result;
+      } catch (error) {
+        this.#log(
+          `${threadId}: reading the thread file failed: ${String(error)}`
+        );
+        return { file: null };
+      }
+    };
+    const initial = read();
     const thread = new ThreadRelay({
       threadId,
       clock: this.#clock,
       epoch: this.epoch,
-      history: toHistory(file),
+      history: toHistory(initial.file, initial.notice),
       persist: (history) =>
         this.#files.writeAgui(threadId, {
           messages: history.messages,
@@ -525,6 +1000,16 @@ export class AguiRelayService implements AguiSource {
           }),
         }),
       remove: () => this.#files.remove(threadId),
+      reload: () => {
+        const { file, notice } = read();
+        return file == null ? null : toHistory(file, notice);
+      },
+      onRunForgotten: (runId) => {
+        if (this.#runOwners.get(runId) === threadId)
+          this.#runOwners.delete(runId);
+      },
+      onRunFinished: (info) => this.#publishRunFinished(threadId, info),
+      onPendingChanged: (pending) => this.#setAttention(threadId, pending),
       log: this.#log,
     });
     this.#threads.set(threadId, thread);
@@ -534,6 +1019,7 @@ export class AguiRelayService implements AguiSource {
 
   /** Threads nobody watches, with no run and no runtime, beyond the budget. */
   #evictIdle(): void {
+    for (const thread of this.#threads.values()) thread.sweep();
     const idle = [...this.#threads.values()]
       .filter(
         (thread) =>
@@ -552,8 +1038,16 @@ export class AguiRelayService implements AguiSource {
 
   #evict(threadId: string): void {
     this.#threads.delete(threadId);
-    for (const [runId, owner] of this.#runThreads)
-      if (owner === threadId) this.#runThreads.delete(runId);
+    for (const [runId, owner] of this.#runOwners)
+      if (owner === threadId) this.#runOwners.delete(runId);
+  }
+
+  /** Removes `pending`'s reservation, and the thread's map once it is empty. */
+  #release(threadId: string, runId: string, pending: Waiter): void {
+    const waiting = this.#waiting.get(threadId);
+    if (waiting?.get(runId) !== pending) return;
+    waiting.delete(runId);
+    if (waiting.size === 0) this.#waiting.delete(threadId);
   }
 
   #waitingFor(threadId: string): Map<string, Waiter> {
@@ -565,37 +1059,46 @@ export class AguiRelayService implements AguiSource {
     return map;
   }
 
-  /** A repeated run id's answer, or null for a new one. */
-  async #repeatOf(threadId: string, runId: string): Promise<AiSendAck | null> {
-    const recorded = this.#acks.get(threadId)?.get(runId);
-    if (recorded != null) return this.#duplicate(runId, recorded);
+  /**
+   * A repeated run id's answer, or null for a new one. Synchronous up to the
+   * answer: nothing can reserve the run id between this check and the
+   * caller's reservation.
+   */
+  #repeatOf(
+    threadId: string,
+    runId: string
+  ): Promise<AiSendAck> | AiSendAck | null {
+    const recorded = this.#acks.get(runKey(threadId, runId));
+    if (recorded != null) return this.#answer(runId, recorded, true);
     const inflight = this.#waiting.get(threadId)?.get(runId);
-    if (inflight != null) return this.#duplicate(runId, await inflight.promise);
+    if (inflight != null)
+      return inflight.promise.then((ack) => this.#answer(runId, ack, true));
     // A run main saw start without seeing its ack (an ack line lost to a
     // respawn): it is not new either.
-    if (this.#runThreads.get(runId) === threadId)
-      return this.#duplicate(runId, { status: "started" });
+    if (this.#startedRuns.has(runKey(threadId, runId)))
+      return this.#answer(runId, { status: "started" }, true);
     return null;
   }
 
-  #duplicate(runId: string, first: AckRecord): AiSendAck {
-    return {
-      runId,
-      status: "duplicate",
-      original: first.status,
-      ...(first.reason != null && { reason: first.reason }),
-      ...(first.entryId != null && { entryId: first.entryId }),
+  #answer(runId: string, ack: AckRecord, repeat: boolean): AiSendAck {
+    if (ack.status === "unknown") return { runId, status: "duplicate" };
+    const extra = {
+      ...(ack.reason != null && { reason: ack.reason }),
+      ...(ack.entryId != null && { entryId: ack.entryId }),
     };
+    return repeat
+      ? { runId, status: "duplicate", original: ack.status, ...extra }
+      : { runId, status: ack.status, ...extra };
   }
 
-  #settleAck(threadId: string, value: unknown): void {
+  #settleAck(threadId: string, value: unknown, runtime: object | null): void {
     if (!isRecord(value) || typeof value.runId !== "string") return;
     const runId = value.runId;
+    const key = runKey(threadId, runId);
     const status = value.status;
-    // The agent's own in-incarnation duplicate: the first answer was recorded.
-    const ack: AckRecord =
+    const first =
       status === "queued" || status === "rejected" || status === "started"
-        ? {
+        ? ({
             status,
             ...(typeof value.reason === "string" &&
               REASONS.has(value.reason) && {
@@ -604,20 +1107,29 @@ export class AguiRelayService implements AguiSource {
             ...(typeof value.entryId === "string" && {
               entryId: value.entryId,
             }),
-          }
-        : (this.#acks.get(threadId)?.get(runId) ?? { status: "started" });
+          } satisfies AckRecord)
+        : null;
+    // The agent's own in-incarnation duplicate: the first answer is main's
+    // record, if it has one; without one, the original is not guessed.
+    const ack: AckRecord = first ??
+      this.#acks.get(key) ?? { status: "unknown" };
 
     // `thread_mismatch` means main built a bad envelope: never recorded, so
     // a corrected retry of the run id is not answered `duplicate`.
-    if (!(status === "rejected" && value.reason === "thread_mismatch")) {
-      let acks = this.#acks.get(threadId);
-      if (acks == null) {
-        acks = new Map();
-        this.#acks.set(threadId, acks);
-      }
-      if (!acks.has(runId)) {
-        acks.set(runId, ack);
-        if (acks.size > ACKS_KEPT) acks.delete(acks.keys().next().value!);
+    if (
+      first != null &&
+      !(status === "rejected" && value.reason === "thread_mismatch") &&
+      !this.#acks.has(key)
+    ) {
+      this.#acks.set(key, first);
+      trim(this.#acks, ACKS_KEPT);
+      if (first.status === "started" && !this.#startedRuns.has(key)) {
+        let awaiting = this.#awaitingStart.get(threadId);
+        if (awaiting == null) {
+          awaiting = new Map();
+          this.#awaitingStart.set(threadId, awaiting);
+        }
+        awaiting.set(runId, runtime);
       }
     }
     this.#waiting.get(threadId)?.get(runId)?.resolve(ack);
@@ -648,8 +1160,26 @@ export class AguiRelayService implements AguiSource {
     };
   }
 
-  /** Waits for an agui runtime for the thread, starting one if none runs. */
+  /**
+   * Waits for an agui runtime for the thread, starting one if none runs.
+   * One attempt at a time per thread: two first sends start it once.
+   */
   async #ensureAguiRuntime(threadId: string): Promise<void> {
+    const previous = this.#starting.get(threadId);
+    const attempt = (previous ?? Promise.resolve()).then(() =>
+      this.#ensureOnce(threadId)
+    );
+    const settled = attempt.catch(() => undefined);
+    this.#starting.set(threadId, settled);
+    try {
+      await attempt;
+    } finally {
+      if (this.#starting.get(threadId) === settled)
+        this.#starting.delete(threadId);
+    }
+  }
+
+  async #ensureOnce(threadId: string): Promise<void> {
     const deadline = Date.now() + this.#startTimeoutMs;
     let started = false;
 
@@ -695,32 +1225,28 @@ export class AguiRelayService implements AguiSource {
   }
 
   #write(threadId: string, command: object): void {
-    if (!this.#host.send(threadId, command))
+    if (this.#host.send(threadId, command) == null)
       throw unavailable("The agent is not accepting input", 1_000);
   }
 
   /**
-   * The index the agent's queue command needs, checked against what main
-   * last saw from the live process. A stale incarnation or a gone entry is
-   * answered on the stream (`queue.command_rejected`) and nothing is sent.
+   * Whether a queue edit goes to the agent. An incarnation that is not the
+   * live one names entries of a process that is gone: answered on the
+   * stream (`queue.command_rejected`) and not sent. Everything else is the
+   * agent's to check, atomically, by entry id (spec 02 §14.6).
    */
-  #queueIndex(
+  #queueTarget(
     threadId: string,
     incarnation: string,
     entryId: string,
     command: "update" | "remove"
-  ): number | null {
+  ): boolean {
     this.#requireAgui(threadId);
     const thread = this.#thread(threadId);
-    if (thread.incarnation !== incarnation) {
+    if (thread.incarnation != null && thread.incarnation !== incarnation) {
       thread.rejectQueueCommand(entryId, command, "incarnation");
-      return null;
+      return false;
     }
-    const index = thread.queue.findIndex((entry) => entry.id === entryId);
-    if (index === -1) {
-      thread.rejectQueueCommand(entryId, command, "not_found");
-      return null;
-    }
-    return index;
+    return true;
   }
 }

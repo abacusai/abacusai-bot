@@ -8,206 +8,207 @@ Kinds: **Q** query, **M** mutation, **S** event-iterator subscription,
 **T** served by a DB table (sub-slice B), **R** retired (its legacy
 handler stays until the cut-over).
 
-## `window.api.agent.*` (196: 47 Q, 110 M, 2 S, 24 T, 13 R)
+## `window.api.agent.*` (197: 48 Q, 110 M, 2 S, 24 T, 13 R)
 
 | # | Legacy | Defined at | Procedure | Kind | Notes |
 |---|---|---|---|---|---|
-| 1 | `getMetadata` | preload/bridge.ts:181 | `db.workspaces.snapshot` | T | materialIconsBasePath → system.info; activeWorkspaceId → row isActive |
-| 2 | `getGitState` | preload/bridge.ts:186 | `db.gitState.snapshot` | T | keyed by workspaceId |
-| 3 | `listWorktrees` | preload/bridge.ts:188 | `git.worktrees.list` | Q |  |
-| 4 | `createWorktree` | preload/bridge.ts:193 | `git.worktrees.create` | M |  |
-| 5 | `setSessionWorktree` | preload/bridge.ts:198 | `git.worktrees.setForSession` | M | echoes sessions update |
-| 6 | `materializeSessionWorktree` | preload/bridge.ts:203 | `git.worktrees.materialize` | M | echoes sessions update |
-| 7 | `getFileTreeRoot` | preload/bridge.ts:208 | `files.treeRoot` | Q | invalidated by files.events tree-root-changed |
-| 8 | `listModels` | preload/bridge.ts:212 | `models.list` | Q | input { refresh?: boolean } |
-| 9 | `getUsageSnapshot` | preload/bridge.ts:216 | `account.usage` | Q |  |
-| 10 | `getAbacusAccount` | preload/bridge.ts:220 | `account.abacus` | Q |  |
-| 11 | `getReferralSummary` | preload/bridge.ts:225 | `referrals.summary` | Q |  |
-| 12 | `listReferralGmailContacts` | preload/bridge.ts:229 | `referrals.gmailContacts` | Q |  |
-| 13 | `sendReferralEmailInvites` | preload/bridge.ts:233 | `referrals.sendEmail` | M |  |
-| 14 | `listReferralWhatsappContacts` | preload/bridge.ts:239 | `referrals.whatsappContacts` | Q |  |
-| 15 | `sendReferralWhatsappInvites` | preload/bridge.ts:243 | `referrals.sendWhatsapp` | M |  |
-| 16 | `submitTurnFeedback` | preload/bridge.ts:249 | `agent.feedback` | M |  |
-| 17 | `getSettings` | preload/bridge.ts:254 | `settings.get` | Q |  |
-| 18 | `listPromptHistory` | preload/bridge.ts:256 | `settings.promptHistory.list` | Q |  |
-| 19 | `addPromptHistory` | preload/bridge.ts:260 | `settings.promptHistory.add` | M |  |
-| 20 | `listStoredKeyProviders` | preload/bridge.ts:266 | `settings.keys.listProviders` | Q | invalidated by settings.events credentials-changed |
-| 21 | `saveApiKey` | preload/bridge.ts:270 | `settings.keys.save` | M |  |
-| 22 | `setDefaultModel` | preload/bridge.ts:276 | `settings.setDefaultModel` | M |  |
-| 23 | `addWorkspace` | preload/bridge.ts:281 | `workspaces.add` | M | echoes workspaces insert |
-| 24 | `ensureSessionHomeWorkspace` | preload/bridge.ts:287 | `workspaces.ensureSessionHome` | M |  |
-| 25 | `getSessionHomeWorkspacePath` | preload/bridge.ts:291 | `workspaces.sessionHomePath` | Q |  |
-| 26 | `switchWorkspace` | preload/bridge.ts:295 | `workspaces.switch` | M | legacy main-side active workspace; new routes carry workspaceId |
-| 27 | `initGit` | preload/bridge.ts:300 | — | R | no renderer caller |
-| 28 | `getFileTreeChildren` | preload/bridge.ts:302 | `files.treeChildren` | Q |  |
-| 29 | `searchFiles` | preload/bridge.ts:307 | `files.search` | Q |  |
-| 30 | `getGitDiffForPath` | preload/bridge.ts:315 | — | R | no renderer caller; git.diff covers it |
-| 31 | `getGitChangeStatsForPath` | preload/bridge.ts:321 | — | R | no renderer caller |
-| 32 | `startTerminalSession` | preload/bridge.ts:327 | `terminal.start` | M |  |
-| 33 | `writeTerminalInput` | preload/bridge.ts:332 | `terminal.write` | M | fire-and-forget |
-| 34 | `resizeTerminalSession` | preload/bridge.ts:337 | `terminal.resize` | M |  |
-| 35 | `hideTerminalSession` | preload/bridge.ts:342 | `terminal.hide` | M |  |
-| 36 | `promoteTerminalSessionScope` | preload/bridge.ts:347 | `terminal.promoteScope` | M |  |
-| 37 | `getGitBranches` | preload/bridge.ts:354 | `git.branches` | Q |  |
-| 38 | `getGitCurrentBranch` | preload/bridge.ts:359 | `git.currentBranch` | Q |  |
-| 39 | `getPrInfo` | preload/bridge.ts:364 | `git.prInfo` | Q |  |
-| 40 | `getSessionTurnState` | preload/bridge.ts:369 | `sessions.turnState` | Q | live phase also derivable from ai.subscribe; kept for rows not open |
-| 41 | `switchGitBranch` | preload/bridge.ts:375 | `git.switchBranch` | M | echoes gitState |
-| 42 | `createGitBranch` | preload/bridge.ts:381 | `git.createBranch` | M |  |
-| 43 | `createAgentSession` | preload/bridge.ts:387 | `db.sessions.insert` | T |  |
-| 44 | `listAgentSessions` | preload/bridge.ts:392 | `db.sessions.snapshot` | T | per-workspace list becomes a live query where workspaceId |
-| 45 | `listAllAgentSessions` | preload/bridge.ts:396 | `db.sessions.snapshot` | T |  |
-| 46 | `listBots` | preload/bridge.ts:400 | `db.bots.snapshot` | T |  |
-| 47 | `listBotChatPreviews` | preload/bridge.ts:401 | `bots.chatPreviews` | Q | invalidated by bots.events previews-changed |
-| 48 | `listBotSenderChats` | preload/bridge.ts:405 | `bots.senderChats` | Q |  |
-| 49 | `createBot` | preload/bridge.ts:409 | `db.bots.insert` | T |  |
-| 50 | `updateBot` | preload/bridge.ts:411 | `db.bots.update` | T |  |
-| 51 | `deleteBot` | preload/bridge.ts:413 | `db.bots.delete` | T |  |
-| 52 | `announceBotChange` | preload/bridge.ts:415 | `bots.announceChange` | M |  |
-| 53 | `openBotChat` | preload/bridge.ts:421 | `bots.openChat` | M | echoes bots update (sessionId) and sessions insert |
-| 54 | `listRoutines` | preload/bridge.ts:426 | `db.routines.snapshot` | T |  |
-| 55 | `listRoutineRuns` | preload/bridge.ts:430 | `db.routineRuns.snapshot` | T | live query where routineId |
-| 56 | `editRoutineByChat` | preload/bridge.ts:434 | `routines.editByChat` | M | long-running; resolves to the reply text |
-| 57 | `createRoutine` | preload/bridge.ts:440 | `db.routines.insert` | T |  |
-| 58 | `updateRoutine` | preload/bridge.ts:442 | `db.routines.update` | T |  |
-| 59 | `removeRoutine` | preload/bridge.ts:448 | `db.routines.delete` | T |  |
-| 60 | `runRoutine` | preload/bridge.ts:450 | `routines.run` | M | echoes routineRuns insert |
-| 61 | `getLocalModelState` | preload/bridge.ts:452 | `localModels.state` | Q |  |
-| 62 | `installLocalModel` | preload/bridge.ts:456 | `localModels.install` | M |  |
-| 63 | `cancelLocalModelInstall` | preload/bridge.ts:461 | `localModels.cancelInstall` | M |  |
-| 64 | `removeLocalModel` | preload/bridge.ts:463 | `localModels.remove` | M |  |
-| 65 | `startOpenRouterAuth` | preload/bridge.ts:468 | `auth.openRouter.start` | M | long-running; resolves to the outcome union |
-| 66 | `startAbacusAuth` | preload/bridge.ts:472 | `auth.abacus.start` | M | long-running; outcome union kept (cancelled) |
-| 67 | `listBrowserSignInProfiles` | preload/bridge.ts:478 | `auth.abacus.browserProfiles` | Q |  |
-| 68 | `cancelAbacusAuth` | preload/bridge.ts:482 | `auth.abacus.cancel` | M |  |
-| 69 | `openAbacusAuthInBrowser` | preload/bridge.ts:484 | `auth.abacus.openInBrowser` | M |  |
-| 70 | `cancelOpenRouterAuth` | preload/bridge.ts:486 | `auth.openRouter.cancel` | M |  |
-| 71 | `signOutAbacus` | preload/bridge.ts:488 | `auth.abacus.signOut` | M | echoes sessions reset (stash) |
-| 72 | `listConnectorStatuses` | preload/bridge.ts:493 | `connectors.statuses` | Q | invalidated by connectors.events status-changed |
-| 73 | `connectConnector` | preload/bridge.ts:497 | `connectors.connect` | M |  |
-| 74 | `submitConnectorFields` | preload/bridge.ts:502 | `connectors.submitFields` | M |  |
-| 75 | `cancelConnectorConnect` | preload/bridge.ts:511 | `connectors.cancelConnect` | M |  |
-| 76 | `disconnectConnector` | preload/bridge.ts:513 | `connectors.disconnect` | M |  |
-| 77 | `listSessionArtifacts` | preload/bridge.ts:518 | `db.artifacts.snapshot` | T |  |
-| 78 | `removeAgentSession` | preload/bridge.ts:522 | `db.sessions.delete` | T |  |
-| 79 | `startAgentSession` | preload/bridge.ts:528 | `agent.start` | M | spawns the child; the AG-UI stream arrives on ai.subscribe |
-| 80 | `stopAgentSession` | preload/bridge.ts:533 | `agent.stop` | M |  |
-| 81 | `getAgentSessionState` | preload/bridge.ts:538 | `agent.state` | Q | live updates via ai.subscribe STATE_* / CUSTOM session.state |
-| 82 | `sendAgentMessage` | preload/bridge.ts:543 | `ai.send` | M | AG-UI RunAgentInput (threadId/runId/parentRunId/resume/forwardedProps) |
-| 83 | `setAgentMode` | preload/bridge.ts:548 | `agent.setMode` | M | also forwardedProps.mode on ai.send |
-| 84 | `setAgentModel` | preload/bridge.ts:550 | `agent.setModel` | M |  |
-| 85 | `stopAgentTurn` | preload/bridge.ts:552 | `ai.cancel` | M | ends the run with RUN_FINISHED{outcome:cancelled} |
-| 86 | `resetAgentConversation` | preload/bridge.ts:554 | `agent.reset` | M |  |
-| 87 | `switchAgentConversation` | preload/bridge.ts:559 | `agent.switchConversation` | M |  |
-| 88 | `respondAgentPermission` | preload/bridge.ts:564 | `agent.respondPermission` | M | old renderer only (no lineage); the new renderer answers with ai.respondPermission |
-| 89 | `listAgentSkills` | preload/bridge.ts:569 | `agent.skills` | Q | skills-loaded arrives as CUSTOM skills.loaded |
-| 90 | `enqueueAgentMessage` | preload/bridge.ts:571 | `agent.queue.enqueue` | M | old renderer; the new renderer uses ai.queue.enqueue, state via CUSTOM queue.updated |
-| 91 | `dequeueAgentMessage` | preload/bridge.ts:576 | `agent.queue.dequeue` | M |  |
-| 92 | `getAgentQueue` | preload/bridge.ts:581 | `agent.queue.get` | Q |  |
-| 93 | `clearAgentQueue` | preload/bridge.ts:583 | `agent.queue.clear` | M |  |
-| 94 | `removeAgentQueueMessage` | preload/bridge.ts:585 | `agent.queue.remove` | M | by index, old renderer; ai.queue.remove takes incarnation + entry id |
-| 95 | `updateAgentQueueMessage` | preload/bridge.ts:590 | `agent.queue.update` | M | by index, old renderer; ai.queue.update takes incarnation + entry id |
-| 96 | `renameLocalFile` | preload/bridge.ts:595 | `files.rename` | M |  |
-| 97 | `trashLocalFile` | preload/bridge.ts:601 | `files.trash` | M |  |
-| 98 | `saveResolvedConflict` | preload/bridge.ts:606 | — | R | no renderer caller |
-| 99 | `writeFile` | preload/bridge.ts:612 | — | R | no renderer caller ("Open in editor" only) |
-| 100 | `stageFile` | preload/bridge.ts:618 | — | R | no renderer caller |
-| 101 | `unstageFile` | preload/bridge.ts:623 | — | R | no renderer caller |
-| 102 | `removeWorkspace` | preload/bridge.ts:628 | `db.workspaces.delete` | T |  |
-| 103 | `updateWorkspaceLabel` | preload/bridge.ts:633 | `db.workspaces.update` | T |  |
-| 104 | `checkWorkspacePath` | preload/bridge.ts:642 | `workspaces.checkPath` | Q |  |
-| 105 | `relocateWorkspace` | preload/bridge.ts:647 | `workspaces.relocate` | M | echoes workspaces update |
-| 106 | `updateAgentSessionLabel` | preload/bridge.ts:653 | `db.sessions.update` | T |  |
-| 107 | `listBrowserProfiles` | preload/bridge.ts:660 | `browser.profiles.list` | Q |  |
-| 108 | `refreshBrowserProfiles` | preload/bridge.ts:664 | — | R | no renderer caller |
-| 109 | `importBrowserProfile` | preload/bridge.ts:668 | `browser.profiles.import` | M |  |
-| 110 | `clearImportedBrowserProfile` | preload/bridge.ts:673 | — | R | no renderer caller |
-| 111 | `materializeBrowserRuntime` | preload/bridge.ts:681 | `browser.runtime.materialize` | M |  |
-| 112 | `presentBrowserRuntime` | preload/bridge.ts:686 | `browser.runtime.present` | M |  |
-| 113 | `navigateBrowserRuntime` | preload/bridge.ts:691 | `browser.runtime.navigate` | M |  |
-| 114 | `captureBrowserRuntime` | preload/bridge.ts:696 | `browser.runtime.capture` | M |  |
-| 115 | `hideBrowserRuntime` | preload/bridge.ts:701 | `browser.runtime.hide` | M |  |
-| 116 | `closeBrowserRuntime` | preload/bridge.ts:706 | `browser.runtime.close` | M |  |
-| 117 | `promoteBrowserRuntimeScope` | preload/bridge.ts:711 | `browser.runtime.promoteScope` | M |  |
-| 118 | `disposeBrowserRuntimeScope` | preload/bridge.ts:716 | — | R | no renderer caller (main disposes on navigation) |
-| 119 | `disposeBrowserRuntimeWorkspace` | preload/bridge.ts:721 | — | R | no renderer caller |
-| 120 | `listMcpServers` | preload/bridge.ts:726 | `mcp.list` | Q |  |
-| 121 | `addMcpServer` | preload/bridge.ts:730 | `mcp.add` | M |  |
-| 122 | `updateMcpServer` | preload/bridge.ts:735 | `mcp.update` | M |  |
-| 123 | `removeMcpServer` | preload/bridge.ts:740 | `mcp.remove` | M |  |
-| 124 | `setMcpServerDisabled` | preload/bridge.ts:745 | `mcp.setDisabled` | M |  |
-| 125 | `importMcpServers` | preload/bridge.ts:750 | `mcp.import` | M |  |
-| 126 | `refreshMcpServers` | preload/bridge.ts:755 | `mcp.refresh` | M |  |
-| 127 | `restartMcpServer` | preload/bridge.ts:760 | `mcp.restart` | M |  |
-| 128 | `mcpOAuthSignIn` | preload/bridge.ts:765 | `mcp.oauthSignIn` | M |  |
-| 129 | `getMcpRuntimeServers` | preload/bridge.ts:770 | `mcp.runtime.servers` | Q | live via mcp.runtime.events |
-| 130 | `getMcpServerLogs` | preload/bridge.ts:774 | `mcp.runtime.logs` | Q |  |
-| 131 | `setBrowserEngine` | preload/bridge.ts:778 | `browser.setEngine` | M |  |
-| 132 | `connectChromeBrowser` | preload/bridge.ts:783 | `browser.chrome.connect` | M |  |
-| 133 | `disconnectChromeBrowser` | preload/bridge.ts:787 | `browser.chrome.disconnect` | M |  |
-| 134 | `setChromeExtensionToken` | preload/bridge.ts:791 | `browser.chrome.setExtensionToken` | M |  |
-| 135 | `getMcpBrowserStatus` | preload/bridge.ts:796 | `browser.status` | Q | live via browser.events status |
-| 136 | `setMcpBrowserEnabled` | preload/bridge.ts:800 | `browser.setEnabled` | M |  |
-| 137 | `getToolsetStates` | preload/bridge.ts:805 | `settings.toolsets.get` | Q |  |
-| 138 | `getDefaultAgentMode` | preload/bridge.ts:809 | `settings.defaultMode.get` | Q |  |
-| 139 | `getSandboxSupport` | preload/bridge.ts:813 | `settings.sandboxSupport` | Q |  |
-| 140 | `setDefaultAgentMode` | preload/bridge.ts:817 | `settings.defaultMode.set` | M |  |
-| 141 | `getNotificationSettings` | preload/bridge.ts:822 | `settings.notifications.get` | Q |  |
-| 142 | `setNotificationSettings` | preload/bridge.ts:826 | `settings.notifications.set` | M |  |
-| 143 | `setToolsetEnabled` | preload/bridge.ts:831 | `settings.toolsets.setEnabled` | M |  |
-| 144 | `getExecBackendState` | preload/bridge.ts:837 | `settings.execBackend.get` | Q |  |
-| 145 | `setExecBackend` | preload/bridge.ts:841 | `settings.execBackend.set` | M |  |
-| 146 | `getTerminalShellState` | preload/bridge.ts:846 | `terminal.shell.get` | Q |  |
-| 147 | `setTerminalShell` | preload/bridge.ts:850 | `terminal.shell.set` | M |  |
-| 148 | `respondConnector` | preload/bridge.ts:855 | `connectors.respond` | M |  |
-| 149 | `listConnectorRequests` | preload/bridge.ts:860 | `connectors.requests` | Q | live via connectors.events |
-| 150 | `listBrowserPermissionRequests` | preload/bridge.ts:865 | `browser.permissions.list` | Q | live via browser.events |
-| 151 | `setBrowserApproval` | preload/bridge.ts:870 | `browser.permissions.setApproval` | M |  |
-| 152 | `clearBrowserData` | preload/bridge.ts:875 | `browser.clearData` | M |  |
-| 153 | `respondBrowserPermission` | preload/bridge.ts:880 | `browser.permissions.respond` | M |  |
-| 154 | `setAgentSessionModel` | preload/bridge.ts:885 | `db.sessions.update` | T |  |
-| 155 | `listMemories` | preload/bridge.ts:896 | `db.memories.snapshot` | T | scope global |
-| 156 | `getCustomInstructions` | preload/bridge.ts:898 | `memory.customInstructions.get` | Q |  |
-| 157 | `setCustomInstructions` | preload/bridge.ts:900 | `memory.customInstructions.set` | M |  |
-| 158 | `forgetMemory` | preload/bridge.ts:905 | `db.memories.delete` | T |  |
-| 159 | `forgetAllMemories` | preload/bridge.ts:910 | `memory.forgetAll` | M | echoes memories deletes |
-| 160 | `listBotMemories` | preload/bridge.ts:915 | `db.memories.snapshot` | T | scope bot; memory.bots keeps BotMemoryView (noteDays, empty bots) |
-| 161 | `forgetBotMemory` | preload/bridge.ts:919 | `db.memories.delete` | T |  |
-| 162 | `clearBotMemory` | preload/bridge.ts:923 | `memory.clearBot` | M | echoes memories deletes |
-| 163 | `readTranscript` | preload/bridge.ts:927 | `ai.hydrate` | Q | ChatHydrationResult + abacus snapshot, from the relay over the v2 thread files |
-| 164 | `writeTranscript` | preload/bridge.ts:931 | — | R | main persists agui thread files from the AG-UI stream at each terminal; the legacy path dual-writes v2 until cut-over |
-| 165 | `getDeviceStatus` | preload/bridge.ts:937 | `devices.status` | Q | live via devices.events |
-| 166 | `listLocalDevices` | preload/bridge.ts:939 | `devices.list` | Q |  |
-| 167 | `captureDeviceScreenshot` | preload/bridge.ts:943 | `devices.screenshot` | M |  |
-| 168 | `bootLocalDevice` | preload/bridge.ts:948 | `devices.boot` | M |  |
-| 169 | `createLocalDevice` | preload/bridge.ts:953 | `devices.create` | M |  |
-| 170 | `refreshDeviceStatus` | preload/bridge.ts:958 | `devices.refresh` | M |  |
-| 171 | `setDevicesEnabled` | preload/bridge.ts:962 | `devices.setEnabled` | M |  |
-| 172 | `setDevicesApproval` | preload/bridge.ts:967 | `devices.setApproval` | M |  |
-| 173 | `getDeviceProjectInfo` | preload/bridge.ts:972 | `devices.projectInfo` | Q |  |
-| 174 | `interactLocalDevice` | preload/bridge.ts:976 | `devices.interact` | M |  |
-| 175 | `buildAndRunLocalDevice` | preload/bridge.ts:981 | `devices.buildAndRun` | M | progress via devices.events build-state |
-| 176 | `startDeviceStream` | preload/bridge.ts:986 | `devices.stream.start` | M |  |
-| 177 | `stopDeviceStream` | preload/bridge.ts:991 | `devices.stream.stop` | M |  |
-| 178 | `getSimulatorWindowSource` | preload/bridge.ts:996 | `devices.simulatorWindowSource` | Q |  |
-| 179 | `installMaestro` | preload/bridge.ts:1001 | `devices.installMaestro` | M |  |
-| 180 | `fetchWhisperFile` | preload/bridge.ts:1005 | `voice.whisper.fetch` | M | progress via the voice.whisper.progress iterator |
-| 181 | `isWhisperCached` | preload/bridge.ts:1010 | — | R | no renderer caller |
-| 182 | `requestMicrophoneAccess` | preload/bridge.ts:1012 | `voice.requestMicrophone` | M |  |
-| 183 | `streamDeviceTouch` | preload/bridge.ts:1016 | `devices.stream.touch` | M | was ipcRenderer.send; call without await |
-| 184 | `streamDeviceKey` | preload/bridge.ts:1018 | `devices.stream.key` | M | was ipcRenderer.send; call without await |
-| 185 | `openScreenRecordingSettings` | preload/bridge.ts:1020 | `system.openPrivacyPane` | M | input { pane: "screen-recording" } |
-| 186 | `openAccessibilitySettings` | preload/bridge.ts:1024 | `system.openPrivacyPane` | M | input { pane: "accessibility" } |
-| 187 | `getMessagingSnapshot` | preload/bridge.ts:1028 | `messaging.snapshot` | Q | invalidated by messaging.events updated |
-| 188 | `updateMessagingPlatform` | preload/bridge.ts:1032 | `messaging.updatePlatform` | M |  |
-| 189 | `decideMessagingPairing` | preload/bridge.ts:1037 | `messaging.decidePairing` | M |  |
-| 190 | `updateMessagingSettings` | preload/bridge.ts:1042 | `messaging.updateSettings` | M |  |
-| 191 | `showMessagingLogin` | preload/bridge.ts:1047 | `messaging.showLogin` | M |  |
-| 192 | `pairSharedChannel` | preload/bridge.ts:1052 | `messaging.pairShared` | M |  |
-| 193 | `unlinkSharedChannel` | preload/bridge.ts:1057 | `messaging.unlinkShared` | M |  |
-| 194 | `openSharedChannelLink` | preload/bridge.ts:1062 | `messaging.openSharedLink` | M |  |
-| 195 | `onDeviceStreamChunk` | preload/bridge.ts:1071 | `devices.stream.chunks` | S | event iterator of DeviceStreamChunk (input { streamId }) |
-| 196 | `onEvent` | preload/bridge.ts:1078 | `(split)` | S | the catch-all channel is replaced by typed iterators: see the IpcEvent table |
+| 1 | `getMetadata` | preload/bridge.ts:182 | `db.workspaces.snapshot` | T | materialIconsBasePath → system.info; activeWorkspaceId → row isActive |
+| 2 | `getGitState` | preload/bridge.ts:187 | `db.gitState.snapshot` | T | keyed by workspaceId |
+| 3 | `listWorktrees` | preload/bridge.ts:189 | `git.worktrees.list` | Q |  |
+| 4 | `createWorktree` | preload/bridge.ts:194 | `git.worktrees.create` | M |  |
+| 5 | `setSessionWorktree` | preload/bridge.ts:199 | `git.worktrees.setForSession` | M | echoes sessions update |
+| 6 | `materializeSessionWorktree` | preload/bridge.ts:204 | `git.worktrees.materialize` | M | echoes sessions update |
+| 7 | `getFileTreeRoot` | preload/bridge.ts:209 | `files.treeRoot` | Q | invalidated by files.events tree-root-changed |
+| 8 | `listModels` | preload/bridge.ts:213 | `models.list` | Q | input { refresh?: boolean } |
+| 9 | `getUsageSnapshot` | preload/bridge.ts:217 | `account.usage` | Q |  |
+| 10 | `getAbacusAccount` | preload/bridge.ts:221 | `account.abacus` | Q |  |
+| 11 | `getReferralSummary` | preload/bridge.ts:226 | `referrals.summary` | Q |  |
+| 12 | `listReferralGmailContacts` | preload/bridge.ts:230 | `referrals.gmailContacts` | Q |  |
+| 13 | `sendReferralEmailInvites` | preload/bridge.ts:234 | `referrals.sendEmail` | M |  |
+| 14 | `listReferralWhatsappContacts` | preload/bridge.ts:240 | `referrals.whatsappContacts` | Q |  |
+| 15 | `sendReferralWhatsappInvites` | preload/bridge.ts:244 | `referrals.sendWhatsapp` | M |  |
+| 16 | `submitTurnFeedback` | preload/bridge.ts:250 | `agent.feedback` | M |  |
+| 17 | `getSettings` | preload/bridge.ts:255 | `settings.get` | Q |  |
+| 18 | `listPromptHistory` | preload/bridge.ts:257 | `settings.promptHistory.list` | Q |  |
+| 19 | `addPromptHistory` | preload/bridge.ts:261 | `settings.promptHistory.add` | M |  |
+| 20 | `listStoredKeyProviders` | preload/bridge.ts:267 | `settings.keys.listProviders` | Q | invalidated by settings.events credentials-changed |
+| 21 | `saveApiKey` | preload/bridge.ts:271 | `settings.keys.save` | M |  |
+| 22 | `setDefaultModel` | preload/bridge.ts:277 | `settings.setDefaultModel` | M |  |
+| 23 | `addWorkspace` | preload/bridge.ts:282 | `workspaces.add` | M | echoes workspaces insert |
+| 24 | `ensureSessionHomeWorkspace` | preload/bridge.ts:288 | `workspaces.ensureSessionHome` | M |  |
+| 25 | `getSessionHomeWorkspacePath` | preload/bridge.ts:292 | `workspaces.sessionHomePath` | Q |  |
+| 26 | `switchWorkspace` | preload/bridge.ts:296 | `workspaces.switch` | M | legacy main-side active workspace; new routes carry workspaceId |
+| 27 | `initGit` | preload/bridge.ts:301 | — | R | no renderer caller |
+| 28 | `getFileTreeChildren` | preload/bridge.ts:303 | `files.treeChildren` | Q |  |
+| 29 | `searchFiles` | preload/bridge.ts:308 | `files.search` | Q |  |
+| 30 | `getGitDiffForPath` | preload/bridge.ts:316 | — | R | no renderer caller; git.diff covers it |
+| 31 | `getGitChangeStatsForPath` | preload/bridge.ts:322 | — | R | no renderer caller |
+| 32 | `startTerminalSession` | preload/bridge.ts:328 | `terminal.start` | M |  |
+| 33 | `writeTerminalInput` | preload/bridge.ts:333 | `terminal.write` | M | fire-and-forget |
+| 34 | `resizeTerminalSession` | preload/bridge.ts:338 | `terminal.resize` | M |  |
+| 35 | `hideTerminalSession` | preload/bridge.ts:343 | `terminal.hide` | M |  |
+| 36 | `promoteTerminalSessionScope` | preload/bridge.ts:348 | `terminal.promoteScope` | M |  |
+| 37 | `getGitBranches` | preload/bridge.ts:355 | `git.branches` | Q |  |
+| 38 | `getGitCurrentBranch` | preload/bridge.ts:360 | `git.currentBranch` | Q |  |
+| 39 | `getPrInfo` | preload/bridge.ts:365 | `git.prInfo` | Q |  |
+| 40 | `getSessionTurnState` | preload/bridge.ts:370 | `sessions.turnState` | Q | live phase also derivable from ai.subscribe; kept for rows not open |
+| 41 | `switchGitBranch` | preload/bridge.ts:376 | `git.switchBranch` | M | echoes gitState |
+| 42 | `createGitBranch` | preload/bridge.ts:382 | `git.createBranch` | M |  |
+| 43 | `createAgentSession` | preload/bridge.ts:388 | `db.sessions.insert` | T |  |
+| 44 | `listAgentSessions` | preload/bridge.ts:393 | `db.sessions.snapshot` | T | per-workspace list becomes a live query where workspaceId |
+| 45 | `listAllAgentSessions` | preload/bridge.ts:397 | `db.sessions.snapshot` | T |  |
+| 46 | `listBots` | preload/bridge.ts:401 | `db.bots.snapshot` | T |  |
+| 47 | `listBotChatPreviews` | preload/bridge.ts:402 | `bots.chatPreviews` | Q | invalidated by bots.events previews-changed |
+| 48 | `listBotSenderChats` | preload/bridge.ts:406 | `bots.senderChats` | Q |  |
+| 49 | `createBot` | preload/bridge.ts:410 | `db.bots.insert` | T |  |
+| 50 | `updateBot` | preload/bridge.ts:412 | `db.bots.update` | T |  |
+| 51 | `deleteBot` | preload/bridge.ts:414 | `db.bots.delete` | T |  |
+| 52 | `announceBotChange` | preload/bridge.ts:416 | `bots.announceChange` | M |  |
+| 53 | `openBotChat` | preload/bridge.ts:422 | `bots.openChat` | M | echoes bots update (sessionId) and sessions insert |
+| 54 | `listRoutines` | preload/bridge.ts:427 | `db.routines.snapshot` | T |  |
+| 55 | `listRoutineRuns` | preload/bridge.ts:431 | `db.routineRuns.snapshot` | T | live query where routineId |
+| 56 | `editRoutineByChat` | preload/bridge.ts:435 | `routines.editByChat` | M | long-running; resolves to the reply text |
+| 57 | `createRoutine` | preload/bridge.ts:441 | `db.routines.insert` | T |  |
+| 58 | `updateRoutine` | preload/bridge.ts:443 | `db.routines.update` | T |  |
+| 59 | `removeRoutine` | preload/bridge.ts:449 | `db.routines.delete` | T |  |
+| 60 | `runRoutine` | preload/bridge.ts:451 | `routines.run` | M | echoes routineRuns insert |
+| 61 | `getLocalModelState` | preload/bridge.ts:453 | `localModels.state` | Q |  |
+| 62 | `installLocalModel` | preload/bridge.ts:457 | `localModels.install` | M |  |
+| 63 | `cancelLocalModelInstall` | preload/bridge.ts:462 | `localModels.cancelInstall` | M |  |
+| 64 | `removeLocalModel` | preload/bridge.ts:464 | `localModels.remove` | M |  |
+| 65 | `startOpenRouterAuth` | preload/bridge.ts:469 | `auth.openRouter.start` | M | long-running; resolves to the outcome union |
+| 66 | `startAbacusAuth` | preload/bridge.ts:473 | `auth.abacus.start` | M | long-running; outcome union kept (cancelled) |
+| 67 | `listBrowserSignInProfiles` | preload/bridge.ts:479 | `auth.abacus.browserProfiles` | Q |  |
+| 68 | `shouldAutoSignIn` | preload/bridge.ts:483 | `auth.abacus.shouldAutoSignIn` | Q |  |
+| 69 | `cancelAbacusAuth` | preload/bridge.ts:485 | `auth.abacus.cancel` | M |  |
+| 70 | `openAbacusAuthInBrowser` | preload/bridge.ts:487 | `auth.abacus.openInBrowser` | M |  |
+| 71 | `cancelOpenRouterAuth` | preload/bridge.ts:489 | `auth.openRouter.cancel` | M |  |
+| 72 | `signOutAbacus` | preload/bridge.ts:491 | `auth.abacus.signOut` | M | echoes sessions reset (stash) |
+| 73 | `listConnectorStatuses` | preload/bridge.ts:496 | `connectors.statuses` | Q | invalidated by connectors.events status-changed |
+| 74 | `connectConnector` | preload/bridge.ts:500 | `connectors.connect` | M |  |
+| 75 | `submitConnectorFields` | preload/bridge.ts:509 | `connectors.submitFields` | M |  |
+| 76 | `cancelConnectorConnect` | preload/bridge.ts:518 | `connectors.cancelConnect` | M |  |
+| 77 | `disconnectConnector` | preload/bridge.ts:520 | `connectors.disconnect` | M |  |
+| 78 | `listSessionArtifacts` | preload/bridge.ts:525 | `db.artifacts.snapshot` | T |  |
+| 79 | `removeAgentSession` | preload/bridge.ts:529 | `db.sessions.delete` | T |  |
+| 80 | `startAgentSession` | preload/bridge.ts:535 | `agent.start` | M | spawns the child; the AG-UI stream arrives on ai.subscribe |
+| 81 | `stopAgentSession` | preload/bridge.ts:540 | `agent.stop` | M |  |
+| 82 | `getAgentSessionState` | preload/bridge.ts:545 | `agent.state` | Q | live updates via ai.subscribe STATE_* / CUSTOM session.state |
+| 83 | `sendAgentMessage` | preload/bridge.ts:550 | `ai.send` | M | AG-UI RunAgentInput (threadId/runId/parentRunId/resume/forwardedProps) |
+| 84 | `setAgentMode` | preload/bridge.ts:555 | `agent.setMode` | M | also forwardedProps.mode on ai.send |
+| 85 | `setAgentModel` | preload/bridge.ts:557 | `agent.setModel` | M |  |
+| 86 | `stopAgentTurn` | preload/bridge.ts:559 | `ai.cancel` | M | ends the run with RUN_FINISHED{outcome:cancelled} |
+| 87 | `resetAgentConversation` | preload/bridge.ts:561 | `agent.reset` | M |  |
+| 88 | `switchAgentConversation` | preload/bridge.ts:566 | `agent.switchConversation` | M |  |
+| 89 | `respondAgentPermission` | preload/bridge.ts:571 | `agent.respondPermission` | M | old renderer only (no lineage); the new renderer answers with ai.respondPermission |
+| 90 | `listAgentSkills` | preload/bridge.ts:576 | `agent.skills` | Q | skills-loaded arrives as CUSTOM skills.loaded |
+| 91 | `enqueueAgentMessage` | preload/bridge.ts:578 | `agent.queue.enqueue` | M | old renderer; the new renderer uses ai.queue.enqueue, state via CUSTOM queue.updated |
+| 92 | `dequeueAgentMessage` | preload/bridge.ts:583 | `agent.queue.dequeue` | M |  |
+| 93 | `getAgentQueue` | preload/bridge.ts:588 | `agent.queue.get` | Q |  |
+| 94 | `clearAgentQueue` | preload/bridge.ts:590 | `agent.queue.clear` | M |  |
+| 95 | `removeAgentQueueMessage` | preload/bridge.ts:592 | `agent.queue.remove` | M | by index, old renderer; ai.queue.remove takes incarnation + entry id |
+| 96 | `updateAgentQueueMessage` | preload/bridge.ts:597 | `agent.queue.update` | M | by index, old renderer; ai.queue.update takes incarnation + entry id |
+| 97 | `renameLocalFile` | preload/bridge.ts:602 | `files.rename` | M |  |
+| 98 | `trashLocalFile` | preload/bridge.ts:608 | `files.trash` | M |  |
+| 99 | `saveResolvedConflict` | preload/bridge.ts:613 | — | R | no renderer caller |
+| 100 | `writeFile` | preload/bridge.ts:619 | — | R | no renderer caller ("Open in editor" only) |
+| 101 | `stageFile` | preload/bridge.ts:625 | — | R | no renderer caller |
+| 102 | `unstageFile` | preload/bridge.ts:630 | — | R | no renderer caller |
+| 103 | `removeWorkspace` | preload/bridge.ts:635 | `db.workspaces.delete` | T |  |
+| 104 | `updateWorkspaceLabel` | preload/bridge.ts:640 | `db.workspaces.update` | T |  |
+| 105 | `checkWorkspacePath` | preload/bridge.ts:649 | `workspaces.checkPath` | Q |  |
+| 106 | `relocateWorkspace` | preload/bridge.ts:654 | `workspaces.relocate` | M | echoes workspaces update |
+| 107 | `updateAgentSessionLabel` | preload/bridge.ts:660 | `db.sessions.update` | T |  |
+| 108 | `listBrowserProfiles` | preload/bridge.ts:667 | `browser.profiles.list` | Q |  |
+| 109 | `refreshBrowserProfiles` | preload/bridge.ts:671 | — | R | no renderer caller |
+| 110 | `importBrowserProfile` | preload/bridge.ts:675 | `browser.profiles.import` | M |  |
+| 111 | `clearImportedBrowserProfile` | preload/bridge.ts:680 | — | R | no renderer caller |
+| 112 | `materializeBrowserRuntime` | preload/bridge.ts:688 | `browser.runtime.materialize` | M |  |
+| 113 | `presentBrowserRuntime` | preload/bridge.ts:693 | `browser.runtime.present` | M |  |
+| 114 | `navigateBrowserRuntime` | preload/bridge.ts:698 | `browser.runtime.navigate` | M |  |
+| 115 | `captureBrowserRuntime` | preload/bridge.ts:703 | `browser.runtime.capture` | M |  |
+| 116 | `hideBrowserRuntime` | preload/bridge.ts:708 | `browser.runtime.hide` | M |  |
+| 117 | `closeBrowserRuntime` | preload/bridge.ts:713 | `browser.runtime.close` | M |  |
+| 118 | `promoteBrowserRuntimeScope` | preload/bridge.ts:718 | `browser.runtime.promoteScope` | M |  |
+| 119 | `disposeBrowserRuntimeScope` | preload/bridge.ts:723 | — | R | no renderer caller (main disposes on navigation) |
+| 120 | `disposeBrowserRuntimeWorkspace` | preload/bridge.ts:728 | — | R | no renderer caller |
+| 121 | `listMcpServers` | preload/bridge.ts:733 | `mcp.list` | Q |  |
+| 122 | `addMcpServer` | preload/bridge.ts:737 | `mcp.add` | M |  |
+| 123 | `updateMcpServer` | preload/bridge.ts:742 | `mcp.update` | M |  |
+| 124 | `removeMcpServer` | preload/bridge.ts:747 | `mcp.remove` | M |  |
+| 125 | `setMcpServerDisabled` | preload/bridge.ts:752 | `mcp.setDisabled` | M |  |
+| 126 | `importMcpServers` | preload/bridge.ts:757 | `mcp.import` | M |  |
+| 127 | `refreshMcpServers` | preload/bridge.ts:762 | `mcp.refresh` | M |  |
+| 128 | `restartMcpServer` | preload/bridge.ts:767 | `mcp.restart` | M |  |
+| 129 | `mcpOAuthSignIn` | preload/bridge.ts:772 | `mcp.oauthSignIn` | M |  |
+| 130 | `getMcpRuntimeServers` | preload/bridge.ts:777 | `mcp.runtime.servers` | Q | live via mcp.runtime.events |
+| 131 | `getMcpServerLogs` | preload/bridge.ts:781 | `mcp.runtime.logs` | Q |  |
+| 132 | `setBrowserEngine` | preload/bridge.ts:785 | `browser.setEngine` | M |  |
+| 133 | `connectChromeBrowser` | preload/bridge.ts:790 | `browser.chrome.connect` | M |  |
+| 134 | `disconnectChromeBrowser` | preload/bridge.ts:794 | `browser.chrome.disconnect` | M |  |
+| 135 | `setChromeExtensionToken` | preload/bridge.ts:798 | `browser.chrome.setExtensionToken` | M |  |
+| 136 | `getMcpBrowserStatus` | preload/bridge.ts:803 | `browser.status` | Q | live via browser.events status |
+| 137 | `setMcpBrowserEnabled` | preload/bridge.ts:807 | `browser.setEnabled` | M |  |
+| 138 | `getToolsetStates` | preload/bridge.ts:812 | `settings.toolsets.get` | Q |  |
+| 139 | `getDefaultAgentMode` | preload/bridge.ts:816 | `settings.defaultMode.get` | Q |  |
+| 140 | `getSandboxSupport` | preload/bridge.ts:820 | `settings.sandboxSupport` | Q |  |
+| 141 | `setDefaultAgentMode` | preload/bridge.ts:824 | `settings.defaultMode.set` | M |  |
+| 142 | `getNotificationSettings` | preload/bridge.ts:829 | `settings.notifications.get` | Q |  |
+| 143 | `setNotificationSettings` | preload/bridge.ts:833 | `settings.notifications.set` | M |  |
+| 144 | `setToolsetEnabled` | preload/bridge.ts:838 | `settings.toolsets.setEnabled` | M |  |
+| 145 | `getExecBackendState` | preload/bridge.ts:844 | `settings.execBackend.get` | Q |  |
+| 146 | `setExecBackend` | preload/bridge.ts:848 | `settings.execBackend.set` | M |  |
+| 147 | `getTerminalShellState` | preload/bridge.ts:853 | `terminal.shell.get` | Q |  |
+| 148 | `setTerminalShell` | preload/bridge.ts:857 | `terminal.shell.set` | M |  |
+| 149 | `respondConnector` | preload/bridge.ts:862 | `connectors.respond` | M |  |
+| 150 | `listConnectorRequests` | preload/bridge.ts:867 | `connectors.requests` | Q | live via connectors.events |
+| 151 | `listBrowserPermissionRequests` | preload/bridge.ts:872 | `browser.permissions.list` | Q | live via browser.events |
+| 152 | `setBrowserApproval` | preload/bridge.ts:877 | `browser.permissions.setApproval` | M |  |
+| 153 | `clearBrowserData` | preload/bridge.ts:882 | `browser.clearData` | M |  |
+| 154 | `respondBrowserPermission` | preload/bridge.ts:887 | `browser.permissions.respond` | M |  |
+| 155 | `setAgentSessionModel` | preload/bridge.ts:892 | `db.sessions.update` | T |  |
+| 156 | `listMemories` | preload/bridge.ts:903 | `db.memories.snapshot` | T | scope global |
+| 157 | `getCustomInstructions` | preload/bridge.ts:905 | `memory.customInstructions.get` | Q |  |
+| 158 | `setCustomInstructions` | preload/bridge.ts:907 | `memory.customInstructions.set` | M |  |
+| 159 | `forgetMemory` | preload/bridge.ts:912 | `db.memories.delete` | T |  |
+| 160 | `forgetAllMemories` | preload/bridge.ts:917 | `memory.forgetAll` | M | echoes memories deletes |
+| 161 | `listBotMemories` | preload/bridge.ts:922 | `db.memories.snapshot` | T | scope bot; memory.bots keeps BotMemoryView (noteDays, empty bots) |
+| 162 | `forgetBotMemory` | preload/bridge.ts:926 | `db.memories.delete` | T |  |
+| 163 | `clearBotMemory` | preload/bridge.ts:930 | `memory.clearBot` | M | echoes memories deletes |
+| 164 | `readTranscript` | preload/bridge.ts:934 | `ai.hydrate` | Q | ChatHydrationResult + abacus snapshot, from the relay over the v2 thread files |
+| 165 | `writeTranscript` | preload/bridge.ts:938 | — | R | main persists agui thread files from the AG-UI stream at each terminal; the legacy path dual-writes v2 until cut-over |
+| 166 | `getDeviceStatus` | preload/bridge.ts:944 | `devices.status` | Q | live via devices.events |
+| 167 | `listLocalDevices` | preload/bridge.ts:946 | `devices.list` | Q |  |
+| 168 | `captureDeviceScreenshot` | preload/bridge.ts:950 | `devices.screenshot` | M |  |
+| 169 | `bootLocalDevice` | preload/bridge.ts:955 | `devices.boot` | M |  |
+| 170 | `createLocalDevice` | preload/bridge.ts:960 | `devices.create` | M |  |
+| 171 | `refreshDeviceStatus` | preload/bridge.ts:965 | `devices.refresh` | M |  |
+| 172 | `setDevicesEnabled` | preload/bridge.ts:969 | `devices.setEnabled` | M |  |
+| 173 | `setDevicesApproval` | preload/bridge.ts:974 | `devices.setApproval` | M |  |
+| 174 | `getDeviceProjectInfo` | preload/bridge.ts:979 | `devices.projectInfo` | Q |  |
+| 175 | `interactLocalDevice` | preload/bridge.ts:983 | `devices.interact` | M |  |
+| 176 | `buildAndRunLocalDevice` | preload/bridge.ts:988 | `devices.buildAndRun` | M | progress via devices.events build-state |
+| 177 | `startDeviceStream` | preload/bridge.ts:993 | `devices.stream.start` | M |  |
+| 178 | `stopDeviceStream` | preload/bridge.ts:998 | `devices.stream.stop` | M |  |
+| 179 | `getSimulatorWindowSource` | preload/bridge.ts:1003 | `devices.simulatorWindowSource` | Q |  |
+| 180 | `installMaestro` | preload/bridge.ts:1008 | `devices.installMaestro` | M |  |
+| 181 | `fetchWhisperFile` | preload/bridge.ts:1012 | `voice.whisper.fetch` | M | progress via the voice.whisper.progress iterator |
+| 182 | `isWhisperCached` | preload/bridge.ts:1017 | — | R | no renderer caller |
+| 183 | `requestMicrophoneAccess` | preload/bridge.ts:1019 | `voice.requestMicrophone` | M |  |
+| 184 | `streamDeviceTouch` | preload/bridge.ts:1023 | `devices.stream.touch` | M | was ipcRenderer.send; call without await |
+| 185 | `streamDeviceKey` | preload/bridge.ts:1025 | `devices.stream.key` | M | was ipcRenderer.send; call without await |
+| 186 | `openScreenRecordingSettings` | preload/bridge.ts:1027 | `system.openPrivacyPane` | M | input { pane: "screen-recording" } |
+| 187 | `openAccessibilitySettings` | preload/bridge.ts:1031 | `system.openPrivacyPane` | M | input { pane: "accessibility" } |
+| 188 | `getMessagingSnapshot` | preload/bridge.ts:1035 | `messaging.snapshot` | Q | invalidated by messaging.events updated |
+| 189 | `updateMessagingPlatform` | preload/bridge.ts:1039 | `messaging.updatePlatform` | M |  |
+| 190 | `decideMessagingPairing` | preload/bridge.ts:1044 | `messaging.decidePairing` | M |  |
+| 191 | `updateMessagingSettings` | preload/bridge.ts:1049 | `messaging.updateSettings` | M |  |
+| 192 | `showMessagingLogin` | preload/bridge.ts:1054 | `messaging.showLogin` | M |  |
+| 193 | `pairSharedChannel` | preload/bridge.ts:1059 | `messaging.pairShared` | M |  |
+| 194 | `unlinkSharedChannel` | preload/bridge.ts:1064 | `messaging.unlinkShared` | M |  |
+| 195 | `openSharedChannelLink` | preload/bridge.ts:1069 | `messaging.openSharedLink` | M |  |
+| 196 | `onDeviceStreamChunk` | preload/bridge.ts:1078 | `devices.stream.chunks` | S | event iterator of DeviceStreamChunk (input { streamId }) |
+| 197 | `onEvent` | preload/bridge.ts:1085 | `(split)` | S | the catch-all channel is replaced by typed iterators: see the IpcEvent table |
 
 ## Top-level `window.api.*` (53: 15 Q, 27 M, 4 S, 1 T, 6 R)
 
@@ -328,7 +329,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (251)
+## Contract procedures (264)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -356,6 +357,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `agent.state` | query | `agent.getAgentSessionState` |
 | `agent.stop` | mutation | `agent.stopAgentSession` |
 | `agent.switchConversation` | mutation | `agent.switchAgentConversation` |
+| `ai.attention` | subscription |  |
 | `ai.cancel` | mutation | `agent.stopAgentTurn` |
 | `ai.hydrate` | query | `agent.readTranscript` |
 | `ai.joinRun` | subscription |  |
@@ -365,11 +367,13 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `ai.queue.remove` | mutation |  |
 | `ai.queue.update` | mutation |  |
 | `ai.respondPermission` | mutation |  |
+| `ai.runFinished` | subscription |  |
 | `ai.send` | mutation | `agent.sendAgentMessage` |
 | `ai.subscribe` | subscription |  |
 | `auth.abacus.browserProfiles` | query | `agent.listBrowserSignInProfiles` |
 | `auth.abacus.cancel` | mutation | `agent.cancelAbacusAuth` |
 | `auth.abacus.openInBrowser` | mutation | `agent.openAbacusAuthInBrowser` |
+| `auth.abacus.shouldAutoSignIn` | query | `agent.shouldAutoSignIn` |
 | `auth.abacus.signOut` | mutation | `agent.signOutAbacus` |
 | `auth.abacus.start` | mutation | `agent.startAbacusAuth` |
 | `auth.openRouter.cancel` | mutation | `agent.cancelOpenRouterAuth` |
@@ -394,6 +398,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `browser.runtime.close` | mutation | `agent.closeBrowserRuntime` |
 | `browser.runtime.hide` | mutation | `agent.hideBrowserRuntime` |
 | `browser.runtime.materialize` | mutation | `agent.materializeBrowserRuntime` |
+| `browser.runtime.materializeFile` | mutation |  |
 | `browser.runtime.navigate` | mutation | `agent.navigateBrowserRuntime` |
 | `browser.runtime.present` | mutation | `agent.presentBrowserRuntime` |
 | `browser.runtime.promoteScope` | mutation | `agent.promoteBrowserRuntimeScope` |
@@ -472,11 +477,14 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `files.treeChildren` | query | `agent.getFileTreeChildren` |
 | `files.treeRoot` | query | `agent.getFileTreeRoot` |
 | `git.branches` | query | `agent.getGitBranches` |
+| `git.checkoutStatus` | query |  |
 | `git.createBranch` | mutation | `agent.createGitBranch` |
 | `git.currentBranch` | query | `agent.getGitCurrentBranch` |
 | `git.diff` | query |  |
+| `git.discard` | mutation |  |
 | `git.prInfo` | query | `agent.getPrInfo` |
 | `git.switchBranch` | mutation | `agent.switchGitBranch` |
+| `git.watch` | subscription |  |
 | `git.worktrees.create` | mutation | `agent.createWorktree` |
 | `git.worktrees.list` | query | `agent.listWorktrees` |
 | `git.worktrees.materialize` | mutation | `agent.materializeSessionWorktree` |
@@ -520,6 +528,7 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `referrals.summary` | query | `agent.getReferralSummary` |
 | `referrals.whatsappContacts` | query | `agent.listReferralWhatsappContacts` |
 | `routines.editByChat` | mutation | `agent.editRoutineByChat` |
+| `routines.events` | subscription |  |
 | `routines.run` | mutation | `agent.runRoutine` |
 | `sessions.turnState` | query | `agent.getSessionTurnState` |
 | `settings.defaultMode.get` | query | `agent.getDefaultAgentMode` |
@@ -549,6 +558,8 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `system.events` | subscription | `onNotificationClicked` |
 | `system.funnelStep` | mutation | `reportFunnelStep` |
 | `system.info` | query | `getAppVersion`, `getHomeDir`, `platform`, `versions` |
+| `system.loginItem.get` | query |  |
+| `system.loginItem.set` | mutation |  |
 | `system.logs.append` | mutation | `appendLogs` |
 | `system.logs.save` | mutation | `saveLogs` |
 | `system.notify` | mutation | `showNotification` |
@@ -575,10 +586,13 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `voice.whisper.progress` | subscription |  |
 | `window.activity` | mutation | `reportUiActivity` |
 | `window.chrome` | query | `getWindowChrome` |
+| `window.claimCue` | mutation |  |
 | `window.events` | subscription | `onFullScreenChange`, `onWindowChromeChange` |
 | `window.ready` | mutation | `signalRendererReady` |
+| `window.setDensity` | mutation |  |
 | `window.showAbout` | mutation | `showAboutPanel` |
 | `window.state` | query | `isFullScreen` |
+| `window.visibleThread` | mutation |  |
 | `workspaces.add` | mutation | `agent.addWorkspace` |
 | `workspaces.checkPath` | query | `agent.checkWorkspacePath` |
 | `workspaces.ensureSessionHome` | mutation | `agent.ensureSessionHomeWorkspace` |

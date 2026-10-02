@@ -34,6 +34,10 @@
       "id": "s-bash",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "segments": [
             {
               "at": 1788256801000,
@@ -80,7 +84,7 @@
             {
               "at": 1788256808000,
               "id": "b1",
-              "partIndex": 13,
+              "partIndex": 14,
               "type": "text"
             }
           ]
@@ -93,10 +97,6 @@
         {
           "arguments": "{\"command\":\"npm test\",\"timeout\":60000}",
           "id": "call_bash",
-          "input": {
-            "command": "npm test",
-            "timeout": 60000
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-bash",
@@ -104,20 +104,19 @@
             }
           },
           "name": "bash",
-          "output": "1 failing",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "1 failing",
-          "id": "s-bash:result",
+          "id": "s-bash#result",
           "metadata": {
             "abacus": {
               "data": {
                 "command": "npm test",
                 "duration": 2300,
                 "exitCode": 1,
-                "output": "1 failing",
+                "fromContent": ["output"],
                 "type": "bash"
               }
             }
@@ -129,10 +128,6 @@
         {
           "arguments": "{\"file_path\":\"src/sum.ts\",\"limit\":40}",
           "id": "call_read",
-          "input": {
-            "file_path": "src/sum.ts",
-            "limit": 40
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-read",
@@ -140,18 +135,17 @@
             }
           },
           "name": "read",
-          "output": "export const sum = (a, b) => a - b;",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "export const sum = (a, b) => a - b;",
-          "id": "s-read:result",
+          "id": "s-read#result",
           "metadata": {
             "abacus": {
               "data": {
-                "content": "export const sum = (a, b) => a - b;",
                 "filePath": "src/sum.ts",
+                "fromContent": ["content"],
                 "lineCount": 1,
                 "startLine": 1,
                 "type": "read"
@@ -165,11 +159,6 @@
         {
           "arguments": "{\"file_path\":\"src/sum.ts\",\"old_str\":\"a - b\",\"new_str\":\"a + b\"}",
           "id": "call_edit",
-          "input": {
-            "file_path": "src/sum.ts",
-            "new_str": "a + b",
-            "old_str": "a - b"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-edit",
@@ -177,13 +166,12 @@
             }
           },
           "name": "edit",
-          "output": "Edited src/sum.ts",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "Edited src/sum.ts",
-          "id": "s-edit:result",
+          "id": "s-edit#result",
           "metadata": {
             "abacus": {
               "data": {
@@ -203,10 +191,6 @@
         {
           "arguments": "{\"file_path\":\"src/sum.test.ts\",\"content\":\"test('sum', () => {});\\n\"}",
           "id": "call_write",
-          "input": {
-            "content": "test('sum', () => {});\n",
-            "file_path": "src/sum.test.ts"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-write",
@@ -214,13 +198,12 @@
             }
           },
           "name": "write",
-          "output": "Created src/sum.test.ts",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "Created src/sum.test.ts",
-          "id": "s-write:result",
+          "id": "s-write#result",
           "metadata": {
             "abacus": {
               "data": {
@@ -239,13 +222,6 @@
         {
           "arguments": "{\"server_id\":\"linear\",\"tool_name\":\"create_issue\",\"arguments\":{\"title\":\"Sum is wrong\"}}",
           "id": "call_mcp",
-          "input": {
-            "arguments": {
-              "title": "Sum is wrong"
-            },
-            "server_id": "linear",
-            "tool_name": "create_issue"
-          },
           "metadata": {
             "abacus": {
               "endpoint": "mcp_call",
@@ -254,17 +230,16 @@
             }
           },
           "name": "mcp__linear__create_issue",
-          "output": "Created ISSUE-1",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "Created ISSUE-1",
-          "id": "s-mcp:result",
+          "id": "s-mcp#result",
           "metadata": {
             "abacus": {
               "data": {
-                "content": "Created ISSUE-1",
+                "fromContent": ["content"],
                 "isError": false,
                 "type": "mcp"
               }
@@ -277,9 +252,6 @@
         {
           "arguments": "{\"anything\":[1,2,3]}",
           "id": "call_unknown",
-          "input": {
-            "anything": [1, 2, 3]
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-unknown",
@@ -287,17 +259,16 @@
             }
           },
           "name": "some_future_tool",
-          "output": "ok",
           "state": "complete",
           "type": "tool-call"
         },
         {
           "content": "ok",
-          "id": "s-unknown:result",
+          "id": "s-unknown#result",
           "metadata": {
             "abacus": {
               "data": {
-                "output": "ok",
+                "fromContent": ["output"],
                 "type": "generic"
               }
             }
@@ -309,9 +280,6 @@
         {
           "arguments": "{\"pattern\":\"sum\"}",
           "id": "call_grep",
-          "input": {
-            "pattern": "sum"
-          },
           "metadata": {
             "abacus": {
               "segmentId": "s-noresult",
@@ -321,6 +289,18 @@
           "name": "grep",
           "state": "complete",
           "type": "tool-call"
+        },
+        {
+          "content": "",
+          "id": "s-noresult#result",
+          "metadata": {
+            "abacus": {
+              "synthesised": true
+            }
+          },
+          "state": "complete",
+          "toolCallId": "call_grep",
+          "type": "tool-result"
         },
         {
           "content": "Fixed: `sum` now adds.",

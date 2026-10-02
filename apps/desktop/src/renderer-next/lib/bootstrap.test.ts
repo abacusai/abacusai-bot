@@ -7,8 +7,8 @@
 import { implement, type Router } from "@orpc/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createCollections } from "#next/data/collections";
-import { FixtureDb, directDbSource } from "#next/data/fixture-db/fixture-db";
+import { createDb } from "#next/data/db";
+import { FixtureDb, fixtureTransport } from "#next/data/fixture-db/fixture-db";
 import { createQueryClient } from "#next/data/query-client";
 import {
   createMemoryTransport,
@@ -21,7 +21,9 @@ import {
   bootstrap,
   createTransportLostHandler,
   LOOP_WINDOW_MS,
+  mountWhenOpen,
   RELOAD_DELAY_MS,
+  reportFailedBoot,
 } from "./bootstrap";
 
 const os = implement(contract).$context<{ ready: unknown[] }>();
@@ -47,7 +49,8 @@ const setup = (
 ) => {
   const ready: unknown[] = [];
   const transport = createMemoryTransport(routerWith(info), { ready });
-  const collections = createCollections(directDbSource(db), { backoffMs: [5] });
+  const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+  const { collections } = appDb;
   open.push(
     () => transport.close(),
     async () => {
@@ -55,7 +58,7 @@ const setup = (
         await collection.cleanup().catch(() => undefined);
     }
   );
-  return { transport, collections, db, ready, lost: vi.fn() };
+  return { transport, appDb, collections, db, ready, lost: vi.fn() };
 };
 
 const run = (
@@ -66,7 +69,7 @@ const run = (
   bootstrap({
     getTransport,
     queryClient: createQueryClient(),
-    getCollections: () => s.collections,
+    getDb: () => s.appDb,
     onTransportLost: s.lost,
     timeouts,
   });
@@ -97,7 +100,94 @@ describe("bootstrap", () => {
     const result = await run(s);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.step).toBe("system");
-    expect(s.ready).toEqual([expect.objectContaining({ barrier: "failed" })]);
+    await vi.waitFor(() =>
+      expect(s.ready).toEqual([expect.objectContaining({ barrier: "failed" })])
+    );
+  });
+
+  it("returns the failure at once when main stops answering the readiness call (Codex impl r1 #1)", async () => {
+    const ready: unknown[] = [];
+    const stalled = createMemoryTransport(
+      {
+        system: {
+          info: os.system.info.handler(() => {
+            throw new Error("boom");
+          }),
+        },
+        window: {
+          // Takes the call, never answers: the port stays open.
+          ready: os.window.ready.handler(({ input }) => {
+            ready.push(input);
+            return new Promise<void>(() => undefined);
+          }),
+        },
+      } as unknown as Router<any, { ready: unknown[] }>,
+      { ready }
+    );
+    open.push(() => stalled.close());
+    const s = setup();
+    const started = Date.now();
+    const result = await bootstrap({
+      getTransport: async () => stalled,
+      queryClient: createQueryClient(),
+      getDb: () => s.appDb,
+      onTransportLost: s.lost,
+      timeouts: { transport: 300, system: 300, prefs: 300 },
+      readyTimeoutMs: 50,
+    });
+    expect(result.ok).toBe(false);
+    expect(Date.now() - started).toBeLessThan(1_000);
+    await vi.waitFor(() => expect(ready).toHaveLength(1));
+    // And the report itself is bounded: it settles although main never answers.
+    const reported = reportFailedBoot(stalled, "again", 20);
+    await expect(reported).resolves.toBeUndefined();
+  });
+
+  it("creates the collections only once the transport and system facts are in, over that transport", async () => {
+    const s = setup();
+    const order: string[] = [];
+    const result = await bootstrap({
+      getTransport: async () => {
+        order.push("transport");
+        return s.transport;
+      },
+      queryClient: createQueryClient(),
+      getDb: (transport) => {
+        order.push("db");
+        expect(transport).toBe(s.transport);
+        return s.appDb;
+      },
+      onTransportLost: s.lost,
+    });
+    expect(result.ok).toBe(true);
+    expect(order).toEqual(["transport", "db"]);
+  });
+
+  it("a getDb() that throws fails boot and reports failed readiness through the open transport (Codex impl r2 #1)", async () => {
+    const s = setup();
+    const result = await bootstrap({
+      getTransport: async () => s.transport,
+      queryClient: createQueryClient(),
+      getDb: () => {
+        throw new Error("collections failed");
+      },
+      onTransportLost: s.lost,
+      readyTimeoutMs: 200,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.step).toBe("prefs");
+      expect(result.error.message).toContain("collections failed");
+      expect(result.transport).toBe(s.transport);
+    }
+    await vi.waitFor(() =>
+      expect(s.ready).toEqual([
+        expect.objectContaining({
+          barrier: "failed",
+          reason: expect.stringContaining("collections failed"),
+        }),
+      ])
+    );
   });
 
   it("fails when the prefs snapshot rejects", async () => {
@@ -186,9 +276,141 @@ describe("createTransportLostHandler", () => {
     expect(second.scheduled).toHaveLength(0);
   });
 
+  it("stopping the syncs is final: no reopen, no snapshot, no restart on a new subscriber (Claude impl r1 #7)", async () => {
+    const db = new FixtureDb();
+    const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+    open.push(async () => {
+      for (const collection of Object.values(appDb.collections))
+        await collection.cleanup().catch(() => undefined);
+    });
+    await appDb.collections.prefs.preload();
+    await vi.waitFor(() => expect(db.prefs.subscriberCount).toBe(1));
+    const snapshots = vi.spyOn(db.prefs, "snapshot");
+    const streams = vi.spyOn(db.prefs, "subscribe");
+
+    const onLost = createTransportLostHandler({
+      ...deps().deps,
+      stopSyncs: () => appDb.stop(),
+    });
+    onLost("port-closed");
+    await vi.waitFor(() => expect(db.prefs.subscriberCount).toBe(0));
+
+    // What a mounted live query, a loader or the readiness reporter does in
+    // the 1.5 s before the reload.
+    const sub = appDb.collections.prefs.subscribeChanges(() => undefined);
+    void appDb.collections.bots.preload();
+    appDb.collections.sessions.startSyncImmediate();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    sub.unsubscribe();
+    expect(snapshots).not.toHaveBeenCalled();
+    expect(streams).not.toHaveBeenCalled();
+    expect(db.bots.subscriberCount).toBe(0);
+    expect(appDb.stopped).toBe(true);
+  });
+
   it("ignores our own explicit close", () => {
     const { deps: d } = deps();
     createTransportLostHandler(d)("explicit");
     expect(d.stopSyncs).not.toHaveBeenCalled();
+  });
+});
+
+describe("mountWhenOpen (Codex impl r2 #2)", () => {
+  /** A held dev-hooks import: resolves only when released. */
+  const held = () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { prepare: () => gate, release };
+  };
+
+  const lostHandler = (storage: Map<string, string>, now: number) => {
+    const screens: string[] = [];
+    const onLost = createTransportLostHandler({
+      stopSyncs: vi.fn(),
+      // No Toaster before the mount: the connection-lost screen renders.
+      notify: () => screens.push("connection-lost"),
+      reload: vi.fn(),
+      showError: () => screens.push("error"),
+      now: () => now,
+      storage: {
+        getItem: (key) => storage.get(key) ?? null,
+        setItem: (key, value) => void storage.set(key, value),
+      },
+      schedule: () => undefined,
+    });
+    return { screens, onLost };
+  };
+
+  it("mounts when the transport stays open", async () => {
+    const s = setup();
+    const mount = vi.fn();
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    gate.release();
+    await expect(mounting).resolves.toBe(true);
+    expect(mount).toHaveBeenCalledOnce();
+  });
+
+  it("never mounts over the connection-lost screen when the port dies during the held import", async () => {
+    const s = setup();
+    const { screens, onLost } = lostHandler(new Map(), 200_000);
+    s.transport.onClose(onLost);
+    const mount = vi.fn(() => screens.push("app"));
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(screens).toEqual(["connection-lost"]));
+    gate.release();
+    await expect(mounting).resolves.toBe(false);
+    expect(mount).not.toHaveBeenCalled();
+    expect(screens).toEqual(["connection-lost"]);
+  });
+
+  it("never mounts over the error screen on a second loss within the window during the held import", async () => {
+    const storage = new Map<string, string>();
+    // The first document lost its port and reloaded.
+    lostHandler(storage, 300_000).onLost("port-closed");
+    const s = setup();
+    const { screens, onLost } = lostHandler(
+      storage,
+      300_000 + LOOP_WINDOW_MS - 1
+    );
+    s.transport.onClose(onLost);
+    const mount = vi.fn(() => screens.push("app"));
+    const gate = held();
+    const mounting = mountWhenOpen({
+      transport: s.transport,
+      prepare: gate.prepare,
+      mount,
+    });
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(screens).toEqual(["error"]));
+    gate.release();
+    await expect(mounting).resolves.toBe(false);
+    expect(mount).not.toHaveBeenCalled();
+    expect(screens).toEqual(["error"]);
+  });
+
+  it("does not start the import on an already closed transport", async () => {
+    const s = setup();
+    s.transport.serverPort.close();
+    await vi.waitFor(() => expect(s.transport.state).toBe("closed"));
+    const prepare = vi.fn(async () => undefined);
+    const mount = vi.fn();
+    await expect(
+      mountWhenOpen({ transport: s.transport, prepare, mount })
+    ).resolves.toBe(false);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(mount).not.toHaveBeenCalled();
   });
 });

@@ -73,7 +73,7 @@ const readJson = (file: string): unknown =>
 
 const storedPrefs = () =>
   readJson(prefs) as {
-    row: Record<string, unknown>;
+    row: Record<string, unknown> & { sounds: { enabled: boolean } };
     provenance: Record<string, string>;
   };
 
@@ -133,13 +133,16 @@ describe("C-T5 provenance", () => {
 
     await run();
 
+    // The legacy "welcome" is the new "connected" (spec 06 F10).
     expect(storedPrefs().row).toMatchObject({
       theme: "system",
-      onboardingStep: "welcome",
+      onboardingStep: "connected",
+      onboardingFlow: 2,
     });
     expect(storedPrefs().provenance).toMatchObject({
       theme: "user",
       onboardingStep: "legacy",
+      onboardingFlow: "legacy",
       language: "default",
     });
     const [backup] = fs.readdirSync(backupsRoot(home));
@@ -177,6 +180,43 @@ describe("C-T5 provenance", () => {
       theme: "legacy",
       defaultMode: "default",
     });
+  });
+
+  // R5-T28 (main): an old sound opt-out survives the change of mechanism.
+  it("imports config.json's sound opt-out as legacy, never over a user choice", async () => {
+    const config = path.join(home, "config.json");
+    fs.writeFileSync(
+      config,
+      JSON.stringify({ notificationSoundDisabled: true })
+    );
+    legacy({ theme: "dark" });
+    await run();
+    expect(storedPrefs().row.sounds).toMatchObject({ enabled: false });
+    expect(storedPrefs().provenance["sounds.enabled"]).toBe("legacy");
+    // Idempotent: a rerun writes nothing new.
+    const before = fs.readFileSync(prefs);
+    await run([2]);
+    expect(fs.readFileSync(prefs).equals(before)).toBe(true);
+
+    // The user turned sound on in the new UI: a later opt-out cannot move it.
+    const stored = storedPrefs();
+    stored.row.sounds.enabled = true;
+    stored.provenance["sounds.enabled"] = "user";
+    fs.writeFileSync(prefs, JSON.stringify(stored));
+    await run([2]);
+    expect(storedPrefs().row.sounds.enabled).toBe(true);
+    expect(storedPrefs().provenance["sounds.enabled"]).toBe("user");
+  });
+
+  it("leaves sounds at the default without an opt-out", async () => {
+    fs.writeFileSync(
+      path.join(home, "config.json"),
+      JSON.stringify({ notificationSoundDisabled: false })
+    );
+    legacy({ theme: "dark" });
+    await run();
+    expect(storedPrefs().row.sounds.enabled).toBe(true);
+    expect(storedPrefs().provenance["sounds.enabled"]).toBe("default");
   });
 
   it("writes nothing when the import changes nothing", async () => {

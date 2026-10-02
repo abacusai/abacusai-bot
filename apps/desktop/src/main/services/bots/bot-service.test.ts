@@ -45,7 +45,7 @@ const makeCallbacks = (
     sendMessage: vi.fn(),
     removeSession: vi.fn(),
     updateSessionModel: vi.fn(),
-    defaultModel: () => null,
+    effectiveModel: (requested) => requested,
     emitChanged: vi.fn(),
     ...overrides,
   };
@@ -313,7 +313,9 @@ describe("the bot's model", () => {
     // "Default" in the bot dialog has to mean the same model the session
     // pickers show. Left unpinned, the chat started on the CLI's own fallback
     // instead, so a bot quietly ran on a different model from everything else.
-    const callbacks = makeCallbacks({ defaultModel: () => "abacus/route-llm" });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested ?? "abacus/route-llm",
+    });
     const service = new BotService(callbacks);
     const bot = service.create({ name: "Scout", description: "Watch." });
 
@@ -327,7 +329,9 @@ describe("the bot's model", () => {
   });
 
   it("pins nothing when the app has no default stored yet", async () => {
-    const callbacks = makeCallbacks({ defaultModel: () => null });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested,
+    });
     const service = new BotService(callbacks);
     const bot = service.create({ name: "Scout", description: "Watch." });
 
@@ -337,7 +341,9 @@ describe("the bot's model", () => {
   });
 
   it("prefers the bot's own model over the app default", async () => {
-    const callbacks = makeCallbacks({ defaultModel: () => "abacus/route-llm" });
+    const callbacks = makeCallbacks({
+      effectiveModel: (requested) => requested ?? "abacus/route-llm",
+    });
     const service = new BotService(callbacks);
     const bot = service.create({
       name: "Scout",
@@ -361,6 +367,7 @@ describe("the bot's model", () => {
     await service.openChat(bot.id);
 
     service.update(bot.id, { model: "openllm/auto" });
+    await service.settled();
 
     expect(callbacks.updateSessionModel).toHaveBeenCalledWith(
       "ws-default",
@@ -505,5 +512,30 @@ describe("a sponsored first run", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("accessory persistence through the service", () => {
+  it("passes accessories to the store and keeps legacy edits working", () => {
+    const service = new BotService(makeCallbacks());
+    const old = service.create({ name: "Old", description: "Counts" });
+    expect(old.avatarAccessory).toBe("none");
+    expect(service.update(old.id, { title: "Counter" }).avatarAccessory).toBe(
+      "none"
+    );
+    const bot = service.create({
+      name: "Ada",
+      description: "Counts",
+      avatarAccessory: "monocle",
+    });
+    expect(
+      service.list().find((row) => row.id === bot.id)?.avatarAccessory
+    ).toBe("monocle");
+    service.update(bot.id, { avatarAccessory: "cap" });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("cap");
+    service.update(bot.id, { title: "Counter" });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("cap");
+    service.update(bot.id, { avatarAccessory: null });
+    expect(getBot(bot.id)?.avatarAccessory).toBe("none");
   });
 });

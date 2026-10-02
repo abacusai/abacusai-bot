@@ -13,10 +13,10 @@ import {
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 
-import { createCollections, type Collections } from "#next/data/collections";
+import { createDb, type Collections, type Db } from "#next/data/db";
 import {
   FixtureDb,
-  directDbSource,
+  fixtureTransport,
   type FixtureSeed,
 } from "#next/data/fixture-db/fixture-db";
 import {
@@ -31,6 +31,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#next/data/transport/memory";
+import { fixtureRuntime } from "#next/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#next/features/shell/readiness";
 import { resetShellStore } from "#next/features/shell/shell-store";
 import { i18n, initI18n } from "#next/lib/i18n";
@@ -71,6 +72,7 @@ const quiet = async function* ({ signal }: { signal?: AbortSignal }) {
   yield* [];
 };
 
+const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
 const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
   ({
     system: {
@@ -86,7 +88,64 @@ const shellRouter = (system: SystemInfo = SYSTEM_INFO) =>
       }),
       events: os.window.events.handler(quiet as never),
     },
-    settings: { events: os.settings.events.handler(quiet as never) },
+    settings: {
+      events: os.settings.events.handler(quiet as never),
+      get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
+      defaultMode: {
+        get: os.settings.defaultMode.get.handler(() => "YOLO" as never),
+      },
+      notifications: {
+        get: os.settings.notifications.get.handler(
+          () => ({ enabled: false }) as never
+        ),
+      },
+    },
+    bots: {
+      chatPreviews: os.bots.chatPreviews.handler(() => ({})),
+      senderChats: os.bots.senderChats.handler(() => []),
+      events: os.bots.events.handler(quiet as never),
+      openChat: os.bots.openChat.handler(({ input, context }) => {
+        context.calls.push(["bots.openChat", input]);
+        return {
+          botId: input.botId,
+          sessionId: "bot-test",
+          workspaceId: "default",
+        };
+      }),
+    },
+    models: { list: os.models.list.handler(() => []) },
+    connectors: {
+      statuses: os.connectors.statuses.handler(() => ({})),
+      events: os.connectors.events.handler(quiet as never),
+    },
+    messaging: {
+      snapshot: os.messaging.snapshot.handler(() => ({
+        platforms: [],
+        approved: [],
+        pending: [],
+        autoReplies: [],
+        gatewayEnabled: false,
+        autoApproveTools: false,
+        respondToInbound: false,
+        workspaceId: null,
+        botId: null,
+      })),
+      events: os.messaging.events.handler(quiet as never),
+    },
+    memory: {
+      bots: os.memory.bots.handler(() => []),
+      events: os.memory.events.handler(quiet as never),
+    },
+    account: { abacus: os.account.abacus.handler(() => null) },
+    files: { events: os.files.events.handler(quiet as never) },
+    ai: {
+      hydrate: os.ai.hydrate.handler(({ input }) => relay.ai.hydrate(input)),
+      subscribe: os.ai.subscribe.handler(
+        ({ input, signal }) => relay.ai.subscribe(input, { signal }) as never
+      ),
+      runFinished: os.ai.runFinished.handler(quiet as never),
+      attention: os.ai.attention.handler(quiet as never),
+    },
   }) as unknown as Router<any, { calls: Array<[string, unknown]> }>;
 
 export const defaultSeed = (): FixtureSeed => ({
@@ -108,6 +167,8 @@ export interface AppHarness {
   router: AppRouter;
   history: RouterHistory;
   db: FixtureDb;
+  /** The app's collections and prefs writer over `db`. */
+  appDb: Db;
   collections: Collections;
   transport: MemoryTransport;
   calls: Array<[string, unknown]>;
@@ -126,7 +187,8 @@ export const createHarness = async (
   const transport = createMemoryTransport(shellRouter(), { calls });
   const db = new FixtureDb(options.seed ?? defaultSeed());
   options.beforeRender?.(db);
-  const collections = createCollections(directDbSource(db), { backoffMs: [5] });
+  const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+  const { collections } = appDb;
   await collections.prefs.preload();
   const queryClient = createQueryClient();
   const history =
@@ -137,7 +199,7 @@ export const createHarness = async (
       queryClient,
       transport,
       system: SYSTEM_INFO,
-      collections,
+      db: appDb,
       t: i18n.getFixedT(null, "translation") as never,
     },
   });
@@ -147,10 +209,12 @@ export const createHarness = async (
     router,
     history,
     db,
+    appDb,
     collections,
     transport,
     calls,
     cleanup: async () => {
+      appDb.stop();
       for (const collection of Object.values(collections))
         await collection.cleanup().catch(() => undefined);
       transport.close();

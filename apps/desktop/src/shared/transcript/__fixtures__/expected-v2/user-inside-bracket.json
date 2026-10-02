@@ -55,7 +55,7 @@
             "id": "sub-u",
             "messages": [
               {
-                "id": "sub-u:0",
+                "id": "sub-u#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -86,7 +86,18 @@
               }
             ],
             "metadata": {
-              "abacus": {}
+              "abacus": {
+                "segments": [
+                  {
+                    "at": 1788256804000,
+                    "id": "sub-u",
+                    "outcome": "completed",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ]
+              }
             },
             "name": "delegate",
             "status": "finished"
@@ -127,18 +138,14 @@
       "role": "user"
     },
     {
-      "id": "sub-u:1",
+      "id": "b1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 3,
+            "segmentId": "b1"
+          },
           "segments": [
-            {
-              "at": 1788256804000,
-              "id": "sub-u",
-              "outcome": "completed",
-              "partIndex": null,
-              "status": "completed",
-              "type": "subtask"
-            },
             {
               "at": 1788256805000,
               "id": "b1",
@@ -148,7 +155,7 @@
           ]
         },
         "tanstack": {
-          "createdAt": "2026-09-01T10:00:04.000Z"
+          "createdAt": "2026-09-01T10:00:05.000Z"
         }
       },
       "parts": [

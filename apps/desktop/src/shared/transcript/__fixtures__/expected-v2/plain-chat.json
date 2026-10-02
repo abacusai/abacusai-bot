@@ -9,6 +9,7 @@
             {
               "at": 1788256800000,
               "id": "u1",
+              "messageIndex": 0,
               "partIndex": 0,
               "type": "text"
             }
@@ -35,6 +36,10 @@
       "id": "t1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "messageIndex": 1,
           "segments": [
             {
@@ -47,6 +52,7 @@
             {
               "at": 1788256802000,
               "id": "b1",
+              "messageIndex": 1,
               "partIndex": 1,
               "type": "text"
             }
@@ -83,6 +89,7 @@
             {
               "at": 1788256810000,
               "id": "u2",
+              "messageIndex": 2,
               "partIndex": 0,
               "type": "text"
             }
@@ -109,11 +116,16 @@
       "id": "b2",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 3,
+            "segmentId": "b2"
+          },
           "messageIndex": 3,
           "segments": [
             {
               "at": 1788256811000,
               "id": "b2",
+              "messageIndex": 3,
               "partIndex": 0,
               "type": "text"
             }
