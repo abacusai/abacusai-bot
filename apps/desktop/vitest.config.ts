@@ -1,19 +1,7 @@
-import { resolve } from "node:path";
-
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
-/** See the note on `resolve.alias` in vite.config.ts. */
-const alias = {
-  "#main": resolve(import.meta.dirname, "src/main"),
-  "#preload": resolve(import.meta.dirname, "src/preload"),
-  "#renderer": resolve(import.meta.dirname, "src/renderer"),
-  "#shared": resolve(import.meta.dirname, "src/shared"),
-  "ort-dist": resolve(
-    import.meta.dirname,
-    "../../node_modules/onnxruntime-web/dist"
-  ),
-};
+import { alias, NEXT_MODULES, NEXT_REGISTRY_SRC } from "./vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a
@@ -48,6 +36,15 @@ const CONTENDS_FOR_THE_MACHINE = [
   // About renderer code, but it spawns the same Electron: the terminal grid
   // needs a canvas with a real cell size, which jsdom does not have.
   "src/main/ghostty-scrollback.browser.test.ts",
+  // A timing measurement (spec 00 A-T8): run alone, or its median is noise.
+  "src/main/rpc/serializer.bench.test.ts",
+  // Spawns Electron for the real MessagePort handshake (spec 00 A-T12).
+  "src/main/rpc/transports/rpc-handshake.electron.test.ts",
+  // The one real-fs.watch test: FSEvents start-up latency stretches under the
+  // parallel main project's load, so it runs here with the machine to itself.
+  "src/main/rpc/tables/memories.fs.test.ts",
+  // Drives the built renderer-next in Electron (spec 01 R1-T11b).
+  "src/main/dev/renderer-next.electron.test.ts",
 ];
 
 export default defineConfig({
@@ -60,6 +57,8 @@ export default defineConfig({
         "**/dist/**",
         "**/*.config.ts",
         "src/renderer/locales/**",
+        "src/renderer-next/routeTree.gen.ts",
+        "src/renderer-next/ui/**",
       ],
     },
     projects: [
@@ -72,6 +71,26 @@ export default defineConfig({
           ...ciTimeouts,
           include: ["src/renderer/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/renderer/test-support/setup.ts"],
+        },
+      },
+      {
+        // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
+        plugins: [
+          react({
+            include: NEXT_MODULES,
+            exclude: NEXT_REGISTRY_SRC,
+            compiler: true,
+          }),
+        ],
+        resolve: { alias },
+        test: {
+          name: "renderer-next",
+          environment: "jsdom",
+          // Tests read tokens.css as text (`?raw`); nothing is styled.
+          css: { include: [/tokens\.css/] },
+          ...ciTimeouts,
+          include: ["src/renderer-next/**/*.test.{ts,tsx}"],
+          setupFiles: ["./src/renderer-next/test-support/setup.ts"],
         },
       },
       {

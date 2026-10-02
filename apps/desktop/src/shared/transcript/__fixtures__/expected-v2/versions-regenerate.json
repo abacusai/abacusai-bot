@@ -1,0 +1,182 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 0,
+          "regenerateAttempt": 0,
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Write a haiku",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b1",
+      "metadata": {
+        "abacus": {
+          "credits": [
+            {
+              "creditsUsed": 1,
+              "segmentId": "cr-v1"
+            }
+          ],
+          "messageIndex": 1,
+          "regenerateAttempt": 0,
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "b1",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256802000,
+              "id": "cr-v1",
+              "partIndex": null,
+              "type": "credits"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Autumn moonlight—",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    },
+    {
+      "id": "b2",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 3,
+          "regenerateAttempt": 1,
+          "segments": [
+            {
+              "at": 1788256803000,
+              "id": "b2",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256804000,
+              "id": "v-tool",
+              "partIndex": 1,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256805000,
+              "id": "b3",
+              "partIndex": 3,
+              "type": "text"
+            }
+          ],
+          "versions": {
+            "current": 2,
+            "siblings": [
+              {
+                "messageIndex": 1,
+                "regenerateAttempt": 0
+              },
+              {
+                "messageIndex": 3,
+                "regenerateAttempt": 1
+              }
+            ],
+            "total": 2
+          }
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:03.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "A second, regenerated haiku.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b2"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "arguments": "{\"file_path\":\"poems.md\"}",
+          "id": "v-call",
+          "input": {
+            "file_path": "poems.md"
+          },
+          "metadata": {
+            "abacus": {
+              "segmentId": "v-tool",
+              "status": "success"
+            }
+          },
+          "name": "read",
+          "output": "...",
+          "state": "complete",
+          "type": "tool-call"
+        },
+        {
+          "content": "...",
+          "id": "v-tool:result",
+          "metadata": {
+            "abacus": {}
+          },
+          "state": "complete",
+          "toolCallId": "v-call",
+          "type": "tool-result"
+        },
+        {
+          "content": "Same turn, no index.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b3"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 6,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-versions-regenerate",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

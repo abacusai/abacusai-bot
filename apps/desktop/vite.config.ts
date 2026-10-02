@@ -3,9 +3,18 @@ import { resolve } from "node:path";
 
 import { NATIVE_PACKAGES } from "@abacus-ai/config/native-packages";
 import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
+
+import {
+  alias,
+  NEXT_MODULES,
+  NEXT_APP_SRC,
+  NEXT_REGISTRY_SRC,
+  NODE_MODULES,
+} from "./vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
@@ -25,17 +34,24 @@ let devServer: ViteDevServer | null = null;
  */
 const RELAUNCH_GRACE_MS = 8000;
 
-// The ONNX runtime's WebAssembly files are not in its export map, so the
-// transcriber reaches them through this alias. Hoisted node_modules, as
-// electron-builder.yml also relies on.
-const ortDist = resolve(root, "../../node_modules/onnxruntime-web/dist");
-
 // Hidden: written beside each bundle for generate-notices.js to read, never
 // referenced from it and never packaged (see electron-builder.yml).
 const sourcemap = "hidden";
 
 export default defineConfig({
-  build: { outDir: "dist/renderer", sourcemap },
+  build: {
+    outDir: "dist/renderer",
+    sourcemap,
+    // Two documents: the shipped renderer and the rewrite's (spec 01 §3.3).
+    // Both land at the root of dist/renderer, so the experience bundle
+    // carries both unchanged.
+    rolldownOptions: {
+      input: {
+        main: resolve(root, "index.html"),
+        next: resolve(root, "index-next.html"),
+      },
+    },
+  },
   plugins: [
     {
       name: "abacus:dev-server-handle",
@@ -43,8 +59,26 @@ export default defineConfig({
         devServer = server;
       },
     },
+    // Before the React transform: it rewrites route files into split chunks.
+    tanstackRouter({
+      target: "react",
+      routesDirectory: "./src/renderer-next/routes",
+      generatedRouteTree: "./src/renderer-next/routeTree.gen.ts",
+      routeFileIgnorePrefix: "-",
+      autoCodeSplitting: true,
+      quoteStyle: "double",
+    }),
     tailwindcss(),
-    react(),
+    // Order matters (spec 01 §3.3): the compiler instance first, the plain
+    // instance last. Each sets oxc's refresh flag in its `config` hook and the
+    // last one wins, so reversed, the old renderer loses Fast Refresh. The
+    // compiler instance does its own refresh for the files it compiles.
+    react({
+      include: NEXT_MODULES,
+      exclude: NEXT_REGISTRY_SRC,
+      compiler: { logDiagnostics: true },
+    }),
+    react({ exclude: [NODE_MODULES, NEXT_APP_SRC] }),
     ...electron(
       simpleOptions({
         main: {
@@ -87,7 +121,19 @@ export default defineConfig({
               // The connector registry is TypeScript source shared with the
               // agent (a devDependency, like every workspace package); it
               // has no dist to resolve from the asar and must be inlined.
-              include: ["extract-zip", "tuf-js", "@abacus-ai/connectors"],
+              // Main's AG-UI relay runs TanStack's StreamProcessor and
+              // uiMessagesToWire (a devDependency the renderer shares), so it
+              // is inlined with the packages it imports at run time.
+              include: [
+                "extract-zip",
+                "tuf-js",
+                "@abacus-ai/connectors",
+                "@tanstack/ai",
+                "@tanstack/ai-event-client",
+                "@tanstack/ai-utils",
+                "@ag-ui/core",
+                "partial-json",
+              ],
             },
           },
           options: { build: { outDir: "dist/main", sourcemap } },
@@ -110,17 +156,8 @@ export default defineConfig({
     ),
   ],
   resolve: {
-    // The four roots package.json's `imports` declares. Repeated because Node's
-    // subpath-imports resolution takes a target literally: it tries no
-    // extensions and no index files, so `#renderer/components/ui` never finds
-    // `components/ui/index.tsx` on its own.
-    alias: {
-      "#main": resolve(root, "src/main"),
-      "#preload": resolve(root, "src/preload"),
-      "#renderer": resolve(root, "src/renderer"),
-      "#shared": resolve(root, "src/shared"),
-      "ort-dist": ortDist,
-    },
+    // See vite.shared.ts.
+    alias,
     dedupe: ["react", "react-dom"],
   },
   worker: { format: "es" },

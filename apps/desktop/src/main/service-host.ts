@@ -18,6 +18,7 @@ import type {
   BotCreateInput,
   BotUpdateInput,
 } from "#shared/bots";
+import { ConflictError } from "#shared/conflict";
 import type {
   ConnectorConnectOptions,
   TranscriptSegment,
@@ -155,6 +156,7 @@ import {
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
 } from "#shared/messaging";
+import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
 import { detectRememberRequest } from "#shared/remember";
 import type {
   Routine,
@@ -173,6 +175,7 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
 import {
@@ -180,6 +183,7 @@ import {
   getJob,
   listJobs,
   nextRun,
+  onCronStoreWrite,
   recordRun,
   removeJob,
   updateJob,
@@ -230,6 +234,7 @@ import {
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
+import { AguiRelayService } from "./services/agui/relay-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -241,6 +246,7 @@ import { BotService } from "./services/bots/bot-service";
 import {
   getBot,
   listSenderSessionEntries,
+  onBotStoreWrite,
   recordBotSession,
   recordSenderSession,
   removeSenderSession,
@@ -338,6 +344,7 @@ import {
   INACTIVITY_TIMEOUT_MINUTES,
   SessionTurnStateService,
 } from "./services/session/session-turn-state-service";
+import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
 import {
@@ -357,6 +364,12 @@ import { WorkspaceRuntimeService } from "./services/workspace/workspace-runtime-
 import { WorkspaceService } from "./services/workspace/workspace-service";
 
 type EventDispatcher = (event: IpcEvent) => void;
+
+/** The oRPC bus's own channels: pushes the legacy renderer never had. */
+type BusDispatcher = <C extends BusChannel>(
+  channel: C,
+  payload: BusChannels[C]
+) => void;
 
 /** Assistant prose, as opposed to tool cards, status and errors. */
 const isAgentText = (payload: DesktopEvent): boolean =>
@@ -437,9 +450,65 @@ export class ServiceHost {
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
+  private busDispatcher: BusDispatcher | null = null;
 
   readonly mcpConfigService = new McpConfigService();
-  private readonly transcriptService = new TranscriptService();
+  /** The v2 thread files (spec 00 C.3); `ai.hydrate` reads them. */
+  readonly threadStore = new ThreadStore();
+  /**
+   * Main's AG-UI relay (agent spec §5.2): the renderer's `ai.*` procedures,
+   * and the wire each session's agent is spawned with. Until the new
+   * renderer asks for a thread, every spawn stays `--wire ndjson`.
+   */
+  readonly aguiRelay: AguiRelayService = new AguiRelayService({
+    files: this.threadStore,
+    host: {
+      workspaceOf: (threadId) => {
+        const workspaceId =
+          this.agentSessionManagerService.get(threadId)?.workspaceId ?? null;
+        return workspaceId == null || this.isWorkspaceDeleted(workspaceId)
+          ? null
+          : workspaceId;
+      },
+      runtime: (threadId) => this.agentManagerService.getRuntimeInfo(threadId),
+      start: async (threadId) => {
+        const session = this.agentSessionManagerService.get(threadId);
+        if (session == null) return false;
+        const result = await this.startAgentSession({
+          workspaceId: session.workspaceId,
+          sessionId: threadId,
+          // The session's own model and mode, as sendAgentMessage restarts it.
+          ...(session.model != null ? { model: session.model } : {}),
+          ...(session.mode != null ? { mode: session.mode } : {}),
+        });
+        return result.success;
+      },
+      send: (threadId, command) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        return (
+          runtime != null &&
+          this.agentManagerService.sendCommand(
+            runtime.workspaceId,
+            threadId,
+            command
+          )
+        );
+      },
+      markSent: (threadId) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        if (runtime != null)
+          this.sessionTurnStateService.markSent(runtime.workspaceId, threadId);
+      },
+      markStopped: (threadId) => {
+        const runtime = this.agentManagerService.getRuntimeInfo(threadId);
+        if (runtime != null)
+          this.markTurnStopped(runtime.workspaceId, threadId);
+      },
+    },
+  });
+  private readonly transcriptService = new TranscriptService({
+    threads: this.threadStore,
+  });
   private readonly debugSyncService = new DebugSyncService({
     readTranscript: (sessionId) => this.transcriptService.read(sessionId),
     clientVersion: app.getVersion(),
@@ -963,6 +1032,9 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    emitTerminalRetired: (event) => {
+      this.busDispatcher?.("terminal-retired", event);
+    },
     emitTerminalState: (state) => {
       this.emitEvent({
         type: "terminal-state-updated",
@@ -1200,7 +1272,18 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    emitNdjson: (workspaceId, sessionId, payload) => {
+    resolveWire: (sessionId) => this.aguiRelay.wireFor(sessionId),
+    emitAgui: (_workspaceId, sessionId, event, origin) => {
+      this.aguiRelay.ingest(sessionId, event, origin);
+    },
+    emitAguiExit: (_workspaceId, sessionId, exit) => {
+      this.aguiRelay.runtimeExited(sessionId, exit);
+    },
+    emitNdjson: (workspaceId, sessionId, payload, origin) => {
+      // An agui runtime serves only the new renderer (spec 00-agent-agui
+      // §2.1): its compat lines feed main's taps below, never the old
+      // renderer's `local-cli-ndjson` stream.
+      const toOldRenderer = origin?.wire !== "agui";
       // Recorded before the filter: a stopped session is exactly one whose
       // log somebody is about to want.
       if (payload.type === "ready" && payload.agentSessionId != null) {
@@ -1221,8 +1304,9 @@ export class ServiceHost {
         // A relayed turn's own words are notes around a <reply> tag, addressed
         // to nobody; the gateway echoes what it actually sent instead.
         if (
-          !isAgentText(payload) ||
-          !this.messagingGatewayService.relayingSession(sessionId)
+          toOldRenderer &&
+          (!isAgentText(payload) ||
+            !this.messagingGatewayService.relayingSession(sessionId))
         )
           this.emitEvent({
             type: "local-cli-ndjson",
@@ -1251,12 +1335,27 @@ export class ServiceHost {
       const communicationUpdate =
         this.agentCommunicationService.handleDesktopEvent(payload);
       if (communicationUpdate.autoAllowDecision != null) {
-        this.agentCommunicationService.respondPermission({
-          workspaceId,
-          sessionId,
-          permissionId: communicationUpdate.autoAllowDecision.permissionId,
-          decision: communicationUpdate.autoAllowDecision.decision,
-        });
+        if (origin?.wire === "agui") {
+          // Bound to the runtime that asked: a replacement process that now
+          // owns the session id never receives another process's answer.
+          this.agentManagerService.sendCommandToRuntime(
+            origin,
+            workspaceId,
+            sessionId,
+            {
+              type: "permission_response",
+              permissionId: communicationUpdate.autoAllowDecision.permissionId,
+              decision: communicationUpdate.autoAllowDecision.decision,
+            }
+          );
+        } else {
+          this.agentCommunicationService.respondPermission({
+            workspaceId,
+            sessionId,
+            permissionId: communicationUpdate.autoAllowDecision.permissionId,
+            decision: communicationUpdate.autoAllowDecision.decision,
+          });
+        }
       }
       if (communicationUpdate.statePatch != null) {
         const mergedState = this.agentManagerService.applyStatePatch(
@@ -1487,6 +1586,13 @@ export class ServiceHost {
       // emitted a card for the transcript to keep.
       const doing =
         lastActivity != null ? ` while running ${lastActivity}` : "";
+      // The renderer's run ends with main's own terminal, ahead of the
+      // cancelled one the agent writes for the stop (first terminal wins).
+      this.aguiRelay.failActiveRun(
+        sessionId,
+        "inactivity_timeout",
+        `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}.`
+      );
       // Actually stop it, or the slow tool's events would still be forwarded
       // when it finally lands and the session would go busy again.
       this.stopAgentTurn({ workspaceId, sessionId });
@@ -1599,6 +1705,10 @@ export class ServiceHost {
     this.eventDispatcher = dispatcher;
   }
 
+  setBusDispatcher(dispatcher: BusDispatcher): void {
+    this.busDispatcher = dispatcher;
+  }
+
   async addWorkspace(
     workspacePath: string,
     isRemote = false
@@ -1689,7 +1799,7 @@ export class ServiceHost {
       .getWorkspaces()
       .find((w) => w.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     if (workspace.status !== "deleted") {
@@ -1711,6 +1821,7 @@ export class ServiceHost {
       // A remote conversation bound to it would otherwise be answered by nothing.
       this.messagingGatewayService.forgetSession(sessionId);
       this.transcriptService.remove(sessionId);
+      this.aguiRelay.forgetThread(sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
         workspaceId,
@@ -1731,7 +1842,7 @@ export class ServiceHost {
   ): Promise<{ success: boolean; error?: string }> {
     const updated = this.workspaceService.updateLabel(workspaceId, label);
     if (!updated) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
     await this.workspaceRuntimeService.refreshAndEmit();
     return { success: true };
@@ -1899,6 +2010,18 @@ export class ServiceHost {
     return this.terminalSessionService.hideSession(request);
   }
 
+  /** Running terminals' states, for `terminal.events`' opening snapshot. */
+  listTerminalStates(key?: ConversationKey): TerminalSessionSnapshot[] {
+    return this.terminalSessionService.listStates(key);
+  }
+
+  /** A terminal's output from an offset, and its exit once it exited. */
+  terminalOutputState(
+    request: Parameters<TerminalSessionService["outputState"]>[0]
+  ): ReturnType<TerminalSessionService["outputState"]> {
+    return this.terminalSessionService.outputState(request);
+  }
+
   promoteTerminalSessionScope(
     request: PromoteTerminalSessionScopeRequest
   ): Promise<TerminalSessionSnapshot | null> {
@@ -1963,7 +2086,9 @@ export class ServiceHost {
   createAgentSession(
     workspaceId: string,
     routineId: string | null = null,
-    owner: SessionOwner | null = null
+    owner: SessionOwner | null = null,
+    /** The caller's own id (an optimistic insert); a taken one is `ConflictError`. */
+    id?: string
   ): AgentSessionListItem {
     if (this.isWorkspaceDeleted(workspaceId)) {
       throw new Error(
@@ -1973,7 +2098,9 @@ export class ServiceHost {
     const session = this.agentSessionManagerService.create(
       workspaceId,
       routineId,
-      owner
+      owner,
+      null,
+      id
     );
     this.emitEvent({
       type: "local-cli-session-created",
@@ -1991,6 +2118,33 @@ export class ServiceHost {
 
   listAllAgentSessions(): AgentSessionListItem[] {
     return this.agentSessionManagerService.listAll();
+  }
+
+  /** Every session's cached turn state, for the sessions table's join. */
+  listSessionTurnStates(): SessionTurnStateSnapshot[] {
+    return this.sessionTurnStateService.list();
+  }
+
+  /** The DB tables' direct hooks (spec 00 B.2): writes that emit no event. */
+  onSessionsChanged(listener: () => void): () => void {
+    return this.agentSessionManagerService.onChanged(listener);
+  }
+
+  onWorkspacesChanged(listener: () => void): () => void {
+    return this.workspaceService.onChanged(listener);
+  }
+
+  onBotsWritten(listener: () => void): () => void {
+    return onBotStoreWrite(listener);
+  }
+
+  onRoutinesWritten(listener: () => void): () => void {
+    return onCronStoreWrite(listener);
+  }
+
+  /** Where memories and bots live; the memory watchers' root. */
+  botHome(): string {
+    return abacusBotHome();
   }
 
   getMessagingSnapshot(): MessagingSnapshot {
@@ -2209,8 +2363,8 @@ export class ServiceHost {
       });
   }
 
-  createBot(input: BotCreateInput): Bot {
-    return this.botService.create(input);
+  createBot(input: BotCreateInput, id?: string): Bot {
+    return this.botService.create(input, id);
   }
 
   updateBot(id: string, changes: BotUpdateInput): Bot {
@@ -2262,6 +2416,7 @@ export class ServiceHost {
       // A remote conversation bound to it would otherwise be answered by nothing.
       this.messagingGatewayService.forgetSession(sessionId);
       this.transcriptService.remove(sessionId);
+      this.aguiRelay.forgetThread(sessionId);
       this.agentManagerService.stopSession(workspaceId, sessionId);
       this.emitEvent({
         type: "local-cli-session-removed",
@@ -2367,13 +2522,21 @@ export class ServiceHost {
    * a successful delete, and the user would believe the entries were gone.
    */
   private failIfNotDone(result: MemoryResult): void {
-    if (!result.ok) throw new Error(result.message);
+    if (!result.ok) throw new ConflictError(result.message);
   }
 
   /** A running session keeps the snapshot in its prompt until it restarts. */
-  async forgetMemory(request: ForgetMemoryRequest): Promise<MemorySnapshot> {
+  async forgetMemory(
+    request: ForgetMemoryRequest,
+    occurrences?: number
+  ): Promise<MemorySnapshot> {
     this.failIfNotDone(
-      await forgetEntryAt(request.target, request.index, request.entry)
+      await forgetEntryAt(
+        request.target,
+        request.index,
+        request.entry,
+        occurrences
+      )
     );
     return listMemories();
   }
@@ -2382,12 +2545,20 @@ export class ServiceHost {
     return listBotMemories();
   }
 
-  forgetBotMemory(request: {
-    botId: string;
-    index: number;
-    entry: string;
-  }): ReturnType<typeof listBotMemories> {
-    forgetBotMemoryEntry(request.botId, request.index, request.entry);
+  forgetBotMemory(
+    request: {
+      botId: string;
+      index: number;
+      entry: string;
+    },
+    occurrences?: number
+  ): ReturnType<typeof listBotMemories> {
+    forgetBotMemoryEntry(
+      request.botId,
+      request.index,
+      request.entry,
+      occurrences
+    );
     return listBotMemories();
   }
 
@@ -2623,20 +2794,22 @@ export class ServiceHost {
   }
 
   stopAgentTurn(request: AgentSessionCommandRequest): void {
+    this.markTurnStopped(request.workspaceId, request.sessionId);
+    this.agentCommunicationService.stopTurn(request);
+  }
+
+  /** Main's side of a Stop, for `stopAgentTurn` and the relay's `ai.cancel`. */
+  private markTurnStopped(workspaceId: string, sessionId: string): void {
     // Idle, and in-flight CLI events suppressed until the next send.
-    this.sessionTurnStateService.markStopped(
-      request.workspaceId,
-      request.sessionId
-    );
+    this.sessionTurnStateService.markStopped(workspaceId, sessionId);
     // A Connect card is the turn, suspended inside its tool call: stopping
     // must take it down and let the call go. This conversation's only.
-    const stopped = this.conversationKeyForSession(request.sessionId);
+    const stopped = this.conversationKeyForSession(sessionId);
     if (stopped != null)
       this.connectorGate.release(
         stopped,
         "The user stopped this turn before answering. Do not ask again unless they bring it up."
       );
-    this.agentCommunicationService.stopTurn(request);
   }
 
   getSessionTurnState(
@@ -2651,6 +2824,7 @@ export class ServiceHost {
     // Transcript writes refuse an empty segment list, so without this the
     // pre-clear transcript would rehydrate on the next restart.
     this.transcriptService.remove(request.sessionId);
+    this.aguiRelay.clearThread(request.sessionId);
   }
 
   switchAgentConversation(request: AgentSwitchConversationRequest): void {
@@ -3321,12 +3495,14 @@ export class ServiceHost {
     );
   }
 
-  listConnectorRequests(conversationKey: ConversationKey): ConnectorRequest[] {
+  /** One conversation's pending asks, or every conversation's with no key. */
+  listConnectorRequests(conversationKey?: ConversationKey): ConnectorRequest[] {
     return this.connectorGate.listPending(conversationKey);
   }
 
+  /** One conversation's pending asks, or every conversation's with no key. */
   listBrowserPermissionRequests(
-    conversationKey: ConversationKey
+    conversationKey?: ConversationKey
   ): BrowserPermissionRequest[] {
     return this.builtinToolPermissions.listPending(conversationKey);
   }
@@ -3529,7 +3705,12 @@ export class ServiceHost {
    */
   async editRoutineByChat(routineId: string, text: string): Promise<string> {
     const job = getJob(routineId);
-    if (job == null) throw new Error("This routine is gone.");
+    if (job == null)
+      throw new EntityNotFoundError(
+        "routine",
+        routineId,
+        "This routine is gone."
+      );
     const workspaces = this.workspaceService.getWorkspaces();
     const workspaceId =
       job.workspaceId != null &&
@@ -3643,8 +3824,8 @@ export class ServiceHost {
     }));
   }
 
-  createRoutine(input: RoutineCreateInput): Routine {
-    const job = createJob(input);
+  createRoutine(input: RoutineCreateInput, id?: string): Routine {
+    const job = createJob(input, id);
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -3874,6 +4055,11 @@ export class ServiceHost {
 
   getGitState(): GitStateSnapshot {
     return this.workspaceRuntimeService.getGitState();
+  }
+
+  /** The local path `getGitState` was computed for (the gitState table). */
+  gitStateWorkspacePath(): string | null {
+    return this.workspaceRuntimeService.getSnapshot().workspacePath;
   }
 
   getFileTreeRoot(): FileTreeRootSnapshot {

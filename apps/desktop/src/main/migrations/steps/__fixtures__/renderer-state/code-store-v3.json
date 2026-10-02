@@ -1,0 +1,4 @@
+{
+  "local-code-ui-store": "{\"state\":{\"isSidebarVisible\":true,\"selectedModelId\":null,\"favoriteModelIds\":[],\"globalSelectedMode\":\"ACCEPTEDITS\",\"workspaceSelectedModes\":{\"ws-9\":\"YOLO\"},\"workspaceSelectedModelIds\":{},\"workspaceAccordionExpanded\":{},\"codeSidebarTab\":\"workspaces\",\"pinnedSessionIds\":[],\"pinnedBotIds\":[\"bot-a\",\"bot-b\"],\"lastPickedWorkspaceId\":null},\"version\":3}",
+  "sidebar-accordion": "{\"state\":{\"openSection\":null},\"version\":0}"
+}

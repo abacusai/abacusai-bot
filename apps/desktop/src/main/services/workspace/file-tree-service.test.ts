@@ -11,6 +11,7 @@
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   mkdtempSync,
   rmSync,
   symlinkSync,
@@ -19,9 +20,19 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setMigrationWriteBlocks } from "../../migrations/write-block";
 import { FileTreeService } from "./file-tree-service";
+
+vi.mock("electron", () => ({
+  shell: {
+    trashItem: vi.fn(async (file: string) => {
+      const { rmSync: remove } = await import("node:fs");
+      remove(file, { recursive: true, force: true });
+    }),
+  },
+}));
 
 const onCaseInsensitiveFs =
   process.platform === "darwin" || process.platform === "win32";
@@ -188,5 +199,107 @@ describe("saving a resolved conflict", () => {
     );
 
     expect(result).toEqual({ success: false, error: "Path outside workspace" });
+  });
+});
+
+describe("files held by an unresolved migration commit", () => {
+  const held =
+    "Held by an unfinished data migration; try again after restarting the app";
+  let prefs: string;
+  let threads: string;
+
+  beforeEach(() => {
+    // The app's home opened as a workspace, with prefs.json and a thread held.
+    prefs = join(workspace, "prefs.json");
+    threads = join(workspace, "threads");
+    mkdirSync(threads);
+    writeFileSync(prefs, "OLD");
+    writeFileSync(join(threads, "a.json"), "A");
+    writeFileSync(join(workspace, "free.txt"), "F");
+    setMigrationWriteBlocks({
+      unresolved: [
+        {
+          staging: "s",
+          id: 2,
+          name: "x",
+          destinations: [prefs, join(threads, "a.json")],
+          error: "",
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    setMigrationWriteBlocks(null);
+  });
+
+  it("refuses writes and conflict saves to a held file, in any spelling", async () => {
+    expect(await service.writeFile(workspace, "prefs.json", "NEW")).toEqual({
+      success: false,
+      error: held,
+    });
+    expect(await service.writeFile(workspace, prefs, "NEW")).toMatchObject({
+      success: false,
+    });
+    expect(
+      await service.saveResolvedConflict(workspace, "threads/a.json", "NEW")
+    ).toMatchObject({ success: false, error: held });
+    // Through a symlinked directory.
+    symlinkSync(threads, join(workspace, "alias"));
+    expect(
+      await service.writeFile(workspace, "alias/a.json", "NEW")
+    ).toMatchObject({ success: false, error: held });
+    if (onCaseInsensitiveFs)
+      expect(
+        await service.writeFile(workspace, "PREFS.JSON", "NEW")
+      ).toMatchObject({ success: false, error: held });
+    expect(readFileSync(prefs, "utf8")).toBe("OLD");
+    expect(await service.writeFile(workspace, "free.txt", "G")).toEqual({
+      success: true,
+    });
+  });
+
+  it("refuses renames from, onto, or of a directory holding a held file", async () => {
+    for (const [from, to] of [
+      ["prefs.json", "moved.json"],
+      ["free.txt", "prefs.json"],
+      ["threads", "old-threads"],
+      ["free.txt", "threads/a.json"],
+    ] as const)
+      expect(await service.renameFile(workspace, from, to)).toEqual({
+        success: false,
+        error: held,
+      });
+    expect(existsSync(join(threads, "a.json"))).toBe(true);
+    expect(
+      await service.renameFile(workspace, "free.txt", "free2.txt")
+    ).toEqual({ success: true });
+  });
+
+  it("refuses to trash a held file or a directory holding one", async () => {
+    expect(await service.trashFile(workspace, "prefs.json")).toEqual({
+      success: false,
+      error: held,
+    });
+    expect(await service.trashFile(workspace, "threads")).toEqual({
+      success: false,
+      error: held,
+    });
+    expect(existsSync(prefs)).toBe(true);
+    expect(await service.trashFile(workspace, "free.txt")).toEqual({
+      success: true,
+    });
+  });
+
+  it("holds everything when an attempt's destinations are unknown", async () => {
+    setMigrationWriteBlocks({
+      unresolved: [
+        { staging: "s", id: null, name: null, destinations: null, error: "" },
+      ],
+    });
+    expect(await service.writeFile(workspace, "free.txt", "G")).toMatchObject({
+      success: false,
+      error: held,
+    });
   });
 });

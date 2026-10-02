@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "sessionId": "sess-user-inside-bracket",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Go",
+      "at": 1788256800000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-u",
+      "status": "created",
+      "description": "Interrupted by the user",
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "su-text",
+      "source": "bot",
+      "content": "Working...",
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "Stop and do something else",
+      "at": 1788256803000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-u",
+      "status": "completed",
+      "outcome": "completed",
+      "at": 1788256804000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Okay.",
+      "at": 1788256805000
+    }
+  ]
+}

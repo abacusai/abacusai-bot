@@ -50,7 +50,28 @@
     "refresh": "更新",
     "revealInFolder": "Reveal in folder",
     "searchPlaceholder": "成果物とセッションを検索…",
-    "unknownSession": "削除されたセッション"
+    "unknownSession": "削除されたセッション",
+    "page": {
+      "emptyTitle": "Nothing made yet",
+      "emptyDescription": "Documents, decks, images and code the agent makes collect here."
+    },
+    "sidebar": {
+      "label": "成果物",
+      "type": "Type",
+      "source": "Source",
+      "all": "All",
+      "types": {
+        "document": "Documents",
+        "deck": "Decks",
+        "image": "Images",
+        "code": "Code",
+        "other": "Other"
+      },
+      "sources": {
+        "bots": "From bots",
+        "sessions": "From sessions"
+      }
+    }
   },
   "bots": {
     "avatarColor": "Color",
@@ -315,7 +336,22 @@
     "viewBots": "ボット",
     "viewSessions": "セッション",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "page": {
+      "newTitle": "Make a bot",
+      "newDescription": "Give it a name and a mission, and it keeps one chat that remembers.",
+      "chatTitle": "Chat arrives soon",
+      "chatDescription": "This bot's conversation opens here in a coming update.",
+      "editTitle": "Edit bot",
+      "editDescription": "Mission, persona and model settings arrive here soon.",
+      "detailsTitle": "Details",
+      "detailsDescription": "Mission, persona, model and memory."
+    },
+    "sidebar": {
+      "label": "ボット",
+      "new": "新しいボット",
+      "empty": "ボットはまだありません"
+    }
   },
   "browserPermission": {
     "allow": "許可",
@@ -639,8 +675,8 @@
     "add": "Add",
     "addFailed": "Could not add {{name}}.",
     "added": "{{name}} added.",
-    "adding": "Adding…",
     "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
+    "adding": "Adding…",
     "auth": {
       "key": "API key",
       "oauth": "Sign-in",
@@ -685,9 +721,9 @@
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
+    "yours": "Yours",
     "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
-    "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again.",
-    "yours": "Yours"
+    "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
   "creditsCard": {
     "body": "Unlock the full potential",
@@ -1210,12 +1246,15 @@
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Abacus.AIにサインイン",
     "skipCta": "Not now",
+    "welcomeCapabilityModels": "Access",
+    "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "永続メモリを備えた、あなた専用のオープンソースAIコワーカー",
     "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
     "connectedPromiseModels": "Access to free models",
     "connectedPromiseWork": "Gets your work done, and connects to all your services",
-    "connectedPromiseChat": "",
     "connectedCta": "Continue",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
@@ -1226,7 +1265,6 @@
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
     "connectedPromiseLocalLead": "Runs locally.",
     "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
@@ -1251,10 +1289,11 @@
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "{{browser}} · {{profile}} で続行",
     "signInAnotherWay": "別の方法でサインイン",
-    "welcomeFreeBadge": "Free to start",
-    "welcomeCapabilityModels": "Access",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "haveAccountContinueWith": "アカウントをお持ちの方 · {{browser}} で続行",
+    "signInOptions": "その他のサインイン方法",
+    "usesBrowserSessions": "Google・Microsoft・Apple でのサインインには {{browser}} のアカウントを使います。",
+    "connectedPromiseChat": "",
+    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord."
   },
   "openFile": {
     "failed": "そのファイルを開けませんでした。",
@@ -1466,7 +1505,21 @@
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
     "workspaceLabel": "Folder",
     "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "workspaceOwnFolder": "Its own folder",
+    "page": {
+      "emptyTitle": "No routines yet",
+      "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
+      "routineTitle": "Routine",
+      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "createTitle": "新しいルーティン",
+      "createDescription": "Say what it should do and when."
+    },
+    "sidebar": {
+      "label": "ルーティン",
+      "new": "新しいルーティン",
+      "paused": "Paused",
+      "empty": "No routines yet"
+    }
   },
   "sessions": {
     "delete": "Delete session",
@@ -1483,7 +1536,21 @@
     "unpin": "Unpin",
     "today": "Today",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "page": {
+      "newTitle": "New session",
+      "newDescription": "Pick a folder and tell the agent what to do.",
+      "sessionTitle": "Session",
+      "sessionDescription": "The conversation opens here in a coming update.",
+      "reviewTitle": "Review changes",
+      "reviewDescription": "Keep or undo what the agent changed."
+    },
+    "sidebar": {
+      "label": "Sessions",
+      "new": "New session",
+      "pinned": "Pinned",
+      "empty": "セッションはまだありません"
+    }
   },
   "sidebarNav": {
     "app": "App",
@@ -1832,23 +1899,23 @@
       "configure": "Configure",
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
-      "connectCerebrasNote": "無料トライアルで超高速のGPT-OSSとGLM。APIキーを貼り付け",
       "connectGoogleAi": "Google AI Studioを接続",
       "connectGoogleAiNote": "無料のGemini枠。APIキーを取得してここに貼り付け",
-      "connectGroqNote": "高速なオープンモデル（無料枠は小さめ）。APIキーを貼り付け",
-      "connectMistralNote": "無料のDevstralとMistralモデル。APIキーを貼り付け",
       "connectModels": "Connect models",
-      "connectNvidiaNote": "無料のGLM、Kimi、MiniMaxモデル。APIキーを貼り付け",
       "connectOpenRouter": "OpenRouterを接続",
       "connectOpenRouterNote": "ブラウザで1回サインインするだけで無料モデルがRouteLLM - Openとこのリストに加わります",
-      "connectProvider": "{{provider}}を接続",
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
       "onThisMachine": "On this machine",
       "removeFavorite": "Remove {{model}} from favorites",
       "search": "Search models…",
-      "title": "Choose a model"
+      "title": "Choose a model",
+      "connectCerebrasNote": "無料トライアルで超高速のGPT-OSSとGLM。APIキーを貼り付け",
+      "connectGroqNote": "高速なオープンモデル（無料枠は小さめ）。APIキーを貼り付け",
+      "connectMistralNote": "無料のDevstralとMistralモデル。APIキーを貼り付け",
+      "connectNvidiaNote": "無料のGLM、Kimi、MiniMaxモデル。APIキーを貼り付け",
+      "connectProvider": "{{provider}}を接続"
     },
     "modelPlaceholder": "Model",
     "modelProviderLocked": "このモデルは別のプロバイダーのものです。使用するには新しいチャットを開始してください。",
@@ -1905,15 +1972,16 @@
       "reviews": "承認 {{approved}} 件 · 変更リクエスト {{changes}} 件 · 保留中 {{requested}} 件"
     },
     "premiumUpgrade": {
-      "connectCta": "Connect",
       "connectNote": "Connect one of these to keep going. No card needed.",
-      "continueCta": "Continue",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localMeta": "Free, no limits · downloads once",
-      "localName": "A model on this computer",
       "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
       "poolOutTitle": "Every free source is used up for now",
+      "switchNote": "Pick another model in the model picker to keep going",
+      "connectCta": "Connect",
+      "continueCta": "Continue",
+      "localMeta": "Free, no limits · downloads once",
+      "localName": "A model on this computer",
       "setUpCta": "Set up",
       "sourceCerebras": "Cerebras",
       "sourceCerebrasMeta": "高速なGPT-OSSとQwen · 無料トライアルキー",
@@ -1927,7 +1995,6 @@
       "sourceNvidiaMeta": "Kimi、GLM、DeepSeek · 無料APIキー",
       "sourceOpenrouter": "OpenRouter",
       "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
-      "switchNote": "Pick another model in the model picker to keep going",
       "topUpMeta": "Add credits to your account"
     },
     "preview": {
@@ -2156,5 +2223,126 @@
   "reactions": {
     "feedback": "この返信にリアクション",
     "agent": "エージェントが{{emoji}}でリアクションしました"
+  },
+  "shell": {
+    "appName": "AbacusAI Bot",
+    "rail": {
+      "label": "Areas",
+      "bots": "ボット",
+      "sessions": "Sessions",
+      "routines": "ルーティン",
+      "artifacts": "成果物",
+      "library": "Library",
+      "settings": "Settings",
+      "account": "Account"
+    },
+    "topBar": {
+      "back": "Back",
+      "forward": "Forward",
+      "toggleSidebar": "Toggle sidebar",
+      "openPanel": "Open side panel",
+      "closePanel": "Close side panel",
+      "more": "More actions",
+      "panelTabs": "Side panel tabs",
+      "geometryMissing": "Title bar geometry missing"
+    },
+    "panel": {
+      "label": "Side panel",
+      "emptyDescription": "This panel fills in with a later update.",
+      "tabs": {
+        "changes": "Changes",
+        "terminal": "Terminal",
+        "files": "Files",
+        "browser": "Browser",
+        "memory": "Memory",
+        "details": "Details",
+        "agent": "Agent"
+      }
+    },
+    "sidebar": {
+      "loadError": "Couldn't load",
+      "retry": "Retry"
+    },
+    "status": {
+      "ready": "Ready"
+    },
+    "command": {
+      "title": "Command menu",
+      "placeholder": "Search areas, pages, bots and sessions",
+      "empty": "No results",
+      "toggleTheme": "Toggle theme",
+      "groups": {
+        "areas": "Areas",
+        "settings": "Settings",
+        "bots": "ボット",
+        "sessions": "Sessions",
+        "actions": "Actions"
+      }
+    },
+    "connectionLost": "Connection to the app was lost. Reloading…",
+    "boot": {
+      "title": "Couldn't start",
+      "description": "The app couldn't reach its background process.",
+      "reload": "Reload"
+    }
+  },
+  "errors": {
+    "genericTitle": "Something went wrong",
+    "genericDescription": "This screen hit an error it couldn't recover from.",
+    "reload": "Reload",
+    "notFoundTitle": "Not found",
+    "notFoundDescription": "This page doesn't exist.",
+    "goHome": "Go to Bots"
+  },
+  "library": {
+    "sidebar": {
+      "label": "Library"
+    },
+    "pages": {
+      "connectors": "コネクタ",
+      "messaging": "Messaging",
+      "mcp": "MCP servers",
+      "skills": "Skills",
+      "tools": "Tools"
+    },
+    "emptyDescription": "This page arrives in a coming update.",
+    "connectorDescription": "Connection details arrive in a coming update."
+  },
+  "settings": {
+    "sidebar": {
+      "label": "Settings",
+      "personal": "Personal",
+      "app": "App",
+      "capabilities": "Capabilities",
+      "openLibrary": "Open the Library"
+    },
+    "pages": {
+      "general": "General",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "memory": "Memory",
+      "usage": "使用状況",
+      "account": "Account",
+      "models": "Models",
+      "environment": "Environment",
+      "about": "About"
+    },
+    "emptyDescription": "These settings arrive in a coming update.",
+    "theme": {
+      "label": "Theme",
+      "description": "Follow the system, or always light or dark."
+    }
+  },
+  "onboardingFlow": {
+    "description": "Onboarding arrives in a coming update.",
+    "steps": {
+      "welcome": "Welcome",
+      "connect": "Connect",
+      "connected": "Connected",
+      "models": "Models",
+      "connectors": "Connectors",
+      "first-bot": "Your first bot",
+      "done": "Done"
+    }
   }
 }

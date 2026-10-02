@@ -10,6 +10,7 @@ import {
   type BrowserTaskContext,
   type BrowserTaskResult,
 } from "./browser-task.js";
+import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
@@ -182,7 +183,7 @@ export function buildBrowserTaskTool(
         })
       ),
     }),
-    execute: async (_toolCallId, params, signal) => {
+    execute: async (toolCallId, params, signal) => {
       // Stop can land before the tool starts; a sub-session would outlive it.
       if (signal?.aborted) {
         return {
@@ -241,12 +242,19 @@ export function buildBrowserTaskTool(
 
       // Bracketed even on failure, or the card spins forever.
       const subtaskId = `browser-${Date.now()}-${++counter}`;
-      emit({
-        type: "subtask_start",
-        id: subtaskId,
-        description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
-        kind: "browser",
-      });
+      emit(
+        tagEvent(
+          {
+            type: "subtask_start",
+            id: subtaskId,
+            description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
+            kind: "browser",
+          },
+          { parentToolCallId: toolCallId }
+        )
+      );
+      // Everything the sub-agent does is tagged as its own (AG-UI only).
+      const childEmit = scopeEmit(emit, subtaskId);
 
       let result;
       // Failed until proven otherwise: a throw skips straight to `finally`.
@@ -255,7 +263,7 @@ export function buildBrowserTaskTool(
       try {
         browserBusy.running = true;
         try {
-          result = await runBrowserTask(context, task, emit, {
+          result = await runBrowserTask(context, task, childEmit, {
             startUrl,
             signal,
             reportFields,

@@ -66,6 +66,16 @@ describe("a permission prompt's conversation", () => {
     expect(permissions.listPending(elsewhere)).toHaveLength(0);
   });
 
+  it("lists every conversation's prompts when no conversation is named", () => {
+    const { gate: permissions } = gate();
+    void permissions.request("device", "tap", "Tap Home", "session-1");
+    void permissions.request("device", "swipe", "Swipe", "session-2");
+
+    expect(
+      permissions.listPending().map((request) => request.conversationKey)
+    ).toEqual([here, elsewhere]);
+  });
+
   it("refuses an answer from another conversation", async () => {
     const { gate: permissions, events } = gate();
     let decided: string | null = null;

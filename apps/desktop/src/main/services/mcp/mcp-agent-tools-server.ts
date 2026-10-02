@@ -17,8 +17,7 @@ import {
   type Connector,
 } from "@abacus-ai/connectors/registry";
 
-import { sendToRenderer } from "#main/renderer-host";
-import { IpcChannels } from "#shared/channels";
+import { emitIpcEvent } from "#main/rpc/emit";
 import type { ConnectorStatus, ConnectorStatuses } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 import { artifactPathLine } from "#shared/deliverables";
@@ -1191,7 +1190,7 @@ export class McpAgentToolsServer {
       callerSession == null
         ? null
         : (this.options.conversationKeyForSession?.(callerSession) ?? null);
-    sendToRenderer(IpcChannels.Event, {
+    emitIpcEvent({
       type: "preview-open",
       path: target,
       ...(conversationKey == null ? {} : { conversationKey }),

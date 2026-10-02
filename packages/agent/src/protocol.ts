@@ -564,3 +564,6 @@ export type DesktopEvent =
   | { type: "mcp_server_logs"; serverId: string; entries: CliMcpLogEntry[] }
   | { type: "mcp_refresh_failed"; error: string }
   | { type: "mcp_restart_failed"; serverId: string; error: string };
+
+/** Where an `error` came from; only `turn` ends a run (spec §3.2). */
+export type ErrorOrigin = "turn" | "command" | "startup" | "host";

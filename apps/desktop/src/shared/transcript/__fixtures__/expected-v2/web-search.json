@@ -1,0 +1,124 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Find news about tides",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "w1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "w1",
+              "partIndex": 0,
+              "type": "web_search_results"
+            },
+            {
+              "at": 1788256802000,
+              "id": "w2",
+              "partIndex": 1,
+              "type": "web_search_results"
+            },
+            {
+              "at": 1788256803000,
+              "id": "b1",
+              "partIndex": 2,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "tides news",
+          "metadata": {
+            "abacus": {
+              "kind": "web_search_results",
+              "resultType": "web",
+              "results": [
+                {
+                  "snippet": "How tides work.",
+                  "title": "Tides explained",
+                  "url": "https://example.com/tides"
+                },
+                {
+                  "title": "Moon",
+                  "url": "https://example.org/moon"
+                }
+              ],
+              "segmentId": "w1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "tide pictures",
+          "metadata": {
+            "abacus": {
+              "kind": "web_search_results",
+              "resultType": "image",
+              "results": [
+                {
+                  "thumbnailUrl": "https://example.com/beach-thumb.jpg",
+                  "title": "Beach",
+                  "url": "https://example.com/beach.jpg"
+                }
+              ],
+              "segmentId": "w2"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Here is what I found.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 4,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-web-search",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

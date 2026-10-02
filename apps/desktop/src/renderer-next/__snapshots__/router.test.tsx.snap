@@ -1,0 +1,182 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the route tree > matches the snapshot of ids and full paths 1`] = `
+[
+  {
+    "fullPath": "/",
+    "id": "__root__",
+  },
+  {
+    "fullPath": "/",
+    "id": "/_bare",
+  },
+  {
+    "fullPath": "/__ui",
+    "id": "/_bare/__ui",
+  },
+  {
+    "fullPath": "/onboarding/",
+    "id": "/_bare/onboarding/",
+  },
+  {
+    "fullPath": "/onboarding/$step",
+    "id": "/_bare/onboarding/$step",
+  },
+  {
+    "fullPath": "/",
+    "id": "/_shell",
+  },
+  {
+    "fullPath": "/",
+    "id": "/_shell/",
+  },
+  {
+    "fullPath": "/artifacts",
+    "id": "/_shell/(artifacts)/artifacts",
+  },
+  {
+    "fullPath": "/artifacts/",
+    "id": "/_shell/(artifacts)/artifacts/",
+  },
+  {
+    "fullPath": "/bots",
+    "id": "/_shell/(bots)/bots",
+  },
+  {
+    "fullPath": "/bots/",
+    "id": "/_shell/(bots)/bots/",
+  },
+  {
+    "fullPath": "/bots/$botId",
+    "id": "/_shell/(bots)/bots/$botId",
+  },
+  {
+    "fullPath": "/bots/$botId/edit",
+    "id": "/_shell/(bots)/bots/$botId_/edit",
+  },
+  {
+    "fullPath": "/bots/$botId/details",
+    "id": "/_shell/(bots)/bots/$botId/details",
+  },
+  {
+    "fullPath": "/bots/new",
+    "id": "/_shell/(bots)/bots/new",
+  },
+  {
+    "fullPath": "/library",
+    "id": "/_shell/(library)/library",
+  },
+  {
+    "fullPath": "/library/",
+    "id": "/_shell/(library)/library/",
+  },
+  {
+    "fullPath": "/library/connectors",
+    "id": "/_shell/(library)/library/connectors",
+  },
+  {
+    "fullPath": "/library/mcp",
+    "id": "/_shell/(library)/library/mcp",
+  },
+  {
+    "fullPath": "/library/messaging",
+    "id": "/_shell/(library)/library/messaging",
+  },
+  {
+    "fullPath": "/library/skills",
+    "id": "/_shell/(library)/library/skills",
+  },
+  {
+    "fullPath": "/library/tools/",
+    "id": "/_shell/(library)/library/tools/",
+  },
+  {
+    "fullPath": "/library/tools/$toolsetId",
+    "id": "/_shell/(library)/library/tools/$toolsetId",
+  },
+  {
+    "fullPath": "/routines",
+    "id": "/_shell/(routines)/routines",
+  },
+  {
+    "fullPath": "/routines",
+    "id": "/_shell/(routines)/routines/_list",
+  },
+  {
+    "fullPath": "/routines/",
+    "id": "/_shell/(routines)/routines/_list/",
+  },
+  {
+    "fullPath": "/routines/new",
+    "id": "/_shell/(routines)/routines/_list/new",
+  },
+  {
+    "fullPath": "/routines/$routineId",
+    "id": "/_shell/(routines)/routines/$routineId",
+  },
+  {
+    "fullPath": "/sessions",
+    "id": "/_shell/(sessions)/sessions",
+  },
+  {
+    "fullPath": "/sessions/",
+    "id": "/_shell/(sessions)/sessions/",
+  },
+  {
+    "fullPath": "/sessions/$sessionId",
+    "id": "/_shell/(sessions)/sessions/$sessionId",
+  },
+  {
+    "fullPath": "/sessions/$sessionId/review",
+    "id": "/_shell/(sessions)/sessions/$sessionId_/review",
+  },
+  {
+    "fullPath": "/sessions/new",
+    "id": "/_shell/(sessions)/sessions/new",
+  },
+  {
+    "fullPath": "/settings",
+    "id": "/_shell/settings",
+  },
+  {
+    "fullPath": "/settings/",
+    "id": "/_shell/settings/",
+  },
+  {
+    "fullPath": "/settings/about",
+    "id": "/_shell/settings/about",
+  },
+  {
+    "fullPath": "/settings/account",
+    "id": "/_shell/settings/account",
+  },
+  {
+    "fullPath": "/settings/appearance",
+    "id": "/_shell/settings/appearance",
+  },
+  {
+    "fullPath": "/settings/environment",
+    "id": "/_shell/settings/environment",
+  },
+  {
+    "fullPath": "/settings/general",
+    "id": "/_shell/settings/general",
+  },
+  {
+    "fullPath": "/settings/memory",
+    "id": "/_shell/settings/memory",
+  },
+  {
+    "fullPath": "/settings/models",
+    "id": "/_shell/settings/models",
+  },
+  {
+    "fullPath": "/settings/notifications",
+    "id": "/_shell/settings/notifications",
+  },
+  {
+    "fullPath": "/settings/usage",
+    "id": "/_shell/settings/usage",
+  },
+]
+`;
