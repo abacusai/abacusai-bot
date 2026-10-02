@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
+import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
@@ -242,6 +243,24 @@ export const useBotChatSlots = (
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,
       fixedMode: mode.data ?? AgentMode.Normal,
+      ...(!readOnly
+        ? {
+            onResumeOnFreePool: async () => {
+              await setBotModel(collections.bots, bot.id, "abacus/openllm");
+              if (session?.workspaceId) {
+                await transport.client.agent.setModel({
+                  workspaceId: session.workspaceId,
+                  sessionId,
+                  model: "abacus/openllm",
+                });
+                await confirmFreePoolModel(transport, {
+                  workspaceId: session.workspaceId,
+                  sessionId,
+                });
+              }
+            },
+          }
+        : {}),
       onFirstSend: (text: string) => {
         if (detectRememberRequest(text) != null)
           showInfo(t("memory.rememberedToast"));

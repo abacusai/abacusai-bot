@@ -25,6 +25,7 @@ import {
   ShellFailure,
 } from "#renderer/features/shell/shell-layout";
 import { startTour, useTourState } from "#renderer/features/tour/store";
+import { canSignOutOfAbacus } from "#shared/settings";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
 );
@@ -86,8 +87,16 @@ export const Route = createFileRoute("/_shell")({
       accountStateQuery(context.transport)
     );
     const prefs = context.db.collections.prefs.get("app") ?? DEFAULT_PREFS;
-    if (needsOnboarding(account))
-      throw redirect({ ...onboardingTarget(prefs), replace: true });
+    const signedIn = canSignOutOfAbacus(
+      await context.transport.client.settings.get({})
+    );
+    if (needsOnboarding(account, signedIn))
+      throw redirect({
+        ...onboardingTarget(
+          signedIn ? prefs : { ...prefs, onboardingStep: "welcome" }
+        ),
+        replace: true,
+      });
     const exit = prefs.onboardingExit;
     if (exit) {
       const target =

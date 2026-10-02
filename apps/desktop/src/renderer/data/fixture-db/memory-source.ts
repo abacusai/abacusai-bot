@@ -36,7 +36,9 @@ const FIXTURE_BUILD_MARKER =
 type Handlerish = (input: never) => unknown;
 
 /** Every `db.<table>.<procedure>` the fixture client has, as a handler. */
-const buildRouter = (db: FixtureDb): Router<any, Record<string, never>> => {
+export const fixtureDbRouter = (
+  db: FixtureDb
+): Router<any, Record<string, never>> => {
   const client = fixtureDbClient(db) as unknown as Record<
     string,
     Record<string, Handlerish>
@@ -83,7 +85,7 @@ export const createMemoryDbTransport = (
   seed: FixtureSeed = defaultFixtureSeed()
 ): { db: FixtureDb; transport: LazyTransport } => {
   const db = new FixtureDb(seed);
-  const transport = createMemoryTransport(buildRouter(db), {});
+  const transport = createMemoryTransport(fixtureDbRouter(db), {});
   if (import.meta.env.MODE !== "test") console.info(FIXTURE_BUILD_MARKER);
   return { db, transport: async () => transport };
 };

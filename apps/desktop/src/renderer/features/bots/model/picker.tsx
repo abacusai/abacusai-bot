@@ -37,13 +37,17 @@ export const useBotModelBinding = (
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
     defaultModel: settings.data?.defaultModel,
-    freeTier: account.data?.plan?.toLowerCase() === "free",
+    freeTier:
+      (account.data?.subscription_tier ?? account.data?.plan)?.toLowerCase() ===
+      "free",
     labels: {
       defaultGroup: t("bots.model.default"),
       appDefault: t("bots.form.modelDefault"),
       favorites: t("bots.model.favorites"),
       localProvider: t("bots.model.local"),
       connectOpenRouter: t("bots.model.connectOpenRouter"),
+      connectSource: (provider) =>
+        t("onboarding.setupKeyDialogTitle", { provider }),
       connectGoogleAi: t("bots.model.connectGoogleAi"),
       tierFree: t("bots.model.free"),
       tierLocal: t("bots.model.local"),

@@ -260,3 +260,47 @@ describe("R2-T21 queue (rendered)", () => {
     ).toBeTruthy();
   });
 });
+
+it("read-only bot chats hide retry and named model switches", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("dead"),
+    ...b.text("ask", "user", "go"),
+    b.runError("dead", {
+      message: "Turn failed",
+      actions: [
+        { type: "retry" },
+        {
+          type: "switch-model",
+          model: "abacus/openllm",
+          label: "RouteLLM - Open",
+        },
+      ],
+    }),
+  ]);
+  current = await renderRelay(relay, "bot", {
+    readOnly: { reason: "Read only" },
+    model: { value: "a", label: "A", onChange: vi.fn(), groups: [] },
+  });
+  await screen.findByText("Turn failed");
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Continue on/ })).toBeNull();
+  expect(relay.stats.send).toHaveLength(0);
+});
+
+it("re-runs a bot's hidden first turn when there is no visible user message", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("first-run"),
+    b.runError("first-run", { message: "The provider stopped" }),
+  ]);
+  current = await renderRelay(relay, "bot");
+  fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+  expect(relay.stats.send[0]!.messages.at(-1)).toMatchObject({
+    role: "user",
+    parts: [{ type: "text", content: "Continue from where you left off" }],
+  });
+});

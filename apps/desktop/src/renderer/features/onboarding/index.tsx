@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
 } from "#renderer/ui/dropdown-menu";
 
 import type { OnboardingExit } from "./actions";
@@ -129,6 +130,15 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     ...transport.orpc.auth.abacus.browserProfiles.queryOptions({ input: {} }),
     enabled: step === "welcome",
   });
+  const refetchProfiles = profiles.refetch;
+  useEffect(() => {
+    if (step !== "welcome") return;
+    const focus = () => {
+      void refetchProfiles();
+    };
+    window.addEventListener("focus", focus);
+    return () => window.removeEventListener("focus", focus);
+  }, [step, refetchProfiles]);
   const models = useQuery({
     ...transport.orpc.models.list.queryOptions({ input: {} }),
     enabled: step === "models",
@@ -143,6 +153,12 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   });
   const { data: bots } = useLiveQuery(db.collections.bots);
   const defaultProfile = profiles.data?.find((profile) => profile.isDefault);
+  const quickProfile = profiles.data?.find(
+    (profile) => profile.isDefault && profile.hasAbacusSession === true
+  );
+  const sessionProfiles =
+    profiles.data?.filter((profile) => profile.hasAbacusSession !== false) ??
+    [];
   const connected = connectedProviders(
     (models.data ?? []).filter((m) => m.configured),
     keys.data ?? []
@@ -158,6 +174,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     if (
       !props.preview &&
       liveFirst.state === "ready" &&
+      !liveFirst.result.preview &&
       bots &&
       !bots.some((item) => item.id === liveFirst.result.bot.id)
     ) {
@@ -206,11 +223,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     if (target !== "ignore" && target !== "complete")
       void props.navigate(target);
   };
-  const skip = () =>
-    void perform(async () => {
-      await props.cancelSignIn();
-      await props.navigate("models");
-    });
   const button = (label: string, action: () => void, secondary = false) => (
     <Button
       size="lg"
@@ -285,26 +297,24 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
           </div>
           {button(t("onboarding.connectCta"), () => props.signIn("signup"))}
-          <div className="flex items-center gap-1">
-            {button(
+          {quickProfile ? (
+            button(
               t("onboarding.haveAccountCta"),
-              () => props.signIn("signin", defaultProfile?.id),
+              () => props.signIn("signin", quickProfile.id),
               true
-            )}
-            {!!profiles.data?.length && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="secondary"
-                      aria-label={t("onboarding.signInOptions")}
-                    />
-                  }
-                >
-                  ⌄
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {profiles.data.map((profile) => (
+            )
+          ) : sessionProfiles.length ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button size="lg" variant="secondary" disabled={busy} />
+                }
+              >
+                {t("onboarding.haveAccountCta")}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
+                  {sessionProfiles.map((profile) => (
                     <DropdownMenuItem
                       key={profile.id}
                       onClick={() => props.signIn("signin", profile.id)}
@@ -318,10 +328,16 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                   <DropdownMenuItem onClick={() => props.signIn("signin")}>
                     {t("onboarding.signInAnotherWay")}
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            button(
+              t("onboarding.haveAccountCta"),
+              () => props.signIn("signin"),
+              true
+            )
+          )}
           {defaultProfile && (
             <p>
               {t("onboarding.usesBrowserSessions", {
@@ -329,9 +345,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               })}
             </p>
           )}
-          <Button variant="ghost" onClick={skip}>
-            {t("onboarding.pages.skip")}
-          </Button>
         </>
       )}
       {step === "connect" && (
@@ -372,9 +385,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           >
             {t("onboarding.signInAnotherWay")}
           </Button>
-          <Button variant="ghost" onClick={skip}>
-            {t("onboarding.pages.skip")}
-          </Button>
+
           <Button
             variant="ghost"
             onClick={() =>
@@ -482,7 +493,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           <Button variant="ghost" onClick={() => setMore(!more)}>
             {t("onboarding.pages.more")}
           </Button>
-          {button(t("onboarding.connectorsContinue"), advance)}
+          {button(t("onboarding.connectorsContinue"), () => {
+            if (!facts.ownsBot)
+              void perform(() => props.complete({ to: "new-bot" }));
+            else advance();
+          })}
         </>
       )}
       {step === "first-bot" && (
@@ -500,7 +515,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             <>
               <div className="bg-muted w-full rounded-xl border p-5">
                 <h2>
-                  {bots?.some((b) => b.id === bot.id)
+                  {(first.state === "ready" && first.result.preview) ||
+                  bots?.some((b) => b.id === bot.id)
                     ? bot.name
                     : t("onboarding.pages.removed")}
                 </h2>

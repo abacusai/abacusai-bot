@@ -54,7 +54,7 @@ test("catalog templates must select a string leaf", () => {
 });
 
 test("retained legacy sentinels are allowed only while unused", () => {
-  const resource = { retired: false };
+  const resource = { retired: "" };
   assert.deepEqual(validateCopy(resource, [], ["retired"]), []);
   assert.deepEqual(validateCopy(resource, ["retired"], ["retired"]), [
     "Non-string key: retired",
