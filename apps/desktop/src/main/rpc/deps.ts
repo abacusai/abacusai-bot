@@ -8,6 +8,7 @@
  */
 import type { AccountState } from "#shared/account";
 import type {
+  NotificationMetadata,
   SetDensityResult,
   WindowChromeState,
   WindowState,
@@ -86,7 +87,8 @@ export interface AppOperations {
   showNotification(
     title: string,
     body: string,
-    metadata?: { workspaceId?: string; sessionId?: string }
+    metadata?: NotificationMetadata,
+    attention?: { kind?: "needs-you" | "done" | "failed"; dedupeKey?: string }
   ): void;
   readImageAsDataUrl(args: HostFileArgs): Promise<{
     success: boolean;
@@ -193,4 +195,5 @@ export interface RpcDeps {
   trackers: EventTrackers;
   /** `window.claimCue` / `window.visibleThread` (spec 06 §14.2). */
   cues: CueArbiter;
+  notch?: import("../notch/controller").NotchController;
 }

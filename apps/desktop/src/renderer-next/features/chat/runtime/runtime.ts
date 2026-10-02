@@ -42,6 +42,7 @@ export interface ChatRuntime {
 export interface ChatRuntimeOptions {
   sessionOptions?: Omit<ThreadSessionOptions, "ai" | "threadId">;
   capacity?: number;
+  maxSessions?: number;
   host?: ChatHostActions;
 }
 
@@ -50,7 +51,8 @@ export const createChatRuntime = (
   options: ChatRuntimeOptions = {}
 ): ChatRuntime => {
   const sessions = new Map<string, ThreadSession>();
-  const capacity = options.capacity ?? MAX_CACHED_THREADS;
+  const capacity =
+    options.maxSessions ?? options.capacity ?? MAX_CACHED_THREADS;
 
   const evict = (): void => {
     for (const [threadId, session] of sessions) {

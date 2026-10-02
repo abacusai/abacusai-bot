@@ -67,6 +67,8 @@ type CliRuntime = {
   sessionId: string;
   process: ChildProcessWithoutNullStreams;
   state: AgentSessionSnapshot;
+  readiness: Promise<AgentSessionSnapshot>;
+  resolveReadiness: (state: AgentSessionSnapshot) => void;
   wire: AgentWire;
   /** agui: how compat arrives, from `wire.hello` (stdout line 1). */
   compatMode: "pending" | "fd" | "inline" | "none";
@@ -402,6 +404,11 @@ const logCliSpawnFailure = (
 };
 
 export class AgentManagerService {
+  private readonly starts = new Map<string, Promise<StartAgentSessionResult>>();
+  private readonly readyStarts = new Map<
+    string,
+    Promise<StartAgentSessionResult>
+  >();
   private readonly runtimes = new Map<string, CliRuntime>();
   /** Sessions whose process has gone. See ExitedRuntimeRecord. */
   private readonly exited: ExitedRuntimeRecord[] = [];
@@ -466,7 +473,51 @@ export class AgentManagerService {
     return { ...runtime.state };
   }
 
-  async startSession(
+  /** Join configuration and spawn, including callers arriving before a runtime exists. */
+  startSession(
+    request: StartAgentSessionRequest
+  ): Promise<StartAgentSessionResult> {
+    const pending = this.starts.get(request.sessionId);
+    if (pending != null) return pending;
+    const start = this.spawnSession(request).finally(() => {
+      this.starts.delete(request.sessionId);
+    });
+    this.starts.set(request.sessionId, start);
+    return start;
+  }
+
+  /** IPC and RPC starts share the readiness outcome of one process. */
+  startSessionReady(
+    request: StartAgentSessionRequest
+  ): Promise<StartAgentSessionResult> {
+    const pending = this.readyStarts.get(request.sessionId);
+    if (pending != null) return pending;
+    const start = this.waitForStart(request).finally(() => {
+      this.readyStarts.delete(request.sessionId);
+    });
+    this.readyStarts.set(request.sessionId, start);
+    return start;
+  }
+
+  private async waitForStart(
+    request: StartAgentSessionRequest
+  ): Promise<StartAgentSessionResult> {
+    const result = await this.startSession(request);
+    if (!result.success || result.state.status !== "starting") return result;
+    const runtime = this.runtimes.get(request.sessionId);
+    if (runtime == null) return result;
+    const state = await runtime.readiness;
+    return {
+      ...result,
+      success: state.status === "running",
+      state,
+      ...(state.status === "running"
+        ? {}
+        : { error: state.error ?? "Session stopped before it was ready." }),
+    };
+  }
+
+  private async spawnSession(
     request: StartAgentSessionRequest
   ): Promise<StartAgentSessionResult> {
     const workspacePath = this.options.resolveWorkspacePath(
@@ -648,10 +699,16 @@ export class AgentManagerService {
     child.stdin.on("error", () => {});
 
     const startedAt = new Date().toISOString();
+    let resolveReadiness!: (state: AgentSessionSnapshot) => void;
+    const readiness = new Promise<AgentSessionSnapshot>((resolve) => {
+      resolveReadiness = resolve;
+    });
     const runtime: CliRuntime = {
       workspaceId: request.workspaceId,
       sessionId: request.sessionId,
       process: child,
+      readiness,
+      resolveReadiness,
       wire,
       compatMode: wire === "agui" ? "pending" : "none",
       compatLines: new LineSplitter({
@@ -868,6 +925,7 @@ export class AgentManagerService {
           : current.state.error,
         stoppedAt: new Date().toISOString(),
       };
+      current.resolveReadiness({ ...current.state });
       this.options.emitStateUpdated(current.workspaceId, current.sessionId, {
         ...current.state,
       });
@@ -1428,6 +1486,12 @@ export class AgentManagerService {
       ...runtime.state,
       ...patch,
     };
+    if (
+      runtime.state.status === "running" ||
+      runtime.state.status === "error"
+    ) {
+      runtime.resolveReadiness({ ...runtime.state });
+    }
     this.options.emitStateUpdated(runtime.workspaceId, runtime.sessionId, {
       ...runtime.state,
     });

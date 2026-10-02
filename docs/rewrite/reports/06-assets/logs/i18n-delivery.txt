@@ -1,0 +1,1 @@
+[i18n-guard] OK: no new bare UI literals (0 grandfathered).

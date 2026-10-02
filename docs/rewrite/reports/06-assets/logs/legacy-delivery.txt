@@ -1,0 +1,1 @@
+check-legacy-renderer-diff: 17 file(s) under src/renderer changed, additions only (base main @ e379ba09)

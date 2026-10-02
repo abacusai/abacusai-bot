@@ -50,6 +50,7 @@ import {
   SidePanelDrawer,
   SidePanelFrame,
 } from "./side-panel";
+import { useSidePanelOverride } from "./side-panel-slot";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
 import { useTopBarStatus } from "./top-bar-slots";
@@ -107,6 +108,7 @@ export const ShellLayout = ({
   const db = useDb();
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
+  const overridden = useSidePanelOverride();
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
@@ -117,11 +119,19 @@ export const ShellLayout = ({
     width: BAND_WIDTH[band],
     area,
     pinned: prefs.sidebar.pinned,
-    panelOpen: panel.tab != null,
+    panelOpen:
+      area === "sessions"
+        ? (location.search as { tab?: string }).tab != null
+        : panel.tab != null,
+    view: (location.search as { view?: string }).view,
   });
   const panelTabs: readonly SidePanelTabId[] =
     area == null ? [] : AREA_PANEL_TABS[area];
-  const panelInLayout = layout.sidePanel === "layout" && panel.tab != null;
+  const panelInLayout =
+    !overridden &&
+    area !== "sessions" &&
+    layout.sidePanel === "layout" &&
+    panel.tab != null;
 
   useEffect(() => {
     document.documentElement.dataset.band = band;
@@ -188,7 +198,10 @@ export const ShellLayout = ({
             statusText={status ?? undefined}
             badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
           />
-          <TopBar.Actions folded={layout.titleBar.actionsFolded} />
+          <TopBar.Actions
+            folded={layout.titleBar.actionsFolded}
+            tabs={panelInLayout ? panelTabs : []}
+          />
           {panelInLayout && panel.tab != null && (
             <TopBar.PanelTabs
               tabs={panelTabs}
@@ -239,7 +252,9 @@ export const ShellLayout = ({
           </div>
         </div>
         <SidePanelDrawer
-          open={layout.sidePanel === "drawer"}
+          open={
+            !overridden && area !== "sessions" && layout.sidePanel === "drawer"
+          }
           tab={panel.tab}
           tabs={panelTabs}
           onTabChange={panel.setTab}

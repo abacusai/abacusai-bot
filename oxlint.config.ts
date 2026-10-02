@@ -22,7 +22,10 @@ const RENDERER_NEXT_BANNED_PACKAGES = [
  */
 export default defineConfig({
   extends: [base, node],
-  ignorePatterns: base.ignorePatterns ?? [],
+  ignorePatterns: [
+    ...(base.ignorePatterns ?? []),
+    "apps/desktop/src/renderer-next/notchRouteTree.gen.ts",
+  ],
   // Repeated at the entry config: `plugins` in an extended config is additive,
   // so without this the unicorn and react-perf correctness rules come back.
   plugins: ["eslint", "typescript", "react"],

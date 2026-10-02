@@ -1,8 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
+import * as v from "valibot";
 
-import { RoutineCreateSheet } from "#next/features/routines";
-
-/** Masked sheet over the list: the URL shows /routines. */
+import { RoutineCreateDialog } from "#next/features/routines";
+import { optionalField } from "#next/lib/navigation/search";
+import { ROUTINE_TEMPLATES } from "#next/lib/routines/templates";
 export const Route = createFileRoute("/_shell/(routines)/routines/_list/new")({
-  component: RoutineCreateSheet,
+  validateSearch: v.object({
+    template: optionalField(v.picklist(ROUTINE_TEMPLATES.map((x) => x.id))),
+  }),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.db.collections.routines.preload(),
+      context.db.collections.workspaces.preload(),
+    ]);
+  },
+  component: RoutineCreateDialog,
 });

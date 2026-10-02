@@ -27,6 +27,7 @@ import {
   useOptionalChatView,
   type ChatViewContextValue,
 } from "../context";
+import { NotchPermissionList, type NotchPermissionProps } from "./notch-list";
 import { PermissionCard } from "./permission-card";
 import { present } from "./presenters";
 import { permissionSelection, selectPermission } from "./selection";
@@ -227,10 +228,18 @@ const StandalonePermissions = ({
  * pass `runtime` and `threadId` (review r1 #39).
  */
 export const PermissionList = (
-  props: Partial<StandalonePermissionsProps> = {}
+  props: Partial<StandalonePermissionsProps> &
+    Partial<NotchPermissionProps> & {
+      variant?: "chat" | "notch";
+      limit?: number;
+    } = {}
 ) => {
   const view = useOptionalChatView();
   const { runtime, threadId } = props;
+  if (props.variant === "notch" && runtime && threadId)
+    return (
+      <NotchPermissionList {...props} runtime={runtime} threadId={threadId} />
+    );
   if (runtime != null && threadId != null)
     return (
       <StandalonePermissions {...props} runtime={runtime} threadId={threadId}>

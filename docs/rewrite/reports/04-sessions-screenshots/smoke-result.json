@@ -1,0 +1,14 @@
+{
+  "platform": "macOS",
+  "checks": [
+    "new worktree session persists one configured first admission",
+    "real PTY delivers 5 MB while the terminal tab is hidden",
+    "same-document output reconnect appends without replaying old bytes",
+    "browser surface has a live native presentation placeholder",
+    "changes diff reads the sibling worktree and Keep preserves the primary checkout",
+    "masked diff keeps the session dock mounted",
+    "16 session route screenshots: sidebar/start/changes/terminal at 1280 and 900, light and dark",
+    "deleted live session renders its gone state"
+  ],
+  "coverage": "Partial R4 smoke, not full acceptance"
+}

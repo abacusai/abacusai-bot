@@ -16,6 +16,7 @@ import { mcpRouter } from "./procedures/mcp";
 import { memoryRouter } from "./procedures/memory";
 import { messagingRouter } from "./procedures/messaging";
 import { modelsRouter } from "./procedures/models";
+import { notchRouter } from "./procedures/notch";
 import { referralsRouter } from "./procedures/referrals";
 import { routinesRouter } from "./procedures/routines";
 import { sessionsRouter } from "./procedures/sessions";
@@ -43,6 +44,7 @@ export const createRouter = () =>
     ai: aiRouter,
     bots: botsRouter,
     routines: routinesRouter,
+    notch: notchRouter,
     settings: settingsRouter,
     models: modelsRouter,
     localModels: localModelsRouter,

@@ -39,6 +39,8 @@ import {
   discardEntry,
   retryEntry,
   submit as submitAdmission,
+  admitEnvelope,
+  type SubmissionEnvelope,
   type AdmissionHost,
   type AdmissionResult,
   type OutboxEntry,
@@ -177,6 +179,7 @@ export class ThreadSession {
   #recoveries = 0;
   #timers = new Set<ReturnType<typeof setTimeout>>();
   #pins = 0;
+  #loadWaiters = 0;
   #cancelAttempt = 0;
   #permissionAttempt = 0;
   #cancelTimer: ReturnType<typeof setTimeout> | null = null;
@@ -255,12 +258,46 @@ export class ThreadSession {
   }
 
   /** The current generation's readiness; one promise for every caller (§3.2). */
-  load(): Promise<void> {
+  load(options: { signal?: AbortSignal } = {}): Promise<void> {
     if (this.#retired)
       return Promise.reject(new ThreadRetiredError(this.threadId));
+    if (options.signal?.aborted)
+      return Promise.reject(new DOMException("Load aborted", "AbortError"));
     const current = this.#pending ?? this.#live;
-    if (current == null || current.failed) return this.#start().ready.promise;
-    return current.ready.promise;
+    const gen = current == null || current.failed ? this.#start() : current;
+    this.#loadWaiters += 1;
+    if (!options.signal) {
+      const finished = () => {
+        this.#loadWaiters -= 1;
+      };
+      gen.ready.promise.then(finished, finished);
+      return gen.ready.promise;
+    }
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const done = (error?: unknown) => {
+        if (settled) return;
+        settled = true;
+        this.#loadWaiters -= 1;
+        options.signal?.removeEventListener("abort", aborted);
+        if (error) reject(error);
+        else resolve();
+      };
+      const aborted = () => {
+        done(new DOMException("Load aborted", "AbortError"));
+        if (
+          this.#loadWaiters === 0 &&
+          !this.pinned &&
+          !this.hostStore.state.ready
+        )
+          this.retire();
+      };
+      options.signal?.addEventListener("abort", aborted, { once: true });
+      gen.ready.promise.then(
+        () => done(),
+        (error) => done(error)
+      );
+    });
   }
 
   /** The connection error's Retry, and a `NOT_FOUND` row that came back. */
@@ -296,6 +333,11 @@ export class ThreadSession {
     forwardedProps?: Record<string, unknown>
   ): Promise<AdmissionResult> {
     return submitAdmission(this.#admission, text, forwardedProps).result;
+  }
+
+  async admitEnvelope(envelope: SubmissionEnvelope): Promise<AdmissionResult> {
+    await this.load();
+    return admitEnvelope(this.#admission, envelope);
   }
 
   retryOutbox(entryId: string): Promise<AdmissionResult> {
@@ -673,10 +715,13 @@ export class ThreadSession {
   async #build(gen: Generation): Promise<void> {
     let snapshot: AiHydration;
     try {
-      snapshot = await this.#ai.hydrate({
-        threadId: this.threadId,
-        limit: PAGE_SIZE,
-      });
+      snapshot = await this.#ai.hydrate(
+        {
+          threadId: this.threadId,
+          limit: PAGE_SIZE,
+        },
+        { signal: gen.abort.signal }
+      );
     } catch (error) {
       if (
         gen.g !== this.#gen ||

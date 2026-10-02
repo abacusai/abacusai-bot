@@ -1,0 +1,52 @@
+phase6-shell-red.txt
+   × pointer leave releases native click-through before the visual collapse delay 165ms
+   × expanded approval has one Needs you label 70ms
+   × current quiet hours collapse manual reply and release focus 1074ms
+   × current quiet hours collapse manual listening and release focus 1039ms
+   × successful started manual reply collapses and releases native focus 1051ms
+   × successful queued manual reply collapses and releases native focus 1059ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected "vi.fn()" to be called with arguments: [ { interactive: false } ]
+AssertionError: expected [ Array(2) ] to have a length of 1 but got 2
+AssertionError: expected last "vi.fn()" call to have been called with [ ObjectContaining{…} ]
+AssertionError: expected last "vi.fn()" call to have been called with [ ObjectContaining{…} ]
+AssertionError: expected last "vi.fn()" call to have been called with [ { focus: false } ]
+AssertionError: expected last "vi.fn()" call to have been called with [ { focus: false } ]
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+
+phase6-listening-red.txt
+   × R6-T25/T30/T42 native child viewport and disposal cycles 32225ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: {"mode":"plain","locale":"en-US","controls":2,"height":78,"visible":false}: expected false to be true // Object.is equality
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+
+phase6-provider-red.txt
+   × save failures retain valid keys and show retryable transport copy 186ms
+   × refresh failures retain valid keys and show retryable transport copy 64ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected 'That doesn\'t look like an API key. C…' to contain 'Try again'
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+
+phase6-lineage-red.txt
+   × descriptor snooze identity changes when permissions are replaced in the same millisecond 4ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected undefined to be defined
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+
+phase6-retirement-red.txt
+   × R6-T19 the production director bounds real relay subscriptions through changes, cancellation and disposal 1073ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'thread-0' ]
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+
+phase6-unlock-red.txt
+   × unlock revalidates the proposed attention against the latest queue 5ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
