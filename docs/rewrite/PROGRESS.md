@@ -25,3 +25,8 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 ## Cutover release N implementation, 1 October 2026
 
 C5 completion and C6–C14 are implemented in ordered commits on codex-cutover. See [the cutover report](reports/07-cutover.md) for focused checks and final gates. Release acceptance remains pending hardware, signed RC, comparative performance and §19 decisions. N keeps migration steps 1, 2 and 5 registered. Steps 3 and 4 remain reserved for N+1. Restore tooling is shipped early so support can exercise its synthetic two-profile and two-cycle checks before retirement.
+
+## Visual quality pass (2 Oct 2026)
+
+- Notch geometry: measured per-display notch rect, single continuous outline, capsule fallback (docs/rewrite/reports/08-notch-geometry.md; merged 1f8fcae0). Needs the user's eyes on the physical display.
+- UI audit: 2,612 screenshots captured (apps/desktop/scripts/ui-audit-capture.mjs), reviewed independently by Opus 5.5, GPT 6 Astra and GPT 6.1 Sol (209 findings, 121 distinct, 107 confirmed), all 107 fixed by an Astra Codex task with after-captures (docs/rewrite/audit/CONSOLIDATED.md; merged b382b825). Tree green: 4,361 unit + 302 serial tests, zero React Compiler diagnostics.
