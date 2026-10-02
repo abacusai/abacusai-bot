@@ -19,6 +19,14 @@ const TARGETS = {
     packageManager: "pnpm",
     cwd: repoRoot,
     accepted: {
+      // https://github.com/advisories/GHSA-86w9-cpqp-85rv (no patched release).
+      "GHSA-86w9-cpqp-85rv":
+        "node-forge <=1.4.0 via sandbox-runtime 0.0.76: RSA signature " +
+        "verification accepts a malformed DigestAlgorithm. The runtime's " +
+        "only forge consumers, mitm-ca.js and mitm-leaf.js, parse and mint " +
+        "local certificates; they never call forge RSA/certificate verification. " +
+        "TLS verification uses Node/OpenSSL. Delete when forge ships a patched " +
+        "release or sandbox-runtime introduces forge signature verification.",
       // Both name a patched version npm does not have yet, so there is nothing
       // to pin in `overrides`; both are defended at the call site. When the
       // release lands, the stale-entry check below fails on the entry.

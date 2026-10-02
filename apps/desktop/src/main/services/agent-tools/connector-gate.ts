@@ -64,9 +64,14 @@ export class ConnectorGate {
    * One conversation's asks still waiting. The Connect card is fed by a
    * one-shot event, so on mount it re-reads this list to pick the wait up.
    */
-  listPending(conversationKey: ConversationKey): ConnectorRequest[] {
+  listPending(conversationKey?: ConversationKey): ConnectorRequest[] {
+    // No key: every conversation's (a subscriber that watches them all).
     return [...this.pending.values()]
-      .filter((entry) => entry.request.conversationKey === conversationKey)
+      .filter(
+        (entry) =>
+          conversationKey == null ||
+          entry.request.conversationKey === conversationKey
+      )
       .map((entry) => entry.request);
   }
 

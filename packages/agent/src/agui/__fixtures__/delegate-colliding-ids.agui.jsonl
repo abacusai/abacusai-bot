@@ -1,0 +1,46 @@
+{"type":"CUSTOM","name":"session.ready","value":{"model":"fake/fake-1","mode":"YOLO","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>","incarnation":"inc-1"}}
+{"type":"STATE_SNAPSHOT","snapshot":{"mode":"YOLO","modeSource":"startup","model":"fake/fake-1","incarnation":"inc-1","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}}
+{"type":"CUSTOM","name":"skills.loaded","value":{"skills":[]}}
+{"type":"CUSTOM","name":"mcp.servers","value":{"servers":[]}}
+{"type":"RUN_STARTED","threadId":"t-1","runId":"srv-<1>","metadata":{"abacus":{"serverInitiated":true}}}
+{"type":"TEXT_MESSAGE_START","messageId":"srv-<1>:user","role":"user"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"srv-<1>:user","delta":"delegate twice"}
+{"type":"TEXT_MESSAGE_END","messageId":"srv-<1>:user"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"submitted"}}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"streaming"}}
+{"type":"TEXT_MESSAGE_START","messageId":"<MSG_2>","role":"assistant"}
+{"type":"TOOL_CALL_START","toolCallId":"call-0-0","toolCallName":"delegate_task","parentMessageId":"<MSG_2>","metadata":{"abacus":{"rawName":"delegate_task"}}}
+{"type":"TOOL_CALL_ARGS","toolCallId":"call-0-0","delta":"{\"task\":\"task A: list files\"}"}
+{"type":"TOOL_CALL_START","toolCallId":"call-0-1","toolCallName":"delegate_task","parentMessageId":"<MSG_2>","metadata":{"abacus":{"rawName":"delegate_task"}}}
+{"type":"TOOL_CALL_ARGS","toolCallId":"call-0-1","delta":"{\"task\":\"task B: list files\"}"}
+{"type":"TOOL_CALL_END","toolCallId":"call-0-0","metadata":{"tanstack":{"input":{"task":"task A: list files"}}}}
+{"type":"TOOL_CALL_END","toolCallId":"call-0-1","metadata":{"tanstack":{"input":{"task":"task B: list files"}}}}
+{"type":"TEXT_MESSAGE_END","messageId":"<MSG_2>"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"executing-tool"}}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"executing-tool"}}
+{"type":"SUBAGENT_STARTED","subagentRunId":"delegate-<T>-1","name":"delegate","description":"task A: list files","parentToolCallId":"call-0-0","parentMessageId":"<MSG_2>"}
+{"type":"SUBAGENT_STARTED","subagentRunId":"delegate-<T>-2","name":"delegate","description":"task B: list files","parentToolCallId":"call-0-1","parentMessageId":"<MSG_2>"}
+{"type":"TOOL_CALL_START","toolCallId":"delegate-<T>-1:sub-child-0","toolCallName":"ls","metadata":{"abacus":{"rawName":"ls","legacyToolCallId":"sub-child-0"}},"subagentRunId":"delegate-<T>-1"}
+{"type":"TOOL_CALL_ARGS","toolCallId":"delegate-<T>-1:sub-child-0","delta":"{\"path\":\".\"}","subagentRunId":"delegate-<T>-1"}
+{"type":"TOOL_CALL_END","toolCallId":"delegate-<T>-1:sub-child-0","metadata":{"tanstack":{"input":{"path":"."}}},"subagentRunId":"delegate-<T>-1"}
+{"type":"TOOL_CALL_RESULT","messageId":"delegate-<T>-1:sub-child-0:result","toolCallId":"delegate-<T>-1:sub-child-0","role":"tool","content":"{\"text\":\"Tool ls not found\",\"rejected\":true,\"error\":\"Tool ls not found\",\"formatted\":\"```\\nTool ls not found\\n```\"}","metadata":{"tanstack":{"state":"output-error"}},"subagentRunId":"delegate-<T>-1"}
+{"type":"TEXT_MESSAGE_START","messageId":"delegate-<T>-1:final","role":"assistant","subagentRunId":"delegate-<T>-1"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"delegate-<T>-1:final","delta":"A looked.","subagentRunId":"delegate-<T>-1"}
+{"type":"TEXT_MESSAGE_END","messageId":"delegate-<T>-1:final","subagentRunId":"delegate-<T>-1"}
+{"type":"SUBAGENT_FINISHED","subagentRunId":"delegate-<T>-1","result":"A looked.","outcome":{"type":"success"}}
+{"type":"TOOL_CALL_RESULT","messageId":"call-0-0:result","toolCallId":"call-0-0","role":"tool","content":"{\"text\":\"A looked.\",\"rejected\":false,\"formatted\":\"A looked.\"}"}
+{"type":"TOOL_CALL_START","toolCallId":"delegate-<T>-2:sub-child-0","toolCallName":"ls","metadata":{"abacus":{"rawName":"ls","legacyToolCallId":"sub-child-0"}},"subagentRunId":"delegate-<T>-2"}
+{"type":"TOOL_CALL_ARGS","toolCallId":"delegate-<T>-2:sub-child-0","delta":"{\"path\":\".\"}","subagentRunId":"delegate-<T>-2"}
+{"type":"TOOL_CALL_END","toolCallId":"delegate-<T>-2:sub-child-0","metadata":{"tanstack":{"input":{"path":"."}}},"subagentRunId":"delegate-<T>-2"}
+{"type":"TOOL_CALL_RESULT","messageId":"delegate-<T>-2:sub-child-0:result","toolCallId":"delegate-<T>-2:sub-child-0","role":"tool","content":"{\"text\":\"Tool ls not found\",\"rejected\":true,\"error\":\"Tool ls not found\",\"formatted\":\"```\\nTool ls not found\\n```\"}","metadata":{"tanstack":{"state":"output-error"}},"subagentRunId":"delegate-<T>-2"}
+{"type":"TEXT_MESSAGE_START","messageId":"delegate-<T>-2:final","role":"assistant","subagentRunId":"delegate-<T>-2"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"delegate-<T>-2:final","delta":"B looked.","subagentRunId":"delegate-<T>-2"}
+{"type":"TEXT_MESSAGE_END","messageId":"delegate-<T>-2:final","subagentRunId":"delegate-<T>-2"}
+{"type":"SUBAGENT_FINISHED","subagentRunId":"delegate-<T>-2","result":"B looked.","outcome":{"type":"success"}}
+{"type":"TOOL_CALL_RESULT","messageId":"call-0-1:result","toolCallId":"call-0-1","role":"tool","content":"{\"text\":\"B looked.\",\"rejected\":false,\"formatted\":\"B looked.\"}"}
+{"type":"TEXT_MESSAGE_START","messageId":"<MSG_3>","role":"assistant"}
+{"type":"TEXT_MESSAGE_CONTENT","messageId":"<MSG_3>","delta":"Both delegates reported."}
+{"type":"TEXT_MESSAGE_END","messageId":"<MSG_3>"}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}
+{"type":"RUN_FINISHED","threadId":"t-1","runId":"srv-<1>","outcome":{"type":"success"},"usage":[{"model":"fake-1","inputTokens":0,"cachedInputTokens":0,"cacheWriteInputTokens":0,"outputTokens":0,"totalTokens":0}],"metadata":{"tanstack":{"model":"fake/fake-1","finishReason":"stop"},"abacus":{"turnUsage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"requests":2,"model":"fake-1"},"stopReason":"stop","serverInitiated":true}}}
+{"type":"CUSTOM","name":"agent.status","value":{"status":"idle"}}

@@ -14,9 +14,38 @@ export class SwapAborted extends Error {
   }
 }
 
+/**
+ * A swap candidate built for the oRPC contract did not pass its readiness
+ * barrier: it reported `failed`, or nothing within SWAP_READY_TIMEOUT_MS. The
+ * candidate is discarded and the old renderer keeps running.
+ */
+export class SwapNotReady extends Error {
+  constructor(readonly outcome: "failed" | "timeout") {
+    super(`The new renderer did not become ready (${outcome})`);
+    this.name = "SwapNotReady";
+  }
+}
+
+/**
+ * What a candidate must reach before the flip. `first-commit` is the legacy
+ * renderer's `renderer-ready` (or READY_TIMEOUT_MS, whichever first).
+ * `subscriptions` is the oRPC renderer's `window.ready` barrier: transport,
+ * shell tables and visible thread live (spec 00 A.4.6).
+ */
+export type SwapBarrier = "first-commit" | "subscriptions";
+
 export interface SwapOptions {
   /** Checked right before the flip; true rejects with SwapAborted. */
   shouldAbort?: () => boolean;
+  /** Default `first-commit`. */
+  barrier?: SwapBarrier;
+}
+
+export type ReadinessOutcome = "ready" | "failed" | "timeout";
+
+/** Where `window.ready` reports land (main/rpc/readiness.ts). */
+export interface RendererReadinessSource {
+  wait(webContentsId: number, timeoutMs: number): Promise<ReadinessOutcome>;
 }
 
 export interface RendererHostOptions {
@@ -26,6 +55,8 @@ export interface RendererHostOptions {
   /** Runs on every renderer webContents this host creates. */
   wire: (contents: WebContents) => void;
   window: BaseWindow;
+  /** Required for the `subscriptions` barrier. */
+  readiness?: RendererReadinessSource;
 }
 
 const SWAP_TIMEOUT_MS = 30_000;
@@ -40,6 +71,142 @@ const discard = (view: WebContentsView): void => {
  * subscriptions exist. A bundle that never signals still swaps after this.
  */
 const READY_TIMEOUT_MS = 5_000;
+
+/** How long an oRPC-contract candidate has to report ready after loading. */
+export const SWAP_READY_TIMEOUT_MS = 10_000;
+
+/** Readiness failures tolerated per version before swaps stop until relaunch. */
+export const MAX_SWAP_READINESS_ATTEMPTS = 3;
+
+/**
+ * Counts readiness failures per version: a candidate that cannot become
+ * ready is retried at the next idle window, at most
+ * MAX_SWAP_READINESS_ATTEMPTS times, then left alone until the next launch.
+ */
+export class SwapRetryBudget {
+  readonly #failures = new Map<string, number>();
+
+  constructor(readonly max = MAX_SWAP_READINESS_ATTEMPTS) {}
+
+  /** Record one failure; true while another attempt is allowed. */
+  fail(version: string): boolean {
+    const failures = (this.#failures.get(version) ?? 0) + 1;
+    this.#failures.set(version, failures);
+    return failures < this.max;
+  }
+
+  /** Whether another attempt is allowed, before making it. */
+  allows(version: string): boolean {
+    return this.failures(version) < this.max;
+  }
+
+  failures(version: string): number {
+    return this.#failures.get(version) ?? 0;
+  }
+}
+
+/** How often a pending swap looks for a quiet moment. */
+export const SWAP_IDLE_POLL_MS = 5_000;
+
+export interface RendererSwapSchedulerOptions {
+  /** The bundle to swap to now: the active renderer URL, or none. */
+  target(): URL | null | undefined;
+  host(): Pick<RendererHost, "swap"> | null;
+  /** An agent turn, a live terminal or recent input: not now. */
+  busy(): boolean;
+  barrier: SwapBarrier;
+  /** Development stays on its dev server. */
+  disabled?: () => boolean;
+  budget?: SwapRetryBudget;
+  pollMs?: number;
+  log?: Pick<Console, "log" | "warn" | "error">;
+}
+
+/**
+ * Swaps to a newly activated renderer bundle at the first quiet moment, and
+ * retries one that did not become ready at a later quiet moment (never in
+ * the same tick), at most MAX_SWAP_READINESS_ATTEMPTS times per bundle URL:
+ * the budget is keyed and checked on the URL actually swapped to, before
+ * the swap, so a version whose URL changed is not charged for another's
+ * failures and an exhausted one is not attempted again.
+ */
+export class RendererSwapScheduler {
+  readonly #options: RendererSwapSchedulerOptions;
+  readonly #budget: SwapRetryBudget;
+  #timer: ReturnType<typeof setInterval> | null = null;
+
+  constructor(options: RendererSwapSchedulerOptions) {
+    this.#options = options;
+    this.#budget = options.budget ?? new SwapRetryBudget();
+  }
+
+  get pending(): boolean {
+    return this.#timer != null;
+  }
+
+  /** `deferred`: wait for the next idle tick before the first attempt. */
+  schedule(version: string, { deferred = false } = {}): void {
+    this.cancel();
+    if (!deferred && this.#attempt(version)) return;
+    const timer = setInterval(() => {
+      if (this.#attempt(version) && this.#timer === timer) this.cancel();
+    }, this.#options.pollMs ?? SWAP_IDLE_POLL_MS);
+    timer.unref?.();
+    this.#timer = timer;
+  }
+
+  cancel(): void {
+    if (this.#timer != null) clearInterval(this.#timer);
+    this.#timer = null;
+  }
+
+  /** True when there is nothing left to wait for. */
+  #attempt(version: string): boolean {
+    const options = this.#options;
+    const log = options.log ?? console;
+    if (options.disabled?.() === true) return true;
+    const url = options.target();
+    if (!url) return true;
+    const host = options.host();
+    if (host == null) return true;
+    const key = url.href;
+    if (!this.#budget.allows(key)) {
+      log.warn(
+        `[experience] ${version} never became ready; no more swaps until relaunch`
+      );
+      return true;
+    }
+    if (options.busy()) return false;
+
+    host
+      .swap(url, {
+        shouldAbort: () => options.busy(),
+        barrier: options.barrier,
+      })
+      .then(
+        (swapped) => {
+          if (swapped) log.log(`[experience] renderer swapped to ${version}`);
+        },
+        (error: unknown) => {
+          if (error instanceof SwapAborted) {
+            this.schedule(version);
+            return;
+          }
+          if (error instanceof SwapNotReady) {
+            if (this.#budget.fail(key))
+              this.schedule(version, { deferred: true });
+            else
+              log.warn(
+                `[experience] ${version} never became ready; no more swaps until relaunch`
+              );
+            return;
+          }
+          log.error("[experience] renderer swap failed", error);
+        }
+      );
+    return true;
+  }
+}
 
 /** The old renderer answers the continuity capture within this, or not. */
 const CAPTURE_TIMEOUT_MS = 3_000;
@@ -133,8 +300,25 @@ export class RendererHost {
     return this.#view.webContents;
   }
 
+  setBackgroundColor(color: string): void {
+    this.#options.backgroundColor = color;
+    this.#view.setBackgroundColor(color);
+  }
+
   dispose(): void {
     discard(this.#view);
+  }
+
+  /**
+   * The oRPC renderer's readiness report for `contents`, or `timeout` after
+   * SWAP_READY_TIMEOUT_MS. Without a readiness source nothing can report, so
+   * it is `failed`.
+   */
+  readiness(contents: WebContents): Promise<ReadinessOutcome> {
+    const source = this.#options.readiness;
+    return source == null
+      ? Promise.resolve("failed")
+      : source.wait(contents.id, SWAP_READY_TIMEOUT_MS);
   }
 
   /**
@@ -194,12 +378,20 @@ export class RendererHost {
 
     let timer: NodeJS.Timeout | undefined;
     const ready = rendererReady(next.webContents);
+    const barrier = options?.barrier ?? "first-commit";
 
     try {
       await Promise.race([
-        next.webContents
-          .loadURL(target.href)
-          .then(() => Promise.race([ready.promise, delay(READY_TIMEOUT_MS)])),
+        next.webContents.loadURL(target.href).then(async () => {
+          if (barrier === "first-commit") {
+            await Promise.race([ready.promise, delay(READY_TIMEOUT_MS)]);
+            return;
+          }
+          // No flip on a guess: a candidate that never says its data is
+          // live, or says it failed, is discarded (its port closes with it).
+          const outcome = await this.readiness(next.webContents);
+          if (outcome !== "ready") throw new SwapNotReady(outcome);
+        }),
         new Promise<never>((_resolve, reject) => {
           timer = setTimeout(() => {
             reject(
@@ -251,6 +443,7 @@ export class RendererHost {
       throw new SwapAborted();
     }
 
+    next.setBackgroundColor(this.#options.backgroundColor);
     const focused = current.webContents.isFocused();
 
     this.#view = next;

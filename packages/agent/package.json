@@ -37,6 +37,10 @@
       "types": "./dist/main.d.ts",
       "default": "./dist/main.js"
     },
+    "./tool-display": {
+      "types": "./dist/tool-display.d.ts",
+      "default": "./dist/tool-display.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -57,8 +61,11 @@
     "@abacus-ai/config": "workspace:*",
     "@abacus-ai/connectors": "workspace:*",
     "@abacus-ai/test-support": "workspace:*",
+    "@ag-ui/core": "1.0.0",
     "@anthropic-ai/sdk": "^0.117.1",
     "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@tanstack/ai": "~0.63.0",
+    "@tanstack/ai-client": "~0.36.0",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",

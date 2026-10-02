@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "sessionId": "sess-legacy-protocol-tool",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Old agent shape",
+      "at": 1788256800000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp1",
+      "toolUseRequest": {
+        "id": "lp-call-1",
+        "name": "bash",
+        "type": "tool_use",
+        "input": {
+          "command": "ls"
+        }
+      },
+      "toolUseResult": {
+        "id": "lp-call-1",
+        "content": "a\nb"
+      },
+      "toolPhase": "complete",
+      "at": 1788256801000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp2",
+      "toolUseRequest": {
+        "id": "lp-call-2",
+        "name": "write",
+        "type": "tool_use",
+        "input": {
+          "path": "x"
+        }
+      },
+      "toolUseResult": {
+        "content": "denied",
+        "rejected": true
+      },
+      "toolPhase": "rejected",
+      "toolDisplayData": {
+        "isNewFile": true
+      },
+      "at": 1788256802000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp3",
+      "toolUseRequest": {
+        "id": "lp-call-3",
+        "name": "read",
+        "type": "tool_use",
+        "args": {
+          "path": "y"
+        }
+      },
+      "toolPhase": "executing",
+      "at": 1788256803000
+    }
+  ]
+}

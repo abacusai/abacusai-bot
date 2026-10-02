@@ -1,0 +1,88 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Keep going",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "cmp1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "cmp1",
+              "partIndex": 0,
+              "type": "compaction"
+            },
+            {
+              "at": 1788256802000,
+              "id": "b1",
+              "partIndex": 1,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Earlier: the user set up a Vite project and asked for tests.",
+          "metadata": {
+            "abacus": {
+              "kind": "compaction",
+              "segmentId": "cmp1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Continuing from the summary.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 3,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-compaction",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

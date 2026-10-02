@@ -50,7 +50,28 @@
     "refresh": "Actualizar",
     "revealInFolder": "Reveal in folder",
     "searchPlaceholder": "Buscar artefactos y sesiones…",
-    "unknownSession": "Sesión eliminada"
+    "unknownSession": "Sesión eliminada",
+    "page": {
+      "emptyTitle": "Nothing made yet",
+      "emptyDescription": "Documents, decks, images and code the agent makes collect here."
+    },
+    "sidebar": {
+      "label": "Artefactos",
+      "type": "Type",
+      "source": "Source",
+      "all": "All",
+      "types": {
+        "document": "Documents",
+        "deck": "Decks",
+        "image": "Images",
+        "code": "Code",
+        "other": "Other"
+      },
+      "sources": {
+        "bots": "From bots",
+        "sessions": "From sessions"
+      }
+    }
   },
   "bots": {
     "avatarColor": "Color",
@@ -315,7 +336,22 @@
     "viewBots": "Bots",
     "viewSessions": "Sesiones",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "page": {
+      "newTitle": "Make a bot",
+      "newDescription": "Give it a name and a mission, and it keeps one chat that remembers.",
+      "chatTitle": "Chat arrives soon",
+      "chatDescription": "This bot's conversation opens here in a coming update.",
+      "editTitle": "Edit bot",
+      "editDescription": "Mission, persona and model settings arrive here soon.",
+      "detailsTitle": "Details",
+      "detailsDescription": "Mission, persona, model and memory."
+    },
+    "sidebar": {
+      "label": "Bots",
+      "new": "Nuevo bot",
+      "empty": "Aún no hay bots"
+    }
   },
   "browserPermission": {
     "allow": "Permitir",
@@ -639,8 +675,8 @@
     "add": "Add",
     "addFailed": "Could not add {{name}}.",
     "added": "{{name}} added.",
-    "adding": "Adding…",
     "agentKeyHint": "Stored as an agent credential on this machine and used by the tools the agent runs, never sent to Abacus.AI.",
+    "adding": "Adding…",
     "auth": {
       "key": "API key",
       "oauth": "Sign-in",
@@ -685,9 +721,9 @@
     "signingInAction": "Signing in…",
     "token": "Token",
     "whereToGet": "Where do I get this?",
+    "yours": "Yours",
     "wrongAccountApp": "{{name}} attached to a different Abacus.AI account: the app's sign-in window held another account. Sign out and back in, then connect again.",
-    "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again.",
-    "yours": "Yours"
+    "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
   "creditsCard": {
     "body": "Unlock the full potential",
@@ -1210,12 +1246,15 @@
     "setupSignInCta": "Sign in / Create Free Account",
     "signInCta": "Iniciar sesión en Abacus.AI",
     "skipCta": "Not now",
+    "welcomeCapabilityModels": "Access",
+    "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "Tu compañero de IA personal y de código abierto con memoria persistente",
     "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors",
     "connectedPromiseAgent": "The best-in-class open-source AI agent",
     "connectedPromiseModels": "Access to free models",
     "connectedPromiseWork": "Gets your work done, and connects to all your services",
-    "connectedPromiseChat": "",
     "connectedCta": "Continue",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
@@ -1226,7 +1265,6 @@
     "connectedPromiseAgentLead": "Best-in-class,",
     "connectedPromiseModelsLead": "Access",
     "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
     "connectedPromiseLocalLead": "Runs locally.",
     "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
@@ -1251,10 +1289,11 @@
     "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "Continuar con {{browser}} · {{profile}}",
     "signInAnotherWay": "Iniciar sesión de otra forma",
-    "welcomeFreeBadge": "Free to start",
-    "welcomeCapabilityModels": "Access",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors"
+    "haveAccountContinueWith": "Ya tengo una cuenta · Continuar con {{browser}}",
+    "signInOptions": "Otras formas de iniciar sesión",
+    "usesBrowserSessions": "El inicio de sesión con Google, Microsoft y Apple usa tus cuentas de {{browser}}.",
+    "connectedPromiseChat": "",
+    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord."
   },
   "openFile": {
     "failed": "No se pudo abrir ese archivo.",
@@ -1466,7 +1505,21 @@
     "workspaceHelp": "Where the run happens. Pick a project when the instruction reads its code, tests or dependencies.",
     "workspaceLabel": "Folder",
     "workspaceMissing": "This instruction reads a project's code. In its own folder there is nothing to read.",
-    "workspaceOwnFolder": "Its own folder"
+    "workspaceOwnFolder": "Its own folder",
+    "page": {
+      "emptyTitle": "No routines yet",
+      "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
+      "routineTitle": "Routine",
+      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "createTitle": "Nueva rutina",
+      "createDescription": "Say what it should do and when."
+    },
+    "sidebar": {
+      "label": "Rutinas",
+      "new": "Nueva rutina",
+      "paused": "Paused",
+      "empty": "No routines yet"
+    }
   },
   "sessions": {
     "delete": "Delete session",
@@ -1483,7 +1536,21 @@
     "unpin": "Unpin",
     "today": "Today",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago"
+    "daysAgo": "{{count}} days ago",
+    "page": {
+      "newTitle": "New session",
+      "newDescription": "Pick a folder and tell the agent what to do.",
+      "sessionTitle": "Session",
+      "sessionDescription": "The conversation opens here in a coming update.",
+      "reviewTitle": "Review changes",
+      "reviewDescription": "Keep or undo what the agent changed."
+    },
+    "sidebar": {
+      "label": "Sessions",
+      "new": "New session",
+      "pinned": "Pinned",
+      "empty": "Aún no hay sesiones"
+    }
   },
   "sidebarNav": {
     "app": "App",
@@ -1832,23 +1899,23 @@
       "configure": "Configure",
       "configureBeforeSending": "Connect a model before sending a message.",
       "configureProviders": "Configure model providers",
-      "connectCerebrasNote": "GPT-OSS y GLM muy rápidos en prueba gratuita: pega una clave de API",
       "connectGoogleAi": "Conectar Google AI Studio",
       "connectGoogleAiNote": "Cuota gratis de Gemini: obtén una clave de API y pégala aquí",
-      "connectGroqNote": "Modelos abiertos rápidos, con límites gratuitos ajustados: pega una clave de API",
-      "connectMistralNote": "Modelos Devstral y Mistral gratis: pega una clave de API",
       "connectModels": "Connect models",
-      "connectNvidiaNote": "Modelos GLM, Kimi y MiniMax gratis: pega una clave de API",
       "connectOpenRouter": "Conectar OpenRouter",
       "connectOpenRouterNote": "Modelos gratis con un inicio de sesión en el navegador: se unen a RouteLLM - Open y a esta lista",
-      "connectProvider": "Conectar {{provider}}",
       "favorites": "Favorites",
       "noFavorites": "Favorite models appear here.",
       "noResults": "No models found.",
       "onThisMachine": "On this machine",
       "removeFavorite": "Remove {{model}} from favorites",
       "search": "Search models…",
-      "title": "Choose a model"
+      "title": "Choose a model",
+      "connectCerebrasNote": "GPT-OSS y GLM muy rápidos en prueba gratuita: pega una clave de API",
+      "connectGroqNote": "Modelos abiertos rápidos, con límites gratuitos ajustados: pega una clave de API",
+      "connectMistralNote": "Modelos Devstral y Mistral gratis: pega una clave de API",
+      "connectNvidiaNote": "Modelos GLM, Kimi y MiniMax gratis: pega una clave de API",
+      "connectProvider": "Conectar {{provider}}"
     },
     "modelPlaceholder": "Model",
     "modelProviderLocked": "Este modelo es de un proveedor diferente. Inicia un nuevo chat para usarlo.",
@@ -1905,15 +1972,16 @@
       "reviews": "{{approved}} aprobados · {{changes}} cambios solicitados · {{requested}} pendientes"
     },
     "premiumUpgrade": {
-      "connectCta": "Connect",
       "connectNote": "Connect one of these to keep going. No card needed.",
-      "continueCta": "Continue",
       "continueOn": "Continue on {{model}} (free)",
       "exhaustedTitle": "You've used up your free credits",
-      "localMeta": "Free, no limits · downloads once",
-      "localName": "A model on this computer",
       "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
       "poolOutTitle": "Every free source is used up for now",
+      "switchNote": "Pick another model in the model picker to keep going",
+      "connectCta": "Connect",
+      "continueCta": "Continue",
+      "localMeta": "Free, no limits · downloads once",
+      "localName": "A model on this computer",
       "setUpCta": "Set up",
       "sourceCerebras": "Cerebras",
       "sourceCerebrasMeta": "GPT-OSS y Qwen rápidos · clave de prueba gratuita",
@@ -1927,7 +1995,6 @@
       "sourceNvidiaMeta": "Kimi, GLM y DeepSeek · clave de API gratuita",
       "sourceOpenrouter": "OpenRouter",
       "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
-      "switchNote": "Pick another model in the model picker to keep going",
       "topUpMeta": "Add credits to your account"
     },
     "preview": {
@@ -2156,5 +2223,126 @@
   "reactions": {
     "feedback": "Reaccionar a esta respuesta",
     "agent": "El agente reaccionó con {{emoji}}"
+  },
+  "shell": {
+    "appName": "AbacusAI Bot",
+    "rail": {
+      "label": "Areas",
+      "bots": "Bots",
+      "sessions": "Sessions",
+      "routines": "Rutinas",
+      "artifacts": "Artefactos",
+      "library": "Library",
+      "settings": "Settings",
+      "account": "Account"
+    },
+    "topBar": {
+      "back": "Back",
+      "forward": "Forward",
+      "toggleSidebar": "Toggle sidebar",
+      "openPanel": "Open side panel",
+      "closePanel": "Close side panel",
+      "more": "More actions",
+      "panelTabs": "Side panel tabs",
+      "geometryMissing": "Title bar geometry missing"
+    },
+    "panel": {
+      "label": "Side panel",
+      "emptyDescription": "This panel fills in with a later update.",
+      "tabs": {
+        "changes": "Changes",
+        "terminal": "Terminal",
+        "files": "Files",
+        "browser": "Browser",
+        "memory": "Memory",
+        "details": "Details",
+        "agent": "Agent"
+      }
+    },
+    "sidebar": {
+      "loadError": "Couldn't load",
+      "retry": "Retry"
+    },
+    "status": {
+      "ready": "Ready"
+    },
+    "command": {
+      "title": "Command menu",
+      "placeholder": "Search areas, pages, bots and sessions",
+      "empty": "No results",
+      "toggleTheme": "Toggle theme",
+      "groups": {
+        "areas": "Areas",
+        "settings": "Settings",
+        "bots": "Bots",
+        "sessions": "Sessions",
+        "actions": "Actions"
+      }
+    },
+    "connectionLost": "Connection to the app was lost. Reloading…",
+    "boot": {
+      "title": "Couldn't start",
+      "description": "The app couldn't reach its background process.",
+      "reload": "Reload"
+    }
+  },
+  "errors": {
+    "genericTitle": "Something went wrong",
+    "genericDescription": "This screen hit an error it couldn't recover from.",
+    "reload": "Reload",
+    "notFoundTitle": "Not found",
+    "notFoundDescription": "This page doesn't exist.",
+    "goHome": "Go to Bots"
+  },
+  "library": {
+    "sidebar": {
+      "label": "Library"
+    },
+    "pages": {
+      "connectors": "Conectores",
+      "messaging": "Messaging",
+      "mcp": "MCP servers",
+      "skills": "Skills",
+      "tools": "Tools"
+    },
+    "emptyDescription": "This page arrives in a coming update.",
+    "connectorDescription": "Connection details arrive in a coming update."
+  },
+  "settings": {
+    "sidebar": {
+      "label": "Settings",
+      "personal": "Personal",
+      "app": "App",
+      "capabilities": "Capabilities",
+      "openLibrary": "Open the Library"
+    },
+    "pages": {
+      "general": "General",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "memory": "Memory",
+      "usage": "Uso",
+      "account": "Account",
+      "models": "Models",
+      "environment": "Environment",
+      "about": "About"
+    },
+    "emptyDescription": "These settings arrive in a coming update.",
+    "theme": {
+      "label": "Theme",
+      "description": "Follow the system, or always light or dark."
+    }
+  },
+  "onboardingFlow": {
+    "description": "Onboarding arrives in a coming update.",
+    "steps": {
+      "welcome": "Welcome",
+      "connect": "Connect",
+      "connected": "Connected",
+      "models": "Models",
+      "connectors": "Connectors",
+      "first-bot": "Your first bot",
+      "done": "Done"
+    }
   }
 }

@@ -1,0 +1,148 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 0,
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "What is the capital of France?",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "t1",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 1,
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "t1",
+              "partIndex": 0,
+              "title": "Recalling facts",
+              "type": "thinking"
+            },
+            {
+              "at": 1788256802000,
+              "id": "b1",
+              "partIndex": 1,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "The user asks a geography question.",
+          "stepId": "t1",
+          "type": "thinking"
+        },
+        {
+          "content": "The capital of France is **Paris**.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    },
+    {
+      "id": "u2",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 2,
+          "segments": [
+            {
+              "at": 1788256810000,
+              "id": "u2",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:10.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "And of Italy?",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b2",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 3,
+          "segments": [
+            {
+              "at": 1788256811000,
+              "id": "b2",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:11.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Rome.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 5,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-plain-chat",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

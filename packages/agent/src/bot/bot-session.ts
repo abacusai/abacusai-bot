@@ -37,6 +37,7 @@ import {
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
 import { setCurrentMode } from "../current-mode.js";
+import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
 import budgets, { budgetStopReason } from "../extensions/budgets.js";
@@ -46,6 +47,7 @@ import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
+import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
 import { endedOnLeakedToolCall } from "../openllm-failures.js";
@@ -88,6 +90,7 @@ import {
   type ReplyLanguageMismatch,
 } from "../reply-language.js";
 import { conversationSessionManager } from "../session-file.js";
+import type { TurnHandle } from "../session.js";
 import {
   OPENLLM_POOL_EXHAUSTED_MESSAGE,
   OPENLLM_POOL_SHUT_MESSAGE,
@@ -108,6 +111,7 @@ import {
   StallWatch,
   modelStallMs,
 } from "../stall-watch.js";
+import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
@@ -144,6 +148,8 @@ export interface BotSessionOptions {
   model?: string;
   mode?: string;
   emit: (event: DesktopEvent) => void;
+  /** Facts for the AG-UI emitter only; see SessionOptions.emitInternal. */
+  emitInternal?: (event: InternalAgentEvent) => void;
 }
 
 interface PendingPermission {
@@ -255,6 +261,10 @@ export class BotSession {
   private rawStreamed = "";
   private currentMessageId: string | null = null;
   private messageCounter = 0;
+  /** Streamed tool calls, for the AG-UI emitter only. */
+  private readonly toolCallStream = new ToolCallStream(
+    (name) => TOOL_NAME_ALIASES[name] ?? name
+  );
   private readonly toolInputs = new Map<string, Record<string, unknown>>();
   private readonly heartbeat = new ToolHeartbeat((event) =>
     this.options.emit(event)
@@ -492,10 +502,13 @@ export class BotSession {
     this.emitReady();
 
     if (model.error != null) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: model.error, code: "model_unavailable" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: model.error, code: "model_unavailable" },
+        },
+        { origin: "startup" }
+      );
     }
 
     // Bots have no skills; the desktop still expects the roster event.
@@ -565,17 +578,21 @@ export class BotSession {
 
   // ---------------------------------------------------------------- commands
 
-  async send(text: string): Promise<void> {
+  async send(text: string, turn?: TurnHandle): Promise<void> {
     const session = this.requireSession();
 
     // A bot spawned while the account was signed out has no model. The key
     // may have arrived since; read it and pick a model before prompting, or
     // pi answers with its own /login hint and that reaches the user's phone.
     if (!(await this.ensureUsableModel())) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: NO_MODEL_CONFIGURED, code: "model_unavailable" },
+        },
+        { origin: "turn" }
+      );
+      turn?.settled?.();
 
       return;
     }
@@ -614,22 +631,28 @@ export class BotSession {
       await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      // The user's reply is over; housekeeping below is not part of it.
+      turn?.settled?.();
       await this.runMemoryMaintenance();
     } catch (error) {
       // A thrown provider error gets the same words as a reported turn
       // failure rather than the raw "429: {json}" envelope, and the turn ends
       // properly: a bot left "running" here answered nobody.
       const raw = describe(error);
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: this.failureMessage(raw),
-          code: "turn_failed",
-          ...(isProviderFailure(raw) ? providerDetail(raw) : {}),
-          ...this.errorActionsFor(raw),
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: this.failureMessage(raw),
+            code: "turn_failed",
+            ...(isProviderFailure(raw) ? providerDetail(raw) : {}),
+            ...this.errorActionsFor(raw),
+          },
         },
-      });
+        { origin: "turn" }
+      );
       if (this.turnRunning) this.finishTurn();
+      turn?.settled?.();
     }
   }
 
@@ -718,6 +741,7 @@ export class BotSession {
 
     this.hiddenTurn = true;
     let ok = false;
+    this.emitInternal({ type: "hidden_turn", phase: "start", customType });
 
     try {
       await session.sendCustomMessage(
@@ -730,6 +754,7 @@ export class BotSession {
       // Housekeeping must never surface as a failed reply.
     } finally {
       this.hiddenTurn = false;
+      this.emitInternal({ type: "hidden_turn", phase: "end", customType });
     }
     await this.replayParkedSteers();
     return ok;
@@ -916,14 +941,17 @@ export class BotSession {
     if (resolved.model == null) {
       // The candidate came off the live registry a moment ago; should not
       // happen. The idle event was withheld for this rotation, so end the turn.
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: compactFailure(rotation.failure),
-          code: "turn_failed",
-          ...this.upgradeActionsFor(rotation.failure),
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: compactFailure(rotation.failure),
+            code: "turn_failed",
+            ...this.upgradeActionsFor(rotation.failure),
+          },
         },
-      });
+        { origin: "turn" }
+      );
       this.finishTurn();
       return;
     }
@@ -997,14 +1025,17 @@ export class BotSession {
     }
 
     this.stallFailureReported = true;
-    this.emitAgentEvent({
-      type: "error",
-      error: {
-        message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
-        code: "turn_failed",
-        actions: [{ type: "switch-model" }],
+    this.emitAgentEvent(
+      {
+        type: "error",
+        error: {
+          message: `The model stopped answering (no output for ${seconds}s). Try again, or switch to a different model.`,
+          code: "turn_failed",
+          actions: [{ type: "switch-model" }],
+        },
       },
-    });
+      { origin: "turn" }
+    );
     this.finishTurn();
   }
 
@@ -1033,14 +1064,17 @@ export class BotSession {
         this.pendingOpenLlmRotation = { failure, nextId: next.nextId };
         return;
       }
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message:
-            "This conversation is too long for the model. Start a new chat, or switch to a model with a larger context.",
-          code: "turn_failed",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message:
+              "This conversation is too long for the model. Start a new chat, or switch to a model with a larger context.",
+            code: "turn_failed",
+          },
         },
-      });
+        { origin: "turn" }
+      );
       this.finishTurn();
 
       return;
@@ -1071,10 +1105,13 @@ export class BotSession {
     // "This operation was aborted" for text, which reads as a provider fault.
     const budgetStop = budgetStopReason();
     if (budgetStop != null) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: budgetStop, code: "turn_failed" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: budgetStop, code: "turn_failed" },
+        },
+        { origin: "turn" }
+      );
       return;
     }
 
@@ -1085,17 +1122,20 @@ export class BotSession {
     if (typeof message !== "string" || message.length === 0) return;
 
     const pooled = this.openLlmActive && !isOutOfCredits(message);
-    this.emitAgentEvent({
-      type: "error",
-      error: {
-        message: this.failureMessage(message),
-        code: "turn_failed",
-        ...(pooled || !isProviderFailure(message)
-          ? {}
-          : providerDetail(message)),
-        ...this.errorActionsFor(message),
+    this.emitAgentEvent(
+      {
+        type: "error",
+        error: {
+          message: this.failureMessage(message),
+          code: "turn_failed",
+          ...(pooled || !isProviderFailure(message)
+            ? {}
+            : providerDetail(message)),
+          ...this.errorActionsFor(message),
+        },
       },
-    });
+      { origin: "turn" }
+    );
   }
 
   /**
@@ -1335,13 +1375,16 @@ export class BotSession {
         : { model: undefined, error: "the free pool is empty" };
 
     if (resolved.model == null) {
-      this.emitAgentEvent({
-        type: "error",
-        error: {
-          message: resolved.error ?? `Unknown model: ${reference}`,
-          code: "model_unavailable",
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: {
+            message: resolved.error ?? `Unknown model: ${reference}`,
+            code: "model_unavailable",
+          },
         },
-      });
+        { origin: "command" }
+      );
 
       return;
     }
@@ -1352,10 +1395,13 @@ export class BotSession {
     try {
       await session.setModel(resolved.model);
     } catch (error) {
-      this.emitAgentEvent({
-        type: "error",
-        error: { message: describe(error), code: "model_unavailable" },
-      });
+      this.emitAgentEvent(
+        {
+          type: "error",
+          error: { message: describe(error), code: "model_unavailable" },
+        },
+        { origin: "command" }
+      );
       return;
     }
     this.openLlmActive = toRouter;
@@ -1363,6 +1409,11 @@ export class BotSession {
       type: "model_changed",
       model: this.currentModelReference(),
     });
+  }
+
+  /** Whether an answer for `permissionId` would release a waiter now. */
+  hasPendingPermission(permissionId: string): boolean {
+    return this.pending.has(permissionId);
   }
 
   respondPermission(permissionId: string, decision: PermissionDecision): void {
@@ -1518,6 +1569,16 @@ export class BotSession {
           this.rawStreamed = "";
           this.sanitizer.reset();
           this.currentMessageId = `msg-${++this.messageCounter}`;
+          this.toolCallStream.reset();
+          if (!this.hiddenTurn) {
+            const messageId = this.aguiMessageId(event.message);
+
+            this.emitInternal({
+              type: "message_open",
+              key: this.currentMessageId,
+              ...(messageId != null ? { messageId } : {}),
+            });
+          }
         }
 
         return;
@@ -1527,6 +1588,16 @@ export class BotSession {
           type: string;
           delta?: string;
         };
+
+        if (stream.type.startsWith("toolcall_")) {
+          const internals = this.toolCallStream.handle(stream);
+
+          if (!this.hiddenTurn) {
+            for (const internal of internals) this.emitInternal(internal);
+          }
+
+          return;
+        }
 
         if (stream.type === "text_delta" && stream.delta) {
           this.rawStreamed += stream.delta;
@@ -1612,6 +1683,17 @@ export class BotSession {
             // new is owed.
             this.sanitizer.reset();
           }
+        }
+
+        if (!this.hiddenTurn && this.currentMessageId != null) {
+          const stopReason = (event.message as { stopReason?: unknown })
+            .stopReason;
+
+          this.emitInternal({
+            type: "message_close",
+            key: this.currentMessageId,
+            ...(typeof stopReason === "string" ? { stopReason } : {}),
+          });
         }
 
         this.rawStreamed = "";
@@ -1816,6 +1898,16 @@ export class BotSession {
         event.input as Record<string, unknown>
       );
 
+      if (!this.hiddenTurn) {
+        this.emitInternal({
+          type: "tool_call_start",
+          toolCallId: event.toolCallId,
+          toolName: tool.name,
+          rawName: event.toolName,
+          input: tool.input,
+        });
+      }
+
       const gate = gateToolCall(tool, {
         mode: this.mode,
         cwd: ctx.cwd,
@@ -1828,9 +1920,15 @@ export class BotSession {
 
       if (gate.kind === "allow") return;
 
-      if (gate.kind === "refuse") return { block: true, reason: gate.reason };
+      if (gate.kind === "refuse") {
+        this.noteBlocked(event.toolCallId, "refused");
+
+        return { block: true, reason: gate.reason };
+      }
 
       if (!process.stdout.writable || process.stdout.destroyed) {
+        this.noteBlocked(event.toolCallId, "rejected");
+
         return {
           block: true,
           reason:
@@ -1887,7 +1985,13 @@ export class BotSession {
         });
       });
 
-      return this.applyDecision(decision, tool, gate.request);
+      const verdict = this.applyDecision(decision, tool, gate.request);
+
+      if (verdict?.block === true) {
+        this.noteBlocked(event.toolCallId, "rejected");
+      }
+
+      return verdict;
     });
   };
 
@@ -2014,8 +2118,28 @@ export class BotSession {
     return this.currentMessageId;
   }
 
-  private emitAgentEvent(event: AgentEvent): void {
+  private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
+    if (meta != null) tagEvent(event, meta);
     this.options.emit({ type: "event", event });
+  }
+
+  /** A fact for the AG-UI emitter only; never a legacy line. */
+  private emitInternal(event: InternalAgentEvent): void {
+    this.options.emitInternal?.(event);
+  }
+
+  private noteBlocked(toolCallId: string, cause: "rejected" | "refused"): void {
+    if (!this.hiddenTurn) {
+      this.emitInternal({ type: "tool_blocked", toolCallId, cause });
+    }
+  }
+
+  /** See AbacusBotSession.aguiMessageId. */
+  private aguiMessageId(message: unknown): string | undefined {
+    const timestamp = (message as { timestamp?: unknown }).timestamp;
+    const base = this.session?.sessionId ?? "session";
+
+    return typeof timestamp === "number" ? `${base}:${timestamp}` : undefined;
   }
 
   private requireSession(): AgentSession {

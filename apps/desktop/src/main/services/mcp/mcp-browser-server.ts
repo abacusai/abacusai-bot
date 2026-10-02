@@ -3,8 +3,8 @@ import http from "http";
 import net from "net";
 import path from "path";
 
-import { sendToRenderer } from "#main/renderer-host";
-import { IpcChannels } from "#shared/channels";
+import { emitIpcEvent } from "#main/rpc/emit";
+import type { IpcEvent } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 
 import { abacusBotHome } from "../../paths";
@@ -700,7 +700,7 @@ export class McpBrowserServer {
       sessionId == null
         ? null
         : (this.options.conversationKeyForSession?.(sessionId) ?? null);
-    sendToRenderer(IpcChannels.Event, {
+    emitIpcEvent({
       type: "mcp-open-preview",
       url,
       ...(conversationKey == null ? {} : { conversationKey }),
@@ -1410,7 +1410,7 @@ export class McpBrowserServer {
     };
     if (x != null) payload.x = x;
     if (y != null) payload.y = y;
-    sendToRenderer(IpcChannels.Event, payload);
+    emitIpcEvent(payload as unknown as IpcEvent);
   }
 
   private async animateCursorToElement(
@@ -2247,7 +2247,10 @@ export class McpBrowserServer {
             return this.err(`Timed out waiting for URL: ${urlPattern}`);
           return this.ok(`URL matched: ${urlPattern}.`);
         }
-        await new Promise((r) => setTimeout(r, Math.min(timeout, 10000)));
+        const deadline = Date.now() + Math.min(timeout, 10_000);
+        // Fixed polling intervals keep remote input out of timer durations.
+        while (Date.now() < deadline)
+          await new Promise((r) => setTimeout(r, 10));
         return this.ok(`Waited ${timeout}ms.`);
       }
 

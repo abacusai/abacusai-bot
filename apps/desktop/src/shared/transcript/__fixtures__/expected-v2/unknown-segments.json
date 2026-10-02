@@ -1,0 +1,272 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Hello",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "x1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "x1",
+              "partIndex": 0,
+              "type": "future_widget"
+            },
+            {
+              "at": 1788256802000,
+              "id": "x2",
+              "partIndex": 1,
+              "type": "text"
+            },
+            {
+              "at": 1788256803000,
+              "id": "x3",
+              "partIndex": 2,
+              "type": "tool_call"
+            },
+            {
+              "at": 1788256804000,
+              "id": "x4",
+              "partIndex": 3,
+              "type": "media"
+            },
+            {
+              "at": 1788256805000,
+              "id": "x5",
+              "partIndex": 4,
+              "type": "subtask"
+            },
+            {
+              "id": "x6",
+              "partIndex": 5,
+              "type": "unknown"
+            },
+            {
+              "id": "segment-7",
+              "partIndex": 6,
+              "type": "unknown"
+            },
+            {
+              "id": "segment-8",
+              "partIndex": 7,
+              "type": "unknown"
+            },
+            {
+              "id": "x7",
+              "partIndex": 8,
+              "type": "credits"
+            },
+            {
+              "id": "segment-10",
+              "partIndex": 9,
+              "type": "text"
+            },
+            {
+              "at": 100000000000000000000,
+              "id": "x8",
+              "partIndex": 10,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256801000,
+                "id": "x1",
+                "payload": {
+                  "a": 1
+                },
+                "type": "future_widget"
+              },
+              "segmentId": "x1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256802000,
+                "content": 42,
+                "id": "x2",
+                "source": "bot",
+                "type": "text"
+              },
+              "segmentId": "x2"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256803000,
+                "id": "x3",
+                "type": "tool_call"
+              },
+              "segmentId": "x3"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256804000,
+                "id": "x4",
+                "media": {
+                  "kind": "audio",
+                  "url": "https://example.com/a.mp3"
+                },
+                "type": "media"
+              },
+              "segmentId": "x4"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "at": 1788256805000,
+                "id": "x5",
+                "status": "paused",
+                "type": "subtask"
+              },
+              "segmentId": "x5"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "content": "no type",
+                "id": "x6"
+              },
+              "segmentId": "x6"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": null,
+              "segmentId": "segment-7"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": "a bare string",
+              "segmentId": "segment-8"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "",
+          "metadata": {
+            "abacus": {
+              "kind": "unknown",
+              "raw": {
+                "creditsUsed": "many",
+                "id": "x7",
+                "type": "credits"
+              },
+              "segmentId": "x7"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "no id",
+          "metadata": {
+            "abacus": {
+              "segmentId": "segment-10"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "bad time",
+          "metadata": {
+            "abacus": {
+              "segmentId": "x8"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 12,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-unknown-segments",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

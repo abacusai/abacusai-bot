@@ -1,0 +1,15 @@
+{
+  "durable-storage.migrated": "1",
+  "theme": "dark",
+  "abacusai-bot-language": "{\"state\":{\"languageCode\":\"de-DE\"},\"version\":0}",
+  "local-code-ui-store": "{\"state\":{\"isSidebarVisible\":false,\"selectedModelId\":\"abacus/route-llm-code\",\"favoriteModelIds\":[\"abacus/route-llm-code\",\"gpt-5\"],\"globalSelectedMode\":\"PLAN\",\"workspaceSelectedModelIds\":{\"ws-1\":\"gpt-5\"},\"workspaceAccordionExpanded\":{\"ws-1\":true},\"codeSidebarTab\":\"workspaces\",\"pinnedSessionIds\":[\"s-1\",\"s-2\"],\"pinnedBotIds\":[\"bot-a\"],\"lastPickedWorkspaceId\":\"ws-1\"},\"version\":4}",
+  "sidebar-accordion": "{\"state\":{\"openSection\":\"routines\"},\"version\":0}",
+  "abacus-credits": "{\"state\":{\"exhaustedAt\":1790000000000},\"version\":0}",
+  "abacusai-bot-code-folder": "{\"state\":{\"currentFolder\":\"/Users/fixture/project\",\"recentFolders\":[\"/Users/fixture/project\",\"/Users/fixture/other\"]},\"version\":0}",
+  "browser.homepage": "https://example.com/",
+  "onboarding.step": "connect-whatsapp",
+  "referral-card.dismissed-until": "1790604800000",
+  "local-code:upsell-dismissed": "1",
+  "composer.draft:ws-1": "a draft that is not migrated",
+  "abacusai-bot.promptSnippets": "[{\"id\":\"x\",\"text\":\"hi\"}]"
+}

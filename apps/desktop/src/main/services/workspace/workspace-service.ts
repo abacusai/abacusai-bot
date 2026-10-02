@@ -9,6 +9,7 @@ import type {
   SwitchWorkspaceResult,
   WorkspacePathStatus,
 } from "#shared/contracts";
+import { WORKSPACE_NOT_FOUND } from "#shared/not-found";
 
 import { workspaceStore } from "../session/workspace-store";
 
@@ -28,6 +29,18 @@ export class WorkspaceService {
   private workspaces: WorkspaceListItem[] = [];
   private activeWorkspaceId: string | null = null;
   private readonly store = workspaceStore;
+  private readonly changeListeners = new Set<() => void>();
+
+  /**
+   * Called after every store write (add, remove, rename, switch, delete): the
+   * workspaces table's direct hook (spec 00 B.2).
+   */
+  onChanged(listener: () => void): () => void {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
+    };
+  }
 
   initialize(): void {
     if (this.workspaces.length > 0) {
@@ -83,6 +96,7 @@ export class WorkspaceService {
   dispose(): void {
     this.workspaces = [];
     this.activeWorkspaceId = null;
+    this.changed();
   }
 
   getWorkspaces(): WorkspaceListItem[] {
@@ -207,7 +221,7 @@ export class WorkspaceService {
   ): Promise<RelocateWorkspaceResult> {
     const workspace = this.workspaces.find((w) => w.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     const normalized = normalizeWorkspacePath(newPath);
@@ -300,7 +314,7 @@ export class WorkspaceService {
   switchWorkspace(workspaceId: string): SwitchWorkspaceResult {
     const workspace = this.workspaces.find((entry) => entry.id === workspaceId);
     if (workspace == null) {
-      return { success: false, error: "Workspace not found." };
+      return { success: false, error: WORKSPACE_NOT_FOUND };
     }
 
     this.setActiveWorkspace(workspaceId);
@@ -366,5 +380,16 @@ export class WorkspaceService {
   private persist(): void {
     this.store.set(WORKSPACE_STORAGE_KEY, this.workspaces);
     this.store.set(ACTIVE_WORKSPACE_STORAGE_KEY, this.activeWorkspaceId);
+    this.changed();
+  }
+
+  private changed(): void {
+    for (const listener of Array.from(this.changeListeners)) {
+      try {
+        listener();
+      } catch (error) {
+        console.error("[workspaces] change listener threw", error);
+      }
+    }
   }
 }
