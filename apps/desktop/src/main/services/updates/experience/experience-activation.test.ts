@@ -7,7 +7,7 @@
  * becomes ready is committed with the old one as `previous`.
  *
  * The swaps here go through the real `RendererHost` with the barrier this
- * shell ships (`first-commit` at FOUNDATION_API 1): only its webContents are
+ * shell ships (`subscriptions` at FOUNDATION_API 2): only its webContents are
  * fakes.
  */
 import fs from "node:fs";
@@ -53,8 +53,13 @@ const fakes = vi.hoisted(() => {
       if (behaviour.failing.some((prefix) => url.startsWith(prefix)))
         throw new Error("ERR_FILE_NOT_FOUND");
       this.url = url;
-      if (!behaviour.silent.some((prefix) => url.startsWith(prefix)))
-        queueMicrotask(() => this.emit("ipc-message", {}, "renderer-ready"));
+      if (!behaviour.silent.some((prefix) => url.startsWith(prefix))) {
+        const { rendererReadiness } = await import("../../../rpc/readiness");
+        queueMicrotask(() => {
+          this.emit("ipc-message", {}, "renderer-ready");
+          rendererReadiness.report(this.id, { barrier: "subscriptions" });
+        });
+      }
     }
     on(event: string, listener: (...args: unknown[]) => void): void {
       this.listeners.set(event, [
@@ -131,7 +136,7 @@ const { ExperienceStore, REJECTION_TTL_MS } =
   await import("./experience-store");
 const { rendererChangeNeedsReadiness } = await import("./experience-updater");
 const { rendererUrl } = await import("./app-protocol");
-const { FOUNDATION_API } = await import("#shared/experience");
+const { rendererReadiness } = await import("../../../rpc/readiness");
 const {
   MAX_SWAP_READINESS_ATTEMPTS,
   RendererHost,
@@ -145,7 +150,7 @@ type Outcome = import("../../../renderer-host").SwapOutcome;
 const VERSION = (n: number) => String(n).repeat(64).slice(0, 64);
 const SHA = (n: number) => `${"f".repeat(63)}${n}`;
 /** The barrier index.ts derives from the shipped FOUNDATION_API. */
-const SHIPPED_BARRIER = FOUNDATION_API >= 2 ? "subscriptions" : "first-commit";
+const SHIPPED_BARRIER = "subscriptions";
 
 beforeEach(() => {
   paths.userData = fs.mkdtempSync(path.join(os.tmpdir(), "experience-"));
@@ -196,6 +201,7 @@ const makeHost = () =>
     webPreferences: {},
     window: new fakes.FakeWindow() as never,
     wire: () => undefined,
+    readiness: rendererReadiness,
   });
 
 /** index.ts's wiring: the store settles on the scheduler's outcomes. */
@@ -301,16 +307,16 @@ describe("experience activation is transactional with renderer readiness", () =>
     }
   );
 
-  it("the swap's first-commit barrier rejects a candidate that never signals", async () => {
+  it("the swap's subscriptions barrier rejects a candidate that never signals", async () => {
     vi.useFakeTimers();
     const host = makeHost();
     const first = host.webContents;
     fakes.behaviour.silent = ["app://silent/"];
     const swapping = host.swap(new URL("app://silent/"), {
-      barrier: "first-commit",
+      barrier: "subscriptions",
     });
     const rejected = expect(swapping).rejects.toBeInstanceOf(SwapNotReady);
-    await vi.advanceTimersByTimeAsync(6_000);
+    await vi.advanceTimersByTimeAsync(11_000);
     await rejected;
     expect(host.webContents).toBe(first);
   });
@@ -393,6 +399,7 @@ describe("experience activation is transactional with renderer readiness", () =>
       typeof fakes.FakeWebContentsView
     >["webContents"];
     replacement.emit("ipc-message", {}, "renderer-ready");
+    rendererReadiness.report(replacement.id, { barrier: "subscriptions" });
     await vi.advanceTimersByTimeAsync(0);
     expect(outcomes).toEqual([{ version: VERSION(2), outcome: "swapped" }]);
     await settle();

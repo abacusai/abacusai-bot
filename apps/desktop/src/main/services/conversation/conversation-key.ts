@@ -1,7 +1,6 @@
 import {
   conversationBelongsToWorkspace,
   conversationKey as sharedConversationKey,
-  conversationRefFromKey,
   draftConversationRef,
   sessionConversationRef,
   type ConversationKey,
@@ -30,20 +29,6 @@ export const conversationKey = (scope: ConversationScope): ConversationKey => {
       ? draftConversationRef(scope.workspaceId)
       : sessionConversationRef(scope.workspaceId, scope.sessionId);
   return sharedConversationKey(ref);
-};
-
-export const parseConversationKey = (
-  key: ConversationKey
-): ConversationScope | null => {
-  const ref = conversationRefFromKey(key);
-  if (ref == null) return null;
-  return ref.kind === "draft"
-    ? { workspaceId: ref.workspaceId, kind: "draft" }
-    : {
-        workspaceId: ref.workspaceId,
-        kind: "session",
-        sessionId: ref.sessionId,
-      };
 };
 
 export { conversationBelongsToWorkspace };

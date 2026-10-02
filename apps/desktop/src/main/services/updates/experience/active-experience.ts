@@ -20,6 +20,3 @@ export const experienceAgentEntry = (): string | null => {
 
   return directory === null ? null : path.join(directory, "main.js");
 };
-
-export const activeExperienceVersion = (): string | null =>
-  active?.version ?? null;

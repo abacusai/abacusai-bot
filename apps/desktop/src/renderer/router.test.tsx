@@ -1,206 +1,224 @@
-import { QueryClient } from "@tanstack/react-query";
+/**
+ * R1-T1: the route tree, redirects, masks and pop-up identity, on a real
+ * router over memory history with the app's own components.
+ */
+import { createMemoryHistory } from "@tanstack/react-router";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+
+import { PANE_BOUNDARIES } from "#renderer/lib/navigation/pane-key";
+import { routeMasks } from "#renderer/router";
+
 import {
-  createMemoryHistory,
-  Outlet,
-  RouterProvider,
-} from "@tanstack/react-router";
-import { fireEvent, render, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+  createHarness,
+  renderApp,
+  type AppHarness,
+} from "./test-support/app-harness";
 
-vi.mock("./app", () => ({
-  default: () => (
-    <div data-testid="app-root">
-      <Outlet />
-    </div>
-  ),
-}));
+let harness: (AppHarness & { view?: { unmount(): void } }) | null = null;
+afterEach(async () => {
+  await harness?.cleanup();
+  harness = null;
+});
 
-vi.mock("./components/layout/workspace-view", () => ({
-  WorkspaceView: ({ mainContent }: { mainContent?: ReactNode }) => (
-    <div data-testid="workspace-view">{mainContent ?? "Coding workspace"}</div>
-  ),
-}));
-
-vi.mock("./components/chat/chat-panel", () => ({
-  ChatPanel: () => <div data-testid="chat-panel">Chat</div>,
-}));
-
-vi.mock("./components/routines/routine-page", () => ({
-  RoutinePage: ({ routineId }: { routineId: string }) => (
-    <div data-testid="routine-page">{routineId}</div>
-  ),
-}));
-
-vi.mock("./components/settings/profile-panel", () => ({
-  ProfilePanel: () => <div data-testid="profile-panel">Profile</div>,
-}));
-
-vi.mock("./components/settings/capabilities-panel", () => ({
-  ToolsPanel: () => <div data-testid="tools-panel">Tools</div>,
-  ToolsetPanel: ({ toolset }: { toolset: { id: string } }) => (
-    <div data-testid="toolset-panel">{toolset.id}</div>
-  ),
-}));
-
-vi.mock("./components/settings/connectors-panel", () => ({
-  ConnectorsPanel: () => <div data-testid="connectors-panel">Connectors</div>,
-}));
-
-vi.mock("./components/skills/skills-management-panel", () => ({
-  SkillsManagementPanel: () => <div data-testid="skills-panel">Skills</div>,
-}));
-
-vi.mock("./components/mcp/mcp-management-panel", () => ({
-  McpManagementPanel: () => <div data-testid="mcp-panel">MCP</div>,
-}));
-
-vi.mock("./components/settings/memory-panel", () => ({
-  MemoryPanel: () => <div data-testid="memory-panel">Memory</div>,
-}));
-
-vi.mock("./components/settings/usage-panel", () => ({
-  UsagePanel: () => <div data-testid="usage-panel">Usage</div>,
-}));
-
-vi.mock("./components/workspace/artifacts-panel", () => ({
-  ArtifactsPanel: () => <div data-testid="artifacts-panel">Artifacts</div>,
-}));
-
-vi.mock("./hooks/use-workspace-queries", () => ({
-  allAgentSessionsQueryOptions: () => ({
-    queryKey: ["all-agent-sessions"],
-    queryFn: async () => [],
-  }),
-  sessionArtifactsQueryOptions: () => ({
-    queryKey: ["session-artifacts"],
-    queryFn: async () => [],
-  }),
-  workspaceMetadataQueryOptions: () => ({
-    queryKey: ["workspace-metadata"],
-    queryFn: async () => ({ activeWorkspaceId: null, workspaces: [] }),
-  }),
-}));
-
-const { createAppRouter } = await import("./router");
-const { useWorkspaceStore } = await import("./stores/code-store");
-
-const renderRoute = (entry: string | string[]) => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const history = createMemoryHistory({
-    initialEntries: Array.isArray(entry) ? entry : [entry],
-  });
-  const router = createAppRouter(queryClient, history);
-  const rendered = render(<RouterProvider router={router} />);
-  return { ...rendered, history, queryClient, router };
+type AnyRouteNode = {
+  id: string;
+  fullPath: string;
+  options: { staticData?: { area?: string; sidebar?: string } };
+  children?: Record<string, AnyRouteNode> | AnyRouteNode[];
+  parentRoute?: AnyRouteNode;
 };
 
-describe("renderer route families", () => {
-  beforeEach(() => {
-    useWorkspaceStore.setState({ activeRightTab: "explorer" });
-  });
+let all: AnyRouteNode[] = [];
+beforeAll(async () => {
+  // A router initialises the tree (ids and full paths).
+  const probe = await createHarness("/bots/new");
+  all = Object.values(probe.router.routesById) as unknown as AnyRouteNode[];
+  await probe.cleanup();
+});
 
-  it("opens a routine's page beside the lists, by its id", async () => {
-    const { getByTestId } = renderRoute("/routines/job-42");
+const ancestors = (node: AnyRouteNode): AnyRouteNode[] => {
+  const chain: AnyRouteNode[] = [];
+  for (let at: AnyRouteNode | undefined = node; at != null; at = at.parentRoute)
+    chain.unshift(at);
+  return chain;
+};
 
-    await waitFor(() => expect(getByTestId("routine-page")).toBeTruthy());
-    expect(getByTestId("routine-page").textContent).toBe("job-42");
-    expect(getByTestId("workspace-view")).toBeTruthy();
-  });
-
-  it("keeps the coding route inside WorkspaceView and applies its search", async () => {
-    const { getByTestId, queryByTestId } = renderRoute(
-      "/?view=chat&panel=preview&capabilities=mcp&diff=split"
-    );
-
-    await waitFor(() => expect(getByTestId("workspace-view")).toBeTruthy());
-    expect(queryByTestId("capabilities-panel")).toBeNull();
+describe("the route tree", () => {
+  it("matches the snapshot of ids and full paths", () => {
     expect(
-      document.querySelector('[data-slot="focused-tool-layout"]')
-    ).toBeNull();
+      all
+        .map((node) => ({ id: node.id, fullPath: node.fullPath }))
+        .sort((a, b) => a.id.localeCompare(b.id))
+    ).toMatchSnapshot();
+  });
 
-    await waitFor(() => {
-      expect(useWorkspaceStore.getState().activeRightTab).toBe("preview");
+  it("gives every _shell leaf an area and a sidebar through its ancestors", () => {
+    const leaves = all.filter(
+      (node) =>
+        node.id.startsWith("/_shell/") &&
+        (node.children == null || Object.keys(node.children).length === 0) &&
+        node.id !== "/_shell/"
+    );
+    expect(leaves.length).toBeGreaterThan(20);
+    for (const leaf of leaves) {
+      const chain = ancestors(leaf);
+      const area = chain
+        .map((node) => node.options.staticData?.area)
+        .filter(Boolean)
+        .at(-1);
+      const sidebar = chain
+        .map((node) => node.options.staticData?.sidebar)
+        .filter(Boolean)
+        .at(-1);
+      expect(area, leaf.id).toBeDefined();
+      expect(sidebar, leaf.id).toBeDefined();
+    }
+  });
+
+  it("uses full paths, not ids, for every mask", () => {
+    const fullPaths = new Set(all.map((node) => node.fullPath));
+    for (const mask of routeMasks) expect(fullPaths.has(mask.from)).toBe(true);
+  });
+
+  it("keys PANE_BOUNDARIES by generated route ids", () => {
+    const ids = new Set(all.map((node) => node.id));
+    for (const id of Object.keys(PANE_BOUNDARIES))
+      expect(ids.has(id), id).toBe(true);
+  });
+});
+
+describe("redirects", () => {
+  it.each([
+    ["/", "/bots/new"],
+    ["/bots", "/bots/new"],
+    ["/sessions", "/sessions/new"],
+    ["/library", "/library/connectors"],
+    ["/settings", "/settings/general"],
+    ["/onboarding", "/onboarding/welcome"],
+  ])("%s lands on %s", async (from, to) => {
+    harness = await renderApp(from, {
+      onboarded: !from.startsWith("/onboarding"),
     });
-  });
-
-  it("forwards a legacy main-view search to the pane that replaced it", async () => {
-    const { getByTestId } = renderRoute(
-      "/?view=usage&panel=preview&capabilities=mcp&diff=split"
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(to)
     );
+  });
 
-    await waitFor(() => expect(getByTestId("usage-panel")).toBeTruthy());
-    // In the pane, so the session list is still there to click.
-    expect(getByTestId("workspace-view")).toBeTruthy();
+  it("renders the start page and the bots sidebar on /bots/new", async () => {
+    harness = await renderApp("/bots/new");
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeTruthy();
     expect(
-      document.querySelector('[data-slot="focused-tool-layout"]')
-    ).toBeNull();
-  });
-
-  it("renders the profile in the pane, not a window of its own", async () => {
-    // It used to swap the whole window for the focused settings shell, which
-    // took the sidebar and the chat behind it with it. Memory and usage never
-    // did that, and there was never a reason these four should. Notifications,
-    // devices and the browser moved with it: they share this route's parent,
-    // and their panels need the preload bridge to render enough to assert on.
-    const { getByTestId } = renderRoute("/settings/account");
-
-    await waitFor(() => expect(getByTestId("profile-panel")).toBeTruthy());
-    expect(getByTestId("workspace-view")).toBeTruthy();
-    expect(
-      document.querySelector('[data-slot="focused-tool-layout"]')
-    ).toBeNull();
-  });
-
-  it("preloads artifact data through the route loader", async () => {
-    const { getByTestId, queryClient } = renderRoute("/settings/artifacts");
-
-    await waitFor(() => expect(getByTestId("artifacts-panel")).toBeTruthy());
-    expect(getByTestId("workspace-view")).toBeTruthy();
-    expect(queryClient.getQueryData(["session-artifacts"])).toEqual([]);
-    expect(queryClient.getQueryData(["all-agent-sessions"])).toEqual([]);
-  });
-
-  it("lands a bare /settings on the profile, in the pane", async () => {
-    // The redirect outlived the focused shell it was written for: there is no
-    // settings window to open any more, so /settings is just the profile page.
-    const { getByTestId } = renderRoute("/settings");
-
-    await waitFor(() => expect(getByTestId("profile-panel")).toBeTruthy());
-    expect(getByTestId("workspace-view")).toBeTruthy();
-  });
-
-  it("walks back out of a toolset without leaving the pane", async () => {
-    const { getByTestId } = renderRoute("/settings/tools/terminal");
-
-    await waitFor(() => expect(getByTestId("toolset-panel")).toBeTruthy());
-    // Still inside the coding shell, which is the whole point of the move.
-    expect(getByTestId("workspace-view")).toBeTruthy();
-
-    fireEvent.click(
-      document.querySelector(
-        '[data-id="capabilities-pane-back"]'
-      ) as HTMLElement
-    );
-    await waitFor(() => expect(getByTestId("tools-panel")).toBeTruthy());
-    expect(
-      document.querySelector('[data-id="capabilities-pane-back"]')
-    ).toBeNull();
-  });
-
-  it("keeps the coding shell mounted behind the capabilities tabs", async () => {
-    const { getByTestId, queryByTestId } = renderRoute("/settings/skills");
-
-    await waitFor(() => expect(getByTestId("skills-panel")).toBeTruthy());
-    expect(getByTestId("workspace-view")).toBeTruthy();
-    expect(
-      document.querySelector('[data-id="capabilities-pane"]')
+      await screen.findByRole("link", { name: /Chief of Staff/ })
     ).toBeTruthy();
-    expect(
-      document.querySelector('[data-slot="focused-tool-layout"]')
-    ).toBeNull();
-    expect(queryByTestId("focused-title")).toBeNull();
+  });
+
+  it("treats /__ui as not found with the gallery off", async () => {
+    const env = import.meta.env as { DEV: boolean };
+    const dev = env.DEV;
+    env.DEV = false;
+    try {
+      harness = await renderApp("/__ui");
+      expect(await screen.findByText("Not found")).toBeTruthy();
+    } finally {
+      env.DEV = dev;
+    }
+  });
+});
+
+describe("masked pop-ups", () => {
+  it.each([
+    {
+      name: "routine create",
+      to: "/routines/new",
+      masked: "/routines",
+      background: "routines-list-body",
+    },
+    {
+      name: "bot check-in",
+      to: "/bots/chief-of-staff/check-in",
+      masked: "/bots/chief-of-staff",
+      background: "bot-chat",
+    },
+    {
+      name: "connector sheet",
+      to: "/library/connectors?connector=gmail",
+      masked: "/library/connectors",
+      background: "connectors-page",
+    },
+  ])(
+    "$name masks the URL, keeps its background and closes with back",
+    async ({ to, masked, background }) => {
+      const history = createMemoryHistory({ initialEntries: ["/bots/new"] });
+      harness = await renderApp("/bots/new", { history });
+      const start = harness.router.state.location.pathname;
+      const base = to
+        .replace(/\/(new|check-in)$/, (_, last) => (last === "new" ? "" : ""))
+        .split("?")[0]!;
+      // Go to the background first, as a user would.
+      await act(async () => {
+        await harness!.router.navigate({
+          href: base === "/routines" ? "/routines" : base,
+        });
+      });
+      const backgroundNode = await screen.findAllByTestId(background);
+      const before = backgroundNode[0]!;
+      await act(async () => {
+        await harness!.router.navigate({ href: to });
+      });
+      expect(harness.router.state.location.maskedLocation?.pathname).toBe(
+        masked
+      );
+      await screen.findByTestId(
+        /routine-dialog|connector-sheet|check-in-dialog/
+      );
+      // The background instance survived the pop-up opening.
+      expect(screen.getAllByTestId(background)[0]).toBe(before);
+
+      await act(async () => {
+        harness!.router.history.back();
+      });
+      await waitFor(() =>
+        expect(screen.queryByTestId("routine-dialog")).toBeNull()
+      );
+      expect(screen.getAllByTestId(background)[0]).toBe(before);
+      expect(start).toBe("/bots/new");
+    }
+  );
+
+  it("survives a reload: a router re-created on the same history keeps the mask", async () => {
+    const history = createMemoryHistory({ initialEntries: ["/routines"] });
+    harness = await renderApp("/routines", { history });
+    await act(async () => {
+      await harness!.router.navigate({ to: "/routines/new" });
+    });
+    const first = harness;
+    harness.view?.unmount();
+    await first.cleanup();
+    harness = await renderApp("/routines", { history });
+    expect(harness.router.state.location.pathname).toBe("/routines/new");
+    expect(await screen.findByTestId("routine-dialog")).toBeTruthy();
+    expect(screen.getByTestId("routines-list-body")).toBeTruthy();
+  });
+
+  it("keeps a local counter and scroll across open and close", async () => {
+    harness = await renderApp("/routines");
+    const body = await screen.findByTestId("routines-list-body");
+    const pane = body
+      .closest("[data-slot=pane]")!
+      .querySelector("div.overflow-auto") as HTMLElement;
+    pane.scrollTop = 40;
+    body.dataset.counter = "3";
+    await act(async () => {
+      await harness!.router.navigate({ to: "/routines/new" });
+    });
+    await act(async () => {
+      harness!.router.history.back();
+    });
+    const after = screen.getByTestId("routines-list-body");
+    expect(after).toBe(body);
+    expect(after.dataset.counter).toBe("3");
+    expect(pane.scrollTop).toBe(40);
+    fireEvent.scroll(pane);
   });
 });

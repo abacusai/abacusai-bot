@@ -8,13 +8,6 @@ export type XmlNode = {
   text: string;
 };
 
-const EMPTY_NODE: XmlNode = Object.freeze({
-  name: "",
-  attrs: {},
-  children: [],
-  text: "",
-}) as XmlNode;
-
 export function parseXml(source: string): XmlNode {
   const root: XmlNode = {
     name: "#document",
@@ -157,17 +150,6 @@ export function children(
 }
 
 /** Walks a chain of direct children, e.g. `path(sp, 'p:spPr', 'a:xfrm')`. */
-export function path(
-  node: XmlNode | null | undefined,
-  ...names: string[]
-): XmlNode | null {
-  let current = node ?? null;
-  for (const name of names) {
-    current = child(current, name);
-    if (current == null) return null;
-  }
-  return current;
-}
 
 /** First descendant with this tag name, depth-first, or null. */
 export function find(
@@ -224,5 +206,3 @@ export function attrBool(
   if (raw == null) return null;
   return raw === "1" || raw === "true";
 }
-
-export const emptyNode = (): XmlNode => EMPTY_NODE;

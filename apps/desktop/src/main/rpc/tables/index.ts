@@ -47,18 +47,6 @@ export interface Tables {
 
 export type TableName = Exclude<keyof Tables, "prefsStore" | "dispose">;
 
-export const TABLE_NAMES: TableName[] = [
-  "sessions",
-  "bots",
-  "routines",
-  "routineRuns",
-  "artifacts",
-  "memories",
-  "workspaces",
-  "gitState",
-  "prefs",
-];
-
 export interface CreateTablesOptions {
   bus: MainEventBus;
   sources: TableSources;

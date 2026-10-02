@@ -25,6 +25,11 @@ const output = path.join(desktopRoot, "dist", "experience");
 
 // The foundation release this bundle belongs to. build.sh sets this same
 // field before packaging, so the stamp is what app.getVersion() will report.
+execFileSync(
+  process.execPath,
+  [path.join(desktopRoot, "scripts", "check-release-build.mjs")],
+  { stdio: "inherit" }
+);
 const foundation = JSON.parse(
   fs.readFileSync(path.join(desktopRoot, "package.json"), "utf-8")
 ).version;

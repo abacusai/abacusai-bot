@@ -1,6 +1,6 @@
 {
   "name": "abacusai-bot",
-  "version": "1.0.12",
+  "version": "1.0.86",
   "private": true,
   "description": "AbacusAI Bot: free, open-source personal agents for your messaging apps, tools and services.",
   "homepage": "https://github.com/abacusai/abacusai-bot",
@@ -10,9 +10,8 @@
   "scripts": {
     "build": "turbo run build vendor",
     "changelog": "node scripts/sync-changelog.js",
-    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit check:knip-next check:ui-registry check:legacy-diff --concurrency=1",
+    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit check:knip check:ui-registry --concurrency=1",
     "check:audit": "node scripts/check-audit.js",
-    "check:knip-next": "knip --workspace apps/desktop --include files,exports,types,duplicates",
     "dev": "pnpm run dev:desktop",
     "dev:desktop": "turbo run dev --filter=@abacus-ai/desktop",
     "format": "oxfmt .",
@@ -25,14 +24,18 @@
     "test:coverage": "turbo run test:coverage",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
-    "typecheck:tools": "tsc -p tsconfig.tools.json"
+    "typecheck:tools": "tsc -p tsconfig.tools.json",
+    "check:knip": "knip --workspace apps/desktop --include files,exports,types,duplicates,dependencies,unlisted"
   },
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",
+    "@size-limit/file": "^14.1.0",
     "@types/node": "catalog:",
     "knip": "6.38.0",
+    "oxc-parser": "0.150.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "size-limit": "^14.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:"
   },

@@ -275,6 +275,8 @@ Added to `vitest.config.ts` `projects`:
 
 ---
 
+Focused public feature entrypoints keep route loaders separate from presentation barrels. Cross-feature imports must satisfy the exact entrypoint allowlist and composition rules below; `guards.test.ts` enforces both.
+
 ## 4. Folder shape
 
 ```
@@ -320,7 +322,7 @@ apps/desktop/src/renderer-next/
 └─ test-support/            setup.ts, fake-table.ts, render-route.tsx, fixtures/home/ (seed data)
 ```
 
-Rules (PLAN L205, restated as checks): routes never import another route or feature internals beyond the feature's `index.ts`; features import `components/`, `ui/`, `data/`, `lib/`, never each other (oxlint `no-restricted-imports` pattern `#next/features/*/!(index)` from other features, enforced per feature folder by a small script test in §11 because oxlint patterns cannot express "other feature"); `ui/` diffs are rejected in review and by `check:ui-registry` (§5.4).
+Rules (PLAN L205, restated as checks): routes never import another route. Cross-feature imports use the feature root, `index.ts`, or an exact focused public entrypoint in `FOCUSED_ENTRYPOINTS` in `guards.test.ts`. That explicit allowlist lets route loaders avoid presentation barrels; directory prefixes and arbitrary internals are forbidden. Only application and notch routes, bootstrap `main.tsx` and `notch.tsx`, `router.tsx`, `notch-context.ts`, the shell sidebar map and the dev gallery compose features; other features import `components/`, `ui/`, `data/`, `lib/`, never each other. The AST guard in §11 enforces both the composition boundary and the entrypoint allowlist, with tests and test-support exempt; `ui/` diffs are rejected in review and by `check:ui-registry` (§5.4).
 
 ---
 
@@ -1062,7 +1064,7 @@ macOS runs also capture page 5's fullscreen case: the script sends Ctrl+Cmd+F th
 | R1-T12 | `lib/window-chrome/use-titlebar-area.test.ts` | Window-chrome §10 renderer cases, against renderer-next. |
 | R1-T13 | `lib/sound.test.ts` | Gating, coalescing, per-event switches, master switch. |
 | R1-T14 | `features/shell/hotkeys.test.tsx` | Each binding fires its action once with the platform set **only** through `HotkeysProvider defaultOptions.hotkey.platform`, mapped from real `system.info` values (`darwin` → `Meta`, `win32`/`linux` → `Control`), with no per-binding override; `formatForDisplay` labels read ⌘ on `darwin` and Ctrl on `win32`/`linux` (Codex r3 #6); `Mod+Alt+B` never triggers `Mod+B` and vice versa; in a `textarea` `Mod+B` toggles and the event is cancelled; in `contenteditable`, `contenteditable=""` and `plaintext-only` the handler does not run and `defaultPrevented` stays false; macOS Option+B (`key: "∫"`, `code: "KeyB"`) matches `Mod+Alt+B`; each app binding has exactly one registration; with a popover open Escape closes it, and with toasts present F6 focuses the toast viewport (Codex r2 #3, #4, #16). |
-| R1-T15 | `guards.test.ts` | AST scan (`rolldown/parseAst`, `lang: "tsx"`) of every file in `src/renderer-next/**`: no `MemberExpression` `window.api` (also `globalThis.api`, `self.api`), no `Identifier` `ipcRenderer`, no import of `electron`, `#renderer/*` (except `#locales/*`), `framer-motion`, `zustand`, `sonner`; `@base-ui/react` imported only under `ui/`; features do not import other features' internals; routes import only feature `index` files. Covers spec 00 A-T7 for `data/**`. |
+| R1-T15 | `guards.test.ts` | AST scan (`rolldown/parseAst`, `lang: "tsx"`) of every file in `src/renderer-next/**`: no `MemberExpression` `window.api` (also `globalThis.api`, `self.api`), no `Identifier` `ipcRenderer`, no import of `electron`, `#renderer/*` (except `#locales/*`), `framer-motion`, `zustand`, `sonner`; `@base-ui/react` imported only under `ui/`; features do not import other features' internals; routes and designated composition files import only feature roots, `index` files or exact approved focused public entrypoints from the allowlist in `guards.test.ts`. Covers spec 00 A-T7 for `data/**`. |
 | R1-T16 | `lib/i18n/i18n.test.ts` | `matchSupportedLanguage`; `resolveLanguage("system")` follows `navigator.languages`, explicit `"en-US"` stays English with a German OS; new keys exist; no new key collides with an existing leaf; `--apply-keymap` fills a missing key. |
 | R1-T17 (main) | `src/main/renderer-generation.test.ts`, `src/main/renderer-entry.test.ts` | Env override only unpackaged; entry URL for dev/experience/file × legacy/wco; `ABACUSBOT_DEV_CONTENT_SIZE` ignored when packaged. |
 | R1-T18 | `lib/bootstrap.test.ts` | `bootstrap()` with the memory transport: transport never answers → `BootFailure` (transport); `system.info` rejects; prefs snapshot rejects (`markError`); port closed during `prefs.preload()`; port closed after mount → reconnect toast then error. The router is never created on failure. |

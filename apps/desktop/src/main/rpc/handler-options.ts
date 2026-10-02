@@ -9,7 +9,6 @@
 import { flowControlHandlerInterceptor } from "#shared/contract/flow-control";
 import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
 
-import type { RpcContext } from "./context";
 import { logRpcError, toRpcError } from "./errors";
 
 /** A call slower than this is logged; long-running sign-ins are expected to trip it. */
@@ -95,5 +94,3 @@ export const rpcHandlerOptions = () => ({
   interceptors: [flowControlHandlerInterceptor],
   clientInterceptors: [rpcClientInterceptor],
 });
-
-export type { RpcContext };

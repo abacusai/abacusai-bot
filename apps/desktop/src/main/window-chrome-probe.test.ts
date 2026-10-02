@@ -1,6 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { hasOverlayGeometry, probeWindowChrome } from "./window-chrome-probe";
+import {
+  hasOverlayGeometry,
+  probeWindowChrome,
+  waitForChromeProbeWindow,
+} from "./window-chrome-probe";
 
 const geometry = {
   visible: true,
@@ -76,4 +80,31 @@ it("retries later if minimized while polling", async () => {
   minimized = true;
   await vi.advanceTimersByTimeAsync(25);
   expect(await result).toBe("retry-later");
+});
+
+it("R7-T28: hidden and minimized probes wait for one native event without timers", () => {
+  vi.useFakeTimers();
+  let listener: (() => void) | undefined;
+  const once = vi.fn((_event: string, fn: () => void) => {
+    listener = fn;
+  });
+  const probe = vi.fn();
+  const window = {
+    isVisible: () => false,
+    isMinimized: () => false,
+    isFullScreen: () => false,
+    once,
+  };
+  expect(waitForChromeProbeWindow(window, probe)).toBe(true);
+  expect(once).toHaveBeenCalledWith("show", probe);
+  expect(vi.getTimerCount()).toBe(0);
+  listener?.();
+  expect(probe).toHaveBeenCalledOnce();
+  expect(
+    waitForChromeProbeWindow({ ...window, isMinimized: () => true }, probe)
+  ).toBe(true);
+  expect(once).toHaveBeenLastCalledWith("restore", probe);
+  expect(
+    waitForChromeProbeWindow({ ...window, isVisible: () => true }, probe)
+  ).toBe(false);
 });

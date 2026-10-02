@@ -51,15 +51,15 @@ import { v1ToThreadFile } from "#shared/transcript/thread-file";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import {
+  LegacyTranscriptFixture as TranscriptService,
+  type TranscriptServiceOptions,
+} from "./legacy-transcript-fixture.test-support";
+import {
   fingerprintV1,
   peeksAsDerivedV2,
   ThreadStore,
   type ThreadStoreOptions,
 } from "./thread-store";
-import {
-  TranscriptService,
-  type TranscriptServiceOptions,
-} from "./transcript-service";
 
 const SEGMENTS = [
   { type: "text", id: "u1", source: "user", content: "hello", at: 1 },
@@ -119,7 +119,6 @@ const make = (
 ) => {
   const threads = new ThreadStore({
     log: silent,
-    dualWriteDelayMs: 0,
     isWriteBlocked: () => false,
     ...threadOptions,
   });
@@ -164,30 +163,6 @@ describe("C-T7 thread store", () => {
     expect(fs.statSync(v2File("s1")).mtimeMs).toBe(before);
   });
 
-  it("defers and coalesces the dual-write; a read flushes it", async () => {
-    vi.useFakeTimers();
-    const writes: string[] = [];
-    const { threads, transcripts } = make({
-      dualWriteDelayMs: 2_000,
-      writeFile: (file, text) => {
-        writes.push(path.basename(path.dirname(file)));
-        writeFileAtomicSync(file, text);
-      },
-    });
-    for (let index = 0; index < 5; index++) transcripts.write("s1", MORE);
-    expect(fs.existsSync(v2File("s1"))).toBe(false);
-    vi.advanceTimersByTime(2_000);
-    expect(writes).toEqual(["threads"]);
-    expect(readJson(v2File("s1")).source.segments).toBe(3);
-
-    // A read before the timer runs the pending write first.
-    transcripts.write("s2", SEGMENTS);
-    expect(ids(await threads.readCurrent("s2"))).toEqual(["u1", "b1"]);
-    expect(writes).toEqual(["threads", "threads"]);
-    vi.advanceTimersByTime(5_000);
-    expect(writes).toHaveLength(2);
-  });
-
   it("never overwrites an agui twin", async () => {
     const { threads, transcripts } = make();
     const agui = JSON.stringify(aguiThread("s1"));
@@ -217,10 +192,7 @@ describe("C-T7 thread store", () => {
     failThreads = true;
     transcripts.write("s1", MORE);
     expect(persisted).toEqual(["s1", "s1"]);
-    expect(errors).toHaveBeenCalledWith(
-      "[transcripts] failed to write the v2 thread",
-      expect.anything()
-    );
+
     expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(stale);
     failThreads = false;
     errors.mockRestore();
@@ -577,17 +549,6 @@ describe("C-T7 r2: ownership, clears, held writes", () => {
     errors.mockRestore();
   });
 
-  it("#12: the deferred dual-write keeps the 64 MB cap", async () => {
-    const { transcripts } = make({ maxTranscriptBytes: 300 });
-    transcripts.write("s1", SEGMENTS);
-    const twin = fs.readFileSync(v2File("s1"), "utf8");
-    transcripts.write("s1", [
-      ...MORE,
-      { type: "text", id: "big", source: "bot", content: "x".repeat(500) },
-    ]);
-    expect(fs.readFileSync(v2File("s1"), "utf8")).toBe(twin);
-  });
-
   it("cut-over #7: send, reset and quit while recovery is unresolved lose nothing", async () => {
     make().transcripts.write("s1", SEGMENTS);
     make().transcripts.write("s2", SEGMENTS);
@@ -804,12 +765,15 @@ describe("C-T7 through ServiceHost", () => {
     return host;
   };
 
-  const seed = (host: { writeTranscript(id: string, s: never[]): void }) => {
+  const seed = (host: { threadStore: ThreadStore }) => {
     for (const id of ["s1", "s2"])
-      host.writeTranscript(id, SEGMENTS as never[]);
+      new TranscriptService({ threads: host.threadStore }).write(
+        id,
+        SEGMENTS as never[]
+      );
   };
 
-  it("wires the thread store into the transcript dual-write", async () => {
+  it("wires the thread store into dual removal", async () => {
     const host = await makeHost();
     const internals = host as unknown as Record<string, unknown>;
     expect(
@@ -864,7 +828,10 @@ describe("C-T7 through ServiceHost", () => {
   it("a session delete and a workspace delete remove both files", async () => {
     const host = await makeHost();
     seed(host);
-    host.writeTranscript("s3", SEGMENTS as never[]);
+    new TranscriptService({ threads: host.threadStore }).write(
+      "s3",
+      SEGMENTS as never[]
+    );
 
     expect(host.removeAgentSession("w1", "s3")).toBe(true);
     expect(fs.existsSync(v1File("s3"))).toBe(false);

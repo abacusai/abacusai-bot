@@ -137,4 +137,3 @@ export type PptxReadResult =
 /** EMU per inch; CSS pixels are 96 per inch. */
 export const EMU_PER_INCH = 914400;
 export const EMU_PER_PX = EMU_PER_INCH / 96;
-export const EMU_PER_POINT = EMU_PER_INCH / 72;

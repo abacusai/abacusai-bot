@@ -19,16 +19,19 @@ import * as fs from "node:fs";
 import { eventMeta } from "../event-meta.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import type { DesktopEvent } from "../protocol.js";
+import type { AguiEvent } from "./wire.js";
 
 export const WIRE_RECORD_ENV = "ABACUSAI_BOT_WIRE_RECORD";
 
 export type WireRecordEntry =
+  | { dir: "agui"; event: AguiEvent }
   | { dir: "in"; line: string }
   | { dir: "out"; event: DesktopEvent; meta?: Record<string, unknown> }
   | { dir: "internal"; event: InternalAgentEvent };
 
 export interface WireRecorder {
   input(line: string): void;
+  agui(event: AguiEvent): void;
   output(event: DesktopEvent): void;
   internal(event: InternalAgentEvent): void;
 }
@@ -81,6 +84,7 @@ export function openWireRecorder(
   };
 
   return {
+    agui: (event) => append({ dir: "agui", event }),
     input: (line) => append({ dir: "in", line }),
     output: (event) => {
       const meta = metaOf(event);

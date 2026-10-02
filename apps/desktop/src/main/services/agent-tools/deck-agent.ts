@@ -16,28 +16,6 @@ const MAX_SLIDES = 20;
 /** Templates ship 8-18 demo slides (a catalogue); five is what gets presented. */
 const DEFAULT_SLIDES = 5;
 
-export type DeckRequest = {
-  /** What the deck is about: the brief, in the caller's words. */
-  context: string;
-  /** Where the finished PDF goes. */
-  outputPath: string;
-  /** Overrides the model's own choice of template. */
-  template?: string;
-  /** Target slide count. Defaults to five. */
-  slides?: number;
-};
-
-export type DeckResult = {
-  pdfPath: string;
-  htmlPath: string;
-  template: string;
-  templateName: string;
-  rationale: string;
-  slides: number;
-  model: string;
-  seconds: number;
-};
-
 type TemplateIndexEntry = {
   slug: string;
   name: string;

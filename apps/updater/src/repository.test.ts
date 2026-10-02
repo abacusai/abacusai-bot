@@ -8,6 +8,7 @@ import type { JSONObject } from "@tufjs/models/dist/utils";
 import { test } from "vitest";
 
 import { buildExperience } from "./experience.ts";
+import { FOUNDATION_API, PROTOCOL } from "./manifest.ts";
 import { publishExperience, refreshMetadata } from "./repository.ts";
 
 const readJson = async (file: string): Promise<JSONObject> => {
@@ -26,6 +27,18 @@ void test("refreshMetadata re-signs snapshot and timestamp, not targets", async 
     await fs.writeFile(path.join(renderer, "index.html"), "<html/>");
     await fs.writeFile(path.join(agent, "index.mjs"), "console.log(1)");
     const output = path.join(work, "experience");
+    for (const dir of [renderer, agent])
+      await fs.writeFile(
+        path.join(dir, "build.json"),
+        JSON.stringify({
+          commit: "a".repeat(40),
+          dirty: false,
+          foundationApi: FOUNDATION_API,
+          protocol: PROTOCOL,
+          generation: FOUNDATION_API >= 2 ? "wco" : "legacy",
+          builtAt: "2026-10-01T00:00:00.000Z",
+        })
+      );
     await buildExperience({ agent, foundation: "1.2.3", output, renderer });
 
     const repo = path.join(work, "repo");
@@ -119,6 +132,18 @@ void test("bootstrap from existing keys recreates version-1 metadata", async () 
     await fsp.writeFile(path.join(agent, "main.js"), "process.exit(0);");
     const output = path.join(source, "out");
 
+    for (const dir of [renderer, agent])
+      await fs.writeFile(
+        path.join(dir, "build.json"),
+        JSON.stringify({
+          commit: "a".repeat(40),
+          dirty: false,
+          foundationApi: FOUNDATION_API,
+          protocol: PROTOCOL,
+          generation: FOUNDATION_API >= 2 ? "wco" : "legacy",
+          builtAt: "2026-10-01T00:00:00.000Z",
+        })
+      );
     await buildExperience({ agent, foundation: "1.2.3", output, renderer });
     const target = await publishExperience(
       path.join(output, "experience.zip"),

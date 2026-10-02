@@ -266,8 +266,3 @@ export const analyze = async (
 };
 
 /** Which provider a call would use, so the tool can say so in its result. */
-export const analysisProviderId = (kind: "image" | "video"): string | null =>
-  PROVIDERS.find(
-    (provider) =>
-      configured(provider) && (kind === "image" || provider.supportsVideo)
-  )?.id ?? null;

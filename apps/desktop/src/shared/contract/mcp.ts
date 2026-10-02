@@ -57,7 +57,10 @@ export const RemoveMcpServerRequestSchema = v.object({
   name: ServerName,
 });
 
-export const McpOAuthSignInRequestSchema = RemoveMcpServerRequestSchema;
+export const McpOAuthSignInRequestSchema = v.object({
+  mode: McpModeSchema,
+  name: ServerName,
+});
 
 export const SetMcpServerDisabledRequestSchema = v.object({
   mode: McpModeSchema,

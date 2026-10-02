@@ -4,19 +4,9 @@
  * and A-T1b checks that none of them resolves to `any`.
  */
 import type { StreamChunk, UIMessage } from "@tanstack/ai";
-import type {
-  RunAgentInputContext,
-  RunAgentResumeItem,
-  SubscribeConnectionAdapter,
-} from "@tanstack/ai-client";
+import type { SubscribeConnectionAdapter } from "@tanstack/ai-client";
 
-export type {
-  RunAgentInputContext,
-  RunAgentResumeItem,
-  StreamChunk,
-  SubscribeConnectionAdapter,
-  UIMessage,
-};
+export type { StreamChunk, SubscribeConnectionAdapter, UIMessage };
 
 // Not exported from either package root (declared in ai-client's
 // connection-adapters), so derived from the adapter's own signature, and

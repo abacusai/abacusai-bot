@@ -35,7 +35,7 @@ const service = (script = IDLE_SCRIPT): AgentManagerService => {
     resolveWorkspacePath: () => workspace,
     resolveArtifact: () => ({
       execPath: process.execPath,
-      execArgs: ["-e", script],
+      execArgs: ["-e", script, "--"],
       agentRoot: workspace ?? "",
     }),
     resolveAuthEnv: () => ({}),

@@ -39,12 +39,6 @@ export const AbsPath = v.pipe(
   v.check(isAbsolutePath, "an absolute path is required")
 );
 
-export const HttpUrl = v.pipe(
-  v.string(),
-  v.url(),
-  v.check((value) => /^https?:/i.test(value), "an http(s) URL is required")
-);
-
 /** A key minted by `conversationKey()`; anything else is refused. */
 export const ConversationKeySchema = v.custom<ConversationKey>(
   (value) =>

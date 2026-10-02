@@ -1,8 +1,4 @@
-/**
- * A-T4, the preload as a whole: installing the port handshake leaves the
- * legacy `window.api` exposed exactly as before, adds `abacusHost`, and wires
- * the handshake before anything is exposed.
- */
+/** Both window kinds expose only abacusHost after the port handshake. */
 import { describe, expect, it, vi } from "vitest";
 
 const exposed = new Map<string, unknown>();
@@ -30,39 +26,38 @@ vi.mock("electron", () => ({
 }));
 
 describe("the preload (A-T4)", () => {
-  it("still exposes window.api, and adds abacusHost after the handshake", async () => {
-    const fakeWindow = {
-      addEventListener: (type: string) => {
-        order.push(`listen:${type}`);
-        windowListeners.push(type);
-      },
-      postMessage: vi.fn(),
-    };
-    vi.stubGlobal("window", fakeWindow);
-    Object.defineProperty(process, "contextIsolated", {
-      value: true,
-      configurable: true,
-    });
+  it.each(["main", "notch"] as const)(
+    "%s exposes only abacusHost after the handshake",
+    async (kind) => {
+      exposed.clear();
+      order.length = 0;
+      windowListeners.length = 0;
+      const fakeWindow = {
+        addEventListener: (type: string) => {
+          order.push(`listen:${type}`);
+          windowListeners.push(type);
+        },
+        postMessage: vi.fn(),
+      };
+      vi.stubGlobal("window", fakeWindow);
+      Object.defineProperty(process, "contextIsolated", {
+        value: true,
+        configurable: true,
+      });
 
-    await import("./index");
+      const { installMainPreload } = await import("./main-preload");
+      installMainPreload(kind);
 
-    expect(windowListeners).toEqual(["message"]);
-    // The handshake listener exists before anything reaches the page.
-    expect(order[0]).toBe("listen:message");
-    expect(order).toContain("expose:api");
-    expect(order).toContain("expose:abacusHost");
+      expect(windowListeners).toEqual(["message"]);
+      // The handshake listener exists before anything reaches the page.
+      expect(order[0]).toBe("listen:message");
+      expect([...exposed.keys()]).toEqual(["abacusHost"]);
+      const host = exposed.get("abacusHost") as {
+        getPathForFile: (file: unknown) => string;
+      };
+      expect(host.getPathForFile({})).toBe("/tmp/picked.txt");
 
-    const api = exposed.get("api") as Record<string, unknown>;
-    expect(typeof api.agent).toBe("object");
-    expect(typeof api.openFolderDialog).toBe("function");
-    expect(typeof api.getPathForFile).toBe("function");
-    expect(api.durableState).toMatchObject({ snapshot: { theme: "dark" } });
-
-    const host = exposed.get("abacusHost") as {
-      getPathForFile: (file: unknown) => string;
-    };
-    expect(host.getPathForFile({})).toBe("/tmp/picked.txt");
-
-    vi.unstubAllGlobals();
-  });
+      vi.unstubAllGlobals();
+    }
+  );
 });

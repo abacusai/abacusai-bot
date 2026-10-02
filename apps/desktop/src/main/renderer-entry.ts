@@ -1,15 +1,12 @@
 /**
- * Which document the main window loads (spec 01 §3.6): `index-next.html` for
- * the `wco` generation (renderer-next), else `index.html`. The legacy entry
+ * Which document the main window loads (spec 01 §3.6): `index.html` for
+ * the `wco` generation (renderer), else `index.html`. The legacy entry
  * keeps exactly the URL it always had (the base itself), so nothing about the
  * shipped renderer's location changes.
  */
 import { join } from "node:path";
 
-import type { WindowChromeMode } from "./window-chrome-options";
-
-export const NEXT_ENTRY = "index-next.html";
-export const LEGACY_ENTRY = "index.html";
+export const ENTRY = "index.html";
 
 export type RendererBase =
   /** The Vite dev server (`VITE_DEV_SERVER_URL`). */
@@ -23,37 +20,32 @@ export type RendererEntry =
   | { kind: "url"; url: string }
   | { kind: "file"; path: string };
 
-export const rendererEntry = (
-  base: RendererBase,
-  generation: WindowChromeMode
-): RendererEntry => {
-  const next = generation === "wco";
+export const rendererEntry = (base: RendererBase): RendererEntry => {
   switch (base.kind) {
     case "dev":
       return {
         kind: "url",
-        url: next ? new URL(NEXT_ENTRY, base.url).href : base.url,
+        url: new URL(ENTRY, base.url).href,
       };
     case "experience":
       return {
         kind: "url",
-        url: next ? new URL(NEXT_ENTRY, base.url).href : base.url.href,
+        url: new URL(ENTRY, base.url).href,
       };
     case "file":
       return {
         kind: "file",
-        path: join(base.directory, next ? NEXT_ENTRY : LEGACY_ENTRY),
+        path: join(base.directory, ENTRY),
       };
   }
 };
 
 /** The swap target for an experience bundle, in this generation. */
 export const experienceEntryUrl = (
-  url: URL | null | undefined,
-  generation: WindowChromeMode
+  url: URL | null | undefined
 ): URL | null | undefined => {
-  if (url == null || generation !== "wco") return url;
-  return new URL(NEXT_ENTRY, url);
+  if (url == null) return url;
+  return new URL(ENTRY, url);
 };
 
 /**

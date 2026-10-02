@@ -444,9 +444,6 @@ const bindCallbackServer = async (
 const inFlight = new Map<string, () => void>();
 
 /** Abandon the sign-in for one server, if that is the one in flight. */
-export const cancelMcpSignIn = (serverUrl: string): void => {
-  inFlight.get(serverUrl)?.();
-};
 
 /**
  * Clear the field before starting a sign-in: the fixed callback port is a

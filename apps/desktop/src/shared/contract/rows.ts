@@ -170,7 +170,7 @@ export interface PrefsRow {
   };
   // ── Added by specs 05 (§31.5 a) and 06 (§23.5 b). Main's rows always carry
   // them (its defaults fill every leaf); they are optional in the type only
-  // until renderer-next's `DEFAULT_PREFS` literal lists them (phase 5/6 own
+  // until renderer's `DEFAULT_PREFS` literal lists them (phase 5/6 own
   // that file).
   /** Binding id (`<action>` or `<action>@terminal`) → chord, null = unbound. */
   keymap?: Record<string, string | null>;

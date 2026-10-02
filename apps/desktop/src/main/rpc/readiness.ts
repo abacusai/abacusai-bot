@@ -55,6 +55,11 @@ export class RendererReadiness {
     });
   }
 
+  failureReason(webContentsId: number): string | undefined {
+    const report = this.#reports.get(webContentsId);
+    return report?.barrier === "failed" ? report.reason : undefined;
+  }
+
   /** A reload starts over; a waiter keeps waiting for the new document. */
   forget(webContentsId: number): void {
     this.#reports.delete(webContentsId);

@@ -5,7 +5,7 @@
  * (main/handler.ts), so a change reaches the table feeds through the stores'
  * hooks exactly as an old-renderer action would.
  *
- * `renderer.dropPort` makes main drop renderer-next's MessagePort the way
+ * `renderer.dropPort` makes main drop renderer's MessagePort the way
  * it does for a real reconnect (R1-T22: the port-loss reload and the
  * second-loss error screen, driven against the live renderer).
  *
@@ -34,26 +34,9 @@ export interface HarnessHost {
   removeAgentSession(workspaceId: string, sessionId: string): unknown;
 }
 
-export type HarnessOp =
-  | { op: "bots.create"; input: BotCreateInput }
-  | { op: "bots.update"; input: { id: string; changes: BotUpdateInput } }
-  | { op: "bots.delete"; input: { id: string } }
-  | { op: "sessions.create"; input: { workspaceId: string } }
-  | {
-      op: "sessions.rename";
-      input: { workspaceId: string; sessionId: string; label: string };
-    }
-  | {
-      op: "sessions.remove";
-      input: { workspaceId: string; sessionId: string };
-    }
-  | { op: "renderer.dropPort"; input: Record<string, never> }
-  | { op: "window.fullScreen"; input: { on: boolean } }
-  | { op: "window.focus"; input: Record<string, never> };
-
 /** What the harness does outside the ServiceHost. */
 export interface HarnessExtras {
-  /** Main closes renderer-next's active port; resolves with its id. */
+  /** Main closes renderer's active port; resolves with its id. */
   dropRendererPort(): Promise<unknown>;
   /** The main window enters or leaves full screen (the screenshot probe). */
   setFullScreen(on: boolean): Promise<unknown>;
@@ -97,8 +80,8 @@ export const dropRendererPortViaReconnect = async (): Promise<unknown> => {
     await import("../rpc/transports/message-port");
   const contents = electron.webContents
     .getAllWebContents()
-    .find((candidate) => candidate.getURL().includes("index-next.html"));
-  if (contents == null) throw new Error("no renderer-next webContents");
+    .find((candidate) => candidate.getURL().includes("index.html"));
+  if (contents == null) throw new Error("no renderer webContents");
   const channel = new electron.MessageChannelMain();
   electron.ipcMain.emit(RPC_CONNECT_CHANNEL, {
     ports: [channel.port1],

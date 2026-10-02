@@ -95,14 +95,18 @@ const command =
 let report;
 try {
   report = JSON.parse(
-    execFileSync(command.file, ["audit", "--json", "--audit-level=high"], {
-      cwd: target.cwd,
-      shell: command.useShell,
-      encoding: "utf8",
-      // Both audits exit non-zero when they find anything; the JSON is still on
-      // stdout and is the part that matters.
-      stdio: ["ignore", "pipe", "inherit"],
-    })
+    execFileSync(
+      command.file,
+      ["--pm-on-fail=ignore", "audit", "--json", "--audit-level=high"],
+      {
+        cwd: target.cwd,
+        shell: command.useShell,
+        encoding: "utf8",
+        // Both audits exit non-zero when they find anything; the JSON is still on
+        // stdout and is the part that matters.
+        stdio: ["ignore", "pipe", "inherit"],
+      }
+    )
   );
 } catch (err) {
   const stdout = /** @type {{ stdout?: string }} */ (err).stdout;
