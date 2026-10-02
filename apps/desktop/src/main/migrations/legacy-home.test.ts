@@ -86,7 +86,7 @@ describe("migrating a legacy home", () => {
     delete before[path.relative(home, path.join(leftover, "prefs.json"))];
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [1, 2], failed: null });
+    expect(first).toMatchObject({ applied: [1, 2, 5], failed: null });
     expect(first.recovered).toEqual([
       { staging: leftover, action: "discarded" },
     ]);
@@ -129,6 +129,7 @@ describe("migrating a legacy home", () => {
       kind: "transcript-v1",
       updatedAt: "2026-09-01T10:00:00.000Z",
       segments: 2,
+      fingerprint: expect.any(String),
     });
     expect(
       thread?.messages.map((message) => [
@@ -151,6 +152,13 @@ describe("migrating a legacy home", () => {
         name: "prefs-from-renderer-state",
         appVersion: "1.2.3",
         stats: expect.objectContaining({ keys: 4, invalid: 0, written: 1 }),
+      }),
+      // The fixture has no routines: applied, nothing written.
+      expect.objectContaining({
+        id: 5,
+        name: "routine-attempt-ids",
+        appVersion: "1.2.3",
+        stats: expect.objectContaining({ routines: 0, written: 0 }),
       }),
     ]);
 
@@ -216,7 +224,9 @@ describe("migrating a legacy home", () => {
     fs.rmdirSync(state);
     fs.renameSync(aside, state);
     const second = await migrate();
-    expect(second).toMatchObject({ applied: [2], failed: null });
-    expect(readRecord(home).applied.at(-1)?.stats.keys).toBeGreaterThan(0);
+    expect(second).toMatchObject({ applied: [2, 5], failed: null });
+    expect(
+      readRecord(home).applied.find((entry) => entry.id === 2)?.stats.keys
+    ).toBeGreaterThan(0);
   });
 });

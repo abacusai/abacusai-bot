@@ -12,8 +12,8 @@ import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { useRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import { useCollections, type Collections } from "#next/data/collections";
-import { useCollectionStatus } from "#next/data/collections/status";
+import { useCollections, type Collections } from "#next/data/db";
+import { useCollectionStatus } from "#next/data/db/status";
 
 const CollectionRow = ({
   name,

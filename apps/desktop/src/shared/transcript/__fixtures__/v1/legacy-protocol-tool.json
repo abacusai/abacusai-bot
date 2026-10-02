@@ -62,6 +62,60 @@
       },
       "toolPhase": "executing",
       "at": 1788256803000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp4",
+      "toolUseRequest": {
+        "id": "lp-call-4",
+        "name": "read",
+        "type": "tool_use",
+        "input": { "file_path": "/w/notes.md" },
+        "args": { "file_path": "/w/notes.md" }
+      },
+      "toolUseResult": {
+        "id": "lp-call-4",
+        "content": "Read 3 lines from notes.md",
+        "displayContent": "one\ntwo\nthree"
+      },
+      "toolPhase": "complete",
+      "toolDisplayData": { "lineCount": 3 },
+      "at": 1788256804000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp5",
+      "toolUseRequest": {
+        "id": "lp-call-5",
+        "name": "edit",
+        "type": "tool_use",
+        "input": { "file_path": "/w/a.ts", "old": "a", "new": "b" }
+      },
+      "toolUseResult": {
+        "id": "lp-call-5",
+        "content": "Edited a.ts",
+        "old_content": "const a = 1;\n"
+      },
+      "toolPhase": "complete",
+      "toolDisplayData": {
+        "newContent": "const b = 1;\n",
+        "additions": 1,
+        "deletions": 1
+      },
+      "at": 1788256805000
+    },
+    {
+      "type": "tool_call",
+      "id": "lp6",
+      "toolUseRequest": {
+        "id": "lp-call-6",
+        "name": "bash",
+        "type": "tool_use",
+        "input": { "command": "echo hi" }
+      },
+      "toolUseResult": { "id": "lp-call-6", "content": "hi" },
+      "toolPhase": "complete",
+      "at": 1788256806000
     }
   ]
 }

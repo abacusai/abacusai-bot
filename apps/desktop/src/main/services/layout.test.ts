@@ -81,6 +81,7 @@ const MAIN_ROOT_FILES = [
   "handler.test.ts",
   "handler.ts",
   "index.ts",
+  "keep-awake.test.ts",
   "keep-awake.ts",
   // Registers the app as a login item once per install: an OS setting, made
   // at sign-in, that no one service owns.

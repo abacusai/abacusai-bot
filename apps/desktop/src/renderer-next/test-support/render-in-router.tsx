@@ -11,20 +11,14 @@ import {
 import { act, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-import { CollectionsProvider, type Collections } from "#next/data/collections";
+import { DbProvider, type Db } from "#next/data/db";
 import { i18n, initI18n } from "#next/lib/i18n";
 
-export const renderInRouter = async (
-  node: ReactNode,
-  collections: Collections,
-  path = "/"
-) => {
+export const renderInRouter = async (node: ReactNode, db: Db, path = "/") => {
   await initI18n();
   await i18n.changeLanguage("en-US");
   const rootRoute = createRootRoute({
-    component: () => (
-      <CollectionsProvider value={collections}>{node}</CollectionsProvider>
-    ),
+    component: () => <DbProvider value={db}>{node}</DbProvider>,
   });
   const router = createRouter({
     routeTree: rootRoute,

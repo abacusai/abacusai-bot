@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { SessionId, WorkspaceId } from "#shared/contract/ids";
+import { AbsPath, SessionId, WorkspaceId } from "#shared/contract/ids";
 
 /** Optional; an invalid value falls back to absent instead of throwing. */
 export const optionalField = <
@@ -35,6 +35,8 @@ export const SHELL_DEFAULTS = {} as const;
 const BOT_TABS = ["memory", "files", "browser", "details"] as const;
 export const BotSearch = v.object({
   tab: optionalField(v.picklist(BOT_TABS)),
+  /** The Files tab's read-only preview (03-bots §5.2, §11.3a). */
+  preview: optionalField(AbsPath),
 });
 
 export const NewSessionSearch = v.object({
@@ -74,7 +76,8 @@ export const ConnectorsSearch = v.object({
 
 /** The side-panel tabs each area offers (title-bar tabs, ⌘⌥B). */
 export const AREA_PANEL_TABS = {
-  bots: ["memory", "files", "browser", "details"],
+  // `browser` is accepted in the URL but has no bots surface until phase 4.
+  bots: ["details", "memory", "files"],
   sessions: ["changes", "terminal", "files", "browser"],
   routines: ["details"],
   artifacts: ["details"],

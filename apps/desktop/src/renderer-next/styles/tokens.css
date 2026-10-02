@@ -19,15 +19,19 @@
     100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)
   );
   --toolbar-h: 40px; /* overwritten from window.chrome density */
-  /* shell geometry (canvas) */
+  /* shell geometry (canvas); features/shell/geometry.ts holds the same
+     numbers and geometry.test.ts keeps them equal. 8 px grid. */
   --rail-w: 56px;
+  --rail-item: 48px;
   --sidebar-w: 280px;
   --sidebar-strip-w: 88px;
   --sidebar-occupied-w: 280px;
+  --sidebar-header-h: 40px;
   --side-panel-min: 360px;
   --side-panel-drawer-w: 356px;
   --pane-inset: 8px;
   --pane-radius: 12px;
+  --drawer-padding: 16px;
   /* density */
   --row-h: 32px;
   --bot-accent: var(--primary);
@@ -40,7 +44,8 @@
 
 html[data-density="compact"] {
   --toolbar-h: 32px;
-  --row-h: 28px;
+  --row-h: 24px;
+  --sidebar-header-h: 32px;
 }
 
 /*
@@ -56,6 +61,61 @@ html {
     color-scheme: dark;
     background-color: oklch(0.205 0 0);
   }
+}
+
+/*
+ * The chrome's surface (V1). Where main gives the window vibrancy (macOS)
+ * or mica (Windows) and a transparent background (main/startup-theme.ts
+ * `themedBackground`), the document and the chrome are see-through, so the
+ * rail, the sidebar column and the title bar are frosted; the pane and the
+ * panel stay opaque. Reduced transparency, Linux, a native frame and the
+ * gallery keep the opaque `--sidebar`.
+ */
+.shell-surface {
+  background-color: var(--sidebar);
+}
+@media not (prefers-reduced-transparency: reduce) {
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"] {
+    background-color: transparent;
+  }
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]
+    .shell-surface {
+    background-color: color-mix(in oklab, var(--sidebar) 35%, transparent);
+  }
+}
+
+/*
+ * The inset pane and the in-layout panel as cards (V2): a hairline in the
+ * border colour, so the light theme's white pane reads against the near-white
+ * chrome; dark already separates by lightness and keeps a fainter edge.
+ */
+[data-slot="pane"],
+[data-slot="side-panel"][data-mode="layout"] {
+  /* Inside the box: the resizable panels clip anything drawn outside. */
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+.dark [data-slot="pane"],
+.dark [data-slot="side-panel"][data-mode="layout"] {
+  outline-color: color-mix(in oklab, var(--border) 45%, transparent);
+}
+
+/* The pane/panel gutter (V3): an 8 px hit area with a 1 px line on hover. */
+[data-pane-gutter] {
+  position: relative;
+  width: var(--pane-inset);
+  flex: none;
+  background: transparent;
+}
+[data-pane-gutter]::after {
+  inset-block: 12px;
+  width: 1px;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+[data-pane-gutter]:hover::after,
+[data-pane-gutter]:focus-visible::after {
+  background: var(--border);
 }
 
 .titlebar-drag {
@@ -105,6 +165,9 @@ html {
   bottom: var(--pane-inset);
   height: auto;
   border-radius: var(--pane-radius);
+}
+[data-slot="drawer-popup"][data-side-panel] [data-side-panel-tabs] {
+  padding: var(--drawer-padding) var(--drawer-padding) 0;
 }
 
 /* View transitions (§6.7). Durations mirror lib/motion.ts (a test compares). */
@@ -192,15 +255,29 @@ html:active-view-transition-type(settings-in)::view-transition-new(.sidebar),
 html:active-view-transition-type(settings-out)::view-transition-new(.sidebar) {
   animation: 200ms vt-fade-in both;
 }
+/*
+ * Reduced motion: no movement, a 120 ms cross-fade (old out, new in; never
+ * the old snapshot faded in). `prefs.motion.reduce` wins over the OS:
+ * "on" reduces everywhere, "off" keeps full motion even with the OS
+ * setting on (`useMotionPreference` resolves the same way).
+ */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: 120ms !important;
-    animation-name: vt-fade-in !important;
+  html:not([data-reduce-motion="off"])::view-transition-group(*) {
+    animation: none !important;
+  }
+  html:not([data-reduce-motion="off"])::view-transition-old(*) {
+    animation: 120ms vt-fade-out both !important;
+  }
+  html:not([data-reduce-motion="off"])::view-transition-new(*) {
+    animation: 120ms vt-fade-in both !important;
   }
 }
-html[data-reduce-motion="on"]::view-transition-old(*),
+html[data-reduce-motion="on"]::view-transition-group(*) {
+  animation: none !important;
+}
+html[data-reduce-motion="on"]::view-transition-old(*) {
+  animation: 120ms vt-fade-out both !important;
+}
 html[data-reduce-motion="on"]::view-transition-new(*) {
   animation: 120ms vt-fade-in both !important;
 }

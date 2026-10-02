@@ -89,6 +89,8 @@ import {
   fetchAbacusAccount,
 } from "./services/providers/abacus";
 
+const createBot = vi.fn();
+const updateBot = vi.fn();
 const ensureMcpServer = vi.fn();
 const removeMcpServer = vi.fn();
 const refreshAgentProviders = vi.fn();
@@ -103,6 +105,8 @@ const startDeviceStream = vi.fn(
 
 beforeEach(() => {
   handlers.clear();
+  createBot.mockReset();
+  updateBot.mockReset();
   ensureMcpServer.mockClear();
   removeMcpServer.mockClear();
   restoreSessionsForAccount.mockClear();
@@ -120,6 +124,8 @@ beforeEach(() => {
   refreshAgentProviders.mockClear();
 
   const host = {
+    createBot,
+    updateBot,
     restoreSessionsForAccount,
     stashSessionsForAccount,
     setEventDispatcher: vi.fn(),
@@ -360,4 +366,33 @@ describe("signing in with a key that cannot be attributed", () => {
 
     expect(result).toMatchObject({ ok: true });
   });
+});
+
+describe("legacy bot IPC", () => {
+  it.each([undefined, null, "none", "glasses"])(
+    "forwards create and update with accessory %s",
+    (avatarAccessory) => {
+      const look = avatarAccessory === undefined ? {} : { avatarAccessory };
+      const input = { name: "Ada", description: "Counts", ...look };
+      const created = { id: "bot-ada", ...input };
+      createBot.mockReturnValue(created);
+      expect(handlers.get(IpcChannels.CreateBot)!(null, input)).toBe(created);
+      expect(createBot).toHaveBeenCalledWith(input);
+      const changes = { title: "Counter", ...look };
+      const updated = { ...created, ...changes };
+      updateBot.mockReturnValue(updated);
+      expect(
+        handlers.get(IpcChannels.UpdateBot)!(null, created.id, changes)
+      ).toBe(updated);
+      expect(updateBot).toHaveBeenCalledWith(created.id, changes);
+      if (avatarAccessory === undefined) {
+        expect(createBot.mock.calls[0][0]).not.toHaveProperty(
+          "avatarAccessory"
+        );
+        expect(updateBot.mock.calls[0][1]).not.toHaveProperty(
+          "avatarAccessory"
+        );
+      }
+    }
+  );
 });

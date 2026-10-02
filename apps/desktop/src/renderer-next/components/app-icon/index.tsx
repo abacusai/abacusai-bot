@@ -21,6 +21,9 @@ interface Glyph {
   circles?: Array<{ cx: number; cy: number; r: number }>;
 }
 
+export const SETTINGS_GEAR =
+  "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z";
+
 const APP_ICONS: Record<AppIconName, Glyph> = {
   bots: {
     fill: "M6 8h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z",
@@ -53,12 +56,13 @@ const APP_ICONS: Record<AppIconName, Glyph> = {
       "M11 12h2",
     ],
   },
+  // A toothed gear (V6): the canvas's rayed glyph read as a sun or a
+  // brightness control at 18 px. Lucide's `settings` outline, filled at the
+  // same 22 % as the other glyphs.
   settings: {
-    fillCircle: { cx: 12, cy: 12, r: 7 },
-    paths: [
-      "M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6",
-    ],
-    circles: [{ cx: 12, cy: 12, r: 3.2 }],
+    fill: SETTINGS_GEAR,
+    paths: [SETTINGS_GEAR],
+    circles: [{ cx: 12, cy: 12, r: 3 }],
   },
 };
 

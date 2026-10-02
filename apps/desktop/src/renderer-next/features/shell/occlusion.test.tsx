@@ -132,6 +132,66 @@ describe("createOcclusionWatcher", () => {
     }
   });
 
+  it("never re-queries the document for style or class flips outside the overlays", async () => {
+    const { last } = watch();
+    const dialog = add("dialog-content", rect(0, 0, 100, 100));
+    await flush();
+    const unrelated = add("sidebar-slot");
+    await flush();
+    const query = vi.spyOn(document.body, "querySelectorAll");
+    for (let i = 0; i < 20; i += 1) {
+      unrelated.style.width = `${i}px`;
+      unrelated.className = `w-${i}`;
+    }
+    await flush();
+    expect(query).not.toHaveBeenCalled();
+    // A change on the candidate itself still re-measures, without a query.
+    boxes.set(dialog, rect(0, 0, 150, 100));
+    dialog.style.opacity = "0.5";
+    await flush();
+    expect(last()[0]?.width).toBe(150);
+    expect(query).not.toHaveBeenCalled();
+    // A new overlay is still picked up.
+    add("popover-content");
+    await flush();
+    expect(query).toHaveBeenCalled();
+    expect(last()).toHaveLength(2);
+  });
+
+  it("re-measures when an ancestor of a tracked overlay moves it without a resize or scroll (Codex impl r2 #3)", async () => {
+    const OriginalRO = globalThis.ResizeObserver;
+    // No ResizeObserver callback fires: the popup's size never changes.
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      const { last } = watch();
+      const positioner = document.createElement("div");
+      positioner.dataset.slot = "popover-positioner";
+      const popup = document.createElement("div");
+      popup.dataset.slot = "popover-content";
+      boxes.set(popup, rect(10, 20, 100, 40));
+      positioner.append(popup);
+      document.body.append(positioner);
+      added.push(positioner);
+      await flush();
+      expect(last()).toEqual([{ x: 10, y: 20, width: 100, height: 40 }]);
+      const query = vi.spyOn(document.body, "querySelectorAll");
+      query.mockClear();
+      // Base UI's positioner writes the new position as an inline transform.
+      boxes.set(popup, rect(210, 120, 100, 40));
+      positioner.style.transform = "translate(210px, 120px)";
+      await flush();
+      expect(last()).toEqual([{ x: 210, y: 120, width: 100, height: 40 }]);
+      // A re-measure, not a re-query.
+      expect(query).not.toHaveBeenCalled();
+    } finally {
+      globalThis.ResizeObserver = OriginalRO;
+    }
+  });
+
   it("runs a frame loop while animations run, and stops after", async () => {
     const frames: Array<() => void> = [];
     const requestFrame = vi.fn((callback: () => void) => {

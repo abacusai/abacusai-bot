@@ -9,6 +9,7 @@
             {
               "at": 1788256800000,
               "id": "u1",
+              "messageIndex": 0,
               "partIndex": 0,
               "type": "text"
             }
@@ -41,11 +42,16 @@
               "segmentId": "cr1"
             }
           ],
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "messageIndex": 1,
           "segments": [
             {
               "at": 1788256801000,
               "id": "b1",
+              "messageIndex": 1,
               "partIndex": 0,
               "type": "text"
             },
@@ -83,6 +89,7 @@
             {
               "at": 1788256803000,
               "id": "u2",
+              "messageIndex": 2,
               "partIndex": 0,
               "type": "text"
             }
@@ -119,11 +126,16 @@
               "segmentId": "cr3"
             }
           ],
+          "feedback": {
+            "index": 3,
+            "segmentId": "b2"
+          },
           "messageIndex": 3,
           "segments": [
             {
               "at": 1788256804000,
               "id": "b2",
+              "messageIndex": 3,
               "partIndex": 0,
               "type": "text"
             },

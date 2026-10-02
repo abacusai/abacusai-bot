@@ -1,4 +1,4 @@
-import { withEventMeta } from "@orpc/server";
+import { ORPCError, withEventMeta } from "@orpc/server";
 
 import type { AiHydration, StreamChunk } from "#shared/contract";
 
@@ -33,8 +33,11 @@ async function* withSeqIds(
  * `limit`/`before` over the completed transcript (newest last), and the run
  * outcomes that belong to the returned window: those recorded after one of
  * its messages, plus, on the newest page, those recorded on an empty thread.
+ * A `before` the transcript does not hold (it was cleared, or the cursor is
+ * from elsewhere) is `NOT_FOUND`, never the newest page again.
  */
 const page = (
+  threadId: string,
   hydration: AiHydration,
   limit: number | undefined,
   before: string | undefined
@@ -42,8 +45,13 @@ const page = (
   const { messages } = hydration;
   let end = messages.length;
   if (before != null) {
-    const index = messages.findIndex((message) => message.id === before);
-    if (index !== -1) end = index;
+    end = messages.findIndex((message) => message.id === before);
+    if (end === -1)
+      throw new ORPCError("NOT_FOUND", {
+        status: 404,
+        message: `No message ${before} in thread ${threadId}`,
+        data: { entity: "thread", id: threadId },
+      });
   }
   const start = limit == null ? 0 : Math.max(0, end - limit);
   const window = messages.slice(start, end);
@@ -81,15 +89,39 @@ export const aiRouter = impl.ai.router({
         context.deps.ai.subscribe(
           input.threadId,
           afterSeqOf(input.lastEventId ?? lastEventId),
-          signal ?? new AbortController().signal
+          signal ?? new AbortController().signal,
+          input.epoch
         )
       )
   ),
+  runFinished: impl.ai.runFinished.handler(
+    ({ input, context, signal, lastEventId }) => {
+      const afterSeq = afterSeqOf(input.lastEventId ?? lastEventId);
+      const notices = context.deps.ai.runFinished(
+        // An unreadable resume point replays nothing: the consumer continues.
+        afterSeq != null && afterSeq < 0 ? null : afterSeq,
+        signal ?? new AbortController().signal
+      );
+      return (async function* () {
+        for await (const { seq, notice } of notices)
+          yield withEventMeta(notice, { id: String(seq) });
+      })();
+    }
+  ),
+  attention: impl.ai.attention.handler(({ context, signal }) => {
+    const events = context.deps.ai.attention(
+      signal ?? new AbortController().signal
+    );
+    return (async function* () {
+      yield* events;
+    })();
+  }),
   send: impl.ai.send.handler(({ input, context }) =>
     context.deps.ai.send(input)
   ),
   hydrate: impl.ai.hydrate.handler(async ({ input, context }) =>
     page(
+      input.threadId,
       await context.deps.ai.hydrate(input.threadId),
       input.limit,
       input.before

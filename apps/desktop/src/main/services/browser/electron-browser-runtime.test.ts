@@ -1,3 +1,6 @@
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
@@ -141,6 +144,7 @@ const mocks = vi.hoisted(() => {
       setUserAgent(value: string) {
         this.userAgent = value;
       },
+      webRequest: { onBeforeRequest: vi.fn() },
       getUserAgent(): string {
         return this.userAgent;
       },
@@ -457,5 +461,188 @@ describe("Electron browser runtime", () => {
         url: "javascript:alert(1)",
       })
     ).rejects.toThrow("Unsupported browser URL protocol");
+  });
+});
+
+describe("local files on the native surface (spec 04 §12.8, R4-T33)", () => {
+  const owner = {
+    contentView: { addChildView: vi.fn(), removeChildView: vi.fn() },
+    getContentBounds: () => ({ x: 0, y: 0, width: 1200, height: 800 }),
+    isDestroyed: () => false,
+    webContents: { id: 42, isDestroyed: () => false, send: vi.fn() },
+  };
+  const conversationKey = sessionConversationKey("workspace-one", "chat-one");
+  const root = path.resolve("/work/checkout");
+  const file = path.join(root, "docs/report.pdf");
+  const fileUrl = pathToFileURL(file).href;
+  const urlUnderRoot = (relative: string) =>
+    pathToFileURL(path.resolve(root, relative)).href;
+  type Options = { webPreferences: { partition: string } };
+
+  beforeEach(() => {
+    mocks.views.length = 0;
+    vi.clearAllMocks();
+  });
+
+  const open = async () => {
+    const openExternal = vi.fn();
+    const runtime = new ElectronBrowserRuntime(() => owner as never, {
+      openExternal,
+    });
+    const state = await runtime.materializeFile({
+      conversationKey,
+      resourceId: "preview:report",
+      file,
+      root,
+    });
+    const view = mocks.views.at(-1)!;
+    const partition = mocks.sessions.get(
+      (view.options as Options).webPreferences.partition
+    ) as unknown as {
+      webRequest: { onBeforeRequest: ReturnType<typeof vi.fn> };
+    };
+    return { runtime, state, view, openExternal, partition };
+  };
+
+  it("opens the file in a sandboxed view on a partition of its own that is not persisted", async () => {
+    const { state, view } = await open();
+    expect(state.url).toBe(fileUrl);
+    expect(view.options).toEqual({
+      webPreferences: expect.objectContaining({
+        partition: expect.stringMatching(/^local-preview:[0-9a-f-]{36}$/),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        plugins: true,
+      }),
+    });
+    const second = await open();
+    expect((second.view.options as Options).webPreferences.partition).not.toBe(
+      (view.options as Options).webPreferences.partition
+    );
+  });
+
+  it("is locked to the file: fragments stay, everything else is refused, http(s) goes to the system browser", async () => {
+    const { view, openExternal } = await open();
+    const navigate = (url: string) => {
+      const event = { preventDefault: vi.fn() };
+      view.webContents.emit("will-navigate", event, url);
+      return event.preventDefault;
+    };
+    expect(navigate(`${fileUrl}#page=3`)).not.toHaveBeenCalled();
+    expect(navigate(urlUnderRoot("other.html"))).toHaveBeenCalled();
+    expect(navigate("https://example.com/")).toHaveBeenCalled();
+    expect(openExternal).toHaveBeenCalledWith("https://example.com/");
+    expect(openExternal).toHaveBeenCalledTimes(1);
+
+    const handler = view.webContents.setWindowOpenHandler.mock.calls.at(
+      -1
+    )![0] as (details: { url: string }) => { action: string };
+    expect(handler({ url: "https://popup.example/" })).toEqual({
+      action: "deny",
+    });
+    expect(handler({ url: "file:///etc/passwd" })).toEqual({ action: "deny" });
+    expect(openExternal).toHaveBeenLastCalledWith("https://popup.example/");
+    expect(openExternal).toHaveBeenCalledTimes(2);
+  });
+
+  it("the same file under another root gets a new view with that root's lock", async () => {
+    const runtime = new ElectronBrowserRuntime(() => owner as never, {
+      openExternal: vi.fn(),
+    });
+    const request = { conversationKey, resourceId: "preview:report", file };
+    const wide = await runtime.materializeFile({
+      ...request,
+      root: path.dirname(root),
+    });
+    const same = await runtime.materializeFile({
+      ...request,
+      root: path.dirname(root),
+    });
+    expect(same.lease.generation).toBe(wide.lease.generation);
+    expect(mocks.views).toHaveLength(1);
+    const narrow = await runtime.materializeFile({ ...request, root });
+    expect(narrow.lease.generation).toBeGreaterThan(wide.lease.generation);
+    expect(mocks.views).toHaveLength(2);
+    const view = mocks.views.at(-1)!;
+    const partition = mocks.sessions.get(
+      (view.options as Options).webPreferences.partition
+    ) as unknown as {
+      webRequest: { onBeforeRequest: ReturnType<typeof vi.fn> };
+    };
+    const filter = partition.webRequest.onBeforeRequest.mock.calls.at(
+      -1
+    )![0] as (
+      details: { url: string },
+      callback: (response: { cancel: boolean }) => void
+    ) => void;
+    let cancelled: boolean | null = null;
+    filter({ url: urlUnderRoot("../other/secret.txt") }, ({ cancel }) => {
+      cancelled = cancel;
+    });
+    expect(cancelled).toBe(true);
+  });
+
+  it("sub-resources: file: inside the root, data:, blob: and http(s) only", async () => {
+    const { partition } = await open();
+    const filter = partition.webRequest.onBeforeRequest.mock.calls.at(
+      -1
+    )![0] as (
+      details: { url: string },
+      callback: (response: { cancel: boolean }) => void
+    ) => void;
+    const cancelled = (url: string): boolean => {
+      let answer: boolean | null = null;
+      filter({ url }, ({ cancel }) => {
+        answer = cancel;
+      });
+      return answer!;
+    };
+    expect(cancelled(urlUnderRoot("docs/style.css"))).toBe(false);
+    expect(cancelled(urlUnderRoot("../other/secret.txt"))).toBe(true);
+    expect(cancelled(`${pathToFileURL(root).href}/../other/x`)).toBe(true);
+    expect(cancelled("data:text/plain,hi")).toBe(false);
+    expect(cancelled("blob:file:///x")).toBe(false);
+    expect(cancelled("https://cdn.example/a.js")).toBe(false);
+    expect(cancelled("ftp://example.com/a")).toBe(true);
+  });
+
+  it("navigate {url} and present {url} are refused as local-file; the rest works", async () => {
+    const { runtime, state } = await open();
+    await expect(
+      runtime.navigate({
+        lease: state.lease,
+        navigation: { action: "url", url: "https://example.com/" },
+      })
+    ).rejects.toMatchObject({ reason: "local-file" });
+    await expect(
+      runtime.present({
+        lease: state.lease,
+        presentationId: "p",
+        bounds: { x: 0, y: 0, width: 100, height: 100 },
+        url: "https://example.com/",
+      })
+    ).rejects.toMatchObject({ reason: "local-file" });
+    const zoomed = await runtime.navigate({
+      lease: state.lease,
+      navigation: { action: "zoom-in" },
+    });
+    expect(zoomed.zoomFactor).toBeCloseTo(1.1);
+  });
+
+  it("a web runtime on the same key replaces the local view without carrying its URL", async () => {
+    const { runtime, view } = await open();
+    const web = await runtime.materialize({
+      conversationKey,
+      resourceId: "preview:report",
+    });
+    expect(view.webContents.close).toHaveBeenCalledOnce();
+    expect(web.url).toBe("about:blank");
+    await expect(
+      runtime.navigate({
+        lease: web.lease,
+        navigation: { action: "url", url: "https://example.com/" },
+      })
+    ).resolves.toMatchObject({ url: "https://example.com/" });
   });
 });

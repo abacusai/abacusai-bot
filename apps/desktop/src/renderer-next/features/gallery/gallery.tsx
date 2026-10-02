@@ -12,15 +12,16 @@ import {
   useEffect,
   useState,
   ViewTransition,
+  type ComponentType,
   type CSSProperties,
   type ReactNode,
+  type ViewTransitionClassPerType,
 } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#next/components/empty-state";
 import { NavList } from "#next/components/nav-list";
 import {
-  PANE_VT,
   Rail,
   shellStore,
   SidePanelBody,
@@ -30,6 +31,7 @@ import {
 import { cn } from "#next/lib/cn";
 import { NAV_TYPES, durations, type NavType } from "#next/lib/motion";
 import { AREA_HOME, RAIL_AREAS } from "#next/lib/navigation/areas";
+import { useSharedElementName } from "#next/lib/navigation/shared-element";
 import {
   accentForeground,
   contrastRatio,
@@ -348,10 +350,33 @@ const OcclusionSection = () => {
   );
 };
 
+/**
+ * An in-route state change React commits itself (spec 01 §6.7 amendment):
+ * the one place a React `<ViewTransition>` plays in phase 1. Route changes
+ * are the router's document transition, never this.
+ */
+const MOTION_VT: ViewTransitionClassPerType = {
+  "nav-lateral": "pane",
+  "nav-forward": "pane",
+  "nav-back": "pane",
+  "settings-in": "pane",
+  "settings-out": "pane",
+  default: "none",
+};
+
 const MotionSection = () => {
   const [pane, setPane] = useState(0);
+  // A cross-route shared element takes a CSS name (spec 01 §6.7).
+  const shared = useSharedElementName("gallery-shared-dot");
   return (
     <>
+      <Atoms.Row label="shared element (CSS view-transition-name)">
+        <span
+          data-testid="gallery-shared-dot"
+          className="bg-primary size-4 rounded-full"
+          style={shared}
+        />
+      </Atoms.Row>
       <Atoms.Row label={`view-transition types (${durations.crossFade} ms)`}>
         {NAV_TYPES.map((type: NavType) => (
           <Button
@@ -372,8 +397,8 @@ const MotionSection = () => {
       <div className="relative h-32 w-80 overflow-hidden rounded-md border">
         <ViewTransition
           key={pane}
-          enter={PANE_VT}
-          exit={PANE_VT}
+          enter={MOTION_VT}
+          exit={MOTION_VT}
           default="none"
         >
           <div
@@ -446,7 +471,27 @@ const renderSection = (section: GallerySection): ReactNode => {
   );
 };
 
-export const Gallery = ({ search }: { search: GallerySearchValue }) => {
+/**
+ * Sections another feature contributes (spec 02 §14.8): its nav entries and,
+ * when its `fixture` search param is set, the view shown in place of the
+ * sections. The route composes them; the gallery imports no feature.
+ */
+export interface GalleryExtension {
+  Nav: ComponentType<{ fixture: string | undefined }>;
+  View: ComponentType<{
+    fixture: string;
+    step: number | undefined;
+    play: boolean;
+  }>;
+}
+
+export const Gallery = ({
+  search,
+  extension,
+}: {
+  search: GallerySearchValue;
+  extension?: GalleryExtension;
+}) => {
   const navigate = useNavigate();
   const setSearch = (patch: Partial<GallerySearchValue>): void =>
     void navigate({
@@ -519,17 +564,31 @@ export const Gallery = ({ search }: { search: GallerySearchValue }) => {
                 </li>
               ))}
             </ul>
+            {extension != null ? (
+              <extension.Nav fixture={search.fixture} />
+            ) : null}
           </nav>
           <main
             className="min-w-0 flex-1 overflow-y-auto px-8"
             data-testid="gallery"
           >
-            <h1 className="pt-6 text-lg font-semibold">UI gallery</h1>
-            {sections.map((section) => (
-              <Section key={section} id={section} title={section}>
-                {renderSection(section)}
-              </Section>
-            ))}
+            {extension != null && search.fixture != null ? (
+              <extension.View
+                key={`${search.fixture}:${search.step ?? ""}:${search.play ?? ""}`}
+                fixture={search.fixture}
+                step={search.step}
+                play={search.play != null}
+              />
+            ) : (
+              <>
+                <h1 className="pt-6 text-lg font-semibold">UI gallery</h1>
+                {sections.map((section) => (
+                  <Section key={section} id={section} title={section}>
+                    {renderSection(section)}
+                  </Section>
+                ))}
+              </>
+            )}
           </main>
         </div>
       </div>

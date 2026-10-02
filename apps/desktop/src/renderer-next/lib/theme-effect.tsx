@@ -6,7 +6,7 @@
 import { useStore } from "@tanstack/react-store";
 import { useEffect, useSyncExternalStore } from "react";
 
-import { usePrefs } from "#next/data/collections/prefs";
+import { usePrefs } from "#next/data/db/prefs";
 
 import { applyTheme, DARK_QUERY, resolveTheme, themeOverride } from "./theme";
 

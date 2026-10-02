@@ -14,6 +14,7 @@ import { tagEvent } from "../event-meta.js";
 import { parseModeStrict } from "../permissions.js";
 import type { DesktopCommand, DesktopEvent } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
+import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
 import { custom, serialize } from "./event.js";
@@ -142,17 +143,21 @@ export class AguiHost {
   private readonly log: (line: string) => void;
   /** Bumped by every stop and reset: a preparation that sees a new value never prompts. */
   private admissionGen = 0;
-  /** Run ids already answered with an ack, duplicates included. */
-  private readonly ackedRunIds = new Set<string>();
+  /**
+   * Run ids already answered with an ack, duplicates included: the newest
+   * `RUN_IDS_KEPT`, which covers every repeat main can still forward
+   * (bounded.ts).
+   */
+  private readonly ackedRunIds = new BoundedSet<string>(RUN_IDS_KEPT);
   /** The newest user message this incarnation prompted, and the run that did. */
   private lastPrompt: { messageId: string; runId: string } | undefined;
   /**
    * Client user-message ids already echoed on stdout this incarnation. A
    * retry reuses its message id; echoing the text again would append it to
    * the message a continuous StreamProcessor (main's transcript, a second
-   * window) already holds.
+   * window) already holds. Bounded like `ackedRunIds`: one id per run.
    */
-  private readonly echoedUserIds = new Set<string>();
+  private readonly echoedUserIds = new BoundedSet<string>(RUN_IDS_KEPT);
   /** A reset is landing: its cancelled terminal precedes the new `session.ready`. */
   private resetInFlight = false;
   private exiting = false;
@@ -170,6 +175,7 @@ export class AguiHost {
       threadId: options.threadId,
       write: (event) => this.sink.writeAgui(event),
       closeOpenParts: () => this.emitter.closeOpenParts(),
+      errorAnchor: (runId) => this.emitter.errorAnchor(runId),
       model: () => this.emitter.model(),
       onOpen: () => this.emitter.runOpened(),
     });
@@ -257,7 +263,13 @@ export class AguiHost {
       return;
     }
 
-    this.runs.emergencyClose(code, (event) => lastWords(serialize(event)));
+    // The open parts, the error anchor and the terminal go out as one write.
+    let last = "";
+
+    this.runs.emergencyClose(code, (event) => {
+      last += serialize(event);
+    });
+    if (last.length > 0) lastWords(last);
     this.sink.close();
   }
 
@@ -321,6 +333,12 @@ export class AguiHost {
 
       case "permission.respond":
         await this.onRespond(command);
+
+        return;
+
+      case "queue.update":
+      case "queue.remove":
+        await this.onQueueEdit(command);
 
         return;
 
@@ -521,6 +539,55 @@ export class AguiHost {
         await this.core.runAfterStop();
       }
     }
+  }
+
+  /**
+   * `queue.update` / `queue.remove` (spec 02 §14.6): the incarnation and the
+   * entry id are checked, and the entry is found by id and changed, in one
+   * synchronous step (the legacy handler mutates before its first await), so
+   * a drain in between can never shift the target. The accepted path is
+   * today's `update_queue_item` / `remove_from_queue` for that index, compat
+   * lines included; a refusal writes nothing to compat.
+   */
+  private async onQueueEdit(
+    command: Extract<
+      AguiControlCommand,
+      { type: "queue.update" } | { type: "queue.remove" }
+    >
+  ): Promise<void> {
+    const kind = command.type === "queue.update" ? "update" : "remove";
+    const index =
+      command.incarnation === this.options.incarnation
+        ? this.core.queue.findIndex((entry) => entry.id === command.entryId)
+        : -1;
+
+    if (index === -1) {
+      this.write(
+        custom("queue.command_rejected", {
+          incarnation: this.options.incarnation,
+          entryId: String(command.entryId),
+          command: kind,
+          reason:
+            command.incarnation === this.options.incarnation
+              ? "not_found"
+              : "incarnation",
+        })
+      );
+      this.write(
+        custom("queue.updated", {
+          messages: [...this.core.queue],
+          dequeued: null,
+        })
+      );
+
+      return;
+    }
+
+    await this.core.handle(
+      command.type === "queue.update"
+        ? { type: "update_queue_item", index, message: command.message }
+        : { type: "remove_from_queue", index }
+    );
   }
 
   private async onCancel(

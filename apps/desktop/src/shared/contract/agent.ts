@@ -76,7 +76,10 @@ export const agent = {
   feedback: mutation
     .input(TurnFeedbackInputSchema)
     .output(type<TurnFeedbackOutcome>()),
-  /** Spawns the child; its stream arrives on `ai.subscribe`. */
+  /**
+   * Spawns the child; its stream arrives on `ai.subscribe`. Without a
+   * `model`/`mode` it runs on the session row's (spec 04 §26.4 d).
+   */
   start: mutation
     .input(StartAgentSessionRequestSchema)
     .output(type<StartAgentSessionResult>()),
@@ -87,6 +90,11 @@ export const agent = {
     .input(AgentSessionCommandRequestSchema)
     .output(type<AgentSessionSnapshot>()),
   setMode: mutation.input(AgentSetModeRequestSchema).output(type<void>()),
+  /**
+   * Switches the running agent's model and resolves when it has; the
+   * agent's refusal is `CONFLICT {reason: "model-unavailable"}` with its
+   * message (spec 04 §26.4 d). No answer within a few seconds resolves.
+   */
   setModel: mutation.input(AgentSetModelRequestSchema).output(type<void>()),
   reset: mutation.input(AgentSessionCommandRequestSchema).output(type<void>()),
   switchConversation: mutation

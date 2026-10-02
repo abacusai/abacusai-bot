@@ -18,6 +18,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
+import { useCanGoForward } from "#next/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#next/lib/navigation/search";
 import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
@@ -52,7 +53,7 @@ const BarButton = ({
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),8px)] pl-(--titlebar-x) text-[13px] select-none"
+    className="titlebar-drag text-muted-foreground flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
   >
     {children}
   </header>
@@ -67,15 +68,19 @@ const Root = ({ children }: { children: ReactNode }) => (
 const Leading = ({
   sidebarInLayout,
   showAppName,
+  sidebarExpanded,
   onToggleSidebar,
 }: {
   sidebarInLayout: boolean;
   showAppName: boolean;
+  /** Set while the sidebar floats: whether it is showing. */
+  sidebarExpanded?: boolean;
   onToggleSidebar(): void;
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
   const canGoBack = useCanGoBack();
+  const canGoForward = useCanGoForward();
   return (
     <div
       data-slot="topbar-leading"
@@ -95,12 +100,15 @@ const Leading = ({
       </BarButton>
       <BarButton
         label={t("shell.topBar.forward")}
+        disabled={!canGoForward}
         onClick={() => router.history.forward()}
       >
         <ArrowRight />
       </BarButton>
       <BarButton
         label={t("shell.topBar.toggleSidebar")}
+        aria-expanded={sidebarExpanded}
+        data-testid="sidebar-toggle"
         onClick={onToggleSidebar}
       >
         <PanelLeft />
@@ -205,15 +213,25 @@ const PanelTabs = ({
 }) => {
   const { t } = useTranslation();
   if (tabs.length === 0) return null;
+  // Canvas `SplitView`: borderless chips at the bar controls' height, the
+  // active one filled; 8 px before the panel toggle (V7).
   return (
     <Tabs
       value={value}
       onValueChange={(next) => onChange(next as SidePanelTabId)}
-      className="titlebar-nodrag"
+      className="titlebar-nodrag mr-2"
     >
-      <TabsList aria-label={t("shell.topBar.panelTabs")} className="h-7">
+      <TabsList
+        aria-label={t("shell.topBar.panelTabs")}
+        data-topbar-tabs=""
+        className="gap-1 bg-transparent p-0 group-data-horizontal/tabs:h-7"
+      >
         {tabs.map((tab) => (
-          <TabsTrigger key={tab} value={tab} className="px-2 text-xs">
+          <TabsTrigger
+            key={tab}
+            value={tab}
+            className="text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground dark:text-muted-foreground dark:data-active:bg-sidebar-accent dark:data-active:text-sidebar-foreground h-7 flex-none rounded-lg border-0 px-3 shadow-none after:hidden dark:data-active:border-transparent"
+          >
             {t(`shell.panel.tabs.${tab}`)}
           </TabsTrigger>
         ))}

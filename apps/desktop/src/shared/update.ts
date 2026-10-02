@@ -5,6 +5,9 @@ export interface UpdateProgress {
   transferred: number;
 }
 
+/** Which step an update failure happened in (spec 05 §31.5 h). */
+export type UpdateFailedPhase = "check" | "download" | "install";
+
 /** Updater state, emitted by the main process on the `update-status` channel. */
 export interface UpdateStatus {
   checking: boolean;
@@ -20,4 +23,9 @@ export interface UpdateStatus {
   installStalled: boolean;
   /** The running version is below the feed's criticalBelow: a P0 escalation. */
   criticalUpdate: boolean;
+  /**
+   * Set with `error` on every failure path, null otherwise; a new check
+   * clears both. The legacy renderer ignores it.
+   */
+  failedPhase: UpdateFailedPhase | null;
 }

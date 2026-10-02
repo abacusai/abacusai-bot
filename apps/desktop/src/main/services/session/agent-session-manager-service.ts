@@ -1,10 +1,11 @@
-import { AgentStatus } from "#shared/agent-types";
+import { AgentStatus, type AgentMode } from "#shared/agent-types";
 import { ConflictError } from "#shared/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
   RoutineRunOutcome,
   SessionOwner,
+  WorktreeListItem,
 } from "#shared/contracts";
 
 import {
@@ -28,6 +29,12 @@ type SessionRecord = {
   worktreeId?: string | null;
   worktreePath?: string | null;
   worktreeBranch?: string | null;
+  /**
+   * The materialize that attached the current worktree (spec 04 §26.4 g):
+   * a repeat with its operation id returns this instead of creating another.
+   * Cleared by any other worktree change.
+   */
+  worktreeOperation?: { operationId: string; worktree: WorktreeListItem };
   /** The routine whose fire minted this session, if any. */
   routineId?: string | null;
   /** For a routine run: how it went. See AgentSessionListItem.runOutcome. */
@@ -64,6 +71,9 @@ const toListItem = (record: SessionRecord): AgentSessionListItem => ({
   worktreeId: record.worktreeId ?? null,
   worktreePath: record.worktreePath ?? null,
   worktreeBranch: record.worktreeBranch ?? null,
+  ...(record.worktreeOperation != null && {
+    worktreeOperationId: record.worktreeOperation.operationId,
+  }),
   routineId: record.routineId ?? null,
   runOutcome: record.runOutcome ?? null,
   runTrigger: record.runTrigger ?? null,
@@ -142,7 +152,9 @@ export class AgentSessionManagerService {
     owner: SessionOwner | null = null,
     runTrigger: string | null = null,
     /** The caller's own id (an optimistic insert); a taken one is refused. */
-    id?: string
+    id?: string,
+    /** The model and mode to start on (spec 04 §26.4 d), persisted now. */
+    initial: { model?: string | null; mode?: AgentMode | null } = {}
   ): AgentSessionListItem {
     if (
       id != null &&
@@ -167,8 +179,8 @@ export class AgentSessionManagerService {
       updatedAt: now,
       status: "stopped",
       agentStatus: AgentStatus.Idle,
-      model: null,
-      mode: null,
+      model: initial.model ?? null,
+      mode: initial.mode ?? null,
       worktreeId: null,
       worktreePath: null,
       worktreeBranch: null,
@@ -406,16 +418,30 @@ export class AgentSessionManagerService {
       id: string;
       path: string;
       branch: string | null;
-    } | null
+    } | null,
+    /**
+     * The materialize that attached `worktree`, recorded in the same
+     * persist (spec 04 §26.4 g). Any change without one clears the record.
+     */
+    operation?: { operationId: string; worktree: WorktreeListItem }
   ): boolean {
     const session = this.sessions.get(sessionId);
     if (session == null || session.workspaceId !== workspaceId) return false;
     session.worktreeId = worktree?.id ?? null;
     session.worktreePath = worktree?.path ?? null;
     session.worktreeBranch = worktree?.branch ?? null;
+    if (operation != null) session.worktreeOperation = operation;
+    else delete session.worktreeOperation;
     session.updatedAt = new Date().toISOString();
     this.persist();
     return true;
+  }
+
+  /** The materialize recorded on the session, if any (spec 04 §26.4 g). */
+  worktreeOperation(
+    sessionId: string
+  ): { operationId: string; worktree: WorktreeListItem } | null {
+    return this.sessions.get(sessionId)?.worktreeOperation ?? null;
   }
 
   /**
