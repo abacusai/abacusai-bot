@@ -8,10 +8,7 @@ import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  ABACUS_BUY_CREDITS_URL,
-  ABACUS_PLAN_URL,
-} from "#renderer/lib/abacus-links";
+import { CreditsCard } from "#renderer/components/credits-card";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import {
@@ -227,15 +224,6 @@ const exhaustedScope = (actions?: ErrorAction[]): "abacus" | "pool" =>
     ? "abacus"
     : "pool";
 
-const freeModelSwitches = (
-  actions?: ErrorAction[]
-): Array<{ model: string; label: string }> =>
-  (actions ?? []).flatMap((action) =>
-    action.type === "switch-model" && action.model != null
-      ? [{ model: action.model, label: action.label ?? action.model }]
-      : []
-  );
-
 export interface ErrorCardProps {
   outcome: RunOutcomeRecord;
   /** The latest terminal while the thread is idle (Retry is offered then). */
@@ -249,7 +237,7 @@ export const ErrorCard = ({
   tier: providedTier,
 }: ErrorCardProps) => {
   const { t } = useTranslation();
-  const { session, composer, runtime } = useChatView();
+  const { session, composer, runtime, skin } = useChatView();
   const [accountTier, setAccountTier] =
     useState<NonNullable<ErrorCardProps["tier"]>>("unknown");
   useEffect(() => {
@@ -270,64 +258,85 @@ export const ErrorCard = ({
   const actions = ((error as { actions?: ErrorAction[] }).actions ??
     []) as ErrorAction[];
   const detail = (error as { detail?: string }).detail;
+  const upgrade = wantsUpgradeCard(actions);
+  useEffect(() => {
+    if (upgrade) void runtime.host.markCreditsExhausted?.().catch(() => {});
+  }, [upgrade, runtime]);
   const crashed = error.code === "agent_exit" || error.code === "agent_crashed";
-  const retry = () => void session.retry().catch(() => {});
+  const canReply = composer.readOnly == null;
+  const retry = () =>
+    void session
+      .retry(
+        composer.fixedMode ? { mode: composer.fixedMode } : undefined,
+        skin === "bot" ? t("workspace.retryMessage") : undefined
+      )
+      .catch(() => {});
   if (wantsUpgradeCard(actions)) {
-    const scope = exhaustedScope(actions);
     return (
       <div
         role="group"
         aria-label={t("chat.error.label")}
-        className="flex flex-col gap-3 rounded-2xl bg-[var(--chat-surface)] p-4 text-sm"
         data-slot="error-card"
         data-variant="upgrade"
       >
-        <div className="font-medium">
-          {tier === "paid"
-            ? t("creditsCard.paidTitle")
-            : scope === "pool"
-              ? t("workspace.premiumUpgrade.poolOutTitle")
-              : t("workspace.premiumUpgrade.exhaustedTitle")}
-        </div>
-        <p className="text-muted-foreground">
-          {tier === "paid"
-            ? t("creditsCard.paidBody")
-            : t("workspace.premiumUpgrade.switchNote")}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {freeModelSwitches(actions).map((choice) => (
-            <Button
-              key={choice.model}
-              variant="secondary"
-              onClick={() => composer.model?.onChange(choice.model)}
-            >
-              {t("workspace.premiumUpgrade.continueOn", {
-                model: choice.label,
-              })}
-            </Button>
-          ))}
-          {composer.onUseLocalModel != null ? (
-            <Button variant="secondary" onClick={composer.onUseLocalModel}>
-              {t("localModels.useLocal")}
-            </Button>
-          ) : null}
-          <Button
-            onClick={() =>
-              void runtime.host.openExternal(
-                tier === "paid" ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
-              )
-            }
-          >
-            {t("creditsCard.topUpCta")}
-          </Button>
-        </div>
+        <CreditsCard
+          host={runtime.host}
+          tier={tier}
+          scope={exhaustedScope(actions)}
+          alternatives={
+            canReply ? (
+              <>
+                {composer.model &&
+                  actions
+                    .filter(
+                      (action) => action.type === "switch-model" && action.model
+                    )
+                    .map((action) => (
+                      <Button
+                        key={action.model}
+                        variant="secondary"
+                        onClick={() => composer.model?.onChange(action.model!)}
+                      >
+                        {t("workspace.premiumUpgrade.continueOn", {
+                          model: action.label ?? action.model,
+                        })}
+                      </Button>
+                    ))}
+                {composer.onUseLocalModel && (
+                  <Button
+                    variant="secondary"
+                    onClick={composer.onUseLocalModel}
+                  >
+                    {t("localModels.useLocal")}
+                  </Button>
+                )}
+              </>
+            ) : undefined
+          }
+          onResume={
+            latest && canReply
+              ? async () => {
+                  await composer.onResumeOnFreePool?.();
+                  await session.retry(
+                    {
+                      model: "abacus/openllm",
+                      ...(composer.fixedMode
+                        ? { mode: composer.fixedMode }
+                        : {}),
+                    },
+                    skin === "bot" ? t("workspace.retryMessage") : undefined
+                  );
+                }
+              : undefined
+          }
+        />
       </div>
     );
   }
   const buttons = actions.flatMap((action, index) => {
     switch (action.type) {
       case "retry":
-        return latest
+        return latest && canReply
           ? [
               <Button key={index} variant="secondary" onClick={retry}>
                 {t("chat.error.retry")}
@@ -335,7 +344,7 @@ export const ErrorCard = ({
             ]
           : [];
       case "switch-model":
-        return action.model != null
+        return action.model != null && composer.model != null && canReply
           ? [
               <Button
                 key={index}
@@ -347,7 +356,7 @@ export const ErrorCard = ({
                 })}
               </Button>,
             ]
-          : composer.model != null
+          : composer.model != null && canReply
             ? [
                 <Button
                   key={index}
@@ -395,7 +404,12 @@ export const ErrorCard = ({
           : [];
     }
   });
-  if (crashed && latest && !actions.some((action) => action.type === "retry"))
+  if (
+    (crashed || skin === "bot") &&
+    latest &&
+    canReply &&
+    !actions.some((action) => action.type === "retry")
+  )
     buttons.push(
       <Button key="retry" variant="secondary" onClick={retry}>
         {t("chat.error.retry")}
@@ -475,7 +489,7 @@ export const NoticeRow = ({
   onDismiss(): void;
 }) => {
   const { t } = useTranslation();
-  const { runtime, session, composer } = useChatView();
+  const { runtime, session, composer, skin } = useChatView();
   const severity = (
     notice.name === "agent.error"
       ? "error"
@@ -522,12 +536,30 @@ export const NoticeRow = ({
           {t("chat.notice.showInFolder")}
         </Button>
       ) : null}
+      {skin === "bot" &&
+        severity === "error" &&
+        composer.readOnly == null &&
+        !composer.turnBusy &&
+        !actions.some((action) => action.type === "retry") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              void session
+                .retry(undefined, t("workspace.retryMessage"))
+                .catch(() => {})
+            }
+          >
+            {t("chat.error.retry")}
+          </Button>
+        )}
       {actions
-        .filter(
-          (action) =>
-            action.link != null ||
-            action.type === "retry" ||
-            action.type === "switch-model"
+        .filter((action) =>
+          action.type === "retry"
+            ? composer.readOnly == null && !composer.turnBusy
+            : action.type === "switch-model"
+              ? composer.readOnly == null && composer.model != null
+              : action.link != null
         )
         .map((action, index) => (
           <Button
@@ -535,7 +567,13 @@ export const NoticeRow = ({
             variant="ghost"
             size="sm"
             onClick={(event) => {
-              if (action.type === "retry") void session.retry().catch(() => {});
+              if (action.type === "retry")
+                void session
+                  .retry(
+                    undefined,
+                    skin === "bot" ? t("workspace.retryMessage") : undefined
+                  )
+                  .catch(() => {});
               else if (action.type === "switch-model") {
                 if (action.model != null)
                   composer.model?.onChange(action.model);

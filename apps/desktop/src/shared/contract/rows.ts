@@ -57,7 +57,10 @@ export type SessionRow = Omit<AgentSessionListItem, "worktreeOperationId"> & {
   worktreeOperationId?: string | null;
 };
 
-export type BotRow = Bot;
+export type BotRow = Bot & {
+  /** Create-only input; main replaces this with sponsoredUntil in its echo. */
+  sponsoredFirstRun?: boolean;
+};
 
 /** `recentRuns`: at most 20, newest first. */
 export type RoutineRow = Omit<RoutineListItem, "runs"> & {

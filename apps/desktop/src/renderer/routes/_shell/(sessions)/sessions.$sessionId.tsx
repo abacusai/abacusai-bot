@@ -383,6 +383,7 @@ const SessionRoute = () => {
               showModeChip: true,
               model: model.model,
               onBlocked: model.onBlocked,
+              onResumeOnFreePool: model.onResumeOnFreePool,
               availableModes: model.availableModes,
               blocked: model.blocked,
               turnBusy: row.turn?.isBusy === true,

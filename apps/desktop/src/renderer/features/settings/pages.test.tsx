@@ -167,12 +167,13 @@ it.each([
       },
     },
   });
-  await screen.findByText("ada@example.com");
-  if ("ABACUS_API_KEY" in apiKeys)
+  if ("ABACUS_API_KEY" in apiKeys) {
+    await screen.findByText("ada@example.com");
     expect(
       await screen.findByRole("button", { name: enUS.phase5.signOut })
     ).not.toBeNull();
-  else {
+  } else {
+    await screen.findByRole("button", { name: "Sign Up For Free" });
     expect(
       screen.queryByRole("button", { name: enUS.phase5.signOut })
     ).toBeNull();
@@ -316,6 +317,7 @@ it("keeps Account usable when the referral service is unavailable", async () => 
 
 it("opens model setup when the optional local runtime is unavailable", async () => {
   app = await renderApp("/onboarding/models", {
+    signedIn: true,
     procedures: {
       localModels: {
         state: os.localModels.state.handler(() => {

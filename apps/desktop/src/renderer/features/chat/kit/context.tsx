@@ -68,6 +68,8 @@ export interface ComposerConfig {
   skillsBaseline?: readonly SkillMetadata[];
   /** The route supplies the session or start-draft adoption target. */
   onUseLocalModel?(): void;
+  /** Apply the free router before replaying a dead turn. */
+  onResumeOnFreePool?(): Promise<void>;
   /** 03-bots §24.2: sent as `forwardedProps.mode` on every admission. */
   fixedMode?: AgentMode;
   /** Sessions: `agent.setMode` for a live runtime (the route knows the workspace). */

@@ -2,10 +2,44 @@ import { DeleteKeyNotFoundError } from "@tanstack/db";
 import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
+import { resolveLook } from "#renderer/lib/bots/avatar";
+import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
 import type { BotRow } from "#shared/contract";
 
 import { onboardingStore } from "./store";
-export type FirstBotResult = { bot: BotRow; checkInRoutineId: string | null };
+export type FirstBotResult = {
+  bot: BotRow;
+  checkInRoutineId: string | null;
+  preview?: boolean;
+};
+/** A historical first-bot step previews the role; persistence waits for completion. */
+export const previewFirstBot = (id: string, name: string): FirstBotResult => {
+  const template = BOT_TEMPLATES.find((row) => row.id === "chief-of-staff")!;
+  const look = resolveLook({
+    name,
+    avatarShape: template.avatarShape,
+    avatarColor: template.avatarColor,
+  });
+  return {
+    preview: true,
+    checkInRoutineId: null,
+    bot: {
+      id,
+      name,
+      title: template.title,
+      persona: template.persona,
+      description: template.mission,
+      avatarShape: look.shape,
+      avatarColor: look.color,
+      model: null,
+      channel: null,
+      sessionId: null,
+      workspaceId: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    },
+  };
+};
 export type FirstBotState =
   | { state: "idle" }
   | { state: "pending"; promise: Promise<FirstBotResult | null> }
@@ -71,6 +105,10 @@ export const discardFirstBot = async (
   db: Db,
   result: FirstBotResult
 ): Promise<void> => {
+  if (result.preview) {
+    firstBotStore.setState(() => ({ state: "removed" }));
+    return;
+  }
   if (result.checkInRoutineId)
     await deletePersisted(db.collections.routines, result.checkInRoutineId);
   await deletePersisted(db.collections.bots, result.bot.id);

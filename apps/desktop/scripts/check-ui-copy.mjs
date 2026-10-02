@@ -29,10 +29,11 @@ export function validateCopy(resource, keys, retainedKeys = []) {
     for (const [key, value] of Object.entries(node)) {
       const name = prefix + key;
       if (typeof value === "object" && value !== null) visit(value, name + ".");
-      // Main's retired onboarding copy includes a false sentinel. Retaining
+      // Main's retired onboarding copy includes an empty string sentinel. Retaining
       // it is compatible with the locale union, but using it as UI copy still
       // fails the consumer check above.
-      else if (value === false && retainedKeys.includes(name)) continue;
+      else if ((value === false || value === "") && retainedKeys.includes(name))
+        continue;
       else if (typeof value !== "string" || !value.trim())
         problems.push(`Non-string leaf: ${name}`);
       else if (filler.test(value)) problems.push(`Placeholder copy: ${name}`);

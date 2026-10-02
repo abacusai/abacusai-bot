@@ -14,6 +14,7 @@ import {
   fixtureTransport,
   type FixtureSeed,
 } from "#renderer/data/fixture-db/fixture-db";
+import { fixtureDbRouter } from "#renderer/data/fixture-db/memory-source";
 import {
   fixtureBots,
   fixturePrefs,
@@ -89,6 +90,7 @@ const shellRouter = (
   options: HarnessOptions = {}
 ) => {
   let onboarded = options.onboarded ?? true;
+  let signedIn = options.signedIn ?? onboarded;
   const relay = fixtureRuntime("bot-golden-plain", {}, "bot-test")!.relay;
   return {
     system: {
@@ -127,7 +129,13 @@ const shellRouter = (
         ),
       },
       events: os.settings.events.handler(quiet as never),
-      get: os.settings.get.handler(() => ({ defaultModel: null }) as never),
+      get: os.settings.get.handler(
+        () =>
+          ({
+            defaultModel: null,
+            apiKeys: signedIn ? { ABACUS_API_KEY: "test-credential" } : {},
+          }) as never
+      ),
       defaultMode: {
         get: os.settings.defaultMode.get.handler(
           options.defaultMode ?? (() => "YOLO" as never)
@@ -222,15 +230,15 @@ const shellRouter = (
       openRouter: { cancel: os.auth.openRouter.cancel.handler(() => {}) },
       abacus: {
         browserProfiles: os.auth.abacus.browserProfiles.handler(() => []),
-        start: os.auth.abacus.start.handler(({ input, context }) => {
+        start: os.auth.abacus.start.handler(async ({ input, context }) => {
           context.calls.push(["auth.abacus.start", input]);
-          return (
-            options.authStart?.() ?? {
-              ok: false,
-              cancelled: true,
-              error: "cancelled",
-            }
-          );
+          const outcome = await (options.authStart?.() ?? {
+            ok: false,
+            cancelled: true,
+            error: "cancelled",
+          });
+          if (outcome.ok) signedIn = true;
+          return outcome;
         }),
         cancel: os.auth.abacus.cancel.handler(({ context }) => {
           context.calls.push(["auth.abacus.cancel", {}]);
@@ -353,6 +361,7 @@ export const defaultSeed = (): FixtureSeed => ({
 
 export interface HarnessOptions {
   onboarded?: boolean;
+  signedIn?: boolean;
   authStart?(): Promise<AbacusAuthOutcome>;
   seed?: FixtureSeed;
   system?: SystemInfo;
@@ -415,18 +424,18 @@ export const createHarness = async (
           : value;
     return result;
   };
+  const db = new FixtureDb(options.seed ?? defaultSeed());
+  options.beforeRender?.(db);
   const transport = createMemoryTransport(
     mergeProcedures(
       shellRouter(system, {
         onboarded: !path.startsWith("/onboarding"),
         ...options,
       }) as Record<string, unknown>,
-      options.procedures ?? {}
+      { ...fixtureDbRouter(db), ...options.procedures }
     ) as ReturnType<typeof shellRouter>,
     { calls }
   );
-  const db = new FixtureDb(options.seed ?? defaultSeed());
-  options.beforeRender?.(db);
   const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
   const { collections } = appDb;
   await collections.prefs.preload();

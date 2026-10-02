@@ -106,6 +106,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   notch: ["gallery"],
   onboarding: [
     "actions",
+    "first-run",
+    "first-bot",
     "connect",
     "gallery",
     "machine",
