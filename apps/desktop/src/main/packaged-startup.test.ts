@@ -223,6 +223,7 @@ describe("the smoke test that launches it", () => {
   });
 
   it("treats a missing marker as a failure, not a pass", () => {
-    expect(workflow).toContain("never reported that it started");
+    expect(workflow).toContain("grep -qF '[smoke] renderer ready'");
+    expect(workflow).toContain('wait "$pid"');
   });
 });

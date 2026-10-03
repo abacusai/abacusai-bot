@@ -7,10 +7,6 @@
  *   writing the repaired twin when the v2 file is missing, unparseable, or
  *   derived from other v1 bytes (by fingerprint). An `agui` file is returned
  *   as is.
- * - `writeFromV1` is the dual-write `TranscriptService.write` calls after the
- *   v1 rename. It is deferred and coalesced per thread (`dualWriteDelayMs`),
- *   because the old renderer saves every 750 ms while a chat streams; a read
- *   flushes it first, and a crash before it runs is repaired by the next read.
  * - `writeAgui` is main's AG-UI persistence (the relay).
  * - `markCleared`/`remove` clear a conversation: a clear marker
  *   (`<id>.cleared`, `ClearMarker`) is written first and dropped only once
@@ -19,7 +15,7 @@
  *   history after a clear only when a save proved it (`noteSave`).
  *
  * Ownership comes before every write: a newer build's file (`foreign`) or
- * one that cannot be read is never replaced, by the dual-write, the repair
+ * one that cannot be read is never replaced, by the repair
  * or `writeAgui` (which throws, so the relay keeps its history in memory and
  * logs the refusal). Hydration then serves v1 converted in memory.
  *
@@ -81,7 +77,6 @@ export const MAX_STREAMED_TRANSCRIPT_BYTES = 512 * 1024 * 1024;
 export type ThreadNotice = { kind: "too-large"; size: number; limit: number };
 
 /** How long the dual-write waits for more saves of the same thread. */
-export const DUAL_WRITE_DELAY_MS = 2_000;
 
 // Ids arrive over IPC: a path separator or leading dot would let a caller
 // reach outside the folder.
@@ -253,10 +248,14 @@ export const readArchiveIndexStrict = (threadsDir: string): ArchiveIndex => {
 };
 
 /** For reads: a damaged index serves nothing from it (nothing is removed). */
-export const readArchiveIndex = (threadsDir: string): ArchiveIndex => {
+export const readArchiveIndex = (
+  threadsDir: string,
+  log: (message: string) => void = console.error
+): ArchiveIndex => {
   try {
     return readArchiveIndexStrict(threadsDir);
-  } catch {
+  } catch (error) {
+    log(`archive index unavailable: ${String(error)}`);
     return { version: 1, archived: {} };
   }
 };
@@ -281,7 +280,6 @@ export interface ThreadStoreOptions {
   /** Defaults to the migration runner's `isMigrationWriteBlocked`. */
   isWriteBlocked?: (file: string) => boolean;
   /** 0 writes at once (tests). */
-  dualWriteDelayMs?: number;
   /** Test seam for write failures. */
   writeFile?: (file: string, text: string) => void;
   /** Defaults to `MAX_TRANSCRIPT_BYTES` (tests lower it). */
@@ -292,7 +290,6 @@ export interface ThreadStoreOptions {
    * The cut-over build sets this once step 4 has archived `transcripts/`:
    * a v1-derived twin is then served without its v1 file.
    */
-  v1Archived?: boolean;
 }
 
 type V1Read =
@@ -306,11 +303,6 @@ type V1Read =
   | { status: "tooLarge"; size: number }
   | { status: "missing" | "unreadable" | "invalid" };
 
-interface PendingDualWrite {
-  timer: ReturnType<typeof setTimeout> | null;
-  v1: { updatedAt: string; segments: readonly unknown[]; text?: string };
-}
-
 type Ownership =
   | "missing"
   | "corrupt"
@@ -322,10 +314,8 @@ type Ownership =
 export class ThreadStore {
   private readonly home: () => string;
   private readonly log: (message: string) => void;
-  private readonly dualWriteDelayMs: number;
   private readonly maxTranscriptBytes: number;
   private readonly maxStreamedBytes: number;
-  private readonly v1Archived: boolean;
   /** Writes and removals, journalled while a migration holds the file. */
   readonly held: HeldFiles;
   /**
@@ -337,18 +327,15 @@ export class ThreadStore {
     string,
     { size: number; mtimeMs: number; kind: "agui" | "v1" }
   >();
-  private readonly pending = new Map<string, PendingDualWrite>();
 
   constructor(options: ThreadStoreOptions = {}) {
     this.home = options.home ?? abacusBotHome;
     this.log =
       options.log ?? ((message) => console.error(`[threads] ${message}`));
-    this.dualWriteDelayMs = options.dualWriteDelayMs ?? DUAL_WRITE_DELAY_MS;
     this.maxTranscriptBytes =
       options.maxTranscriptBytes ?? MAX_TRANSCRIPT_BYTES;
     this.maxStreamedBytes =
       options.maxStreamedBytes ?? MAX_STREAMED_TRANSCRIPT_BYTES;
-    this.v1Archived = options.v1Archived ?? false;
     this.held = new HeldFiles({
       dir: () => path.join(this.home(), THREADS_DIR_NAME, ".pending"),
       isWriteBlocked: options.isWriteBlocked ?? isMigrationWriteBlocked,
@@ -432,7 +419,6 @@ export class ThreadStore {
     const threadFile = this.threadPath(sessionId);
     const transcriptFile = this.transcriptPath(sessionId);
     if (threadFile == null || transcriptFile == null) return { file: null };
-    this.flush(sessionId);
     const marker = this.readMarker(sessionId);
     const v1 = this.readV1(transcriptFile);
     const file = this.current(sessionId, threadFile, marker, v1);
@@ -504,51 +490,6 @@ export class ThreadStore {
   }
 
   /**
-   * The transition dual-write, after the v1 rename. Never over an `agui`
-   * file (on disk or held), a newer build's file or one that cannot be read,
-   * and never for a v1 file over the size cap. Deferred and coalesced; with
-   * no delay it runs at once and throws on a failed write (the caller
-   * isolates it).
-   */
-  writeFromV1(
-    sessionId: string,
-    v1: { updatedAt: string; segments: readonly unknown[]; text?: string }
-  ): void {
-    if (this.threadPath(sessionId) == null) return;
-    if (this.dualWriteDelayMs <= 0) {
-      this.dualWrite(sessionId, v1);
-      return;
-    }
-    const existing = this.pending.get(sessionId);
-    if (existing?.timer != null) clearTimeout(existing.timer);
-    const entry: PendingDualWrite = { timer: null, v1 };
-    entry.timer = setTimeout(() => {
-      entry.timer = null;
-      this.flush(sessionId);
-    }, this.dualWriteDelayMs);
-    entry.timer.unref?.();
-    this.pending.set(sessionId, entry);
-  }
-
-  /** Runs a deferred dual-write now (all of them without an id). */
-  flush(sessionId?: string): void {
-    const ids =
-      sessionId === undefined ? [...this.pending.keys()] : [sessionId];
-    for (const id of ids) {
-      const entry = this.pending.get(id);
-      if (entry === undefined) continue;
-      this.pending.delete(id);
-      if (entry.timer != null) clearTimeout(entry.timer);
-      try {
-        this.dualWrite(id, entry.v1);
-      } catch (error) {
-        // The next read repairs it.
-        this.log(`dual-write of ${id} failed: ${String(error)}`);
-      }
-    }
-  }
-
-  /**
    * Records that the old renderer saved `text` as the v1 file: while the
    * thread has a clear marker, that save is the proof that the v1 file is
    * new history (`savedAfterClear`).
@@ -567,35 +508,6 @@ export class ThreadStore {
     } catch (error) {
       this.log(`clear marker of ${sessionId}: ${String(error)}`);
     }
-  }
-
-  private dualWrite(
-    sessionId: string,
-    v1: { updatedAt: string; segments: readonly unknown[]; text?: string }
-  ): void {
-    const threadFile = this.threadPath(sessionId);
-    if (threadFile == null) return;
-    if (
-      v1.text !== undefined &&
-      Buffer.byteLength(v1.text) > this.maxTranscriptBytes
-    ) {
-      this.log(`${sessionId}: transcript over the size cap; not converted`);
-      return;
-    }
-    const owner = this.ownership(sessionId, threadFile);
-    if (owner === "agui") return;
-    if (owner === "foreign" || owner === "unreadable") {
-      this.log(`${sessionId}: thread file is ${owner}; not replaced`);
-      return;
-    }
-    const thread = v1ToThreadFile({
-      threadId: sessionId,
-      updatedAt: v1.updatedAt,
-      segments: v1.segments,
-      ...(v1.text !== undefined && { fingerprint: fingerprintV1(v1.text) }),
-      ...this.afterClear(sessionId),
-    });
-    this.persist(sessionId, threadFile, thread, "dual-write", true);
   }
 
   /**
@@ -619,9 +531,6 @@ export class ThreadStore {
     const owner = this.ownership(sessionId, threadFile);
     if (owner === "foreign" || owner === "unreadable")
       throw new ThreadFileProtectedError(sessionId, owner);
-    const pending = this.pending.get(sessionId);
-    if (pending?.timer != null) clearTimeout(pending.timer);
-    this.pending.delete(sessionId);
     const file: ThreadFileV2 = {
       version: 2,
       threadId: sessionId,
@@ -666,9 +575,6 @@ export class ThreadStore {
   markCleared(sessionId: string): void {
     const transcriptFile = this.transcriptPath(sessionId);
     if (transcriptFile == null) return;
-    const pending = this.pending.get(sessionId);
-    if (pending?.timer != null) clearTimeout(pending.timer);
-    this.pending.delete(sessionId);
     const v1 = this.held.read(transcriptFile, this.maxTranscriptBytes);
     const marker: ClearMarker = {
       version: 1,
@@ -722,9 +628,10 @@ export class ThreadStore {
     twin: Extract<ThreadTwin, { status: "ok" }>
   ): boolean {
     if (twin.source.kind !== "transcript-v1") return false;
-    if (this.v1Archived) return true;
-    const entry = readArchiveIndex(path.join(this.home(), THREADS_DIR_NAME))
-      .archived[sessionId];
+    const entry = readArchiveIndex(
+      path.join(this.home(), THREADS_DIR_NAME),
+      this.log
+    ).archived[sessionId];
     if (entry === undefined) return false;
     // The twin holds the archived bytes (by time for a pre-fingerprint twin).
     return twin.source.fingerprint !== undefined
@@ -840,7 +747,7 @@ export class ThreadStore {
     sessionId: string,
     file: string,
     thread: ThreadFileV2,
-    reason: "repair" | "dual-write" | "agui",
+    reason: "repair" | "agui",
     rethrow = false
   ): void {
     try {

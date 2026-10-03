@@ -35,7 +35,6 @@ allowBuilds:
   electron: true
   electron-winstaller: false
   protobufjs: false
-  "@tsparticles/engine": true
   # esbuild only verifies its platform binary on install.
   esbuild: true
   zigpty: set this to true or false
@@ -46,6 +45,14 @@ allowBuilds:
 # high SSRF / host-confusion advisories (GHSA-5jgf-p345-68v8, GHSA-qw65-cvwx-89v3
 # and siblings).
 overrides:
+  # Keep each dependency on its existing major while fixing the October 2026
+  # HTTP-parser and brace-expansion denial-of-service advisories.
+  "undici@^6": ^6.28.1
+  "undici@^7": ^7.29.1
+  "undici@^8": ^8.10.2
+  "brace-expansion@^1": ^1.1.21
+  "brace-expansion@^2": ^2.1.7
+  "brace-expansion@^5": ^5.0.12
   dompurify: ^3.4.13
   deepmerge-ts: ^8.0.0
   fast-uri: ^3.1.7
@@ -86,4 +93,3 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   ghostty-web@0.4.0: patches/ghostty-web@0.4.0.patch
-  react-tourlight@0.3.0: patches/react-tourlight@0.3.0.patch

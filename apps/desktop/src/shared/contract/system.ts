@@ -9,6 +9,7 @@ import { NoInput } from "./ids";
 /** What the renderer used to read synchronously from the preload. */
 export interface SystemInfo {
   appVersion: string;
+  legacyComposerDrafts?: Record<string, string>;
   platform: string;
   arch: string;
   versions: Record<string, string | undefined>;
@@ -67,6 +68,9 @@ export const system = {
     .input(v.object({ path: v.pipe(v.string(), v.nonEmpty()) }))
     .output(type<void>()),
   info: query.input(NoInput).output(type<SystemInfo>()),
+  acknowledgeLegacyDrafts: mutation
+    .input(v.object({ keys: v.array(v.string()) }))
+    .output(type<void>()),
   /**
    * Open at login (spec 05 §31.5 c). macOS and Windows only; Linux answers
    * `PRECONDITION_FAILED { reason: "unsupported-platform" }`.

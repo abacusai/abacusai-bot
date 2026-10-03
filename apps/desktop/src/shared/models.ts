@@ -339,13 +339,6 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
 ];
 
 /** Shown when a model's provider has no credential yet. */
-export const TIER_LABELS: Record<ModelTier, string> = {
-  default: "Recommended",
-  strong: "For harder tasks",
-  fast: "Fast & cheap",
-  free: "Free",
-  local: "Local / custom",
-};
 
 /** Display order of the groups in the picker: free and cheap before strong. */
 export const TIER_ORDER: ModelTier[] = [

@@ -56,7 +56,7 @@ export class MainEventBus {
     Set<{ activate: () => () => void; stop: (() => void) | null }>
   >();
 
-  /** Every `IpcEvent`, as emitIpcEvent sends it to the legacy renderer. */
+  /** Every `IpcEvent`, as emitHostEvent sends it to the legacy renderer. */
   dispatch(event: IpcEvent): void {
     for (const entry of Array.from(this.#ipc)) {
       let matches = false;

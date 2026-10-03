@@ -1,18 +1,5 @@
-// TODO(renderer cut-over, docs/rewrite/specs/00-window-chrome.md §7): remove
-// shared/window-chrome.ts and its tests; renderer TITLEBAR_* constants,
-// titlebarStartInset(), isWindows, --workspace-topbar-height,
-// --titlebar-start-inset, WebkitAppRegion styles, the macOS fullscreen inset
-// branch, useWindowFullScreen, isFullScreen(), onFullScreenChange(), and the
-// window:is-full-screen / window:full-screen-changed channels.
-// Resize WindowDragRegion with --toolbar-h and migrate Toaster/layout consumers.
 import type { BaseWindowConstructorOptions } from "electron";
 
-import {
-  MACOS_TRAFFIC_LIGHT_POSITION,
-  windowChromeMetrics,
-} from "#shared/window-chrome";
-
-export type WindowChromeMode = "legacy" | "wco";
 export type LinuxChromeMode = "overlay" | "native-frame";
 export type TitlebarDensity = "comfortable" | "compact";
 export type ChromeCapability =
@@ -64,7 +51,6 @@ export function linuxChromeMode(
 }
 
 export interface WindowChromeInput {
-  mode: WindowChromeMode;
   platform: string;
   dark: boolean;
   reducedTransparency: boolean;
@@ -73,7 +59,6 @@ export interface WindowChromeInput {
 }
 
 export function windowChromeOptions({
-  mode,
   platform,
   dark,
   reducedTransparency,
@@ -82,10 +67,8 @@ export function windowChromeOptions({
 }: WindowChromeInput): BaseWindowConstructorOptions {
   if (platform === "darwin") {
     return {
-      titleBarStyle: mode === "legacy" ? "hiddenInset" : "hidden",
-      ...(mode === "legacy"
-        ? { trafficLightPosition: MACOS_TRAFFIC_LIGHT_POSITION }
-        : { titleBarOverlay: { height: clampOverlayHeight(overlayHeight) } }),
+      titleBarStyle: "hidden",
+      titleBarOverlay: { height: clampOverlayHeight(overlayHeight) },
       ...(reducedTransparency
         ? {}
         : { vibrancy: "under-window", visualEffectState: "active" }),
@@ -96,15 +79,12 @@ export function windowChromeOptions({
       titleBarStyle: "hidden",
       titleBarOverlay: {
         ...overlayColors(dark),
-        height:
-          mode === "legacy"
-            ? windowChromeMetrics("win32").titlebarHeight
-            : clampOverlayHeight(overlayHeight),
+        height: clampOverlayHeight(overlayHeight),
       },
       backgroundMaterial: reducedTransparency ? "none" : "mica",
     };
   }
-  if (mode === "legacy" || linuxMode === "native-frame") return { frame: true };
+  if (linuxMode === "native-frame") return { frame: true };
   const color = dark ? TITLEBAR_SURFACE.dark : TITLEBAR_SURFACE.light;
   return {
     titleBarStyle: "hidden",
@@ -188,22 +168,12 @@ export function windowChromeState(
   fullScreen: boolean
 ) {
   return {
-    mode:
-      input.mode === "legacy"
-        ? input.platform === "darwin" || input.platform === "win32"
-          ? "overlay"
-          : "native-frame"
-        : capability,
+    mode: capability,
     fullScreen,
     density:
-      input.mode === "legacy"
-        ? ("comfortable" as const)
-        : input.overlayHeight === 32
-          ? ("compact" as const)
-          : ("comfortable" as const),
-    toolbarHeight:
-      input.mode === "legacy"
-        ? windowChromeMetrics(input.platform).titlebarHeight
-        : input.overlayHeight,
+      input.overlayHeight === 32
+        ? ("compact" as const)
+        : ("comfortable" as const),
+    toolbarHeight: input.overlayHeight,
   };
 }

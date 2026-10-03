@@ -8,12 +8,49 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { FakeProvider } from "@abacus-ai/test-support/fake-provider";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DesktopEvent } from "#shared/agent-types";
 
-import { AgentManagerService, type AgentWire } from "./cli-manager-service";
+// These agent-only test modules are outside desktop's composite TS project.
+// Load their existing scenarios at runtime, as other cross-package harnesses do.
+interface GoldenScenario {
+  name: string;
+  mode?: string;
+  steps: Array<
+    | { send: unknown }
+    | { until(events: DesktopEvent[]): boolean; label: string }
+  >;
+}
+const harnessPath = path.resolve(
+  "../../packages/agent/src/agui/__tests__/harness.ts"
+);
+const { prepare, maskVolatile, readGolden, stopProvider, GOLDEN_ROOT } =
+  (await import(pathToFileURL(harnessPath).href)) as {
+    prepare(
+      scenario: GoldenScenario,
+      root: string
+    ): Promise<{
+      context: { cwd: string };
+      provider: FakeProvider;
+      restore(): void;
+    }>;
+    maskVolatile(bytes: string, port: number): string;
+    readGolden(name: string): string;
+    stopProvider(): Promise<void>;
+    GOLDEN_ROOT: string;
+  };
+const scenariosPath = path.resolve(
+  "../../packages/agent/src/agui/__tests__/scenarios.ts"
+);
+const { SCENARIOS } = (await import(pathToFileURL(scenariosPath).href)) as {
+  SCENARIOS: GoldenScenario[];
+};
+import type { ResolvedAgentArtifact } from "./artifact-resolver-service";
+import { AgentManagerService } from "./cli-manager-service";
 import { LineSplitter } from "./line-splitter";
 
 let workspace: string | null = null;
@@ -81,16 +118,13 @@ const FRAGMENTED = [
   `})();`,
 ].join("\n");
 
-const NDJSON_LAST = [
-  `const fs = require("fs");`,
-  `fs.writeSync(1, ${JSON.stringify(`${READY}\n`)});`,
-  `const bytes = Buffer.from(${JSON.stringify(JSON.stringify({ type: "probe", text: "bye 🙂" }))}, "utf8");`,
-  `const at = bytes.indexOf(Buffer.from("🙂", "utf8")) + 1;`,
-  `fs.writeSync(1, bytes.subarray(0, at));`,
-  `setTimeout(() => { fs.writeSync(1, bytes.subarray(at)); setTimeout(() => process.exit(0), 150); }, 60);`,
-].join("\n");
+afterAll(stopProvider);
 
-function manager(script: string, wire: AgentWire) {
+function manager(
+  script: string,
+  artifact?: ResolvedAgentArtifact,
+  cwd?: string
+) {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cli-taps-"));
   // The fragmented-wire fixture exceeds Linux's single-argument limit for node -e.
   const standIn = path.join(workspace, "stand-in.cjs");
@@ -100,15 +134,15 @@ function manager(script: string, wire: AgentWire) {
   /** Everything either wire delivered, in delivery order. */
   const log: string[] = [];
   const service = new AgentManagerService({
-    resolveWorkspacePath: () => workspace,
-    resolveArtifact: () => ({
-      execPath: process.execPath,
-      execArgs: [standIn, "--"],
-      agentRoot: workspace ?? "",
-    }),
+    resolveWorkspacePath: () => cwd ?? workspace,
+    resolveArtifact: () =>
+      artifact ?? {
+        execPath: process.execPath,
+        execArgs: [standIn, "--"],
+        agentRoot: workspace ?? "",
+      },
     resolveAuthEnv: () => ({}),
     resolveAdditionalConfigEnv: async () => ({}),
-    resolveWire: () => wire,
     emitStateUpdated: () => {},
     emitNdjson: (_w, _s, event) => {
       ndjson.push(event);
@@ -153,7 +187,7 @@ const probes = (events: ReadonlyArray<Record<string, unknown>>): string[] =>
 describe("the taps through the manager", () => {
   it("agui over fd 3: split characters, long lines and unterminated last lines arrive intact, before the exit", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { service, ndjson, agui, log } = manager(FRAGMENTED, "agui");
+    const { service, ndjson, agui, log } = manager(FRAGMENTED);
     try {
       await service.startSession({
         workspaceId: "w",
@@ -197,26 +231,6 @@ describe("the taps through the manager", () => {
       expect(log.indexOf("agui:last agui 🙂")).toBeLessThan(exitAt);
       // No replacement character anywhere.
       expect(JSON.stringify([ndjson, agui])).not.toContain("�");
-    } finally {
-      await service.dispose();
-    }
-  }, 30_000);
-
-  it("ndjson: a split character and a last line without its newline arrive", async () => {
-    const { service, ndjson } = manager(NDJSON_LAST, "ndjson");
-    try {
-      await service.startSession({
-        workspaceId: "w",
-        sessionId: "session-1",
-        startupTimeoutMs: 20_000,
-      });
-      await vi.waitFor(
-        () =>
-          expect(
-            probes(ndjson as unknown as Array<Record<string, unknown>>)
-          ).toEqual(["bye 🙂"]),
-        { timeout: 15_000 }
-      );
     } finally {
       await service.dispose();
     }
@@ -296,3 +310,76 @@ describe("LineSplitter", () => {
     expect(splitter.end()).toEqual(["two�"]);
   });
 });
+
+for (const name of ["plain-text", "tool-bash", "permission-accept"]) {
+  for (const mode of ["fd", "inline"] as const) {
+    it(`R7-T7 ${name} real spawned agent preserves frozen bytes over ${mode}`, async () => {
+      const scenario = SCENARIOS.find((scenario) => scenario.name === name)!;
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), "manager-golden-"));
+      const { context, provider, restore } = await prepare(scenario, root);
+      const entry = path.resolve("../../packages/agent/dist/main.js");
+      const { service, ndjson } = manager(
+        "",
+        {
+          execPath: process.execPath,
+          execArgs:
+            mode === "fd"
+              ? [entry]
+              : [
+                  "-e",
+                  "require('node:fs').closeSync(3);import(require('node:url').pathToFileURL(process.argv[1]).href);",
+                  "--",
+                  entry,
+                ],
+          agentRoot: path.dirname(entry),
+        },
+        context.cwd
+      );
+      try {
+        const result = await service.startSession({
+          workspaceId: "w",
+          sessionId: "t-1",
+          mode: scenario.mode as never,
+          startupTimeoutMs: 20000,
+        });
+        expect(result.success).toBe(true);
+        // The manager issues one extra mcp_list_servers command after ready.
+        // Wait for its answer, assert it, then exclude only that command response
+        // when comparing the agent's spontaneous stream to its frozen baseline.
+        await vi.waitFor(
+          () =>
+            expect(
+              ndjson.filter((event) => event.type === "mcp_servers")
+            ).toHaveLength(2),
+          { timeout: 20000 }
+        );
+        expect(ndjson.filter((event) => event.type === "mcp_servers")).toEqual([
+          { type: "mcp_servers", servers: [] },
+          { type: "mcp_servers", servers: [] },
+        ]);
+        for (const step of scenario.steps) {
+          if ("send" in step)
+            expect(service.sendCommand("w", "t-1", step.send)).toBe(true);
+          else if ("until" in step)
+            await vi.waitFor(
+              () => expect(step.until(ndjson), step.label).toBe(true),
+              { timeout: 20000 }
+            );
+          else throw new Error(`Unexpected golden step for ${name}`);
+        }
+        let snapshots = 0;
+        const bytes = ndjson
+          .filter((event) => event.type !== "mcp_servers" || ++snapshots === 1)
+          .map((event) => JSON.stringify(event) + "\n")
+          .join("");
+        expect(
+          maskVolatile(bytes.split(root).join(GOLDEN_ROOT), provider.port)
+        ).toBe(readGolden(`${name}.ndjson`));
+      } finally {
+        await service.dispose();
+        restore();
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }, 30000);
+  }
+}

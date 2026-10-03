@@ -28,6 +28,8 @@ export interface AppliedMigration {
   id: number;
   name: string;
   appliedAt: string;
+  /** A completed support restoration makes this step eligible again. */
+  restoredAt?: string;
   appVersion: string;
   durationMs: number;
   stats: Record<string, number>;

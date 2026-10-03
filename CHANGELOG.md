@@ -2,10 +2,31 @@
 
 <!-- One section per version: `## 1.0.62 (2026-09-09)`. Write freely under
      it: prose, ### headings, bullets. Notes for the next release go under
-     `## Unreleased`. Sections here are kept as written; a release nobody
+     `## Unreleased
+`. Sections here are kept as written; a release nobody
      wrote up says "Bug fixes, improvements in quality and speed." -->
 
 ## Unreleased
+
+The app has a new rail for Bots, Sessions, Routines, Artifacts and Library. Library brings together connectors, messaging, MCP servers, skills and tools. Settings has separate pages and search. The system draws the title bar, and your light, dark or system theme applies before the window appears.
+
+A companion around the Mac notch, or by the Windows clock, shows bot activity and requests your attention. You can turn it off in General settings. Sounds have per-bot levels and quiet hours; system notifications are silent. Bots keep their looks in the new avatar style, math renders as replies arrive, and the tour can be replayed from Settings.
+
+The built-in code editor is replaced by Open in editor. Sessions are grouped by folder, and update notices appear in the title bar.
+
+On first launch, Updating your data may appear while conversations are converted. Release N leaves legacy files in place. Going back to the previous version shows the data left before the update; new conversations and preference changes do not appear there. See the Going back support article before downgrading after release N+1.
+
+- Artifacts refresh automatically; the Refresh button is removed.
+- The rail opens the Bots sidebar directly.
+- Start a bot chat from its bot page; the start page no longer has a composer.
+- Each rail item has its own sidebar.
+- Legacy ?view=capabilities and ?view=messaging links are retired.
+- The companion shows ongoing work; the background Task still running notification is removed.
+- Finishing setup opens the saved destination without switching a workspace.
+- Setup no longer resets an open tour.
+- Opening a routine run keeps your current workspace.
+- Legacy /settings/jobs and /routines/chat links are retired; open Routines from the rail.
+
 
 A smaller download and install: the package no longer carries a second copy
 of the interface libraries that are already built into the app.

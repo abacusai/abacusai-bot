@@ -77,12 +77,10 @@ vi.mock("./services/providers/openrouter-auth-service", () => ({
 }));
 vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
 
-import { IpcChannels } from "#shared/channels";
 import { ABACUS_CONNECTORS_SERVER_NAME } from "#shared/contracts";
 
-import { registerIpcHandlers } from "./handler";
+import { wireHostEvents } from "./handler";
 import { activateProfile, profileKeyFor } from "./profile-home";
-import { mainEventBus } from "./rpc/event-bus";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {
   abacusCredentialRejected,
@@ -138,46 +136,22 @@ beforeEach(() => {
     startDeviceStream,
   };
 
-  registerIpcHandlers(
-    host as unknown as Parameters<typeof registerIpcHandlers>[0]
+  const operations = wireHostEvents(
+    host as unknown as Parameters<typeof wireHostEvents>[0]
+  );
+  handlers.set("auth", (_event, ...args) =>
+    operations.startAbacusAuth(...(args as [boolean, boolean]))
+  );
+  handlers.set("save", (_event, ...args) =>
+    operations.saveApiKey(...(args as [string, string]))
+  );
+  handlers.set("account", (_event, ...args) =>
+    operations.getAbacusAccount(...(args as [boolean]))
   );
   // Startup reconciles the derived gateway from the stored credential. Each
   // case below asserts only the transition it triggers.
   ensureMcpServer.mockClear();
   removeMcpServer.mockClear();
-});
-
-describe("a device stream started over legacy IPC", () => {
-  it("delivers each chunk to the legacy channel and to the oRPC bus", async () => {
-    const send = vi.fn();
-    const sender = { id: 3, send, isDestroyed: () => false };
-    await handlers.get("agent:start-device-stream")?.(
-      { sender },
-      { platform: "android", deviceId: "emulator-5554" }
-    );
-    const given = startDeviceStream.mock.calls.at(-1)![1];
-
-    const published: unknown[] = [];
-    const stop = mainEventBus.listenChannel("device-chunk", (chunk) =>
-      published.push(chunk)
-    );
-    const chunk = {
-      streamId: 7,
-      data: new Uint8Array([1]),
-      isKey: true,
-      format: "h264",
-    };
-    given.send("agent:device-stream-chunk", chunk);
-    given.send("something-else", 1);
-    stop();
-
-    expect(send.mock.calls).toEqual([
-      ["agent:device-stream-chunk", chunk],
-      ["something-else", 1],
-    ]);
-    expect(published).toEqual([chunk]);
-    expect(given.isDestroyed()).toBe(false);
-  });
 });
 
 describe("acquiring an Abacus.AI key", () => {
@@ -187,14 +161,14 @@ describe("acquiring an Abacus.AI key", () => {
   };
 
   it("re-establishes the connector gateway when signing in through the browser", async () => {
-    await handlers.get(IpcChannels.StartAbacusAuth)?.({});
+    await handlers.get("auth")?.({});
 
     expect(ensureMcpServer).toHaveBeenCalledTimes(1);
     expect(ensureMcpServer.mock.calls[0]?.[0]).toMatchObject(gateway);
   });
 
   it("tells the running agents to re-read the keys", async () => {
-    await handlers.get(IpcChannels.SaveApiKey)?.({}, "openai", "sk-live");
+    await handlers.get("save")?.({}, "openai", "sk-live");
 
     // The chat that is already open has to pick the key up, or the model the
     // user just paid for stays unusable until the app restarts.
@@ -202,7 +176,7 @@ describe("acquiring an Abacus.AI key", () => {
   });
 
   it("does the same for a key pasted into the keys panel", async () => {
-    await handlers.get(IpcChannels.SaveApiKey)?.({}, "abacus", "s2_pasted");
+    await handlers.get("save")?.({}, "abacus", "s2_pasted");
 
     expect(ensureMcpServer).toHaveBeenCalledTimes(1);
     expect(ensureMcpServer.mock.calls[0]?.[0]).toMatchObject(gateway);
@@ -219,7 +193,7 @@ describe("acquiring an Abacus.AI key", () => {
     // sign-out, so a key that ended any other way left a server behind that
     // the app could never authenticate: listed in MCP, serving nothing, for
     // a user the app agreed was signed out.
-    await handlers.get(IpcChannels.SaveApiKey)?.({}, "abacus", "");
+    await handlers.get("save")?.({}, "abacus", "");
 
     expect(ensureMcpServer).not.toHaveBeenCalled();
     expect(removeMcpServer).toHaveBeenCalledTimes(1);
@@ -231,14 +205,14 @@ describe("acquiring an Abacus.AI key", () => {
       apiKeys: { ABACUS_API_KEY: "departing-key" },
     } as never);
 
-    await handlers.get(IpcChannels.SaveApiKey)?.({}, "abacus", "");
+    await handlers.get("save")?.({}, "abacus", "");
 
     expect(stashSessionsForAccount).toHaveBeenCalledOnce();
     expect(saveApiKey).toHaveBeenCalledWith("abacus", "");
   });
 
   it("leaves other providers' keys out of it", async () => {
-    await handlers.get(IpcChannels.SaveApiKey)?.({}, "groq", "gsk_key");
+    await handlers.get("save")?.({}, "groq", "gsk_key");
 
     expect(ensureMcpServer).not.toHaveBeenCalled();
     expect(removeMcpServer).not.toHaveBeenCalled();
@@ -265,9 +239,7 @@ describe("asking who the key belongs to", () => {
     vi.mocked(fetchAbacusAccount).mockResolvedValue(null);
     vi.mocked(abacusCredentialRejected).mockReturnValue(true);
 
-    await expect(
-      handlers.get(IpcChannels.GetAbacusAccount)?.({}, true)
-    ).resolves.toBeNull();
+    await expect(handlers.get("account")?.({}, true)).resolves.toBeNull();
 
     expect(vi.mocked(saveApiKey)).toHaveBeenCalledWith("abacus", "");
     expect(removeMcpServer.mock.calls[0]?.[0]).toMatchObject(gateway);
@@ -281,7 +253,7 @@ describe("asking who the key belongs to", () => {
     } as never);
     vi.mocked(abacusCredentialRejected).mockReturnValue(false);
 
-    await handlers.get(IpcChannels.GetAbacusAccount)?.({}, true);
+    await handlers.get("account")?.({}, true);
 
     expect(vi.mocked(saveApiKey)).not.toHaveBeenCalled();
     expect(removeMcpServer).not.toHaveBeenCalled();
@@ -291,9 +263,9 @@ describe("asking who the key belongs to", () => {
     vi.mocked(fetchAbacusAccount).mockResolvedValue({ name: "Ada" } as never);
     vi.mocked(abacusCredentialRejected).mockReturnValue(true);
 
-    await expect(
-      handlers.get(IpcChannels.GetAbacusAccount)?.({}, true)
-    ).resolves.toMatchObject({ name: "Ada" });
+    await expect(handlers.get("account")?.({}, true)).resolves.toMatchObject({
+      name: "Ada",
+    });
 
     expect(vi.mocked(saveApiKey)).not.toHaveBeenCalled();
   });
@@ -301,7 +273,7 @@ describe("asking who the key belongs to", () => {
   it("has nothing to clear when no key is stored", async () => {
     vi.mocked(abacusCredentialRejected).mockReturnValue(true);
 
-    await handlers.get(IpcChannels.GetAbacusAccount)?.({}, true);
+    await handlers.get("account")?.({}, true);
 
     expect(vi.mocked(saveApiKey)).not.toHaveBeenCalled();
     expect(removeMcpServer).not.toHaveBeenCalled();
@@ -328,13 +300,13 @@ describe("signing in with a key that cannot be attributed", () => {
   });
 
   it("refuses, rather than borrowing whichever profile is open", async () => {
-    const result = await handlers.get(IpcChannels.StartAbacusAuth)?.({});
+    const result = await handlers.get("auth")?.({});
 
     expect(result).toMatchObject({ ok: false, error: "unidentified-account" });
   });
 
   it("puts the key back where it found it: nowhere", async () => {
-    await handlers.get(IpcChannels.StartAbacusAuth)?.({});
+    await handlers.get("auth")?.({});
 
     // Stored on the way in (the sign-in stores before it identifies), so
     // refusing has to undo that or the wall would let the user straight past.
@@ -346,7 +318,7 @@ describe("signing in with a key that cannot be attributed", () => {
       apiKeys: { ABACUS_API_KEY: "previous-key" },
     } as never);
 
-    const save = handlers.get(IpcChannels.SaveApiKey);
+    const save = handlers.get("save");
     if (save == null)
       throw new Error("save API key handler was not registered");
     await (save({}, "abacus", "unidentified-key") as Promise<unknown>).catch(
@@ -362,37 +334,8 @@ describe("signing in with a key that cannot be attributed", () => {
   it("still signs in when the account can be identified", async () => {
     vi.mocked(profileKeyFor).mockReturnValue("ada@example.com_acme");
 
-    const result = await handlers.get(IpcChannels.StartAbacusAuth)?.({});
+    const result = await handlers.get("auth")?.({});
 
     expect(result).toMatchObject({ ok: true });
   });
-});
-
-describe("legacy bot IPC", () => {
-  it.each([undefined, null, "none", "glasses"])(
-    "forwards create and update with accessory %s",
-    (avatarAccessory) => {
-      const look = avatarAccessory === undefined ? {} : { avatarAccessory };
-      const input = { name: "Ada", description: "Counts", ...look };
-      const created = { id: "bot-ada", ...input };
-      createBot.mockReturnValue(created);
-      expect(handlers.get(IpcChannels.CreateBot)!(null, input)).toBe(created);
-      expect(createBot).toHaveBeenCalledWith(input);
-      const changes = { title: "Counter", ...look };
-      const updated = { ...created, ...changes };
-      updateBot.mockReturnValue(updated);
-      expect(
-        handlers.get(IpcChannels.UpdateBot)!(null, created.id, changes)
-      ).toBe(updated);
-      expect(updateBot).toHaveBeenCalledWith(created.id, changes);
-      if (avatarAccessory === undefined) {
-        expect(createBot.mock.calls[0][0]).not.toHaveProperty(
-          "avatarAccessory"
-        );
-        expect(updateBot.mock.calls[0][1]).not.toHaveProperty(
-          "avatarAccessory"
-        );
-      }
-    }
-  );
 });

@@ -5,7 +5,6 @@
     { "path": "./tsconfig.main.json" },
     { "path": "./tsconfig.preload.json" },
     { "path": "./tsconfig.renderer.json" },
-    { "path": "./tsconfig.renderer-next.json" },
     { "path": "./tsconfig.vite.json" }
   ]
 }

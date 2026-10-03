@@ -18,8 +18,8 @@ import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 
 const sent = vi.fn();
 
-vi.mock("#main/renderer-host", () => ({
-  sendToRenderer: (channel: string, payload: unknown) => sent(channel, payload),
+vi.mock("#main/rpc/emit", () => ({
+  emitHostEvent: (payload: unknown) => sent("bus", payload),
 }));
 
 const server = (extra: Record<string, unknown> = {}): McpAgentToolsServer =>

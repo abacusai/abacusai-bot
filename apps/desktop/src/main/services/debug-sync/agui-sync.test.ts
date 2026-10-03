@@ -99,7 +99,6 @@ describe("debug sync, feedback and previews on v2 AG-UI threads", () => {
         markStopped: () => undefined,
       },
       files: store,
-      aguiForEverySpawn: true,
       log: () => undefined,
     });
     const emit = (event: Record<string, unknown>) =>

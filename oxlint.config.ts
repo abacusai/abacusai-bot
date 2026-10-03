@@ -3,7 +3,7 @@ import node from "@abacus-ai/config/oxlint/node";
 import { defineConfig } from "oxlint";
 
 /** The old renderer's stack, removed at cut-over; never imported by the rewrite. */
-const RENDERER_NEXT_BANNED_PACKAGES = [
+const RENDERER_BANNED_PACKAGES = [
   "electron",
   "framer-motion",
   "zustand",
@@ -13,6 +13,8 @@ const RENDERER_NEXT_BANNED_PACKAGES = [
   "monaco-editor",
   "@monaco-editor/react",
   "uuid",
+  "clsx",
+  "tailwind-merge",
   "@lobehub/icons-static-svg",
 ];
 
@@ -24,54 +26,17 @@ export default defineConfig({
   extends: [base, node],
   ignorePatterns: [
     ...(base.ignorePatterns ?? []),
-    "apps/desktop/src/renderer-next/notchRouteTree.gen.ts",
+    "apps/desktop/src/renderer/notchRouteTree.gen.ts",
   ],
   // Repeated at the entry config: `plugins` in an extended config is additive,
   // so without this the unicorn and react-perf correctness rules come back.
   plugins: ["eslint", "typescript", "react"],
   options: { reportUnusedDisableDirectives: "deny" },
   overrides: [
-    {
-      files: ["apps/desktop/src/renderer/**/*.{ts,tsx}"],
-      env: { browser: true, node: false },
-      // Just "react": oxlint implements the react-hooks rules inside its own
-      // react plugin (its typings say so, and there is no react-hooks entry in
-      // the built-in plugin list). Naming it separately was a type error, which
-      // nothing noticed because no task type-checked this file.
-      plugins: ["react"],
-      rules: {
-        // Hook order is correctness, not style.
-        "react/rules-of-hooks": "error",
-        "react/jsx-key": "error",
-        "react/no-children-prop": "error",
-        // A warning, as #223 set it: the findings are real but the fixes are a
-        // sweep, and a warning still shows up in review.
-        "react-hooks/exhaustive-deps": "warn",
-        // The React Compiler rules report on patterns this codebase uses
-        // deliberately. They were off before #223 and #223 left them off.
-        "react/set-state-in-effect": "off",
-        "react/refs": "off",
-        "react/purity": "off",
-        "react/preserve-manual-memoization": "off",
-        // The rewrite's tree is its own; the old one never reaches into it.
-        "no-restricted-imports": [
-          "error",
-          {
-            paths: [{ name: "#next", message: "renderer-next is separate" }],
-            patterns: [
-              {
-                group: ["#next/*", "**/renderer-next/**"],
-                message: "The old renderer does not import renderer-next.",
-              },
-            ],
-          },
-        ],
-      },
-    },
     // The rewrite (spec 01 §3.4): the React Compiler is on, so its rules are
     // errors, and the legacy stack is banned by import.
     {
-      files: ["apps/desktop/src/renderer-next/**/*.{ts,tsx}"],
+      files: ["apps/desktop/src/renderer/**/*.{ts,tsx}"],
       env: { browser: true, node: false },
       plugins: ["react", "import"],
       rules: {
@@ -89,9 +54,9 @@ export default defineConfig({
           "error",
           {
             paths: [
-              ...RENDERER_NEXT_BANNED_PACKAGES.map((name) => ({
+              ...RENDERER_BANNED_PACKAGES.map((name) => ({
                 name,
-                message: "Not in renderer-next (spec 01 §3.4).",
+                message: "Not in renderer (spec 01 §3.4).",
               })),
               {
                 name: "react",
@@ -103,8 +68,6 @@ export default defineConfig({
             patterns: [
               {
                 group: [
-                  "#renderer/*",
-                  "**/renderer/**",
                   "!#locales/*",
                   "@dicebear/*",
                   "@tsparticles/*",
@@ -112,7 +75,7 @@ export default defineConfig({
                   "@base-ui/react/*",
                 ],
                 message:
-                  "renderer-next reaches the old tree only through #locales/*; Base UI only inside ui/.",
+                  "renderer reaches the old tree only through #locales/*; Base UI only inside ui/.",
               },
             ],
           },
@@ -122,20 +85,20 @@ export default defineConfig({
     // Registry output: Base UI is imported here and nowhere else, and the
     // registry may memoise (it is never edited).
     {
-      files: ["apps/desktop/src/renderer-next/ui/**/*.{ts,tsx}"],
+      files: ["apps/desktop/src/renderer/ui/**/*.{ts,tsx}"],
       rules: {
         "react/preserve-manual-memoization": "off",
         "no-restricted-imports": [
           "error",
           {
-            paths: RENDERER_NEXT_BANNED_PACKAGES.map((name) => ({
+            paths: RENDERER_BANNED_PACKAGES.map((name) => ({
               name,
-              message: "Not in renderer-next (spec 01 §3.4).",
+              message: "Not in renderer (spec 01 §3.4).",
             })),
             patterns: [
               {
-                group: ["#renderer/*", "**/renderer/**"],
-                message: "renderer-next does not import the old tree.",
+                group: ["@dicebear/*", "@tsparticles/*", "@radix-ui/*"],
+                message: "renderer does not import the old tree.",
               },
             ],
           },
@@ -145,7 +108,7 @@ export default defineConfig({
     // File routes export `Route`; the router plugin reads them by name, and
     // these are the only files that may default-export at all.
     {
-      files: ["apps/desktop/src/renderer-next/routes/**/*.tsx"],
+      files: ["apps/desktop/src/renderer/routes/**/*.tsx"],
       rules: { "import/no-default-export": "off" },
     },
   ],

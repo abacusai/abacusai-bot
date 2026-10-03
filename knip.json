@@ -3,27 +3,57 @@
   "workspaces": {
     "apps/desktop": {
       "entry": [
-        "src/renderer-next/main.tsx",
-        "src/renderer-next/notch.tsx",
-        "src/renderer-next/notch-routes/**/*.tsx",
-        "src/renderer-next/routes/**/*.tsx",
-        "src/renderer-next/features/*/index.ts",
-        "src/renderer-next/**/*.test.{ts,tsx}",
-        "src/renderer-next/features/chat/index.ts",
-        "src/renderer-next/features/bots/index.ts",
-        "src/renderer-next/data/transport/index.ts",
-        "src/renderer-next/components/route-sheet/index.tsx",
-        "src/renderer-next/features/{routines,artifacts,library,settings}/index.tsx",
-        "src/renderer-next/components/{form-kit,sound-preview,keymap-editor}/index.tsx",
-        "src/renderer-next/lib/{notify,sound,keyboard/actions}.ts"
+        "src/renderer/{main,notch}.tsx",
+        "src/renderer/routes/**/*.tsx",
+        "src/renderer/notch-routes/**/*.tsx",
+        "src/main/index.ts",
+        "src/main/window-chrome.e2e-entry.ts",
+        "src/main/rpc/transports/rpc-handshake.e2e-main.ts",
+        "src/renderer/test-support/notch-fit.tsx",
+        "src/preload/index.ts",
+        "src/**/*.test.{ts,tsx}",
+        "scripts/before-pack.cjs",
+        "scripts/build-experience.js",
+        "scripts/check-chat-bundle.mjs",
+        "scripts/check-jsx-i18n.js",
+        "scripts/check-packaged-resources.js",
+        "scripts/check-react-compiler.mjs",
+        "scripts/check-release-build.mjs",
+        "scripts/check-release-versions.mjs",
+        "scripts/download-llama-server.js",
+        "scripts/download-scrcpy.js",
+        "scripts/download-wa-js.js",
+        "scripts/generate-notices.js",
+        "scripts/generate-routes.mjs",
+        "scripts/measure-release-size.mjs",
+        "scripts/rpc-ws-smoke.mjs",
+        "scripts/screenshots.mjs",
+        "scripts/shadcn-registry-snapshot.mjs",
+        "scripts/sync-chat-fixtures.mjs",
+        "scripts/sync-locales.js"
       ],
-      "project": ["src/renderer-next/**/*.{ts,tsx}"],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.{js,mjs,cjs}",
+        "*.config.ts",
+        "vite.shared.ts"
+      ],
       "ignore": [
-        "src/renderer-next/routeTree.gen.ts",
-        "src/renderer-next/notchRouteTree.gen.ts",
-        "src/renderer-next/ui/**"
+        "src/renderer/routeTree.gen.ts",
+        "src/renderer/notchRouteTree.gen.ts",
+        "src/renderer/ui/**"
       ],
-      "ignoreExportsUsedInFile": true
+      "ignoreExportsUsedInFile": true,
+      "ignoreDependencies": [
+        "@testing-library/dom",
+        "@fontsource-variable/inter",
+        "@fontsource-variable/jetbrains-mono",
+        "tailwindcss",
+        "tw-animate-css"
+      ],
+      "paths": {
+        "ort-dist/*": ["../../node_modules/onnxruntime-web/dist/*"]
+      }
     }
   },
   "tags": ["-public"]

@@ -33,6 +33,8 @@ export interface MigrationPlan {
 }
 
 export interface MigrationContext {
+  /** Unique identity shared by the plan, journal and retained manifest. */
+  attempt?: string;
   /** `abacusBotHome()`. */
   home: string;
   /** `app.getPath("userData")`. */

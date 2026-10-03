@@ -30,7 +30,10 @@ export const RemoveSkillRequestSchema = v.object({
   workspacePath: v.optional(v.string()),
 });
 
-export const OpenSkillFileRequestSchema = RemoveSkillRequestSchema;
+export const OpenSkillFileRequestSchema = v.object({
+  path: v.pipe(v.string(), v.nonEmpty()),
+  workspacePath: v.optional(v.string()),
+});
 
 export const ImportLocalSkillsRequestSchema = v.object({
   kind: v.picklist(["file", "folder"]),

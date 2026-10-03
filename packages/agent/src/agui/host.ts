@@ -21,6 +21,7 @@ import { custom, serialize } from "./event.js";
 import { serverRunId } from "./ids.js";
 import { decisionKind, validateResponse } from "./permissions.js";
 import { describe, HostCore, isPrompt, type TurnHooks } from "./queue.js";
+import { openWireRecorder, WIRE_RECORD_ENV } from "./record.js";
 import { RunController, type TurnToken } from "./runs.js";
 import { HostSink } from "./sink.js";
 import type {
@@ -139,6 +140,7 @@ export class AguiHost {
   readonly emitter: AguiEmitter;
   private readonly sink: HostSink;
   private readonly core: HostCore;
+  private readonly recordLine: ((line: string) => void) | undefined;
   private readonly options: AguiHostOptions;
   private readonly log: (line: string) => void;
   /** Bumped by every stop and reset: a preparation that sees a new value never prompts. */
@@ -170,7 +172,9 @@ export class AguiHost {
       options.writeStdout ??
       ((text: string) => void process.stdout.write(text));
 
-    this.sink = new HostSink(options.compat);
+    const recorder = openWireRecorder(process.env[WIRE_RECORD_ENV], this.log);
+    this.recordLine = recorder?.input.bind(recorder);
+    this.sink = new HostSink(options.compat, recorder);
     this.runs = new RunController({
       threadId: options.threadId,
       write: (event) => this.sink.writeAgui(event),
@@ -214,8 +218,7 @@ export class AguiHost {
     this.core = new HostCore(
       session,
       (event) => this.sink.emit(event),
-      this.hooks(),
-      { reserveDuringAbort: true }
+      this.hooks()
     );
   }
 
@@ -223,7 +226,8 @@ export class AguiHost {
     await this.core.start();
     await this.core.readCommands(
       this.options.stdin ?? process.stdin,
-      (command) => this.dispatch(command as AgentCommand)
+      (command) => this.dispatch(command as AgentCommand),
+      this.recordLine
     );
     // stdin closed and every command settled: a run still open never got its
     // terminal from the session, so it gets one now (§3.8).

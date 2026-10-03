@@ -49,7 +49,8 @@ export const checkAgentBundle = async (
     if (value !== undefined) env[name] = value;
   }
 
-  const child = spawn(process.execPath, [entry], {
+  const args = [entry, "--thread-id", "health-check"];
+  const child = spawn(process.execPath, args, {
     cwd: home,
     env,
     stdio: ["pipe", "pipe", "pipe"],
@@ -72,10 +73,16 @@ export const checkAgentBundle = async (
           if (
             typeof parsed === "object" &&
             parsed !== null &&
-            (parsed as { type?: unknown }).type === "ready"
+            (parsed as { type?: unknown }).type === "CUSTOM" &&
+            (parsed as { name?: unknown }).name === "session.ready"
           ) {
             clearTimeout(timer);
             resolve();
+          } else if (
+            (parsed as { type?: unknown } | null)?.type === "RUN_ERROR"
+          ) {
+            clearTimeout(timer);
+            reject(new Error("Candidate reported RUN_ERROR"));
           }
         } catch {
           // Not a protocol line; keep reading.

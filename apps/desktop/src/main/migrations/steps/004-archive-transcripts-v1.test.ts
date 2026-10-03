@@ -273,6 +273,7 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
     expect(
       plan.removals.map((file) => path.relative(home, file)).sort()
     ).toEqual([
+      path.join("threads", "cleared.cleared"),
       path.join("threads", "cleared.json"),
       path.join("threads", "gone.json"),
       path.join("transcripts", "cleared.json"),
@@ -314,7 +315,6 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       home: () => home,
       log: () => undefined,
       isWriteBlocked: () => false,
-      v1Archived: true,
     });
     expect(
       (await cutOver.readCurrent("kept")).map((message) => message.id)

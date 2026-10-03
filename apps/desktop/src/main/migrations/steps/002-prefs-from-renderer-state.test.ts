@@ -226,7 +226,10 @@ describe("C-T5 provenance", () => {
     await run([2]);
     expect(fs.readFileSync(prefs).equals(before)).toBe(true);
     expect(readRecord(home).applied[0]?.stats).toMatchObject({ written: 0 });
-    expect(fs.existsSync(backupsRoot(home))).toBe(false);
+    // No legacy file backup; the empty commit still retains its manifest.
+    expect(
+      fs.readdirSync(backupsRoot(home)).some((name) => name.endsWith(".jsonl"))
+    ).toBe(true);
   });
 
   it("replaces a corrupt prefs.json, keeping a copy", async () => {

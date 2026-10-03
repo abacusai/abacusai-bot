@@ -8,11 +8,12 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
+import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
   alias,
-  NEXT_MODULES,
-  NEXT_APP_SRC,
-  NEXT_REGISTRY_SRC,
+  RENDERER_MODULES,
+  RENDERER_APP_SRC,
+  RENDERER_REGISTRY_SRC,
   NODE_MODULES,
 } from "./vite.shared.ts";
 
@@ -20,6 +21,30 @@ import {
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
 
 const root = import.meta.dirname;
+
+// multi-env's dev builder has configFile:false and no top-level resolve.alias.
+// Vite aliases are global-only, so options.resolve.alias would be discarded.
+// Rolldown plugins are retained in both modes; delegate extension/index lookup
+// back to Vite after applying exactly the shared alias map.
+const electronAliases = {
+  name: "abacus:electron-aliases",
+  resolveId: {
+    order: "pre" as const,
+    async handler(
+      this: import("vite").Rolldown.PluginContext,
+      id: string,
+      importer: string | undefined
+    ) {
+      for (const [find, replacement] of Object.entries(alias)) {
+        if (id === find || id.startsWith(`${find}/`))
+          return this.resolve(replacement + id.slice(find.length), importer, {
+            skipSelf: true,
+          });
+      }
+      return null;
+    },
+  },
+};
 
 // The dev server, for the relaunch check below.
 let devServer: ViteDevServer | null = null;
@@ -38,140 +63,156 @@ const RELAUNCH_GRACE_MS = 8000;
 // referenced from it and never packaged (see electron-builder.yml).
 const sourcemap = "hidden";
 
-export default defineConfig({
-  build: {
-    outDir: "dist/renderer",
-    sourcemap,
-    // Two documents: the shipped renderer and the rewrite's (spec 01 §3.3).
-    // Both land at the root of dist/renderer, so the experience bundle
-    // carries both unchanged.
-    rolldownOptions: {
-      input: {
-        main: resolve(root, "index.html"),
-        next: resolve(root, "index-next.html"),
-        notch: resolve(root, "notch.html"),
+export default defineConfig(({ command }) => {
+  const flags = {
+    gallery: process.env.VITE_UI_GALLERY === "1",
+    fixtures: process.env.VITE_NEXT_DB_FIXTURES === "1",
+  };
+  const release = command === "build" && !flags.gallery && !flags.fixtures;
+  return {
+    build: {
+      outDir: "dist/renderer",
+      sourcemap,
+      // Two documents: the shipped renderer and the rewrite's (spec 01 §3.3).
+      // Both land at the root of dist/renderer, so the experience bundle
+      // carries both unchanged.
+      rolldownOptions: {
+        input: {
+          main: resolve(root, "index.html"),
+          notch: resolve(root, "notch.html"),
+        },
       },
     },
-  },
-  plugins: [
-    {
-      name: "abacus:dev-server-handle",
-      configureServer(server) {
-        devServer = server;
+    plugins: [
+      releaseBuildPlugin(root, release, flags),
+      {
+        name: "abacus:dev-server-handle",
+        configureServer(server) {
+          devServer = server;
+        },
       },
+      // Before the React transform: it rewrites route files into split chunks.
+      tanstackRouter({
+        target: "react",
+        routesDirectory: "./src/renderer/routes",
+        generatedRouteTree: "./src/renderer/routeTree.gen.ts",
+        routeFileIgnorePrefix: "-",
+        autoCodeSplitting: true,
+        quoteStyle: "double",
+      }),
+      tanstackRouter({
+        target: "react",
+        routesDirectory: "./src/renderer/notch-routes",
+        generatedRouteTree: "./src/renderer/notchRouteTree.gen.ts",
+        routeFileIgnorePrefix: "-",
+        autoCodeSplitting: true,
+        quoteStyle: "double",
+      }),
+      tailwindcss(),
+      // Order matters (spec 01 §3.3): the compiler instance first, the plain
+      // instance last. Each sets oxc's refresh flag in its `config` hook and the
+      // last one wins, so reversed, the old renderer loses Fast Refresh. The
+      // compiler instance does its own refresh for the files it compiles.
+      react({
+        include: RENDERER_MODULES,
+        exclude: RENDERER_REGISTRY_SRC,
+        compiler: { logDiagnostics: true },
+      }),
+      react({ exclude: [NODE_MODULES, RENDERER_APP_SRC] }),
+      ...electron(
+        simpleOptions({
+          main: {
+            input: "src/main/index.ts",
+            plugins: [electronAliases],
+            onstart: async ({ startup }) => {
+              await startup();
+              // Mounted by the plugin's startup(); not in Node's own Process type.
+              const child = (process as { electronApp?: ChildProcess })
+                .electronApp;
+              if (child == null) return;
+              child.removeAllListeners("exit");
+              child.once("exit", (code: number | null) => {
+                setTimeout(() => {
+                  if ((devServer?.ws.clients.size ?? 0) === 0)
+                    process.exit(code);
+                  // The relaunch is not this server's child: the plugin's next
+                  // rebuild would message or kill the exited one and crash
+                  // (ERR_IPC_CHANNEL_CLOSED). A no-op stands in; renderer edits
+                  // still hot-reload, main/preload edits need a new `pnpm dev`.
+                  (process as { electronApp?: unknown }).electronApp = {
+                    send: () => false,
+                    kill: () => false,
+                    on: () => undefined,
+                    once: () => undefined,
+                    removeAllListeners: () => undefined,
+                  };
+                  console.log(
+                    "[dev] app relaunched itself; keeping the dev server (restart pnpm dev for main/preload changes)"
+                  );
+                }, RELAUNCH_GRACE_MS);
+              });
+            },
+            bundleDeps: {
+              both: {
+                exclude: [...NATIVE_PACKAGES, ...ELECTRON_NATIVE],
+                // The experience update client must ship inside the main
+                // bundle. Nothing under resources/ provides these, and a bare
+                // import of them in a packaged app fails at startup. Pinned
+                // because the plugin otherwise leaves them external; the
+                // packaged-startup guard test enforces it.
+                // The connector registry is TypeScript source shared with the
+                // agent (a devDependency, like every workspace package); it
+                // has no dist to resolve from the asar and must be inlined.
+                // Main's AG-UI relay runs TanStack's StreamProcessor and
+                // uiMessagesToWire (a devDependency the renderer shares), so it
+                // is inlined with the packages it imports at run time, closed
+                // transitively: `@tanstack/ai-event-client` imports
+                // `@tanstack/devtools-event-client` at its top level, which
+                // only tree-shaking (`sideEffects: false`) drops today.
+                include: [
+                  "@abacus-ai/updater",
+                  "extract-zip",
+                  "tuf-js",
+                  "@abacus-ai/connectors",
+                  "@tanstack/ai",
+                  "@tanstack/ai-event-client",
+                  "@tanstack/devtools-event-client",
+                  "@tanstack/ai-utils",
+                  "@ag-ui/core",
+                  "partial-json",
+                ],
+              },
+            },
+            options: {
+              define: {
+                "import.meta.env.ABACUS_DEV_HARNESS": JSON.stringify(!release),
+              },
+              build: { outDir: "dist/main", emptyOutDir: true, sourcemap },
+            },
+          },
+          preload: {
+            input: "src/preload/index.ts",
+            plugins: [electronAliases],
+            bundleDeps: { both: { exclude: ELECTRON_NATIVE } },
+            // `.cjs`, not the plugin's default `.mjs`: the content it emits is
+            // CommonJS, and Electron decides how to load a preload from the
+            // extension. An .mjs file holding `require` calls fails at load.
+            options: {
+              build: {
+                outDir: "dist/preload",
+                sourcemap,
+                rolldownOptions: { output: { entryFileNames: "[name].cjs" } },
+              },
+            },
+          },
+        })
+      ),
+    ],
+    resolve: {
+      // See vite.shared.ts.
+      alias,
+      dedupe: ["react", "react-dom"],
     },
-    // Before the React transform: it rewrites route files into split chunks.
-    tanstackRouter({
-      target: "react",
-      routesDirectory: "./src/renderer-next/routes",
-      generatedRouteTree: "./src/renderer-next/routeTree.gen.ts",
-      routeFileIgnorePrefix: "-",
-      autoCodeSplitting: true,
-      quoteStyle: "double",
-    }),
-    tanstackRouter({
-      target: "react",
-      routesDirectory: "./src/renderer-next/notch-routes",
-      generatedRouteTree: "./src/renderer-next/notchRouteTree.gen.ts",
-      routeFileIgnorePrefix: "-",
-      autoCodeSplitting: false,
-      quoteStyle: "double",
-    }),
-    tailwindcss(),
-    // Order matters (spec 01 §3.3): the compiler instance first, the plain
-    // instance last. Each sets oxc's refresh flag in its `config` hook and the
-    // last one wins, so reversed, the old renderer loses Fast Refresh. The
-    // compiler instance does its own refresh for the files it compiles.
-    react({
-      include: NEXT_MODULES,
-      exclude: NEXT_REGISTRY_SRC,
-      compiler: { logDiagnostics: true },
-    }),
-    react({ exclude: [NODE_MODULES, NEXT_APP_SRC] }),
-    ...electron(
-      simpleOptions({
-        main: {
-          input: "src/main/index.ts",
-          onstart: async ({ startup }) => {
-            await startup();
-            // Mounted by the plugin's startup(); not in Node's own Process type.
-            const child = (process as { electronApp?: ChildProcess })
-              .electronApp;
-            if (child == null) return;
-            child.removeAllListeners("exit");
-            child.once("exit", (code: number | null) => {
-              setTimeout(() => {
-                if ((devServer?.ws.clients.size ?? 0) === 0) process.exit(code);
-                // The relaunch is not this server's child: the plugin's next
-                // rebuild would message or kill the exited one and crash
-                // (ERR_IPC_CHANNEL_CLOSED). A no-op stands in; renderer edits
-                // still hot-reload, main/preload edits need a new `pnpm dev`.
-                (process as { electronApp?: unknown }).electronApp = {
-                  send: () => false,
-                  kill: () => false,
-                  on: () => undefined,
-                  once: () => undefined,
-                  removeAllListeners: () => undefined,
-                };
-                console.log(
-                  "[dev] app relaunched itself; keeping the dev server (restart pnpm dev for main/preload changes)"
-                );
-              }, RELAUNCH_GRACE_MS);
-            });
-          },
-          bundleDeps: {
-            both: {
-              exclude: [...NATIVE_PACKAGES, ...ELECTRON_NATIVE],
-              // The experience update client must ship inside the main
-              // bundle. Nothing under resources/ provides these, and a bare
-              // import of them in a packaged app fails at startup. Pinned
-              // because the plugin otherwise leaves them external; the
-              // packaged-startup guard test enforces it.
-              // The connector registry is TypeScript source shared with the
-              // agent (a devDependency, like every workspace package); it
-              // has no dist to resolve from the asar and must be inlined.
-              // Main's AG-UI relay runs TanStack's StreamProcessor and
-              // uiMessagesToWire (a devDependency the renderer shares), so it
-              // is inlined with the packages it imports at run time, closed
-              // transitively: `@tanstack/ai-event-client` imports
-              // `@tanstack/devtools-event-client` at its top level, which
-              // only tree-shaking (`sideEffects: false`) drops today.
-              include: [
-                "extract-zip",
-                "tuf-js",
-                "@abacus-ai/connectors",
-                "@tanstack/ai",
-                "@tanstack/ai-event-client",
-                "@tanstack/devtools-event-client",
-                "@tanstack/ai-utils",
-                "@ag-ui/core",
-                "partial-json",
-              ],
-            },
-          },
-          options: { build: { outDir: "dist/main", sourcemap } },
-        },
-        preload: {
-          input: "src/preload/index.ts",
-          bundleDeps: { both: { exclude: ELECTRON_NATIVE } },
-          // `.cjs`, not the plugin's default `.mjs`: the content it emits is
-          // CommonJS, and Electron decides how to load a preload from the
-          // extension. An .mjs file holding `require` calls fails at load.
-          options: {
-            build: {
-              outDir: "dist/preload",
-              sourcemap,
-              rolldownOptions: { output: { entryFileNames: "[name].cjs" } },
-            },
-          },
-        },
-      })
-    ),
-  ],
-  resolve: {
-    // See vite.shared.ts.
-    alias,
-    dedupe: ["react", "react-dom"],
-  },
-  worker: { format: "es" },
+    worker: { format: "es" },
+  };
 });

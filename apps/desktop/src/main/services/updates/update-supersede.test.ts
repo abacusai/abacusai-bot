@@ -123,7 +123,7 @@ describe("a feed that no longer offers the downloaded build", () => {
     autoUpdater.emit("update-not-available", { version: "1.0.18" });
 
     expect(service.getStatus().downloaded).toBe(true);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
 
   it("drops the pulled release on the second consecutive answer", () => {
@@ -156,7 +156,7 @@ describe("electron-updater's switches, kept in step with the pending build", () 
     withDownloadedBuild();
 
     expect(autoUpdater.autoDownload).toBe(false);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
 
   it("resumes downloading, and parks install-on-quit, when superseded", () => {
@@ -170,6 +170,84 @@ describe("electron-updater's switches, kept in step with the pending build", () 
     autoUpdater.emit("update-downloaded", { version: "1.0.20" });
 
     expect(autoUpdater.autoDownload).toBe(false);
-    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
   });
+});
+
+it("R7-T33: an install rechecks admission; withdrawn and staging-excluded offers never reach quitAndInstall", async () => {
+  const quit = vi.fn();
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  checkForUpdates.mockResolvedValueOnce({
+    isUpdateAvailable: false,
+    updateInfo: { version: "1.0.19" },
+  } as never);
+  expect((await service.installUpdate()).success).toBe(false);
+  expect(quit).not.toHaveBeenCalled();
+  expect(service.getStatus().downloaded).toBe(false);
+  expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+});
+it("R7-T33: halt during download cancels it and ignores a late completion", async () => {
+  const token = { cancel: vi.fn() };
+  const service = new UpdateService();
+  autoUpdater.emit("update-available", { version: "1.0.19" });
+  checkForUpdates.mockResolvedValueOnce({
+    cancellationToken: token,
+    downloadPromise: new Promise(() => {}),
+  } as never);
+  await service.checkForUpdates();
+  autoUpdater.emit("update-not-available", { version: "1.0.18" });
+  expect(token.cancel).toHaveBeenCalledOnce();
+  autoUpdater.emit("update-downloaded", { version: "1.0.19" });
+  expect(service.getStatus()).toMatchObject({
+    downloading: false,
+    downloaded: false,
+    progress: null,
+  });
+});
+it("R7-T33: the same fresh offer can install", async () => {
+  vi.useFakeTimers();
+  const quit = vi.fn();
+  autoUpdater.quitAndInstall = quit;
+  const service = withDownloadedBuild();
+  checkForUpdates.mockResolvedValueOnce({
+    isUpdateAvailable: true,
+    updateInfo: { version: "1.0.19" },
+  } as never);
+  expect((await service.installUpdate()).success).toBe(true);
+  expect(quit).toHaveBeenCalledOnce();
+});
+it("withdrawal and re-offer start a second transfer, and an offer alone is not downloading", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+  let offered = true;
+  let transfers = 0;
+  const cancel = vi.fn();
+  checkForUpdates.mockImplementation(async () => {
+    autoUpdater.emit(offered ? "update-available" : "update-not-available", {
+      version: offered ? "1.0.19" : "1.0.18",
+    });
+    if (!offered || !autoUpdater.autoDownload) return null;
+    transfers++;
+    return {
+      cancellationToken: { cancel },
+      downloadPromise: new Promise(() => {}),
+    } as never;
+  });
+  const service = new UpdateService();
+  autoUpdater.emit("update-available", { version: "1.0.19" });
+  expect(service.getStatus().downloading).toBe(false);
+  await service.checkForUpdates();
+  expect(transfers).toBe(1);
+  expect(service.getStatus().downloading).toBe(true);
+  offered = false;
+  await service.checkForUpdates();
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(service.getStatus().downloading).toBe(false);
+  expect(autoUpdater.autoDownload).toBe(true);
+  offered = true;
+  await service.checkForUpdates();
+  expect(transfers).toBe(2);
+  expect(service.getStatus().downloading).toBe(true);
+  checkForUpdates.mockImplementation(() => Promise.resolve(null));
+  vi.unstubAllGlobals();
 });

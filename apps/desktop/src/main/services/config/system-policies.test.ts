@@ -4,15 +4,8 @@ import { createLoginItem, UnsupportedPlatformError } from "./login-item";
 import { notificationSilent } from "./notification-policy";
 
 describe("notificationSilent (spec 05 §31.5 d)", () => {
-  it("is always silent in the wco generation", () => {
-    expect(notificationSilent("wco", true)).toBe(true);
-    expect(notificationSilent("wco", false)).toBe(true);
-  });
-
-  it("keeps the legacy generation's sound setting", () => {
-    expect(notificationSilent("legacy", true)).toBe(false);
-    expect(notificationSilent("legacy", false)).toBe(true);
-  });
+  it("keeps system notifications silent", () =>
+    expect(notificationSilent()).toBe(true));
 });
 
 describe("createLoginItem (spec 05 §31.5 c)", () => {

@@ -46,14 +46,18 @@ class Host {
   ) {}
 
   static start(cwd: string, args: string[] = []): Host {
-    const child = spawn(process.execPath, [AGENT, ...args], {
-      cwd,
-      env: {
-        ...process.env,
-        ABACUSAI_BOT_HOME: home,
-      },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    const child = spawn(
+      process.execPath,
+      [AGENT, "--thread-id", "host-e2e", "--compat-fd", "-1", ...args],
+      {
+        cwd,
+        env: {
+          ...process.env,
+          ABACUSAI_BOT_HOME: home,
+        },
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
 
     const host = new Host(child, cwd);
 
@@ -128,10 +132,10 @@ class Host {
     this.buffer = lines.pop() ?? "";
 
     for (const line of lines) {
-      if (line.trim().length === 0) continue;
+      if (!line.startsWith("\u001e")) continue;
 
       try {
-        this.events.push(JSON.parse(line) as DesktopEvent);
+        this.events.push(JSON.parse(line.slice(1)) as DesktopEvent);
       } catch {
         throw new Error(
           `stdout is the protocol, and this line is not an event: ${line.slice(0, 200)}`

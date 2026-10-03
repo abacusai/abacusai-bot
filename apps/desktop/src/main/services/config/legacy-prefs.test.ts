@@ -4,34 +4,25 @@
  * the `db.prefs` table by provenance, and `renderer-state.json` is never
  * written by the sync.
  */
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import os from "node:os";
+
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({
   app: { getPath: () => os.tmpdir(), on: vi.fn() },
   ipcMain: { on: vi.fn() },
 }));
 
-import { AgentMode } from "#shared/agent-types";
-
-import { MainEventBus } from "../../rpc/event-bus";
-import { createTables, type Tables } from "../../rpc/tables";
-import type { TableSources } from "../../rpc/tables/sources";
 import {
   composeLegacyPrefs,
   importLegacyPrefs,
-  importLegacySoundOptOut,
-  installLegacyPrefsSync,
   LEGACY_ONBOARDING_STEPS,
   LEGACY_PREFS_FIELDS,
   mapLegacyKey,
   normalizeBrowserHomepage,
 } from "./legacy-prefs";
 import { PREFS_DEFAULTS, PrefsStore } from "./prefs-store";
-import { RendererStateStore } from "./renderer-state";
 
 const zustand = (state: unknown, version = 0): string =>
   JSON.stringify({ state, version });
@@ -146,7 +137,7 @@ describe("mapLegacyKey", () => {
       onboardingFlow: 2,
     });
 
-    // renderer-next writes its own "welcome" as a user patch; a later legacy
+    // renderer writes its own "welcome" as a user patch; a later legacy
     // write cannot move it.
     prefs.update({ onboardingStep: "welcome", onboardingFlow: 2 });
     importLegacyPrefs(prefs, reader({ "onboarding.step": "explainer" }));
@@ -264,29 +255,14 @@ describe("composeLegacyPrefs", () => {
   });
 
   it("matches the old renderer's onboarding steps and homepage rule", () => {
-    // Read as text: main's project does not compile renderer files.
-    const steps = fs.readFileSync(
-      path.join(
-        __dirname,
-        "../../../renderer/components/onboarding/onboarding-steps.ts"
-      ),
-      "utf8"
-    );
-    const order = /STEP_ORDER = \[([^\]]*)\]/.exec(steps)?.[1] ?? "";
-    expect(LEGACY_ONBOARDING_STEPS).toEqual(
-      [...order.matchAll(/"([^"]+)"/g)].map((match) => match[1])
-    );
-    const source = fs.readFileSync(
-      path.join(__dirname, "../../../renderer/lib/browser-homepage.ts"),
-      "utf8"
-    );
-    // The same parse: a scheme-less value gains https://, only http(s) pass.
-    expect(source).toContain(
-      "/^[a-z][a-z\\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`"
-    );
-    expect(source).toContain(
-      'if (url.protocol !== "http:" && url.protocol !== "https:") return null;'
-    );
+    // Frozen from C5 d8bccf17. Homepage scheme/protocol cases below preserve its rule.
+    expect(LEGACY_ONBOARDING_STEPS).toEqual([
+      "auth",
+      "welcome",
+      "connectors",
+      "models",
+      "explainer",
+    ]);
     expect(normalizeBrowserHomepage("example.com")).toBe(
       "https://example.com/"
     );
@@ -337,247 +313,4 @@ describe("importLegacyPrefs", () => {
   });
 });
 
-describe("C-T8 live legacy sync", () => {
-  let dir: string;
-  let stateFile: string;
-  let prefsFile: string;
-  let tables: Tables | null = null;
-
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "legacy-prefs-"));
-    stateFile = path.join(dir, "renderer-state.json");
-    prefsFile = path.join(dir, "prefs.json");
-  });
-
-  afterEach(() => {
-    tables?.dispose();
-    tables = null;
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  const noHook = () => () => undefined;
-  const sources = {
-    listAllAgentSessions: () => [],
-    listSessionTurnStates: () => [],
-    onSessionsChanged: noHook,
-    listBots: () => [],
-    onBotsWritten: noHook,
-    listRoutines: () => [],
-    onRoutinesWritten: noHook,
-    listSessionArtifacts: () => [],
-    listMemories: () => [],
-    listBotMemories: () => [],
-    getMetadata: () => ({
-      workspaces: [],
-      activeWorkspaceId: null,
-      materialIconsBasePath: null,
-      lastUpdatedAt: "",
-    }),
-    onWorkspacesChanged: noHook,
-    getGitState: () => {
-      throw new Error("unused");
-    },
-    botHome: () => dir,
-  } as unknown as TableSources;
-
-  const setup = () => {
-    const prefs = new PrefsStore({ file: prefsFile });
-    tables = createTables({
-      bus: new MainEventBus(),
-      sources,
-      prefsStore: prefs,
-      watchMemories: false,
-      routinesClockMs: null,
-    });
-    const state = new RendererStateStore(stateFile);
-    const off = installLegacyPrefsSync(state, prefs);
-    return { prefs, state, off, tables };
-  };
-
-  const storedPrefs = () =>
-    JSON.parse(fs.readFileSync(prefsFile, "utf8")) as {
-      row: Record<string, unknown>;
-      provenance: Record<string, string>;
-    };
-
-  it("carries set() into prefs.json and publishes a db.prefs change", async () => {
-    const { state, tables } = setup();
-    tables.prefs.snapshot();
-    const stream = tables.prefs.subscribe();
-    await stream.next(); // hello
-
-    state.set("theme", "dark");
-
-    const batch = await stream.next();
-    expect(batch.done).toBe(false);
-    expect(JSON.stringify(batch.value)).toContain('"theme":"dark"');
-    expect(storedPrefs().row.theme).toBe("dark");
-    expect(storedPrefs().provenance.theme).toBe("legacy");
-    await stream.return?.(undefined);
-  });
-
-  it("leaves a user field alone and resets only legacy fields on removal", () => {
-    const { prefs, state } = setup();
-    prefs.update({ theme: "system" });
-    state.set("theme", "dark");
-    expect(prefs.get().theme).toBe("system");
-
-    state.set(
-      "local-code-ui-store",
-      zustand(
-        { globalSelectedMode: AgentMode.PlanMode, pinnedBotIds: ["b"] },
-        4
-      )
-    );
-    state.set("sidebar-accordion", zustand({ openSection: "routines" }));
-    expect(prefs.get()).toMatchObject({
-      defaultMode: AgentMode.PlanMode,
-      pinned: { sessionIds: [], botIds: ["b"] },
-      sidebar: { pinned: true, openSection: "routines" },
-    });
-
-    // Only the accordion's member goes back to what the old UI shows.
-    state.set("sidebar-accordion", null);
-    expect(prefs.get().sidebar).toEqual({ pinned: true, openSection: "bots" });
-
-    state.set("theme", null);
-    state.clear();
-    expect(prefs.get()).toMatchObject({
-      theme: "system",
-      defaultMode: PREFS_DEFAULTS.defaultMode,
-      pinned: PREFS_DEFAULTS.pinned,
-      sidebar: PREFS_DEFAULTS.sidebar,
-    });
-    expect(prefs.provenance()).toMatchObject({
-      theme: "user",
-      defaultMode: "default",
-      "sidebar.pinned": "default",
-      "sidebar.openSection": "default",
-    });
-  });
-
-  it("imports the whole legacy state at install", () => {
-    fs.writeFileSync(
-      stateFile,
-      JSON.stringify({
-        theme: "light",
-        "abacusai-bot-language": zustand({ languageCode: "fr-FR" }),
-      })
-    );
-    const { prefs } = setup();
-    expect(prefs.get()).toMatchObject({ theme: "light", language: "fr-FR" });
-  });
-
-  it("ignores unmapped keys", () => {
-    const { prefs, state } = setup();
-    state.set("composer.draft:ws-1", "half a thought");
-    state.set("durable-storage.migrated", "1");
-    expect(fs.existsSync(prefsFile)).toBe(false);
-    expect(prefs.provenance().theme).toBe("default");
-  });
-
-  it("never writes renderer-state.json: only the store's own debounced flush does", () => {
-    // Structurally, the sync sees `LegacyStateSource` (get/onSet), which has
-    // no write path. Behaviourally: a mapped-key set, with the store's
-    // 500 ms debounce run out, writes the state file exactly once (the
-    // store's flush) and nothing else writes it.
-    vi.useFakeTimers();
-    try {
-      const writes: string[] = [];
-      const write = fs.writeFileSync;
-      const rename = fs.renameSync;
-      const spyWrite = vi
-        .spyOn(fs, "writeFileSync")
-        .mockImplementation((file, ...rest) => {
-          writes.push(String(file));
-          return write(file, ...rest);
-        });
-      const spyRename = vi
-        .spyOn(fs, "renameSync")
-        .mockImplementation((from, to) => {
-          writes.push(String(to));
-          return rename(from, to);
-        });
-      const { prefs, state } = setup();
-      state.set("theme", "dark");
-      state.set("sidebar-accordion", zustand({ openSection: "sessions" }));
-      expect(prefs.get().theme).toBe("dark");
-      const beforeFlush = writes.filter((file) => file.startsWith(stateFile));
-      vi.advanceTimersByTime(1_000);
-      const stateWrites = writes.filter((file) => file.startsWith(stateFile));
-      spyWrite.mockRestore();
-      spyRename.mockRestore();
-      expect(beforeFlush).toEqual([]);
-      expect(stateWrites.length).toBeGreaterThan(0);
-      expect(
-        writes.filter(
-          (file) => !file.startsWith(stateFile) && !file.startsWith(prefsFile)
-        )
-      ).toEqual([]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("stops after unsubscribe and survives a throwing prefs store", () => {
-    const { prefs, state, off } = setup();
-    off();
-    state.set("theme", "dark");
-    expect(prefs.get().theme).toBe("system");
-
-    const log = vi.fn();
-    const broken = {
-      provenance: () => {
-        throw new Error("boom");
-      },
-      importLegacy: vi.fn(),
-      resetLegacy: vi.fn(),
-    };
-    installLegacyPrefsSync(state, broken as never, log);
-    expect(() => state.set("theme", "light")).not.toThrow();
-    expect(log).toHaveBeenCalledTimes(2);
-  });
-});
-
 // R5-T28 (main): `notificationSoundDisabled` into `sounds.enabled`.
-describe("legacy sound opt-out (spec 05 §31.5 i)", () => {
-  it("imports an opt-out as legacy, lifts it, and never touches a user leaf", () => {
-    const prefs = new PrefsStore({ file: null });
-    expect(importLegacySoundOptOut(prefs, undefined)).toBe("none");
-    expect(importLegacySoundOptOut(prefs, true)).toBe("imported");
-    expect(prefs.get().sounds.enabled).toBe(false);
-    expect(prefs.provenance()["sounds.enabled"]).toBe("legacy");
-    expect(importLegacySoundOptOut(prefs, false)).toBe("reset");
-    expect(prefs.get().sounds.enabled).toBe(true);
-    expect(prefs.provenance()["sounds.enabled"]).toBe("default");
-
-    prefs.update({ sounds: { enabled: true } });
-    expect(importLegacySoundOptOut(prefs, true)).toBe("kept-user");
-    expect(prefs.get().sounds.enabled).toBe(true);
-    expect(prefs.provenance()["sounds.enabled"]).toBe("user");
-  });
-
-  it("the live sync follows setNotificationSettings writes", () => {
-    const prefs = new PrefsStore({ file: null });
-    let disabled: unknown = true;
-    const listeners = new Set<() => void>();
-    const legacy = {
-      get: () => undefined,
-      onSet: () => () => undefined,
-    };
-    const stop = installLegacyPrefsSync(legacy, prefs, undefined, {
-      read: () => disabled,
-      onWrite: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    });
-    // The startup import covers an opt-out made before this build.
-    expect(prefs.get().sounds.enabled).toBe(false);
-    disabled = false;
-    for (const listener of listeners) listener();
-    expect(prefs.get().sounds.enabled).toBe(true);
-    stop();
-    expect(listeners.size).toBe(0);
-  });
-});

@@ -21,7 +21,11 @@
       "types": "./dist/repository.d.mts",
       "default": "./dist/repository.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./provenance": {
+      "types": "./dist/provenance.d.mts",
+      "default": "./dist/provenance.mjs"
+    }
   },
   "scripts": {
     "build": "tsdown",
