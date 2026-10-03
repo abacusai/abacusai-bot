@@ -153,7 +153,9 @@ export const AppRoot = ({
             <InertHiddenEffect />
             <ShortcutHandler />
             <CommandMenu />
-            {children}
+            <div className="h-dvh min-h-0 min-w-0 overflow-hidden">
+              {children}
+            </div>
           </AppToaster>
         </TooltipProvider>
       </AppHotkeysProvider>

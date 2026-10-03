@@ -415,7 +415,12 @@ describe("the title bar", () => {
     await waitFor(() =>
       expect(harness!.router.state.location.search).not.toHaveProperty("tab")
     );
-    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("panel-toggle").getAttribute("aria-expanded")
+      ).toBe("false")
+    );
+    fireEvent.click(screen.getByTestId("panel-toggle"));
     await waitFor(() =>
       expect(harness!.router.state.location.search).toEqual({ tab: "files" })
     );

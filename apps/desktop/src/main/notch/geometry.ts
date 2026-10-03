@@ -26,17 +26,25 @@ export const notchPlacement = (
   requested: { width: number; height: number }
 ): Placement => {
   const shape = clampShape(requested);
-  const width = shape.width + 48;
+  const width = Math.max(shape.width, notch?.width ?? 0) + 48;
+  const center =
+    notch?.x === undefined
+      ? display.bounds.x + display.bounds.width / 2
+      : display.bounds.x + notch.x + notch.width / 2;
+  const x = Math.round(center - width / 2);
   return {
     bounds: {
-      x: Math.round(display.bounds.x + (display.bounds.width - width) / 2),
-      y: display.bounds.y,
+      x,
+      y: notch
+        ? display.bounds.y
+        : Math.max(display.bounds.y, display.workArea.y) + 8,
       width,
-      height: shape.height + 32,
+      height: Math.max(shape.height, notch?.height ?? 0) + 32,
     },
     layout: {
       displayId: display.id,
-      mode: notch ? "notch" : "plain",
+      offsetX: center - (x + width / 2),
+      mode: notch ? "notch" : "capsule",
       notch,
       growth: "down",
       maxShape: MAX_SHAPE,

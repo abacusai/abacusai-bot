@@ -9,6 +9,9 @@
  * required run builds `dist/` itself when it is missing or a fixture build.
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+
+import { authenticatedTestHome } from "../../../scripts/authenticated-test-home.mjs";
+export { authenticatedTestHome } from "../../../scripts/authenticated-test-home.mjs";
 import {
   appendFileSync,
   existsSync,
@@ -300,35 +303,4 @@ export const stats = (values: readonly number[]) => {
       ? Number.NaN
       : sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]!;
   return { median: at(0.5), p95: at(0.95), max: sorted.at(-1) ?? Number.NaN };
-};
-
-/** Isolated fake credential and account endpoints; acceptance never contacts Abacus. */
-export const authenticatedTestHome = (home: string): string => {
-  const configPath = join(home, "config.json");
-  const config = existsSync(configPath)
-    ? JSON.parse(readFileSync(configPath, "utf8"))
-    : {};
-  config.apiKeys = {
-    ...config.apiKeys,
-    ABACUS_API_KEY: "acceptance-invalid-key",
-  };
-  writeFileSync(configPath, JSON.stringify(config));
-  const preload = join(home, "fake-abacus.cjs");
-  writeFileSync(
-    preload,
-    `
-const realFetch = globalThis.fetch;
-globalThis.fetch = (input, options) => {
-  const url = new URL(typeof input === "string" ? input : input.url ?? String(input));
-  if (url.hostname === "abacus.ai" || url.hostname.endsWith(".abacus.ai")) {
-    const body = url.pathname === "/v1/account"
-      ? { id: "acceptance-account", name: "Acceptance", email: "acceptance@example.test", subscription_tier: "free", credits_granted: 100, credits_used: 0 }
-      : { data: [] };
-    return Promise.resolve(new Response(JSON.stringify(body), { status: url.pathname === "/v1/account" || url.pathname === "/v1/models" ? 200 : 503, headers: { "content-type": "application/json" } }));
-  }
-  return realFetch(input, options);
-};
-`
-  );
-  return preload;
 };

@@ -155,7 +155,7 @@ const AttachmentChip = ({ path }: { path: string }) => {
 
 const PendingState = ({ message }: { message: UIMessage }) => {
   const { t } = useTranslation();
-  const { session } = useChatView();
+  const { session, composer } = useChatView();
   const abacus = (
     message.metadata as
       | { abacus?: { pending?: boolean; state?: string } }
@@ -174,13 +174,15 @@ const PendingState = ({ message }: { message: UIMessage }) => {
       role="status"
     >
       {t("chat.message.notSent")}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => void session.retryOutbox(message.id)}
-      >
-        {t("chat.message.retry")}
-      </Button>
+      {composer.readOnly == null && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void session.retryOutbox(message.id)}
+        >
+          {t("chat.message.retry")}
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"

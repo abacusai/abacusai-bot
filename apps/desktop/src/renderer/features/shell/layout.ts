@@ -68,7 +68,8 @@ export const shellLayout = (input: {
   const band = bandFor(input.width);
   let sidebar: SidebarMode = input.pinned ? "pinned" : "floating";
   if (band === "sm" && input.area === "bots" && input.pinned) sidebar = "strip";
-  if (band === "sm" && input.area === "sessions") sidebar = "floating";
+  if (band === "md" || (band === "sm" && input.area !== "bots"))
+    sidebar = "floating";
 
   if (
     input.area === "sessions" &&

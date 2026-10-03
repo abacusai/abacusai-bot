@@ -5,6 +5,7 @@
  * that covers the content region only, so the title bar and the window
  * controls stay usable. Escape or the scrim closes it by clearing `tab`.
  */
+import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ import {
   useMotionPreference,
 } from "#renderer/lib/motion";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
+import { Button } from "#renderer/ui/button";
 import {
   Drawer,
   DrawerContent,
@@ -130,7 +132,7 @@ export const SidePanelDrawer = ({
         <DrawerContent
           data-side-panel=""
           aria-label={t("shell.panel.label")}
-          className={cn("bg-background")}
+          className={cn("bg-background overflow-hidden")}
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>{t("shell.panel.label")}</DrawerTitle>
@@ -138,22 +140,37 @@ export const SidePanelDrawer = ({
               {tab == null ? "" : t(`shell.panel.tabs.${tab}`)}
             </DrawerDescription>
           </DrawerHeader>
-          <div className="flex min-h-0 flex-1 flex-col">
-            {tabs.length > 0 && tab != null && (
-              <Tabs
-                value={tab}
-                onValueChange={(next) => onTabChange(next as SidePanelTabId)}
-                data-side-panel-tabs=""
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between gap-1 p-2">
+              {tabs.length > 0 && tab != null && (
+                <Tabs
+                  value={tab}
+                  onValueChange={(next) => onTabChange(next as SidePanelTabId)}
+                  data-side-panel-tabs=""
+                  className="min-w-0"
+                >
+                  <TabsList
+                    className="max-w-full flex-wrap"
+                    aria-label={t("shell.topBar.panelTabs")}
+                  >
+                    {tabs.map((item) => (
+                      <TabsTrigger key={item} value={item} className="text-xs">
+                        {t(`shell.panel.tabs.${item}`)}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                aria-label={t("shell.topBar.closePanel")}
+                onClick={onClose}
               >
-                <TabsList aria-label={t("shell.topBar.panelTabs")}>
-                  {tabs.map((item) => (
-                    <TabsTrigger key={item} value={item} className="text-xs">
-                      {t(`shell.panel.tabs.${item}`)}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            )}
+                <X />
+              </Button>
+            </div>
             {tab != null && <SidePanelBody tab={tab} />}
           </div>
         </DrawerContent>

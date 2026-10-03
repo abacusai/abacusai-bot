@@ -160,10 +160,17 @@ export const SessionStartPage = ({
             {error}
           </p>
         ) : null}
-        {!prefs.sidebar.pinned ? (
+        {!prefs.sidebar.pinned &&
+        workspace &&
+        (recent ?? []).some(
+          (s) => isListedSession(s) && s.workspaceId === workspace.id
+        ) ? (
           <div>
             <h2 className="text-sm">
-              {t("sessions.start.recent", { workspace: workspace?.label })}
+              {t("sessions.start.recent", {
+                workspace:
+                  workspace.label || workspace.path?.split(/[\\/]/).pop(),
+              })}
             </h2>
             {(recent ?? [])
               .filter(

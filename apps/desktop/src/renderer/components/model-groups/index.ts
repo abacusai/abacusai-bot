@@ -9,6 +9,7 @@
  * the kit, App default is the item whose `id` is `""`: selecting it calls
  * `onChange(null)`, and it is checked while the binding's `value` is null.
  */
+import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "#shared/free-pool";
 import { LOCAL_PROVIDER_ID } from "#shared/local-models";
 import { resolveConfiguredModel, type ModelAvailability } from "#shared/models";
 import { PROVIDER_KEY_FIELDS } from "#shared/settings";
@@ -24,7 +25,7 @@ export interface BotModelGroup {
 /** The kit's id for the App default item (`onChange(null)`). */
 export const APP_DEFAULT_ITEM_ID = "";
 
-type FreeProvider = "openrouter" | "gemini";
+type FreeProvider = FreePoolProvider;
 
 export interface BotModelLabels {
   /** "Default" */
@@ -37,6 +38,7 @@ export interface BotModelLabels {
   localProvider: string;
   connectOpenRouter: string;
   connectGoogleAi: string;
+  connectSource?: (provider: FreeProvider) => string;
   /** Tier badges shown as the item's description ("Free", "Local"). */
   tierFree: string;
   tierLocal: string;
@@ -186,9 +188,7 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
 
   const connected = new Set(runnable.map((model) => model.provider));
   const connectable: FreeProvider[] = input.freeTier
-    ? (["openrouter", "gemini"] as const).filter(
-        (provider) => !connected.has(provider)
-      )
+    ? FREE_POOL_PROVIDERS.filter((provider) => !connected.has(provider))
     : [];
   const providerIds = [
     ...new Set([
@@ -223,7 +223,10 @@ export const botModelGroups = (input: BotModelGroupsInput): BotModelGroup[] => {
             label:
               provider === "openrouter"
                 ? labels.connectOpenRouter
-                : labels.connectGoogleAi,
+                : provider === "gemini"
+                  ? labels.connectGoogleAi
+                  : (labels.connectSource?.(provider as FreeProvider) ??
+                    modelProviderLabel(provider, labels.localProvider)),
             onSelect: () => input.onConnect(provider as FreeProvider),
           }
         : undefined;

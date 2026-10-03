@@ -31,6 +31,7 @@ export interface FilePreviewProps {
   read: FilePreviewReaders;
   onOpenExternally(path: string): void;
   onReveal?(path: string): void;
+  showActions?: boolean;
 }
 
 type Loaded =
@@ -49,6 +50,7 @@ export const FilePreview = ({
   read,
   onOpenExternally,
   onReveal,
+  showActions = true,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
   const kind =
@@ -135,7 +137,7 @@ export const FilePreview = ({
         >
           {baseName(path)}
         </span>
-        {actions}
+        {showActions && actions}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">
         {kind === "external" ? (

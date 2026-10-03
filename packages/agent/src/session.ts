@@ -3598,10 +3598,17 @@ export function classifyProviderFailure(raw: string): {
     };
   }
 
-  if (status === 401 || status === 403 || /api key|unauthorized/.test(text)) {
+  if (status === 403) {
+    return {
+      summary: "The model provider denied access",
+      remedy:
+        "Check your model access in Settings → Models, or choose another model.",
+    };
+  }
+  if (status === 401 || /api key|unauthorized/.test(text)) {
     return {
       summary: "The model provider rejected the key",
-      remedy: "Check the key in Settings → API keys.",
+      remedy: "Check the key in Settings → Models.",
     };
   }
 

@@ -42,7 +42,7 @@ export const Phase5GalleryNav = ({
   );
 };
 export const RoutineSidebarGallery = () => (
-  <div className="flex h-[650px] gap-3">
+  <div className="flex h-[calc(100dvh-180px)] min-h-64 gap-3">
     <aside className="w-[280px]">
       <RoutinesSidebar />
     </aside>

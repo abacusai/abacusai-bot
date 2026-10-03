@@ -240,6 +240,7 @@ export const createBotFromTemplate = async (
     id?: string;
     name?: string;
     checkIn?: { preset: "weekdays"; time: string };
+    sponsoredFirstRun?: boolean;
   } = {}
 ): Promise<{ bot: BotRow; checkInRoutineId: string | null }> => {
   const template = BOT_TEMPLATES.find((row) => row.id === templateId);
@@ -257,6 +258,7 @@ export const createBotFromTemplate = async (
   const now = Date.now();
   const row: BotRow = {
     id: overrides.id ?? newBotId(),
+    ...(overrides.sponsoredFirstRun ? { sponsoredFirstRun: true } : {}),
     name,
     title: template.title,
     persona: template.persona,

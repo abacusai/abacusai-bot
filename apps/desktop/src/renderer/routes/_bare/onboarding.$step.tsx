@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
@@ -10,6 +11,11 @@ import {
   type OnboardingExit,
 } from "#renderer/features/onboarding/actions";
 import { connectOnboarding } from "#renderer/features/onboarding/connect";
+import { previewFirstBot } from "#renderer/features/onboarding/first-bot";
+import {
+  startFirstRunGmail,
+  startWebsiteSignIn,
+} from "#renderer/features/onboarding/first-run";
 import { guardStep } from "#renderer/features/onboarding/machine";
 import { OnboardingLocalModels } from "#renderer/features/onboarding/steps/local-models";
 import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
@@ -27,6 +33,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { isPayingAbacusTier } from "#shared/models";
 import { canSignOutOfAbacus } from "#shared/settings";
 const OnboardingRoute = () => {
+  const { t } = useTranslation();
   const step = Route.useParams().step as OnboardingStepId;
   const { facts } = Route.useLoaderData();
   const { transport, db, queryClient } = Route.useRouteContext();
@@ -50,22 +57,28 @@ const OnboardingRoute = () => {
     }
     return () => {
       if (step === "models") {
-        void transport.client.auth.openRouter.cancel({});
-        void cancelSignIn(transport);
+        void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
+        void cancelSignIn(transport).catch(() => undefined);
       }
       if (step === "connectors")
-        void transport.client.connectors.cancelConnect({});
+        void transport.client.connectors
+          .cancelConnect({})
+          .catch(() => undefined);
     };
   }, [db, transport, step]);
   const auth = (intent: "signup" | "signin", profileId?: string) => {
     if (
-      startSignIn(transport, intent, profileId, (outcome) => {
+      startSignIn(transport, intent, profileId, async (outcome) => {
         if (step === "models") {
           void queryClient.invalidateQueries();
           return;
         }
         if (outcome.ok) {
-          void queryClient.invalidateQueries();
+          const account = await transport.client.account.abacus({
+            refresh: true,
+          });
+          await startFirstRunGmail(transport, account?.email ?? "");
+          await queryClient.invalidateQueries();
           void go("connected");
         } else if (outcome.cancelled) void go("welcome");
       }) &&
@@ -110,16 +123,56 @@ const OnboardingRoute = () => {
               });
             });
         },
+        resolveExit: async (exit) => {
+          try {
+            const snapshot = await transport.client.db.bots.snapshot({});
+            if (snapshot.rows.some((bot) => bot.channel == null)) {
+              await transport.client.system.funnelStep({
+                step: "first_bot_skipped",
+                detail: "has_bots",
+              });
+              return exit;
+            }
+            const { bot } = await createBotFromTemplate(db, "chief-of-staff", {
+              name: t("bots.templates.chief-of-staff.name"),
+              sponsoredFirstRun: true,
+            });
+            await transport.client.system.funnelStep({
+              step: "first_bot_shown",
+            });
+            await transport.client.system.funnelStep({
+              step: "first_bot_kept",
+            });
+            return exit.to === "bot" || exit.to === "bot-tour"
+              ? { ...exit, botId: bot.id }
+              : { to: "bot", botId: bot.id };
+          } catch {
+            await transport.client.system.funnelStep({
+              step: "first_bot_skipped",
+              detail: "create_failed",
+            });
+            return { to: "new-bot" };
+          }
+        },
         startTour: () =>
           startTour({ origin: router.state.location.href, onboarded: true }),
       },
       exit
     );
-  const create = (id: string) =>
-    createBotFromTemplate(db, "chief-of-staff", {
-      id,
-      checkIn: { preset: "weekdays", time: "08:00" },
-    });
+  const create = async (id: string) =>
+    previewFirstBot(id, t("bots.templates.chief-of-staff.name"));
+  const automaticallySignIn = useEffectEvent(() => {
+    if (onboardingStore.state.signIn?.status !== "pending") auth("signin");
+  });
+  const completeWebsiteSignup = useEffectEvent(() => finish({ to: "new-bot" }));
+  useEffect(() => {
+    if (step === "welcome" && !facts.signedIn)
+      void startWebsiteSignIn(transport, automaticallySignIn).catch(() => {});
+    if (facts.signedIn && facts.email)
+      void startFirstRunGmail(transport, facts.email).catch(() => {});
+    if (facts.signedIn && facts.webSignup && step === "connected")
+      void completeWebsiteSignup();
+  }, [step, facts.signedIn, facts.email, facts.webSignup, transport]);
   const connect = (id: string) => connectOnboarding(db, transport, id);
   return (
     <OnboardingStepPage
@@ -155,6 +208,8 @@ const factsOf = async (context: import("#renderer/router").RouterContext) => {
   return {
     signedIn: canSignOutOfAbacus(settings),
     payingTier: isPayingAbacusTier(account?.subscription_tier),
+    webSignup: account?.web_signup === true,
+    email: account?.email ?? "",
     ownsBot: context.db.collections.bots.toArray.some(
       (bot) => bot.channel == null
     ),
@@ -197,9 +252,12 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
         context.queryClient.ensureQueryData(
           context.transport.orpc.models.list.queryOptions({ input: {} })
         ),
-        context.queryClient.ensureQueryData(
-          context.transport.orpc.localModels.state.queryOptions({ input: {} })
-        ),
+        // A local runtime is optional; the pane presents its unavailable state.
+        context.queryClient
+          .ensureQueryData(
+            context.transport.orpc.localModels.state.queryOptions({ input: {} })
+          )
+          .catch(() => undefined),
       ]);
     if (params.step === "connectors")
       await context.queryClient.ensureQueryData(

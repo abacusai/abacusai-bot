@@ -9,6 +9,8 @@ export interface FlowFacts {
   signedIn: boolean;
   payingTier: boolean;
   ownsBot: boolean;
+  webSignup?: boolean;
+  email?: string;
 }
 export type FlowEvent =
   | { type: "sign-up" | "sign-in" | "retry"; attempt: string }
@@ -30,16 +32,14 @@ export const next = (
     case "welcome":
       return event.type === "sign-up" || event.type === "sign-in"
         ? "connect"
-        : event.type === "skip"
-          ? "models"
-          : "ignore";
+        : "ignore";
     case "connect":
       if (event.type === "auth-ok") return "connected";
       if (event.type === "auth-cancelled" || event.type === "back")
         return "welcome";
       if (event.type === "auth-failed" || event.type === "retry")
         return "connect";
-      return event.type === "skip" ? "models" : "ignore";
+      return "ignore";
     case "connected":
       return event.type === "next"
         ? facts.payingTier
@@ -93,12 +93,15 @@ export const guardStep = (
     !["pending", "failed"].includes(doc.signIn?.status ?? "")
   )
     return "welcome";
-  if (step === "connected" && !facts.signedIn) return "welcome";
+  if (!facts.signedIn && step !== "welcome" && step !== "connect")
+    return "welcome";
   if (step === "first-bot" && facts.ownsBot && !doc.createdBotId) return "done";
   return step;
 };
-export const needsOnboarding = (account: AccountState): boolean =>
-  !account.onboarded;
+export const needsOnboarding = (
+  account: AccountState,
+  signedIn = true
+): boolean => !account.onboarded || !signedIn;
 export const onboardingTarget = (prefs: PrefsRow) => ({
   to: "/onboarding/$step" as const,
   params: {

@@ -220,7 +220,7 @@ export const KeymapEditor = ({
                   : undefined
               }
             >
-              <kbd className="text-muted-foreground text-xs">
+              <kbd className="bg-muted text-foreground min-w-20 rounded-md border px-2 py-1 text-center font-mono text-sm tracking-normal">
                 {binding
                   ? formatForDisplay(binding as never, { platform })
                   : t("phase5.notSet")}

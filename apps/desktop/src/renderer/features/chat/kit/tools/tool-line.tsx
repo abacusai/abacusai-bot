@@ -24,6 +24,7 @@ import {
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { messageTime } from "#renderer/lib/bot-turns/gap-stamp";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import {
@@ -453,8 +454,16 @@ export const ToolLine = (props: ToolLineProps) => {
 };
 const MountedToolLine = ({ part, result, expander: fixed }: ToolLineProps) => {
   const { t } = useTranslation();
-  const { threadId, skin } = useChatView();
-  const [firstSeen] = useState(() => Date.now());
+  const { threadId, skin, session } = useChatView();
+  const message = useMessageScope().message;
+  const runStart = useThreadStore(
+    session,
+    (state) => state.runs.active?.startedAt ?? null
+  );
+  // Hydration can assign a message's creation time on the client. Prefer the
+  // recorded run clock so remounting a live tool cannot restart its timer.
+  const firstSeen =
+    runStart ?? (message ? (messageTime(message)?.getTime() ?? null) : null);
   const scope = useSubagentScope();
   const { tool, input, needsYou } = useNormalizedTool(part, result);
   const expander = fixed ?? expanderFor(part.name);

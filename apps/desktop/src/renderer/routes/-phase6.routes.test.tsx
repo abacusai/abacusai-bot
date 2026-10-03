@@ -17,15 +17,21 @@ beforeEach(() => {
   onboardingStore.setState(() => ({ signIn: null, createdBotId: null }));
   firstBotStore.setState(() => ({ state: "idle" }));
 });
-it("R6-T2 fresh account reaches onboarding before shell; signed-out onboarded account reaches shell", async () => {
+it("R6-T2 fresh account reaches onboarding before shell; signed-out onboarded account returns to the sign-in wall", async () => {
   harness = await renderApp("/bots/new", { onboarded: false });
   await waitFor(() =>
     expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
   );
   expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
+  harness.view.unmount();
   await harness.cleanup();
-  harness = await renderApp("/bots/new", { onboarded: true });
-  expect(await screen.findByRole("textbox", { name: "Name" })).toBeTruthy();
+  harness = await renderApp("/bots/new", { onboarded: true, signedIn: false });
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
+  );
+  expect(
+    await screen.findByRole("button", { name: "Sign Up For Free" })
+  ).toBeTruthy();
 });
 it("R6-T7 real router preserves failed attempts and ignores cancellation's late success", async () => {
   let outcome!: (value: { ok: false; error: string } | { ok: true }) => void;
@@ -66,61 +72,73 @@ it("R6-T7 real router preserves failed attempts and ignores cancellation's late 
   expect(harness.router.state.location.pathname).toBe("/onboarding/welcome");
 });
 
-it("R6-T8 no-model path persists one weekday bot and completes into the shell", async () => {
-  const seed = defaultSeed();
-  seed.bots = [];
-  seed.routines = [];
-  harness = await renderApp("/onboarding/welcome", { onboarded: false, seed });
-  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
-  await waitFor(() =>
-    expect(harness!.router.state.location.pathname).toBe("/onboarding/models")
-  );
-  const continueModels = await screen.findByRole("button", {
-    name: "Continue",
-  });
-  await waitFor(() =>
-    expect((continueModels as HTMLButtonElement).disabled).toBe(false)
-  );
-  fireEvent.click(continueModels);
-  await waitFor(() =>
-    expect(harness!.router.state.location.pathname).toBe(
-      "/onboarding/connectors"
-    )
-  );
-  await screen.findByRole("heading", {
-    name: "Connect your tools and services",
-  });
-  const continueConnectors = await screen.findByRole("button", {
-    name: "Continue",
-  });
-  await waitFor(() =>
-    expect((continueConnectors as HTMLButtonElement).disabled).toBe(false)
-  );
-  fireEvent.click(continueConnectors);
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Say hello" }, { timeout: 5000 })
-  );
-  await waitFor(() =>
-    expect(harness!.router.state.location.pathname).toBe("/onboarding/done")
-  );
-  expect(harness.collections.bots.toArray).toHaveLength(1);
-  expect(harness.collections.routines.toArray).toHaveLength(1);
-  fireEvent.click(await screen.findByRole("button", { name: "New session" }));
-  await waitFor(() =>
-    expect(harness!.router.state.location.pathname).toBe("/sessions/new")
-  );
-  expect(harness.collections.prefs.get("app")).toMatchObject({
-    onboardingStep: null,
-    onboardingExit: null,
-  });
-  expect(
-    harness.calls.filter(([name]) => name === "account.skipOnboarding")
-  ).toHaveLength(1);
-  expect(
-    harness.calls.filter(
-      ([name, input]) =>
-        name === "system.funnelStep" &&
-        (input as { step: string }).step === "onboarding_done"
-    )
-  ).toEqual([["system.funnelStep", { step: "onboarding_done", once: true }]]);
-}, 15000);
+it.each([false, true])(
+  "R6-T8 authenticated completion creates one sponsored Chief of Staff after onboarding, channel lane=%s",
+  async (hasChannelLane) => {
+    const seed = defaultSeed();
+    seed.bots = hasChannelLane
+      ? [{ ...seed.bots![0]!, channel: "telegram" }]
+      : [];
+    seed.routines = [];
+    harness = await renderApp("/onboarding/models", {
+      onboarded: false,
+      signedIn: true,
+      seed,
+    });
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe("/onboarding/models")
+    );
+    const continueModels = await screen.findByRole("button", {
+      name: "Continue",
+    });
+    await waitFor(() =>
+      expect((continueModels as HTMLButtonElement).disabled).toBe(false)
+    );
+    fireEvent.click(continueModels);
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        "/onboarding/connectors"
+      )
+    );
+    await screen.findByRole("heading", {
+      name: "Connect your tools and services",
+    });
+    const continueConnectors = await screen.findByRole("button", {
+      name: "Continue",
+    });
+    await waitFor(() =>
+      expect((continueConnectors as HTMLButtonElement).disabled).toBe(false)
+    );
+    fireEvent.click(continueConnectors);
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toMatch(/^\/bots\/bot-/)
+    );
+    const ownBots = harness.collections.bots.toArray.filter(
+      (bot) => bot.channel == null
+    );
+    expect(ownBots).toHaveLength(1);
+    expect(ownBots[0]).toMatchObject({
+      sponsoredFirstRun: true,
+    });
+    expect(harness.collections.routines.toArray).toHaveLength(0);
+    expect(ownBots[0]!.description).toContain("create_draft_reply");
+    // Completion clears the exit only after the destination navigation settles.
+    await waitFor(() =>
+      expect(harness!.collections.prefs.get("app")).toMatchObject({
+        onboardingStep: null,
+        onboardingExit: null,
+      })
+    );
+    expect(
+      harness.calls.filter(([name]) => name === "account.skipOnboarding")
+    ).toHaveLength(1);
+    expect(
+      harness.calls.filter(
+        ([name, input]) =>
+          name === "system.funnelStep" &&
+          (input as { step: string }).step === "onboarding_done"
+      )
+    ).toEqual([["system.funnelStep", { step: "onboarding_done", once: true }]]);
+  },
+  15000
+);

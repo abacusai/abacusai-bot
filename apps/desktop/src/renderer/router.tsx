@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 
+import { RoutePending, PaneError } from "#renderer/components/page-state";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import {
@@ -19,20 +20,9 @@ import {
   type ChatRuntime,
 } from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
-import { Spinner } from "#renderer/ui/spinner";
 import type { SystemInfo } from "#shared/contract";
 
 import { routeTree } from "./routeTree.gen";
-
-/** Shown after 150 ms of loading, for at least 200 ms. */
-const PendingPane = () => (
-  <div
-    data-testid="pending-pane"
-    className="text-muted-foreground flex size-full items-center justify-center"
-  >
-    <Spinner />
-  </div>
-);
 
 type Area =
   | "bots"
@@ -140,7 +130,8 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
     defaultPreload: "intent",
     // Query and DB own staleness (PLAN "Route tree").
     defaultPreloadStaleTime: 0,
-    defaultPendingComponent: PendingPane,
+    defaultPendingComponent: RoutePending,
+    defaultErrorComponent: PaneError,
     defaultPendingMs: 150,
     defaultPendingMinMs: 200,
     scrollRestoration: true,

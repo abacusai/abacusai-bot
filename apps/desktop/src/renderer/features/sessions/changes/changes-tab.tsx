@@ -51,11 +51,17 @@ export const changeRows = (
           scope: "unstaged" as const,
           group: "unstaged",
         })),
-        ...sections.merged.map((change) => ({
-          change,
-          scope: "unstaged" as const,
-          group: "merged",
-        })),
+        ...sections.merged
+          .filter(
+            (change) =>
+              !sections.staged.some((item) => item.path === change.path) &&
+              !sections.unstaged.some((item) => item.path === change.path)
+          )
+          .map((change) => ({
+            change,
+            scope: "unstaged" as const,
+            group: "merged",
+          })),
       ]
     : state.gitChanges.map((change) => ({
         change,
@@ -198,7 +204,9 @@ export const ChangesTab = ({
             >
               <span className="max-w-full truncate">{r.change.path}</span>
               <span className="font-mono text-[11px]">
-                +{r.change.additions} −{r.change.deletions}
+                {r.change.additions != null && r.change.deletions != null
+                  ? `+${r.change.additions} −${r.change.deletions}`
+                  : r.change.status}
                 {isReviewed(
                   row.id,
                   r.change.path,

@@ -612,3 +612,23 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `workspaces.relocate` | mutation | `agent.relocateWorkspace` |
 | `workspaces.sessionHomePath` | query | `agent.getSessionHomeWorkspacePath` |
 | `workspaces.switch` | mutation | `agent.switchWorkspace` |
+
+
+## Main product changes carried across cut-over (MP parity IDs)
+
+These ports preserve the product changes in `e379ba09..ee045235`. The larger renderer ports are follow-up commits on `rewrite/renderer`; the typed operations and shared model rules are in the rebased foundation and surfaces layers.
+
+| ID | Main behaviour | New consumer and contract | Evidence |
+|---|---|---|---|
+| MP-01 | Two-button sign-in wall, default-browser sessions, returning-account wall, profile refresh | `features/onboarding/index.tsx`, onboarding and shell route guards; `auth.abacus.browserProfiles/start` | `routes/-phase6.routes.test.tsx`, main sign-in/security suites |
+| MP-02 | Website-created account auto sign-in and completion | `features/onboarding/first-run.ts`, onboarding route; `auth.abacus.shouldAutoSignIn` | `first-run.test.ts`, `main/rpc/first-run-options.test.ts` |
+| MP-03 | One-time Gmail consent, account email hint and first-run ownership | `features/onboarding/first-run.ts`; `connectors.connect.options` | `first-run.test.ts`, `main/rpc/first-run-options.test.ts` |
+| MP-04 | Fresh sponsored Chief of Staff after onboarding; Gmail drafts, no sending; ignore channel bots when deciding whether the user owns a bot | Onboarding completion route, `features/bots/data/bot-actions.ts`; `db.bots.insert.sponsoredFirstRun` | `routes/-phase6.routes.test.tsx`, `features/onboarding/complete.test.ts`, main sponsorship tests |
+| MP-05 | Out-of-credits list of ways forward, six free-pool sources in spending order, paid top-up, sidebar account counters/freshness, remembered upsell dismissal, alternative-provider/local/referral paths | `components/credits-card`, `features/shell/credits-card.tsx`, bot model picker and settings key pages | component and shell `credits-card.test.tsx`, `features/settings/pages.test.tsx`, shared free-pool/agent source tests |
+| MP-06 | Re-run the dead bot turn once after connecting a free source; switch the persistent bot model and live session to RouteLLM Open | `features/bots/chat/slots.tsx`, credit card callback, AG-UI forwarded model on retry | `credits-card.test.tsx`, `actions.test.ts` live-model acknowledgement/timeout, `features/chat/kit/status.test.tsx` hidden first-turn replay, agent host process tests and AG-UI golden suites |
+| MP-07 | Retry, resume and model switch require an editable composer; read-only channel chats retain external links | `features/chat/kit/status/status.tsx`, pending-message retry | `features/chat/kit/status.test.tsx` |
+| MP-08 | Name-only bot asks, Gmail-only Chief of Staff mission | `shared/bot-model-string.ts`, `shared/bot-templates.ts` consumed by new bot forms | shared and renderer bot model-string/template tests |
+| MP-09 | Free-pool quota failover, bot recovery/security, routine audit, account identity | Shared main services and AG-UI session/bot emitter, retained from main | agent full suite including NDJSON goldens, main unit and serial projects |
+| MP-10 | Test-build update feeds, advisory patches and pnpm version warning | `main/services/updates`, workspace overrides/patches, install scripts | main update suites, dependency audit, install gate |
+
+Locale union is retained in all eleven locales. `scripts/i18n-retained-keys.json` explicitly records retired legacy leaves so the audit continues to reject unconsumed new keys without deleting main translations. Unchanged NDJSON golden fixtures are not regenerated.
