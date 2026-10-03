@@ -1,0 +1,429 @@
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { BotMemoryList } from "#next/components/bot-memory-list";
+import { ConnectorMark } from "#next/components/connector-mark";
+import { FilePreview, containmentRootFor } from "#next/components/file-preview";
+import { useDb } from "#next/data/db";
+import { usePrefs } from "#next/data/db/prefs";
+import { checkInFromRoutine } from "#next/lib/bots/check-in";
+import { weekdayName } from "#next/lib/bots/schedule";
+import { formatWhen } from "#next/lib/format-time";
+import { AppLink } from "#next/lib/navigation/app-link";
+import { showError, showInfo } from "#next/lib/toast";
+import { useNow } from "#next/lib/use-now";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "#next/ui/alert-dialog";
+import { Button } from "#next/ui/button";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+} from "#next/ui/context-menu";
+import type { BotRow } from "#shared/contract/rows";
+
+import { BotFace } from "../avatar";
+import { clearMemory, forgetMemory, setPinned } from "../data/bot-actions";
+import {
+  useBotMemories,
+  useBotFiles,
+  useBotSessions,
+  useCheckIn,
+  botsQueries,
+} from "../data/queries";
+import { useBotsTransport } from "../data/transport";
+import { ModelPicker, type useBotModelBinding } from "../model/picker";
+import { DeleteBotDialog } from "../sidebar/delete-dialog";
+export const DetailsTab = ({
+  bot,
+  binding,
+  modelInComposer,
+  setTab,
+}: {
+  bot: BotRow;
+  binding: ReturnType<typeof useBotModelBinding>;
+  modelInComposer: boolean;
+  setTab(tab: "details" | "memory" | "files"): void;
+}) => {
+  const { t, i18n } = useTranslation();
+  const db = useDb();
+  const prefs = usePrefs();
+  const transport = useBotsTransport();
+  const queries = botsQueries(transport.orpc);
+  const memory = useQuery(queries.memoryBots());
+  const senders = useQuery(queries.senderChats());
+  const messaging = useQuery(queries.messaging());
+  const routine = useCheckIn(bot.id);
+  const sessions = useBotSessions(bot.id);
+  const files = useBotFiles(sessions.map((s) => s.id));
+  const [deleting, setDeleting] = useState(false);
+  const check = checkInFromRoutine(routine);
+  const pinned = prefs.pinned.botIds.includes(bot.id);
+  const senderRows = (senders.data ?? []).filter((row) => row.botId === bot.id);
+  const memoryCount =
+    memory.data?.find((row) => row.botId === bot.id)?.entries.length ?? 0;
+  return (
+    <div className="flex flex-col gap-4 p-4" data-slot="bot-details">
+      <div className="flex flex-col items-center gap-1 py-2">
+        <BotFace bot={bot} size={72} />
+        <h2 className="text-base font-semibold">{bot.name}</h2>
+        <p className="text-muted-foreground text-center text-xs">{bot.title}</p>
+        {bot.channel == null && (
+          <AppLink
+            to="/bots/$botId/edit"
+            params={{ botId: bot.id }}
+            className="bg-secondary mt-2 rounded-full px-3 py-2 text-xs"
+          >
+            {t("bots.sidebar.edit")}
+          </AppLink>
+        )}
+      </div>
+      <div className="bg-card flex flex-col rounded-xl border">
+        <div
+          className="flex min-h-11 items-center justify-between gap-2 border-b px-3"
+          aria-label={t("bots.panel.modelValue", { model: binding.label })}
+        >
+          <span className="text-xs">{t("bots.form.model")}</span>
+          {modelInComposer ? (
+            <span aria-hidden className="text-muted-foreground text-xs">
+              {binding.label}
+            </span>
+          ) : (
+            <ModelPicker binding={binding} readOnly={bot.channel != null} />
+          )}
+        </div>
+        <AppLink
+          to="/bots/$botId/check-in"
+          params={{ botId: bot.id }}
+          transition="none"
+          className="flex h-11 items-center justify-between border-b px-3 text-xs"
+        >
+          <span>{t("bots.checkIn.label")}</span>
+          <span className="text-muted-foreground">
+            {!check.enabled
+              ? t("bots.checkIn.paused")
+              : check.preset === "custom"
+                ? t("bots.checkIn.customLabel")
+                : t(`bots.checkIn.${check.preset}`)}{" "}
+            {["daily", "weekdays", "weekly"].includes(check.preset)
+              ? check.time
+              : ""}
+            {check.preset === "weekly"
+              ? ` ${weekdayName(check.weekday, i18n.language)}`
+              : ""}
+          </span>
+        </AppLink>
+        <Button
+          variant="ghost"
+          className="h-11 justify-between rounded-none border-b"
+          onClick={() => setTab("memory")}
+        >
+          <span>{t("bots.panel.memoryTitle")}</span>
+          <span className="text-muted-foreground text-xs">
+            {t("bots.panel.memoryCount", { count: memoryCount })}
+          </span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="h-11 justify-between"
+          onClick={() => setTab("files")}
+        >
+          <span>{t("bots.panel.filesTitle")}</span>
+          <span className="text-muted-foreground text-xs">{files.length}</span>
+        </Button>
+      </div>
+      {routine && (
+        <section>
+          <h3 className="text-muted-foreground mb-2 text-xs">
+            {t("bots.panel.checkIns")}
+          </h3>
+          {sessions
+            .filter((s) => s.routineId === routine.id)
+            .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .slice(0, 5)
+            .map((session) => (
+              <AppLink
+                key={session.id}
+                to="/bots/$botId/chats/$sessionId"
+                params={{ botId: bot.id, sessionId: session.id }}
+                className="flex h-11 items-center justify-between text-xs"
+              >
+                <span>
+                  {new Date(session.createdAt).toLocaleString(i18n.language)}
+                </span>
+                <span>{session.runOutcome}</span>
+              </AppLink>
+            ))}
+        </section>
+      )}
+      {senderRows.length > 0 && (
+        <section>
+          <h3 className="text-muted-foreground text-xs">
+            {t("bots.panel.senderChats")}
+          </h3>
+          {senderRows.map((row) => (
+            <AppLink
+              key={row.sessionId}
+              to="/bots/$botId/chats/$sessionId"
+              params={{ botId: bot.id, sessionId: row.sessionId }}
+              className="flex h-11 items-center gap-2 text-xs"
+            >
+              <ConnectorMark id={row.platform} size={20} />
+              <span className="flex-1">{row.senderName}</span>
+              <span>
+                {t(
+                  row.autoReply === "approved"
+                    ? "bots.panel.on"
+                    : "bots.checkIn.paused"
+                )}
+              </span>
+            </AppLink>
+          ))}
+        </section>
+      )}
+      {messaging.data && (
+        <section>
+          <h3 className="text-muted-foreground text-xs">
+            {t("bots.panel.reachable")}
+          </h3>
+          {messaging.data.platforms
+            .filter(
+              (platform) =>
+                platform.id === bot.channel ||
+                messaging.data.approved.some(
+                  (row) => row.platform === platform.id && row.botId === bot.id
+                )
+            )
+            .map((platform) => (
+              <AppLink
+                key={platform.id}
+                to="/library/messaging"
+                className="flex h-11 items-center gap-2 text-xs"
+              >
+                <ConnectorMark id={platform.id} size={20} />
+                <span>{platform.id}</span>
+                <span className="ml-auto">{t("bots.panel.connected")}</span>
+              </AppLink>
+            ))}
+        </section>
+      )}
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() =>
+            void setPinned(db, prefs.pinned.botIds, bot.id, !pinned).catch(() =>
+              showError(t("bots.errors.pin"))
+            )
+          }
+        >
+          {t(pinned ? "bots.sidebar.unpin" : "bots.sidebar.pin")}
+        </Button>
+        {bot.channel == null && (
+          <Button
+            variant="ghost"
+            className="text-destructive flex-1"
+            onClick={() => setDeleting(true)}
+          >
+            {t("bots.sidebar.delete")}
+          </Button>
+        )}
+      </div>
+      <DeleteBotDialog
+        bot={deleting ? bot : null}
+        hasCheckIn={routine != null}
+        nextBotId={null}
+        onClose={() => setDeleting(false)}
+      />
+    </div>
+  );
+};
+export const MemoryTab = ({ bot }: { bot: BotRow }) => {
+  const { t } = useTranslation();
+  const db = useDb();
+  const transport = useBotsTransport();
+  const entries = useBotMemories(bot.id);
+  const memory = useQuery(botsQueries(transport.orpc).memoryBots());
+  const noteDays =
+    memory.data?.find((row) => row.botId === bot.id)?.noteDays ?? 0;
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    void db.collections.memories.preload();
+  }, [db]);
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <p className="text-muted-foreground text-xs">
+        {t("bots.panel.memoryIntro", { name: bot.name })}
+      </p>
+      <BotMemoryList
+        entries={entries}
+        onForget={(row) =>
+          void forgetMemory(db.collections.memories, row)
+            .then((result) => {
+              if (result === "stale") showInfo(t("bots.errors.memoryConflict"));
+            })
+            .catch(() => showError(t("bots.errors.memory")))
+        }
+      />
+      {noteDays > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {t("bots.panel.memory.notes", { count: noteDays })}
+        </p>
+      )}
+      {entries.length > 0 && (
+        <Button
+          variant="ghost"
+          className="text-destructive"
+          onClick={() => setConfirm(true)}
+        >
+          {t("bots.panel.memory.clear")}
+        </Button>
+      )}
+      <AlertDialog open={confirm} onOpenChange={setConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("bots.panel.memory.clearConfirm")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("bots.panel.memoryIntro", { name: bot.name })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel autoFocus>
+              {t("bots.form.cancel")}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                void clearMemory(transport, bot.id)
+                  .then(() => setConfirm(false))
+                  .catch(() => showError(t("bots.errors.memory")))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {t("bots.panel.memory.clear")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+export const FilesTab = ({
+  bot,
+  preview,
+  workspaceRoot,
+  onClosePreview,
+}: {
+  bot: BotRow;
+  preview?: string;
+  workspaceRoot: string | null;
+  onClosePreview(): void;
+}) => {
+  const { t, i18n } = useTranslation();
+  const db = useDb();
+  const transport = useBotsTransport();
+  const sessions = useBotSessions(bot.id);
+  const files = useBotFiles(sessions.map((s) => s.id));
+  const now = useNow();
+  useEffect(() => {
+    void db.collections.artifacts.preload();
+  }, [db]);
+  if (preview)
+    return (
+      <div className="flex flex-col gap-2 p-3">
+        <Button variant="ghost" onClick={onClosePreview}>
+          {t("bots.panel.backFiles")}
+        </Button>
+        <FilePreview
+          path={preview}
+          hostRoot={containmentRootFor(preview, workspaceRoot)}
+          read={{
+            text: (path, hostRoot) =>
+              transport.client.files.readText({ filePath: path, hostRoot }),
+            image: async (path, hostRoot) =>
+              (
+                await transport.client.files.readImageAsDataUrl({
+                  filePath: path,
+                  hostRoot,
+                })
+              ).dataUrl,
+            pptx: (path, hostRoot) =>
+              transport.client.files.readPptx({ filePath: path, hostRoot }),
+          }}
+          onOpenExternally={(path) =>
+            void transport.client.system.openPath({ path })
+          }
+          onReveal={(path) =>
+            void transport.client.system.showItemInFolder({ path })
+          }
+        />
+      </div>
+    );
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <p className="text-muted-foreground text-xs">
+        {t("bots.panel.filesIntro")}
+      </p>
+      {files.length === 0 && (
+        <p className="text-muted-foreground text-sm">
+          {t("bots.panel.filesEmpty")}
+        </p>
+      )}
+      {files.map((file) => (
+        <ContextMenu key={file.id}>
+          <ContextMenuTrigger render={<div />}>
+            <Button
+              variant="ghost"
+              className="h-12 w-full justify-start"
+              onClick={() =>
+                void (file.kind === "link"
+                  ? transport.client.system.openExternal({ url: file.location })
+                  : transport.client.system.openPath({ path: file.location }))
+              }
+            >
+              <span
+                aria-hidden
+                className="bg-muted size-[26px] shrink-0 rounded-md"
+              />
+              <span className="flex min-w-0 flex-col items-start">
+                <span className="max-w-full truncate">
+                  {file.title || file.location}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {formatWhen(file.createdAt, now, i18n.language)}
+                </span>
+              </span>
+            </Button>
+          </ContextMenuTrigger>
+          {file.kind !== "link" && (
+            <ContextMenuContent>
+              <ContextMenuItem
+                onClick={() =>
+                  void transport.client.system.showItemInFolder({
+                    path: file.location,
+                  })
+                }
+              >
+                {t("artifacts.revealInFolder")}
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
+      ))}
+    </div>
+  );
+};

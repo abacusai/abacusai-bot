@@ -25,6 +25,30 @@ const fakeHost = (): HarnessHost &
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
+describe("renderer.dropPort", () => {
+  it("asks main to drop renderer-next's port (R1-T22)", async () => {
+    const dropRendererPort = vi.fn(async () => ({ webContentsId: 3 }));
+    await expect(
+      runHarnessOp(
+        fakeHost(),
+        { op: "renderer.dropPort", input: {} },
+        { dropRendererPort, setFullScreen: vi.fn() }
+      )
+    ).resolves.toEqual({ webContentsId: 3 });
+    expect(dropRendererPort).toHaveBeenCalledOnce();
+  });
+
+  it("window.fullScreen toggles the main window's full screen", async () => {
+    const setFullScreen = vi.fn(async (on: boolean) => ({ fullScreen: on }));
+    await runHarnessOp(
+      fakeHost(),
+      { op: "window.fullScreen", input: { on: true } },
+      { dropRendererPort: vi.fn(), setFullScreen }
+    );
+    expect(setFullScreen).toHaveBeenCalledWith(true);
+  });
+});
+
 describe("shouldInstallHarness", () => {
   it("needs an unpackaged app and ABACUSBOT_DEV_HARNESS=1", () => {
     expect(shouldInstallHarness({ ABACUSBOT_DEV_HARNESS: "1" }, false)).toBe(

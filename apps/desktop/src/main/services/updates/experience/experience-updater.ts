@@ -72,6 +72,21 @@ const exists = async (file: string): Promise<boolean> => {
   }
 };
 
+/**
+ * Whether activating a release with `rendererVersion` must wait on the
+ * swap's readiness before it is committed. Compared with the committed
+ * renderer, not a pending candidate's: a release that carries a pending
+ * (never seen ready) renderer must pass readiness itself. And while an
+ * activation is pending, the next one waits too, so it never commits the
+ * pending renderer.
+ */
+export const rendererChangeNeedsReadiness = (
+  store: Pick<ExperienceStore, "committedRendererVersion" | "pendingVersion">,
+  rendererVersion: string
+): boolean =>
+  rendererVersion !== store.committedRendererVersion ||
+  store.pendingVersion !== null;
+
 export class ExperienceUpdater {
   #checking: Promise<void> | undefined;
   #target: string | undefined;
@@ -224,6 +239,14 @@ export class ExperienceUpdater {
         return targetHash;
       }
 
+      const manifestDigest = createHash("sha256")
+        .update(await fs.readFile(path.join(temporary, "manifest.json")))
+        .digest("hex");
+      if (await store.isRejected(manifest.experienceVersion, manifestDigest)) {
+        // Its renderer never became ready here; a new release replaces it.
+        return targetHash;
+      }
+
       // The candidate's agent resolves native imports through the linked
       // runtime, so the link must exist before the health check.
       await store.linkRuntime(temporary);
@@ -233,9 +256,7 @@ export class ExperienceUpdater {
         store.experiencesDirectory,
         manifest.experienceVersion
       );
-      const manifestSha256 = createHash("sha256")
-        .update(await fs.readFile(path.join(temporary, "manifest.json")))
-        .digest("hex");
+      const manifestSha256 = manifestDigest;
 
       if (await exists(installed)) {
         try {
@@ -248,11 +269,16 @@ export class ExperienceUpdater {
         await fs.rename(temporary, installed);
       }
 
-      const rendererChanged =
-        manifest.rendererVersion !== store.rendererVersion;
+      const rendererChanged = rendererChangeNeedsReadiness(
+        store,
+        manifest.rendererVersion
+      );
       const candidate = store.install(manifest, manifestSha256);
 
-      await store.activate(candidate);
+      // A new renderer is committed only once its swap passed readiness
+      // (`commitActivation`), or rolled back (`abandonActivation`): a
+      // relaunch never boots a candidate that was not seen ready.
+      await store.activate(candidate, { commit: !rendererChanged });
       console.log(`[experience] activated ${manifest.experienceVersion}`);
 
       if (rendererChanged) {

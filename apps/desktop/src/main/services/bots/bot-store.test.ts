@@ -158,3 +158,45 @@ describe("minted ids", () => {
     }
   });
 });
+
+describe("avatar accessories", () => {
+  it("persists create and update choices and preserves them on unrelated edits", () => {
+    const bot = createBot({
+      name: "Ada",
+      description: "Counts",
+      avatarAccessory: "glasses",
+    });
+    expect(bot.avatarAccessory).toBe("glasses");
+    expect(getBot(bot.id)?.avatarAccessory).toBe("glasses");
+    expect(
+      updateBot(bot.id, { avatarAccessory: "crown" }).avatarAccessory
+    ).toBe("crown");
+    expect(updateBot(bot.id, { title: "Queen" }).avatarAccessory).toBe("crown");
+    expect(getBot(bot.id)?.avatarAccessory).toBe("crown");
+    expect(updateBot(bot.id, { avatarAccessory: null }).avatarAccessory).toBe(
+      "none"
+    );
+    expect(getBot(bot.id)?.avatarAccessory).toBe("none");
+    expect(updateBot(bot.id, { avatarAccessory: "none" }).avatarAccessory).toBe(
+      "none"
+    );
+  });
+
+  it("defaults missing accessories without backfilling disk data", () => {
+    const bot = createBot({ name: "Old", description: "Counts" });
+    const file = path.join(home, "bots.json");
+    const before = fs.readFileSync(file, "utf8");
+    expect(bot.avatarAccessory).toBe("none");
+    expect(listBots()[0].avatarAccessory).toBe("none");
+    expect(getBot(bot.id)?.avatarAccessory).toBe("none");
+    expect(fs.readFileSync(file, "utf8")).toBe(before);
+    expect(updateBot(bot.id, { title: "Counter" }).avatarAccessory).toBe(
+      "none"
+    );
+    recordBotSession(bot.id, "ws", "session");
+    createBot({ name: "New", description: "Reads", avatarAccessory: "bow" });
+    const rows = JSON.parse(fs.readFileSync(file, "utf8"));
+    expect(rows[0]).not.toHaveProperty("avatarAccessory");
+    expect(rows[1].avatarAccessory).toBe("bow");
+  });
+});

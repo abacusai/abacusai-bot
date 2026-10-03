@@ -338,17 +338,34 @@ describe("swap readiness (A-T10)", () => {
     expect(host.webContents).toBe(first);
   });
 
-  it("keeps the legacy first-commit barrier unless asked", async () => {
+  it("uses the legacy first-commit barrier unless asked: renderer-ready flips", async () => {
     const { host } = makeHost();
     const first = host.webContents;
 
-    // No readiness report at all: the legacy path still flips.
-    vi.useFakeTimers();
+    // No window.ready report: the legacy barrier waits on renderer-ready.
     const swapping = host.swap(new URL("app://bundle.new/"));
-    await vi.advanceTimersByTimeAsync(6_000);
+    const next = await candidate();
+    await vi.waitFor(() => expect(next.url).toBe("app://bundle.new/"));
+    next.emit("ipc-message", {}, "renderer-ready");
 
     await expect(swapping).resolves.toBe(true);
     expect(host.webContents).not.toBe(first);
+  });
+
+  it("the first-commit barrier does not flip a candidate that never signals (review r1 #9)", async () => {
+    const { host } = makeHost();
+    const first = host.webContents;
+
+    vi.useFakeTimers();
+    const swapping = host.swap(new URL("app://bundle.new/"));
+    const rejected = expect(swapping).rejects.toMatchObject({
+      name: "SwapNotReady",
+      outcome: "timeout",
+    });
+    await vi.advanceTimersByTimeAsync(6_000);
+
+    await rejected;
+    expect(host.webContents).toBe(first);
   });
 
   describe("the swap scheduler's retries (impl-r1)", () => {

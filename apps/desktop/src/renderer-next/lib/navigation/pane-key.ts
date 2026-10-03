@@ -14,7 +14,7 @@ export const PANE_BOUNDARIES = {
   "/_shell/(routines)/routines/_list/": "routines-list",
   "/_shell/(routines)/routines/_list/new": "routines-list",
   "/_shell/(bots)/bots/$botId": "bot:$botId",
-  "/_shell/(bots)/bots/$botId/details": "bot:$botId",
+  "/_shell/(bots)/bots/$botId/check-in": "bot:$botId",
   // The connector sheet is search-driven on the same route.
   "/_shell/(library)/library/connectors": "library-connectors",
 } as const satisfies Partial<Record<keyof FileRoutesById, string>>;

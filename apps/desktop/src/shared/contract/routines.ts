@@ -1,8 +1,23 @@
-import { type } from "@orpc/contract";
+import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
-import { mutation } from "./base";
-import { RoutineId } from "./ids";
+import type { RoutineTrigger } from "../routines";
+import { mutation, subscription } from "./base";
+import { NoInput, RoutineId } from "./ids";
+
+/**
+ * A routine fired and its session started (spec 05 §31.5 j): the
+ * `routine-fired` cue's source. A notice, not a row diff: there is no
+ * snapshot, so a (re)subscription plays nothing old; consumers dedupe by
+ * `attemptId`.
+ */
+export type RoutinesEvent = {
+  type: "run-started";
+  routineId: string;
+  attemptId: string;
+  trigger: RoutineTrigger;
+  startedAt: number;
+};
 
 /**
  * Routine rows and their CRUD are the `db.routines` table; runs are
@@ -24,4 +39,8 @@ export const routines = {
       })
     )
     .output(type<void>()),
+  /** Lossless-actionable, no snapshot. */
+  events: subscription
+    .input(NoInput)
+    .output(eventIterator(type<RoutinesEvent>())),
 };

@@ -6,7 +6,7 @@ import { app, BaseWindow, powerMonitor } from "electron";
 
 import { sendToRenderer } from "#main/renderer-host";
 import { emitBusChannel } from "#main/rpc/emit";
-import type { UpdateStatus } from "#shared/update";
+import type { UpdateFailedPhase, UpdateStatus } from "#shared/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
 import { isTestBuild } from "../providers/abacus-host";
@@ -84,7 +84,17 @@ const initialStatus = (): UpdateStatus => ({
   updateInfo: null,
   installStalled: false,
   criticalUpdate: false,
+  failedPhase: null,
 });
+
+/**
+ * The step an updater `error` event interrupted, read from the state before
+ * the handler clears `checking`/`downloading`/`progress` (spec 05 §31.5 h).
+ */
+export const failedPhaseOf = (
+  status: Pick<UpdateStatus, "installing" | "downloading">
+): UpdateFailedPhase =>
+  status.installing ? "install" : status.downloading ? "download" : "check";
 
 export class UpdateService {
   private status = initialStatus();
@@ -123,6 +133,7 @@ export class UpdateService {
       console.log(`[UpdateService] checking ${UPDATE_FEED_URL}`);
       this.status.checking = true;
       this.status.error = null;
+      this.status.failedPhase = null;
       this.emitStatusUpdate();
     });
 
@@ -181,6 +192,7 @@ export class UpdateService {
       const fullMsg = error?.message ?? String(error);
       const shortMsg = fullMsg.split("\n")[0] || fullMsg;
       console.warn(`[UpdateService] Update error: ${shortMsg}`);
+      this.status.failedPhase = failedPhaseOf(this.status);
       this.status.checking = false;
       this.status.downloading = false;
       // A dead transfer has no progress; a kept figure reads as a live one.
@@ -327,6 +339,7 @@ export class UpdateService {
     }
     try {
       this.status.error = null;
+      this.status.failedPhase = null;
       this.status.installStalled = false;
       this.emitStatusUpdate();
 
@@ -339,6 +352,7 @@ export class UpdateService {
       const shortMsg = fullMsg.split("\n")[0] || fullMsg;
       console.warn(`[UpdateService] Failed to check for updates: ${shortMsg}`);
       this.status.error = shortMsg;
+      this.status.failedPhase = "check";
       this.status.checking = false;
       this.emitStatusUpdate();
       return { success: false, error: shortMsg };
@@ -388,6 +402,8 @@ export class UpdateService {
         error instanceof Error ? error.message : String(error);
       console.error("[UpdateService] Failed to install update:", errorMessage);
       this.status.installing = false;
+      this.status.error = errorMessage;
+      this.status.failedPhase = "install";
       this.emitStatusUpdate();
       return { success: false, error: errorMessage };
     }

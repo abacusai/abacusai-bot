@@ -1,0 +1,219 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "messageIndex": 0,
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "messageIndex": 0,
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Delegate",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b1",
+      "metadata": {
+        "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1b"
+          },
+          "messageIndex": 1,
+          "regenerateAttempt": 1,
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "b1",
+              "messageIndex": 1,
+              "partIndex": 0,
+              "regenerateAttempt": 1,
+              "type": "text"
+            },
+            {
+              "at": 1788256801500,
+              "id": "b1b",
+              "messageIndex": 1,
+              "partIndex": 1,
+              "type": "text",
+              "versions": {
+                "current": 2,
+                "siblings": [],
+                "total": 2
+              }
+            },
+            {
+              "at": 1788256802000,
+              "id": "sub",
+              "partIndex": 2,
+              "status": "created",
+              "type": "subtask"
+            }
+          ],
+          "versions": {
+            "current": 1,
+            "siblings": [
+              {
+                "messageIndex": 1,
+                "regenerateAttempt": 0
+              },
+              {
+                "messageIndex": 1,
+                "regenerateAttempt": 1
+              }
+            ],
+            "total": 2
+          }
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "On it.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "content": "Also this.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1b"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "subagent": {
+            "id": "sub",
+            "messages": [
+              {
+                "id": "sub#0",
+                "metadata": {
+                  "abacus": {
+                    "messageIndex": 3,
+                    "regenerateAttempt": 0,
+                    "segments": [
+                      {
+                        "at": 1788256803000,
+                        "id": "c1",
+                        "messageIndex": 3,
+                        "partIndex": 0,
+                        "regenerateAttempt": 0,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:03.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Child turn one.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "c1"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              },
+              {
+                "id": "sub#1",
+                "metadata": {
+                  "abacus": {
+                    "messageIndex": 4,
+                    "segments": [
+                      {
+                        "at": 1788256804000,
+                        "id": "c2",
+                        "messageIndex": 4,
+                        "partIndex": 0,
+                        "type": "text"
+                      }
+                    ],
+                    "versions": {
+                      "current": 1,
+                      "siblings": [],
+                      "total": 1
+                    }
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:04.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Child turn two.",
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "c2"
+                      }
+                    },
+                    "type": "text"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {
+                "segments": [
+                  {
+                    "at": 1788256805000,
+                    "id": "sub",
+                    "outcome": "completed",
+                    "partIndex": null,
+                    "status": "completed",
+                    "type": "subtask"
+                  }
+                ]
+              }
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 7,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-bracket-turn-fields",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

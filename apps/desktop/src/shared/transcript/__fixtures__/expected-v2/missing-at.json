@@ -30,6 +30,10 @@
       "id": "b1",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b2"
+          },
           "segments": [
             {
               "id": "b1",

@@ -45,6 +45,7 @@ import { Route as ShellroutinesRoutinesListRouteImport } from "./routes/_shell/(
 import { Route as ShellsessionsSessionsIndexRouteImport } from "./routes/_shell/(sessions)/sessions.index"
 import { Route as ShellsessionsSessionsSessionIdRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId"
 import { Route as ShellsessionsSessionsNewRouteImport } from "./routes/_shell/(sessions)/sessions.new"
+import { Route as ShellbotsBotsBotIdCheckInRouteImport } from "./routes/_shell/(bots)/bots.$botId.check-in"
 import { Route as ShellbotsBotsBotIdDetailsRouteImport } from "./routes/_shell/(bots)/bots.$botId.details"
 import { Route as ShellbotsBotsBotIdEditRouteImport } from "./routes/_shell/(bots)/bots.$botId_.edit"
 import { Route as ShelllibraryLibraryToolsIndexRouteImport } from "./routes/_shell/(library)/library.tools.index"
@@ -52,6 +53,7 @@ import { Route as ShelllibraryLibraryToolsToolsetIdRouteImport } from "./routes/
 import { Route as ShellroutinesRoutinesListIndexRouteImport } from "./routes/_shell/(routines)/routines._list.index"
 import { Route as ShellroutinesRoutinesListNewRouteImport } from "./routes/_shell/(routines)/routines._list.new"
 import { Route as ShellsessionsSessionsSessionIdReviewRouteImport } from "./routes/_shell/(sessions)/sessions.$sessionId_.review"
+import { Route as ShellbotsBotsBotIdChatsSessionIdRouteImport } from "./routes/_shell/(bots)/bots.$botId_.chats.$sessionId"
 
 const BareRoute = BareRouteImport.update({
   id: "/_bare",
@@ -242,6 +244,12 @@ const ShellsessionsSessionsNewRoute =
     path: "/new",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
+const ShellbotsBotsBotIdCheckInRoute =
+  ShellbotsBotsBotIdCheckInRouteImport.update({
+    id: "/check-in",
+    path: "/check-in",
+    getParentRoute: () => ShellbotsBotsBotIdRoute,
+  } as any)
 const ShellbotsBotsBotIdDetailsRoute =
   ShellbotsBotsBotIdDetailsRouteImport.update({
     id: "/details",
@@ -283,6 +291,12 @@ const ShellsessionsSessionsSessionIdReviewRoute =
     path: "/$sessionId/review",
     getParentRoute: () => ShellsessionsSessionsRoute,
   } as any)
+const ShellbotsBotsBotIdChatsSessionIdRoute =
+  ShellbotsBotsBotIdChatsSessionIdRouteImport.update({
+    id: "/$botId_/chats/$sessionId",
+    path: "/$botId/chats/$sessionId",
+    getParentRoute: () => ShellbotsBotsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof ShellIndexRoute
@@ -318,6 +332,7 @@ export interface FileRoutesByFullPath {
   "/bots/": typeof ShellbotsBotsIndexRoute
   "/library/": typeof ShelllibraryLibraryIndexRoute
   "/sessions/": typeof ShellsessionsSessionsIndexRoute
+  "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
@@ -325,6 +340,7 @@ export interface FileRoutesByFullPath {
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/routines/": typeof ShellroutinesRoutinesListIndexRoute
+  "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRoutesByTo {
   "/": typeof ShellIndexRoute
@@ -355,12 +371,14 @@ export interface FileRoutesByTo {
   "/bots": typeof ShellbotsBotsIndexRoute
   "/library": typeof ShelllibraryLibraryIndexRoute
   "/sessions": typeof ShellsessionsSessionsIndexRoute
+  "/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/bots/$botId/edit": typeof ShellbotsBotsBotIdEditRoute
   "/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
   "/routines/new": typeof ShellroutinesRoutinesListNewRoute
   "/sessions/$sessionId/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/library/tools": typeof ShelllibraryLibraryToolsIndexRoute
+  "/bots/$botId/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -400,6 +418,7 @@ export interface FileRoutesById {
   "/_shell/(bots)/bots/": typeof ShellbotsBotsIndexRoute
   "/_shell/(library)/library/": typeof ShelllibraryLibraryIndexRoute
   "/_shell/(sessions)/sessions/": typeof ShellsessionsSessionsIndexRoute
+  "/_shell/(bots)/bots/$botId/check-in": typeof ShellbotsBotsBotIdCheckInRoute
   "/_shell/(bots)/bots/$botId/details": typeof ShellbotsBotsBotIdDetailsRoute
   "/_shell/(bots)/bots/$botId_/edit": typeof ShellbotsBotsBotIdEditRoute
   "/_shell/(library)/library/tools/$toolsetId": typeof ShelllibraryLibraryToolsToolsetIdRoute
@@ -407,6 +426,7 @@ export interface FileRoutesById {
   "/_shell/(sessions)/sessions/$sessionId_/review": typeof ShellsessionsSessionsSessionIdReviewRoute
   "/_shell/(library)/library/tools/": typeof ShelllibraryLibraryToolsIndexRoute
   "/_shell/(routines)/routines/_list/": typeof ShellroutinesRoutinesListIndexRoute
+  "/_shell/(bots)/bots/$botId_/chats/$sessionId": typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -444,6 +464,7 @@ export interface FileRouteTypes {
     | "/bots/"
     | "/library/"
     | "/sessions/"
+    | "/bots/$botId/check-in"
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
     | "/library/tools/$toolsetId"
@@ -451,6 +472,7 @@ export interface FileRouteTypes {
     | "/sessions/$sessionId/review"
     | "/library/tools/"
     | "/routines/"
+    | "/bots/$botId/chats/$sessionId"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
@@ -481,12 +503,14 @@ export interface FileRouteTypes {
     | "/bots"
     | "/library"
     | "/sessions"
+    | "/bots/$botId/check-in"
     | "/bots/$botId/details"
     | "/bots/$botId/edit"
     | "/library/tools/$toolsetId"
     | "/routines/new"
     | "/sessions/$sessionId/review"
     | "/library/tools"
+    | "/bots/$botId/chats/$sessionId"
   id:
     | "__root__"
     | "/_bare"
@@ -525,6 +549,7 @@ export interface FileRouteTypes {
     | "/_shell/(bots)/bots/"
     | "/_shell/(library)/library/"
     | "/_shell/(sessions)/sessions/"
+    | "/_shell/(bots)/bots/$botId/check-in"
     | "/_shell/(bots)/bots/$botId/details"
     | "/_shell/(bots)/bots/$botId_/edit"
     | "/_shell/(library)/library/tools/$toolsetId"
@@ -532,6 +557,7 @@ export interface FileRouteTypes {
     | "/_shell/(sessions)/sessions/$sessionId_/review"
     | "/_shell/(library)/library/tools/"
     | "/_shell/(routines)/routines/_list/"
+    | "/_shell/(bots)/bots/$botId_/chats/$sessionId"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -793,6 +819,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ShellsessionsSessionsNewRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
     }
+    "/_shell/(bots)/bots/$botId/check-in": {
+      id: "/_shell/(bots)/bots/$botId/check-in"
+      path: "/check-in"
+      fullPath: "/bots/$botId/check-in"
+      preLoaderRoute: typeof ShellbotsBotsBotIdCheckInRouteImport
+      parentRoute: typeof ShellbotsBotsBotIdRoute
+    }
     "/_shell/(bots)/bots/$botId/details": {
       id: "/_shell/(bots)/bots/$botId/details"
       path: "/details"
@@ -841,6 +874,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/sessions/$sessionId/review"
       preLoaderRoute: typeof ShellsessionsSessionsSessionIdReviewRouteImport
       parentRoute: typeof ShellsessionsSessionsRoute
+    }
+    "/_shell/(bots)/bots/$botId_/chats/$sessionId": {
+      id: "/_shell/(bots)/bots/$botId_/chats/$sessionId"
+      path: "/$botId/chats/$sessionId"
+      fullPath: "/bots/$botId/chats/$sessionId"
+      preLoaderRoute: typeof ShellbotsBotsBotIdChatsSessionIdRouteImport
+      parentRoute: typeof ShellbotsBotsRoute
     }
   }
 }
@@ -904,10 +944,12 @@ const ShellartifactsArtifactsRouteWithChildren =
   )
 
 interface ShellbotsBotsBotIdRouteChildren {
+  ShellbotsBotsBotIdCheckInRoute: typeof ShellbotsBotsBotIdCheckInRoute
   ShellbotsBotsBotIdDetailsRoute: typeof ShellbotsBotsBotIdDetailsRoute
 }
 
 const ShellbotsBotsBotIdRouteChildren: ShellbotsBotsBotIdRouteChildren = {
+  ShellbotsBotsBotIdCheckInRoute: ShellbotsBotsBotIdCheckInRoute,
   ShellbotsBotsBotIdDetailsRoute: ShellbotsBotsBotIdDetailsRoute,
 }
 
@@ -919,6 +961,7 @@ interface ShellbotsBotsRouteChildren {
   ShellbotsBotsNewRoute: typeof ShellbotsBotsNewRoute
   ShellbotsBotsIndexRoute: typeof ShellbotsBotsIndexRoute
   ShellbotsBotsBotIdEditRoute: typeof ShellbotsBotsBotIdEditRoute
+  ShellbotsBotsBotIdChatsSessionIdRoute: typeof ShellbotsBotsBotIdChatsSessionIdRoute
 }
 
 const ShellbotsBotsRouteChildren: ShellbotsBotsRouteChildren = {
@@ -926,6 +969,7 @@ const ShellbotsBotsRouteChildren: ShellbotsBotsRouteChildren = {
   ShellbotsBotsNewRoute: ShellbotsBotsNewRoute,
   ShellbotsBotsIndexRoute: ShellbotsBotsIndexRoute,
   ShellbotsBotsBotIdEditRoute: ShellbotsBotsBotIdEditRoute,
+  ShellbotsBotsBotIdChatsSessionIdRoute: ShellbotsBotsBotIdChatsSessionIdRoute,
 }
 
 const ShellbotsBotsRouteWithChildren = ShellbotsBotsRoute._addFileChildren(

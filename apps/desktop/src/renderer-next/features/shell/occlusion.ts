@@ -101,12 +101,58 @@ export const createOcclusionWatcher = (
     measure();
   };
 
-  const mutations = new MutationObserver(() => sync());
+  /**
+   * Re-query only when overlays may have come or gone: a childList record
+   * that adds or removes an occluder (or a subtree holding one). An
+   * attribute change re-measures only when it is on a tracked candidate,
+   * inside one or on an ancestor of one; the shell's own per-frame style and class flips (sidebar
+   * spring, scrim) cost nothing (Claude impl r1 #14).
+   */
+  const holdsOccluder = (node: Node): boolean =>
+    node instanceof Element &&
+    (node.matches(OCCLUDER_SELECTOR) ||
+      node.querySelector(OCCLUDER_SELECTOR) != null);
+  const removesTracked = (node: Node): boolean => {
+    for (const element of observers.keys())
+      if (node === element || node.contains(element)) return true;
+    return false;
+  };
+  const containsTracked = (node: Node): boolean => {
+    for (const element of observers.keys())
+      if (node !== element && node.contains(element)) return true;
+    return false;
+  };
+  const onMutations = (records: MutationRecord[]): void => {
+    let resync = false;
+    let remeasure = false;
+    for (const record of records) {
+      if (record.type === "childList") {
+        for (const node of record.addedNodes)
+          if (holdsOccluder(node)) resync = true;
+        for (const node of record.removedNodes)
+          if (removesTracked(node)) resync = true;
+        continue;
+      }
+      if (remeasure) continue;
+      const target = record.target as Element;
+      const candidate = target.closest?.(OCCLUDER_SELECTOR);
+      if (candidate != null && observers.has(candidate)) remeasure = true;
+      // An attribute that turns an element into a candidate (a slot set late).
+      else if (target.matches?.(OCCLUDER_SELECTOR)) resync = true;
+      // An ancestor of a tracked overlay: a positioner wrapper moves its popup
+      // through an inline transform without resizing it (Codex impl r2 #3).
+      else if (containsTracked(target)) remeasure = true;
+    }
+    if (resync) sync();
+    else if (remeasure) measure();
+  };
+  const mutations = new MutationObserver(onMutations);
   mutations.observe(root, {
     childList: true,
     subtree: true,
     attributes: true,
     attributeFilter: [
+      "data-slot",
       "data-open",
       "data-starting-style",
       "data-ending-style",

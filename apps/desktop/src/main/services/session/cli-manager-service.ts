@@ -32,6 +32,7 @@ import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";
 import type { ResolvedAgentArtifact } from "./artifact-resolver-service";
+import { LineSplitter } from "./line-splitter";
 
 /** Max diagnostic log entries retained per server in the desktop process. */
 const MCP_LOG_TAIL_PER_SERVER = 200;
@@ -69,11 +70,12 @@ type CliRuntime = {
   wire: AgentWire;
   /** agui: how compat arrives, from `wire.hello` (stdout line 1). */
   compatMode: "pending" | "fd" | "inline" | "none";
-  /** agui: the fd-3 line buffer. */
-  compatBuffer: string;
+  /** agui: fd 3 as lines (its own decoder and buffer). */
+  compatLines: LineSplitter;
   /** agui: the one `compat.hello` preamble on fd 3 has been discarded. */
   compatPreambleSeen: boolean;
-  stdoutBuffer: string;
+  /** stdout as lines (its own decoder and buffer). */
+  stdoutLines: LineSplitter;
   stderrBuffer: string;
   /** Last known runtime state of each MCP server (keyed by server id). */
   mcpServers: Map<string, AgentMcpServer>;
@@ -311,16 +313,6 @@ const trimBuffer = (value: string): string => {
     return value;
   }
   return value.slice(value.length - MAX_BUFFER_SIZE);
-};
-
-const drainLines = (rawBuffer: string): { lines: string[]; rest: string } => {
-  const normalized = rawBuffer.replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
-  if (lines.length === 0) {
-    return { lines: [], rest: "" };
-  }
-  const rest = lines.pop() ?? "";
-  return { lines, rest };
 };
 
 /**
@@ -662,9 +654,22 @@ export class AgentManagerService {
       process: child,
       wire,
       compatMode: wire === "agui" ? "pending" : "none",
-      compatBuffer: "",
+      compatLines: new LineSplitter({
+        maxLineChars: MAX_BUFFER_SIZE,
+        onOverflow: (chars) =>
+          console.error(
+            `[CLI] ${request.sessionId}: a compat line exceeded ${MAX_BUFFER_SIZE} characters (${chars} so far) and is dropped whole.`
+          ),
+      }),
       compatPreambleSeen: false,
-      stdoutBuffer: "",
+      stdoutLines: new LineSplitter({
+        maxLineChars: MAX_BUFFER_SIZE,
+        // An oversize line would fail to parse: a lost agent event, so be loud.
+        onOverflow: (chars) =>
+          console.error(
+            `[CLI] ${request.sessionId}: ${wire === "agui" ? "AG-UI" : "NDJSON"} line exceeded ${MAX_BUFFER_SIZE} characters (${chars} so far) and is dropped whole; the event is lost.`
+          ),
+      }),
       stderrBuffer: "",
       mcpServers: new Map(),
       mcpLogs: new Map(),
@@ -728,11 +733,13 @@ export class AgentManagerService {
       if (!ownsSession()) {
         return;
       }
-      const data = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      // One streaming decoder per pipe: a character split across chunks
+      // is joined, not replaced (spec 07 review r1 #11).
+      const lines = runtime.stdoutLines.push(chunk);
       if (wire === "agui") {
-        this.handleAguiStdout(request.sessionId, data, resolveStartup);
+        this.handleAguiLines(request.sessionId, lines, resolveStartup);
       } else {
-        this.handleStdout(request.sessionId, data, resolveStartup);
+        this.handleStdoutLines(request.sessionId, lines, resolveStartup);
       }
     });
 
@@ -750,8 +757,21 @@ export class AgentManagerService {
       if (!ownsSession()) {
         return;
       }
-      const data = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-      this.handleCompatFd(request.sessionId, data, resolveStartup);
+      this.handleCompatLines(
+        request.sessionId,
+        runtime.compatLines.push(chunk),
+        resolveStartup
+      );
+    });
+    // fd 3's last line without its newline is a whole line too; it is
+    // delivered when the pipe ends, which precedes the child's close.
+    compatPipe?.on("end", () => {
+      if (!ownsSession()) return;
+      this.handleCompatLines(
+        request.sessionId,
+        runtime.compatLines.end(),
+        resolveStartup
+      );
     });
 
     child.stderr.on("data", (chunk: Buffer | string) => {
@@ -792,6 +812,20 @@ export class AgentManagerService {
 
     child.on("close", (code, signal) => {
       resolveStartup();
+      // A last line without its newline (a process that exits right after
+      // writing it) is still a whole line: deliver it before the exit, on
+      // either wire and on fd 3 (a no-op when the pipe's end delivered it).
+      if (ownsSession()) {
+        const last = runtime.stdoutLines.end();
+        if (wire === "agui")
+          this.handleAguiLines(request.sessionId, last, resolveStartup);
+        else this.handleStdoutLines(request.sessionId, last, resolveStartup);
+        this.handleCompatLines(
+          request.sessionId,
+          runtime.compatLines.end(),
+          resolveStartup
+        );
+      }
       if (wire === "agui") {
         // Before the ownership check: the relay tells runtimes apart itself.
         this.options.emitAguiExit?.(request.workspaceId, request.sessionId, {
@@ -878,6 +912,20 @@ export class AgentManagerService {
     if (this.runtimes.get(sessionId)?.process !== origin.runtime) return false;
 
     return this.sendCommand(workspaceId, sessionId, command);
+  }
+
+  /**
+   * `sendCommand` to the session's live runtime, whatever its workspace.
+   * Returns the process written to (the identity `NdjsonOrigin.runtime`
+   * names), or null: the AG-UI relay binds an admission to the process that
+   * actually received it, which may not have said `wire.hello` yet.
+   */
+  sendCommandToSession(sessionId: string, command: unknown): object | null {
+    const runtime = this.runtimes.get(sessionId);
+    if (runtime == null) return null;
+    return this.sendCommand(runtime.workspaceId, sessionId, command)
+      ? runtime.process
+      : null;
   }
 
   sendCommand(
@@ -982,9 +1030,9 @@ export class AgentManagerService {
     };
   }
 
-  private handleStdout(
+  private handleStdoutLines(
     sessionId: string,
-    chunk: string,
+    lines: readonly string[],
     onReady: () => void
   ): void {
     const runtime = this.runtimes.get(sessionId);
@@ -992,19 +1040,7 @@ export class AgentManagerService {
       return;
     }
 
-    // Drain complete lines first, then trim only the incomplete tail: trimming
-    // before draining slices an in-flight JSON line and loses the whole record.
-    const drained = drainLines(runtime.stdoutBuffer + chunk);
-    runtime.stdoutBuffer = trimBuffer(drained.rest);
-    if (runtime.stdoutBuffer.length < drained.rest.length) {
-      // The in-flight line exceeded the cap and will fail to parse: a lost
-      // agent event, so be loud.
-      console.error(
-        `[CLI] ${sessionId}: NDJSON line exceeded ${MAX_BUFFER_SIZE} bytes and was head-truncated; the event will be dropped.`
-      );
-    }
-
-    for (const line of drained.lines) {
+    for (const line of lines) {
       this.handleNdjsonLine(runtime, line, onReady);
     }
   }
@@ -1014,9 +1050,9 @@ export class AgentManagerService {
    * arrives; after it, RS-prefixed lines are compat (inline mode) and every
    * other line is one AG-UI event for the renderer's relay.
    */
-  private handleAguiStdout(
+  private handleAguiLines(
     sessionId: string,
-    chunk: string,
+    lines: readonly string[],
     onReady: () => void
   ): void {
     const runtime = this.runtimes.get(sessionId);
@@ -1024,10 +1060,7 @@ export class AgentManagerService {
       return;
     }
 
-    const drained = drainLines(runtime.stdoutBuffer + chunk);
-    runtime.stdoutBuffer = trimBuffer(drained.rest);
-
-    for (const line of drained.lines) {
+    for (const line of lines) {
       if (line.startsWith(INLINE_COMPAT_PREFIX)) {
         this.handleNdjsonLine(
           runtime,
@@ -1071,9 +1104,9 @@ export class AgentManagerService {
   }
 
   /** An agui runtime's fd 3: the one preamble line, then today's NDJSON. */
-  private handleCompatFd(
+  private handleCompatLines(
     sessionId: string,
-    chunk: string,
+    lines: readonly string[],
     onReady: () => void
   ): void {
     const runtime = this.runtimes.get(sessionId);
@@ -1081,10 +1114,7 @@ export class AgentManagerService {
       return;
     }
 
-    const drained = drainLines(runtime.compatBuffer + chunk);
-    runtime.compatBuffer = trimBuffer(drained.rest);
-
-    for (const line of drained.lines) {
+    for (const line of lines) {
       if (!runtime.compatPreambleSeen) {
         runtime.compatPreambleSeen = true;
         if (line.includes('"type":"compat.hello"')) continue;

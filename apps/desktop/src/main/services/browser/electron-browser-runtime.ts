@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
 import {
   BaseWindow,
   session,
@@ -27,14 +31,83 @@ import {
   sessionConversationKey,
   type ConversationKey,
 } from "#shared/conversation-scope";
+import { ForbiddenError } from "#shared/forbidden";
 
 import {
   BrowserRuntimeRegistry,
   browserResourceId,
   type BrowserRuntimeLease,
 } from "./browser-runtime-registry";
+import { isInsideRoot } from "./local-preview-file";
 
-type MaterializeOptions = { profileId?: string };
+/** A local PDF/HTML file's view (spec 04 §12.8): real paths, checked. */
+type LocalFile = { file: string; root: string };
+type MaterializeOptions = { profileId?: string; localFile?: LocalFile };
+
+const localFileIdentity = (localFile: LocalFile): string =>
+  `${localFile.file}\0${localFile.root}`;
+
+/** What the local-file view's session lets through (spec 04 §12.8). */
+export const localFileRequestAllowed = (
+  localFile: LocalFile,
+  url: string
+): boolean => {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  switch (parsed.protocol) {
+    case "file:": {
+      let requested: string;
+      try {
+        requested = fileURLToPath(parsed);
+      } catch {
+        return false;
+      }
+      let real = requested;
+      try {
+        real = realpathSync(requested);
+      } catch {
+        // Not there (yet): judged by the path as written.
+      }
+      return isInsideRoot(localFile.root, real);
+    }
+    case "data:":
+    case "blob:":
+    case "http:":
+    case "https:":
+    // Chromium's own PDF viewer and devtools.
+    case "chrome-extension:":
+    case "chrome:":
+    case "devtools:":
+      return true;
+    default:
+      return false;
+  }
+};
+
+/** A navigation that stays on `fileUrl` (a fragment change of the same file). */
+export const sameLocalDocument = (fileUrl: string, url: string): boolean => {
+  try {
+    const next = new URL(url);
+    const current = new URL(fileUrl);
+    next.hash = "";
+    current.hash = "";
+    return next.href === current.href;
+  } catch {
+    return false;
+  }
+};
+
+const isHttpUrl = (url: string): boolean =>
+  url.startsWith("http://") || url.startsWith("https://");
+
+export interface ElectronBrowserRuntimeOptions {
+  /** `system.openExternal`'s path: a local file's http(s) links go there. */
+  openExternal?: (url: string) => void;
+}
 type CrashRecovery = {
   attempts: number;
   windowStartedAt: number;
@@ -230,7 +303,35 @@ export class ElectronBrowserRuntime {
     }
   );
 
-  constructor(private readonly getWindow: () => BrowserRuntimeWindow | null) {}
+  /** Local-file views (spec 04 §12.8), by view. */
+  private readonly localFiles = new WeakMap<
+    WebContentsView,
+    LocalFile & { url: string }
+  >();
+  /**
+   * runtime key → the local file its view shows and the root its
+   * sub-resources are locked to (`localFileIdentity`).
+   */
+  private readonly localKeys = new Map<string, string>();
+
+  constructor(
+    private readonly getWindow: () => BrowserRuntimeWindow | null,
+    private readonly options: ElectronBrowserRuntimeOptions = {}
+  ) {}
+
+  /** Closes the key's runtime (a different profile or kind is wanted). */
+  private replace(key: string): void {
+    const previousLease = this.leases.get(key);
+    if (previousLease == null) return;
+    if (this.sameLease(this.presentedLease, previousLease)) {
+      this.presentedLease = null;
+      this.presentedBy = null;
+    }
+    this.registry.close(previousLease);
+    this.leases.delete(key);
+    this.profiles.delete(key);
+    this.localKeys.delete(key);
+  }
 
   async materialize(
     request: MaterializeBrowserRuntimeRequest
@@ -241,16 +342,14 @@ export class ElectronBrowserRuntime {
     const profileId = checkedProfileId(request.profileId);
     let url = request.url == null ? undefined : checkedUrl(request.url);
     const existingProfile = this.profiles.get(key);
-    if (this.leases.has(key) && existingProfile !== profileId) {
-      const previousLease = this.leases.get(key)!;
-      url ??= this.state(previousLease).url;
-      if (this.sameLease(this.presentedLease, previousLease)) {
-        this.presentedLease = null;
-        this.presentedBy = null;
-      }
-      this.registry.close(previousLease);
-      this.leases.delete(key);
-      this.profiles.delete(key);
+    if (
+      this.leases.has(key) &&
+      (existingProfile !== profileId || this.localKeys.has(key))
+    ) {
+      // A local file's URL never carries over into a web view.
+      if (!this.localKeys.has(key))
+        url ??= this.state(this.leases.get(key)!).url;
+      this.replace(key);
     }
 
     // Only a fresh view gets the URL: the renderer calls materialize on every
@@ -266,10 +365,61 @@ export class ElectronBrowserRuntime {
     return this.state(lease);
   }
 
+  /**
+   * A local PDF or HTML file on the native surface (spec 04 §12.8). The
+   * caller has checked `file` (real path) against `root` (real path) with
+   * the readers' containment guard. The view gets its own non-persistent
+   * partition, no preload and no node, and is locked to the file: every
+   * top-level navigation but a fragment change is refused (http(s) links go
+   * to the system browser), and sub-resources are `file:` inside `root`,
+   * `data:`, `blob:` or http(s).
+   */
+  async materializeFile(request: {
+    conversationKey: ConversationKey;
+    resourceId: string;
+    file: string;
+    root: string;
+  }): Promise<BrowserRuntimeState> {
+    const conversationKey = checkedConversationKey(request.conversationKey);
+    const resourceId = browserResourceId(request.resourceId);
+    const key = runtimeMapKey(conversationKey, resourceId);
+    // The view's lock is fixed when it is built: another file, or the same
+    // file under another root (a narrower one included), needs a new view.
+    const identity = localFileIdentity(request);
+    if (this.leases.has(key) && this.localKeys.get(key) !== identity)
+      this.replace(key);
+    const fresh = !this.leases.has(key);
+    const lease = this.registry.materialize(conversationKey, resourceId, {
+      localFile: { file: request.file, root: request.root },
+    });
+    this.leases.set(key, lease);
+    this.profiles.set(key, undefined);
+    this.localKeys.set(key, identity);
+    if (fresh) {
+      const view = this.registry.nativeView(lease);
+      try {
+        await view.webContents.loadURL(pathToFileURL(request.file).href);
+      } catch {
+        // did-fail-load has recorded the error for state().
+      }
+    }
+    return this.state(lease);
+  }
+
+  /** A local-file view refuses any URL of its own choosing. */
+  private refuseLocalUrl(lease: BrowserRuntimeLease): void {
+    if (this.localFiles.has(this.registry.nativeView(lease)))
+      throw new ForbiddenError(
+        "local-file",
+        "A local file's view shows only that file"
+      );
+  }
+
   async present(
     request: PresentBrowserRuntimeRequest
   ): Promise<BrowserRuntimeState> {
     const lease = this.resolveLease(request.lease);
+    if (request.url != null) this.refuseLocalUrl(lease);
     const url = request.url == null ? undefined : checkedUrl(request.url);
     const previous = this.presentedLease;
     if (previous != null && !this.sameLease(previous, lease)) {
@@ -290,6 +440,7 @@ export class ElectronBrowserRuntime {
     const { navigation } = request;
     switch (navigation.action) {
       case "url":
+        this.refuseLocalUrl(lease);
         // An unsupported protocol is the caller's error; a page that will not
         // load is pane state (the error overlay), not a rejected IPC call.
         await this.loadUrlQuietly(lease, checkedUrl(navigation.url));
@@ -378,6 +529,9 @@ export class ElectronBrowserRuntime {
     this.profiles.delete(
       runtimeMapKey(lease.conversationKey, lease.resourceId)
     );
+    this.localKeys.delete(
+      runtimeMapKey(lease.conversationKey, lease.resourceId)
+    );
     if (this.sameLease(this.presentedLease, lease)) {
       this.presentedLease = null;
       this.presentedBy = null;
@@ -397,10 +551,13 @@ export class ElectronBrowserRuntime {
       const newKey = runtimeMapKey(sessionKey, lease.resourceId);
       const profileId = this.profiles.get(oldKey);
       const view = this.registry.nativeView(lease);
+      const localFile = this.localKeys.get(oldKey);
       this.leases.delete(oldKey);
       this.profiles.delete(oldKey);
+      this.localKeys.delete(oldKey);
       this.leases.set(newKey, lease);
       this.profiles.set(newKey, profileId);
+      if (localFile != null) this.localKeys.set(newKey, localFile);
       this.currentLease.set(view, lease);
       if (
         this.presentedLease?.conversationKey === draftKey &&
@@ -531,6 +688,7 @@ export class ElectronBrowserRuntime {
     } finally {
       this.leases.clear();
       this.profiles.clear();
+      this.localKeys.clear();
       this.presentedLease = null;
       this.presentedBy = null;
     }
@@ -540,14 +698,20 @@ export class ElectronBrowserRuntime {
     lease: BrowserRuntimeLease,
     options?: MaterializeOptions
   ): WebContentsView {
+    const localFile = options?.localFile;
+    // A local file gets a partition of its own that is never written to
+    // disk (no `persist:`), so nothing it stores outlives it.
     const partition =
-      options?.profileId == null
-        ? DEFAULT_PARTITION
-        : importedProfilePartition(options.profileId);
+      localFile != null
+        ? `local-preview:${randomUUID()}`
+        : options?.profileId == null
+          ? DEFAULT_PARTITION
+          : importedProfilePartition(options.profileId);
     const partitionSession = session.fromPartition(partition);
-    partitionSession.setUserAgent(
-      plainChromeUserAgent(partitionSession.getUserAgent())
-    );
+    if (localFile == null)
+      partitionSession.setUserAgent(
+        plainChromeUserAgent(partitionSession.getUserAgent())
+      );
     const view = new WebContentsView({
       webPreferences: {
         partition,
@@ -555,8 +719,12 @@ export class ElectronBrowserRuntime {
         contextIsolation: true,
         nodeIntegration: false,
         focusOnNavigation: false,
+        // Chromium's PDF viewer is a plugin.
+        ...(localFile != null && { plugins: true }),
       },
     });
+    if (localFile != null)
+      this.lockToLocalFile(view, localFile, partitionSession);
     view.setBounds(PARKED_BOUNDS);
     this.park(view);
     this.currentLease.set(view, lease);
@@ -592,11 +760,38 @@ export class ElectronBrowserRuntime {
     contents.on("blur", emit);
     contents.on("devtools-opened", emit);
     contents.on("devtools-closed", emit);
-    contents.setWindowOpenHandler(({ url }) => {
-      void this.loadUrlForView(view, url).catch(() => undefined);
+    if (localFile == null)
+      contents.setWindowOpenHandler(({ url }) => {
+        void this.loadUrlForView(view, url).catch(() => undefined);
+        return { action: "deny" };
+      });
+    return view;
+  }
+
+  /** §12.8's lock: the file, its fragments, and nothing else on top. */
+  private lockToLocalFile(
+    view: WebContentsView,
+    localFile: LocalFile,
+    partitionSession: Electron.Session
+  ): void {
+    const url = pathToFileURL(localFile.file).href;
+    this.localFiles.set(view, { ...localFile, url });
+    const handOff = (target: string): void => {
+      if (isHttpUrl(target)) this.options.openExternal?.(target);
+    };
+    const contents = view.webContents;
+    contents.on("will-navigate", (event: Electron.Event, target: string) => {
+      if (sameLocalDocument(url, target)) return;
+      event.preventDefault();
+      handOff(target);
+    });
+    contents.setWindowOpenHandler(({ url: target }) => {
+      handOff(target);
       return { action: "deny" };
     });
-    return view;
+    partitionSession.webRequest.onBeforeRequest((details, callback) => {
+      callback({ cancel: !localFileRequestAllowed(localFile, details.url) });
+    });
   }
 
   private presentView(
@@ -759,6 +954,7 @@ export class ElectronBrowserRuntime {
       if (!predicate(lease)) continue;
       this.leases.delete(key);
       this.profiles.delete(key);
+      this.localKeys.delete(key);
     }
   }
 

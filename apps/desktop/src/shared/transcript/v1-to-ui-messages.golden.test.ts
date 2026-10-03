@@ -23,10 +23,14 @@ const names = fs
 
 /** The cases C.7 lists, so a deleted fixture fails here. */
 const REQUIRED = [
+  "bracket-turn-fields",
   "compaction",
   "credits",
   "display-segments",
+  "duplicate-tool-ids",
   "empty",
+  "invalid-tool-shapes",
+  "late-close-interrupted",
   "legacy-protocol-tool",
   "media",
   "missing-at",
@@ -39,6 +43,7 @@ const REQUIRED = [
   "tool-result-states",
   "unknown-segments",
   "user-inside-bracket",
+  "user-text-tags",
   "versions-regenerate",
   "web-search",
 ];

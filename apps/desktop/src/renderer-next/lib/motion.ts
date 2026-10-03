@@ -5,7 +5,7 @@
  */
 import { useSyncExternalStore } from "react";
 
-import { usePrefs } from "#next/data/collections/prefs";
+import { usePrefs } from "#next/data/db/prefs";
 
 export const durations = {
   crossFade: 200,

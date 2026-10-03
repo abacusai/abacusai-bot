@@ -5,10 +5,12 @@
  * subscriber sees it:
  *
  * - a TanStack `StreamProcessor`, whose messages at each terminal are the
- *   thread's transcript (persisted, with the run's outcome record);
+ *   thread's transcript (persisted, with the run's outcome record). Each
+ *   chunk goes through `restoreInboundChunk` first, as `ChatClient` does, so
+ *   main's transcript and a client's never differ by that step;
  * - a bounded ring of recent events for `lastEventId` resume;
- * - the active run's complete log (from `RUN_STARTED`, never evicted until its
- *   terminal) for `joinRun`, and the logs of the last few finished runs;
+ * - the active run's log (from `RUN_STARTED` to its terminal) for `joinRun`,
+ *   and, for a short while, the logs of the last few finished runs;
  * - the session-scoped state `hydrate` returns (permissions, queue, agent
  *   state, skills, activity, notices, incarnation).
  *
@@ -17,16 +19,27 @@
  * double an event (agent spec §5.3 item 3).
  *
  * Main also owns what the agent cannot know across its own restarts (PLAN
- * amendments, agent spec §3.1.4, §3.8): a user message id the transcript
- * already holds is not replayed into it again, and a run the process never
- * closed gets a synthesized `RUN_ERROR` (first terminal wins; the rest of that
- * run's stream is dropped).
+ * amendments, agent spec §3.1.4, §3.8):
+ *
+ * - a user message id the transcript already holds is not replayed into it
+ *   again; `CUSTOM abacus.duplicate_echo` says so, so a client waiting for
+ *   that echo (the chat kit's outbox, spec 02 §3.7) stops waiting;
+ * - a run the process never closed gets a synthesized `RUN_ERROR` (first
+ *   terminal wins; the rest of that run's stream is dropped);
+ * - before any `RUN_ERROR` it applies (the agent's or its own), the run's
+ *   open parts are closed (text, reasoning, tool calls with an unfinished
+ *   result, sub-agents) and a run with no assistant message gets an empty
+ *   one: a receive-only `StreamProcessor` handles neither on `RUN_ERROR`,
+ *   and without an assistant message it creates a pending one that the next
+ *   run's user echo is renamed into.
  */
 import {
+  getChunkRunId,
   StreamProcessor,
   type StreamChunk,
   type UIMessage,
 } from "@tanstack/ai";
+import { restoreInboundChunk } from "@tanstack/ai/client";
 
 import {
   AgentStatus,
@@ -58,9 +71,22 @@ export const RING_EVENTS = 4_000;
 export const ACTIVE_LOG_CAP = 200_000;
 /** Finished runs whose logs stay joinable (a late `joinRun` after a terminal). */
 export const FINISHED_LOGS_KEPT = 4;
+/**
+ * Events kept across a thread's finished logs; the newest log is kept
+ * whatever its size, the older ones only within this budget.
+ */
+const FINISHED_EVENTS_KEPT = 20_000;
+/**
+ * How long a finished log stays joinable. A `joinRun` for it comes right
+ * after a `hydrate` that saw the run active; after this, `hydrate` has the
+ * run in the transcript.
+ */
+export const FINISHED_LOG_TTL_MS = 2 * 60_000;
 /** Run outcomes kept in the thread file. */
 export const RUN_OUTCOMES_KEPT = 1_000;
 const NOTICES_KEPT = 50;
+/** `ai.send` user message ids awaiting their run's start. */
+const EXPECTED_ECHOES_KEPT = 256;
 
 /** CUSTOM names that belong to a run (agent spec §2.3, *R*). */
 const RUN_SCOPED_CUSTOM = new Set([
@@ -86,20 +112,65 @@ export const isRunScoped = (event: RelayEvent): boolean =>
 export const isTerminal = (event: { type: string }): boolean =>
   event.type === "RUN_FINISHED" || event.type === "RUN_ERROR";
 
-/** A terminal's run id: `RUN_FINISHED.runId`, or TanStack's metadata convention. */
-export const terminalRunId = (event: RelayEvent): string | null => {
-  if (event.type === "RUN_FINISHED")
-    return typeof event.runId === "string" ? event.runId : null;
-  const runId = (
-    event.metadata as { tanstack?: { runId?: unknown } } | undefined
-  )?.tanstack?.runId;
-  return typeof runId === "string" ? runId : null;
-};
+/**
+ * A terminal's run id, as TanStack reads it (`getChunkRunId`): the top-level
+ * `runId`, else `metadata.tanstack.runId`.
+ */
+export const terminalRunId = (event: RelayEvent): string | null =>
+  getChunkRunId(event as unknown as StreamChunk) ?? null;
 
 const record = (value: unknown): Record<string, unknown> =>
   value != null && typeof value === "object"
     ? (value as Record<string, unknown>)
     : {};
+
+const stringOr = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length > 0 ? value : undefined;
+
+/** What a reply the user never sees says (the bot loop's silent answer). */
+export const NO_REPLY = "NO_REPLY";
+
+/**
+ * Whether `messages` (a run's own) hold an assistant text part a user sees:
+ * trimmed, non-empty and not exactly `NO_REPLY` (spec 03 §24.11).
+ */
+export const hasVisibleAssistantText = (
+  messages: readonly UIMessage[]
+): boolean =>
+  messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.parts.some((part) => {
+        if (part.type !== "text") return false;
+        const text = String(
+          (part as { content?: unknown }).content ?? ""
+        ).trim();
+        return text !== "" && text !== NO_REPLY;
+      })
+  );
+
+/**
+ * A run's authoritative end (spec 03 §24.11): the first terminal the relay
+ * applied for it, once per run id, main's own included.
+ */
+export interface RunFinishedInfo {
+  runId: string;
+  outcome: "success" | "cancelled" | "error";
+  errorCode?: string;
+  hasVisibleAssistantText: boolean;
+  /** The terminal's relay seq: the notice's event id. */
+  seq: number;
+  at: number;
+}
+
+/**
+ * The thread's answerable pending permissions (spec 06 §23.6): the live
+ * incarnation's only.
+ */
+export interface PendingPermissionsInfo {
+  incarnation: string | null;
+  items: PermissionDescriptor[];
+}
 
 /** Where seqs come from: one counter for every thread, never reused. */
 export class SeqClock {
@@ -115,10 +186,35 @@ export class SeqClock {
   }
 }
 
+/**
+ * Why the history is not all there (the thread store's `ThreadNotice`): a
+ * v1 transcript too large to read. Served as the session-scoped notice
+ * `abacus.notice` (spec 02 §4.1), keyed so it appears once.
+ */
+export type ThreadHistoryNotice = {
+  kind: "too-large";
+  /** Absolute v1 transcript path, when the file store provides it. */
+  path?: string;
+  size: number;
+  limit: number;
+};
+
+/** The notice key of a thread-history notice. */
+export const HISTORY_NOTICE_KEY = "abacus.history";
+
 export interface ThreadHistory {
   messages: UIMessage[];
   runs: RunOutcomeRecord[];
+  notice?: ThreadHistoryNotice;
   migratedFrom?: { updatedAt: string };
+  /**
+   * The messages come from a v1 transcript (not an `agui` file): the legacy
+   * renderer may still be writing it, so the relay re-reads it before the
+   * thread's first AG-UI run and at each checkpoint until then.
+   */
+  v1Derived?: boolean;
+  /** The v1 file's fingerprint, for a v1-derived baseline (spec 00 C.3). */
+  v1Fingerprint?: string;
 }
 
 export interface ThreadRelayOptions {
@@ -130,16 +226,80 @@ export interface ThreadRelayOptions {
   persist: (history: ThreadHistory) => void;
   /** Deletes the thread file (`session.cleared`). */
   remove: () => void;
+  /** Re-reads the thread's history (a v1-derived baseline's refresh). */
+  reload?: () => ThreadHistory | null;
+  /** A run's log is no longer joinable here (expired, evicted or cleared). */
+  onRunForgotten?: (runId: string) => void;
+  /** A run reached its authoritative terminal (once per run id). */
+  onRunFinished?: (info: RunFinishedInfo) => void;
+  /** The answerable pending permissions may have changed. */
+  onPendingChanged?: (pending: PendingPermissionsInfo) => void;
+  /** Overrides `ACTIVE_LOG_CAP` (tests). */
+  activeLogCap?: number;
+  now?: () => number;
   log?: (message: string) => void;
+}
+
+/** What a run has opened and not yet closed, for a terminal main applies. */
+interface OpenParts {
+  /** Text messages: id → the child that owns it, if any. */
+  texts: Map<string, string | undefined>;
+  reasoning: Map<string, { messageOpen: boolean; child: string | undefined }>;
+  /** Tool calls without a result: id → owner and whether TOOL_CALL_END came. */
+  tools: Map<string, { child: string | undefined; ended: boolean }>;
+  /** Sub-agents without a terminal, in start order. */
+  children: Set<string>;
+  /** A parent assistant `TEXT_MESSAGE_START` was applied in this run. */
+  hadAssistant: boolean;
 }
 
 interface ActiveRun extends AiActiveRun {
   historyEpoch: number;
   steps: number;
+  /** The run's log; null holes are coalesced `tool.output`s (past the cap). */
+  log: Array<RelayChunk | null>;
+  live: number;
+  /** The log reached the cap: from then on, tool output coalesces. */
+  coalescing: boolean;
+  /** tool.output log indexes per `(subagentRunId, toolCallId)`. */
+  outputs: Map<string, number[]>;
+  open: OpenParts;
+  /** User message ids whose echo is being skipped (already in the transcript). */
+  skippedUserIds: Set<string>;
+  /** User message ids `abacus.duplicate_echo` was sent for in this run. */
+  noticedEchoes: Set<string>;
+  /** Message ids the transcript held when the run started. */
+  priorMessageIds: Set<string>;
+}
+
+interface FinishedLog {
   log: RelayChunk[];
+  endedAt: number;
 }
 
 type Listener = (chunk: RelayChunk) => void;
+
+const outputKey = (event: RelayEvent): string =>
+  `${String(event.subagentRunId ?? "")}\u0000${String(record(event.value).toolCallId ?? "")}`;
+
+const unfinishedResult = (toolCallId: string): RelayEvent => {
+  const text = "The run ended before this finished.";
+  return {
+    type: "TOOL_CALL_RESULT",
+    messageId: `${toolCallId}:result`,
+    toolCallId,
+    role: "tool",
+    content: JSON.stringify({
+      text,
+      rejected: true,
+      error: text,
+      unfinished: true,
+    }),
+    metadata: {
+      tanstack: { state: "output-error", toolResultOutcome: "cancelled" },
+    },
+  };
+};
 
 export class ThreadRelay {
   readonly threadId: string;
@@ -151,23 +311,33 @@ export class ThreadRelay {
   readonly #epoch: string;
   readonly #persist: (history: ThreadHistory) => void;
   readonly #remove: () => void;
+  readonly #reload: (() => ThreadHistory | null) | undefined;
+  readonly #onRunForgotten: (runId: string) => void;
+  readonly #onRunFinished: (info: RunFinishedInfo) => void;
+  readonly #onPendingChanged: (pending: PendingPermissionsInfo) => void;
+  readonly #activeLogCap: number;
+  readonly #now: () => number;
   readonly #log: (message: string) => void;
   #processor: StreamProcessor;
   #transcript: UIMessage[];
   #runs: RunOutcomeRecord[];
   #migratedFrom: { updatedAt: string } | undefined;
+  #v1Derived: boolean;
+  #v1Fingerprint: string | undefined;
   /** Bumped by every clear; a run from before a clear persists nothing. */
   #historyEpoch = 0;
 
   #ring: RelayChunk[] = [];
   /** A resume point below this is no longer in the ring. */
   #floor: number;
+  /** The seq of the last event applied to this thread (the checkpoint cursor). */
+  #lastSeq: number;
   #active: ActiveRun | null = null;
-  readonly #finished = new Map<string, RelayChunk[]>();
+  readonly #finished = new Map<string, FinishedLog>();
   /** A run main closed itself; its own late stream is dropped. */
   #orphanRunId: string | null = null;
-  /** User message ids whose echo is being skipped (already in the transcript). */
-  readonly #skippedUserIds = new Set<string>();
+  /** runId → the newest user message id `ai.send` sent for it. */
+  readonly #expectedEchoes = new Map<string, string>();
 
   #permissions: { incarnation: string | null; items: PermissionDescriptor[] } =
     { incarnation: null, items: [] };
@@ -179,10 +349,12 @@ export class ThreadRelay {
     runningTools: 0,
   };
   #notices: AiNotice[] = [];
+  /** The answerable set last reported (`#checkPending`); "" for none. */
+  #pendingKey = "";
 
   readonly #listeners = new Set<Listener>();
   /** Last time anything touched this thread, for eviction. */
-  lastUsed = Date.now();
+  lastUsed: number;
 
   constructor(options: ThreadRelayOptions) {
     this.threadId = options.threadId;
@@ -190,15 +362,32 @@ export class ThreadRelay {
     this.#epoch = options.epoch;
     this.#persist = options.persist;
     this.#remove = options.remove;
+    this.#reload = options.reload;
+    this.#onRunForgotten = options.onRunForgotten ?? (() => undefined);
+    this.#onRunFinished = options.onRunFinished ?? (() => undefined);
+    this.#onPendingChanged = options.onPendingChanged ?? (() => undefined);
+    this.#activeLogCap = options.activeLogCap ?? ACTIVE_LOG_CAP;
+    this.#now = options.now ?? Date.now;
     this.#log =
       options.log ?? ((message) => console.error(`[agui] ${message}`));
     this.#transcript = structuredClone(options.history.messages);
     this.#runs = [...options.history.runs];
     this.#migratedFrom = options.history.migratedFrom;
+    this.#v1Derived = options.history.v1Derived === true;
+    this.#v1Fingerprint = options.history.v1Fingerprint;
     this.#processor = new StreamProcessor({
       initialMessages: structuredClone(options.history.messages),
     });
     this.#floor = this.#clock.current;
+    this.#lastSeq = this.#floor;
+    this.lastUsed = this.#now();
+    if (options.history.notice != null)
+      this.#apply(
+        this.#custom("abacus.notice", {
+          ...options.history.notice,
+          notificationKey: HISTORY_NOTICE_KEY,
+        })
+      );
   }
 
   get activeRunId(): string | null {
@@ -217,9 +406,21 @@ export class ThreadRelay {
     );
   }
 
-  /** The latest host queue, hidden entries included (their indexes count). */
+  /** The latest host queue, hidden entries included. */
   get queue(): readonly QueueEntry[] {
     return this.#queue;
+  }
+
+  /**
+   * `ai.send` wrote `run` for `runId` with `messageId` as its newest user
+   * message. If the transcript already holds that id when the run starts (a
+   * retry, which the agent does not echo again in the same process), the
+   * relay says `abacus.duplicate_echo` for it.
+   */
+  expectEcho(runId: string, messageId: string): void {
+    this.#expectedEchoes.set(runId, messageId);
+    while (this.#expectedEchoes.size > EXPECTED_ECHOES_KEPT)
+      this.#expectedEchoes.delete(this.#expectedEchoes.keys().next().value!);
   }
 
   /**
@@ -228,7 +429,8 @@ export class ThreadRelay {
    * tail, a user echo the transcript already holds).
    */
   ingest(event: RelayEvent, runtime: object | null = null): RelayChunk | null {
-    this.lastUsed = Date.now();
+    this.lastUsed = this.#now();
+    this.#pruneFinished();
 
     if (event.type === "CUSTOM" && event.name === "wire.hello") {
       const value = record(event.value);
@@ -250,7 +452,14 @@ export class ThreadRelay {
           "The run ended without a terminal."
         );
       this.#orphanRunId = null;
-    } else if (isTerminal(event)) {
+      // The last chance to pick up legacy turns before AG-UI history starts.
+      this.#refreshBaseline();
+      const chunk = this.#apply(event);
+      this.#noticeExpectedEcho();
+      return chunk;
+    }
+
+    if (isTerminal(event)) {
       const runId = terminalRunId(event);
       if (
         this.#active == null ||
@@ -261,9 +470,21 @@ export class ThreadRelay {
           this.#orphanRunId = null;
         return null;
       }
+      if (event.type === "RUN_ERROR") this.#closeOpenParts(this.#active);
     } else if (isRunScoped(event)) {
-      if (this.#active == null) return null;
-      if (this.#skipUserEcho(event)) return null;
+      const active = this.#active;
+      if (active == null) return null;
+      const skip = this.#skipUserEcho(active, event);
+      if (skip !== "keep") {
+        if (skip === "notice")
+          this.#apply(
+            this.#custom("abacus.duplicate_echo", {
+              runId: active.runId,
+              messageId: event.messageId,
+            })
+          );
+        return null;
+      }
     }
 
     return this.#apply(event);
@@ -280,15 +501,16 @@ export class ThreadRelay {
 
   /**
    * The runtime is gone (`runtime` exited): close its run, and say the
-   * process-bound state it held is gone with it (its pending permissions and
-   * its queue), so every window drops them.
+   * process-bound state it held is gone with it (its pending permissions,
+   * its queue, its activity), so every window drops them. False when
+   * `runtime` is no longer the thread's (a replacement already runs).
    */
   runtimeExited(
     runtime: object,
     code: "agent_exit" | "agent_crashed",
     message: string
-  ): void {
-    if (this.runtime != null && this.runtime !== runtime) return;
+  ): boolean {
+    if (this.runtime != null && this.runtime !== runtime) return false;
     this.#synthesizeTerminal(code, message);
     if (this.#permissions.items.length > 0)
       this.#apply(
@@ -301,12 +523,13 @@ export class ThreadRelay {
       this.#apply(
         this.#custom("queue.updated", { messages: [], dequeued: null })
       );
-    if (
-      this.#activity.status !== AgentStatus.Idle ||
-      this.#activity.runningTools !== 0
-    )
+    if (this.#activity.status !== AgentStatus.Idle)
       this.#apply(this.#custom("agent.status", { status: AgentStatus.Idle }));
+    // No process is left to correct a count of running tools.
+    if (this.#activity.runningTools !== 0)
+      this.#apply(this.#custom("agent.heartbeat", { runningTools: 0 }));
     this.runtime = null;
+    return true;
   }
 
   /**
@@ -335,18 +558,34 @@ export class ThreadRelay {
   }
 
   /**
-   * The conversation was cleared by main (legacy reset, session deletion).
-   * History goes at once; a run still open finishes without persisting, and
-   * the agent's `session.cleared` clears again when it lands.
+   * The conversation was cleared by main (legacy reset, session deletion):
+   * a `session.cleared` of main's own, so every window drops its transcript
+   * (spec 02 §3.1 `rev`) as it does for the agent's. The agent's own
+   * `session.cleared`, if it comes, clears again.
+   *
+   * A run still open is retired first, as the agent's reset does (its
+   * cancelled terminal precedes the clear): its open parts close, it
+   * finishes `cancelled` without persisting, and the rest of its stream is
+   * dropped. So nothing after the clear belongs to it: `hydrate` answers
+   * `activeRun: null`, `joinRun` has no log for it, and a client's new
+   * generation (spec 02 §3.3) never replays the clear it is recovering from.
    */
-  clearHistory(): void {
-    this.#historyEpoch += 1;
-    this.#processor.clearMessages();
-    this.#transcript = [];
-    this.#runs = [];
-    this.#notices = [];
-    this.#migratedFrom = undefined;
-    this.#finished.clear();
+  clearByMain(): void {
+    const active = this.#active;
+    if (active != null) {
+      // It belongs to the history being cleared: its terminal persists nothing.
+      this.#historyEpoch += 1;
+      this.#closeOpenParts(active, { anchor: false });
+      this.#apply({
+        type: "RUN_FINISHED",
+        threadId: this.threadId,
+        runId: active.runId,
+        outcome: { type: "cancelled" },
+        timestamp: Date.now(),
+      });
+      this.#orphanRunId = active.runId;
+    }
+    this.#apply(this.#custom("session.cleared", {}));
   }
 
   /** The atomic checkpoint (agent spec §5.3 item 3; spec 02 §14.1). */
@@ -355,7 +594,9 @@ export class ThreadRelay {
     activeRun: { runId: string } | null;
     snapshot: AiThreadSnapshot;
   } {
-    this.lastUsed = Date.now();
+    this.lastUsed = this.#now();
+    this.#pruneFinished();
+    this.#refreshBaseline();
     const active = this.#active;
     const activeRun: AiActiveRun | null =
       active == null
@@ -371,7 +612,9 @@ export class ThreadRelay {
       messages: structuredClone(this.#transcript),
       activeRun: activeRun == null ? null : { runId: activeRun.runId },
       snapshot: {
-        cursor: this.#clock.current,
+        // This thread's own last seq: every event up to it is either in the
+        // snapshot or in the active run's replay, whatever other threads did.
+        cursor: this.#lastSeq,
         epoch: this.#epoch,
         incarnation: this.incarnation,
         activeRun,
@@ -400,7 +643,7 @@ export class ThreadRelay {
     afterSeq: number | null,
     listener: Listener
   ): { replay: RelayChunk[] | "resync"; unsubscribe: () => void } {
-    this.lastUsed = Date.now();
+    this.lastUsed = this.#now();
     this.#listeners.add(listener);
     const unsubscribe = (): void => {
       this.#listeners.delete(listener);
@@ -424,20 +667,26 @@ export class ThreadRelay {
     runId: string,
     listener: Listener
   ): { replay: RelayChunk[]; ended: boolean; unsubscribe: () => void } | null {
-    this.lastUsed = Date.now();
+    this.lastUsed = this.#now();
+    this.#pruneFinished();
     const finished = this.#finished.get(runId);
     if (finished != null)
-      return { replay: [...finished], ended: true, unsubscribe: () => {} };
+      return { replay: [...finished.log], ended: true, unsubscribe: () => {} };
     if (this.#active?.runId !== runId) return null;
     this.#listeners.add(listener);
 
     return {
-      replay: [...this.#active.log],
+      replay: this.#activeLog(this.#active),
       ended: false,
       unsubscribe: () => {
         this.#listeners.delete(listener);
       },
     };
+  }
+
+  /** Drops finished logs past their budget or grace period. */
+  sweep(): void {
+    this.#pruneFinished();
   }
 
   // ─── internals ─────────────────────────────────────────────────────────
@@ -456,15 +705,53 @@ export class ThreadRelay {
   }
 
   /**
+   * A v1-derived baseline is re-read while no AG-UI run has persisted: the
+   * legacy renderer's turns (an ndjson runtime) keep landing in the v1 file,
+   * and the first AG-UI terminal must not persist a stale copy over them.
+   */
+  #refreshBaseline(): void {
+    if (!this.#v1Derived || this.#active != null || this.#reload == null)
+      return;
+    let next: ThreadHistory | null;
+    try {
+      next = this.#reload();
+    } catch (error) {
+      this.#log(
+        `${this.threadId}: re-reading the thread file failed: ${String(error)}`
+      );
+      return;
+    }
+    if (next == null) return;
+    if (
+      next.v1Derived === true &&
+      next.migratedFrom?.updatedAt === this.#migratedFrom?.updatedAt &&
+      next.v1Fingerprint === this.#v1Fingerprint
+    )
+      return;
+    this.#transcript = structuredClone(next.messages);
+    this.#processor = new StreamProcessor({
+      initialMessages: structuredClone(next.messages),
+    });
+    this.#migratedFrom = next.migratedFrom;
+    this.#v1Derived = next.v1Derived === true;
+    this.#v1Fingerprint = next.v1Fingerprint;
+    if (!this.#v1Derived) this.#runs = [...next.runs];
+  }
+
+  /**
    * A user `TEXT_MESSAGE_*` whose id the transcript already holds: a retry
    * after a respawn (agent spec §3.1.4, §5.2). `StreamProcessor` would append
    * its content to the stored message ("questionquestion"), in main's
-   * transcript and in every client replaying the ring, so it is dropped.
+   * transcript and in every client replaying the ring, so it is dropped;
+   * its START is answered with `abacus.duplicate_echo` ("notice").
    */
-  #skipUserEcho(event: RelayEvent): boolean {
+  #skipUserEcho(
+    active: ActiveRun,
+    event: RelayEvent
+  ): "keep" | "drop" | "notice" {
     const messageId =
       typeof event.messageId === "string" ? event.messageId : null;
-    if (messageId == null) return false;
+    if (messageId == null) return "keep";
     if (event.type === "TEXT_MESSAGE_START") {
       if (
         event.role === "user" &&
@@ -472,20 +759,43 @@ export class ThreadRelay {
           .getMessages()
           .some((message) => message.id === messageId)
       ) {
-        this.#skippedUserIds.add(messageId);
-        return true;
+        active.skippedUserIds.add(messageId);
+        if (active.noticedEchoes.has(messageId)) return "drop";
+        active.noticedEchoes.add(messageId);
+        return "notice";
       }
-      return false;
+      return "keep";
     }
-    if (!this.#skippedUserIds.has(messageId)) return false;
+    if (!active.skippedUserIds.has(messageId)) return "keep";
     if (event.type === "TEXT_MESSAGE_END")
-      this.#skippedUserIds.delete(messageId);
-    return event.type.startsWith("TEXT_MESSAGE_");
+      active.skippedUserIds.delete(messageId);
+    return event.type.startsWith("TEXT_MESSAGE_") ? "drop" : "keep";
+  }
+
+  /** The run `ai.send` started holds a user message the transcript already has. */
+  #noticeExpectedEcho(): void {
+    const active = this.#active;
+    if (active == null) return;
+    const messageId = this.#expectedEchoes.get(active.runId);
+    this.#expectedEchoes.delete(active.runId);
+    if (
+      messageId == null ||
+      !this.#processor.getMessages().some((message) => message.id === messageId)
+    )
+      return;
+    active.noticedEchoes.add(messageId);
+    this.#apply(
+      this.#custom("abacus.duplicate_echo", {
+        runId: active.runId,
+        messageId,
+      })
+    );
   }
 
   #synthesizeTerminal(code: string, message: string): RelayChunk | null {
     const active = this.#active;
     if (active == null) return null;
+    this.#closeOpenParts(active);
     const chunk = this.#apply({
       type: "RUN_ERROR",
       message,
@@ -500,12 +810,131 @@ export class ThreadRelay {
     return chunk;
   }
 
+  /**
+   * Before a `RUN_ERROR`: the run's open parts closed in the agent's order
+   * (agent spec §3.1.5, `closeOpenParts`), then an empty assistant message
+   * when the run has none (`anchor`; a cancelled terminal needs none).
+   * Nothing when the agent already did both.
+   */
+  #closeOpenParts(active: ActiveRun, options = { anchor: true }): void {
+    const { texts, reasoning, tools, children, hadAssistant } = active.open;
+    const out: RelayEvent[] = [];
+    const tag = (event: RelayEvent, child: string | undefined): RelayEvent =>
+      child == null ? event : { ...event, subagentRunId: child };
+    const closeTexts = (owner: (child: string | undefined) => boolean) => {
+      for (const [messageId, child] of texts)
+        if (owner(child))
+          out.push(tag({ type: "TEXT_MESSAGE_END", messageId }, child));
+    };
+    const closeTools = (owner: (child: string | undefined) => boolean) => {
+      for (const [toolCallId, tool] of tools) {
+        if (!owner(tool.child)) continue;
+        if (!tool.ended)
+          out.push(tag({ type: "TOOL_CALL_END", toolCallId }, tool.child));
+        out.push(tag(unfinishedResult(toolCallId), tool.child));
+      }
+    };
+
+    for (const [messageId, open] of reasoning) {
+      if (open.messageOpen)
+        out.push(tag({ type: "REASONING_MESSAGE_END", messageId }, open.child));
+      out.push(tag({ type: "REASONING_END", messageId }, open.child));
+    }
+    closeTexts((child) => child == null);
+    // Innermost (latest started) child first: its parts, then its terminal.
+    for (const child of [...children].reverse()) {
+      closeTexts((owner) => owner === child);
+      closeTools((owner) => owner === child);
+      out.push({
+        type: "SUBAGENT_ERROR",
+        subagentRunId: child,
+        message: "The sub-agent did not finish.",
+        code: "unfinished",
+      });
+    }
+    // Parts of children that already ended.
+    closeTexts((child) => child != null && !children.has(child));
+    closeTools((child) => child != null && !children.has(child));
+    closeTools((child) => child == null);
+    if (!hadAssistant && options.anchor) {
+      let messageId = `${active.runId}:error`;
+      const taken = new Set(
+        this.#processor.getMessages().map((message) => message.id)
+      );
+      for (let n = 2; taken.has(messageId); n += 1)
+        messageId = `${active.runId}:error:${n}`;
+      out.push(
+        { type: "TEXT_MESSAGE_START", messageId, role: "assistant" },
+        { type: "TEXT_MESSAGE_END", messageId }
+      );
+    }
+
+    for (const event of out) this.#apply(event);
+  }
+
+  /** What a run-scoped event opens or closes. */
+  #track(open: OpenParts, event: RelayEvent): void {
+    const child = stringOr(event.subagentRunId);
+    const messageId = stringOr(event.messageId);
+    const toolCallId = stringOr(event.toolCallId);
+    switch (event.type) {
+      case "TEXT_MESSAGE_START":
+        if (messageId != null) open.texts.set(messageId, child);
+        if (child == null && event.role !== "user" && event.role !== "system")
+          open.hadAssistant = true;
+        return;
+      case "TEXT_MESSAGE_END":
+        if (messageId != null) open.texts.delete(messageId);
+        return;
+      case "REASONING_START":
+        if (messageId != null)
+          open.reasoning.set(messageId, { messageOpen: false, child });
+        return;
+      case "REASONING_MESSAGE_START":
+        if (messageId != null)
+          open.reasoning.set(messageId, { messageOpen: true, child });
+        return;
+      case "REASONING_MESSAGE_END": {
+        const reasoning =
+          messageId == null ? undefined : open.reasoning.get(messageId);
+        if (reasoning != null) reasoning.messageOpen = false;
+        return;
+      }
+      case "REASONING_END":
+        if (messageId != null) open.reasoning.delete(messageId);
+        return;
+      case "TOOL_CALL_START":
+        if (toolCallId != null && !open.tools.has(toolCallId))
+          open.tools.set(toolCallId, { child, ended: false });
+        return;
+      case "TOOL_CALL_END": {
+        const tool =
+          toolCallId == null ? undefined : open.tools.get(toolCallId);
+        if (tool != null) tool.ended = true;
+        return;
+      }
+      case "TOOL_CALL_RESULT":
+        if (toolCallId != null) open.tools.delete(toolCallId);
+        return;
+      case "SUBAGENT_STARTED":
+        if (child != null) open.children.add(child);
+        return;
+      case "SUBAGENT_FINISHED":
+      case "SUBAGENT_ERROR":
+        if (child != null) open.children.delete(child);
+        return;
+      default:
+        return;
+    }
+  }
+
   /** Sequences, applies and fans out one event. */
   #apply(event: RelayEvent): RelayChunk {
     const chunk: RelayChunk = {
       seq: this.#clock.next(),
       event: event as unknown as StreamChunk,
     };
+    this.#lastSeq = chunk.seq;
 
     if (event.type === "RUN_STARTED") {
       const metadata = record(event.metadata);
@@ -518,19 +947,42 @@ export class ThreadRelay {
         historyEpoch: this.#historyEpoch,
         steps: 0,
         log: [],
+        live: 0,
+        coalescing: false,
+        outputs: new Map(),
+        open: {
+          texts: new Map(),
+          reasoning: new Map(),
+          tools: new Map(),
+          children: new Set(),
+          hadAssistant: false,
+        },
+        skippedUserIds: new Set(),
+        noticedEchoes: new Set(),
+        priorMessageIds: new Set(
+          this.#processor.getMessages().map((message) => message.id)
+        ),
       };
     }
 
     try {
-      this.#processor.processChunk(chunk.event);
+      // As `ChatClient.processIncomingChunk` does, on a shallow copy (it
+      // assigns top-level fields only): the ring and the logs keep the
+      // event as the agent wrote it.
+      this.#processor.processChunk(
+        restoreInboundChunk({ ...event } as unknown as StreamChunk)
+      );
     } catch (error) {
       this.#log(
         `${this.threadId}: the transcript processor rejected ${event.type}: ${String(error)}`
       );
     }
+    if (this.#active != null && isRunScoped(event))
+      this.#track(this.#active.open, event);
     this.#applySessionState(event, chunk.seq);
+    this.#checkPending(event);
     this.#record(chunk, event);
-    if (isTerminal(event)) this.#finishRun(event);
+    if (isTerminal(event)) this.#finishRun(event, chunk.seq);
 
     // A copy: a listener may unsubscribe itself (a joined run ends).
     for (const listener of Array.from(this.#listeners)) listener(chunk);
@@ -552,36 +1004,87 @@ export class ThreadRelay {
       (event.subagentRunId == null || event.subagentRunId === "")
     )
       active.steps += 1;
-    if (
-      active.log.length >= ACTIVE_LOG_CAP &&
-      event.type === "CUSTOM" &&
-      event.name === "tool.output"
-    ) {
-      // Past the cap only live tool output coalesces, to the latest per call.
-      const toolCallId = record(event.value).toolCallId;
-      const subagentRunId = event.subagentRunId;
-      const index = active.log.findIndex(
-        (entry) =>
-          (entry.event as { type: string }).type === "CUSTOM" &&
-          (entry.event as { name?: string }).name === "tool.output" &&
-          record((entry.event as { value?: unknown }).value).toolCallId ===
-            toolCallId &&
-          (entry.event as { subagentRunId?: unknown }).subagentRunId ===
-            subagentRunId
-      );
-      if (index !== -1) active.log.splice(index, 1);
+    if (active.live >= this.#activeLogCap) active.coalescing = true;
+    if (event.type === "CUSTOM" && event.name === "tool.output") {
+      const key = outputKey(event);
+      let indexes = active.outputs.get(key);
+      if (active.coalescing && indexes != null) {
+        // Past the cap, live tool output coalesces to the latest per call:
+        // every earlier output of that call leaves the log.
+        for (const index of indexes) {
+          if (active.log[index] == null) continue;
+          active.log[index] = null;
+          active.live -= 1;
+        }
+        indexes = [];
+        active.outputs.set(key, indexes);
+      }
+      if (indexes == null) {
+        indexes = [];
+        active.outputs.set(key, indexes);
+      }
+      indexes.push(active.log.length);
     }
     active.log.push(chunk);
+    active.live += 1;
+    if (active.log.length - active.live > Math.max(1_024, active.live))
+      this.#compact(active);
   }
 
-  #finishRun(event: RelayEvent): void {
+  /** Drops the holes coalescing left, and re-indexes the outputs. */
+  #compact(active: ActiveRun): void {
+    const log = this.#activeLog(active);
+    active.log = log;
+    active.live = log.length;
+    active.outputs.clear();
+    log.forEach((chunk, index) => {
+      const event = chunk.event as unknown as RelayEvent;
+      if (event.type !== "CUSTOM" || event.name !== "tool.output") return;
+      const key = outputKey(event);
+      const indexes = active.outputs.get(key) ?? [];
+      indexes.push(index);
+      active.outputs.set(key, indexes);
+    });
+  }
+
+  #activeLog(active: ActiveRun): RelayChunk[] {
+    return active.log.filter((chunk): chunk is RelayChunk => chunk != null);
+  }
+
+  #forgetFinished(runId: string): void {
+    if (this.#finished.delete(runId)) this.#onRunForgotten(runId);
+  }
+
+  #pruneFinished(): void {
+    if (this.#finished.size === 0) return;
+    const now = this.#now();
+    for (const [runId, finished] of this.#finished)
+      if (now - finished.endedAt > FINISHED_LOG_TTL_MS)
+        this.#forgetFinished(runId);
+    while (this.#finished.size > FINISHED_LOGS_KEPT)
+      this.#forgetFinished(this.#finished.keys().next().value!);
+    let events = 0;
+    for (const finished of this.#finished.values())
+      events += finished.log.length;
+    // Oldest first; the newest log stays whatever its size.
+    for (const [runId, finished] of this.#finished) {
+      if (events <= FINISHED_EVENTS_KEPT || this.#finished.size <= 1) break;
+      events -= finished.log.length;
+      this.#forgetFinished(runId);
+    }
+  }
+
+  #finishRun(event: RelayEvent, seq: number): void {
     const active = this.#active;
     if (active == null) return;
     this.#active = null;
+    this.#publishFinished(active, event, seq);
 
-    this.#finished.set(active.runId, active.log);
-    while (this.#finished.size > FINISHED_LOGS_KEPT)
-      this.#finished.delete(this.#finished.keys().next().value!);
+    this.#finished.set(active.runId, {
+      log: this.#activeLog(active),
+      endedAt: this.#now(),
+    });
+    this.#pruneFinished();
 
     if (active.historyEpoch !== this.#historyEpoch) {
       // Cleared while it ran: nothing of it belongs to the new history.
@@ -603,11 +1106,95 @@ export class ThreadRelay {
         runs: this.#runs,
         ...(this.#migratedFrom != null && { migratedFrom: this.#migratedFrom }),
       });
+      // The file is now the relay's: no v1 refresh from here on.
+      this.#v1Derived = false;
     } catch (error) {
       this.#log(
         `${this.threadId}: persisting the transcript failed: ${String(error)}`
       );
     }
+  }
+
+  /** The run's one notice, from the messages it added to the processor. */
+  #publishFinished(active: ActiveRun, event: RelayEvent, seq: number): void {
+    const own = this.#processor
+      .getMessages()
+      .filter((message) => !active.priorMessageIds.has(message.id));
+    const outcome =
+      event.type === "RUN_ERROR"
+        ? "error"
+        : record(event.outcome).type === "cancelled"
+          ? "cancelled"
+          : "success";
+    const code = stringOr(event.code);
+    try {
+      this.#onRunFinished({
+        runId: active.runId,
+        outcome,
+        ...(outcome === "error" && code != null && { errorCode: code }),
+        hasVisibleAssistantText: hasVisibleAssistantText(own),
+        seq,
+        at: typeof event.timestamp === "number" ? event.timestamp : this.#now(),
+      });
+    } catch (error) {
+      this.#log(
+        `${this.threadId}: the run-finished notice failed: ${String(error)}`
+      );
+    }
+  }
+
+  /** The permissions a client may still answer: the live incarnation's. */
+  get pendingPermissions(): PendingPermissionsInfo {
+    return {
+      incarnation: this.incarnation,
+      items: this.#permissions.items.filter(
+        (item) =>
+          this.incarnation == null ||
+          item.metadata.abacus.lineage.incarnation === this.incarnation
+      ),
+    };
+  }
+
+  /**
+   * After an event that can change the answerable set (its list, or the
+   * live incarnation): tells the host when the set really changed.
+   */
+  #checkPending(event: RelayEvent): void {
+    const relevant =
+      event.type === "STATE_SNAPSHOT" ||
+      (event.type === "CUSTOM" &&
+        (event.name === "permission.pending" ||
+          event.name === "session.ready" ||
+          event.name === "wire.hello"));
+    if (!relevant) return;
+    const pending = this.pendingPermissions;
+    const key =
+      pending.items.length === 0
+        ? ""
+        : `${pending.incarnation ?? ""}\u0000${pending.items
+            .map((item) => item.metadata.abacus.lineage.permissionId)
+            .join("\u0000")}`;
+    if (key === this.#pendingKey) return;
+    this.#pendingKey = key;
+    try {
+      this.#onPendingChanged(pending);
+    } catch (error) {
+      this.#log(
+        `${this.threadId}: the attention update failed: ${String(error)}`
+      );
+    }
+  }
+
+  #clearHistory(): void {
+    this.#historyEpoch += 1;
+    this.#processor.clearMessages();
+    this.#transcript = [];
+    this.#runs = [];
+    this.#notices = [];
+    this.#migratedFrom = undefined;
+    this.#v1Derived = false;
+    this.#v1Fingerprint = undefined;
+    for (const runId of this.#finished.keys()) this.#forgetFinished(runId);
   }
 
   #outcome(
@@ -676,7 +1263,7 @@ export class ThreadRelay {
           this.#setIncarnation(value.incarnation);
         return;
       case "session.cleared":
-        this.clearHistory();
+        this.#clearHistory();
         try {
           this.#remove();
         } catch (error) {
@@ -686,6 +1273,8 @@ export class ThreadRelay {
         }
         return;
       case "permission.pending":
+        if (this.incarnation != null && value.incarnation !== this.incarnation)
+          return;
         this.#permissions = {
           incarnation:
             typeof value.incarnation === "string" ? value.incarnation : null,
@@ -719,7 +1308,8 @@ export class ThreadRelay {
           };
         return;
       case "agent.notification":
-      case "agent.error": {
+      case "agent.error":
+      case "abacus.notice": {
         const key =
           typeof value.notificationKey === "string"
             ? value.notificationKey

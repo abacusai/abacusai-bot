@@ -82,9 +82,13 @@ export class SessionTurnStateService {
   }
 
   /** True only while user-requested work is in flight. Idle CLI processes do not count. */
-  hasBusyTurn(): boolean {
-    for (const state of this.states.values()) {
-      if (state.isBusy) return true;
+  /**
+   * `exclude`: sessions whose busy state comes from elsewhere (an agui
+   * runtime, whose run state the relay holds; spec 07 review r1 #10).
+   */
+  hasBusyTurn(exclude?: (sessionId: string) => boolean): boolean {
+    for (const [sessionId, state] of this.states) {
+      if (state.isBusy && exclude?.(sessionId) !== true) return true;
     }
     return false;
   }

@@ -1,0 +1,208 @@
+/*
+ * The chat kit's tokens and hand-written styles (spec 02 §5.4, §7.2, §9):
+ * status colours, diff colours, the prose block, code chrome, math, the
+ * typing dots and fresh-row entry. Values from the design canvas (pages
+ * 1–4), mapped onto theme tokens for light and dark; every text pair meets
+ * 4.5:1 in both themes.
+ */
+:root {
+  --chat-surface: oklch(0.97 0 0);
+  --chat-surface-2: oklch(0.945 0 0);
+  --chat-inset: oklch(0.985 0 0);
+  --chat-status-running: oklch(0.52 0.15 50);
+  --chat-status-attention: oklch(0.52 0.15 50);
+  --chat-status-done: oklch(0.47 0.12 150);
+  --chat-status-muted: oklch(0.5 0 0);
+  --chat-diff-add-bg: oklch(0.95 0.05 150);
+  --chat-diff-add-fg: oklch(0.38 0.11 150);
+  --chat-diff-del-bg: oklch(0.95 0.04 20);
+  --chat-diff-del-fg: oklch(0.45 0.16 25);
+  --chat-user-bubble: oklch(0.93 0 0);
+  --chat-font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dark {
+  --chat-surface: oklch(0.255 0.004 286);
+  --chat-surface-2: oklch(0.225 0.004 286);
+  --chat-inset: oklch(0.18 0.003 286);
+  --chat-status-running: oklch(0.84 0.1 60);
+  --chat-status-attention: oklch(0.84 0.1 60);
+  --chat-status-done: oklch(0.87 0.12 150);
+  --chat-status-muted: oklch(0.7 0 0);
+  --chat-diff-add-bg: oklch(0.25 0.04 150);
+  --chat-diff-add-fg: oklch(0.88 0.12 150);
+  --chat-diff-del-bg: oklch(0.24 0.035 20);
+  --chat-diff-del-fg: oklch(0.8 0.11 20);
+  --chat-user-bubble: oklch(0.255 0.004 286);
+}
+
+/* ─── prose (§7.2) ───────────────────────────────────────────────── */
+
+.chat-prose {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.chat-prose > * + * { margin-top: 0.75em; }
+.chat-prose h1, .chat-prose h2, .chat-prose h3, .chat-prose h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.1em;
+}
+.chat-prose h1 { font-size: 1.15em; }
+.chat-prose h2 { font-size: 1.07em; }
+.chat-prose h3, .chat-prose h4 { font-size: 1em; }
+.chat-prose ul, .chat-prose ol { padding-inline-start: 1.4em; }
+.chat-prose ul { list-style: disc; }
+.chat-prose ol { list-style: decimal; }
+.chat-prose li + li { margin-top: 0.25em; }
+.chat-prose a { text-decoration: underline; text-underline-offset: 3px; }
+.chat-prose a[data-file] { font-family: var(--chat-font-mono); font-size: 0.92em; }
+.chat-prose blockquote {
+  border-inline-start: 2px solid var(--border);
+  padding-inline-start: 0.9em;
+  color: var(--muted-foreground);
+}
+.chat-prose hr { border: 0; border-top: 1px solid var(--border); }
+.chat-prose :not(pre) > code {
+  font-family: var(--chat-font-mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.35em;
+  background: var(--chat-surface);
+}
+.chat-prose .chat-table { overflow-x: auto; }
+.chat-prose table { border-collapse: collapse; font-size: 0.93em; }
+.chat-prose th, .chat-prose td {
+  border: 1px solid var(--border);
+  padding: 0.35em 0.7em;
+  text-align: start;
+}
+.chat-prose th { font-weight: 600; background: var(--chat-surface-2); }
+.chat-prose .chat-image { max-width: 100%; border-radius: 0.6rem; }
+.chat-prose-streaming > :last-child { animation: chat-fade-in 80ms ease-out; }
+
+/* ─── code (§7.4) ────────────────────────────────────────────────── */
+
+.chat-code {
+  border-radius: 10px;
+  background: var(--chat-inset);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.chat-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  padding: 0 4px 0 12px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+.chat-code-lang { font-family: var(--chat-font-mono); }
+.chat-code pre.tm-code {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-family: var(--chat-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  background: transparent;
+}
+.chat-code pre.chat-code-collapsed { max-height: calc(30 * 1.6 * 12px + 20px); overflow-y: hidden; }
+.chat-code-more {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  text-align: start;
+  color: var(--muted-foreground);
+  border-top: 1px solid var(--border);
+}
+.chat-code-more:hover { color: var(--foreground); }
+/* @tanstack/highlight's diff grammar emits `th-inserted` / `th-deleted`. */
+.chat-code:is([data-lang="diff"], [data-lang="patch"]) .th-inserted { color: var(--chat-diff-add-fg); }
+.chat-code:is([data-lang="diff"], [data-lang="patch"]) .th-deleted { color: var(--chat-diff-del-fg); }
+
+/* ─── math (§7.3) ────────────────────────────────────────────────── */
+
+.chat-math { overflow-x: auto; padding: 0.25em 0; font-family: "Cambria Math", "STIX Two Math", math; }
+.chat-math-inline math { font-family: "Cambria Math", "STIX Two Math", math; }
+.chat-math-pending { font-family: var(--chat-font-mono); font-size: 0.9em; color: var(--muted-foreground); }
+.chat-prose .temml-error { color: var(--destructive) !important; font-family: var(--chat-font-mono); font-size: 0.9em; }
+
+/* ─── diffs and terminal output (§5.4) ──────────────────────────── */
+
+.chat-diff {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background: var(--chat-inset);
+  font-family: var(--chat-font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow: auto;
+}
+.chat-diff [data-kind] { padding: 0 12px; white-space: pre; }
+.chat-diff [data-kind="add"] { background: var(--chat-diff-add-bg); color: var(--chat-diff-add-fg); }
+.chat-diff [data-kind="del"] { background: var(--chat-diff-del-bg); color: var(--chat-diff-del-fg); }
+.chat-diff [data-kind="same"] { color: var(--muted-foreground); }
+.chat-terminal {
+  max-height: 400px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--chat-inset);
+  font-family: var(--chat-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-mono { font-family: var(--chat-font-mono); }
+
+/* ─── typing dots (canvas `bob`, §5.6) ──────────────────────────── */
+
+@keyframes chat-bob {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+.chat-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: chat-bob 1.2s ease-in-out infinite;
+}
+.chat-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes chat-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── fresh rows (§9.1) ─────────────────────────────────────────── */
+
+[data-slot="message-scroller-item"][data-fresh] {
+  transition: opacity 160ms ease-out, translate 160ms ease-out;
+  @starting-style {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+/*
+ * Reduced motion (§9.1), resolved as the foundation does (tokens.css):
+ * `prefs.motion.reduce` is `data-reduce-motion` on <html>; "on" reduces
+ * everywhere, "off" keeps full motion even with the OS setting on, and
+ * "system" follows the OS. Dots stop, fresh rows and the last streamed
+ * block only fade, and the shimmer becomes plain text (`shimmer-none`).
+ */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) .chat-typing-dot { animation: none; opacity: 0.7; }
+  html:not([data-reduce-motion="off"]) .chat-prose-streaming > :last-child { animation: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
+  html:not([data-reduce-motion="off"]) .shimmer { --shimmer-image: none; --shimmer-text-fill: currentColor; animation: none; }
+}
+html[data-reduce-motion="on"] .chat-typing-dot { animation: none; opacity: 0.7; }
+html[data-reduce-motion="on"] .chat-prose-streaming > :last-child { animation: none; }
+html[data-reduce-motion="on"] [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
+html[data-reduce-motion="on"] .shimmer { --shimmer-image: none; --shimmer-text-fill: currentColor; animation: none; }

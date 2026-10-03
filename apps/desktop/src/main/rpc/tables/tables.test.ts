@@ -27,8 +27,10 @@ import type { RoutineListItem } from "#shared/routines";
 import { createTables, type Tables } from ".";
 import {
   createJob,
+  getJob,
   listJobs,
   onCronStoreWrite,
+  recordRun,
 } from "../../services/agent-tools/cron-store";
 import {
   forgetEntryAt,
@@ -208,17 +210,28 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     const { tables } = setup();
     const bots = await reader(tables.bots);
 
-    const bot = createBot({ name: "Ada", description: "Counts" }, "bot-ada");
+    const bot = createBot(
+      { name: "Ada", description: "Counts", avatarAccessory: "glasses" },
+      "bot-ada"
+    );
     expect(bot.id).toBe("bot-ada");
     await expect(bots.next()).resolves.toMatchObject({
       seq: 1,
-      changes: [{ type: "insert", key: "bot-ada" }],
+      changes: [
+        {
+          type: "insert",
+          key: "bot-ada",
+          value: { avatarAccessory: "glasses" },
+        },
+      ],
     });
 
-    updateBot(bot.id, { name: "Ada L." });
+    updateBot(bot.id, { name: "Ada L.", avatarAccessory: "crown" });
     await expect(bots.next()).resolves.toMatchObject({
       seq: 2,
-      changes: [{ type: "update", value: { name: "Ada L." } }],
+      changes: [
+        { type: "update", value: { name: "Ada L.", avatarAccessory: "crown" } },
+      ],
     });
 
     removeBot(bot.id);
@@ -255,9 +268,13 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
         lastRunAt: null,
         lastResult: null,
         runs: Array.from({ length: 25 }, (_, i) => ({
+          id: `attempt-${i}`,
           at: 100 - i,
           trigger: "schedule" as const,
           result: `run ${i}`,
+          kind: "unknown" as const,
+          sessionId: null,
+          attemptId: null,
         })),
         nextRunAt: 5,
         webhookUrl: null,
@@ -303,6 +320,61 @@ describe("DB table wiring (B-T3)", { timeout: 20_000 }, () => {
     });
     await sessionFeed.close();
     await runFeed.close();
+  });
+
+  // R5-T10 (main side), spec 05 §31.5 f: a result recorded after the
+  // session notification reaches a subscribed routineRuns client, joined to
+  // its attempt by session id.
+  it("routineRuns: a cron-only write (a timeout) updates the run's attempt and result", async () => {
+    const job = createJob({ prompt: "p", schedule: "0 9 * * *" });
+    const { tables, sessions } = setup({
+      sources: {
+        listRoutines: () => listJobs() as unknown as RoutineListItem[],
+        onRoutinesWritten: onCronStoreWrite,
+      },
+    });
+    const run = sessions.create("ws-1", job.id);
+    const attempt = recordRun(job.id, `started session ${run.id}`, "manual", {
+      kind: "started",
+      sessionId: run.id,
+    });
+    const feed = await reader(tables.routineRuns);
+    expect(tables.routineRuns.snapshot().rows).toMatchObject([
+      {
+        sessionId: run.id,
+        attemptId: attempt!.id,
+        result: `started session ${run.id}`,
+      },
+    ]);
+
+    // No session record changes: only cronjobs.json is written.
+    const timeout = recordRun(
+      job.id,
+      "failed: the run was stopped after 30 minutes",
+      "schedule",
+      { kind: "timed-out", sessionId: run.id, attemptId: attempt!.id }
+    );
+    await expect(feed.next()).resolves.toMatchObject({
+      changes: [
+        {
+          type: "update",
+          key: run.id,
+          value: {
+            attemptId: attempt!.id,
+            result: "failed: the run was stopped after 30 minutes",
+          },
+        },
+      ],
+    });
+    // Ids are persisted: prepending more entries never changes them.
+    recordRun(job.id, "skipped: the previous run is still going", "schedule");
+    const stored = getJob(job.id)!.runs;
+    expect(stored.map((entry) => entry.id).slice(1)).toEqual([
+      timeout!.id,
+      attempt!.id,
+    ]);
+    expect(stored[0]).toMatchObject({ kind: "skipped", sessionId: null });
+    await feed.close();
   });
 
   it("sessions: a client id is honoured once, then CONFLICT; sessions-reloaded resets", async () => {
@@ -772,8 +844,8 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     for (const entry of changesOf(feed.batches)) {
       if (entry.type === "delete") continue;
       const paths = entry.value.gitChanges.map((item) => item.path);
-      if (entry.key === idB) expect(paths).not.toContain("a.txt");
-      else expect(entry.key).toBe(idA);
+      if (entry.key === `${idB}:primary`) expect(paths).not.toContain("a.txt");
+      else expect(entry.key).toBe(`${idA}:primary`);
     }
     await feed.close();
   });
@@ -1024,8 +1096,8 @@ describe("DB table wiring (impl review r1)", { timeout: 20_000 }, () => {
     });
     await expect(gitState.next()).resolves.toMatchObject({
       changes: expect.arrayContaining([
-        { type: "delete", key: idB },
-        expect.objectContaining({ type: "insert", key: idA }),
+        { type: "delete", key: `${idB}:primary` },
+        expect.objectContaining({ type: "insert", key: `${idA}:primary` }),
       ]),
     });
     await workspaces.close();

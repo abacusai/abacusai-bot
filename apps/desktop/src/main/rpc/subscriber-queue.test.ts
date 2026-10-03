@@ -59,8 +59,11 @@ describe("delivery classes (A-T9)", () => {
       "browser.events": "lossless-actionable",
       "connectors.events": "lossless-actionable",
       "devices.events": "lossless-actionable",
+      "routines.events": "lossless-actionable",
       "ai.subscribe": "lossless-actionable",
       "ai.joinRun": "lossless-actionable",
+      "ai.runFinished": "lossless-actionable",
+      "ai.attention": "lossless-actionable",
       "devices.stream.chunks": "lossless-actionable",
       "mcp.runtime.events": "coalescing",
       "update.events": "coalescing",
@@ -73,6 +76,8 @@ describe("delivery classes (A-T9)", () => {
       "localModels.progress": "coalescing",
       "voice.whisper.progress": "coalescing",
       "files.events": "coalescing",
+      // Spec 04 §26.4 b: one yield; the rows are gitState's.
+      "git.watch": "coalescing",
     });
   });
 

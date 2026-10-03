@@ -95,13 +95,14 @@ import {
   registerIpcHandlers,
   type HostOperations,
 } from "./handler";
-import { registerKeepAwakeHandlers } from "./keep-awake";
+import { followMainAgentBusy, registerKeepAwakeHandlers } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
   prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
+import { CueArbiter, mainOnlyCueWindows } from "./notch/cue-arbiter";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -137,6 +138,8 @@ import { registerBrowserRuntimeIpcHandlers } from "./services/browser/browser-ru
 import { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import type { BrowserRuntimeWindow } from "./services/browser/electron-browser-runtime";
 import { installLegacyPrefsSync } from "./services/config/legacy-prefs";
+import { createLoginItem } from "./services/config/login-item";
+import { notificationSilent } from "./services/config/notification-policy";
 import { PrefsStore, prefsFile } from "./services/config/prefs-store";
 import {
   registerRendererState,
@@ -144,9 +147,14 @@ import {
 } from "./services/config/renderer-state";
 import {
   readNotificationSettings,
+  readLegacySoundOptOut,
+  onNotificationSettingsWritten,
   readSettings,
 } from "./services/config/settings";
-import { reportFunnelStep } from "./services/debug-sync/funnel-beacon";
+import {
+  reportFunnelStep,
+  reportFunnelStepOnce,
+} from "./services/debug-sync/funnel-beacon";
 import {
   buildLogDump,
   collectEnvironmentInfo,
@@ -373,7 +381,7 @@ function notifyTaskRunningInBackground(): void {
     const notification = new Notification({
       title: "Task still running",
       body: "We'll notify you when it finishes.",
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => revealMainWindow());
     notification.show();
@@ -393,6 +401,8 @@ let mainWindowRef: BaseWindow | null = null;
 let rendererHost: RendererHost | null = null;
 /** Null until whenReady; wherever it stays null the packaged baseline runs. */
 let experienceRuntime: ExperienceRuntime | null = null;
+/** Reloads the main window's app content; set while a window is up. */
+let reloadRendererContent: (() => void) | null = null;
 
 // Throttled input reports from renderer/lib/activity-beacon; a swap defers
 // while input is recent.
@@ -410,11 +420,15 @@ ipcMain.on("renderer-activity", () => {
 const rendererSwaps = new RendererSwapScheduler({
   // Development stays on the Vite server.
   disabled: () => Boolean(process.env.VITE_DEV_SERVER_URL),
-  target: () =>
-    experienceEntryUrl(
-      experienceRuntime?.activeRendererUrl(),
-      RENDERER_GENERATION
-    ),
+  // Only while `version` is still the active experience: a superseded
+  // version has nothing to swap to (the newer one's schedule settles).
+  target: (version) =>
+    experienceRuntime?.store.version === version
+      ? experienceEntryUrl(
+          experienceRuntime.activeRendererUrl(),
+          RENDERER_GENERATION
+        )
+      : null,
   host: () => rendererHost,
   busy: () =>
     workspaceServiceHost.hasActiveAgentTurn() ||
@@ -423,6 +437,24 @@ const rendererSwaps = new RendererSwapScheduler({
   // The integrity check admits only experiences built for this shell's
   // FOUNDATION_API, so this is also the candidate's contract.
   barrier: FOUNDATION_API >= 2 ? "subscriptions" : "first-commit",
+  // Activation is transactional with readiness (spec 07 review r1 #9).
+  onOutcome: (version, outcome, detail) => {
+    const store = experienceRuntime?.store;
+    if (store == null) return;
+    const settle =
+      outcome === "gave-up"
+        ? store.abandonActivation(version)
+        : store.commitActivation(version);
+    settle
+      .then(() => {
+        // A new window's first document gave up: show the committed one.
+        if (outcome === "gave-up" && detail?.live === true)
+          reloadRendererContent?.();
+      })
+      .catch((error: unknown) => {
+        console.error(`[experience] settling ${version} failed`, error);
+      });
+  },
 });
 
 function scheduleRendererSwap(version: string): void {
@@ -444,7 +476,12 @@ const browserRuntimeWindow = (): BrowserRuntimeWindow | null => {
     },
   };
 };
-const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow);
+const browserRuntime = new ElectronBrowserRuntime(browserRuntimeWindow, {
+  // A local file view's http(s) links (spec 04 §12.8): the system browser.
+  openExternal: (url) => {
+    if (isSafeExternalUrl(url)) void shell.openExternal(url);
+  },
+});
 workspaceServiceHost.attachBrowserRuntime(browserRuntime);
 
 let activeLinuxChromeMode: LinuxChromeMode = "native-frame";
@@ -1089,6 +1126,12 @@ async function createWindow(restored?: RecreatedWindowState) {
   });
   rendererHost = host;
   setActiveRendererHost(host);
+  reloadRendererContent = () => {
+    if (rendererHost === host) loadAppContent();
+  };
+  // An activation still waiting on readiness (no window was up to swap)
+  // settles on this window's first document, which is its bundle.
+  rendererSwaps.adopt(host);
 
   loadAppContent();
 }
@@ -1279,8 +1322,11 @@ const appOperations: AppOperations = {
   hasGoogleChrome: () => hasGoogleChrome(),
 
   // First-run milestones; see services/debug-sync/funnel-beacon.ts.
-  reportFunnelStep(step, detail) {
-    if (isFunnelStep(step)) reportFunnelStep(step, funnelDetail(detail));
+  reportFunnelStep(step, detail, once) {
+    if (!isFunnelStep(step)) return;
+    // `once`: the persisted first-time report (spec 06 §6.5).
+    if (once === true) reportFunnelStepOnce(step, funnelDetail(detail));
+    else reportFunnelStep(step, funnelDetail(detail));
   },
 
   // The local account; see shared/account.ts for why it is optional.
@@ -1389,7 +1435,7 @@ const appOperations: AppOperations = {
     const notification = new Notification({
       title,
       body,
-      silent: !prefs.sound,
+      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
     });
     notification.on("click", () => {
       const win = revealMainWindow();
@@ -1560,6 +1606,18 @@ const appOperations: AppOperations = {
 
   showAboutPanel: () => app.showAboutPanel(),
 
+  async setTitlebarDensity(value) {
+    const density = setTitlebarDensity(value);
+    if (RENDERER_GENERATION === "wco") {
+      refreshWindowChrome();
+      publishChromeState();
+      if (process.platform === "darwin") await recreateMainWindow();
+    }
+    return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
+  },
+
+  loginItem: createLoginItem(app),
+
   markRendererActivity() {
     lastRendererActivity = Date.now();
   },
@@ -1608,6 +1666,20 @@ function installRpc(
   host: HostOperations,
   rendererState: RendererStateStore
 ): void {
+  // Before the notch exists, the main renderer is the only audible document.
+  const cueArbiter = new CueArbiter({
+    windows: mainOnlyCueWindows({
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      state: (id) =>
+        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+    }),
+    // Each renderer generation reports its thread once; forget it when gone.
+    onWindowGone: (id, forget) => {
+      const contents = electronWebContents.fromId(id);
+      if (contents == null || contents.isDestroyed()) forget();
+      else contents.once("destroyed", forget);
+    },
+  });
   const deps: RpcDeps = {
     serviceHost: workspaceServiceHost,
     host,
@@ -1638,6 +1710,7 @@ function installRpc(
     ai: workspaceServiceHost.aguiRelay,
     threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
+    cues: cueArbiter,
   };
   rpcTransport = installMessagePortTransport({
     ipcMain,
@@ -1710,6 +1783,9 @@ app
     // store reads the files they derive. Never throws; a failure is recorded
     // and retried next launch, and every consumer has a fallback.
     await runStartupMigrations(APP_DISPLAY_NAME);
+    // The blocks for this launch are set: journalled thread writes whose
+    // files are free again land now, even for threads nobody opens.
+    workspaceServiceHost.threadStore.replayHeld();
     // An unresolved commit that may cover prefs.json: this session writes a
     // copy, so the next launch's rollback neither overwrites nor is defeated
     // by what the user changes now.
@@ -1734,7 +1810,10 @@ app
     const rendererState = registerRendererState();
     // The old renderer is the shipped UI until the cut-over: its durable
     // state keeps `prefs.json` current, by provenance (spec 00 C.4).
-    installLegacyPrefsSync(rendererState, prefsStore);
+    installLegacyPrefsSync(rendererState, prefsStore, undefined, {
+      read: readLegacySoundOptOut,
+      onWrite: onNotificationSettingsWritten,
+    });
     const hostOperations = registerIpcHandlers(workspaceServiceHost);
     // After the dispatcher: the router shares the handlers' operations.
     installRpc(hostOperations, rendererState);
@@ -1759,6 +1838,10 @@ app
       .catch(() => undefined);
 
     registerKeepAwakeHandlers();
+    // Keep-awake follows the relay's run state too, re-evaluated at every
+    // AG-UI run start and terminal (spec 07 review r1 #10), starting from the
+    // value it already has (the relay and the cron scheduler started above).
+    followMainAgentBusy(workspaceServiceHost.aguiRelay);
 
     // Best-effort cleanup of attachment temp files older than 7 days across
     // every workspace; never blocks startup.
@@ -1879,17 +1962,8 @@ app
     // The same state the oRPC renderer reads through `window.chrome`.
     ipcMain.handle("window:chrome", () => chromeState());
     ipcMain.handle("window:recreate", () => recreateMainWindow());
-    ipcMain.handle(
-      "settings:set-titlebar-density",
-      async (_event, value: unknown) => {
-        const density = setTitlebarDensity(value);
-        if (RENDERER_GENERATION === "wco") {
-          refreshWindowChrome();
-          publishChromeState();
-          if (process.platform === "darwin") await recreateMainWindow();
-        }
-        return { density, appliesOnRestart: RENDERER_GENERATION === "legacy" };
-      }
+    ipcMain.handle("settings:set-titlebar-density", (_event, value: unknown) =>
+      appOperations.setTitlebarDensity(value)
     );
 
     // `on`, not `handle`: the renderer must never wait on main to log a line.

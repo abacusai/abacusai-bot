@@ -12,11 +12,13 @@ import type {
   RoutineRow,
   RoutineRunRow,
   SessionRow,
+  PrefsPatch,
   TablePosition,
   WorkspaceRow,
 } from "#shared/contract";
 
-import type { DbClient, DbSource } from "../collections/table-source";
+import type { LazyTransport } from "../db/tables";
+import type { Transport } from "../transport/types";
 import { FixtureTable } from "./fixture-table";
 import { fixturePrefs } from "./rows";
 
@@ -31,6 +33,17 @@ export interface FixtureSeed {
   memories?: MemoryRow[];
   gitState?: GitStateRow[];
 }
+
+type DbClient = Transport["client"]["db"];
+
+const PREFS_GROUPS: ReadonlySet<string> = new Set([
+  "sidebar",
+  "pinned",
+  "models",
+  "dismissals",
+  "motion",
+  "sounds",
+]);
 
 export class FixtureDb {
   readonly prefs: FixtureTable<PrefsRow, "app">;
@@ -61,11 +74,20 @@ export class FixtureDb {
     this.gitState = new FixtureTable((row) => row.workspaceId, seed.gitState);
   }
 
-  updatePrefs(patch: Partial<PrefsRow>): TablePosition<"app"> {
+  /** Main's merge (spec 00 B.2): a group takes only the leaves it names. */
+  updatePrefs(patch: PrefsPatch): TablePosition<"app"> {
     const current = this.prefs.rows.get("app") ?? fixturePrefs();
+    const next: Record<string, unknown> = { ...current };
+    for (const [field, value] of Object.entries(patch)) {
+      if (value === undefined) continue;
+      const before = next[field];
+      next[field] =
+        PREFS_GROUPS.has(field) && typeof before === "object" && before != null
+          ? { ...before, ...(value as object) }
+          : value;
+    }
     return this.prefs.upsert({
-      ...current,
-      ...patch,
+      ...(next as unknown as PrefsRow),
       id: "app",
       updatedAt: new Date().toISOString(),
     });
@@ -130,8 +152,7 @@ const tableClient = <Row extends object, Key extends string>(
 export const fixtureDbClient = (db: FixtureDb): DbClient =>
   ({
     prefs: tableClient(db.prefs, {
-      update: ({ patch }: { patch: Partial<PrefsRow> }) =>
-        db.updatePrefs(patch),
+      update: ({ patch }: { patch: PrefsPatch }) => db.updatePrefs(patch),
     }),
     bots: tableClient(db.bots, {
       insert: (input: BotRow) => db.insertBot(input),
@@ -152,6 +173,25 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
       delete: ({ id }: { id: string }) => db.workspaces.remove(id),
     }),
     routines: tableClient(db.routines, {
+      insert: (input: Partial<RoutineRow> & { id: string; prompt: string }) =>
+        db.routines.upsert({
+          name: "Check-in",
+          schedule: null,
+          runAt: null,
+          webhookToken: null,
+          workspaceId: null,
+          botId: null,
+          enabled: true,
+          createdAt: Date.now(),
+          lastRunAt: null,
+          lastResult: null,
+          nextRunAt: null,
+          webhookUrl: null,
+          webhookPublicPending: false,
+          botName: null,
+          recentRuns: [],
+          ...input,
+        }),
       update: ({ id, patch }: { id: string; patch: Partial<RoutineRow> }) =>
         db.updateRow(db.routines, id, patch),
       delete: ({ id }: { id: string }) => db.routines.remove(id),
@@ -164,7 +204,13 @@ export const fixtureDbClient = (db: FixtureDb): DbClient =>
     gitState: tableClient(db.gitState),
   }) as unknown as DbClient;
 
-export const directDbSource =
-  (db: FixtureDb): DbSource =>
-  async () =>
-    fixtureDbClient(db);
+/**
+ * A lazy transport whose `client.db` is the FixtureDb, with no oRPC in
+ * between (tests). Only `db.*` exists on it.
+ */
+export const fixtureTransport = (db: FixtureDb): LazyTransport => {
+  const transport = {
+    client: { db: fixtureDbClient(db) },
+  } as unknown as Transport;
+  return async () => transport;
+};
