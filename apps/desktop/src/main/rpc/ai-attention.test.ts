@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AttentionEvent } from "#shared/contract";
 
@@ -23,6 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   fs.rmSync(home, { recursive: true, force: true });
 });
 
@@ -345,4 +346,25 @@ it("a late permission list cannot replace a new incarnation's list", async () =>
   });
   abort.abort();
   await stream.return?.();
+});
+
+it("descriptor snooze identity changes when permissions are replaced in the same millisecond", async () => {
+  vi.spyOn(Date, "now").mockReturnValue(100);
+  const { relay, boot, pending } = setup();
+  boot("s1", "i");
+  pending("s1", "i", [{ id: "a" }]);
+  const abort = new AbortController();
+  const stream = relay.attention(abort.signal)[Symbol.asyncIterator]();
+  const first = (await stream.next()).value;
+  pending("s1", "i", [{ id: "b" }]);
+  const second = (await stream.next()).value;
+  if (first.type !== "snapshot" || second.type !== "upsert")
+    throw new Error("Expected snapshot then upsert");
+  expect(first.items[0]!.oldestAt).toBe(second.item.oldestAt);
+  expect(first.items[0]!.firstDescriptorId).toBeDefined();
+  expect(second.item.firstDescriptorId).toBeDefined();
+  expect(first.items[0]!.firstDescriptorId).not.toBe(
+    second.item.firstDescriptorId
+  );
+  abort.abort();
 });

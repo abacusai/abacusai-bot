@@ -102,7 +102,12 @@ export const sessionsCollectionOptions = (
     getKey: byId,
     // The shell's sidebar needs it before anything renders.
     startSync: true,
-    toInsertInput: (row) => ({ id: row.id, workspaceId: row.workspaceId }),
+    toInsertInput: (row) => ({
+      id: row.id,
+      workspaceId: row.workspaceId,
+      model: row.model,
+      mode: row.mode,
+    }),
     toUpdateInput: (id, changes) => ({
       id,
       patch: writablePatch(
@@ -123,6 +128,7 @@ const BOT_CREATE_FIELDS = [
   "persona",
   "avatarColor",
   "avatarShape",
+  "avatarAccessory",
   "workspaceId",
   "model",
   "channel",
@@ -135,6 +141,7 @@ const BOT_UPDATE_FIELDS = [
   "persona",
   "avatarColor",
   "avatarShape",
+  "avatarAccessory",
   "model",
   "channel",
 ] as const;
@@ -288,7 +295,7 @@ export const gitStateCollectionOptions = (
   ipcCollectionOptions<GitStateRow, string>({
     id: "gitState",
     table: tableOf(transport, (db) => db.gitState),
-    getKey: (row) => row.workspaceId,
+    getKey: (row) => row.checkoutKey,
     ...overrides,
   });
 

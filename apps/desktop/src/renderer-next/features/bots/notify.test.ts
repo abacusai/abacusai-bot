@@ -67,6 +67,7 @@ describe("lossless bot completion", () => {
       expect(d.play).toHaveBeenCalledWith(cue, {
         threadId: "never-opened",
         botId: bot.id,
+        dedupeKey: "run",
       });
     expect(d.unread.has(bot.id)).toBe(outcome !== "cancelled");
   });
@@ -91,6 +92,7 @@ describe("lossless bot completion", () => {
     expect(d.play).toHaveBeenCalledWith("done", {
       threadId: "never-opened",
       botId: bot.id,
+      dedupeKey: "run",
     });
   });
   it("waiting notices are level changes rather than every render", () => {

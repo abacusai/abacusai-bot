@@ -66,22 +66,74 @@ const PORT = Number(option("--port", "9392"));
 export const bandFor = (width) =>
   width >= 1100 ? "xl" : width >= 1000 ? "lg" : width >= 900 ? "md" : "sm";
 
+export const PHASE6_ROUTES = [
+  ...[
+    "welcome",
+    "connect",
+    "connected",
+    "models",
+    "connectors",
+    "first-bot",
+    "done",
+  ].map((step) => `/__ui?fixture=onboarding-${step}`),
+  ...[
+    "welcome",
+    "rail",
+    "make-bot",
+    "workspaces",
+    "start-session",
+    "connectors",
+    "talk",
+    "changes",
+    "preview-terminal",
+    "memory",
+    "artifacts",
+    "notch",
+  ].map((stop) => `/__ui?fixture=tour-${stop}`),
+  ...["plain", "notch", "capsule"].flatMap((mode) =>
+    [
+      "hidden",
+      "idle",
+      "working",
+      "approval",
+      "question",
+      "truncated",
+      "reply",
+      "reply-readonly",
+      "call",
+      "done",
+      "failed",
+      "several",
+      "hovered",
+      "quiet",
+      "reaction",
+    ].map(
+      (state) =>
+        `/__ui?fixture=notch-${mode === "plain" ? "" : mode + "-"}${state}`
+    )
+  ),
+];
 export const ROUTES = option(
   "--routes",
-  [
-    "/bots/new",
-    "/bots/chief-of-staff",
-    "/sessions/new",
-    "/sessions/review-prs?tab=terminal",
-    "/routines",
-    "/routines/new",
-    "/artifacts",
-    "/library/connectors",
-    "/settings/general",
-    "/settings/appearance",
-    "/onboarding/welcome",
-    "/__ui?section=shell",
-  ].join(",")
+  flag("--phase6")
+    ? PHASE6_ROUTES.join(",")
+    : [
+        "/bots/new",
+        "/bots/chief-of-staff",
+        "/sessions/new",
+        "/sessions/review-prs?tab=files",
+        "/__ui?fixture=sessions-terminal",
+        "/routines",
+        "/routines/new",
+        "/artifacts",
+        "/library/connectors",
+        "/settings/general",
+        "/settings/models",
+        "/__ui?fixture=routine-report",
+        "/settings/appearance",
+        "/__ui?fixture=onboarding-welcome",
+        "/__ui?section=shell",
+      ].join(",")
 ).split(",");
 
 const OVERLAYS = [
@@ -430,6 +482,10 @@ const main = async () => {
   const scratch = mkdtempSync(join(tmpdir(), "screenshots-next-"));
   const home = join(scratch, "home");
   mkdirSync(home, { recursive: true });
+  writeFileSync(
+    join(home, "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   const axeSource = readFileSync(
     require.resolve("axe-core/axe.min.js"),
     "utf8"
@@ -443,6 +499,9 @@ const main = async () => {
   /** Capture the current state as `name`, after axe on the settled page. */
   const capture = async (cdp, name, extra = {}) => {
     await animationsDone(cdp);
+    await cdp.evaluate(
+      `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))`
+    );
     const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(join(out, name), Buffer.from(shot.data, "base64"));
     const axe = await cdp.evaluate(
@@ -450,7 +509,17 @@ const main = async () => {
     );
     axeReport.push({ file: name, violations: axe });
     failures.push(...axeFailures(name, axe));
-    shots.push({ file: name, ...extra });
+    const notchText = flag("--phase6")
+      ? await cdp.evaluate(`(() => {
+      const region = document.querySelector('.notch-shape');
+      if (!region) return null;
+      return [...region.querySelectorAll('span,h2,p,button')].filter((node) => node.textContent).map((node) => {
+        const css = getComputedStyle(node);
+        return { tag: node.tagName, text: node.textContent.slice(0,80), color: css.color, background: css.backgroundColor, opacity: css.opacity, visibility: css.visibility, mix: css.mixBlendMode };
+      });
+    })()`)
+      : undefined;
+    shots.push({ file: name, ...extra, ...(notchText ? { notchText } : {}) });
   };
 
   for (const width of WIDTHS) {
@@ -513,6 +582,23 @@ const main = async () => {
             cdp,
             `document.documentElement.classList.contains('dark') === ${theme === "dark"}`
           );
+          if (flag("--phase6")) {
+            const selector = route.includes("onboarding-")
+              ? `[data-onboarding-step="${route.split("onboarding-")[1]}"]`
+              : route.includes("fixture=tour")
+                ? '[data-slot="tour-spotlight"]'
+                : ".notch-shape";
+            if (
+              !(await waitFor(
+                cdp,
+                `!!document.querySelector(${JSON.stringify(selector)})`
+              ))
+            )
+              throw new Error(`phase-6 surface did not mount: ${route}`);
+            await cdp.evaluate("document.fonts.ready.then(() => true)");
+            await animationsDone(cdp);
+            await sleep(180);
+          }
           const geometry = await cdp.evaluate(`(() => {
             const pane = document.querySelector('[data-slot="pane"]')?.getBoundingClientRect();
             const identity = document.querySelector('[data-slot="topbar-identity"]')?.getBoundingClientRect();
@@ -577,8 +663,8 @@ const main = async () => {
           // The 1100 minimum with the panel in layout (Codex impl r1 #13).
           if (width === 1100 && route.includes("tab=")) {
             const split = await cdp.evaluate(`({
-              pane: ${rect('[data-slot="pane"]')},
-              panel: ${rect('[data-slot="side-panel"][data-mode="layout"]')},
+              pane: ${rect('[data-slot="session-dock"][data-view="split"] [data-session-pane="chat"]')},
+              panel: ${rect('[data-slot="session-dock"][data-view="split"] [data-session-pane="tools"]')},
               innerWidth,
             })`);
             failures.push(...panelSplitProblems(name, split));
@@ -587,6 +673,7 @@ const main = async () => {
           await capture(cdp, name, { route, width, theme, geometry });
         }
 
+        if (flag("--phase6")) continue;
         // Collapsed, then the floating sidebar on rail hover (V9).
         if (width >= 900) {
           await cdp.evaluate("window.__abacusDev.setPinned(true)");
@@ -633,6 +720,15 @@ const main = async () => {
             cdp,
             `document.querySelector('[data-slot="sidebar-floating"]') != null`
           );
+          if (opened)
+            await waitFor(
+              cdp,
+              `(() => {
+            const floating = document.querySelector('[data-slot="sidebar-floating"]');
+            const expected = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rail-w')) + 4;
+            return floating && Math.abs(floating.getBoundingClientRect().left - expected) < 0.5;
+          })()`
+            );
           const hovered = await waitStable(
             cdp,
             `({
@@ -677,7 +773,11 @@ const main = async () => {
       // page capture above has no vibrancy behind it. On macOS, capture the
       // window from the screen as well (needs Screen Recording permission;
       // recorded as skipped when the capture fails).
-      if (width === WIDTHS[0] && process.platform === "darwin") {
+      if (
+        !flag("--phase6") &&
+        width === WIDTHS[0] &&
+        process.platform === "darwin"
+      ) {
         probes.vibrancy = [];
         for (const theme of THEMES) {
           await cdp.send("Emulation.setEmulatedMedia", {
@@ -717,7 +817,7 @@ const main = async () => {
       }
 
       // Full screen (the first width only): no traffic-light reservation.
-      if (width === WIDTHS[0]) {
+      if (!flag("--phase6") && width === WIDTHS[0]) {
         await cdp.send("Emulation.setEmulatedMedia", {
           features: [{ name: "prefers-color-scheme", value: "light" }],
         });
@@ -753,9 +853,13 @@ const main = async () => {
 
   // Compact density: a launch with the stored setting (main reads it at
   // window creation).
-  {
+  if (!flag("--phase6")) {
     const compactHome = join(scratch, "home-compact");
     mkdirSync(compactHome, { recursive: true });
+    writeFileSync(
+      join(compactHome, "account.json"),
+      readFileSync(join(home, "account.json"))
+    );
     writeFileSync(
       join(compactHome, "settings.json"),
       JSON.stringify({ titlebarDensity: "compact" })

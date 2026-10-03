@@ -1,12 +1,5 @@
-/**
- * A read-only preview of one file (spec 03 §11.3a; the old preview pane's
- * renderers, no editor): images, Markdown rendered, code and text as
- * monospace, a pptx deck as its slides' text. Anything without an in-app
- * viewer (office documents, binaries, pdf and html until their renderers
- * are ported) offers the OS app instead. Props in, callbacks out: the caller
- * supplies the reads (`files.readText`, `files.readImageAsDataUrl`,
- * `files.readPptx`).
- */
+/** Read-only file preview. PPTX uses authored slide geometry; local PDF/HTML
+ * URLs come from the caller's host file boundary before the viewer loads. */
 import { TextPart } from "@tanstack/ai-react/ui";
 import { ExternalLink, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -15,8 +8,10 @@ import { useTranslation } from "react-i18next";
 import { highlightFile, toFileUrl } from "#next/lib/file-highlight";
 import { Button } from "#next/ui/button";
 import { Skeleton } from "#next/ui/skeleton";
+import type { PptxDeck } from "#shared/pptx";
 
 import { previewKind } from "./paths";
+import { PptxSlides } from "./pptx-slides";
 
 interface FilePreviewReaders {
   text(
@@ -27,6 +22,7 @@ interface FilePreviewReaders {
   image(path: string, hostRoot: string): Promise<string>;
   /** The parsed deck (`PptxDeck`); absent: pptx opens externally. */
   pptx?(path: string, hostRoot: string): Promise<unknown>;
+  localUrl?(path: string, hostRoot: string): Promise<string>;
 }
 
 export interface FilePreviewProps {
@@ -42,35 +38,8 @@ type Loaded =
   | { state: "failed" }
   | { state: "text"; content: string; truncated: boolean }
   | { state: "image"; src: string }
-  | { state: "slides"; slides: string[][] };
-
-/** Every text run of a slide, in reading order (a cheap outline view). */
-const slideTexts = (deck: unknown): string[][] => {
-  const parsed = (deck as { deck?: unknown } | null)?.deck ?? deck;
-  const slides = (parsed as { slides?: unknown[] } | null)?.slides ?? [];
-  return slides.map((slide) => {
-    const lines: string[] = [];
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) {
-        for (const child of node) walk(child);
-        return;
-      }
-      if (node == null || typeof node !== "object") return;
-      const record = node as Record<string, unknown>;
-      if (Array.isArray(record.runs)) {
-        const line = (record.runs as Array<{ text?: string }>)
-          .map((run) => run.text ?? "")
-          .join("")
-          .trim();
-        if (line !== "") lines.push(line);
-        return;
-      }
-      for (const value of Object.values(record)) walk(value);
-    };
-    walk(slide);
-    return lines;
-  });
-};
+  | { state: "slides"; deck: PptxDeck }
+  | { state: "local"; url: string };
 
 const baseName = (path: string): string => path.split(/[\\/]/).pop() ?? path;
 
@@ -96,15 +65,28 @@ export const FilePreview = ({
     result.key === key ? result.loaded : { state: "loading" };
 
   useEffect(() => {
-    if (kind === "external" || kind === "pdf" || kind === "html") return;
+    if (kind === "external") return;
     let live = true;
     const load = async (): Promise<Loaded> => {
+      if (kind === "pdf" || kind === "html") {
+        if (!read.localUrl)
+          throw new Error("Host file URL resolver unavailable");
+        const url = new URL(await read.localUrl(path, hostRoot));
+        if (url.protocol !== "file:")
+          throw new Error("Expected a host file URL");
+        return {
+          state: "local",
+          url: url.hostname
+            ? url.href
+            : toFileUrl(decodeURIComponent(url.pathname)),
+        };
+      }
       if (kind === "image")
         return { state: "image", src: await read.image(path, hostRoot) };
       if (kind === "pptx")
         return {
           state: "slides",
-          slides: slideTexts(await read.pptx!(path, hostRoot)),
+          deck: ((await read.pptx!(path, hostRoot)) as { deck: PptxDeck }).deck,
         };
       const text = await read.text(path, hostRoot);
       return { state: "text", ...text };
@@ -156,12 +138,7 @@ export const FilePreview = ({
         {actions}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">
-        {kind === "pdf" || kind === "html" ? (
-          <webview
-            src={toFileUrl(path)}
-            className="h-[600px] w-full bg-white"
-          />
-        ) : kind === "external" ? (
+        {kind === "external" ? (
           <div className="flex flex-col items-start gap-2" role="status">
             <p className="text-muted-foreground">
               {t("bots.chat.preview.noViewer")}
@@ -192,18 +169,9 @@ export const FilePreview = ({
             className="mx-auto max-h-full max-w-full object-contain"
           />
         ) : loaded.state === "slides" ? (
-          <ol className="flex flex-col gap-3" data-slot="file-preview-slides">
-            {loaded.slides.map((lines, index) => (
-              <li key={index} className="bg-muted/40 rounded-lg p-3">
-                <div className="text-muted-foreground pb-1 text-xs">
-                  {t("bots.chat.preview.slide", { n: index + 1 })}
-                </div>
-                {lines.map((line, row) => (
-                  <p key={row}>{line}</p>
-                ))}
-              </li>
-            ))}
-          </ol>
+          <PptxSlides deck={loaded.deck} />
+        ) : loaded.state === "local" ? (
+          <webview src={loaded.url} className="h-[600px] w-full bg-white" />
         ) : (
           <>
             {loaded.truncated && (

@@ -1,0 +1,10 @@
+/* Preferences apply to chat text without resizing labels and tool controls. */
+[data-slot="chat-layout"] .chat-prose,
+[data-slot="chat-layout"] [data-slot="composer"] textarea {
+  font-size: var(--chat-font-size, 14px);
+}
+
+html[data-bubble-tint="off"] [data-slot="chat-layout"][data-skin="bot"] [data-role="user"] > div {
+  background-color: var(--chat-user-bubble);
+  color: var(--foreground);
+}

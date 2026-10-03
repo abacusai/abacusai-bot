@@ -20,6 +20,9 @@ export interface SystemInfo {
 }
 
 export interface NotificationMetadata {
+  kind?: "bot" | "session" | "routine" | "routine-run";
+  botId?: string;
+  routineId?: string;
   workspaceId?: string;
   sessionId?: string;
 }
@@ -104,8 +107,15 @@ export const system = {
       v.object({
         title: v.string(),
         body: v.string(),
+        kind: v.optional(v.picklist(["needs-you", "done", "failed"])),
+        dedupeKey: v.optional(v.string()),
         metadata: v.optional(
           v.object({
+            kind: v.optional(
+              v.picklist(["bot", "session", "routine", "routine-run"])
+            ),
+            botId: v.optional(v.string()),
+            routineId: v.optional(v.string()),
             workspaceId: v.optional(v.string()),
             sessionId: v.optional(v.string()),
           })

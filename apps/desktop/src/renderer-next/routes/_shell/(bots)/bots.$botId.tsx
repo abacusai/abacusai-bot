@@ -10,6 +10,7 @@ import {
   BotPending,
   useBot,
   useBotChatSlots,
+  useBotChatActivity,
   DetailsTab,
   MemoryTab,
   FilesTab,
@@ -19,18 +20,22 @@ import {
 import {
   ChatView,
   loadFixtureRuntime,
+  useThreadHost,
   useComposerExpanded,
 } from "#next/features/chat";
 import {
   TopBarSlot,
   useTopBarActions,
   SidePanelContent,
+  requestBrowserOpen,
 } from "#next/features/shell";
 import { accentVars, resolveLook } from "#next/lib/bots/avatar";
 import { BotSearch } from "#next/lib/navigation/search";
 import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Button } from "#next/ui/button";
 import { BotId } from "#shared/contract/ids";
+
+import { BotBrowser, BotBrowserRegistration } from "./-browser";
 /**
  * The dev fixture build (`VITE_NEXT_DB_FIXTURES=1`, gallery and visual
  * screenshots only): a bot with no forever session yet shows a recorded
@@ -39,11 +44,11 @@ import { BotId } from "#shared/contract/ids";
 type Fixture = ReturnType<
   Awaited<ReturnType<typeof loadFixtureRuntime>>
 > | null;
-const fixtureState: { value: Fixture } = { value: null };
+const fixtureState: { current: Fixture } = { current: null };
 const fixtureReady: Promise<void> | null =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((fixtureRuntime) => {
-        fixtureState.value = fixtureRuntime(
+        fixtureState.current = fixtureRuntime(
           "bot-golden-plain",
           {},
           "fixture-bot"
@@ -108,21 +113,26 @@ const ComposedChat = ({
 }) => {
   const { t } = useTranslation();
   const { chat } = Route.useRouteContext();
-  const slots = useBotChatSlots(bot, sessionId, expanded);
+  const runtime =
+    fixtureState.current && bot.sessionId == null
+      ? fixtureState.current.runtime
+      : chat;
+  const host = useThreadHost(runtime.session(sessionId));
+  useBotChatActivity(bot.id, host.messages, host.sessionGenerating);
+  const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
+    requestBrowserOpen({ sessionId, url })
+  );
   const navigate = useAppNavigate();
   useTopBarActions([
     { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
   ]);
-  const runtime =
-    fixtureState.value && bot.sessionId == null
-      ? fixtureState.value.runtime
-      : chat;
   return (
     <div
       data-testid="bot-chat"
       className="size-full"
       style={accentVars(resolveLook(bot))}
     >
+      <BotBrowserRegistration sessionId={sessionId} />
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
@@ -161,8 +171,12 @@ const ComposedChat = ({
       <SidePanelContent tab="memory">
         <MemoryTab bot={bot} />
       </SidePanelContent>
+      <SidePanelContent tab="browser">
+        <BotBrowser sessionId={sessionId} />
+      </SidePanelContent>
       <SidePanelContent tab="files">
         <FilesTab
+          sessionId={sessionId}
           bot={bot}
           preview={preview}
           workspaceRoot={slots.workspaceRoot}
@@ -220,14 +234,14 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
     staleReloadMode: "blocking",
     handler: async ({ context, params, preload }) => {
       if (fixtureReady != null) await fixtureReady;
-      if (fixtureState.value) {
+      if (fixtureState.current) {
         await context.db.collections.bots.preload();
         return {
           ready: true as const,
           botId: params.botId,
           sessionId:
             context.db.collections.bots.get(params.botId)?.sessionId ??
-            fixtureState.value.threadId,
+            fixtureState.current.threadId,
         };
       }
       return loadBotChat(

@@ -138,6 +138,10 @@ export const launch = async (options: {
   const harnessFile = join(scratch, "harness.jsonl");
   writeFileSync(harnessFile, "");
   mkdirSync(home, { recursive: true });
+  writeFileSync(
+    join(home, "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   options.prepareHome?.(home);
   const electron = createRequire(import.meta.url)(
     "electron"

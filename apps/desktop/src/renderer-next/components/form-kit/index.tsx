@@ -21,10 +21,12 @@ const TextField = ({
   label,
   max,
   multiline = false,
+  errorKeyPrefix = "bots.form.validation",
 }: {
   label: string;
   max: number;
   multiline?: boolean;
+  errorKeyPrefix?: string;
 }) => {
   const { t } = useTranslation();
   const field = useFieldContext<string>();
@@ -71,7 +73,7 @@ const TextField = ({
           {errors
             .map((error) =>
               typeof error === "object" && error && "message" in error
-                ? t(`bots.form.validation.${error.message}`)
+                ? t(`${errorKeyPrefix}.${error.message}`)
                 : t("bots.form.validation.required")
             )
             .join(" ")}

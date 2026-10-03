@@ -1,5 +1,11 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 
+import { SoundSynthesisProbe } from "#next/components/sound-preview/probe";
+import {
+  ArtifactsPage,
+  artifactGalleryRows,
+  ArtifactsStressGallery,
+} from "#next/features/artifacts";
 import {
   useBot,
   useBotChatSlots,
@@ -13,13 +19,43 @@ import {
 } from "#next/features/chat";
 import { chatGallerySections } from "#next/features/chat";
 import { Gallery, GallerySearch, galleryEnabled } from "#next/features/gallery";
+import { ConnectorsPage } from "#next/features/library";
+import { NotchGallery } from "#next/features/notch";
+import { OnboardingGallery } from "#next/features/onboarding";
+import {
+  Phase5GalleryNav,
+  phase5FixtureIds,
+  RoutineSidebarGallery,
+  RunReportFrame,
+} from "#next/features/routines";
+import {
+  sessionsGallerySections,
+  isSessionsGalleryFixture,
+} from "#next/features/sessions";
+import {
+  GeneralPage,
+  ModelsPage,
+  NotificationsPage,
+  KeyboardPage,
+} from "#next/features/settings";
+import { TourGallery } from "#next/features/tour";
+import {
+  ONBOARDING_STEPS,
+  type OnboardingStepId,
+} from "#next/lib/navigation/areas";
 
 type Replay = ReturnType<Awaited<ReturnType<typeof loadFixtureRuntime>>>;
-let replay: Replay = null;
+const replayState = { current: null as Replay };
+const reportReplayState = { current: null as Replay };
 const replayReady =
   import.meta.env.VITE_NEXT_DB_FIXTURES === "1"
     ? loadFixtureRuntime().then((create) => {
-        replay = create("bot-golden-plain", {}, "bots-gallery");
+        replayState.current = create("bot-golden-plain", {}, "bots-gallery");
+        reportReplayState.current = create(
+          "bot-golden-plain",
+          {},
+          "routine-gallery-report"
+        );
       })
     : null;
 const BotChatGallery = () => {
@@ -33,11 +69,11 @@ const GalleryChat = ({
 }) => {
   const expanded = useComposerExpanded("bots-gallery");
   const slots = useBotChatSlots(bot, "bots-gallery", expanded);
-  return replay ? (
+  return replayState.current ? (
     <div className="h-[650px]">
       <ChatView
         threadId="bots-gallery"
-        runtime={replay.runtime}
+        runtime={replayState.current.runtime}
         skin="bot"
         workspaceRoot={slots.workspaceRoot}
         composer={slots.composer}
@@ -59,6 +95,34 @@ const GalleryChat = ({
 const extension = {
   Nav: (props: { fixture: string | undefined }) => (
     <>
+      <sessionsGallerySections.Nav {...props} />
+      <Phase5GalleryNav {...props} />
+      <div className="my-3 font-semibold">
+        {"Phase 6" /* i18n-ignore: dev-only gallery label */}
+      </div>
+      {[
+        ...ONBOARDING_STEPS.map((step) => `onboarding-${step}`),
+        "tour",
+        ...[
+          "idle",
+          "working",
+          "approval",
+          "question",
+          "reply",
+          "call",
+          "done",
+          "failed",
+        ].map((state) => `notch-${state}`),
+      ].map((fixture) => (
+        <Link
+          key={fixture}
+          to="/__ui"
+          search={{ fixture }}
+          className="block py-1 text-xs"
+        >
+          {fixture}
+        </Link>
+      ))}
       <botsGallerySections.Nav {...props} />
       <chatGallerySections.Nav {...props} />
     </>
@@ -68,7 +132,17 @@ const extension = {
     step: number | undefined;
     play: boolean;
   }) =>
-    props.fixture === "bots-chat" ? (
+    props.fixture.startsWith("onboarding-") ? (
+      <OnboardingGallery step={props.fixture.slice(11) as OnboardingStepId} />
+    ) : props.fixture.startsWith("notch-") ? (
+      <NotchGallery state={props.fixture.slice(6)} />
+    ) : props.fixture.startsWith("tour") ? (
+      <TourGallery stop={props.fixture.slice(5) || "welcome"} />
+    ) : isSessionsGalleryFixture(props.fixture) ? (
+      <sessionsGallerySections.View {...props} />
+    ) : phase5FixtureIds.some((id) => id === props.fixture) ? (
+      <Phase5View fixture={props.fixture} />
+    ) : props.fixture === "bots-chat" ? (
       <BotChatGallery />
     ) : isBotsGalleryFixture(props.fixture) ? (
       <botsGallerySections.View {...props} />
@@ -92,3 +166,41 @@ export const Route = createFileRoute("/_bare/__ui")({
   validateSearch: GallerySearch,
   component: GalleryRoute,
 });
+
+function Phase5View({ fixture }: { fixture: string }) {
+  const components: Record<string, React.ReactNode> = {
+    "routines-sidebar": <RoutineSidebarGallery />,
+    "artifacts-grid": <ArtifactsPage fixtureRows={artifactGalleryRows} />,
+    "artifacts-stress": <ArtifactsStressGallery />,
+    "sound-synthesis": <SoundSynthesisProbe />,
+    "library-connectors": <ConnectorsPage />,
+    "settings-general": <GeneralPage />,
+    "settings-models": <ModelsPage />,
+    "settings-notifications": <NotificationsPage />,
+    "settings-keyboard": <KeyboardPage />,
+    "routine-report": reportReplayState.current ? (
+      <RunReportFrame runId="routine-gallery-report" onClose={() => {}}>
+        <ChatView
+          threadId="routine-gallery-report"
+          runtime={reportReplayState.current.runtime}
+          skin="bot"
+          workspaceRoot={null}
+          composer={{
+            mode: "full",
+            placeholder: "",
+            attachmentsBase: null,
+            showModeChip: false,
+            model: null,
+            readOnly: { reason: "This run is read-only" },
+          }}
+          slots={{
+            decorateMessage: (m, c) => ({
+              hidden: m.role === "user" && c.index === 0,
+            }),
+          }}
+        />
+      </RunReportFrame>
+    ) : null,
+  };
+  return <div className="h-[650px]">{components[fixture]}</div>;
+}

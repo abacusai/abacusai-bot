@@ -404,12 +404,13 @@ const CASES: TableCase[] = [
   },
   {
     name: "gitState",
-    keys: ({ state }) => (state.active == null ? [] : [state.active]),
+    keys: ({ state }) =>
+      state.active == null ? [] : [`${state.active}:primary`],
     change: ({ state, emit }) => {
       state.git = { ...state.git, gitStatusMessage: "1 change" };
       emit({ type: "git-state-updated" });
       return {
-        key: "ws-1",
+        key: "ws-1:primary",
         check: (row) => expect(row.gitStatusMessage).toBe("1 change"),
       };
     },

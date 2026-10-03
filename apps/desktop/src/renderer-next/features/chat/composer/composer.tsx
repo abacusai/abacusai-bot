@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { isNotFound, rpcCode } from "#next/data/ai";
 import { cn } from "#next/lib/cn";
 import { useMotionPreference } from "#next/lib/motion";
+import { useConnectedDictation } from "#next/lib/voice/use-dictation";
 import {
   Attachment,
   AttachmentAction,
@@ -229,6 +230,13 @@ const Attach = () => {
 
 const Dictate = () => {
   const { t } = useTranslation();
+  const { threadId } = useComposer();
+  const voice = useConnectedDictation(threadId, (text) => {
+    updateDraft(threadId, (draft) => ({
+      ...draft,
+      text: `${draft.text}${draft.text ? " " : ""}${text}`,
+    }));
+  });
   return (
     <Tooltip>
       <TooltipTrigger
@@ -236,21 +244,39 @@ const Dictate = () => {
           <Button
             variant="ghost"
             size="icon-lg"
-            aria-label={t("chat.composer.dictate")}
+            aria-label={t(
+              voice.state === "recording"
+                ? "notch.listening.end"
+                : "chat.composer.dictate"
+            )}
+            aria-pressed={voice.state === "recording"}
+            disabled={
+              voice.state === "starting" || voice.state === "transcribing"
+            }
+            onClick={() => {
+              if (voice.state === "recording") void voice.end();
+              else void voice.start();
+            }}
             className="size-9 rounded-full"
           />
         }
       >
         <Mic aria-hidden />
       </TooltipTrigger>
-      <TooltipContent>{t("chat.composer.dictateSoon")}</TooltipContent>
+      <TooltipContent>
+        {t(
+          voice.state === "error"
+            ? "notch.listening.error"
+            : "chat.composer.dictate"
+        )}
+      </TooltipContent>
     </Tooltip>
   );
 };
 
 const SendOrStop = () => {
   const { t } = useTranslation();
-  const { skin } = useChatView();
+  const { skin, composer: config } = useChatView();
   const { draft, busy, submit, stop, cancelling } = useComposer();
   const hasText = draft.text.trim() !== "" || draft.attachments.length > 0;
   if (busy && !hasText)
@@ -273,7 +299,7 @@ const SendOrStop = () => {
     <Button
       size="icon-lg"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
-      disabled={!hasText}
+      disabled={!hasText || !!config.blocked}
       className={cn(
         "size-9 rounded-full",
         skin === "bot" &&
@@ -308,7 +334,9 @@ export const ThreadComposer = () => {
   );
   const incarnation = useThreadStore(session, (state) => state.incarnation);
   const queue = useThreadStore(session, (state) => state.queue);
-  const skills = useThreadStore(session, (state) => state.skills);
+  const liveSkills = useThreadStore(session, (state) => state.skills);
+  const skills =
+    liveSkills.length > 0 ? liveSkills : (config.skillsBaseline ?? []);
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const setFocused = (value: boolean): void => setThreadFocus(threadId, value);
   const modelMenuOpen = useSelector(modelMenus, (state) => state.has(threadId));
@@ -350,6 +378,10 @@ export const ThreadComposer = () => {
               : "resting";
 
   const submit = (): void => {
+    if (config.blocked) {
+      config.onBlocked?.();
+      return;
+    }
     const route = routeSubmit({
       text: draft.text,
       attachments: draft.attachments,
@@ -357,8 +389,10 @@ export const ThreadComposer = () => {
       readOnly: config.readOnly != null || gone,
       questionPending: question,
       preStart: config.preStart === true,
-      hydrated,
-      ...(draft.mode != null ? { mode: draft.mode } : {}),
+      hydrated: hydrated || config.preStart === true,
+      ...((draft.mode ?? config.defaultMode) != null
+        ? { mode: draft.mode ?? config.defaultMode }
+        : {}),
       ...(draft.model != null ? { model: draft.model } : {}),
       ...(config.fixedMode != null ? { fixedMode: config.fixedMode } : {}),
     });
@@ -388,8 +422,21 @@ export const ThreadComposer = () => {
           restoreDraft(threadId, clearedRevision, saved);
           setError(message);
         };
-        session
-          .submit(route.text, route.forwardedProps)
+        void config.history?.add(route.text);
+        const admission = config.onSubmitEnvelope
+          ? config
+              .onSubmitEnvelope({
+                runId: crypto.randomUUID(),
+                messageId: crypto.randomUUID(),
+                parts: [{ type: "text", content: route.text }],
+                forwardedProps: {
+                  ...route.forwardedProps,
+                  model: config.model?.value ?? null,
+                },
+              })
+              .then(() => ({ kind: "started" as const }))
+          : session.submit(route.text, route.forwardedProps);
+        admission
           .then((result) => {
             if (result.kind === "rejected")
               restore(t("chat.composer.rejected"));
@@ -428,6 +475,8 @@ export const ThreadComposer = () => {
     );
   };
 
+  const historyIndex = useRef(-1);
+  const historyItems = useRef<string[]>([]);
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     const mod = event.metaKey || event.ctrlKey;
@@ -442,6 +491,31 @@ export const ThreadComposer = () => {
     if (event.key === "ArrowUp" && draft.text === "" && queue.length > 0) {
       event.preventDefault();
       setQueueEditing(threadId, queue.at(-1)!.id);
+      return;
+    }
+    if (
+      config.history &&
+      queue.length === 0 &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown") &&
+      event.currentTarget.selectionStart === 0
+    ) {
+      event.preventDefault();
+      void config.history.list().then((items) => {
+        historyItems.current = items;
+        historyIndex.current = Math.max(
+          -1,
+          Math.min(
+            items.length - 1,
+            historyIndex.current + (event.key === "ArrowUp" ? 1 : -1)
+          )
+        );
+        setText(
+          historyIndex.current < 0
+            ? ""
+            : (items[items.length - 1 - historyIndex.current] ?? ""),
+          null
+        );
+      });
       return;
     }
     if (event.key === "Escape") {
@@ -505,8 +579,9 @@ export const ThreadComposer = () => {
   };
   const mode = config.showModeChip ? (
     <ModeChip
+      availableModes={config.availableModes}
       value={liveMode}
-      draft={draft.mode}
+      draft={draft.mode ?? config.defaultMode}
       live={incarnation != null}
       onDraft={(next: AgentMode) =>
         updateDraft(threadId, (current) => ({ ...current, mode: next }))
@@ -520,6 +595,7 @@ export const ThreadComposer = () => {
     config.model != null ? (
       <ModelChip
         binding={config.model}
+        onUseLocalModel={config.onUseLocalModel}
         onOpenChange={(open) => setModelMenu(threadId, open)}
       />
     ) : null;
@@ -529,6 +605,7 @@ export const ThreadComposer = () => {
       <div
         className="flex flex-col"
         data-slot="composer"
+        data-tour="composer"
         data-state={state}
         data-expanded={expanded ? "" : undefined}
         onFocusCapture={() => setFocused(true)}

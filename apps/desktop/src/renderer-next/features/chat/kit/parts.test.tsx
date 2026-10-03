@@ -5,7 +5,7 @@
  * helpers (reminders stripped, routine fires hidden, attachment chips); an
  * empty assistant message renders nothing (F12).
  */
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
@@ -77,15 +77,20 @@ describe("R2-T11 parts", () => {
     "tool groups have a summary and the %s default expansion",
     async (skin) => {
       await migrated("tool-group", skin);
-      if (skin === "bot")
-        fireEvent.click(await screen.findByText(/Worked through/));
+      if (skin === "bot") {
+        expect(screen.queryByText(/Worked through/)).toBeNull();
+        expect(
+          screen.queryByRole("button", {
+            name: "Read 2 files, searched 1 pattern",
+          })
+        ).toBeNull();
+        expect(document.querySelectorAll("[data-tool]")).toHaveLength(0);
+        return;
+      }
       const summary = await screen.findByRole("button", {
         name: "Read 2 files, searched 1 pattern",
       });
-      expect(summary.getAttribute("aria-expanded")).toBe(
-        skin === "session" ? "true" : "false"
-      );
-      if (skin === "bot") fireEvent.click(summary);
+      expect(summary.getAttribute("aria-expanded")).toBe("true");
       expect(document.querySelectorAll("[data-tool]")).toHaveLength(3);
     }
   );
@@ -110,17 +115,19 @@ describe("R2-T11 parts", () => {
       await migrated("web-search", skin);
       expect(
         document.querySelectorAll('[data-slot="search-results"]')
-      ).toHaveLength(2);
+      ).toHaveLength(skin === "session" ? 2 : 0);
       const links = document.querySelectorAll(
         '[data-slot="search-results"] button'
       );
-      expect(links.length).toBeGreaterThan(0);
+      expect(links.length > 0).toBe(skin === "session");
       await current!.cleanup();
       current = null;
       await migrated("unknown-segments", skin);
-      expect((await screen.findAllByText("[unknown]")).length).toBeGreaterThan(
-        0
-      );
+      if (skin === "session")
+        expect(
+          (await screen.findAllByText("[unknown]")).length
+        ).toBeGreaterThan(0);
+      else expect(screen.queryByText("[unknown]")).toBeNull();
     }
   );
 
@@ -147,7 +154,9 @@ describe("R2-T11 parts", () => {
         }),
         skin
       );
-      expect(await screen.findByText(/report.pdf|document/i)).toBeTruthy();
+      if (skin === "session")
+        expect(await screen.findByText(/report.pdf|document/i)).toBeTruthy();
+      else expect(screen.queryByText(/report.pdf|document/i)).toBeNull();
     }
   );
 

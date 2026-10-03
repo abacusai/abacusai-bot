@@ -12,8 +12,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createDb, DbProvider } from "#next/data/db";
 import { fixtureTransport, FixtureDb } from "#next/data/fixture-db/fixture-db";
 import { fixturePrefs } from "#next/data/fixture-db/rows";
-import { AppearanceTheme } from "#next/features/settings";
 import { initI18n } from "#next/lib/i18n";
+import { renderApp } from "#next/test-support/app-harness";
 import { setMediaMatches } from "#next/test-support/media";
 import { BOT_AVATAR_COLORS } from "#shared/bots";
 
@@ -93,12 +93,15 @@ describe("ThemeEffect", () => {
 
 describe("the appearance control", () => {
   it("writes prefs.theme", async () => {
-    const { db } = await mount(
-      fixturePrefs({ theme: "system" }),
-      <AppearanceTheme />
+    const harness = await renderApp("/settings/appearance");
+    cleanups.push(async () => {
+      harness.view?.unmount();
+      await harness.cleanup();
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Dark" }));
+    await waitFor(() =>
+      expect(harness.db.prefs.rows.get("app")?.theme).toBe("dark")
     );
-    fireEvent.click(await screen.findByTestId("theme-dark"));
-    await waitFor(() => expect(db.prefs.rows.get("app")?.theme).toBe("dark"));
   });
 });
 

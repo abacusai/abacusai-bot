@@ -3,9 +3,22 @@
  * facts and prefs were resolved by bootstrap() and arrive as context.
  */
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 
-import { AppRoot, NotFound, RootError } from "#next/features/shell";
+import { LibraryGlobals } from "#next/features/library";
+import { RoutinesGlobals } from "#next/features/routines";
+import {
+  CriticalUpdateDialog,
+  useUpdatePillAction,
+} from "#next/features/settings";
+import {
+  AppRoot,
+  NotFound,
+  RootError,
+  useTopBarEndActions,
+} from "#next/features/shell";
+import { ActionBindingsProvider } from "#next/lib/keyboard/action-bindings";
+import { installLogRing } from "#next/lib/log-ring";
 import type { RouterContext } from "#next/router";
 
 const Devtools =
@@ -17,11 +30,25 @@ const Devtools =
       )
     : null;
 
+const UpdateEndAction = () => {
+  useTopBarEndActions(useUpdatePillAction());
+  return null;
+};
+
 const RootComponent = () => {
   const { transport, db, system } = Route.useRouteContext();
+  useEffect(() => {
+    if (import.meta.env.MODE !== "test") return installLogRing(transport);
+  }, [transport]);
   return (
     <AppRoot transport={transport} db={db} system={system}>
-      <Outlet />
+      <ActionBindingsProvider>
+        <Outlet />
+        <RoutinesGlobals />
+        <LibraryGlobals />
+        <CriticalUpdateDialog />
+        <UpdateEndAction />
+      </ActionBindingsProvider>
       {Devtools != null && (
         <Suspense fallback={null}>
           <Devtools />

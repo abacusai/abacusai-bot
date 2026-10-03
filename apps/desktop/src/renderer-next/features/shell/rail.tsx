@@ -40,6 +40,7 @@ const RailLink = ({
   "aria-label"?: string;
   title?: string;
   "data-area"?: string;
+  "data-tour"?: string;
 }) => (
   <AppLink
     {...(props as object)}
@@ -67,6 +68,13 @@ const RailItem = ({
     transition={area === "settings" ? "settings-in" : "nav-lateral"}
     aria-current={active ? "page" : undefined}
     data-area={area}
+    data-tour={
+      area === "artifacts"
+        ? "rail-artifacts"
+        : area === "library"
+          ? "rail-library"
+          : undefined
+    }
     className={cn(
       "titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2",
       active
@@ -107,6 +115,7 @@ export const Rail = ({
     <nav
       aria-label={label ?? t("shell.rail.label")}
       data-slot="rail"
+      data-tour="rail-bots-sessions"
       className="flex w-(--rail-w) shrink-0 flex-col items-center pt-1 pb-3"
       onPointerEnter={() => {
         if (floatingEnabled) intent.hover();

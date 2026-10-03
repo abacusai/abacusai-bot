@@ -49,6 +49,7 @@ export default defineConfig({
       input: {
         main: resolve(root, "index.html"),
         next: resolve(root, "index-next.html"),
+        notch: resolve(root, "notch.html"),
       },
     },
   },
@@ -66,6 +67,14 @@ export default defineConfig({
       generatedRouteTree: "./src/renderer-next/routeTree.gen.ts",
       routeFileIgnorePrefix: "-",
       autoCodeSplitting: true,
+      quoteStyle: "double",
+    }),
+    tanstackRouter({
+      target: "react",
+      routesDirectory: "./src/renderer-next/notch-routes",
+      generatedRouteTree: "./src/renderer-next/notchRouteTree.gen.ts",
+      routeFileIgnorePrefix: "-",
+      autoCodeSplitting: false,
       quoteStyle: "double",
     }),
     tailwindcss(),

@@ -14,7 +14,12 @@ import type { ReactNode } from "react";
 import { DbProvider, type Db } from "#next/data/db";
 import { i18n, initI18n } from "#next/lib/i18n";
 
-export const renderInRouter = async (node: ReactNode, db: Db, path = "/") => {
+export const renderInRouter = async (
+  node: ReactNode,
+  db: Db,
+  path = "/",
+  context?: object
+) => {
   await initI18n();
   await i18n.changeLanguage("en-US");
   const rootRoute = createRootRoute({
@@ -22,6 +27,7 @@ export const renderInRouter = async (node: ReactNode, db: Db, path = "/") => {
   });
   const router = createRouter({
     routeTree: rootRoute,
+    context,
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   let view!: ReturnType<typeof render>;

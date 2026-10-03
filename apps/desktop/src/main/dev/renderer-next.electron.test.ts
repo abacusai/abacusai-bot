@@ -27,6 +27,7 @@ import {
   appendFileSync,
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -230,6 +231,11 @@ beforeAll(async () => {
   scratch = mkdtempSync(join(tmpdir(), "renderer-next-accept-"));
   const harnessFile = join(scratch, "harness.jsonl");
   writeFileSync(harnessFile, "");
+  mkdirSync(join(scratch, "home"), { recursive: true });
+  writeFileSync(
+    join(scratch, "home", "account.json"),
+    JSON.stringify({ account: null, apps: [], onboarded: true })
+  );
   const electron = createRequire(import.meta.url)(
     "electron"
   ) as unknown as string;
@@ -374,7 +380,7 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
     it("a search-only change starts none", async () => {
       await go("/artifacts");
       await transitions();
-      await go("/artifacts?type=deck");
+      await go("/artifacts?type=file");
       expect(await transitions()).toEqual([]);
     });
 
@@ -477,6 +483,52 @@ describe.skipIf(!runnable)("renderer-next acceptance (Electron)", () => {
     await evaluate("window.__abacusDev.setTheme('light')");
     await until(`!${dark}`, 5_000, "nativeTheme light");
     await evaluate("window.__abacusDev.setTheme('system')");
+  });
+
+  it("R5 appearance preferences change rendered transcript, composer and user bubble styles", async () => {
+    await go("/__ui?fixture=bot-golden-plain");
+    await until(
+      '!!(document.querySelector(".chat-prose") && document.querySelector("[data-slot=composer] textarea"))',
+      10000,
+      "chat appearance fixture"
+    ).catch(async () => {
+      throw new Error(
+        await evaluate<string>(
+          "JSON.stringify({ prose: document.querySelector('.chat-prose')?.outerHTML, textarea: document.querySelector('textarea')?.outerHTML, chat: document.querySelector('[data-slot=chat-layout]')?.outerHTML.slice(0,3000) })"
+        )
+      );
+    });
+    const original = await evaluate(
+      "window.__abacusDev.rows('prefs')[0].appearance"
+    );
+    const tintBefore = await evaluate<string>(
+      'getComputedStyle(document.querySelector("[data-role=user] > div")).backgroundColor'
+    );
+    try {
+      await evaluate(
+        "window.__abacusDev.call('db.prefs.update', { patch: { appearance: { textSize: 15, bubbleTint: false } } })"
+      );
+      await until(
+        'getComputedStyle(document.querySelector(".chat-prose")).fontSize === "15px"',
+        5000,
+        "transcript text size"
+      );
+      expect(
+        await evaluate(
+          'getComputedStyle(document.querySelector("[data-slot=composer] textarea")).fontSize'
+        )
+      ).toBe("15px");
+      expect(
+        await evaluate(
+          'getComputedStyle(document.querySelector("[data-role=user] > div")).backgroundColor'
+        )
+      ).not.toBe(tintBefore);
+    } finally {
+      await evaluate(
+        `window.__abacusDev.call('db.prefs.update', { patch: { appearance: ${JSON.stringify(original)} } })`
+      );
+      await go("/bots/new");
+    }
   });
 
   it("R1-T22: a lost port stops the syncs and says so, reloads exactly once and reconnects; a second loss within 10 s shows the error screen", async () => {
