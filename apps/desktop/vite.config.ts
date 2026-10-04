@@ -64,6 +64,7 @@ export default defineConfig(({ command }) => {
     root: webRoot,
     build: {
       outDir: resolve(root, "dist/renderer"),
+      emptyOutDir: true,
       sourcemap,
       // Two documents: the shipped renderer and the rewrite's (spec 01 §3.3).
       // Both land at the root of dist/renderer, so the experience bundle
