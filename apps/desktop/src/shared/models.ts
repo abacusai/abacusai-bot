@@ -171,7 +171,7 @@ export const MODEL_CATALOG: AbacusBotModel[] = [
 
   // ── The long tail, one flagship each ──────────────────────────────────────
   // One or two entries per key-paste provider from PROVIDER_KEY_FIELDS; the
-  // rest of each provider's catalog stays reachable by id from the CLI.
+  // rest of each provider's catalog stays reachable by id.
   {
     id: "groq/openai/gpt-oss-120b",
     label: "GPT-OSS 120B (Groq)",

@@ -1,5 +1,5 @@
 /**
- * The store the CLI and the desktop share.
+ * The store the agent and the desktop share.
  *
  * The regression that matters is silent: a format that drifts from
  * apps/desktop/src/main/services/agent-tools/memory-store.ts does not throw, it
@@ -94,7 +94,7 @@ describe("what the agent carries into a session", () => {
 });
 
 /**
- * Writing, which the CLI could not do at all until it had its own store: the
+ * Writing, which the agent could not do at all until it had its own store: the
  * `memory` tool arrives over MCP, so a terminal session could recall what the
  * desktop had remembered and never add to it.
  *
@@ -221,7 +221,7 @@ describe("editing what is remembered", () => {
   });
 
   it("stages every write under its own temp name, and leaves none behind", async () => {
-    // The desktop and CLI write these files concurrently. With one fixed
+    // The desktop and agent write these files concurrently. With one fixed
     // `.tmp` name, two writers interleave into the same temp file and the
     // rename publishes the mix.
     const spy = vi.spyOn(fs, "writeFileSync");

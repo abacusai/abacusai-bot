@@ -1,5 +1,5 @@
 /**
- * Pins the desktop memory store to the CLI's twin.
+ * Pins the desktop memory store to the agent's twin.
  *
  * This pair is duplicated like static-server and todo-store, but it is not a
  * textual copy: the desktop side adds the UI-facing list/forget methods and the

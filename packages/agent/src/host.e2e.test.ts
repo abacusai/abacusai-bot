@@ -7,10 +7,10 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
  * only ever exercised by launching Electron. These spawn the built
  * `dist/index.js` and speak the protocol to it over stdio.
  *
- * They are also the other half of the CLI's alignment check. The CLI withholds
- * the tools that need a host to render; the point of doing it there rather than
- * removing them is that the desktop still gets them, and that only means
- * something if something asserts it.
+ * They are also the other half of the host-less alignment check. Without a
+ * host the agent withholds the tools that need one to render; the point of
+ * doing it there rather than removing them is that the desktop still gets
+ * them, and that only means something if something asserts it.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -230,7 +230,7 @@ describe("starting up", () => {
 });
 
 describe("the toolset the desktop gets", () => {
-  it("still includes the components the CLI withholds", async () => {
+  it("still includes the components a host-less run withholds", async () => {
     const host = start(workspace(), ["--permission-mode", "YOLO"]);
 
     host.send({ type: "send", message: "hello" });
@@ -240,7 +240,7 @@ describe("the toolset the desktop gets", () => {
 
     const tools = provider.firstCall?.tools ?? [];
 
-    // The CLI drops these because nothing there can answer a render request.
+    // A host-less run drops these because nothing can answer a render request.
     // The desktop can, so this is what makes that a routing decision rather
     // than a capability the product lost.
     expect(tools).toEqual(
@@ -329,8 +329,8 @@ describe("host services", () => {
 
     expect(request.requestId).toBeTruthy();
 
-    // Answering is what the desktop does and the CLI cannot, which is the whole
-    // reason the CLI does not register the tool.
+    // Answering is what the desktop does and a host-less run cannot, which is
+    // the whole reason the tool is not registered without a host.
     host.send({
       type: "host_service_response",
       requestId: request.requestId,

@@ -23,9 +23,8 @@ export function resourcePath(...segments: string[]): string {
 }
 
 /**
- * The agent ships beside the resources rather than inside them, since it is
- * also published as the `abacusai-bot` CLI; in the workspace it is its own
- * package, the one place the two layouts differ.
+ * The agent ships beside the resources rather than inside them; in the
+ * workspace it is its own package, the one place the two layouts differ.
  */
 const REPO = join(import.meta.dirname, "..", "..", "..", "..");
 
