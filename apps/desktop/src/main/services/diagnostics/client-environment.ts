@@ -122,8 +122,7 @@ export function collectClientEnvironment(
   );
 
   return {
-    platform:
-      process.env.ABACUSAI_BOT_HOST_MODE === "1" ? "web_host" : platform,
+    platform: import.meta.env.ABACUS_WEB_HOST === true ? "web_host" : platform,
     arch,
     os_name: name,
     os_version: version,

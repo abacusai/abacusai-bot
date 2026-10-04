@@ -62,7 +62,7 @@ export const runStartupMigrations = async (
 ): Promise<RunMigrationsResult | null> => {
   const userData = app.getPath("userData");
   const dark = progressWindowDark(userData);
-  if (process.env.ABACUSAI_BOT_HOST_MODE !== "1")
+  if (import.meta.env.ABACUS_WEB_HOST !== true)
     progress = createMigrationProgress({
       open: () =>
         openProgressWindow({

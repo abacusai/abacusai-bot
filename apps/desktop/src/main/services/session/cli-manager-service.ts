@@ -629,7 +629,7 @@ export class AgentManagerService {
       // The agent entry is a plain Node script run by Electron's own binary.
       ELECTRON_RUN_AS_NODE: "1",
       ABACUSAI_BOT_CLIENT_KIND:
-        process.env.ABACUSAI_BOT_HOST_MODE === "1"
+        import.meta.env.ABACUS_WEB_HOST === true
           ? "web_host"
           : "desktop_code_mode",
 
@@ -638,7 +638,7 @@ export class AgentManagerService {
       ABACUSAI_BOT_SESSION_ID: request.sessionId,
       ...this.options.resolveAuthEnv(),
       ...(await this.options.resolveAdditionalConfigEnv(request.sessionId)),
-      ...(process.env.ABACUSAI_BOT_HOST_MODE === "1"
+      ...(import.meta.env.ABACUS_WEB_HOST === true
         ? { ABACUSAI_BOT_SANDBOX: "off" }
         : {}),
     };

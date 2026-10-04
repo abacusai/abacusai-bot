@@ -28,7 +28,7 @@ const onceFile = (): string => path.join(profileBaseDir(), "funnel-once.json");
 
 const enabled = (): boolean => {
   if (
-    process.env.ABACUSAI_BOT_HOST_MODE === "1" &&
+    import.meta.env.ABACUS_WEB_HOST === true &&
     !process.env.ABACUSAI_BOT_FUNNEL_SYNC_URL
   )
     return false;
@@ -60,7 +60,7 @@ export function reportFunnelStep(step: FunnelStep, detail?: string): void {
 
   const { version, build } = appFacts();
   const url = new URL(
-    process.env.ABACUSAI_BOT_HOST_MODE === "1"
+    import.meta.env.ABACUS_WEB_HOST === true
       ? process.env.ABACUSAI_BOT_FUNNEL_SYNC_URL!
       : BEACON_PATH,
     abacusAppHost()
@@ -71,7 +71,7 @@ export function reportFunnelStep(step: FunnelStep, detail?: string): void {
   url.searchParams.set("v", version);
   url.searchParams.set(
     "os",
-    process.env.ABACUSAI_BOT_HOST_MODE === "1" ? "web_host" : process.platform
+    import.meta.env.ABACUS_WEB_HOST === true ? "web_host" : process.platform
   );
   url.searchParams.set("arch", process.arch);
   url.searchParams.set("build", build);

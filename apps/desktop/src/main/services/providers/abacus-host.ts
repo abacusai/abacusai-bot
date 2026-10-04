@@ -42,7 +42,7 @@ const overrideHost = (): URL | null => {
   // packaged too, but exists to be pointed at preprod, so it may read it.
   if (
     raw.length === 0 ||
-    (process.env.ABACUSAI_BOT_HOST_MODE !== "1" &&
+    (import.meta.env.ABACUS_WEB_HOST !== true &&
       app.isPackaged &&
       !isTestBuild())
   )

@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cp,
+  mkdtemp,
   mkdir,
-  readdir,
   readFile,
   rm,
   symlink,
@@ -11,6 +11,7 @@ import {
   chmod,
   realpath,
   access,
+  rename,
 } from "node:fs/promises";
 import { resolve, dirname, join, relative } from "node:path";
 
@@ -36,22 +37,32 @@ run("pnpm", [
   "--filter=@abacus-ai/connectors...",
   "--filter=@abacus-ai/updater...",
 ]);
-run("pnpm", ["--filter", "@abacus-ai/host", "build"]);
-const stage = join(app, "dist", ".bundle");
-await rm(stage, { recursive: true, force: true });
+await mkdir(join(app, "dist"), { recursive: true });
+const stage = await mkdtemp(join(app, "dist", ".bundle-"));
 const host = join(stage, "host");
 await mkdir(join(host, "bin"), { recursive: true });
 await mkdir(join(host, "host"), { recursive: true });
-for (const file of await readdir(join(app, "dist")))
-  if (file.endsWith(".js"))
-    await cp(join(app, "dist", file), join(host, "host", file));
+run("pnpm", [
+  "--filter",
+  "@abacus-ai/host",
+  "build",
+  "--out-dir",
+  join(host, "host"),
+]);
 const manifest = JSON.parse(await readFile(join(app, "package.json"), "utf8"));
 await writeFile(
   join(host, "host/package.json"),
   JSON.stringify({
     type: "module",
     version: manifest.version,
-    contractVersion: 1,
+    contractVersion: Number(
+      (
+        await readFile(
+          join(root, "packages/contract/src/contract/index.ts"),
+          "utf8"
+        )
+      ).match(/CONTRACT_VERSION = (\d+)/)[1]
+    ),
   })
 );
 const archive = join(stage, "node.tar.xz");
@@ -80,6 +91,9 @@ await writeFile(
 );
 await cp(join(root, "apps/desktop/resources"), join(host, "resources"), {
   recursive: true,
+  dereference: true,
+  filter: (source) =>
+    !source.includes("/vendor/llama") && !source.endsWith("/scrcpy-server.jar"),
 });
 await cp(join(root, "packages/agent/dist"), join(host, "resources/agent"), {
   recursive: true,
@@ -88,7 +102,7 @@ await cp(join(root, "packages/agent/dist"), join(host, "resources/agent"), {
 await cp(
   join(root, "packages/agent/vendor"),
   join(host, "resources/agent/vendor"),
-  { recursive: true }
+  { recursive: true, dereference: true }
 );
 
 // Preserve each package's dependency versions, with symlinks contained in the tar root.
@@ -177,6 +191,13 @@ await writeFile(
   `for(const name of ${JSON.stringify(agentExternals.flatMap((name) => (name === "@abacus-ai/connectors" ? ["@abacus-ai/connectors/registry", "@abacus-ai/connectors/describe", "@abacus-ai/connectors/tool-meta"] : [name])))}) await import(name);\n`
 );
 const tarball = join(app, "dist", `host-linux-${arch}.tar.gz`);
-run("tar", ["-czf", tarball, "-C", stage, "host"]);
-run(process.execPath, [join(app, "scripts/verify-host-bundle.mjs"), tarball]);
+const preparedTarball = join(stage, `host-linux-${arch}.tar.gz`);
+run("tar", ["-czf", preparedTarball, "-C", stage, "host"]);
+run(process.execPath, [
+  join(app, "scripts/verify-host-bundle.mjs"),
+  preparedTarball,
+]);
+await rename(preparedTarball, tarball);
 console.log(tarball);
+
+await rm(stage, { recursive: true, force: true });

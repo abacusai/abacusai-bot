@@ -1,6 +1,12 @@
+import { join } from "node:path";
+
 // Pod credentials must be removed before modules capture the inherited environment.
 delete process.env.ABACUS_API_KEY;
-process.env.ABACUSAI_BOT_HOST_MODE = "1";
+process.env.ABACUSAI_BOT_RESOURCES ??= join(
+  import.meta.dirname,
+  "..",
+  "resources"
+);
 process.env.ABACUSAI_BOT_SANDBOX = "off";
 
 const main = async () => {

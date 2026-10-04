@@ -17,7 +17,7 @@ import { ArtifactResolverService } from "../services/session/artifact-resolver-s
 const resolveArtifactError = (): string | null => {
   try {
     new ArtifactResolverService(
-      process.env.ABACUSAI_BOT_HOST_MODE === "1"
+      import.meta.env.ABACUS_WEB_HOST === true
     ).resolveBundledCliPath();
 
     return null;

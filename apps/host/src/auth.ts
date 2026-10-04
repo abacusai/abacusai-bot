@@ -17,7 +17,10 @@ export const readHostIdentity = (): HostIdentity => {
   if (!owner || !org || !file || !origins.size)
     throw new Error("Host identity configuration required");
   const secret = readFileSync(file, "utf8");
-  if (!secret) throw new Error("Host secret is empty");
+  if (!/^[a-f0-9]{64}$/.test(secret))
+    throw new Error(
+      "Host secret must be 64 lowercase hex characters without a newline"
+    );
   return { owner, org, secret, origins };
 };
 export const authenticate = (
@@ -27,6 +30,11 @@ export const authenticate = (
   const origin = request.headers.origin;
   if (!origin || !identity.origins.has(origin)) return "origin";
   if (request.headers["x-abacus-user-id"] !== identity.owner) return "owner";
+  if (
+    request.headers["x-abacus-org-id"] !== undefined &&
+    request.headers["x-abacus-org-id"] !== identity.org
+  )
+    return "org";
   const protocols = (request.headers["sec-websocket-protocol"] ?? "")
     .split(",")
     .map((x) => x.trim());
@@ -34,21 +42,52 @@ export const authenticate = (
   const token =
     bearer ?? protocols.find((p) => p.startsWith("abacus-token."))?.slice(13);
   if (!token || token.length > 4096) return "token";
-  const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra || !/^[a-f0-9]{64}$/.test(signature))
+  const segments = token.split(".");
+  const [payload, signature] = segments;
+  if (
+    segments.length !== 2 ||
+    !payload ||
+    !signature ||
+    !/^[A-Za-z0-9_-]+$/.test(payload) ||
+    !/^[a-f0-9]{64}$/.test(signature)
+  )
     return "signature";
+  if (Buffer.from(payload, "base64url").toString("base64url") !== payload)
+    return "claims";
   const expected = createHmac("sha256", identity.secret)
     .update(payload)
     .digest();
   if (!timingSafeEqual(Buffer.from(signature, "hex"), expected))
     return "signature";
   try {
+    const expirySources = new WeakMap<object, string>();
     const claims = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8")
+      new TextDecoder("utf-8", { fatal: true }).decode(
+        Buffer.from(payload, "base64url")
+      ),
+      function (
+        this: object,
+        key: string,
+        value: unknown,
+        context?: { source?: string }
+      ) {
+        if (key === "e") expirySources.set(this, context?.source ?? "");
+        return value;
+      }
     );
-    if (claims.o !== identity.owner || claims.g !== identity.org)
+    if (
+      !claims ||
+      Array.isArray(claims) ||
+      typeof claims !== "object" ||
+      claims.o !== identity.owner ||
+      claims.g !== identity.org
+    )
       return "claims";
-    if (!Number.isFinite(claims.e) || claims.e <= Date.now() / 1000)
+    if (
+      typeof claims.e !== "number" ||
+      !/^-?(0|[1-9][0-9]*)$/.test(expirySources.get(claims) ?? "") ||
+      claims.e <= Date.now() / 1000
+    )
       return "expiry";
   } catch {
     return "claims";

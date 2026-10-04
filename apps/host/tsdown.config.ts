@@ -30,6 +30,7 @@ export default defineConfig({
     onlyBundle: false,
   },
   define: {
+    "import.meta.env.ABACUS_WEB_HOST": "true",
     "import.meta.env.ABACUS_DEV_HARNESS": "false",
     "import.meta.env.DEV": "false",
   },
