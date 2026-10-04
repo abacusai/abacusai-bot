@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 const web = "apps/web";
 test("web configuration canaries still point at the renderer tree", () => {
@@ -13,19 +12,39 @@ test("web configuration canaries still point at the renderer tree", () => {
   assert.ok(existsSync(`${web}/src/routes/_bare/[__ui].tsx`));
   assert.ok(existsSync("packages/contract/src/contract/index.ts"));
 });
-test("oxlint rejects static native imports from a shared module", () => {
-  const file = `${web}/src/__web_split_lint_canary.ts`;
-  try {
-    writeFileSync(
-      file,
-      'import { nativePresenterFor } from "#renderer/features/shell/native-presenter"; console.log(nativePresenterFor);\n'
+test("browser boundary checks resolved targets for alias, relative, extension and index imports", async () => {
+  const { createJiti } = await import("jiti");
+  const { browserBoundaryPlugin } = await createJiti(import.meta.url).import(
+    "../apps/web/vite.renderer.ts"
+  );
+  const plugin = browserBoundaryPlugin();
+  for (const specifier of [
+    "#renderer/features/shell/native-presenter",
+    "./native-presenter",
+    "../shell/native-presenter.ts",
+    "../browser/index.tsx",
+  ]) {
+    const target = specifier.includes("browser")
+      ? "features/sessions/browser/index.tsx"
+      : "features/shell/native-presenter.ts";
+    await assert.rejects(
+      plugin.resolveId.call(
+        { resolve: async () => ({ id: `/repo/apps/web/src/${target}` }) },
+        specifier,
+        "/repo/apps/web/src/shared.ts"
+      ),
+      /Electron-only module/
     );
-    const result = spawnSync("pnpm", ["exec", "oxlint", file], {
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.match(result.stdout + result.stderr, /no-restricted-imports/);
-  } finally {
-    rmSync(file, { force: true });
   }
+  assert.deepEqual(
+    await plugin.resolveId.call(
+      {
+        resolve: async () => ({
+          id: "/repo/apps/web/src/platform/presenter.browser.ts",
+        }),
+      },
+      "#platform/presenter"
+    ),
+    { id: "/repo/apps/web/src/platform/presenter.browser.ts" }
+  );
 });

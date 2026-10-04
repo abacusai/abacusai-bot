@@ -15,12 +15,15 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { Store, useStore } from "@tanstack/react-store";
 
+import { webSignIn } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import { webSignIn } from "#renderer/lib/browser/sign-in";
+import {
+  reserveAuthorization,
+  completeConnectorAuthorization,
+} from "#renderer/lib/browser/authorization";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
 export const CONNECT_WATCHDOG_MS = 180000;
@@ -236,12 +239,18 @@ export const createConnectFlow = (deps: FlowDeps) => {
     connectorId: string,
     options: { pairing?: "navigate" | "defer" } = {}
   ): Promise<ConnectorOutcome> => {
+    const authorization = reserveAuthorization();
     const id = ++serial;
     await cancel();
-    if (id !== serial)
+    if (id !== serial) {
+      authorization.close();
       return { ok: false, cancelled: true, error: "superseded" };
+    }
     const entry = connectorById(connectorId);
-    if (!entry) return { ok: false, error: "unknown-connector" };
+    if (!entry) {
+      authorization.close();
+      return { ok: false, error: "unknown-connector" };
+    }
     const outcome = new Promise<ConnectorOutcome>((resolve) => {
       active = {
         id,
@@ -309,22 +318,19 @@ export const createConnectFlow = (deps: FlowDeps) => {
           connectorId,
         });
         if (!current()) return;
-        if (!IS_ELECTRON && result.ok && result.url) {
-          await platformSystem(deps.transport.client).openExternal({
-            url: result.url,
-          });
-          while (current()) {
-            const statuses = await deps.transport.client.connectors.statuses(
-              {}
-            );
-            if (statuses[connectorId]?.state === "connected") break;
-            await new Promise((resolve) => setTimeout(resolve, 3_000));
-          }
-        }
+        const completed = await completeConnectorAuthorization(
+          deps.transport.client,
+          connectorId,
+          result,
+          authorization,
+          current
+        );
         if (!current()) return;
-        await complete(id, entry, result);
+        await complete(id, entry, completed);
       } catch (e) {
         finish(id, { ok: false, error: errorText(e) });
+      } finally {
+        authorization.close();
       }
     })();
     return outcome;

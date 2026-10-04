@@ -9,16 +9,12 @@ import { rendererEntry } from "../src/main/renderer-entry";
 it("R8-T7 pins Electron CSP and refuses a missing platform", () => {
   expect(rendererCsp("electron", {})).toBe(RENDERER_CSP);
   expect(() => rendererCsp(undefined as never, {})).toThrow("platform");
-  expect(() => rendererCsp("browser", {})).toThrow("VITE_CONNECT_SRC");
-  expect(
-    rendererCsp("browser", { VITE_CONNECT_SRC: "https://apps.abacus.ai" })
-  ).toContain("wss://*.preview.apps.abacus.ai");
-  expect(
-    rendererCsp("browser", {
-      VITE_CONNECT_SRC: "https://apps.abacus.ai",
-      VITE_ABACUS_ENV: "staging",
-    })
-  ).toContain("wss://*.preview.staging-apps.abacus.ai");
+  expect(() => rendererCsp("browser", { VITE_CONNECT_SRC: "" })).toThrow(
+    "VITE_CONNECT_SRC"
+  );
+  expect(rendererCsp("browser", {})).toContain(
+    "connect-src 'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai;"
+  );
 });
 it("dev entry and source scripts resolve from the web root", () => {
   expect(rendererEntry({ kind: "dev", url: "http://localhost:5173/" })).toEqual(

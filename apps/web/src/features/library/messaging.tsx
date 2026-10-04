@@ -193,9 +193,10 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   );
   const s = query.data;
   const p = s?.platforms.find((p) => p.id === platform);
-  const sharedId = platform.startsWith("abacus_")
-    ? platform
-    : SHARED_BOT_PLATFORM_OF[platform];
+  const sharedId =
+    !IS_ELECTRON && platform.startsWith("abacus_")
+      ? platform
+      : SHARED_BOT_PLATFORM_OF[platform];
   const shared = s?.platforms.find((p) => p.id === sharedId);
   const navigate = useAppNavigate();
   const flow = useConnectFlow();
@@ -231,7 +232,8 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
       if (IS_ELECTRON)
         await transport.client.messaging.showLogin({ platformId: platform });
       if (sharedId && (!IS_ELECTRON || SHARED_LINK_REQUIRED.has(platform))) {
-        await connectPlatform({ transport, queryClient: cache }, sharedId);
+        if (sharedId !== platform)
+          await connectPlatform({ transport, queryClient: cache }, sharedId);
         const next = await transport.client.messaging.pairShared({
           platformId: sharedId,
         });
@@ -273,16 +275,18 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
           {(error || p?.errorMessage) && (
             <p role="alert">{error ?? p?.errorMessage}</p>
           )}
-          <Button
-            variant="secondary"
-            onClick={() =>
-              void transport.client.messaging.showLogin({
-                platformId: platform,
-              })
-            }
-          >
-            {t("phase5.openLogin")}
-          </Button>
+          {IS_ELECTRON && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void transport.client.messaging.showLogin({
+                  platformId: platform,
+                })
+              }
+            >
+              {t("phase5.openLogin")}
+            </Button>
+          )}
           {p && p.fields.length > 0 && <PlatformCredentials platform={p} />}
           {shared?.sharedLink && (
             <>

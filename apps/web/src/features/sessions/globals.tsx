@@ -1,9 +1,9 @@
 import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef } from "react";
-import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BrowserAskHost } from "#platform/ask-host";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
@@ -17,11 +17,7 @@ import { createNotifier } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
-const BrowserAskHost = IS_ELECTRON
-  ? lazy(() =>
-      import("./browser/ask-host").then((m) => ({ default: m.BrowserAskHost }))
-    )
-  : () => null;
+
 import { followSessionsSources } from "./data/live";
 import { useSessionsTransport } from "./data/queries";
 import { markSessionUnread } from "./data/unread-store";

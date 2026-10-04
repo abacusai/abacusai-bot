@@ -20,6 +20,10 @@ import { useEffect, useState } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
+import {
+  reserveAuthorization,
+  completeConnectorAuthorization,
+} from "#renderer/lib/browser/authorization";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp">;
 
@@ -86,6 +90,7 @@ export const connectRequest = async (
   request: ConnectorRequest,
   values?: Record<string, string>
 ): Promise<ConnectResult> => {
+  const authorization = reserveAuthorization();
   let outcome;
   try {
     outcome =
@@ -95,8 +100,16 @@ export const connectRequest = async (
             values,
           })
         : await client.connectors.connect({ connectorId: request.connectorId });
+    outcome = await completeConnectorAuthorization(
+      client,
+      request.connectorId,
+      outcome,
+      authorization
+    );
   } catch (error) {
     return { kind: "error", message: messageOf(error) };
+  } finally {
+    authorization.close();
   }
   if (!outcome.ok) {
     if (outcome.cancelled === true) {

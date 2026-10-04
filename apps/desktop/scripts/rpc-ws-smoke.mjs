@@ -41,10 +41,10 @@ export const run = async ({ serve }) => {
       app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot", account: { get: () => ({ account: null, apps: [], onboarded: true }) }, markRendererActivity: () => {} },
       host: { sessionHomePath: () => "/h/AbacusAI", readSettings: () => ({ apiKeys: { ABACUS_API_KEY: "smoke" } }), getAbacusAccount: () => null, listModels: () => [], readApiKeyProviders: () => [], getConnectorStatuses: () => ({}) },
       serviceHost: {
- getMetadata: () => ({ materialIconsBasePath: null, workspaces: [], activeWorkspaceId: null }),
- listAllAgentSessions: () => [], listSessionTurnStates: () => [], listBots: () => [], listRoutines: () => [], listSessionArtifacts: () => [], listBotMemories: () => [], listMemories: () => ({ global: [], bots: [] }),
+ ensureSessionHomeWorkspace: () => null, getMetadata: () => ({ materialIconsBasePath: null, workspaces: [], activeWorkspaceId: null }),
+ listAllAgentSessions: () => [], listSessionTurnStates: () => [], listBots: () => [], listRoutines: () => [], listRoutineHistories: () => [], listSessionArtifacts: () => [], listBotMemories: () => [], listMemories: () => ({ global: [], bots: [] }),
  listBotChatPreviews: () => [], listBotSenderChats: () => [], getNotificationSettings: () => ({ enabled: true, sound: true }),
- getMessagingSnapshot: () => ({ platforms: [] }), listConnectorRequests: () => [],
+ getMessagingSnapshot: () => ({ platforms: [], pending: [], approved: [], autoReplies: [], workspaceId: null, botId: null, gatewayEnabled: false, respondToInbound: false, autoApproveTools: false }), listConnectorRequests: () => [], listConnectorStatuses: () => ({}),
  },
     }),
   });

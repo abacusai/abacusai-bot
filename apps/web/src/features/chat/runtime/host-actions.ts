@@ -1,3 +1,4 @@
+import { uploadFiles, viewHostFile } from "#platform/files";
 /**
  * What the chat kit asks of the host besides `ai.*` (spec 02 §7.5, §8.6):
  * external links, revealing files, the attach pickers, pasted files and
@@ -6,7 +7,6 @@
 import type { CreditActions } from "#renderer/components/credits-card";
 import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
-import { uploadFiles } from "#renderer/lib/browser/files";
 import { creditsTier } from "#renderer/lib/credits";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -45,9 +45,7 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
     showItemInFolder: (path) =>
       IS_ELECTRON
         ? client.system.showItemInFolder({ path })
-        : import("#renderer/lib/browser/files").then((module) =>
-            module.viewHostFile(client, path)
-          ),
+        : viewHostFile(client, path),
     // Native File objects expose metadata without reading file contents. The
     // preload bridge resolves their paths without the byte-returning picker RPC.
     pickFiles: () =>

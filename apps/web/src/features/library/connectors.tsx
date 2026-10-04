@@ -21,7 +21,6 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -67,8 +66,6 @@ export const ConnectorsPage = () => {
     staleTime: 60000,
   });
   const entries = CONNECTORS.filter(
-    (e) => IS_ELECTRON || e.kind !== "messaging"
-  ).filter(
     (e) =>
       e.kind !== "messaging" &&
       statuses.data?.[e.id]?.reason !== "not-offered" &&

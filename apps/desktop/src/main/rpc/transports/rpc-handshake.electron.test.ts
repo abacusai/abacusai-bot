@@ -53,6 +53,10 @@ const bundle = async (options: {
     },
     resolve: {
       alias: {
+        "#platform/transport": resolve(
+          DESKTOP,
+          "../web/src/platform/transport.electron.ts"
+        ),
         "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),
         "#renderer": resolve(DESKTOP, "../web/src"),
         "#main": join(SRC, "main"),

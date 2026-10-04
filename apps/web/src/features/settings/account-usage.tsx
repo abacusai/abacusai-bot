@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { webSignIn } from "#platform/sign-in";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
   AreaPage,
   GroupCard,
   SettingRow,
 } from "#renderer/components/form-kit/page";
-import { webSignIn } from "#renderer/lib/browser/sign-in";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -134,9 +134,10 @@ export const AccountPage = () => {
               description={t("phase5.signOutDetail")}
               label={t("phase5.signOut")}
               onConfirm={async () => {
-                await transport.client.auth.abacus.signOut({
-                  keepOtherApiKeys: !removeOthers,
-                });
+                if (IS_ELECTRON)
+                  await transport.client.auth.abacus.signOut({
+                    keepOtherApiKeys: !removeOthers,
+                  });
                 await transport.client.account.signOut({});
                 void navigate({ to: "/bots/new", transition: "settings-out" });
               }}

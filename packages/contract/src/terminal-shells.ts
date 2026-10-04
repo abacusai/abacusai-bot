@@ -22,7 +22,7 @@ export interface TerminalShell {
   /** i18n key under `terminalShells`. */
   labelKey: string;
   /** Platforms the entry is offered on; `"all"` means every one. */
-  platforms: readonly NodeJS.Platform[] | "all";
+  platforms: readonly string[] | "all";
 }
 
 /**
@@ -48,9 +48,7 @@ export const DEFAULT_TERMINAL_SHELL: TerminalShellId = "system";
 export const isTerminalShellId = (value: unknown): value is TerminalShellId =>
   TERMINAL_SHELLS.some((shell) => shell.id === value);
 
-export const terminalShellsForPlatform = (
-  platform: NodeJS.Platform
-): TerminalShell[] =>
+export const terminalShellsForPlatform = (platform: string): TerminalShell[] =>
   TERMINAL_SHELLS.filter(
     (shell) => shell.platforms === "all" || shell.platforms.includes(platform)
   );

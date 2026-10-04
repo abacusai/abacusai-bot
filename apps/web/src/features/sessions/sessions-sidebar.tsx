@@ -24,7 +24,7 @@ import { usePendingConnectorAsks } from "#renderer/lib/connector-requests";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
+import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -218,7 +218,9 @@ export const SessionsSidebar = () => {
             <span className="mt-1 block">
               {t("sessions.sidebar.emptyDescription", {
                 key:
-                  document.documentElement.dataset.platform === "darwin"
+                  uiPlatform(
+                    document.documentElement.dataset.platform ?? "linux"
+                  ) === "mac"
                     ? "⌘N"
                     : "Ctrl+N",
               })}

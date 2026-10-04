@@ -42,11 +42,10 @@
     "./contract": "./src/contract/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@abacus-ai/agent": "workspace:*",
     "@abacus-ai/connectors": "workspace:*",
     "@orpc/client": "1.15.4",
     "@orpc/contract": "1.15.4",
@@ -57,6 +56,7 @@
     "valibot": "1.5.0"
   },
   "devDependencies": {
+    "@abacus-ai/agent": "workspace:*",
     "@abacus-ai/config": "workspace:*",
     "@orpc/server": "1.15.4",
     "@orpc/tanstack-query": "1.15.4",

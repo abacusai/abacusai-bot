@@ -13,7 +13,16 @@
     ],
     "#locales/*": [
       "./src/locales/*"
-    ]
+    ],
+    "#platform/*": [
+      "./src/platform/*.electron.tsx",
+      "./src/platform/*.electron.ts"
+    ],
+    "#platform/system": "./src/platform/adapters.electron.ts",
+    "#platform/sign-in": "./src/platform/adapters.electron.ts",
+    "#platform/files": "./src/platform/adapters.electron.ts",
+    "#platform/attention": "./src/platform/adapters.electron.ts",
+    "#platform/lease": "./src/platform/adapters.electron.ts"
   },
   "scripts": {
     "build": "vite build",
@@ -53,7 +62,6 @@
     "@tanstack/react-router": "1.170.40",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-store": "^0.11.2",
-    "@testing-library/react": "^16.3.2",
     "axe-core": "4.13.0",
     "class-variance-authority": "^0.7.1",
     "cmdk": "1.1.1",
@@ -79,13 +87,13 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-generator": "1.167.39",
     "@tanstack/router-plugin": "1.168.41",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "^30.0.1",
-    "magic-string": "0.30.21",
     "oxc-parser": "0.150.0",
     "oxc-transform-react": "0.145.0",
     "rolldown": "1.2.4",

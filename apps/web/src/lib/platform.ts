@@ -16,9 +16,18 @@ export const uiPlatform = (hostPlatform: string): HotkeyPlatform =>
   IS_ELECTRON
     ? toHotkeyPlatform(hostPlatform)
     : toHotkeyPlatform(
-        /Mac|iPhone|iPad/.test(navigator.platform)
+        /Mac|iPhone|iPad/.test(
+          (navigator as Navigator & { userAgentData?: { platform: string } })
+            .userAgentData?.platform ?? navigator.platform
+        )
           ? "darwin"
-          : /Win/.test(navigator.platform)
+          : /Win/.test(
+                (
+                  navigator as Navigator & {
+                    userAgentData?: { platform: string };
+                  }
+                ).userAgentData?.platform ?? navigator.platform
+              )
             ? "win32"
             : "linux"
       );

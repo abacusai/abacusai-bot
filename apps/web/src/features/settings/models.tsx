@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { webSignIn } from "#platform/sign-in";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
@@ -21,7 +22,6 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
-import { webSignIn } from "#renderer/lib/browser/sign-in";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -217,18 +217,20 @@ export const ModelsPage = ({
               >
                 {t("phase5.connectFree")}
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  void navigate({
-                    to: "/settings/models",
-                    search: (old) => ({ ...old, provider: "local" }),
-                    transition: "none",
-                  })
-                }
-              >
-                {t("phase5.useLocal")}
-              </Button>
+              {IS_ELECTRON && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    void navigate({
+                      to: "/settings/models",
+                      search: (old) => ({ ...old, provider: "local" }),
+                      transition: "none",
+                    })
+                  }
+                >
+                  {t("phase5.useLocal")}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 onClick={() => void update({ creditsExhaustedAt: null })}

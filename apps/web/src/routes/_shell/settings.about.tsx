@@ -1,16 +1,9 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 
-import { IS_ELECTRON } from "#renderer/lib/platform";
-const AboutPage = IS_ELECTRON
-  ? lazy(() =>
-      import("#renderer/features/settings/updates").then((m) => ({
-        default: m.AboutPage,
-      }))
-    )
-  : () => null;
+import { AboutPage } from "#platform/about";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const AboutSettingsRoute = () => {
   const { t } = useTranslation();

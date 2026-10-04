@@ -32,6 +32,12 @@ export const NotificationClicks = ({
 }): null => {
   const navigate = useAppNavigate();
   useEffect(() => {
+    const clicked = (event: Event) => {
+      const metadata = (event as CustomEvent<NotificationMetadata>).detail;
+      const href = metadata ? notificationHref(metadata) : null;
+      if (href) void navigate({ href });
+    };
+    window.addEventListener("abacusai-bot:notification-clicked", clicked);
     const abort = new AbortController();
     void followNotices(
       transport,
@@ -42,7 +48,10 @@ export const NotificationClicks = ({
       },
       abort.signal
     );
-    return () => abort.abort();
+    return () => {
+      abort.abort();
+      window.removeEventListener("abacusai-bot:notification-clicked", clicked);
+    };
   }, [transport, navigate]);
   return null;
 };

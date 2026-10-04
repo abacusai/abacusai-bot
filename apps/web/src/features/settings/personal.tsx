@@ -7,10 +7,10 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
-import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { CompanionSettings } from "#platform/companion";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { BotMemoryList } from "#renderer/components/bot-memory-list";
 import { useAppForm } from "#renderer/components/form-kit";
@@ -44,11 +44,6 @@ import {
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
 import { Textarea } from "#renderer/ui/textarea";
-const CompanionSettings = IS_ELECTRON
-  ? lazy(() =>
-      import("./companion").then((m) => ({ default: m.CompanionSettings }))
-    )
-  : () => null;
 const modes = [
   "AUTO",
   "DEFAULT",

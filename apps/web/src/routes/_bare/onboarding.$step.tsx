@@ -1,9 +1,11 @@
+import { isPayingAbacusTier } from "@abacus-ai/contract/models";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef } from "react";
-import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { OnboardingLocalModels } from "#platform/local-models";
 import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
 import { OnboardingStepPage } from "#renderer/features/onboarding";
 import { completeOnboarding } from "#renderer/features/onboarding/actions";
@@ -18,17 +20,6 @@ import {
   startWebsiteSignIn,
 } from "#renderer/features/onboarding/first-run";
 import { guardStep } from "#renderer/features/onboarding/machine";
-import { IS_ELECTRON } from "#renderer/lib/platform";
-const OnboardingLocalModels = IS_ELECTRON
-  ? lazy(() =>
-      import("#renderer/features/onboarding/steps/local-models").then((m) => ({
-        default: m.OnboardingLocalModels,
-      }))
-    )
-  : () => null;
-import { isPayingAbacusTier } from "@abacus-ai/contract/models";
-import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
-
 import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
 import {
   onboardingStore,
@@ -41,6 +32,7 @@ import {
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 const OnboardingRoute = () => {
   const { t } = useTranslation();
   const step = Route.useParams().step as OnboardingStepId;

@@ -1,7 +1,7 @@
 import { Store } from "@tanstack/react-store";
 
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-const KEY = "abacus.sessions.reviews";
+const KEY = "abacusai-bot:abacus.sessions.reviews";
 const load = (): Record<string, Record<string, string>> => {
   try {
     return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");

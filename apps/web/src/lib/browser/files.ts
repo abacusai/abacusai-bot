@@ -1,17 +1,23 @@
 import type { AppClient } from "#renderer/data/transport/types";
 import { i18n } from "#renderer/lib/i18n";
 export const uploadFiles = async (files: File[]): Promise<string[]> => {
-  const { browserConnection } =
+  const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
-  const host = browserConnection();
+  let host = await refreshUploadToken();
   const body = new FormData();
   files.forEach((file) => body.append("files", file, file.name));
-  const response = await fetch(`${host.origin}/upload`, {
-    method: "POST",
-    credentials: "include",
-    headers: { Authorization: `Bearer ${host.token}` },
-    body,
-  });
+  const upload = () =>
+    fetch(`${host.origin}/upload`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Authorization: `Bearer ${host.token}` },
+      body,
+    });
+  let response = await upload();
+  if ([401, 403].includes(response.status)) {
+    host = await refreshUploadToken(true);
+    response = await upload();
+  }
   if (!response.ok) throw new Error(`Upload failed (${response.status})`);
   const value = (await response.json()) as { paths?: unknown };
   if (
@@ -24,20 +30,37 @@ export const uploadFiles = async (files: File[]): Promise<string[]> => {
 export const pickHostFolder = async (
   client: AppClient
 ): Promise<string | null> => {
-  const snapshot = await client.files.treeRoot({});
+  const [snapshot, workspaces] = await Promise.all([
+    client.files.treeRoot({}),
+    client.db.workspaces.snapshot({}),
+  ]);
+  const root = workspaces.rows.find((row) => row.isActive)?.path;
+  if (!root) throw new Error("Select a workspace before choosing a folder");
   return new Promise((resolve, reject) => {
     const dialog = document.createElement("dialog");
     const list = document.createElement("div");
     const title = document.createElement("p");
     title.textContent = i18n.t("web.files.select");
-    let selected = "";
+    let selected = root;
+    let history = [root];
+    let navigation = 0;
+    let closed = false;
+    const up = document.createElement("button");
+    up.textContent = "Up";
+    const home = document.createElement("button");
+    home.textContent = "Root";
     const done = (path: string | null) => {
+      closed = true;
+      navigation++;
       dialog.remove();
       resolve(path);
     };
     const browse = async (path: string) => {
-      selected = path;
+      const request = ++navigation;
       const children = await client.files.treeChildren({ directoryPath: path });
+      if (closed || request !== navigation) return;
+      selected = path;
+      up.disabled = history.length === 1;
       list.replaceChildren();
       title.textContent = path;
       for (const child of children.filter(
@@ -46,6 +69,7 @@ export const pickHostFolder = async (
         const button = document.createElement("button");
         button.textContent = child.name;
         button.onclick = () => {
+          history.push(child.absolutePath);
           void browse(child.absolutePath).catch((error) => {
             dialog.remove();
             reject(error);
@@ -63,7 +87,18 @@ export const pickHostFolder = async (
     cancel.textContent = i18n.t("web.files.cancel");
     cancel.onclick = () => done(null);
     dialog.addEventListener("cancel", () => done(null), { once: true });
-    dialog.append(title, list, choose, cancel);
+    up.disabled = true;
+    title.textContent = root;
+    up.onclick = () => {
+      if (history.length <= 1) return;
+      history.pop();
+      void browse(history[history.length - 1]!).catch(reject);
+    };
+    home.onclick = () => {
+      history = [root];
+      void browse(root).catch(reject);
+    };
+    dialog.append(title, up, home, list, choose, cancel);
     document.body.append(dialog);
     dialog.showModal();
     for (const child of snapshot.fileTree.filter(
@@ -72,6 +107,7 @@ export const pickHostFolder = async (
       const button = document.createElement("button");
       button.textContent = child.name;
       button.onclick = () => {
+        history.push(child.absolutePath);
         void browse(child.absolutePath).catch((error) => {
           dialog.remove();
           reject(error);

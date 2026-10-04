@@ -14,7 +14,7 @@ export interface BotDraft {
   values: BotFormValues;
   stages: { bot: boolean; checkIn: "none" | "persisted" | "failed" };
 }
-const storageKey = "renderer:bot-draft";
+const storageKey = "abacusai-bot:renderer:bot-draft";
 const restore = (): BotDraft | null => {
   try {
     return JSON.parse(
@@ -94,7 +94,7 @@ interface EditDraft {
   values: BotFormValues;
   baseline: BotFormValues;
 }
-const EDIT_KEY = "abacus.bots.edits";
+const EDIT_KEY = "abacusai-bot:abacus.bots.edits";
 const readEdits = (): Record<string, EditDraft> => {
   try {
     return JSON.parse(sessionStorage.getItem(EDIT_KEY) ?? "{}");

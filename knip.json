@@ -60,7 +60,8 @@
         "src/routes/**/*.tsx",
         "src/notch-routes/**/*.tsx",
         "src/test-support/notch-fit.tsx",
-        "src/**/*.test.{ts,tsx}"
+        "src/**/*.test.{ts,tsx}",
+        "src/platform/*.{ts,tsx}"
       ],
       "project": ["src/**/*.{ts,tsx}", "*.ts"],
       "ignore": [

@@ -3,8 +3,14 @@ import { resolve } from "node:path";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { render, waitFor } from "@testing-library/react";
-import { expect, it } from "vitest";
+import {
+  render,
+  waitFor,
+  act,
+  fireEvent,
+  screen,
+} from "@testing-library/react";
+import { expect, it, vi } from "vitest";
 import NodeWebSocket from "ws";
 
 import { createDb } from "#renderer/data/db";
@@ -64,7 +70,14 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
     )
       violations.push(path + ":" + (error as { code: string }).code);
   };
-  const socket = new NodeWebSocket(url) as unknown as WebSocket;
+  vi.stubEnv("VITE_WEB_HOST_URL", url);
+  const { resolveBrowserHost } =
+    await import("#renderer/features/shell/connect/services");
+  const host = await resolveBrowserHost(() => {});
+  const socket = new NodeWebSocket(host.url, [
+    "abacus-rpc",
+    `abacus-token.${host.token}`,
+  ]) as unknown as WebSocket;
   let db: ReturnType<typeof createDb> | undefined;
   let unmount: (() => void) | undefined;
   const queryClient = createQueryClient();
@@ -79,6 +92,8 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
       flowControl: false,
       inspectCall: inspect,
     });
+    (globalThis as Record<symbol, unknown>)[Symbol.for("abacus.transport")] =
+      Promise.resolve(transport);
     await initI18n();
     const result = await bootstrap({
       getTransport: async () => transport,
@@ -103,16 +118,71 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
         expect(document.querySelector('[data-slot="shell"]')).not.toBeNull(),
       { timeout: 10_000 }
     );
-    for (const to of [
-      "/settings/appearance",
+    const visit = async (to: string, landmark: string) => {
+      await act(async () => {
+        await router.navigate({ to });
+        await router.load();
+      });
+      await waitFor(
+        () =>
+          expect(
+            document.querySelector(landmark),
+            `${to}: ${landmark}`
+          ).not.toBeNull(),
+        { timeout: 5000 }
+      );
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(violations).toEqual([]);
+    };
+    await visit("/settings/appearance", '[data-setting-id="theme"]');
+    await visit(
       "/settings/models",
-      "/library/messaging",
-      "/sessions",
-      "/settings/account",
-    ] as const) {
-      await router.navigate({ to });
+      'input[aria-label="Search model providers…"]'
+    );
+    await visit("/library/messaging", '[data-setting-id="gatewayEnabled"]');
+    await act(async () => {
+      await router.navigate({
+        to: "/library/messaging",
+        search: { platform: "abacus_telegram" },
+      });
       await router.load();
-    }
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="sheet-content"]')
+      ).not.toBeNull()
+    );
+    expect(screen.queryByText("Open login")).toBeNull();
+    await visit("/sessions", '[data-slot="sessions-start"]');
+    await visit("/routines/new", "form");
+    await visit("/settings/account", "main h2");
+    expect(
+      await screen.findByRole("heading", { name: "Account" })
+    ).toBeDefined();
+    const search = screen.getByRole("textbox", { name: "Search settings" });
+    fireEvent.change(search, { target: { value: "local" } });
+    expect(document.querySelector('a[href*="provider=local"]')).toBeNull();
+    await visit("/bots", '[data-slot="shell"]');
+    const { startTour, tourSignedOut } =
+      await import("#renderer/features/tour/store");
+    await act(async () => startTour({ origin: "/bots", onboarded: true }));
+    await waitFor(() =>
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(violations).toEqual([]);
+    tourSignedOut();
+    await visit("/onboarding/welcome", "h1");
+    document
+      .querySelector("h1")!
+      .dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
     expect(violations).toEqual([]);
   } finally {
     unmount?.();
@@ -126,5 +196,9 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
     await new Promise((resolve) => setTimeout(resolve, 100));
     socket.close();
     child.kill("SIGTERM");
+    delete (globalThis as Record<symbol, unknown>)[
+      Symbol.for("abacus.transport")
+    ];
+    vi.unstubAllEnvs();
   }
 }, 30_000);

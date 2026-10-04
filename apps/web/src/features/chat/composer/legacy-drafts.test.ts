@@ -19,7 +19,9 @@ it("imports a synthetic v1.0.85 durable draft once without overwriting a new dra
   });
   expect(draftStore.state["edited-thread"]?.text).toBe("new words");
   expect(
-    JSON.parse(sessionStorage.getItem("abacus.chat.drafts")!)["old-thread"].text
+    JSON.parse(sessionStorage.getItem("abacusai-bot:abacus.chat.drafts")!)[
+      "old-thread"
+    ].text
   ).toBe("unsent legacy words");
   expect(acknowledge).toHaveBeenCalledWith(["old-thread", "edited-thread"]);
   clearDraft("old-thread");

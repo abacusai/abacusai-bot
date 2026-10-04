@@ -2,7 +2,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { createRoot } from "react-dom/client";
 
-import { createDb, installDb, type Db } from "#renderer/data/db";
+import {
+  installBrowserAttention,
+  requestNotificationPermission,
+} from "#platform/attention";
+import { ConnectScreen } from "#platform/connect";
 
 /**
  * renderer boot (spec 01 §8.6): styles, the stored theme before the
@@ -12,17 +16,14 @@ import { createDb, installDb, type Db } from "#renderer/data/db";
  * never a blank window, and tells main through a bounded readiness call.
  */
 import "./styles/app.css";
+import { resolveBrowserHost, type ConnectStage } from "#platform/connect";
+import { installLease } from "#platform/lease";
+import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport, type Transport } from "#renderer/data/transport";
 import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { isToasterMounted } from "#renderer/features/shell/app-toaster";
-import { ConnectScreen } from "#renderer/features/shell/connect";
-import {
-  resolveBrowserHost,
-  type ConnectStage,
-} from "#renderer/features/shell/connect/services";
-import { installLease } from "#renderer/features/shell/lease";
 import { BootFailure } from "#renderer/features/shell/screens";
 import { installActivity } from "#renderer/lib/activity";
 import {
@@ -109,6 +110,10 @@ const start = async (forceRestart = false): Promise<void> => {
     // 4. English is bundled; the user's language follows prefs.
     await initI18n();
     if (IS_BROWSER) {
+      installBrowserAttention();
+      window.addEventListener("pointerdown", requestNotificationPermission, {
+        once: true,
+      });
       let stage: ConnectStage = "starting";
       const connect = async (forceRestart = false): Promise<void> => {
         try {

@@ -1,15 +1,7 @@
 import { useSearch, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent } from "react";
-import { lazy } from "react";
 
-import { IS_ELECTRON } from "#renderer/lib/platform";
-const BrowserTab = IS_ELECTRON
-  ? lazy(() =>
-      import("#renderer/features/sessions/browser/browser-tab").then((m) => ({
-        default: m.BrowserTab,
-      }))
-    )
-  : () => null;
+import { BrowserTab } from "#platform/browser-tab";
 import {
   useSession,
   useWorkspace,
@@ -23,6 +15,7 @@ import { nativePresenterFor } from "#renderer/features/shell/platform-presenter"
 import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
 import { shellStore } from "#renderer/features/shell/shell-store";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 export const BotBrowserRegistration = ({
   sessionId,

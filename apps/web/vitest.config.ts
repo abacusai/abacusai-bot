@@ -8,9 +8,22 @@ import {
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
 } from "../desktop/vite.shared";
+import { platformAlias } from "./vite.renderer";
 export default defineConfig({
   test: {
-    maxWorkers: 4,
+    maxWorkers: process.env.CI ? 2 : 4,
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "html"],
+      exclude: [
+        "**/*.test.*",
+        "**/dist/**",
+        "**/*.config.ts",
+        "src/locales/**",
+        "src/routeTree.gen.ts",
+        "src/ui/**",
+      ],
+    },
     projects: ["electron", "browser"].map((platform) => ({
       define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
       plugins: [
@@ -23,6 +36,7 @@ export default defineConfig({
       resolve: {
         alias: {
           ...alias,
+          ...platformAlias(platform as "electron" | "browser"),
           "ort-dist": resolve(
             import.meta.dirname,
             "../../node_modules/onnxruntime-web/dist"
@@ -30,9 +44,10 @@ export default defineConfig({
         },
       },
       test: {
+        ...(process.env.CI ? { hookTimeout: 30_000, testTimeout: 30_000 } : {}),
         name: platform === "electron" ? "renderer" : "renderer-browser",
         environment: "jsdom",
-        maxWorkers: 4,
+        maxWorkers: process.env.CI ? 2 : 4,
         css: { include: [/tokens\.css/] },
         include:
           platform === "electron"

@@ -30,7 +30,7 @@ const values = {
 };
 it("R7-T3: all typed draft families round-trip without normalization or attachment bytes", () => {
   const entries = {
-    "abacus.chat.drafts": {
+    "abacusai-bot:abacus.chat.drafts": {
       t: {
         text: "hello",
         attachments: [
@@ -52,17 +52,17 @@ it("R7-T3: all typed draft families round-trip without normalization or attachme
         },
       },
     },
-    "renderer:bot-draft": {
+    "abacusai-bot:renderer:bot-draft": {
       id: "b",
       templateId: "template",
       values,
       stages: { bot: false, checkIn: "none" },
       lookPicked: true,
     },
-    "abacus.bots.edits": {
+    "abacusai-bot:abacus.bots.edits": {
       b: { values, baseline: { ...values, name: "old" } },
     },
-    "abacus.sessions.start": {
+    "abacusai-bot:abacus.sessions.start": {
       id: "draft",
       workspaceId: "w",
       worktree: { kind: "new", baseRef: "main" },
@@ -74,7 +74,7 @@ it("R7-T3: all typed draft families round-trip without normalization or attachme
         parts: [{ type: "text", content: "start" }],
       },
     },
-    "abacus.sessions.tabs": {
+    "abacusai-bot:abacus.sessions.tabs": {
       s: {
         tabs: [
           { ref: "terminal:t", title: "zsh", openedAt: 2, shell: "system" },
@@ -88,8 +88,8 @@ it("R7-T3: all typed draft families round-trip without normalization or attachme
         },
       },
     },
-    "abacus.sessions.reviews": { s: { file: "fingerprint" } },
-    "routine-editor:r": [{ user: "change", reply: "done" }],
+    "abacusai-bot:abacus.sessions.reviews": { s: { file: "fingerprint" } },
+    "abacusai-bot:routine-editor:r": [{ user: "change", reply: "done" }],
   };
   for (const [key, value] of Object.entries(entries))
     sessionStorage.setItem(key, JSON.stringify(value));
@@ -102,14 +102,17 @@ it("R7-T3: all typed draft families round-trip without normalization or attachme
 it("invalid and unknown versioned stores are dropped and logged", () => {
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   restoreDrafts({
-    "abacus.chat.drafts": { key: "chat.drafts.v1", value: { x: { text: 4 } } },
+    "abacusai-bot:abacus.chat.drafts": {
+      key: "chat.drafts.v1",
+      value: { x: { text: 4 } },
+    },
     unknown: { key: "v9", value: {} },
   });
   expect(sessionStorage.length).toBe(0);
   expect(warn).toHaveBeenCalledTimes(2);
 });
 it("captures live quota-blocked state and defers snapshots over 4 MB", () => {
-  const unbind = bindContinuityStore("abacus.chat.drafts", {
+  const unbind = bindContinuityStore("abacusai-bot:abacus.chat.drafts", {
     read: () => ({ t: { text: "x".repeat(4 * 1024 * 1024), attachments: [] } }),
     write: () => {},
   });

@@ -1,4 +1,8 @@
 import type { Transport } from "#renderer/data/transport";
+import {
+  reserveAuthorization,
+  completeConnectorAuthorization,
+} from "#renderer/lib/browser/authorization";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const claim = (key: string): boolean => {
@@ -17,10 +21,55 @@ export const startFirstRunGmail = async (
   email: string
 ): Promise<void> => {
   if (!email) return;
+  if (!IS_ELECTRON) {
+    const statuses = await transport.client.connectors.statuses({});
+    if (
+      statuses["abacus-gmailuser"]?.state === "connected" ||
+      document.getElementById("gmail-consent")
+    )
+      return;
+    const button = document.createElement("button");
+    button.id = "gmail-consent";
+    button.className =
+      "fixed right-4 bottom-4 z-50 rounded-lg bg-primary px-4 py-2 text-primary-foreground shadow-lg";
+    button.textContent = "Connect Gmail";
+    button.onclick = () => {
+      const authorization = reserveAuthorization();
+      button.disabled = true;
+      void transport.client.connectors
+        .connect({
+          connectorId: "abacus-gmailuser",
+          options: { hint: email, owner: "first-run" },
+        })
+        .then((outcome) =>
+          completeConnectorAuthorization(
+            transport.client,
+            "abacus-gmailuser",
+            outcome,
+            authorization
+          )
+        )
+        .then(async (outcome) => {
+          await transport.client.system.funnelStep({
+            step: outcome.ok ? "gmail_allowed" : "gmail_declined",
+          });
+          if (outcome.ok) {
+            claim("abacusai-bot:onboarding.gmailHop");
+            button.remove();
+          } else button.disabled = false;
+        })
+        .catch(() => {
+          authorization.close();
+          button.disabled = false;
+        });
+    };
+    document.body.append(button);
+    return;
+  }
   const statuses = await transport.client.connectors.statuses({});
   if (
     statuses["abacus-gmailuser"]?.state === "connected" ||
-    !claim("onboarding.gmailHop")
+    !claim("abacusai-bot:onboarding.gmailHop")
   )
     return;
   void transport.client.connectors
@@ -42,11 +91,11 @@ export const startWebsiteSignIn = async (
   start: () => void
 ): Promise<void> => {
   if (!IS_ELECTRON) {
-    start();
+    if (claim("abacusai-bot:onboarding.autoSignIn")) start();
     return;
   }
   if (!(await transport.client.auth.abacus.shouldAutoSignIn({}))) return;
-  if (!claim("onboarding.autoSignIn")) return;
+  if (!claim("abacusai-bot:onboarding.autoSignIn")) return;
   await transport.client.system.funnelStep({ step: "auto_signin" });
   start();
 };

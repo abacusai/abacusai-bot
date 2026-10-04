@@ -248,6 +248,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
+      jiti:
+        specifier: 2.7.0
+        version: 2.7.0
       knip:
         specifier: 6.38.0
         version: 6.38.0
@@ -535,9 +538,6 @@ importers:
       '@tanstack/react-store':
         specifier: ^0.11.2
         version: 0.11.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@testing-library/react':
-        specifier: ^16.3.2
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       axe-core:
         specifier: 4.13.0
         version: 4.13.0
@@ -608,6 +608,9 @@ importers:
       '@tanstack/router-plugin':
         specifier: 1.168.41
         version: 1.168.41(@tanstack/react-router@1.170.40(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(esbuild@0.28.1)(rolldown@1.2.4)(supports-color@7.2.0)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/node':
         specifier: 'catalog:'
         version: 26.2.0
@@ -626,9 +629,6 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@2.3.0)
-      magic-string:
-        specifier: 0.30.21
-        version: 0.30.21
       oxc-parser:
         specifier: 0.150.0
         version: 0.150.0
@@ -748,9 +748,6 @@ importers:
 
   packages/contract:
     dependencies:
-      '@abacus-ai/agent':
-        specifier: workspace:*
-        version: link:../agent
       '@abacus-ai/connectors':
         specifier: workspace:*
         version: link:../connectors
@@ -776,6 +773,9 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@7.0.2)
     devDependencies:
+      '@abacus-ai/agent':
+        specifier: workspace:*
+        version: link:../agent
       '@abacus-ai/config':
         specifier: workspace:*
         version: link:../config

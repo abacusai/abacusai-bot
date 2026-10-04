@@ -33,6 +33,7 @@
     "@abacus-ai/config": "workspace:*",
     "@size-limit/file": "^14.1.0",
     "@types/node": "catalog:",
+    "jiti": "2.7.0",
     "knip": "6.38.0",
     "oxc-parser": "0.150.0",
     "oxfmt": "catalog:",

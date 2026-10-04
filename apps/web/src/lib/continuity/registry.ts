@@ -135,11 +135,19 @@ export const CONTINUITY_STORES: ReadonlyArray<{
   prefix?: boolean;
   schema: v.GenericSchema;
 }> = [
-  { key: "chat.drafts.v1", storage: "abacus.chat.drafts", schema: chat },
-  { key: "bots.drafts.v1", storage: "renderer:bot-draft", schema: bot },
+  {
+    key: "chat.drafts.v1",
+    storage: "abacusai-bot:abacus.chat.drafts",
+    schema: chat,
+  },
+  {
+    key: "bots.drafts.v1",
+    storage: "abacusai-bot:renderer:bot-draft",
+    schema: bot,
+  },
   {
     key: "bots.edits.v1",
-    storage: "abacus.bots.edits",
+    storage: "abacusai-bot:abacus.bots.edits",
     schema: v.record(
       v.string(),
       v.object({ values: botValues, baseline: botValues })
@@ -147,22 +155,22 @@ export const CONTINUITY_STORES: ReadonlyArray<{
   },
   {
     key: "sessions.startDraft.v1",
-    storage: "abacus.sessions.start",
+    storage: "abacusai-bot:abacus.sessions.start",
     schema: start,
   },
   {
     key: "sessions.panelTabs.v1",
-    storage: "abacus.sessions.tabs",
+    storage: "abacusai-bot:abacus.sessions.tabs",
     schema: tabs,
   },
   {
     key: "sessions.review.v1",
-    storage: "abacus.sessions.reviews",
+    storage: "abacusai-bot:abacus.sessions.reviews",
     schema: v.record(v.string(), v.record(v.string(), v.string())),
   },
   {
     key: "routines.editorLog.v1",
-    storage: "routine-editor:",
+    storage: "abacusai-bot:routine-editor:",
     prefix: true,
     schema: v.array(v.object({ user: v.string(), reply: v.string() })),
   },

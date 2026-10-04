@@ -96,9 +96,15 @@ test("release guard refuses a zero-match gallery and normalizes both roots", () 
       },
     }
   );
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "chunk-graph-"));
+  fs.mkdirSync(path.join(directory, "assets"));
+  fs.writeFileSync(path.join(directory, "assets/main.js"), "final bytes");
+  plugin.writeBundle({ dir: directory });
   const graph = JSON.parse(
-    assets.find((asset) => asset.fileName === "chunk-sizes.json").source
+    fs.readFileSync(path.join(directory, "chunk-sizes.json"), "utf8")
   );
+  assert.equal(graph[0].bytes, Buffer.byteLength("final bytes"));
+  fs.rmSync(directory, { recursive: true });
   assert.deepEqual(graph[0].modules.map((module) => module.id).sort(), [
     "<desktop>/src/main/index.ts",
     "<web>/src/main.tsx",

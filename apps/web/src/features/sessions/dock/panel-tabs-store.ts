@@ -18,7 +18,7 @@ export interface PanelTabs {
   last: string | null;
   tree?: DockNode;
 }
-const KEY = "abacus.sessions.tabs";
+const KEY = "abacusai-bot:abacus.sessions.tabs";
 const restore = (): Record<string, PanelTabs> => {
   try {
     return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");

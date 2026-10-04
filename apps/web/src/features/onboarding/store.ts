@@ -1,8 +1,8 @@
 import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
 import { Store } from "@tanstack/react-store";
 
+import { webSignIn } from "#platform/sign-in";
 import type { Transport } from "#renderer/data/transport";
-import { webSignIn } from "#renderer/lib/browser/sign-in";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 export interface SignInAttempt {
   id: string;

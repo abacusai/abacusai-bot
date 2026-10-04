@@ -119,6 +119,8 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   routines: ["form", "gallery", "globals", "page", "run-requests", "sidebar"],
   sessions: [
     "browser/browser-tab",
+    "browser/ask-host",
+    "device/device-tab",
     "changes/changes-card",
     "changes/full-diff-dialog",
     "context/context-tray",
@@ -137,6 +139,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "start/start-resources",
   ],
   settings: [
+    "companion",
     "account-usage",
     "changelog",
     "environment",
@@ -189,6 +192,7 @@ const featureBoundaryHits = (
       const allowed =
         file.path.startsWith("routes/") ||
         file.path.startsWith("notch-routes/") ||
+        file.path.startsWith("platform/") ||
         ["router.tsx", "notch.tsx", "notch-context.ts"].includes(file.path) ||
         file.path === "main.tsx" ||
         file.path === "features/shell/sidebars.ts" ||
@@ -268,6 +272,7 @@ describe("renderer guards", () => {
   it("rejects unapproved internals even at feature composition boundaries", () => {
     const paths = [
       "routes/canary.tsx",
+      "platform/canary.tsx",
       "main.tsx",
       "features/shell/sidebars.ts",
       "features/gallery/canary.tsx",
@@ -365,7 +370,7 @@ it("every persisted sessionStorage draft has a continuity schema", () => {
 });
 it("the session-store guard catches an extra unregistered key beside a registered one", () => {
   const source =
-    'const KEY = "abacus.chat.drafts"; sessionStorage.setItem(KEY, "{}"); globalThis.sessionStorage?.setItem("forgotten.draft", "x");';
+    'const KEY = "abacusai-bot:abacus.chat.drafts"; sessionStorage.setItem(KEY, "{}"); globalThis.sessionStorage?.setItem("forgotten.draft", "x");';
   expect(
     unregisteredSessionKeys(
       source,

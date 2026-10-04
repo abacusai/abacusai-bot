@@ -227,7 +227,7 @@ export const mountWhenOpen = async (deps: MountDeps): Promise<boolean> => {
 };
 
 /** How recently a reload for a lost port happened, across the reload. */
-const RELOAD_KEY = "abacus:transport-lost-reload-at";
+const RELOAD_KEY = "abacusai-bot:transport-lost-reload-at";
 export const RELOAD_DELAY_MS = 1_500;
 export const LOOP_WINDOW_MS = 10_000;
 

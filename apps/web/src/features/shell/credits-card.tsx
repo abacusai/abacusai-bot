@@ -24,7 +24,7 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
-const DISMISSED_KEY = "local-code:upsell-dismissed";
+const DISMISSED_KEY = "abacusai-bot:local-code:upsell-dismissed";
 const readDismissed = () => {
   try {
     return localStorage.getItem(DISMISSED_KEY) != null;

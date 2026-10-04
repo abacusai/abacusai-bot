@@ -31,7 +31,7 @@ export interface Draft {
   model?: string | null;
 }
 
-const KEY = "abacus.chat.drafts";
+const KEY = "abacusai-bot:abacus.chat.drafts";
 
 const load = (): Record<string, Draft> => {
   try {

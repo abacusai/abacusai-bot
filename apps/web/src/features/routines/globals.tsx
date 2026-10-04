@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
+import { claimBrowserAttention } from "#platform/attention";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { permissionCueKey } from "#renderer/lib/attention/cues";
@@ -46,7 +47,8 @@ export const RoutinesGlobals = () => {
       prefs: sounds,
       now: () => Date.now(),
       claim: !IS_ELECTRON
-        ? async () => true
+        ? (cueId, threadId) =>
+            claimBrowserAttention(`sound:${cueId}:${threadId ?? ""}`)
         : (cueId, threadId) =>
             transport.client.window
               .claimCue({ cueId, threadId })

@@ -1,6 +1,7 @@
 import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { useEffect } from "react";
 
+import { claimBrowserAttention } from "#platform/attention";
 import type { Transport } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
@@ -28,7 +29,8 @@ export const documentSoundPlayer = () =>
 export const useDocumentSoundOwner = (transport: Transport): void => {
   useEffect(() => {
     claim = !IS_ELECTRON
-      ? async () => true
+      ? (cueId, threadId) =>
+          claimBrowserAttention(`sound:${cueId}:${threadId ?? ""}`)
       : (cueId, threadId) =>
           transport.client.window
             .claimCue({ cueId, threadId })

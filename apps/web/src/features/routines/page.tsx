@@ -451,7 +451,7 @@ type Exchange = { user: string; reply: string };
 const readLog = (id: string): Exchange[] => {
   try {
     return JSON.parse(
-      sessionStorage.getItem(`routine-editor:${id}`) ?? "[]"
+      sessionStorage.getItem(`abacusai-bot:routine-editor:${id}`) ?? "[]"
     ) as Exchange[];
   } catch {
     return [];
@@ -466,7 +466,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
   const [gone, setGone] = useState(false);
   useEffect(
     () =>
-      bindContinuityStore(`routine-editor:${routineId}`, {
+      bindContinuityStore(`abacusai-bot:routine-editor:${routineId}`, {
         read: () => log,
         write: (value) => setLog(value as Exchange[]),
       }),
@@ -484,7 +484,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       const next = [...log, { user, reply: result.reply }].slice(-10);
       setLog(next);
       sessionStorage.setItem(
-        `routine-editor:${routineId}`,
+        `abacusai-bot:routine-editor:${routineId}`,
         JSON.stringify(next)
       );
       setText("");
@@ -497,7 +497,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       const next = [...log, { user, reply }].slice(-10);
       setLog(next);
       sessionStorage.setItem(
-        `routine-editor:${routineId}`,
+        `abacusai-bot:routine-editor:${routineId}`,
         JSON.stringify(next)
       );
     }

@@ -32,7 +32,7 @@ export interface StartDraft {
   stage: "draft" | "created" | "checkout-ready" | "handed-off";
   envelope: SubmissionEnvelope | null;
 }
-const KEY = "abacus.sessions.start";
+const KEY = "abacusai-bot:abacus.sessions.start";
 export const newStartDraft = (): StartDraft => ({
   id: crypto.randomUUID(),
   workspaceId: null,

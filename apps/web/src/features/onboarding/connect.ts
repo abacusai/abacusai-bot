@@ -3,6 +3,10 @@ import { connectorById } from "@abacus-ai/connectors/registry";
 import type { Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
+import {
+  reserveAuthorization,
+  completeConnectorAuthorization,
+} from "#renderer/lib/browser/authorization";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /** Pairing is deferred; enabling and persisting the queue happen on the click. */
@@ -11,6 +15,7 @@ export const connectOnboarding = async (
   transport: Transport,
   id: string
 ) => {
+  const authorization = reserveAuthorization();
   const connector = connectorById(id);
   if (IS_ELECTRON && connector?.kind === "messaging") {
     await transport.client.messaging.updatePlatform({
@@ -23,6 +28,7 @@ export const connectOnboarding = async (
         ...new Set([...(prefs.onboardingPairing ?? []), connector.platform]),
       ],
     });
+    authorization.close();
     return { ok: false, deferred: true } as const;
   }
   const abort = new AbortController();
@@ -36,8 +42,16 @@ export const connectOnboarding = async (
       { connectorId: id },
       { signal: abort.signal }
     );
+    outcome = await completeConnectorAuthorization(
+      transport.client,
+      id,
+      outcome,
+      authorization,
+      () => !abort.signal.aborted
+    );
   } finally {
     clearTimeout(timer);
+    authorization.close();
   }
   if (!outcome.ok && !outcome.cancelled)
     throw new Error("connector-connect-failed");

@@ -121,23 +121,6 @@ export default defineConfig({
             patterns: [
               {
                 group: [
-                  "#renderer/features/notch/**",
-                  "#renderer/features/sessions/device/**",
-                  "#renderer/features/sessions/browser/**",
-                  "#renderer/components/browser-surface/**",
-                  "#renderer/lib/window-chrome/**",
-                  "#renderer/features/onboarding/steps/local-models",
-                  "#renderer/features/settings/updates",
-                  "#renderer/features/settings/companion",
-                  "#renderer/features/shell/native-presenter",
-                ],
-                allowTypeImports: true,
-                message:
-                  "Electron implementations must be loaded inside an IS_ELECTRON branch (spec 08 §5.2).",
-              },
-
-              {
-                group: [
                   "!#locales/*",
                   "@dicebear/*",
                   "@tsparticles/*",

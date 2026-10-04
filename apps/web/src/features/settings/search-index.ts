@@ -166,3 +166,17 @@ export const searchSettings = (
       `${row.label ?? t(row.labelKey)} ${t(`settings.pages.${row.page}`)}`
     ).includes(foldSearch(query))
   );
+
+export const settingsIndexFor = (
+  electron: boolean,
+  uiOS: "mac" | "windows" | "linux"
+) =>
+  SETTINGS_INDEX.filter(
+    (entry) =>
+      (electron ||
+        (!["browser", "devices", "about"].includes(entry.page) &&
+          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|key-notch)/.test(
+            entry.id
+          ))) &&
+      (uiOS !== "mac" || !entry.id.endsWith("@terminal"))
+  );

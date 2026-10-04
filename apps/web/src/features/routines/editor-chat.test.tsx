@@ -26,7 +26,7 @@ it("R5-T12 the mounted editor sends trimmed text once, disables the field and re
     routines: { editByChat: os.routines.editByChat.handler(edit) },
   };
   sessionStorage.setItem(
-    `routine-editor:${row.id}`,
+    `abacusai-bot:routine-editor:${row.id}`,
     JSON.stringify(
       Array.from({ length: 10 }, (_, i) => ({
         user: `old ${i}`,
@@ -48,7 +48,9 @@ it("R5-T12 the mounted editor sends trimmed text once, disables the field and re
   expect(field.hasAttribute("disabled")).toBe(true);
   release({ reply: "Changed to 7" });
   await waitFor(() => expect(field.hasAttribute("disabled")).toBe(false));
-  const log = JSON.parse(sessionStorage.getItem(`routine-editor:${row.id}`)!);
+  const log = JSON.parse(
+    sessionStorage.getItem(`abacusai-bot:routine-editor:${row.id}`)!
+  );
   expect(log).toHaveLength(10);
   expect(log[0].user).toBe("old 1");
   expect(log.at(-1)).toEqual({ user: "every day at 7", reply: "Changed to 7" });
@@ -79,7 +81,9 @@ it.each(["TIMEOUT", "NOT_FOUND", "INTERNAL_SERVER_ERROR"] as const)(
     else
       await waitFor(() => expect(field.hasAttribute("disabled")).toBe(false));
     expect(
-      JSON.parse(sessionStorage.getItem(`routine-editor:${row.id}`)!)
+      JSON.parse(
+        sessionStorage.getItem(`abacusai-bot:routine-editor:${row.id}`)!
+      )
     ).toHaveLength(1);
   }
 );
@@ -87,11 +91,11 @@ it.each(["TIMEOUT", "NOT_FOUND", "INTERNAL_SERVER_ERROR"] as const)(
 it("navigation between routines isolates editor history and drafts", async () => {
   const other = fixtureRoutines()[1]!;
   sessionStorage.setItem(
-    `routine-editor:${row.id}`,
+    `abacusai-bot:routine-editor:${row.id}`,
     JSON.stringify([{ user: "First routine request", reply: "First reply" }])
   );
   sessionStorage.setItem(
-    `routine-editor:${other.id}`,
+    `abacusai-bot:routine-editor:${other.id}`,
     JSON.stringify([{ user: "Second routine request", reply: "Second reply" }])
   );
   app = await renderApp(`/routines/${row.id}`);

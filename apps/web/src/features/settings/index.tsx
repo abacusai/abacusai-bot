@@ -8,13 +8,13 @@ import { useTranslation } from "react-i18next";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import type { SettingsPageId } from "#renderer/lib/navigation/areas";
-import { IS_ELECTRON } from "#renderer/lib/platform";
+import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Input } from "#renderer/ui/input";
 
 import {
   searchSettings,
-  SETTINGS_INDEX,
+  settingsIndexFor,
   type SettingEntry,
 } from "./search-index";
 
@@ -64,9 +64,7 @@ export const SettingsSidebar = () => {
     enabled: !!q.trim(),
   });
   const entries: SettingEntry[] = [
-    ...SETTINGS_INDEX.filter(
-      (entry) => system.platform !== "darwin" || !entry.id.endsWith("@terminal")
-    ),
+    ...settingsIndexFor(IS_ELECTRON, uiPlatform(system.platform)),
     ...bots.flatMap((bot) => [
       {
         id: `sounds-bot-${bot.id}`,

@@ -17,7 +17,6 @@ import { ConnectorRequestCard } from "#renderer/components/connector-request-car
 import type { TerminalAction } from "#renderer/components/terminal/keys";
 import { useConnectorRequests } from "#renderer/lib/connector-requests";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 
 import { WorkspaceMissing } from "./context/workspace-missing";
@@ -31,19 +30,15 @@ import {
 } from "./data/queries";
 import { openTab } from "./dock/panel-tabs-store";
 import { SessionDock, type SessionDockProps } from "./dock/session-dock";
-const BrowserTab = IS_ELECTRON
-  ? lazy(() =>
-      import("./browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
-    )
-  : () => null;
+const BrowserTab = lazy(() =>
+  import("#platform/browser-tab").then((m) => ({ default: m.BrowserTab }))
+);
 const ChangesTab = lazy(() =>
   import("./changes/changes-tab").then((m) => ({ default: m.ChangesTab }))
 );
-const DeviceTab = IS_ELECTRON
-  ? lazy(() =>
-      import("./device/device-tab").then((m) => ({ default: m.DeviceTab }))
-    )
-  : () => null;
+const DeviceTab = lazy(() =>
+  import("#platform/device-tab").then((m) => ({ default: m.DeviceTab }))
+);
 const TerminalTab = lazy(() =>
   import("./terminal/terminal-tab").then((m) => ({ default: m.TerminalTab }))
 );

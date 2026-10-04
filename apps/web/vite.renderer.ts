@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import MagicString from "magic-string";
 import { loadEnv, type PluginOption } from "vite";
 
 import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
@@ -30,80 +29,94 @@ export const rendererCsp = (
   if (platform !== "electron" && platform !== "browser")
     throw new Error("Renderer platform is required");
   if (platform === "electron") return CSP_BASE + "connect-src 'self' data:;";
-  if (!env.VITE_CONNECT_SRC)
+  const sources =
+    env.VITE_CONNECT_SRC ??
+    "'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai";
+  if (!sources.trim())
     throw new Error("VITE_CONNECT_SRC is required for browser builds");
-  const sources = [
-    "'self'",
-    "https://apps.abacus.ai",
-    "https://*.preview.apps.abacus.ai",
-    "wss://*.preview.apps.abacus.ai",
-  ];
-  if (env.VITE_ABACUS_ENV === "staging")
-    sources.push(
-      "https://staging-apps.abacus.ai",
-      "https://*.preview.staging-apps.abacus.ai",
-      "wss://*.preview.staging-apps.abacus.ai"
-    );
-  sources.push(env.VITE_CONNECT_SRC);
-  return CSP_BASE + `connect-src ${[...new Set(sources)].join(" ")};`;
+  return CSP_BASE + `connect-src ${sources};`;
 };
-export const platformPlugin = (platform: RendererPlatform) => {
-  const csp = rendererCsp(platform, {
-    ...loadEnv("production", webRoot, "VITE_"),
+export const platformAlias = (platform: RendererPlatform) =>
+  Object.fromEntries(
+    [
+      "ask-host",
+      "companion",
+      "about",
+      "updates",
+      "local-models",
+      "browser-tab",
+      "device-tab",
+      "presenter",
+      "transport",
+      "connect",
+      "lease",
+      "sign-in",
+      "system",
+      "files",
+      "attention",
+    ].map((name) => [
+      `#platform/${name}`,
+      resolve(
+        webRoot,
+        `src/platform/${platform === "electron" && ["system", "sign-in", "files", "attention", "lease"].includes(name) ? "adapters" : name}.${platform}.${["presenter", "transport", "lease", "sign-in", "system", "files", "attention"].includes(name) ? "ts" : "tsx"}`
+      ),
+    ])
+  );
+export const assertBrowserImport = (resolved: string): void => {
+  const id = resolved.replaceAll("\\", "/");
+  if (
+    /\/src\/(?:features\/(?:notch\/|sessions\/(?:device|browser)\/|onboarding\/steps\/local-models\.|settings\/(?:updates|companion)\.|shell\/native-presenter\.)|lib\/window-chrome\/|components\/(?:device|browser-surface)\/)/.test(
+      id
+    )
+  )
+    throw new Error(
+      `Electron-only module in browser build: ${id}. Use #platform aliasing.`
+    );
+};
+export const browserBoundaryPlugin = () => ({
+  name: "abacus:browser-boundary",
+  async resolveId(
+    this: import("vite").Rolldown.PluginContext,
+    id: string,
+    importer: string | undefined
+  ) {
+    const resolved = await this.resolve(id, importer, { skipSelf: true });
+    if (resolved) assertBrowserImport(resolved.id);
+    return resolved;
+  },
+});
+export const platformPlugin = (
+  platform: RendererPlatform,
+  mode = "production",
+  command = "build"
+) => {
+  const env = {
+    ...(platform === "browser" ? loadEnv(mode, webRoot, "VITE_") : {}),
     ...process.env,
-  });
+  };
+  if (platform === "browser" && command === "serve" && env.VITE_WEB_HOST_URL) {
+    const origin = new URL(env.VITE_WEB_HOST_URL).origin;
+    env.VITE_CONNECT_SRC = `${env.VITE_CONNECT_SRC ?? "'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai"} ${origin} ${origin.replace(/^ws/, "http")}`;
+  }
+  const csp = rendererCsp(platform, env);
   return {
     name: "abacus:platform",
-    enforce: "pre" as const,
-    transform(code: string, id: string) {
-      if (
-        !id.replaceAll("\\", "/").includes("/apps/web/src/") ||
-        id.endsWith("/lib/platform.ts")
-      )
-        return;
-      // Imported constants are propagated after Rolldown discovers dynamic
-      // entries. Make the gates defines before that discovery instead.
-      const result = new MagicString(code);
-      for (const match of code.matchAll(
-        /import\s*\{([^}]*)\}\s*from\s*["'](?:#renderer\/lib\/platform|\.\/platform)["'];?/g
-      )) {
-        const bindings = match[1]!;
-        const retained = bindings
-          .split(",")
-          .map((binding) => binding.trim())
-          .filter(
-            (binding) => !["IS_ELECTRON", "IS_BROWSER"].includes(binding)
-          );
-        result.overwrite(
-          match.index!,
-          match.index! + match[0].length,
-          retained.length ? match[0].replace(bindings, retained.join(", ")) : ""
-        );
-      }
-      return {
-        code: result.toString(),
-        map: result.generateMap({ hires: true }),
-      };
-    },
     config: () => ({
-      define: {
-        __ABACUS_PLATFORM__: JSON.stringify(platform),
-        IS_ELECTRON: JSON.stringify(platform === "electron"),
-        IS_BROWSER: JSON.stringify(platform === "browser"),
-      },
+      define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
     }),
     transformIndexHtml: () => [
       {
         tag: "meta",
         attrs: { "http-equiv": "Content-Security-Policy", content: csp },
-        injectTo: "head" as const,
+        injectTo: "head-prepend" as const,
       },
     ],
   };
 };
 export const rendererPlugins = (
   platform: RendererPlatform,
-  command: string
+  command: string,
+  mode = "production"
 ): PluginOption[] => {
   const root = webRoot;
   const flags = {
@@ -112,8 +125,9 @@ export const rendererPlugins = (
   };
   const release = command === "build" && !flags.gallery && !flags.fixtures;
   return [
-    platformPlugin(platform),
-    releaseBuildPlugin(root, release, flags),
+    platformPlugin(platform, mode, command),
+    ...(platform === "browser" ? [browserBoundaryPlugin()] : []),
+    releaseBuildPlugin(root, release, flags, platform),
     // Before the React transform: it rewrites route files into split chunks.
     tanstackRouter({
       target: "react",

@@ -11,7 +11,6 @@ import { AppRoot } from "#renderer/features/shell/app-root";
 import { NotFound, RootError } from "#renderer/features/shell/screens";
 import { ActionBindingsProvider } from "#renderer/lib/keyboard/action-bindings";
 import { installLogRing } from "#renderer/lib/log-ring";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { RouterContext } from "#renderer/router";
 
 const Devtools =
@@ -23,11 +22,7 @@ const Devtools =
       )
     : null;
 
-const UpdateOwner = IS_ELECTRON
-  ? lazy(() =>
-      import("./-update-owner").then((m) => ({ default: m.UpdateOwner }))
-    )
-  : () => null;
+import { UpdateOwner } from "#platform/updates";
 
 const RootComponent = () => {
   const { transport, db, system } = Route.useRouteContext();

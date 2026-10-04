@@ -12,15 +12,12 @@ import {
 import { useTranslation } from "react-i18next";
 
 import type { BrowserSurface } from "#renderer/components/browser-surface";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
-const BrowserTab = IS_ELECTRON
-  ? lazy(() =>
-      import("../browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
-    )
-  : () => null;
+const BrowserTab = lazy(() =>
+  import("#platform/browser-tab").then((m) => ({ default: m.BrowserTab }))
+);
 import { useWorkspace } from "../data/queries";
 import { isRelativePath } from "../data/search";
 import {

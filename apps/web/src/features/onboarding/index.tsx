@@ -133,7 +133,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   });
   const refetchProfiles = profiles.refetch;
   useEffect(() => {
-    if (step !== "welcome") return;
+    if (!IS_ELECTRON || step !== "welcome") return;
     const focus = () => {
       void refetchProfiles();
     };

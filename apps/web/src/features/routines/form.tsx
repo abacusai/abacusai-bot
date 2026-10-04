@@ -14,6 +14,7 @@ import {
   weekdayName,
 } from "#renderer/lib/bots/schedule";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
@@ -441,8 +442,8 @@ export const RoutineDialog = ({
                           value={value.workspaceId ?? ""}
                           onChange={(e) => {
                             if (e.target.value === "choose") {
-                              void transport.client.system.dialog
-                                .openFolder({})
+                              void platformSystem(transport.client)
+                                .dialog.openFolder({})
                                 .then(async (path) => {
                                   if (!path) return;
                                   const added =

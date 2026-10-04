@@ -18,6 +18,7 @@ import {
 } from "#renderer/components/terminal/keys";
 import { followNotices } from "#renderer/data/queries/live";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
+import { uiPlatform } from "#renderer/lib/platform";
 
 import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";
@@ -120,17 +121,11 @@ export const TerminalTab = ({
             .catch(() => {});
         });
         disposers.push(() => input.dispose());
-        const platform = document.documentElement.dataset.platform;
+        const platform = uiPlatform(
+          document.documentElement.dataset.platform ?? "linux"
+        );
         view.term.attachCustomKeyEventHandler((event) =>
-          handleKey(
-            event,
-            platform === "darwin"
-              ? "mac"
-              : platform === "win32"
-                ? "windows"
-                : "linux",
-            view.term
-          )
+          handleKey(event, platform, view.term)
         );
         const links = [
           new UrlRegexProvider(view.term),

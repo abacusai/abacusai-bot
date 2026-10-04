@@ -26,7 +26,7 @@ import {
   RouterProvider,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 
 import type { AiClient } from "#renderer/data/ai";
 import { createDb, type Collections, type Db } from "#renderer/data/db";
@@ -483,11 +483,6 @@ export const renderApp = async (path: string, options: HarnessOptions = {}) => {
       </QueryClientProvider>
     );
     await harness.router.load();
-  });
-  // A route can finish its loader while its lazy view still suspends.
-  await waitFor(() => {
-    if (view.container.querySelector("[data-pending-area]"))
-      throw new Error("Route view is pending");
   });
   return { ...harness, view };
 };

@@ -32,7 +32,7 @@ export const TourHost = () => {
       input: {},
       enabled: IS_ELECTRON,
     }),
-    enabled: active !== null,
+    enabled: IS_ELECTRON && active !== null,
   });
   const stops = TOUR_STOPS.filter(
     (stop) => stop.id !== "notch" || status.data?.available
