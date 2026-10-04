@@ -145,6 +145,6 @@ proxy.on("upgrade", (req, socket, head) => {
 });
 proxy.listen(port, "127.0.0.1", () =>
   console.log(
-    `Dev SPA: https://apps.abacus.ai${port === 443 ? "" : `:${port}`}/web/; host: https://${previewHost}`
+    `Dev SPA: https://apps.abacus.ai${port === 443 ? "" : `:${port}`}/bot/; host: https://${previewHost}`
   )
 );

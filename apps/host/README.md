@@ -3,8 +3,8 @@
 `@abacus-ai/host` composes the desktop's main services under Node, without Electron.
 The supervisor supplies `ABACUSAI_BOT_HOST_OWNER`, `ABACUSAI_BOT_HOST_ORG`,
 `ABACUSAI_BOT_HOST_SECRET_FILE`, and `ABACUSAI_BOT_HOST_ORIGINS`. The secret file
-contains the server-generated UTF-8 secret; the host only reads it. Production
-origins follow the same-origin deployment amendment (`https://apps.abacus.ai`).
+contains exactly 64 lowercase hexadecimal UTF-8 characters, without a newline;
+the host only reads it. Production origins follow the same-origin deployment amendment (`https://apps.abacus.ai`).
 `ABACUSAI_BOT_HOST_PORT` defaults to 7777. `ABACUSAI_BOT_ABACUS_HOST` selects an
 HTTPS Abacus endpoint for staging. The entry removes the pod's `ABACUS_API_KEY`
 before importing services.
@@ -44,7 +44,7 @@ export ABACUSAI_BOT_HOST_ORG=local-org
 export ABACUSAI_BOT_HOST_ORIGINS=https://apps.abacus.ai
 export ABACUSAI_BOT_HOST_SECRET_FILE="$ABACUSAI_BOT_HOME/host-secret"
 umask 077
-openssl rand -hex 32 > "$ABACUSAI_BOT_HOST_SECRET_FILE"
+openssl rand -hex 32 | tr -d '\n' > "$ABACUSAI_BOT_HOST_SECRET_FILE"
 mkdir "$ABACUSAI_BOT_HOME/runtime"
 tar -xzf apps/host/dist/host-linux-x64.tar.gz \
   --strip-components=1 -C "$ABACUSAI_BOT_HOME/runtime"
@@ -71,10 +71,10 @@ origins, and the proxy's temporary self-signed certificate:
 chromium --user-data-dir="$(mktemp -d /tmp/abacus-host-browser.XXXXXX)" \
   --ignore-certificate-errors \
   --host-resolver-rules="MAP apps.abacus.ai 127.0.0.1, MAP local.preview.apps.abacus.ai 127.0.0.1" \
-  https://apps.abacus.ai/web/
+  https://apps.abacus.ai/bot/
 ```
 
-`/web/` is this branch's PR 1 entry; its deployment fix pass changes it to `/bot/`.
+`/bot/` is the same-origin deployment entry.
 For staging, set `ABACUSAI_BOT_HOST_ORIGINS=https://staging-apps.abacus.ai` and
 `ABACUSAI_BOT_ABACUS_HOST=https://staging-apps.abacus.ai` in host/proxy terminals,
 set `VITE_ABACUS_ENV=staging` in the Vite terminal, and map/open
@@ -84,3 +84,17 @@ login to complete the real handoff. The proxy does not fake an LLM credential.
 `HOST_PROXY_TARGET`, `HOST_PROXY_VITE` and `HOST_PROXY_PORT` override the proxy's
 upstream endpoints and listening port. A nonstandard port also changes the
 allowed Origin and browser URL; set them consistently.
+
+## Files and socket limits
+
+`GET /files?hostRoot=<workspace>&path=<file>` streams downloads without the
+WebSocket size limit. It uses the same Bearer connect token, exact Origin and
+proxy owner checks as uploads. `/file` is an alias. `/upload` requires
+`workspaceId` and `sessionId`, resolves the session workspace on the server,
+ignores `baseFolder`, and gives attachment names unique prefixes.
+
+Host RPC replies and iterator snapshots are capped below 1 MiB and return the
+defined `PAYLOAD_TOO_LARGE` error with an HTTP alternative. The transport also
+closes any oversized frame with 1009. These limits do not apply to desktop
+MessagePorts. Host behavior is selected at build time; the runtime
+`ABACUSAI_BOT_HOST_MODE` environment variable cannot change desktop behavior.
