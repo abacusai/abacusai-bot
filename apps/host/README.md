@@ -23,6 +23,9 @@ before succeeding. Extract with `--strip-components=1`; run
 `bin/abacusai-bot-host`, or pass `--verify` to check the installed runtime.
 The wrapper supplies `ABACUSAI_BOT_RESOURCES`. Persistent host workspace metadata
 lives in `<botHome>/host-userdata`, separately from `<botHome>/config.json`.
+With the same identity environment, `pnpm --filter @abacus-ai/host dev` builds,
+verifies and extracts a fresh bundle, starts its wrapper, and removes the
+extracted runtime on exit; it forwards arguments such as `--verify`.
 
 ## Local browser against the host
 
@@ -98,3 +101,22 @@ defined `PAYLOAD_TOO_LARGE` error with an HTTP alternative. The transport also
 closes any oversized frame with 1009. These limits do not apply to desktop
 MessagePorts. Host behavior is selected at build time; the runtime
 `ABACUSAI_BOT_HOST_MODE` environment variable cannot change desktop behavior.
+
+
+Whisper models use `GET /files?whisperUrl=<encoded-original-model-url>` with the
+same authentication. Only URLs under
+`https://huggingface.co/onnx-community/whisper-base/resolve/main/` are accepted.
+The host downloads missing files asynchronously to its model cache, emits
+`voice.whisper.progress`, and streams cached bytes with `Content-Length`.
+`voice.whisper.fetch` is `UNSUPPORTED` on web hosts; desktop RPC stays available.
+
+PR 1 renderer follow-up: fetch `${host.origin}/files?...` with
+`Authorization: Bearer <connect-token>` (the proxy supplies identity headers).
+Consume bytes as a Blob/ArrayBuffer for `files.readImageAsDataUrl`, `files.readPptx`,
+large transcript exports and Whisper's model fetch hook. Build query strings
+with `URLSearchParams`; use the typed error's `data.alternative` for file RPC
+fallbacks and `whisperUrl` for model URLs. Render image Blob URLs and revoke them
+when disposed; parse deck bytes and transcript text in the renderer. Handle
+`PAYLOAD_TOO_LARGE` explicitly, preserving the connection and offering a download
+or retry through the HTTP route. Snapshot replies without an exported file still
+need paging/chunking; their placeholder alternative is not a ready download.

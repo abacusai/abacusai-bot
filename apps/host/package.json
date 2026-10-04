@@ -8,7 +8,7 @@
     "bundle": "node scripts/bundle.mjs",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "dev": "node dist/index.js"
+    "dev": "node scripts/dev.mjs"
   },
   "dependencies": {
     "@abacus-ai/agent": "workspace:*",

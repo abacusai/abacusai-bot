@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { trashItem } from "./filesystem";
+import { trashItem, sweepTrash } from "./filesystem";
 it("trashes files, directories and symlinks across mounts without dereferencing", async () => {
   const home = await mkdtemp(join(tmpdir(), "trash-home-"));
   const source = await mkdtemp("/dev/shm/trash-source-");
@@ -79,5 +79,27 @@ it("retains the source and removes a partial trash copy when copying fails", asy
     vi.unstubAllEnvs();
     await rm(home, { recursive: true, force: true });
     await rm(source, { recursive: true, force: true });
+  }
+});
+
+it("logs a broken trash entry and continues sweeping", async () => {
+  const home = await mkdtemp(join(tmpdir(), "trash-sweep-"));
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await mkdir(join(home, "trash"));
+    await symlink("missing", join(home, "trash/broken"));
+    await writeFile(join(home, "trash/old"), "expired");
+    const { utimes } = await import("node:fs/promises");
+    await utimes(join(home, "trash/old"), 0, 0);
+    await expect(sweepTrash(home)).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      "[host-trash] sweep entry failed",
+      join(home, "trash/broken"),
+      expect.any(Error)
+    );
+    expect(await readdir(join(home, "trash"))).toEqual(["broken"]);
+  } finally {
+    warn.mockRestore();
+    await rm(home, { recursive: true, force: true });
   }
 });

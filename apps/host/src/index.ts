@@ -49,6 +49,8 @@ const main = async () => {
     },
   });
   console.log(`[host] listening on ${transport.port}`);
+  const { sweepTrash } = await import("./filesystem");
+  void sweepTrash(appOps.botHome());
   const { installShutdown, shutdown } = await import("./shutdown");
   let stopping = false;
   const stop = async () => {

@@ -29,9 +29,18 @@ export const trashItem = async (file: string): Promise<void> => {
 
 export const sweepTrash = async (home: string) => {
   const root = join(home, "trash");
-  for (const name of await readdir(root).catch(() => [] as string[])) {
-    const file = join(root, name);
-    if ((await stat(file)).mtimeMs < Date.now() - 30 * 86400_000)
-      await rm(file, { recursive: true, force: true });
+  try {
+    for (const name of await readdir(root)) {
+      const file = join(root, name);
+      try {
+        if ((await stat(file)).mtimeMs < Date.now() - 30 * 86400_000)
+          await rm(file, { recursive: true, force: true });
+      } catch (error) {
+        console.warn("[host-trash] sweep entry failed", file, error);
+      }
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+      console.warn("[host-trash] sweep failed", root, error);
   }
 };
