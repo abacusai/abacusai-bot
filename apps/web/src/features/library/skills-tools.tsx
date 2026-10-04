@@ -331,7 +331,9 @@ export const ToolsPage = () => {
         onChange={(e) => setQ(e.target.value)}
       />
       <GroupCard>
-        {TOOLSETS_FOR_DISPLAY.filter((s) => IS_ELECTRON || s.id !== "device")
+        {TOOLSETS_FOR_DISPLAY.filter(
+          (s) => IS_ELECTRON || !["device", "messaging"].includes(s.id)
+        )
           .filter((s) =>
             foldSearch(
               s.id +
@@ -381,7 +383,9 @@ export const ToolsPage = () => {
 export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   const { t } = useTranslation();
   const set = TOOLSETS_FOR_DISPLAY.find(
-    (s) => s.id === toolsetName && (IS_ELECTRON || s.id !== "device")
+    (s) =>
+      s.id === toolsetName &&
+      (IS_ELECTRON || !["device", "messaging"].includes(s.id))
   );
   return (
     <AreaPage

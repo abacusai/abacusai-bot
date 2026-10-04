@@ -221,26 +221,28 @@ export const AccountPage = () => {
         </SettingRow>
       </GroupCard>
       <GroupCard>
-        {(["link", "gmail", "whatsapp"] as const).map((invite) => (
-          <SettingRow
-            key={invite}
-            id={`invite-${invite}`}
-            title={t(`phase5.inviteChannels.${invite}`)}
-          >
-            <Button
-              size="sm"
-              onClick={() =>
-                void navigate({
-                  to: "/settings/account",
-                  search: { invite },
-                  transition: "none",
-                })
-              }
+        {(["link", "gmail", "whatsapp"] as const)
+          .filter((invite) => IS_ELECTRON || invite !== "whatsapp")
+          .map((invite) => (
+            <SettingRow
+              key={invite}
+              id={`invite-${invite}`}
+              title={t(`phase5.inviteChannels.${invite}`)}
             >
-              {t("phase5.invite")}
-            </Button>
-          </SettingRow>
-        ))}
+              <Button
+                size="sm"
+                onClick={() =>
+                  void navigate({
+                    to: "/settings/account",
+                    search: { invite },
+                    transition: "none",
+                  })
+                }
+              >
+                {t("phase5.invite")}
+              </Button>
+            </SettingRow>
+          ))}
       </GroupCard>
       {local.data && (
         <GroupCard>

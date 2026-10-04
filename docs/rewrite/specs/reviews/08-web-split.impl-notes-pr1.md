@@ -618,3 +618,5 @@ Logs: `/tmp/fix-r5-{browser-tests,web-tests,contract-tests,desktop-build,web-bui
 Deployment metadata: `/tmp/fix-r5-deployment.json`.
 Implementation and notes are committed locally; nothing was pushed. Pre-existing
 spec edits and untracked PR3/PR4 review notes were left untouched.
+
+- Cleanup r6: browser Library Tools hides Messaging and its detail route; direct Messaging navigation throws `notFound()` in `beforeLoad`; WhatsApp referral actions, dialog choices and direct links are gated; startup copy says “Starting your workspace” in English and all synced locales. Browser regressions, full web Vitest, web build, bundle, TypeScript, Oxlint, formatting and locale/i18n checks pass.

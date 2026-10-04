@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -48,7 +49,7 @@ export const InviteDialog = ({
   });
   const whatsapp = useQuery({
     ...transport.orpc.referrals.whatsappContacts.queryOptions({ input: {} }),
-    enabled: channel === "whatsapp",
+    enabled: IS_ELECTRON && channel === "whatsapp",
   });
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -124,10 +125,12 @@ export const InviteDialog = ({
         <Segments
           label={t("phase5.inviteChannel")}
           value={channel}
-          values={["link", "gmail", "whatsapp"].map((x) => ({
-            value: x,
-            label: t(`phase5.inviteChannels.${x}`),
-          }))}
+          values={["link", "gmail", "whatsapp"]
+            .filter((x) => IS_ELECTRON || x !== "whatsapp")
+            .map((x) => ({
+              value: x,
+              label: t(`phase5.inviteChannels.${x}`),
+            }))}
           onChange={(invite) =>
             void navigate({
               to: "/settings/account",

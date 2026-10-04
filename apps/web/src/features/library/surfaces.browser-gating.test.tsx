@@ -1,7 +1,9 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, render, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
+import enUS from "#locales/en-US.json";
 import { settingsIndexFor } from "#renderer/features/settings/search-index";
+import { ConnectScreen } from "#renderer/features/shell/connect";
 import {
   BOT_TEMPLATE_CATEGORIES,
   BOT_TEMPLATES,
@@ -27,11 +29,12 @@ it("filters desktop messaging templates from the web catalog and every category"
     BOT_TEMPLATES.some((template) => template.id === "chief-of-staff")
   ).toBe(true);
 });
-it("hides messaging navigation, direct panes and Devices tools while retaining other tools", async () => {
+it("hides messaging navigation, direct routes and native tool groups while retaining other tools", async () => {
   const app = await renderApp("/library/tools");
   try {
     await screen.findByRole("heading", { name: "Tools" });
-    expect(document.querySelector('[data-setting-id="device"]')).toBeNull();
+    for (const id of ["device", "messaging"])
+      expect(document.querySelector(`[data-setting-id="${id}"]`)).toBeNull();
     expect(document.querySelector('a[href="/library/messaging"]')).toBeNull();
     expect(
       document.querySelector('[data-setting-id="terminal"]')
@@ -45,6 +48,14 @@ it("hides messaging navigation, direct panes and Devices tools while retaining o
     expect(screen.queryByText("device_list")).toBeNull();
     await act(async () => {
       await app.router.navigate({
+        to: "/library/tools/$toolsetId",
+        params: { toolsetId: "messaging" },
+      });
+    });
+    expect(app.router.state.location.pathname).toBe("/library/tools");
+    expect(screen.queryByText("send_whatsapp_message")).toBeNull();
+    await act(async () => {
+      await app.router.navigate({
         to: "/library/messaging",
         search: { platform: "abacus_telegram" },
       });
@@ -53,6 +64,8 @@ it("hides messaging navigation, direct panes and Devices tools while retaining o
       document.querySelector('[data-setting-id="gatewayEnabled"]')
     ).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect" })).toBeNull();
+    expect(await screen.findByText(enUS.errors.notFoundTitle)).toBeDefined();
+    expect(screen.queryByText("Messaging")).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
@@ -117,6 +130,74 @@ it("terminal shell menu uses the translated label rather than an object", async 
       await screen.findByRole("menuitem", { name: /Default shell/ })
     ).toBeDefined();
     expect(screen.queryByText(/returned an object/)).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("uses workspace copy on the browser connection screen", () => {
+  const view = render(<ConnectScreen stage="starting" restart={() => {}} />);
+  try {
+    expect(screen.getByRole("status").textContent).toBe(
+      "Starting your workspace"
+    );
+  } finally {
+    view.unmount();
+  }
+});
+
+it("hides WhatsApp referrals in account, invite choices and direct links", async () => {
+  const { contract } = await import("@abacus-ai/contract/contract");
+  const { implement } = await import("@orpc/server");
+  const impl = implement(contract);
+  const whatsappContacts = vi.fn(() => []);
+  const app = await renderApp("/settings/account", {
+    procedures: {
+      account: {
+        abacus: impl.account.abacus.handler(
+          () => ({ email: "test@example.com" }) as never
+        ),
+      },
+      referrals: {
+        whatsappContacts:
+          impl.referrals.whatsappContacts.handler(whatsappContacts),
+      },
+    },
+  });
+  try {
+    await screen.findByRole("heading", { name: "Account" });
+    expect(
+      document.querySelector('[data-setting-id="invite-whatsapp"]')
+    ).toBeNull();
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-setting-id="invite-link"]')
+      ).not.toBeNull();
+    });
+    for (const invite of ["link", "gmail"] as const) {
+      expect(
+        document.querySelector(`[data-setting-id="invite-${invite}"]`)
+      ).not.toBeNull();
+      await act(async () => {
+        await app.router.navigate({
+          to: "/settings/account",
+          search: { invite },
+        });
+      });
+      expect(await screen.findByRole("dialog")).toBeDefined();
+      expect(
+        screen.queryByText(enUS.phase5.inviteChannels.whatsapp)
+      ).toBeNull();
+    }
+    await act(async () => {
+      await app.router.navigate({
+        to: "/settings/account",
+        search: { invite: "whatsapp" },
+      });
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(whatsappContacts).not.toHaveBeenCalled();
   } finally {
     app.view.unmount();
     await app.cleanup();

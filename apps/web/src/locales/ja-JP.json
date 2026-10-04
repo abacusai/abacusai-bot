@@ -3882,7 +3882,7 @@
   },
   "web": {
     "connect": {
-      "starting": "Starting your computer",
+      "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
       "signin": "Sign in",

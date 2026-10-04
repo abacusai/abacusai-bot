@@ -7,6 +7,7 @@ import { AccountPage } from "#renderer/features/settings/account-usage";
 import { InviteDialog } from "#renderer/features/settings/invite";
 import { AccountSearch } from "#renderer/features/settings/search";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const AccountSettingsRoute = () => {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ const AccountSettingsRoute = () => {
         </span>
       </TopBarSlot>
       <AccountPage />
-      {invite && (
+      {invite && (IS_ELECTRON || invite !== "whatsapp") && (
         <InviteDialog
           key={invite}
           channel={invite}
