@@ -4,8 +4,8 @@
  * `ABACUSAI_BOT_ABACUS_HOST` is a developer override for preprod. The value
  * feeds `shell.openExternal` and the request carrying `ABACUS_API_KEY`, so it
  * is honored only in an unpackaged build or a test build (a `-test.` version),
- * over https, for an `*.abacus.ai` host; anything else silently falls back to
- * production.
+ * over https, for an `*.abacus.ai` or `*.internalreai.com` dev-pod host;
+ * anything else silently falls back to production.
  */
 import { app } from "electron";
 
@@ -53,7 +53,10 @@ const overrideHost = (): URL | null => {
     const host = url.hostname.toLowerCase();
 
     if (url.protocol !== "https:") return null;
-    if (host !== "abacus.ai" && !host.endsWith(".abacus.ai")) return null;
+    const devPod =
+      (!app.isPackaged || isTestBuild()) && host.endsWith(".internalreai.com");
+    if (host !== "abacus.ai" && !host.endsWith(".abacus.ai") && !devPod)
+      return null;
 
     return url;
   } catch {
@@ -81,6 +84,9 @@ export const abacusRoutellmV1 = (): string => {
   const url = overrideHost();
 
   if (url == null) return DEFAULT_ROUTELLM_V1;
+
+  // A dev pod serves both sign-in and the API on the same host.
+  if (url.hostname.endsWith(".internalreai.com")) return `${url.origin}/v1`;
 
   // apps.abacus.ai -> routellm.abacus.ai. Rewrite the leading DNS label on a
   // parsed URL, never a substring replace (which matches `apps.abacus.ai.evil.com`).

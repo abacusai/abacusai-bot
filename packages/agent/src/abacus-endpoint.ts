@@ -1,5 +1,6 @@
 // An ABACUSAI_BOT_ABACUS_V1 override is honored only when it is https on an
 // abacus.ai host, else production, so a planted value can't redirect the key.
+// Dev pods (*.internalreai.com) require explicit ABACUSAI_BOT_DEV_ENDPOINTS=1.
 export const DEFAULT_ABACUS_V1 = "https://routellm.abacus.ai/v1";
 
 const isAbacusHost = (host: string): boolean =>
@@ -12,7 +13,11 @@ export const abacusV1BaseUrl = (
   if (!raw) return DEFAULT_ABACUS_V1;
   try {
     const url = new URL(raw);
-    if (url.protocol === "https:" && isAbacusHost(url.hostname.toLowerCase())) {
+    const host = url.hostname.toLowerCase();
+    const devPod =
+      env.ABACUSAI_BOT_DEV_ENDPOINTS === "1" &&
+      host.endsWith(".internalreai.com");
+    if (url.protocol === "https:" && (isAbacusHost(host) || devPod)) {
       return raw;
     }
   } catch {

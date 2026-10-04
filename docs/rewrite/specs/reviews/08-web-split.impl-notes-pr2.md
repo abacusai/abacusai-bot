@@ -297,3 +297,27 @@ Logs: `/tmp/pr2-r4-{host,web,smoke,check}.log`.
 Committed locally; no push, deployment or changes to another worktree.
 
 - Claude r3 N2–N4 follow-up: binary JSON frames use the text envelope gate; `/files` returns fixed realpath/Whisper error reasons; uncached Whisper HEAD returns 404 without fetching; the dev proxy exposes Content-Length, Content-Range and X-File-Size. Regression coverage passes with `pnpm --filter @abacus-ai/host test` (11 suites / 98 tests), `pnpm smoke:rpc` (all five checks), host typecheck and targeted lint. Committed locally without pushing; all work stayed in this worktree.
+
+
+## Dev-pod hosts
+
+Desktop `ABACUSAI_BOT_ABACUS_HOST` now accepts HTTPS `*.internalreai.com`
+only when unpackaged or versioned `-test.`; packaged release defaults and
+existing Abacus host behavior are unchanged. Dev pods keep the same origin
+for sign-in and `/v1` account/credits requests. The agent's
+`ABACUSAI_BOT_ABACUS_V1` accepts this suffix only with the explicit opt-in
+`ABACUSAI_BOT_DEV_ENDPOINTS=1` (set both variables for a standalone agent).
+The desktop supplies the `/v1` endpoint from its host override. HTTP, bare
+`internalreai.com`, lookalike domains and suffix spoofing remain rejected.
+
+Validation: desktop `pnpm --filter @abacus-ai/desktop test --project main`
+passed 278 files / 2,502 tests (3 existing skips); agent endpoint tests passed
+17 tests; targeted formatting/lint passed. Built Electron launched headlessly
+with both dev-host env vars and a fresh `/tmp` home. Its main log records
+`/chatllm/signin` and `/v1/account` on
+`rajaniraiyn-dev.mumbai.internalreai.com`; the account endpoint supplies credits
+and returned HTTP 500 with a deliberately invalid test key. No real sign-in
+was performed. Screenshot, main log, capture driver and build/test logs are in
+`/shared/home/rajaniraiyn/abacusai-bot/.codex-runs/electron-devhost/`.
+The capture used `VITE_UI_GALLERY=1` for real RPC calls (no response mocks),
+then the normal build was restored. Committed locally without pushing.
