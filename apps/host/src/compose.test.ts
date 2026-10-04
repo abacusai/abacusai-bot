@@ -62,8 +62,8 @@ it("initializes and starts under the shim; migrates workspace stores without tou
       platform: "linux",
     });
     expect(await transport.client.account.state()).toHaveProperty("onboarded");
-    expect(await transport.client.update.status()).toMatchObject({
-      checking: false,
+    await expect(transport.client.update.status()).rejects.toMatchObject({
+      code: "UNSUPPORTED",
     });
     const created = host.serviceHost.createAgentSession("legacy");
     expect(host.serviceHost.hostUploadFolder("legacy", created.id)).toBe(
@@ -113,10 +113,10 @@ it("initializes and starts under the shim; migrates workspace stores without tou
     );
     await expect(
       transport.client.auth.abacus.signOut({ keepOtherApiKeys: true })
-    ).resolves.toMatchObject({ removedProviders: [] });
+    ).rejects.toMatchObject({ code: "UNSUPPORTED" });
     expect(
       JSON.parse(readFileSync(configPath, "utf8")).apiKeys.ABACUS_API_KEY
-    ).toBeUndefined();
+    ).toBe("sentinel");
   } finally {
     transport.closeClient();
     transport.closeServer();

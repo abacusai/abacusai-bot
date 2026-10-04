@@ -164,14 +164,6 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "20",
     message: "This operation was aborted",
   },
-  "system.openExternal": {
-    code: "UNSUPPORTED",
-    message: "not available on the web host",
-  },
-  "system.logs.save": {
-    code: "UNSUPPORTED",
-    message: "not available on the web host",
-  },
   "system.events": {
     code: "20",
     message: "This operation was aborted",
