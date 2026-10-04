@@ -411,3 +411,76 @@ Logs: `/tmp/r3-desktop-build.log`, `/tmp/r3-web-build.log`,
 `/tmp/r3-bundle.log`, `/tmp/r3-files-tests.log`, `/tmp/r3-contract-tests.log`
 and `/tmp/r3-check-final.log`. No push, deployment, live Apps handoff or
 physical-device validation was performed.
+
+## Fix pass r3
+
+Addresses `.codex-runs/reviews/pr1.claude-r2.md` F1–F3 and the boundary nit.
+
+- Browser HTTP readers translate the current host's `{error: reason}` and
+  `{error, reason}` responses into defined `NOT_FOUND{entity:"file",id}`,
+  `FORBIDDEN{reason}` and `CONFLICT{reason}` errors. Binary text retains the
+  `binary-file` conflict. Content errors do not trigger an authentication refresh.
+- Text defaults to 524288 bytes. Reads stream to the preview limit (at least
+  8192 bytes for binary detection), then cancel. The `maxBytes:1` existence
+  probe reads at most one byte and sends `maxBytes=1`. File size comes from
+  `Content-Length`, or `X-File-Size` when the server truncates the response.
+- Images use Electron's extension/MIME allowlist and 8 MB cap; PPTX uses its
+  60 MB cap. Declared oversized bodies are cancelled before reading; streaming
+  caps also apply without Content-Length. Deck parsing inflates XML,
+  relationships and images only, skipping audio/video and other entries.
+- Artifact integration tests use the browser transport's HTTP readers and
+  actual browser dialog for PDF, image and PPTX; missing files return `missing`
+  and directories return `directory`. PDFs use a PDF Blob iframe, with URL
+  cleanup on close/cancel and browser CSP allowing Blob frames.
+- Removed the dead `PAYLOAD_TOO_LARGE` JSON fallback. Host alternatives name
+  raw input files or placeholders, not JSON procedure results. Tests preserve
+  the actual `{limit:1048576,alternative}` shape and verify a real RPC socket
+  remains usable after the error without fetching an alternative.
+- File downloads and uploads pass their rejected token to the single-flight
+  refresh so a delayed stale 403 cannot trigger another completed refresh.
+  Fixture generation writes the same descriptive source field as the fixture,
+  without server source paths. The browser boundary denies `#main`, `#preload`
+  and resolved desktop main/preload paths; real Vite resolver tests cover both.
+
+### PR 2 handoff
+
+Read `apps/host/src/http.ts` in the supplied host worktree without modifying it.
+It currently supports GET only, ignores `maxBytes`, and returns 404
+`{error: reason}` even for outside-root and directory failures. The browser
+accepts that shape already. For consistent HTTP semantics, return 404
+`{error:"not-found"}`, 403 `{error:"forbidden",reason:"outside-root"}` and
+409 `{error:"conflict",reason}` for other containment/type failures; keep auth
+403 `{error:"forbidden"}` distinguishable from content failures.
+
+Add HEAD and/or `Range: bytes=0-0` support for existence probes. Until then,
+honour the browser's `maxBytes` query server-side (especially `maxBytes=1`),
+return the transmitted byte count in Content-Length and the original file size
+in `X-File-Size`. The browser bounds retained bytes and cancels the current GET
+stream, but the existing server can send buffered bytes before cancellation;
+server-side bounds are required to guarantee that probes do not transfer the
+whole file. Preserve full streaming downloads when no query limit is supplied.
+Snapshots still require a concrete export or paging design; raw file alternatives
+must never be described as JSON procedure outputs.
+
+### Validation
+
+- `pnpm --filter @abacus-ai/desktop build` and
+  `pnpm --filter @abacus-ai/web build`: pass.
+- `node scripts/check-web-bundle.mjs`: pass, 296 browser chunks / 487 modules.
+  Desktop remains 309 chunks / 6,105,743 bytes / 2,039,133 gzip bytes.
+- `env -u NO_COLOR xvfb-run -a pnpm smoke:rpc`: all five checks pass.
+- `env -u NO_COLOR xvfb-run -a pnpm --filter @abacus-ai/web test`:
+  212 files / 1,597 tests pass, across both Vitest projects. The strengthened
+  boundary initially rejected the smoke test's Vite import of native policy;
+  the test now reads that policy with Node outside the browser module graph.
+- `pnpm --filter @abacus-ai/contract test`: 25 files / 419 tests pass.
+- Real Vite boundary tests pass, including `#main` and `#preload` resolves.
+  Fixture regeneration from the committed verbatim Python dictionaries in a
+  temporary server layout is byte-identical, including descriptive sources.
+- `env -u NO_COLOR xvfb-run -a pnpm check --force`: **30/30 tasks pass,
+  zero cached**, 7m59.754s. Desktop: 288 files / 2,783 tests pass, with the
+  existing 3 file / 26 test skips. Native reload/swap and late-port tests pass.
+
+Logs: `/tmp/fix-r3-desktop-build.log`, `/tmp/fix-r3-web-build.log`,
+`/tmp/fix-r3-bundle.log`, `/tmp/fix-r3-smoke.log`, `/tmp/fix-r3-web-tests.log`,
+`/tmp/fix-r3-contract-tests.log` and `/tmp/fix-r3-check.log`.

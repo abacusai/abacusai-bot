@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -18,18 +19,16 @@ import { createQueryClient } from "#renderer/data/query-client";
 import { bootstrap } from "#renderer/lib/bootstrap";
 import { initI18n } from "#renderer/lib/i18n";
 import { createAppRouter } from "#renderer/router";
-import { loadUntyped } from "#renderer/test-support/chat-relay";
 
 import { awaitWebSocketOpen, createWebSocketTransport } from "./websocket";
 it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls", async () => {
-  const { supportsProcedure } = await loadUntyped<{
-    supportsProcedure(platform: "web-host", path: string): boolean;
-  }>(
-    new URL(
-      "../../../../desktop/src/main/platform/capabilities.ts",
-      import.meta.url
-    ).pathname
-  );
+  // Read the native host policy outside Vite's deliberately browser-only graph.
+  const { supportsProcedure } = createRequire(import.meta.url)(
+    resolve(
+      import.meta.dirname,
+      "../../../../desktop/src/main/platform/capabilities.ts"
+    )
+  ) as { supportsProcedure(platform: "web-host", path: string): boolean };
   const child = spawn(
     process.execPath,
     [

@@ -30,6 +30,8 @@ test("browser boundary rejects the real Vite client resolver and direct requests
     const container = server.environments.client.pluginContainer;
     const importer = `${webRoot}/src/features/shell/index.tsx`;
     for (const id of [
+      "#main/index",
+      "#preload/index",
       "#renderer/features/shell/native-presenter",
       "./native-presenter.ts",
       "#renderer/platform/transport.electron",

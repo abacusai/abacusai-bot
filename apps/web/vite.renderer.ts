@@ -34,7 +34,7 @@ export const rendererCsp = (
     "'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai";
   if (!sources.trim())
     throw new Error("VITE_CONNECT_SRC is required for browser builds");
-  return CSP_BASE + `connect-src ${sources};`;
+  return CSP_BASE + `connect-src ${sources}; frame-src 'self' blob:;`;
 };
 export const platformAlias = (platform: RendererPlatform) =>
   Object.fromEntries(
@@ -66,6 +66,8 @@ export const platformAlias = (platform: RendererPlatform) =>
 export const assertBrowserImport = (resolved: string): void => {
   const id = resolved.replaceAll("\\", "/");
   if (
+    /^#(?:main|preload)(?:\/|$)/.test(id) ||
+    /\/apps\/desktop\/src\/(?:main|preload)\//.test(id) ||
     /\/src\/(?:features\/(?:notch\/|sessions\/(?:device|browser)\/|onboarding\/steps\/local-models\.|settings\/(?:updates|companion)\.|shell\/native-presenter\.)|platform\/[^/]*\.electron\.|data\/transport\/message-port\.|lib\/window-chrome\/|components\/(?:device|browser-surface)\/)/.test(
       id
     )

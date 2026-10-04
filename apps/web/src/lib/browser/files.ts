@@ -6,6 +6,7 @@ export const uploadFiles = async (files: File[]): Promise<string[]> => {
   let host = await refreshUploadToken();
   const body = new FormData();
   files.forEach((file) => body.append("files", file, file.name));
+  const token = host.token;
   const upload = () =>
     fetch(`${host.origin}/upload`, {
       method: "POST",
@@ -15,7 +16,7 @@ export const uploadFiles = async (files: File[]): Promise<string[]> => {
     });
   let response = await upload();
   if ([401, 403].includes(response.status)) {
-    host = await refreshUploadToken(true);
+    host = await refreshUploadToken(true, token);
     response = await upload();
   }
   if (!response.ok) throw new Error(`Upload failed (${response.status})`);
@@ -126,9 +127,24 @@ export const viewHostFile = async (
   const dialog = document.createElement("dialog");
   const close = document.createElement("button");
   close.textContent = i18n.t("common.close");
-  close.onclick = () => dialog.remove();
+  let objectUrl: string | undefined;
+  const cleanup = () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    dialog.remove();
+  };
+  close.onclick = cleanup;
   dialog.append(close);
-  if (/\.(png|jpe?g|gif|webp|svg)$/i.test(path)) {
+  if (/\.pdf$/i.test(path)) {
+    const { hostFiles } = await import("./host-files");
+    const blob = await hostFiles.blob(input);
+    objectUrl = URL.createObjectURL(
+      new Blob([blob], { type: "application/pdf" })
+    );
+    const frame = document.createElement("iframe");
+    frame.title = path;
+    frame.src = objectUrl;
+    dialog.append(frame);
+  } else if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|tiff?)$/i.test(path)) {
     const image = document.createElement("img");
     image.src = (await client.files.readImageAsDataUrl(input)).dataUrl;
     dialog.append(image);
@@ -139,7 +155,8 @@ export const viewHostFile = async (
       : (await client.files.readText(input)).content;
     dialog.append(text);
   }
-  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  dialog.addEventListener("close", cleanup, { once: true });
+  dialog.addEventListener("cancel", cleanup, { once: true });
   document.body.append(dialog);
   dialog.showModal();
 };

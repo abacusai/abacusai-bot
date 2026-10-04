@@ -121,10 +121,12 @@ const bootstrap = async (
 };
 let refreshing: Promise<BrowserConnection> | undefined;
 export const refreshUploadToken = (
-  force = false
+  force = false,
+  rejectedToken?: string
 ): Promise<BrowserConnection> => {
   const host = browserConnection();
-  if (host.local) return Promise.resolve(host);
+  if (host.local || (rejectedToken != null && host.token !== rejectedToken))
+    return Promise.resolve(host);
   if (!force && Date.now() - host.tokenIssuedAt < 8 * 60_000)
     return Promise.resolve(host);
   refreshing ??= bootstrap(host.deploymentConversationId)
