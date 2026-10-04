@@ -21,7 +21,7 @@ export const rendererAlias = {
 };
 export type RendererPlatform = "electron" | "browser";
 const CSP_BASE =
-  "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: data:; img-src 'self' blob: data:; ";
+  "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob: data:; img-src 'self' blob: data:; ";
 export const rendererCsp = (
   platform: RendererPlatform,
   env = process.env
