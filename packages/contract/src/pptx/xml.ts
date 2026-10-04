@@ -25,7 +25,7 @@ export function parseXml(source: string): XmlNode {
 
     if (lt > i) {
       const text = decodeEntities(source.slice(i, lt));
-      if (text.length > 0) stack[stack.length - 1].text += text;
+      if (text.length > 0) stack[stack.length - 1]!.text += text;
     }
 
     // Comments, CDATA and processing instructions carry nothing we need.
@@ -37,7 +37,7 @@ export function parseXml(source: string): XmlNode {
     if (source.startsWith("<![CDATA[", lt)) {
       const end = source.indexOf("]]>", lt);
       const body = source.slice(lt + 9, end < 0 ? len : end);
-      stack[stack.length - 1].text += body;
+      stack[stack.length - 1]!.text += body;
       i = end < 0 ? len : end + 3;
       continue;
     }
@@ -60,7 +60,7 @@ export function parseXml(source: string): XmlNode {
     const selfClosing = raw.endsWith("/");
     const body = selfClosing ? raw.slice(0, -1) : raw;
     const node = parseTag(body);
-    stack[stack.length - 1].children.push(node);
+    stack[stack.length - 1]!.children.push(node);
     if (!selfClosing) stack.push(node);
     i = gt + 1;
   }
@@ -88,7 +88,7 @@ function findTagEnd(source: string, start: number): number {
 
 function parseTag(body: string): XmlNode {
   let cursor = 0;
-  while (cursor < body.length && !/\s/.test(body[cursor])) cursor++;
+  while (cursor < body.length && !/\s/.test(body[cursor]!)) cursor++;
   const name = body.slice(0, cursor);
   const attrs: Record<string, string> = {};
 
@@ -96,7 +96,7 @@ function parseTag(body: string): XmlNode {
   attrRe.lastIndex = cursor;
   let match: RegExpExecArray | null;
   while ((match = attrRe.exec(body)) != null) {
-    attrs[match[1]] = decodeEntities(match[3] ?? match[4] ?? "");
+    attrs[match[1]!] = decodeEntities(match[3] ?? match[4] ?? "");
   }
 
   return { name, attrs, children: [], text: "" };

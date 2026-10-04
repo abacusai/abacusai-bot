@@ -22,6 +22,7 @@
     "./models": "./src/models.ts",
     "./not-found": "./src/not-found.ts",
     "./pptx": "./src/pptx.ts",
+    "./pptx/*": "./src/pptx/*.ts",
     "./remember": "./src/remember.ts",
     "./reply-envelope": "./src/reply-envelope.ts",
     "./routines": "./src/routines.ts",
