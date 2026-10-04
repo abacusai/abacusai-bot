@@ -21,10 +21,6 @@ compression: maximum
 
 # Runtime resources and license notices live outside app.asar.
 extraResources:
-  # Workspace registry imports stay external in the agent bundle.
-  - from: ../../packages/connectors/
-    to: agent/node_modules/@abacus-ai/connectors/
-    filter: ["package.json", "dist/**"]
   - from: ../../LICENSE
     to: LICENSE
   - from: dist/THIRD-PARTY-NOTICES.txt
