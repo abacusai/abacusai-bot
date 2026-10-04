@@ -541,3 +541,80 @@ Logs: `/tmp/fix-r4-focused.log`, `/tmp/fix-r4-focused-final.log`,
 `/tmp/fix-r4-contract-tests.log`, `/tmp/fix-r4-desktop-build.log`,
 `/tmp/fix-r4-web-build.log`, `/tmp/fix-r4-bundle.log` and
 `/tmp/fix-r4-check.log`.
+
+## Fix pass r5 (final browser run)
+
+Addressed the renderer defects in `.codex-runs/browser-e2e-2/REPORT.md` on
+`rewrite/web-split`, using the headless host checkout only to read its upload
+contract. No host or `.worktrees/` files were changed.
+
+- Terminal initialization imports `ghostty-web/ghostty-vt.wasm?url` and passes
+  the emitted URL explicitly to `Ghostty.load`; each terminal receives that
+  instance. Vite emits `assets/ghostty-vt-DOMeXDrv.wasm`: `/bot/assets/...` on web,
+  a module-relative `file:` URL in Electron's `dist/renderer`. Browser
+  `connect-src` still excludes `data:`. Initialization errors appear as terminal
+  alerts; hidden-tab and disposal paths catch rejection, and failed loads can
+  retry instead of caching a permanently rejected promise.
+- Uploads pass the composer's workspace/session IDs as query parameters, retain
+  token refresh/retry, and validate the host's `{ success, dir, paths }` success
+  shape. Picked files, pasted files and drops use the same explicit context.
+  The new-session composer persists its stopped session identity before upload
+  because the host accepts only an existing session; this does not start an
+  agent or advance submission. Bot and existing-session composers pass their
+  own session context. Picker rejection appears in the composer as an alert.
+- Gmail consent uses an onboarding layout banner slot with a dismiss control,
+  rather than a fixed body overlay. The slot leaves the DOM with onboarding,
+  including its pending CTA; delayed status results cannot append it to an
+  unrelated route. Consent still begins only with an explicit click.
+- Web Library hides Messaging navigation, queued-pairing links and the direct
+  messaging pane/controls. WhatsApp, Telegram and Discord templates are filtered
+  from the renderer catalog and category ordering; gallery connector marks are
+  filtered too. Abacus channels remain available.
+- Devices in Library Tools is intentionally hidden on web, including direct
+  detail routes, consistent with Settings Devices. The contract catalog and
+  Electron behavior remain intact. Terminal shell menu translations use
+  `terminalShells.<key>.label`. Session/environment execution labels say Host;
+  account copy says “Forget this host’s account”, including settings search.
+- “Take the tour” remains Electron-only per spec (including removal from web
+  settings search). Appearance Density remains Electron-only because it changes
+  window chrome. Neither control is restored on web.
+
+Regression coverage runs in `renderer-browser`: explicit WASM loading/retry and
+visible hidden-tab failure, CSP, fake HTTP host multipart uploads and success/
+failure responses, token retry with context, composer error display, persisted
+new-session upload identity, Gmail slot/dismiss lifecycle, template categories,
+Library navigation/direct panes/Devices, platform copy and shell menu labels.
+R8-T3 now asserts the web Messaging capability gate rather than expecting the
+previously leaked pane.
+
+Production terminal probes also passed: Chromium served the built SPA at `/bot/`
+and fetched `/bot/assets/ghostty-vt-DOMeXDrv.wasm`, while a real Electron renderer
+loaded the built `file:///.../dist/renderer/index.html`. Both initialized the
+terminal and read `r5-terminal-ok` from its terminal buffer. This specifically
+verifies the renderer/WASM initialization; it is not a new live-host PTY test.
+Evidence: `/tmp/fix-r5-browser-terminal-smoke.log`,
+`/tmp/fix-r5-terminal-smoke.log`, `/tmp/fix-r5-electron.log`.
+
+Validation and rollout:
+
+- Browser project: 16 files / 95 tests pass, including R8-T3.
+- Full web Vitest: 218 files / 1,628 tests pass across both projects.
+- Contract Vitest: 25 files / 419 tests pass.
+- Desktop and browser production builds pass. `node scripts/check-web-bundle.mjs`
+  passes: 296 browser chunks / 489 modules; Electron parity remains within budget.
+- `env -u NO_COLOR xvfb-run -a pnpm check --force`: all 30 tasks pass,
+  zero cached tasks, including native Electron tests.
+- Rebuilt browser dist with the requested `VITE_CONNECT_SRC` allowing self,
+  preview HTTPS/WSS and Mumbai internal HTTPS/WSS. Installed with a staged,
+  atomic directory exchange into `<dev-pod-html-root>/bot`. Rollback copy:
+  `<dev-pod-html-root>/bot`.
+- `curl -sk -o /dev/null -w "%{http_code}" <dev-pod-origin>/bot/`
+  returns **200**. The hashed WASM reached from the built index's module graph,
+  `/bot/assets/ghostty-vt-DOMeXDrv.wasm`, also returns **200**, has the WASM magic
+  bytes and matches the built asset byte for byte. The live index matches the
+  pod build, and its decoded CSP retains no `data:` in `connect-src`.
+
+Logs: `/tmp/fix-r5-{browser-tests,web-tests,contract-tests,desktop-build,web-build,bundle,check,pod-build}.log`.
+Deployment metadata: `/tmp/fix-r5-deployment.json`.
+Implementation and notes are committed locally; nothing was pushed. Pre-existing
+spec edits and untracked PR3/PR4 review notes were left untouched.
