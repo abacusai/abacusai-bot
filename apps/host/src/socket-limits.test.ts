@@ -15,7 +15,10 @@ import { nodeFileOperations } from "#main/app-operations/node";
 import { MainEventBus } from "#main/rpc/event-bus";
 import { createRouter } from "#main/rpc/router";
 import { fakeDeps } from "#main/rpc/testing";
-import { startWebSocketTransport } from "#main/rpc/transports/websocket";
+import {
+  isRpcRequestFrame,
+  startWebSocketTransport,
+} from "#main/rpc/transports/websocket";
 
 const setup = async (serviceHost: any = {}) => {
   let peer!: WebSocket;
@@ -243,6 +246,78 @@ it("denies whisper RPC before loading model bytes", async () => {
       client.voice.whisper.fetch({ url: "https://huggingface.co/model" })
     ).rejects.toMatchObject({ code: "UNSUPPORTED" });
     expect(fetchFile).not.toHaveBeenCalled();
+  } finally {
+    socket.terminate();
+    await server.close();
+  }
+});
+
+const invalidFrames = [
+  null,
+  [],
+  {},
+  { i: 1, p: { u: "/system/info" } },
+  { i: "junk" },
+  { i: "junk", p: {} },
+  { i: "junk", t: 3 },
+  ...[0, 5, "1", null].map((t) => ({ i: "junk", t, p: { u: "/system/info" } })),
+  ...[null, [], "payload", 1].map((p) => ({ i: "junk", p })),
+  { i: "junk", p: { u: 1 } },
+  { i: "junk", p: { u: "invalid URL" } },
+  { i: "junk", p: { u: "/system/info", extra: true } },
+  { i: "junk", p: { u: "/system/info" }, extra: true },
+  { i: "junk", t: 3, p: {} },
+  { i: "junk", t: 3, p: { e: "invalid" } },
+  { i: "junk", t: 4, p: {} },
+];
+
+it.each(invalidFrames.map((frame) => [JSON.stringify(frame)]))(
+  "closes malformed text frame %s with 1008 before the RPC decoder",
+  async (frame) => {
+    expect(isRpcRequestFrame(JSON.parse(frame))).toBe(false);
+    const errors = vi.spyOn(console, "error");
+    const { server, socket, closed } = await setup();
+    try {
+      socket.send(frame);
+      expect(await closed).toBe(1008);
+      expect(errors).not.toHaveBeenCalled();
+    } finally {
+      socket.terminate();
+      await server.close();
+      errors.mockRestore();
+    }
+  }
+);
+
+it("accepts the oRPC request, iterator and payload-free abort grammar", () => {
+  const frames = [
+    { i: "1", p: { u: "/system/info" } },
+    { i: "1", t: 1, p: { u: "http://orpc/system/info", b: { json: null } } },
+    // The installed request decoder treats both 1 and 2 as requests.
+    { i: "1", t: 2, p: { u: "/system/info" } },
+    {
+      i: "1",
+      p: {
+        u: "/files/readText",
+        b: {},
+        h: { "x-abacus-flow": "f;1" },
+        m: "GET",
+      },
+    },
+    ...["message", "error", "done"].flatMap((e) => [
+      { i: "1", t: 3, p: { e } },
+      { i: "1", t: 3, p: { e, d: null, m: { id: "event", retry: 10 } } },
+    ]),
+    { i: "1", t: 4 },
+  ];
+  for (const frame of frames) expect(isRpcRequestFrame(frame)).toBe(true);
+});
+
+it("closes invalid JSON text with 1008", async () => {
+  const { server, socket, closed } = await setup();
+  try {
+    socket.send("{");
+    expect(await closed).toBe(1008);
   } finally {
     socket.terminate();
     await server.close();

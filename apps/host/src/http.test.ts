@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, truncateSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { ServerResponse } from "node:http";
+import { get, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -99,6 +99,40 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     expect(download.headers.get("content-length")).toBe("10");
     expect(await download.text()).toBe("attachment");
     grow.mockRestore();
+    await writeFile(paths[0], "attachment");
+    const shrink = vi
+      .spyOn(ServerResponse.prototype, "writeHead")
+      .mockImplementation(function (this: ServerResponse, ...args: any[]) {
+        if (args[1]?.["content-length"] === 10) truncateSync(paths[0], 5);
+        return (writeHead as Function).apply(this, args);
+      });
+    await new Promise<void>((resolve, reject) => {
+      const request = get(
+        `${base}/files?${new URLSearchParams({ hostRoot: home, path: paths[0] })}`,
+        { headers },
+        (response) => {
+          response.resume();
+          response.once("end", () =>
+            reject(new Error("short response ended cleanly"))
+          );
+          response.once("error", (error: NodeJS.ErrnoException) => {
+            expect(error.code).toBe("ECONNRESET");
+            expect(response.complete).toBe(false);
+            resolve();
+          });
+        }
+      );
+      request.setTimeout(1000, () => {
+        request.destroy();
+        reject(new Error("short response did not abort promptly"));
+      });
+      request.once("error", (error: NodeJS.ErrnoException) => {
+        // The server may destroy the socket before headers reach the client.
+        if (error.code === "ECONNRESET") resolve();
+        else reject(error);
+      });
+    });
+    shrink.mockRestore();
     await writeFile(join(home, "empty"), "");
     const empty = await fetch(
       `${base}/files?${new URLSearchParams({ hostRoot: home, path: "empty" })}`,

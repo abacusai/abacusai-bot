@@ -33,6 +33,40 @@ export const enforceSocketBacklog = (socket: {
     socket.close(1013, "consumer stalled");
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+/** Grammar consumed by oRPC's request decoder (omitted t means request). */
+export const isRpcRequestFrame = (value: unknown): boolean => {
+  if (!isRecord(value) || typeof value.i !== "string") return false;
+  if (Object.keys(value).some((key) => !["i", "t", "p"].includes(key)))
+    return false;
+  if (value.t !== undefined && ![1, 2, 3, 4].includes(value.t as number))
+    return false;
+  if (value.t === 4) return value.p === undefined;
+  if (!isRecord(value.p)) return false;
+  const payload = value.p;
+  if (value.t === 3)
+    return (
+      ["message", "error", "done"].includes(payload.e as string) &&
+      Object.keys(payload).every((key) => ["e", "d", "m"].includes(key)) &&
+      (payload.m === undefined || isRecord(payload.m))
+    );
+  if (
+    typeof payload.u !== "string" ||
+    Object.keys(payload).some((key) => !["u", "b", "h", "m"].includes(key)) ||
+    (payload.h !== undefined && !isRecord(payload.h)) ||
+    (payload.m !== undefined && typeof payload.m !== "string")
+  )
+    return false;
+  try {
+    new URL(payload.u, payload.u.startsWith("/") ? "http://orpc" : undefined);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export interface WebSocketTransport {
   url: string;
   port: number;
@@ -132,18 +166,16 @@ export const startWebSocketTransport = async ({
                     }
                     if (
                       typeof event.data === "string" &&
-                      (!decoded ||
-                        typeof decoded !== "object" ||
-                        typeof decoded.i !== "string" ||
-                        (decoded.t !== undefined &&
-                          ![1, 2, 3, 4].includes(decoded.t)) ||
-                        (decoded.p !== undefined &&
-                          (decoded.p === null ||
-                            typeof decoded.p !== "object")))
-                    )
+                      !isRpcRequestFrame(decoded)
+                    ) {
+                      socket.close(1008, "malformed RPC frame");
                       return;
+                    }
                   } catch {
-                    if (typeof event.data === "string") return;
+                    if (typeof event.data === "string") {
+                      socket.close(1008, "malformed RPC frame");
+                      return;
+                    }
                     /* Binary oRPC frames pass through unchanged. */
                   }
                 }

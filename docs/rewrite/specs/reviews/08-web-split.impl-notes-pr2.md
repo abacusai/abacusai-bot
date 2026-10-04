@@ -205,3 +205,41 @@ PR 1 renderer handoff (required by the web host):
 
 Linux arm64, macOS, logged-in staging handoff and billed LLM acceptance remain
 unrun. Changes and commits stay in this worktree; no push or deployment occurred.
+
+## Fix pass r3
+
+Addressed F1–F3 from `pr2.codex-r2.md` in `rewrite/headless-host`:
+
+- F1: the asynchronous preflight now charges serializer metadata paths for
+  undefined array elements and NaN, including undefined values in Sets/Map
+  entries. Path sizes include JSON escaping and UTF-8 bytes. Accepted values
+  are measured using the actual `StandardRPCSerializer` output and the shared
+  binary serializer. Tests compare exact output sizes for undefined elements,
+  sparse arrays, Sets/Maps, NaN, valid/invalid Dates and nested binaries, and
+  require oversized repeated metadata paths to be rejected before synchronous
+  serialization.
+- F2: authenticated file downloads open one descriptor, stat it and stream from
+  that same descriptor with the original length bound. A byte-counting transform
+  errors on short EOF, destroying the response socket before a clean end. The
+  HTTP regression truncates a file after stat and requires a prompt aborted
+  response; growth and empty-file tests still pass.
+- F3: the text-frame gate validates the request decoder's envelope and payload
+  grammar and closes malformed frames with 1008 before decoding. Tests cover
+  invalid ids/types/payloads/extra keys, missing request URLs and iterator events,
+  invalid JSON, and valid request, iterator and payload-free abort frames. Binary
+  pass-through and the real-socket cancellation regression remain covered.
+
+Validation (global npm bin on PATH, all commands in this worktree):
+
+- `pnpm --filter @abacus-ai/host test`: 10 suites / 73 tests passed.
+- `pnpm smoke:rpc`: passed system info, initial/update stream, windowless
+  refusal and missing-token close 1008.
+- `env -u NO_COLOR xvfb-run -a pnpm check`: all 33 tasks passed (19 cached).
+  Desktop passed 290 suites / 2,785 tests, with 3 suites / 26 tests skipped;
+  web passed 211 suites / 1,568 tests. The initial lint failure for the sparse
+  array fixture was corrected before this successful run.
+
+Logs: `/tmp/pr2-r3-{host,smoke,check}.log`. The Electron tests generated a core
+dump, moved out of the worktree to `/tmp/pr2-r3-electron.core`.
+
+Committed locally; no push or deployment.

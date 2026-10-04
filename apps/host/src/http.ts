@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { createServer, type ServerResponse } from "node:http";
 import { basename } from "node:path";
+import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
@@ -69,7 +69,6 @@ export const createHostHttpServer = (
           ? {
               ok: true as const,
               realFile: model.path,
-              stat: await stat(model.path),
             }
           : await openHostFile(
               url.searchParams.get("path") ?? "",
@@ -79,21 +78,45 @@ export const createHostHttpServer = (
           json(response, 404, { error: file.error });
           return;
         }
-        response.writeHead(200, {
-          "content-type": "application/octet-stream",
-          "content-length": file.stat.size,
-          "cache-control": "no-store",
-        });
-        lease.activity();
-        if (file.stat.size === 0) response.end();
-        else
-          await pipeline(
-            createReadStream(file.realFile, { end: file.stat.size - 1 }),
-            response
-          );
+        const handle = await open(file.realFile, "r");
+        try {
+          const info = await handle.stat();
+          if (!info.isFile()) throw new Error("not-a-file");
+          response.writeHead(200, {
+            "content-type": "application/octet-stream",
+            "content-length": info.size,
+            "cache-control": "no-store",
+          });
+          lease.activity();
+          if (info.size === 0) response.end();
+          else {
+            let bytes = 0;
+            const completeBody = new Transform({
+              transform(chunk, _encoding, callback) {
+                bytes += chunk.length;
+                callback(null, chunk);
+              },
+              flush(callback) {
+                callback(
+                  bytes === info.size ? null : new Error("short file read")
+                );
+              },
+            });
+            // A short EOF errors the pipeline and destroys the response before
+            // it can end cleanly with fewer bytes than Content-Length.
+            await pipeline(
+              handle.createReadStream({ end: info.size - 1, autoClose: false }),
+              completeBody,
+              response
+            );
+          }
+        } finally {
+          await handle.close();
+        }
       } catch {
         if (!response.headersSent)
           json(response, 400, { error: "download-failed" });
+        else response.destroy();
       }
       return;
     }
