@@ -2,13 +2,17 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { FlowRegistry } from "@abacus-ai/contract/contract/flow-control";
+import {
+  createFlowControlLinkInterceptor,
+  FlowRegistry,
+} from "@abacus-ai/contract/contract/flow-control";
 import { createORPCClient, isDefinedError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/websocket";
 import { expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
 import { nodeFileOperations } from "#main/app-operations/node";
+import { MainEventBus } from "#main/rpc/event-bus";
 import { createRouter } from "#main/rpc/router";
 import { fakeDeps } from "#main/rpc/testing";
 import { startWebSocketTransport } from "#main/rpc/transports/websocket";
@@ -174,5 +178,54 @@ it("caps terminal scrollback iterator snapshots with a defined size error", asyn
   } finally {
     socket.terminate();
     await server.close();
+  }
+});
+
+it("cancels a real socket subscription and releases listeners and flow state", async () => {
+  const bus = new MainEventBus();
+  const open = vi.spyOn(FlowRegistry.prototype, "open");
+  const server = await startWebSocketTransport({
+    router: createRouter(),
+    deps: fakeDeps({ bus }),
+    platform: "web-host",
+    flowControl: true,
+  });
+  const socket = new WebSocket(server.url);
+  await new Promise<void>((resolve) => socket.once("open", resolve));
+  const client: any = createORPCClient(
+    new RPCLink({
+      websocket: socket as never,
+      clientInterceptors: [
+        createFlowControlLinkInterceptor(
+          (ack) => socket.send(JSON.stringify(ack)),
+          1
+        ),
+      ],
+    })
+  );
+  const baseline = bus.listenerCount();
+  try {
+    const pending = client.system.events();
+    await vi.waitFor(() => expect(bus.listenerCount()).toBe(baseline + 1));
+    bus.dispatchChannel("system", {
+      type: "notification",
+      title: "test",
+      body: "test",
+    });
+    const iterator = await pending;
+    await iterator.next();
+    expect(open).toHaveBeenCalled();
+    const registry = open.mock.instances[0] as FlowRegistry;
+    expect(registry.size).toBe(1);
+    await iterator.return();
+    await vi.waitFor(() => {
+      expect(bus.listenerCount()).toBe(baseline);
+      expect(registry.size).toBe(0);
+    });
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+  } finally {
+    socket.terminate();
+    await server.close();
+    open.mockRestore();
   }
 });

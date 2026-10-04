@@ -135,8 +135,11 @@ export const startWebSocketTransport = async ({
                       (!decoded ||
                         typeof decoded !== "object" ||
                         typeof decoded.i !== "string" ||
-                        !decoded.p ||
-                        typeof decoded.p !== "object")
+                        (decoded.t !== undefined &&
+                          ![1, 2, 3, 4].includes(decoded.t)) ||
+                        (decoded.p !== undefined &&
+                          (decoded.p === null ||
+                            typeof decoded.p !== "object")))
                     )
                       return;
                   } catch {
