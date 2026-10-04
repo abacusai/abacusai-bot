@@ -30,6 +30,7 @@ import { system } from "./system";
 import { terminal } from "./terminal";
 import { update } from "./update";
 import { voice } from "./voice";
+import { webRunner } from "./web-runner";
 import { window } from "./window";
 import { workspaces } from "./workspaces";
 
@@ -58,6 +59,7 @@ export const contract = {
   voice,
   messaging,
   system,
+  webRunner,
   window,
   update,
   skills,
@@ -89,7 +91,15 @@ export type { McpRuntimeEvent } from "./mcp";
 export type { MemoryEvent } from "./memory";
 export type { MessagingEvent } from "./messaging";
 export type { SettingsEvent } from "./settings";
-export type { NotificationMetadata, SystemEvent, SystemInfo } from "./system";
+export type {
+  Capabilities,
+  Capability,
+  NotificationMetadata,
+  SystemEvent,
+  SystemInfo,
+} from "./system";
+export { ALL_CAPABILITIES, CAPABILITIES } from "./system";
+export type { WebRunnerState } from "./web-runner";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
 
 export type {

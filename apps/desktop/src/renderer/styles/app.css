@@ -5,6 +5,7 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 @import "./tokens.css";
+@import "./phone.css";
 
 @custom-variant dark (&:is(.dark *));
 

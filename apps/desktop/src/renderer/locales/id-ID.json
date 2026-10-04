@@ -3870,5 +3870,25 @@
   },
   "visualizer": {
     "loading": "Memuat visualisasi…"
+  },
+  "web": {
+    "openUrl": {
+      "title": "Lanjutkan di tab baru",
+      "action": "Buka"
+    },
+    "coding": {
+      "title": "Coding berjalan di komputer kamu",
+      "body": "Sesi, terminal, dan file memakai komputer kamu sendiri. Buka AbacusAI Bot di sana, aktifkan “Gunakan dari web” di Pengaturan, lalu coding dari sini.",
+      "bodyAttached": "Komputer kamu terhubung. Sesi, terminal, dan file berjalan di sana.",
+      "open": "Buka coding",
+      "download": "Unduh aplikasi desktop"
+    },
+    "runner": {
+      "title": "Gunakan dari web",
+      "description": "Izinkan aplikasi web AbacusAI Bot menjalankan sesi coding di komputer ini selama aplikasi ini terbuka. Hanya akun kamu yang bisa memakainya.",
+      "connected": "Terhubung ke aplikasi web",
+      "connecting": "Menghubungkan…",
+      "off": "Mati"
+    }
   }
 }

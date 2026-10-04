@@ -1,0 +1,81 @@
+/*
+ * The xs band (features/shell/layout.ts): phones, which only the web app
+ * meets. The rail becomes a tab bar along the bottom, the sidebar a drawer
+ * over the page, and the pane loses its inset and corners. Every rule is
+ * scoped to html[data-band="xs"], so no desktop width is touched.
+ */
+html[data-band="xs"] {
+  --rail-w: 0px;
+  --sidebar-w: min(320px, 86vw);
+  --pane-inset: 0px;
+  --pane-radius: 0px;
+  --tab-bar-h: 56px;
+  --side-panel-drawer-w: 100vw;
+}
+
+/* The page follows the keyboard (web-app.ts keeps --app-h current). */
+html[data-band="xs"] [data-slot="shell"] {
+  height: var(--app-h, 100dvh);
+  padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+}
+
+html[data-band="xs"] [data-slot="rail"] {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  width: 100%;
+  height: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  gap: 0;
+  padding: 0 8px env(safe-area-inset-bottom);
+  background: var(--sidebar);
+  border-top: 1px solid var(--sidebar-border);
+}
+html[data-band="xs"] [data-slot="rail"] > .flex-1 {
+  display: none;
+}
+html[data-band="xs"] [data-slot="rail"] > a {
+  margin-top: 0;
+}
+
+/* The keyboard covers the tab bar, not the composer. */
+html[data-band="xs"][data-keyboard="open"] [data-slot="rail"] {
+  display: none;
+}
+html[data-band="xs"][data-keyboard="open"] [data-slot="shell"] {
+  padding-bottom: 0;
+}
+
+html[data-band="xs"] [data-slot="sidebar-slot"] {
+  display: none;
+}
+html[data-band="xs"] [data-slot="sidebar-floating"] {
+  top: var(--toolbar-h);
+  bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom));
+  left: 0;
+  border-radius: 0 var(--radius-xl, 12px) var(--radius-xl, 12px) 0;
+}
+html[data-band="xs"] [data-slot="sidebar-backdrop"] {
+  display: block;
+}
+
+/* The browser has its own history buttons. */
+html[data-band="xs"] [data-history="forward"] {
+  display: none;
+}
+
+/* Fixed-width asides become the page's width. */
+html[data-band="xs"] [data-slot="pane"] .w-\[300px\],
+html[data-band="xs"] [data-slot="pane"] .w-\[420px\],
+html[data-band="xs"] [data-slot="pane"] .w-\[480px\] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Touch targets. */
+html[data-band="xs"] button,
+html[data-band="xs"] [role="button"] {
+  touch-action: manipulation;
+}

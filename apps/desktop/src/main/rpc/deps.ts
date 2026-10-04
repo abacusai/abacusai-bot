@@ -191,4 +191,11 @@ export interface RpcDeps {
   /** `window.claimCue` / `window.visibleThread` (spec 06 §14.2). */
   cues: CueArbiter;
   notch?: import("../notch/controller").NotchController;
+  /** "Use from the web" (main/services/runner); absent where it cannot run. */
+  webRunner?: {
+    state(): import("#shared/contract").WebRunnerState;
+    setEnabled(enabled: boolean): import("#shared/contract").WebRunnerState;
+  };
+  /** What this host can do (`system.capabilities`); all of it when absent. */
+  capabilities?: () => import("#shared/contract").Capabilities;
 }

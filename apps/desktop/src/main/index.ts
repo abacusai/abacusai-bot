@@ -158,6 +158,7 @@ import {
   skipOnboarding,
 } from "./services/providers/account-service";
 import { getLocalUsageSnapshot } from "./services/providers/usage";
+import { WebRunner } from "./services/providers/web-runner";
 import { accountStashKey } from "./services/session/account-session-stash";
 import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import {
@@ -1610,6 +1611,13 @@ function publishChromeState(): void {
 
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
+let rpcDeps: RpcDeps | null = null;
+/** "Use from the web": serves the web app's coding view from this machine. */
+const webRunner = new WebRunner({
+  router: createRouter,
+  deps: () => rpcDeps,
+  publish: (state) => emitBusChannel("system", { type: "web-runner", state }),
+});
 let notchController: NotchController | null = null;
 const notchNotifications = new NotchNotificationPolicy({
   enabled: () => prefsStore.get().notch?.showInNotch === true,
@@ -1711,7 +1719,20 @@ function installRpc(host: HostOperations): void {
     trackers: createEventTrackers(mainEventBus),
     cues: cueArbiter,
     notch: notchController,
+    webRunner: {
+      state: () => webRunner.state(),
+      setEnabled: (enabled) => webRunner.setEnabled(enabled),
+    },
   };
+  rpcDeps = deps;
+  // A new key (sign-in, sign-out, another account) reconnects with it.
+  mainEventBus.listen(
+    (event) =>
+      event.type === "credentials-changed" &&
+      (event as { provider?: string }).provider === "abacus",
+    () => webRunner.refresh()
+  );
+  webRunner.refresh();
   rpcTransport = installMessagePortTransport({
     ipcMain,
     router: createRouter(),
@@ -2074,6 +2095,7 @@ app.on("before-quit", (event) => {
   // Quit must wait for this (bounded below): the SIGKILL escalation runs on
   // an unref'd timer, and returning synchronously would let a wedged agent
   // survive quit.
+  webRunner.dispose();
   const agentsStopped = workspaceServiceHost.dispose();
 
   // Only devices we booted, never ones the user started.

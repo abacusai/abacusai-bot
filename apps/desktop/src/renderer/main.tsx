@@ -14,6 +14,7 @@ import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport, type Transport } from "#renderer/data/transport";
+import { getWebTransport } from "#renderer/data/transport/web";
 import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { isToasterMounted } from "#renderer/features/shell/app-toaster";
 import { BootFailure } from "#renderer/features/shell/screens";
@@ -25,6 +26,7 @@ import {
   reportFailedBoot,
   type BootError,
 } from "#renderer/lib/bootstrap";
+import { loadCapabilities } from "#renderer/lib/capabilities";
 import { installUiContinuity } from "#renderer/lib/continuity";
 import {
   changeLanguage,
@@ -37,6 +39,7 @@ import { installLogRing } from "#renderer/lib/log-ring";
 import { guardSingleViewTransition } from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
 import { applyTheme, DARK_QUERY, resolveTheme } from "#renderer/lib/theme";
+import { isWebApp, whenTabCanReconnect } from "#renderer/lib/web-app";
 import { toast } from "#renderer/ui/toast";
 
 import { createAppRouter } from "./router";
@@ -111,7 +114,12 @@ const start = async (): Promise<void> => {
           toast.add({ title: i18n.t("shell.connectionLost"), type: "loading" });
         else renderConnectionLost();
       },
-      reload: () => window.location.reload(),
+      // The web app reloads only once the tab can reach the server again.
+      reload: () => {
+        if (isWebApp)
+          void whenTabCanReconnect().then(() => window.location.reload());
+        else window.location.reload();
+      },
       showError: () => renderFailure(null),
       storage: window.sessionStorage,
     });
@@ -128,7 +136,8 @@ const start = async (): Promise<void> => {
     // 5. Transport, system facts, the collections over that transport,
     // prefs; the close handler is registered the moment the transport exists.
     const result = await bootstrap({
-      getTransport,
+      // The web app has no preload: its server is a socket away.
+      getTransport: isWebApp ? getWebTransport : getTransport,
       queryClient,
       getDb: (resolved) => {
         db =
@@ -148,6 +157,7 @@ const start = async (): Promise<void> => {
     await importLegacyDrafts(boot.system.legacyComposerDrafts ?? {}, (keys) =>
       boot.transport.client.system.acknowledgeLegacyDrafts({ keys })
     );
+    await loadCapabilities(boot.transport);
     installActivity(boot.transport);
     installUiContinuity();
     installLogRing(boot.transport);

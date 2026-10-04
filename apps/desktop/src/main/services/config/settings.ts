@@ -17,6 +17,7 @@ import {
 import type { ToolsetPreferences } from "#shared/toolsets";
 
 import { abacusBotHome } from "../../paths";
+import { hostedPolicy, hostedToolsetPreferences } from "./hosted";
 
 /**
  * User settings: `~/.abacusai-bot/config.json`, the same file the agent
@@ -27,7 +28,7 @@ import { abacusBotHome } from "../../paths";
 
 const configPath = (): string => path.join(abacusBotHome(), "config.json");
 
-export const readSettings = (): AbacusBotSettings => {
+const readStoredSettings = (): AbacusBotSettings => {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(configPath(), "utf8"));
 
@@ -39,7 +40,23 @@ export const readSettings = (): AbacusBotSettings => {
   }
 };
 
+/** The file, with the hosted web app's keys (never stored) laid over it. */
+export const readSettings = (): AbacusBotSettings => {
+  const stored = readStoredSettings();
+  const hosted = hostedPolicy()?.apiKeys;
+  if (hosted == null) return stored;
+  return { ...stored, apiKeys: { ...stored.apiKeys, ...hosted } };
+};
+
 const writeSettings = (settings: AbacusBotSettings): AbacusBotSettings => {
+  const hosted = hostedPolicy()?.apiKeys;
+  if (hosted != null && settings.apiKeys != null) {
+    // Laid over by readSettings; the hosted keys never reach the file.
+    const apiKeys = { ...settings.apiKeys };
+    for (const [envVar, key] of Object.entries(hosted))
+      if (apiKeys[envVar] === key) delete apiKeys[envVar];
+    settings = { ...settings, apiKeys };
+  }
   const target = configPath();
   fs.mkdirSync(path.dirname(target), { recursive: true });
   // Merged, never replaced: the file is hand-editable and holds provider
@@ -168,7 +185,7 @@ export const setToolsetEnabled = (
 };
 
 export const readToolsetPreferences = (): ToolsetPreferences =>
-  readSettings().enabledToolsets ?? {};
+  hostedToolsetPreferences() ?? readSettings().enabledToolsets ?? {};
 
 /** Unvalidated; `resolveBackend` decides if it is usable. */
 export const readExecBackend = (): BackendId | undefined => {
@@ -321,3 +338,10 @@ export const hasOAuthCredential = (provider: string): boolean => {
     return false;
   }
 };
+
+/** "Use from the web" (main/services/runner); off unless turned on. */
+export const readWebRunnerEnabled = (): boolean =>
+  readSettings().webRunner === true;
+
+export const setWebRunnerEnabled = (enabled: boolean): AbacusBotSettings =>
+  writeSettings({ ...readSettings(), webRunner: enabled });

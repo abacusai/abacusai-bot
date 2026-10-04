@@ -21,6 +21,7 @@ import { Route as ShellartifactsArtifactsRouteImport } from "./routes/_shell/(ar
 import { Route as ShellbotsBotsRouteImport } from "./routes/_shell/(bots)/bots"
 import { Route as ShelllibraryLibraryRouteImport } from "./routes/_shell/(library)/library"
 import { Route as ShellroutinesRoutinesRouteImport } from "./routes/_shell/(routines)/routines"
+import { Route as ShellsessionsCodingRouteImport } from "./routes/_shell/(sessions)/coding"
 import { Route as ShellsessionsSessionsRouteImport } from "./routes/_shell/(sessions)/sessions"
 import { Route as ShellSettingsIndexRouteImport } from "./routes/_shell/settings.index"
 import { Route as ShellSettingsAboutRouteImport } from "./routes/_shell/settings.about"
@@ -119,6 +120,11 @@ const ShelllibraryLibraryRoute = ShelllibraryLibraryRouteImport.update({
 const ShellroutinesRoutinesRoute = ShellroutinesRoutinesRouteImport.update({
   id: "/(routines)/routines",
   path: "/routines",
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellsessionsCodingRoute = ShellsessionsCodingRouteImport.update({
+  id: "/(sessions)/coding",
+  path: "/coding",
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellsessionsSessionsRoute = ShellsessionsSessionsRouteImport.update({
@@ -359,6 +365,7 @@ export interface FileRoutesByFullPath {
   "/bots": typeof ShellbotsBotsRouteWithChildren
   "/library": typeof ShelllibraryLibraryRouteWithChildren
   "/routines": typeof ShellroutinesRoutinesRouteWithChildren
+  "/coding": typeof ShellsessionsCodingRoute
   "/sessions": typeof ShellsessionsSessionsRouteWithChildren
   "/settings/about": typeof ShellSettingsAboutRoute
   "/settings/account": typeof ShellSettingsAccountRoute
@@ -406,6 +413,7 @@ export interface FileRoutesByTo {
   "/__ui": typeof BareChar91__uiChar93Route
   "/onboarding/$step": typeof BareOnboardingStepRoute
   "/routines": typeof ShellroutinesRoutinesListIndexRoute
+  "/coding": typeof ShellsessionsCodingRoute
   "/settings/about": typeof ShellSettingsAboutRoute
   "/settings/account": typeof ShellSettingsAccountRoute
   "/settings/appearance": typeof ShellSettingsAppearanceRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   "/_shell/(bots)/bots": typeof ShellbotsBotsRouteWithChildren
   "/_shell/(library)/library": typeof ShelllibraryLibraryRouteWithChildren
   "/_shell/(routines)/routines": typeof ShellroutinesRoutinesRouteWithChildren
+  "/_shell/(sessions)/coding": typeof ShellsessionsCodingRoute
   "/_shell/(sessions)/sessions": typeof ShellsessionsSessionsRouteWithChildren
   "/_shell/settings/about": typeof ShellSettingsAboutRoute
   "/_shell/settings/account": typeof ShellSettingsAccountRoute
@@ -514,6 +523,7 @@ export interface FileRouteTypes {
     | "/bots"
     | "/library"
     | "/routines"
+    | "/coding"
     | "/sessions"
     | "/settings/about"
     | "/settings/account"
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | "/__ui"
     | "/onboarding/$step"
     | "/routines"
+    | "/coding"
     | "/settings/about"
     | "/settings/account"
     | "/settings/appearance"
@@ -613,6 +624,7 @@ export interface FileRouteTypes {
     | "/_shell/(bots)/bots"
     | "/_shell/(library)/library"
     | "/_shell/(routines)/routines"
+    | "/_shell/(sessions)/coding"
     | "/_shell/(sessions)/sessions"
     | "/_shell/settings/about"
     | "/_shell/settings/account"
@@ -746,6 +758,13 @@ declare module "@tanstack/react-router" {
       path: "/routines"
       fullPath: "/routines"
       preLoaderRoute: typeof ShellroutinesRoutinesRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    "/_shell/(sessions)/coding": {
+      id: "/_shell/(sessions)/coding"
+      path: "/coding"
+      fullPath: "/coding"
+      preLoaderRoute: typeof ShellsessionsCodingRouteImport
       parentRoute: typeof ShellRoute
     }
     "/_shell/(sessions)/sessions": {
@@ -1265,6 +1284,7 @@ interface ShellRouteChildren {
   ShellbotsBotsRoute: typeof ShellbotsBotsRouteWithChildren
   ShelllibraryLibraryRoute: typeof ShelllibraryLibraryRouteWithChildren
   ShellroutinesRoutinesRoute: typeof ShellroutinesRoutinesRouteWithChildren
+  ShellsessionsCodingRoute: typeof ShellsessionsCodingRoute
   ShellsessionsSessionsRoute: typeof ShellsessionsSessionsRouteWithChildren
 }
 
@@ -1275,6 +1295,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellbotsBotsRoute: ShellbotsBotsRouteWithChildren,
   ShelllibraryLibraryRoute: ShelllibraryLibraryRouteWithChildren,
   ShellroutinesRoutinesRoute: ShellroutinesRoutinesRouteWithChildren,
+  ShellsessionsCodingRoute: ShellsessionsCodingRoute,
   ShellsessionsSessionsRoute: ShellsessionsSessionsRouteWithChildren,
 }
 

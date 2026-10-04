@@ -3870,5 +3870,25 @@
   },
   "visualizer": {
     "loading": "विज़ुअलाइज़ेशन लोड हो रहा है…"
+  },
+  "web": {
+    "openUrl": {
+      "title": "Continue in a new tab",
+      "action": "Open"
+    },
+    "coding": {
+      "title": "Coding runs on your computer",
+      "body": "Sessions, terminals and files use your own computer. Open AbacusAI Bot on it, turn on “Use from the web” in Settings, and code from here.",
+      "bodyAttached": "Your computer is connected. Sessions, terminals and files run there.",
+      "open": "Open coding",
+      "download": "Get the desktop app"
+    },
+    "runner": {
+      "title": "Use from the web",
+      "description": "Let the AbacusAI Bot web app run coding sessions on this computer while this app is open. Only your account can use it.",
+      "connected": "Connected to the web app",
+      "connecting": "Connecting…",
+      "off": "Off"
+    }
   }
 }

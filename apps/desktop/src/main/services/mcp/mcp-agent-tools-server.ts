@@ -69,6 +69,7 @@ import {
   htmlPagesIn,
 } from "../agent-tools/static-server";
 import { renderTodos, readTodos, setTodos } from "../agent-tools/todo-store";
+import { hostedPolicy } from "../config/hosted";
 import { MAX_ATTACHMENT_BYTES } from "../messaging/connector";
 import {
   resolveSender,
@@ -620,7 +621,12 @@ export class McpAgentToolsServer {
     if (
       !forEditor &&
       !isToolEnabled(definition, this.options.enabledToolsets()) &&
-      !(definition.botAlways === true && this.isBotCaller(callerSession))
+      !(
+        definition.botAlways === true &&
+        // Hosted, the policy decides alone: no scheduler runs routines there.
+        hostedPolicy() == null &&
+        this.isBotCaller(callerSession)
+      )
     ) {
       return this.err(
         `The ${toolsetsFor(definition).join("/")} toolset is switched off in Capabilities.`
@@ -1451,7 +1457,7 @@ export class McpAgentToolsServer {
     if (definition == null || definition.hidden === true) return false;
     return (
       (isToolEnabled(definition, enabled) ||
-        (forBot && definition.botAlways === true)) &&
+        (forBot && definition.botAlways === true && hostedPolicy() == null)) &&
       this.isToolConfigured(definition) &&
       (forBot || definition.botsOnly !== true)
     );

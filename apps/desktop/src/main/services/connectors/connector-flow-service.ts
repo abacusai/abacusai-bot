@@ -18,6 +18,8 @@ import type {
   McpServerEntry,
 } from "#shared/contracts";
 
+import { hostedPolicy } from "../config/hosted";
+
 export interface FlowSources {
   /** The platform's browser hop and its inverse, by service key. */
   platform: {
@@ -96,6 +98,17 @@ export const mcpEntryFor = (
   return entry;
 };
 
+/**
+ * Hosted, only the platform's own connectors attach: an MCP connector would
+ * start a server process on our machine, and a credential connector would
+ * store a third-party key there for tools the hosted agent does not have.
+ */
+const hostedOnlyPlatform = (connector: { kind: string }): boolean =>
+  hostedPolicy() != null && connector.kind !== "platform";
+
+const notHosted = (connector: { name: string }): ConnectorOutcome =>
+  failure(`${connector.name} is available in the desktop app.`);
+
 export class ConnectorFlowService {
   constructor(private readonly sources: FlowSources) {}
 
@@ -106,6 +119,7 @@ export class ConnectorFlowService {
   ): Promise<ConnectorOutcome> {
     const connector = connectorById(connectorId);
     if (connector == null) return unknown(connectorId);
+    if (hostedOnlyPlatform(connector)) return notHosted(connector);
     const ui = connectUi(connector);
     if (ui === "fields")
       return failure(`${connector.name} needs its fields first.`);
@@ -130,6 +144,7 @@ export class ConnectorFlowService {
   ): Promise<ConnectorOutcome> {
     const connector = connectorById(connectorId);
     if (connector == null) return unknown(connectorId);
+    if (hostedOnlyPlatform(connector)) return notHosted(connector);
     if (connector.kind === "credential") {
       const value = (values[connector.envVar] ?? "").trim();
       if (value.length === 0)

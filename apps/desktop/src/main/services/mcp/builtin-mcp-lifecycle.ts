@@ -12,6 +12,7 @@ import type {
 } from "#shared/contracts";
 
 import type { ChromeBrowserService } from "../browser/chrome/chrome-browser-service";
+import { hostedPolicy } from "../config/hosted";
 import type { BuiltinPermissionScope } from "./builtin-tool-permissions";
 import type { McpAgentToolsServer } from "./mcp-agent-tools-server";
 import type { McpBrowserServer } from "./mcp-browser-server";
@@ -147,7 +148,9 @@ export class BuiltinMcpLifecycle {
         ? `${url}?session=${encodeURIComponent(sessionId)}`
         : url;
     const builtins: Record<string, { url: string }> = {};
-    if (mode === "code" && this.browserEnabled) {
+    // The hosted web app runs on our machines: no local browser or devices.
+    const hosted = hostedPolicy() != null;
+    if (mode === "code" && this.browserEnabled && !hosted) {
       await this.startBrowserServer();
       const port = this.deps.browserServer.getPort();
       if (port != null) {
@@ -158,6 +161,7 @@ export class BuiltinMcpLifecycle {
     }
     if (
       mode === "code" &&
+      !hosted &&
       !this.deps.mcpConfigService.isBuiltinDevicesDisabled() &&
       this.deps.deviceServer.isToolchainAvailable()
     ) {
@@ -200,7 +204,12 @@ export class BuiltinMcpLifecycle {
   }
 
   async startBrowserServer(): Promise<void> {
-    if (!this.browserEnabled || this.deps.browserServer.isRunning()) return;
+    if (
+      !this.browserEnabled ||
+      hostedPolicy() != null ||
+      this.deps.browserServer.isRunning()
+    )
+      return;
     try {
       await this.deps.browserServer.start();
     } catch (err) {

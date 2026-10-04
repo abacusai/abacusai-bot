@@ -4,7 +4,11 @@ import type { RpcDeps } from "./deps";
 
 export type RpcTransportKind = "message-port" | "websocket" | "memory";
 
-export type RpcWindowKind = "main" | "notch" | "dev";
+/**
+ * `web`: a browser tab of the hosted web app. `remote`: the hosted web app
+ * reaching this desktop for coding (see main/services/runner).
+ */
+export type RpcWindowKind = "main" | "notch" | "dev" | "web" | "remote";
 
 /**
  * Per connection, fixed when the port or socket is upgraded. `webContentsId`

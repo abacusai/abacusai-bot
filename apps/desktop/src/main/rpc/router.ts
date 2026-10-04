@@ -25,6 +25,7 @@ import { systemRouter } from "./procedures/system";
 import { terminalRouter } from "./procedures/terminal";
 import { updateRouter } from "./procedures/update";
 import { voiceRouter } from "./procedures/voice";
+import { webRunnerRouter } from "./procedures/web-runner";
 import { windowRouter } from "./procedures/window";
 import { workspacesRouter } from "./procedures/workspaces";
 
@@ -59,6 +60,7 @@ export const createRouter = () =>
     voice: voiceRouter,
     messaging: messagingRouter,
     system: systemRouter,
+    webRunner: webRunnerRouter,
     window: windowRouter,
     update: updateRouter,
     skills: skillsRouter,

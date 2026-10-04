@@ -133,6 +133,19 @@ export const SidebarSlot = ({
       </motion.div>
       <AnimatePresence>
         {floatingOpen && (
+          // Phones: the drawer covers the page; a tap beside it closes it.
+          <motion.div
+            key="floating-backdrop"
+            data-slot="sidebar-backdrop"
+            aria-hidden
+            className="fixed inset-0 z-20 hidden bg-black/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => onEscape?.()}
+          />
+        )}
+        {floatingOpen && (
           <motion.div
             key="floating-sidebar"
             ref={floatingRef}
@@ -146,11 +159,18 @@ export const SidebarSlot = ({
               motionPref === "reduced" ? reducedTransition : springs.sidebar
             }
             onPointerEnter={intent.hold}
-            onPointerLeave={intent.leave}
+            onPointerLeave={(event) => {
+              // A finger lifting is not the pointer leaving: phones close it
+              // by navigating, the backdrop or Escape.
+              if (event.pointerType !== "touch") intent.leave();
+            }}
             onFocus={intent.hold}
             onBlur={(event) => {
               // Focus left the sidebar for somewhere else: close after the grace.
-              if (!event.currentTarget.contains(event.relatedTarget as Node))
+              if (
+                document.documentElement.dataset.band !== "xs" &&
+                !event.currentTarget.contains(event.relatedTarget as Node)
+              )
                 intent.leave();
             }}
             onKeyDown={onKeyDown}

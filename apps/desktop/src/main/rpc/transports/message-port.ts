@@ -36,7 +36,7 @@ import type { AppRouter } from "../router";
 
 export const RPC_CONNECT_CHANNEL = "rpc:connect";
 
-export type RendererKind = Exclude<RpcWindowKind, "dev">;
+export type RendererKind = Exclude<RpcWindowKind, "dev" | "web" | "remote">;
 
 interface Entry {
   kind: RendererKind;

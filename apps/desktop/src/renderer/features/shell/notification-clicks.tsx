@@ -37,6 +37,7 @@ export const NotificationClicks = ({
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),
       (event) => {
+        if (event.type !== "notification-clicked") return;
         const href = notificationHref(event.metadata);
         if (href != null) void navigate({ href });
       },

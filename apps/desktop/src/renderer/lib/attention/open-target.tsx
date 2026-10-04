@@ -2,6 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
+import { useCapability } from "#renderer/lib/capabilities";
 import type { OpenCommand, OpenTarget } from "#shared/contract";
 export const openTargetHref = (target: OpenTarget): string => {
   if (target.kind === "bot")
@@ -48,7 +49,10 @@ export const openCommandReceiver = (deps: {
 export const OpenTargetBridge = () => {
   const router = useRouter();
   const { transport } = router.options.context;
+  const notch = useCapability("notch");
   useEffect(() => {
+    // Only a desktop with a notch companion sends these.
+    if (!notch) return;
     const abort = new AbortController();
     const receive = openCommandReceiver({
       signal: abort.signal,
@@ -66,6 +70,6 @@ export const OpenTargetBridge = () => {
       abort.signal
     );
     return () => abort.abort();
-  }, [router, transport]);
+  }, [router, transport, notch]);
   return null;
 };

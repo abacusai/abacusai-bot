@@ -1,4 +1,8 @@
-import { CONTRACT_VERSION, type SystemEvent } from "#shared/contract";
+import {
+  ALL_CAPABILITIES,
+  CONTRACT_VERSION,
+  type SystemEvent,
+} from "#shared/contract";
 import { FOUNDATION_API } from "#shared/experience";
 
 import {
@@ -40,6 +44,9 @@ export const systemRouter = impl.system.router({
     ({ input, context }) => {
       context.deps.app.showItemInFolder(input.path);
     }
+  ),
+  capabilities: impl.system.capabilities.handler(
+    ({ context }) => context.deps.capabilities?.() ?? ALL_CAPABILITIES
   ),
   info: impl.system.info.handler(({ context }) => {
     const { app, host, serviceHost } = context.deps;

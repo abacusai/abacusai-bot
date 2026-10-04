@@ -13,6 +13,7 @@ import type {
 } from "#shared/contracts";
 
 import { bringToFront } from "../../bring-to-front";
+import { hostedPolicy } from "../config/hosted";
 import { credentialFor } from "../config/settings";
 import { openConnectWindow, type ConnectWindow } from "./abacus-connect-window";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
@@ -317,6 +318,9 @@ export const startConnectorConnect = (
     return Promise.resolve({ ok: false, error: "not-signed-in" });
   }
 
+  if (hostedPolicy() != null)
+    return startHostedConnectorConnect(serviceKey, options);
+
   const callbackPath = crypto.randomBytes(16).toString("hex");
 
   return new Promise<AbacusConnectorOutcome>((resolve) => {
@@ -508,6 +512,71 @@ export const startConnectorConnect = (
     });
   });
 };
+
+/** How often the hosted hop asks the platform whether the service attached. */
+const HOSTED_POLL_MS = 3_000;
+
+/**
+ * The hop in the hosted web app: there is no loopback to ping, but the
+ * browser tab is already signed into this very account, so the connect page
+ * opens in it (through `shell.openExternal`, which the web host hands to the
+ * tab) and the platform's listing is the only signal: poll it until the
+ * service appears, the hop is cancelled, or it times out.
+ */
+const startHostedConnectorConnect = (
+  serviceKey: string,
+  options: ConnectorConnectOptions
+): Promise<AbacusConnectorOutcome> =>
+  new Promise<AbacusConnectorOutcome>((resolve) => {
+    let settled = false;
+    let poll: NodeJS.Timeout | null = null;
+    const deadline = Date.now() + CONNECT_TIMEOUT_MS;
+
+    const finish = (result: AbacusConnectorOutcome): void => {
+      if (settled) return;
+      settled = true;
+      if (poll != null) clearTimeout(poll);
+      if (inFlight.get(serviceKey)?.close === close)
+        inFlight.delete(serviceKey);
+      resolve(result);
+    };
+    const close = (): void => {
+      finish({
+        ok: false,
+        error: "Connecting was cancelled.",
+        cancelled: true,
+      });
+    };
+    inFlight.set(serviceKey, { close, owner: options.owner });
+
+    const check = (): void => {
+      void listAbacusConnectors().then((snapshot) => {
+        if (settled) return;
+        if (snapshot.ok && snapshot.connected[serviceKey] != null) {
+          finish({ ok: true });
+        } else if (Date.now() > deadline) {
+          finish({
+            ok: false,
+            error:
+              "Timed out waiting for the connection. The user may still be mid-sign-in. Call connect_connector for it again to keep waiting; an account attached late is picked up then.",
+          });
+        } else {
+          poll = setTimeout(check, HOSTED_POLL_MS);
+        }
+      });
+    };
+
+    const connectUrl = new URL(CONNECT_PATH, abacusAppHost());
+    connectUrl.searchParams.set("service", serviceKey);
+    // The page then says to return to the web app, and closes its own tab.
+    connectUrl.searchParams.set("botWeb", "1");
+    if (options.autostart === true)
+      connectUrl.searchParams.set("autostart", "1");
+    const hint = (options.hint ?? "").trim();
+    if (HINT_RE.test(hint)) connectUrl.searchParams.set("hint", hint);
+    void shell.openExternal(connectUrl.toString());
+    poll = setTimeout(check, HOSTED_POLL_MS);
+  });
 
 const RESPONSE_PAGE = `<!doctype html>
 <html lang="en">

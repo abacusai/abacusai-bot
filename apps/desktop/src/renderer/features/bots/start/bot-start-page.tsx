@@ -14,10 +14,12 @@ import {
 } from "#renderer/lib/bots/avatar";
 import {
   BOT_TEMPLATES,
+  TEMPLATE_FOR_CONNECTOR,
   BOT_TEMPLATE_CATEGORIES,
   orderedTemplateIds,
   type BotTemplateCategory,
 } from "#renderer/lib/bots/templates";
+import { useCapability } from "#renderer/lib/capabilities";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 import {
@@ -36,6 +38,13 @@ import { ToggleGroup, ToggleGroupItem } from "#renderer/ui/toggle-group";
 import { useBots, botsQueries } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { useBotDraft, updateDraft, selectTemplate } from "../form/draft-store";
+
+/** Templates that live in a messaging app; offered only where those run. */
+const MESSAGING_TEMPLATES = new Set(
+  Object.entries(TEMPLATE_FOR_CONNECTOR)
+    .filter(([connector]) => connector.startsWith("messaging-"))
+    .map(([, template]) => template)
+);
 export const BotStartPage = ({
   category = "featured",
 }: {
@@ -61,12 +70,14 @@ export const BotStartPage = ({
       search: { step: "setup", template: id, category },
     });
   };
+  const messaging = useCapability("messaging");
   const connected = Object.entries(connectors.data ?? {})
     .filter(([, row]) => row.state === "connected")
     .map(([id]) => id);
   const templates = orderedTemplateIds(category, connected)
     .map((id) => BOT_TEMPLATES.find((item) => item.id === id)!)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((item) => messaging || !MESSAGING_TEMPLATES.has(item.id));
   return (
     <div
       data-testid="bot-start"

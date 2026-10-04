@@ -276,6 +276,7 @@ import {
   buildAgentAuthEnv,
   buildAgentConfigEnv,
 } from "./services/config/agent-env";
+import { hostedPolicy } from "./services/config/hosted";
 import {
   readExecBackend,
   readTerminalShell,
@@ -1765,6 +1766,9 @@ export class ServiceHost {
     };
     // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
     this.threadStore.onAguiPersist(persisted);
+    // The hosted web app serves many users from one machine: no local
+    // browser, no messaging logins and no device logs to sync.
+    if (hostedPolicy() != null) return;
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
@@ -3413,6 +3417,12 @@ export class ServiceHost {
   getToolsetStates(): Record<string, boolean> {
     const preferences = readToolsetPreferences();
     const states: Record<string, boolean> = {};
+    // Hosted, the policy is the only source: no browser or device servers.
+    if (hostedPolicy() != null) {
+      for (const toolset of TOOLSETS)
+        states[toolset.id] = isToolsetEnabled(toolset.id, preferences);
+      return states;
+    }
 
     for (const toolset of TOOLSETS) {
       states[toolset.id] = toolset.alwaysOn

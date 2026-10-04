@@ -22,6 +22,8 @@ export interface CustomProviderEntry {
 export interface AbacusBotSettings {
   /** Last model the user selected. */
   defaultModel?: string;
+  /** "Use from the web": serve the web app's coding view. Absent means off. */
+  webRunner?: boolean;
   /** Provider credentials, keyed by environment-variable name. */
   apiKeys?: Record<string, string>;
   /**

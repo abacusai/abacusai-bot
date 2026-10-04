@@ -37,6 +37,7 @@
   },
   "scripts": {
     "build": "vite build",
+    "build:web": "vite build --config vite.web.config.ts && node scripts/build-web-host.mjs",
     "check:i18n": "node scripts/check-jsx-i18n.js",
     "check:locales": "node scripts/sync-locales.js --check && node --test scripts/i18n-dynamic-keys.test.mjs && node scripts/check-ui-copy.mjs && node --test scripts/check-ui-copy.test.mjs",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",

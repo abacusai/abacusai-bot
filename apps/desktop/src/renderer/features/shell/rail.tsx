@@ -11,10 +11,13 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
+import { useCapabilities } from "#renderer/lib/capabilities";
 import { cn } from "#renderer/lib/cn";
 import type { NavType } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";
+import { railAreaAvailable } from "#renderer/lib/navigation/available";
+import { isRunnerView, webAppUrl } from "#renderer/lib/web-app";
 import { Avatar, AvatarFallback } from "#renderer/ui/avatar";
 
 import { useFloatingIntent } from "./floating-intent";
@@ -110,6 +113,7 @@ export const Rail = ({
   const { t } = useTranslation();
   const last = useStore(shellStore, (state) => state.lastLocationByArea);
   const intent = useFloatingIntent();
+  const capabilities = useCapabilities();
 
   return (
     <nav
@@ -126,45 +130,65 @@ export const Rail = ({
         else intent.cancel();
       }}
     >
-      {RAIL_AREAS.map((item) => (
-        <RailItem
-          key={item}
-          area={item}
-          active={area === item}
-          icon={item}
-          label={t(`shell.rail.${item}`)}
-          target={railTarget(item, last)}
-        />
-      ))}
+      {isRunnerView() && (
+        // The coding view's way back to the web app's bots.
+        <a
+          href={webAppUrl()}
+          data-area="bots"
+          className="titlebar-nodrag group/rail focus-visible:ring-ring/50 text-muted-foreground hover:text-sidebar-foreground flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2"
+        >
+          <span className="group-hover/rail:bg-sidebar-accent/50 flex h-[30px] w-9 items-center justify-center rounded-[10px] transition-colors">
+            <AppIcon name="bots" size={20} />
+          </span>
+          <span>{t("shell.rail.bots")}</span>
+        </a>
+      )}
+      {RAIL_AREAS.filter((item) => railAreaAvailable(item, capabilities)).map(
+        (item) => (
+          <RailItem
+            key={item}
+            area={item}
+            active={area === item}
+            icon={item}
+            label={t(`shell.rail.${item}`)}
+            target={railTarget(item, last)}
+          />
+        )
+      )}
       <div className="flex-1" />
-      <RailLink
-        target={railTarget("settings", last)}
-        transition="settings-in"
-        aria-label={t("shell.rail.settings")}
-        title={t("shell.rail.settings")}
-        aria-current={area === "settings" ? "page" : undefined}
-        className={cn(
-          "titlebar-nodrag focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2",
-          area === "settings"
-            ? "bg-sidebar-accent text-sidebar-foreground"
-            : "text-muted-foreground hover:text-sidebar-foreground"
-        )}
-      >
-        <AppIcon name="settings" size={18} />
-      </RailLink>
-      <AppLink
-        to="/settings/account"
-        transition="settings-in"
-        aria-label={t("shell.rail.account")}
-        title={t("shell.rail.account")}
-        className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
-      >
-        <Avatar size="sm">
-          <AvatarFallback className="text-foreground text-[11px] font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-      </AppLink>
+      {!isRunnerView() && (
+        <>
+          <RailLink
+            target={railTarget("settings", last)}
+            transition="settings-in"
+            aria-label={t("shell.rail.settings")}
+            title={t("shell.rail.settings")}
+            aria-current={area === "settings" ? "page" : undefined}
+            className={cn(
+              "titlebar-nodrag focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2",
+              area === "settings"
+                ? "bg-sidebar-accent text-sidebar-foreground"
+                : "text-muted-foreground hover:text-sidebar-foreground"
+            )}
+          >
+            <AppIcon name="settings" size={18} />
+          </RailLink>
+          <AppLink
+            // The web app's account is the website's; usage is what it shows.
+            to={capabilities.signIn ? "/settings/account" : "/settings/usage"}
+            transition="settings-in"
+            aria-label={t("shell.rail.account")}
+            title={t("shell.rail.account")}
+            className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
+          >
+            <Avatar size="sm">
+              <AvatarFallback className="text-foreground text-[11px] font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </AppLink>
+        </>
+      )}
     </nav>
   );
 };

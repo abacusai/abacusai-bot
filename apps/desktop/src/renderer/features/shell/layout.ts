@@ -6,19 +6,27 @@
  */
 import { SHELL_GEOMETRY } from "./geometry";
 
-export type Band = "sm" | "md" | "lg" | "xl";
+export type Band = "xs" | "sm" | "md" | "lg" | "xl";
 
-/** Lower bounds, px. 800 is the window minimum. */
+/** Lower bounds, px. 800 is the desktop window's minimum. */
 export const BAND_MIN = { sm: 800, md: 900, lg: 1000, xl: 1100 } as const;
 
+/**
+ * Phones, which only the web app meets: below this the rail becomes a tab
+ * bar at the bottom and the sidebar a drawer over the page.
+ */
+export const BAND_XS_MAX = 767;
+
 export const bandFor = (width: number): Band =>
-  width >= BAND_MIN.xl
-    ? "xl"
-    : width >= BAND_MIN.lg
-      ? "lg"
-      : width >= BAND_MIN.md
-        ? "md"
-        : "sm";
+  width <= BAND_XS_MAX
+    ? "xs"
+    : width >= BAND_MIN.xl
+      ? "xl"
+      : width >= BAND_MIN.lg
+        ? "lg"
+        : width >= BAND_MIN.md
+          ? "md"
+          : "sm";
 
 export type ShellArea =
   | "bots"
@@ -68,7 +76,11 @@ export const shellLayout = (input: {
   const band = bandFor(input.width);
   let sidebar: SidebarMode = input.pinned ? "pinned" : "floating";
   if (band === "sm" && input.area === "bots" && input.pinned) sidebar = "strip";
-  if (band === "md" || (band === "sm" && input.area !== "bots"))
+  if (
+    band === "xs" ||
+    band === "md" ||
+    (band === "sm" && input.area !== "bots")
+  )
     sidebar = "floating";
 
   if (
@@ -92,7 +104,7 @@ export const shellLayout = (input: {
     sidePanel: input.panelOpen ? (band === "xl" ? "layout" : "drawer") : null,
     titleBar: {
       status: band === "xl" || band === "lg",
-      actionsFolded: band === "sm",
+      actionsFolded: band === "sm" || band === "xs",
       appName: sidebar === "pinned",
     },
   };

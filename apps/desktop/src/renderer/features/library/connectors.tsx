@@ -20,6 +20,8 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
+import { useCapabilities } from "#renderer/lib/capabilities";
+import { connectorKindAvailable } from "#renderer/lib/navigation/available";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -64,9 +66,11 @@ export const ConnectorsPage = () => {
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
     staleTime: 60000,
   });
+  const capabilities = useCapabilities();
   const entries = CONNECTORS.filter(
     (e) =>
       e.kind !== "messaging" &&
+      connectorKindAvailable(e.kind, capabilities) &&
       statuses.data?.[e.id]?.reason !== "not-offered" &&
       (search.q
         ? foldSearch(e.name + " " + e.description).includes(

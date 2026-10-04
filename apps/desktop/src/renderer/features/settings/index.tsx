@@ -7,7 +7,9 @@ import { useTranslation } from "react-i18next";
 
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
+import { useCapabilities } from "#renderer/lib/capabilities";
 import type { SettingsPageId } from "#renderer/lib/navigation/areas";
+import { settingsPageAvailable } from "#renderer/lib/navigation/available";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Input } from "#renderer/ui/input";
 
@@ -41,6 +43,7 @@ const GROUPS: Array<{ label: string; pages: SettingsPage[] }> = [
 
 export const SettingsSidebar = () => {
   const { t } = useTranslation();
+  const capabilities = useCapabilities();
   const matchRoute = useMatchRoute();
   const [q, setQ] = useState("");
   const c = useCollections();
@@ -118,26 +121,33 @@ export const SettingsSidebar = () => {
           )}
         </NavList.Rows>
       ) : (
-        GROUPS.map((group) => (
-          <NavList.Group
-            key={group.label}
-            label={group.pages.length > 1 ? t(group.label) : ""}
-          >
-            {group.pages.map((page) => (
-              <NavList.Item
-                key={page}
-                to={`/settings/${page}`}
-                active={
-                  matchRoute({
-                    to: `/settings/${page}`,
-                    fuzzy: true,
-                  } as never) !== false
-                }
-                title={t(`settings.pages.${page}`)}
-              />
-            ))}
-          </NavList.Group>
-        ))
+        GROUPS.map((group) => ({
+          ...group,
+          pages: group.pages.filter((page) =>
+            settingsPageAvailable(page, capabilities)
+          ),
+        }))
+          .filter((group) => group.pages.length > 0)
+          .map((group) => (
+            <NavList.Group
+              key={group.label}
+              label={group.pages.length > 1 ? t(group.label) : ""}
+            >
+              {group.pages.map((page) => (
+                <NavList.Item
+                  key={page}
+                  to={`/settings/${page}`}
+                  active={
+                    matchRoute({
+                      to: `/settings/${page}`,
+                      fuzzy: true,
+                    } as never) !== false
+                  }
+                  title={t(`settings.pages.${page}`)}
+                />
+              ))}
+            </NavList.Group>
+          ))
       )}
       <NavList.Group label="">
         <NavList.Item

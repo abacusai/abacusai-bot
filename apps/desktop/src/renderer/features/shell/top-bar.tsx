@@ -117,6 +117,7 @@ const Leading = ({
         <ArrowLeft />
       </BarButton>
       <BarButton
+        data-history="forward"
         label={t("shell.topBar.forward")}
         disabled={!canGoForward}
         onClick={() => router.history.forward()}

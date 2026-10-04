@@ -1,9 +1,3 @@
-/**
- * Everything `__root` mounts around the routes (spec 01 §6.1): collections,
- * hotkeys with the platform from `system.info`, tooltips, the registry
- * Toaster, the icon sprite, the theme/chrome/readiness/invalidation effects,
- * the occlusion watcher, the app's shortcut handler and the command menu.
- */
 import { useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 
@@ -18,6 +12,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { toHotkeyPlatform } from "#renderer/lib/platform";
 import { ThemeEffect } from "#renderer/lib/theme-effect";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { isWebApp } from "#renderer/lib/web-app";
 import {
   ChromeEffect,
   useChromeState,
@@ -40,6 +35,13 @@ import {
 import { usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
 import { useSidebarToggle } from "./use-sidebar-toggle";
+/**
+ * Everything `__root` mounts around the routes (spec 01 §6.1): collections,
+ * hotkeys with the platform from `system.info`, tooltips, the registry
+ * Toaster, the icon sprite, the theme/chrome/readiness/invalidation effects,
+ * the occlusion watcher, the app's shortcut handler and the command menu.
+ */
+import { WebServerEvents } from "./web-server-events";
 
 const InvalidationBridge = ({ transport }: { transport: Transport }): null => {
   useInvalidationBridge(transport);
@@ -149,6 +151,7 @@ export const AppRoot = ({
             />
             <InvalidationBridge transport={transport} />
             <NotificationClicks transport={transport} />
+            {isWebApp && <WebServerEvents transport={transport} />}
             <OcclusionEffect />
             <InertHiddenEffect />
             <ShortcutHandler />

@@ -9,12 +9,17 @@ import { useTranslation } from "react-i18next";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { useCapabilities } from "#renderer/lib/capabilities";
 import type { NavType } from "#renderer/lib/motion";
 import {
   AREA_HOME,
   RAIL_AREAS,
   SETTINGS_PAGES,
 } from "#renderer/lib/navigation/areas";
+import {
+  railAreaAvailable,
+  settingsPageAvailable,
+} from "#renderer/lib/navigation/available";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import {
   Command,
@@ -50,6 +55,7 @@ export const CommandMenu = () => {
 
 const CommandMenuBody = () => {
   const { t } = useTranslation();
+  const capabilities = useCapabilities();
   const collections = useCollections();
   const prefs = usePrefs();
   const updatePrefs = useUpdatePrefs();
@@ -68,14 +74,18 @@ const CommandMenuBody = () => {
       <CommandList>
         <CommandEmpty>{t("shell.command.empty")}</CommandEmpty>
         <CommandGroup heading={t("shell.command.groups.areas")}>
-          {RAIL_AREAS.map((area) => (
+          {RAIL_AREAS.filter((area) =>
+            railAreaAvailable(area, capabilities)
+          ).map((area) => (
             <CommandItem key={area} onSelect={() => go(AREA_HOME[area])}>
               {t(`shell.rail.${area}`)}
             </CommandItem>
           ))}
         </CommandGroup>
         <CommandGroup heading={t("shell.command.groups.settings")}>
-          {SETTINGS_PAGES.map((page) => (
+          {SETTINGS_PAGES.filter((page) =>
+            settingsPageAvailable(page, capabilities)
+          ).map((page) => (
             <CommandItem
               key={page}
               onSelect={() => go(`/settings/${page}`, "settings-in")}

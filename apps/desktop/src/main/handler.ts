@@ -27,6 +27,7 @@ import {
 } from "./profile-home";
 import { emitBusChannel, emitHostEvent } from "./rpc/emit";
 import { ServiceHost } from "./service-host";
+import { hostedPolicy } from "./services/config/hosted";
 import {
   addPromptToHistory,
   readPromptHistory,
@@ -256,6 +257,9 @@ export const createHostOperations = (
   ): Promise<AbacusAccountInfo | null> => {
     const account = await fetchAbacusAccount(refresh === true);
     if (account != null || !abacusCredentialRejected()) return account;
+    // Hosted, the key belongs to the web session, not to this app: the
+    // gateway replaces a revoked one; there is no stored key to clear.
+    if (hostedPolicy() != null) return null;
 
     const stored = readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? "";
     if (stored.trim().length === 0) return null;

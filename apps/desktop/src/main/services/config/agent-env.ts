@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { agentVendorDir } from "#main/resources";
+import { hostedPolicy } from "#main/services/config/hosted";
 import { excludedBuiltinTools, isToolsetEnabled } from "#shared/toolsets";
 
 import { memorySnapshot } from "../agent-tools/memory-store";
@@ -51,7 +52,10 @@ export function buildAgentConfigEnv(
   // Toolsets the user switched off in Capabilities. Resolved here because
   // this process owns both the registry and the settings file.
   const preferences = readToolsetPreferences();
-  const excluded = excludedBuiltinTools(preferences);
+  const excluded = [
+    ...excludedBuiltinTools(preferences),
+    ...(hostedPolicy()?.excludedTools ?? []),
+  ];
   if (excluded.length > 0) {
     envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");
   }
@@ -77,7 +81,7 @@ export function buildAgentConfigEnv(
   // Where `bash` runs. Resolved rather than passed through so a stored choice
   // whose backend became unusable falls back to local.
   const backend = resolveBackend(readExecBackend());
-  if (backend !== "local") {
+  if (backend !== "local" && hostedPolicy() == null) {
     envVars.ABACUSAI_BOT_EXEC_BACKEND = backend;
     const image = readDockerImage();
     if (backend === "docker" && image != null) {

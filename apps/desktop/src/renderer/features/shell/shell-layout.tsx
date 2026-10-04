@@ -225,7 +225,8 @@ export const ShellLayout = ({
         <div className="relative flex min-h-0 min-w-0">
           <Rail
             area={area}
-            floatingEnabled={floatingEnabled}
+            // A tap is not a hover: on a phone the rail never opens it.
+            floatingEnabled={floatingEnabled && band !== "xs"}
             initials={initials}
           />
           <PaneBoundary resetKey={area}>

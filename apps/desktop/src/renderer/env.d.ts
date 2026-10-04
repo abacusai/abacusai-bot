@@ -32,6 +32,8 @@ declare global {
      * while main's `db.*` answers UNAVAILABLE (spec 00 sub-slice B pending).
      */
     readonly VITE_NEXT_DB_FIXTURES?: string;
+    /** "1" in the hosted web app's build (vite.web.config.ts). */
+    readonly VITE_WEB_APP?: string;
   }
 }
 

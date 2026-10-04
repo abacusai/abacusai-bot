@@ -14,8 +14,10 @@ import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
 import { resolveLook } from "#renderer/lib/bots/avatar";
+import { useCapabilities } from "#renderer/lib/capabilities";
 import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+import { connectorKindAvailable } from "#renderer/lib/navigation/available";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
@@ -147,6 +149,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     ...transport.orpc.settings.keys.listProviders.queryOptions({ input: {} }),
     enabled: step === "models",
   });
+  const capabilities = useCapabilities();
   const statuses = useQuery({
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
     enabled: step === "connectors",
@@ -457,6 +460,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               (c) => c.onboarding || (more && c.kind === "platform")
             )
               .filter((c) => statuses.data?.[c.id]?.reason !== "not-offered")
+              .filter((c) => connectorKindAvailable(c.kind, capabilities))
               .map((c) => (
                 <div
                   key={c.id}

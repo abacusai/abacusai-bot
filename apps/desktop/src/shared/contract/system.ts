@@ -5,6 +5,7 @@ import type { OpenFilePathResult } from "../contracts";
 import { FUNNEL_STEPS } from "../funnel";
 import { mutation, query, subscription } from "./base";
 import { NoInput } from "./ids";
+import type { WebRunnerState } from "./web-runner";
 
 /** What the renderer used to read synchronously from the preload. */
 export interface SystemInfo {
@@ -28,10 +29,44 @@ export interface NotificationMetadata {
   sessionId?: string;
 }
 
-export type SystemEvent = {
-  type: "notification-clicked";
-  metadata: NotificationMetadata;
-};
+/**
+ * What this app can do where it runs. The desktop can do everything; the
+ * hosted web app runs on servers and leaves out what needs the user's own
+ * machine. Screens hide what is off; the server refuses it regardless.
+ */
+export const CAPABILITIES = [
+  "sessions",
+  "routines",
+  "messaging",
+  "files",
+  "terminal",
+  "browser",
+  "devices",
+  "voice",
+  "localModels",
+  "customMcp",
+  "skillsInstall",
+  "providerKeys",
+  "signIn",
+  "update",
+  "notch",
+] as const;
+
+export type Capability = (typeof CAPABILITIES)[number];
+
+export type Capabilities = Record<Capability, boolean>;
+
+export const ALL_CAPABILITIES: Capabilities = Object.fromEntries(
+  CAPABILITIES.map((capability) => [capability, true])
+) as Capabilities;
+
+export type SystemEvent =
+  | { type: "notification-clicked"; metadata: NotificationMetadata }
+  /** The hosted web app: main asks the tab to open a page (a connect hop). */
+  | { type: "open-url"; url: string }
+  | { type: "capabilities-changed"; capabilities: Capabilities }
+  /** "Use from the web" connected, dropped or was switched (desktop). */
+  | { type: "web-runner"; state: WebRunnerState };
 
 export interface PickedFile {
   path: string;
@@ -127,6 +162,7 @@ export const system = {
       })
     )
     .output(type<void>()),
+  capabilities: query.input(NoInput).output(type<Capabilities>()),
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<SystemEvent>())),

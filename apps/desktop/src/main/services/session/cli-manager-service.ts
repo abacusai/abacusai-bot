@@ -29,6 +29,7 @@ import type {
 } from "#shared/contracts";
 import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 
+import { hostedPolicy } from "../config/hosted";
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";
 import type { ResolvedAgentArtifact } from "./artifact-resolver-service";
@@ -638,7 +639,10 @@ export class AgentManagerService {
     const spawnArgs: string[] = [...artifact.execArgs];
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
-    if (request.mode != null) spawnArgs.push("--permission-mode", request.mode);
+    // Hosted, every agent asks before it changes anything: it acts on the
+    // user's accounts from our machines, with nobody's own judgment set.
+    const mode = hostedPolicy() != null ? AgentMode.Normal : request.mode;
+    if (mode != null) spawnArgs.push("--permission-mode", mode);
     const wire: AgentWire = "agui";
     {
       spawnArgs.push(

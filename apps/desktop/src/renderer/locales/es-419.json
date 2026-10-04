@@ -3870,5 +3870,25 @@
   },
   "visualizer": {
     "loading": "Cargando visualización…"
+  },
+  "web": {
+    "openUrl": {
+      "title": "Continúa en una pestaña nueva",
+      "action": "Abrir"
+    },
+    "coding": {
+      "title": "La programación se ejecuta en tu computadora",
+      "body": "Las sesiones, terminales y archivos usan tu propia computadora. Abre AbacusAI Bot en ella, activa “Usar desde la web” en Configuración y programa desde aquí.",
+      "bodyAttached": "Tu computadora está conectada. Las sesiones, terminales y archivos se ejecutan ahí.",
+      "open": "Abrir programación",
+      "download": "Descargar la app de escritorio"
+    },
+    "runner": {
+      "title": "Usar desde la web",
+      "description": "Permite que la app web de AbacusAI Bot ejecute sesiones de programación en esta computadora mientras esta app esté abierta. Solo tu cuenta puede usarla.",
+      "connected": "Conectada a la app web",
+      "connecting": "Conectando…",
+      "off": "Desactivado"
+    }
   }
 }

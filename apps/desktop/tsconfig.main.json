@@ -10,5 +10,11 @@
     "composite": true,
     "tsBuildInfoFile": "../../node_modules/.tmp/desktop.main.tsbuildinfo"
   },
-  "include": ["src/main", "src/shared", "src/agent-host", "src/preload/*.d.ts"]
+  "include": [
+    "src/main",
+    "src/shared",
+    "src/agent-host",
+    "src/web-host",
+    "src/preload/*.d.ts"
+  ]
 }

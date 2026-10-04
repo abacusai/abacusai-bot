@@ -24,6 +24,7 @@ import { SoundPreview } from "#renderer/components/sound-preview";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { resolveLook } from "#renderer/lib/bots/avatar";
+import { useCapability } from "#renderer/lib/capabilities";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
 import type { Cue } from "#renderer/lib/sound";
@@ -41,6 +42,7 @@ import { AgentMode } from "#shared/agent-types";
 import { SUPPORTED_LANGUAGES, type PrefsRow } from "#shared/contract/rows";
 
 import { CompanionSettings } from "./companion";
+import { WebRunnerSettings } from "./web-runner";
 const modes = [
   "AUTO",
   "DEFAULT",
@@ -68,108 +70,118 @@ export const GeneralPage = () => {
     transport.orpc.settings.defaultMode.get.queryOptions({ input: {} })
   );
   const fail = () => showError(t("phase5.saveFailed"));
+  const coding = useCapability("terminal");
   return (
     <AreaPage title={t("settings.pages.general")}>
       <CompanionSettings />
-      <GroupCard>
-        {info.data?.platform !== "linux" && (
-          <SettingRow
-            id="launchAtLogin"
-            title={t("phase5.settings.launchAtLogin")}
-            detail={t("phase5.settings.launchDetail")}
-          >
-            <SettingSwitch
-              id="launchAtLogin"
-              checked={login.data?.openAtLogin ?? false}
-              disabled={!login.data}
-              onCheckedChange={(value) => {
-                const key = transport.orpc.system.loginItem.get.queryKey({
-                  input: {},
-                });
-                const previous = login.data;
-                cache.setQueryData(key, { openAtLogin: value });
-                void transport.client.system.loginItem
-                  .set({ openAtLogin: value })
-                  .then((result) => cache.setQueryData(key, result))
-                  .catch(() => {
-                    cache.setQueryData(key, previous);
-                    fail();
-                  });
-              }}
-            />
-          </SettingRow>
-        )}
-        <SettingRow
-          id="defaultWorkspace"
-          title={t("phase5.settings.defaultWorkspace")}
-          detail={t("phase5.settings.workspaceDetail")}
-        >
-          <Choice
-            id="defaultWorkspace"
-            value={prefs.lastPickedWorkspaceId ?? ""}
-            options={[
-              { value: "", label: t("phase5.defaultWorkspace") },
-              ...workspaces
-                .filter((w) => w.kind == null || w.kind === "auto")
-                .map((w) => ({ value: w.id, label: w.label })),
-            ]}
-            onChange={(id) =>
-              void update({ lastPickedWorkspaceId: id || null }).catch(fail)
-            }
-          />
-        </SettingRow>
-        <SettingRow id="defaultMode" title={t("phase5.settings.defaultMode")}>
-          <Choice
-            id="defaultMode"
-            value={prefs.defaultMode}
-            options={modes
-              .filter((m) => m !== "AUTO" || sandbox.data?.available)
-              .map((m) => ({ value: m, label: t(`chat.mode.${m}`) }))}
-            onChange={(mode) =>
-              void update({
-                defaultMode: mode as PrefsRow["defaultMode"],
-              }).catch(fail)
-            }
-          />
-        </SettingRow>
-        {sandbox.data?.available && (
-          <SettingRow id="botMode" title={t("phase5.settings.botMode")}>
-            <Choice
-              id="botMode"
-              value={botMode.data ?? "YOLO"}
-              options={[
-                { value: "YOLO", label: t("phase5.fullAccess") },
-                { value: "AUTO", label: t("phase5.auto") },
-              ]}
-              onChange={(mode) =>
-                void transport.client.settings.defaultMode
-                  .set({ mode: mode as AgentMode.Auto | AgentMode.Yolo })
-                  .then((value) =>
-                    cache.setQueryData(
-                      transport.orpc.settings.defaultMode.get.queryKey({
-                        input: {},
-                      }),
-                      value
-                    )
-                  )
-                  .catch(fail)
-              }
-            />
-          </SettingRow>
-        )}
-      </GroupCard>
-      <GroupCard title={t("phase5.settings.modes")}>
-        {modes.map((m) => (
-          <SettingRow
-            key={m}
-            id={`mode-${m}`}
-            title={t(`chat.mode.${m}`)}
-            detail={t(`phase5.modeDescriptions.${m}`)}
-          >
-            {m === "YOLO" && <StatePill>{t("phase5.careful")}</StatePill>}
-          </SettingRow>
-        ))}
-      </GroupCard>
+      <WebRunnerSettings />
+      {/* Where sessions run and what they may do: the coding machine's settings. */}
+      {coding && (
+        <>
+          <GroupCard>
+            {info.data?.platform !== "linux" && (
+              <SettingRow
+                id="launchAtLogin"
+                title={t("phase5.settings.launchAtLogin")}
+                detail={t("phase5.settings.launchDetail")}
+              >
+                <SettingSwitch
+                  id="launchAtLogin"
+                  checked={login.data?.openAtLogin ?? false}
+                  disabled={!login.data}
+                  onCheckedChange={(value) => {
+                    const key = transport.orpc.system.loginItem.get.queryKey({
+                      input: {},
+                    });
+                    const previous = login.data;
+                    cache.setQueryData(key, { openAtLogin: value });
+                    void transport.client.system.loginItem
+                      .set({ openAtLogin: value })
+                      .then((result) => cache.setQueryData(key, result))
+                      .catch(() => {
+                        cache.setQueryData(key, previous);
+                        fail();
+                      });
+                  }}
+                />
+              </SettingRow>
+            )}
+            <SettingRow
+              id="defaultWorkspace"
+              title={t("phase5.settings.defaultWorkspace")}
+              detail={t("phase5.settings.workspaceDetail")}
+            >
+              <Choice
+                id="defaultWorkspace"
+                value={prefs.lastPickedWorkspaceId ?? ""}
+                options={[
+                  { value: "", label: t("phase5.defaultWorkspace") },
+                  ...workspaces
+                    .filter((w) => w.kind == null || w.kind === "auto")
+                    .map((w) => ({ value: w.id, label: w.label })),
+                ]}
+                onChange={(id) =>
+                  void update({ lastPickedWorkspaceId: id || null }).catch(fail)
+                }
+              />
+            </SettingRow>
+            <SettingRow
+              id="defaultMode"
+              title={t("phase5.settings.defaultMode")}
+            >
+              <Choice
+                id="defaultMode"
+                value={prefs.defaultMode}
+                options={modes
+                  .filter((m) => m !== "AUTO" || sandbox.data?.available)
+                  .map((m) => ({ value: m, label: t(`chat.mode.${m}`) }))}
+                onChange={(mode) =>
+                  void update({
+                    defaultMode: mode as PrefsRow["defaultMode"],
+                  }).catch(fail)
+                }
+              />
+            </SettingRow>
+            {sandbox.data?.available && (
+              <SettingRow id="botMode" title={t("phase5.settings.botMode")}>
+                <Choice
+                  id="botMode"
+                  value={botMode.data ?? "YOLO"}
+                  options={[
+                    { value: "YOLO", label: t("phase5.fullAccess") },
+                    { value: "AUTO", label: t("phase5.auto") },
+                  ]}
+                  onChange={(mode) =>
+                    void transport.client.settings.defaultMode
+                      .set({ mode: mode as AgentMode.Auto | AgentMode.Yolo })
+                      .then((value) =>
+                        cache.setQueryData(
+                          transport.orpc.settings.defaultMode.get.queryKey({
+                            input: {},
+                          }),
+                          value
+                        )
+                      )
+                      .catch(fail)
+                  }
+                />
+              </SettingRow>
+            )}
+          </GroupCard>
+          <GroupCard title={t("phase5.settings.modes")}>
+            {modes.map((m) => (
+              <SettingRow
+                key={m}
+                id={`mode-${m}`}
+                title={t(`chat.mode.${m}`)}
+                detail={t(`phase5.modeDescriptions.${m}`)}
+              >
+                {m === "YOLO" && <StatePill>{t("phase5.careful")}</StatePill>}
+              </SettingRow>
+            ))}
+          </GroupCard>
+        </>
+      )}
     </AreaPage>
   );
 };

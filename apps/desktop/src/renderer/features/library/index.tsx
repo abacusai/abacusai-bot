@@ -4,13 +4,16 @@ import { useTranslation } from "react-i18next";
 
 import { NavList } from "#renderer/components/nav-list";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { useCapabilities } from "#renderer/lib/capabilities";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { LIBRARY_PAGES } from "#renderer/lib/navigation/areas";
+import { libraryPageAvailable } from "#renderer/lib/navigation/available";
 import { showError } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 
 export const LibrarySidebar = () => {
   const { t } = useTranslation();
+  const capabilities = useCapabilities();
   const matchRoute = useMatchRoute();
   const queue = usePrefs().onboardingPairing ?? [];
   const update = useUpdatePrefs();
@@ -53,7 +56,9 @@ export const LibrarySidebar = () => {
         </div>
       )}
       <NavList.Rows>
-        {LIBRARY_PAGES.map((page) => (
+        {LIBRARY_PAGES.filter((page) =>
+          libraryPageAvailable(page, capabilities)
+        ).map((page) => (
           <NavList.Item
             key={page}
             to={`/library/${page}`}

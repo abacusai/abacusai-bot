@@ -30,6 +30,7 @@ import {
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { isWebApp } from "#renderer/lib/web-app";
 import { isPayingAbacusTier } from "#shared/models";
 import { canSignOutOfAbacus } from "#shared/settings";
 const OnboardingRoute = () => {
@@ -200,6 +201,20 @@ const OnboardingRoute = () => {
     />
   );
 };
+/**
+ * The web app is opened signed in, and model keys are the desktop's: the
+ * sign-in steps and the models step lead on to the next one that applies.
+ */
+const webOnboardingStep = (
+  step: OnboardingStepId,
+  signedIn: boolean
+): OnboardingStepId => {
+  if (!isWebApp || !signedIn) return step;
+  if (step === "welcome" || step === "connect") return "connected";
+  if (step === "models") return "connectors";
+  return step;
+};
+
 const factsOf = async (context: import("#renderer/router").RouterContext) => {
   const [settings, account] = await Promise.all([
     context.transport.client.settings.get({}),
@@ -221,7 +236,7 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
     await context.db.collections.bots.preload();
     const facts = await factsOf(context);
     const guarded = guardStep(
-      params.step as OnboardingStepId,
+      webOnboardingStep(params.step as OnboardingStepId, facts.signedIn),
       facts,
       onboardingStore.state
     );
@@ -234,7 +249,7 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
   },
   loader: async ({ context, params, cause }) => {
     if (cause === "preload") return { facts: await factsOf(context) };
-    if (params.step === "welcome")
+    if (params.step === "welcome" && !isWebApp)
       await context.queryClient.ensureQueryData(
         context.transport.orpc.auth.abacus.browserProfiles.queryOptions({
           input: {},

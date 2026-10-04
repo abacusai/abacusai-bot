@@ -162,6 +162,7 @@ export const SessionsGlobals = ({
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),
       (event) => {
+        if (event.type !== "notification-clicked") return;
         const id = event.metadata.sessionId;
         if (!id) return;
         const row = db.collections.sessions.get(id);
