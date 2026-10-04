@@ -117,6 +117,7 @@
       ]
     },
     "@abacus-ai/web#typecheck": {
+      "dependsOn": ["^typecheck", "^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/desktop/vite.shared.ts",
