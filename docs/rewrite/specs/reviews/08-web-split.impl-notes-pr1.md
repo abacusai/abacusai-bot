@@ -347,3 +347,67 @@ and first forced check exposed stale upload fixtures and test-only gallery
 imports; those were corrected before the successful final forced run. The
 standalone web suite's successful final result is included in that forced run.
 No live Apps/server deployment or macOS/physical-notch validation is claimed.
+
+## Follow-up r3 (/files consumers)
+
+Implemented the host's Fix pass r2 renderer handoff on `rewrite/web-split` in
+this main checkout. The host worktree was read only; existing spec edits and
+other review notes were left outside these commits.
+
+- Added browser-only `hostFiles` beside the upload adapter. It encodes
+  `hostRoot`/`path` or `whisperUrl` with `URLSearchParams`, sends the connect
+  token as a Bearer header with proxy credentials, and shares upload renewal:
+  bootstrap after eight minutes and retry once after 401/403. It exposes
+  Response, Blob, ArrayBuffer and text reads; HTTP failures remain explicit.
+- The browser WebSocket transport routes all `files.readText`,
+  `files.readImageAsDataUrl` and `files.readPptx` calls through HTTP before RPC
+  encoding. This also covers TanStack query utilities: artifact thumbnails and
+  previews, session file panes, bot panels, chat images, host-file dialogs,
+  diffs, transcript files and exported snapshots. Text reads return complete
+  content unless a consumer explicitly supplies `maxBytes`; binary detection
+  and explicit truncation metadata remain. Images become MIME-correct data URLs
+  without retaining object URLs.
+- Shared the existing deck/XML parser through the contract package, with
+  browser-safe package paths and base64 encoding. The browser opens downloaded
+  PPTX bytes with JSZip and retains the existing slide/layout/master/theme and
+  embedded-media rendering. Electron retains its ZIP reader and RPC readers.
+- A shared browser call boundary catches `PAYLOAD_TOO_LARGE` and retries concrete
+  `/files` export alternatives as JSON, preserving the socket for later calls.
+  Placeholder alternatives are never fetched: as the host handoff states,
+  snapshots without an existing export still require host paging/export support.
+  Their typed error is preserved rather than pretending a placeholder is a file.
+- Whisper's fetch hook gates the browser onto `/files?whisperUrl=...` before
+  touching `voice.whisper.fetch`; Electron keeps the existing procedure. Platform
+  aliases keep browser connection services out of the Electron bundle.
+- Added eleven browser-project tests against a fake HTTP file server: large
+  text and query reads, images, deck bytes with embedded media/relationships,
+  host-file dialogs, Blob results, Whisper with RPC sends refused, stale-token
+  renewal, both auth retry statuses, repeated/non-auth failures, concrete versus
+  placeholder alternatives, and a real RPC socket that remains usable after an
+  oversized snapshot falls back to HTTP. Fixtures use generic workspace files.
+
+Validation:
+
+- Both desktop and web builds pass. `node scripts/check-web-bundle.mjs` passes,
+  including browser/Electron graph checks and desktop baseline bounds.
+- Web Vitest in the forced xvfb run: 212 suites / 1,579 tests pass, including
+  R8-T3 with no denied calls and the eleven new file-consumer tests.
+- Contract Vitest: 25 suites / 419 tests pass.
+
+The first forced check stopped at desktop build because a standalone rebuild
+was accidentally started against the same output directory while that task was
+running. Its 28 completed tasks passed; the complete forced check was then
+rerun without overlapping builds. The earlier standalone web run also caught
+the new authentication adapter's missing feature-boundary allowance, which was
+fixed with a narrowly scoped seam entry before the passing web run.
+
+Final `env -u NO_COLOR xvfb-run -a pnpm check --force`: **30/30 tasks passed,
+zero cached**, 8m4.395s. Desktop: 288 suites / 2,783 tests passed, with the
+existing 3 suite / 26 test skips. The complete run includes both builds,
+web/contract/native tests, typechecks, formatting, lint, audit, knip, locale/i18n,
+registry and cutover checks. Native reload/swap and late-port checks passed.
+
+Logs: `/tmp/r3-desktop-build.log`, `/tmp/r3-web-build.log`,
+`/tmp/r3-bundle.log`, `/tmp/r3-files-tests.log`, `/tmp/r3-contract-tests.log`
+and `/tmp/r3-check-final.log`. No push, deployment, live Apps handoff or
+physical-device validation was performed.
