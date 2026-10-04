@@ -164,8 +164,8 @@ export interface SessionOptions {
   model?: string;
   mode?: string;
   /**
-   * Whether a host is attached to answer `host_service_request`. The CLI has
-   * none, so the tools that need one are never registered: an unanswered
+   * Whether a host is attached to answer `host_service_request`. Without one,
+   * the tools that need it are never registered: an unanswered
    * request leaves nothing on the event loop and the process exits silently.
    */
   hostServices?: boolean;
@@ -183,8 +183,8 @@ interface PendingPermission {
  * the live state; the prompt catches up next session.
  */
 function memoryPrompt(hasMemoryTool: boolean): string | null {
-  // The desktop passes the snapshot it read at spawn; the CLI has no main
-  // process and reads the same store itself.
+  // The desktop passes the snapshot it read at spawn; without one the agent
+  // reads the same store itself.
   const snapshot = (
     (process.env.ABACUSAI_BOT_MEMORY_SNAPSHOT ?? "").trim() ||
     readMemorySnapshot() ||
@@ -3172,7 +3172,7 @@ export class AbacusBotSession {
 
 /**
  * What to say when there is no model at all: the key to set is the only part
- * a first-time user can act on. Plain text, since the CLI prints it too.
+ * a first-time user can act on. Plain text, so it reads the same anywhere.
  */
 const NO_MODEL_CONFIGURED =
   "No model provider is configured. Set an API key (ABACUS_API_KEY, ANTHROPIC_API_KEY, " +

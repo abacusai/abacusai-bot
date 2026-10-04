@@ -115,7 +115,8 @@ const writeEntries = (target: MemoryTarget, entries: string[]): void => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   // Temp file plus rename so a crash mid-write cannot leave a half-flushed
   // store. The temp name is unique per process and write: the desktop and
-  // CLI share these files, and a fixed name lets two writers interleave.
+  // its agent processes share these files, and a fixed name lets two writers
+  // interleave.
   const temp = `${file}.${process.pid}.${++writeCounter}.tmp`;
 
   try {
@@ -243,7 +244,7 @@ const breakAbandonedLock = (lock: string): void => {
 
 /**
  * Run `body` with exclusive access to one store, across processes: several
- * agent children and the CLI all write these files, and an unlocked
+ * agent children and the desktop all write these files, and an unlocked
  * read-modify-write loses entries silently. The lock is a file created with
  * "wx" (the one operation every filesystem agrees is atomic) carrying the
  * holder's identity. A writer that cannot take it within LOCK_WAIT_MS reports

@@ -1,5 +1,5 @@
 /**
- * `memory`: remembering something, from the CLI, which has no MCP server.
+ * `memory`: remembering something, when no MCP server provides the tool.
  * Name, targets, actions, schema and output are identical to the MCP version
  * in mcp-agent-tools-server.ts so the model meets one tool in both surfaces.
  */

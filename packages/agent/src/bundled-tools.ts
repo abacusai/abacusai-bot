@@ -12,8 +12,7 @@ import { fileURLToPath } from "node:url";
 /**
  * The package's `vendor/` directory: beside the bundle when packaged, one level
  * above dist/ in the workspace (tsdown clears dist on every build). Neither
- * existing is valid (source checkout, npm install of the CLI); callers then
- * fall back to PATH.
+ * existing is valid (a source checkout); callers then fall back to PATH.
  */
 export function bundledToolsDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));

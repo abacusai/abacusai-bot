@@ -1,5 +1,5 @@
 /**
- * The desktop half of the store the app and the CLI share.
+ * The desktop half of the store the app and the agent share.
  *
  * The shared core is covered in packages/agent/src/memory-store.test.ts. What
  * is only here is the UI's own entry points, and the reason they matter is

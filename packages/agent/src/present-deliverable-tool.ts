@@ -1,9 +1,9 @@
 /**
- * `present_deliverable`: handing the work over, from the CLI. The desktop
- * serves this over MCP; the CLI has no MCP server, and every prompt tells the
- * model to end with this tool. Name, schema, path resolution and markdown match
+ * `present_deliverable`: handing the work over when no MCP server provides it.
+ * The desktop serves this over MCP, and every prompt tells the model to end
+ * with this tool. Name, schema, path resolution and markdown match
  * mcp-agent-tools-server.ts, except the closing line names the primary item
- * rather than claiming a preview pane opened, since a terminal has none.
+ * rather than claiming a preview pane opened, since there may be none.
  */
 import fs from "fs";
 import path from "path";
