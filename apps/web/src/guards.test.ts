@@ -202,6 +202,7 @@ const featureBoundaryHits = (
         [
           "lib/activity.ts",
           "lib/browser/files.ts",
+          "lib/browser/host-files.ts",
           "lib/browser/sign-in.ts",
           "data/transport/index.ts",
         ].includes(file.path) &&

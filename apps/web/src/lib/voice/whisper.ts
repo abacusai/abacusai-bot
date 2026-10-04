@@ -1,13 +1,14 @@
 import { WHISPER_MODEL_ID } from "@abacus-ai/contract/voice";
 /**
  * Whisper in the renderer. The library and its model load on first use only:
- * the model files arrive through main (the renderer's CSP allows no other
- * host), the WebAssembly runtime is bundled beside the app, and inference
- * runs on WebGPU when the machine has it, WebAssembly otherwise.
+ * the model files arrive through the host, the WebAssembly runtime is bundled
+ * beside the app. Inference runs on WebGPU when available, WebAssembly otherwise.
  */
 import ortWasmUrl from "ort-dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 
+import { fetchHostModel } from "#platform/host-files";
 import type { Transport } from "#renderer/data/transport";
+import { IS_BROWSER } from "#renderer/lib/platform";
 
 type Transformers = typeof import("@huggingface/transformers");
 type Transcriber =
@@ -27,11 +28,14 @@ let loading: Promise<{
   device: WhisperDevice;
 }> | null = null;
 
-/** The model files, routed through main; anything else is refused. */
-const fetchThroughMain = async (
+/** Model downloads use authenticated HTTP in the browser and RPC on Electron. */
+export const fetchWhisperModel = async (
   input: string | URL,
   _init?: unknown
 ): Promise<Response> => {
+  if (IS_BROWSER) {
+    return fetchHostModel(String(input));
+  }
   const result = await transport.client.voice.whisper.fetch({
     url: String(input),
   });
@@ -55,7 +59,7 @@ const configure = (transformers: Transformers, device: WhisperDevice): void => {
   env.useCustomCache = false;
   // Main keeps the files on disk; a second cache here would double them.
   env.useWasmCache = false;
-  env.fetch = fetchThroughMain as typeof env.fetch;
+  env.fetch = fetchWhisperModel as typeof env.fetch;
   const wasm = env.backends.onnx.wasm;
   if (wasm != null) {
     // The runtime's default build carries its own loader; only the binary

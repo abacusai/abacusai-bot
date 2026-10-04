@@ -48,6 +48,7 @@ export const platformAlias = (platform: RendererPlatform) =>
       "device-tab",
       "presenter",
       "transport",
+      "host-files",
       "connect",
       "lease",
       "sign-in",
@@ -58,7 +59,7 @@ export const platformAlias = (platform: RendererPlatform) =>
       `#platform/${name}`,
       resolve(
         webRoot,
-        `src/platform/${platform === "electron" && ["system", "sign-in", "files", "attention", "lease"].includes(name) ? "adapters" : name}.${platform}.${["presenter", "transport", "lease", "sign-in", "system", "files", "attention"].includes(name) ? "ts" : "tsx"}`
+        `src/platform/${platform === "electron" && ["system", "sign-in", "files", "attention", "lease"].includes(name) ? "adapters" : name}.${platform}.${["presenter", "transport", "host-files", "lease", "sign-in", "system", "files", "attention"].includes(name) ? "ts" : "tsx"}`
       ),
     ])
   );

@@ -13,8 +13,18 @@ import { ClientRetryPlugin } from "@orpc/client/plugins";
 import { RPCLink } from "@orpc/client/websocket";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
+import { browserFileCall } from "#platform/host-files";
+
 import { createCloseSignal } from "./close-signal";
 import type { AppClient, Transport } from "./types";
+
+type CallInterceptorOptions = Parameters<
+  NonNullable<
+    import("@orpc/client/websocket").RPCLinkOptions<
+      Record<string, never>
+    >["interceptors"]
+  >[number]
+>[0];
 
 export interface WebSocketTransportOptions {
   /** For tests; the global `WebSocket` otherwise. */
@@ -45,20 +55,24 @@ export const createWebSocketTransport = (
           ],
     customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
     plugins: [new ClientRetryPlugin()],
-    interceptors: options.inspectCall
-      ? [
-          async ({ path, next }) => {
-            const procedure = path.join(".");
-            options.inspectCall?.(procedure);
-            try {
-              return await next();
-            } catch (error) {
-              options.inspectCall?.(procedure, error);
-              throw error;
-            }
-          },
-        ]
-      : [],
+    interceptors: [
+      async ({ path, input, next, signal }: CallInterceptorOptions) =>
+        browserFileCall(path, input, next, signal),
+      ...(options.inspectCall
+        ? [
+            async ({ path, next }: CallInterceptorOptions) => {
+              const procedure = path.join(".");
+              options.inspectCall?.(procedure);
+              try {
+                return await next();
+              } catch (error) {
+                options.inspectCall?.(procedure, error);
+                throw error;
+              }
+            },
+          ]
+        : []),
+    ],
   });
   const client: AppClient = createORPCClient(link);
 
