@@ -12,6 +12,9 @@ export const checkDesktopParity = (
       "utf8"
     )
   );
+  console.log(
+    "Regenerate desktop baseline: bash scripts/fixtures/regenerate-web-split-desktop-baseline.sh (conditions: scripts/fixtures/web-split-desktop-baseline.md)"
+  );
   const actual = { chunks: 0, bytes: 0, gzipBytes: 0 };
   for (const file of readdirSync(directory, { recursive: true }).filter(
     (file) => file.endsWith(".js")
