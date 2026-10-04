@@ -52,7 +52,7 @@ export const createHostHttpServer = (
       return;
     }
     if (
-      request.method === "GET" &&
+      (request.method === "GET" || request.method === "HEAD") &&
       ["/files", "/file"].includes(url.pathname)
     ) {
       try {
@@ -75,20 +75,64 @@ export const createHostHttpServer = (
               url.searchParams.get("hostRoot") ?? ""
             );
         if (file.ok === false) {
-          json(response, 404, { error: file.error });
+          json(
+            response,
+            file.error === "not-found"
+              ? 404
+              : file.error === "outside-root"
+                ? 403
+                : 409,
+            file.error === "not-found"
+              ? { error: "not-found" }
+              : {
+                  error:
+                    file.error === "outside-root" ? "forbidden" : "conflict",
+                  reason: file.error,
+                }
+          );
           return;
         }
         const handle = await open(file.realFile, "r");
         try {
           const info = await handle.stat();
-          if (!info.isFile()) throw new Error("not-a-file");
-          response.writeHead(200, {
+          if (!info.isFile()) {
+            json(response, 409, { error: "conflict", reason: "not-a-file" });
+            return;
+          }
+          const maxBytesQuery = url.searchParams.get("maxBytes");
+          const maxBytes =
+            maxBytesQuery == null ? info.size : Number(maxBytesQuery);
+          if (
+            maxBytesQuery != null &&
+            (!/^\d+$/.test(maxBytesQuery) || !Number.isSafeInteger(maxBytes))
+          ) {
+            json(response, 400, { error: "invalid-max-bytes" });
+            return;
+          }
+          // HEAD reports the same bounded representation without opening a stream.
+          const range =
+            request.method === "GET" && request.headers.range === "bytes=0-0";
+          if (range && (info.size === 0 || maxBytes === 0)) {
+            response
+              .writeHead(416, {
+                "content-range": `bytes */${info.size}`,
+                "content-length": 0,
+                "x-file-size": info.size,
+                "cache-control": "no-store",
+              })
+              .end();
+            return;
+          }
+          const length = Math.min(info.size, maxBytes, range ? 1 : info.size);
+          response.writeHead(range ? 206 : 200, {
             "content-type": "application/octet-stream",
-            "content-length": info.size,
+            "content-length": length,
+            "x-file-size": info.size,
+            ...(range ? { "content-range": `bytes 0-0/${info.size}` } : {}),
             "cache-control": "no-store",
           });
           lease.activity();
-          if (info.size === 0) response.end();
+          if (request.method === "HEAD" || length === 0) response.end();
           else {
             let bytes = 0;
             const completeBody = new Transform({
@@ -98,14 +142,14 @@ export const createHostHttpServer = (
               },
               flush(callback) {
                 callback(
-                  bytes === info.size ? null : new Error("short file read")
+                  bytes === length ? null : new Error("short file read")
                 );
               },
             });
             // A short EOF errors the pipeline and destroys the response before
             // it can end cleanly with fewer bytes than Content-Length.
             await pipeline(
-              handle.createReadStream({ end: info.size - 1, autoClose: false }),
+              handle.createReadStream({ end: length - 1, autoClose: false }),
               completeBody,
               response
             );
@@ -113,10 +157,17 @@ export const createHostHttpServer = (
         } finally {
           await handle.close();
         }
-      } catch {
-        if (!response.headersSent)
-          json(response, 400, { error: "download-failed" });
-        else response.destroy();
+      } catch (error) {
+        if (!response.headersSent) {
+          const missing = (error as NodeJS.ErrnoException)?.code === "ENOENT";
+          json(
+            response,
+            missing ? 404 : 409,
+            missing
+              ? { error: "not-found" }
+              : { error: "conflict", reason: "download-failed" }
+          );
+        } else response.destroy();
       }
       return;
     }

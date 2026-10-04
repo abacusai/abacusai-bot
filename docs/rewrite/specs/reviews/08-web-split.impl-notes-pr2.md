@@ -258,3 +258,40 @@ desktop 290 suites / 2,785 tests with 3 suites / 26 tests skipped and web
 212 suites / 1,579 tests. Logs are `/tmp/pr2-rebase-r3-{host,smoke,main,check}.log`.
 Only this results note was changed and committed locally; no push or changes to
 the main checkout or other worktrees occurred.
+
+## Handoff r4 (/files probes)
+
+Implemented the PR 1 r3 renderer handoff in `rewrite/headless-host` after reading
+its `/files` reader and browser tests in this worktree. Renderer code and fixtures
+already accept the typed bodies and prefer `X-File-Size`; neither needed changes.
+
+- `/files` and its `/file` alias return 404 `{error:"not-found"}`, containment
+  403 `{error:"forbidden",reason:"outside-root"}`, and 409
+  `{error:"conflict",reason}`. Authentication still returns 403
+  `{error:"forbidden"}` without a reason, preserving the renderer's renewal rule.
+- HEAD authenticates and resolves the same file, reports the GET representation's
+  headers, and sends no body. GET `Range: bytes=0-0` returns one byte with 206
+  and `Content-Range: bytes 0-0/<original-size>`; an empty representation returns
+  416 with `Content-Range: bytes */<original-size>`. Other ranges are ignored.
+- `maxBytes` bounds the descriptor stream on the server. `Content-Length` is the
+  transmitted length and `X-File-Size` is the original descriptor stat size.
+  Zero returns an empty body; larger limits return the complete file. Invalid
+  limits return 400 `{error:"invalid-max-bytes"}`. No limit retains full streaming.
+- The descriptor stat/stream and byte-counting transform remain together. Short
+  EOF aborts the response; regression coverage now checks full and bounded reads.
+  Tests also cover each typed status, auth distinction, HEAD, range, empty files,
+  limits, invalid limits, the alias and growth after stat.
+
+Validation (all commands in this worktree, global npm bin directory on PATH):
+
+- `pnpm --filter @abacus-ai/host test`: 10 suites / 74 tests passed.
+- `pnpm --filter @abacus-ai/web test`: both Vitest projects passed, 212 files /
+  1,597 tests, including the 29 browser host-file reader tests.
+- `pnpm smoke:rpc`: all five checks passed.
+- `env -u NO_COLOR xvfb-run -a pnpm check`: all 33 tasks passed (17 cached),
+  4m48.326s. Desktop passed 290 files / 2,785 tests, with the existing 3 file /
+  26 test skips. Native reload/swap and late-port coverage passed.
+
+Logs: `/tmp/pr2-r4-{host,web,smoke,check}.log`.
+
+Committed locally; no push, deployment or changes to another worktree.

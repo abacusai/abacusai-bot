@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { appendFileSync, truncateSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { get, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -99,40 +99,43 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     expect(download.headers.get("content-length")).toBe("10");
     expect(await download.text()).toBe("attachment");
     grow.mockRestore();
-    await writeFile(paths[0], "attachment");
-    const shrink = vi
-      .spyOn(ServerResponse.prototype, "writeHead")
-      .mockImplementation(function (this: ServerResponse, ...args: any[]) {
-        if (args[1]?.["content-length"] === 10) truncateSync(paths[0], 5);
-        return (writeHead as Function).apply(this, args);
+    for (const maxBytes of [undefined, "8"]) {
+      await writeFile(paths[0], "attachment");
+      const shrink = vi
+        .spyOn(ServerResponse.prototype, "writeHead")
+        .mockImplementation(function (this: ServerResponse, ...args: any[]) {
+          if ([10, 8].includes(args[1]?.["content-length"]))
+            truncateSync(paths[0], 5);
+          return (writeHead as Function).apply(this, args);
+        });
+      await new Promise<void>((resolve, reject) => {
+        const request = get(
+          `${base}/files?${new URLSearchParams({ hostRoot: home, path: paths[0], ...(maxBytes == null ? {} : { maxBytes }) })}`,
+          { headers },
+          (response) => {
+            response.resume();
+            response.once("end", () =>
+              reject(new Error("short response ended cleanly"))
+            );
+            response.once("error", (error: NodeJS.ErrnoException) => {
+              expect(error.code).toBe("ECONNRESET");
+              expect(response.complete).toBe(false);
+              resolve();
+            });
+          }
+        );
+        request.setTimeout(1000, () => {
+          request.destroy();
+          reject(new Error("short response did not abort promptly"));
+        });
+        request.once("error", (error: NodeJS.ErrnoException) => {
+          // The server may destroy the socket before headers reach the client.
+          if (error.code === "ECONNRESET") resolve();
+          else reject(error);
+        });
       });
-    await new Promise<void>((resolve, reject) => {
-      const request = get(
-        `${base}/files?${new URLSearchParams({ hostRoot: home, path: paths[0] })}`,
-        { headers },
-        (response) => {
-          response.resume();
-          response.once("end", () =>
-            reject(new Error("short response ended cleanly"))
-          );
-          response.once("error", (error: NodeJS.ErrnoException) => {
-            expect(error.code).toBe("ECONNRESET");
-            expect(response.complete).toBe(false);
-            resolve();
-          });
-        }
-      );
-      request.setTimeout(1000, () => {
-        request.destroy();
-        reject(new Error("short response did not abort promptly"));
-      });
-      request.once("error", (error: NodeJS.ErrnoException) => {
-        // The server may destroy the socket before headers reach the client.
-        if (error.code === "ECONNRESET") resolve();
-        else reject(error);
-      });
-    });
-    shrink.mockRestore();
+      shrink.mockRestore();
+    }
     await writeFile(join(home, "empty"), "");
     const empty = await fetch(
       `${base}/files?${new URLSearchParams({ hostRoot: home, path: "empty" })}`,
@@ -184,6 +187,103 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     ).toBe(10 * 1024 * 1024);
   } finally {
     vi.restoreAllMocks();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it("serves typed file failures, HEAD, one-byte ranges and bounded previews", async () => {
+  const home = await mkdtemp(join(tmpdir(), "host-files-"));
+  const lease = new HostLease();
+  const identity = {
+    owner: "o",
+    org: "g",
+    secret: "secret",
+    origins: new Set(["https://apps.abacus.ai"]),
+  };
+  const payload = Buffer.from(
+    JSON.stringify({ o: "o", g: "g", e: Math.floor(Date.now() / 1000) + 600 })
+  ).toString("base64url");
+  const headers = {
+    Origin: "https://apps.abacus.ai",
+    "x-abacus-user-id": "o",
+    Authorization: `Bearer ${payload}.${createHmac("sha256", identity.secret).update(payload).digest("hex")}`,
+  };
+  const server = createHostHttpServer(
+    identity,
+    createNodeAppOperations(lease, {} as never),
+    lease
+  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const url = (path: string, maxBytes?: string, route = "/files") =>
+    `${base}${route}?${new URLSearchParams({ hostRoot: home, path, ...(maxBytes == null ? {} : { maxBytes }) })}`;
+  try {
+    await writeFile(join(home, "file.txt"), "attachment");
+    await writeFile(join(home, "empty"), "");
+    await symlink(tmpdir(), join(home, "escape"));
+    const auth = await fetch(url("file.txt"));
+    expect(auth.status).toBe(403);
+    expect(await auth.json()).toEqual({ error: "forbidden" });
+    for (const [path, status, body] of [
+      ["missing", 404, { error: "not-found" }],
+      ["escape", 403, { error: "forbidden", reason: "outside-root" }],
+      [".", 409, { error: "conflict", reason: "not-a-file" }],
+    ] as const) {
+      const result = await fetch(url(path), { headers });
+      expect(result.status).toBe(status);
+      expect(await result.json()).toEqual(body);
+      const head = await fetch(url(path), { headers, method: "HEAD" });
+      expect(head.status).toBe(status);
+      expect(await head.text()).toBe("");
+    }
+    for (const [maxBytes, expected] of [
+      [undefined, "attachment"],
+      ["1", "a"],
+      ["4", "atta"],
+      ["0", ""],
+      ["100", "attachment"],
+    ] as const) {
+      const result = await fetch(url("file.txt", maxBytes), { headers });
+      expect(result.status).toBe(200);
+      expect(result.headers.get("content-length")).toBe(
+        String(expected.length)
+      );
+      expect(result.headers.get("x-file-size")).toBe("10");
+      expect(await result.text()).toBe(expected);
+      const head = await fetch(url("file.txt", maxBytes), {
+        headers,
+        method: "HEAD",
+      });
+      expect(head.status).toBe(200);
+      expect(head.headers.get("content-length")).toBe(String(expected.length));
+      expect(head.headers.get("x-file-size")).toBe("10");
+      expect(await head.text()).toBe("");
+    }
+    for (const maxBytes of [undefined, "1", "4"]) {
+      const result = await fetch(url("file.txt", maxBytes), {
+        headers: { ...headers, Range: "bytes=0-0" },
+      });
+      expect(result.status).toBe(206);
+      expect(result.headers.get("content-range")).toBe("bytes 0-0/10");
+      expect(result.headers.get("content-length")).toBe("1");
+      expect(result.headers.get("x-file-size")).toBe("10");
+      expect(await result.text()).toBe("a");
+    }
+    const emptyRange = await fetch(url("empty"), {
+      headers: { ...headers, Range: "bytes=0-0" },
+    });
+    expect(emptyRange.status).toBe(416);
+    expect(emptyRange.headers.get("content-range")).toBe("bytes */0");
+    expect(await emptyRange.text()).toBe("");
+    const alias = await fetch(url("file.txt", "1", "/file"), { headers });
+    expect(await alias.text()).toBe("a");
+    for (const invalid of ["-1", "1.5", "", "Infinity", "9007199254740992"]) {
+      const result = await fetch(url("file.txt", invalid), { headers });
+      expect(result.status).toBe(400);
+      expect(await result.json()).toEqual({ error: "invalid-max-bytes" });
+    }
+  } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(home, { recursive: true, force: true });
   }
