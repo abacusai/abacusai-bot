@@ -3,12 +3,13 @@ import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
 import {
   alias,
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
 } from "../desktop/vite.shared";
-import { browserBoundaryPlugin, platformAlias } from "./vite.renderer";
+import { browserBoundaryPlugin, platformAlias, webRoot } from "./vite.renderer";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,
@@ -27,7 +28,18 @@ export default defineConfig({
     projects: ["electron", "browser"].map((platform) => ({
       define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
       plugins: [
-        ...(platform === "browser" ? [browserBoundaryPlugin()] : []),
+        ...(platform === "browser"
+          ? [
+              browserBoundaryPlugin(),
+              // Match the shipped browser graph: the internal UI gallery is pruned.
+              releaseBuildPlugin(
+                webRoot,
+                true,
+                { gallery: false, fixtures: false },
+                "browser"
+              ),
+            ]
+          : []),
         react({
           include: RENDERER_MODULES,
           exclude: RENDERER_REGISTRY_SRC,

@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 
 import type { AppClient } from "#renderer/data/transport/types";
+import serverFixtures from "#renderer/features/shell/connect/fixtures/bootstrap-server.json";
 import { resolveBrowserHost } from "#renderer/features/shell/connect/services";
 import { initI18n } from "#renderer/lib/i18n";
 
@@ -90,7 +91,9 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
       Response.json({
         success: true,
         result: {
-          status: "ready",
+          ...serverFixtures.find(
+            (fixture) => fixture.result.status === "ready"
+          )!.result,
           previewHost: "pod.preview.apps.abacus.ai",
           token,
         },
@@ -112,7 +115,9 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
       Response.json({
         success: true,
         result: {
-          status: "ready",
+          ...serverFixtures.find(
+            (fixture) => fixture.result.status === "ready"
+          )!.result,
           previewHost: "pod.preview.apps.abacus.ai",
           token: "fresh.token",
         },
@@ -123,7 +128,9 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
       Response.json({
         success: true,
         result: {
-          status: "ready",
+          ...serverFixtures.find(
+            (fixture) => fixture.result.status === "ready"
+          )!.result,
           previewHost: "pod.preview.apps.abacus.ai",
           token: "retry.token",
         },
