@@ -842,6 +842,7 @@ export class ServiceHost {
       }),
   });
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
+    platform: () => this.platform,
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
     chromeBrowser: this.chromeBrowser,
@@ -1063,7 +1064,9 @@ export class ServiceHost {
       this.conversationKeyForSession(sessionId),
   });
   private readonly workspaceService = new WorkspaceService();
-  private readonly browserProfilesService = new BrowserProfilesService();
+  private readonly browserProfilesService = new BrowserProfilesService(
+    () => this.platform
+  );
   private readonly artifactResolverService = new ArtifactResolverService(
     () => this.platform === "web-host"
   );
@@ -3369,6 +3372,7 @@ export class ServiceHost {
   }
 
   getDeviceStatus(): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const toolchain = this.deviceService.getToolchain();
     return {
       available: toolchain.ios || toolchain.android,
@@ -3383,6 +3387,7 @@ export class ServiceHost {
   }
 
   async listLocalDevices(): Promise<LocalDeviceInfo[]> {
+    assertHostCapability(this.platform, "devices");
     try {
       return await this.deviceService.listDevices();
     } catch (err) {
@@ -3394,6 +3399,7 @@ export class ServiceHost {
   async captureDeviceScreenshot(
     request: CaptureDeviceScreenshotRequest
   ): Promise<CaptureDeviceScreenshotResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const buffer = await this.deviceService.screenshotBuffer(
         request.platform,
@@ -3408,6 +3414,7 @@ export class ServiceHost {
   async bootLocalDevice(
     request: BootLocalDeviceRequest
   ): Promise<BootLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const device = await this.deviceService.boot(
         request.platform,
@@ -3427,6 +3434,7 @@ export class ServiceHost {
 
   /** The user may have just installed Xcode or Android Studio. */
   refreshDeviceStatus(): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     this.deviceService.refreshToolchain();
     const status = this.getDeviceStatus();
     this.emitEvent({
@@ -3440,6 +3448,7 @@ export class ServiceHost {
   async createLocalDevice(
     request: CreateLocalDeviceRequest
   ): Promise<CreateLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const device = await this.deviceService.createDevice(request.platform);
       return { success: true, device };
@@ -3504,6 +3513,7 @@ export class ServiceHost {
   }
 
   setDevicesEnabled(enabled: boolean): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const state = this.mcpConfigService.readState();
     state.builtinDevicesDisabled = !enabled;
     this.mcpConfigService.writeState(state);
@@ -3522,6 +3532,7 @@ export class ServiceHost {
   }
 
   setDevicesApproval(approval: BrowserApproval): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const state = this.mcpConfigService.readState();
     state.builtinDevicesApproval = approval;
     this.mcpConfigService.writeState(state);
@@ -3537,6 +3548,7 @@ export class ServiceHost {
   }
 
   getDeviceProjectInfo(): DeviceProjectInfo {
+    assertHostCapability(this.platform, "devices");
     const workspace = this.workspaceService.getActiveWorkspace();
     if (workspace?.path == null || workspace.isRemote === true) {
       return { ios: false, android: false, framework: null };
@@ -3552,6 +3564,7 @@ export class ServiceHost {
   async interactLocalDevice(
     request: InteractLocalDeviceRequest
   ): Promise<InteractLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const message = await this.deviceService.interact(request.platform, {
         action: request.action,
@@ -3575,6 +3588,7 @@ export class ServiceHost {
   buildAndRunLocalDevice(
     request: BuildAndRunLocalDeviceRequest
   ): Promise<BuildAndRunLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     return this.deviceMirrorService.buildAndRunLocalDevice(request);
   }
 
@@ -3583,10 +3597,12 @@ export class ServiceHost {
     sender: Electron.WebContents,
     opts?: { keepStreamId?: number | null; isRestart?: boolean }
   ): Promise<StartDeviceStreamResult> {
+    assertHostCapability(this.platform, "devices");
     return this.deviceMirrorService.startDeviceStream(request, sender, opts);
   }
 
   stopDeviceStream(streamId?: number): void {
+    assertHostCapability(this.platform, "devices");
     assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.stopDeviceStream(streamId);
   }
@@ -3598,22 +3614,27 @@ export class ServiceHost {
   }
 
   openScreenRecordingSettings(): Promise<void> {
+    assertHostCapability(this.platform, "system.openPrivacyPane");
     return openScreenRecordingSettings();
   }
 
   openAccessibilitySettings(): Promise<void> {
+    assertHostCapability(this.platform, "system.openPrivacyPane");
     return openAccessibilitySettings();
   }
 
   streamDeviceTouch(request: StreamDeviceTouchRequest): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.streamDeviceTouch(request);
   }
 
   streamDeviceKey(request: StreamDeviceKeyRequest): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.streamDeviceKey(request);
   }
 
   async installMaestro(): Promise<InstallMaestroResult> {
+    assertHostCapability(this.platform, "devices");
     const result = await this.deviceService.installMaestro();
     const status = this.getDeviceStatus();
     this.emitEvent({

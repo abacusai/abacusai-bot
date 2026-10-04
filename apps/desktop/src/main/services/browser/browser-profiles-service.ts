@@ -10,6 +10,11 @@ import { promisify } from "node:util";
 
 import { app, session } from "electron";
 
+import {
+  assertHostCapability,
+  type HostPlatform,
+} from "../../platform/capabilities";
+
 const execFileAsync = promisify(execFile);
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -987,7 +992,9 @@ function toPartitionName(profileId: string): string {
 export class BrowserProfilesService {
   private cachedProfiles: BrowserProfileInfo[] | null = null;
 
-  constructor() {
+  constructor(
+    private readonly platform: () => HostPlatform = () => "electron"
+  ) {
     // Stale temp dirs and partitions from earlier sessions; does not block.
     this.cleanupStaleData();
   }
@@ -1009,6 +1016,7 @@ export class BrowserProfilesService {
   }
 
   listProfiles(): BrowserProfileInfo[] {
+    assertHostCapability(this.platform(), "browser.profiles");
     if (this.cachedProfiles != null) return this.cachedProfiles;
 
     this.cachedProfiles = discoverBrowserProfiles();
@@ -1016,11 +1024,13 @@ export class BrowserProfilesService {
   }
 
   refreshProfiles(): BrowserProfileInfo[] {
+    assertHostCapability(this.platform(), "browser.profiles");
     this.cachedProfiles = null;
     return this.listProfiles();
   }
 
   async importProfile(profileId: string): Promise<ImportProfileResult> {
+    assertHostCapability(this.platform(), "browser.profiles");
     const profiles = this.listProfiles();
     const profile = profiles.find((p) => p.id === profileId);
     if (profile == null) {
@@ -1148,6 +1158,7 @@ export class BrowserProfilesService {
   async clearImportedProfile(
     profileId: string
   ): Promise<{ success: boolean; error?: string }> {
+    assertHostCapability(this.platform(), "browser.profiles");
     const partitionName = toPartitionName(profileId);
 
     try {

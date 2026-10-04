@@ -1,3 +1,59 @@
+import type {
+  AbacusAccountInfo,
+  UsageSnapshot,
+} from "@abacus-ai/contract/contracts";
+
+import { abacusBotHome } from "../paths";
+import { agentEntry, resourcesRoot } from "../resources";
+import {
+  buildLogDump,
+  collectEnvironmentInfo,
+  type LogDumpInput,
+} from "../services/diagnostics/log-dump";
+import { buildZip, type ZipFile } from "../services/diagnostics/zip-write";
+import { fetchAbacusAccount } from "../services/providers/abacus";
+import { getLocalUsageSnapshot } from "../services/providers/usage";
+import { ArtifactResolverService } from "../services/session/artifact-resolver-service";
+const resolveArtifactError = (): string | null => {
+  try {
+    new ArtifactResolverService(
+      process.env.ABACUSAI_BOT_HOST_MODE === "1"
+    ).resolveBundledCliPath();
+
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+};
+
+/** For the dump. A corrupt session log costs that section, not the file. */
+const collectUsageForDump = async (): Promise<{
+  usage: UsageSnapshot | null;
+  usageError: string | null;
+}> => {
+  try {
+    return { usage: await getLocalUsageSnapshot(), usageError: null };
+  } catch (error) {
+    return {
+      usage: null,
+      usageError: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+/**
+ * Plan and credits for the dump. Never a throw and never a refresh: a dump is
+ * asked for when something is already wrong, and a network round trip is not
+ * worth failing it over.
+ */
+const collectAccountForDump = async (): Promise<AbacusAccountInfo | null> => {
+  try {
+    return await fetchAbacusAccount();
+  } catch {
+    return null;
+  }
+};
+
 import { mkdirSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -7,7 +63,7 @@ import { parsePptx } from "@abacus-ai/contract/pptx/parser";
 import { resolvePastedFilePath } from "../pasted-temp-files";
 import { WORKSPACE_DIR_NAME } from "../paths";
 import type { AppOperations } from "../rpc/deps";
-import { logStore } from "../services/diagnostics/log-store";
+import { logStore, RETENTION_DAYS } from "../services/diagnostics/log-store";
 import { ZipArchive } from "../services/pptx/zip";
 import { openHostFile } from "../services/workspace/host-path";
 const IMAGE_MIME: Record<string, string> = {
@@ -191,4 +247,58 @@ export const nodeFileOperations: Pick<
       };
     }
   },
+};
+
+export const importPickedSkills = (
+  service: Pick<
+    import("../services/workspace/skills-service").SkillsService,
+    "importFromPaths"
+  >,
+  paths: string[],
+  kind: "file" | "folder"
+) =>
+  paths.length === 0
+    ? Promise.resolve({ success: false, cancelled: true })
+    : service.importFromPaths({ paths, kind });
+
+export const saveLogArchive = async (
+  filePath: string,
+  rendererLogs: string,
+  facts: Pick<LogDumpInput, "appVersion" | "isPackaged" | "sessions">
+): ReturnType<AppOperations["saveLogs"]> => {
+  try {
+    const summary = buildLogDump({
+      ...facts,
+      homeDir: abacusBotHome(),
+      rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
+      environment: collectEnvironmentInfo({
+        resourcesPath: resourcesRoot(),
+        agentEntry: agentEntry(),
+        artifactError: resolveArtifactError(),
+      }),
+      retainedDays: RETENTION_DAYS,
+      account: await collectAccountForDump(),
+      ...(await collectUsageForDump()),
+    });
+    const files: ZipFile[] = [
+      { name: "summary.txt", content: Buffer.from(summary, "utf8") },
+    ];
+    for (const file of logStore().files()) {
+      try {
+        files.push({
+          name: `logs/${file.name}`,
+          content: await fs.readFile(file.path),
+        });
+      } catch {
+        /* Retained files can be removed during collection. */
+      }
+    }
+    await fs.writeFile(filePath, buildZip(files));
+    return { success: true, filePath };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 };

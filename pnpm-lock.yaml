@@ -409,6 +409,82 @@ importers:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
 
+  apps/host:
+    dependencies:
+      '@abacus-ai/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@abacus-ai/connectors':
+        specifier: workspace:*
+        version: link:../../packages/connectors
+      '@abacus-ai/contract':
+        specifier: workspace:*
+        version: link:../../packages/contract
+      '@abacus-ai/updater':
+        specifier: workspace:*
+        version: link:../updater
+      '@ff-labs/fff-node':
+        specifier: ^0.9.6
+        version: 0.9.6
+      '@lydell/node-pty':
+        specifier: 1.2.0-beta.15
+        version: 1.2.0-beta.15
+      '@orpc/client':
+        specifier: 1.15.4
+        version: 1.15.4(@opentelemetry/api@1.9.0)
+      '@orpc/contract':
+        specifier: 1.15.4
+        version: 1.15.4(@opentelemetry/api@1.9.0)
+      '@orpc/server':
+        specifier: 1.15.4
+        version: 1.15.4(@opentelemetry/api@1.9.0)(ws@8.21.3)
+      conf:
+        specifier: ^10.2.0
+        version: 10.2.0
+      extract-zip:
+        specifier: ^2.0.1
+        version: 2.0.1(supports-color@7.2.0)
+      ffi-rs:
+        specifier: ^1.3.2
+        version: 1.3.7
+      pptxgenjs:
+        specifier: ^4.0.1
+        version: 4.0.1
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
+      tuf-js:
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@7.2.0)
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@7.0.2)
+      ws:
+        specifier: 8.21.3
+        version: 8.21.3
+    devDependencies:
+      '@abacus-ai/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.2.0
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      electron:
+        specifier: 44.4.5
+        version: 44.4.5(supports-color@7.2.0)
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.14(oxc-resolver@11.24.2)(typescript@7.0.2)
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+
   apps/updater:
     dependencies:
       '@tufjs/canonical-json':
@@ -13102,7 +13178,7 @@ snapshots:
       hookable: 6.1.1
       import-without-cache: 0.4.0
       obug: 2.1.4
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       rolldown: 1.2.4
       rolldown-plugin-dts: 0.27.14(oxc-resolver@11.24.2)(rolldown@1.2.4)(typescript@7.0.2)
       tinyexec: 1.3.0

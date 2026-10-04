@@ -245,7 +245,7 @@ export const createHostOperations = (
     // A hop or sign-in still out would attach to, or mint a key for, an
     // account that is leaving; the partition is nobody's from here.
     cancelAllConnectorConnects();
-    cancelAbacusAuth();
+    if (serviceHost.platform !== "web-host") cancelAbacusAuth();
     await clearSignInSession();
 
     const settings = saveApiKey("abacus", "");
@@ -286,7 +286,10 @@ export const createHostOperations = (
       if (key.trim().length === 0)
         return (await clearAbacusCredential()).settings;
 
-      const result = await adoptAbacusCredential(key);
+      const result = await adoptAbacusCredential(
+        key,
+        serviceHost.platform === "web-host" ? "web" : undefined
+      );
       if (result.ok === false) throw new Error(result.error);
       return readSettings();
     }

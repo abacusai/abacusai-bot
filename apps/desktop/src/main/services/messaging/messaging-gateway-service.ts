@@ -579,6 +579,11 @@ export class MessagingGatewayService {
   private buildConnector(
     platformId: MessagingPlatformId
   ): MessagingConnector | null {
+    if (
+      this.options.platform?.() === "web-host" &&
+      !platformId.startsWith("abacus_")
+    )
+      return null;
     const generation = (this.generations.get(platformId) ?? 0) + 1;
     this.generations.set(platformId, generation);
     const current = (): boolean =>

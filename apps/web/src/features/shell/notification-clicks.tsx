@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_BROWSER } from "#renderer/lib/platform";
 
 /** Missing kind retains the session-only behavior of older producers. */
 export const notificationHref = (
@@ -43,6 +44,14 @@ export const NotificationClicks = ({
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),
       (event) => {
+        if (event.type === "notification") {
+          if (IS_BROWSER)
+            void import("#renderer/lib/browser/notifications").then(
+              ({ browserNotify }) =>
+                browserNotify({ title: event.title, body: event.body })
+            );
+          return;
+        }
         const href = notificationHref(event.metadata);
         if (href != null) void navigate({ href });
       },

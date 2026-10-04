@@ -69,6 +69,7 @@ const MAIN_ROOT_FILES = [
   // Clipboard IPC and native chrome belong to the main window/process.
   "clipboard-image.test.ts",
   "clipboard-image.ts",
+  "compose-host.ts",
   "crash-guard.test.ts",
   "crash-guard.ts",
   "external-links.test.ts",

@@ -1,7 +1,6 @@
 import { app } from "electron";
 
 import {
-  createHostOperations,
   wireHostEvents as wire,
   type HostPlatformOperations,
 } from "../handler";
@@ -71,6 +70,5 @@ export const electronHostPlatform: HostPlatformOperations = {
 };
 export const wireHostEvents = (host: ServiceHost) =>
   wire(host, electronHostPlatform);
-export { createHostOperations };
 
 export type { HostOperations } from "../handler";

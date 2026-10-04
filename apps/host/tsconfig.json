@@ -1,0 +1,23 @@
+{
+  "extends": "../desktop/tsconfig.main.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "../../node_modules/.tmp/host-types",
+    "tsBuildInfoFile": "../../node_modules/.tmp/host.tsbuildinfo",
+    "paths": {
+      "@abacus-ai/contract/*": ["../../packages/contract/src/*"],
+      "#main/*": ["../desktop/src/main/*"]
+    }
+  },
+  "references": [{ "path": "../../packages/contract" }],
+  "include": [
+    "src",
+    "../desktop/src/main",
+    "../desktop/src/agent-host",
+    "../desktop/src/preload/*.d.ts"
+  ],
+  "exclude": [
+    "../desktop/src/main/index.ts",
+    "../desktop/src/main/**/*.test.ts"
+  ]
+}
