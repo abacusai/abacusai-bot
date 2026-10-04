@@ -7,3 +7,18 @@ export type HotkeyPlatform = "mac" | "windows" | "linux";
 
 export const toHotkeyPlatform = (platform: string): HotkeyPlatform =>
   platform === "darwin" ? "mac" : platform === "win32" ? "windows" : "linux";
+
+declare const __ABACUS_PLATFORM__: "electron" | "browser";
+export const PLATFORM = __ABACUS_PLATFORM__;
+export const IS_ELECTRON = PLATFORM === "electron";
+export const IS_BROWSER = PLATFORM === "browser";
+export const uiPlatform = (hostPlatform: string): HotkeyPlatform =>
+  IS_ELECTRON
+    ? toHotkeyPlatform(hostPlatform)
+    : toHotkeyPlatform(
+        /Mac|iPhone|iPad/.test(navigator.platform)
+          ? "darwin"
+          : /Win/.test(navigator.platform)
+            ? "win32"
+            : "linux"
+      );

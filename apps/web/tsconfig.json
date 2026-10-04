@@ -1,6 +1,7 @@
 {
   "extends": "@abacus-ai/config/typescript/react",
   "compilerOptions": {
+    "paths": { "@abacus-ai/contract/*": ["../../packages/contract/src/*"] },
     // `vite/client` only: no `electron` and no `node`. The new renderer
     // reaches main only through its Transport, so neither may type-check here
     // (spec 01 §3.4).
@@ -9,9 +10,8 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "composite": true,
-    "tsBuildInfoFile": "../../node_modules/.tmp/desktop.renderer.tsbuildinfo"
+    "tsBuildInfoFile": "../../node_modules/.tmp/web.tsbuildinfo"
   },
-  "include": ["src/renderer", "src/shared"],
-  // Shared tests run under Node and are checked by the other projects.
-  "exclude": ["src/shared/**/*.test.ts"]
+  "include": ["src"],
+  "references": [{ "path": "../../packages/contract" }]
 }

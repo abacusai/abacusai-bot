@@ -12,7 +12,11 @@
     "LOCALAPPDATA",
     "TMPDIR",
     "TMP",
-    "TEMP"
+    "TEMP",
+    "DISPLAY",
+    "XAUTHORITY",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "ABACUSBOT_REQUIRE_ELECTRON_SUITES"
   ],
   "tasks": {
     "//#format": {
@@ -32,9 +36,6 @@
     "check:i18n": {},
     "check:locales": {},
     "//#check:audit": {
-      "cache": false
-    },
-    "//#check:knip-next": {
       "cache": false
     },
     "check:ui-registry": {
@@ -74,7 +75,10 @@
         "ABACUS_BUILD_COMMIT",
         "ABACUS_RELEASE",
         "VITE_UI_GALLERY",
-        "VITE_NEXT_DB_FIXTURES"
+        "VITE_NEXT_DB_FIXTURES",
+        "VITE_ABACUS_PLATFORM",
+        "VITE_CONNECT_SRC",
+        "VITE_ABACUS_ENV"
       ]
     },
     "@abacus-ai/agent#build": {
@@ -86,6 +90,23 @@
         "VITE_UI_GALLERY",
         "VITE_NEXT_DB_FIXTURES"
       ]
+    },
+    "@abacus-ai/web#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**"],
+      "env": [
+        "VITE_ABACUS_PLATFORM",
+        "VITE_CONNECT_SRC",
+        "VITE_ABACUS_ENV",
+        "VITE_UI_GALLERY",
+        "VITE_NEXT_DB_FIXTURES"
+      ]
+    },
+    "//#check:knip": {
+      "cache": false
+    },
+    "//#check:web-split": {
+      "cache": false
     }
   },
   "globalEnv": ["ABACUS_BUILD_COMMIT", "ABACUS_RELEASE"]
