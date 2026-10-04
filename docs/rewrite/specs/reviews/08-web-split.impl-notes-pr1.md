@@ -416,6 +416,8 @@ physical-device validation was performed.
 
 Addresses `.codex-runs/reviews/pr1.claude-r2.md` F1–F3 and the boundary nit.
 
+- PR 2 review r3 N1: text requests `maxBytes=limit+1`, detects overflow from received bytes while retaining only `limit`, and treats `X-File-Size` as optional (bounded Content-Length is only a size lower bound). Existence probes use `Range: bytes=0-0` and exposed `Content-Range`, accepting 206 and empty-file 416. The HTTP fixture honours `maxBytes` with the transmitted Content-Length and no `X-File-Size`; regressions cover below/exact/over-limit text and empty/nonempty probes. Browser Vitest: 10 files / 71 tests pass; the full web Vitest run also passes across both projects. Web build, typecheck and rebuilt bundle check pass (296 chunks / 487 modules).
+
 - Browser HTTP readers translate the current host's `{error: reason}` and
   `{error, reason}` responses into defined `NOT_FOUND{entity:"file",id}`,
   `FORBIDDEN{reason}` and `CONFLICT{reason}` errors. Binary text retains the

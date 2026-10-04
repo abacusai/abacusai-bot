@@ -8,7 +8,8 @@ type Download = HostFile | { whisperUrl: string };
 const response = async (
   input: Download,
   signal?: AbortSignal,
-  maxBytes?: number
+  maxBytes?: number,
+  probe = false
 ): Promise<Response> => {
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
@@ -26,7 +27,10 @@ const response = async (
   const fetchFile = () =>
     fetch(`${host.origin}/files?${query}`, {
       credentials: "include",
-      headers: { Authorization: `Bearer ${host.token}` },
+      headers: {
+        Authorization: `Bearer ${host.token}`,
+        ...(probe ? { Range: "bytes=0-0" } : {}),
+      },
       signal,
     });
   let result = await fetchFile();
@@ -69,10 +73,18 @@ const fileError = (input: Download, reason: string) =>
 const checked = async (
   input: Download,
   signal?: AbortSignal,
-  maxBytes?: number
+  maxBytes?: number,
+  probe = false
 ): Promise<Response> => {
-  const result = await response(input, signal, maxBytes);
-  if (!result.ok) {
+  const result = await response(input, signal, maxBytes, probe);
+  if (
+    !result.ok &&
+    !(
+      probe &&
+      result.status === 416 &&
+      result.headers.get("content-range") === "bytes */0"
+    )
+  ) {
     const body = (await result.json().catch(() => null)) as {
       error?: string;
       reason?: string;
@@ -91,8 +103,11 @@ const checked = async (
   return result;
 };
 const sizeOf = (result: Response): number | undefined => {
+  const rangeSize = result.headers.get("content-range")?.match(/\/(\d+)$/)?.[1];
   const value =
-    result.headers.get("x-file-size") ?? result.headers.get("content-length");
+    rangeSize ??
+    result.headers.get("x-file-size") ??
+    result.headers.get("content-length");
   return value != null && Number.isFinite(Number(value))
     ? Number(value)
     : undefined;
@@ -109,18 +124,22 @@ const boundedBytes = async (
     throw fileError(input, "too-large");
   }
   const reader = result.body?.getReader();
-  if (!reader) return new Uint8Array();
+  if (!reader) return { bytes: new Uint8Array(), truncated: false };
   const chunks: Uint8Array[] = [];
   let size = 0;
+  let truncated = false;
   try {
-    while (size < limit || rejectOverflow) {
+    while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      if (rejectOverflow && size + value.length > limit)
-        throw fileError(input, "too-large");
+      if (size + value.length > limit) {
+        if (rejectOverflow) throw fileError(input, "too-large");
+        truncated = true;
+      }
       const chunk = value.subarray(0, limit - size);
       chunks.push(chunk);
       size += chunk.length;
+      if (truncated) break;
     }
   } finally {
     await reader.cancel();
@@ -131,7 +150,7 @@ const boundedBytes = async (
     bytes.set(chunk, offset);
     offset += chunk.length;
   }
-  return bytes;
+  return { bytes, truncated };
 };
 const imageMime: Record<string, string> = {
   png: "image/png",
@@ -163,7 +182,7 @@ export const readHostImage: AppClient["files"]["readImageAsDataUrl"] = async (
     imageMime[input.filePath.split(".").at(-1)?.toLowerCase() ?? ""];
   if (!mimeType) throw fileError(input, "unsupported-extension");
   const result = await checked(input, options?.signal);
-  const bytes = await boundedBytes(result, 8 * 1024 * 1024, input, true);
+  const { bytes } = await boundedBytes(result, 8 * 1024 * 1024, input, true);
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -177,17 +196,21 @@ export const readHostText: AppClient["files"]["readText"] = async (
   options
 ) => {
   const limit = input.maxBytes ?? 524288;
-  // Existence probes need only one byte. PR 2 must honour the query server-side.
-  const readLimit = limit === 1 ? 1 : Math.max(limit, 8192);
-  const result = await checked(input, options?.signal, readLimit);
-  const bytes = await boundedBytes(result, readLimit, input);
+  const probe = limit === 1;
+  const result = await checked(
+    input,
+    options?.signal,
+    probe ? undefined : limit + 1,
+    probe
+  );
+  const { bytes, truncated } = await boundedBytes(result, limit, input);
   if (bytes.subarray(0, 8192).includes(0))
     throw fileError(input, "binary-file");
-  const sizeBytes = sizeOf(result) ?? bytes.length;
+  const sizeBytes = sizeOf(result) ?? bytes.length + Number(truncated);
   return {
-    content: new TextDecoder().decode(bytes.subarray(0, limit)),
+    content: new TextDecoder().decode(bytes),
     sizeBytes,
-    truncated: sizeBytes > limit,
+    truncated: truncated || (probe && sizeBytes > limit),
   };
 };
 
@@ -196,7 +219,7 @@ export const readHostPptx: AppClient["files"]["readPptx"] = async (
   options
 ) => {
   const result = await checked(input, options?.signal);
-  const bytes = await boundedBytes(result, 60 * 1024 * 1024, input, true);
+  const { bytes } = await boundedBytes(result, 60 * 1024 * 1024, input, true);
   const [{ default: JSZip }, { parsePptx }] = await Promise.all([
     import("jszip"),
     import("@abacus-ai/contract/pptx/parser"),

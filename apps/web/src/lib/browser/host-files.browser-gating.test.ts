@@ -20,7 +20,11 @@ const preview = "https://pod.preview.apps.abacus.ai";
 const file = { filePath: "/workspace/sample.txt", hostRoot: "/workspace" };
 const originalFetch = globalThis.fetch;
 let server: ReturnType<typeof createServer>;
-let requests: { query: URLSearchParams; token: string | undefined }[];
+let requests: {
+  query: URLSearchParams;
+  token: string | undefined;
+  range: string | undefined;
+}[];
 let statuses: number[];
 let files: Map<string, Uint8Array | string>;
 let bootstrapCount: number;
@@ -35,6 +39,7 @@ beforeEach(async () => {
     requests.push({
       query: url.searchParams,
       token: request.headers.authorization,
+      range: request.headers.range,
     });
     const body = files.get(url.searchParams.get("path") ?? "model");
     const status = statuses.shift() ?? (body == null ? 404 : 200);
@@ -45,12 +50,24 @@ beforeEach(async () => {
       );
       return;
     }
+    const bytes = Buffer.from(body!);
+    if (request.headers.range === "bytes=0-0") {
+      response.writeHead(bytes.length ? 206 : 416, {
+        "content-range": bytes.length
+          ? `bytes 0-0/${bytes.length}`
+          : "bytes */0",
+        "content-length": bytes.length ? 1 : 0,
+      });
+      response.end(bytes.subarray(0, 1));
+      return;
+    }
+    const maxBytes = url.searchParams.get("maxBytes");
+    const sent = maxBytes == null ? bytes : bytes.subarray(0, Number(maxBytes));
     response.writeHead(status, {
       "content-type": "application/octet-stream",
-      "content-length":
-        typeof body === "string" ? Buffer.byteLength(body) : body!.length,
+      "content-length": sent.length,
     });
-    response.end(body);
+    response.end(sent);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as { port: number };
@@ -120,7 +137,7 @@ it("reads large transcripts, snapshots and diff/preview text through the browser
   const host = transport();
   const text = await host.client.files.readText(file);
   expect(text.content.length).toBe(524288);
-  expect(text.sizeBytes).toBe(1_320_000);
+  expect(text.sizeBytes).toBe(524289);
   expect(text.truncated).toBe(true);
   const query = host.orpc.files.readText.queryOptions({
     input: { ...file, maxBytes: 10 },
@@ -133,6 +150,37 @@ it("reads large transcripts, snapshots and diff/preview text through the browser
   expect(requests[0]!.token).toMatch(/^Bearer /);
   host.close();
 });
+it.each([9, 10, 11, 10000])(
+  "detects truncation of %s text bytes without X-File-Size",
+  async (size) => {
+    files.set(file.filePath, "a".repeat(size));
+    const host = transport();
+    expect(await host.client.files.readText({ ...file, maxBytes: 10 })).toEqual(
+      {
+        content: "a".repeat(Math.min(size, 10)),
+        sizeBytes: Math.min(size, 11),
+        truncated: size > 10,
+      }
+    );
+    expect(requests[0]!.query.get("maxBytes")).toBe("11");
+    host.close();
+  }
+);
+it.each([0, 1, 10000])(
+  "probes %s file bytes using Content-Range",
+  async (size) => {
+    files.set(file.filePath, "a".repeat(size));
+    const host = transport();
+    expect(await host.client.files.readText({ ...file, maxBytes: 1 })).toEqual({
+      content: size ? "a" : "",
+      sizeBytes: size,
+      truncated: size > 1,
+    });
+    expect(requests[0]!.range).toBe("bytes=0-0");
+    expect(requests[0]!.query.has("maxBytes")).toBe(false);
+    host.close();
+  }
+);
 it("reads large images for every preview and thumbnail consumer with the correct MIME", async () => {
   const image = { ...file, filePath: "/workspace/photo.png" };
   files.set(image.filePath, new Uint8Array(2 * 1024 * 1024).fill(7));
@@ -350,7 +398,8 @@ it.each(["pdf", "png", "pptx"])(
           location: path,
         } as ArtifactRow)
       ).toBe("opened");
-      expect(requests[0]!.query.get("maxBytes")).toBe("1");
+      expect(requests[0]!.range).toBe("bytes=0-0");
+      expect(requests[0]!.query.has("maxBytes")).toBe(false);
       expect(
         document.querySelector(
           `dialog ${extension === "pdf" ? "iframe" : extension === "png" ? "img" : "pre"}`
@@ -413,7 +462,13 @@ it("bounds the existence probe and cancels the stream", async () => {
             },
             cancel,
           }),
-          { headers: { "content-length": "1000000000" } }
+          {
+            status: 206,
+            headers: {
+              "content-length": "1",
+              "content-range": "bytes 0-0/1000000000",
+            },
+          }
         )
     )
   );
