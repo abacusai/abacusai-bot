@@ -1,9 +1,13 @@
 import { createHmac } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+
+import { WhisperModelService } from "#main/services/voice/whisper-model-service";
 
 import { createNodeAppOperations } from "./app-operations";
 import { createHostHttpServer } from "./http";
@@ -23,8 +27,22 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     JSON.stringify({ o: "o", g: "g", e: Math.floor(Date.now() / 1000) + 600 })
   ).toString("base64url");
   const token = `${payload}.${createHmac("sha256", identity.secret).update(payload).digest("hex")}`;
-  const server = createHostHttpServer(identity, app, lease, (w, s) =>
-    w === "w" && s === "s" ? home : null
+  const modelUrl =
+    "https://huggingface.co/onnx-community/whisper-base/resolve/main/onnx/encoder_model_quantized.onnx";
+  const fetchModel = vi.fn(
+    async () => new Response(new Uint8Array(2 * 1024 * 1024))
+  );
+  const whisper = new WhisperModelService({
+    modelDir: join(home, "models"),
+    emitEvent: () => {},
+    fetch: fetchModel,
+  });
+  const server = createHostHttpServer(
+    identity,
+    app,
+    lease,
+    (w, s) => (w === "w" && s === "s" ? home : null),
+    whisper
   );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -65,12 +83,46 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     const { paths } = (await response.json()) as { paths: string[] };
     expect(paths[0]).toContain(join(home, ".abacusai-bot", "temp"));
     expect(await readFile(paths[0], "utf8")).toBe("attachment");
+    const writeHead = ServerResponse.prototype.writeHead;
+    const grow = vi
+      .spyOn(ServerResponse.prototype, "writeHead")
+      .mockImplementation(function (this: ServerResponse, ...args: any[]) {
+        if (args[1]?.["content-length"] === 10)
+          appendFileSync(paths[0], "grew after stat");
+        return (writeHead as Function).apply(this, args);
+      });
     const download = await fetch(
       `${base}/files?hostRoot=${encodeURIComponent(home)}&path=${encodeURIComponent(paths[0])}`,
       { headers }
     );
     expect(download.status).toBe(200);
+    expect(download.headers.get("content-length")).toBe("10");
     expect(await download.text()).toBe("attachment");
+    grow.mockRestore();
+    await writeFile(join(home, "empty"), "");
+    const empty = await fetch(
+      `${base}/files?${new URLSearchParams({ hostRoot: home, path: "empty" })}`,
+      { headers }
+    );
+    expect(empty.headers.get("content-length")).toBe("0");
+    expect(await empty.text()).toBe("");
+    const modelPath = `/files?${new URLSearchParams({ whisperUrl: modelUrl })}`;
+    expect((await fetch(`${base}${modelPath}`)).status).toBe(403);
+    expect(fetchModel).not.toHaveBeenCalled();
+    for (let i = 0; i < 2; i++) {
+      const model = await fetch(`${base}${modelPath}`, { headers });
+      expect(model.status).toBe(200);
+      expect(model.headers.get("content-length")).toBe(String(2 * 1024 * 1024));
+      expect((await model.arrayBuffer()).byteLength).toBe(2 * 1024 * 1024);
+    }
+    expect(fetchModel).toHaveBeenCalledTimes(1);
+    expect(
+      (
+        await fetch(`${base}/files?whisperUrl=https://example.com/model`, {
+          headers,
+        })
+      ).status
+    ).toBe(403);
     expect(
       (await fetch(`${base}/files?hostRoot=${home}&path=${paths[0]}`)).status
     ).toBe(403);
@@ -97,6 +149,7 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
         .length
     ).toBe(10 * 1024 * 1024);
   } finally {
+    vi.restoreAllMocks();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(home, { recursive: true, force: true });
   }

@@ -17,6 +17,7 @@ import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";
 import { forbidden, unsupported } from "../errors";
 import type { BusChannel, BusChannels } from "../event-bus";
+import { rpcPayloadSize } from "../payload-size";
 import { SubscriberQueue } from "../subscriber-queue";
 
 export const impl: ImplementerInternalWithMiddlewares<
@@ -62,9 +63,9 @@ export const impl: ImplementerInternalWithMiddlewares<
     }
     const result = await next({ context: {} });
     if (context.platform !== "web-host") return result;
-    const check = (value: unknown) => {
+    const check = async (value: unknown) => {
       // Reserve space for oRPC framing and serializer metadata.
-      if (Buffer.byteLength(JSON.stringify(value) ?? "") > 900 * 1024)
+      if ((await rpcPayloadSize(value, 900 * 1024)) > 900 * 1024)
         throw tooLarge();
       return value;
     };
@@ -78,11 +79,11 @@ export const impl: ImplementerInternalWithMiddlewares<
       return {
         ...result,
         output: (async function* () {
-          for await (const value of inner) yield check(value);
+          for await (const value of inner) yield await check(value);
         })(),
       };
     }
-    check(output);
+    await check(output);
     return result;
   });
 

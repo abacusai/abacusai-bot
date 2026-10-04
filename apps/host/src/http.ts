@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 import { createServer, type ServerResponse } from "node:http";
 import { basename } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -7,6 +8,7 @@ import { pipeline } from "node:stream/promises";
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 
 import type { AppOperations } from "#main/rpc/deps";
+import type { WhisperModelService } from "#main/services/voice/whisper-model-service";
 import { openHostFile } from "#main/services/workspace/host-path";
 
 import { authenticate, type HostIdentity } from "./auth";
@@ -25,7 +27,8 @@ export const createHostHttpServer = (
   uploadFolder: (
     workspaceId: string,
     sessionId: string
-  ) => string | null = () => null
+  ) => string | null = () => null,
+  whisper?: Pick<WhisperModelService, "prepareFile">
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -53,10 +56,25 @@ export const createHostHttpServer = (
       ["/files", "/file"].includes(url.pathname)
     ) {
       try {
-        const file = await openHostFile(
-          url.searchParams.get("path") ?? "",
-          url.searchParams.get("hostRoot") ?? ""
-        );
+        const whisperUrl = url.searchParams.get("whisperUrl");
+        const model =
+          whisperUrl && whisper ? await whisper.prepareFile(whisperUrl) : null;
+        if (whisperUrl && (!model || model.status !== 200 || !model.path)) {
+          json(response, model?.status ?? 400, {
+            error: model?.error ?? "model-unavailable",
+          });
+          return;
+        }
+        const file = model?.path
+          ? {
+              ok: true as const,
+              realFile: model.path,
+              stat: await stat(model.path),
+            }
+          : await openHostFile(
+              url.searchParams.get("path") ?? "",
+              url.searchParams.get("hostRoot") ?? ""
+            );
         if (file.ok === false) {
           json(response, 404, { error: file.error });
           return;
@@ -67,7 +85,12 @@ export const createHostHttpServer = (
           "cache-control": "no-store",
         });
         lease.activity();
-        await pipeline(createReadStream(file.realFile), response);
+        if (file.stat.size === 0) response.end();
+        else
+          await pipeline(
+            createReadStream(file.realFile, { end: file.stat.size - 1 }),
+            response
+          );
       } catch {
         if (!response.headersSent)
           json(response, 400, { error: "download-failed" });

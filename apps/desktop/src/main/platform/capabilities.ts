@@ -23,6 +23,7 @@ export const WEB_HOST_DENIED = [
   "system.showItemInFolder",
   "system.openPrivacyPane",
   "skills.openFile",
+  "voice.whisper.fetch",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [
@@ -157,7 +158,6 @@ export const WEB_HOST_ALLOWED = [
   "memory.bots",
   "memory.clearBot",
   "memory.events",
-  "voice.whisper.fetch",
   "voice.whisper.progress",
   "voice.requestMicrophone",
   "messaging.snapshot",

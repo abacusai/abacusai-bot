@@ -229,3 +229,22 @@ it("cancels a real socket subscription and releases listeners and flow state", a
     open.mockRestore();
   }
 });
+
+it("denies whisper RPC before loading model bytes", async () => {
+  const fetchFile = vi.fn();
+  const { server, socket } = await setup({
+    whisperModelService: { fetchFile },
+  });
+  const client: any = createORPCClient(
+    new RPCLink({ websocket: socket as never })
+  );
+  try {
+    await expect(
+      client.voice.whisper.fetch({ url: "https://huggingface.co/model" })
+    ).rejects.toMatchObject({ code: "UNSUPPORTED" });
+    expect(fetchFile).not.toHaveBeenCalled();
+  } finally {
+    socket.terminate();
+    await server.close();
+  }
+});
