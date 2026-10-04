@@ -16,15 +16,17 @@ const Host = v.object({
 const Bootstrap = v.variant("status", [
   v.object({
     status: v.literal("starting"),
+    token: v.nullable(v.pipe(v.string(), v.minLength(1))),
+    version: v.nullable(v.string()),
     previewHost: v.string(),
-    detail: v.optional(v.string()),
+    detail: v.nullable(v.string()),
   }),
   v.object({
     status: v.literal("ready"),
     previewHost: v.string(),
     token: v.pipe(v.string(), v.minLength(1)),
-    version: v.optional(v.string()),
-    detail: v.optional(v.string()),
+    version: v.nullable(v.string()),
+    detail: v.nullable(v.string()),
   }),
 ]);
 const Health = v.object({

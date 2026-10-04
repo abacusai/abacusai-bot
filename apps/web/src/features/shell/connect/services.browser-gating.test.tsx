@@ -1,21 +1,18 @@
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 import { afterEach, expect, it, vi } from "vitest";
 
+import serverFixtures from "./fixtures/bootstrap-server.json";
 import { callApps, resolveBrowserHost, refreshUploadToken } from "./services";
-const token =
-  btoa(JSON.stringify({ o: "owner", g: "org", e: 9999999999 })) + ".signature";
+const ready = serverFixtures.find(
+  (fixture) => fixture.result.status === "ready"
+)!.result;
+const token = ready.token!;
 const envelope = (result: unknown) => Response.json({ success: true, result });
 const host = {
   deploymentConversationId: "conversation",
   previewHost: "pod.preview.apps.abacus.ai",
   computerLifecycle: "STOPPED",
   filesystemLifecycle: "AVAILABLE",
-};
-const ready = {
-  status: "ready",
-  previewHost: host.previewHost,
-  token,
-  version: "1",
 };
 const health = { ok: true, owner: "owner", contractVersion: CONTRACT_VERSION };
 afterEach(() => {
@@ -27,13 +24,7 @@ it("uses the real envelope, bootstraps until ready, retries proxy 403, and resta
   const fetch = vi
     .fn()
     .mockResolvedValueOnce(envelope(host))
-    .mockResolvedValueOnce(
-      envelope({
-        status: "starting",
-        previewHost: host.previewHost,
-        detail: "Starting computer",
-      })
-    )
+    .mockResolvedValueOnce(envelope(serverFixtures[0]!.result))
     .mockResolvedValueOnce(envelope(ready))
     .mockResolvedValueOnce(new Response(null, { status: 403 }))
     .mockResolvedValueOnce(Response.json(health));
@@ -153,4 +144,36 @@ it("serializes refresh after eight minutes without replacing the connection", as
   expect(JSON.parse(fetch.mock.calls[3]![1].body)).toEqual({
     deploymentConversationId: "conversation",
   });
+});
+
+it.each(
+  serverFixtures.filter((fixture) => fixture.result.status === "starting")
+)(
+  "accepts the server's $result.detail response with explicit null token/version",
+  async ({ result }) => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(envelope(host))
+        .mockResolvedValueOnce(envelope(result))
+        .mockResolvedValueOnce(envelope(ready))
+        .mockResolvedValueOnce(Response.json(health))
+    );
+    const pending = resolveBrowserHost(() => {});
+    await vi.runAllTimersAsync();
+    expect(await pending).toMatchObject({ token });
+  }
+);
+it("accepts a ready response with a nullable version", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(envelope(host))
+      .mockResolvedValueOnce(envelope({ ...ready, version: null }))
+      .mockResolvedValueOnce(Response.json(health))
+  );
+  expect(await resolveBrowserHost(() => {})).toMatchObject({ token });
 });
