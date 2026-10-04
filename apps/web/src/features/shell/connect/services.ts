@@ -4,7 +4,8 @@ export type ConnectStage = "starting" | "installing" | "connecting";
 export class ConnectError extends Error {
   constructor(
     readonly kind: "signin" | "tier" | "version" | "connection",
-    message: string
+    message: string,
+    readonly network = false
   ) {
     super(message);
   }
@@ -56,7 +57,8 @@ export const callApps = async (
   } catch {
     throw new ConnectError(
       "connection",
-      "Connection service unavailable. Please retry."
+      "Connection service unavailable. Please retry.",
+      true
     );
   }
   const body = (await response.json().catch(() => null)) as {

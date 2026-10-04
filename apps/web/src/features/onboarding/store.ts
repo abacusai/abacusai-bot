@@ -4,6 +4,7 @@ import { Store } from "@tanstack/react-store";
 import { webSignIn } from "#platform/sign-in";
 import type { Transport } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { SignInFailure } from "#renderer/lib/sign-in-failure";
 export interface SignInAttempt {
   id: string;
   intent: "signup" | "signin";
@@ -38,9 +39,9 @@ export const startSignIn = (
         })
       : webSignIn(transport)
   )
-    .catch((): AbacusAuthOutcome => ({
+    .catch((error: unknown): AbacusAuthOutcome => ({
       ok: false,
-      error: "auth-failed",
+      error: error instanceof SignInFailure ? error.message : "auth-failed",
     }))
     .then((outcome) => {
       if (onboardingStore.state.signIn?.id !== attempt.id) return;

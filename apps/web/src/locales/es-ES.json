@@ -1353,7 +1353,16 @@
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
     "connectedPromiseChat": "",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord."
+    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
+    "webSignIn": {
+      "body": "Connecting the account signed in on this site. If your session has expired, sign in again to continue.",
+      "waiting": "Connecting your account…",
+      "session": "Your sign-in session has expired. Use “Sign in another way” to sign in on this site, then return to connect your account.",
+      "authCode": "This site could not create an account connection code. Try again. If it keeps failing, contact support.",
+      "hostStart": "The host could not start the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "hostComplete": "The host could not complete the account connection ({{code}}). Try again. If it keeps failing, contact support with this code.",
+      "network": "The account connection lost its network connection. Check your connection and try again."
+    }
   },
   "referralCard": {
     "cta": "Invite friends",

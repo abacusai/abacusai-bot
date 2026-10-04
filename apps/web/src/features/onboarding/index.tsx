@@ -18,6 +18,7 @@ import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { signInFailureCopy } from "#renderer/lib/sign-in-failure";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 import {
@@ -281,7 +282,9 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       <p>
         {step === "welcome"
           ? t("onboarding.welcomeTagline")
-          : t(`onboarding.pages.${step}.body`)}
+          : step === "connect" && !IS_ELECTRON
+            ? t("onboarding.webSignIn.body")
+            : t(`onboarding.pages.${step}.body`)}
       </p>
       {step === "welcome" && (
         <>
@@ -350,10 +353,16 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       )}
       {step === "connect" && (
         <>
-          <div role="status" className="flex items-center gap-2">
-            {(props.preview || attempt?.status === "pending") && <Spinner />}
-            {t("onboarding.pages.connect.waiting")}
-          </div>
+          {((props.preview && !attempt) || attempt?.status === "pending") && (
+            <div role="status" className="flex items-center gap-2">
+              <Spinner />
+              {t(
+                IS_ELECTRON
+                  ? "onboarding.pages.connect.waiting"
+                  : "onboarding.webSignIn.waiting"
+              )}
+            </div>
+          )}
           {attempt?.status === "failed" && (
             <p role="alert">
               {t(
@@ -361,7 +370,12 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                   !attempt.outcome.ok &&
                   attempt.outcome.error === "unidentified-account"
                   ? "onboarding.abacusUnidentified"
-                  : "onboarding.frame.failed"
+                  : !IS_ELECTRON && attempt.outcome && !attempt.outcome.ok
+                    ? signInFailureCopy(attempt.outcome.error).key
+                    : "onboarding.frame.failed",
+                !IS_ELECTRON && attempt.outcome && !attempt.outcome.ok
+                  ? { code: signInFailureCopy(attempt.outcome.error).code }
+                  : {}
               )}
             </p>
           )}
@@ -379,17 +393,28 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               {t("onboarding.openInBrowserCta")}
             </Button>
           )}
-          <Button
-            variant="ghost"
-            onClick={() =>
-              void perform(async () => {
-                await props.cancelSignIn();
-                props.signIn("signin");
-              })
-            }
-          >
-            {t("onboarding.signInAnotherWay")}
-          </Button>
+          {IS_ELECTRON ? (
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void perform(async () => {
+                  await props.cancelSignIn();
+                  props.signIn("signin");
+                })
+              }
+            >
+              {t("onboarding.signInAnotherWay")}
+            </Button>
+          ) : attempt?.status === "failed" &&
+            attempt.outcome &&
+            !attempt.outcome.ok &&
+            attempt.outcome.error === "auth-code:session:UNKNOWN" ? (
+            <a
+              href={`/chatllm/signin?redirectUrl=${encodeURIComponent("/bot/" + location.hash)}`}
+            >
+              {t("onboarding.signInAnotherWay")}
+            </a>
+          ) : null}
 
           <Button
             variant="ghost"
