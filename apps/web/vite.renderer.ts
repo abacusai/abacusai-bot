@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { loadEnv, type PluginOption } from "vite";
+import { loadEnv, type Plugin, type PluginOption } from "vite";
 
 import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
 import {
@@ -65,7 +65,7 @@ export const platformAlias = (platform: RendererPlatform) =>
 export const assertBrowserImport = (resolved: string): void => {
   const id = resolved.replaceAll("\\", "/");
   if (
-    /\/src\/(?:features\/(?:notch\/|sessions\/(?:device|browser)\/|onboarding\/steps\/local-models\.|settings\/(?:updates|companion)\.|shell\/native-presenter\.)|lib\/window-chrome\/|components\/(?:device|browser-surface)\/)/.test(
+    /\/src\/(?:features\/(?:notch\/|sessions\/(?:device|browser)\/|onboarding\/steps\/local-models\.|settings\/(?:updates|companion)\.|shell\/native-presenter\.)|platform\/[^/]*\.electron\.|data\/transport\/message-port\.|lib\/window-chrome\/|components\/(?:device|browser-surface)\/)/.test(
       id
     )
   )
@@ -73,16 +73,31 @@ export const assertBrowserImport = (resolved: string): void => {
       `Electron-only module in browser build: ${id}. Use #platform aliasing.`
     );
 };
-export const browserBoundaryPlugin = () => ({
+export const browserBoundaryPlugin = (): Plugin => ({
+  enforce: "pre",
   name: "abacus:browser-boundary",
-  async resolveId(
-    this: import("vite").Rolldown.PluginContext,
-    id: string,
-    importer: string | undefined
-  ) {
-    const resolved = await this.resolve(id, importer, { skipSelf: true });
-    if (resolved) assertBrowserImport(resolved.id);
-    return resolved;
+  resolveId: {
+    order: "pre",
+    async handler(
+      this: import("vite").Rolldown.PluginContext,
+      id: string,
+      importer: string | undefined
+    ) {
+      const resolved = await this.resolve(id, importer, { skipSelf: true });
+      if (resolved) assertBrowserImport(resolved.id);
+      return resolved;
+    },
+  },
+  load(id) {
+    assertBrowserImport(id);
+    return null;
+  },
+  transform(_code, id) {
+    assertBrowserImport(id);
+    return null;
+  },
+  generateBundle() {
+    for (const id of this.getModuleIds()) assertBrowserImport(id);
   },
 });
 export const platformPlugin = (

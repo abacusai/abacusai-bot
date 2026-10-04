@@ -8,7 +8,7 @@ import {
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
 } from "../desktop/vite.shared";
-import { platformAlias } from "./vite.renderer";
+import { browserBoundaryPlugin, platformAlias } from "./vite.renderer";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,
@@ -27,6 +27,7 @@ export default defineConfig({
     projects: ["electron", "browser"].map((platform) => ({
       define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
       plugins: [
+        ...(platform === "browser" ? [browserBoundaryPlugin()] : []),
         react({
           include: RENDERER_MODULES,
           exclude: RENDERER_REGISTRY_SRC,

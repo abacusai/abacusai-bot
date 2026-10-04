@@ -20,13 +20,10 @@ export const checkWebBundle = async (
   );
   const web = modules.filter((id) => id.startsWith("<web>/src/"));
   assert.ok(web.length > 100, "Web module guard matched no renderer tree");
-  const denied =
-    /\/src\/(?:features\/(?:notch\/|sessions\/(?:device|browser)\/|onboarding\/steps\/local-models\.|settings\/updates\.|shell\/native-presenter\.)|lib\/window-chrome\/|components\/(?:device|browser-surface)\/)/;
-  assert.deepEqual(
-    web.filter((id) => denied.test(id)),
-    [],
-    "Electron-only modules in browser bundle"
+  const { assertBrowserImport } = await createJiti(import.meta.url).import(
+    "../apps/web/vite.renderer.ts"
   );
+  for (const id of modules) assertBrowserImport(id);
   const files = readdirSync(directory, { recursive: true });
   assert.ok(
     !files.some((file) =>
