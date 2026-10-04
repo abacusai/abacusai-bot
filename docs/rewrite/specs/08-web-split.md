@@ -243,3 +243,15 @@ Scheduled routine wake-up of a stopped host, and a host-renewed busy lease, need
 | R8-T9 | `pnpm smoke:rpc` keeps passing with loopback defaults and no flow context. |
 | R8-T10 | Under the shim: `composeHost` runs through `initialize` and `start`; every retained procedure answers or throws `UNSUPPORTED`; each agent host service is exercised; `workspace-store`'s migrations run; `config.json` is untouched by the store shim; the shim's export list diffs clean. |
 | R8-T11 | Flow control over the socket bounds pending bytes under a stalled consumer; `bufferedAmount` over 16 MiB closes with 1013. |
+
+## Amendments recorded during implementation (4 Oct 2026)
+
+Decisions taken while the two app PRs were reviewed and fixed; the implementation notes under `reviews/08-web-split.impl-notes-pr{1,2}.md` carry the evidence.
+
+- **Start and bootstrap are one call.** The browser polls a single hosting-side bootstrap service every 3 s; it answers `starting` until the machine is up and the host is launched, then `ready` with the connect token and the host address. The browser never drives machine start itself, and the token is re-minted (idempotently) before uploads when older than 8 minutes.
+- **Host secret delivery.** The hosting side gives the bootstrap a one-use, short-lived, conversation-bound ticket; the bootstrap redeems it with the machine's own credential to fetch the host secret and writes it once to `ABACUSAI_BOT_HOST_SECRET_FILE`. A live healthy host is never replaced implicitly; a newer host version applies on the next cold start or an explicit "Restart your computer".
+- **Payload bounds.** oRPC replies over the socket are bounded at 1 MiB (the proxy in front caps frames at 4 MiB). Large content (images, decks, long transcripts, Whisper models) is read by the browser through a token-authenticated `GET /files` route on the host, with the same typed errors and size caps as the RPC readers, HEAD and `Range` for existence probes, and a typed `PAYLOAD_TOO_LARGE` error instead of a dead socket. `voice.whisper.fetch` is denied on the web host.
+- **Platform modules.** Electron-only implementations live behind build-time `#platform/<name>` aliases resolved per Vite config, so the Electron bundle keeps static imports and its chunk graph (parity within 1 % of the pre-split baseline, recipe committed); a resolved-target boundary plugin fails any browser build that reaches an Electron module. `IS_ELECTRON` remains for small inline branches.
+- **Host mode is a build-time constant** of `apps/host`, never a runtime env var a packaged desktop build could honour.
+- **Capability table** denies whole procedure families on the web host and a test classifies every contract procedure.
+- **Same origin.** The web app is served at `/bot/` on the apps origin; all service calls are relative; `connect-src` is `'self'` plus the preview hosts; storage keys and the notification channel are namespaced.
