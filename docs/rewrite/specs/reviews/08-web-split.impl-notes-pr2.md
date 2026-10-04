@@ -243,3 +243,18 @@ Logs: `/tmp/pr2-r3-{host,smoke,check}.log`. The Electron tests generated a core
 dump, moved out of the worktree to `/tmp/pr2-r3-electron.core`.
 
 Committed locally; no push or deployment.
+
+## Rebase onto PR 1 r3
+
+Rebase sanity on `rewrite/headless-host` after PR 1 r2/r3 (`#platform/*`
+aliases, resolved-target import boundary, nullable bootstrap schema, `/files`
+consumers and shared PPTX parsing) passed without code changes. All commands ran
+in this worktree with `export PATH="$(npm prefix -g)/bin:$PATH"`:
+`pnpm --filter @abacus-ai/host test` passed 10 suites / 73 tests;
+`pnpm smoke:rpc` passed all five checks; desktop `vitest run --project main`
+passed 278 suites / 2,484 tests with 3 tests skipped; and
+`env -u NO_COLOR xvfb-run -a pnpm check` passed all 33 tasks (12 cached), including
+desktop 290 suites / 2,785 tests with 3 suites / 26 tests skipped and web
+212 suites / 1,579 tests. Logs are `/tmp/pr2-rebase-r3-{host,smoke,main,check}.log`.
+Only this results note was changed and committed locally; no push or changes to
+the main checkout or other worktrees occurred.
