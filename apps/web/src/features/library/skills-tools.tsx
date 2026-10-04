@@ -184,7 +184,7 @@ export const SkillsPage = () => {
             </GroupCard>
           </section>
         ))}
-        {restart && (
+        {IS_ELECTRON && restart && (
           <div role="status">
             <p>{t("phase5.restartSkills")}</p>
             <Button onClick={() => void transport.client.system.restart({})}>
