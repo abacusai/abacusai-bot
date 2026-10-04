@@ -83,6 +83,11 @@ jobs:
       # later.
       - run: pnpm run typecheck
       - run: pnpm run check:knip
+      - run: pnpm run check:web-split
+      - name: Browser bundle platform guard
+        run: |
+          pnpm --filter @abacus-ai/web build
+          node scripts/check-web-bundle.mjs
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |

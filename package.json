@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo run build vendor",
     "changelog": "node scripts/sync-changelog.js",
-    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit check:knip check:ui-registry --concurrency=1",
+    "check": "turbo run format:check lint typecheck test check:i18n check:locales check:audit check:knip check:web-split check:ui-registry --concurrency=1",
     "check:audit": "node scripts/check-audit.js",
     "dev": "pnpm run dev:desktop",
     "dev:desktop": "turbo run dev --filter=@abacus-ai/desktop",
@@ -25,7 +25,9 @@
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "typecheck:tools": "tsc -p tsconfig.tools.json",
-    "check:knip": "knip --workspace apps/desktop --include files,exports,types,duplicates,dependencies,unlisted"
+    "check:knip": "knip --workspace apps/desktop --workspace apps/web --workspace packages/contract --include files,exports,types,duplicates,dependencies,unlisted",
+    "smoke:rpc": "pnpm --filter @abacus-ai/desktop smoke:rpc",
+    "check:web-split": "node --test scripts/web-split.test.mjs scripts/cutover/knip-canaries.test.mjs scripts/cutover/check-deletions.test.mjs scripts/cutover/parity-consumers.test.mjs apps/desktop/scripts/check-release-build.test.mjs"
   },
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",

@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const LOCALE_DIR = path.join(ROOT, "src/renderer/locales");
+const LOCALE_DIR = path.join(ROOT, "../web/src/locales");
 const BASE_LOCALE = "en-US.json";
 const checkOnly = process.argv.includes("--check");
 function loadJson(filePath) {
@@ -74,7 +74,7 @@ function flattenKeys(obj, prefix = "") {
 }
 
 // Both renderers' t() calls resolve against the one set of locale files.
-const SOURCE_DIRS = [path.join(ROOT, "src/renderer")];
+const SOURCE_DIRS = [path.join(ROOT, "../web/src")];
 
 // CLDR plural categories i18next appends to a plural key.
 const PLURAL_SUFFIXES = ["_one", "_other", "_zero", "_two", "_few", "_many"];

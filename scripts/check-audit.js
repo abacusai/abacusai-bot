@@ -19,6 +19,11 @@ const TARGETS = {
     packageManager: "pnpm",
     cwd: repoRoot,
     accepted: {
+      "GHSA-vfj7-8cjw-p6xm":
+        "braces <=3.0.3 has no patched release. Its consumers are build and " +
+        "registry tooling using repository-owned glob patterns and the pinned " +
+        "registry snapshot; user or host RPC input never supplies these patterns. " +
+        "Delete when a patched braces release ships.",
       // https://github.com/advisories/GHSA-86w9-cpqp-85rv (no patched release).
       "GHSA-86w9-cpqp-85rv":
         "node-forge <=1.4.0 via sandbox-runtime 0.0.76: RSA signature " +

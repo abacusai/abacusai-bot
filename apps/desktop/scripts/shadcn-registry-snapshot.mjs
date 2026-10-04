@@ -28,13 +28,13 @@ import { join } from "node:path";
 import { registryContent } from "./registry-content.mjs";
 import { addFromSnapshot, INITIAL_ITEMS, latestSnapshot } from "./shadcn.mjs";
 
-const desktop = join(import.meta.dirname, "..");
+const desktop = join(import.meta.dirname, "../../web");
 const repo = join(desktop, "../..");
 
 const record = async () => {
   const snapshot = join(
     desktop,
-    "shadcn-registry",
+    "../desktop/shadcn-registry",
     new Date().toISOString().slice(0, 10)
   );
   await addFromSnapshot({
@@ -51,15 +51,11 @@ const check = async () => {
   try {
     for (const file of ["package.json", "components.json", "tsconfig.json"])
       cpSync(join(desktop, file), join(temp, file));
-    mkdirSync(join(temp, "src/renderer"), { recursive: true });
+    mkdirSync(join(temp, "src"), { recursive: true });
     for (const dir of ["styles", "lib"])
-      cpSync(
-        join(desktop, "src/renderer", dir),
-        join(temp, "src/renderer", dir),
-        {
-          recursive: true,
-        }
-      );
+      cpSync(join(desktop, "src", dir), join(temp, "src", dir), {
+        recursive: true,
+      });
     // The CLI resolves packages from node_modules next to package.json.
     execFileSync("ln", [
       "-s",
@@ -74,19 +70,15 @@ const check = async () => {
     });
     execFileSync(
       join(repo, "node_modules/.bin/oxfmt"),
-      [
-        "--config",
-        join(repo, "oxfmt.config.ts"),
-        join(temp, "src/renderer/ui"),
-      ],
+      ["--config", join(repo, "oxfmt.config.ts"), join(temp, "src/ui")],
       {
         cwd: repo,
         stdio: "inherit",
       }
     );
 
-    const committed = join(desktop, "src/renderer/ui");
-    const replayed = join(temp, "src/renderer/ui");
+    const committed = join(desktop, "src/ui");
+    const replayed = join(temp, "src/ui");
     const names = new Set([
       ...readdirSync(committed),
       ...readdirSync(replayed),

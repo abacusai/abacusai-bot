@@ -38,9 +38,14 @@ export const run = async ({ serve }) => {
     router: createRouter(),
     deps: fakeDeps({
       bus,
-      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot" },
-      host: { sessionHomePath: () => "/h/AbacusAI" },
-      serviceHost: { getMetadata: () => ({ materialIconsBasePath: null }) },
+      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot", account: { get: () => ({ account: null, apps: [], onboarded: true }) }, markRendererActivity: () => {} },
+      host: { sessionHomePath: () => "/h/AbacusAI", readSettings: () => ({ apiKeys: { ABACUS_API_KEY: "smoke" } }), getAbacusAccount: () => null, listModels: () => [], readApiKeyProviders: () => [], getConnectorStatuses: () => ({}) },
+      serviceHost: {
+ getMetadata: () => ({ materialIconsBasePath: null, workspaces: [], activeWorkspaceId: null }),
+ listAllAgentSessions: () => [], listSessionTurnStates: () => [], listBots: () => [], listRoutines: () => [], listSessionArtifacts: () => [], listBotMemories: () => [], listMemories: () => ({ global: [], bots: [] }),
+ listBotChatPreviews: () => [], listBotSenderChats: () => [], getNotificationSettings: () => ({ enabled: true, sound: true }),
+ getMessagingSnapshot: () => ({ platforms: [] }), listConnectorRequests: () => [],
+ },
     }),
   });
   if (serve) {
@@ -103,7 +108,7 @@ await build({
   external: [/^@orpc\//, "ws", "bufferutil", "utf-8-validate", "valibot"],
   resolve: {
     alias: {
-      "#shared": join(SRC, "shared"),
+      "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),
       "#main": join(SRC, "main"),
     },
   },

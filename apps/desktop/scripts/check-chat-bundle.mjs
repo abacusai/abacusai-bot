@@ -16,13 +16,17 @@ await build({
       name: "check-chat-bundle",
       generateBundle(_options, bundle) {
         const forbidden = new Set();
+        let matches = 0;
         for (const item of Object.values(bundle)) {
           if (item.type !== "chunk") continue;
           chunks += 1;
-          for (const id of Object.keys(item.modules))
-            if (/renderer\/features\/chat\/(fixtures|gallery)\//.test(id))
+          for (const id of Object.keys(item.modules)) {
+            if (/web\/src\/features\/chat\//.test(id)) matches++;
+            if (/web\/src\/features\/chat\/(fixtures|gallery)\//.test(id))
               forbidden.add(id);
+          }
         }
+        if (!matches) throw new Error("Chat bundle guard matched no modules");
         if (forbidden.size > 0)
           throw new Error(
             `Chat dev modules in production:\n${[...forbidden].join("\n")}`
