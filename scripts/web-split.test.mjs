@@ -35,6 +35,8 @@ test("browser boundary rejects the real Vite client resolver and direct requests
       "#renderer/platform/transport.electron",
       "#renderer/data/transport/message-port",
       "#renderer/features/sessions/browser/browser-tab",
+      "#renderer/components/browser-surface",
+      "#renderer/components/browser-surface/index.tsx",
     ])
       await assert.rejects(
         container.resolveId(id, importer),
