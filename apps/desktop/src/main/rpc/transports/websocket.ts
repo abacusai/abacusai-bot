@@ -87,6 +87,23 @@ export const startWebSocketTransport = async ({
       socket.close(1008, "token required");
       return;
     }
+    if (flowControl) {
+      const send = socket.send.bind(socket);
+      socket.send = ((
+        data: Parameters<typeof socket.send>[0],
+        ...args: unknown[]
+      ) => {
+        const size =
+          typeof data === "string"
+            ? Buffer.byteLength(data)
+            : (data as Buffer).byteLength;
+        if (size > 1024 * 1024) {
+          socket.close(1009, "outbound payload too large");
+          return;
+        }
+        return (send as Function)(data, ...args);
+      }) as typeof socket.send;
+    }
     const flows = flowControl ? new FlowRegistry() : undefined;
     const timer = flowControl
       ? setInterval(() => {
@@ -113,7 +130,17 @@ export const startWebSocketTransport = async ({
                       listener({ data: decoded });
                       return;
                     }
+                    if (
+                      typeof event.data === "string" &&
+                      (!decoded ||
+                        typeof decoded !== "object" ||
+                        typeof decoded.i !== "string" ||
+                        !decoded.p ||
+                        typeof decoded.p !== "object")
+                    )
+                      return;
                   } catch {
+                    if (typeof event.data === "string") return;
                     /* Binary oRPC frames pass through unchanged. */
                   }
                 }

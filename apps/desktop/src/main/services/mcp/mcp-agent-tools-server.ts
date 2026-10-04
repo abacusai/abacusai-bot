@@ -315,6 +315,7 @@ export class McpAgentToolsServer {
     this.activeSessions.clear();
 
     if (this.server != null) {
+      this.server.closeAllConnections();
       this.server.close();
       this.server = null;
       this.port = null;

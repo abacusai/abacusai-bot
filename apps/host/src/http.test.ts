@@ -20,10 +20,12 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     origins: new Set(["https://apps.abacus.ai"]),
   };
   const payload = Buffer.from(
-    JSON.stringify({ o: "o", g: "g", e: Date.now() / 1000 + 600 })
+    JSON.stringify({ o: "o", g: "g", e: Math.floor(Date.now() / 1000) + 600 })
   ).toString("base64url");
   const token = `${payload}.${createHmac("sha256", identity.secret).update(payload).digest("hex")}`;
-  const server = createHostHttpServer(identity, app, lease);
+  const server = createHostHttpServer(identity, app, lease, (w, s) =>
+    w === "w" && s === "s" ? home : null
+  );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const headers = {
@@ -51,20 +53,44 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     ).toBe(403);
     const body = new FormData();
     body.append("files", new Blob(["attachment"]), "../test.txt");
-    const response = await fetch(`${base}/upload`, {
-      method: "POST",
-      headers,
-      body,
-    });
+    const response = await fetch(
+      `${base}/upload?workspaceId=w&sessionId=s&baseFolder=/ignored`,
+      {
+        method: "POST",
+        headers,
+        body,
+      }
+    );
     expect(response.status).toBe(200);
     const { paths } = (await response.json()) as { paths: string[] };
     expect(paths[0]).toContain(join(home, ".abacusai-bot", "temp"));
     expect(await readFile(paths[0], "utf8")).toBe("attachment");
-    const raw = await fetch(`${base}/upload?name=raw.bin`, {
-      method: "POST",
-      headers,
-      body: new Uint8Array(10 * 1024 * 1024),
-    });
+    const download = await fetch(
+      `${base}/files?hostRoot=${encodeURIComponent(home)}&path=${encodeURIComponent(paths[0])}`,
+      { headers }
+    );
+    expect(download.status).toBe(200);
+    expect(await download.text()).toBe("attachment");
+    expect(
+      (await fetch(`${base}/files?hostRoot=${home}&path=${paths[0]}`)).status
+    ).toBe(403);
+    expect(
+      (
+        await fetch(`${base}/upload?baseFolder=/tmp`, {
+          method: "POST",
+          headers,
+          body: "x",
+        })
+      ).status
+    ).toBe(400);
+    const raw = await fetch(
+      `${base}/upload?workspaceId=w&sessionId=s&name=raw.bin`,
+      {
+        method: "POST",
+        headers,
+        body: new Uint8Array(10 * 1024 * 1024),
+      }
+    );
     expect(raw.status).toBe(200);
     expect(
       (await readFile(((await raw.json()) as { paths: string[] }).paths[0]))

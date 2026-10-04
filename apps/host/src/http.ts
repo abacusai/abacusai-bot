@@ -1,8 +1,13 @@
+import { randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { createServer, type ServerResponse } from "node:http";
+import { basename } from "node:path";
+import { pipeline } from "node:stream/promises";
 
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 
 import type { AppOperations } from "#main/rpc/deps";
+import { openHostFile } from "#main/services/workspace/host-path";
 
 import { authenticate, type HostIdentity } from "./auth";
 import type { HostLease } from "./lease";
@@ -16,7 +21,11 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
 export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
-  lease: HostLease
+  lease: HostLease,
+  uploadFolder: (
+    workspaceId: string,
+    sessionId: string
+  ) => string | null = () => null
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -39,8 +48,43 @@ export const createHostHttpServer = (
       request.resume();
       return;
     }
+    if (
+      request.method === "GET" &&
+      ["/files", "/file"].includes(url.pathname)
+    ) {
+      try {
+        const file = await openHostFile(
+          url.searchParams.get("path") ?? "",
+          url.searchParams.get("hostRoot") ?? ""
+        );
+        if (file.ok === false) {
+          json(response, 404, { error: file.error });
+          return;
+        }
+        response.writeHead(200, {
+          "content-type": "application/octet-stream",
+          "content-length": file.stat.size,
+          "cache-control": "no-store",
+        });
+        lease.activity();
+        await pipeline(createReadStream(file.realFile), response);
+      } catch {
+        if (!response.headersSent)
+          json(response, 400, { error: "download-failed" });
+      }
+      return;
+    }
     if (request.method !== "POST" || url.pathname !== "/upload") {
       json(response, 404, { error: "not-found" });
+      return;
+    }
+    const folder = uploadFolder(
+      url.searchParams.get("workspaceId") ?? "",
+      url.searchParams.get("sessionId") ?? ""
+    );
+    if (!folder) {
+      json(response, 400, { error: "session-required" });
+      request.resume();
       return;
     }
     const limit = 256 * 1024 * 1024;
@@ -83,8 +127,11 @@ export const createHostHttpServer = (
           { name: url.searchParams.get("name") || "attachment", data: bytes },
         ];
       const result = await app.savePastedTempFiles(
-        url.searchParams.get("baseFolder") || app.botHome(),
-        files
+        folder,
+        files.map((file) => ({
+          ...file,
+          name: `${randomUUID()}-${basename(file.name)}`,
+        }))
       );
       lease.activity();
       json(response, result.success ? 200 : 400, result);

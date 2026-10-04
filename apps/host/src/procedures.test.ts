@@ -7,7 +7,19 @@ const fixture = await vi.hoisted(async () => {
   process.env.ABACUSAI_BOT_HOME = home;
   process.env.ABACUSAI_BOT_HOST_MODE = "1";
   delete process.env.ABACUS_API_KEY;
-  return { home };
+  return { home, unsupported: [] as string[] };
+});
+vi.mock("./unsupported", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./unsupported")>();
+  return {
+    ...original,
+    HostUnsupportedError: class extends original.HostUnsupportedError {
+      constructor(member: string) {
+        super(member);
+        fixture.unsupported.push(member);
+      }
+    },
+  };
 });
 import { rmSync } from "node:fs";
 
@@ -19,6 +31,189 @@ import { connectInProcess } from "#main/rpc/testing";
 
 import { composeNodeHost } from "./compose";
 import { procedureInput } from "./procedure-input.test-support";
+const expectedFailures: Record<string, { code: string; message: string }> = {
+  "workspaces.switch": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "workspaces.relocate": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "git.switchBranch": {
+    code: "CONFLICT",
+    message: "Unable to switch git branch.",
+  },
+  "git.createBranch": {
+    code: "CONFLICT",
+    message: "Unable to create git branch.",
+  },
+  "git.diff": {
+    code: "FORBIDDEN",
+    message: "<home> is outside the checkout",
+  },
+  "git.discard": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "git.checkoutStatus": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "git.watch": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "files.rename": {
+    code: "CONFLICT",
+    message: "Path outside workspace",
+  },
+  "files.trash": {
+    code: "CONFLICT",
+    message: "Path outside workspace",
+  },
+  "files.readImageAsDataUrl": {
+    code: "CONFLICT",
+    message: "unsupported-extension",
+  },
+  "files.readText": {
+    code: "CONFLICT",
+    message: "not-a-file",
+  },
+  "files.readPptx": {
+    code: "CONFLICT",
+    message: "not-a-file",
+  },
+  "ai.subscribe": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
+  "ai.runFinished": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "ai.send": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
+  "ai.hydrate": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
+  "ai.respondPermission": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "ai.queue.enqueue": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "ai.queue.update": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "ai.queue.remove": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "ai.queue.clear": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "ai.queue.dequeue": {
+    code: "UNAVAILABLE",
+    message: "The agent is not running",
+  },
+  "bots.openChat": {
+    code: "NOT_FOUND",
+    message: "No bot fixture",
+  },
+  "bots.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "routines.editByChat": {
+    code: "NOT_FOUND",
+    message: "No routine fixture",
+  },
+  "routines.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "settings.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "auth.web.complete": {
+    code: "UNAUTHORIZED",
+    message: "Unauthorized",
+  },
+  "mcp.runtime.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "terminal.output": {
+    code: "NOT_FOUND",
+    message: "No terminal terminal-1",
+  },
+  "voice.whisper.progress": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "messaging.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "system.openExternal": {
+    code: "UNSUPPORTED",
+    message: "not available on the web host",
+  },
+  "system.logs.save": {
+    code: "UNSUPPORTED",
+    message: "not available on the web host",
+  },
+  "system.events": {
+    code: "20",
+    message: "This operation was aborted",
+  },
+  "db.sessions.update": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
+  "db.sessions.delete": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
+  "db.bots.update": {
+    code: "NOT_FOUND",
+    message: "No bot fixture",
+  },
+  "db.bots.delete": {
+    code: "NOT_FOUND",
+    message: "No bot fixture",
+  },
+  "db.routines.update": {
+    code: "NOT_FOUND",
+    message: "No routine fixture",
+  },
+  "db.routines.delete": {
+    code: "NOT_FOUND",
+    message: "No routine fixture",
+  },
+  "db.memories.delete": {
+    code: "BAD_REQUEST",
+    message: "A global memory names its target",
+  },
+  "db.workspaces.update": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+  "db.workspaces.delete": {
+    code: "NOT_FOUND",
+    message: "No workspace fixture",
+  },
+};
+
 const procedures = (
   router: any,
   prefix: string[] = []
@@ -42,6 +237,9 @@ it("calls every retained procedure under the shim through a memory transport", a
     webContentsId: null,
   });
   const failures: string[] = [];
+  const unhandled = (error: unknown) =>
+    failures.push(`background rejection: ${String(error)}`);
+  process.on("unhandledRejection", unhandled);
   const retained = procedures(createRouter()).filter(({ path, procedure }) =>
     supportsProcedure(
       "web-host",
@@ -70,7 +268,10 @@ it("calls every retained procedure under the shim through a memory transport", a
       let client: any = transport.client;
       for (const segment of path) client = client[segment];
       const abort = new AbortController();
-      const timer = setTimeout(() => abort.abort(), 100);
+      const timer = setTimeout(
+        () => abort.abort(),
+        expectedFailures[name]?.code === "20" ? 1000 : 30_000
+      );
       try {
         const value = await client(input, { signal: abort.signal });
         if (value && typeof value.next === "function") {
@@ -81,16 +282,19 @@ it("calls every retained procedure under the shim through a memory transport", a
             await value.return?.();
           }
         }
+        if (expectedFailures[name])
+          failures.push(
+            `${name}: expected ${expectedFailures[name].code}, call succeeded`
+          );
       } catch (error) {
-        const message = String((error as Error).message);
-        // Missing ids and offline network calls have normal domain errors. Electron use is never one.
-        if (
-          (error as { code?: string }).code === "INTERNAL_SERVER_ERROR" ||
-          /Electron member|HostUnsupportedError|not available.*shim|Input validation failed/.test(
-            message
-          )
-        )
-          failures.push(`${name}: ${message}`);
+        const expected = expectedFailures[name];
+        const code = String((error as { code?: unknown }).code);
+        const message = String((error as Error).message).replaceAll(
+          fixture.home,
+          "<home>"
+        );
+        if (!expected || expected.code !== code || expected.message !== message)
+          failures.push(`${name}: ${code} ${message}`);
       } finally {
         clearTimeout(timer);
       }
@@ -98,12 +302,15 @@ it("calls every retained procedure under the shim through a memory transport", a
     expect(called).toBe(retained.length);
     expect(called).toBeGreaterThan(150);
     console.info(`Retained procedures exercised: ${called}`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(fixture.unsupported).toEqual([]);
     expect(failures).toEqual([]);
   } finally {
     transport.closeClient();
     transport.closeServer();
     await host.dispose();
+    process.off("unhandledRejection", unhandled);
     vi.unstubAllGlobals();
   }
-}, 60_000);
+}, 180_000);
 afterAll(() => rmSync(fixture.home, { recursive: true, force: true }));

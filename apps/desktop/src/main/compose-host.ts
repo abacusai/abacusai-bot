@@ -1,4 +1,3 @@
-const APP_DISPLAY_NAME = "AbacusAI Bot";
 import type { HostOperations, HostPlatformOperations } from "./handler";
 import { wireHostEvents } from "./handler";
 import { runStartupMigrations } from "./migrations/startup";
@@ -9,6 +8,8 @@ import { createTables } from "./rpc/tables";
 import { createEventTrackers } from "./rpc/trackers";
 import { ServiceHost } from "./service-host";
 import { PrefsStore } from "./services/config/prefs-store";
+
+const APP_DISPLAY_NAME = "AbacusAI Bot";
 
 export interface ComposeHostOptions {
   serviceHost?: ServiceHost;
@@ -65,6 +66,7 @@ export const composeHost = async (options: ComposeHostOptions) => {
     sources: serviceHost,
     prefsStore: options.prefsStore ?? new PrefsStore(),
   });
+  const trackers = createEventTrackers(mainEventBus);
   const deps: RpcDeps = {
     serviceHost,
     host,
@@ -78,12 +80,13 @@ export const composeHost = async (options: ComposeHostOptions) => {
     tables,
     ai: serviceHost.aguiRelay,
     threads: serviceHost.threadStore,
-    trackers: createEventTrackers(mainEventBus),
+    trackers,
   };
   return {
     serviceHost,
     deps,
     dispose: async () => {
+      trackers.dispose();
       tables.dispose();
       serviceHost.stopCronScheduler();
       await serviceHost.dispose();

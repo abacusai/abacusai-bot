@@ -6,11 +6,13 @@ import type { IpcEvent } from "@abacus-ai/contract/contracts";
  * event iterator is built from.
  */
 import {
+  ORPCError,
   implement,
   type ImplementerInternalWithMiddlewares,
 } from "@orpc/server";
 
 import { supportsProcedure } from "../../platform/capabilities";
+import { openHostFile } from "../../services/workspace/host-path";
 import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";
 import { forbidden, unsupported } from "../errors";
@@ -23,11 +25,65 @@ export const impl: ImplementerInternalWithMiddlewares<
   RpcContext
 > = implement(contract)
   .$context<RpcContext>()
-  .use(({ context, path, next }, input) => {
+  .use(async ({ context, path, next }, input) => {
     const procedure = path.join(".");
     if (!supportsProcedure(context.platform ?? "electron", procedure, input))
       throw unsupported(procedure);
-    return next({ context: {} });
+    const fileInput = input as
+      | { hostRoot?: string; filePath?: string; maxBytes?: number }
+      | undefined;
+    const alternative =
+      fileInput?.hostRoot && fileInput.filePath
+        ? `/files?${new URLSearchParams({ hostRoot: fileInput.hostRoot, path: fileInput.filePath })}`
+        : "/files?hostRoot=<workspace>&path=<export-file>";
+    const tooLarge = () =>
+      new ORPCError("PAYLOAD_TOO_LARGE", {
+        status: 413,
+        data: { limit: 1024 * 1024, alternative },
+      });
+    if (
+      context.platform === "web-host" &&
+      ["files.readText", "files.readImageAsDataUrl", "files.readPptx"].includes(
+        procedure
+      ) &&
+      fileInput?.hostRoot &&
+      fileInput.filePath
+    ) {
+      const file = await openHostFile(fileInput.filePath, fileInput.hostRoot);
+      if (file.ok) {
+        const size =
+          procedure === "files.readText"
+            ? Math.min(file.stat.size, fileInput.maxBytes ?? 524288)
+            : file.stat.size;
+        const cap =
+          procedure === "files.readImageAsDataUrl" ? 675 * 1024 : 900 * 1024;
+        if (size > cap) throw tooLarge();
+      }
+    }
+    const result = await next({ context: {} });
+    if (context.platform !== "web-host") return result;
+    const check = (value: unknown) => {
+      // Reserve space for oRPC framing and serializer metadata.
+      if (Buffer.byteLength(JSON.stringify(value) ?? "") > 900 * 1024)
+        throw tooLarge();
+      return value;
+    };
+    const output = result.output;
+    if (
+      output &&
+      typeof output === "object" &&
+      Symbol.asyncIterator in output
+    ) {
+      const inner = output as AsyncIterable<unknown>;
+      return {
+        ...result,
+        output: (async function* () {
+          for await (const value of inner) yield check(value);
+        })(),
+      };
+    }
+    check(output);
+    return result;
   });
 
 /** The caller's webContents id; `FORBIDDEN` over a transport with no window. */

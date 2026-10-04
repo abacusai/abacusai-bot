@@ -9,7 +9,7 @@ import { HostUnsupportedError } from "./unsupported";
 it("exports every runtime Electron import, including dynamic imports", () => {
   const root = resolve(import.meta.dirname, "../../..");
   const files = execFileSync(
-    "rg",
+    resolve(root, "packages/agent/vendor/rg"),
     ["--files", "apps/desktop/src", "-g", "*.ts"],
     { cwd: root, encoding: "utf8" }
   )

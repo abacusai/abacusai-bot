@@ -1837,6 +1837,9 @@ export class ServiceHost {
   stop(): void {
     this.startedAt = null;
     this.workspaceRuntimeService.stop();
+    this.logSyncService.stop();
+    this.diagnosticsSyncService.stop();
+    this.debugSyncService.stop();
   }
 
   hasDevicesBootedByUs(): boolean {
@@ -1853,6 +1856,7 @@ export class ServiceHost {
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
     this.mcpDeviceServer.stop();
+    this.mcpAgentToolsServer.stop();
     this.deviceMirrorService.dispose();
     this.initializedAt = null;
     this.workspaceService.dispose();
@@ -1863,9 +1867,9 @@ export class ServiceHost {
     this.sessionArtifactsService.dispose();
     const agentsStopped = this.agentManagerService.dispose();
     this.fileSearchService.dispose();
-    void this.messagingGatewayService.dispose();
+    const messagingStopped = this.messagingGatewayService.dispose();
     this.workspaceRuntimeService.reset();
-    return agentsStopped;
+    return Promise.all([agentsStopped, messagingStopped]).then(() => {});
   }
 
   setEventDispatcher(dispatcher: EventDispatcher): void {
@@ -3077,6 +3081,12 @@ export class ServiceHost {
     return this.gitService.listBranches(workspacePath);
   }
 
+  hostUploadFolder(workspaceId: string, sessionId: string): string | null {
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (!session || session.workspaceId !== workspaceId) return null;
+    return this.resolveWorkspaceContextPath({ workspaceId, sessionId });
+  }
+
   private localWorkspacePath(workspaceId: string): string | null {
     const workspace = this.workspaceService
       .getWorkspaces()
@@ -3602,7 +3612,6 @@ export class ServiceHost {
   }
 
   stopDeviceStream(streamId?: number): void {
-    assertHostCapability(this.platform, "devices");
     assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.stopDeviceStream(streamId);
   }

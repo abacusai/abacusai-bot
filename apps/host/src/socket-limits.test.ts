@@ -1,0 +1,178 @@
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { FlowRegistry } from "@abacus-ai/contract/contract/flow-control";
+import { createORPCClient, isDefinedError } from "@orpc/client";
+import { RPCLink } from "@orpc/client/websocket";
+import { expect, it, vi } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
+
+import { nodeFileOperations } from "#main/app-operations/node";
+import { createRouter } from "#main/rpc/router";
+import { fakeDeps } from "#main/rpc/testing";
+import { startWebSocketTransport } from "#main/rpc/transports/websocket";
+
+const setup = async (serviceHost: any = {}) => {
+  let peer!: WebSocket;
+  const emit = WebSocketServer.prototype.emit;
+  const spy = vi
+    .spyOn(WebSocketServer.prototype, "emit")
+    .mockImplementation(function (
+      this: WebSocketServer,
+      event: string | symbol,
+      ...args: any[]
+    ) {
+      if (event === "connection") peer = args[0];
+      return emit.call(this, event, ...args);
+    });
+  const server = await startWebSocketTransport({
+    router: createRouter(),
+    deps: fakeDeps({ app: nodeFileOperations, serviceHost }),
+    platform: "web-host",
+    flowControl: true,
+  });
+  const socket = new WebSocket(server.url);
+  await new Promise<void>((resolve) => socket.once("open", resolve));
+  spy.mockRestore();
+  const closed = new Promise<number>((resolve) =>
+    socket.once("close", resolve)
+  );
+  return { server, socket, peer, closed };
+};
+it.each(["inbound", "outbound"])(
+  "closes a real socket with 1009 for oversized %s frames",
+  async (direction) => {
+    const { server, socket, peer, closed } = await setup();
+    peer.on("error", () => {});
+    try {
+      (direction === "inbound" ? socket : peer).send(
+        "x".repeat(1024 * 1024 + 1)
+      );
+      expect(await closed).toBe(1009);
+    } finally {
+      socket.terminate();
+      await server.close();
+    }
+  }
+);
+it("returns a defined size error for a normal large image while keeping the connection usable", async () => {
+  const home = await mkdtemp(join(tmpdir(), "rpc-image-"));
+  await writeFile(join(home, "large.png"), Buffer.alloc(4 * 1024 * 1024));
+  const { server, socket } = await setup();
+  const client: any = createORPCClient(
+    new RPCLink({ websocket: socket as never })
+  );
+  try {
+    try {
+      await client.files.readImageAsDataUrl({
+        hostRoot: home,
+        filePath: "large.png",
+      });
+      throw new Error("expected size error");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "PAYLOAD_TOO_LARGE",
+        data: { alternative: expect.stringContaining("/files?") },
+      });
+      expect(isDefinedError(error)).toBe(true);
+    }
+    await writeFile(join(home, "small.txt"), "download works");
+    expect(
+      await client.files.readText({ hostRoot: home, filePath: "small.txt" })
+    ).toMatchObject({ content: "download works" });
+  } finally {
+    socket.terminate();
+    await server.close();
+    await rm(home, { recursive: true, force: true });
+  }
+});
+it("the real backlog timer closes a stalled socket with 1013 and releases flow state and timer", async () => {
+  const closeFlow = vi.spyOn(FlowRegistry.prototype, "close");
+  const clear = vi.spyOn(globalThis, "clearInterval");
+  const { server, socket, peer, closed } = await setup();
+  const close = vi.spyOn(peer, "close");
+  try {
+    (socket as any)._socket.pause();
+    for (let i = 0; i < 100; i++) peer.send(Buffer.alloc(512 * 1024));
+    await vi.waitFor(() =>
+      expect(close).toHaveBeenCalledWith(1013, "consumer stalled")
+    );
+    (socket as any)._socket.resume();
+    expect(await closed).toBe(1013);
+    await vi.waitFor(() => expect(closeFlow).toHaveBeenCalled());
+    expect(clear).toHaveBeenCalled();
+    for (const registry of closeFlow.mock.instances)
+      expect((registry as FlowRegistry).size).toBe(0);
+  } finally {
+    socket.terminate();
+    await server.close();
+    vi.restoreAllMocks();
+  }
+});
+
+it("returns a pending channel URL through the real host socket", async () => {
+  const { AbacusChannelsConnector } =
+    await import("#main/services/messaging/abacus-channels-connector");
+  const connector = new AbacusChannelsConnector(
+    {} as never,
+    "discord",
+    "web-host"
+  );
+  const url = "https://discord.com/oauth2/authorize?client_id=fixture";
+  (connector as any).link = { status: "pending", deepLink: url };
+  const server = await startWebSocketTransport({
+    router: createRouter(),
+    deps: fakeDeps({
+      serviceHost: { openSharedChannelLink: async () => connector.openLink() },
+    }),
+    platform: "web-host",
+    flowControl: true,
+  });
+  const socket = new WebSocket(server.url);
+  await new Promise<void>((resolve) => socket.once("open", resolve));
+  const client: any = createORPCClient(
+    new RPCLink({ websocket: socket as never })
+  );
+  try {
+    expect(
+      await client.messaging.openSharedLink({
+        platformId: "abacus_discord",
+        target: "install",
+      })
+    ).toBe(url);
+  } finally {
+    socket.terminate();
+    await server.close();
+  }
+});
+
+it("caps terminal scrollback iterator snapshots with a defined size error", async () => {
+  const { server, socket } = await setup({
+    terminalOutputState: () => ({
+      data: "x".repeat(2 * 1024 * 1024),
+      offset: 2 * 1024 * 1024,
+      from: 0,
+    }),
+  });
+  const client: any = createORPCClient(
+    new RPCLink({ websocket: socket as never })
+  );
+  try {
+    const iterator = await client.terminal.output({
+      conversationKey: (
+        await import("@abacus-ai/contract/conversation-scope")
+      ).sessionConversationKey("w", "s"),
+      terminalId: "terminal-1",
+      generation: 1,
+    });
+    await expect(iterator.next()).rejects.toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+    });
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+    await iterator.return();
+  } finally {
+    socket.terminate();
+    await server.close();
+  }
+});

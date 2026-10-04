@@ -1,12 +1,9 @@
-import { mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
 
 import { isFunnelStep, funnelDetail } from "@abacus-ai/contract/funnel";
 
 import {
   nodeFileOperations,
-  saveLogArchive,
   importPickedSkills,
 } from "#main/app-operations/node";
 import { abacusBotHome } from "#main/paths";
@@ -26,6 +23,7 @@ import { setTitlebarDensity } from "#main/window-chrome-settings";
 
 import { app } from "./electron-shim";
 import type { HostLease } from "./lease";
+import { shutdown } from "./shutdown";
 import { unsupported } from "./unsupported";
 export const createNodeAppOperations = (
   lease: HostLease,
@@ -40,7 +38,7 @@ export const createNodeAppOperations = (
   appVersion: app.getVersion,
   homeDir: homedir,
   botHome: abacusBotHome,
-  restartApp: () => process.exit(75),
+  restartApp: () => shutdown(75),
   hasGoogleChrome: () => false,
   reportFunnelStep: (step, detail, once) => {
     if (isFunnelStep(step))
@@ -55,20 +53,7 @@ export const createNodeAppOperations = (
     signOut,
     forget: forgetAccount,
   },
-  saveLogs: async (logs) => {
-    try {
-      const dir = join(abacusBotHome(), "host", "log");
-      await mkdir(dir, { recursive: true });
-      const filePath = join(dir, `logs-${Date.now()}.zip`);
-      return saveLogArchive(filePath, logs, {
-        appVersion: app.getVersion(),
-        isPackaged: false,
-        sessions: serviceHost.collectAgentDiagnostics(),
-      });
-    } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  },
+  saveLogs: async () => unsupported("system.saveLogs"),
   showNotification: (title, body, metadata) =>
     emitBusChannel("system", { type: "notification", title, body, metadata }),
   importLocalSkills: (request) =>

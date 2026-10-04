@@ -26,7 +26,13 @@ const main = async () => {
   const { composeNodeHost } = await import("./compose");
   const composition = await composeNodeHost();
   const { appOps, lease } = composition;
-  const httpServer = createHostHttpServer(identity, appOps, lease);
+  const httpServer = createHostHttpServer(
+    identity,
+    appOps,
+    lease,
+    (workspaceId, sessionId) =>
+      composition.serviceHost.hostUploadFolder(workspaceId, sessionId)
+  );
   const transport = await startWebSocketTransport({
     router: createRouter(),
     deps: composition.deps,
@@ -42,6 +48,7 @@ const main = async () => {
     },
   });
   console.log(`[host] listening on ${transport.port}`);
+  const { installShutdown, shutdown } = await import("./shutdown");
   let stopping = false;
   const stop = async () => {
     if (stopping) return;
@@ -49,13 +56,15 @@ const main = async () => {
     await transport.close();
     await composition.dispose();
     logStore().flush();
-    httpServer.close();
+    httpServer.closeAllConnections();
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
   };
+  installShutdown(stop);
   process.once("SIGTERM", () => {
-    void stop();
+    shutdown();
   });
   process.once("SIGINT", () => {
-    void stop();
+    shutdown();
   });
 };
 if (process.argv.includes("--verify")) {

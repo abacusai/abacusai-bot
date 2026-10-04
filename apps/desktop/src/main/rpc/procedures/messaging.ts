@@ -26,7 +26,7 @@ export const messagingRouter = impl.messaging.router({
   ),
   openSharedLink: impl.messaging.openSharedLink.handler(
     async ({ input, context }) => {
-      await context.deps.serviceHost.openSharedChannelLink(
+      return context.deps.serviceHost.openSharedChannelLink(
         input.platformId,
         input.target
       );

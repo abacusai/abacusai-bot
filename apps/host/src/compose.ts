@@ -7,7 +7,7 @@ export const composeNodeHost = async () => {
   const { ServiceHost } = await import("#main/service-host");
   const { CueArbiter } = await import("#main/notch/cue-arbiter");
   const { unsupported } = await import("./unsupported");
-  const { trashItem } = await import("./filesystem");
+  const { trashItem, sweepTrash } = await import("./filesystem");
   const serviceHost = new ServiceHost("web-host", { trashItem });
   const lease = new HostLease(
     () =>
@@ -21,6 +21,7 @@ export const composeNodeHost = async () => {
         )
   );
   const appOps = createNodeAppOperations(lease, serviceHost);
+  await sweepTrash(appOps.botHome());
   const composition = await composeHost({
     serviceHost,
     appOps,

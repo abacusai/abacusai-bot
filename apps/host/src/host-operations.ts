@@ -6,6 +6,7 @@ import { emitHostEvent } from "#main/rpc/emit";
 import type { ServiceHost } from "#main/service-host";
 
 import { createWebAuth } from "./auth-web";
+import { shutdown } from "./shutdown";
 import { unsupported } from "./unsupported";
 export const nodeHostPlatform: HostPlatformOperations = {
   startAbacusAuth: async () => unsupported("auth.abacus.start"),
@@ -20,7 +21,7 @@ export const nodeHostPlatform: HostPlatformOperations = {
   clearSignInSession: async () => {},
   rememberSessionAccount: () => {},
   registerLoginItem: () => {},
-  relaunch: () => process.exit(75),
+  relaunch: () => shutdown(75),
   requestMicrophoneAccess: async () => true,
   localModels: {
     state: unsupported,

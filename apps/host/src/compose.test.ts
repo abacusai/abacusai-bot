@@ -38,6 +38,8 @@ it("initializes and starts under the shim; migrates workspace stores without tou
   // The sentinel is a filesystem assertion, not a credential for network work.
   const configPath = join(fixture.home, "config.json");
   const original = readFileSync(configPath, "utf8");
+  const { mainEventBus } = await import("#main/rpc/event-bus");
+  const listenersBefore = mainEventBus.listenerCount();
   const host = await composeNodeHost();
   const transport = connectInProcess(host.deps, {
     platform: "web-host",
@@ -63,6 +65,14 @@ it("initializes and starts under the shim; migrates workspace stores without tou
     expect(await transport.client.update.status()).toMatchObject({
       checking: false,
     });
+    const created = host.serviceHost.createAgentSession("legacy");
+    expect(host.serviceHost.hostUploadFolder("legacy", created.id)).toBe(
+      fixture.home
+    );
+    expect(host.serviceHost.hostUploadFolder("other", created.id)).toBeNull();
+    expect(host.serviceHost.hostUploadFolder("legacy", "unknown")).toBeNull();
+    const snapshot = await transport.client.db.sessions.snapshot();
+    expect(snapshot.rows.some((row) => row.id === created.id)).toBe(true);
     await transport.client.system.activity();
     expect(host.lease.lastActivityAt).toBeGreaterThan(0);
     for (const service of ["render_document", "render_deck", "render_design"])
@@ -110,7 +120,27 @@ it("initializes and starts under the shim; migrates workspace stores without tou
   } finally {
     transport.closeClient();
     transport.closeServer();
+    await host.serviceHost.getRuntimeMcpPathForSpawn("code", "dispose-test");
+    const mcp = (host.serviceHost as any).mcpAgentToolsServer;
+    const port = mcp.port;
+    expect(mcp.isRunning()).toBe(true);
     await host.dispose();
+    expect(mcp.isRunning()).toBe(false);
+    expect(mainEventBus.listenerCount()).toBe(listenersBefore);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const { createConnection } = await import("node:net");
+    await new Promise<void>((resolve, reject) => {
+      const socket = createConnection({ port, host: "127.0.0.1" });
+      socket.once("connect", () => {
+        socket.destroy();
+        reject(new Error("MCP listener survived disposal"));
+      });
+      socket.once("error", () => resolve());
+    });
+    const handles = (process as any)._getActiveHandles();
+    expect(
+      handles.filter((h: any) => h.constructor.name === "Server" && h.listening)
+    ).toEqual([]);
     vi.unstubAllGlobals();
   }
 }, 20_000);

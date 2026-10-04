@@ -3,6 +3,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { trashItem } from "./filesystem";
+import { shutdown } from "./shutdown";
 import { HostUnsupportedError } from "./unsupported";
 const botHome = () =>
   process.env.ABACUSAI_BOT_HOME || join(homedir(), ".abacusai-bot");
@@ -57,8 +58,8 @@ export const app = {
   userAgentFallback:
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
   getApplicationNameForProtocol: () => "",
-  relaunch: () => process.exit(75),
-  quit: () => process.exit(75),
+  relaunch: () => shutdown(75),
+  quit: () => shutdown(75),
 };
 export const shell = {
   trashItem,

@@ -10,7 +10,6 @@ import { join } from "path";
 import path from "path";
 import { promisify } from "util";
 
-import type {} from "@abacus-ai/contract/contracts";
 import {
   app,
   shell,
