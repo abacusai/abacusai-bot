@@ -301,23 +301,32 @@ Committed locally; no push, deployment or changes to another worktree.
 
 ## Dev-pod hosts
 
-Desktop `ABACUSAI_BOT_ABACUS_HOST` now accepts HTTPS `*.internalreai.com`
-only when unpackaged or versioned `-test.`; packaged release defaults and
+Desktop `ABACUSAI_BOT_ABACUS_HOST` accepts an extra HTTPS host suffix from
+`ABACUSAI_BOT_DEV_ENDPOINT_SUFFIX` (for example `.dev.example.test`) only
+when unpackaged or versioned `-test.`; packaged release defaults and
 existing Abacus host behavior are unchanged. Dev pods keep the same origin
 for sign-in and `/v1` account/credits requests. The agent's
 `ABACUSAI_BOT_ABACUS_V1` accepts this suffix only with the explicit opt-in
-`ABACUSAI_BOT_DEV_ENDPOINTS=1` (set both variables for a standalone agent).
+`ABACUSAI_BOT_DEV_ENDPOINTS=1` (set the endpoint, suffix and opt-in variables
+for a standalone agent). The suffix must be a single dotted DNS suffix;
+missing or malformed suffixes grant no extra hosts.
 The desktop supplies the `/v1` endpoint from its host override. HTTP, bare
-`internalreai.com`, lookalike domains and suffix spoofing remain rejected.
+`dev.example.test`, lookalike domains and suffix spoofing remain rejected.
 
 Validation: desktop `pnpm --filter @abacus-ai/desktop test --project main`
 passed 278 files / 2,502 tests (3 existing skips); agent endpoint tests passed
 17 tests; targeted formatting/lint passed. Built Electron launched headlessly
-with both dev-host env vars and a fresh `/tmp` home. Its main log records
-`/chatllm/signin` and `/v1/account` on
-`rajaniraiyn-dev.mumbai.internalreai.com`; the account endpoint supplies credits
+with dev-host env vars and a fresh `/tmp` home. Its main log records
+`/chatllm/signin` and `/v1/account` on the dev pod (anonymized here as
+`pod.dev.example.test`); the account endpoint supplies credits
 and returned HTTP 500 with a deliberately invalid test key. No real sign-in
 was performed. Screenshot, main log, capture driver and build/test logs are in
 `/shared/home/rajaniraiyn/abacusai-bot/.codex-runs/electron-devhost/`.
 The capture used `VITE_UI_GALLERY=1` for real RPC calls (no response mocks),
 then the normal build was restored. Committed locally without pushing.
+
+Env-suffix follow-up validation: the desktop main project passed 278 files /
+2,522 tests (3 existing skips); after adding configurable-suffix coverage,
+the touched desktop suite passed all 41 tests and the agent endpoint suite
+passed all 28 tests. Targeted formatting/lint and `git diff --check` passed;
+the removed internal domain and dev-pod hostname have no tracked matches.
