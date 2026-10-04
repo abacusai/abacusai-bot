@@ -1,3 +1,4 @@
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 /** R3-T3,T4,T6,T7,T12,T15: real collections and the loader/action boundary. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +9,6 @@ import {
 } from "#renderer/data/fixture-db/fixture-db";
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
-import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { botAttention } from "./attention";
 import { createBot, updateBot, deleteBot, duplicateName } from "./bot-actions";

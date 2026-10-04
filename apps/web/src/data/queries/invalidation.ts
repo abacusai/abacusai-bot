@@ -1,3 +1,4 @@
+import type { SettingsEvent, WindowEvent } from "@abacus-ai/contract/contract";
 /**
  * `eventType → queryKey[]` (spec 01 §8.4; spec 00 A-T11): the table that
  * replaces the old renderer's refresh map. `useInvalidationBridge()` in
@@ -7,7 +8,7 @@ import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import type { AppQueryUtils, Transport } from "#renderer/data/transport";
-import type { SettingsEvent, WindowEvent } from "@abacus-ai/contract/contract";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { followNotices } from "./live";
 import { settingsKeys } from "./settings";
@@ -44,20 +45,21 @@ export const useInvalidationBridge = (transport: Transport): void => {
       for (const queryKey of keysFor(transport.orpc, notice))
         void queryClient.invalidateQueries({ queryKey });
     };
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.window.events({}, { signal }),
-      (event) => {
-        // The chrome state rides the notice: no round trip needed.
-        if (event.type === "chrome")
-          queryClient.setQueryData(
-            windowChromeQuery(transport.orpc).queryKey,
-            event.chrome
-          );
-        invalidate({ source: "window", event });
-      },
-      abort.signal
-    );
+    if (IS_ELECTRON)
+      void followNotices(
+        transport,
+        ({ signal }) => transport.client.window.events({}, { signal }),
+        (event) => {
+          // The chrome state rides the notice: no round trip needed.
+          if (event.type === "chrome")
+            queryClient.setQueryData(
+              windowChromeQuery(transport.orpc).queryKey,
+              event.chrome
+            );
+          invalidate({ source: "window", event });
+        },
+        abort.signal
+      );
     void followNotices(
       transport,
       ({ signal }) => transport.client.settings.events({}, { signal }),

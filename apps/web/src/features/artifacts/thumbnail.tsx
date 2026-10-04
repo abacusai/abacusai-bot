@@ -1,9 +1,9 @@
+import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 import { useQuery } from "@tanstack/react-query";
 import { Image, File, Link } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useAppContext } from "#renderer/lib/use-app-context";
-import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 
 import { dirname } from "./data";
 export const ArtifactThumbnail = ({ artifact }: { artifact: ArtifactRow }) => {

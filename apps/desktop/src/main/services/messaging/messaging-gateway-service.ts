@@ -15,7 +15,10 @@ import {
   type MessagingSnapshot,
   type SharedChannelLink,
 } from "@abacus-ai/contract/messaging";
-import { outgoingWords, lastTaggedReply } from "@abacus-ai/contract/reply-envelope";
+import {
+  outgoingWords,
+  lastTaggedReply,
+} from "@abacus-ai/contract/reply-envelope";
 
 import { readDefaultAgentMode } from "../config/settings";
 import { environmentNoticeService } from "../providers/environment-notice-service";

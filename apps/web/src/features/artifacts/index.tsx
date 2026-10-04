@@ -1,3 +1,5 @@
+import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
 import { Ellipsis } from "lucide-react";
@@ -10,6 +12,8 @@ import { Segments } from "#renderer/components/form-kit/controls";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { showInfo, showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -29,8 +33,6 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
-import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import {
   sourceFor,
@@ -212,13 +214,13 @@ export const ArtifactsPage = ({
         label: t(a.kind === "link" ? "phase5.openBrowser" : "phase5.openFile"),
         run: () => void open(a),
       },
-      ...(a.kind === "link"
+      ...(!IS_ELECTRON || a.kind === "link"
         ? []
         : [
             {
               label: t("phase5.reveal"),
               run: () =>
-                void transport.client.system
+                void platformSystem(transport.client)
                   .showItemInFolder({ path: a.location })
                   .catch(() => showError(t("phase5.failed"))),
             },
@@ -466,29 +468,33 @@ export const ArtifactsPage = ({
                     <code>{selected.location}</code>
                   ) : (
                     <FilePreview
-                      onOpenExternally={() => void open(selected)}
+                      onOpenExternally={
+                        IS_ELECTRON ? () => void open(selected) : undefined
+                      }
                       showActions={false}
                       path={selected.location}
                       hostRoot={dirname(selected.location)}
                       read={{
-                        localUrl: async (filePath, hostRoot) => {
-                          const state =
-                            await transport.client.browser.runtime.materializeFile(
-                              {
-                                filePath,
-                                hostRoot,
-                                conversationKey: sessionConversationKey(
-                                  selected.workspaceId,
-                                  selected.sessionId
-                                ),
-                                resourceId: `artifact-preview:${selected.id}`,
-                              }
-                            );
-                          await transport.client.browser.runtime.close(
-                            state.lease
-                          );
-                          return state.url;
-                        },
+                        localUrl: IS_ELECTRON
+                          ? async (filePath, hostRoot) => {
+                              const state =
+                                await transport.client.browser.runtime.materializeFile(
+                                  {
+                                    filePath,
+                                    hostRoot,
+                                    conversationKey: sessionConversationKey(
+                                      selected.workspaceId,
+                                      selected.sessionId
+                                    ),
+                                    resourceId: `artifact-preview:${selected.id}`,
+                                  }
+                                );
+                              await transport.client.browser.runtime.close(
+                                state.lease
+                              );
+                              return state.url;
+                            }
+                          : undefined,
                         text: (filePath, hostRoot) =>
                           transport.client.files.readText({
                             filePath,

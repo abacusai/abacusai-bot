@@ -21,7 +21,7 @@ const { readFileSync } = (
     };
   }
 ).process.getBuiltinModule("node:fs");
-const appCss = readFileSync("src/renderer/styles/app.css", "utf8");
+const appCss = readFileSync("src/styles/app.css", "utf8");
 
 /** The declarations of the first `selector {…}` block in app.css. */
 const block = (selector: string): string => {

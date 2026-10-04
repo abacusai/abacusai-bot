@@ -1,3 +1,4 @@
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +22,6 @@ import {
   AlertDialogFooter,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { UpdateStatus } from "@abacus-ai/contract/update";
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false

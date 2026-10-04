@@ -38,7 +38,10 @@ import {
   type WorkspaceListItem,
 } from "@abacus-ai/contract/contracts";
 import { ForbiddenError } from "@abacus-ai/contract/forbidden";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
+import {
+  EntityNotFoundError,
+  WORKSPACE_NOT_FOUND,
+} from "@abacus-ai/contract/not-found";
 
 import { isMigrationWriteBlockedTree } from "../../migrations/write-block";
 import { isInsideWorkspace, type FileTreeService } from "./file-tree-service";

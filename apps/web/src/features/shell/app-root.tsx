@@ -1,3 +1,4 @@
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
  * Everything `__root` mounts around the routes (spec 01 §6.1): collections,
  * hotkeys with the platform from `system.info`, tooltips, the registry
@@ -12,18 +13,14 @@ import { DbProvider, type Db } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useInvalidationBridge } from "#renderer/data/queries/invalidation";
 import type { Transport } from "#renderer/data/transport";
+import { ChromeEffect, useChromeState } from "#renderer/lib/chrome-state";
 import { inertWhileHidden } from "#renderer/lib/inert-hidden";
 import { resolveKeymap } from "#renderer/lib/keyboard/actions";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { toHotkeyPlatform } from "#renderer/lib/platform";
+import { uiPlatform } from "#renderer/lib/platform";
 import { ThemeEffect } from "#renderer/lib/theme-effect";
 import { useAppContext } from "#renderer/lib/use-app-context";
-import {
-  ChromeEffect,
-  useChromeState,
-} from "#renderer/lib/window-chrome/chrome-state";
 import { TooltipProvider } from "#renderer/ui/tooltip";
-import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { AppToaster } from "./app-toaster";
 import { CommandMenu } from "./command-menu-loader";
@@ -115,9 +112,7 @@ const ShortcutHandler = () => {
   return (
     <AppHotkeys
       actions={actions}
-      bindings={
-        resolveKeymap(prefs.keymap, toHotkeyPlatform(system.platform)).window
-      }
+      bindings={resolveKeymap(prefs.keymap, uiPlatform(system.platform)).window}
     />
   );
 };
@@ -136,7 +131,7 @@ export const AppRoot = ({
   const chrome = useChromeState(transport);
   return (
     <DbProvider value={db}>
-      <AppHotkeysProvider platform={toHotkeyPlatform(system.platform)}>
+      <AppHotkeysProvider platform={uiPlatform(system.platform)}>
         <TooltipProvider>
           <AppToaster toolbarHeight={chrome.toolbarHeight}>
             <AppIconSprite />

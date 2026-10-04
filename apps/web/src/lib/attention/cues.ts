@@ -1,4 +1,7 @@
-import type { AttentionSummary, RunFinishedNotice } from "@abacus-ai/contract/contract";
+import type {
+  AttentionSummary,
+  RunFinishedNotice,
+} from "@abacus-ai/contract/contract";
 export const permissionCueKey = (summary: AttentionSummary): string =>
   `${summary.threadId}:${summary.incarnation}:${summary.oldestAt}`;
 

@@ -1,3 +1,5 @@
+import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * What happens to a conversation between turns.
  *
@@ -6,9 +8,6 @@
  * like an agent thinking.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import { AgentStatus } from "@abacus-ai/contract/agent-types";
-import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
   const actual =

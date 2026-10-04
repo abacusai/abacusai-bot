@@ -1,8 +1,13 @@
+import {
+  isPlausibleApiKey,
+  PROVIDER_KEY_FIELDS,
+} from "@abacus-ai/contract/settings";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Transport } from "#renderer/data/transport";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -19,7 +24,6 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Field, FieldLabel, FieldDescription } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 export const OnboardingProviderKey = ({
   transport,
   saved,
@@ -123,7 +127,7 @@ export const OnboardingProviderKey = ({
               <Button
                 variant="ghost"
                 onClick={() =>
-                  void transport.client.system.openExternal({
+                  void platformSystem(transport.client).openExternal({
                     url: field.signupUrl!,
                   })
                 }

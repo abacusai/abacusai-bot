@@ -19,16 +19,9 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
+const ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const AGENT_COPY = path.join(ROOT, "packages", "agent", "src", "protocol.ts");
-const APP_COPY = path.join(
-  ROOT,
-  "apps",
-  "desktop",
-  "src",
-  "shared",
-  "agent-types.ts"
-);
+const APP_COPY = path.join(ROOT, "packages/contract/src/agent-types.ts");
 
 /** Every `type: 'name'` discriminant declared in a protocol file. */
 function discriminants(file: string): string[] {

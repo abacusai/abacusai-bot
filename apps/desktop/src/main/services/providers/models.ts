@@ -2,9 +2,11 @@ import fs from "fs";
 import path from "path";
 
 import { listBuiltinModels } from "@abacus-ai/agent/model-catalog";
-
 import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
-import { MODEL_CATALOG, type ModelAvailability } from "@abacus-ai/contract/models";
+import {
+  MODEL_CATALOG,
+  type ModelAvailability,
+} from "@abacus-ai/contract/models";
 import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 import { abacusBotHome } from "../../paths";

@@ -1,3 +1,4 @@
+import { WHISPER_MODEL_ID } from "@abacus-ai/contract/voice";
 /**
  * Whisper in the renderer. The library and its model load on first use only:
  * the model files arrive through main (the renderer's CSP allows no other
@@ -7,7 +8,6 @@
 import ortWasmUrl from "ort-dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 
 import type { Transport } from "#renderer/data/transport";
-import { WHISPER_MODEL_ID } from "@abacus-ai/contract/voice";
 
 type Transformers = typeof import("@huggingface/transformers");
 type Transcriber =

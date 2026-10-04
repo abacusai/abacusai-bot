@@ -41,6 +41,7 @@ export interface PickedFile {
 }
 
 export const system = {
+  activity: mutation.input(NoInput).output(type<void>()),
   openPrivacyPane: mutation
     .input(
       v.object({ pane: v.picklist(["screen-recording", "accessibility"]) })

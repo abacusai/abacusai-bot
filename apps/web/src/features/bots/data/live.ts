@@ -1,3 +1,9 @@
+import type { AttentionEvent } from "@abacus-ai/contract/contract/ai";
+import {
+  conversationRefFromKey,
+  sessionConversationKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 import type { QueryClient } from "@tanstack/react-query";
 /**
  * The bots area's notice streams (spec 03 §6.1), one subscription each per
@@ -12,12 +18,6 @@ import { Store, useSelector } from "@tanstack/react-store";
 import type { Collections } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
-import type { AttentionEvent } from "@abacus-ai/contract/contract/ai";
-import {
-  conversationRefFromKey,
-  sessionConversationKey,
-  type ConversationKey,
-} from "@abacus-ai/contract/conversation-scope";
 
 import type { ThreadAttention } from "./attention";
 import { botsQueries } from "./queries";

@@ -1,3 +1,4 @@
+import type { PptxDeck } from "@abacus-ai/contract/pptx";
 /** Read-only file preview. PPTX uses authored slide geometry; local PDF/HTML
  * URLs come from the caller's host file boundary before the viewer loads. */
 import { TextPart } from "@tanstack/ai-react/ui";
@@ -8,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { highlightFile, toFileUrl } from "#renderer/lib/file-highlight";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
-import type { PptxDeck } from "@abacus-ai/contract/pptx";
 
 import { previewKind } from "./paths";
 import { PptxSlides } from "./pptx-slides";
@@ -29,7 +29,7 @@ export interface FilePreviewProps {
   path: string;
   hostRoot: string;
   read: FilePreviewReaders;
-  onOpenExternally(path: string): void;
+  onOpenExternally?(path: string): void;
   onReveal?(path: string): void;
   showActions?: boolean;
 }
@@ -113,14 +113,16 @@ export const FilePreview = ({
           <FolderOpen />
         </Button>
       )}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("bots.chat.preview.openExternally")}
-        onClick={() => onOpenExternally(path)}
-      >
-        <ExternalLink />
-      </Button>
+      {onOpenExternally && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("bots.chat.preview.openExternally")}
+          onClick={() => onOpenExternally?.(path)}
+        >
+          <ExternalLink />
+        </Button>
+      )}
     </div>
   );
 
@@ -145,9 +147,14 @@ export const FilePreview = ({
             <p className="text-muted-foreground">
               {t("bots.chat.preview.noViewer")}
             </p>
-            <Button variant="secondary" onClick={() => onOpenExternally(path)}>
-              {t("bots.chat.preview.openExternally")}
-            </Button>
+            {onOpenExternally && (
+              <Button
+                variant="secondary"
+                onClick={() => onOpenExternally(path)}
+              >
+                {t("bots.chat.preview.openExternally")}
+              </Button>
+            )}
           </div>
         ) : loaded.state === "loading" ? (
           <div className="flex flex-col gap-2" aria-busy>
@@ -160,9 +167,14 @@ export const FilePreview = ({
             <p className="text-muted-foreground">
               {t("bots.chat.preview.failed")}
             </p>
-            <Button variant="secondary" onClick={() => onOpenExternally(path)}>
-              {t("bots.chat.preview.openExternally")}
-            </Button>
+            {onOpenExternally && (
+              <Button
+                variant="secondary"
+                onClick={() => onOpenExternally(path)}
+              >
+                {t("bots.chat.preview.openExternally")}
+              </Button>
+            )}
           </div>
         ) : loaded.state === "image" ? (
           <img

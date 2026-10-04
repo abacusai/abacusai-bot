@@ -1,3 +1,4 @@
+import { contract } from "@abacus-ai/contract/contract";
 /**
  * R2-T14 (§5.5): sub-agent rows, Stop = `ai.cancel` of the parent run
  * (never `handle.stop`), Open → `onOpenSubagent`. R2-T15 (§5.6): busy line
@@ -11,7 +12,6 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "@abacus-ai/contract/contract";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";

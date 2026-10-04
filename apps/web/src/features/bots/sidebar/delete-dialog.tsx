@@ -1,3 +1,4 @@
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 /**
  * Delete confirmation (spec 03 §7.5, parity P24): Cancel has focus; Delete
  * shows a spinner while pending; an error stays in the dialog. Deleting the
@@ -21,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { deleteBot } from "../data/bot-actions";
 

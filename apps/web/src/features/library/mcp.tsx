@@ -1,3 +1,8 @@
+import type {
+  McpServerInfo,
+  McpServerEntry,
+  AgentMcpServer,
+} from "@abacus-ai/contract/contracts";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +22,7 @@ import {
 import { useCollections } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -32,11 +38,6 @@ import { Field, FieldGroup, FieldLabel } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Textarea } from "#renderer/ui/textarea";
-import type {
-  McpServerInfo,
-  McpServerEntry,
-  AgentMcpServer,
-} from "@abacus-ai/contract/contracts";
 export const useMcpRuntimeScope = () => {
   const c = useCollections();
   const sessions = useLiveQuery(c.sessions).data ?? [];
@@ -148,6 +149,7 @@ export const McpPage = () => {
   const importServers = async (
     source: "claude" | "cursor" | "deepagent" | "file" | "json"
   ) => {
+    if (!IS_ELECTRON && source === "file") return;
     try {
       const result = await transport.client.mcp.import({
         mode: "code",
@@ -201,8 +203,9 @@ export const McpPage = () => {
         }
       >
         <div className="flex flex-wrap gap-2">
-          {(["claude", "cursor", "deepagent", "file", "json"] as const).map(
-            (source) => (
+          {(["claude", "cursor", "deepagent", "file", "json"] as const)
+            .filter((source) => IS_ELECTRON || source !== "file")
+            .map((source) => (
               <Button
                 key={source}
                 size="sm"
@@ -211,8 +214,7 @@ export const McpPage = () => {
               >
                 {t(`phase5.imports.${source}`)}
               </Button>
-            )
-          )}
+            ))}
           <Button
             size="sm"
             disabled={!scope}
@@ -360,30 +362,34 @@ export const McpPage = () => {
                   >
                     {t("phase5.logs")}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      void transport.client.mcp
-                        .oauthSignIn({ mode: "code", name: server.name })
-                        .then(async (result) => {
-                          if (result.cancelled) return;
-                          if (!result.success) {
-                            showError(result.error ?? t("phase5.failed"));
-                            return;
-                          }
-                          if (scope) {
-                            const refreshed =
-                              await transport.client.mcp.refresh(scope);
-                            if (!refreshed.success)
-                              showError(refreshed.error ?? t("phase5.failed"));
-                          }
-                        })
-                        .catch(() => showError(t("phase5.failed")))
-                    }
-                  >
-                    {t("phase5.signIn")}
-                  </Button>
+                  {IS_ELECTRON && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        void transport.client.mcp
+                          .oauthSignIn({ mode: "code", name: server.name })
+                          .then(async (result) => {
+                            if (result.cancelled) return;
+                            if (!result.success) {
+                              showError(result.error ?? t("phase5.failed"));
+                              return;
+                            }
+                            if (scope) {
+                              const refreshed =
+                                await transport.client.mcp.refresh(scope);
+                              if (!refreshed.success)
+                                showError(
+                                  refreshed.error ?? t("phase5.failed")
+                                );
+                            }
+                          })
+                          .catch(() => showError(t("phase5.failed")))
+                      }
+                    >
+                      {t("phase5.signIn")}
+                    </Button>
+                  )}
                 </div>
                 {search.logs === server.name && (
                   <pre

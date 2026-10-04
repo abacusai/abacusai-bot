@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 /** Library snapshots have separate notice streams; table resync is not a notice. */
 export const LibraryGlobals = () => {
@@ -43,30 +44,32 @@ export const LibraryGlobals = () => {
       () => invalidate(transport.orpc.memory.bots.queryKey({ input: {} })),
       abort.signal
     );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.browser.events({}, { signal }),
-      (event) => {
-        if (event.type === "status")
-          cache.setQueryData(
-            transport.orpc.browser.status.queryKey({ input: {} }),
-            event.status
-          );
-      },
-      abort.signal
-    );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.devices.events({}, { signal }),
-      (event) => {
-        if (event.type === "status" || event.type === "snapshot")
-          cache.setQueryData(
-            transport.orpc.devices.status.queryKey({ input: {} }),
-            event.status
-          );
-      },
-      abort.signal
-    );
+    if (IS_ELECTRON)
+      void followNotices(
+        transport,
+        ({ signal }) => transport.client.browser.events({}, { signal }),
+        (event) => {
+          if (event.type === "status")
+            cache.setQueryData(
+              transport.orpc.browser.status.queryKey({ input: {} }),
+              event.status
+            );
+        },
+        abort.signal
+      );
+    if (IS_ELECTRON)
+      void followNotices(
+        transport,
+        ({ signal }) => transport.client.devices.events({}, { signal }),
+        (event) => {
+          if (event.type === "status" || event.type === "snapshot")
+            cache.setQueryData(
+              transport.orpc.devices.status.queryKey({ input: {} }),
+              event.status
+            );
+        },
+        abort.signal
+      );
     void followNotices(
       transport,
       ({ signal }) => transport.client.settings.events({}, { signal }),

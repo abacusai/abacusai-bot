@@ -2,8 +2,14 @@ import fs from "fs";
 import path from "path";
 
 import { AgentMode } from "@abacus-ai/contract/agent-types";
-import type { DefaultAgentMode, NotificationSettings } from "@abacus-ai/contract/contracts";
-import { EXEC_BACKENDS, type BackendId } from "@abacus-ai/contract/exec-backends";
+import type {
+  DefaultAgentMode,
+  NotificationSettings,
+} from "@abacus-ai/contract/contracts";
+import {
+  EXEC_BACKENDS,
+  type BackendId,
+} from "@abacus-ai/contract/exec-backends";
 import {
   PROVIDER_ENV_VARS,
   type AbacusBotSettings,

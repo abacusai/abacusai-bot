@@ -48,7 +48,7 @@ const FIXTURE_MARKER = "renderer fixture-db: dev fixture tables";
 /** `shell.connectionLost` in the bundled English copy. */
 const CONNECTION_LOST = (
   JSON.parse(
-    readFileSync(join(DESKTOP, "src/renderer/locales/en-US.json"), "utf8")
+    readFileSync(join(DESKTOP, "../web/src/locales/en-US.json"), "utf8")
   ) as { shell: { connectionLost: string } }
 ).shell.connectionLost;
 const REQUIRED =

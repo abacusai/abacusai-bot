@@ -1,11 +1,10 @@
+import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 import {
   useQueries,
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useState } from "react";
-
-import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 
 export const MAX_LOADED_DIRECTORIES = 50;
 export const useLazyChildren = (

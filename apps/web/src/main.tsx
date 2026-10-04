@@ -1,3 +1,9 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "@tanstack/react-router";
+import { createRoot } from "react-dom/client";
+
+import { createDb, installDb, type Db } from "#renderer/data/db";
+
 /**
  * renderer boot (spec 01 §8.6): styles, the stored theme before the
  * first paint, i18n, then bootstrap() (transport, system facts, the
@@ -6,16 +12,17 @@
  * never a blank window, and tells main through a bounded readiness call.
  */
 import "./styles/app.css";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
-import { createRoot } from "react-dom/client";
-
-import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
 import { getTransport, type Transport } from "#renderer/data/transport";
 import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { isToasterMounted } from "#renderer/features/shell/app-toaster";
+import { ConnectScreen } from "#renderer/features/shell/connect";
+import {
+  resolveBrowserHost,
+  type ConnectStage,
+} from "#renderer/features/shell/connect/services";
+import { installLease } from "#renderer/features/shell/lease";
 import { BootFailure } from "#renderer/features/shell/screens";
 import { installActivity } from "#renderer/lib/activity";
 import {
@@ -36,6 +43,7 @@ import {
 import { installLogRing } from "#renderer/lib/log-ring";
 import { guardSingleViewTransition } from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { IS_BROWSER } from "#renderer/lib/platform";
 import { applyTheme, DARK_QUERY, resolveTheme } from "#renderer/lib/theme";
 import { toast } from "#renderer/ui/toast";
 
@@ -94,12 +102,36 @@ const renderConnectionLost = (): void => {
   );
 };
 
-const start = async (): Promise<void> => {
+const start = async (forceRestart = false): Promise<void> => {
   let transport: Transport | null = null;
   let db: Db | null = null;
   try {
     // 4. English is bundled; the user's language follows prefs.
     await initI18n();
+    if (IS_BROWSER) {
+      let stage: ConnectStage = "starting";
+      const connect = async (forceRestart = false): Promise<void> => {
+        try {
+          await resolveBrowserHost((value) => {
+            stage = value;
+            root.render(
+              <ConnectScreen stage={stage} restart={() => void start(true)} />
+            );
+          }, forceRestart);
+          await getTransport();
+        } catch (error) {
+          root.render(
+            <ConnectScreen
+              stage={stage}
+              error={error instanceof Error ? error : new Error(String(error))}
+              restart={() => void start(true)}
+            />
+          );
+          throw error;
+        }
+      };
+      await connect(forceRestart);
+    }
 
     const queryClient = createQueryClient();
     const onTransportLost = createTransportLostHandler({
@@ -148,6 +180,8 @@ const start = async (): Promise<void> => {
     await importLegacyDrafts(boot.system.legacyComposerDrafts ?? {}, (keys) =>
       boot.transport.client.system.acknowledgeLegacyDrafts({ keys })
     );
+    if (IS_BROWSER && transport)
+      installLease(() => transport?.state === "open");
     installActivity(boot.transport);
     installUiContinuity();
     installLogRing(boot.transport);
@@ -203,7 +237,8 @@ const start = async (): Promise<void> => {
   } catch (error) {
     // Anything unexpected: the failure screen, and main hears it (bounded).
     console.error("[renderer] boot failed", error);
-    renderFailure(error instanceof Error ? error : new Error(String(error)));
+    if (!IS_BROWSER || transport)
+      renderFailure(error instanceof Error ? error : new Error(String(error)));
     void reportFailedBoot(
       transport,
       error instanceof Error ? error.message : String(error)

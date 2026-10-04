@@ -14,7 +14,7 @@ import { fixtureRuntime } from "./player";
 import { SCENARIOS } from "./scenarios";
 
 const SOURCES = readSourceFiles(
-  "../../../../../../../packages/agent/src/agui/__fixtures__/*.agui.jsonl",
+  "../../../../../../packages/agent/src/agui/__fixtures__/*.agui.jsonl",
   import.meta.dirname
 );
 

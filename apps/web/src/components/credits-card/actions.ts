@@ -1,11 +1,14 @@
-import type { Transport } from "#renderer/data/transport";
 import { isFreePoolProvider } from "@abacus-ai/contract/free-pool";
+
+import type { Transport } from "#renderer/data/transport";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 
 import type { CreditActions } from "./index";
 export const creditActionsFor = (transport: Transport): CreditActions => {
   const client = transport.client;
   return {
-    openExternal: (url) => client.system.openExternal({ url }),
+    openExternal: (url) => platformSystem(client).openExternal({ url }),
     configuredFreeSources: async () => {
       const [models, keys] = await Promise.all([
         client.models.list({}),
@@ -23,7 +26,7 @@ export const creditActionsFor = (transport: Transport): CreditActions => {
       );
     },
     connectFreeSource: async (source, key) => {
-      if (source === "openrouter" && key == null) {
+      if (IS_ELECTRON && source === "openrouter" && key == null) {
         const result = await client.auth.openRouter.start({});
         if (!result.ok) return false;
       } else {

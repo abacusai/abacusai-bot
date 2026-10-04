@@ -9,7 +9,7 @@ import { useEffect, type ReactNode } from "react";
  */
 import { useTranslation } from "react-i18next";
 
-import { useTitlebarArea } from "#renderer/lib/window-chrome/use-titlebar-area";
+import { useTitlebarArea } from "#renderer/lib/use-titlebar-area";
 import {
   Toast,
   ToastAction,

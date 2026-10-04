@@ -1,3 +1,6 @@
+import type { CheckoutRef } from "@abacus-ai/contract/contract/checkout";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
@@ -18,9 +21,6 @@ import {
   AlertDialogAction,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { CheckoutRef } from "@abacus-ai/contract/contract/checkout";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 
 import {
   useCheckoutIdentity,

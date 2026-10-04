@@ -1,3 +1,10 @@
+import type { TerminalOutputChunk } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import {
+  conversationKey,
+  draftConversationRef,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 /**
  * A-T9: what may be dropped, and what may not. Events are filtered before
  * they are buffered; each iterator's declared delivery class is the spec's;
@@ -6,14 +13,6 @@
  * streams open on a snapshot of what is pending.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { TerminalOutputChunk } from "@abacus-ai/contract/contract";
-import type { IpcEvent } from "@abacus-ai/contract/contracts";
-import {
-  conversationKey,
-  draftConversationRef,
-  type ConversationKey,
-} from "@abacus-ai/contract/conversation-scope";
 
 import { ConnectorGate } from "../services/agent-tools/connector-gate";
 import {

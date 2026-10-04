@@ -1,3 +1,4 @@
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 /**
  * Chat scenarios (spec 02 §11): the agent's recorded goldens replayed as
  * they are, plus builder scenarios for canvas states the goldens do not
@@ -5,8 +6,6 @@
  * coverage table, R2-T29).
  */
 import type { StreamChunk, UIMessage } from "@tanstack/ai";
-
-import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import type { Draft } from "../composer/draft-store";
 import * as b from "./builders";
@@ -199,7 +198,7 @@ const sessionRunning = (): RelayEvent[] =>
       "The restore takes all of its width from the centre column. With the side panel at its maximum the centre has nothing left to give, so the layout cannot be honoured."
     ),
     ...b.toolCall("c1", "read", "a1", {
-      path: "src/renderer/components/layout/workspace-view.tsx",
+      path: "src/components/layout/workspace-view.tsx",
       offset: 168,
       limit: 100,
     }),
@@ -209,7 +208,7 @@ const sessionRunning = (): RelayEvent[] =>
       text: "Found 4 matches\nsrc/a.ts:1\nsrc/b.ts:2\nsrc/c.ts:3\nsrc/d.ts:4",
     }),
     ...b.toolCall("c3", "edit", "a1", {
-      path: "src/renderer/components/layout/workspace-view.tsx",
+      path: "src/components/layout/workspace-view.tsx",
     }),
     b.custom("tool.display", {
       toolCallId: "c3",
@@ -223,7 +222,7 @@ const sessionRunning = (): RelayEvent[] =>
     }),
     b.toolResult("c3", { text: "Edited" }),
     ...b.toolCall("c4", "bash", "a1", {
-      command: "pnpm exec vitest run src/renderer/components/layout",
+      command: "pnpm exec vitest run src/components/layout",
     }),
     b.custom("tool.output", {
       toolCallId: "c4",
@@ -488,7 +487,7 @@ const fromGolden = (name: string) => () => golden(name);
 
 const migratedHistory = (): UIMessage[] => {
   const raw = import.meta.glob<unknown>(
-    "../../../../shared/transcript/__fixtures__/v1/*.json",
+    "../../../../../../packages/contract/src/transcript/__fixtures__/v1/*.json",
     {
       import: "default",
       eager: true,

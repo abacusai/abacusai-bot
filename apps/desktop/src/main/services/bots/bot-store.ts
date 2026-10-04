@@ -7,7 +7,6 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
-
 import {
   MAX_BOT_DESCRIPTION,
   MAX_BOT_PERSONA,

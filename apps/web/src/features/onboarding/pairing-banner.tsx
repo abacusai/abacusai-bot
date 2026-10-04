@@ -1,3 +1,4 @@
+import { isMessagingPlatformConnected } from "@abacus-ai/contract/messaging";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -7,8 +8,8 @@ import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
-import { isMessagingPlatformConnected } from "@abacus-ai/contract/messaging";
 /** The persisted queue drains on connection or dismissal, and waits for the tour. */
 export const PairingQueueBanner = ({
   suppressed = false,
@@ -23,9 +24,9 @@ export const PairingQueueBanner = ({
   const [busy, setBusy] = useState(false);
   const platform = prefs.onboardingPairing?.[0];
   const options = transport.orpc.messaging.snapshot.queryOptions({ input: {} });
-  const snapshot = useQuery({ ...options, enabled: !!platform });
+  const snapshot = useQuery({ ...options, enabled: IS_ELECTRON && !!platform });
   useEffect(() => {
-    if (!platform) return;
+    if (!IS_ELECTRON || !platform) return;
     const abort = new AbortController();
     void followNotices(
       transport,
@@ -51,7 +52,7 @@ export const PairingQueueBanner = ({
         })
         .catch(() => undefined);
   }, [platform, snapshot.data, db]);
-  if (!platform || suppressed) return null;
+  if (!IS_ELECTRON || !platform || suppressed) return null;
   const act = async (open: boolean) => {
     if (busy) return;
     setBusy(true);

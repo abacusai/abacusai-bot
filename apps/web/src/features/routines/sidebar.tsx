@@ -8,6 +8,7 @@ import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollectionStatus } from "#renderer/data/db/status";
 import { AppLink } from "#renderer/lib/navigation/app-link";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
@@ -43,6 +44,7 @@ export const RoutinesSidebar = () => {
     userId: string,
     decision: "pause" | "resume" | "revoke"
   ) => {
+    if (!IS_ELECTRON && !platformId.startsWith("abacus_")) return;
     const next = await transport.client.messaging.decidePairing({
       platformId,
       userId,
@@ -53,6 +55,10 @@ export const RoutinesSidebar = () => {
       next
     );
   };
+  const autoReplies =
+    snapshot.data?.autoReplies.filter(
+      (grant) => IS_ELECTRON || grant.platform.startsWith("abacus_")
+    ) ?? [];
   const ordered = routines
     .filter((r) => foldSearch(r.name + " " + r.prompt).includes(foldSearch(q)))
     .toSorted(
@@ -107,9 +113,9 @@ export const RoutinesSidebar = () => {
           })}
         </NavList.Rows>
       )}
-      {!q && (snapshot.data?.autoReplies.length ?? 0) > 0 && (
+      {!q && autoReplies.length > 0 && (
         <NavList.Group label={t("phase5.autoReplies")}>
-          {snapshot.data?.autoReplies.map((grant) => {
+          {autoReplies.map((grant) => {
             const chat = chats.data?.find(
               (s) =>
                 s.botId === grant.botId &&

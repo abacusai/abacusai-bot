@@ -4,7 +4,10 @@ import fsp from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 
-import type { FileTreeNode, GitChangeItem } from "@abacus-ai/contract/contracts";
+import type {
+  FileTreeNode,
+  GitChangeItem,
+} from "@abacus-ai/contract/contracts";
 
 import {
   isMigrationWriteBlocked,

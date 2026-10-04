@@ -1,13 +1,13 @@
-import { implement } from "@orpc/server";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { expect, it } from "vitest";
-
-import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 import { contract } from "@abacus-ai/contract/contract";
 import {
   LOCAL_MODEL_CATALOG,
   type LocalModelState,
 } from "@abacus-ai/contract/local-models";
+import { implement } from "@orpc/server";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { expect, it } from "vitest";
+
+import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const os = implement(contract);
 it.each([
   { installed: false, bot: false },

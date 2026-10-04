@@ -5,6 +5,7 @@
  * The row, its context menu and its ⋯ menu share one item list (§7.4).
  */
 import "../bots.css";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import type { TFunction } from "i18next";
 import { MoreHorizontal } from "lucide-react";
 import { motion, type Transition } from "motion/react";
@@ -34,7 +35,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";

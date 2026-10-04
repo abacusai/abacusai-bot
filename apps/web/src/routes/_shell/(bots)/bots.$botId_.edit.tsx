@@ -1,3 +1,4 @@
+import { BotId } from "@abacus-ai/contract/contract/ids";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import * as v from "valibot";
 
@@ -5,7 +6,6 @@ import { BotGone } from "#renderer/features/bots/chat/identity";
 import { loadBot } from "#renderer/features/bots/data/loaders";
 import { botsQueries } from "#renderer/features/bots/data/queries";
 import { BotEditorPage } from "#renderer/features/bots/form/bot-form";
-import { BotId } from "@abacus-ai/contract/contract/ids";
 const EditRoute = () => {
   const { botId } = Route.useParams();
   const { chat } = Route.useRouteContext();

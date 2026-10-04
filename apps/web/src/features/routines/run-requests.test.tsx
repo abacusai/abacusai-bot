@@ -1,7 +1,6 @@
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { RunRequests } from "./run-requests";
 const mocks = vi.hoisted(() => ({

@@ -1,3 +1,9 @@
+import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
+import {
+  conversationRefFromKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 /**
  * Connector asks for the bot chat's banner (spec 03 §11.4) and for other
  * bots' attention (§6.1, §6.6), over `connectors.events` (lossless-
@@ -14,12 +20,6 @@ import { useEffect, useState } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
-import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
-import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
-import {
-  conversationRefFromKey,
-  type ConversationKey,
-} from "@abacus-ai/contract/conversation-scope";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp">;
 

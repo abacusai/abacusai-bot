@@ -2,14 +2,19 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const desktop = path.resolve(import.meta.dirname, "../../..");
+const desktop = path.resolve(import.meta.dirname, "../..");
 export const readSourceFiles = (
   patterns: string | string[],
   from: string
 ): Record<string, string> => {
   const globs = typeof patterns === "string" ? [patterns] : patterns;
   const absolute = globs.some((pattern) => pattern.startsWith("/"));
-  const cwd = absolute ? desktop : from;
+  const repoAbsolute = globs.some((pattern) => pattern.startsWith("/apps/"));
+  const cwd = absolute
+    ? repoAbsolute
+      ? path.resolve(desktop, "../..")
+      : desktop
+    : from;
   const normalize = (pattern: string) =>
     absolute ? pattern.replace(/^\//, "") : pattern;
   const include = globs

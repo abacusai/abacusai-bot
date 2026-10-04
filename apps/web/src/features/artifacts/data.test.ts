@@ -1,11 +1,10 @@
-import { describe, it, expect } from "vitest";
-
 import type {
   ArtifactRow,
   SessionRow,
   RoutineRow,
   BotRow,
 } from "@abacus-ai/contract/contract/rows";
+import { describe, it, expect } from "vitest";
 
 import { cardWindow, filterArtifacts, sourceFor, artifactTarget } from "./data";
 const artifact = {

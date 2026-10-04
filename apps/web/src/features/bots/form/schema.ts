@@ -1,3 +1,10 @@
+import {
+  MAX_BOT_NAME,
+  MAX_BOT_PERSONA,
+  MAX_BOT_DESCRIPTION,
+  MAX_BOT_TITLE,
+} from "@abacus-ai/contract/bots";
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 import * as v from "valibot";
 
 import {
@@ -10,13 +17,6 @@ import {
   CheckInDraftSchema,
   checkInFromRoutine,
 } from "#renderer/lib/bots/check-in";
-import {
-  MAX_BOT_NAME,
-  MAX_BOT_PERSONA,
-  MAX_BOT_DESCRIPTION,
-  MAX_BOT_TITLE,
-} from "@abacus-ai/contract/bots";
-import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 const trimmed = (max: number) =>
   v.pipe(v.string(), v.trim(), v.maxLength(max, "too-long"));
 export const BotFormSchema = v.object({

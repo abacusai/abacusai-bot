@@ -10,6 +10,10 @@ import { join } from "path";
 import path from "path";
 import { promisify } from "util";
 
+import type {
+  AbacusAccountInfo,
+  UsageSnapshot,
+} from "@abacus-ai/contract/contracts";
 import {
   app,
   shell,
@@ -29,8 +33,6 @@ import {
 } from "electron";
 import type { WebContents } from "electron";
 import Store from "electron-store";
-
-import type { AbacusAccountInfo, UsageSnapshot } from "@abacus-ai/contract/contracts";
 
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
@@ -73,7 +75,10 @@ export function hasGoogleChrome(
     }
   });
 }
-import type { WindowChromeState, WindowState } from "@abacus-ai/contract/contract";
+import type {
+  WindowChromeState,
+  WindowState,
+} from "@abacus-ai/contract/contract";
 import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 

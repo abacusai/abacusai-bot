@@ -1,3 +1,4 @@
+import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 /**
  * Per-message feedback on a bot's reply (spec 03 §11.3, parity P59): a "…"
  * shown on hover or focus of a completed assistant message opens 👍 / 👎
@@ -13,7 +14,6 @@ import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Textarea } from "#renderer/ui/textarea";
-import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 
 type Rating = "up" | "down";
 

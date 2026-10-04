@@ -1,3 +1,5 @@
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
+
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import {
@@ -9,7 +11,6 @@ import {
   describeCheckIn,
   type CheckInDraft,
 } from "#renderer/lib/bots/check-in";
-import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   createBot,

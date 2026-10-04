@@ -1,6 +1,5 @@
-import { afterEach, expect, it, vi } from "vitest";
-
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { agentLifecycle } from "./agent-start";
 const row = {

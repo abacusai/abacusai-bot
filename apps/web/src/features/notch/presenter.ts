@@ -1,4 +1,3 @@
-import { isQuietNow } from "#renderer/lib/notify";
 import type {
   AttentionSummary,
   BotRow,
@@ -7,6 +6,8 @@ import type {
   RunFinishedNotice,
   SessionRow,
 } from "@abacus-ai/contract/contract";
+
+import { isQuietNow } from "#renderer/lib/notify";
 export type AttentionKind =
   | "question"
   | "approval"

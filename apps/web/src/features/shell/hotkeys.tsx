@@ -1,7 +1,7 @@
 /**
  * The app's only keyboard handler for app shortcuts (spec 01 §7.9). Every
  * binding is exact (`Mod+Alt+B` never fires `Mod+B`); the platform comes once
- * from `HotkeysProvider` (`toHotkeyPlatform(system.info.platform)`).
+ * from `HotkeysProvider` (`uiPlatform(system.info.platform)`).
  *
  * The provider defaults turn the library's own preventDefault/stopPropagation
  * off, because it cancels *before* the callback: `useAppHotkey` decides, so a

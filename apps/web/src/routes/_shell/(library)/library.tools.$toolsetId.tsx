@@ -1,9 +1,9 @@
+import { TOOLSETS_BY_ID } from "@abacus-ai/contract/toolsets";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ToolsetPage } from "#renderer/features/library/skills-tools";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
-import { TOOLSETS_BY_ID } from "@abacus-ai/contract/toolsets";
 
 const ToolsetRoute = () => {
   const { t } = useTranslation();

@@ -3,7 +3,10 @@
  * tests; the old copy stays until cut-over) and the explicit "system" choice
  * (spec 01 §9.2).
  */
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@abacus-ai/contract/contract";
+import {
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from "@abacus-ai/contract/contract";
 
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en-US";
 

@@ -1,3 +1,5 @@
+import type { SessionRow, WorkspaceRow } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
@@ -22,6 +24,7 @@ import { usePendingConnectorAsks } from "#renderer/lib/connector-requests";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -54,8 +57,6 @@ import {
   DropdownMenuItem,
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow, WorkspaceRow } from "@abacus-ai/contract/contract";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { WorkspaceMissing } from "./context/workspace-missing";
 import { sessionAttention } from "./data/attention";
@@ -160,10 +161,11 @@ export const SessionsSidebar = () => {
     <div
       className="flex min-h-0 flex-1 flex-col"
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+        if (IS_ELECTRON && e.dataTransfer.types.includes("Files"))
+          e.preventDefault();
       }}
       onDrop={(e) => {
-        if (!e.dataTransfer.files.length) return;
+        if (!IS_ELECTRON || !e.dataTransfer.files.length) return;
         e.preventDefault();
         const path = transport.host.getPathForFile?.(e.dataTransfer.files[0]!);
         if (!path) return;

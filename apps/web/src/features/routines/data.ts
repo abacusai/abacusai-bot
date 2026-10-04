@@ -1,3 +1,8 @@
+import type {
+  RoutineRow,
+  RoutineRunRow,
+  SessionRow,
+} from "@abacus-ai/contract/contract/rows";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { TFunction } from "i18next";
 
@@ -7,11 +12,6 @@ import {
   formatTime,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
-import type {
-  RoutineRow,
-  RoutineRunRow,
-  SessionRow,
-} from "@abacus-ai/contract/contract/rows";
 export const useRoutinesData = () => {
   const c = useCollections();
   const routines = useLiveQuery(c.routines).data ?? [];

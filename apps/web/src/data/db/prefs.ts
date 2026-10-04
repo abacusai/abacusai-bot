@@ -1,3 +1,4 @@
+import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 /**
  * The single `"app"` prefs row (spec 01 §8.3): read live, written as a
  * `PrefsPatch` through `db.updatePrefs` (spec 00 B.2): only the leaves a
@@ -7,8 +8,6 @@
  */
 import { useLiveQuery } from "@tanstack/react-db";
 import { Debouncer } from "@tanstack/react-pacer";
-
-import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import { useCollections, useDb, type Db } from "./index";
 

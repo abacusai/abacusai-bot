@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest";
-
-import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
-import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import type {
   AttentionSummary,
   RunFinishedNotice,
   SessionRow,
 } from "@abacus-ai/contract/contract";
+import { describe, expect, it } from "vitest";
+
+import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
+import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 
 import { presentNotch, type NotchInputs } from "./presenter";
 const base = (): NotchInputs => ({

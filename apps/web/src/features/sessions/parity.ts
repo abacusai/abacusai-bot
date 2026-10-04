@@ -13,7 +13,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S2",
@@ -29,7 +29,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S3",
@@ -44,7 +44,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S4",
@@ -59,7 +59,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S5",
@@ -75,7 +75,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S6",
@@ -89,7 +89,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S7",
@@ -103,7 +103,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S8",
@@ -118,7 +118,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S9",
@@ -133,7 +133,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S10",
@@ -148,7 +148,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S11",
@@ -163,7 +163,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S12",
@@ -178,7 +178,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S13",
@@ -193,7 +193,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S14",
@@ -207,7 +207,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S15",
@@ -221,7 +221,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S16",
@@ -235,7 +235,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S17",
@@ -250,7 +250,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S18",
@@ -265,7 +265,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S19",
@@ -280,7 +280,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S20",
@@ -295,7 +295,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S21",
@@ -310,7 +310,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S22",
@@ -325,7 +325,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S23",
@@ -339,7 +339,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S24",
@@ -354,7 +354,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S25",
@@ -369,7 +369,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S26",
@@ -383,7 +383,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/sessions-sidebar.tsx#groupSessions",
+      "apps/web/src/features/sessions/sessions-sidebar.tsx#groupSessions",
   },
   {
     id: "S27",
@@ -398,7 +398,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S28",
@@ -413,7 +413,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S29",
@@ -428,7 +428,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S30",
@@ -443,7 +443,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S31",
@@ -458,7 +458,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S32",
@@ -473,7 +473,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S33",
@@ -488,7 +488,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S34",
@@ -503,7 +503,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S35",
@@ -519,7 +519,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S36",
@@ -534,7 +534,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S37",
@@ -549,7 +549,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S38",
@@ -564,7 +564,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S39",
@@ -579,7 +579,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/start/session-start-page.tsx#SessionStartPage",
+      "apps/web/src/features/sessions/start/session-start-page.tsx#SessionStartPage",
   },
   {
     id: "S40",
@@ -594,7 +594,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S41",
@@ -609,7 +609,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S42",
@@ -624,7 +624,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S43",
@@ -638,7 +638,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S44",
@@ -653,7 +653,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S45",
@@ -667,7 +667,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S46",
@@ -682,7 +682,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S47",
@@ -696,7 +696,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S48",
@@ -711,7 +711,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S49",
@@ -725,7 +725,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S50",
@@ -739,7 +739,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S51",
@@ -753,7 +753,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S52",
@@ -768,7 +768,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S53",
@@ -782,7 +782,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S54",
@@ -797,7 +797,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S55",
@@ -811,7 +811,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S56",
@@ -825,7 +825,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S57",
@@ -840,7 +840,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S58",
@@ -855,7 +855,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S59",
@@ -870,7 +870,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S60",
@@ -885,7 +885,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S61",
@@ -900,7 +900,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S62",
@@ -915,7 +915,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S63",
@@ -930,7 +930,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S64",
@@ -945,7 +945,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S65",
@@ -960,7 +960,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S66",
@@ -975,7 +975,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S67",
@@ -990,7 +990,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S68",
@@ -1004,7 +1004,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S69",
@@ -1019,7 +1019,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S70",
@@ -1034,7 +1034,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S71",
@@ -1049,7 +1049,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S72",
@@ -1064,7 +1064,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S73",
@@ -1079,7 +1079,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S74",
@@ -1093,7 +1093,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S75",
@@ -1108,7 +1108,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S76",
@@ -1123,7 +1123,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S77",
@@ -1137,7 +1137,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S78",
@@ -1151,7 +1151,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S79",
@@ -1165,7 +1165,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S80",
@@ -1180,7 +1180,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/dock/session-dock.tsx#SessionDock",
+      "apps/web/src/features/sessions/dock/session-dock.tsx#SessionDock",
   },
   {
     id: "S81",
@@ -1195,7 +1195,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S82",
@@ -1209,7 +1209,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S83",
@@ -1223,7 +1223,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S84",
@@ -1237,7 +1237,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S85",
@@ -1252,7 +1252,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S86",
@@ -1266,7 +1266,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S87",
@@ -1281,7 +1281,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S88",
@@ -1295,7 +1295,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S89",
@@ -1310,7 +1310,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S90",
@@ -1324,7 +1324,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S91",
@@ -1338,7 +1338,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S92",
@@ -1353,7 +1353,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S93",
@@ -1367,7 +1367,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
+      "apps/web/src/features/sessions/terminal/terminal-tab.tsx#TerminalTab",
   },
   {
     id: "S94",
@@ -1381,7 +1381,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S95",
@@ -1395,7 +1395,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S96",
@@ -1409,7 +1409,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S97",
@@ -1423,7 +1423,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S98",
@@ -1437,7 +1437,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S99",
@@ -1451,7 +1451,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S100",
@@ -1465,7 +1465,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S101",
@@ -1479,7 +1479,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S102",
@@ -1495,7 +1495,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/browser/browser-tab.tsx#normalizeAddress",
+      "apps/web/src/features/sessions/browser/browser-tab.tsx#normalizeAddress",
   },
   {
     id: "S103",
@@ -1509,7 +1509,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/files/files-tab.tsx#flattenFiles",
+    consumer: "apps/web/src/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S104",
@@ -1522,7 +1522,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/files/files-tab.tsx#flattenFiles",
+    consumer: "apps/web/src/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S105",
@@ -1535,7 +1535,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/files/files-tab.tsx#flattenFiles",
+    consumer: "apps/web/src/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S106",
@@ -1548,7 +1548,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/files/files-tab.tsx#flattenFiles",
+    consumer: "apps/web/src/features/sessions/files/files-tab.tsx#flattenFiles",
   },
   {
     id: "S107",
@@ -1563,7 +1563,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/changes/changes-tab.tsx#changeRows",
+      "apps/web/src/features/sessions/changes/changes-tab.tsx#changeRows",
   },
   {
     id: "S108",
@@ -1577,7 +1577,7 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
+      "apps/web/src/routes/_shell/(sessions)/sessions.$sessionId.tsx#Route",
   },
   {
     id: "S109",
@@ -1590,7 +1590,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/device/device-tab.tsx#DeviceTab",
+    consumer: "apps/web/src/features/sessions/device/device-tab.tsx#DeviceTab",
   },
   {
     id: "S110",
@@ -1603,7 +1603,7 @@ export const SESSION_PARITY = [
     reason: "Acceptance remains open in the phase-4 report.",
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
-    consumer: "src/renderer/features/sessions/device/device-tab.tsx#DeviceTab",
+    consumer: "apps/web/src/features/sessions/device/device-tab.tsx#DeviceTab",
   },
   {
     id: "S111",
@@ -1617,6 +1617,6 @@ export const SESSION_PARITY = [
     owner: "release manager",
     plan: "docs/rewrite/PLAN.md#phases-and-pr-stack",
     consumer:
-      "src/renderer/features/sessions/files/preview-bridge.ts#recordBackgroundPreview",
+      "apps/web/src/features/sessions/files/preview-bridge.ts#recordBackgroundPreview",
   },
 ] as const;

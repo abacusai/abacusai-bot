@@ -1,11 +1,10 @@
+import type { AbacusConnectorsSnapshot } from "@abacus-ai/contract/contracts";
 /**
  * The post-OAuth confirmation. One immediate read of the (flaky, lagging)
  * listing used to answer "did not complete" over a connect that had in fact
  * completed. The user watched the OAuth succeed and the card call it failed.
  */
 import { describe, expect, it } from "vitest";
-
-import type { AbacusConnectorsSnapshot } from "@abacus-ai/contract/contracts";
 
 import { confirmConnected } from "./abacus-connector-service";
 

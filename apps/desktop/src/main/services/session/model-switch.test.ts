@@ -1,3 +1,4 @@
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 /**
  * `ModelSwitchWaiters` (spec 04 §26.4 d): the agent handles `set_model`
  * commands concurrently and a refusal names no model, so each session's
@@ -5,8 +6,6 @@
  * one, and only when it names the requested model.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import { ModelSwitchWaiters, ModelUnavailableError } from "./model-switch";
 

@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef } from "react";
+import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -17,7 +18,17 @@ import {
   startWebsiteSignIn,
 } from "#renderer/features/onboarding/first-run";
 import { guardStep } from "#renderer/features/onboarding/machine";
-import { OnboardingLocalModels } from "#renderer/features/onboarding/steps/local-models";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+const OnboardingLocalModels = IS_ELECTRON
+  ? lazy(() =>
+      import("#renderer/features/onboarding/steps/local-models").then((m) => ({
+        default: m.OnboardingLocalModels,
+      }))
+    )
+  : () => null;
+import { isPayingAbacusTier } from "@abacus-ai/contract/models";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
+
 import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
 import {
   onboardingStore,
@@ -30,8 +41,6 @@ import {
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { isPayingAbacusTier } from "@abacus-ai/contract/models";
-import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 const OnboardingRoute = () => {
   const { t } = useTranslation();
   const step = Route.useParams().step as OnboardingStepId;
@@ -56,7 +65,7 @@ const OnboardingRoute = () => {
       });
     }
     return () => {
-      if (step === "models") {
+      if (IS_ELECTRON && step === "models") {
         void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
         void cancelSignIn(transport).catch(() => undefined);
       }
@@ -69,7 +78,7 @@ const OnboardingRoute = () => {
   const auth = (intent: "signup" | "signin", profileId?: string) => {
     if (
       startSignIn(transport, intent, profileId, async (outcome) => {
-        if (step === "models") {
+        if (IS_ELECTRON && step === "models") {
           void queryClient.invalidateQueries();
           return;
         }
@@ -234,7 +243,7 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
   },
   loader: async ({ context, params, cause }) => {
     if (cause === "preload") return { facts: await factsOf(context) };
-    if (params.step === "welcome")
+    if (IS_ELECTRON && params.step === "welcome")
       await context.queryClient.ensureQueryData(
         context.transport.orpc.auth.abacus.browserProfiles.queryOptions({
           input: {},
@@ -253,11 +262,15 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
           context.transport.orpc.models.list.queryOptions({ input: {} })
         ),
         // A local runtime is optional; the pane presents its unavailable state.
-        context.queryClient
-          .ensureQueryData(
-            context.transport.orpc.localModels.state.queryOptions({ input: {} })
-          )
-          .catch(() => undefined),
+        !IS_ELECTRON
+          ? Promise.resolve()
+          : context.queryClient
+              .ensureQueryData(
+                context.transport.orpc.localModels.state.queryOptions({
+                  input: {},
+                })
+              )
+              .catch(() => undefined),
       ]);
     if (params.step === "connectors")
       await context.queryClient.ensureQueryData(

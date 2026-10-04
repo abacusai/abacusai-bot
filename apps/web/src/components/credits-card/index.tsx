@@ -1,3 +1,11 @@
+import {
+  FREE_POOL_PROVIDERS,
+  type FreePoolProvider,
+} from "@abacus-ai/contract/free-pool";
+import {
+  isPlausibleApiKey,
+  PROVIDER_KEY_FIELDS,
+} from "@abacus-ai/contract/settings";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,6 +14,7 @@ import {
   ABACUS_BUY_CREDITS_URL,
   ABACUS_PLAN_URL,
 } from "#renderer/lib/abacus-links";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -17,8 +26,6 @@ import {
 import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { Separator } from "#renderer/ui/separator";
-import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "@abacus-ai/contract/free-pool";
-import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 export interface CreditActions {
   openExternal(url: string): Promise<void>;
@@ -165,7 +172,8 @@ export const CreditsCard = ({
                       size="sm"
                       disabled={busy}
                       onClick={() => {
-                        if (source === "openrouter") void connect(source);
+                        if (IS_ELECTRON && source === "openrouter")
+                          void connect(source);
                         else {
                           setAsking(source);
                           setKey("");

@@ -1,3 +1,4 @@
+import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,11 +15,12 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
 export const EnvironmentPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -168,7 +170,8 @@ export const normalizeHomepage = (value: string): string | null => {
     throw new Error("invalid-url");
   return url.href;
 };
-export const BrowserPage = () => {
+export const BrowserPage = () => (IS_ELECTRON ? <ElectronBrowserPage /> : null);
+const ElectronBrowserPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const cache = useQueryClient();
@@ -260,7 +263,7 @@ export const BrowserPage = () => {
                 size="sm"
                 variant="secondary"
                 onClick={() =>
-                  void transport.client.system.openExternal({
+                  void platformSystem(transport.client).openExternal({
                     url: status.chrome.installUrl,
                   })
                 }
@@ -355,7 +358,8 @@ export const BrowserPage = () => {
     </AreaPage>
   );
 };
-export const DevicesPage = () => {
+export const DevicesPage = () => (IS_ELECTRON ? <ElectronDevicesPage /> : null);
+const ElectronDevicesPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const cache = useQueryClient();

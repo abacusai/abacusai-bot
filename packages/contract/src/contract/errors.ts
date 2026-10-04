@@ -38,6 +38,7 @@ export interface RpcErrorData {
   CONFLICT: { reason: string };
   PRECONDITION_FAILED: { reason: PreconditionReason; detail?: string };
   FORBIDDEN: { reason: string };
+  UNSUPPORTED: { procedure: string };
   UNAVAILABLE: { retryAfterMs?: number };
   RESYNC_REQUIRED: { stream: string };
   TIMEOUT: { ms: number };
@@ -58,6 +59,7 @@ export const COMMON_ERRORS = {
     data: type<RpcErrorData["PRECONDITION_FAILED"]>(),
   },
   FORBIDDEN: { status: 403, data: type<RpcErrorData["FORBIDDEN"]>() },
+  UNSUPPORTED: { status: 501, data: type<RpcErrorData["UNSUPPORTED"]>() },
   UNAVAILABLE: { status: 503, data: type<RpcErrorData["UNAVAILABLE"]>() },
   RESYNC_REQUIRED: {
     status: 409,

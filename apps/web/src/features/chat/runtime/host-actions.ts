@@ -6,7 +6,10 @@
 import type { CreditActions } from "#renderer/components/credits-card";
 import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
+import { uploadFiles } from "#renderer/lib/browser/files";
 import { creditsTier } from "#renderer/lib/credits";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 
 interface PickedPath {
   path: string;
@@ -38,8 +41,13 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
       const account = await client.account.abacus();
       return creditsTier(account);
     },
-    openExternal: (url) => client.system.openExternal({ url }),
-    showItemInFolder: (path) => client.system.showItemInFolder({ path }),
+    openExternal: (url) => platformSystem(client).openExternal({ url }),
+    showItemInFolder: (path) =>
+      IS_ELECTRON
+        ? client.system.showItemInFolder({ path })
+        : import("#renderer/lib/browser/files").then((module) =>
+            module.viewHostFile(client, path)
+          ),
     // Native File objects expose metadata without reading file contents. The
     // preload bridge resolves their paths without the byte-returning picker RPC.
     pickFiles: () =>
@@ -55,8 +63,20 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
         input.addEventListener("cancel", () => finish(null), { once: true });
         input.addEventListener(
           "change",
-          () => {
+          async () => {
             try {
+              if (!IS_ELECTRON) {
+                const files = Array.from(input.files ?? []);
+                const paths = await uploadFiles(files);
+                finish(
+                  paths.map((path, i) => ({
+                    path,
+                    name: files[i]!.name,
+                    size: files[i]!.size,
+                  }))
+                );
+                return;
+              }
               const paths = Array.from(input.files ?? []).map((file) => {
                 const path = transport.host.getPathForFile?.(file);
                 if (!path)
@@ -76,9 +96,11 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
         document.body.append(input);
         input.click();
       }),
-    pickFolder: () => client.system.dialog.openFolder(),
+    pickFolder: () => platformSystem(client).dialog.openFolder(),
     savePasted: async (baseFolder, files) =>
-      (await client.files.savePastedTemp({ baseFolder, files })).paths,
+      IS_ELECTRON
+        ? (await client.files.savePastedTemp({ baseFolder, files })).paths
+        : uploadFiles(files.map((file) => new File([file.data], file.name))),
     pathForFile: (file) => transport.host.getPathForFile?.(file) || null,
     readImage: async (filePath, hostRoot) =>
       (await client.files.readImageAsDataUrl({ filePath, hostRoot })).dataUrl,

@@ -1,3 +1,4 @@
+import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 import { Store } from "@tanstack/react-store";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -5,7 +6,6 @@ import { afterEach, expect, it, vi } from "vitest";
 import { PermissionList, type ChatRuntime } from "#renderer/features/chat";
 import { descriptor } from "#renderer/features/chat/fixtures/builders";
 import { emptyThreadState } from "#renderer/features/chat/store/thread-store";
-import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 
 afterEach(() => vi.restoreAllMocks());
 it("R6-T18 a new permission lineage resets question progress and answers", () => {

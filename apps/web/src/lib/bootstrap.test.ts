@@ -1,3 +1,4 @@
+import { contract } from "@abacus-ai/contract/contract";
 /**
  * R1-T18: bootstrap() with the memory transport, and the transport-lost
  * policy. The router is created only when boot succeeded and the transport is
@@ -18,7 +19,6 @@ import {
   type MemoryTransport,
 } from "#renderer/data/transport/memory";
 import { SYSTEM_INFO } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
 
 import {
   bootstrap,

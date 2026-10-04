@@ -93,7 +93,7 @@ interface RelayModule {
 }
 
 const LIVE = new URL(
-  "../../../../../packages/agent/src/agui/__tests__/live.ts",
+  "../../../../packages/agent/src/agui/__tests__/live.ts",
   import.meta.url
 ).pathname;
 const RELAY = "#main/services/agui/relay-service";

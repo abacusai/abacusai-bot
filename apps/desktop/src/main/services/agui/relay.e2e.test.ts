@@ -15,6 +15,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { AgentMode, type DesktopEvent } from "@abacus-ai/contract/agent-types";
+import type { PermissionDescriptor } from "@abacus-ai/contract/contract";
 import {
   FakeProvider,
   fakeProviderConfig,
@@ -32,9 +34,6 @@ import {
   it,
   vi,
 } from "vitest";
-
-import { AgentMode, type DesktopEvent } from "@abacus-ai/contract/agent-types";
-import type { PermissionDescriptor } from "@abacus-ai/contract/contract";
 
 import {
   connectInProcess,

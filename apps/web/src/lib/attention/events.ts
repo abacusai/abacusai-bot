@@ -1,4 +1,7 @@
-import type { AttentionEvent, AttentionSummary } from "@abacus-ai/contract/contract";
+import type {
+  AttentionEvent,
+  AttentionSummary,
+} from "@abacus-ai/contract/contract";
 export interface AttentionState {
   revision: number;
   items: ReadonlyMap<string, AttentionSummary>;

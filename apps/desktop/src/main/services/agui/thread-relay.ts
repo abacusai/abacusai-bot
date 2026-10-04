@@ -1,3 +1,16 @@
+import {
+  AgentStatus,
+  type QueueEntry,
+  type SkillMetadata,
+} from "@abacus-ai/contract/agent-types";
+import type {
+  AgentState,
+  AiActiveRun,
+  AiNotice,
+  AiThreadSnapshot,
+  PermissionDescriptor,
+  RunOutcomeRecord,
+} from "@abacus-ai/contract/contract";
 /**
  * One thread's side of main's AG-UI relay (agent spec §5.2-§5.3, spec 02
  * §14). Every AG-UI line an agui runtime writes for the thread is applied
@@ -40,20 +53,6 @@ import {
   type UIMessage,
 } from "@tanstack/ai";
 import { restoreInboundChunk } from "@tanstack/ai/client";
-
-import {
-  AgentStatus,
-  type QueueEntry,
-  type SkillMetadata,
-} from "@abacus-ai/contract/agent-types";
-import type {
-  AgentState,
-  AiActiveRun,
-  AiNotice,
-  AiThreadSnapshot,
-  PermissionDescriptor,
-  RunOutcomeRecord,
-} from "@abacus-ai/contract/contract";
 
 import { applyJsonPatch, type JsonPatchOp } from "./json-patch";
 

@@ -1,3 +1,10 @@
+import {
+  SHARED_BOT_PLATFORM_OF,
+  SHARED_LINK_REQUIRED,
+  type MessagingPlatformId,
+  type MessagingPlatformInfo,
+  type UpdateMessagingSettingsRequest,
+} from "@abacus-ai/contract/messaging";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +25,8 @@ import {
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { openSharedLink } from "#renderer/lib/platform-system";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -30,13 +39,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "#renderer/ui/sheet";
-import {
-  SHARED_BOT_PLATFORM_OF,
-  SHARED_LINK_REQUIRED,
-  type MessagingPlatformId,
-  type MessagingPlatformInfo,
-  type UpdateMessagingSettingsRequest,
-} from "@abacus-ai/contract/messaging";
 
 import {
   connectPlatform,
@@ -82,7 +84,11 @@ export const MessagingPage = () => {
     >
       <GroupCard>
         {s?.platforms
-          .filter((p) => ["whatsapp", "telegram", "discord"].includes(p.id))
+          .filter((p) =>
+            IS_ELECTRON
+              ? ["whatsapp", "telegram", "discord"].includes(p.id)
+              : p.id.startsWith("abacus_")
+          )
           .map((p) => (
             <SettingRow
               key={p.id}
@@ -172,7 +178,9 @@ const PlatformSheet = () => {
   const search = useSearch({ strict: false }) as {
     platform?: MessagingPlatformId;
   };
-  return search.platform ? (
+  return search.platform &&
+    (IS_ELECTRON ||
+      !["whatsapp", "telegram", "discord"].includes(search.platform)) ? (
     <PlatformDetail key={search.platform} platform={search.platform} />
   ) : null;
 };
@@ -185,7 +193,9 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   );
   const s = query.data;
   const p = s?.platforms.find((p) => p.id === platform);
-  const sharedId = SHARED_BOT_PLATFORM_OF[platform];
+  const sharedId = platform.startsWith("abacus_")
+    ? platform
+    : SHARED_BOT_PLATFORM_OF[platform];
   const shared = s?.platforms.find((p) => p.id === sharedId);
   const navigate = useAppNavigate();
   const flow = useConnectFlow();
@@ -218,8 +228,9 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     const ready = flowRef.current.registerPairing(platform, async () => {
       await connectPlatform({ transport, queryClient: cache }, platform);
       if (!live) return;
-      await transport.client.messaging.showLogin({ platformId: platform });
-      if (sharedId && SHARED_LINK_REQUIRED.has(platform)) {
+      if (IS_ELECTRON)
+        await transport.client.messaging.showLogin({ platformId: platform });
+      if (sharedId && (!IS_ELECTRON || SHARED_LINK_REQUIRED.has(platform))) {
         await connectPlatform({ transport, queryClient: cache }, sharedId);
         const next = await transport.client.messaging.pairShared({
           platformId: sharedId,
@@ -296,7 +307,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                 <>
                   <Button
                     onClick={() =>
-                      void transport.client.messaging.openSharedLink({
+                      void openSharedLink(transport.client, {
                         platformId: sharedId,
                         target: "install",
                       })
@@ -306,7 +317,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                   </Button>
                   <Button
                     onClick={() =>
-                      void transport.client.messaging.openSharedLink({
+                      void openSharedLink(transport.client, {
                         platformId: sharedId,
                         target: "dm",
                       })

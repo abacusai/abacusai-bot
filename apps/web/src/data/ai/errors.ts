@@ -1,3 +1,4 @@
+import type { RpcErrorCode } from "@abacus-ai/contract/contract/errors";
 /**
  * Classifying `ai.*` failures (spec 02 §3.7, §4.6). Main raises
  * `BAD_REQUEST`, `NOT_FOUND`, `CONFLICT` and `UNAVAILABLE` only before it
@@ -6,8 +7,6 @@
  * uncertain: the agent may have accepted the prompt.
  */
 import { ORPCError } from "@orpc/client";
-
-import type { RpcErrorCode } from "@abacus-ai/contract/contract/errors";
 
 export const rpcCode = (error: unknown): RpcErrorCode | null =>
   error instanceof ORPCError ? (error.code as RpcErrorCode) : null;

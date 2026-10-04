@@ -1,3 +1,4 @@
+import { TOOLSETS_FOR_DISPLAY } from "@abacus-ai/contract/toolsets";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
@@ -16,6 +17,8 @@ import { useCollections } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { useDebouncedValue } from "#renderer/lib/use-debounced-value";
@@ -28,7 +31,6 @@ import {
   DialogDescription,
 } from "#renderer/ui/dialog";
 import { Input } from "#renderer/ui/input";
-import { TOOLSETS_FOR_DISPLAY } from "@abacus-ai/contract/toolsets";
 /** @public Shared phase-5 integration API. */
 export const selectSkills = (
   live: readonly unknown[] | undefined,
@@ -115,6 +117,7 @@ export const SkillsPage = () => {
               size="sm"
               variant="secondary"
               onClick={() =>
+                IS_ELECTRON &&
                 void transport.client.skills
                   .importLocal({ kind })
                   .then(changed)
@@ -148,20 +151,22 @@ export const SkillsPage = () => {
                     title={`/${s.id}`}
                     detail={s.description}
                   >
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() =>
-                        void transport.client.skills
-                          .openFile({ path: s.path, workspacePath })
-                          .then((result) => {
-                            if (!result.success)
-                              showError(result.error ?? t("phase5.failed"));
-                          })
-                      }
-                    >
-                      {t("phase5.editSkill")}
-                    </Button>
+                    {IS_ELECTRON && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          void transport.client.skills
+                            .openFile({ path: s.path, workspacePath })
+                            .then((result) => {
+                              if (!result.success)
+                                showError(result.error ?? t("phase5.failed"));
+                            })
+                        }
+                      >
+                        {t("phase5.editSkill")}
+                      </Button>
+                    )}
                     <ConfirmAction
                       title={t("phase5.uninstallSkill")}
                       description={t("phase5.uninstallSkillDescription", {
@@ -278,7 +283,7 @@ export const MarketplaceDialog = ({ onInstalled }: { onInstalled(): void }) => {
         <Button
           variant="ghost"
           onClick={() =>
-            void transport.client.system.openExternal({
+            void platformSystem(transport.client).openExternal({
               url: "https://skills.sh",
             })
           }

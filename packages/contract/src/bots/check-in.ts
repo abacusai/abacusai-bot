@@ -1,3 +1,4 @@
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 /**
  * Check-ins (spec 03 §10; the spec's `shared/bots/check-in.ts`). A check-in
  * is a routine made for a bot whose prompt is exactly `CHECK_IN_PROMPT`;
@@ -6,8 +7,6 @@
  * pinned by the fixtures in `__fixtures__/legacy-model-strings` (§9.5).
  */
 import * as v from "valibot";
-
-import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   composeCron,

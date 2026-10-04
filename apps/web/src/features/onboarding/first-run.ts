@@ -1,4 +1,5 @@
 import type { Transport } from "#renderer/data/transport";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const claim = (key: string): boolean => {
   try {
@@ -40,6 +41,10 @@ export const startWebsiteSignIn = async (
   transport: Transport,
   start: () => void
 ): Promise<void> => {
+  if (!IS_ELECTRON) {
+    start();
+    return;
+  }
   if (!(await transport.client.auth.abacus.shouldAutoSignIn({}))) return;
   if (!claim("onboarding.autoSignIn")) return;
   await transport.client.system.funnelStep({ step: "auto_signin" });

@@ -1,3 +1,4 @@
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
  * Boot before the router (spec 01 §8.6): the transport, `system.info` and the
  * prefs snapshot, each with its own timeout and typed failure. Route loading
@@ -14,7 +15,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { Db } from "#renderer/data/db";
 import { systemInfoQuery } from "#renderer/data/queries/system";
 import type { CloseReason, Transport } from "#renderer/data/transport";
-import type { SystemInfo } from "@abacus-ai/contract/contract";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 class BootTimeoutError extends Error {
   constructor(readonly step: BootStep) {
@@ -102,7 +103,7 @@ export const reportFailedBoot = (
   reason: string,
   timeoutMs = READY_REPORT_TIMEOUT_MS
 ): Promise<void> => {
-  if (transport === null || transport.state !== "open")
+  if (!IS_ELECTRON || transport === null || transport.state !== "open")
     return Promise.resolve();
   const abort = new AbortController();
   const call = transport.client.window

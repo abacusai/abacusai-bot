@@ -3870,5 +3870,20 @@
   },
   "visualizer": {
     "loading": "विज़ुअलाइज़ेशन लोड हो रहा है…"
+  },
+  "web": {
+    "connect": {
+      "starting": "Starting your computer",
+      "installing": "Installing",
+      "connecting": "Connecting",
+      "signin": "Sign in",
+      "upgrade": "Upgrade to Pro",
+      "restart": "Restart your computer"
+    },
+    "files": {
+      "select": "Select folder",
+      "cancel": "Cancel",
+      "open": "Open folder"
+    }
   }
 }

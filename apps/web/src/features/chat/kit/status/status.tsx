@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import { CreditsCard } from "#renderer/components/credits-card";
 import { cn } from "#renderer/lib/cn";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
   HoverCard,
@@ -527,7 +528,7 @@ export const NoticeRow = ({
         />
       </MarkerIcon>
       <MarkerContent className="flex-1">{message}</MarkerContent>
-      {tooLarge && historyPath != null ? (
+      {IS_ELECTRON && tooLarge && historyPath != null ? (
         <Button
           variant="ghost"
           size="sm"

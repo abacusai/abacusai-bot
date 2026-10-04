@@ -1,9 +1,10 @@
-import { APP_ACTIONS } from "#renderer/lib/keyboard/actions";
-import type { SettingsPageId } from "#renderer/lib/navigation/areas";
-import { foldSearch } from "#renderer/lib/use-app-context";
 import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
 import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
 import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
+
+import { APP_ACTIONS } from "#renderer/lib/keyboard/actions";
+import type { SettingsPageId } from "#renderer/lib/navigation/areas";
+import { foldSearch } from "#renderer/lib/use-app-context";
 export interface SettingEntry {
   id: string;
   page: SettingsPageId;

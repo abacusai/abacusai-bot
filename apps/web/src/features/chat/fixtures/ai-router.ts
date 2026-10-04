@@ -1,3 +1,11 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type {
+  AiHydration,
+  AiSendAck,
+  AiSendInput,
+  AttentionEvent,
+  RunFinishedNotice,
+} from "@abacus-ai/contract/contract";
 /**
  * The `ai.*` procedures over an `AguiSource`, for the fixture relay (spec 02
  * §11.1): the contract implemented as main's `rpc/procedures/ai.ts` does it
@@ -9,15 +17,6 @@
  */
 import { implement, ORPCError, withEventMeta } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
-
-import { contract } from "@abacus-ai/contract/contract";
-import type {
-  AiHydration,
-  AiSendAck,
-  AiSendInput,
-  AttentionEvent,
-  RunFinishedNotice,
-} from "@abacus-ai/contract/contract";
 
 /** One relay event and its seq; a null seq is a control yield. */
 export interface SequencedChunk {

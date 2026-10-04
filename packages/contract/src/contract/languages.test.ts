@@ -14,7 +14,7 @@ import { SUPPORTED_LANGUAGES } from "./rows";
 describe("supported languages", () => {
   it("are exactly the locale files the renderer ships", () => {
     const locales = readdirSync(
-      join(import.meta.dirname, "../../renderer/locales")
+      join(import.meta.dirname, "../../../../apps/web/src/locales")
     )
       .filter((name) => name.endsWith(".json"))
       .map((name) => name.replace(/\.json$/, ""))

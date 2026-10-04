@@ -1,3 +1,6 @@
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * The browser and device permission prompt belongs to one conversation.
  *
@@ -8,10 +11,6 @@
  * denied rather than shown to a stranger.
  */
 import { describe, expect, it } from "vitest";
-
-import { AgentMode } from "@abacus-ai/contract/agent-types";
-import type { IpcEvent } from "@abacus-ai/contract/contracts";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BuiltinToolPermissions } from "./builtin-tool-permissions";
 

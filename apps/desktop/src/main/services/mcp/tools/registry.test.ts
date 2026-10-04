@@ -9,9 +9,8 @@
 import fs from "fs";
 import path from "path";
 
-import { describe, expect, it } from "vitest";
-
 import { TOOLSETS } from "@abacus-ai/contract/toolsets";
+import { describe, expect, it } from "vitest";
 
 import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
 
@@ -43,13 +42,7 @@ const descriptions = (
     fs.readFileSync(
       path.join(
         import.meta.dirname,
-        "..",
-        "..",
-        "..",
-        "..",
-        "renderer",
-        "locales",
-        "en-US.json"
+        "../../../../../../web/src/locales/en-US.json"
       ),
       "utf8"
     )

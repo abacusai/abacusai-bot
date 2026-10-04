@@ -1,3 +1,4 @@
+import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 /**
  * `/__ui` (spec 01 §10): every token, every atom, the shell parts, the
  * occlusion watcher's output and the view-transition types, one theme at a
@@ -38,7 +39,6 @@ import {
   themeOverride,
 } from "#renderer/lib/theme";
 import { Button } from "#renderer/ui/button";
-import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 
 import * as Atoms from "./atoms";
 import { OverlayContext, OVERLAY_EXAMPLES } from "./overlays";

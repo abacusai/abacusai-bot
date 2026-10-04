@@ -1,8 +1,9 @@
+import type { OpenCommand, OpenTarget } from "@abacus-ai/contract/contract";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
-import type { OpenCommand, OpenTarget } from "@abacus-ai/contract/contract";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 export const openTargetHref = (target: OpenTarget): string => {
   if (target.kind === "bot")
     return `/bots/${encodeURIComponent(target.botId)}${target.sessionId ? `/chats/${encodeURIComponent(target.sessionId)}` : ""}`;
@@ -49,6 +50,7 @@ export const OpenTargetBridge = () => {
   const router = useRouter();
   const { transport } = router.options.context;
   useEffect(() => {
+    if (!IS_ELECTRON) return;
     const abort = new AbortController();
     const receive = openCommandReceiver({
       signal: abort.signal,

@@ -296,7 +296,7 @@ const gated = (
   };
 };
 
-interface HandlerInterceptorOptions {
+export interface HandlerInterceptorOptions {
   context: object;
   request: {
     headers: Record<string, string | string[] | undefined>;

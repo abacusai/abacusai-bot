@@ -8,8 +8,6 @@ import os from "node:os";
 import path from "path";
 
 import { connectorById } from "@abacus-ai/connectors/registry";
-import { app } from "electron";
-
 import {
   AgentStatus,
   type AgentMode,
@@ -23,7 +21,10 @@ import type {
   BotUpdateInput,
 } from "@abacus-ai/contract/bots";
 import { ConflictError } from "@abacus-ai/contract/conflict";
-import { checkoutKey, type GitDiffResult } from "@abacus-ai/contract/contract/checkout";
+import {
+  checkoutKey,
+  type GitDiffResult,
+} from "@abacus-ai/contract/contract/checkout";
 import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import type {
   ConnectorConnectOptions,
@@ -153,7 +154,10 @@ import {
   sessionConversationKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
-import type { BackendId, BackendStatus } from "@abacus-ai/contract/exec-backends";
+import type {
+  BackendId,
+  BackendStatus,
+} from "@abacus-ai/contract/exec-backends";
 import {
   describePlatformForAgent,
   reportableLivePlatforms,
@@ -163,7 +167,10 @@ import {
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
 } from "@abacus-ai/contract/messaging";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
+import {
+  EntityNotFoundError,
+  WORKSPACE_NOT_FOUND,
+} from "@abacus-ai/contract/not-found";
 import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import type {
   Routine,
@@ -176,7 +183,12 @@ import type {
   TerminalShellState,
 } from "@abacus-ai/contract/terminal-shells";
 import { TimeoutError } from "@abacus-ai/contract/timeout-error";
-import { isToolsetEnabled, TOOLSETS, TOOLSETS_BY_ID } from "@abacus-ai/contract/toolsets";
+import {
+  isToolsetEnabled,
+  TOOLSETS,
+  TOOLSETS_BY_ID,
+} from "@abacus-ai/contract/toolsets";
+import { app } from "electron";
 
 import {
   abacusBotHome,

@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { FilesEvent } from "@abacus-ai/contract/contract/files";
 /**
  * R3-T33 (routing half): URLs go to the browser tab, viewable files to the
  * preview with the right containment root, the rest to the OS app;
@@ -9,8 +11,6 @@ import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "@abacus-ai/contract/contract";
-import type { FilesEvent } from "@abacus-ai/contract/contract/files";
 
 import {
   openBotFile,

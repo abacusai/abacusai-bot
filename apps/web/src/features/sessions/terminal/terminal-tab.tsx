@@ -1,3 +1,9 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import {
+  sessionConversationKey,
+  sessionConversationRef,
+} from "@abacus-ai/contract/conversation-scope";
+import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 import { UrlRegexProvider, OSC8LinkProvider } from "ghostty-web";
 import { useContext, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,12 +18,6 @@ import {
 } from "#renderer/components/terminal/keys";
 import { followNotices } from "#renderer/data/queries/live";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import {
-  sessionConversationKey,
-  sessionConversationRef,
-} from "@abacus-ai/contract/conversation-scope";
-import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 
 import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";

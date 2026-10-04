@@ -1,3 +1,9 @@
+import { localModelReference } from "@abacus-ai/contract/local-models";
+import {
+  PROVIDER_KEY_FIELDS,
+  isPlausibleApiKey,
+  type ProviderKeyField,
+} from "@abacus-ai/contract/settings";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
@@ -15,7 +21,10 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
+import { webSignIn } from "#renderer/lib/browser/sign-in";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
@@ -29,12 +38,6 @@ import {
 } from "#renderer/ui/dialog";
 import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { localModelReference } from "@abacus-ai/contract/local-models";
-import {
-  PROVIDER_KEY_FIELDS,
-  isPlausibleApiKey,
-  type ProviderKeyField,
-} from "@abacus-ai/contract/settings";
 
 import { creditMarkState } from "./credits";
 export const ModelsPage = ({
@@ -65,7 +68,10 @@ export const ModelsPage = ({
     refetchInterval: 300000,
   });
   const state = useQuery(
-    transport.orpc.localModels.state.queryOptions({ input: {} })
+    transport.orpc.localModels.state.queryOptions({
+      input: {},
+      enabled: IS_ELECTRON,
+    })
   );
   const [q, setQ] = useState("");
   const installGeneration = useRef(0);
@@ -89,6 +95,7 @@ export const ModelsPage = ({
       void update({ creditsExhaustedAt: null }).catch(() => undefined);
   }, [mark, update]);
   useEffect(() => {
+    if (!IS_ELECTRON) return;
     const abort = new AbortController();
     void followNotices(
       transport,
@@ -182,7 +189,7 @@ export const ModelsPage = ({
         {t(
           keys.data?.includes(field.provider)
             ? "phase5.manage"
-            : field.connect
+            : field.connect && IS_ELECTRON
               ? "phase5.connect"
               : "phase5.addKey"
         )}
@@ -254,7 +261,7 @@ export const ModelsPage = ({
               .map(row)}
           </GroupCard>
         </details>
-        {state.data?.runtimeAvailable && (
+        {IS_ELECTRON && state.data?.runtimeAvailable && (
           <section data-setting-id="localModels">
             <GroupCard title={t("phase5.onThisMachine")}>
               <p className="p-3 text-xs">
@@ -395,6 +402,8 @@ export const ProviderDialog = ({
       search: (old) => ({ ...old, provider: undefined }),
       transition: "none",
     });
+  const canConnect =
+    field.connect && (IS_ELECTRON || field.connect === "abacus");
   const auth =
     field.connect === "abacus"
       ? transport.client.auth.abacus
@@ -402,7 +411,7 @@ export const ProviderDialog = ({
   useEffect(
     () => () => {
       token.current++;
-      if (field.connect) void auth.cancel({});
+      if (IS_ELECTRON && field.connect) void auth.cancel({});
     },
     [auth, field.connect]
   );
@@ -446,11 +455,14 @@ export const ProviderDialog = ({
     },
   });
   const connect = async () => {
+    if (!canConnect) return;
     const id = ++token.current;
     setPending(true);
     setError(null);
     try {
-      const result = await auth.start({});
+      const result = IS_ELECTRON
+        ? await auth.start({})
+        : await webSignIn(transport);
       if (id !== token.current) return;
       if (result.ok) {
         await refresh();
@@ -471,13 +483,13 @@ export const ProviderDialog = ({
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>
-            {t(field.connect ? "phase5.connectProvider" : "phase5.getKey", {
+            {t(canConnect ? "phase5.connectProvider" : "phase5.getKey", {
               provider: field.label,
             })}
           </DialogTitle>
           <DialogDescription>{t("phase5.storedHere")}</DialogDescription>
         </DialogHeader>
-        {field.connect ? (
+        {canConnect ? (
           <div className="flex gap-2">
             <Button disabled={pending} onClick={() => void connect()}>
               {t(pending ? "phase5.waitingSignIn" : "phase5.connect")}
@@ -488,7 +500,7 @@ export const ProviderDialog = ({
                 onClick={() => {
                   token.current++;
                   setPending(false);
-                  void auth.cancel({});
+                  if (IS_ELECTRON) void auth.cancel({});
                 }}
               >
                 {t("phase5.cancel")}
@@ -507,7 +519,7 @@ export const ProviderDialog = ({
               type="button"
               variant="secondary"
               onClick={() =>
-                void transport.client.system.openExternal({
+                void platformSystem(transport.client).openExternal({
                   url: field.signupUrl,
                 })
               }

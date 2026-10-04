@@ -1,14 +1,15 @@
 import { EventEmitter } from "node:events";
 
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { screen } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PrefsRow } from "../../shared/contract/rows";
 import * as metrics from "./metrics";
 const DEFAULT_PREFS = {
   notch: { enabled: true, haptics: false, extraDisplays: false },
 } as PrefsRow;
-import type { NotchShape } from "../../shared/contract/notch";
+import type { NotchShape } from "@abacus-ai/contract/contract/notch";
+
 import { NotchController, type NotchControllerOptions } from "./controller";
 import { wireMainNotchEvents } from "./main-events";
 

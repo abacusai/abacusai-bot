@@ -1,14 +1,4 @@
 import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type JSX,
-} from "react";
-// Read-only visual slide renderer ported from the legacy PPTX viewer.
-import { useTranslation } from "react-i18next";
-
-import {
   EMU_PER_PX,
   type PptxDeck,
   type PptxFill,
@@ -17,6 +7,15 @@ import {
   type PptxSlide,
   type PptxTextBody,
 } from "@abacus-ai/contract/pptx";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type JSX,
+} from "react";
+// Read-only visual slide renderer ported from the legacy PPTX viewer.
+import { useTranslation } from "react-i18next";
 const emuToPx = (emu: number): number => emu / EMU_PER_PX;
 
 /** Font stack behind whatever the deck asked for, so text stays close. */

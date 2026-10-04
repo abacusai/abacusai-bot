@@ -1,3 +1,9 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { BrowserRuntimeState } from "@abacus-ai/contract/contracts";
+import {
+  sessionConversationKey,
+  type ConversationKey,
+} from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -11,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { BrowserSurface } from "#renderer/components/browser-surface";
 import { followNotices } from "#renderer/data/queries/live";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -19,12 +26,6 @@ import {
   DropdownMenuItem,
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { BrowserRuntimeState } from "@abacus-ai/contract/contracts";
-import {
-  sessionConversationKey,
-  type ConversationKey,
-} from "@abacus-ai/contract/conversation-scope";
 
 import { useSessionsTransport } from "../data/queries";
 import { acquireLocalFile } from "./local-materialization";
@@ -195,7 +196,7 @@ export const BrowserTab = ({
           size="icon-sm"
           aria-label={t("sessions.browser.external")}
           onClick={() =>
-            void transport.client.system.openExternal({
+            void platformSystem(transport.client).openExternal({
               url: state?.url ?? address,
             })
           }

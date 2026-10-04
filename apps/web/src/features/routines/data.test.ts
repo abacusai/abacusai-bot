@@ -1,3 +1,4 @@
+import { nextRun } from "@abacus-ai/contract/routines/cron";
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 
@@ -5,7 +6,6 @@ import {
   fixtureRoutines,
   fixtureSessions,
 } from "#renderer/data/fixture-db/rows";
-import { nextRun } from "@abacus-ai/contract/routines/cron";
 
 import { routineState, runsView, stats } from "./data";
 import {

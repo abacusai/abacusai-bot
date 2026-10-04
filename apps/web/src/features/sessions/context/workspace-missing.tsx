@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { platformSystem } from "#renderer/lib/platform-system";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,7 +33,9 @@ export const WorkspaceMissing = ({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const relocate = async () => {
-    const newPath = await transport.client.system.dialog.openFolder({});
+    const newPath = await platformSystem(transport.client).dialog.openFolder(
+      {}
+    );
     if (!newPath) return;
     await transport.client.workspaces.relocate({ workspaceId, newPath });
     await db.collections.workspaces.utils.resync();

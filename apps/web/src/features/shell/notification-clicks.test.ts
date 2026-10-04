@@ -1,6 +1,5 @@
-import { expect, it } from "vitest";
-
 import type { NotificationMetadata } from "@abacus-ai/contract/contract";
+import { expect, it } from "vitest";
 
 import { notificationHref } from "./notification-clicks";
 

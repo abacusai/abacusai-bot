@@ -1,10 +1,10 @@
 import { CONNECTORS } from "@abacus-ai/connectors/registry";
+import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 
 import {
   CONNECT_WATCHDOG_MS,

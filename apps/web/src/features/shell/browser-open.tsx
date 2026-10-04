@@ -1,5 +1,7 @@
 import { Store, useStore } from "@tanstack/react-store";
 
+import { IS_ELECTRON } from "#renderer/lib/platform";
+
 export interface BrowserOpenRequest {
   sessionId: string;
   url: string;
@@ -17,6 +19,10 @@ export const registerBrowserOpen = (
   };
 };
 export const requestBrowserOpen = (request: BrowserOpenRequest): void => {
+  if (!IS_ELECTRON) {
+    window.open(request.url, "_blank", "noopener,noreferrer");
+    return;
+  }
   requests.setState((state) => ({
     ...state,
     [request.sessionId]: request.url,

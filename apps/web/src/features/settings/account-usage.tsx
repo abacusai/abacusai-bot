@@ -1,3 +1,4 @@
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,12 +9,14 @@ import {
   GroupCard,
   SettingRow,
 } from "#renderer/components/form-kit/page";
+import { webSignIn } from "#renderer/lib/browser/sign-in";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
-import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 
 import { ABACUS_PLAN_URL, ABACUS_BUY_CREDITS_URL } from "./credits";
 export const AccountPage = () => {
@@ -47,7 +50,7 @@ export const AccountPage = () => {
   const attempt = useRef(0);
   useEffect(
     () => () => {
-      if (pending) {
+      if (IS_ELECTRON && pending) {
         attempt.current++;
         void transport.client.auth.abacus.cancel({});
       }
@@ -58,9 +61,9 @@ export const AccountPage = () => {
     const id = ++attempt.current;
     setPending(true);
     try {
-      const result = await transport.client.auth.abacus.start({
-        intent: "signin",
-      });
+      const result = IS_ELECTRON
+        ? await transport.client.auth.abacus.start({ intent: "signin" })
+        : await webSignIn(transport);
       if (id !== attempt.current) return;
       if (result.ok)
         await cache.invalidateQueries({
@@ -90,19 +93,21 @@ export const AccountPage = () => {
                 onClick={() => {
                   attempt.current++;
                   setPending(false);
-                  void transport.client.auth.abacus.cancel({});
+                  if (IS_ELECTRON) void transport.client.auth.abacus.cancel({});
                 }}
               >
                 {t("phase5.cancel")}
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  void transport.client.auth.abacus.openInBrowser({})
-                }
-              >
-                {t("phase5.continueBrowser")}
-              </Button>
+              {IS_ELECTRON && (
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    void transport.client.auth.abacus.openInBrowser({})
+                  }
+                >
+                  {t("phase5.continueBrowser")}
+                </Button>
+              )}
             </>
           )}
           <Button
@@ -154,7 +159,7 @@ export const AccountPage = () => {
           <Button
             size="sm"
             onClick={() =>
-              void transport.client.system.openExternal({
+              void platformSystem(transport.client).openExternal({
                 url: ABACUS_PLAN_URL,
               })
             }
@@ -178,7 +183,7 @@ export const AccountPage = () => {
             size="sm"
             variant="secondary"
             onClick={() =>
-              void transport.client.system.openExternal({
+              void platformSystem(transport.client).openExternal({
                 url: ABACUS_BUY_CREDITS_URL,
               })
             }

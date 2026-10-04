@@ -10,6 +10,7 @@ import {
 } from "#renderer/lib/document-sound";
 import { isThreadSeen } from "#renderer/lib/navigation/visible-thread";
 import { createNotifier } from "#renderer/lib/notify";
+import { platformSystem } from "#renderer/lib/platform-system";
 /**
  * `BotsGlobals`: the bots area's document-wide subscriptions, mounted once
  * by the shell route (the sidebar is not always mounted, but unread, cues
@@ -73,7 +74,7 @@ export const BotsGlobals = () => {
         notificationsEnabled: () => notificationsOn.current,
         sounds: () => soundPrefs.current,
         now: () => new Date(),
-        send: (input) => transport.client.system.notify(input),
+        send: (input) => platformSystem(transport.client).notify(input),
       }),
       labels: {
         done: (bot) => ({

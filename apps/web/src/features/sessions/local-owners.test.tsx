@@ -1,9 +1,8 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, it, vi } from "vitest";
-
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 vi.mock("./data/queries", () => ({
   useSessionsTransport: () => ({ client: {} }),
   useWorkspace: () => ({ path: "/repo" }),

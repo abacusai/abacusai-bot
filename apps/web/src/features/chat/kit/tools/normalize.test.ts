@@ -6,6 +6,7 @@
  * input after `TOOL_CALL_END`, `parsePartialJSON` before.
  */
 import { buildToolTitle } from "@abacus-ai/agent/tool-display";
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 import { StreamProcessor } from "@tanstack/ai";
 import {
   parsePartialJSON,
@@ -13,8 +14,6 @@ import {
   type ToolResultPart,
 } from "@tanstack/ai-client";
 import { describe, expect, it } from "vitest";
-
-import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import * as b from "../../fixtures/builders";
 import { normalizeTool, toolInput } from "./normalize";
@@ -151,7 +150,7 @@ describe("R2-T13 live", () => {
 });
 
 const V1 = import.meta.glob<{ segments: unknown[] }>(
-  "../../../../../shared/transcript/__fixtures__/v1/*.json",
+  "../../../../../../../packages/contract/src/transcript/__fixtures__/v1/*.json",
   {
     import: "default",
     eager: true,
@@ -159,8 +158,9 @@ const V1 = import.meta.glob<{ segments: unknown[] }>(
 );
 const pairsOf = (name: string) => {
   const messages = v1ToUiMessages(
-    V1[`../../../../../shared/transcript/__fixtures__/v1/${name}.json`]!
-      .segments
+    V1[
+      `../../../../../../../packages/contract/src/transcript/__fixtures__/v1/${name}.json`
+    ]!.segments
   );
   const parts = messages.flatMap((message) => message.parts);
   const results = parts.filter(

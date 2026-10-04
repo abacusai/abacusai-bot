@@ -21,6 +21,8 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
@@ -65,6 +67,8 @@ export const ConnectorsPage = () => {
     staleTime: 60000,
   });
   const entries = CONNECTORS.filter(
+    (e) => IS_ELECTRON || e.kind !== "messaging"
+  ).filter(
     (e) =>
       e.kind !== "messaging" &&
       statuses.data?.[e.id]?.reason !== "not-offered" &&
@@ -221,7 +225,9 @@ export const ConnectorSheet = ({ connector }: { connector: string }) => {
             variant="secondary"
             onClick={() =>
               entry &&
-              void transport.client.system.openExternal({ url: entry.docsUrl })
+              void platformSystem(transport.client).openExternal({
+                url: entry.docsUrl,
+              })
             }
           >
             {t("phase5.documentation")}

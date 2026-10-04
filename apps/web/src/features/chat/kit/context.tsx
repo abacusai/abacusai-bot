@@ -1,3 +1,4 @@
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 /**
  * The thread view's context: the session, the runtime, the skin and the
  * route-provided pieces (spec 02 §2 `ChatViewProps`). Widgets the kit
@@ -6,8 +7,6 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 import { createContext, use, type ReactNode } from "react";
-
-import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";

@@ -1,3 +1,4 @@
+import type { WindowChromeState } from "@abacus-ai/contract/contract";
 /**
  * The native chrome's state on `<html>` (spec 01 §7.4, §7.7): `data-titlebar`
  * (overlay, overlay-pending, native-frame, overlay-unavailable),
@@ -9,9 +10,8 @@ import { useEffect } from "react";
 
 import { windowChromeQuery } from "#renderer/data/queries/window";
 import type { Transport } from "#renderer/data/transport";
-import type { WindowChromeState } from "@abacus-ai/contract/contract";
 
-const DEFAULT_CHROME: WindowChromeState = {
+export const DEFAULT_CHROME: WindowChromeState = {
   mode: "overlay-pending",
   fullScreen: false,
   density: "comfortable",

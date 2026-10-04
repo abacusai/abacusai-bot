@@ -1,3 +1,8 @@
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
+import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
@@ -9,13 +14,10 @@ import { confirmFreePoolModel } from "#renderer/components/credits-card/actions"
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem, openSharedLink } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
-import { AgentMode } from "@abacus-ai/contract/agent-types";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
-import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
-import { detectRememberRequest } from "@abacus-ai/contract/remember";
 
 import { react } from "../avatar";
 import { setBotModel, setCheckInsEnabled } from "../data/bot-actions";
@@ -62,9 +64,9 @@ export const useBotChatSlots = (
   const mode = useQuery(queries.defaultMode());
   const messaging = useQuery(queries.messaging());
   const senders = useQuery(queries.senderChats());
-  const channel = messaging.data?.platforms.find(
-    (row) => row.id === bot.channel
-  );
+  const channel = IS_ELECTRON
+    ? messaging.data?.platforms.find((row) => row.id === bot.channel)
+    : undefined;
   const senderInfo = senders.data?.find((row) => row.sessionId === sessionId);
   const isRun = !!session?.routineId;
   const key = session?.workspaceId
@@ -82,7 +84,7 @@ export const useBotChatSlots = (
     });
   const openTarget = (target: BotOpenTarget): void => {
     if (target.kind === "external")
-      void transport.client.system.openPath({ path: target.path });
+      void platformSystem(transport.client).openPath({ path: target.path });
     else if (target.kind === "preview")
       void navigate({
         search: (previous) => ({
@@ -92,6 +94,8 @@ export const useBotChatSlots = (
         }),
         transition: "none",
       });
+    else if (!IS_ELECTRON)
+      void platformSystem(transport.client).openExternal({ url: target.url });
     else {
       onBrowser?.(target.url);
       void navigate({
@@ -169,7 +173,7 @@ export const useBotChatSlots = (
                         variant="secondary"
                         size="sm"
                         onClick={() =>
-                          void transport.client.messaging.openSharedLink({
+                          void openSharedLink(transport.client, {
                             platformId: channel.id,
                             target: "dm",
                           })
@@ -190,8 +194,11 @@ export const useBotChatSlots = (
     workspaceRoot,
     onOpenFile: openFile,
     onOpenUrl: (url) => openTarget({ kind: "browser", url }),
-    onOpenExternal: (url) => void transport.client.system.openExternal({ url }),
-    onReveal: (path) => void transport.client.system.showItemInFolder({ path }),
+    onOpenExternal: (url) =>
+      void platformSystem(transport.client).openExternal({ url }),
+    onReveal: IS_ELECTRON
+      ? (path) => void transport.client.system.showItemInFolder({ path })
+      : undefined,
   });
   return {
     session,

@@ -1,9 +1,3 @@
-import type { UIMessage } from "@tanstack/ai-client";
-import { Store } from "@tanstack/react-store";
-
-import type { Db } from "#renderer/data/db";
-import type { AppClient } from "#renderer/data/transport/types";
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
 import type { AgentMode } from "@abacus-ai/contract/agent-types";
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
@@ -12,6 +6,13 @@ import {
   sessionConversationKey,
   sessionConversationRef,
 } from "@abacus-ai/contract/conversation-scope";
+import type { UIMessage } from "@tanstack/ai-client";
+import { Store } from "@tanstack/react-store";
+
+import type { Db } from "#renderer/data/db";
+import type { AppClient } from "#renderer/data/transport/types";
+import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
 export interface SubmissionEnvelope {
@@ -162,10 +163,12 @@ export const startSession = async (
           sessionConversationKey: to,
           sessionConversation: sessionConversationRef(workspaceId, sessionId),
         }),
-        deps.client.browser.runtime.promoteScope({
-          draftConversationKey: from,
-          sessionConversationKey: to,
-        }),
+        IS_ELECTRON
+          ? deps.client.browser.runtime.promoteScope({
+              draftConversationKey: from,
+              sessionConversationKey: to,
+            })
+          : Promise.resolve(),
       ]);
       for (const result of promotions)
         if (result.status === "rejected")

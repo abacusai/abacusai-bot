@@ -1,3 +1,4 @@
+import type { AiSendAck } from "@abacus-ai/contract/contract/ai";
 /**
  * Admission (spec 02 §3.7): `ai.send` outside `ChatClient`, with an outbox
  * of pending user messages in the host store. A pending message is shown
@@ -9,7 +10,6 @@
 import type { UIMessage } from "@tanstack/ai-client";
 
 import { isDefinitive, type AiClient } from "#renderer/data/ai";
-import type { AiSendAck } from "@abacus-ai/contract/contract/ai";
 
 export interface SubmissionEnvelope {
   runId: string;

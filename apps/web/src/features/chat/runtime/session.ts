@@ -1,3 +1,5 @@
+import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
+import type { AiHydration } from "@abacus-ai/contract/contract/ai";
 /**
  * `ThreadSession` (spec 02 §3.1-§3.3): one per thread per document. It owns
  * the generations (each: a hydrate snapshot, a fresh receive-only
@@ -16,8 +18,6 @@ import {
 import { Store } from "@tanstack/react-store";
 
 import { isNotFound, type AiClient } from "#renderer/data/ai";
-import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
-import type { AiHydration } from "@abacus-ai/contract/contract/ai";
 
 import { isAllowed } from "../kit/permissions/decisions";
 import {

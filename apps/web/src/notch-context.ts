@@ -1,3 +1,4 @@
+import type { NotchLayout } from "@abacus-ai/contract/contract";
 import type { QueryClient } from "@tanstack/react-query";
 import { createContext, use } from "react";
 
@@ -5,7 +6,6 @@ import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import type { ChatRuntime } from "#renderer/features/chat";
 import type { NotchPresentation } from "#renderer/features/notch";
-import type { NotchLayout } from "@abacus-ai/contract/contract";
 export interface NotchRouterContext {
   transport: Transport;
   db: Db;

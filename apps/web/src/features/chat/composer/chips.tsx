@@ -1,3 +1,4 @@
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 /**
  * The composer's chips (spec 02 §8.2): the permission-mode chip (sessions)
  * with the canvas's five modes, and the model chip with its picker shell
@@ -25,7 +26,6 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
-import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import type { ModelChipBinding } from "../kit/context";
 import { MODE_DESCRIPTION_KEYS, MODE_LABEL_KEYS, MODE_ORDER } from "./modes";

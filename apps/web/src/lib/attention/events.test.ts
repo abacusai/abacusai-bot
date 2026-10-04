@@ -1,6 +1,8 @@
+import type {
+  AttentionSummary,
+  RunFinishedNotice,
+} from "@abacus-ai/contract/contract";
 import { describe, expect, it } from "vitest";
-
-import type { AttentionSummary, RunFinishedNotice } from "@abacus-ai/contract/contract";
 
 import { cueForNotice } from "./cues";
 import { applyAttention, emptyAttention } from "./events";

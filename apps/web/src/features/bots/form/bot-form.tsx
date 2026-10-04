@@ -1,3 +1,11 @@
+import {
+  MAX_BOT_NAME,
+  MAX_BOT_PERSONA,
+  MAX_BOT_DESCRIPTION,
+  MAX_BOT_TITLE,
+  MAX_BOTS,
+} from "@abacus-ai/contract/bots";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -26,14 +34,6 @@ import {
   PopoverTrigger,
   PopoverTitle,
 } from "#renderer/ui/popover";
-import {
-  MAX_BOT_NAME,
-  MAX_BOT_PERSONA,
-  MAX_BOT_DESCRIPTION,
-  MAX_BOT_TITLE,
-  MAX_BOTS,
-} from "@abacus-ai/contract/bots";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { BotFace } from "../avatar";
 import { BotGone } from "../chat/identity";

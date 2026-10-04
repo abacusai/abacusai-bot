@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import {
+  EXPERIENCE_PROTOCOL,
+  FOUNDATION_API,
+} from "@abacus-ai/contract/experience";
 /**
  * Recompute every digest of an experience tree from the builder's JSON canon
  * (`apps/updater/src/manifest.ts`: sorted keys, compact separators, ASCII
@@ -9,8 +13,6 @@ import path from "node:path";
  * because the shape is small and this runs before anything else can.
  */
 import { verifyProvenance } from "@abacus-ai/updater/provenance";
-
-import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "@abacus-ai/contract/experience";
 
 export interface ExperienceFileEntry {
   readonly sha256: string;

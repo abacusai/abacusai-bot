@@ -1,3 +1,4 @@
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 import {
   useLayoutEffect,
   useRef,
@@ -5,8 +6,6 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-
-import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 
 import { notchOutline } from "./outline";
 

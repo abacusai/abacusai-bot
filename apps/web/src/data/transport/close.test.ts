@@ -1,3 +1,4 @@
+import { contract } from "@abacus-ai/contract/contract";
 /**
  * Transport lifecycle (spec 01 §15.5): `state` and `onClose` on all three
  * constructors. `state` flips before listeners run; each registration fires
@@ -7,8 +8,6 @@
  */
 import { implement, type Router } from "@orpc/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { contract } from "@abacus-ai/contract/contract";
 
 import { createCloseSignal } from "./close-signal";
 import { createTransport } from "./create-transport";

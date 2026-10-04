@@ -1,3 +1,4 @@
+import type { AiSendInput } from "@abacus-ai/contract/contract/ai";
 /**
  * R2-T35 (spec 02 §3.7, review r3-5): uncertain admissions. The relay fake
  * answers a repeated run id with the recorded original ack (§14.5).
@@ -9,7 +10,6 @@ import {
   memoryRelay,
   closeMemoryRelays,
 } from "#renderer/test-support/chat-relay";
-import type { AiSendInput } from "@abacus-ai/contract/contract/ai";
 
 import * as b from "../fixtures/builders";
 import type { FakeRelay } from "../fixtures/relay";

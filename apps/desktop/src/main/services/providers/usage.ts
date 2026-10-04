@@ -5,7 +5,6 @@ import {
   UsageScanner,
   type OpenRouterKeyStatus,
 } from "@abacus-ai/agent/usage";
-
 import type { UsageSnapshot } from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";

@@ -6,7 +6,7 @@
  * candidate, window resize and capture-phase scroll, and a frame loop while
  * anything is starting, ending or animating. Publishes are deduplicated.
  */
-import { OCCLUDER_SELECTOR } from "#renderer/lib/window-chrome/overlay-slots";
+import { OCCLUDER_SELECTOR } from "#renderer/lib/overlay-slots";
 
 import type { OcclusionRect } from "./shell-store";
 

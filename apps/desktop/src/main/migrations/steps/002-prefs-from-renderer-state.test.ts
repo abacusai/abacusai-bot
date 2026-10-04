@@ -11,9 +11,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { backupsRoot } from "../backup";
 import { readRecord } from "../record";

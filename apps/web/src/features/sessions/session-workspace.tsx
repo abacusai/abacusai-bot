@@ -1,3 +1,5 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
@@ -10,14 +12,13 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BrowserSurface } from "#renderer/components/browser-surface";
+import type { BrowserSurface } from "#renderer/components/browser-surface";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import type { TerminalAction } from "#renderer/components/terminal/keys";
 import { useConnectorRequests } from "#renderer/lib/connector-requests";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { WorkspaceMissing } from "./context/workspace-missing";
 import { useAgentLifecycle } from "./data/agent-start";
@@ -30,15 +31,19 @@ import {
 } from "./data/queries";
 import { openTab } from "./dock/panel-tabs-store";
 import { SessionDock, type SessionDockProps } from "./dock/session-dock";
-const BrowserTab = lazy(() =>
-  import("./browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
-);
+const BrowserTab = IS_ELECTRON
+  ? lazy(() =>
+      import("./browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
+    )
+  : () => null;
 const ChangesTab = lazy(() =>
   import("./changes/changes-tab").then((m) => ({ default: m.ChangesTab }))
 );
-const DeviceTab = lazy(() =>
-  import("./device/device-tab").then((m) => ({ default: m.DeviceTab }))
-);
+const DeviceTab = IS_ELECTRON
+  ? lazy(() =>
+      import("./device/device-tab").then((m) => ({ default: m.DeviceTab }))
+    )
+  : () => null;
 const TerminalTab = lazy(() =>
   import("./terminal/terminal-tab").then((m) => ({ default: m.TerminalTab }))
 );

@@ -1,9 +1,10 @@
-import type { Db } from "#renderer/data/db";
-import { isListedSession } from "#renderer/data/db/filters";
 import {
   conversationRefFromKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
+
+import type { Db } from "#renderer/data/db";
+import { isListedSession } from "#renderer/data/db/filters";
 
 import { isRelativePath } from "../data/search";
 import { markSessionUnread } from "../data/unread-store";

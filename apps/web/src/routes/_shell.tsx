@@ -1,3 +1,4 @@
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 import {
   createFileRoute,
   stripSearchParams,
@@ -25,15 +26,14 @@ import {
   ShellFailure,
 } from "#renderer/features/shell/shell-layout";
 import { startTour, useTourState } from "#renderer/features/tour/store";
-import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
 );
 import { OpenTargetBridge } from "#renderer/lib/attention/open-target";
+import { useChromeState } from "#renderer/lib/chrome-state";
 import { useDocumentSoundOwner } from "#renderer/lib/document-sound";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#renderer/lib/navigation/search";
-import { useChromeState } from "#renderer/lib/window-chrome/chrome-state";
 
 /** "/Users/ada" → "AD": the account avatar until the account row exists. */
 const initialsOf = (home: string): string =>

@@ -3,6 +3,7 @@ import { connectorById } from "@abacus-ai/connectors/registry";
 import type { Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /** Pairing is deferred; enabling and persisting the queue happen on the click. */
 export const connectOnboarding = async (
@@ -11,7 +12,7 @@ export const connectOnboarding = async (
   id: string
 ) => {
   const connector = connectorById(id);
-  if (connector?.kind === "messaging") {
+  if (IS_ELECTRON && connector?.kind === "messaging") {
     await transport.client.messaging.updatePlatform({
       platformId: connector.platform,
       enabled: true,

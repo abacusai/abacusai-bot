@@ -2,11 +2,6 @@ import fs from "fs";
 import https from "https";
 import path from "path";
 
-import { shell } from "electron";
-
-import { decideLocalOpen } from "#main/local-open-guard";
-import { WORKSPACE_DIR_NAME } from "#main/paths";
-import { resourcePath } from "#main/resources";
 import type {
   InstalledSkill,
   InstallSkillRequest,
@@ -20,6 +15,11 @@ import type {
   SkillMutationResult,
   SkillSource,
 } from "@abacus-ai/contract/skills-types";
+import { shell } from "electron";
+
+import { decideLocalOpen } from "#main/local-open-guard";
+import { WORKSPACE_DIR_NAME } from "#main/paths";
+import { resourcePath } from "#main/resources";
 
 import { DESKTOP_DIR } from "../mcp/mcp-config-service";
 import { environmentNoticeService } from "../providers/environment-notice-service";

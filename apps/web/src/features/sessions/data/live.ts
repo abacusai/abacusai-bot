@@ -1,9 +1,9 @@
+import { checkoutKey } from "@abacus-ai/contract/contract/checkout";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { Collections } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
-import { checkoutKey } from "@abacus-ai/contract/contract/checkout";
 
 import { sessionsQueries } from "./queries";
 export const followSessionsSources = (

@@ -1,3 +1,7 @@
+import type {
+  BotRow,
+  RoutineRow as Row,
+} from "@abacus-ai/contract/contract/rows";
 import { CalendarClock, Ellipsis } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +28,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import type { BotRow, RoutineRow as Row } from "@abacus-ai/contract/contract/rows";
 
 import { routineState } from "./data";
 

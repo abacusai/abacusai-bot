@@ -2,16 +2,6 @@ import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import {
-  BaseWindow,
-  session,
-  WebContentsView,
-  type BrowserWindow,
-  type Rectangle,
-  type WebContents,
-} from "electron";
-
-import { publishIpcEvent } from "#main/rpc/emit";
 import type {
   BrowserRuntimeBounds,
   BrowserRuntimeCapture,
@@ -31,6 +21,16 @@ import {
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import { ForbiddenError } from "@abacus-ai/contract/forbidden";
+import {
+  BaseWindow,
+  session,
+  WebContentsView,
+  type BrowserWindow,
+  type Rectangle,
+  type WebContents,
+} from "electron";
+
+import { publishIpcEvent } from "#main/rpc/emit";
 
 import {
   BrowserRuntimeRegistry,

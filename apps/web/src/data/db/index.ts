@@ -1,3 +1,4 @@
+import type { PrefsPatch } from "@abacus-ai/contract/contract/rows";
 /**
  * The app's DB collections (spec 00 B.3, spec 01 §8.3). Nothing is created at
  * import: `createDb(transport)` builds one set over a lazy transport, and
@@ -13,8 +14,6 @@
  */
 import { createCollection } from "@tanstack/db";
 import { createContext, use } from "react";
-
-import type { PrefsPatch } from "@abacus-ai/contract/contract/rows";
 
 import {
   artifactsCollectionOptions,

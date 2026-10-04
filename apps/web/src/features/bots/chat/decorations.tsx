@@ -1,3 +1,7 @@
+import type {
+  TurnFeedbackInput,
+  TurnFeedbackOutcome,
+} from "@abacus-ai/contract/contracts";
 /**
  * The bot skin's message decorations (spec 03 §11.3, §11.3a), handed to the
  * chat kit's `slots.decorateMessage`: silent turns and suppressed or held
@@ -24,7 +28,6 @@ import {
   botThreadView,
   type BotMessageView,
 } from "#renderer/lib/bot-turns/turns";
-import type { TurnFeedbackInput, TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 
 import { MessageFeedback } from "./feedback";
 
@@ -62,7 +65,7 @@ export interface BotDecorationOptions {
   /** "Open in browser": the system browser. */
   onOpenExternal(url: string): void;
   /** "Show in folder". */
-  onReveal(absPath: string): void;
+  onReveal?(absPath: string): void;
 }
 
 const GapStamp = ({ at }: { at: Date }) => {
@@ -134,7 +137,11 @@ export const botMessageDecorations = (
           ? options.onOpenUrl(item.path)
           : options.onOpenFile(resolve(item.path))
       }
-      onReveal={(item) => options.onReveal(resolve(item.path))}
+      onReveal={
+        options.onReveal
+          ? (item) => options.onReveal?.(resolve(item.path))
+          : undefined
+      }
       onOpenUrl={(item) => options.onOpenExternal(item.path)}
     />
   );

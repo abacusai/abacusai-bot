@@ -1,11 +1,10 @@
+import type { RoutineRun } from "@abacus-ai/contract/routines";
 /**
  * Spec 05 §31.5 f: history entry kinds, the legacy classification migration
  * step 5 applies (and `cron-store`'s read fallback repeats), and the run-row
  * join.
  */
 import { describe, expect, it } from "vitest";
-
-import type { RoutineRun } from "@abacus-ai/contract/routines";
 
 import {
   attemptForSession,

@@ -9,7 +9,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Changed (canvas, user decision)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST2",
@@ -19,7 +19,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Changed (foundation)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST3",
@@ -30,7 +30,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: 'Changed (PLAN "Nuked: `staticData.titleKey`")',
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST4",
@@ -40,7 +40,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST5",
@@ -50,7 +50,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity + System option (foundation \u00a79.2)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST6",
@@ -61,7 +61,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity (canvas)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST7",
@@ -72,7 +72,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Changed (canvas placement)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST8",
@@ -83,7 +83,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity + confirm",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST9",
@@ -93,7 +93,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Changed (canvas)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST10",
@@ -104,7 +104,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity (canvas placement)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST11",
@@ -114,7 +114,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST12",
@@ -125,7 +125,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity + confirm",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST13",
@@ -136,7 +136,7 @@ export const PHASE5_PARITY = [
     target: "features/settings/index.tsx",
     specStatus:
       "Changed (PLAN Sound, F12); the old sound opt-out is imported (\u00a731.5 i)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST14",
@@ -146,7 +146,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST15",
@@ -156,7 +156,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity (canvas layout)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST16",
@@ -167,7 +167,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST17",
@@ -177,7 +177,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity + New (install)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST18",
@@ -188,7 +188,7 @@ export const PHASE5_PARITY = [
     target: "features/settings/index.tsx",
     specStatus:
       "Parity + New (manual check, About); composer strip and home banner Retired (canvas: pill + About cover them)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST19",
@@ -198,7 +198,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST20",
@@ -208,7 +208,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Changed (canvas)",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST21",
@@ -218,7 +218,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST22",
@@ -229,7 +229,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Deferred to phase 6",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST23",
@@ -239,7 +239,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST24",
@@ -249,7 +249,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST25",
@@ -259,7 +259,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST26",
@@ -270,7 +270,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
   {
     id: "ST27",
@@ -281,6 +281,6 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/settings/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
   },
 ] as const;

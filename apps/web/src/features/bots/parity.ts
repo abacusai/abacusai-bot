@@ -8,7 +8,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P2",
@@ -18,7 +18,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity; workspace switch retired (PLAN)",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P3",
@@ -28,7 +28,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P4",
@@ -38,7 +38,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (gap fix)",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P5",
@@ -48,7 +48,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (PLAN route tree)",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P6",
@@ -58,7 +58,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "routes/_shell/(bots)/bots.$botId.tsx",
     specStatus: "Changed (gap fix)",
-    consumer: "src/renderer/routes/_shell/(bots)/bots.$botId.tsx#Route",
+    consumer: "apps/web/src/routes/_shell/(bots)/bots.$botId.tsx#Route",
   },
   {
     id: "P7",
@@ -68,7 +68,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P8",
@@ -77,7 +77,7 @@ export const BOT_PARITY = [
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P9",
@@ -87,7 +87,7 @@ export const BOT_PARITY = [
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (canvas)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P10",
@@ -97,7 +97,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (canvas BotDetails)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P11",
@@ -107,7 +107,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P12",
@@ -117,7 +117,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (F8)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P13",
@@ -127,7 +127,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity; count retired (canvas)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P14",
@@ -137,7 +137,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (needs-you group, PLAN)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P15",
@@ -147,7 +147,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P16",
@@ -157,7 +157,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity (canvas geometry)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P17",
@@ -167,7 +167,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P18",
@@ -177,7 +177,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity + canvas",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P19",
@@ -187,7 +187,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P20",
@@ -197,7 +197,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P21",
@@ -207,7 +207,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity + New (Mark as unread, Duplicate, Pause)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P22",
@@ -217,7 +217,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (bug fix)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P23",
@@ -227,7 +227,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Changed (PLAN)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P24",
@@ -237,7 +237,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P25",
@@ -247,7 +247,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P26",
@@ -256,7 +256,7 @@ export const BOT_PARITY = [
     visible: true,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Retired (F15)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P27",
@@ -266,7 +266,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P28",
@@ -276,7 +276,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/sidebar/bots-sidebar.tsx",
     specStatus: "Parity with foundation",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
   {
     id: "P29",
@@ -286,7 +286,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity (canvas geometry)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P30",
@@ -296,7 +296,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity + New (marks)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P31",
@@ -306,7 +306,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P32",
@@ -316,7 +316,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P33",
@@ -326,7 +326,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P34",
@@ -336,7 +336,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity; max added (gap fix)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P35",
@@ -346,7 +346,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Changed (gap fix)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P36",
@@ -356,7 +356,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P37",
@@ -366,7 +366,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P38",
@@ -376,7 +376,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity + New (accessory)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P39",
@@ -386,7 +386,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P40",
@@ -396,7 +396,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P41",
@@ -407,7 +407,7 @@ export const BOT_PARITY = [
     target: "features/bots/form/bot-form.tsx",
     specStatus:
       "Parity; custom display changed (gap fix, value still untouched)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P42",
@@ -417,7 +417,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P43",
@@ -427,7 +427,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P44",
@@ -437,7 +437,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: 'Changed (PLAN "Bot model")',
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P45",
@@ -447,7 +447,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity (hook only)",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P46",
@@ -458,7 +458,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Deferred to phase 6",
-    consumer: "src/renderer/features/bots/form/bot-form.tsx#BotSetupForm",
+    consumer: "apps/web/src/features/bots/form/bot-form.tsx#BotSetupForm",
   },
   {
     id: "P47",
@@ -468,7 +468,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P48",
@@ -478,7 +478,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P49",
@@ -488,7 +488,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P50",
@@ -498,7 +498,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P51",
@@ -508,7 +508,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P52",
@@ -518,7 +518,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P53",
@@ -529,7 +529,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (URL preview needs phase 4's browser surface, §24.13)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P54",
@@ -539,7 +539,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P55",
@@ -549,7 +549,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P56",
@@ -559,7 +559,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P57",
@@ -569,7 +569,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P58",
@@ -579,7 +579,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P59",
@@ -589,7 +589,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P60",
@@ -599,7 +599,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity + New (button)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P61",
@@ -609,7 +609,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity; Revoke moves",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P62",
@@ -619,7 +619,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P63",
@@ -629,7 +629,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P64",
@@ -639,7 +639,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Changed (canvas BotApproval, 02)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P65",
@@ -649,7 +649,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/chat/slots.tsx",
     specStatus: "Parity (kit)",
-    consumer: "src/renderer/features/bots/chat/slots.tsx#useBotChatSlots",
+    consumer: "apps/web/src/features/bots/chat/slots.tsx#useBotChatSlots",
   },
   {
     id: "P66",
@@ -659,7 +659,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity + New (entry point)",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#MemoryTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#MemoryTab",
   },
   {
     id: "P67",
@@ -669,7 +669,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#MemoryTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#MemoryTab",
   },
   {
     id: "P68",
@@ -679,7 +679,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#MemoryTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#MemoryTab",
   },
   {
     id: "P69",
@@ -689,7 +689,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#DetailsTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#DetailsTab",
   },
   {
     id: "P70",
@@ -699,7 +699,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#DetailsTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#DetailsTab",
   },
   {
     id: "P71",
@@ -709,7 +709,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "components/bot-avatar/index.tsx",
     specStatus: 'Changed (PLAN "Nuked")',
-    consumer: "src/renderer/components/bot-avatar/index.tsx#BotAvatar",
+    consumer: "apps/web/src/components/bot-avatar/index.tsx#BotAvatar",
   },
   {
     id: "P72",
@@ -719,7 +719,7 @@ export const BOT_PARITY = [
     visible: false,
     target: "features/bots/panel/bot-side-panel.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/bots/panel/bot-side-panel.tsx#FilesTab",
+    consumer: "apps/web/src/features/bots/panel/bot-side-panel.tsx#FilesTab",
   },
   {
     id: "P73",
@@ -729,6 +729,6 @@ export const BOT_PARITY = [
     visible: false,
     target: "components/bot-avatar/index.tsx",
     specStatus: "New (PLAN)",
-    consumer: "src/renderer/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
+    consumer: "apps/web/src/features/bots/sidebar/bots-sidebar.tsx#BotsSidebar",
   },
 ] as const;

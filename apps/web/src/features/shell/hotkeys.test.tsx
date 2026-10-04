@@ -19,7 +19,7 @@ import {
   TerminalActionBindingsContext,
 } from "#renderer/lib/keyboard/action-bindings";
 import { resolveKeymap } from "#renderer/lib/keyboard/actions";
-import { toHotkeyPlatform } from "#renderer/lib/platform";
+import { uiPlatform } from "#renderer/lib/platform";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Toaster, toast } from "#renderer/ui/toast";
 
@@ -46,7 +46,7 @@ const actions = (): ShellActions &
 const mount = (platformNode: string, extra?: React.ReactNode) => {
   const spies = actions();
   const view = render(
-    <AppHotkeysProvider platform={toHotkeyPlatform(platformNode)}>
+    <AppHotkeysProvider platform={uiPlatform(platformNode)}>
       <AppHotkeys actions={spies} />
       <textarea data-testid="plain" />
       <div data-testid="rich" contentEditable suppressContentEditableWarning />
@@ -117,15 +117,15 @@ describe("app hotkeys", () => {
   );
 
   it("labels read ⌘ on macOS and Ctrl elsewhere", () => {
-    expect(
-      hotkeyLabel(APP_HOTKEYS.command, toHotkeyPlatform("darwin"))
-    ).toContain("⌘");
-    expect(
-      hotkeyLabel(APP_HOTKEYS.command, toHotkeyPlatform("win32"))
-    ).toContain("Ctrl");
-    expect(
-      hotkeyLabel(APP_HOTKEYS.command, toHotkeyPlatform("linux"))
-    ).toContain("Ctrl");
+    expect(hotkeyLabel(APP_HOTKEYS.command, uiPlatform("darwin"))).toContain(
+      "⌘"
+    );
+    expect(hotkeyLabel(APP_HOTKEYS.command, uiPlatform("win32"))).toContain(
+      "Ctrl"
+    );
+    expect(hotkeyLabel(APP_HOTKEYS.command, uiPlatform("linux"))).toContain(
+      "Ctrl"
+    );
   });
 
   it("keeps Mod+Alt+B and Mod+B apart; Option+B (∫) still matches", () => {

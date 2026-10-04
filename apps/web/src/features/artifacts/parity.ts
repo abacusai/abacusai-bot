@@ -9,7 +9,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Changed (PLAN rail)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR2",
@@ -19,7 +19,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity + New (sort)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR3",
@@ -29,7 +29,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity (matching changed to substring)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR4",
@@ -39,7 +39,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR5",
@@ -49,7 +49,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR6",
@@ -58,7 +58,7 @@ export const PHASE5_PARITY = [
     visible: true,
     target: "features/artifacts/index.tsx",
     specStatus: "Retired (live data)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR7",
@@ -69,7 +69,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity (canvas copy)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR8",
@@ -79,7 +79,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR9",
@@ -90,7 +90,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Changed (canvas)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR10",
@@ -101,7 +101,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Changed (canvas: preview in Artifacts, not in the session)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR11",
@@ -112,7 +112,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: 'Changed (canvas `ArtifactsPreview`: "Open in browser")',
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR12",
@@ -123,7 +123,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity + New (bot and routine targets)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR13",
@@ -133,7 +133,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR14",
@@ -143,7 +143,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "New",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
   {
     id: "AR15",
@@ -154,6 +154,6 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/artifacts/index.tsx",
     specStatus: "Parity (Remove deferred)",
-    consumer: "src/renderer/features/artifacts/index.tsx#ArtifactsSidebar",
+    consumer: "apps/web/src/features/artifacts/index.tsx#ArtifactsSidebar",
   },
 ] as const;

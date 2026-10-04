@@ -1,11 +1,10 @@
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 /**
  * R3-T24 (pure half): the bot model picker's groups keep the old composer
  * picker's order and rules, App default leads with the resolved default's
  * label, and display resolves through `resolveConfiguredModel`.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { ModelAvailability } from "@abacus-ai/contract/models";
 
 import {
   APP_DEFAULT_ITEM_ID,

@@ -1,3 +1,4 @@
+import type { QueueEntry } from "@abacus-ai/contract/agent-types";
 /**
  * R2-T21 runtime half (spec 02 §8.5, §14.6): enqueue goes to the host queue
  * and rows come only from `queue.updated`; edits and removals carry the
@@ -11,7 +12,6 @@ import {
   memoryRelay,
   closeMemoryRelays,
 } from "#renderer/test-support/chat-relay";
-import type { QueueEntry } from "@abacus-ai/contract/agent-types";
 
 import * as b from "../fixtures/builders";
 import type { FakeRelay } from "../fixtures/relay";

@@ -1,10 +1,15 @@
-import { findCheckIn } from "#renderer/lib/bots/check-in";
 /**
  * `botAttention` over live data (spec 03 §6.6): the bot's sessions, its
  * check-in, main's per-thread asks, pending connector asks and unread. One
  * hook for the row, the strip, the title bar and the avatar mood.
  */
-import type { BotRow, RoutineRow, SessionRow } from "@abacus-ai/contract/contract/rows";
+import type {
+  BotRow,
+  RoutineRow,
+  SessionRow,
+} from "@abacus-ai/contract/contract/rows";
+
+import { findCheckIn } from "#renderer/lib/bots/check-in";
 
 import {
   useAllBotActivity,

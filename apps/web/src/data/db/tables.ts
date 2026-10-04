@@ -1,11 +1,3 @@
-/**
- * One set of collection options per `db.*` table (spec 00 B.2, B.3): the key,
- * what each mutation sends, and whether the shell needs the table at once.
- * Each takes a lazy transport, so tests pass an in-memory one and the app
- * passes `getTransport`.
- */
-import { createTransaction } from "@tanstack/db";
-
 import type {
   ArtifactRow,
   BotRow,
@@ -19,6 +11,13 @@ import type {
   SessionRow,
   WorkspaceRow,
 } from "@abacus-ai/contract/contract/rows";
+/**
+ * One set of collection options per `db.*` table (spec 00 B.2, B.3): the key,
+ * what each mutation sends, and whether the shell needs the table at once.
+ * Each takes a lazy transport, so tests pass an in-memory one and the app
+ * passes `getTransport`.
+ */
+import { createTransaction } from "@tanstack/db";
 
 import type { Transport } from "../transport/types";
 import {

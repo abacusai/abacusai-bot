@@ -12,5 +12,9 @@ export function installMainPreload(kind: "main" | "notch" = "main"): void {
   };
   if (process.contextIsolated)
     contextBridge.exposeInMainWorld("abacusHost", abacusHost);
-  else Object.assign(window, { abacusHost });
+  else
+    Object.assign(
+      (globalThis as unknown as { window: HandshakeWindow }).window,
+      { abacusHost }
+    );
 }

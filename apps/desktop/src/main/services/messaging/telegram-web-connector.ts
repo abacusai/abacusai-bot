@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import { BrowserWindow } from "electron";
-
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
+import { BrowserWindow } from "electron";
 
 import {
   bringToFront,

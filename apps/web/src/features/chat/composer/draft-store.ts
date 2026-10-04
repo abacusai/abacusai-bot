@@ -1,3 +1,4 @@
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 /**
  * Drafts per thread (spec 02 §8.7): text, attachments and the pre-start
  * mode/model, persisted to `sessionStorage` per document (kept across HMR
@@ -7,7 +8,6 @@
 import { Store } from "@tanstack/react-store";
 
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 export interface DraftAttachment {
   id: string;

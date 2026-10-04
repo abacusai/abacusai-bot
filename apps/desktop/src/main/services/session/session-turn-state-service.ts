@@ -1,4 +1,7 @@
-import { AgentStatus, type DesktopEvent } from "@abacus-ai/contract/agent-types";
+import {
+  AgentStatus,
+  type DesktopEvent,
+} from "@abacus-ai/contract/agent-types";
 import type {
   SessionTurnPhase,
   SessionTurnStateSnapshot,

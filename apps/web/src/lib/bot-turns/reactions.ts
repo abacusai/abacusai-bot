@@ -1,3 +1,4 @@
+import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 /**
  * The bot's reaction to a user message (spec 03 §11.3, parity P56), a port of
  * the old `agentReactions`: only a successful `react_to_message` result
@@ -6,8 +7,6 @@
  * the legacy content (and possibly `metadata.abacus.data`).
  */
 import type { UIMessage } from "@tanstack/ai-client";
-
-import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
 import { messageTools, parseJsonRecord, type MessageTool } from "./tool-parts";
 

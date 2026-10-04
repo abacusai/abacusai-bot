@@ -1,9 +1,8 @@
-import { matchesKeyboardEvent } from "@tanstack/react-hotkeys";
-
 import {
   terminalAction,
   type TerminalAction as SharedTerminalAction,
 } from "@abacus-ai/contract/terminal/keys";
+import { matchesKeyboardEvent } from "@tanstack/react-hotkeys";
 export type TerminalAction =
   | SharedTerminalAction
   | "newTerminalTab"

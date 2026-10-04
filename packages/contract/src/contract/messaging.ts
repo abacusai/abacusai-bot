@@ -62,7 +62,7 @@ export const messaging = {
         target: v.optional(v.picklist(["install", "dm"])),
       })
     )
-    .output(type<void>()),
+    .output(type<string | void>()),
   events: subscription
     .input(NoInput)
     .output(eventIterator(type<MessagingEvent>())),

@@ -1,3 +1,8 @@
+import type {
+  NotchEvent,
+  RunFinishedNotice,
+} from "@abacus-ai/contract/contract";
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useEffect, useRef, useState } from "react";
 
@@ -7,8 +12,6 @@ import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import { applyAttention, emptyAttention } from "#renderer/lib/attention/events";
 import { runFinishedFeed } from "#renderer/lib/run-finished";
-import type { NotchEvent, RunFinishedNotice } from "@abacus-ai/contract/contract";
-import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 
 import type { NotchInputs } from "./presenter";
 import { activeSnoozes, type Snooze } from "./snooze";

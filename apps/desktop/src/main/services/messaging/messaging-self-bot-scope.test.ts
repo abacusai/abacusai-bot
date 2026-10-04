@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * WHICH bot answers depends on who is talking. The user's own chat routes to
  * the dedicated self bot (the Telegram bootstrap's "AbacusAI Bot <-> You");
@@ -6,8 +7,6 @@
  * Telegram bot.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 const settings = {
   gatewayEnabled: true,

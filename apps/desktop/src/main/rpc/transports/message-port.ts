@@ -1,3 +1,8 @@
+import {
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  withFlowAcks,
+} from "@abacus-ai/contract/contract/flow-control";
 /**
  * The oRPC transport between main and a renderer window: one MessagePort per
  * page load (spec 00 A.4.2).
@@ -21,12 +26,6 @@ import type {
   MessagePortMain,
   WebContents,
 } from "electron";
-
-import {
-  FLOW_CONTEXT_KEY,
-  FlowRegistry,
-  withFlowAcks,
-} from "@abacus-ai/contract/contract/flow-control";
 
 import type { RpcContext, RpcWindowKind } from "../context";
 import type { RpcDeps } from "../deps";

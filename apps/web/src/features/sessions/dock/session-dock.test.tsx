@@ -1,8 +1,8 @@
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { dockLeaves } from "./dock-store";
 import { openTab, panelTabsStore, updateTabs } from "./panel-tabs-store";

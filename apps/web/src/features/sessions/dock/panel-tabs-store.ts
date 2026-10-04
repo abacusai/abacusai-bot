@@ -1,7 +1,7 @@
+import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
 import { Store } from "@tanstack/react-store";
 
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
 
 import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
 export interface PanelTab {

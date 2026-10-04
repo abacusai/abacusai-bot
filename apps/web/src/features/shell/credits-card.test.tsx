@@ -1,12 +1,12 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
-import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
 
 const os = implement(contract);
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;

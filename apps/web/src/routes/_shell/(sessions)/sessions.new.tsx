@@ -1,3 +1,4 @@
+import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
@@ -7,13 +8,12 @@ import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { SessionStartPage } from "#renderer/features/sessions/start/session-start-page";
 import { SessionStartResources } from "#renderer/features/sessions/start/start-resources";
-import { nativePresenterFor } from "#renderer/features/shell/native-presenter";
+import { nativePresenterFor } from "#renderer/features/shell/platform-presenter";
 import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
 import { shellStore } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { Button } from "#renderer/ui/button";
-import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();

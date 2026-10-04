@@ -1,3 +1,10 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
+import type {
+  ConnectorOutcome,
+  ConnectorRequest,
+} from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * R3-T32 (jsdom, memory transport): the card shows the snapshot's pending
  * asks for this conversation only; `request`/`cleared` update it; Connect →
@@ -13,10 +20,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "@abacus-ai/contract/contract";
-import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
-import type { ConnectorOutcome, ConnectorRequest } from "@abacus-ai/contract/contracts";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import {
   connectRequest,

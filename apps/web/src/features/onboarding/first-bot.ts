@@ -1,10 +1,10 @@
+import type { BotRow } from "@abacus-ai/contract/contract";
 import { DeleteKeyNotFoundError } from "@tanstack/db";
 import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
-import type { BotRow } from "@abacus-ai/contract/contract";
 
 import { onboardingStore } from "./store";
 export type FirstBotResult = {

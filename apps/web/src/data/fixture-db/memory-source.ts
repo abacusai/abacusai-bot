@@ -1,3 +1,4 @@
+import { contract } from "@abacus-ai/contract/contract";
 /**
  * The dev fixture mode (VITE_NEXT_DB_FIXTURES=1), for the UI gallery
  * (`dev:next:fixtures`) and the visual screenshot run only: the shell's
@@ -8,8 +9,6 @@
  * dynamic import behind the env flag, so production bundles never contain it.
  */
 import { implement, type Router } from "@orpc/server";
-
-import { contract } from "@abacus-ai/contract/contract";
 
 import type { LazyTransport } from "../db/tables";
 import { createMemoryTransport } from "../transport/memory";

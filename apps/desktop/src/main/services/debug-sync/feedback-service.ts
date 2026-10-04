@@ -1,3 +1,4 @@
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 /**
  * A thumbs up/down on one assistant turn, reported to the platform. The
  * verdict is keyed on the synced transcript (session + event sequence), so the
@@ -5,8 +6,6 @@
  * it was uploaded under.
  */
 import { app } from "electron";
-
-import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { readSettings } from "../config/settings";
 import { clientEnvironment } from "../diagnostics/client-environment";

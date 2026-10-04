@@ -1,3 +1,15 @@
+import { AgentStatus, type QueueEntry } from "@abacus-ai/contract/agent-types";
+import type {
+  AiHydration,
+  AiSendAck,
+  AiSendInput,
+  AgentState,
+  PermissionDescriptor,
+} from "@abacus-ai/contract/contract";
+import type {
+  AiNotice,
+  RunOutcomeRecord,
+} from "@abacus-ai/contract/contract/ai-thread";
 /**
  * A fake main relay (spec 02 §11.1, §13 "main relay fake"): an `AguiSource`
  * over an in-memory event log, answering exactly the contract the kit binds
@@ -29,15 +41,6 @@ import {
 import { restoreInboundChunk } from "@tanstack/ai/client";
 
 import type { AiClient } from "#renderer/data/ai";
-import { AgentStatus, type QueueEntry } from "@abacus-ai/contract/agent-types";
-import type {
-  AiHydration,
-  AiSendAck,
-  AiSendInput,
-  AgentState,
-  PermissionDescriptor,
-} from "@abacus-ai/contract/contract";
-import type { AiNotice, RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
 
 import {
   fixtureAiRouter,

@@ -1,17 +1,13 @@
-/**
- * Mapping main's failures onto the contract's error map (spec 00 A.5). An
- * `ORPCError` whose code, status and data match `COMMON_ERRORS` reaches the
- * client as a defined error, wherever it was thrown.
- */
-import { ORPCError } from "@orpc/server";
-
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   NotFoundEntity,
   PreconditionReason,
 } from "@abacus-ai/contract/contract/errors";
 import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
+import {
+  EntityNotFoundError,
+  WORKSPACE_NOT_FOUND,
+} from "@abacus-ai/contract/not-found";
 import { CronParseError } from "@abacus-ai/contract/routines/cron";
 import {
   ForbiddenError,
@@ -19,6 +15,12 @@ import {
   PreconditionError,
 } from "@abacus-ai/contract/service-errors";
 import { TimeoutError } from "@abacus-ai/contract/timeout-error";
+/**
+ * Mapping main's failures onto the contract's error map (spec 00 A.5). An
+ * `ORPCError` whose code, status and data match `COMMON_ERRORS` reaches the
+ * client as a defined error, wherever it was thrown.
+ */
+import { ORPCError } from "@orpc/server";
 
 import { UnsupportedPlatformError } from "../services/config/login-item";
 

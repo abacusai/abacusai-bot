@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
   HoverCard,
@@ -55,7 +56,7 @@ export const SessionContextTray = ({
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const add = async () => {
-    const path = await transport.client.system.dialog.openFolder({});
+    const path = await platformSystem(transport.client).dialog.openFolder({});
     if (!path) return;
     const result = await transport.client.workspaces.add({ path });
     await db.collections.workspaces.utils.resync();
@@ -189,7 +190,7 @@ export const SessionContextTray = ({
                   size="sm"
                   variant="ghost"
                   onClick={() =>
-                    void transport.client.system.openExternal({
+                    void platformSystem(transport.client).openExternal({
                       url: pr.data!.url,
                     })
                   }
@@ -213,7 +214,7 @@ export const SessionContextTray = ({
                       disabled={!check.url}
                       onClick={() =>
                         check.url &&
-                        void transport.client.system.openExternal({
+                        void platformSystem(transport.client).openExternal({
                           url: check.url,
                         })
                       }

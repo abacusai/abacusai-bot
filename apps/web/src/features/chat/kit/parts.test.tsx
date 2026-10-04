@@ -1,3 +1,4 @@
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 /**
  * R2-T11 (spec 02 §5.3): the exported `SessionUI`/`BotUI` configurations
  * over live and C.3-migrated history (the real `v1ToUiMessages` mapper):
@@ -8,19 +9,19 @@
 import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
-
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";
 
 const V1 = import.meta.glob<{ segments: unknown[] }>(
-  "../../../../shared/transcript/__fixtures__/v1/*.json",
+  "../../../../../../packages/contract/src/transcript/__fixtures__/v1/*.json",
   { import: "default", eager: true }
 );
 const fixture = (name: string) =>
   v1ToUiMessages(
-    V1[`../../../../shared/transcript/__fixtures__/v1/${name}.json`]!.segments
+    V1[
+      `../../../../../../packages/contract/src/transcript/__fixtures__/v1/${name}.json`
+    ]!.segments
   );
 
 let current: Awaited<ReturnType<typeof renderRelay>> | null = null;

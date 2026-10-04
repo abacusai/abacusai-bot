@@ -1,3 +1,6 @@
+import { browserConnection } from "#renderer/features/shell/connect/services";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+
 /**
  * The renderer's one way to reach main (spec 00 A.7). `getTransport()` asks
  * the preload for this document's port once; the promise lives on a global
@@ -6,6 +9,7 @@
  */
 import { connectMessagePortTransport } from "./message-port";
 import type { Transport } from "./types";
+import { connectWebSocketTransport } from "./websocket";
 
 const GLOBAL_KEY = Symbol.for("abacus.transport");
 
@@ -13,7 +17,15 @@ type TransportGlobal = { [GLOBAL_KEY]?: Promise<Transport> };
 
 export const getTransport = (): Promise<Transport> => {
   const store = globalThis as TransportGlobal;
-  store[GLOBAL_KEY] ??= connectMessagePortTransport();
+  store[GLOBAL_KEY] ??= IS_ELECTRON
+    ? connectMessagePortTransport()
+    : connectWebSocketTransport(browserConnection().url, [
+        "abacus-rpc",
+        `abacus-token.${browserConnection().token}`,
+      ]).catch((error: unknown) => {
+        delete store[GLOBAL_KEY];
+        throw error;
+      });
   return store[GLOBAL_KEY];
 };
 

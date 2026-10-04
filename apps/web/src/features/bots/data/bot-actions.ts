@@ -1,3 +1,13 @@
+import {
+  MAX_BOT_NAME,
+  MAX_BOTS,
+  type BotChangeNotice,
+} from "@abacus-ai/contract/bots";
+import type {
+  BotRow,
+  MemoryRow,
+  RoutineRow,
+} from "@abacus-ai/contract/contract/rows";
 /**
  * Every bots mutation (spec 03 §6.4): the collection write, what the caller
  * awaits, and each failure's handling. Errors are branched on their typed
@@ -10,8 +20,6 @@ import type { Transport } from "#renderer/data/transport";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
 import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
-import { MAX_BOT_NAME, MAX_BOTS, type BotChangeNotice } from "@abacus-ai/contract/bots";
-import type { BotRow, MemoryRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { forgetOpenChat } from "./open-chat";
 import { botsUnreadStore } from "./unread-store";

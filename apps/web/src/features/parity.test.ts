@@ -12,12 +12,9 @@ import { PHASE6_ONBOARDING_PARITY } from "./onboarding/parity";
 import { PHASE5_PARITY as routines } from "./routines/parity";
 import { SESSION_PARITY } from "./sessions/parity";
 import { PHASE5_PARITY as settings } from "./settings/parity";
-const desktop = path.resolve(import.meta.dirname, "../../..");
+const desktop = path.resolve(import.meta.dirname, "../../../..");
 const ids = JSON.parse(
-  fs.readFileSync(
-    path.join(desktop, "../../scripts/cutover/parity-ids.json"),
-    "utf8"
-  )
+  fs.readFileSync(path.join(desktop, "scripts/cutover/parity-ids.json"), "utf8")
 ) as Record<string, string[]>;
 const rows = [
   ...BOT_PARITY,
@@ -33,7 +30,10 @@ const resolves = (consumer: string) => {
   if (consumer.startsWith("retired: "))
     return /[.!?]$/.test(consumer.slice(9).trim());
   const [file, symbol] = consumer.split("#");
-  if (!file?.startsWith("src/renderer/") && !file?.startsWith("src/main/"))
+  if (
+    !file?.startsWith("apps/web/src/") &&
+    !file?.startsWith("apps/desktop/src/main/")
+  )
     return false;
   if (
     !symbol ||
@@ -81,10 +81,8 @@ it("R7-T25 has the exact parity-id set without duplicate, missing or extra rows"
 it("R7-T25 resolves every consumer declaration in the new tree or main", () => {
   for (const row of rows)
     expect(resolves(row.consumer), row.id + ": " + row.consumer).toBe(true);
-  expect(resolves("src/renderer/app.tsx#App")).toBe(false);
-  expect(resolves("src/renderer/features/settings/companion.tsx#Missing")).toBe(
-    false
-  );
+  expect(resolves("src/app.tsx#App")).toBe(false);
+  expect(resolves("src/features/settings/companion.tsx#Missing")).toBe(false);
 });
 
 it("R7-T25 requires final status metadata and preserves acceptance gaps", () => {

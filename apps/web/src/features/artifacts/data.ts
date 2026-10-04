@@ -1,5 +1,3 @@
-import type { Transport } from "#renderer/data/transport";
-import { foldSearch, rpcError } from "#renderer/lib/use-app-context";
 import type {
   ArtifactRow,
   SessionRow,
@@ -7,6 +5,10 @@ import type {
   BotRow,
   WorkspaceRow,
 } from "@abacus-ai/contract/contract/rows";
+
+import type { Transport } from "#renderer/data/transport";
+import { platformSystem } from "#renderer/lib/platform-system";
+import { foldSearch, rpcError } from "#renderer/lib/use-app-context";
 export interface ArtifactSource {
   botIds: string[];
   routine: string | null;
@@ -117,7 +119,7 @@ export const openArtifact = async (
   a: ArtifactRow
 ): Promise<"opened" | "missing" | "directory" | "revealed" | "refused"> => {
   if (a.kind === "link") {
-    await transport.client.system.openExternal({ url: a.location });
+    await platformSystem(transport.client).openExternal({ url: a.location });
     return "opened";
   }
   try {
@@ -130,12 +132,16 @@ export const openArtifact = async (
     const typed = rpcError(e);
     if (typed?.code === "NOT_FOUND") return "missing";
     if (typed?.code === "CONFLICT" && typed.data.reason === "not-a-file") {
-      await transport.client.system.showItemInFolder({ path: a.location });
+      await platformSystem(transport.client).showItemInFolder({
+        path: a.location,
+      });
       return "directory";
     }
     if (typed?.code !== "FORBIDDEN" && typed?.code !== "CONFLICT") throw e;
   }
-  const result = await transport.client.system.openPath({ path: a.location });
+  const result = await platformSystem(transport.client).openPath({
+    path: a.location,
+  });
   return result.outcome === "refused" && result.reason === "missing"
     ? "missing"
     : result.outcome;

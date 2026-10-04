@@ -1,8 +1,8 @@
+import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 import { useSelector } from "@tanstack/react-store";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "#renderer/ui/button";
-import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 
 import { panelTabsStore } from "../dock/panel-tabs-store";
 

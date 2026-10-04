@@ -1,3 +1,24 @@
+import {
+  contract,
+  type SystemInfo,
+  type WindowChromeState,
+} from "@abacus-ai/contract/contract";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { MaterializeBrowserRuntimeFileRequest } from "@abacus-ai/contract/contract/browser";
+import type { FilesEvent } from "@abacus-ai/contract/contract/files";
+import type { TerminalEvent } from "@abacus-ai/contract/contract/terminal";
+/**
+ * The whole app over test doubles: a memory transport answering the handful
+ * of procedures the shell calls (system.info, window.chrome, window.ready,
+ * the notice streams), collections over a FixtureDb, and a router on memory
+ * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
+ */
+import type {
+  AbacusAuthOutcome,
+  FileTreeNode,
+  DefaultAgentMode,
+  BrowserRuntimeState,
+} from "@abacus-ai/contract/contracts";
 import { implement, type Router } from "@orpc/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -5,7 +26,7 @@ import {
   RouterProvider,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { act, render } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 
 import type { AiClient } from "#renderer/data/ai";
 import { createDb, type Collections, type Db } from "#renderer/data/db";
@@ -34,27 +55,6 @@ import { resetShellStore } from "#renderer/features/shell/shell-store";
 import { i18n, initI18n } from "#renderer/lib/i18n";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
 import { createAppRouter, type AppRouter } from "#renderer/router";
-import {
-  contract,
-  type SystemInfo,
-  type WindowChromeState,
-} from "@abacus-ai/contract/contract";
-import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
-import type { MaterializeBrowserRuntimeFileRequest } from "@abacus-ai/contract/contract/browser";
-import type { FilesEvent } from "@abacus-ai/contract/contract/files";
-import type { TerminalEvent } from "@abacus-ai/contract/contract/terminal";
-/**
- * The whole app over test doubles: a memory transport answering the handful
- * of procedures the shell calls (system.info, window.chrome, window.ready,
- * the notice streams), collections over a FixtureDb, and a router on memory
- * history. `renderApp("/bots/new")` mounts it; the returned handles drive it.
- */
-import type {
-  AbacusAuthOutcome,
-  FileTreeNode,
-  DefaultAgentMode,
-  BrowserRuntimeState,
-} from "@abacus-ai/contract/contracts";
 
 export const SYSTEM_INFO: SystemInfo = {
   appVersion: "1.0.0",
@@ -483,6 +483,11 @@ export const renderApp = async (path: string, options: HarnessOptions = {}) => {
       </QueryClientProvider>
     );
     await harness.router.load();
+  });
+  // A route can finish its loader while its lazy view still suspends.
+  await waitFor(() => {
+    if (view.container.querySelector("[data-pending-area]"))
+      throw new Error("Route view is pending");
   });
   return { ...harness, view };
 };

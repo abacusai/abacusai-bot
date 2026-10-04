@@ -1,3 +1,8 @@
+import {
+  declaredArtifactTargets,
+  isDeliverableUrl,
+  presentedDeliverables,
+} from "@abacus-ai/contract/deliverables";
 /**
  * The files a bot turn handed over (spec 03 §11.3a), a port of the old
  * renderer's `components/chat/deliverables.ts` over UIMessages. The scope is
@@ -7,12 +12,6 @@
  * calls count.
  */
 import type { UIMessage } from "@tanstack/ai-client";
-
-import {
-  declaredArtifactTargets,
-  isDeliverableUrl,
-  presentedDeliverables,
-} from "@abacus-ai/contract/deliverables";
 
 import {
   basename,

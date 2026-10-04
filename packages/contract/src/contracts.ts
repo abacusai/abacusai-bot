@@ -762,7 +762,7 @@ export interface AbacusConnectorsSnapshot {
 }
 
 export type AbacusConnectorOutcome =
-  | { ok: true }
+  | { ok: true; url?: string }
   | {
       ok: false;
       error: string;

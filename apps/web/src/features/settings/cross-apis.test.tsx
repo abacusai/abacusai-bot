@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
 import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -8,8 +10,6 @@ import {
   updateDraft,
 } from "#renderer/features/chat/composer/draft-store";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
-import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
 const os = implement(contract);
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {

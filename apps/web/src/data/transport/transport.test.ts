@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
  * The Transport a renderer gets, over the test double: the real oRPC link
  * and handler on an in-process MessageChannel, the typed client, and the
@@ -6,9 +8,6 @@
 import { implement, type Router } from "@orpc/server";
 import { partialMatchKey } from "@tanstack/query-core";
 import { afterEach, describe, expect, it } from "vitest";
-
-import { contract } from "@abacus-ai/contract/contract";
-import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { createMemoryTransport, type MemoryTransport } from "./memory";
 

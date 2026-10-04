@@ -1,3 +1,4 @@
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
  * The router (spec 01 §6): file routes, hash history, route masks for the
  * pop-ups, and the context every loader gets. `bootstrap()` resolves the
@@ -20,7 +21,6 @@ import {
   type ChatRuntime,
 } from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
-import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { routeTree } from "./routeTree.gen";
 

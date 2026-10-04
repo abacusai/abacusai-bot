@@ -1,3 +1,5 @@
+import { MAX_BOTS } from "@abacus-ai/contract/bots";
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 /**
  * A bot's menu (spec 03 §7.4): one item list for the row's context menu,
  * its ⋯ button and the 800 px title-bar menu, so they never disagree
@@ -9,8 +11,6 @@ import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { toast } from "#renderer/ui/toast";
-import { MAX_BOTS } from "@abacus-ai/contract/bots";
-import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   duplicateBot,

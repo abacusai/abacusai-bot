@@ -9,10 +9,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import type {
+  AgentSessionStatus,
+  SessionOwner,
+} from "@abacus-ai/contract/contracts";
+import {
+  resolveConfiguredModel,
+  type ModelAvailability,
+} from "@abacus-ai/contract/models";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { AgentSessionStatus, SessionOwner } from "@abacus-ai/contract/contracts";
-import { resolveConfiguredModel, type ModelAvailability } from "@abacus-ai/contract/models";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import { AguiRelayService } from "../agui/relay-service";

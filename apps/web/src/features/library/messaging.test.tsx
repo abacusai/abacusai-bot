@@ -1,3 +1,8 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type {
+  MessagingPlatformId,
+  MessagingSnapshot,
+} from "@abacus-ai/contract/messaging";
 import { implement, ORPCError } from "@orpc/server";
 import {
   act,
@@ -10,8 +15,6 @@ import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
-import type { MessagingPlatformId, MessagingSnapshot } from "@abacus-ai/contract/messaging";
 const os = implement(contract);
 const setup = (
   platform: MessagingPlatformId = "whatsapp",

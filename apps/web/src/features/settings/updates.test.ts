@@ -1,6 +1,5 @@
-import { describe, it, expect } from "vitest";
-
 import type { UpdateStatus } from "@abacus-ai/contract/update";
+import { describe, it, expect } from "vitest";
 
 import { updatePhase } from "./updates";
 const idle = {

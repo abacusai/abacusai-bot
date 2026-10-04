@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import type { AgentSessionListItem } from "@abacus-ai/contract/contracts";
+import { describe, expect, it } from "vitest";
 
 import { resolveSessionWorkspacePath } from "./session-workspace-context";
 

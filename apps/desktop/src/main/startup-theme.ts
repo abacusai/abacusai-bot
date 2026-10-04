@@ -1,3 +1,4 @@
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 /**
  * The theme main applies from `prefs.theme` (spec 00 B.2 side effect; spec 01
  * §7.7 startup theme). Electron-free: `nativeTheme` is passed in.
@@ -16,8 +17,6 @@
  * are what they were.
  */
 import type { BaseWindowConstructorOptions } from "electron";
-
-import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import type { PrefsStore } from "./services/config/prefs-store";
 import {

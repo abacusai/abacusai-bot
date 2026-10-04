@@ -1,7 +1,6 @@
+import type { Contract } from "@abacus-ai/contract/contract";
 import type { ContractRouterClient } from "@orpc/contract";
 import type { RouterUtils } from "@orpc/tanstack-query";
-
-import type { Contract } from "@abacus-ai/contract/contract";
 
 import type { CloseReason, TransportState } from "./close-signal";
 

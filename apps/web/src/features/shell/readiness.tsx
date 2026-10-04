@@ -9,6 +9,7 @@ import { useEffect } from "react";
 
 import type { Collections } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const REPORTED = Symbol.for("abacus.readinessReported");
 
@@ -72,9 +73,11 @@ export const ReadinessReporter = ({
   // An effect: runs after the first commit.
   useEffect(
     () =>
-      watchReadiness(collections, (barrier) => {
-        void transport.client.window.ready(barrier).catch(() => undefined);
-      }),
+      IS_ELECTRON
+        ? watchReadiness(collections, (barrier) => {
+            void transport.client.window.ready(barrier).catch(() => undefined);
+          })
+        : undefined,
     [collections, transport]
   );
   return null;

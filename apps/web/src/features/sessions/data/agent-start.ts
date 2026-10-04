@@ -1,9 +1,9 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 // Explicit memoization owns an imperative controller, including its disposal.
 // eslint-disable-next-line no-restricted-imports
 import { useEffect, useEffectEvent, useMemo } from "react";
 
 import type { AppClient } from "#renderer/data/transport/types";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 export const agentLifecycle = (
   client: AppClient,
   report: (error: unknown | null) => void,

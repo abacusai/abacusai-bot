@@ -1,3 +1,4 @@
+import { describeCheckIn as sharedDescribe } from "@abacus-ai/contract/bots/check-in";
 import * as v from "valibot";
 /**
  * R3-T9: the model-facing strings equal the immutable fixtures captured from
@@ -5,8 +6,6 @@ import * as v from "valibot";
  * routines and saves by the §10.3 rules.
  */
 import { describe, expect, it } from "vitest";
-
-import { describeCheckIn as sharedDescribe } from "@abacus-ai/contract/bots/check-in";
 
 import checkInPromptFixture from "./__fixtures__/legacy-model-strings/check-in-prompt.txt?raw";
 import describeFixture from "./__fixtures__/legacy-model-strings/describe-check-in.json";

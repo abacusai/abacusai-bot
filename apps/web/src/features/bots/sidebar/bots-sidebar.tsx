@@ -1,3 +1,5 @@
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import type { BotChatPreview } from "@abacus-ai/contract/contracts";
 /**
  * The Bots sidebar (spec 03 §7, canvas `BotsSidebar`, `BotsEmpty`,
  * `BotStates`), the 88 px strip (§7.7, canvas `BW800`) and the "Needs you"
@@ -26,8 +28,6 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useNow } from "#renderer/lib/use-now";
 import { Input } from "#renderer/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
-import type { BotChatPreview } from "@abacus-ai/contract/contracts";
 
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";

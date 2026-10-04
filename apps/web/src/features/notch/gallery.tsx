@@ -1,4 +1,5 @@
 import "./notch.css";
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,7 +7,6 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 
 import { NotchSurface, NotchHeader, NotchBody } from "./frame";
 import type { NotchPresentation } from "./presenter";

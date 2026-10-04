@@ -1,15 +1,5 @@
 import type { EventEmitter } from "node:events";
 
-import {
-  globalShortcut,
-  powerMonitor,
-  screen,
-  systemPreferences,
-  type Display,
-  type WebContents,
-  type WebContentsView,
-} from "electron";
-
 import type {
   NotchEvent,
   NotchLayout,
@@ -20,6 +10,15 @@ import type {
   PrefsRow,
   WindowState,
 } from "@abacus-ai/contract/contract";
+import {
+  globalShortcut,
+  powerMonitor,
+  screen,
+  systemPreferences,
+  type Display,
+  type WebContents,
+  type WebContentsView,
+} from "electron";
 
 import { notchEntry, type RendererBase } from "../renderer-entry";
 import { forbidden } from "../rpc/errors";

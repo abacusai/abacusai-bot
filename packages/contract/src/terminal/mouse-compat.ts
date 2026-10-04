@@ -1,3 +1,4 @@
+import { encodeMouse } from "@abacus-ai/contract/terminal/mouse";
 /// <reference lib="dom" />
 /**
  * Mouse and focus reporting: the half of the protocol ghostty-web asks about
@@ -22,8 +23,6 @@
  * text as usual, whatever the program asked for.
  */
 import type { Terminal as GhosttyTerminal } from "ghostty-web";
-
-import { encodeMouse } from "@abacus-ai/contract/terminal/mouse";
 
 /** DEC private modes a program sets to ask for any of this. */
 const MODE = {

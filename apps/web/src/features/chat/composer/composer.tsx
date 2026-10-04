@@ -1,3 +1,4 @@
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 /**
  * The composer (spec 02 §8): a compound around the draft store. The bot pill
  * grows into a box on focus, text or attachments; the session box has two
@@ -43,7 +44,6 @@ import {
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
-import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { useChatView } from "../kit/context";
 import { composerChildren, composerSurface } from "../motion";

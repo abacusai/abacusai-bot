@@ -5,9 +5,9 @@ import { readSourceFiles } from "#renderer/test-support/source-files";
 
 const sources = readSourceFiles(
   [
-    "/src/renderer/features/{notch,onboarding,tour}/**/*.{ts,tsx}",
-    "/src/renderer/lib/voice/*.{ts,tsx}",
-    "!/src/renderer/**/*.test.{ts,tsx}",
+    "/src/features/{notch,onboarding,tour}/**/*.{ts,tsx}",
+    "/src/lib/voice/*.{ts,tsx}",
+    "!/src/**/*.test.{ts,tsx}",
   ],
   import.meta.dirname
 );

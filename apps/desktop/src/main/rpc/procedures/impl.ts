@@ -1,20 +1,35 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 /**
  * What every procedures/<domain>.ts shares: the implementer bound to the
  * contract and the RPC context, the window guards, and the one helper every
  * event iterator is built from.
  */
-import { implement } from "@orpc/server";
+import {
+  ORPCError,
+  implement,
+  type ImplementerInternalWithMiddlewares,
+} from "@orpc/server";
 
-import { contract } from "@abacus-ai/contract/contract";
-import type { IpcEvent } from "@abacus-ai/contract/contracts";
-
+import { supportsProcedure } from "../../platform/capabilities";
 import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";
 import { forbidden } from "../errors";
 import type { BusChannel, BusChannels } from "../event-bus";
 import { SubscriberQueue } from "../subscriber-queue";
 
-export const impl = implement(contract).$context<RpcContext>();
+export const impl: ImplementerInternalWithMiddlewares<
+  typeof contract,
+  RpcContext,
+  RpcContext
+> = implement(contract)
+  .$context<RpcContext>()
+  .use(({ context, path, next }, input) => {
+    const procedure = path.join(".");
+    if (!supportsProcedure(context.platform ?? "electron", procedure, input))
+      throw new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
+    return next({ context: {} });
+  });
 
 /** The caller's webContents id; `FORBIDDEN` over a transport with no window. */
 export const requireWindow = (context: RpcContext): number => {

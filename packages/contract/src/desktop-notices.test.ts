@@ -43,13 +43,14 @@ function fixture() {
   json("apps/desktop/dist/renderer/assets/index.js.map", {
     sources: ["../../../../../node_modules/rendered/index.js"],
   });
+  fs.mkdirSync(path.join(root, "apps/desktop/src"), { recursive: true });
   // A font package imported for its CSS, an icon file, and a test's import.
   write(
-    "apps/desktop/src/renderer/main.tsx",
+    "apps/web/src/main.tsx",
     'import "fonts/index.css";\nimport icon from "icons/logo.svg";\n'
   );
-  write("apps/desktop/src/renderer/x.test.tsx", 'import "unused";\n');
-  write("apps/desktop/src/renderer/index.css", '@import "mono";\n');
+  write("apps/web/src/x.test.tsx", 'import "unused";\n');
+  write("apps/web/src/index.css", '@import "mono";\n');
   json("apps/desktop/build/licenses/sources.json", []);
   write("apps/desktop/resources/decks/TEMPLATES-LICENSE", "Template copyright");
   write("apps/desktop/resources/pdf/fonts/LICENSE-font.txt", "Font copyright");
@@ -91,7 +92,10 @@ function fixture() {
   write(
     "apps/desktop/scripts/generate-notices.js",
     fs.readFileSync(
-      path.resolve(import.meta.dirname, "../../scripts/generate-notices.js"),
+      path.resolve(
+        import.meta.dirname,
+        "../../../apps/desktop/scripts/generate-notices.js"
+      ),
       "utf8"
     )
   );

@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /** R3-T5: only each source's specified derived queries are invalidated. */
 import { implement } from "@orpc/server";
 import { waitFor } from "@testing-library/react";
@@ -10,8 +12,6 @@ import {
 } from "#renderer/data/fixture-db/fixture-db";
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "@abacus-ai/contract/contract";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { connectorAsksStore, followBotsSources } from "./live";
 import { botsQueries } from "./queries";

@@ -2,8 +2,6 @@ import {
   readCustomInstructions,
   writeCustomInstructions,
 } from "@abacus-ai/agent/custom-instructions";
-import { app } from "electron";
-
 import type {
   IpcEvent,
   AbacusAccountInfo,
@@ -17,6 +15,7 @@ import {
   abacusConnectorsMcpEntry,
 } from "@abacus-ai/contract/contracts";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
+import { app } from "electron";
 
 import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";

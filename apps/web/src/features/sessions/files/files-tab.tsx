@@ -1,3 +1,5 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 // The tree adapter treats paths identity as a topology update.
@@ -8,6 +10,8 @@ import { useTranslation } from "react-i18next";
 import { FilePreview, previewKind } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -20,8 +24,6 @@ import {
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 
 import {
   useSessionsTransport,
@@ -71,8 +73,10 @@ export const SessionFilePreview = ({
         pptx: (filePath, hostRoot) =>
           transport.client.files.readPptx({ filePath, hostRoot }),
       }}
-      onOpenExternally={(path) =>
-        void transport.client.system.openPath({ path })
+      onOpenExternally={
+        IS_ELECTRON
+          ? (path) => void transport.client.system.openPath({ path })
+          : undefined
       }
     />
   );
@@ -204,7 +208,7 @@ export const FilesTab = ({
                   {
                     label: t("sessions.files.openEditor"),
                     run: () =>
-                      void transport.client.system.openPath({
+                      void platformSystem(transport.client).openPath({
                         path: `${root}/${item.path}`,
                       }),
                   },

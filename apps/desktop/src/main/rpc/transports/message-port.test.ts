@@ -1,3 +1,4 @@
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 /**
  * A-T2: the real router over a real MessageChannel with the real oRPC
  * adapters, main's services faked. Round trips, validation, mapped errors,
@@ -5,8 +6,6 @@
  * client aborts or the port closes.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { MainEventBus } from "../event-bus";
 import {

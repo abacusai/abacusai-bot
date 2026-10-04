@@ -1,4 +1,5 @@
 import "./notch.css";
+import type { OpenTarget } from "@abacus-ai/contract/contract";
 import { MotionConfig } from "motion/react";
 import {
   createContext,
@@ -26,7 +27,6 @@ import {
 } from "#renderer/notch-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { OpenTarget } from "@abacus-ai/contract/contract";
 
 import { NotchDirector, shapeSettled } from "./director";
 import { notchDrafts as drafts } from "./drafts";

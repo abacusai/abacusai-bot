@@ -1,10 +1,10 @@
+import type { RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 import type { UIMessage } from "@tanstack/ai-client";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "#renderer/ui/button";
-import type { RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 
 import { useGitState } from "../data/queries";
 import { isRelativePath } from "../data/search";

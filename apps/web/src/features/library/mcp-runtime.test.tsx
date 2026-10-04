@@ -1,10 +1,10 @@
+import { contract } from "@abacus-ai/contract/contract";
+import type { AgentMcpServer } from "@abacus-ai/contract/contracts";
 import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
-import type { AgentMcpServer } from "@abacus-ai/contract/contracts";
 const notices = vi.hoisted(() => ({ error: vi.fn(), info: vi.fn() }));
 vi.mock("#renderer/lib/toast", () => ({
   showError: notices.error,

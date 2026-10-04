@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
+import { describe, expect, it, vi } from "vitest";
 
 import { descriptor } from "../../fixtures/builders";
 import { notchAcceptable } from "./notch-acceptable";

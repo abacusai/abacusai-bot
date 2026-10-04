@@ -1,3 +1,4 @@
+import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useSelector } from "@tanstack/react-store";
 import {
   lazy,
@@ -10,14 +11,16 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BrowserSurface } from "#renderer/components/browser-surface";
+import type { BrowserSurface } from "#renderer/components/browser-surface";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
-import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 
-const BrowserTab = lazy(() =>
-  import("../browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
-);
+const BrowserTab = IS_ELECTRON
+  ? lazy(() =>
+      import("../browser/browser-tab").then((m) => ({ default: m.BrowserTab }))
+    )
+  : () => null;
 import { useWorkspace } from "../data/queries";
 import { isRelativePath } from "../data/search";
 import {

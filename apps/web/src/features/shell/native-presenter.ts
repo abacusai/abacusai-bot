@@ -1,10 +1,10 @@
-import { Store } from "@tanstack/react-store";
-
-import type { AppClient } from "#renderer/data/transport/types";
 import type {
   BrowserRuntimeLease,
   BrowserRuntimeBounds,
 } from "@abacus-ai/contract/contracts";
+import { Store } from "@tanstack/react-store";
+
+import type { AppClient } from "#renderer/data/transport/types";
 
 export interface NativeCandidate {
   id: string;

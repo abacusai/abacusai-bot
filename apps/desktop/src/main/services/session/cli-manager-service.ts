@@ -6,7 +6,6 @@ import {
 import { existsSync } from "fs";
 import { delimiter } from "path";
 
-import { agentVendorDir } from "#main/resources";
 import {
   AgentMode,
   AgentStatus,
@@ -28,6 +27,8 @@ import type {
   StopAgentSessionResult,
 } from "@abacus-ai/contract/contracts";
 import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
+
+import { agentVendorDir } from "#main/resources";
 
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";

@@ -86,7 +86,7 @@ describe("bots architecture", () => {
       Array.from({ length: 73 }, (_, i) => `P${i + 1}`)
     );
     for (const row of BOT_PARITY) {
-      expect(existsSync(`src/renderer/${row.target}`), row.id).toBe(true);
+      expect(existsSync(`src/${row.target}`), row.id).toBe(true);
       expect(row.status).toBeTruthy();
     }
   });

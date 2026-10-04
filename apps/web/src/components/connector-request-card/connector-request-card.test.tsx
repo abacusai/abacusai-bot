@@ -5,11 +5,11 @@
  * `features/bots/chat/connector-requests.test.tsx`.
  */
 import { CONNECTORS, connectUi } from "@abacus-ai/connectors/registry";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
-import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 
 import { ConnectorRequestCard } from ".";
 

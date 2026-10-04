@@ -1,7 +1,7 @@
 import { CONNECTORS } from "@abacus-ai/connectors/registry";
+import { useLiveQuery } from "@tanstack/react-db";
 
 import "./onboarding.css";
-import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -17,6 +17,7 @@ import { resolveLook } from "#renderer/lib/bots/avatar";
 import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 import {
@@ -128,7 +129,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   );
   const profiles = useQuery({
     ...transport.orpc.auth.abacus.browserProfiles.queryOptions({ input: {} }),
-    enabled: step === "welcome",
+    enabled: IS_ELECTRON && step === "welcome",
   });
   const refetchProfiles = profiles.refetch;
   useEffect(() => {
@@ -368,12 +369,16 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             button(t("onboarding.pages.retry"), () =>
               props.signIn(attempt.intent, attempt.profileId)
             )}
-          <Button
-            variant="default"
-            onClick={() => void transport.client.auth.abacus.openInBrowser({})}
-          >
-            {t("onboarding.openInBrowserCta")}
-          </Button>
+          {IS_ELECTRON && (
+            <Button
+              variant="default"
+              onClick={() =>
+                void transport.client.auth.abacus.openInBrowser({})
+              }
+            >
+              {t("onboarding.openInBrowserCta")}
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={() =>
@@ -427,20 +432,22 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                 ) : provider === "gemini" ? (
                   props.addKey
                 ) : (
-                  <Button
-                    disabled={busy}
-                    onClick={() =>
-                      provider === "abacus"
-                        ? props.signIn("signin")
-                        : void perform(async () => {
-                            await transport.client.auth.openRouter.start({});
-                            await models.refetch();
-                            await keys.refetch();
-                          })
-                    }
-                  >
-                    {t("onboarding.pages.connectLabel")}
-                  </Button>
+                  IS_ELECTRON && (
+                    <Button
+                      disabled={busy}
+                      onClick={() =>
+                        provider === "abacus"
+                          ? props.signIn("signin")
+                          : void perform(async () => {
+                              await transport.client.auth.openRouter.start({});
+                              await models.refetch();
+                              await keys.refetch();
+                            })
+                      }
+                    >
+                      {t("onboarding.pages.connectLabel")}
+                    </Button>
+                  )
                 )}
               </div>
             ))}
@@ -456,6 +463,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             {CONNECTORS.filter(
               (c) => c.onboarding || (more && c.kind === "platform")
             )
+              .filter((c) => IS_ELECTRON || c.kind !== "messaging")
               .filter((c) => statuses.data?.[c.id]?.reason !== "not-offered")
               .map((c) => (
                 <div

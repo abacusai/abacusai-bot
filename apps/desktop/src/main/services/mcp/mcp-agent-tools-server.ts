@@ -16,9 +16,10 @@ import {
   resolveConnector,
   type Connector,
 } from "@abacus-ai/connectors/registry";
-
-import { emitHostEvent } from "#main/rpc/emit";
-import type { ConnectorStatus, ConnectorStatuses } from "@abacus-ai/contract/contracts";
+import type {
+  ConnectorStatus,
+  ConnectorStatuses,
+} from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { artifactPathLine } from "@abacus-ai/contract/deliverables";
 import {
@@ -26,6 +27,8 @@ import {
   type MessagingPlatformId,
   describePlatformForAgent,
 } from "@abacus-ai/contract/messaging";
+
+import { emitHostEvent } from "#main/rpc/emit";
 
 import { WORKSPACE_DIR_NAME } from "../../paths";
 import {

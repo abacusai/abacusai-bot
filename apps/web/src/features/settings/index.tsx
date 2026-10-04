@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import type { SettingsPageId } from "#renderer/lib/navigation/areas";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Input } from "#renderer/ui/input";
 
@@ -34,9 +35,16 @@ const GROUPS: Array<{ label: string; pages: SettingsPage[] }> = [
   { label: "settings.sidebar.models", pages: ["models"] },
   {
     label: "settings.sidebar.environment",
-    pages: ["environment", "browser", "devices"],
+    pages: IS_ELECTRON
+      ? ["environment", "browser", "devices"]
+      : ["environment"],
   },
-  { label: "settings.sidebar.app", pages: ["language", "keyboard", "about"] },
+  {
+    label: "settings.sidebar.app",
+    pages: IS_ELECTRON
+      ? ["language", "keyboard", "about"]
+      : ["language", "keyboard"],
+  },
 ];
 
 export const SettingsSidebar = () => {
@@ -160,11 +168,7 @@ export {
 export { ModelsPage } from "./models";
 export { AccountPage, UsagePage } from "./account-usage";
 export { EnvironmentPage, BrowserPage, DevicesPage } from "./environment";
-export {
-  AboutPage,
-  CriticalUpdateDialog,
-  useUpdatePillAction,
-} from "./updates";
+
 export { KeyboardPage } from "./keyboard";
 export { SettingsSearch, ModelsSearch, AccountSearch } from "./search";
 export { ChangelogPage } from "./changelog";

@@ -1,8 +1,9 @@
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+
 import { isListedSession } from "#renderer/data/db/filters";
 import type { Notifier } from "#renderer/lib/notify";
 import type { SoundPlayer } from "#renderer/lib/sound";
-import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 export interface SessionsWatcherDeps {
   sessions(): readonly SessionRow[];
   seen(id: string): boolean;

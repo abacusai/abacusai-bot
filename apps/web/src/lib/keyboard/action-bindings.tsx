@@ -1,7 +1,7 @@
 import { createContext, type ReactNode } from "react";
 
 import { usePrefs } from "#renderer/data/db/prefs";
-import { toHotkeyPlatform } from "#renderer/lib/platform";
+import { uiPlatform } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import { resolveKeymap } from "./actions";
@@ -24,10 +24,7 @@ export const ActionBindingsProvider = ({
 }) => {
   const prefs = usePrefs();
   const { system } = useAppContext();
-  const bindings = resolveKeymap(
-    prefs.keymap,
-    toHotkeyPlatform(system.platform)
-  );
+  const bindings = resolveKeymap(prefs.keymap, uiPlatform(system.platform));
   return (
     <ActionBindingsContext value={bindings.window}>
       <TerminalActionBindingsContext value={bindings.terminal}>

@@ -1,10 +1,10 @@
+import { contract } from "@abacus-ai/contract/contract";
 import { implement } from "@orpc/server";
 import { fireEvent, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
 const os = implement(contract);
 it("R5-T23 invite refuses empty recipients and malformed email before sending", async () => {
   const send = vi.fn();

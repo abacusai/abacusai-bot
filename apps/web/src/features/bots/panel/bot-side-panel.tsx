@@ -1,3 +1,5 @@
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +17,8 @@ import { checkInFromRoutine } from "#renderer/lib/bots/check-in";
 import { weekdayName } from "#renderer/lib/bots/schedule";
 import { formatWhen } from "#renderer/lib/format-time";
 import { AppLink } from "#renderer/lib/navigation/app-link";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useNow } from "#renderer/lib/use-now";
 import {
@@ -33,8 +37,6 @@ import {
   ContextMenuContent,
   ContextMenuItem,
 } from "#renderer/ui/context-menu";
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BotFace } from "../avatar";
 import { clearMemory, forgetMemory, setPinned } from "../data/bot-actions";
@@ -378,25 +380,27 @@ export const FilesTab = ({
           path={preview}
           hostRoot={containmentRootFor(preview, workspaceRoot)}
           read={{
-            localUrl: async (filePath, hostRoot) => {
-              const viewed = sessions.find(
-                (row) => row.id === (sessionId ?? bot.sessionId)
-              );
-              if (!viewed?.workspaceId)
-                throw new Error("Session workspace unavailable");
-              const state =
-                await transport.client.browser.runtime.materializeFile({
-                  filePath,
-                  hostRoot,
-                  conversationKey: sessionConversationKey(
-                    viewed.workspaceId,
-                    viewed.id
-                  ),
-                  resourceId: `bot-preview:${filePath}`,
-                });
-              await transport.client.browser.runtime.close(state.lease);
-              return state.url;
-            },
+            localUrl: IS_ELECTRON
+              ? async (filePath, hostRoot) => {
+                  const viewed = sessions.find(
+                    (row) => row.id === (sessionId ?? bot.sessionId)
+                  );
+                  if (!viewed?.workspaceId)
+                    throw new Error("Session workspace unavailable");
+                  const state =
+                    await transport.client.browser.runtime.materializeFile({
+                      filePath,
+                      hostRoot,
+                      conversationKey: sessionConversationKey(
+                        viewed.workspaceId,
+                        viewed.id
+                      ),
+                      resourceId: `bot-preview:${filePath}`,
+                    });
+                  await transport.client.browser.runtime.close(state.lease);
+                  return state.url;
+                }
+              : undefined,
             text: (path, hostRoot) =>
               transport.client.files.readText({ filePath: path, hostRoot }),
             image: async (path, hostRoot) =>
@@ -409,11 +413,18 @@ export const FilesTab = ({
             pptx: (path, hostRoot) =>
               transport.client.files.readPptx({ filePath: path, hostRoot }),
           }}
-          onOpenExternally={(path) =>
-            void transport.client.system.openPath({ path })
+          onOpenExternally={
+            IS_ELECTRON
+              ? (path) => void transport.client.system.openPath({ path })
+              : undefined
           }
-          onReveal={(path) =>
-            void transport.client.system.showItemInFolder({ path })
+          onReveal={
+            IS_ELECTRON
+              ? (path) =>
+                  void platformSystem(transport.client).showItemInFolder({
+                    path,
+                  })
+              : undefined
           }
         />
       </div>
@@ -438,8 +449,12 @@ export const FilesTab = ({
               className="h-12 w-full justify-start"
               onClick={() =>
                 void (file.kind === "link"
-                  ? transport.client.system.openExternal({ url: file.location })
-                  : transport.client.system.openPath({ path: file.location }))
+                  ? platformSystem(transport.client).openExternal({
+                      url: file.location,
+                    })
+                  : platformSystem(transport.client).openPath({
+                      path: file.location,
+                    }))
               }
             >
               <span
@@ -456,11 +471,11 @@ export const FilesTab = ({
               </span>
             </Button>
           </ContextMenuTrigger>
-          {file.kind !== "link" && (
+          {IS_ELECTRON && file.kind !== "link" && (
             <ContextMenuContent>
               <ContextMenuItem
                 onClick={() =>
-                  void transport.client.system.showItemInFolder({
+                  void platformSystem(transport.client).showItemInFolder({
                     path: file.location,
                   })
                 }

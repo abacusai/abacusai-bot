@@ -1,5 +1,8 @@
 import type { SystemEvent, WindowEvent } from "@abacus-ai/contract/contract";
-import type { DeviceStreamChunk, IpcEvent } from "@abacus-ai/contract/contracts";
+import type {
+  DeviceStreamChunk,
+  IpcEvent,
+} from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 import type { UpdateStatus } from "@abacus-ai/contract/update";
 

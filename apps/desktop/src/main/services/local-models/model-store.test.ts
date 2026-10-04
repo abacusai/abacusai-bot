@@ -8,6 +8,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
+import type { LocalModelSpec } from "@abacus-ai/contract/local-models";
 import {
   afterAll,
   afterEach,
@@ -17,8 +18,6 @@ import {
   expect,
   it,
 } from "vitest";
-
-import type { LocalModelSpec } from "@abacus-ai/contract/local-models";
 
 import {
   downloadModel,

@@ -5,7 +5,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/renderer/lib/notify.ts#notifyAttention",
+    consumer: "apps/web/src/lib/notify.ts#notifyAttention",
     owner: "phase-6",
   },
   {
@@ -13,7 +13,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/main/index.ts#appOperations",
+    consumer: "apps/desktop/src/main/index.ts#appOperations",
     owner: "phase-6",
   },
   {
@@ -31,7 +31,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/main/notch/controller.ts#NotchController",
+    consumer: "apps/desktop/src/main/notch/controller.ts#NotchController",
     owner: "phase-6",
   },
   {
@@ -39,7 +39,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/renderer/lib/sound.ts#createSoundPlayer",
+    consumer: "apps/web/src/lib/sound.ts#createSoundPlayer",
     owner: "phase-6",
   },
   {
@@ -47,7 +47,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/renderer/lib/voice/use-dictation.ts#useDictation",
+    consumer: "apps/web/src/lib/voice/use-dictation.ts#useDictation",
     owner: "phase-6",
   },
   {
@@ -55,7 +55,7 @@ export const PHASE6_NOTCH_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "src/renderer/features/settings/companion.tsx#CompanionSettings",
+    consumer: "apps/web/src/features/settings/companion.tsx#CompanionSettings",
     owner: "other-phase",
   },
 ] as const;

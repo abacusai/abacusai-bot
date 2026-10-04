@@ -1,13 +1,3 @@
-/**
- * The thread store (spec 02 §4.1): one TanStack Store per generation of a
- * thread, holding what the transcript's messages do not: permission
- * descriptors, the host queue, agent state, runs and their outcomes, live
- * tool output and display, activity and notices. Session-scoped slices
- * start from the hydrate snapshot; run-scoped ones are rebuilt from the
- * inclusive replay of the active run (§3.3).
- */
-import { Store } from "@tanstack/react-store";
-
 import type { ToolDisplayData } from "@abacus-ai/contract/agent-types";
 import type {
   AgentStatus,
@@ -20,6 +10,15 @@ import type {
   PermissionDescriptor,
   RunOutcomeRecord,
 } from "@abacus-ai/contract/contract/ai-thread";
+/**
+ * The thread store (spec 02 §4.1): one TanStack Store per generation of a
+ * thread, holding what the transcript's messages do not: permission
+ * descriptors, the host queue, agent state, runs and their outcomes, live
+ * tool output and display, activity and notices. Session-scoped slices
+ * start from the hydrate snapshot; run-scoped ones are rebuilt from the
+ * inclusive replay of the active run (§3.3).
+ */
+import { Store } from "@tanstack/react-store";
 
 export type {
   AgentState,

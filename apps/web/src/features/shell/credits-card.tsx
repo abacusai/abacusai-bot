@@ -18,6 +18,8 @@ import {
   joinProviderLabels,
 } from "#renderer/lib/credits";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
@@ -53,7 +55,10 @@ export const SidebarCreditsCard = () => {
     transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })
   );
   const local = useQuery(
-    transport.orpc.localModels.state.queryOptions({ input: {} })
+    transport.orpc.localModels.state.queryOptions({
+      input: {},
+      enabled: IS_ELECTRON,
+    })
   );
   const mark = creditMarkState(
     account.data,
@@ -86,6 +91,7 @@ export const SidebarCreditsCard = () => {
   const canConnect =
     tier === "free" && !canSwitch && missingFreeSources(configured).length > 0;
   const canGoLocal =
+    IS_ELECTRON &&
     tier === "free" &&
     !canSwitch &&
     !canConnect &&
@@ -113,7 +119,7 @@ export const SidebarCreditsCard = () => {
             <Button
               size="sm"
               onClick={() =>
-                void transport.client.system.openExternal({
+                void platformSystem(transport.client).openExternal({
                   url: ABACUS_PLAN_URL,
                 })
               }

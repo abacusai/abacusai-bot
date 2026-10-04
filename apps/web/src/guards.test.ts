@@ -148,11 +148,15 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "updates",
   ],
   shell: [
+    "connect",
+    "connect/services",
+    "lease",
     "app-root",
     "app-toaster",
     "browser-open",
     "hotkeys",
     "native-presenter",
+    "platform-presenter",
     "preview-consumers",
     "rail",
     "screens",
@@ -189,7 +193,17 @@ const featureBoundaryHits = (
         file.path === "main.tsx" ||
         file.path === "features/shell/sidebars.ts" ||
         own === "gallery";
-      if (!allowed) hits.push(`${file.path}: ${specifier} (other feature)`);
+      const platformSeam =
+        feature === "shell" &&
+        [
+          "lib/activity.ts",
+          "lib/browser/files.ts",
+          "lib/browser/sign-in.ts",
+          "data/transport/index.ts",
+        ].includes(file.path) &&
+        ["/connect/services", "/lease"].includes(subpath ?? "");
+      if (!allowed && !platformSeam)
+        hits.push(`${file.path}: ${specifier} (other feature)`);
       else if (
         subpath != null &&
         subpath !== "/index" &&

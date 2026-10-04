@@ -1,7 +1,13 @@
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import {
+  SUPPORTED_LANGUAGES,
+  type PrefsRow,
+} from "@abacus-ai/contract/contract/rows";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
+import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -26,6 +32,7 @@ import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
@@ -37,10 +44,11 @@ import {
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
 import { Textarea } from "#renderer/ui/textarea";
-import { AgentMode } from "@abacus-ai/contract/agent-types";
-import { SUPPORTED_LANGUAGES, type PrefsRow } from "@abacus-ai/contract/contract/rows";
-
-import { CompanionSettings } from "./companion";
+const CompanionSettings = IS_ELECTRON
+  ? lazy(() =>
+      import("./companion").then((m) => ({ default: m.CompanionSettings }))
+    )
+  : () => null;
 const modes = [
   "AUTO",
   "DEFAULT",
@@ -59,7 +67,7 @@ export const GeneralPage = () => {
   const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
   const login = useQuery({
     ...transport.orpc.system.loginItem.get.queryOptions({ input: {} }),
-    enabled: info.data != null && info.data.platform !== "linux",
+    enabled: IS_ELECTRON && info.data != null && info.data.platform !== "linux",
   });
   const sandbox = useQuery(
     transport.orpc.settings.sandboxSupport.queryOptions({ input: {} })
@@ -72,7 +80,7 @@ export const GeneralPage = () => {
     <AreaPage title={t("settings.pages.general")}>
       <CompanionSettings />
       <GroupCard>
-        {info.data?.platform !== "linux" && (
+        {IS_ELECTRON && info.data?.platform !== "linux" && (
           <SettingRow
             id="launchAtLogin"
             title={t("phase5.settings.launchAtLogin")}
@@ -180,7 +188,10 @@ export const AppearanceTheme = () => {
   const { transport } = useAppContext();
   const cache = useQueryClient();
   const chrome = useQuery(
-    transport.orpc.window.chrome.queryOptions({ input: {} })
+    transport.orpc.window.chrome.queryOptions({
+      input: {},
+      enabled: IS_ELECTRON,
+    })
   );
   const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
   const fail = () => showError(t("phase5.saveFailed"));
@@ -204,36 +215,38 @@ export const AppearanceTheme = () => {
             }
           />
         </SettingRow>
-        <SettingRow
-          id="density"
-          title={t("phase5.settings.density")}
-          detail={
-            info.data?.platform === "darwin"
-              ? t("phase5.settings.densityDetail")
-              : undefined
-          }
-        >
-          <Segments
-            label={t("phase5.settings.density")}
-            value={chrome.data?.density ?? "comfortable"}
-            values={["comfortable", "compact"].map((x) => ({
-              value: x,
-              label: t(`phase5.${x}`),
-            }))}
-            onChange={(density) =>
-              void transport.client.window
-                .setDensity({ density: density as "comfortable" | "compact" })
-                .then(() =>
-                  cache.invalidateQueries({
-                    queryKey: transport.orpc.window.chrome.queryKey({
-                      input: {},
-                    }),
-                  })
-                )
-                .catch(fail)
+        {IS_ELECTRON && (
+          <SettingRow
+            id="density"
+            title={t("phase5.settings.density")}
+            detail={
+              info.data?.platform === "darwin"
+                ? t("phase5.settings.densityDetail")
+                : undefined
             }
-          />
-        </SettingRow>
+          >
+            <Segments
+              label={t("phase5.settings.density")}
+              value={chrome.data?.density ?? "comfortable"}
+              values={["comfortable", "compact"].map((x) => ({
+                value: x,
+                label: t(`phase5.${x}`),
+              }))}
+              onChange={(density) =>
+                void transport.client.window
+                  .setDensity({ density: density as "comfortable" | "compact" })
+                  .then(() =>
+                    cache.invalidateQueries({
+                      queryKey: transport.orpc.window.chrome.queryKey({
+                        input: {},
+                      }),
+                    })
+                  )
+                  .catch(fail)
+              }
+            />
+          </SettingRow>
+        )}
         <SettingRow id="textSize" title={t("phase5.settings.textSize")}>
           <Segments
             label={t("phase5.settings.textSize")}

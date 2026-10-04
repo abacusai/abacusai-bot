@@ -1,3 +1,4 @@
+import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 /** Electron-only R6-T41 entry: the shipped permission component, fonts and styles. */
 import { Store } from "@tanstack/react-store";
 import { createRoot } from "react-dom/client";
@@ -8,7 +9,6 @@ import type { ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { emptyThreadState } from "#renderer/features/chat/store/thread-store";
 import { initI18n, changeLanguage, i18n } from "#renderer/lib/i18n";
 import type { SupportedLanguage } from "#renderer/lib/i18n/languages";
-import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
 
 const thread = new Store(emptyThreadState());
 const host = new Store({ store: thread });
@@ -64,10 +64,11 @@ window.__phase6Fit = async (request, width, language) => {
   };
 };
 
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+
 /** Mounted listening controls, measured by Chromium with the shipped shape. */
 import { ListeningControls } from "#renderer/features/notch/listening";
 import { shapeFor } from "#renderer/features/notch/shape";
-import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 declare global {
   interface Window {
     __phase6ListeningFit(

@@ -25,9 +25,8 @@ import {
   HEARTBEAT_INTERVAL_MS,
   MAX_VOUCHED_RUNTIME_MS,
 } from "@abacus-ai/agent";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import {
   SessionTurnStateService,

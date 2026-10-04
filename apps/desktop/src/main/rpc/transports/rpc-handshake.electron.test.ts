@@ -50,7 +50,7 @@ const bundle = async (options: {
     external: ["electron"],
     resolve: {
       alias: {
-        "#shared": join(SRC, "shared"),
+        "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),
         "#main": join(SRC, "main"),
         "#preload": join(SRC, "preload"),
       },

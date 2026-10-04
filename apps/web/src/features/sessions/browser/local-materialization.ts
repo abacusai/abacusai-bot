@@ -1,5 +1,6 @@
-import type { Transport } from "#renderer/data/transport";
 import type { BrowserRuntimeState } from "@abacus-ai/contract/contracts";
+
+import type { Transport } from "#renderer/data/transport";
 
 type Runtime = Transport["client"]["browser"]["runtime"];
 interface Materialization {

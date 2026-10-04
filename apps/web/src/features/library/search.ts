@@ -1,8 +1,8 @@
+import { WorkspaceId } from "@abacus-ai/contract/contract/ids";
+import { MessagingPlatformIdSchema } from "@abacus-ai/contract/contract/messaging";
 import * as v from "valibot";
 
 import { optionalField } from "#renderer/lib/navigation/search";
-import { WorkspaceId } from "@abacus-ai/contract/contract/ids";
-import { MessagingPlatformIdSchema } from "@abacus-ai/contract/contract/messaging";
 export { CONNECTOR_CATEGORY_TABS } from "#renderer/lib/navigation/search";
 export const MessagingSearch = v.object({
   platform: optionalField(MessagingPlatformIdSchema),

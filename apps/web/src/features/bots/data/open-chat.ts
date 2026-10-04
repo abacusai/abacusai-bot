@@ -1,3 +1,5 @@
+import type { BotChatHandle } from "@abacus-ai/contract/bots";
+
 /**
  * `openChatOnce` (spec 03 §5.3): `bots.openChat` at most once in flight per
  * bot per document. `openChat` has side effects (the forever session, the
@@ -6,7 +8,6 @@
  * change or a second navigation never calls it again.
  */
 import type { Transport } from "#renderer/data/transport";
-import type { BotChatHandle } from "@abacus-ai/contract/bots";
 
 interface OpenChatDeps {
   transport: Pick<Transport, "client">;

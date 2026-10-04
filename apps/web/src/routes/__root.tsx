@@ -7,15 +7,11 @@ import { lazy, Suspense, useEffect } from "react";
 
 import { LibraryGlobals } from "#renderer/features/library/globals";
 import { RoutinesGlobals } from "#renderer/features/routines/globals";
-import {
-  CriticalUpdateDialog,
-  useUpdatePillAction,
-} from "#renderer/features/settings/updates";
 import { AppRoot } from "#renderer/features/shell/app-root";
 import { NotFound, RootError } from "#renderer/features/shell/screens";
-import { useTopBarEndActions } from "#renderer/features/shell/top-bar-slots";
 import { ActionBindingsProvider } from "#renderer/lib/keyboard/action-bindings";
 import { installLogRing } from "#renderer/lib/log-ring";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { RouterContext } from "#renderer/router";
 
 const Devtools =
@@ -27,10 +23,11 @@ const Devtools =
       )
     : null;
 
-const UpdateEndAction = () => {
-  useTopBarEndActions(useUpdatePillAction());
-  return null;
-};
+const UpdateOwner = IS_ELECTRON
+  ? lazy(() =>
+      import("./-update-owner").then((m) => ({ default: m.UpdateOwner }))
+    )
+  : () => null;
 
 const RootComponent = () => {
   const { transport, db, system } = Route.useRouteContext();
@@ -43,8 +40,9 @@ const RootComponent = () => {
         <Outlet />
         <RoutinesGlobals />
         <LibraryGlobals />
-        <CriticalUpdateDialog />
-        <UpdateEndAction />
+        <Suspense fallback={null}>
+          <UpdateOwner />
+        </Suspense>
       </ActionBindingsProvider>
       {Devtools != null && (
         <Suspense fallback={null}>

@@ -1,3 +1,5 @@
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Store } from "@tanstack/react-store";
 import {
@@ -19,8 +21,6 @@ import { emptyThreadState } from "#renderer/features/chat/store/thread-store";
 import { RoutinesGlobals } from "#renderer/features/routines/globals";
 import { initI18n } from "#renderer/lib/i18n";
 import type { NotchRouterContext } from "#renderer/notch-context";
-import type { RunFinishedNotice } from "@abacus-ai/contract/contract";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { NotchShell } from "./index";
 import type { NotchInputs } from "./presenter";

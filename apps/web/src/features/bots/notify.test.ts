@@ -1,3 +1,5 @@
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import { renderHook, act } from "@testing-library/react";
 /** R3-T15,T23,T27: lossless terminals, ephemeral unread, gates and reaction lifetime. */
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,8 +8,6 @@ import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
 import { allowed, isQuietNow } from "#renderer/lib/notify";
 import { createSoundPlayer, synthCue, CUE_TONES } from "#renderer/lib/sound";
-import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
-import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { react, useReaction } from "./avatar";
 import { createUnreadStore } from "./data/unread-store";

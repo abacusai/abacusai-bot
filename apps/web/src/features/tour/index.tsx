@@ -8,6 +8,7 @@ import { Spotlight, waitForAnchor } from "#renderer/components/spotlight";
 import type { Box } from "#renderer/components/spotlight/geometry";
 import { useDb } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Badge } from "#renderer/ui/badge";
 import { Button } from "#renderer/ui/button";
 
@@ -27,7 +28,10 @@ export const TourHost = () => {
   const [rect, setRect] = useState<Box | null>(null);
   const [busy, setBusy] = useState(false);
   const status = useQuery({
-    ...transport.orpc.notch.status.queryOptions({ input: {} }),
+    ...transport.orpc.notch.status.queryOptions({
+      input: {},
+      enabled: IS_ELECTRON,
+    }),
     enabled: active !== null,
   });
   const stops = TOUR_STOPS.filter(
@@ -80,7 +84,8 @@ export const TourHost = () => {
         }
         if (href) await navigate({ href });
         if (abort.signal.aborted) return;
-        if (stop.id === "notch") await transport.client.notch.preview({});
+        if (IS_ELECTRON && stop.id === "notch")
+          await transport.client.notch.preview({});
         element = stop.anchor
           ? await waitForAnchor(stop.anchor, 2000, abort.signal)
           : null;

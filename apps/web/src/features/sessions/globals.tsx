@@ -1,5 +1,7 @@
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef } from "react";
+import { lazy } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
@@ -12,10 +14,14 @@ import {
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { isThreadSeen } from "#renderer/lib/navigation/visible-thread";
 import { createNotifier } from "#renderer/lib/notify";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
-import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
-
-import { BrowserAskHost } from "./browser/ask-host";
+const BrowserAskHost = IS_ELECTRON
+  ? lazy(() =>
+      import("./browser/ask-host").then((m) => ({ default: m.BrowserAskHost }))
+    )
+  : () => null;
 import { followSessionsSources } from "./data/live";
 import { useSessionsTransport } from "./data/queries";
 import { markSessionUnread } from "./data/unread-store";
@@ -52,7 +58,7 @@ export const SessionsGlobals = ({
         latest.current.notifications.data?.enabled ?? true,
       sounds: () => latest.current.prefs.sounds,
       now: () => new Date(),
-      send: (input) => transport.client.system.notify(input),
+      send: (input) => platformSystem(transport.client).notify(input),
     });
   }, [transport]);
   const deps = () => ({
@@ -149,15 +155,16 @@ export const SessionsGlobals = ({
       },
       abort.signal
     );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.browser.events({}, { signal }),
-      (event) => {
-        if (event.type === "open-preview")
-          show({ conversationKey: event.conversationKey, url: event.url });
-      },
-      abort.signal
-    );
+    if (IS_ELECTRON)
+      void followNotices(
+        transport,
+        ({ signal }) => transport.client.browser.events({}, { signal }),
+        (event) => {
+          if (event.type === "open-preview")
+            show({ conversationKey: event.conversationKey, url: event.url });
+        },
+        abort.signal
+      );
     void followNotices(
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),

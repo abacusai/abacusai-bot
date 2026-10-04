@@ -1,3 +1,11 @@
+import {
+  checkoutKey,
+  type CheckoutRef,
+} from "@abacus-ai/contract/contract/checkout";
+import type {
+  WorkspaceRow,
+  SessionRow,
+} from "@abacus-ai/contract/contract/rows";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useRouter } from "@tanstack/react-router";
@@ -6,8 +14,6 @@ import { useEffect } from "react";
 import { useCollections } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import type { AppQueryUtils } from "#renderer/data/transport/types";
-import { checkoutKey, type CheckoutRef } from "@abacus-ai/contract/contract/checkout";
-import type { WorkspaceRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 
 export const useSessionsTransport = (): Transport =>
   useRouter().options.context.transport;

@@ -1,7 +1,8 @@
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { useEffect } from "react";
 
 import type { Transport } from "#renderer/data/transport";
-import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { isThreadSeen } from "./navigation/visible-thread";
 import { createSoundPlayer } from "./sound";
@@ -26,10 +27,12 @@ export const documentSoundPlayer = () =>
 /** The shell owns cross-window arbitration for the shared document player. */
 export const useDocumentSoundOwner = (transport: Transport): void => {
   useEffect(() => {
-    claim = (cueId, threadId) =>
-      transport.client.window
-        .claimCue({ cueId, threadId })
-        .then((result) => result.play);
+    claim = !IS_ELECTRON
+      ? async () => true
+      : (cueId, threadId) =>
+          transport.client.window
+            .claimCue({ cueId, threadId })
+            .then((result) => result.play);
     return () => {
       claim = async () => false;
     };

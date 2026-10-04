@@ -1,3 +1,4 @@
+import { BotId } from "@abacus-ai/contract/contract/ids";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,7 +34,6 @@ import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import { BotId } from "@abacus-ai/contract/contract/ids";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
 /**

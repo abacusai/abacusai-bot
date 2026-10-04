@@ -1,6 +1,6 @@
 import { KeymapEditor } from "#renderer/components/keymap-editor";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import { toHotkeyPlatform } from "#renderer/lib/platform";
+import { uiPlatform } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 export const KeyboardPage = () => {
@@ -10,7 +10,7 @@ export const KeyboardPage = () => {
   return (
     <KeymapEditor
       keymap={prefs.keymap ?? {}}
-      platform={toHotkeyPlatform(system.platform)}
+      platform={uiPlatform(system.platform)}
       onUpdate={update}
     />
   );

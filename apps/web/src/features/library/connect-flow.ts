@@ -4,14 +4,6 @@ import {
   type Connector,
   type ConnectorField,
 } from "@abacus-ai/connectors/registry";
-import type { QueryClient } from "@tanstack/react-query";
-import { useQueryClient } from "@tanstack/react-query";
-import { Store, useStore } from "@tanstack/react-store";
-
-import type { Db } from "#renderer/data/db";
-import type { Transport } from "#renderer/data/transport";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
@@ -19,6 +11,18 @@ import {
   type MessagingPlatformId,
   type MessagingSnapshot,
 } from "@abacus-ai/contract/messaging";
+import type { QueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { Store, useStore } from "@tanstack/react-store";
+
+import type { Db } from "#renderer/data/db";
+import type { Transport } from "#renderer/data/transport";
+import { webSignIn } from "#renderer/lib/browser/sign-in";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
+import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+
 export const CONNECT_WATCHDOG_MS = 180000;
 export const fieldsFor = (entry: Connector): Record<string, ConnectorField> => {
   if (entry.kind === "credential") return entry.fields;
@@ -137,7 +141,11 @@ export const createConnectFlow = (deps: FlowDeps) => {
     let chromeMissing = false;
     if (result.ok) {
       await refresh();
-      if (entry.kind === "mcp" && entry.requires === "google-chrome")
+      if (
+        IS_ELECTRON &&
+        entry.kind === "mcp" &&
+        entry.requires === "google-chrome"
+      )
         chromeMissing = await deps.transport.client.browser
           .hasGoogleChrome({})
           .then((present) => !present)
@@ -258,9 +266,11 @@ export const createConnectFlow = (deps: FlowDeps) => {
           if (!current()) return;
           if (statuses[connectorId]?.reason === "not-signed-in") {
             store.setState(() => ({ connectorId, phase: "signing-in" }));
-            const result = await deps.transport.client.auth.abacus.start({
-              intent: "signin",
-            });
+            const result = IS_ELECTRON
+              ? await deps.transport.client.auth.abacus.start({
+                  intent: "signin",
+                })
+              : await webSignIn(deps.transport);
             if (!current()) return;
             if (!result.ok) {
               finish(id, result);
@@ -298,6 +308,19 @@ export const createConnectFlow = (deps: FlowDeps) => {
         const result = await deps.transport.client.connectors.connect({
           connectorId,
         });
+        if (!current()) return;
+        if (!IS_ELECTRON && result.ok && result.url) {
+          await platformSystem(deps.transport.client).openExternal({
+            url: result.url,
+          });
+          while (current()) {
+            const statuses = await deps.transport.client.connectors.statuses(
+              {}
+            );
+            if (statuses[connectorId]?.state === "connected") break;
+            await new Promise((resolve) => setTimeout(resolve, 3_000));
+          }
+        }
         if (!current()) return;
         await complete(id, entry, result);
       } catch (e) {

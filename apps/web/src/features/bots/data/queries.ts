@@ -1,3 +1,10 @@
+import type {
+  ArtifactRow,
+  BotRow,
+  MemoryRow,
+  RoutineRow,
+  SessionRow,
+} from "@abacus-ai/contract/contract/rows";
 /**
  * What the bots area reads (spec 03 §6.1, §6.2): query options over the
  * transport, and live queries over the DB collections. Filters on nested
@@ -11,13 +18,6 @@ import { useCollections } from "#renderer/data/db";
 import { useCollectionStatus } from "#renderer/data/db/status";
 import type { AppQueryUtils } from "#renderer/data/transport";
 import { findCheckIn } from "#renderer/lib/bots/check-in";
-import type {
-  ArtifactRow,
-  BotRow,
-  MemoryRow,
-  RoutineRow,
-  SessionRow,
-} from "@abacus-ai/contract/contract/rows";
 
 /** Query options, keyed off the transport's oRPC utils (§6.1). */
 export const botsQueries = (orpc: AppQueryUtils) => ({

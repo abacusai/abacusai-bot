@@ -1,3 +1,9 @@
+import {
+  isRoutineFire,
+  stripAttachmentRefs,
+  visibleUserText,
+  type AttachmentRef,
+} from "@abacus-ai/contract/transcript/user-text";
 /**
  * Message widgets (spec 02 §5.1, §5.3, §8.6): `BotMessage` (bubbles, bot
  * tint for the user, spoken parts and inline permissions) and
@@ -35,12 +41,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
-import {
-  isRoutineFire,
-  stripAttachmentRefs,
-  visibleUserText,
-  type AttachmentRef,
-} from "@abacus-ai/contract/transcript/user-text";
 
 import { Markdown } from "../markdown/markdown";
 import { useToolWindow } from "../scroller/row-context";

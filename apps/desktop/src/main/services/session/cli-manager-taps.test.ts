@@ -10,10 +10,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type { FakeProvider } from "@abacus-ai/test-support/fake-provider";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-
-import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 // These agent-only test modules are outside desktop's composite TS project.
 // Load their existing scenarios at runtime, as other cross-package harnesses do.

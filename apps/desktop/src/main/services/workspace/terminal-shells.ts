@@ -16,14 +16,14 @@ import {
   posixShellEnv,
   type PosixShell,
 } from "@abacus-ai/agent/posix-shell-install";
-
-import { agentVendorDir } from "#main/resources";
 import {
   DEFAULT_TERMINAL_SHELL,
   terminalShellsForPlatform,
   type TerminalShellId,
   type TerminalShellStatus,
 } from "@abacus-ai/contract/terminal-shells";
+
+import { agentVendorDir } from "#main/resources";
 
 export interface ResolvedTerminalShell {
   /** What was resolved, which is `system` when the request could not be. */

@@ -1,3 +1,4 @@
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -7,11 +8,12 @@ import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { permissionCueKey } from "#renderer/lib/attention/cues";
 import { createNotifier, notifyAttention } from "#renderer/lib/notify";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 import { createReadinessQueue } from "#renderer/lib/readiness-queue";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
 import { createSoundPlayer } from "#renderer/lib/sound";
 import { useAppContext } from "#renderer/lib/use-app-context";
-import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 
 import { routineConnectorThreads } from "./attention";
 import { routineOwns } from "./notify";
@@ -43,10 +45,12 @@ export const RoutinesGlobals = () => {
       isWindowFocused: () => document.hasFocus(),
       prefs: sounds,
       now: () => Date.now(),
-      claim: (cueId, threadId) =>
-        transport.client.window
-          .claimCue({ cueId, threadId })
-          .then((result) => result.play),
+      claim: !IS_ELECTRON
+        ? async () => true
+        : (cueId, threadId) =>
+            transport.client.window
+              .claimCue({ cueId, threadId })
+              .then((result) => result.play),
     });
     const unlock = () => player.unlock();
     document.addEventListener("pointerdown", unlock);
@@ -59,7 +63,7 @@ export const RoutinesGlobals = () => {
           )?.enabled ?? true,
         sounds,
         now: () => new Date(),
-        send: (input) => transport.client.system.notify(input),
+        send: (input) => platformSystem(transport.client).notify(input),
       },
       seenFor(seenNotices, transport)
     );
@@ -130,7 +134,9 @@ export const RoutinesGlobals = () => {
       ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) =>
         readiness.run(() => {
-          const put = (r: import("@abacus-ai/contract/contracts").ConnectorRequest) => {
+          const put = (
+            r: import("@abacus-ai/contract/contracts").ConnectorRequest
+          ) => {
             const ref = conversationRefFromKey(r.conversationKey);
             if (ref?.kind === "session")
               requests.set(r.requestId, ref.sessionId);

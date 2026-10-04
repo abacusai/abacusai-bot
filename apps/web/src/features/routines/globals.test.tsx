@@ -1,9 +1,9 @@
+import { contract } from "@abacus-ai/contract/contract";
 import { implement } from "@orpc/server";
 import { act, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
 const sound = vi.hoisted(() => ({
   play: vi.fn(),
   unlock: vi.fn(),

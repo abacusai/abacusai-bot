@@ -11,9 +11,8 @@
 import fs from "fs";
 import path from "path";
 
-import { app } from "electron";
-
 import { funnelDetail, type FunnelStep } from "@abacus-ai/contract/funnel";
+import { app } from "electron";
 
 import { profileBaseDir } from "../../profile-home";
 import { readSettings } from "../config/settings";

@@ -21,10 +21,7 @@ const { readFileSync } = (
     };
   }
 ).process.getBuiltinModule("node:fs");
-const css = readFileSync(
-  "src/renderer/components/bot-avatar/moods.css",
-  "utf8"
-);
+const css = readFileSync("src/components/bot-avatar/moods.css", "utf8");
 
 const look = (patch: Partial<Look> = {}): Look => ({
   shape: "blob",

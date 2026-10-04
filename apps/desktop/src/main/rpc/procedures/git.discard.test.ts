@@ -11,12 +11,11 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import type {
   AgentSessionListItem,
   WorkspaceListItem,
 } from "@abacus-ai/contract/contracts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setMigrationWriteBlocks } from "../../migrations/write-block";
 import { CheckoutService } from "../../services/workspace/checkout-service";

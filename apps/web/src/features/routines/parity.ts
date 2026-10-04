@@ -9,7 +9,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: 'Changed (user decision "one sidebar per rail item")',
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT2",
@@ -19,7 +19,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity + New (states)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT3",
@@ -30,7 +30,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Changed (03 F8: the sender-chat view is the bots route)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT4",
@@ -40,7 +40,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Changed (canvas; counts future fires too)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT5",
@@ -51,7 +51,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (canvas copy)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT6",
@@ -62,7 +62,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (canvas layout)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT7",
@@ -72,7 +72,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT8",
@@ -82,7 +82,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT9",
@@ -92,7 +92,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT10",
@@ -102,7 +102,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT11",
@@ -112,7 +112,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT12",
@@ -122,7 +122,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity + New (next-fire preview)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT13",
@@ -133,7 +133,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (typed errors, F1)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT14",
@@ -144,7 +144,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (canvas placement)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT15",
@@ -154,7 +154,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT16",
@@ -164,7 +164,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT17",
@@ -175,7 +175,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (live instead of polling)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT18",
@@ -185,7 +185,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Changed (canvas: report on demand)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT19",
@@ -194,7 +194,7 @@ export const PHASE5_PARITY = [
     visible: true,
     target: "features/routines/sidebar.tsx",
     specStatus: 'Retired (PLAN "no state in two places")',
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT20",
@@ -204,7 +204,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (canvas)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT21",
@@ -215,7 +215,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT22",
@@ -225,7 +225,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity (confirm added)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT23",
@@ -236,7 +236,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Changed (03 F8)",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT24",
@@ -247,7 +247,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT25",
@@ -258,7 +258,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/routines/sidebar.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
   {
     id: "RT26",
@@ -268,6 +268,6 @@ export const PHASE5_PARITY = [
     visible: true,
     target: "features/routines/sidebar.tsx",
     specStatus: 'Retired (PLAN "Nuked: `?view=` redirects"; new entry HTML)',
-    consumer: "src/renderer/features/routines/sidebar.tsx#RoutinesSidebar",
+    consumer: "apps/web/src/features/routines/sidebar.tsx#RoutinesSidebar",
   },
 ] as const;

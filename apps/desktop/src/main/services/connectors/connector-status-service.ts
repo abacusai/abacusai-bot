@@ -7,7 +7,6 @@
  * the same statuses, so no surface computes "installed" on its own.
  */
 import { CONNECTORS, type Connector } from "@abacus-ai/connectors/registry";
-
 import type {
   ConnectorStatus,
   ConnectorStatuses,

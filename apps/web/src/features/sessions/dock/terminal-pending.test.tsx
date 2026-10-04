@@ -1,10 +1,10 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "@abacus-ai/contract/contract";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("../terminal/terminal-registry", () => ({

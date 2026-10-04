@@ -10,7 +10,7 @@ import {
 import { parseChangelog } from "#renderer/lib/changelog";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
-import changelog from "../../../../../../CHANGELOG.md?raw";
+import changelog from "../../../../../CHANGELOG.md?raw";
 export const ChangelogPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();

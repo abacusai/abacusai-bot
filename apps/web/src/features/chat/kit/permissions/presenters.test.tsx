@@ -28,7 +28,7 @@ beforeAll(async () => {
   allowedFor = (
     await loadUntyped<{ allowedDecisions: typeof allowedFor }>(
       new URL(
-        "../../../../../../../../packages/agent/src/agui/permissions.ts",
+        "../../../../../../../packages/agent/src/agui/permissions.ts",
         import.meta.url
       ).pathname
     )

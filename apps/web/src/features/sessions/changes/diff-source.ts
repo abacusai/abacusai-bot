@@ -1,7 +1,10 @@
+import type {
+  CheckoutRef,
+  GitDiffResult,
+} from "@abacus-ai/contract/contract/checkout";
 import { createPatch } from "diff";
 
 import type { AppClient } from "#renderer/data/transport/types";
-import type { CheckoutRef, GitDiffResult } from "@abacus-ai/contract/contract/checkout";
 
 import { isRelativePath } from "../data/search";
 export const readDiff = async (

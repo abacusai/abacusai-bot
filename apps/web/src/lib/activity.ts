@@ -1,4 +1,6 @@
 import type { Transport } from "#renderer/data/transport";
+import { markActivity } from "#renderer/features/shell/lease";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 /** Main's quiet-time clock follows main-window input, at most once per 5 s. */
 export const installActivity = (transport: Transport): (() => void) => {
   let last = -Infinity;
@@ -6,7 +8,12 @@ export const installActivity = (transport: Transport): (() => void) => {
     const now = Date.now();
     if (now - last < 5000) return;
     last = now;
-    void transport.client.window.activity().catch(() => undefined);
+    if (IS_ELECTRON)
+      void transport.client.window.activity().catch(() => undefined);
+    else {
+      markActivity();
+      void transport.client.system.activity().catch(() => undefined);
+    }
   };
   const events = ["pointerdown", "keydown", "wheel"] as const;
   events.forEach((event) =>

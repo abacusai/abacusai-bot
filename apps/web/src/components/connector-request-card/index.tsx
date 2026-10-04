@@ -9,6 +9,7 @@
  * which cancels the hop (its cancelled result answers "declined").
  */
 import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import { Link2, Plug } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,7 +18,6 @@ import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 
 export interface ConnectorRequestCardProps {
   request: ConnectorRequest;

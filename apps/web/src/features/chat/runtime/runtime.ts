@@ -1,3 +1,5 @@
+import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
+
 /**
  * `ChatRuntime` (spec 02 §2, §3.1): the per-document cache of
  * `ThreadSession`s (an LRU of 8; a session with a mounted view is pinned),
@@ -7,7 +9,6 @@
  */
 import type { AiClient } from "#renderer/data/ai";
 import type { Transport } from "#renderer/data/transport";
-import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
 
 import type { PermissionDescriptor } from "../store/thread-store";
 import {

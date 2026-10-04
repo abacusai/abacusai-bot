@@ -1,3 +1,4 @@
+import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 /**
  * The chat's `/__ui` gallery entries (spec 02 §11.2): every scenario, by
  * section, replayed through the real runtime over the fixture relay
@@ -7,7 +8,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
 import { botAccentStyle } from "#renderer/lib/theme";
-import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 
 import { clearDraft } from "../composer/draft-store";
 import { fixtureRuntime } from "../fixtures/player";

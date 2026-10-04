@@ -1,9 +1,11 @@
+import type { AccountState } from "@abacus-ai/contract/account";
+import type { PrefsRow } from "@abacus-ai/contract/contract";
+
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
-import type { AccountState } from "@abacus-ai/contract/account";
-import type { PrefsRow } from "@abacus-ai/contract/contract";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 export const ONBOARDING_FLOW = ONBOARDING_STEPS;
 export interface FlowFacts {
   signedIn: boolean;
@@ -42,7 +44,7 @@ export const next = (
       return "ignore";
     case "connected":
       return event.type === "next"
-        ? facts.payingTier
+        ? facts.payingTier || !IS_ELECTRON
           ? "connectors"
           : "models"
         : "ignore";
@@ -60,7 +62,7 @@ export const next = (
           ? "done"
           : "first-bot"
         : event.type === "back"
-          ? facts.payingTier
+          ? facts.payingTier || !IS_ELECTRON
             ? "connected"
             : "models"
           : "ignore";
@@ -88,6 +90,7 @@ export const guardStep = (
   facts: FlowFacts,
   doc: { signIn: { status: string } | null; createdBotId: string | null }
 ): OnboardingStepId => {
+  if (!IS_ELECTRON && step === "models") return "connectors";
   if (
     step === "connect" &&
     !["pending", "failed"].includes(doc.signIn?.status ?? "")

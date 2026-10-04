@@ -2,11 +2,15 @@ import { expect, it } from "vitest";
 
 import { readSourceFiles } from "#renderer/test-support/source-files";
 
-import spec from "../../../../../../docs/rewrite/specs/06-onboarding-tour-notch.md?raw";
+import spec from "../../../../../docs/rewrite/specs/06-onboarding-tour-notch.md?raw";
 import { PHASE6_NOTCH_PARITY } from "../notch/parity";
 import { PHASE6_ONBOARDING_PARITY } from "./parity";
 const files = readSourceFiles(
-  ["/src/renderer/**/*.ts", "/src/renderer/**/*.tsx", "/src/main/**/*.ts"],
+  [
+    "/apps/web/src/**/*.ts",
+    "/apps/web/src/**/*.tsx",
+    "/apps/desktop/src/main/**/*.ts",
+  ],
   import.meta.dirname
 );
 it("R6-T40 every spec parity row has a status and a located consumer or explicit other-phase owner", () => {

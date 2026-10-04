@@ -1,3 +1,5 @@
+import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * `connect_connector`: what the agent can see and how it asks.
  *
@@ -10,9 +12,6 @@
  * a platform account, a chat app, a token card. The button is the gate.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 

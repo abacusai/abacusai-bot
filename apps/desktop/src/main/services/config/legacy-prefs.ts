@@ -1,5 +1,11 @@
 import path from "node:path";
 
+import { PrefsPatchSchema } from "@abacus-ai/contract/contract/db";
+import {
+  SUPPORTED_LANGUAGES,
+  type PrefsField,
+  type PrefsPatch,
+} from "@abacus-ai/contract/contract/rows";
 /**
  * The old renderer's durable state (`userData/renderer-state.json`) mapped
  * onto the prefs row (spec 00 C.4). One mapping, three import points: the
@@ -18,13 +24,6 @@ import path from "node:path";
  * ever read here.
  */
 import * as v from "valibot";
-
-import { PrefsPatchSchema } from "@abacus-ai/contract/contract/db";
-import {
-  SUPPORTED_LANGUAGES,
-  type PrefsField,
-  type PrefsPatch,
-} from "@abacus-ai/contract/contract/rows";
 
 import { PREFS_DEFAULTS, type PrefsStore } from "./prefs-store";
 import { readRendererStateFile } from "./renderer-state";

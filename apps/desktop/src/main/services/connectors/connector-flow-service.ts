@@ -11,7 +11,6 @@ import {
   HOME_PLACEHOLDER,
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
-
 import type {
   ConnectorConnectOptions,
   ConnectorOutcome,

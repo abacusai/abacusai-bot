@@ -16,6 +16,12 @@ import { NoInput } from "./ids";
  * on, so it stays an output rather than an error.
  */
 export const auth = {
+  web: {
+    start: mutation.input(NoInput).output(type<{ challenge: string }>()),
+    complete: mutation
+      .input(v.object({ code: v.pipe(v.string(), v.nonEmpty()) }))
+      .output(type<import("../account").AccountState>()),
+  },
   openRouter: {
     start: mutation.input(NoInput).output(type<OpenRouterAuthOutcome>()),
     cancel: mutation.input(NoInput).output(type<void>()),

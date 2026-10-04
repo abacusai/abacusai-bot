@@ -31,7 +31,7 @@ export interface DeliverableItem {
 export interface DeliverablesCardProps {
   items: readonly DeliverableItem[];
   onOpen(item: DeliverableItem): void;
-  onReveal(item: DeliverableItem): void;
+  onReveal?(item: DeliverableItem): void;
   onOpenUrl(item: DeliverableItem): void;
 }
 
@@ -111,17 +111,21 @@ export const DeliverablesCard = ({
                 </TooltipTrigger>
                 <TooltipContent>{item.path}</TooltipContent>
               </Tooltip>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={secondary}
-                title={secondary}
-                data-slot="deliverable-locate"
-                className="text-muted-foreground shrink-0"
-                onClick={() => (item.isUrl ? onOpenUrl(item) : onReveal(item))}
-              >
-                {item.isUrl ? <ExternalLink /> : <FolderOpen />}
-              </Button>
+              {(item.isUrl || onReveal) && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={secondary}
+                  title={secondary}
+                  data-slot="deliverable-locate"
+                  className="text-muted-foreground shrink-0"
+                  onClick={() =>
+                    item.isUrl ? onOpenUrl(item) : onReveal?.(item)
+                  }
+                >
+                  {item.isUrl ? <ExternalLink /> : <FolderOpen />}
+                </Button>
+              )}
             </li>
           );
         })}

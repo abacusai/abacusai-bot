@@ -1,4 +1,7 @@
-import { CONTRACT_VERSION, type SystemEvent } from "@abacus-ai/contract/contract";
+import {
+  CONTRACT_VERSION,
+  type SystemEvent,
+} from "@abacus-ai/contract/contract";
 import { FOUNDATION_API } from "@abacus-ai/contract/experience";
 
 import {
@@ -9,6 +12,9 @@ import { conflict } from "../errors";
 import { impl, onChannel, stream } from "./impl";
 
 export const systemRouter = impl.system.router({
+  activity: impl.system.activity.handler(({ context }) => {
+    context.deps.app.markRendererActivity();
+  }),
   openPrivacyPane: impl.system.openPrivacyPane.handler(({ input, context }) =>
     input.pane === "screen-recording"
       ? context.deps.serviceHost.openScreenRecordingSettings()

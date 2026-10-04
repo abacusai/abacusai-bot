@@ -1,9 +1,8 @@
+import type { ChangeBatch } from "@abacus-ai/contract/contract/rows";
 /**
  * B-T2: the table feed's wire guarantees, without a transport.
  */
 import { describe, expect, it } from "vitest";
-
-import type { ChangeBatch } from "@abacus-ai/contract/contract/rows";
 
 import { TableFeed } from "./table-feed";
 

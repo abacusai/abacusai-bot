@@ -1,3 +1,9 @@
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
+import {
+  terminalShellsForPlatform,
+  type TerminalShellId,
+} from "@abacus-ai/contract/terminal-shells";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
@@ -21,6 +27,7 @@ import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -35,12 +42,6 @@ import {
   ResizableHandle,
 } from "#renderer/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
-import type { SessionRow } from "@abacus-ai/contract/contract/rows";
-import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
-import {
-  terminalShellsForPlatform,
-  type TerminalShellId,
-} from "@abacus-ai/contract/terminal-shells";
 
 import { useSessionsTransport, useGitState } from "../data/queries";
 import {
@@ -113,7 +114,10 @@ export const SessionDock = ({
   const [drag, setDrag] = useState<string | null>(null);
   const git = useGitState({ workspaceId: row.workspaceId, sessionId: row.id });
   const device = useQuery(
-    transport.orpc.devices.status.queryOptions({ input: {} })
+    transport.orpc.devices.status.queryOptions({
+      input: {},
+      enabled: IS_ELECTRON,
+    })
   );
   const shells = useQuery(
     transport.orpc.terminal.shell.get.queryOptions({ input: {} })
@@ -209,10 +213,11 @@ export const SessionDock = ({
         .catch(() => {});
     }
     if (ref.startsWith("browser:")) {
-      void transport.client.browser.runtime
-        .materialize({ conversationKey: key, resourceId: ref.slice(8) })
-        .then((state) => transport.client.browser.runtime.close(state.lease))
-        .catch(() => {});
+      if (IS_ELECTRON)
+        void transport.client.browser.runtime
+          .materialize({ conversationKey: key, resourceId: ref.slice(8) })
+          .then((state) => transport.client.browser.runtime.close(state.lease))
+          .catch(() => {});
     }
     const next = closeTab(key, ref);
     if (active === ref) select(next);
@@ -243,20 +248,21 @@ export const SessionDock = ({
       },
       abort.signal
     );
-    void followNotices(
-      transport,
-      ({ signal }) =>
-        transport.client.browser.events({ conversationKey: key }, { signal }),
-      (event) => {
-        if (event.type === "runtime-materialized")
-          openTab(key, {
-            ref: `browser:${event.resourceId}`,
-            title: event.url,
-            url: event.url,
-          });
-      },
-      abort.signal
-    );
+    if (IS_ELECTRON)
+      void followNotices(
+        transport,
+        ({ signal }) =>
+          transport.client.browser.events({ conversationKey: key }, { signal }),
+        (event) => {
+          if (event.type === "runtime-materialized")
+            openTab(key, {
+              ref: `browser:${event.resourceId}`,
+              title: event.url,
+              url: event.url,
+            });
+        },
+        abort.signal
+      );
     return () => abort.abort();
   }, [transport, key, t]);
   const normalizeSelection = useEffectEvent(select);
@@ -365,12 +371,12 @@ export const SessionDock = ({
               </DropdownMenuItem>
             ))}
             {[
-              "browser",
+              ...(IS_ELECTRON ? ["browser"] : []),
               "terminal",
               "files",
               ...(git?.gitChanges.length ? ["changes"] : []),
               "agents",
-              ...(device.data?.enabled ? ["device"] : []),
+              ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
             ].map((kind) => (
               <DropdownMenuItem key={kind} onClick={() => add(kind)}>
                 {t(`sessions.dock.${kind}`)}

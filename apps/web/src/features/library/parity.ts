@@ -8,7 +8,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: 'Changed (PLAN "Library vs Settings")',
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB2",
@@ -18,7 +18,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB3",
@@ -29,7 +29,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB4",
@@ -39,7 +39,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Changed (canvas)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB5",
@@ -49,7 +49,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity (canvas layout)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB6",
@@ -60,7 +60,7 @@ export const PHASE5_PARITY = [
     target: "features/library/index.tsx",
     specStatus:
       "Parity; a hop now survives leaving the page (Changed, \u00a712.4 item 8)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB7",
@@ -70,7 +70,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB8",
@@ -80,7 +80,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity + confirm",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB9",
@@ -91,7 +91,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB10",
@@ -102,7 +102,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity (phase 3)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB11",
@@ -113,7 +113,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity (own page, F7)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB12",
@@ -124,7 +124,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB13",
@@ -135,7 +135,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB14",
@@ -146,7 +146,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB15",
@@ -156,7 +156,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity + confirm (gap fix)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB16",
@@ -166,7 +166,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity + URL check (gap fix)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB17",
@@ -177,7 +177,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB18",
@@ -188,7 +188,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB19",
@@ -198,7 +198,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Parity + gap fix",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB20",
@@ -208,7 +208,7 @@ export const PHASE5_PARITY = [
     visible: false,
     target: "features/library/index.tsx",
     specStatus: "Changed (canvas `SettingsEnvironment`)",
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
   {
     id: "LB21",
@@ -217,6 +217,6 @@ export const PHASE5_PARITY = [
     visible: true,
     target: "features/library/index.tsx",
     specStatus: 'Retired (PLAN "Nuked")',
-    consumer: "src/renderer/features/library/index.tsx#LibrarySidebar",
+    consumer: "apps/web/src/features/library/index.tsx#LibrarySidebar",
   },
 ] as const;

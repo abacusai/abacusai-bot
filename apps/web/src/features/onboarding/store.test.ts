@@ -1,7 +1,7 @@
+import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
-import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
 
 import { onboardingStore, startSignIn, cancelSignIn } from "./store";
 const deferred = <T>() => {

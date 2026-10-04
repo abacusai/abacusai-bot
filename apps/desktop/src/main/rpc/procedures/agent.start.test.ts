@@ -2,9 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
 import type { StartAgentSessionRequest } from "@abacus-ai/contract/contracts";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentManagerService } from "../../services/session/cli-manager-service";
 import { connectInProcess, fakeDeps } from "../testing";

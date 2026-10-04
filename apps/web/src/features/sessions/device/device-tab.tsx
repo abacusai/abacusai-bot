@@ -1,3 +1,4 @@
+import type { LocalDeviceInfo } from "@abacus-ai/contract/contracts";
 import { useQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -10,7 +11,6 @@ import type { Transport } from "#renderer/data/transport";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { LocalDeviceInfo } from "@abacus-ai/contract/contracts";
 
 import { useSessionsTransport } from "../data/queries";
 

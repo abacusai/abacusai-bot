@@ -1,3 +1,8 @@
+import type {
+  ChangeBatch,
+  TablePosition,
+  TableSnapshot,
+} from "@abacus-ai/contract/contract/rows";
 /**
  * TanStack DB collection options over one `db.<table>` (spec 00 B.3): a
  * custom `sync` that mirrors main's table through its `hello` → snapshot →
@@ -35,12 +40,6 @@ import type {
   SyncConfig,
   UtilsRecord,
 } from "@tanstack/db";
-
-import type {
-  ChangeBatch,
-  TablePosition,
-  TableSnapshot,
-} from "@abacus-ai/contract/contract/rows";
 
 /** What `transport.client.db.<table>` offers; mutations only where they exist. */
 export interface IpcTableClient<Row, Key extends string> {

@@ -1,3 +1,4 @@
+import { expandToolResultData } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 /**
  * Tool result normalisation (spec 02 §5.4a), pure. Widgets never read
  * `part.output` or `result.content` directly: live results (the agent's
@@ -7,8 +8,6 @@
  * result exists.
  */
 import type { ToolCallPart, ToolResultPart } from "@tanstack/ai-client";
-
-import { expandToolResultData } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import type { ToolDisplayData } from "../../store/thread-store";
 
