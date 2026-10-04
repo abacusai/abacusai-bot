@@ -19,10 +19,20 @@ export type ResolvedAgentArtifact = {
 };
 
 export class ArtifactResolverService {
+  constructor(
+    private readonly baselineOnly: boolean | (() => boolean) = false
+  ) {}
   resolveBundledCliPath(): ResolvedAgentArtifact {
     // An installed experience supersedes the baseline bundle for new sessions;
     // running sessions keep the process they started with.
-    const entry = experienceAgentEntry() ?? agentEntry();
+    const entry =
+      ((
+        typeof this.baselineOnly === "function"
+          ? this.baselineOnly()
+          : this.baselineOnly
+      )
+        ? null
+        : experienceAgentEntry()) ?? agentEntry();
 
     try {
       fs.accessSync(entry, fs.constants.R_OK);

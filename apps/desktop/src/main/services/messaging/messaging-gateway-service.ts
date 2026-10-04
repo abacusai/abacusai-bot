@@ -20,6 +20,7 @@ import {
   lastTaggedReply,
 } from "@abacus-ai/contract/reply-envelope";
 
+import type { HostPlatform } from "../../platform/capabilities";
 import { readDefaultAgentMode } from "../config/settings";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import { AbacusChannelsConnector } from "./abacus-channels-connector";
@@ -142,6 +143,7 @@ const CONNECT_DEADLINE_MS: Partial<Record<MessagingPlatformId, number>> = {
 const STOP_DEADLINE_MS = 5_000;
 
 type GatewayOptions = {
+  platform?: () => HostPlatform;
   /** Workspace remote messages run in; null when none is configured. */
   resolveWorkspaceId: () => string | null;
   createAgentSession: (workspaceId: string) => AgentSessionListItem;
@@ -400,6 +402,11 @@ export class MessagingGatewayService {
     const { gatewayEnabled } = readGatewaySettings();
 
     for (const entry of MESSAGING_PLATFORM_CATALOG) {
+      if (
+        this.options.platform?.() === "web-host" &&
+        !entry.id.startsWith("abacus_")
+      )
+        continue;
       const shouldRun =
         gatewayEnabled &&
         isPlatformEnabled(entry.id) &&
@@ -608,9 +615,17 @@ export class MessagingGatewayService {
       case "whatsapp":
         return new WhatsAppWebConnector(callbacks);
       case "abacus_discord":
-        return new AbacusChannelsConnector(callbacks, "discord");
+        return new AbacusChannelsConnector(
+          callbacks,
+          "discord",
+          this.options.platform?.()
+        );
       case "abacus_telegram":
-        return new AbacusChannelsConnector(callbacks, "telegram");
+        return new AbacusChannelsConnector(
+          callbacks,
+          "telegram",
+          this.options.platform?.()
+        );
       default:
         return null;
     }
@@ -1408,10 +1423,10 @@ export class MessagingGatewayService {
   async openSharedChannelLink(
     platformId: MessagingPlatformId,
     target: "install" | "dm" = "install"
-  ): Promise<void> {
+  ): Promise<void | string> {
     const connector = this.connectors.get(platformId);
     if (connector instanceof AbacusChannelsConnector)
-      connector.openLink(target);
+      return connector.openLink(target);
   }
 
   async unlinkSharedChannel(

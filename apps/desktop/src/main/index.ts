@@ -1,11 +1,11 @@
 import { execFile } from "child_process";
 import { existsSync, mkdirSync } from "fs";
+import fs from "fs/promises";
+import os from "os";
 
 // The account-profile home MUST resolve before any import below reads a path
 // under abacusBotHome(). Stores open files at module load. Keep this first.
 import "./profile-home-init";
-import fs from "fs/promises";
-import os from "os";
 import { join } from "path";
 import path from "path";
 import { promisify } from "util";
@@ -34,6 +34,8 @@ import {
 import type { WebContents } from "electron";
 import Store from "electron-store";
 
+import { nodeFileOperations } from "./app-operations/node";
+import { composeHost } from "./compose-host";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
 import { wireMainNotchEvents } from "./notch/main-events";
@@ -80,7 +82,6 @@ import type {
   WindowState,
 } from "@abacus-ai/contract/contract";
 import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
-import { parsePptx } from "@abacus-ai/contract/pptx/parser";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
@@ -89,18 +90,16 @@ import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
 import {
   disposeLocalModels,
-  wireHostEvents,
+  electronHostPlatform,
   type HostOperations,
-} from "./handler";
+} from "./host-operations/electron";
 import { followMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
 import {
   disposeMigrationProgress,
   prefsFileAfterMigrations,
-  runStartupMigrations,
 } from "./migrations/startup";
 import { CueArbiter } from "./notch/cue-arbiter";
-import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
@@ -155,7 +154,6 @@ import {
 } from "./services/diagnostics/log-dump";
 import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
 import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
-import { ZipArchive } from "./services/pptx/zip";
 import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   readAccountState,
@@ -173,7 +171,6 @@ import {
 import type { ExperienceRuntime } from "./services/updates/experience/runtime";
 import { consumeRelaunchHidden } from "./services/updates/relaunch-hidden";
 import { UpdateService } from "./services/updates/update-service";
-import { openHostFile } from "./services/workspace/host-path";
 import { runSmoke } from "./smoke";
 import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
@@ -1091,24 +1088,6 @@ async function createWindow(restored?: RecreatedWindowState) {
 }
 
 /** Extension allow-list for the agent-image reader below. */
-const IMAGE_MIME: Record<string, string> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".bmp": "image/bmp",
-  ".ico": "image/x-icon",
-  ".svg": "image/svg+xml",
-  ".tif": "image/tiff",
-  ".tiff": "image/tiff",
-};
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-const MAX_TEXT_BYTES_DEFAULT = 524288; // 512 KB
-// Embedded images come back as base64 data URLs, so the payload lands
-// several times larger than the file; 200 MB wedged the renderer.
-const MAX_PPTX_BYTES = 60 * 1024 * 1024; // 60 MB
-
 const PICKED_FILE_MIME: Record<string, string> = {
   ".pdf": "application/pdf",
   ".png": "image/png",
@@ -1166,6 +1145,7 @@ const PICKED_FILE_MIME: Record<string, string> = {
  * (main/rpc) both call these, so neither carries its own copy.
  */
 const appOperations: AppOperations = {
+  ...nodeFileOperations,
   async openFolderDialog() {
     const result = await showOpenDialogFromApp({
       properties: ["openDirectory", "dontAddToRecent", "createDirectory"],
@@ -1292,33 +1272,6 @@ const appOperations: AppOperations = {
   },
 
   // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
-  async savePastedTempFiles(baseFolder, files) {
-    try {
-      if (typeof baseFolder !== "string" || baseFolder.length === 0) {
-        return { success: false, error: "workspace path required" };
-      }
-      const tempDir = path.join(baseFolder, WORKSPACE_DIR_NAME, "temp");
-      mkdirSync(tempDir, { recursive: true });
-      // Self-ignoring: the user's repo does not ignore .abacusai-bot/, and
-      // untracked attachments would read as "the agent created these".
-      await fs
-        .writeFile(path.join(tempDir, ".gitignore"), "*\n")
-        .catch(() => {});
-      // Renderer-supplied names; resolvePastedFilePath keeps writes inside.
-      const paths = files.map((file) =>
-        resolvePastedFilePath(tempDir, file.name)
-      );
-      await Promise.all(
-        files.map((file, i) => fs.writeFile(paths[i], Buffer.from(file.data)))
-      );
-      return { success: true, dir: tempDir, paths };
-    } catch (err) {
-      return { success: false, error: String(err) };
-    }
-  },
-
-  // A summary of this run plus every retained day of logs: the run someone
-  // reports is rarely the one still going.
   async saveLogs(rendererLogs) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const result = await showSaveDialogFromApp({
@@ -1374,14 +1327,6 @@ const appOperations: AppOperations = {
     }
   },
 
-  appendLogs(lines) {
-    if (!Array.isArray(lines)) return;
-
-    for (const line of lines) {
-      if (typeof line === "string") logStore().append("renderer", line);
-    }
-  },
-
   showNotification(title, body, metadata, attention) {
     notchNotifications.notify(
       { ...attention, botReply: metadata?.kind === "bot" },
@@ -1412,138 +1357,6 @@ const appOperations: AppOperations = {
 
   // Agent-produced image as a data URL. Real paths on both sides, anything
   // escaping the root refused, extension allow-list, size cap.
-  async readImageAsDataUrl(args) {
-    try {
-      const filePath = args?.filePath;
-      const hostRoot = args?.hostRoot;
-      if (!filePath || !hostRoot) {
-        return {
-          success: false,
-          error: "filePath and hostRoot are required",
-        };
-      }
-
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeType = IMAGE_MIME[ext];
-      if (!mimeType) {
-        return { success: false, error: "unsupported-extension" };
-      }
-
-      const file = await openHostFile(filePath, hostRoot);
-      if (file.ok === false) return { success: false, error: file.error };
-      const { realFile, stat } = file;
-      if (stat.size > MAX_IMAGE_BYTES) {
-        return {
-          success: false,
-          error: "too-large",
-          sizeBytes: stat.size,
-        };
-      }
-
-      const buf = await fs.readFile(realFile);
-      const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
-      return { success: true, dataUrl, mimeType, sizeBytes: stat.size };
-    } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  },
-
-  // Same path resolution and sandboxing as the image reader above.
-  async readFileAsText(args) {
-    try {
-      const filePath = args?.filePath;
-      const hostRoot = args?.hostRoot;
-      if (!filePath || !hostRoot) {
-        return {
-          success: false,
-          error: "filePath and hostRoot are required",
-        };
-      }
-
-      const maxBytes = args?.maxBytes ?? MAX_TEXT_BYTES_DEFAULT;
-
-      const file = await openHostFile(filePath, hostRoot);
-      if (file.ok === false) return { success: false, error: file.error };
-      const { realFile, stat } = file;
-
-      const sizeBytes = stat.size;
-
-      // A null byte in the first 8KB marks a binary file.
-      const fd = await fs.open(realFile, "r");
-      try {
-        const probe = Buffer.alloc(Math.min(8192, sizeBytes));
-        await fd.read(probe, 0, probe.length, 0);
-        if (probe.includes(0)) {
-          return { success: false, error: "binary-file", sizeBytes };
-        }
-      } finally {
-        await fd.close();
-      }
-
-      const truncated = sizeBytes > maxBytes;
-      let content: string;
-      if (truncated) {
-        const buf = Buffer.alloc(maxBytes);
-        const fd2 = await fs.open(realFile, "r");
-        try {
-          await fd2.read(buf, 0, maxBytes, 0);
-        } finally {
-          await fd2.close();
-        }
-        content = buf.toString("utf8");
-      } else {
-        content = await fs.readFile(realFile, "utf8");
-      }
-
-      return { success: true, content, sizeBytes, truncated };
-    } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  },
-
-  // Parsed here, not in the renderer: sending back slides is cheaper than
-  // shipping a 40 MB deck across IPC. Same sandboxing as the readers above.
-  async readPptx(args) {
-    try {
-      const filePath = args?.filePath;
-      const hostRoot = args?.hostRoot;
-      if (!filePath || !hostRoot) {
-        return {
-          success: false,
-          error: "filePath and hostRoot are required",
-        };
-      }
-
-      const file = await openHostFile(filePath, hostRoot);
-      if (file.ok === false) return { success: false, error: file.error };
-      const { realFile, stat } = file;
-      if (stat.size > MAX_PPTX_BYTES) {
-        return {
-          success: false,
-          error: "too-large",
-          sizeBytes: stat.size,
-        };
-      }
-
-      const buf = await fs.readFile(realFile);
-      const deck = parsePptx(ZipArchive.open(buf));
-      return { success: true, deck, sizeBytes: stat.size };
-    } catch (err) {
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  },
-
-  // The picker lives here (needs the focused window); the service validates
-  // and copies. Always global scope.
   async importLocalSkills(request) {
     const kind = request?.kind === "folder" ? "folder" : "file";
     const result = await showOpenDialogFromApp({
@@ -1631,7 +1444,7 @@ function wireNotchContents(contents: WebContents): void {
   rpcTransport?.registerRendererContents(contents, "notch");
 }
 
-function installRpc(host: HostOperations): void {
+function installRpc(host: HostOperations): RpcDeps {
   notchController = new NotchController({
     platform: process.platform,
     packaged: app.isPackaged,
@@ -1724,6 +1537,7 @@ function installRpc(host: HostOperations): void {
     deps,
     readiness: rendererReadiness,
   });
+  return deps;
 }
 
 // Before `whenReady`, or a dev run shows "Electron" in the menu bar. Keep the
@@ -1797,58 +1611,56 @@ app
       });
     });
 
-    // One-time, versioned migrations (spec 00 C.1): before any service or
-    // store reads the files they derive. Never throws; a failure is recorded
-    // and retried next launch, and every consumer has a fallback.
-    await runStartupMigrations(APP_DISPLAY_NAME);
-    // The blocks for this launch are set: journalled thread writes whose
-    // files are free again land now, even for threads nobody opens.
-    workspaceServiceHost.threadStore.replayHeld();
-    // An unresolved commit that may cover prefs.json: this session writes a
-    // copy, so the next launch's rollback neither overwrites nor is defeated
-    // by what the user changes now.
-    const sessionPrefs = prefsFileAfterMigrations(prefsFile());
-    if (sessionPrefs !== prefsFile())
-      prefsStore = new PrefsStore({ file: sessionPrefs });
-
-    workspaceServiceHost.initialize();
-    // A profile relaunch lands here already signed in, so the sign-in handler
-    // that normally restores the stash never ran.
-    void fetchAbacusAccount().then((account) => {
-      if (account != null)
-        workspaceServiceHost.restoreSessionsForAccount(
-          accountStashKey(
-            account.email,
-            readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? null
-          )
-        );
+    let composedDeps: RpcDeps;
+    await composeHost({
+      serviceHost: workspaceServiceHost,
+      hostPlatform: electronHostPlatform,
+      platform: "electron",
+      beforeInitialize: () => {
+        const sessionPrefs = prefsFileAfterMigrations(prefsFile());
+        if (sessionPrefs !== prefsFile())
+          prefsStore = new PrefsStore({ file: sessionPrefs });
+      },
+      afterInitialize: () => {
+        // A profile relaunch lands here already signed in, so the sign-in handler
+        // that normally restores the stash never ran.
+        void fetchAbacusAccount().then((account) => {
+          if (account != null)
+            workspaceServiceHost.restoreSessionsForAccount(
+              accountStashKey(
+                account.email,
+                readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? null
+              )
+            );
+        });
+      },
+      afterStart: async (hostOperations) => {
+        try {
+          importLegacyPrefsAtStartup(
+            path.join(app.getPath("userData"), "renderer-state.json"),
+            prefsStore
+          );
+          importLegacySoundOptOut(prefsStore, readLegacySoundOptOut());
+        } catch (error) {
+          console.error("[legacy-prefs] startup import failed", error);
+        }
+        // After the dispatcher: the router shares the handlers' operations.
+        composedDeps = installRpc(hostOperations);
+        // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
+        // does for the legacy renderer.
+        followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
+        // Development acceptance runs only (spec 01 §12); inert when packaged.
+        if (import.meta.env.ABACUS_DEV_HARNESS) {
+          const { installMutationHarness } =
+            await import("./dev/mutation-harness");
+          installMutationHarness(workspaceServiceHost, {
+            env: process.env,
+            isPackaged: app.isPackaged,
+          });
+        }
+      },
+      getDeps: () => composedDeps,
     });
-    workspaceServiceHost.start();
-    try {
-      importLegacyPrefsAtStartup(
-        path.join(app.getPath("userData"), "renderer-state.json"),
-        prefsStore
-      );
-      importLegacySoundOptOut(prefsStore, readLegacySoundOptOut());
-    } catch (error) {
-      console.error("[legacy-prefs] startup import failed", error);
-    }
-    const hostOperations = wireHostEvents(workspaceServiceHost);
-    // After the dispatcher: the router shares the handlers' operations.
-    installRpc(hostOperations);
-    // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
-    // does for the legacy renderer.
-    followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
-    // Development acceptance runs only (spec 01 §12); inert when packaged.
-    if (import.meta.env.ABACUS_DEV_HARNESS) {
-      const { installMutationHarness } = await import("./dev/mutation-harness");
-      installMutationHarness(workspaceServiceHost, {
-        env: process.env,
-        isPackaged: app.isPackaged,
-      });
-    }
-
-    workspaceServiceHost.startCronScheduler();
 
     // Reap devices a previous run booted but never shut down (force quit and
     // crashes skip `before-quit`). Only ever touches devices we started.

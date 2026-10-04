@@ -28,10 +28,17 @@ export interface NotificationMetadata {
   sessionId?: string;
 }
 
-export type SystemEvent = {
-  type: "notification-clicked";
-  metadata: NotificationMetadata;
-};
+export type SystemEvent =
+  | {
+      type: "notification";
+      title: string;
+      body: string;
+      metadata?: NotificationMetadata;
+    }
+  | {
+      type: "notification-clicked";
+      metadata: NotificationMetadata;
+    };
 
 export interface PickedFile {
   path: string;

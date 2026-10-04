@@ -195,6 +195,14 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import {
+  assertHostCapability,
+  type HostPlatform,
+} from "./platform/capabilities";
+import {
+  electronFileOperations,
+  type HostFileOperations,
+} from "./platform/files";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -475,6 +483,15 @@ const SELF_LANE_BOTS: Record<
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 export class ServiceHost {
+  readonly platform: HostPlatform;
+  private readonly files: HostFileOperations;
+  constructor(
+    platform: HostPlatform = "electron",
+    files: HostFileOperations = electronFileOperations
+  ) {
+    this.platform = platform;
+    this.files = files;
+  }
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
@@ -609,7 +626,7 @@ export class ServiceHost {
         isConnected: p.state === "connected",
       })),
   });
-  readonly skillsService = new SkillsService();
+  readonly skillsService = new SkillsService(() => this.platform);
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
@@ -646,6 +663,7 @@ export class ServiceHost {
 
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
+    if (this.platform === "web-host") return null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
     // and the first browser call opens the allow page if it is not connected.
     if (this.builtinMcpLifecycle.getBrowserEngine() === "chrome")
@@ -904,7 +922,8 @@ export class ServiceHost {
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
-      connect: startConnectorConnect,
+      connect: (service, options) =>
+        startConnectorConnect(service, options, this.platform),
       disconnect: disconnectAbacusConnector,
       // The MCP file is user-editable, so the url and headers under the
       // app's own name are rewritten rather than assumed.
@@ -1012,6 +1031,7 @@ export class ServiceHost {
   async mcpOAuthSignIn(
     request: McpOAuthSignInRequest
   ): Promise<{ success: boolean; error?: string; cancelled?: boolean }> {
+    assertHostCapability(this.platform, "mcp.oauthSignIn");
     const server = this.listMcpServers({ mode: request.mode }).find(
       (entry) => entry.id === request.name
     );
@@ -1019,10 +1039,10 @@ export class ServiceHost {
       return { success: false, error: "No such HTTP server is configured." };
     if (server.config.oauth === false)
       return { success: false, error: "OAuth is disabled for this server." };
-    const result = await signInToMcpServer(
-      server.config.url,
-      server.config.oauth != null ? { oauth: server.config.oauth } : {}
-    );
+    const result = await signInToMcpServer(server.config.url, {
+      ...(server.config.oauth != null ? { oauth: server.config.oauth } : {}),
+      platform: this.platform,
+    });
     if (result.ok) {
       await this.notifyMcpSignedIn(request.mode);
       return { success: true };
@@ -1044,12 +1064,16 @@ export class ServiceHost {
   });
   private readonly workspaceService = new WorkspaceService();
   private readonly browserProfilesService = new BrowserProfilesService();
-  private readonly artifactResolverService = new ArtifactResolverService();
+  private readonly artifactResolverService = new ArtifactResolverService(
+    () => this.platform === "web-host"
+  );
 
   private readonly sandboxProbeService = new SandboxProbeService(() =>
     this.artifactResolverService.resolveBundledCliPath()
   );
-  private readonly fileTreeService = new FileTreeService();
+  private readonly fileTreeService = new FileTreeService({
+    trashItem: (file) => this.files.trashItem(file),
+  });
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
 
@@ -1065,11 +1089,12 @@ export class ServiceHost {
         .find((entry) => entry.id === workspaceId) ?? null,
     session: (sessionId) => this.agentSessionManagerService.get(sessionId),
     git: this.gitService,
-    files: new FileTreeService(),
+    files: new FileTreeService({
+      trashItem: (file) => this.files.trashItem(file),
+    }),
     search: (root, query) => this.fileSearchService.search(root, query),
     trash: async (absolutePath) => {
-      const { shell } = await import("electron");
-      await shell.trashItem(absolutePath);
+      await this.files.trashItem(absolutePath);
     },
   });
 
@@ -1187,6 +1212,7 @@ export class ServiceHost {
     new AgentSessionManagerService();
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
+    platform: () => this.platform,
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
       const configured = readGatewaySettings().workspaceId;
@@ -1608,26 +1634,8 @@ export class ServiceHost {
     },
     // Work that needs Electron, exposed to the agent as named services rather
     // than a whole MCP server. See packages/agent/src/host-services.ts.
-    runHostService: async (service, payload) => {
-      switch (service) {
-        case "render_document":
-          return await renderDocument(payload as RenderDocumentRequest);
-        case "document_templates":
-          return await documentTemplates();
-        case "design_catalog":
-          return await designCatalog();
-        case "render_design":
-          return await renderDesign(payload as RenderDesignRequest);
-        case "deck_templates":
-          return await deckTemplates();
-        case "deck_slots":
-          return await deckSlots(payload as DeckSlotsRequest);
-        case "render_deck":
-          return await renderDeck(payload as RenderDeckRequest);
-        default:
-          throw new Error(`Unknown host service: ${String(service)}`);
-      }
-    },
+    runHostService: (service, payload) =>
+      this.runAgentHostService(service, payload),
   });
   private readonly agentCommunicationService = new AgentCommunicationService(
     (workspaceId, sessionId, command) => {
@@ -1639,6 +1647,7 @@ export class ServiceHost {
     }
   );
   private readonly mcpAdminService = new McpAdminService({
+    platform: () => this.platform,
     mcpConfigService: this.mcpConfigService,
     rewriteRuntimeConfig: (mode, sessionId) =>
       this.getRuntimeMcpPathForSpawn(mode, sessionId),
@@ -1745,6 +1754,32 @@ export class ServiceHost {
     emitEvent: (event) => this.emitEvent(event),
   });
 
+  async runAgentHostService(
+    service: string,
+    payload: unknown
+  ): Promise<unknown> {
+    if (service.startsWith("render_"))
+      assertHostCapability(this.platform, service);
+    switch (service) {
+      case "render_document":
+        return await renderDocument(payload as RenderDocumentRequest);
+      case "document_templates":
+        return await documentTemplates();
+      case "design_catalog":
+        return await designCatalog();
+      case "render_design":
+        return await renderDesign(payload as RenderDesignRequest);
+      case "deck_templates":
+        return await deckTemplates();
+      case "deck_slots":
+        return await deckSlots(payload as DeckSlotsRequest);
+      case "render_deck":
+        return await renderDeck(payload as RenderDeckRequest);
+      default:
+        throw new Error(`Unknown host service: ${String(service)}`);
+    }
+  }
+
   initialize(): void {
     if (this.initializedAt != null) {
       return;
@@ -1781,7 +1816,8 @@ export class ServiceHost {
     this.diagnosticsSyncService.start();
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
     this.workspaceRuntimeService.scheduleRefresh(0);
-    void this.builtinMcpLifecycle.startBrowserServer();
+    if (this.platform === "electron")
+      void this.builtinMcpLifecycle.startBrowserServer();
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -2339,7 +2375,7 @@ export class ServiceHost {
   openSharedChannelLink(
     platformId: MessagingPlatformId,
     target?: "install" | "dm"
-  ): Promise<void> {
+  ): Promise<void | string> {
     return this.messagingGatewayService.openSharedChannelLink(
       platformId,
       target
@@ -3551,6 +3587,7 @@ export class ServiceHost {
   }
 
   stopDeviceStream(streamId?: number): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.stopDeviceStream(streamId);
   }
 
@@ -3618,6 +3655,7 @@ export class ServiceHost {
   async clearBrowserData(
     _request?: ClearBrowserDataRequest
   ): Promise<ClearBrowserDataResult> {
+    assertHostCapability(this.platform, "browser.clearData");
     try {
       const { session } = await import("electron");
       // Profile-import partitions belong to the browser-profiles flow.
@@ -4406,24 +4444,28 @@ export class ServiceHost {
   }
 
   listBrowserProfiles(): ReturnType<BrowserProfilesService["listProfiles"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.listProfiles();
   }
 
   refreshBrowserProfiles(): ReturnType<
     BrowserProfilesService["refreshProfiles"]
   > {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.refreshProfiles();
   }
 
   importBrowserProfile(
     profileId: string
   ): ReturnType<BrowserProfilesService["importProfile"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.importProfile(profileId);
   }
 
   clearImportedBrowserProfile(
     profileId: string
   ): ReturnType<BrowserProfilesService["clearImportedProfile"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.clearImportedProfile(profileId);
   }
 }

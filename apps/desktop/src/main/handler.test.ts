@@ -79,7 +79,7 @@ vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
 
 import { ABACUS_CONNECTORS_SERVER_NAME } from "@abacus-ai/contract/contracts";
 
-import { wireHostEvents } from "./handler";
+import { wireHostEvents } from "./host-operations/electron";
 import { activateProfile, profileKeyFor } from "./profile-home";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {

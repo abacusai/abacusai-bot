@@ -15,9 +15,7 @@ import {
   abacusConnectorsMcpEntry,
 } from "@abacus-ai/contract/contracts";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
-import { app } from "electron";
 
-import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";
 import {
   activateProfile,
@@ -36,22 +34,11 @@ import {
   setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
-import { LocalModelService } from "./services/local-models/local-model-service";
 import {
   abacusCredentialRejected,
   clearAbacusCache,
   fetchAbacusAccount,
 } from "./services/providers/abacus";
-import {
-  cancelAbacusAuth,
-  openAbacusAuthInBrowser,
-  startAbacusAuth,
-} from "./services/providers/abacus-auth-service";
-import { listBrowserSignInProfiles } from "./services/providers/abacus-browser-profiles";
-import {
-  cancelAllConnectorConnects,
-  cancelConnectorConnect,
-} from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
   fetchReferralSummary,
@@ -59,29 +46,40 @@ import {
   sendReferralEmailInvites,
   sendReferralWhatsappInvites,
 } from "./services/providers/abacus-referral-service";
-import { shouldAutoSignIn } from "./services/providers/abacus-signin-config";
-import { signOut as clearLocalAccount } from "./services/providers/account-service";
+import {
+  adoptWebAccount,
+  signOut as clearLocalAccount,
+} from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
 import { clearOpenRouterCache } from "./services/providers/openrouter";
-import {
-  cancelOpenRouterAuth,
-  startOpenRouterAuth,
-} from "./services/providers/openrouter-auth-service";
-import {
-  clearSignInSession,
-  rememberSessionAccount,
-} from "./services/providers/sign-in-session";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
-import { requestMicrophoneAccess } from "./services/voice/microphone";
 
-/** The local model runtime, alive from the handlers' registration to quit. */
-let localModels: LocalModelService | null = null;
-
-export const disposeLocalModels = (): void => {
-  localModels?.dispose();
-  localModels = null;
-};
+export interface HostPlatformOperations {
+  startAbacusAuth: (
+    intent: "signin" | "signup",
+    profile?: string
+  ) => Promise<any>;
+  startOpenRouterAuth: () => Promise<any>;
+  cancelAbacusAuth: () => void;
+  openAbacusAuthInBrowser: () => void;
+  listBrowserSignInProfiles: () => any;
+  shouldAutoSignIn: () => Promise<boolean>;
+  cancelOpenRouterAuth: () => void;
+  cancelConnectorConnect: () => void;
+  cancelAllConnectorConnects: () => void;
+  clearSignInSession: () => Promise<void>;
+  rememberSessionAccount: (email: string) => void;
+  registerLoginItem: () => void;
+  relaunch: () => void;
+  requestMicrophoneAccess: () => Promise<any>;
+  localModels: {
+    state: () => any;
+    install: (modelId: string) => Promise<LocalModelInstallOutcome>;
+    cancelInstall: () => void;
+    remove: (modelId: string) => void;
+  };
+}
 
 /**
  * What the legacy IPC handlers do beyond forwarding to ServiceHost, as named
@@ -92,8 +90,24 @@ export const disposeLocalModels = (): void => {
  */
 export const createHostOperations = (
   serviceHost: ServiceHost,
-  dispatchEvent: (event: IpcEvent) => void
+  dispatchEvent: (event: IpcEvent) => void,
+  platform: HostPlatformOperations
 ) => {
+  const {
+    startAbacusAuth,
+    startOpenRouterAuth,
+    cancelAbacusAuth,
+    openAbacusAuthInBrowser,
+    listBrowserSignInProfiles,
+    shouldAutoSignIn,
+    cancelOpenRouterAuth,
+    cancelConnectorConnect,
+    cancelAllConnectorConnects,
+    clearSignInSession,
+    rememberSessionAccount,
+    registerLoginItem,
+    requestMicrophoneAccess,
+  } = platform;
   /** The connector gateway MCP entry exists exactly while an Abacus key does. */
   const syncAbacusGateway = (key?: string): void => {
     if (key != null && key.trim().length > 0) {
@@ -156,7 +170,7 @@ export const createHostOperations = (
   const adoptAbacusCredential = async (
     rawKey: string,
     /** Where the key was minted; the app's own window keeps that account's session. */
-    surface?: "in_app" | "browser"
+    surface?: "in_app" | "browser" | "web"
   ): Promise<{ ok: true } | { ok: false; error: "unidentified-account" }> => {
     const key = rawKey.trim();
     const previousKey =
@@ -184,7 +198,7 @@ export const createHostOperations = (
     const legacyKey = legacyProfileKeyFor(account);
     const aliases =
       legacyKey != null && legacyKey !== profileKey ? [legacyKey] : [];
-    if (activateProfile(profileKey, key, aliases)) {
+    if (surface !== "web" && activateProfile(profileKey, key, aliases)) {
       // This process still owns the departing profile; leave the new key only
       // in its target profile and relaunch there. `quit`, not `exit`: the
       // before-quit handler disposes the terminal PTYs, and a live pty reader
@@ -193,12 +207,12 @@ export const createHostOperations = (
       clearLocalAccount();
       credentialsChanged("abacus", "");
       setTimeout(() => {
-        app.relaunch();
-        app.quit();
+        platform.relaunch();
       }, 300);
       return { ok: true };
     }
 
+    if (surface === "web") adoptWebAccount(account);
     credentialsChanged("abacus", key);
     const restored = serviceHost.restoreSessionsForAccount(
       accountStashKey(account.email, key)
@@ -363,6 +377,14 @@ export const createHostOperations = (
   };
 
   return {
+    webAuth: undefined as
+      | undefined
+      | {
+          start: () => Promise<{ challenge: string }>;
+          complete: (input: {
+            code: string;
+          }) => Promise<import("@abacus-ai/contract/account").AccountState>;
+        },
     credentialsChanged,
     syncAbacusGateway,
     getAbacusAccount,
@@ -401,34 +423,25 @@ export const createHostOperations = (
         serviceHost.sendMessagingText("whatsapp", chatId, text)
       ),
     requestMicrophoneAccess: () => requestMicrophoneAccess(),
-    localModels: {
-      state: () => localModels?.state(),
-      install: (modelId: string): Promise<LocalModelInstallOutcome> =>
-        localModels == null
-          ? Promise.resolve({
-              ok: false,
-              error: "local models are not available",
-            })
-          : localModels.install(modelId),
-      cancelInstall: (): void => {
-        localModels?.cancelInstall();
-      },
-      remove: (modelId: string): void => {
-        localModels?.remove(modelId);
-      },
-    },
+    adoptAbacusCredential,
+    localModels: platform.localModels,
   };
 };
 
 export type HostOperations = ReturnType<typeof createHostOperations>;
 
-export const wireHostEvents = (serviceHost: ServiceHost): HostOperations => {
+export const wireHostEvents = (
+  serviceHost: ServiceHost,
+  platform: HostPlatformOperations,
+  supplied?: HostOperations
+): HostOperations => {
   // One function feeds both the legacy renderer and the oRPC event bus.
   serviceHost.setEventDispatcher(emitHostEvent);
   // Bus-only pushes (no legacy event), such as a retired terminal generation.
   serviceHost.setBusDispatcher(emitBusChannel);
 
-  const ops = createHostOperations(serviceHost, emitHostEvent);
+  const ops =
+    supplied ?? createHostOperations(serviceHost, emitHostEvent, platform);
 
   // The connector flow stores agent credentials through the same path a
   // pasted key takes, so the announcement above happens for those too.

@@ -84,6 +84,11 @@ export class DiagnosticsSyncService {
   }
 
   private enabled(): boolean {
+    if (
+      process.env.ABACUSAI_BOT_HOST_MODE === "1" &&
+      !process.env.ABACUSAI_BOT_DIAGNOSTICS_SYNC_URL
+    )
+      return false;
     if (this.disabledForRun != null) return false;
     const settings = readSettings();
     const toggle = settings.serverDebugSync ?? true; // default on

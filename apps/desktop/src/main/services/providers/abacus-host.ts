@@ -40,7 +40,13 @@ const overrideHost = (): URL | null => {
   // Powerless in a released build: an env var an attacker can set must not
   // redirect a signed app's sign-in or key-bearing requests. A test build is
   // packaged too, but exists to be pointed at preprod, so it may read it.
-  if (raw.length === 0 || (app.isPackaged && !isTestBuild())) return null;
+  if (
+    raw.length === 0 ||
+    (process.env.ABACUSAI_BOT_HOST_MODE !== "1" &&
+      app.isPackaged &&
+      !isTestBuild())
+  )
+    return null;
 
   try {
     const url = new URL(raw);

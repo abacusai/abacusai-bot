@@ -628,12 +628,19 @@ export class AgentManagerService {
       ...sanitized,
       // The agent entry is a plain Node script run by Electron's own binary.
       ELECTRON_RUN_AS_NODE: "1",
-      ABACUSAI_BOT_CLIENT_KIND: "desktop_code_mode",
+      ABACUSAI_BOT_CLIENT_KIND:
+        process.env.ABACUSAI_BOT_HOST_MODE === "1"
+          ? "web_host"
+          : "desktop_code_mode",
+
       // Lets the agent pick this chat back up; without it the restored
       // transcript is visible on screen and unknown to the model.
       ABACUSAI_BOT_SESSION_ID: request.sessionId,
       ...this.options.resolveAuthEnv(),
       ...(await this.options.resolveAdditionalConfigEnv(request.sessionId)),
+      ...(process.env.ABACUSAI_BOT_HOST_MODE === "1"
+        ? { ABACUSAI_BOT_SANDBOX: "off" }
+        : {}),
     };
 
     const spawnArgs: string[] = [...artifact.execArgs];
