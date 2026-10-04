@@ -486,3 +486,58 @@ must never be described as JSON procedure outputs.
 Logs: `/tmp/fix-r3-desktop-build.log`, `/tmp/fix-r3-web-build.log`,
 `/tmp/fix-r3-bundle.log`, `/tmp/fix-r3-smoke.log`, `/tmp/fix-r3-web-tests.log`,
 `/tmp/fix-r3-contract-tests.log` and `/tmp/fix-r3-check.log`.
+
+## Fix pass r4 (browser run)
+
+Read `.codex-runs/browser-e2e/REPORT.md`, including “What failed” and all six
+“Renderer defects to fix”. The live run successfully minted an auth code and
+started the host handoff; the host rejected `auth.web.complete` with
+`UNAUTHORIZED`. This pass fixes renderer diagnostics and recovery. It does not
+resolve that host/API rejection or bypass the account/onboarding gate.
+
+- Sign-in failures retain the `host-start`, `auth-code` or `host-complete` stage
+  and distinguish network loss, missing cookie sessions and rejected handoffs.
+  Only known RPC error codes survive; unknown codes become `UNKNOWN`. Original
+  messages, causes and payloads are discarded, and codes/challenges/tokens are
+  never logged. Onboarding preserves the sanitized outcome instead of replacing
+  every browser failure with `auth-failed`.
+- Browser onboarding describes connecting the existing account in the current
+  tab, with retry/support guidance for auth-code and host failures and network
+  recovery guidance for connection loss. Added the web copy to `en-US.json` and
+  ran locale sync and the complete locale checks; all ten synced locales receive
+  the new keys using the established English fallback.
+- Pending copy and the spinner render only for pending attempts (or an idle
+  preview). Failed attempts show the failure alert and retry, without
+  “Waiting for sign-in…” or “Connecting your account…”.
+- Browser “Sign in another way” appears only for a missing cookie session and
+  links to same-origin `/chatllm/signin`, returning to `/bot/` plus the current
+  hash route. Other browser failures hide it. Electron keeps its existing flow.
+- Both injected CSPs add exactly `font-src 'self' data:`. The Electron header
+  constant in `renderer-csp.ts` matches the injected Electron policy.
+- The shared HTML explicitly links `%BASE_URL%favicon.png`; the public favicon
+  is the existing 32×32 app icon. Production output points at
+  `/bot/favicon.png`, avoiding the implicit root `/favicon.ico` fallback.
+
+### Validation
+
+- New browser-project tests: 13 pass, covering all failure stages, network
+  failures, invalid auth-code responses, missing sessions, secret-bearing error
+  sanitization, pending-to-failed UI, recovery-link origin/redirect, host error
+  copy, both font policies, Electron CSP pin and the reused favicon asset.
+- Web Vitest projects: 215 files / 1,617 tests pass.
+- Contract Vitest project: 25 files / 419 tests pass.
+- Web TypeScript, locale sync/checks, desktop build and browser build pass.
+- `node scripts/check-web-bundle.mjs`: pass, 296 browser chunks / 488 modules.
+  Desktop: 309 chunks / 6,115,057 bytes / 2,042,000 gzip bytes.
+
+- `env -u NO_COLOR xvfb-run -a pnpm check --force`: **30/30 tasks pass,
+  zero cached**, 8m8.818s. Electron: 288 files / 2,783 tests pass, with the
+  existing 3 file / 26 test skips. Agent: 128 files / 2,068 tests pass, with
+  the existing 1 file / 5 test skips.
+
+Logs: `/tmp/fix-r4-focused.log`, `/tmp/fix-r4-focused-final.log`,
+`/tmp/fix-r4-csp.log`, `/tmp/fix-r4-locales.log`,
+`/tmp/fix-r4-typecheck.log`, `/tmp/fix-r4-web-tests.log`,
+`/tmp/fix-r4-contract-tests.log`, `/tmp/fix-r4-desktop-build.log`,
+`/tmp/fix-r4-web-build.log`, `/tmp/fix-r4-bundle.log` and
+`/tmp/fix-r4-check.log`.
