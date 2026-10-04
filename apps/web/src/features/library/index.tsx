@@ -6,6 +6,7 @@ import { NavList } from "#renderer/components/nav-list";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { LIBRARY_PAGES } from "#renderer/lib/navigation/areas";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 
@@ -17,7 +18,7 @@ export const LibrarySidebar = () => {
   return (
     <NavList.Root label={t("library.sidebar.label")}>
       <NavList.Header title={t("library.sidebar.label")} />
-      {queue.length > 0 && (
+      {IS_ELECTRON && queue.length > 0 && (
         <div role="status" className="flex flex-col gap-2 p-3 text-xs">
           <p>{t("phase5.pairingPending")}</p>
           {queue.map((platform) => (
@@ -53,7 +54,9 @@ export const LibrarySidebar = () => {
         </div>
       )}
       <NavList.Rows>
-        {LIBRARY_PAGES.map((page) => (
+        {LIBRARY_PAGES.filter(
+          (page) => IS_ELECTRON || page !== "messaging"
+        ).map((page) => (
           <NavList.Item
             key={page}
             to={`/library/${page}`}

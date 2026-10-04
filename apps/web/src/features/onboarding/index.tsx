@@ -76,6 +76,7 @@ export const OnboardingFrame = ({
           <span key={n} data-current={n === mark} data-done={n < mark} />
         ))}
       </div>
+      <div id="onboarding-consent" className="shrink-0 px-6" />
       {children}
     </div>
   );

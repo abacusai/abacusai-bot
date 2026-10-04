@@ -140,7 +140,6 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
       "/settings/models",
       'input[aria-label="Search model providers…"]'
     );
-    await visit("/library/messaging", '[data-setting-id="gatewayEnabled"]');
     await act(async () => {
       await router.navigate({
         to: "/library/messaging",
@@ -148,12 +147,11 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
       });
       await router.load();
     });
-    await waitFor(() =>
-      expect(
-        document.querySelector('[data-slot="sheet-content"]')
-      ).not.toBeNull()
-    );
-    expect(screen.queryByText("Open login")).toBeNull();
+    expect(
+      document.querySelector('[data-setting-id="gatewayEnabled"]')
+    ).toBeNull();
+    expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+    expect(violations).toEqual([]);
     await visit("/sessions", '[data-slot="sessions-start"]');
     await visit("/routines/new", "form");
     await visit("/settings/account", "main h2");

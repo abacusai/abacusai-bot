@@ -20,7 +20,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   document
-    .querySelectorAll("dialog, #gmail-consent")
+    .querySelectorAll("dialog, #gmail-consent, #onboarding-consent")
     .forEach((el) => el.remove());
   localStorage.clear();
 });
@@ -100,11 +100,18 @@ it("first-run Gmail waits for an actionable click and confirmed authorization", 
     .mockResolvedValueOnce({})
     .mockResolvedValueOnce({})
     .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } });
+  const slot = document.createElement("div");
+  slot.id = "onboarding-consent";
+  document.body.append(slot);
   await startFirstRunGmail(
     { client } as unknown as Transport,
     "owner@example.com"
   );
   expect(client.connectors.connect).not.toHaveBeenCalled();
+  expect(slot.querySelector("#gmail-consent")).not.toBeNull();
+  expect(slot.querySelector("#gmail-consent")?.className).not.toContain(
+    "fixed"
+  );
   (document.getElementById("gmail-consent") as HTMLButtonElement).click();
   await vi.advanceTimersByTimeAsync(0);
   expect(client.system.funnelStep).not.toHaveBeenCalled();
@@ -201,3 +208,29 @@ it.each(["cancel", "supersede"])(
     expect(document.querySelector("dialog")).toBeNull();
   }
 );
+
+it("Gmail consent is dismissible and cannot survive leaving its layout slot", async () => {
+  const slot = document.createElement("div");
+  slot.id = "onboarding-consent";
+  document.body.append(slot);
+  const client = clientFor();
+  client.connectors.statuses.mockResolvedValue({});
+  await startFirstRunGmail(
+    { client } as unknown as Transport,
+    "owner@example.com"
+  );
+  (slot.querySelector("button:last-child") as HTMLButtonElement).click();
+  expect(slot.children).toHaveLength(0);
+  await startFirstRunGmail(
+    { client } as unknown as Transport,
+    "owner@example.com"
+  );
+  slot.remove();
+  expect(document.getElementById("gmail-consent")).toBeNull();
+  await startFirstRunGmail(
+    { client } as unknown as Transport,
+    "owner@example.com"
+  );
+  expect(document.getElementById("gmail-consent")).toBeNull();
+  expect(client.connectors.connect).not.toHaveBeenCalled();
+});

@@ -28,10 +28,19 @@ export const startFirstRunGmail = async (
       document.getElementById("gmail-consent")
     )
       return;
+    const slot = document.getElementById("onboarding-consent");
+    if (!slot) return;
+    const banner = document.createElement("div");
+    banner.className =
+      "flex items-center justify-between gap-3 rounded-lg border p-3";
+    banner.setAttribute("role", "status");
+    const dismiss = document.createElement("button");
+    dismiss.textContent = "Dismiss";
+    dismiss.onclick = () => banner.remove();
     const button = document.createElement("button");
     button.id = "gmail-consent";
     button.className =
-      "fixed right-4 bottom-4 z-50 rounded-lg bg-primary px-4 py-2 text-primary-foreground shadow-lg";
+      "rounded-lg bg-primary px-4 py-2 text-primary-foreground";
     button.textContent = "Connect Gmail";
     button.onclick = () => {
       const authorization = reserveAuthorization();
@@ -55,7 +64,7 @@ export const startFirstRunGmail = async (
           });
           if (outcome.ok) {
             claim("abacusai-bot:onboarding.gmailHop");
-            button.remove();
+            banner.remove();
           } else button.disabled = false;
         })
         .catch(() => {
@@ -63,7 +72,8 @@ export const startFirstRunGmail = async (
           button.disabled = false;
         });
     };
-    document.body.append(button);
+    banner.append(button, dismiss);
+    slot.append(banner);
     return;
   }
   const statuses = await transport.client.connectors.statuses({});

@@ -46,7 +46,11 @@ export const EnvironmentPage = () => {
             <SettingRow
               id={`backend-${backend.id}`}
               key={backend.id}
-              title={t(`execBackends.${backend.labelKey}.label`)}
+              title={t(
+                !IS_ELECTRON && backend.id === "local"
+                  ? "web.hostLabel"
+                  : `execBackends.${backend.labelKey}.label`
+              )}
               detail={
                 status?.blocker
                   ? t(`phase5.backendBlockers.${status.blocker.kind}`, {

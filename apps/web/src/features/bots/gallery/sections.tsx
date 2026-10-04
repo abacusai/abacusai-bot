@@ -15,6 +15,7 @@ import {
   defaultLook,
 } from "#renderer/lib/bots/avatar";
 import { DEFAULT_CHECK_IN } from "#renderer/lib/bots/check-in";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 
 import { CheckInFields } from "../check-in/fields";
@@ -123,7 +124,10 @@ const View = ({
   if (fixture === "bots-connector-marks")
     return (
       <div className="flex flex-wrap gap-4">
-        {CONNECTOR_MARK_IDS.map((id) => (
+        {CONNECTOR_MARK_IDS.filter(
+          (id) =>
+            IS_ELECTRON || !["whatsapp", "telegram", "discord"].includes(id)
+        ).map((id) => (
           <div key={id} className="flex gap-2">
             <ConnectorMark id={id} size={16} />
             <ConnectorMark id={id} size={28} />

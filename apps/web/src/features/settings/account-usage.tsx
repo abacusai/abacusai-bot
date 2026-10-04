@@ -244,10 +244,21 @@ export const AccountPage = () => {
       </GroupCard>
       {local.data && (
         <GroupCard>
-          <SettingRow id="forgetAccount" title={t("phase5.forgetComputer")}>
+          <SettingRow
+            id="forgetAccount"
+            title={t(
+              IS_ELECTRON ? "phase5.forgetComputer" : "web.forgetAccount"
+            )}
+          >
             <ConfirmAction
-              title={t("phase5.forgetComputer")}
-              description={t("phase5.forgetComputerDetail")}
+              title={t(
+                IS_ELECTRON ? "phase5.forgetComputer" : "web.forgetAccount"
+              )}
+              description={t(
+                IS_ELECTRON
+                  ? "phase5.forgetComputerDetail"
+                  : "web.forgetAccountDetail"
+              )}
               label={t("phase5.forget")}
               onConfirm={() => transport.client.account.forget({})}
             />

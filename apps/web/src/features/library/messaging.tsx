@@ -45,7 +45,9 @@ import {
   disablePlatform,
   useConnectFlow,
 } from "./connect-flow";
-export const MessagingPage = () => {
+export const MessagingPage = () =>
+  IS_ELECTRON ? <DesktopMessagingPage /> : null;
+const DesktopMessagingPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const cache = useQueryClient();

@@ -3893,6 +3893,10 @@
       "select": "Select folder",
       "cancel": "Cancel",
       "open": "Open folder"
-    }
+    },
+    "hostLabel": "Host",
+    "forgetAccount": "Forget this host’s account",
+    "forgetAccountDetail": "Forget your name and email on this host?",
+    "targetFallback": "{{name}} is unavailable; using Host."
   }
 }

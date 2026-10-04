@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
@@ -244,7 +245,7 @@ export const SessionContextTray = ({
           <Laptop />
           {exec.data?.effective === "docker"
             ? "Docker"
-            : t("sessions.tray.local")}
+            : t(IS_ELECTRON ? "sessions.tray.local" : "web.hostLabel")}
           {mode === "AUTO" ? ` · ${t("sessions.tray.sandboxed")}` : ""}
         </PopoverTrigger>
         <PopoverContent className="w-80">
@@ -266,18 +267,30 @@ export const SessionContextTray = ({
                     queryClient.setQueryData(options.exec().queryKey, state);
                     if (state.effective !== backend)
                       setError(
-                        t("sessions.tray.targetFallback", { name: backend })
+                        t(
+                          IS_ELECTRON
+                            ? "sessions.tray.targetFallback"
+                            : "web.targetFallback",
+                          { name: backend }
+                        )
                       );
                   })
                   .catch((error) => setError(String(error)));
               }}
             >
-              {backend === "local" ? t("sessions.tray.local") : "Docker"}
+              {backend === "local"
+                ? t(IS_ELECTRON ? "sessions.tray.local" : "web.hostLabel")
+                : "Docker"}
             </Button>
           ))}
           {exec.data && exec.data.selected !== exec.data.effective ? (
             <p role="status">
-              {t("sessions.tray.targetFallback", { name: exec.data.selected })}
+              {t(
+                IS_ELECTRON
+                  ? "sessions.tray.targetFallback"
+                  : "web.targetFallback",
+                { name: exec.data.selected }
+              )}
             </p>
           ) : null}
         </PopoverContent>

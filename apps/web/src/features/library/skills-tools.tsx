@@ -331,54 +331,58 @@ export const ToolsPage = () => {
         onChange={(e) => setQ(e.target.value)}
       />
       <GroupCard>
-        {TOOLSETS_FOR_DISPLAY.filter((s) =>
-          foldSearch(
-            s.id +
-              " " +
-              t(`capabilities.toolsets.${s.labelKey}.label`) +
-              " " +
-              s.tools.map((t) => t.name).join(" ")
-          ).includes(foldSearch(q))
-        ).map((s) => (
-          <SettingRow
-            key={s.id}
-            id={s.id}
-            title={t(`capabilities.toolsets.${s.labelKey}.label`)}
-            detail={s.tools.map((tool) => tool.name).join(", ")}
-          >
-            <Button
-              size="sm"
-              variant="secondary"
-              nativeButton={false}
-              render={
-                <AppLink
-                  to="/library/tools/$toolsetId"
-                  params={{ toolsetId: s.id }}
-                />
-              }
+        {TOOLSETS_FOR_DISPLAY.filter((s) => IS_ELECTRON || s.id !== "device")
+          .filter((s) =>
+            foldSearch(
+              s.id +
+                " " +
+                t(`capabilities.toolsets.${s.labelKey}.label`) +
+                " " +
+                s.tools.map((t) => t.name).join(" ")
+            ).includes(foldSearch(q))
+          )
+          .map((s) => (
+            <SettingRow
+              key={s.id}
+              id={s.id}
+              title={t(`capabilities.toolsets.${s.labelKey}.label`)}
+              detail={s.tools.map((tool) => tool.name).join(", ")}
             >
-              {t("phase5.details")}
-            </Button>
-            {s.alwaysOn || s.status === "planned" ? (
-              <StatePill>
-                {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}
-              </StatePill>
-            ) : (
-              <SettingSwitch
-                id={s.id}
-                checked={query.data?.[s.id] !== false}
-                onCheckedChange={(enabled) => void change(s.id, enabled)}
-              />
-            )}
-          </SettingRow>
-        ))}
+              <Button
+                size="sm"
+                variant="secondary"
+                nativeButton={false}
+                render={
+                  <AppLink
+                    to="/library/tools/$toolsetId"
+                    params={{ toolsetId: s.id }}
+                  />
+                }
+              >
+                {t("phase5.details")}
+              </Button>
+              {s.alwaysOn || s.status === "planned" ? (
+                <StatePill>
+                  {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}
+                </StatePill>
+              ) : (
+                <SettingSwitch
+                  id={s.id}
+                  checked={query.data?.[s.id] !== false}
+                  onCheckedChange={(enabled) => void change(s.id, enabled)}
+                />
+              )}
+            </SettingRow>
+          ))}
       </GroupCard>
     </AreaPage>
   );
 };
 export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   const { t } = useTranslation();
-  const set = TOOLSETS_FOR_DISPLAY.find((s) => s.id === toolsetName);
+  const set = TOOLSETS_FOR_DISPLAY.find(
+    (s) => s.id === toolsetName && (IS_ELECTRON || s.id !== "device")
+  );
   return (
     <AreaPage
       title={

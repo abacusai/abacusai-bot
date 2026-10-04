@@ -175,8 +175,18 @@ export const settingsIndexFor = (
     (entry) =>
       (electron ||
         (!["browser", "devices", "about"].includes(entry.page) &&
-          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|key-notch)/.test(
+          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|tour|key-notch)/.test(
             entry.id
           ))) &&
       (uiOS !== "mac" || !entry.id.endsWith("@terminal"))
+  ).map((entry) =>
+    !electron && ["backend-local", "forgetAccount"].includes(entry.id)
+      ? {
+          ...entry,
+          labelKey:
+            entry.id === "backend-local"
+              ? "web.hostLabel"
+              : "web.forgetAccount",
+        }
+      : entry
   );
