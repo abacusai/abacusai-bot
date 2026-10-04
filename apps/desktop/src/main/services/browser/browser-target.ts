@@ -75,7 +75,7 @@ export interface BrowserTargetSource {
 /**
  * The id to drive, or null. A session only drives its own views, since another
  * session's page would be someone else's browser; a caller with no session id
- * (the CLI, tests) takes the view on screen.
+ * (tests, for one) takes the view on screen.
  */
 export function pickBrowserTarget(
   candidates: readonly BrowserViewCandidate[],

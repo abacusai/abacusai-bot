@@ -3,8 +3,8 @@
  *
  * Two Windows constraints shape this: a rename onto a file anyone holds open
  * is refused with EPERM (POSIX allows it), and a temp name derived only from
- * the target collides between the desktop and the CLI, which share these
- * directories.
+ * the target collides between the desktop and its agent processes, which
+ * share these directories.
  */
 import fs from "fs";
 import fsPromises from "fs/promises";

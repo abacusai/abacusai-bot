@@ -63,7 +63,7 @@ export interface RosterContext {
   model: () => unknown;
   /** The browser sub-agent's model, which may be stronger than the chat's. */
   browserModel: () => unknown;
-  /** Null for a front end without host services (the CLI). */
+  /** Null when the agent runs without a host to answer service requests. */
   hostServices: HostServiceClient | null;
   /** The tools the user switched off in Capabilities. */
   excluded: readonly string[];
@@ -92,7 +92,7 @@ export interface RosterEntry {
   when?: (ctx: RosterContext) => boolean;
   /**
    * Skipped when something else already serves this name. The desktop serves
-   * `todo` over MCP and the CLI has no MCP server; adding it only when
+   * `todo` over MCP; adding it only when
    * nothing provides it keeps the Capabilities toggle the single answer to
    * whether it is on.
    */
@@ -189,8 +189,8 @@ export const OWN_TOOLS: readonly RosterEntry[] = [
   { name: "grep", build: (ctx) => createGrepToolDefinition(ctx.cwd) },
   { name: "find", build: (ctx) => createFindToolDefinition(ctx.cwd) },
   { name: "ls", build: (ctx) => createLsToolDefinition(ctx.cwd) },
-  // Here rather than on the desktop's tool server: the CLI has no such
-  // server and no other way to add a skill.
+  // Here rather than on the desktop's tool server, so the agent can add a
+  // skill without one.
   {
     name: "skill_add",
     when: () => skillAddEnabled(),
@@ -200,8 +200,7 @@ export const OWN_TOOLS: readonly RosterEntry[] = [
         onInstalled: () => ctx.reloadSkills(),
       }),
   },
-  // Recall over past conversations; it reads files, not app state, so the
-  // CLI can have it too.
+  // Recall over past conversations; it reads files, not app state.
   {
     name: "session_search",
     when: () => sessionSearchEnabled(),
@@ -209,7 +208,7 @@ export const OWN_TOOLS: readonly RosterEntry[] = [
   },
   { name: "todo", unlessProvided: true, build: () => buildTodoTool() },
   { name: "memory", unlessProvided: true, build: () => buildMemoryTool() },
-  // The tool every handover instruction names; the CLI must have one too.
+  // The tool every handover instruction names; there must always be one.
   {
     name: "present_deliverable",
     unlessProvided: true,

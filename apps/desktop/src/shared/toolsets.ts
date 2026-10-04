@@ -333,8 +333,7 @@ export const TOOLSETS: Toolset[] = [
     id: "session_search",
     labelKey: "session_search",
     status: "ready",
-    // Registered by the agent process, not the tool server, so the CLI has it
-    // too.
+    // Registered by the agent process, not the tool server.
     delivery: "agent",
     tools: [agentTool("session_search")],
     defaultEnabled: true,
@@ -344,8 +343,8 @@ export const TOOLSETS: Toolset[] = [
     labelKey: "skills",
     status: "ready",
     delivery: "mcp-agent-tools",
-    // `skill_add` is registered by the agent process so the CLI, which has no
-    // Skills dialog, can install one too.
+    // `skill_add` is registered by the agent process, so the agent can
+    // install a skill itself.
     tools: [
       tool("skills_list"),
       tool("skill_view"),

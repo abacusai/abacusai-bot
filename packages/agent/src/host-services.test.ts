@@ -118,7 +118,7 @@ describe("a request nobody answers", () => {
     instance.request("render_document", {}).catch(() => undefined);
 
     // An unref'd timer is what lets Node exit while a request is outstanding;
-    // a ref'd one would keep an idle CLI alive for the whole deadline.
+    // a ref'd one would keep an idle agent alive for the whole deadline.
     const timers = vi.getTimerCount();
 
     expect(timers).toBe(1);

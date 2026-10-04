@@ -14,7 +14,7 @@ interface Pending {
 
 /**
  * Rendering a long document takes seconds, not minutes. The number matters less
- * than having one: a host that never answers (the terminal CLI, for one) would
+ * than having one: a host that never answers would
  * otherwise leave the tool call waiting for the life of the process.
  */
 const REQUEST_TIMEOUT_MS = 120_000;

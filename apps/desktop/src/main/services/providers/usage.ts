@@ -13,8 +13,7 @@ import { readSettings } from "../config/settings";
 
 /**
  * The Usage panel's data: spend per model and per day from the agent's session
- * logs, plus OpenRouter's account-wide key status. The scanner is shared with
- * the CLI's `usage` command so both front ends agree.
+ * logs, plus OpenRouter's account-wide key status.
  */
 
 const sessionsDir = (): string =>
