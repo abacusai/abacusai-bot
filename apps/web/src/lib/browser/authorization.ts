@@ -62,6 +62,7 @@ export const completeConnectorAuthorization = async (
     const deadline = Date.now() + 180_000;
     while (current() && !authorization.cancelled) {
       const statuses = await client.connectors.statuses({});
+      if (!current() || authorization.cancelled) break;
       if (statuses[connectorId]?.state === "connected") return { ok: true };
       if (Date.now() >= deadline)
         return { ok: false, error: "Authorization timed out. Please retry." };

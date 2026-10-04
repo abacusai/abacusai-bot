@@ -171,3 +171,33 @@ it("library waits for consent before settling and reserves its popup synchronous
   expect(flow.store.state.phase).toBe("idle");
   queryClient.clear();
 });
+
+it.each(["cancel", "supersede"])(
+  "rejects %s during a pending status RPC",
+  async (action) => {
+    vi.stubGlobal("open", vi.fn().mockReturnValue(null));
+    const client = clientFor();
+    let resolveStatus!: (value: unknown) => void;
+    client.connectors.statuses.mockReset().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStatus = resolve;
+        })
+    );
+    let current = true;
+    const pending = completeConnectorAuthorization(
+      client as unknown as AppClient,
+      "abacus-gmailuser",
+      { ok: true, url: "https://consent.example/" },
+      reserveAuthorization(),
+      () => current
+    );
+    expect(client.connectors.statuses).toHaveBeenCalledOnce();
+    if (action === "cancel")
+      (document.querySelector("dialog button") as HTMLButtonElement).click();
+    else current = false;
+    resolveStatus({ "abacus-gmailuser": { state: "connected" } });
+    expect(await pending).toMatchObject({ ok: false, cancelled: true });
+    expect(document.querySelector("dialog")).toBeNull();
+  }
+);
