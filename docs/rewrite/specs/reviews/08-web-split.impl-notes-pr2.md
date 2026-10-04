@@ -148,3 +148,60 @@ npm bin directory on PATH; native Linux runs used `env -u NO_COLOR xvfb-run -a`)
 Linux arm64, macOS, a logged-in staging handoff and a billed LLM turn remain
 unrun as described above. No push, deployment or write to another worktree was
 performed.
+
+## Fix pass r2
+
+Addressed every finding in `pr2.claude-r2.md` on the rebased
+`rewrite/headless-host` worktree. This section supersedes the pre-rebase test
+counts and capability claims above. All commands used the global npm bin on
+PATH; desktop/native acceptance ran with `env -u NO_COLOR xvfb-run -a`.
+
+| Finding | Disposition and evidence |
+| --- | --- |
+| Rebase fallout | `update.status` now expects `UNSUPPORTED`; removed the dead `system.openExternal` and `system.logs.save` expected-failure entries. Running the composition test exposed the next stale assertion: PR 1 also denies `auth.abacus.signOut`. It now asserts `UNSUPPORTED` and verifies the sentinel credential remains intact. |
+| N-M1 | The socket junk filter accepts string `i`, optional `t` in 1–4, and optional object `p`, including payload-free abort frames. The real-socket cancellation test enables server flow control and the client credit interceptor, receives a system event, returns the iterator, and checks that both bus listeners and the flow registry return to baseline while the socket remains open. |
+| N-M2 | Reply/event sizing uses the actual oRPC serializer and shared custom binary serializers. An asynchronous preflight counts base64 length and serializer path metadata without enumerating bytes, yields while walking large collections, and rejects oversized or excessively deep values before synchronous serialization. File reader stat checks remain before reads. Tests pin 300 KiB Uint8Array and Buffer wire sizes, early 40 MiB rejection, event-loop progress, and metadata expansion bounds. |
+| N-M2 / Whisper | `voice.whisper.fetch` is denied on web hosts before the model service runs. Authenticated `GET /files?whisperUrl=<encoded-original-model-url>` resolves/downloads a validated Whisper repository file and streams its cached path. Downloads use asynchronous disk I/O and a streaming pipeline into a temporary file, followed by rename, with no whole-model RPC reply or synchronous model read/write. Existing desktop fetch remains available. HTTP tests cover authentication before downloads, 2 MiB transfer, caching, and foreign URL refusal. |
+| N-m1 / renderer consumers | The host README and the PR 1 handoff below specify the HTTP consumers and typed error handling still needed in the renderer. |
+| Trash sweep | Removed the sweep from composition. It starts unawaited after the socket/HTTP listener is ready; root and individual entry failures are logged and never reject startup. A broken entry test confirms that other expired entries are still removed. |
+| Bundle staging | Staging lives inside `try/finally`, so failures remove the temporary directory; only a verified tarball is renamed into place. |
+| Host dev | `host dev` now builds/verifies a bundle and runs its extracted wrapper with complete resources, forwards arguments, and cleans extraction on exit. `pnpm --filter @abacus-ai/host dev --verify` passed. |
+| HTTP length | `/files` advertises stat size and uses `end: size - 1`, with an explicit empty-file response. A real HTTP regression grows a file after stat and verifies that only the original length is returned. |
+
+Post-rebase validation:
+
+- `pnpm --filter @abacus-ai/host test`: 10 suites / 38 tests passed.
+- Desktop `vitest run --project main`: 278 suites / 2,484 tests passed, 3 skipped.
+- `pnpm smoke:rpc`: passed system info, update stream, windowless refusal, and
+  missing-token close 1008.
+- `pnpm --filter @abacus-ai/host bundle` and independent
+  `node apps/host/scripts/verify-host-bundle.mjs apps/host/dist/host-linux-x64.tar.gz`:
+  passed bootstrap-exact verification, link audit, native search/PTY, agent
+  readiness and natural disposal exit.
+- Full `env -u NO_COLOR xvfb-run -a pnpm check`: all 33 tasks passed. Its full
+  desktop run passed 290 suites / 2,785 tests, with 3 suites and 26 tests skipped;
+  host passed 10 suites / 38 tests. Web passed 211 suites / 1,563 tests.
+
+PR 1 renderer handoff (required by the web host):
+
+- Add a `/files` consumer using the host service origin and the current connect
+  token in `Authorization: Bearer <token>`. The proxy supplies the owner/Origin
+  headers; use the same authentication/renewal flow as uploads. File requests
+  use `/files?hostRoot=<workspace>&path=<file>`, encoded with `URLSearchParams`.
+- Use that consumer for `files.readImageAsDataUrl` and `files.readPptx` when the
+  RPC limit is exceeded, and for large transcript/export files. Consume Blob or
+  ArrayBuffer data, render/revoke image Blob URLs, parse deck bytes and transcript
+  text in the renderer, and retain desktop transport behavior.
+- Change the web Whisper fetch hook to fetch
+  `${host.origin}/files?${new URLSearchParams({ whisperUrl: originalModelUrl })}`
+  with the connect token. Accepted URLs are under
+  `https://huggingface.co/onnx-community/whisper-base/resolve/main/`;
+  `voice.whisper.progress` remains available during cache population. Web hosts
+  return `UNSUPPORTED` for the old `voice.whisper.fetch` RPC.
+- Handle defined `PAYLOAD_TOO_LARGE` explicitly: use `data.alternative` when it
+  identifies a concrete file, keep the connection usable, and offer HTTP
+  download/retry. Large snapshots without an export file still require paging
+  or chunking; the placeholder alternative is not an existing download.
+
+Linux arm64, macOS, logged-in staging handoff and billed LLM acceptance remain
+unrun. Changes and commits stay in this worktree; no push or deployment occurred.
