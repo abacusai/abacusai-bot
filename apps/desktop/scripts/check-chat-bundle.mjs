@@ -10,7 +10,8 @@ process.env.VITE_UI_GALLERY = "";
 process.env.VITE_NEXT_DB_FIXTURES = "";
 let chunks = 0;
 await build({
-  root: desktop,
+  root: resolve(desktop, "../web"),
+  configFile: resolve(desktop, "vite.config.ts"),
   plugins: [
     {
       name: "check-chat-bundle",
