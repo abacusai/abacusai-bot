@@ -84,7 +84,8 @@ export class WhisperModelService {
 
   /** Resolve/download on disk; HTTP callers stream this path without reading model bytes into RPC. */
   async prepareFile(
-    url: string
+    url: string,
+    { download = true }: { download?: boolean } = {}
   ): Promise<WhisperFileResult & { path?: string }> {
     const file = modelFileFor(url);
     if (file == null) {
@@ -103,6 +104,7 @@ export class WhisperModelService {
     ) {
       return { status: 200, path: target };
     }
+    if (!download) return { status: 404 };
     // One download per file, however many callers ask while it is in flight.
     let pending = this.downloads.get(file);
     if (pending == null) {

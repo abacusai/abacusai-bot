@@ -271,14 +271,18 @@ const invalidFrames = [
   { i: "junk", t: 4, p: {} },
 ];
 
-it.each(invalidFrames.map((frame) => [JSON.stringify(frame)]))(
-  "closes malformed text frame %s with 1008 before the RPC decoder",
-  async (frame) => {
+it.each(
+  invalidFrames.flatMap((frame) =>
+    [false, true].map((binary) => [JSON.stringify(frame), binary] as const)
+  )
+)(
+  "closes malformed JSON frame %s (binary=%s) with 1008 before the RPC decoder",
+  async (frame, binary) => {
     expect(isRpcRequestFrame(JSON.parse(frame))).toBe(false);
     const errors = vi.spyOn(console, "error");
     const { server, socket, closed } = await setup();
     try {
-      socket.send(frame);
+      socket.send(frame, { binary });
       expect(await closed).toBe(1008);
       expect(errors).not.toHaveBeenCalled();
     } finally {
@@ -321,5 +325,28 @@ it("closes invalid JSON text with 1008", async () => {
   } finally {
     socket.terminate();
     await server.close();
+  }
+});
+
+it("accepts valid JSON requests and aborts carried by binary frames", async () => {
+  const home = await mkdtemp(join(tmpdir(), "rpc-binary-json-"));
+  await writeFile(join(home, "file.txt"), "binary JSON works");
+  const { server, socket } = await setup();
+  const send = socket.send.bind(socket);
+  socket.send = ((data: Parameters<typeof socket.send>[0]) =>
+    send(data, { binary: true })) as typeof socket.send;
+  const client: any = createORPCClient(
+    new RPCLink({ websocket: socket as never })
+  );
+  try {
+    socket.send(JSON.stringify({ i: "unused", t: 4 }));
+    expect(
+      await client.files.readText({ hostRoot: home, filePath: "file.txt" })
+    ).toMatchObject({ content: "binary JSON works" });
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+  } finally {
+    socket.terminate();
+    await server.close();
+    await rm(home, { recursive: true, force: true });
   }
 });

@@ -295,3 +295,5 @@ Validation (all commands in this worktree, global npm bin directory on PATH):
 Logs: `/tmp/pr2-r4-{host,web,smoke,check}.log`.
 
 Committed locally; no push, deployment or changes to another worktree.
+
+- Claude r3 N2–N4 follow-up: binary JSON frames use the text envelope gate; `/files` returns fixed realpath/Whisper error reasons; uncached Whisper HEAD returns 404 without fetching; the dev proxy exposes Content-Length, Content-Range and X-File-Size. Regression coverage passes with `pnpm --filter @abacus-ai/host test` (11 suites / 98 tests), `pnpm smoke:rpc` (all five checks), host typecheck and targeted lint. Committed locally without pushing; all work stayed in this worktree.

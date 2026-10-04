@@ -164,10 +164,7 @@ export const startWebSocketTransport = async ({
                       listener({ data: decoded });
                       return;
                     }
-                    if (
-                      typeof event.data === "string" &&
-                      !isRpcRequestFrame(decoded)
-                    ) {
+                    if (!isRpcRequestFrame(decoded)) {
                       socket.close(1008, "malformed RPC frame");
                       return;
                     }

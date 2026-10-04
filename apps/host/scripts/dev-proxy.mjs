@@ -65,6 +65,8 @@ const proxy = createServer(
             "access-control-allow-methods": "GET, POST, OPTIONS",
             "access-control-allow-headers":
               "Authorization, Content-Type, REAI-UI",
+            "access-control-expose-headers":
+              "Content-Length, Content-Range, X-File-Size",
             vary: "Origin",
           }
         : {};

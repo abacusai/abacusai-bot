@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { appendFileSync, truncateSync } from "node:fs";
+import fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { get, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
@@ -146,20 +147,54 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
     const modelPath = `/files?${new URLSearchParams({ whisperUrl: modelUrl })}`;
     expect((await fetch(`${base}${modelPath}`)).status).toBe(403);
     expect(fetchModel).not.toHaveBeenCalled();
+    const uncachedHead = await fetch(`${base}${modelPath}`, {
+      headers,
+      method: "HEAD",
+    });
+    expect(uncachedHead.status).toBe(404);
+    expect(await uncachedHead.text()).toBe("");
+    expect(fetchModel).not.toHaveBeenCalled();
     for (let i = 0; i < 2; i++) {
       const model = await fetch(`${base}${modelPath}`, { headers });
       expect(model.status).toBe(200);
       expect(model.headers.get("content-length")).toBe(String(2 * 1024 * 1024));
       expect((await model.arrayBuffer()).byteLength).toBe(2 * 1024 * 1024);
     }
+    const cachedHead = await fetch(`${base}${modelPath}`, {
+      headers,
+      method: "HEAD",
+    });
+    expect(cachedHead.status).toBe(200);
+    expect(cachedHead.headers.get("content-length")).toBe(
+      String(2 * 1024 * 1024)
+    );
+    expect(await cachedHead.text()).toBe("");
     expect(fetchModel).toHaveBeenCalledTimes(1);
-    expect(
-      (
-        await fetch(`${base}/files?whisperUrl=https://example.com/model`, {
-          headers,
-        })
-      ).status
-    ).toBe(403);
+    const foreignModel = await fetch(
+      `${base}/files?whisperUrl=https://example.com/model`,
+      { headers }
+    );
+    expect(foreignModel.status).toBe(403);
+    expect(await foreignModel.json()).toEqual({
+      error: "forbidden",
+      reason: "invalid-model-url",
+    });
+    const otherModel = `${base}/files?${new URLSearchParams({
+      whisperUrl: modelUrl.replace("encoder", "decoder"),
+    })}`;
+    fetchModel.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    const missingModel = await fetch(otherModel, { headers });
+    expect(missingModel.status).toBe(404);
+    expect(await missingModel.json()).toEqual({ error: "not-found" });
+    fetchModel.mockRejectedValueOnce(
+      new Error(`private download failure at ${home}`)
+    );
+    const failedModel = await fetch(otherModel, { headers });
+    expect(failedModel.status).toBe(502);
+    expect(await failedModel.json()).toEqual({
+      error: "conflict",
+      reason: "model-download-failed",
+    });
     expect(
       (await fetch(`${base}/files?hostRoot=${home}&path=${paths[0]}`)).status
     ).toBe(403);
@@ -236,6 +271,23 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
       const head = await fetch(url(path), { headers, method: "HEAD" });
       expect(head.status).toBe(status);
       expect(await head.text()).toBe("");
+    }
+    for (const code of ["EACCES", "ELOOP"]) {
+      const realpath = vi
+        .spyOn(fs, "realpath")
+        .mockRejectedValueOnce(
+          Object.assign(new Error(`${code}: realpath '${home}'`), { code })
+        );
+      try {
+        const result = await fetch(url("file.txt"), { headers });
+        expect(result.status).toBe(409);
+        expect(await result.json()).toEqual({
+          error: "conflict",
+          reason: "realpath-failed",
+        });
+      } finally {
+        realpath.mockRestore();
+      }
     }
     for (const [maxBytes, expected] of [
       [undefined, "attachment"],

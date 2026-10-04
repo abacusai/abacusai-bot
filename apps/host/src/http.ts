@@ -58,11 +58,26 @@ export const createHostHttpServer = (
       try {
         const whisperUrl = url.searchParams.get("whisperUrl");
         const model =
-          whisperUrl && whisper ? await whisper.prepareFile(whisperUrl) : null;
+          whisperUrl && whisper
+            ? await whisper.prepareFile(whisperUrl, {
+                download: request.method !== "HEAD",
+              })
+            : null;
         if (whisperUrl && (!model || model.status !== 200 || !model.path)) {
-          json(response, model?.status ?? 400, {
-            error: model?.error ?? "model-unavailable",
-          });
+          json(
+            response,
+            model?.status ?? 400,
+            model?.status === 404
+              ? { error: "not-found" }
+              : model?.status === 403
+                ? { error: "forbidden", reason: "invalid-model-url" }
+                : {
+                    error: "conflict",
+                    reason: model
+                      ? "model-download-failed"
+                      : "model-unavailable",
+                  }
+          );
           return;
         }
         const file = model?.path
