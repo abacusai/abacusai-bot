@@ -65,6 +65,7 @@ const SessionsNewRoute = () => {
                   mode: "full",
                   placeholder: t("sessions.start.placeholder"),
                   attachmentsBase: binding.root,
+                  attachmentContext: binding.attachmentContext,
                   showModeChip: true,
                   model: model.model,
                   onBlocked: model.onBlocked,

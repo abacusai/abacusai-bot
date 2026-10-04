@@ -136,13 +136,18 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
         },
       })
     )
-    .mockResolvedValueOnce(Response.json({ paths: ["/root/upload"] }));
-  expect(await uploadFiles([new File(["content"], "test.txt")])).toEqual([
-    "/root/upload",
-  ]);
+    .mockResolvedValueOnce(
+      Response.json({ success: true, dir: "/root", paths: ["/root/upload"] })
+    );
+  expect(
+    await uploadFiles([new File(["content"], "test.txt")], {
+      workspaceId: "workspace",
+      sessionId: "session",
+    })
+  ).toEqual(["/root/upload"]);
   expect(host.url).toBe(url);
   const uploads = fetch.mock.calls.filter(([url]) =>
-    String(url).endsWith("/upload")
+    String(url).includes("/upload?")
   );
   expect(uploads.map(([, options]) => options)).toEqual([
     expect.objectContaining({

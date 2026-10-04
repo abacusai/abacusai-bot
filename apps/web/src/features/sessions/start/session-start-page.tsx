@@ -19,6 +19,7 @@ import {
   startDraftStore,
   startSession,
   newStartDraft,
+  optimisticSession,
   type SubmissionEnvelope,
 } from "./start-session";
 export interface StartComposerBinding {
@@ -28,6 +29,7 @@ export interface StartComposerBinding {
   context: ReactNode;
   submit(envelope: SubmissionEnvelope): Promise<void>;
   blocked: boolean;
+  attachmentContext(): Promise<{ workspaceId: string; sessionId: string }>;
 }
 export const SessionStartPage = ({
   workspaceId,
@@ -148,6 +150,20 @@ export const SessionStartPage = ({
         ) : (
           renderComposer({
             threadId: id,
+            attachmentContext: async () => {
+              if (!draft.workspaceId)
+                throw new Error("Select a workspace before uploading files");
+              await db.collections.sessions.preload();
+              const existing = db.collections.sessions.get(draft.id);
+              if (existing && existing.workspaceId !== draft.workspaceId)
+                throw new Error(
+                  "Session identity belongs to another workspace"
+                );
+              if (!existing)
+                await db.collections.sessions.insert(optimisticSession(draft))
+                  .isPersisted.promise;
+              return { workspaceId: draft.workspaceId, sessionId: draft.id };
+            },
             workspaceId: draft.workspaceId,
             root: workspace?.path ?? null,
             context,

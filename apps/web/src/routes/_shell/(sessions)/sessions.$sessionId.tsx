@@ -385,6 +385,10 @@ const SessionRoute = () => {
               mode: "full",
               placeholder: t("chat.composer.busySession"),
               attachmentsBase: root,
+              attachmentContext: async () => ({
+                workspaceId: row.workspaceId,
+                sessionId: row.id,
+              }),
               showModeChip: true,
               model: model.model,
               onBlocked: model.onBlocked,

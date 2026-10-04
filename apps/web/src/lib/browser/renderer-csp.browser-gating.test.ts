@@ -29,6 +29,12 @@ it("pins the Electron injected policy to its main-process copy and permits only 
   const pinned = strings.map((value) => JSON.parse(value) as string).join("");
   expect(rendererCsp("electron", {})).toBe(pinned);
   for (const platform of ["electron", "browser"] as const) {
+    if (platform === "browser")
+      expect(
+        rendererCsp(platform, {})
+          .split(";")
+          .find((rule) => rule.trim().startsWith("connect-src"))
+      ).not.toContain("data:");
     expect(
       rendererCsp(platform, {})
         .split(";")

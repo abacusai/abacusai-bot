@@ -188,43 +188,54 @@ const Attachments = () => {
 
 const Attach = () => {
   const { t } = useTranslation();
-  const { runtime } = useChatView();
+  const { runtime, composer: config } = useChatView();
   const { threadId } = useComposer();
+  const [error, setError] = useState<string | null>(null);
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="secondary"
-            size="icon-lg"
-            aria-label={t("chat.composer.attach")}
-            className="size-9 shrink-0 rounded-full"
-          />
-        }
-      >
-        <Plus aria-hidden />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start">
-        <DropdownMenuItem
-          onClick={async () => {
-            const files = await runtime.host.pickFiles();
-            if (files != null) addPaths(threadId, files);
-          }}
+    <>
+      {error && <p role="alert">{error}</p>}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="secondary"
+              size="icon-lg"
+              aria-label={t("chat.composer.attach")}
+              className="size-9 shrink-0 rounded-full"
+            />
+          }
         >
-          <FileText aria-hidden />
-          {t("chat.composer.attachFiles")}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={async () => {
-            const folder = await runtime.host.pickFolder();
-            if (folder != null) addPaths(threadId, [{ path: folder }]);
-          }}
-        >
-          <Folder aria-hidden />
-          {t("chat.composer.attachFolder")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <Plus aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start">
+          <DropdownMenuItem
+            onClick={async () => {
+              setError(null);
+              try {
+                const files = await runtime.host.pickFiles(
+                  config.attachmentContext
+                );
+                if (files != null) addPaths(threadId, files);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              }
+            }}
+          >
+            <FileText aria-hidden />
+            {t("chat.composer.attachFiles")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={async () => {
+              const folder = await runtime.host.pickFolder();
+              if (folder != null) addPaths(threadId, [{ path: folder }]);
+            }}
+          >
+            <Folder aria-hidden />
+            {t("chat.composer.attachFolder")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 };
 
@@ -536,13 +547,25 @@ export const ThreadComposer = () => {
     const files = [...event.clipboardData.files];
     if (files.length === 0) return;
     event.preventDefault();
-    void addFiles(threadId, files, runtime.host, config.attachmentsBase);
+    void addFiles(
+      threadId,
+      files,
+      runtime.host,
+      config.attachmentsBase,
+      config.attachmentContext
+    );
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     const files = [...event.dataTransfer.files];
     if (files.length === 0) return;
     event.preventDefault();
-    void addFiles(threadId, files, runtime.host, config.attachmentsBase);
+    void addFiles(
+      threadId,
+      files,
+      runtime.host,
+      config.attachmentsBase,
+      config.attachmentContext
+    );
   };
 
   if (config.readOnly != null || gone)

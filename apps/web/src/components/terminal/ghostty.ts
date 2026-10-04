@@ -1,6 +1,11 @@
-import { init, Terminal, FitAddon, type GhosttyCell } from "ghostty-web";
-let ready: Promise<void> | null = null;
-export const ghosttyReady = (): Promise<void> => (ready ??= init());
+import { Ghostty, Terminal, FitAddon, type GhosttyCell } from "ghostty-web";
+import wasmUrl from "ghostty-web/ghostty-vt.wasm?url";
+let ready: Promise<Ghostty> | null = null;
+export const ghosttyReady = (): Promise<Ghostty> =>
+  (ready ??= Ghostty.load(wasmUrl).catch((error) => {
+    ready = null;
+    throw error;
+  }));
 export { Terminal, FitAddon };
 /** Adapter for the installed 0.4.0; same-size resize deliberately does not paint. */
 export const repaint = (terminal: Terminal): void => {

@@ -247,6 +247,11 @@ export const useBotChatSlots = (
         name: bot.name.length > 40 ? bot.name.slice(0, 39) + "…" : bot.name,
       }),
       attachmentsBase: workspaceRoot,
+      attachmentContext: async () => {
+        if (!session)
+          throw new Error("Select a session before uploading files");
+        return { workspaceId: session.workspaceId, sessionId };
+      },
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,
       fixedMode: mode.data ?? AgentMode.Normal,

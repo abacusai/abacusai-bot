@@ -11,6 +11,12 @@ import { creditsTier } from "#renderer/lib/credits";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 
+export interface AttachmentContext {
+  workspaceId: string;
+  sessionId: string;
+}
+export type ResolveAttachmentContext = () => Promise<AttachmentContext>;
+
 interface PickedPath {
   path: string;
   name: string;
@@ -21,12 +27,13 @@ export interface ChatHostActions extends CreditActions {
   openExternal(url: string): Promise<void>;
   accountTier(): Promise<"free" | "basic" | "paid" | "unknown">;
   showItemInFolder(path: string): Promise<void>;
-  pickFiles(): Promise<PickedPath[] | null>;
+  pickFiles(context?: ResolveAttachmentContext): Promise<PickedPath[] | null>;
   pickFolder(): Promise<string | null>;
   /** Writes pasted blobs under `baseFolder`; returns their absolute paths. */
   savePasted(
     baseFolder: string,
-    files: Array<{ name: string; data: Uint8Array<ArrayBuffer> }>
+    files: Array<{ name: string; data: Uint8Array<ArrayBuffer> }>,
+    context?: ResolveAttachmentContext
   ): Promise<string[]>;
   /** A dropped file's real path, when it has one (spec 00 A.4.4). */
   pathForFile(file: File): string | null;
@@ -48,7 +55,7 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
         : viewHostFile(client, path),
     // Native File objects expose metadata without reading file contents. The
     // preload bridge resolves their paths without the byte-returning picker RPC.
-    pickFiles: () =>
+    pickFiles: (context) =>
       new Promise((resolve, reject) => {
         const input = document.createElement("input");
         input.type = "file";
@@ -65,7 +72,11 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
             try {
               if (!IS_ELECTRON) {
                 const files = Array.from(input.files ?? []);
-                const paths = await uploadFiles(files);
+                if (!files.length) {
+                  finish(null);
+                  return;
+                }
+                const paths = await uploadFiles(files, await context?.());
                 finish(
                   paths.map((path, i) => ({
                     path,
@@ -95,10 +106,13 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
         input.click();
       }),
     pickFolder: () => platformSystem(client).dialog.openFolder(),
-    savePasted: async (baseFolder, files) =>
+    savePasted: async (baseFolder, files, context) =>
       IS_ELECTRON
         ? (await client.files.savePastedTemp({ baseFolder, files })).paths
-        : uploadFiles(files.map((file) => new File([file.data], file.name))),
+        : uploadFiles(
+            files.map((file) => new File([file.data], file.name)),
+            await context?.()
+          ),
     pathForFile: (file) => transport.host.getPathForFile?.(file) || null,
     readImage: async (filePath, hostRoot) =>
       (await client.files.readImageAsDataUrl({ filePath, hostRoot })).dataUrl,

@@ -1,6 +1,15 @@
 import type { AppClient } from "#renderer/data/transport/types";
 import { i18n } from "#renderer/lib/i18n";
-export const uploadFiles = async (files: File[]): Promise<string[]> => {
+export interface UploadContext {
+  workspaceId: string;
+  sessionId: string;
+}
+export const uploadFiles = async (
+  files: File[],
+  context?: UploadContext
+): Promise<string[]> => {
+  if (!context?.workspaceId || !context.sessionId)
+    throw new Error("Select a session before uploading files");
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
   let host = await refreshUploadToken();
@@ -8,7 +17,7 @@ export const uploadFiles = async (files: File[]): Promise<string[]> => {
   files.forEach((file) => body.append("files", file, file.name));
   const token = host.token;
   const upload = () =>
-    fetch(`${host.origin}/upload`, {
+    fetch(`${host.origin}/upload?${new URLSearchParams({ ...context })}`, {
       method: "POST",
       credentials: "include",
       headers: { Authorization: `Bearer ${host.token}` },
@@ -20,7 +29,12 @@ export const uploadFiles = async (files: File[]): Promise<string[]> => {
     response = await upload();
   }
   if (!response.ok) throw new Error(`Upload failed (${response.status})`);
-  const value = (await response.json()) as { paths?: unknown };
+  const value = (await response.json()) as {
+    success?: boolean;
+    paths?: unknown;
+    error?: string;
+  };
+  if (value.success !== true) throw new Error(value.error ?? "Upload failed");
   if (
     !Array.isArray(value.paths) ||
     !value.paths.every((path) => typeof path === "string")

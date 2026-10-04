@@ -60,6 +60,7 @@ export interface ComposerConfig {
   placeholder: string;
   /** Folder for pasted files; null disables paste-to-file. */
   attachmentsBase: string | null;
+  attachmentContext?: import("../runtime/host-actions").ResolveAttachmentContext;
   showModeChip: boolean;
   model: ModelChipBinding | null;
   mentions?: MentionSource;

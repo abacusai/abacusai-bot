@@ -67,7 +67,8 @@ export const addFiles = async (
   threadId: string,
   files: readonly File[],
   host: ChatHostActions,
-  attachmentsBase: string | null
+  attachmentsBase: string | null,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
 ): Promise<void> => {
   for (const file of files) {
     const path = host.pathForFile(file);
@@ -99,9 +100,11 @@ export const addFiles = async (
     }));
     try {
       const data = new Uint8Array(await file.arrayBuffer());
-      const [saved] = await host.savePasted(attachmentsBase, [
-        { name: pastedName(id, file), data },
-      ]);
+      const [saved] = await host.savePasted(
+        attachmentsBase,
+        [{ name: pastedName(id, file), data }],
+        context
+      );
       if (saved == null) throw new Error("not saved");
       patch(threadId, id, { path: saved, state: "done" });
     } catch (error) {

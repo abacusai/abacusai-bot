@@ -21,12 +21,13 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         terminalTheme,
         installTerminalTheme,
       } = await import("#renderer/components/terminal/ghostty");
-      await ghosttyReady();
+      const ghostty = await ghosttyReady();
       await document.fonts?.load('13px "Symbols Nerd Font Mono"');
       await document.fonts?.ready;
       const element = document.createElement("div");
       element.style.cssText = "width:100%;height:100%";
       const term = new Terminal({
+        ghostty,
         fontSize: 13,
         fontFamily:
           '"JetBrains Mono Variable", "Symbols Nerd Font Mono", monospace',
@@ -50,6 +51,10 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         disposeTheme,
       };
     })();
+    view = view.catch((error) => {
+      views.delete(key);
+      throw error;
+    });
     views.set(key, view);
   }
   return view;
@@ -57,11 +62,13 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
 export const disposeTerminalView = (key: string): void => {
   const view = views.get(key);
   views.delete(key);
-  void view?.then((v) => {
-    v.disposeTheme();
-    v.term.dispose();
-    v.element.remove();
-  });
+  void view
+    ?.then((v) => {
+      v.disposeTheme();
+      v.term.dispose();
+      v.element.remove();
+    })
+    .catch(() => {});
 };
 
 if (import.meta.env.VITE_UI_GALLERY === "1") {

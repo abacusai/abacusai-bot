@@ -366,7 +366,7 @@ export const SessionDock = ({
                 }
               >
                 {t("sessions.terminal.newShell", {
-                  shell: t(`terminalShells.${shell.labelKey}`),
+                  shell: t(`terminalShells.${shell.labelKey}.label`),
                 })}
               </DropdownMenuItem>
             ))}

@@ -252,14 +252,18 @@ export const TerminalTab = ({
   useEffect(() => {
     let live = true;
     if (!visible)
-      void getTerminalView(`${key}:${id}`).then((view) => {
-        if (live && view.generation != null)
-          void transport.client.terminal.hide({
-            conversationKey: key,
-            terminalId: id,
-            generation: view.generation,
-          });
-      });
+      void getTerminalView(`${key}:${id}`)
+        .then((view) => {
+          if (live && view.generation != null)
+            void transport.client.terminal.hide({
+              conversationKey: key,
+              terminalId: id,
+              generation: view.generation,
+            });
+        })
+        .catch((e) => {
+          if (live) setError(String(e));
+        });
     return () => {
       live = false;
     };
