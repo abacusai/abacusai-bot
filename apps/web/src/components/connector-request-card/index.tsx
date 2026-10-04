@@ -17,7 +17,7 @@ import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { ConnectorRequest } from "#shared/contracts";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 
 export interface ConnectorRequestCardProps {
   request: ConnectorRequest;

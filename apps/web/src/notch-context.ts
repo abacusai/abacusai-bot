@@ -5,7 +5,7 @@ import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import type { ChatRuntime } from "#renderer/features/chat";
 import type { NotchPresentation } from "#renderer/features/notch";
-import type { NotchLayout } from "#shared/contract";
+import type { NotchLayout } from "@abacus-ai/contract/contract";
 export interface NotchRouterContext {
   transport: Transport;
   db: Db;

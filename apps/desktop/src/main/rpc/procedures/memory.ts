@@ -1,4 +1,4 @@
-import type { MemoryEvent } from "#shared/contract";
+import type { MemoryEvent } from "@abacus-ai/contract/contract";
 
 import { impl, onChannel, stream } from "./impl";
 

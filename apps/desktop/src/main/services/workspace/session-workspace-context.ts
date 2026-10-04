@@ -1,4 +1,4 @@
-import type { AgentSessionListItem } from "#shared/contracts";
+import type { AgentSessionListItem } from "@abacus-ai/contract/contracts";
 
 export interface WorkspacePathContext {
   workspaceId: string;

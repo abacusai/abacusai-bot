@@ -7,7 +7,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
 import { botAccentStyle } from "#renderer/lib/theme";
-import { BOT_AVATAR_COLORS } from "#shared/bots";
+import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 
 import { clearDraft } from "../composer/draft-store";
 import { fixtureRuntime } from "../fixtures/player";

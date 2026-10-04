@@ -36,7 +36,7 @@ import type {
   McpServerInfo,
   McpServerEntry,
   AgentMcpServer,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 export const useMcpRuntimeScope = () => {
   const c = useCollections();
   const sessions = useLiveQuery(c.sessions).data ?? [];

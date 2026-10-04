@@ -6,7 +6,7 @@ import type {
   RoutineRow,
   RunFinishedNotice,
   SessionRow,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 export type AttentionKind =
   | "question"
   | "approval"

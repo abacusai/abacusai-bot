@@ -1,9 +1,9 @@
-import { AgentMode, AgentStatus } from "#shared/agent-types";
-import type { DesktopEvent } from "#shared/agent-types";
+import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type {
   AgentSessionListItem,
   StartAgentSessionResult,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   MESSAGING_PLATFORM_CATALOG,
   SHARED_BOT_PLATFORM_OF,
@@ -14,8 +14,8 @@ import {
   type MessagingPlatformState,
   type MessagingSnapshot,
   type SharedChannelLink,
-} from "#shared/messaging";
-import { outgoingWords, lastTaggedReply } from "#shared/reply-envelope";
+} from "@abacus-ai/contract/messaging";
+import { outgoingWords, lastTaggedReply } from "@abacus-ai/contract/reply-envelope";
 
 import { readDefaultAgentMode } from "../config/settings";
 import { environmentNoticeService } from "../providers/environment-notice-service";
@@ -92,7 +92,7 @@ const NO_MODEL_REPLY =
  * Without a block the whole text goes, minus any <thinking> block, because a
  * reply must never be lost to a missing tag.
  */
-export { outgoingWords } from "#shared/reply-envelope";
+export { outgoingWords } from "@abacus-ai/contract/reply-envelope";
 
 /** The one rule, restated on every auto-reply turn. See dispatch. */
 const REPLY_REMINDER =

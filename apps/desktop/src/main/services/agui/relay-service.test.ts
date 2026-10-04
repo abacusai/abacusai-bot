@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { getEventMeta } from "@orpc/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentSessionStatus } from "#shared/contracts";
+import type { AgentSessionStatus } from "@abacus-ai/contract/contracts";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import type { AgentWire } from "../session/cli-manager-service";

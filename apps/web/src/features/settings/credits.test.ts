@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import type { AbacusAccountInfo } from "#shared/contracts";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 
 import { creditMarkState, CREDITS_EXHAUSTED_TTL_MS } from "./credits";
 const account = (tier: string, used = 10, granted = 10) =>

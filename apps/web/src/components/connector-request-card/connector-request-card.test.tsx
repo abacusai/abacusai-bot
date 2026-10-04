@@ -9,7 +9,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { i18n, initI18n } from "#renderer/lib/i18n";
-import type { ConnectorRequest } from "#shared/contracts";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 
 import { ConnectorRequestCard } from ".";
 

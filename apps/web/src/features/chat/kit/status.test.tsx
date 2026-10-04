@@ -11,7 +11,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";

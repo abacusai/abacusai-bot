@@ -5,7 +5,7 @@
  * first message, ported verbatim from the old transport
  * (`conversation/transport.ts:88-114`).
  */
-import type { AgentMode } from "#shared/agent-types";
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 interface SubmitAttachment {
   path: string | null;

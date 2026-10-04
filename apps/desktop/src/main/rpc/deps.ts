@@ -6,13 +6,13 @@
  * The procedures are thin: validate, call the same ServiceHost method or
  * named operation the legacy IPC handler calls, map the result.
  */
-import type { AccountState } from "#shared/account";
+import type { AccountState } from "@abacus-ai/contract/account";
 import type {
   NotificationMetadata,
   SetDensityResult,
   WindowChromeState,
   WindowState,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -25,14 +25,14 @@ import type {
   PromoteBrowserRuntimeScopeRequest,
   BrowserRuntimeState,
   BrowserRuntimeCapture,
-} from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
-import type { PptxReadResult } from "#shared/pptx";
+} from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
+import type { PptxReadResult } from "@abacus-ai/contract/pptx";
 import type {
   ImportLocalSkillsRequest,
   ImportLocalSkillsResult,
-} from "#shared/skills-types";
-import type { UpdateStatus } from "#shared/update";
+} from "@abacus-ai/contract/skills-types";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 
 import type { HostOperations } from "../handler";
 import type { CueArbiter } from "../notch/cue-arbiter";

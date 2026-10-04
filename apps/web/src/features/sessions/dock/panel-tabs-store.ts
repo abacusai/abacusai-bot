@@ -1,7 +1,7 @@
 import { Store } from "@tanstack/react-store";
 
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-import type { TerminalSessionSnapshot } from "#shared/contracts";
+import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
 
 import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
 export interface PanelTab {
@@ -10,7 +10,7 @@ export interface PanelTab {
   openedAt: number;
   path?: string;
   sessionId?: string;
-  shell?: import("#shared/terminal-shells").TerminalShellId;
+  shell?: import("@abacus-ai/contract/terminal-shells").TerminalShellId;
   url?: string;
 }
 export interface PanelTabs {

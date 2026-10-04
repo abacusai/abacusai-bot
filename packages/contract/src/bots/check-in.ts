@@ -7,7 +7,7 @@
  */
 import * as v from "valibot";
 
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   composeCron,

@@ -1,5 +1,5 @@
-import { CONTRACT_VERSION, type SystemEvent } from "#shared/contract";
-import { FOUNDATION_API } from "#shared/experience";
+import { CONTRACT_VERSION, type SystemEvent } from "@abacus-ai/contract/contract";
+import { FOUNDATION_API } from "@abacus-ai/contract/experience";
 
 import {
   pendingLegacyDrafts,

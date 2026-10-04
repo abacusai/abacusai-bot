@@ -8,7 +8,7 @@ import type {
   AgentEvent,
   DesktopEvent,
   ToolRequest,
-} from "#shared/agent-types";
+} from "@abacus-ai/contract/agent-types";
 
 /** Never let one long argument push everything else off the line. */
 const clip = (value: string, max = 200): string =>

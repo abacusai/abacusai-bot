@@ -31,13 +31,13 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { checkoutKey } from "#shared/contract/checkout";
-import type { GitStateRow } from "#shared/contract/rows";
+import { checkoutKey } from "@abacus-ai/contract/contract/checkout";
+import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import type {
   AgentSessionListItem,
   GitChangeItem,
   WorkspaceListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { PrefsStore } from "../../services/config/prefs-store";
 import { CheckoutService } from "../../services/workspace/checkout-service";

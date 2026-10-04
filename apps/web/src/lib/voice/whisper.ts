@@ -7,7 +7,7 @@
 import ortWasmUrl from "ort-dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 
 import type { Transport } from "#renderer/data/transport";
-import { WHISPER_MODEL_ID } from "#shared/voice";
+import { WHISPER_MODEL_ID } from "@abacus-ai/contract/voice";
 
 type Transformers = typeof import("@huggingface/transformers");
 type Transcriber =

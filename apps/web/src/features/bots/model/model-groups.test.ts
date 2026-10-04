@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { ModelAvailability } from "#shared/models";
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 
 import {
   APP_DEFAULT_ITEM_ID,

@@ -5,7 +5,7 @@ import {
   fixtureRoutines,
   fixtureSessions,
 } from "#renderer/data/fixture-db/rows";
-import { nextRun } from "#shared/routines/cron";
+import { nextRun } from "@abacus-ai/contract/routines/cron";
 
 import { routineState, runsView, stats } from "./data";
 import {

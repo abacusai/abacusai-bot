@@ -10,8 +10,8 @@ import {
 } from "#renderer/data/fixture-db/fixture-db";
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "#shared/contract";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import { contract } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { connectorAsksStore, followBotsSources } from "./live";
 import { botsQueries } from "./queries";

@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 const os = implement(contract);
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {

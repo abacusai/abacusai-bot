@@ -10,7 +10,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 const revoked: string[] = [];
 let pairingRow: Record<string, unknown> | null = null;

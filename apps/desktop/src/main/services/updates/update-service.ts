@@ -8,7 +8,7 @@ const { autoUpdater } = electronUpdater;
 import { app, BaseWindow, powerMonitor } from "electron";
 
 import { emitBusChannel } from "#main/rpc/emit";
-import type { UpdateFailedPhase, UpdateStatus } from "#shared/update";
+import type { UpdateFailedPhase, UpdateStatus } from "@abacus-ai/contract/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
 import { isNotchWindow } from "../../notch/registry";

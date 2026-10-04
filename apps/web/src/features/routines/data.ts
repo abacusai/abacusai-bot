@@ -11,7 +11,7 @@ import type {
   RoutineRow,
   RoutineRunRow,
   SessionRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 export const useRoutinesData = () => {
   const c = useCollections();
   const routines = useLiveQuery(c.routines).data ?? [];

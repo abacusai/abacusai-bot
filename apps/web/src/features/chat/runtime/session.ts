@@ -16,8 +16,8 @@ import {
 import { Store } from "@tanstack/react-store";
 
 import { isNotFound, type AiClient } from "#renderer/data/ai";
-import type { PermissionDecision } from "#shared/agent-types";
-import type { AiHydration } from "#shared/contract/ai";
+import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
+import type { AiHydration } from "@abacus-ai/contract/contract/ai";
 
 import { isAllowed } from "../kit/permissions/decisions";
 import {

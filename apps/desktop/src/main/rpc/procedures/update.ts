@@ -1,4 +1,4 @@
-import type { UpdateStatus } from "#shared/update";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 
 import { unwrapResult } from "../errors";
 import { impl, onChannel, stream } from "./impl";

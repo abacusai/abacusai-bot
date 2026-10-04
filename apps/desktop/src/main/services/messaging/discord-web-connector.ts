@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 import {
   bringToFront,

@@ -40,7 +40,7 @@ import type {
   ChangeBatch,
   TablePosition,
   TableSnapshot,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 /** What `transport.client.db.<table>` offers; mutations only where they exist. */
 export interface IpcTableClient<Row, Key extends string> {

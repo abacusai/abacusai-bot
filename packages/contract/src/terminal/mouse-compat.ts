@@ -23,7 +23,7 @@
  */
 import type { Terminal as GhosttyTerminal } from "ghostty-web";
 
-import { encodeMouse } from "#shared/terminal/mouse";
+import { encodeMouse } from "@abacus-ai/contract/terminal/mouse";
 
 /** DEC private modes a program sets to ask for any of this. */
 const MODE = {

@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { v1ToThreadFile } from "#shared/transcript/thread-file";
+import { v1ToThreadFile } from "@abacus-ai/contract/transcript/thread-file";
 
 import { fingerprintV1 } from "../../services/session/thread-store";
 import { backupsRoot, migratingRoot } from "../backup";

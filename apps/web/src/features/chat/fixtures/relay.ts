@@ -29,15 +29,15 @@ import {
 import { restoreInboundChunk } from "@tanstack/ai/client";
 
 import type { AiClient } from "#renderer/data/ai";
-import { AgentStatus, type QueueEntry } from "#shared/agent-types";
+import { AgentStatus, type QueueEntry } from "@abacus-ai/contract/agent-types";
 import type {
   AiHydration,
   AiSendAck,
   AiSendInput,
   AgentState,
   PermissionDescriptor,
-} from "#shared/contract";
-import type { AiNotice, RunOutcomeRecord } from "#shared/contract/ai-thread";
+} from "@abacus-ai/contract/contract";
+import type { AiNotice, RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
 
 import {
   fixtureAiRouter,

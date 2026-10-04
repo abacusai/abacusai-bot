@@ -9,9 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { AgentMode } from "#shared/agent-types";
-import type { IpcEvent } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BuiltinToolPermissions } from "./builtin-tool-permissions";
 

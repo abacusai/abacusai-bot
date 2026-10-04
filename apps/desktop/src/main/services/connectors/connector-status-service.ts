@@ -12,12 +12,12 @@ import type {
   ConnectorStatus,
   ConnectorStatuses,
   McpServerInfo,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
   isMessagingPlatformInstalled,
   type MessagingSnapshot,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
 
 export interface StatusInputs {
   /**

@@ -6,7 +6,7 @@ import path from "node:path";
 import { buildExperience } from "@abacus-ai/updater/experience";
 import { describe, expect, it } from "vitest";
 
-import { FOUNDATION_API, EXPERIENCE_PROTOCOL } from "#shared/experience";
+import { FOUNDATION_API, EXPERIENCE_PROTOCOL } from "@abacus-ai/contract/experience";
 
 import { verifyExperience } from "./integrity";
 

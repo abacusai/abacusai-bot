@@ -4,7 +4,7 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type SkillMetadata,
-} from "#shared/agent-types";
+} from "@abacus-ai/contract/agent-types";
 import type {
   AgentPermissionResponseRequest,
   AgentQueueMessageRequest,
@@ -16,7 +16,7 @@ import type {
   AgentSessionSnapshot,
   AgentSwitchConversationRequest,
   SendAgentMessageRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 type CliCommandDispatcher = (
   workspaceId: string,

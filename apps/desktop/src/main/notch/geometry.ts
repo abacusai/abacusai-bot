@@ -1,4 +1,4 @@
-import type { NotchLayout } from "#shared/contract/notch";
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 export interface Rect {
   x: number;
   y: number;

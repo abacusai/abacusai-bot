@@ -15,8 +15,8 @@ import {
   MAX_BOT_PERSONA,
   MAX_BOT_DESCRIPTION,
   MAX_BOT_TITLE,
-} from "#shared/bots";
-import type { BotRow, RoutineRow } from "#shared/contract/rows";
+} from "@abacus-ai/contract/bots";
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 const trimmed = (max: number) =>
   v.pipe(v.string(), v.trim(), v.maxLength(max, "too-long"));
 export const BotFormSchema = v.object({

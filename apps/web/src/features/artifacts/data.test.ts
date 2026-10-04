@@ -5,7 +5,7 @@ import type {
   SessionRow,
   RoutineRow,
   BotRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 import { cardWindow, filterArtifacts, sourceFor, artifactTarget } from "./data";
 const artifact = {
@@ -82,7 +82,7 @@ it("R5-T14 list headings use local calendar days and disappear for name sorting"
       ({
         id: String(i),
         updatedAt: new Date(date.getTime() - offset).toISOString(),
-      }) as import("#shared/contract/rows").ArtifactRow
+      }) as import("@abacus-ai/contract/contract/rows").ArtifactRow
   );
   expect(
     artifactListEntries(rows, true).filter((row) => "day" in row)

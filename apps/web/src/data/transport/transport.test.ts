@@ -7,8 +7,8 @@ import { implement, type Router } from "@orpc/server";
 import { partialMatchKey } from "@tanstack/query-core";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { contract } from "#shared/contract";
-import type { SystemInfo } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { createMemoryTransport, type MemoryTransport } from "./memory";
 

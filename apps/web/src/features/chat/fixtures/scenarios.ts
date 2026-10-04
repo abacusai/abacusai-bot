@@ -6,7 +6,7 @@
  */
 import type { StreamChunk, UIMessage } from "@tanstack/ai";
 
-import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import type { Draft } from "../composer/draft-store";
 import * as b from "./builders";

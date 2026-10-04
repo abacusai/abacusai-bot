@@ -2,8 +2,8 @@
  * What the DB tables read and hook (spec 00 B.2). `ServiceHost` provides all
  * of it; tests pass fakes. Every `on*` returns its removal.
  */
-import type { Bot } from "#shared/bots";
-import type { GitStateRow } from "#shared/contract/rows";
+import type { Bot } from "@abacus-ai/contract/bots";
+import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import type {
   AgentSessionListItem,
   BotMemoryView,
@@ -12,8 +12,8 @@ import type {
   SessionArtifact,
   SessionTurnStateSnapshot,
   WorkspaceMetadataSnapshot,
-} from "#shared/contracts";
-import type { Routine, RoutineListItem } from "#shared/routines";
+} from "@abacus-ai/contract/contracts";
+import type { Routine, RoutineListItem } from "@abacus-ai/contract/routines";
 
 export type Unhook = () => void;
 

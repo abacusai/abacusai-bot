@@ -18,9 +18,9 @@ import {
   AlertDialogAction,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { CheckoutRef } from "#shared/contract/checkout";
-import type { SessionRow } from "#shared/contract/rows";
-import type { GitChangeItem } from "#shared/contracts";
+import type { CheckoutRef } from "@abacus-ai/contract/contract/checkout";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 
 import {
   useCheckoutIdentity,

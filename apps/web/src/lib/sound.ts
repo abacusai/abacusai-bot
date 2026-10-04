@@ -3,7 +3,7 @@
  * One AudioContext, created lazily on `unlock()` (the first pointerdown);
  * nothing plays before it. The values are provisional and live only here.
  */
-import type { PrefsRow } from "#shared/contract";
+import type { PrefsRow } from "@abacus-ai/contract/contract";
 
 import { allowed } from "./notify";
 

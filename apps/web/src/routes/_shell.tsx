@@ -25,7 +25,7 @@ import {
   ShellFailure,
 } from "#renderer/features/shell/shell-layout";
 import { startTour, useTourState } from "#renderer/features/tour/store";
-import { canSignOutOfAbacus } from "#shared/settings";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 const TourHost = lazy(() =>
   import("#renderer/features/tour").then((m) => ({ default: m.TourHost }))
 );

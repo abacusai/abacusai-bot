@@ -16,7 +16,7 @@ import {
   type PptxShape,
   type PptxSlide,
   type PptxTextBody,
-} from "#shared/pptx";
+} from "@abacus-ai/contract/pptx";
 const emuToPx = (emu: number): number => emu / EMU_PER_PX;
 
 /** Font stack behind whatever the deck asked for, so text stays close. */

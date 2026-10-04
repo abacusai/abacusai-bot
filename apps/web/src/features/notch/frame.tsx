@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { NotchLayout } from "#shared/contract/notch";
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 
 import { notchOutline } from "./outline";
 

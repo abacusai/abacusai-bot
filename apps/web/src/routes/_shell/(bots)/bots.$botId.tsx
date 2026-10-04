@@ -33,7 +33,7 @@ import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import { BotId } from "#shared/contract/ids";
+import { BotId } from "@abacus-ai/contract/contract/ids";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
 /**

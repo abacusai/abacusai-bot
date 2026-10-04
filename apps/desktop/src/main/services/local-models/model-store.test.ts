@@ -18,7 +18,7 @@ import {
   it,
 } from "vitest";
 
-import type { LocalModelSpec } from "#shared/local-models";
+import type { LocalModelSpec } from "@abacus-ai/contract/local-models";
 
 import {
   downloadModel,

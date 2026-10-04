@@ -28,7 +28,7 @@ import {
   DialogDescription,
 } from "#renderer/ui/dialog";
 import { Input } from "#renderer/ui/input";
-import { TOOLSETS_FOR_DISPLAY } from "#shared/toolsets";
+import { TOOLSETS_FOR_DISPLAY } from "@abacus-ai/contract/toolsets";
 /** @public Shared phase-5 integration API. */
 export const selectSkills = (
   live: readonly unknown[] | undefined,

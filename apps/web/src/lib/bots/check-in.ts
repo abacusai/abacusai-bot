@@ -1,1 +1,1 @@
-export * from "#shared/bots/check-in";
+export * from "@abacus-ai/contract/bots/check-in";

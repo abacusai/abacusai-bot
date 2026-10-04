@@ -1,4 +1,4 @@
-import type { SettingsEvent } from "#shared/contract";
+import type { SettingsEvent } from "@abacus-ai/contract/contract";
 
 import { impl, isType, onIpcEvents, stream } from "./impl";
 

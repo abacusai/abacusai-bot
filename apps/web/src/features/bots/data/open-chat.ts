@@ -6,7 +6,7 @@
  * change or a second navigation never calls it again.
  */
 import type { Transport } from "#renderer/data/transport";
-import type { BotChatHandle } from "#shared/bots";
+import type { BotChatHandle } from "@abacus-ai/contract/bots";
 
 interface OpenChatDeps {
   transport: Pick<Transport, "client">;

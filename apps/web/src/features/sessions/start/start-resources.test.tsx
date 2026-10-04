@@ -3,7 +3,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { dispatchPreview } from "#renderer/features/shell";
 import { renderApp } from "#renderer/test-support/app-harness";
-import { draftConversationKey } from "#shared/conversation-scope";
+import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { newStartDraft, startDraftStore } from "./start-session";
 

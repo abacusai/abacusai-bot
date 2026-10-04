@@ -14,7 +14,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { Db } from "#renderer/data/db";
 import { systemInfoQuery } from "#renderer/data/queries/system";
 import type { CloseReason, Transport } from "#renderer/data/transport";
-import type { SystemInfo } from "#shared/contract";
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 class BootTimeoutError extends Error {
   constructor(readonly step: BootStep) {

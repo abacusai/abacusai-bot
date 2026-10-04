@@ -26,7 +26,7 @@ import {
   FLOW_CONTEXT_KEY,
   FlowRegistry,
   withFlowAcks,
-} from "#shared/contract/flow-control";
+} from "@abacus-ai/contract/contract/flow-control";
 
 import type { RpcContext, RpcWindowKind } from "../context";
 import type { RpcDeps } from "../deps";

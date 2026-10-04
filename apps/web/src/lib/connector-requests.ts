@@ -14,12 +14,12 @@ import { useEffect, useState } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
-import type { ConnectorsEvent } from "#shared/contract/connectors";
-import type { ConnectorRequest } from "#shared/contracts";
+import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
+import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import {
   conversationRefFromKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp">;
 

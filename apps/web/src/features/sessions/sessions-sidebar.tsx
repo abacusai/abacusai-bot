@@ -54,8 +54,8 @@ import {
   DropdownMenuItem,
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow, WorkspaceRow } from "#shared/contract";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { SessionRow, WorkspaceRow } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { WorkspaceMissing } from "./context/workspace-missing";
 import { sessionAttention } from "./data/attention";

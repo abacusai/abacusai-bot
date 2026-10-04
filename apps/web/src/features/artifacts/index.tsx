@@ -29,8 +29,8 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
-import type { ArtifactRow } from "#shared/contract/rows";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import {
   sourceFor,

@@ -1,4 +1,4 @@
-import type { ArtifactRow } from "#shared/contract/rows";
+import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 
 export const artifactGalleryRows: ArtifactRow[] = /* @__PURE__ */ [
   ["file", "Weekly briefing", "/gallery/briefing.md"],

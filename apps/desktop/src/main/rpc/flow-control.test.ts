@@ -14,8 +14,8 @@ import {
   FLOW_ACK,
   FlowRegistry,
   parseFlowHeader,
-} from "#shared/contract/flow-control";
-import type { IpcEvent } from "#shared/contracts";
+} from "@abacus-ai/contract/contract/flow-control";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { MainEventBus } from "./event-bus";
 import { LOSSLESS_ACTIONABLE_MAX_EVENTS } from "./subscriber-queue";

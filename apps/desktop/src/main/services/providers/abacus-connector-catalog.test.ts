@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { AbacusConnectorsSnapshot } from "#shared/contracts";
+import type { AbacusConnectorsSnapshot } from "@abacus-ai/contract/contracts";
 
 import { confirmConnected } from "./abacus-connector-service";
 

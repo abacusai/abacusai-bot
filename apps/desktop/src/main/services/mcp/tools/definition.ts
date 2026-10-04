@@ -1,4 +1,4 @@
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 import type { McpAgentToolsServer } from "../mcp-agent-tools-server";
 

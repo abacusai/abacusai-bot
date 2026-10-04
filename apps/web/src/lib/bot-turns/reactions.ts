@@ -7,7 +7,7 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 
-import { isMessageReaction } from "#shared/message-reactions";
+import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
 import { messageTools, parseJsonRecord, type MessageTool } from "./tool-parts";
 

@@ -8,7 +8,7 @@ import {
 } from "#renderer/data/fixture-db/fixture-db";
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { botAttention } from "./attention";
 import { createBot, updateBot, deleteBot, duplicateName } from "./bot-actions";

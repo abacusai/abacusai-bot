@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { BrowserSurface } from "#renderer/components/browser-surface";
 import { Button } from "#renderer/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
-import { draftConversationKey } from "#shared/conversation-scope";
+import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 const BrowserTab = lazy(() =>
   import("../browser/browser-tab").then((m) => ({ default: m.BrowserTab }))

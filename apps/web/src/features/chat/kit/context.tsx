@@ -7,7 +7,7 @@
 import type { UIMessage } from "@tanstack/ai-client";
 import { createContext, use, type ReactNode } from "react";
 
-import type { AgentMode } from "#shared/agent-types";
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import type { SubmissionEnvelope } from "../runtime/admission";
 import type { ChatRuntime } from "../runtime/runtime";

@@ -19,8 +19,8 @@ import { emptyThreadState } from "#renderer/features/chat/store/thread-store";
 import { RoutinesGlobals } from "#renderer/features/routines/globals";
 import { initI18n } from "#renderer/lib/i18n";
 import type { NotchRouterContext } from "#renderer/notch-context";
-import type { RunFinishedNotice } from "#shared/contract";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { NotchShell } from "./index";
 import type { NotchInputs } from "./presenter";

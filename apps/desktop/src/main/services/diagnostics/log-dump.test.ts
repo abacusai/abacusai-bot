@@ -12,7 +12,7 @@ import os from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import type { AgentSessionSnapshot, UsageSnapshot } from "#shared/contracts";
+import type { AgentSessionSnapshot, UsageSnapshot } from "@abacus-ai/contract/contracts";
 
 import {
   buildLogDump,

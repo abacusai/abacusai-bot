@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { fixtureRoutines } from "#renderer/data/fixture-db/rows";
 import { renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 const os = implement(contract);
 const row = fixtureRoutines()[0]!;
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;

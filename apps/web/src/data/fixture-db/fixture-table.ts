@@ -13,7 +13,7 @@ import type {
   ChangeBatch,
   TablePosition,
   TableSnapshot,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 interface Subscriber<Row, Key> {
   push(batch: ChangeBatch<Row, Key>): void;

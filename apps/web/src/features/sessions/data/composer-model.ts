@@ -10,9 +10,9 @@ import {
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { AgentMode } from "#shared/agent-types";
-import type { SessionRow } from "#shared/contract/rows";
-import { resolveConfiguredModel } from "#shared/models";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { resolveConfiguredModel } from "@abacus-ai/contract/models";
 
 import { useCheckoutQueries, useSessionsTransport } from "./queries";
 import { setSessionModel } from "./session-actions";

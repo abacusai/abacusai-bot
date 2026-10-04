@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentSessionListItem,
   WorkspaceListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { setMigrationWriteBlocks } from "../../migrations/write-block";
 import { CheckoutService } from "../../services/workspace/checkout-service";

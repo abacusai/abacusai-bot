@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { AbsPath, SessionId, WorkspaceId } from "#shared/contract/ids";
+import { AbsPath, SessionId, WorkspaceId } from "@abacus-ai/contract/contract/ids";
 
 /** Optional; an invalid value falls back to absent instead of throwing. */
 export const optionalField = <

@@ -38,11 +38,11 @@ import {
   contract,
   type SystemInfo,
   type WindowChromeState,
-} from "#shared/contract";
-import type { RunFinishedNotice } from "#shared/contract/ai";
-import type { MaterializeBrowserRuntimeFileRequest } from "#shared/contract/browser";
-import type { FilesEvent } from "#shared/contract/files";
-import type { TerminalEvent } from "#shared/contract/terminal";
+} from "@abacus-ai/contract/contract";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { MaterializeBrowserRuntimeFileRequest } from "@abacus-ai/contract/contract/browser";
+import type { FilesEvent } from "@abacus-ai/contract/contract/files";
+import type { TerminalEvent } from "@abacus-ai/contract/contract/terminal";
 /**
  * The whole app over test doubles: a memory transport answering the handful
  * of procedures the shell calls (system.info, window.chrome, window.ready,
@@ -54,7 +54,7 @@ import type {
   FileTreeNode,
   DefaultAgentMode,
   BrowserRuntimeState,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 export const SYSTEM_INFO: SystemInfo = {
   appVersion: "1.0.0",

@@ -6,7 +6,7 @@
  */
 import { app } from "electron";
 
-import { PROVIDER_ENV_VARS } from "#shared/settings";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { readSettings, storedKeyProviders } from "../config/settings";
 import {

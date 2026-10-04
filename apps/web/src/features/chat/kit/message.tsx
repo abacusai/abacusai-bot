@@ -40,7 +40,7 @@ import {
   stripAttachmentRefs,
   visibleUserText,
   type AttachmentRef,
-} from "#shared/transcript/user-text";
+} from "@abacus-ai/contract/transcript/user-text";
 
 import { Markdown } from "../markdown/markdown";
 import { useToolWindow } from "../scroller/row-context";

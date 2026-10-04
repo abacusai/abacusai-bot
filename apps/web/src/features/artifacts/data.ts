@@ -6,7 +6,7 @@ import type {
   RoutineRow,
   BotRow,
   WorkspaceRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 export interface ArtifactSource {
   botIds: string[];
   routine: string | null;

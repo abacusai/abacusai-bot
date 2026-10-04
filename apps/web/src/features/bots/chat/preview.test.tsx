@@ -9,8 +9,8 @@ import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createMemoryTransport } from "#renderer/data/transport/memory";
-import { contract } from "#shared/contract";
-import type { FilesEvent } from "#shared/contract/files";
+import { contract } from "@abacus-ai/contract/contract";
+import type { FilesEvent } from "@abacus-ai/contract/contract/files";
 
 import {
   openBotFile,

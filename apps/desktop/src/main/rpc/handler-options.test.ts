@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
+import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
 
 import { UnavailableAguiSource } from "./ai/source";
 import {

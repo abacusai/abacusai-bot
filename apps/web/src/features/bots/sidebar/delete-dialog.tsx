@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { BotRow } from "#shared/contract/rows";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { deleteBot } from "../data/bot-actions";
 

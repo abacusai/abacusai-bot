@@ -6,7 +6,7 @@
  */
 import crypto from "node:crypto";
 
-import type { RoutineRun, RoutineRunKind } from "#shared/routines";
+import type { RoutineRun, RoutineRunKind } from "@abacus-ai/contract/routines";
 
 /** Every result string main records, verbatim or as a prefix. */
 export const ROUTINE_RESULTS = {

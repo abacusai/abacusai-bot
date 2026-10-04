@@ -5,7 +5,7 @@
 import type {
   GetSimulatorWindowSourceRequest,
   GetSimulatorWindowSourceResult,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 export async function getSimulatorWindowSource(
   request: GetSimulatorWindowSourceRequest

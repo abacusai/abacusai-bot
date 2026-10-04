@@ -1,8 +1,8 @@
 import type { UIMessage } from "@tanstack/ai-client";
 import { expect, it } from "vitest";
 
-import type { RunOutcomeRecord } from "#shared/contract/ai-thread";
-import type { GitChangeItem } from "#shared/contracts";
+import type { RunOutcomeRecord } from "@abacus-ai/contract/contract/ai-thread";
+import type { GitChangeItem } from "@abacus-ai/contract/contracts";
 
 import { lastRunChanges } from "./changes-card";
 const message = (id: string, name: string, input: object) =>

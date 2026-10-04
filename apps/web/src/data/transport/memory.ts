@@ -12,8 +12,8 @@ import {
   FlowRegistry,
   flowControlHandlerInterceptor,
   withFlowAcks,
-} from "#shared/contract/flow-control";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+} from "@abacus-ai/contract/contract/flow-control";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 
 import { createTransport } from "./create-transport";
 import type { Transport, TransportHost } from "./types";

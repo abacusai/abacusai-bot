@@ -7,7 +7,7 @@ import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import type { AppQueryUtils, Transport } from "#renderer/data/transport";
-import type { SettingsEvent, WindowEvent } from "#shared/contract";
+import type { SettingsEvent, WindowEvent } from "@abacus-ai/contract/contract";
 
 import { followNotices } from "./live";
 import { settingsKeys } from "./settings";

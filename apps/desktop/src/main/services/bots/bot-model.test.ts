@@ -11,8 +11,8 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentSessionStatus, SessionOwner } from "#shared/contracts";
-import { resolveConfiguredModel, type ModelAvailability } from "#shared/models";
+import type { AgentSessionStatus, SessionOwner } from "@abacus-ai/contract/contracts";
+import { resolveConfiguredModel, type ModelAvailability } from "@abacus-ai/contract/models";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import { AguiRelayService } from "../agui/relay-service";

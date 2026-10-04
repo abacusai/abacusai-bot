@@ -13,7 +13,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { isThreadSeen } from "#renderer/lib/navigation/visible-thread";
 import { createNotifier } from "#renderer/lib/notify";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
-import { conversationRefFromKey } from "#shared/conversation-scope";
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BrowserAskHost } from "./browser/ask-host";
 import { followSessionsSources } from "./data/live";

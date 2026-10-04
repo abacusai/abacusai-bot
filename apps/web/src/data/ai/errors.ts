@@ -7,7 +7,7 @@
  */
 import { ORPCError } from "@orpc/client";
 
-import type { RpcErrorCode } from "#shared/contract/errors";
+import type { RpcErrorCode } from "@abacus-ai/contract/contract/errors";
 
 export const rpcCode = (error: unknown): RpcErrorCode | null =>
   error instanceof ORPCError ? (error.code as RpcErrorCode) : null;

@@ -1,7 +1,7 @@
 import { Store } from "@tanstack/react-store";
 
 import type { Transport } from "#renderer/data/transport";
-import type { AbacusAuthOutcome } from "#shared/contracts";
+import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
 export interface SignInAttempt {
   id: string;
   intent: "signup" | "signin";

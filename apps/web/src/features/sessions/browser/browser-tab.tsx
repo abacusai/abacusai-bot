@@ -19,12 +19,12 @@ import {
   DropdownMenuItem,
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow } from "#shared/contract/rows";
-import type { BrowserRuntimeState } from "#shared/contracts";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { BrowserRuntimeState } from "@abacus-ai/contract/contracts";
 import {
   sessionConversationKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { useSessionsTransport } from "../data/queries";
 import { acquireLocalFile } from "./local-materialization";

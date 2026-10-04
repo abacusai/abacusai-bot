@@ -12,7 +12,7 @@ import {
   parseTranscriptV1,
   type ClearMarker,
   type ThreadTwinSummary,
-} from "#shared/transcript/thread-file";
+} from "@abacus-ai/contract/transcript/thread-file";
 
 import {
   clearMarkerPath,

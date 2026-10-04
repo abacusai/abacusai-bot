@@ -248,7 +248,7 @@ it.each(["pdf", "html"])(
   async (extension) => {
     const materializeFile = vi.fn(
       async (
-        input: import("#shared/contract/browser").MaterializeBrowserRuntimeFileRequest
+        input: import("@abacus-ai/contract/contract/browser").MaterializeBrowserRuntimeFileRequest
       ) => ({
         lease: {
           conversationKey: input.conversationKey,

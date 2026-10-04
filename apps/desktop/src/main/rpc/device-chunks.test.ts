@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { DeviceStreamChunk } from "#shared/contracts";
+import type { DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 
 import { DEVICE_CHUNK_MAX_BYTES } from "./delivery";
 import { LEGACY_DEVICE_CHUNK_CHANNEL } from "./device-chunks";

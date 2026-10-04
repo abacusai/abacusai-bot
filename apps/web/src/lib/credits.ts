@@ -1,6 +1,6 @@
-import type { AbacusAccountInfo } from "#shared/contracts";
-import { FREE_POOL_PROVIDERS } from "#shared/free-pool";
-import { PROVIDER_KEY_FIELDS } from "#shared/settings";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
+import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 /** The plan-selection page, for a paid tier that wants more. */
 /** Where Upgrade goes: the product page, so people see what they get before a plan picker. */

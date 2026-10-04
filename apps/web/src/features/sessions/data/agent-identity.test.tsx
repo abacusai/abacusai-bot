@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 
 import { useAgentLifecycle } from "./agent-start";
 it("editing A → editing B warms B and disposes A's pending retries", async () => {

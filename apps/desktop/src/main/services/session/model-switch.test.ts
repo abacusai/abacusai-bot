@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { DesktopEvent } from "#shared/agent-types";
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import { ModelSwitchWaiters, ModelUnavailableError } from "./model-switch";
 

@@ -5,7 +5,7 @@ import { RoutePending } from "#renderer/components/page-state";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { Button } from "#renderer/ui/button";
-import type { BotRow } from "#shared/contract/rows";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { BotFace } from "../avatar";
 import { moodFor } from "../data/attention";

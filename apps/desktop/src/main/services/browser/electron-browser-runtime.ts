@@ -23,14 +23,14 @@ import type {
   NavigateBrowserRuntimeRequest,
   PresentBrowserRuntimeRequest,
   PromoteBrowserRuntimeScopeRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   AGENT_BROWSER_RESOURCE_ID,
   conversationRefFromKey,
   sessionConversationKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
-import { ForbiddenError } from "#shared/forbidden";
+} from "@abacus-ai/contract/conversation-scope";
+import { ForbiddenError } from "@abacus-ai/contract/forbidden";
 
 import {
   BrowserRuntimeRegistry,

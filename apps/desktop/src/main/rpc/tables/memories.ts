@@ -7,8 +7,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { MemoryRow } from "#shared/contract/rows";
-import type { MemoryTargetId } from "#shared/contracts";
+import type { MemoryRow } from "@abacus-ai/contract/contract/rows";
+import type { MemoryTargetId } from "@abacus-ai/contract/contracts";
 
 import type { TableSources } from "./sources";
 

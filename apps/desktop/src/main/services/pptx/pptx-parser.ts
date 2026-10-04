@@ -16,7 +16,7 @@ import type {
   PptxTableCell,
   PptxTextBody,
   PptxTextRun,
-} from "#shared/pptx";
+} from "@abacus-ai/contract/pptx";
 
 import {
   attr,

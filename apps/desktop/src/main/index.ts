@@ -30,7 +30,7 @@ import {
 import type { WebContents } from "electron";
 import Store from "electron-store";
 
-import type { AbacusAccountInfo, UsageSnapshot } from "#shared/contracts";
+import type { AbacusAccountInfo, UsageSnapshot } from "@abacus-ai/contract/contracts";
 
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
@@ -73,9 +73,9 @@ export function hasGoogleChrome(
     }
   });
 }
-import type { WindowChromeState, WindowState } from "#shared/contract";
-import { funnelDetail, isFunnelStep } from "#shared/funnel";
-import { PROVIDER_ENV_VARS } from "#shared/settings";
+import type { WindowChromeState, WindowState } from "@abacus-ai/contract/contract";
+import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";

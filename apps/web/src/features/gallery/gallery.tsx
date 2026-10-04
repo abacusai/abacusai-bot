@@ -38,7 +38,7 @@ import {
   themeOverride,
 } from "#renderer/lib/theme";
 import { Button } from "#renderer/ui/button";
-import { BOT_AVATAR_COLORS } from "#shared/bots";
+import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 
 import * as Atoms from "./atoms";
 import { OverlayContext, OVERLAY_EXAMPLES } from "./overlays";

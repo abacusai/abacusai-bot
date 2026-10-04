@@ -12,13 +12,13 @@ import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
-import type { ConnectorOutcome } from "#shared/contracts";
+import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
   SHARED_BOT_PLATFORM_OF,
   type MessagingPlatformId,
   type MessagingSnapshot,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
 export const CONNECT_WATCHDOG_MS = 180000;
 export const fieldsFor = (entry: Connector): Record<string, ConnectorField> => {
   if (entry.kind === "credential") return entry.fields;

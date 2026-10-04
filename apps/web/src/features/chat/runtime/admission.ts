@@ -9,7 +9,7 @@
 import type { UIMessage } from "@tanstack/ai-client";
 
 import { isDefinitive, type AiClient } from "#renderer/data/ai";
-import type { AiSendAck } from "#shared/contract/ai";
+import type { AiSendAck } from "@abacus-ai/contract/contract/ai";
 
 export interface SubmissionEnvelope {
   runId: string;

@@ -13,7 +13,7 @@ import {
   LOCAL_MODEL_CATALOG,
   localModelUrl,
   type LocalModelSpec,
-} from "#shared/local-models";
+} from "@abacus-ai/contract/local-models";
 
 import { abacusBotHome } from "../../paths";
 

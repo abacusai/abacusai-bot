@@ -7,7 +7,7 @@
 import { Store } from "@tanstack/react-store";
 
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-import type { AgentMode } from "#shared/agent-types";
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 export interface DraftAttachment {
   id: string;

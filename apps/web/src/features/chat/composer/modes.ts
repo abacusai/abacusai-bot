@@ -2,7 +2,7 @@
  * The permission modes the mode chip offers (spec 02 §8.2, canvas
  * "Session, permission mode open"), in menu order.
  */
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 export const MODE_ORDER: readonly AgentMode[] = [
   AgentMode.Auto,

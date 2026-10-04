@@ -2,7 +2,7 @@ import { getEventMeta } from "@orpc/client";
 
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
-import type { RunFinishedNotice } from "#shared/contract/ai";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
 
 type Listener = (notice: RunFinishedNotice) => void | Promise<void>;
 const feeds = new WeakMap<Transport, ReturnType<typeof createFeed>>();

@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import type { MessagingSnapshot } from "#shared/messaging";
+import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 
 import {
   CONNECT_WATCHDOG_MS,

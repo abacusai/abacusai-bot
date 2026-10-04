@@ -9,7 +9,7 @@ import {
   memoryRelay,
   closeMemoryRelays,
 } from "#renderer/test-support/chat-relay";
-import type { AiSendInput } from "#shared/contract/ai";
+import type { AiSendInput } from "@abacus-ai/contract/contract/ai";
 
 import * as b from "../fixtures/builders";
 import type { FakeRelay } from "../fixtures/relay";

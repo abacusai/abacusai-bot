@@ -9,7 +9,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import { AgentStatus, type DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import {
   SessionTurnStateService,

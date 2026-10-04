@@ -4,7 +4,7 @@ import {
   draftConversationRef,
   sessionConversationRef,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 export type DraftConversationScope = {
   workspaceId: string;
@@ -21,7 +21,7 @@ export type ConversationScope =
   | DraftConversationScope
   | SessionConversationScope;
 
-export type { ConversationKey } from "#shared/conversation-scope";
+export type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 export const conversationKey = (scope: ConversationScope): ConversationKey => {
   const ref =

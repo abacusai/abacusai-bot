@@ -4,9 +4,9 @@ import {
   draftConversationRef,
   sessionConversationRef,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
-export type { ConversationKey } from "#shared/conversation-scope";
+export type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 export type BrowserResourceId = string & {
   readonly __browserResourceId: unique symbol;

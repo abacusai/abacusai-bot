@@ -1,8 +1,8 @@
-import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import { AgentStatus, type DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type {
   SessionTurnPhase,
   SessionTurnStateSnapshot,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 type EmitChange = (snapshot: SessionTurnStateSnapshot) => void;
 type OnInactivityTimeout = (

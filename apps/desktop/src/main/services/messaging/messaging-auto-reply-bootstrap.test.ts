@@ -19,7 +19,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 // A mutable in-memory settings store standing in for the config file, so the
 // bootstrap's own writes are visible to its later reads.

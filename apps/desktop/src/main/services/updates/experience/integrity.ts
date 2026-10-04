@@ -10,7 +10,7 @@ import path from "node:path";
  */
 import { verifyProvenance } from "@abacus-ai/updater/provenance";
 
-import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "#shared/experience";
+import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "@abacus-ai/contract/experience";
 
 export interface ExperienceFileEntry {
   readonly sha256: string;

@@ -54,9 +54,9 @@ import {
 } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import type { AgentMode, PermissionRequest } from "#shared/agent-types";
-import { SessionId } from "#shared/contract/ids";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { AgentMode, PermissionRequest } from "@abacus-ai/contract/agent-types";
+import { SessionId } from "@abacus-ai/contract/contract/ids";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 const SessionAgents = ({
   runtime,

@@ -12,7 +12,7 @@ import path from "path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sessionConversationKey } from "#shared/conversation-scope";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 

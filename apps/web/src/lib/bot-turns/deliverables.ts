@@ -12,7 +12,7 @@ import {
   declaredArtifactTargets,
   isDeliverableUrl,
   presentedDeliverables,
-} from "#shared/deliverables";
+} from "@abacus-ai/contract/deliverables";
 
 import {
   basename,

@@ -20,7 +20,7 @@ import {
   type ChatRuntime,
 } from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
-import type { SystemInfo } from "#shared/contract";
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { routeTree } from "./routeTree.gen";
 

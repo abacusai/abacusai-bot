@@ -18,7 +18,7 @@ import { fixturePrefs } from "#renderer/data/fixture-db/rows";
 import { initI18n } from "#renderer/lib/i18n";
 import { renderApp } from "#renderer/test-support/app-harness";
 import { setMediaMatches } from "#renderer/test-support/media";
-import { BOT_AVATAR_COLORS } from "#shared/bots";
+import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 
 import {
   accentForeground,

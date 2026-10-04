@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { agentVendorDir } from "#main/resources";
-import { excludedBuiltinTools, isToolsetEnabled } from "#shared/toolsets";
+import { excludedBuiltinTools, isToolsetEnabled } from "@abacus-ai/contract/toolsets";
 
 import { memorySnapshot } from "../agent-tools/memory-store";
 import { abacusRoutellmV1 } from "../providers/abacus-host";

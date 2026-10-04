@@ -14,7 +14,7 @@ import {
 } from "@tanstack/ai-client";
 import { describe, expect, it } from "vitest";
 
-import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import * as b from "../../fixtures/builders";
 import { normalizeTool, toolInput } from "./normalize";

@@ -10,8 +10,8 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { AgentStatus } from "#shared/agent-types";
-import type { MessagingPlatformId } from "#shared/messaging";
+import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
   const actual =

@@ -11,7 +11,7 @@ import * as path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { DesktopEvent } from "#shared/agent-types";
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import { AgentManagerService, type NdjsonOrigin } from "./cli-manager-service";
 

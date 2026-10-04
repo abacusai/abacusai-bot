@@ -3,8 +3,8 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import { contract } from "@abacus-ai/contract/contract";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { artifactStressRows } from "./gallery";
 beforeEach(() => {

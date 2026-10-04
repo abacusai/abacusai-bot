@@ -21,7 +21,7 @@ import {
   AlertDialogFooter,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import type { UpdateStatus } from "#shared/update";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false

@@ -19,7 +19,7 @@ vi.mock("electron", () => ({
   ipcMain: { on: vi.fn() },
 }));
 
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { importLegacyPrefsAtStartup } from "../services/config/legacy-prefs";
 import { PrefsStore } from "../services/config/prefs-store";

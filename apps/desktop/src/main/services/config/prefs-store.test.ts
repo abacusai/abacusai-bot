@@ -9,7 +9,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { PREFS_DEFAULTS, PrefsStore } from "./prefs-store";
 

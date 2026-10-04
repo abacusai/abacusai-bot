@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { RoutineRun } from "#shared/routines";
+import type { RoutineRun } from "@abacus-ai/contract/routines";
 
 import {
   backupsRoot,

@@ -5,7 +5,7 @@ import {
   AVATAR_ACCESSORIES,
   isSupportedAvatarColor,
 } from "#renderer/lib/bots/avatar";
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 // Draft validation checks shape, not form validity: an unfinished name or cron
 // time must survive a swap just as typed, without trimming or normalization.

@@ -2,7 +2,7 @@ import { withEventMeta } from "@orpc/client";
 import { expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
-import type { RunFinishedNotice } from "#shared/contract";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract";
 
 import { runFinishedFeed, subscribeRunFinished } from "./run-finished";
 it("shares one resumed stream and advances its cursor only after buffered delivery settles", async () => {

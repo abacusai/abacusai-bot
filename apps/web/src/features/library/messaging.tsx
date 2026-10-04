@@ -36,7 +36,7 @@ import {
   type MessagingPlatformId,
   type MessagingPlatformInfo,
   type UpdateMessagingSettingsRequest,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
 
 import {
   connectPlatform,

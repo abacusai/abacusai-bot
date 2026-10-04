@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { MessagingSnapshot } from "#shared/messaging";
+import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 
 import {
   buildConnectorStatuses,

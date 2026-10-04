@@ -11,7 +11,7 @@ import {
   memoryRelay,
   closeMemoryRelays,
 } from "#renderer/test-support/chat-relay";
-import type { QueueEntry } from "#shared/agent-types";
+import type { QueueEntry } from "@abacus-ai/contract/agent-types";
 
 import * as b from "../fixtures/builders";
 import type { FakeRelay } from "../fixtures/relay";

@@ -4,7 +4,7 @@
  * ambiguous name is reported rather than guessed: approving the wrong person
  * hands them an auto-replying account.
  */
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 export interface SenderCandidate {
   platform: MessagingPlatformId;

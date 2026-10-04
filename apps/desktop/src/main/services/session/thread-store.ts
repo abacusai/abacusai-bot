@@ -35,7 +35,7 @@ import path from "node:path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 
-import type { UIMessage } from "#shared/contract";
+import type { UIMessage } from "@abacus-ai/contract/contract";
 import {
   decideConversion,
   parseClearMarker,
@@ -46,7 +46,7 @@ import {
   type ThreadFileV2,
   type ThreadTwin,
   type V1Meta,
-} from "#shared/transcript/thread-file";
+} from "@abacus-ai/contract/transcript/thread-file";
 
 import { isMigrationWriteBlocked } from "../../migrations/write-block";
 import { abacusBotHome } from "../../paths";

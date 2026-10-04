@@ -1,6 +1,6 @@
 import { ORPCError, withEventMeta } from "@orpc/server";
 
-import type { AiHydration, StreamChunk } from "#shared/contract";
+import type { AiHydration, StreamChunk } from "@abacus-ai/contract/contract";
 
 import type { SequencedChunk } from "../ai/source";
 import { impl } from "./impl";

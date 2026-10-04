@@ -5,7 +5,7 @@ import { BotGone } from "#renderer/features/bots/chat/identity";
 import { loadBot } from "#renderer/features/bots/data/loaders";
 import { botsQueries } from "#renderer/features/bots/data/queries";
 import { BotEditorPage } from "#renderer/features/bots/form/bot-form";
-import { BotId } from "#shared/contract/ids";
+import { BotId } from "@abacus-ai/contract/contract/ids";
 const EditRoute = () => {
   const { botId } = Route.useParams();
   const { chat } = Route.useRouteContext();

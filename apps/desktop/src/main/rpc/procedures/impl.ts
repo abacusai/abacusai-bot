@@ -5,8 +5,8 @@
  */
 import { implement } from "@orpc/server";
 
-import { contract } from "#shared/contract";
-import type { IpcEvent } from "#shared/contracts";
+import { contract } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";

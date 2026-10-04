@@ -9,10 +9,10 @@
  * the kit, App default is the item whose `id` is `""`: selecting it calls
  * `onChange(null)`, and it is checked while the binding's `value` is null.
  */
-import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "#shared/free-pool";
-import { LOCAL_PROVIDER_ID } from "#shared/local-models";
-import { resolveConfiguredModel, type ModelAvailability } from "#shared/models";
-import { PROVIDER_KEY_FIELDS } from "#shared/settings";
+import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "@abacus-ai/contract/free-pool";
+import { LOCAL_PROVIDER_ID } from "@abacus-ai/contract/local-models";
+import { resolveConfiguredModel, type ModelAvailability } from "@abacus-ai/contract/models";
+import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 /** Structurally the chat kit's `ModelGroup` (features/chat/kit/context.tsx). */
 export interface BotModelGroup {

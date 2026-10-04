@@ -3,8 +3,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
-import type { PrefsRow } from "#shared/contract";
-import type { FunnelStep } from "#shared/funnel";
+import type { PrefsRow } from "@abacus-ai/contract/contract";
+import type { FunnelStep } from "@abacus-ai/contract/funnel";
 export const accountStateQuery = (transport: Transport) =>
   transport.orpc.account.state.queryOptions({ input: {}, staleTime: Infinity });
 export const FUNNEL_BY_STEP: Partial<Record<OnboardingStepId, FunnelStep>> = {

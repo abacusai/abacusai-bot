@@ -1,4 +1,4 @@
-import type { TerminalOutputChunk } from "#shared/contract/terminal";
+import type { TerminalOutputChunk } from "@abacus-ai/contract/contract/terminal";
 export interface OutputView {
   offset: number | undefined;
   write(data: string): void | Promise<void>;

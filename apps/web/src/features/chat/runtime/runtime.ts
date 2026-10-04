@@ -7,7 +7,7 @@
  */
 import type { AiClient } from "#renderer/data/ai";
 import type { Transport } from "#renderer/data/transport";
-import type { PermissionDecision } from "#shared/agent-types";
+import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
 
 import type { PermissionDescriptor } from "../store/thread-store";
 import {

@@ -4,9 +4,9 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
-import type { AbacusAccountInfo } from "#shared/contracts";
-import type { UpdateStatus } from "#shared/update";
+import { contract } from "@abacus-ai/contract/contract";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 const os = implement(contract);
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {

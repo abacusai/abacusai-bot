@@ -4,14 +4,14 @@ import { Store } from "@tanstack/react-store";
 import type { Db } from "#renderer/data/db";
 import type { AppClient } from "#renderer/data/transport/types";
 import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-import type { AgentMode } from "#shared/agent-types";
-import type { SessionRow } from "#shared/contract/rows";
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   draftConversationKey,
   draftConversationRef,
   sessionConversationKey,
   sessionConversationRef,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
 export interface SubmissionEnvelope {

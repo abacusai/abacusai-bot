@@ -12,7 +12,7 @@
 import { createCollection, type Collection } from "@tanstack/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Bot } from "#shared/bots";
+import type { Bot } from "@abacus-ai/contract/bots";
 import type {
   AgentSessionListItem,
   GitStateSnapshot,
@@ -20,8 +20,8 @@ import type {
   MemorySnapshot,
   SessionArtifact,
   WorkspaceListItem,
-} from "#shared/contracts";
-import type { RoutineListItem } from "#shared/routines";
+} from "@abacus-ai/contract/contracts";
+import type { RoutineListItem } from "@abacus-ai/contract/routines";
 
 import { createTables, type TableName, type Tables } from ".";
 import { PrefsStore } from "../../services/config/prefs-store";

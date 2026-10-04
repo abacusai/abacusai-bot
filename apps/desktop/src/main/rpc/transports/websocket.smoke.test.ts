@@ -13,8 +13,8 @@ import { RPCLink } from "@orpc/client/websocket";
 import type { ContractRouterClient } from "@orpc/contract";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Contract } from "#shared/contract";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+import type { Contract } from "@abacus-ai/contract/contract";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 
 vi.mock("electron", () => {
   throw new Error("the router must not import electron");

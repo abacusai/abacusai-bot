@@ -9,7 +9,7 @@
  * else 1 while the session's turn waits on a permission, plus that
  * session's pending connector asks.
  */
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 
 export type LifecycleMood =
   | "idle"

@@ -10,7 +10,7 @@ import type {
   AbacusConnectorOutcome,
   AbacusConnectorsSnapshot,
   ConnectorConnectOptions,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { bringToFront } from "../../bring-to-front";
 import { credentialFor } from "../config/settings";

@@ -1,4 +1,4 @@
-import type { DeviceStreamChunk } from "#shared/contracts";
+import type { DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 export const codecFromSps = (data: Uint8Array): string | null => {
   for (let i = 0; i + 4 < data.length; i++) {
     if (data[i] !== 0 || data[i + 1] !== 0) continue;

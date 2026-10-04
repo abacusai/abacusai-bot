@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { highlightFile, toFileUrl } from "#renderer/lib/file-highlight";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
-import type { PptxDeck } from "#shared/pptx";
+import type { PptxDeck } from "@abacus-ai/contract/pptx";
 
 import { previewKind } from "./paths";
 import { PptxSlides } from "./pptx-slides";

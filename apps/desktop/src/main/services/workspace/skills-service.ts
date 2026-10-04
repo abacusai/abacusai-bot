@@ -19,7 +19,7 @@ import type {
   SearchMarketplaceSkillsResult,
   SkillMutationResult,
   SkillSource,
-} from "#shared/skills-types";
+} from "@abacus-ai/contract/skills-types";
 
 import { DESKTOP_DIR } from "../mcp/mcp-config-service";
 import { environmentNoticeService } from "../providers/environment-notice-service";

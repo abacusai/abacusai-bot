@@ -11,12 +11,12 @@ import type {
   AbacusSignOutResult,
   LocalModelInstallOutcome,
   OpenRouterAuthOutcome,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   ABACUS_CONNECTORS_SERVER_NAME,
   abacusConnectorsMcpEntry,
-} from "#shared/contracts";
-import { PROVIDER_ENV_VARS } from "#shared/settings";
+} from "@abacus-ai/contract/contracts";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";

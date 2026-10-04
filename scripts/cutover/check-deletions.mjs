@@ -11,7 +11,7 @@ export const resolveLocal = (specifier, importer, desktop) => {
   const clean = specifier.split("?")[0];
   const aliases = {
     "#main/": "main",
-    "#shared/": "shared",
+    "@abacus-ai/contract/": "shared",
     "#preload/": "preload",
     "#renderer/": "renderer",
     "#locales/": "renderer/locales",

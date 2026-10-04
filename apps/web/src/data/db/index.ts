@@ -14,7 +14,7 @@
 import { createCollection } from "@tanstack/db";
 import { createContext, use } from "react";
 
-import type { PrefsPatch } from "#shared/contract/rows";
+import type { PrefsPatch } from "@abacus-ai/contract/contract/rows";
 
 import {
   artifactsCollectionOptions,

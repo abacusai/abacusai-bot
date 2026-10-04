@@ -8,7 +8,7 @@
  */
 import type { ToolCallPart, ToolResultPart } from "@tanstack/ai-client";
 
-import { expandToolResultData } from "#shared/transcript/v1-to-ui-messages";
+import { expandToolResultData } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import type { ToolDisplayData } from "../../store/thread-store";
 

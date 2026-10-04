@@ -13,7 +13,7 @@ import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Textarea } from "#renderer/ui/textarea";
-import type { TurnFeedbackOutcome } from "#shared/contracts";
+import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 
 type Rating = "up" | "down";
 

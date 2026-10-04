@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { AgentEvent, DesktopEvent } from "#shared/agent-types";
+import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import { describeAgentEvent } from "./agent-event-log";
 

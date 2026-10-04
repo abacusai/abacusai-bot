@@ -4,7 +4,7 @@ import type { AddressInfo } from "net";
 
 import { app, shell } from "electron";
 
-import type { AbacusAuthIntent } from "#shared/contracts";
+import type { AbacusAuthIntent } from "@abacus-ai/contract/contracts";
 
 import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";

@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { followNotices } from "#renderer/data/queries/live";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
-import type { ConnectorRequest, ConnectorOutcome } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { ConnectorRequest, ConnectorOutcome } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 export const RunRequests = ({
   sessionId,
   workspaceId,

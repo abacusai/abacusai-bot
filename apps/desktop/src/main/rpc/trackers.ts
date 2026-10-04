@@ -2,7 +2,7 @@
  * State an iterator snapshots on (re)open that no service keeps, followed
  * from the bus for the process's lifetime.
  */
-import type { DeviceBuildPhase, DeviceStreamChunk } from "#shared/contracts";
+import type { DeviceBuildPhase, DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 
 import { DEVICE_CHUNK_MAX_BYTES } from "./delivery";
 import type { EventTrackers } from "./deps";

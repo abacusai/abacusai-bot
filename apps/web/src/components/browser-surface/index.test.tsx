@@ -2,7 +2,7 @@ import { Store } from "@tanstack/react-store";
 import { render } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
-import { sessionConversationKey } from "#shared/conversation-scope";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BrowserSurface } from ".";
 

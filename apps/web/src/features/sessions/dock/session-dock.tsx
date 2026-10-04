@@ -35,12 +35,12 @@ import {
   ResizableHandle,
 } from "#renderer/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
-import type { SessionRow } from "#shared/contract/rows";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import {
   terminalShellsForPlatform,
   type TerminalShellId,
-} from "#shared/terminal-shells";
+} from "@abacus-ai/contract/terminal-shells";
 
 import { useSessionsTransport, useGitState } from "../data/queries";
 import {

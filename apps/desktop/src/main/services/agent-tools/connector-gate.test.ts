@@ -5,8 +5,8 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { IpcEvent } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { ConnectorGate } from "./connector-gate";
 

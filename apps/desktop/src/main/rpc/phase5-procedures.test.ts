@@ -9,7 +9,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi, onTestFinished } from "vitest";
 
-import { TimeoutError } from "#shared/timeout-error";
+import { TimeoutError } from "@abacus-ai/contract/timeout-error";
 
 import {
   createJob,

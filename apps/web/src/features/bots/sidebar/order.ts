@@ -1,11 +1,11 @@
-import type { BotRow } from "#shared/contract/rows";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 /**
  * The sidebar's order (spec 03 §7.2): one flat list of label and bot entries
  * under one keyed parent, so a bot that moves between groups keeps its row.
  * Needs you (oldest waiting first) → Pinned (pin order) → the rest by last
  * activity. With a search query: one flat filtered list, no labels.
  */
-import type { BotChatPreview } from "#shared/contracts";
+import type { BotChatPreview } from "@abacus-ai/contract/contracts";
 
 import type { BotAttention } from "../data/attention";
 

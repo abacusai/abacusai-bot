@@ -33,8 +33,8 @@ import {
   ContextMenuContent,
   ContextMenuItem,
 } from "#renderer/ui/context-menu";
-import type { BotRow } from "#shared/contract/rows";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { BotFace } from "../avatar";
 import { clearMemory, forgetMemory, setPinned } from "../data/bot-actions";

@@ -2,7 +2,7 @@ import { useSelector, type Store } from "@tanstack/react-store";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { BrowserRuntimeLease } from "#shared/contracts";
+import type { BrowserRuntimeLease } from "@abacus-ai/contract/contracts";
 interface Presenter {
   captures: Store<Record<string, string>>;
   owner: Store<string | null>;

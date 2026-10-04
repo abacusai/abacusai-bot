@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import type { NotificationMetadata } from "#shared/contract";
+import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 
 /** Missing kind retains the session-only behavior of older producers. */
 export const notificationHref = (

@@ -13,7 +13,7 @@ import type {
   AgentMcpServer,
   AgentSessionSnapshot,
   UsageSnapshot,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import {
   clientEnvironment,

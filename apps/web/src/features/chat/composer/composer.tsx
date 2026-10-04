@@ -43,7 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
-import type { AgentMode } from "#shared/agent-types";
+import type { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { useChatView } from "../kit/context";
 import { composerChildren, composerSurface } from "../motion";

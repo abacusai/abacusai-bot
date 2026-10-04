@@ -19,7 +19,7 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Field, FieldLabel, FieldDescription } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "#shared/settings";
+import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 export const OnboardingProviderKey = ({
   transport,
   saved,

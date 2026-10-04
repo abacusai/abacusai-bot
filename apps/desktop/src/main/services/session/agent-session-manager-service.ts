@@ -1,12 +1,12 @@
-import { AgentStatus, type AgentMode } from "#shared/agent-types";
-import { ConflictError } from "#shared/conflict";
+import { AgentStatus, type AgentMode } from "@abacus-ai/contract/agent-types";
+import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
   RoutineRunOutcome,
   SessionOwner,
   WorktreeListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import {
   clearSessionStash,

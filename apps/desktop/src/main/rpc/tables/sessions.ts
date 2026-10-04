@@ -1,4 +1,4 @@
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 
 import type { TableSources } from "./sources";
 

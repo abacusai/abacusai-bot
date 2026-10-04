@@ -17,7 +17,7 @@ import type {
   MemoryRow,
   RoutineRow,
   SessionRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 /** Query options, keyed off the transport's oRPC utils (§6.1). */
 export const botsQueries = (orpc: AppQueryUtils) => ({

@@ -4,7 +4,7 @@
  * transport trusts in that window gets them, so a swap candidate that
  * subscribed before the flip does not become visible with stale state.
  */
-import type { WindowEvent } from "#shared/contract";
+import type { WindowEvent } from "@abacus-ai/contract/contract";
 
 import type { BusChannels } from "./event-bus";
 

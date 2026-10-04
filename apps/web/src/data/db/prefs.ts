@@ -8,7 +8,7 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import { Debouncer } from "@tanstack/react-pacer";
 
-import type { PrefsPatch, PrefsRow } from "#shared/contract/rows";
+import type { PrefsPatch, PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import { useCollections, useDb, type Db } from "./index";
 

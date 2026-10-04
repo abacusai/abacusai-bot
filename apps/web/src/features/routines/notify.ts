@@ -1,7 +1,7 @@
 import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
-import type { RunFinishedNotice } from "#shared/contract/ai";
-import type { RoutinesEvent } from "#shared/contract/routines";
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { RoutinesEvent } from "@abacus-ai/contract/contract/routines";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 export const routineOwns = (routine: RoutineRow | undefined) =>
   !!routine && !(routine.botId && isCheckInRoutine(routine, routine.botId));
 export const createFireHandler = (

@@ -3,7 +3,7 @@
  * for a level the button can pulse with, and a decode to the 16 kHz mono
  * float samples Whisper takes.
  */
-import { WHISPER_SAMPLE_RATE } from "#shared/voice";
+import { WHISPER_SAMPLE_RATE } from "@abacus-ai/contract/voice";
 
 export type MicError =
   | "permission-denied"

@@ -6,7 +6,7 @@ import {
   messagingPlatformSpec,
   type MessagingPairedUser,
   type MessagingPlatformId,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
 
 import { abacusBotHome } from "../../paths";
 import { environmentNoticeService } from "../providers/environment-notice-service";

@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { ChangeBatch } from "#shared/contract/rows";
+import type { ChangeBatch } from "@abacus-ai/contract/contract/rows";
 
 import { TableFeed } from "./table-feed";
 

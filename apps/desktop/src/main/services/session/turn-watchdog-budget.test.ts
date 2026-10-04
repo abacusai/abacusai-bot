@@ -27,7 +27,7 @@ import {
 } from "@abacus-ai/agent";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import type { DesktopEvent } from "#shared/agent-types";
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 import {
   SessionTurnStateService,

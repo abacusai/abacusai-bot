@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { optionalField } from "#renderer/lib/navigation/search";
-import { PROVIDER_KEY_FIELDS } from "#shared/settings";
+import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 import { SETTINGS_INDEX } from "./search-index";
 export const SettingsSearch = v.object({

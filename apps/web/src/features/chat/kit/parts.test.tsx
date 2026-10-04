@@ -8,7 +8,7 @@
 import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { v1ToUiMessages } from "#shared/transcript/v1-to-ui-messages";
+import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";

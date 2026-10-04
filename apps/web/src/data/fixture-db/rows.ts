@@ -9,7 +9,7 @@ import type {
   RoutineRow,
   SessionRow,
   WorkspaceRow,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 const minutesAgo = (now: number, minutes: number): number =>
   now - minutes * 60_000;

@@ -9,7 +9,7 @@ vi.mock("../data/queries", () => ({
 import type {
   BrowserRuntimeLease,
   BrowserRuntimeState,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { BrowserTab } from "./browser-tab";
 it("independent local-file owners materialize separately and close their own leases", async () => {

@@ -1,7 +1,7 @@
 import { act, render, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 const mocks = vi.hoisted(() => ({ start: vi.fn(), get: vi.fn() }));
 vi.mock("../data/queries", () => ({
   useSessionsTransport: () => ({

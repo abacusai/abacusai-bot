@@ -5,7 +5,7 @@ import type { StreamChunk } from "@tanstack/ai";
  * `scripts/sync-chat-fixtures.mjs` (spec 02 §11.1). The kit renders what
  * the agent actually emits; R2-T29 keeps the copies equal to the sources.
  */
-import { outgoingWords } from "#shared/reply-envelope";
+import { outgoingWords } from "@abacus-ai/contract/reply-envelope";
 
 import type { RelayEvent } from "./relay";
 

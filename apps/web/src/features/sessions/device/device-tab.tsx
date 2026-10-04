@@ -10,7 +10,7 @@ import type { Transport } from "#renderer/data/transport";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { LocalDeviceInfo } from "#shared/contracts";
+import type { LocalDeviceInfo } from "@abacus-ai/contract/contracts";
 
 import { useSessionsTransport } from "../data/queries";
 

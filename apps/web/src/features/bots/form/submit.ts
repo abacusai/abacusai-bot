@@ -9,7 +9,7 @@ import {
   describeCheckIn,
   type CheckInDraft,
 } from "#renderer/lib/bots/check-in";
-import type { BotRow, RoutineRow } from "#shared/contract/rows";
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   createBot,

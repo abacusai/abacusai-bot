@@ -11,15 +11,15 @@ import { implement, type Router } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/message-port";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 import {
   DEFAULT_FLOW_WINDOW,
   FLOW_CONTEXT_KEY,
   FlowRegistry,
   flowControlHandlerInterceptor,
   withFlowAcks,
-} from "#shared/contract/flow-control";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+} from "@abacus-ai/contract/contract/flow-control";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 
 import { createTransport, type TransportPort } from "./create-transport";
 import { createMemoryTransport } from "./memory";

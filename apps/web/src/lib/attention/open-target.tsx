@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { followNotices } from "#renderer/data/queries/live";
-import type { OpenCommand, OpenTarget } from "#shared/contract";
+import type { OpenCommand, OpenTarget } from "@abacus-ai/contract/contract";
 export const openTargetHref = (target: OpenTarget): string => {
   if (target.kind === "bot")
     return `/bots/${encodeURIComponent(target.botId)}${target.sessionId ? `/chats/${encodeURIComponent(target.sessionId)}` : ""}`;

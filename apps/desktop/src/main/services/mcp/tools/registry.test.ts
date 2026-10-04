@@ -11,7 +11,7 @@ import path from "path";
 
 import { describe, expect, it } from "vitest";
 
-import { TOOLSETS } from "#shared/toolsets";
+import { TOOLSETS } from "@abacus-ai/contract/toolsets";
 
 import { AGENT_TOOL_NAMES, AGENT_TOOLS, agentTool } from "./index";
 

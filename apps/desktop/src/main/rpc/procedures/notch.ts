@@ -1,4 +1,4 @@
-import type { NotchEvent, OpenCommand } from "#shared/contract/notch";
+import type { NotchEvent, OpenCommand } from "@abacus-ai/contract/contract/notch";
 
 import type { RpcContext } from "../context";
 import { forbidden } from "../errors";

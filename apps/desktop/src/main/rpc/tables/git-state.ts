@@ -1,5 +1,5 @@
-import { checkoutKey } from "#shared/contract/checkout";
-import type { GitStateRow } from "#shared/contract/rows";
+import { checkoutKey } from "@abacus-ai/contract/contract/checkout";
+import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 
 import type { TableSources } from "./sources";
 

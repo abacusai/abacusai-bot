@@ -5,11 +5,11 @@
  */
 import path from "path";
 
-import type { SessionArtifactKind } from "#shared/contracts";
+import type { SessionArtifactKind } from "@abacus-ai/contract/contracts";
 import {
   declaredArtifactTargets,
   presentedDeliverables,
-} from "#shared/deliverables";
+} from "@abacus-ai/contract/deliverables";
 
 const IMAGE_EXTENSIONS = new Set([
   ".apng",

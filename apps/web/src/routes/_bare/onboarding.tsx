@@ -8,7 +8,7 @@ import {
 import { OnboardingFrame } from "#renderer/features/onboarding";
 import { accountStateQuery } from "#renderer/features/onboarding/actions";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
-import { canSignOutOfAbacus } from "#shared/settings";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 const Layout = () => {
   const matches = useMatches();
   const step = matches.at(-1)?.params as { step?: OnboardingStepId };

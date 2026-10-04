@@ -18,7 +18,7 @@ import type {
   RoutineRunRow,
   SessionRow,
   WorkspaceRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 import type { Transport } from "../transport/types";
 import {

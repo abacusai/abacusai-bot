@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { PassThrough, type Readable } from "node:stream";
 
-import type { BotCreateInput, BotUpdateInput } from "#shared/bots";
+import type { BotCreateInput, BotUpdateInput } from "@abacus-ai/contract/bots";
 
 import { isNotchWindow } from "../notch/registry";
 

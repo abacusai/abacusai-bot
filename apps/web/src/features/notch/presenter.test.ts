@@ -6,7 +6,7 @@ import type {
   AttentionSummary,
   RunFinishedNotice,
   SessionRow,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 import { presentNotch, type NotchInputs } from "./presenter";
 const base = (): NotchInputs => ({

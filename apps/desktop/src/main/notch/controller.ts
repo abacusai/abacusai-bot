@@ -19,7 +19,7 @@ import type {
   OpenTarget,
   PrefsRow,
   WindowState,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 import { notchEntry, type RendererBase } from "../renderer-entry";
 import { forbidden } from "../rpc/errors";

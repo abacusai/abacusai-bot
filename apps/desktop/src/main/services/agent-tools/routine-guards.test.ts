@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { RoutineRunItem } from "#shared/contracts";
+import type { RoutineRunItem } from "@abacus-ai/contract/contracts";
 
 import {
   consecutiveFailures,

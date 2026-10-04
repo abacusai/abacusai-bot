@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { CronParseError, nextRun, parseCron } from "#shared/routines/cron";
-import { TimeoutError } from "#shared/timeout-error";
+import { CronParseError, nextRun, parseCron } from "@abacus-ai/contract/routines/cron";
+import { TimeoutError } from "@abacus-ai/contract/timeout-error";
 
 import * as store from "./cron-store";
 

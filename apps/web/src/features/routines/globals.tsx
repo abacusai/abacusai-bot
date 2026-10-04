@@ -11,7 +11,7 @@ import { createReadinessQueue } from "#renderer/lib/readiness-queue";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
 import { createSoundPlayer } from "#renderer/lib/sound";
 import { useAppContext } from "#renderer/lib/use-app-context";
-import { conversationRefFromKey } from "#shared/conversation-scope";
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 
 import { routineConnectorThreads } from "./attention";
 import { routineOwns } from "./notify";
@@ -130,7 +130,7 @@ export const RoutinesGlobals = () => {
       ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) =>
         readiness.run(() => {
-          const put = (r: import("#shared/contracts").ConnectorRequest) => {
+          const put = (r: import("@abacus-ai/contract/contracts").ConnectorRequest) => {
             const ref = conversationRefFromKey(r.conversationKey);
             if (ref?.kind === "session")
               requests.set(r.requestId, ref.sessionId);

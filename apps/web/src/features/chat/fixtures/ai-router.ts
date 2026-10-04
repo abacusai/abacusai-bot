@@ -10,14 +10,14 @@
 import { implement, ORPCError, withEventMeta } from "@orpc/server";
 import type { StreamChunk } from "@tanstack/ai";
 
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 import type {
   AiHydration,
   AiSendAck,
   AiSendInput,
   AttentionEvent,
   RunFinishedNotice,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 /** One relay event and its seq; a null seq is a control yield. */
 export interface SequencedChunk {

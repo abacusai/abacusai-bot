@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import type { BotRow, RoutineRow as Row } from "#shared/contract/rows";
+import type { BotRow, RoutineRow as Row } from "@abacus-ai/contract/contract/rows";
 
 import { routineState } from "./data";
 

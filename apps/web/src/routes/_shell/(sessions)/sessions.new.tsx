@@ -13,7 +13,7 @@ import { shellStore } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { Button } from "#renderer/ui/button";
-import { draftConversationKey } from "#shared/conversation-scope";
+import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();

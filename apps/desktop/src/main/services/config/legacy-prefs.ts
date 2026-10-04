@@ -19,12 +19,12 @@ import path from "node:path";
  */
 import * as v from "valibot";
 
-import { PrefsPatchSchema } from "#shared/contract/db";
+import { PrefsPatchSchema } from "@abacus-ai/contract/contract/db";
 import {
   SUPPORTED_LANGUAGES,
   type PrefsField,
   type PrefsPatch,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 import { PREFS_DEFAULTS, type PrefsStore } from "./prefs-store";
 import { readRendererStateFile } from "./renderer-state";

@@ -2,8 +2,8 @@ import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
-import type { AccountState } from "#shared/account";
-import type { PrefsRow } from "#shared/contract";
+import type { AccountState } from "@abacus-ai/contract/account";
+import type { PrefsRow } from "@abacus-ai/contract/contract";
 export const ONBOARDING_FLOW = ONBOARDING_STEPS;
 export interface FlowFacts {
   signedIn: boolean;

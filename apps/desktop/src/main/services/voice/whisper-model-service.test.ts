@@ -8,7 +8,7 @@ import path from "path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { IpcEvent } from "#shared/contracts";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { modelFileFor, WhisperModelService } from "./whisper-model-service";
 

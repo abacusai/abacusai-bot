@@ -24,7 +24,7 @@ import {
   botThreadView,
   type BotMessageView,
 } from "#renderer/lib/bot-turns/turns";
-import type { TurnFeedbackInput, TurnFeedbackOutcome } from "#shared/contracts";
+import type { TurnFeedbackInput, TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 
 import { MessageFeedback } from "./feedback";
 

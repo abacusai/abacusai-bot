@@ -8,15 +8,15 @@ import type {
   TerminalRuntimeRequest,
   TerminalSessionSnapshot,
   WriteTerminalInputRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   conversationKey,
   draftConversationRef,
   sessionConversationRef,
   type ConversationKey,
   type ConversationRef,
-} from "#shared/conversation-scope";
-import type { TerminalShellId } from "#shared/terminal-shells";
+} from "@abacus-ai/contract/conversation-scope";
+import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
 
 import { readTerminalShell } from "../config/settings";
 import {

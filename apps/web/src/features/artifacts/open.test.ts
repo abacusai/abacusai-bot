@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
-import type { ArtifactRow } from "#shared/contract/rows";
+import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 
 import { openArtifact } from "./data";
 const artifact = { kind: "file", location: "/work/report.md" } as ArtifactRow;

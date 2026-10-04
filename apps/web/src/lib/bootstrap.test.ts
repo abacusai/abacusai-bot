@@ -18,7 +18,7 @@ import {
   type MemoryTransport,
 } from "#renderer/data/transport/memory";
 import { SYSTEM_INFO } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 
 import {
   bootstrap,

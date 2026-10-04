@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { Transport } from "#renderer/data/transport";
-import type { PrefsRow } from "#shared/contract/rows";
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import { isThreadSeen } from "./navigation/visible-thread";
 import { createSoundPlayer } from "./sound";

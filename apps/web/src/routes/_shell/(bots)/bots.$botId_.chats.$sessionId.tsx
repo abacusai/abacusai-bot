@@ -18,7 +18,7 @@ import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
-import { BotId, SessionId } from "#shared/contract/ids";
+import { BotId, SessionId } from "@abacus-ai/contract/contract/ids";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
 const ReadySender = () => {

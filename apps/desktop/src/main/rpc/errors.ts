@@ -5,20 +5,20 @@
  */
 import { ORPCError } from "@orpc/server";
 
-import { ConflictError } from "#shared/conflict";
+import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
   NotFoundEntity,
   PreconditionReason,
-} from "#shared/contract/errors";
-import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
-import { CronParseError } from "#shared/routines/cron";
+} from "@abacus-ai/contract/contract/errors";
+import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
+import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
+import { CronParseError } from "@abacus-ai/contract/routines/cron";
 import {
   ForbiddenError,
   InvalidInputError,
   PreconditionError,
-} from "#shared/service-errors";
-import { TimeoutError } from "#shared/timeout-error";
+} from "@abacus-ai/contract/service-errors";
+import { TimeoutError } from "@abacus-ai/contract/timeout-error";
 
 import { UnsupportedPlatformError } from "../services/config/login-item";
 

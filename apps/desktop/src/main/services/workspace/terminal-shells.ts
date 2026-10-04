@@ -23,7 +23,7 @@ import {
   terminalShellsForPlatform,
   type TerminalShellId,
   type TerminalShellStatus,
-} from "#shared/terminal-shells";
+} from "@abacus-ai/contract/terminal-shells";
 
 export interface ResolvedTerminalShell {
   /** What was resolved, which is `system` when the request could not be. */

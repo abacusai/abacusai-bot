@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useState } from "react";
 
-import type { FileTreeNode } from "#shared/contracts";
+import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 
 export const MAX_LOADED_DIRECTORIES = 50;
 export const useLazyChildren = (

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 
-import type { FileTreeNode } from "#shared/contracts";
+import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 
 import { MAX_LOADED_DIRECTORIES, useLazyChildren } from "./lazy-children";
 it("lazy children replace invalidated directories, refresh roots without dropping open directories and isolate checkouts", async () => {

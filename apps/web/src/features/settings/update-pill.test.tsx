@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next";
 import { expect, it, vi } from "vitest";
 
 import { initI18n, i18n } from "#renderer/lib/i18n";
-import type { UpdateStatus } from "#shared/update";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 
 import { UpdatePillButton } from "./updates";
 const status: UpdateStatus = {

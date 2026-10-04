@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { followNotices } from "#renderer/data/queries/live";
 import { Button } from "#renderer/ui/button";
-import type { BrowserPermissionRequest } from "#shared/contracts";
+import type { BrowserPermissionRequest } from "@abacus-ai/contract/contracts";
 
 import { useSessionsTransport } from "../data/queries";
 export const BrowserAskHost = () => {

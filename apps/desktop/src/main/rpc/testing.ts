@@ -8,15 +8,15 @@ import { RPCLink } from "@orpc/client/message-port";
 import type { ContractRouterClient } from "@orpc/contract";
 import { RPCHandler } from "@orpc/server/message-port";
 
-import type { Contract } from "#shared/contract";
+import type { Contract } from "@abacus-ai/contract/contract";
 import {
   createFlowControlLinkInterceptor,
   FLOW_CONTEXT_KEY,
   FlowRegistry,
   withFlowAcks,
-} from "#shared/contract/flow-control";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
-import type { UpdateStatus } from "#shared/update";
+} from "@abacus-ai/contract/contract/flow-control";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 
 import { CueArbiter, mainOnlyCueWindows } from "../notch/cue-arbiter";
 import { PrefsStore } from "../services/config/prefs-store";

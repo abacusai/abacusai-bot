@@ -8,18 +8,18 @@
  */
 import { Store } from "@tanstack/react-store";
 
-import type { ToolDisplayData } from "#shared/agent-types";
+import type { ToolDisplayData } from "@abacus-ai/contract/agent-types";
 import type {
   AgentStatus,
   QueueEntry,
   SkillMetadata,
-} from "#shared/agent-types";
-import type { AiThreadSnapshot } from "#shared/contract/ai-thread";
+} from "@abacus-ai/contract/agent-types";
+import type { AiThreadSnapshot } from "@abacus-ai/contract/contract/ai-thread";
 import type {
   AgentState,
   PermissionDescriptor,
   RunOutcomeRecord,
-} from "#shared/contract/ai-thread";
+} from "@abacus-ai/contract/contract/ai-thread";
 
 export type {
   AgentState,

@@ -1,5 +1,5 @@
 import type { Transport } from "#renderer/data/transport";
-import { isFreePoolProvider } from "#shared/free-pool";
+import { isFreePoolProvider } from "@abacus-ai/contract/free-pool";
 
 import type { CreditActions } from "./index";
 export const creditActionsFor = (transport: Transport): CreditActions => {

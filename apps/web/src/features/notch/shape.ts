@@ -1,4 +1,4 @@
-import type { NotchLayout } from "#shared/contract/notch";
+import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
 
 import type { NotchPresentation } from "./presenter";
 // Wing and body dimensions from the Notch design canvas, spec 06 §11.5.

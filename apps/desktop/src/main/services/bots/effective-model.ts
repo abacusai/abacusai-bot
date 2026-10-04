@@ -13,7 +13,7 @@
  * synchronous default it always had: the wanted model, else the tier's
  * cached recommendation.
  */
-import { resolveConfiguredModel, type ModelAvailability } from "#shared/models";
+import { resolveConfiguredModel, type ModelAvailability } from "@abacus-ai/contract/models";
 
 export interface EffectiveModelSources {
   /** `config.json`'s `defaultModel` (the user's last pick), if any. */

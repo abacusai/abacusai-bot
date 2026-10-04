@@ -32,8 +32,8 @@ import {
   MAX_BOT_DESCRIPTION,
   MAX_BOT_TITLE,
   MAX_BOTS,
-} from "#shared/bots";
-import type { BotRow } from "#shared/contract/rows";
+} from "@abacus-ai/contract/bots";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { BotFace } from "../avatar";
 import { BotGone } from "../chat/identity";

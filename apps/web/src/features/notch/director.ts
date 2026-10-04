@@ -1,4 +1,4 @@
-import type { NotchShape } from "#shared/contract/notch";
+import type { NotchShape } from "@abacus-ai/contract/contract/notch";
 
 import type { NotchPresentation } from "./presenter";
 export interface Shape {

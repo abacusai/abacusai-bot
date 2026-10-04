@@ -6,8 +6,8 @@ import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
 import { allowed, isQuietNow } from "#renderer/lib/notify";
 import { createSoundPlayer, synthCue, CUE_TONES } from "#renderer/lib/sound";
-import type { RunFinishedNotice } from "#shared/contract/ai";
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { react, useReaction } from "./avatar";
 import { createUnreadStore } from "./data/unread-store";

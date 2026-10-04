@@ -6,8 +6,8 @@ import { useEffect } from "react";
 import { useCollections } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import type { AppQueryUtils } from "#renderer/data/transport/types";
-import { checkoutKey, type CheckoutRef } from "#shared/contract/checkout";
-import type { WorkspaceRow, SessionRow } from "#shared/contract/rows";
+import { checkoutKey, type CheckoutRef } from "@abacus-ai/contract/contract/checkout";
+import type { WorkspaceRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 
 export const useSessionsTransport = (): Transport =>
   useRouter().options.context.transport;

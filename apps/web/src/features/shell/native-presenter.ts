@@ -4,7 +4,7 @@ import type { AppClient } from "#renderer/data/transport/types";
 import type {
   BrowserRuntimeLease,
   BrowserRuntimeBounds,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 export interface NativeCandidate {
   id: string;

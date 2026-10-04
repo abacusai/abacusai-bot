@@ -4,7 +4,7 @@ import { Store } from "@tanstack/react-store";
 import type { Db } from "#renderer/data/db";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
-import type { BotRow } from "#shared/contract";
+import type { BotRow } from "@abacus-ai/contract/contract";
 
 import { onboardingStore } from "./store";
 export type FirstBotResult = {

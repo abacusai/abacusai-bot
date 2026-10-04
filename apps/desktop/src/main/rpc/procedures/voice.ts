@@ -1,4 +1,4 @@
-import type { WhisperDownloadProgress } from "#shared/voice";
+import type { WhisperDownloadProgress } from "@abacus-ai/contract/voice";
 
 import { impl, isType, onIpcEvents, stream } from "./impl";
 

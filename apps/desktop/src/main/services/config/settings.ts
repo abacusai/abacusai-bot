@@ -1,20 +1,20 @@
 import fs from "fs";
 import path from "path";
 
-import { AgentMode } from "#shared/agent-types";
-import type { DefaultAgentMode, NotificationSettings } from "#shared/contracts";
-import { EXEC_BACKENDS, type BackendId } from "#shared/exec-backends";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import type { DefaultAgentMode, NotificationSettings } from "@abacus-ai/contract/contracts";
+import { EXEC_BACKENDS, type BackendId } from "@abacus-ai/contract/exec-backends";
 import {
   PROVIDER_ENV_VARS,
   type AbacusBotSettings,
   type CustomProviderEntry,
-} from "#shared/settings";
+} from "@abacus-ai/contract/settings";
 import {
   DEFAULT_TERMINAL_SHELL,
   isTerminalShellId,
   type TerminalShellId,
-} from "#shared/terminal-shells";
-import type { ToolsetPreferences } from "#shared/toolsets";
+} from "@abacus-ai/contract/terminal-shells";
+import type { ToolsetPreferences } from "@abacus-ai/contract/toolsets";
 
 import { abacusBotHome } from "../../paths";
 

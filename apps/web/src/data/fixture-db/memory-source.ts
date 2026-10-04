@@ -9,7 +9,7 @@
  */
 import { implement, type Router } from "@orpc/server";
 
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 
 import type { LazyTransport } from "../db/tables";
 import { createMemoryTransport } from "../transport/memory";

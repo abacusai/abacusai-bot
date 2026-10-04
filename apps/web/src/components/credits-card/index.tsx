@@ -17,8 +17,8 @@ import {
 import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { Separator } from "#renderer/ui/separator";
-import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "#shared/free-pool";
-import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "#shared/settings";
+import { FREE_POOL_PROVIDERS, type FreePoolProvider } from "@abacus-ai/contract/free-pool";
+import { isPlausibleApiKey, PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
 export interface CreditActions {
   openExternal(url: string): Promise<void>;

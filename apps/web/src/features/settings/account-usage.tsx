@@ -13,7 +13,7 @@ import { showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
-import { canSignOutOfAbacus } from "#shared/settings";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 
 import { ABACUS_PLAN_URL, ABACUS_BUY_CREDITS_URL } from "./credits";
 export const AccountPage = () => {

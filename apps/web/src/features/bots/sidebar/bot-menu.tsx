@@ -9,8 +9,8 @@ import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { toast } from "#renderer/ui/toast";
-import { MAX_BOTS } from "#shared/bots";
-import type { BotRow, RoutineRow } from "#shared/contract/rows";
+import { MAX_BOTS } from "@abacus-ai/contract/bots";
+import type { BotRow, RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   duplicateBot,

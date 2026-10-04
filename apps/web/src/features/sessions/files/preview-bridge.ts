@@ -3,7 +3,7 @@ import { isListedSession } from "#renderer/data/db/filters";
 import {
   conversationRefFromKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { isRelativePath } from "../data/search";
 import { markSessionUnread } from "../data/unread-store";

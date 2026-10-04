@@ -33,8 +33,8 @@ import {
   vi,
 } from "vitest";
 
-import { AgentMode, type DesktopEvent } from "#shared/agent-types";
-import type { PermissionDescriptor } from "#shared/contract";
+import { AgentMode, type DesktopEvent } from "@abacus-ai/contract/agent-types";
+import type { PermissionDescriptor } from "@abacus-ai/contract/contract";
 
 import {
   connectInProcess,

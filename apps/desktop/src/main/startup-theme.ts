@@ -17,7 +17,7 @@
  */
 import type { BaseWindowConstructorOptions } from "electron";
 
-import type { PrefsRow } from "#shared/contract/rows";
+import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import type { PrefsStore } from "./services/config/prefs-store";
 import {

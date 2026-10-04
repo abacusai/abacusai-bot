@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import type { BotRow } from "#shared/contract/rows";
+import type { BotRow } from "@abacus-ai/contract/contract/rows";
 
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";

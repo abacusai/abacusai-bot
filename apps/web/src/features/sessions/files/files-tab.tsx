@@ -20,8 +20,8 @@ import {
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { SessionRow } from "#shared/contract/rows";
-import type { FileTreeNode } from "#shared/contracts";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import type { FileTreeNode } from "@abacus-ai/contract/contracts";
 
 import {
   useSessionsTransport,

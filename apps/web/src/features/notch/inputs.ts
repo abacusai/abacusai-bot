@@ -7,8 +7,8 @@ import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import { applyAttention, emptyAttention } from "#renderer/lib/attention/events";
 import { runFinishedFeed } from "#renderer/lib/run-finished";
-import type { NotchEvent, RunFinishedNotice } from "#shared/contract";
-import { conversationRefFromKey } from "#shared/conversation-scope";
+import type { NotchEvent, RunFinishedNotice } from "@abacus-ai/contract/contract";
+import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 
 import type { NotchInputs } from "./presenter";
 import { activeSnoozes, type Snooze } from "./snooze";

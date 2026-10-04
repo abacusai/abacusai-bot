@@ -4,7 +4,7 @@ import { findCheckIn } from "#renderer/lib/bots/check-in";
  * check-in, main's per-thread asks, pending connector asks and unread. One
  * hook for the row, the strip, the title bar and the avatar mood.
  */
-import type { BotRow, RoutineRow, SessionRow } from "#shared/contract/rows";
+import type { BotRow, RoutineRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 
 import {
   useAllBotActivity,

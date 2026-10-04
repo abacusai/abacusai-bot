@@ -39,7 +39,7 @@ import { Field, FieldLabel, FieldGroup, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Switch } from "#renderer/ui/switch";
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { useRoutinesData } from "./data";
 import {

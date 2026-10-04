@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { StartAgentSessionRequest } from "#shared/contracts";
+import type { StartAgentSessionRequest } from "@abacus-ai/contract/contracts";
 
 import { AgentManagerService } from "../../services/session/cli-manager-service";
 import { connectInProcess, fakeDeps } from "../testing";

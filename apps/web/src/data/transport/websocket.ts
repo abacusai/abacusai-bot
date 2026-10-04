@@ -11,7 +11,7 @@ import { ClientRetryPlugin } from "@orpc/client/plugins";
 import { RPCLink } from "@orpc/client/websocket";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 
 import { createCloseSignal } from "./close-signal";
 import type { AppClient, Transport } from "./types";

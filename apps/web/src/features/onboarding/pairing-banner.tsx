@@ -8,7 +8,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import { isMessagingPlatformConnected } from "#shared/messaging";
+import { isMessagingPlatformConnected } from "@abacus-ai/contract/messaging";
 /** The persisted queue drains on connection or dismissal, and waits for the tour. */
 export const PairingQueueBanner = ({
   suppressed = false,

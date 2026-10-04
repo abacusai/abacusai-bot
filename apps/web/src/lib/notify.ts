@@ -4,12 +4,12 @@
  * quiet hours and the per-bot level, then — for notifications — focus, the
  * user's switch and per-document dedupe.
  */
-import type { NotificationMetadata } from "#shared/contract";
+import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 import type {
   BotSoundLevel,
   PrefsRow,
   QuietHours,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 export type AttentionKind =
   | "needs-you"

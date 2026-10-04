@@ -17,12 +17,12 @@ import type {
   AgentSessionListItem,
   SessionArtifact,
   WorkspaceListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   draftConversationKey,
   sessionConversationKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { CheckoutService } from "../../services/workspace/checkout-service";
 import { FileTreeService } from "../../services/workspace/file-tree-service";

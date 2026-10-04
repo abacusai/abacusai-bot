@@ -26,7 +26,7 @@ const serve = process.argv.includes("--serve");
 const entry = `
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/websocket";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 import { MainEventBus } from "#main/rpc/event-bus";
 import { createRouter } from "#main/rpc/router";
 import { fakeDeps, IDLE_UPDATE_STATUS } from "#main/rpc/testing";

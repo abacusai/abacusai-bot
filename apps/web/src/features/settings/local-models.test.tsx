@@ -3,11 +3,11 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 import {
   LOCAL_MODEL_CATALOG,
   type LocalModelState,
-} from "#shared/local-models";
+} from "@abacus-ai/contract/local-models";
 const os = implement(contract);
 it.each([
   { installed: false, bot: false },

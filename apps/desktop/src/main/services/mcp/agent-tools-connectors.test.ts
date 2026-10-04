@@ -11,8 +11,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ConnectorStatuses } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 

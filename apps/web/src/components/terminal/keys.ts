@@ -3,7 +3,7 @@ import { matchesKeyboardEvent } from "@tanstack/react-hotkeys";
 import {
   terminalAction,
   type TerminalAction as SharedTerminalAction,
-} from "#shared/terminal/keys";
+} from "@abacus-ai/contract/terminal/keys";
 export type TerminalAction =
   | SharedTerminalAction
   | "newTerminalTab"

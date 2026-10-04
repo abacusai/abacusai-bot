@@ -11,7 +11,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import type { MessagingPlatformId } from "#shared/messaging";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

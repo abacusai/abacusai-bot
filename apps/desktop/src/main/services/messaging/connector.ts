@@ -6,7 +6,7 @@ import type { BrowserWindow } from "electron";
 import type {
   MessagingPlatformId,
   MessagingPlatformState,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
 
 import { abacusBotHome } from "../../paths";
 

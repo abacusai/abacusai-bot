@@ -37,8 +37,8 @@ import {
   CollapsibleTrigger,
 } from "#renderer/ui/collapsible";
 import { Textarea } from "#renderer/ui/textarea";
-import { AgentMode } from "#shared/agent-types";
-import { SUPPORTED_LANGUAGES, type PrefsRow } from "#shared/contract/rows";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { SUPPORTED_LANGUAGES, type PrefsRow } from "@abacus-ai/contract/contract/rows";
 
 import { CompanionSettings } from "./companion";
 const modes = [

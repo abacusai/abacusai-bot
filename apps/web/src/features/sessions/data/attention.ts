@@ -1,4 +1,4 @@
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 export type SessionAttention =
   | { kind: "needs-you"; since: string; reason: "permission" | "connector" }
   | { kind: "running"; caption: string | null }

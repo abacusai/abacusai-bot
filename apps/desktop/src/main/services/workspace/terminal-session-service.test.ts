@@ -8,8 +8,8 @@ import {
   conversationKey,
   draftConversationRef,
   sessionConversationRef,
-} from "#shared/conversation-scope";
-import type { TerminalShellId } from "#shared/terminal-shells";
+} from "@abacus-ai/contract/conversation-scope";
+import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
 
 import { TerminalSessionService } from "./terminal-session-service";
 

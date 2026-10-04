@@ -11,8 +11,8 @@ import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
  */
 import type { Notifier } from "#renderer/lib/notify";
 import type { Cue } from "#renderer/lib/sound";
-import type { RunFinishedNotice } from "#shared/contract/ai";
-import type { BotRow, RoutineRow, SessionRow } from "#shared/contract/rows";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { BotRow, RoutineRow, SessionRow } from "@abacus-ai/contract/contract/rows";
 
 import { react } from "./avatar";
 import type { UnreadStore } from "./data/unread-store";

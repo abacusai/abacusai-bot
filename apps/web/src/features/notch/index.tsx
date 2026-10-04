@@ -26,7 +26,7 @@ import {
 } from "#renderer/notch-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import type { OpenTarget } from "#shared/contract";
+import type { OpenTarget } from "@abacus-ai/contract/contract";
 
 import { NotchDirector, shapeSettled } from "./director";
 import { notchDrafts as drafts } from "./drafts";

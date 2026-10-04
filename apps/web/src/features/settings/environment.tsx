@@ -18,7 +18,7 @@ import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
-import { EXEC_BACKENDS } from "#shared/exec-backends";
+import { EXEC_BACKENDS } from "@abacus-ai/contract/exec-backends";
 export const EnvironmentPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
@@ -130,7 +130,7 @@ export const EnvironmentPage = () => {
                 void transport.client.terminal.shell
                   .set({
                     shell:
-                      selected as import("#shared/terminal-shells").TerminalShellId,
+                      selected as import("@abacus-ai/contract/terminal-shells").TerminalShellId,
                   })
                   .then((value) =>
                     cache.setQueryData(

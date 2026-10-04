@@ -1,1 +1,1 @@
-export * from "#shared/bots/templates";
+export * from "@abacus-ai/contract/bots/templates";

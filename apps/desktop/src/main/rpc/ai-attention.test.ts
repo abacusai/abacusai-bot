@@ -10,7 +10,7 @@ import * as path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AttentionEvent } from "#shared/contract";
+import type { AttentionEvent } from "@abacus-ai/contract/contract";
 
 import { AguiRelayService } from "../services/agui/relay-service";
 import { ThreadStore } from "../services/session/thread-store";

@@ -6,7 +6,7 @@ import * as v from "valibot";
  */
 import { describe, expect, it } from "vitest";
 
-import { describeCheckIn as sharedDescribe } from "#shared/bots/check-in";
+import { describeCheckIn as sharedDescribe } from "@abacus-ai/contract/bots/check-in";
 
 import checkInPromptFixture from "./__fixtures__/legacy-model-strings/check-in-prompt.txt?raw";
 import describeFixture from "./__fixtures__/legacy-model-strings/describe-check-in.json";

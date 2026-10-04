@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "#shared/experience";
+import { EXPERIENCE_PROTOCOL, FOUNDATION_API } from "@abacus-ai/contract/experience";
 it("desktop and updater source compatibility constants move together", () => {
   const source = fs.readFileSync(
     path.resolve(

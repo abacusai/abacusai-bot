@@ -7,13 +7,13 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { TerminalOutputChunk } from "#shared/contract";
-import type { IpcEvent } from "#shared/contracts";
+import type { TerminalOutputChunk } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import {
   conversationKey,
   draftConversationRef,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { ConnectorGate } from "../services/agent-tools/connector-gate";
 import {

@@ -15,7 +15,7 @@ import type {
   PrefsPatch,
   TablePosition,
   WorkspaceRow,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 import type { LazyTransport } from "../db/tables";
 import type { Transport } from "../transport/types";

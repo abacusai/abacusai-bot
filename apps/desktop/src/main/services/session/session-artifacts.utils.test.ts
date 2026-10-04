@@ -3,7 +3,7 @@ import path from "path";
 
 import { describe, expect, it } from "vitest";
 
-import { artifactPathLine } from "#shared/deliverables";
+import { artifactPathLine } from "@abacus-ai/contract/deliverables";
 
 import { extractArtifacts } from "./session-artifacts.utils";
 

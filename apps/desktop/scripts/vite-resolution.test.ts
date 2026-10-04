@@ -33,8 +33,8 @@ describe("detached Electron dev resolution", () => {
       const options = electronOptions.find((option) => option.name === name)!;
       const root = resolve(import.meta.dirname, "..");
       const paths = {
-        "#shared/contract": "src/shared/contract/index.ts",
-        "#shared/conversation-scope": "src/shared/conversation-scope.ts",
+        "@abacus-ai/contract/contract": "src/shared/contract/index.ts",
+        "@abacus-ai/contract/conversation-scope": "src/shared/conversation-scope.ts",
         "#renderer/data/db": "src/renderer/data/db/index.ts",
         "#renderer/features/sessions/device/device-tab":
           "src/renderer/features/sessions/device/device-tab.tsx",

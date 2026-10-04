@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-import type { RunFinishedNotice } from "#shared/contract/ai";
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import { createFireHandler, completionNotice } from "./notify";
 const routine = { id: "r", name: "Briefing", botId: null } as RoutineRow;

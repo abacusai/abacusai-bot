@@ -23,7 +23,7 @@ import {
   useChromeState,
 } from "#renderer/lib/window-chrome/chrome-state";
 import { TooltipProvider } from "#renderer/ui/tooltip";
-import type { SystemInfo } from "#shared/contract";
+import type { SystemInfo } from "@abacus-ai/contract/contract";
 
 import { AppToaster } from "./app-toaster";
 import { CommandMenu } from "./command-menu-loader";

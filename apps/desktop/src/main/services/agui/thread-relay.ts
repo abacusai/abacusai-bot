@@ -45,7 +45,7 @@ import {
   AgentStatus,
   type QueueEntry,
   type SkillMetadata,
-} from "#shared/agent-types";
+} from "@abacus-ai/contract/agent-types";
 import type {
   AgentState,
   AiActiveRun,
@@ -53,7 +53,7 @@ import type {
   AiThreadSnapshot,
   PermissionDescriptor,
   RunOutcomeRecord,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 import { applyJsonPatch, type JsonPatchOp } from "./json-patch";
 

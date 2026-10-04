@@ -16,8 +16,8 @@ import type { TerminalAction } from "#renderer/components/terminal/keys";
 import { useConnectorRequests } from "#renderer/lib/connector-requests";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import type { SessionRow } from "#shared/contract/rows";
-import { sessionConversationKey } from "#shared/conversation-scope";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { WorkspaceMissing } from "./context/workspace-missing";
 import { useAgentLifecycle } from "./data/agent-start";

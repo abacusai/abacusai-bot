@@ -8,7 +8,7 @@
 import { implement, type Router } from "@orpc/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "#shared/contract";
+import { contract } from "@abacus-ai/contract/contract";
 
 import { createCloseSignal } from "./close-signal";
 import { createTransport } from "./create-transport";

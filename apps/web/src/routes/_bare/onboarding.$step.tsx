@@ -30,8 +30,8 @@ import {
   type OnboardingStepId,
 } from "#renderer/lib/navigation/areas";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { isPayingAbacusTier } from "#shared/models";
-import { canSignOutOfAbacus } from "#shared/settings";
+import { isPayingAbacusTier } from "@abacus-ai/contract/models";
+import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
 const OnboardingRoute = () => {
   const { t } = useTranslation();
   const step = Route.useParams().step as OnboardingStepId;

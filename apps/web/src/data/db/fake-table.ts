@@ -10,7 +10,7 @@ import type {
   ChangeBatch,
   TablePosition,
   TableSnapshot,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
 
 import type { IpcTableClient } from "./ipc-collection-options";
 

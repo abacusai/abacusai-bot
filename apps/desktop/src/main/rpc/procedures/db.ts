@@ -4,7 +4,7 @@
  * calls, then re-diffs the table at once and returns the position of the
  * batch that carries its echo (or the current one, when nothing changed).
  */
-import type { TablePosition } from "#shared/contract/rows";
+import type { TablePosition } from "@abacus-ai/contract/contract/rows";
 
 import type { RpcContext } from "../context";
 import {

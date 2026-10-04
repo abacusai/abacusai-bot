@@ -12,12 +12,12 @@ import {
 } from "#renderer/components/terminal/keys";
 import { followNotices } from "#renderer/data/queries/live";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
-import type { SessionRow } from "#shared/contract/rows";
+import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import {
   sessionConversationKey,
   sessionConversationRef,
-} from "#shared/conversation-scope";
-import { installMouseReporting } from "#shared/terminal/mouse-compat";
+} from "@abacus-ai/contract/conversation-scope";
+import { installMouseReporting } from "@abacus-ai/contract/terminal/mouse-compat";
 
 import { useSessionsTransport } from "../data/queries";
 import { retainTerminalStart } from "../dock/panel-tabs-store";
@@ -54,7 +54,7 @@ export const TerminalTab = ({
   onClose: () => void;
   dispatch: (id: TerminalAction) => void;
   onUrl: (url: string) => void;
-  shell?: import("#shared/terminal-shells").TerminalShellId;
+  shell?: import("@abacus-ai/contract/terminal-shells").TerminalShellId;
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();

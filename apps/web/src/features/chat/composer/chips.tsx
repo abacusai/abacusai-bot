@@ -25,7 +25,7 @@ import {
 } from "#renderer/ui/dropdown-menu";
 import { Input } from "#renderer/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import type { ModelChipBinding } from "../kit/context";
 import { MODE_DESCRIPTION_KEYS, MODE_LABEL_KEYS, MODE_ORDER } from "./modes";

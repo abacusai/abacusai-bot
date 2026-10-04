@@ -9,7 +9,7 @@ import { useEffect } from "react";
 
 import { windowChromeQuery } from "#renderer/data/queries/window";
 import type { Transport } from "#renderer/data/transport";
-import type { WindowChromeState } from "#shared/contract";
+import type { WindowChromeState } from "@abacus-ai/contract/contract";
 
 const DEFAULT_CHROME: WindowChromeState = {
   mode: "overlay-pending",

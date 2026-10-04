@@ -29,12 +29,12 @@ import {
 } from "#renderer/ui/dialog";
 import { Field, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import { localModelReference } from "#shared/local-models";
+import { localModelReference } from "@abacus-ai/contract/local-models";
 import {
   PROVIDER_KEY_FIELDS,
   isPlausibleApiKey,
   type ProviderKeyField,
-} from "#shared/settings";
+} from "@abacus-ai/contract/settings";
 
 import { creditMarkState } from "./credits";
 export const ModelsPage = ({

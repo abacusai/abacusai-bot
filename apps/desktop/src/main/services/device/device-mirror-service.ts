@@ -13,7 +13,7 @@ import type {
   StartDeviceStreamResult,
   StreamDeviceKeyRequest,
   StreamDeviceTouchRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { AndroidScrcpyService } from "./android-scrcpy-service";
 import type { DeviceService } from "./device-service";

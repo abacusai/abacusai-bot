@@ -1,4 +1,4 @@
-import type { FlowContext } from "#shared/contract/flow-control";
+import type { FlowContext } from "@abacus-ai/contract/contract/flow-control";
 
 import type { RpcDeps } from "./deps";
 
