@@ -330,3 +330,29 @@ Env-suffix follow-up validation: the desktop main project passed 278 files /
 the touched desktop suite passed all 41 tests and the agent endpoint suite
 passed all 28 tests. Targeted formatting/lint and `git diff --check` passed;
 the removed internal domain and dev-pod hostname have no tracked matches.
+
+
+## Fix pass r5 (adoption tolerance)
+
+REPORT3 demonstrated a successful code exchange followed by four account HTTP
+500s, which adoption incorrectly converted to UNAUTHORIZED and rolled back.
+Web adoption now stores the exchanged key and rejects only a definitive account
+401/403. Transient failures (including network errors and timeouts) retain it,
+clear stale account details, and persist `account: null, onboarded: true` using
+the existing AccountState fields. `auth.web.complete` returns a typed
+`WebAuthCompleteResult` with `accountDetailsPending`; the browser shows
+“Signed in; account details pending”. No additional AccountState variant.
+
+Background identification retries at 1.2s, doubling to a 60s cap. Success adopts
+the account and notifies the renderer; definitive rejection clears the key.
+Revision and stored-key checks prevent late results from restoring details after
+sign-out or a replacement sign-in. Timers do not keep the process alive.
+Electron retains its existing identity/profile requirement and rollback behavior:
+without identity it cannot safely select an isolated profile. Web hosts have one
+owner and do not activate Electron profiles; no desktop profile fallback is added.
+
+Validation: host tests, desktop main vitest project, RPC smoke, host typecheck,
+and browser pending-result tests. Adoption tests cover 200, 401/403, actual 500,
+network-error and timeout fetch behavior, backoff recovery, background rejection,
+and sign-out during an in-flight lookup. Publication is version 1.0.86-dev3 with
+no temporary exchange preload; deployment evidence is recorded in REPORT5.md.

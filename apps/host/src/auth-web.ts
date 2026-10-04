@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 
+import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
 import { ORPCError } from "@orpc/server";
 
 import type { HostOperations } from "#main/handler";
@@ -18,7 +19,11 @@ export const createWebAuth = (operations: HostOperations) => {
         challenge: createHash("sha256").update(verifier).digest("base64url"),
       };
     },
-    complete: async ({ code }: { code: string }) => {
+    complete: async ({
+      code,
+    }: {
+      code: string;
+    }): Promise<WebAuthCompleteResult> => {
       const pending = attempt;
       attempt = undefined;
       if (!pending || pending.expires <= Date.now())
@@ -48,7 +53,10 @@ export const createWebAuth = (operations: HostOperations) => {
       if (!key) throw new ORPCError("UNAUTHORIZED");
       const adopted = await operations.adoptAbacusCredential(key, "web");
       if (!adopted.ok) throw new ORPCError("UNAUTHORIZED");
-      return readAccountState();
+      return {
+        ...readAccountState(),
+        accountDetailsPending: adopted.accountDetailsPending === true,
+      };
     },
   };
 };

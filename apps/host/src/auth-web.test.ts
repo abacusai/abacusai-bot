@@ -6,7 +6,11 @@ vi.mock("#main/services/providers/account-service", () => ({
 }));
 import { createWebAuth } from "./auth-web";
 const setup = () => {
-  const adoptAbacusCredential = vi.fn(async () => ({ ok: true }));
+  const adoptAbacusCredential = vi.fn(
+    async (): Promise<{ ok: boolean; accountDetailsPending?: boolean }> => ({
+      ok: true,
+    })
+  );
   return {
     adoptAbacusCredential,
     auth: createWebAuth({ adoptAbacusCredential } as never),
@@ -56,4 +60,35 @@ it("expires pending verifiers after ten minutes and never adopts a rejected exch
     code: "UNAUTHORIZED",
   });
   expect(adoptAbacusCredential).not.toHaveBeenCalled();
+});
+
+it("returns a typed pending success after an exchanged key is retained", async () => {
+  const { auth, adoptAbacusCredential } = setup();
+  adoptAbacusCredential.mockResolvedValue({
+    ok: true,
+    accountDetailsPending: true,
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ apiKey: "bot-key" }))
+  );
+  await auth.start();
+  expect(await auth.complete({ code: "once" })).toEqual({
+    account: null,
+    apps: [],
+    onboarded: true,
+    accountDetailsPending: true,
+  });
+});
+it("rejects a key explicitly refused during adoption", async () => {
+  const { auth, adoptAbacusCredential } = setup();
+  adoptAbacusCredential.mockResolvedValue({ ok: false });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ apiKey: "bot-key" }))
+  );
+  await auth.start();
+  await expect(auth.complete({ code: "once" })).rejects.toMatchObject({
+    code: "UNAUTHORIZED",
+  });
 });

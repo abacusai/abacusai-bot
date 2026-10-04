@@ -6,7 +6,12 @@ import {
   startSignIn,
 } from "#renderer/features/onboarding/store";
 
+const { add } = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("#renderer/ui/toast", () => ({ toast: { add } }));
+import { webSignIn } from "./sign-in";
+
 beforeEach(() => {
+  add.mockClear();
   onboardingStore.setState(() => ({ signIn: null, createdBotId: null }));
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -72,5 +77,40 @@ it.each([
     expect(settled).toHaveBeenCalledWith({ ok: false, error: expected });
     expect(JSON.stringify(onboardingStore.state)).not.toContain("secret-");
     if (stage !== "host-complete") expect(complete).not.toHaveBeenCalled();
+  }
+);
+
+it.each([false, true])(
+  "shows pending details only when completion is pending (%s)",
+  async (pending) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ success: true, result: { authCode: "fixture" } })
+      )
+    );
+    const complete = vi.fn().mockResolvedValue({
+      account: null,
+      apps: [],
+      onboarded: true,
+      accountDetailsPending: pending,
+    });
+    const transport = {
+      client: {
+        auth: {
+          web: {
+            start: vi.fn().mockResolvedValue({ challenge: "challenge" }),
+            complete,
+          },
+        },
+      },
+    } as unknown as Transport;
+    expect(await webSignIn(transport)).toEqual({ ok: true });
+    expect(complete).toHaveBeenCalledWith({ code: "fixture" });
+    expect(add).toHaveBeenCalledTimes(pending ? 1 : 0);
+    if (pending)
+      expect(add).toHaveBeenCalledWith({
+        title: "Signed in; account details pending",
+      });
   }
 );

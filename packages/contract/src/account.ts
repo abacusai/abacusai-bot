@@ -36,3 +36,8 @@ export const EMPTY_ACCOUNT_STATE: AccountState = {
   apps: [],
   onboarded: false,
 };
+
+/** A stored web credential may precede availability of optional account details. */
+export type WebAuthCompleteResult = AccountState & {
+  accountDetailsPending: boolean;
+};

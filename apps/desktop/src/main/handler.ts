@@ -49,6 +49,7 @@ import {
 import {
   adoptWebAccount,
   signOut as clearLocalAccount,
+  skipOnboarding,
 } from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
 import { clearOpenRouterCache } from "./services/providers/openrouter";
@@ -153,6 +154,44 @@ export const createHostOperations = (
     });
   };
 
+  let adoptionRevision = 0;
+  let identificationTimer: ReturnType<typeof setTimeout> | undefined;
+  const cancelIdentification = () => {
+    adoptionRevision += 1;
+    clearTimeout(identificationTimer);
+    identificationTimer = undefined;
+  };
+  const storedAbacusKey = () =>
+    readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
+
+  // A web host has one owner and does not choose Electron profile directories.
+  // Retry its optional account details without holding the sign-in RPC open.
+  const scheduleIdentification = (
+    key: string,
+    revision: number,
+    delay = 1200
+  ) => {
+    const current = () =>
+      revision === adoptionRevision && storedAbacusKey() === key;
+    identificationTimer = setTimeout(async () => {
+      if (!current()) return;
+      const account = await fetchAbacusAccount(true);
+      if (!current()) return;
+      if (abacusCredentialRejected()) {
+        await clearAbacusCredential(account);
+      } else if (account != null) {
+        adoptWebAccount(account);
+        credentialsChanged("abacus", key);
+        serviceHost.restoreSessionsForAccount(
+          accountStashKey(account.email, key)
+        );
+      } else {
+        scheduleIdentification(key, revision, Math.min(delay * 2, 60_000));
+      }
+    }, delay);
+    identificationTimer.unref?.();
+  };
+
   /** Resolve a newly stored key past the short propagation delay after signup. */
   const identifyAbacusAccount = async (): Promise<AbacusAccountInfo | null> => {
     let account = await fetchAbacusAccount(true);
@@ -171,16 +210,43 @@ export const createHostOperations = (
     rawKey: string,
     /** Where the key was minted; the app's own window keeps that account's session. */
     surface?: "in_app" | "browser" | "web"
-  ): Promise<{ ok: true } | { ok: false; error: "unidentified-account" }> => {
+  ): Promise<
+    | { ok: true; accountDetailsPending?: boolean }
+    | { ok: false; error: "unidentified-account" }
+  > => {
+    cancelIdentification();
+    const revision = adoptionRevision;
     const key = rawKey.trim();
     const previousKey =
       readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
     saveApiKey("abacus", key);
     // Clear the old account cache so validation cannot inherit the previous
-    // user; nothing is announced until the key has an identity and a profile.
+    // user. Electron still requires an identity to select an isolated profile.
     clearAbacusCache();
 
-    const account = await identifyAbacusAccount();
+    const account =
+      surface === "web"
+        ? await fetchAbacusAccount(true)
+        : await identifyAbacusAccount();
+    if (revision !== adoptionRevision)
+      return { ok: false, error: "unidentified-account" };
+    if (surface === "web" && !abacusCredentialRejected()) {
+      if (account == null) {
+        clearLocalAccount();
+        skipOnboarding();
+        credentialsChanged("abacus", key);
+        scheduleIdentification(key, revision);
+        return { ok: true, accountDetailsPending: true };
+      }
+      // Web identity is optional; no desktop profile directory is selected.
+      adoptWebAccount(account);
+      credentialsChanged("abacus", key);
+      serviceHost.restoreSessionsForAccount(
+        accountStashKey(account.email, key)
+      );
+      registerLoginItem();
+      return { ok: true, accountDetailsPending: false };
+    }
     const profileKey = account != null ? profileKeyFor(account) : null;
     if (account == null || profileKey == null) {
       // A failed switch must not sign the previous account out.
@@ -231,6 +297,7 @@ export const createHostOperations = (
     stashedSessions: number;
     settings: ReturnType<typeof readSettings>;
   }> => {
+    cancelIdentification();
     const departingKey =
       readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
     const account =
@@ -386,7 +453,9 @@ export const createHostOperations = (
           start: () => Promise<{ challenge: string }>;
           complete: (input: {
             code: string;
-          }) => Promise<import("@abacus-ai/contract/account").AccountState>;
+          }) => Promise<
+            import("@abacus-ai/contract/account").WebAuthCompleteResult
+          >;
         },
     credentialsChanged,
     syncAbacusGateway,

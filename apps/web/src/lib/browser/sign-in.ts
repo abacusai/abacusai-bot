@@ -7,6 +7,7 @@ import {
   ConnectError,
 } from "#renderer/features/shell/connect/services";
 import { SignInFailure, safeAuthCode } from "#renderer/lib/sign-in-failure";
+import { toast } from "#renderer/ui/toast";
 
 const failure = (stage: SignInFailure["stage"], error: unknown) => {
   const code = safeAuthCode(
@@ -48,7 +49,9 @@ export const webSignIn = async (
     throw failure("auth-code", error);
   }
   try {
-    await transport.client.auth.web.complete({ code: authCode });
+    const result = await transport.client.auth.web.complete({ code: authCode });
+    if (result.accountDetailsPending)
+      toast.add({ title: "Signed in; account details pending" });
   } catch (error) {
     throw failure("host-complete", error);
   }
