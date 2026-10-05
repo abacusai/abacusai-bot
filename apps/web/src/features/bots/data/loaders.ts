@@ -4,7 +4,16 @@ import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import { findCheckIn } from "#renderer/lib/bots/check-in";
 
-import { openChatOnce } from "./open-chat";
+import { cachedChat, openChatOnce } from "./open-chat";
+
+interface ChatLoadDeps {
+  db: Db;
+  load(id: string): Promise<unknown>;
+  /** A hover: fetch the transcript's first page, create no session. */
+  warm(id: string): void;
+  /** The runtime already holds this chat ready: nothing left to load. */
+  ready(id: string): boolean;
+}
 export const loadBot = async (db: Db, botId: string) => {
   await db.collections.bots.preload();
   const bot = db.collections.bots.get(botId);
@@ -12,7 +21,7 @@ export const loadBot = async (db: Db, botId: string) => {
   return bot;
 };
 export const loadBotChat = async (
-  deps: { db: Db; transport: Transport; load(id: string): Promise<unknown> },
+  deps: ChatLoadDeps & { transport: Transport },
   botId: string,
   preload: boolean
 ) => {
@@ -21,7 +30,23 @@ export const loadBotChat = async (
     deps.db.collections.sessions.preload(),
   ]);
   const bot = await loadBot(deps.db, botId);
-  if (preload) return { ready: false as const, botId };
+  if (preload) {
+    // Only a chat this document already opened: `bots.openChat` has side
+    // effects and waits for the click.
+    const cached = cachedChat(bot, deps.db.collections.sessions);
+    // A ready chat commits as the page itself: the click, which reuses this
+    // stale preload while it reloads in the background, shows the chat
+    // instead of the skeleton.
+    if (cached != null && deps.ready(cached.sessionId))
+      return {
+        ready: true as const,
+        botId,
+        sessionId: cached.sessionId,
+        workspaceId: cached.workspaceId,
+      };
+    if (cached != null) deps.warm(cached.sessionId);
+    return { ready: false as const, botId };
+  }
   const handle = await openChatOnce(
     { transport: deps.transport, sessions: deps.db.collections.sessions },
     bot
@@ -35,7 +60,7 @@ export const loadBotChat = async (
   };
 };
 export const loadSenderChat = async (
-  deps: { db: Db; load(id: string): Promise<unknown> },
+  deps: ChatLoadDeps,
   botId: string,
   sessionId: string,
   preload: boolean
@@ -58,7 +83,11 @@ export const loadSenderChat = async (
     )
   )
     throw notFound();
-  if (preload) return { ready: false as const };
+  if (preload) {
+    if (deps.ready(sessionId)) return { ready: true as const, sessionId };
+    deps.warm(sessionId);
+    return { ready: false as const };
+  }
   await deps.load(sessionId);
   return { ready: true as const, sessionId };
 };

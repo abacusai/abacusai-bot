@@ -14,6 +14,7 @@ import { useBot } from "#renderer/features/bots/data/queries";
 import { FilesTab } from "#renderer/features/bots/panel/bot-side-panel";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
+import { chatLoading } from "#renderer/features/chat/runtime/runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
@@ -84,7 +85,7 @@ export const Route = createFileRoute(
     loadSenderChat(
       {
         db: context.db,
-        load: (id) => context.chat.session(id).load(),
+        ...chatLoading(context),
       },
       params.botId,
       params.sessionId,

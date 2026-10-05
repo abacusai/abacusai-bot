@@ -24,6 +24,7 @@ import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
+import { chatLoading } from "#renderer/features/chat/runtime/runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import {
@@ -246,7 +247,7 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
       {
         db: context.db,
         transport: context.transport,
-        load: (id) => context.chat.session(id).load(),
+        ...chatLoading(context),
       },
       params.botId,
       preload
