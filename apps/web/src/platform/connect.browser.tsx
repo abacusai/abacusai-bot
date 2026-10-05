@@ -10,13 +10,12 @@
  * (`followWriteAuthorization`).
  */
 import type { SystemInfo } from "@abacus-ai/contract/contract";
-import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { Store } from "@tanstack/react-store";
 import type { Root } from "react-dom/client";
 
-import { readLastKnown, writeLastKnown } from "#platform/last-known";
+import { lookStore, readLastKnown, writeLastKnown } from "#platform/last-known";
 import { installLease } from "#platform/lease";
 import { rpcCode } from "#renderer/data/ai/errors";
 import { installDb } from "#renderer/data/db";
@@ -47,7 +46,13 @@ import { installUiContinuity } from "#renderer/lib/continuity";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
-import { applyTheme, DARK_QUERY, resolveTheme } from "#renderer/lib/theme";
+import {
+  applyBootLook,
+  applyTheme,
+  CONTRAST_QUERY,
+  DARK_QUERY,
+  setLookStore,
+} from "#renderer/lib/theme";
 import { createAppRouter } from "#renderer/router";
 
 export { HostStatus } from "#renderer/features/shell/connect";
@@ -140,26 +145,26 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
           transport.client.system.acknowledgeLegacyDrafts({ keys }, BACKGROUND)
         )
   );
-  // Theme follows prefs reactively (ThemeEffect) once they load; until
-  // then this user's last theme. The language once here.
-  const theme = readLastKnown<PrefsRow["theme"]>("theme");
-  if (theme != null)
-    applyTheme(document, resolveTheme(theme, matchMedia(DARK_QUERY).matches));
-  const rememberTheme = (): void => {
-    const prefs = db.collections.prefs.get("app");
-    if (prefs != null) writeLastKnown("theme", prefs.theme);
-  };
-  void db.collections.prefs.preload().then(() => {
-    rememberTheme();
-    db.collections.prefs.subscribeChanges(rememberTheme);
-    return changeLanguage(
+  // The look follows prefs reactively (ThemeEffect, which also remembers
+  // it here) once they load; until then this user's last look, from the
+  // same per-user store as the system facts. The language once here.
+  setLookStore(lookStore);
+  applyTheme(
+    document,
+    applyBootLook(document, {
+      dark: matchMedia(DARK_QUERY).matches,
+      high: matchMedia(CONTRAST_QUERY).matches,
+    })
+  );
+  void db.collections.prefs.preload().then(() =>
+    changeLanguage(
       resolveLanguage(
         (db.collections.prefs.get("app") ?? DEFAULT_PREFS).language
       )
     ).catch((error: unknown) => {
       console.error("[renderer] locale failed; keeping English", error);
-    });
-  });
+    })
+  );
 
   installLease(() => transport.state === "open");
   installActivity(transport);

@@ -106,11 +106,11 @@
   padding: 10px 12px;
   overflow-x: auto;
   font-family: var(--chat-font-mono);
-  font-size: 12px;
+  font-size: var(--code-font-size, 12px);
   line-height: 1.6;
   background: transparent;
 }
-.chat-code pre.chat-code-collapsed { max-height: calc(30 * 1.6 * 12px + 20px); overflow-y: hidden; }
+.chat-code pre.chat-code-collapsed { max-height: calc(30 * 1.6 * var(--code-font-size, 12px) + 20px); overflow-y: hidden; }
 .chat-code-more {
   width: 100%;
   padding: 6px 12px;
