@@ -3,6 +3,7 @@ import type {
   McpServerEntry,
   AgentMcpServer,
 } from "@abacus-ai/contract/contracts";
+import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,14 +44,15 @@ import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Textarea } from "#renderer/ui/textarea";
 export const useMcpRuntimeScope = () => {
   const c = useCollections();
-  const sessions = useLiveQuery(c.sessions).data ?? [];
-  const candidates = sessions
-    .filter((s) => s.status === "running")
-    .toSorted((a, b) =>
-      (b.turn?.updatedAt ?? b.updatedAt).localeCompare(
-        a.turn?.updatedAt ?? a.updatedAt
-      )
-    );
+  const running =
+    useLiveQuery((q) =>
+      q.from({ s: c.sessions }).where(({ s }) => eq(s.status, "running"))
+    ).data ?? [];
+  const candidates = running.toSorted((a, b) =>
+    (b.turn?.updatedAt ?? b.updatedAt).localeCompare(
+      a.turn?.updatedAt ?? a.updatedAt
+    )
+  );
   const [picked, setPicked] = useState<string | null>(null);
   const session = candidates.find((s) => s.id === picked) ?? candidates[0];
   const scope = session

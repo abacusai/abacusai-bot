@@ -12,7 +12,7 @@ import type { PrefsPatch } from "@abacus-ai/contract/contract/rows";
  * `prefs`, `workspaces` and `sessions` sync at once (the shell needs them);
  * the rest start on first use or a route's `collection.preload()`.
  */
-import { createCollection } from "@tanstack/db";
+import { BasicIndex, createCollection } from "@tanstack/db";
 import { createContext, use } from "react";
 
 import {
@@ -74,6 +74,16 @@ export const createDb = (
   const collections = buildCollections(transport, {
     ...overrides,
     signal: stopper.signal,
+  });
+  // For the bots area's live queries: a check-in is the oldest of a bot's
+  // routines (`orderBy` with a limit), and a bot's files join its sessions
+  // on the session id. Without them TanStack DB scans: an artifact scan per
+  // session (sessions × artifacts), and warns.
+  collections.routines.createIndex((row) => row.createdAt, {
+    indexType: BasicIndex,
+  });
+  collections.artifacts.createIndex((row) => row.sessionId, {
+    indexType: BasicIndex,
   });
   const write = createUpdatePrefs(collections.prefs, transport);
   return {
