@@ -184,9 +184,9 @@ describe("the router's document view transition", () => {
       to: "/routines",
       ...withIntent("nav-forward"),
     } as never);
-    // Past defaultPendingMs (150): the pending pane is committed.
+    // Past defaultPendingMs (400): the pending pane is committed.
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 600));
     });
     expect(screen.getByTestId("pending-pane")).toBeTruthy();
     expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();

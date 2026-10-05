@@ -132,8 +132,10 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
     defaultPreloadStaleTime: 0,
     defaultPendingComponent: RoutePending,
     defaultErrorComponent: PaneError,
-    defaultPendingMs: 150,
-    defaultPendingMinMs: 200,
+    // A warm navigation never flashes the skeleton, and one that does show
+    // it is not held open past its data.
+    defaultPendingMs: 400,
+    defaultPendingMinMs: 100,
     scrollRestoration: true,
     // Set by installTransitionTypes: typed navigations only.
     defaultViewTransition: undefined,

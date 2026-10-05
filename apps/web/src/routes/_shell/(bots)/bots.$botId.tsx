@@ -230,30 +230,27 @@ const BotError = ({ error }: { error: unknown }) => {
 export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
   params: { parse: v.parser(v.object({ botId: BotId })) },
   validateSearch: BotSearch,
-  loader: {
-    staleReloadMode: "blocking",
-    handler: async ({ context, params, preload }) => {
-      if (fixtureReady != null) await fixtureReady;
-      if (fixtureState.current) {
-        await context.db.collections.bots.preload();
-        return {
-          ready: true as const,
-          botId: params.botId,
-          sessionId:
-            context.db.collections.bots.get(params.botId)?.sessionId ??
-            fixtureState.current.threadId,
-        };
-      }
-      return loadBotChat(
-        {
-          db: context.db,
-          transport: context.transport,
-          load: (id) => context.chat.session(id).load(),
-        },
-        params.botId,
-        preload
-      );
-    },
+  loader: async ({ context, params, preload }) => {
+    if (fixtureReady != null) await fixtureReady;
+    if (fixtureState.current) {
+      await context.db.collections.bots.preload();
+      return {
+        ready: true as const,
+        botId: params.botId,
+        sessionId:
+          context.db.collections.bots.get(params.botId)?.sessionId ??
+          fixtureState.current.threadId,
+      };
+    }
+    return loadBotChat(
+      {
+        db: context.db,
+        transport: context.transport,
+        load: (id) => context.chat.session(id).load(),
+      },
+      params.botId,
+      preload
+    );
   },
   pendingComponent: BotPending,
   errorComponent: BotError,

@@ -68,26 +68,23 @@ const RoutineRoute = () => {
 export const Route = createFileRoute("/_shell/(routines)/routines/$routineId")({
   validateSearch: RoutineSearch,
   loaderDeps: ({ search }) => ({ run: search.run }),
-  loader: {
-    staleReloadMode: "blocking",
-    handler: async ({ context, params, deps, preload }) => {
-      await Promise.all([
-        context.db.collections.routines.preload(),
-        context.db.collections.routineRuns.preload(),
-      ]);
-      if (!context.db.collections.routines.get(params.routineId))
-        throw notFound();
-      if (deps.run) {
-        if (
-          !preload &&
-          context.db.collections.routineRuns.toArray.some(
-            (run) =>
-              run.sessionId === deps.run && run.routineId === params.routineId
-          )
+  loader: async ({ context, params, deps, preload }) => {
+    await Promise.all([
+      context.db.collections.routines.preload(),
+      context.db.collections.routineRuns.preload(),
+    ]);
+    if (!context.db.collections.routines.get(params.routineId))
+      throw notFound();
+    if (deps.run) {
+      if (
+        !preload &&
+        context.db.collections.routineRuns.toArray.some(
+          (run) =>
+            run.sessionId === deps.run && run.routineId === params.routineId
         )
-          await chatRuntimeFor(context.transport).session(deps.run).load();
-      }
-    },
+      )
+        await chatRuntimeFor(context.transport).session(deps.run).load();
+    }
   },
   notFoundComponent: RoutineGone,
   component: RoutineRoute,

@@ -80,19 +80,16 @@ export const Route = createFileRoute(
 )({
   params: { parse: v.parser(v.object({ botId: BotId, sessionId: SessionId })) },
   validateSearch: BotSearch,
-  loader: {
-    staleReloadMode: "blocking",
-    handler: ({ context, params, preload }) =>
-      loadSenderChat(
-        {
-          db: context.db,
-          load: (id) => context.chat.session(id).load(),
-        },
-        params.botId,
-        params.sessionId,
-        preload
-      ),
-  },
+  loader: ({ context, params, preload }) =>
+    loadSenderChat(
+      {
+        db: context.db,
+        load: (id) => context.chat.session(id).load(),
+      },
+      params.botId,
+      params.sessionId,
+      preload
+    ),
   pendingComponent: BotPending,
   notFoundComponent: () => <BotGone chat />,
   component: SenderRoute,
