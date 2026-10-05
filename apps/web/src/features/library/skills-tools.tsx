@@ -15,12 +15,15 @@ import {
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { optimistic, useMutation } from "#renderer/data/query-client";
+import {
+  optimistic,
+  succeeding,
+  useMutation,
+} from "#renderer/data/query-client";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { showError } from "#renderer/lib/toast";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { useDebouncedValue } from "#renderer/lib/use-debounced-value";
 import { Button } from "#renderer/ui/button";
@@ -64,18 +67,35 @@ export const SkillsPage = () => {
   const cache = useQueryClient();
   const navigate = useAppNavigate();
   const [restart, setRestart] = useState(false);
-  const changed = async (result: {
-    success: boolean;
-    error?: string;
-    cancelled?: boolean;
-  }) => {
-    if (result.cancelled) return;
-    if (!result.success) throw new Error(result.error ?? t("phase5.failed"));
-    setRestart(true);
-    await cache.invalidateQueries({
-      queryKey: transport.orpc.skills.listInstalled.key(),
-    });
+  // An import or removal changes the installed list; a cancelled picker
+  // changes nothing.
+  const changed = {
+    onSuccess: async (result: object) => {
+      if ("cancelled" in result && result.cancelled) return;
+      setRestart(true);
+      await cache.invalidateQueries({
+        queryKey: transport.orpc.skills.listInstalled.key(),
+      });
+    },
   };
+  const importLocal = useMutation(
+    succeeding(
+      transport.orpc.skills.importLocal.mutationOptions({
+        ...changed,
+        meta: { errorToast: "phase5.failed" },
+      })
+    )
+  );
+  const openFile = useMutation(
+    succeeding(
+      transport.orpc.skills.openFile.mutationOptions({
+        meta: { errorToast: { reasonOr: "phase5.failed" } },
+      })
+    )
+  );
+  const removeSkill = useMutation(
+    succeeding(transport.orpc.skills.remove.mutationOptions(changed))
+  );
   return (
     <>
       <AreaPage
@@ -121,13 +141,8 @@ export const SkillsPage = () => {
               key={kind}
               size="sm"
               variant="secondary"
-              onClick={() =>
-                IS_ELECTRON &&
-                void transport.client.skills
-                  .importLocal({ kind })
-                  .then(changed)
-                  .catch(() => showError(t("phase5.failed")))
-              }
+              disabled={importLocal.isPending}
+              onClick={() => IS_ELECTRON && importLocal.mutate({ kind })}
             >
               {t(`phase5.skillImport.${kind}`)}
             </Button>
@@ -161,12 +176,7 @@ export const SkillsPage = () => {
                         size="sm"
                         variant="secondary"
                         onClick={() =>
-                          void transport.client.skills
-                            .openFile({ path: s.path, workspacePath })
-                            .then((result) => {
-                              if (!result.success)
-                                showError(result.error ?? t("phase5.failed"));
-                            })
+                          openFile.mutate({ path: s.path, workspacePath })
                         }
                       >
                         {t("phase5.editSkill")}
@@ -179,9 +189,7 @@ export const SkillsPage = () => {
                       })}
                       label={t("phase5.uninstall")}
                       onConfirm={() =>
-                        transport.client.skills
-                          .remove({ path: s.path, workspacePath })
-                          .then(changed)
+                        removeSkill.mutateAsync({ path: s.path, workspacePath })
                       }
                     />
                   </SettingRow>
@@ -207,12 +215,21 @@ export const SkillsPage = () => {
 export const MarketplaceDialog = ({ onInstalled }: { onInstalled(): void }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const navigate = useAppNavigate();
   const [q, setQ] = useState("");
   const queryText = useDebouncedValue(q, 350);
-  const [pending, setPending] = useState<string | null>(null);
   const [installed, setInstalled] = useState<string[]>([]);
+  const install = useMutation(
+    succeeding(
+      transport.orpc.skills.install.mutationOptions({
+        onSuccess: () => onInstalled(),
+        meta: {
+          invalidates: [transport.orpc.skills.listInstalled.key()],
+          errorToast: true,
+        },
+      })
+    )
+  );
   const result = useQuery({
     ...transport.orpc.skills.search.queryOptions({
       input: { query: queryText },
@@ -253,31 +270,18 @@ export const MarketplaceDialog = ({ onInstalled }: { onInstalled(): void }) => {
           >
             <Button
               size="sm"
-              disabled={pending != null || installed.includes(s.id)}
-              onClick={() => {
-                setPending(s.id);
-                void transport.client.skills
-                  .install({
+              disabled={install.isPending || installed.includes(s.id)}
+              onClick={() =>
+                install.mutate(
+                  {
                     skillId: s.skillId,
                     source: s.source,
                     name: s.name,
                     scope: "global",
-                  })
-                  .then(async (result) => {
-                    if (!result.success) throw new Error(result.error);
-                    setInstalled((ids) => [...ids, s.id]);
-                    onInstalled();
-                    await cache.invalidateQueries({
-                      queryKey: transport.orpc.skills.listInstalled.key(),
-                    });
-                  })
-                  .catch((e) =>
-                    showError(
-                      e instanceof Error ? e.message : t("phase5.failed")
-                    )
-                  )
-                  .finally(() => setPending(null));
-              }}
+                  },
+                  { onSuccess: () => setInstalled((ids) => [...ids, s.id]) }
+                )
+              }
             >
               {t(
                 installed.includes(s.id) ? "phase5.installed" : "phase5.install"
