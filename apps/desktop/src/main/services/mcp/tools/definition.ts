@@ -1,11 +1,10 @@
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 import type { McpAgentToolsServer } from "../mcp-agent-tools-server";
+import type { McpToolResult } from "../mcp-http-server";
 
-export interface ToolResult {
-  content: Array<{ type: string; text?: string }>;
-  isError?: boolean;
-}
+/** The SDK's result type; see McpToolResult. */
+export type ToolResult = McpToolResult;
 
 /**
  * The server's handlers a definition may call. A `Pick` of the server rather

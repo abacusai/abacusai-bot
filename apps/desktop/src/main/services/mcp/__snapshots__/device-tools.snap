@@ -1,0 +1,287 @@
+[
+  {
+    "name": "device_list",
+    "description": "List available iOS simulators and Android emulators/devices with their state (booted/shutdown). Use this first to pick a target.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "device_boot",
+    "description": "Boot a simulator/emulator (and open its window). Omit device to boot the first available one. Blocks until the OS has finished booting.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_shutdown",
+    "description": "Shut down a booted simulator/emulator.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_build",
+    "description": "Build the active workspace for the simulator/emulator and return the artifact path + app id.\nOmit platform to auto-detect it from the project layout (required only when the project targets both iOS and Android).\niOS: finds the .xcworkspace/.xcodeproj (root or ./ios), builds with xcodebuild for the iOS Simulator, returns the .app path and bundle id.\nAndroid: runs ./gradlew assembleDebug (root or ./android), returns the debug APK path and applicationId.\nFlutter / React Native: run the framework build via the shell instead, then use device_app install with the produced artifact.\nBuilds can take several minutes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb). Optional; auto-detected from the project when unambiguous."
+        },
+        "scheme": {
+          "type": "string",
+          "description": "iOS only: Xcode scheme (defaults to the first listed scheme)"
+        },
+        "configuration": {
+          "type": "string",
+          "description": "iOS only: build configuration (default \"Debug\")"
+        }
+      }
+    }
+  },
+  {
+    "name": "device_app",
+    "description": "Manage an app on a device. Actions:\n  \"install\":   install an artifact (params: path to .app dir / .apk)\n  \"launch\":    launch by app id (params: appId = iOS bundle id / Android package)\n  \"terminate\": force-stop the app (params: appId)\n  \"uninstall\": remove the app (params: appId)\n  \"open_url\":  open a URL / deep link on the device (params: url)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "install",
+            "launch",
+            "terminate",
+            "uninstall",
+            "open_url"
+          ],
+          "description": "App action"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        },
+        "path": {
+          "type": "string",
+          "description": "Artifact path for \"install\" (.app directory on iOS, .apk on Android)"
+        },
+        "appId": {
+          "type": "string",
+          "description": "iOS bundle id / Android package for launch/terminate/uninstall"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL or deep link for \"open_url\""
+        }
+      },
+      "required": [
+        "action",
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_screenshot",
+    "description": "Capture a screenshot of a booted device. Saves a PNG to disk and returns the file path. Read the file to see the screen. Use after every meaningful UI change.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_snapshot",
+    "description": "Capture the current UI element tree (Android: uiautomator; iOS: Maestro, which needs the Maestro binary on the host).\nReturns interactive elements with @eN refs usable in device_interact (refs valid until the next snapshot or screen change).\nIf the tree is empty or unavailable, fall back to device_screenshot.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_interact",
+    "description": "Interact with the device screen. Prefer @eN refs from the latest device_snapshot; raw x/y coordinates work as a fallback (e.g. from a screenshot).\nAndroid runs natively via adb; iOS requires the Maestro binary on the host (the tool explains how to install it if missing).\nActions:\n  tap:         tap an element or point (params: ref OR x+y)\n  long_press:  press and hold (params: ref OR x+y)\n  swipe / scroll: scroll the screen (params: direction up/down/left/right, amount px)\n  type:        type text into the focused input (tap the field first)\n  press_key:   press a key (params: key = enter/back/home/delete; Android also tab/menu or raw KEYCODE_*)\n  wait:        wait (params: amount ms, default 2000)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "tap",
+            "long_press",
+            "swipe",
+            "scroll",
+            "type",
+            "press_key",
+            "wait"
+          ],
+          "description": "Interaction action"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Element ref from the latest device_snapshot (e.g. \"@e3\")"
+        },
+        "x": {
+          "type": "number",
+          "description": "X coordinate (when no ref)"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate (when no ref)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text for the \"type\" action"
+        },
+        "key": {
+          "type": "string",
+          "description": "Key name for \"press_key\""
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ],
+          "description": "Scroll/swipe direction"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Scroll distance px, or wait duration ms"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        }
+      },
+      "required": [
+        "action",
+        "platform"
+      ]
+    }
+  },
+  {
+    "name": "device_logs",
+    "description": "Read recent device logs (iOS: unified log via `log show --last 2m`; Android: logcat).\nAlways pass a filter (regex) and/or appId to avoid noise; raw device logs are extremely verbose.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "ios",
+            "android"
+          ],
+          "description": "Target platform (\"ios\" = simulator via simctl, \"android\" = emulator/device via adb)"
+        },
+        "device": {
+          "type": "string",
+          "description": "Optional device UDID/serial or (partial) name. Defaults to the booted device on that platform."
+        },
+        "lines": {
+          "type": "number",
+          "description": "Max lines to return (default 200, max 2000)"
+        },
+        "filter": {
+          "type": "string",
+          "description": "Case-insensitive regex applied per line. It is evaluated under a time limit; a pattern that does not finish in time, or one that is not valid, is reported as an error rather than applied."
+        },
+        "appId": {
+          "type": "string",
+          "description": "iOS: filter to this app's process"
+        }
+      },
+      "required": [
+        "platform"
+      ]
+    }
+  }
+]

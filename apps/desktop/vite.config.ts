@@ -140,6 +140,15 @@ export default defineConfig(({ command, mode }) => {
                 // transitively: `@tanstack/ai-event-client` imports
                 // `@tanstack/devtools-event-client` at its top level, which
                 // only tree-shaking (`sideEffects: false`) drops today.
+                // The built-in MCP servers run on the MCP SDK (a
+                // devDependency), inlined the same way with what it imports
+                // at run time: its own zod, zod-to-json-schema (left behind
+                // as a bare side-effect import otherwise), ajv and
+                // ajv-formats with their CommonJS requires, content-type for
+                // the media-type check, and @hono/node-server, whose
+                // `hono/ws` import tree-shaking then drops. mcp-http-server.ts
+                // imports it dynamically, so all of it lands in a chunk under
+                // dist/main/assets rather than in the entry.
                 include: [
                   "@abacus-ai/updater",
                   "extract-zip",
@@ -151,6 +160,17 @@ export default defineConfig(({ command, mode }) => {
                   "@tanstack/ai-utils",
                   "@ag-ui/core",
                   "partial-json",
+                  "@modelcontextprotocol/sdk",
+                  "@hono/node-server",
+                  "ajv",
+                  "ajv-formats",
+                  "content-type",
+                  "fast-deep-equal",
+                  "fast-uri",
+                  "hono",
+                  "json-schema-traverse",
+                  "zod",
+                  "zod-to-json-schema",
                 ],
               },
             },
