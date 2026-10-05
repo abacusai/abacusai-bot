@@ -54,9 +54,7 @@ export const LibrarySidebar = () => {
         </div>
       )}
       <NavList.Rows>
-        {LIBRARY_PAGES.filter(
-          (page) => IS_ELECTRON || page !== "messaging"
-        ).map((page) => (
+        {LIBRARY_PAGES.map((page) => (
           <NavList.Item
             key={page}
             to={`/library/${page}`}

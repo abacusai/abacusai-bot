@@ -44,8 +44,9 @@ import {
   disablePlatform,
   useConnectFlow,
 } from "./connect-flow";
+import { WebMessagingPage } from "./whatsapp-phone";
 export const MessagingPage = () =>
-  IS_ELECTRON ? <DesktopMessagingPage /> : null;
+  IS_ELECTRON ? <DesktopMessagingPage /> : <WebMessagingPage />;
 const DesktopMessagingPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();

@@ -3897,6 +3897,36 @@
     "hostLabel": "Host",
     "forgetAccount": "Forget this host’s account",
     "forgetAccountDetail": "Forget your name and email on this host?",
-    "targetFallback": "{{name}} is unavailable; using Host."
+    "targetFallback": "{{name}} is unavailable; using Host.",
+    "whatsapp": {
+      "title": "WhatsApp",
+      "pageDescription": "Text your agent from the apps already on your phone.",
+      "rowDetail": "Chat with your agent in “Message yourself”",
+      "connected": "Connected",
+      "note": "Your agent answers in WhatsApp even when this tab and your laptop are closed.",
+      "sheetTitle": "Connect WhatsApp",
+      "sheetBody": "Link WhatsApp on this phone. Your agent replies in your “Message yourself” chat.",
+      "numberLabel": "Your WhatsApp number",
+      "numberPlaceholder": "+1 415 555 0123",
+      "getCode": "Get my link code",
+      "consent": "This uses WhatsApp’s linked devices. You can unlink any time in WhatsApp or here.",
+      "codeTitle": "Enter this code in WhatsApp",
+      "codeLabel": "Your link code",
+      "copy": "Copy code",
+      "copied": "Copied",
+      "step1": "Open WhatsApp › Settings › Linked devices",
+      "step2": "Tap Link a device, then Link with phone number instead",
+      "step3": "Enter the code",
+      "scamNote": "WhatsApp may warn that this could be a scam and name a US city. That is the server your agent runs on; tap Link device to continue.",
+      "openWhatsApp": "Open WhatsApp",
+      "waiting": "Waiting for WhatsApp…",
+      "doneTitle": "WhatsApp is connected",
+      "linkedTo": "Linked to {{phone}}",
+      "doneBody": "Your agent said hi in “Message yourself”. Reply there any time, even with your laptop closed.",
+      "openChat": "Open my chat",
+      "done": "Done",
+      "unlink": "Unlink WhatsApp",
+      "unlinkConfirm": "Your agent stops answering in WhatsApp. You can link it again any time."
+    }
   }
 }
