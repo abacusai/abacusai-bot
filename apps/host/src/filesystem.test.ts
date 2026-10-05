@@ -14,7 +14,10 @@ import { join } from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { trashItem, sweepTrash } from "./filesystem";
-it("trashes files, directories and symlinks across mounts without dereferencing", async () => {
+it("trashes files, directories and symlinks across mounts without dereferencing", async ({
+  skip,
+}) => {
+  if (process.platform !== "linux") skip(); // copies across mounts via /dev/shm
   const home = await mkdtemp(join(tmpdir(), "trash-home-"));
   const source = await mkdtemp("/dev/shm/trash-source-");
   vi.stubEnv("ABACUSAI_BOT_HOME", home);
@@ -62,7 +65,10 @@ it("trashes files, directories and symlinks across mounts without dereferencing"
   }
 });
 
-it("retains the source and removes a partial trash copy when copying fails", async () => {
+it("retains the source and removes a partial trash copy when copying fails", async ({
+  skip,
+}) => {
+  if (process.platform !== "linux") skip(); // copies across mounts via /dev/shm
   const { execFileSync } = await import("node:child_process");
   const home = await mkdtemp(join(tmpdir(), "trash-failure-"));
   const source = await mkdtemp("/dev/shm/trash-failure-");

@@ -37,6 +37,8 @@ it("exposes file metadata through the dev preview proxy", async () => {
       env: {
         ...process.env,
         TMPDIR: home,
+        TEMP: home,
+        TMP: home,
         ABACUSAI_BOT_HOST_SECRET_FILE: join(home, "secret"),
         HOST_PROXY_PORT: String(port),
         HOST_PROXY_TARGET: `http://127.0.0.1:${(upstream.address() as { port: number }).port}`,
