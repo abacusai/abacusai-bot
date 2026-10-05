@@ -16,6 +16,7 @@ import type { BrowserSurface } from "#renderer/components/browser-surface";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import type { TerminalAction } from "#renderer/components/terminal/keys";
 import { useConnectorRequests } from "#renderer/lib/connector-requests";
+import { whenIdle } from "#renderer/lib/idle";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 
@@ -39,14 +40,16 @@ const ChangesTab = lazy(() =>
 const DeviceTab = lazy(() =>
   import("#platform/device-tab").then((m) => ({ default: m.DeviceTab }))
 );
+const loadTerminalTab = () => import("./terminal/terminal-tab");
+const loadFilesTab = () => import("./files/files-tab");
 const TerminalTab = lazy(() =>
-  import("./terminal/terminal-tab").then((m) => ({ default: m.TerminalTab }))
+  loadTerminalTab().then((m) => ({ default: m.TerminalTab }))
 );
 const FilesTab = lazy(() =>
-  import("./files/files-tab").then((m) => ({ default: m.FilesTab }))
+  loadFilesTab().then((m) => ({ default: m.FilesTab }))
 );
 const SessionFilePreview = lazy(() =>
-  import("./files/files-tab").then((m) => ({ default: m.SessionFilePreview }))
+  loadFilesTab().then((m) => ({ default: m.SessionFilePreview }))
 );
 export const SessionWorkspace = ({
   row,
@@ -95,6 +98,16 @@ export const SessionWorkspace = ({
     workspace?.path
   );
   useCheckoutWatch(transport, checkout, checkoutIdentity);
+  // The two tabs a session opens most: their chunks load while idle, so
+  // the first switch to one does not wait on the network.
+  useEffect(
+    () =>
+      whenIdle(() => {
+        void loadTerminalTab().catch(() => undefined);
+        void loadFilesTab().catch(() => undefined);
+      }),
+    []
+  );
   const select = (tab: string, extra: Record<string, unknown> = {}) =>
     void navigate({
       to: ".",

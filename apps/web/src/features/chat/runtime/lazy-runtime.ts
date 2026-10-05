@@ -32,6 +32,7 @@ export const createLazyChatRuntime = (
     prepareChat,
     chat: {
       session: (id) => ready().session(id),
+      peek: (id) => runtime?.peek(id),
       get host() {
         return ready().host;
       },

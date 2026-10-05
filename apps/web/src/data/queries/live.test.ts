@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMemoryTransport } from "#renderer/data/transport/memory";
 
 import { keysFor } from "./invalidation";
-import { followNotices } from "./live";
+import { followAttention, followConnectorEvents, followNotices } from "./live";
 
 describe("followNotices", () => {
   it("stops on FORBIDDEN instead of reopening every second (Claude impl r1 #22)", async () => {
@@ -79,7 +79,7 @@ describe("keysFor", () => {
         source: "settings",
         event: { type: "credentials-changed" } as never,
       })
-    ).toHaveLength(3);
+    ).toContainEqual(transport.orpc.settings.get.key());
     transport.close();
   });
 });
@@ -102,3 +102,209 @@ it("exec-backend events invalidate the query shared by the context tray and pick
     transport.close();
   }
 });
+
+describe("followAttention", () => {
+  it("shares one stream, replays the current snapshot to a late subscriber and closes after the last", async () => {
+    const queue: unknown[] = [];
+    let wake = () => undefined as void;
+    let closed = false;
+    const attention = vi.fn(
+      async (_input: unknown, { signal }: { signal: AbortSignal }) =>
+        (async function* () {
+          signal.addEventListener("abort", () => wake(), { once: true });
+          while (!signal.aborted) {
+            if (queue.length > 0) yield queue.shift();
+            else await new Promise<void>((resolve) => (wake = resolve));
+          }
+          closed = true;
+        })()
+    );
+    const push = (event: unknown) => {
+      queue.push(event);
+      wake();
+    };
+    const transport = {
+      state: "open",
+      client: { ai: { attention } },
+    } as never;
+    const item = (threadId: string) => ({
+      threadId,
+      questions: 1,
+      approvals: 0,
+      firstTitle: null,
+      oldestAt: 1,
+    });
+    const first: unknown[] = [];
+    const second: unknown[] = [];
+    const late: unknown[] = [];
+    const a = new AbortController();
+    const b = new AbortController();
+    const c = new AbortController();
+    followAttention(transport, (event) => first.push(event), a.signal);
+    followAttention(transport, (event) => second.push(event), b.signal);
+    push({ type: "snapshot", revision: 1, items: [item("t1")] });
+    push({ type: "upsert", revision: 2, item: item("t2") });
+    push({ type: "remove", revision: 3, threadId: "t1" });
+    await vi.waitFor(() => expect(first).toHaveLength(3));
+    expect(second).toEqual(first);
+    expect(attention).toHaveBeenCalledTimes(1);
+    followAttention(transport, (event) => late.push(event), c.signal);
+    expect(late).toEqual([
+      { type: "snapshot", revision: 3, items: [item("t2")] },
+    ]);
+    a.abort();
+    b.abort();
+    expect(closed).toBe(false);
+    c.abort();
+    await vi.waitFor(() => expect(closed).toBe(true));
+    expect(attention).toHaveBeenCalledTimes(1);
+  });
+
+  it("isolates a throwing subscriber: the others get every event and the stream stays open", async () => {
+    const { transport, push, attention } = fakeStream("attention");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const healthy: unknown[] = [];
+    const late: unknown[] = [];
+    const a = new AbortController();
+    const b = new AbortController();
+    const c = new AbortController();
+    followAttention(
+      transport,
+      () => {
+        throw new Error("reducer bug");
+      },
+      a.signal
+    );
+    followAttention(transport, (event) => healthy.push(event), b.signal);
+    push({ type: "snapshot", revision: 1, items: [] });
+    push({ type: "upsert", revision: 2, item: item("t1") });
+    await vi.waitFor(() => expect(healthy).toHaveLength(2));
+    // A late joiner that throws on the snapshot does not break its mount.
+    expect(() =>
+      followAttention(
+        transport,
+        () => {
+          throw new Error("snapshot bug");
+        },
+        c.signal
+      )
+    ).not.toThrow();
+    push({ type: "remove", revision: 3, threadId: "t1" });
+    await vi.waitFor(() => expect(healthy).toHaveLength(3));
+    followAttention(transport, (event) => late.push(event), c.signal);
+    expect(late).toEqual([{ type: "snapshot", revision: 3, items: [] }]);
+    expect(attention).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalled();
+    a.abort();
+    b.abort();
+    c.abort();
+    error.mockRestore();
+  });
+
+  it("drops a late subscriber that aborts while receiving its snapshot", async () => {
+    const { transport, push, isClosed } = fakeStream("attention");
+    const a = new AbortController();
+    const b = new AbortController();
+    const seen: unknown[] = [];
+    followAttention(transport, (event) => seen.push(event), a.signal);
+    push({ type: "snapshot", revision: 1, items: [] });
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    const reentrant = vi.fn(() => b.abort());
+    followAttention(transport, reentrant, b.signal);
+    expect(reentrant).toHaveBeenCalledTimes(1);
+    a.abort();
+    await vi.waitFor(() => expect(isClosed()).toBe(true));
+  });
+
+  it("treats the same callback registered twice as two subscriptions", async () => {
+    const { transport, push, isClosed } = fakeStream("attention");
+    const receive = vi.fn();
+    const a = new AbortController();
+    const b = new AbortController();
+    followAttention(transport, receive, a.signal);
+    followAttention(transport, receive, b.signal);
+    push({ type: "snapshot", revision: 1, items: [] });
+    await vi.waitFor(() => expect(receive).toHaveBeenCalledTimes(2));
+    a.abort();
+    push({ type: "upsert", revision: 2, item: item("t1") });
+    await vi.waitFor(() => expect(receive).toHaveBeenCalledTimes(3));
+    expect(isClosed()).toBe(false);
+    b.abort();
+    await vi.waitFor(() => expect(isClosed()).toBe(true));
+  });
+});
+
+describe("followConnectorEvents", () => {
+  it("folds requests and clears into the snapshot a late subscriber receives, isolating a throwing one", async () => {
+    const { transport, push, events } = fakeStream("connectors");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const request = (requestId: string) => ({ requestId }) as never;
+    const healthy: unknown[] = [];
+    const late: unknown[] = [];
+    const a = new AbortController();
+    const b = new AbortController();
+    const c = new AbortController();
+    followConnectorEvents(
+      transport,
+      () => {
+        throw new Error("boom");
+      },
+      a.signal
+    );
+    followConnectorEvents(transport, (event) => healthy.push(event), b.signal);
+    push({ type: "snapshot", requests: [request("r1")] });
+    push({ type: "request", request: request("r2") });
+    push({ type: "cleared", requestId: "r1" });
+    await vi.waitFor(() => expect(healthy).toHaveLength(3));
+    followConnectorEvents(transport, (event) => late.push(event), c.signal);
+    expect(late).toEqual([{ type: "snapshot", requests: [request("r2")] }]);
+    expect(events).toHaveBeenCalledTimes(1);
+    a.abort();
+    b.abort();
+    c.abort();
+    error.mockRestore();
+  });
+});
+
+const item = (threadId: string) => ({
+  threadId,
+  questions: 1,
+  approvals: 0,
+  firstTitle: null,
+  oldestAt: 1,
+});
+
+/** A keyless stream the test feeds by hand; `isClosed` once it is aborted. */
+const fakeStream = (kind: "attention" | "connectors") => {
+  const queue: unknown[] = [];
+  let wake = () => undefined as void;
+  let closed = false;
+  const stream = vi.fn(
+    async (_input: unknown, { signal }: { signal: AbortSignal }) =>
+      (async function* () {
+        signal.addEventListener("abort", () => wake(), { once: true });
+        while (!signal.aborted) {
+          if (queue.length > 0) yield queue.shift();
+          else await new Promise<void>((resolve) => (wake = resolve));
+        }
+        closed = true;
+      })()
+  );
+  const transport = {
+    state: "open",
+    client:
+      kind === "attention"
+        ? { ai: { attention: stream } }
+        : { connectors: { events: stream } },
+  } as never;
+  return {
+    transport,
+    attention: stream,
+    events: stream,
+    push: (event: unknown) => {
+      queue.push(event);
+      wake();
+    },
+    isClosed: () => closed,
+  };
+};

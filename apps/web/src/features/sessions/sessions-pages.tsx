@@ -26,9 +26,12 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void renameSession(db, sessionId, label)
-              .then(() => setEditing(false))
-              .catch((e) => setError(String(e)));
+            // The title shows the new name at once; a refusal puts the old
+            // one back and says why.
+            setEditing(false);
+            void renameSession(db, sessionId, label).catch((e) =>
+              setError(String(e))
+            );
           }}
         >
           <Input

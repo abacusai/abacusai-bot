@@ -116,9 +116,11 @@ export const useSessionComposerModel = (row?: SessionRow) => {
             setError(String(e))
           );
         else
-          void db.collections.sessions.update(row.id, (d) => {
-            d.model = null;
-          }).isPersisted.promise;
+          void db.collections.sessions
+            .update(row.id, (d) => {
+              d.model = null;
+            })
+            .isPersisted.promise.catch((e) => setError(String(e)));
       },
     },
   };

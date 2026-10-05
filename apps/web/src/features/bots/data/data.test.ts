@@ -25,7 +25,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 const setup = async (cold = false) => {
-  const bot = fixtureBots()[0]!;
+  const bot = { ...fixtureBots()[0]!, sessionId: "s-forever" };
   const forever = {
     ...fixtureSessions()[0]!,
     id: "s-forever",
@@ -90,19 +90,41 @@ describe("bot loaders", () => {
     }));
     const load = vi.fn(async () => {});
     const transport = { client: { bots: { openChat } } } as never;
-    const deps = { db, transport, load };
+    const warm = vi.fn();
+    const ready = vi.fn(() => false);
+    const deps = { db, transport, load, warm, ready };
     expect(await loadBotChat(deps, bot.id, true)).toEqual({
       ready: false,
       botId: bot.id,
     });
     expect(openChat).not.toHaveBeenCalled();
     expect(load).not.toHaveBeenCalled();
+    expect(warm).not.toHaveBeenCalled();
     await Promise.all([
       loadBotChat(deps, bot.id, false),
       loadBotChat(deps, bot.id, false),
     ]);
     expect(openChat).toHaveBeenCalledTimes(1);
     expect(load).toHaveBeenCalledWith("s-forever");
+    // Once opened, a hover warms the chat without asking main again or
+    // building a session.
+    load.mockClear();
+    await loadBotChat(deps, bot.id, true);
+    expect(openChat).toHaveBeenCalledTimes(1);
+    expect(load).not.toHaveBeenCalled();
+    expect(warm).toHaveBeenCalledWith("s-forever");
+    // A chat the runtime holds ready is the page itself: the click shows it
+    // at once instead of the skeleton.
+    warm.mockClear();
+    ready.mockReturnValue(true);
+    expect(await loadBotChat(deps, bot.id, true)).toEqual({
+      ready: true,
+      botId: bot.id,
+      sessionId: "s-forever",
+      workspaceId: "ws-1",
+    });
+    expect(warm).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
   });
   it("cold snapshots block lookup and hydration until bots, sessions and routines are ready", async () => {
     const { bot, db, feed } = await setup(true);
@@ -116,13 +138,22 @@ describe("bot loaders", () => {
     }));
     const load = vi.fn(async () => {});
     let ready = false;
-    const pending = loadSenderChat({ db, load }, bot.id, "s-run", false).then(
-      () => {
-        ready = true;
-      }
-    );
+    const pending = loadSenderChat(
+      { db, load, warm: vi.fn(), ready: () => false },
+      bot.id,
+      "s-run",
+      false
+    ).then(() => {
+      ready = true;
+    });
     const chat = loadBotChat(
-      { db, transport: { client: { bots: { openChat } } } as never, load },
+      {
+        db,
+        transport: { client: { bots: { openChat } } } as never,
+        load,
+        warm: vi.fn(),
+        ready: () => false,
+      },
       bot.id,
       false
     );
@@ -145,16 +176,40 @@ describe("bot loaders", () => {
     const { bot, db } = await setup();
     const load = vi.fn(async () => {});
     expect(
-      (await loadSenderChat({ db, load }, bot.id, "s-run", false)).ready
+      (
+        await loadSenderChat(
+          { db, load, warm: vi.fn(), ready: () => false },
+          bot.id,
+          "s-run",
+          false
+        )
+      ).ready
     ).toBe(true);
     expect(
-      (await loadSenderChat({ db, load }, bot.id, "s-sender", true)).ready
+      (
+        await loadSenderChat(
+          { db, load, warm: vi.fn(), ready: () => false },
+          bot.id,
+          "s-sender",
+          true
+        )
+      ).ready
     ).toBe(false);
     await expect(
-      loadSenderChat({ db, load }, bot.id, "s-forever", false)
+      loadSenderChat(
+        { db, load, warm: vi.fn(), ready: () => false },
+        bot.id,
+        "s-forever",
+        false
+      )
     ).rejects.toBeDefined();
     await expect(
-      loadSenderChat({ db, load }, "gone", "s-sender", false)
+      loadSenderChat(
+        { db, load, warm: vi.fn(), ready: () => false },
+        "gone",
+        "s-sender",
+        false
+      )
     ).rejects.toBeDefined();
   });
 });

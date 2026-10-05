@@ -18,7 +18,10 @@ import {
  */
 import { useEffect, useState } from "react";
 
-import { followNotices } from "#renderer/data/queries/live";
+import {
+  followConnectorEvents,
+  followNotices,
+} from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import {
   reserveAuthorization,
@@ -265,9 +268,8 @@ export const usePendingConnectorAsks = (
   );
   useEffect(() => {
     const abort = new AbortController();
-    void followNotices(
+    followConnectorEvents(
       transport,
-      ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) => setAsks((previous) => reduceAskCounts(previous, event)),
       abort.signal
     );

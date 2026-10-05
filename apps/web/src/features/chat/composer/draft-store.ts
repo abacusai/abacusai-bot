@@ -44,10 +44,23 @@ const load = (): Record<string, Draft> => {
 
 export const draftStore = new Store<Record<string, Draft>>(load());
 
-draftStore.subscribe((state) => {
+/**
+ * Every keystroke updates the store; serializing every thread's drafts
+ * into `sessionStorage` is batched to at most once per `PERSIST_MS`. A
+ * pending write is flushed when the page is hidden (the last event a
+ * frozen or discarded tab is guaranteed) or unloaded, and a change to a
+ * `pendingSubmit` (what reload recovery resends) is written at once. A
+ * renderer crash can still lose the last `PERSIST_MS` of typing.
+ */
+const PERSIST_MS = 250;
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
+
+const persist = (): void => {
+  clearTimeout(persistTimer);
+  persistTimer = undefined;
   try {
     const persisted = Object.fromEntries(
-      Object.entries(state).map(([id, draft]) => [
+      Object.entries(draftStore.state).map(([id, draft]) => [
         id,
         {
           ...draft,
@@ -61,6 +74,30 @@ draftStore.subscribe((state) => {
   } catch {
     // Storage full or unavailable: the draft lives in memory only.
   }
+};
+
+let previous = draftStore.state;
+draftStore.subscribe(() => {
+  const current = draftStore.state;
+  const submitChanged = Object.keys({ ...previous, ...current }).some(
+    (id) => previous[id]?.pendingSubmit !== current[id]?.pendingSubmit
+  );
+  previous = current;
+  if (submitChanged) persist();
+  else persistTimer ??= setTimeout(persist, PERSIST_MS);
+});
+const flush = (): void => {
+  if (persistTimer !== undefined) persist();
+};
+const flushHidden = (): void => {
+  if (document.visibilityState === "hidden") flush();
+};
+globalThis.addEventListener?.("pagehide", flush);
+globalThis.document?.addEventListener("visibilitychange", flushHidden);
+import.meta.hot?.dispose(() => {
+  flush();
+  globalThis.removeEventListener?.("pagehide", flush);
+  globalThis.document?.removeEventListener("visibilitychange", flushHidden);
 });
 
 export const EMPTY_DRAFT: Draft = { text: "", attachments: [] };

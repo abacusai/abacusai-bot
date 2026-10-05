@@ -33,7 +33,7 @@ const readDismissed = () => {
   }
 };
 export const SidebarCreditsCard = () => {
-  const { transport } = useAppContext();
+  const { transport, credentialsChanged } = useAppContext();
   const { t } = useTranslation();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
@@ -48,8 +48,12 @@ export const SidebarCreditsCard = () => {
     ],
     staleTime: 60_000,
   });
+  // Fresh for five minutes, as the bots catalog (features/bots/data/queries).
   const models = useQuery(
-    transport.orpc.models.list.queryOptions({ input: {} })
+    transport.orpc.models.list.queryOptions({
+      input: {},
+      staleTime: 5 * 60_000,
+    })
   );
   const keys = useQuery(
     transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })
@@ -144,7 +148,7 @@ export const SidebarCreditsCard = () => {
         </GroupCard>
       ) : tier === "paid" || canConnect ? (
         <CreditsCard
-          host={creditActionsFor(transport)}
+          host={creditActionsFor(transport, credentialsChanged)}
           tier={tier}
           {...(canConnect
             ? {

@@ -15,6 +15,7 @@ import type { TFunction } from "i18next";
 
 import { RoutePending, PaneError } from "#renderer/components/page-state";
 import type { Db } from "#renderer/data/db";
+import { invalidateCredentials } from "#renderer/data/queries/settings";
 import type { Transport } from "#renderer/data/transport";
 import {
   chatRuntimeFor,
@@ -47,6 +48,13 @@ export interface RouterContext {
    * `chat.session(id).load()`. One per transport, kept across Fast Refresh.
    */
   chat: ChatRuntime;
+  /**
+   * After this window changed a credential: invalidates at once what a
+   * `credentials-changed` notice would, since the route gates cache "signed
+   * in" until then. Pages read it here rather than importing the query
+   * helper, which would split it into a chunk of its own.
+   */
+  credentialsChanged(): Promise<void>;
 }
 
 export const routeMasks = [
@@ -114,17 +122,23 @@ export const routeMasks = [
 
 export interface AppRouterOptions {
   /** `chat` defaults to the transport's runtime; tests may pass their own. */
-  context: Omit<RouterContext, "chat"> & { chat?: ChatRuntime };
+  context: Omit<RouterContext, "chat" | "credentialsChanged"> & {
+    chat?: ChatRuntime;
+  };
   history?: RouterHistory;
 }
 
-export const createAppRouter = ({ context, history }: AppRouterOptions) =>
-  createRouter({
+export const createAppRouter = ({ context, history }: AppRouterOptions) => {
+  const credentialsChanged = () =>
+    invalidateCredentials(context.queryClient, context.transport.orpc);
+  return createRouter({
     routeTree,
     history: history ?? createHashHistory(),
     context: {
       ...context,
-      chat: context.chat ?? chatRuntimeFor(context.transport),
+      credentialsChanged,
+      chat:
+        context.chat ?? chatRuntimeFor(context.transport, credentialsChanged),
     } satisfies RouterContext,
     routeMasks,
     defaultPreload: "intent",
@@ -132,13 +146,16 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) =>
     defaultPreloadStaleTime: 0,
     defaultPendingComponent: RoutePending,
     defaultErrorComponent: PaneError,
-    defaultPendingMs: 150,
-    defaultPendingMinMs: 200,
+    // A warm navigation never flashes the skeleton, and one that does show
+    // it is not held open past its data.
+    defaultPendingMs: 400,
+    defaultPendingMinMs: 100,
     scrollRestoration: true,
     // Set by installTransitionTypes: typed navigations only.
     defaultViewTransition: undefined,
     defaultStructuralSharing: true,
   });
+};
 
 export type AppRouter = ReturnType<typeof createAppRouter>;
 

@@ -175,53 +175,68 @@ if (!ready.runnable && REQUIRED)
   });
 
 describe.skipIf(!ready.runnable)("R2-T32 real session in Electron", () => {
-  it("R2-T28: one nav-lateral transition between long threads snapshots the transcript end", async () => {
-    await app.evaluate(
-      'window.__abacusDev.navigateAndSettle("/sessions/chat-long-a")'
-    );
-    await app.evaluate(`(() => {
-      window.__chatTransitionStarts = 0;
-      window.__chatSnapshots = []; window.__chatTransitionError = null;
-      const start = document.startViewTransition.bind(document);
-      document.startViewTransition = function(arg) {
-        window.__chatTransitionStarts++;
-        const transition = start(arg);
-        transition.ready.then(() => {
-          const v = document.querySelector('[data-slot="message-scroller-viewport"]');
-          const last = v.querySelector('[data-message-id]:last-of-type') || [...v.querySelectorAll('[data-message-id]')].at(-1);
-          window.__chatSnapshots.push({text: last.textContent, bottom: last.getBoundingClientRect().bottom, viewportBottom: v.getBoundingClientRect().bottom, scrollTop: v.scrollTop, height: v.scrollHeight, pending: v.hasAttribute("data-pending-scroll")});
-        }).catch(error => window.__chatTransitionError = String(error));
-        return transition;
-      };
-      window.__abacusDev.navTypes();
-    })()`);
-    await app.evaluate(
-      'window.__abacusDev.navigateAndSettle("/sessions/chat-long-b")'
-    );
-    const result = await app.evaluate<{
-      starts: number;
-      types: string[];
-      snapshots: Array<{
+  it("R2-T28: switching between long sibling threads starts no transition and lands on the transcript end", async () => {
+    // Sibling moves within an area (thread → thread) are deliberately
+    // transition-free (nav-type.ts rule 2): the pane swaps in place, and the
+    // new transcript must still open at its end.
+    try {
+      await app.evaluate(
+        'window.__abacusDev.navigateAndSettle("/sessions/chat-long-a")'
+      );
+      await app.evaluate(`(() => {
+        window.__chatTransitionStarts = 0;
+        const start = document.startViewTransition.bind(document);
+        document.startViewTransition = function(arg) {
+          window.__chatTransitionStarts++;
+          return start(arg);
+        };
+        window.__abacusDev.navTypes();
+      })()`);
+      await app.evaluate(
+        'window.__abacusDev.navigateAndSettle("/sessions/chat-long-b")'
+      );
+      const lastMessage = `(() => {
+        const v = document.querySelector('[data-slot="message-scroller-viewport"]');
+        return v && [...v.querySelectorAll('[data-message-id]')].at(-1);
+      })()`;
+      await app.until(
+        `${lastMessage}?.textContent.includes("chat-long-b message 499") === true`,
+        15000,
+        "the second thread's last message"
+      );
+      const result = await app.evaluate<{
+        starts: number;
+        types: string[];
         text: string;
         bottom: number;
+        viewportTop: number;
         viewportBottom: number;
-      }>;
-    }>(
-      "({starts: window.__chatTransitionStarts, types: window.__abacusDev.navTypes(), snapshots: window.__chatSnapshots})"
-    );
-    console.info("CHAT_TRANSITION", JSON.stringify(result));
-    expect(result.starts).toBe(1);
-    expect(result.types).toContain("nav-lateral");
-
-    expect(result.snapshots).toHaveLength(1);
-    expect(result.snapshots[0]!.text).toContain("chat-long-b message 499");
-    expect(result.snapshots[0]!.bottom).toBeLessThanOrEqual(
-      result.snapshots[0]!.viewportBottom
-    );
-    await app.evaluate(
-      `window.__abacusDev.navigateAndSettle("/sessions/${THREAD}")`
-    );
-    await app.evaluate("window.__chatTransitionStarts = 0");
+      }>(`(() => {
+        const v = document.querySelector('[data-slot="message-scroller-viewport"]');
+        const last = ${lastMessage};
+        const box = last.getBoundingClientRect();
+        const viewport = v.getBoundingClientRect();
+        return {
+          starts: window.__chatTransitionStarts,
+          types: window.__abacusDev.navTypes(),
+          text: last.textContent,
+          bottom: box.bottom,
+          viewportTop: viewport.top,
+          viewportBottom: viewport.bottom,
+        };
+      })()`);
+      console.info("CHAT_TRANSITION", JSON.stringify(result));
+      expect(result.starts).toBe(0);
+      expect(result.types).toEqual([]);
+      expect(result.text).toContain("chat-long-b message 499");
+      expect(result.bottom).toBeGreaterThan(result.viewportTop);
+      expect(result.bottom).toBeLessThanOrEqual(result.viewportBottom);
+    } finally {
+      await app.evaluate(
+        `window.__abacusDev.navigateAndSettle("/sessions/${THREAD}")`
+      );
+      await app.evaluate("window.__chatTransitionStarts = 0");
+    }
   }, 60000);
   it("attachment-only admission, live bash output, approval, reload, busy submission and terminal", async () => {
     await app.send("Page.setInterceptFileChooserDialog", { enabled: true });

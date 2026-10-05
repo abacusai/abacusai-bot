@@ -20,7 +20,11 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showError } from "#renderer/lib/toast";
-import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
+import {
+  useAppContext,
+  foldSearch,
+  useOptimisticToggle,
+} from "#renderer/lib/use-app-context";
 import { useDebouncedValue } from "#renderer/lib/use-debounced-value";
 import { Button } from "#renderer/ui/button";
 import {
@@ -304,25 +308,17 @@ export const ToolsPage = () => {
   const query = useQuery(
     transport.orpc.settings.toolsets.get.queryOptions({ input: {} })
   );
-  const cache = useQueryClient();
   const [q, setQ] = useState("");
-  const change = async (id: string, enabled: boolean) => {
-    const key = transport.orpc.settings.toolsets.get.queryKey({ input: {} });
-    const before = query.data;
-    cache.setQueryData(key, { ...before, [id]: enabled });
-    try {
-      cache.setQueryData(
-        key,
-        await transport.client.settings.toolsets.setEnabled({
-          toolsetId: id,
-          enabled,
-        })
-      );
-    } catch {
-      cache.setQueryData(key, before);
-      showError(t("phase5.failed"));
-    }
-  };
+  const toggle = useOptimisticToggle({
+    queryKey: transport.orpc.settings.toolsets.get.queryKey({ input: {} }),
+    mutationFn: (change: { toolsetId: string; enabled: boolean }) =>
+      transport.client.settings.toolsets.setEnabled(change),
+    apply: (data: NonNullable<typeof query.data>, change) => ({
+      ...data,
+      [change.toolsetId]: change.enabled,
+    }),
+    onError: () => showError(t("phase5.failed")),
+  });
   return (
     <AreaPage
       title={t("library.pages.tools")}
@@ -371,7 +367,9 @@ export const ToolsPage = () => {
               <SettingSwitch
                 id={s.id}
                 checked={query.data?.[s.id] !== false}
-                onCheckedChange={(enabled) => void change(s.id, enabled)}
+                onCheckedChange={(enabled) =>
+                  toggle.mutate({ toolsetId: s.id, enabled })
+                }
               />
             )}
           </SettingRow>

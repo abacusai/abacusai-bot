@@ -392,8 +392,7 @@ export const ProviderDialog = ({
   stored: boolean;
 }) => {
   const { t } = useTranslation();
-  const { transport } = useAppContext();
-  const cache = useQueryClient();
+  const { transport, credentialsChanged } = useAppContext();
   const navigate = useAppNavigate();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -419,16 +418,7 @@ export const ProviderDialog = ({
   );
   const refresh = async () => {
     await transport.client.models.list({ refresh: true });
-    await Promise.all([
-      cache.invalidateQueries({
-        queryKey: transport.orpc.settings.keys.listProviders.queryKey({
-          input: {},
-        }),
-      }),
-      cache.invalidateQueries({
-        queryKey: transport.orpc.models.list.queryKey(),
-      }),
-    ]);
+    await credentialsChanged();
   };
   const save = async (key: string) => {
     await transport.client.settings.keys.save({

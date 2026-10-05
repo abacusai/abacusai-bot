@@ -50,16 +50,33 @@ vi.mock("#renderer/lib/motion", () => ({
 vi.mock("#renderer/lib/navigation/shared-element", () => ({
   useSharedElementName: () => undefined,
 }));
-vi.mock("#renderer/data/queries/live", () => ({
-  followNotices: async (
+vi.mock("#renderer/data/queries/live", () => {
+  const followNotices = async (
     _t: unknown,
     subscribe: any,
     receive: any,
     signal: AbortSignal
   ) => {
     f.streams.set(await subscribe({ signal }), receive);
-  },
-}));
+  };
+  return {
+    followNotices,
+    followAttention: (t: any, receive: any, signal: AbortSignal) =>
+      void followNotices(
+        t,
+        (options: unknown) => t.client.ai.attention({}, options),
+        receive,
+        signal
+      ),
+    followConnectorEvents: (t: any, receive: any, signal: AbortSignal) =>
+      void followNotices(
+        t,
+        (options: unknown) => t.client.connectors.events({}, options),
+        receive,
+        signal
+      ),
+  };
+});
 vi.mock("#renderer/lib/run-finished", () => {
   const subscribe = (receive: (notice: RunFinishedNotice) => void) => {
     f.finished.add(receive);

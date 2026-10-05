@@ -2,7 +2,10 @@ import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
-import { chatRuntimeFor } from "#renderer/features/chat/runtime/runtime";
+import {
+  chatLoading,
+  chatRuntimeFor,
+} from "#renderer/features/chat/runtime/runtime";
 import { useConnectFlow } from "#renderer/features/library/connect-flow";
 import { ConnectorFieldsDialog } from "#renderer/features/library/connectors";
 import { RoutinePage, RoutineGone } from "#renderer/features/routines/page";
@@ -68,26 +71,28 @@ const RoutineRoute = () => {
 export const Route = createFileRoute("/_shell/(routines)/routines/$routineId")({
   validateSearch: RoutineSearch,
   loaderDeps: ({ search }) => ({ run: search.run }),
-  loader: {
-    staleReloadMode: "blocking",
-    handler: async ({ context, params, deps, preload }) => {
-      await Promise.all([
-        context.db.collections.routines.preload(),
-        context.db.collections.routineRuns.preload(),
-      ]);
-      if (!context.db.collections.routines.get(params.routineId))
-        throw notFound();
-      if (deps.run) {
-        if (
-          !preload &&
-          context.db.collections.routineRuns.toArray.some(
-            (run) =>
-              run.sessionId === deps.run && run.routineId === params.routineId
-          )
-        )
-          await chatRuntimeFor(context.transport).session(deps.run).load();
-      }
-    },
+  loader: async ({ context, params, deps, preload }) => {
+    await Promise.all([
+      context.db.collections.routines.preload(),
+      context.db.collections.routineRuns.preload(),
+    ]);
+    if (!context.db.collections.routines.get(params.routineId))
+      throw notFound();
+    if (
+      deps.run &&
+      context.db.collections.routineRuns.toArray.some(
+        (run) =>
+          run.sessionId === deps.run && run.routineId === params.routineId
+      )
+    ) {
+      const chat = chatLoading({
+        ...context,
+        chat: chatRuntimeFor(context.transport),
+      });
+      // A hover fetches the run's first page only; the click loads it.
+      if (preload) chat.warm(deps.run);
+      else await chat.load(deps.run);
+    }
   },
   notFoundComponent: RoutineGone,
   component: RoutineRoute,

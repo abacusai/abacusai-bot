@@ -24,6 +24,7 @@ import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
+import { chatLoading } from "#renderer/features/chat/runtime/runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import {
@@ -230,30 +231,27 @@ const BotError = ({ error }: { error: unknown }) => {
 export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
   params: { parse: v.parser(v.object({ botId: BotId })) },
   validateSearch: BotSearch,
-  loader: {
-    staleReloadMode: "blocking",
-    handler: async ({ context, params, preload }) => {
-      if (fixtureReady != null) await fixtureReady;
-      if (fixtureState.current) {
-        await context.db.collections.bots.preload();
-        return {
-          ready: true as const,
-          botId: params.botId,
-          sessionId:
-            context.db.collections.bots.get(params.botId)?.sessionId ??
-            fixtureState.current.threadId,
-        };
-      }
-      return loadBotChat(
-        {
-          db: context.db,
-          transport: context.transport,
-          load: (id) => context.chat.session(id).load(),
-        },
-        params.botId,
-        preload
-      );
-    },
+  loader: async ({ context, params, preload }) => {
+    if (fixtureReady != null) await fixtureReady;
+    if (fixtureState.current) {
+      await context.db.collections.bots.preload();
+      return {
+        ready: true as const,
+        botId: params.botId,
+        sessionId:
+          context.db.collections.bots.get(params.botId)?.sessionId ??
+          fixtureState.current.threadId,
+      };
+    }
+    return loadBotChat(
+      {
+        db: context.db,
+        transport: context.transport,
+        ...chatLoading(context),
+      },
+      params.botId,
+      preload
+    );
   },
   pendingComponent: BotPending,
   errorComponent: BotError,
