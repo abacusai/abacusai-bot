@@ -5,7 +5,11 @@ import { NATIVE_PACKAGES } from "@abacus-ai/config/native-packages";
 import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
-import { rendererConfig, rendererFlags, webRoot } from "../web/vite.renderer";
+import {
+  rendererConfig,
+  rendererFlags,
+  webRoot,
+} from "../web/vite.renderer.ts";
 import { alias } from "../web/vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */

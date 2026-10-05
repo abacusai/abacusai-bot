@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 import { defineConfig } from "vite";
 
-import { rendererConfig, webRoot } from "./vite.renderer";
+import { rendererConfig, webRoot } from "./vite.renderer.ts";
 export default defineConfig(({ command, mode }) => ({
   ...rendererConfig("browser", command, mode),
   base: "/bot/",

@@ -13,7 +13,7 @@ import {
   RENDERER_APP_SRC,
   NODE_MODULES,
   alias as desktopAlias,
-} from "./vite.shared";
+} from "./vite.shared.ts";
 
 export const webRoot = import.meta.dirname;
 export const rendererAlias = {

@@ -6,7 +6,7 @@ import {
   compilerReact,
   rendererAliases,
   webRoot,
-} from "./vite.renderer";
+} from "./vite.renderer.ts";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,
