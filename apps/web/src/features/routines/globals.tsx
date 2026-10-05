@@ -6,7 +6,11 @@ import { useTranslation } from "react-i18next";
 
 import { cueClaim } from "#platform/attention";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
-import { followNotices } from "#renderer/data/queries/live";
+import {
+  followAttention,
+  followConnectorEvents,
+  followNotices,
+} from "#renderer/data/queries/live";
 import { permissionCueKey } from "#renderer/lib/attention/cues";
 import { createNotifier, notifyAttention } from "#renderer/lib/notify";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -107,9 +111,8 @@ export const RoutinesGlobals = () => {
         },
       });
     };
-    void followNotices(
+    followAttention(
       transport,
-      ({ signal }) => transport.client.ai.attention({}, { signal }),
       (event) =>
         readiness.run(() => {
           if (event.type === "upsert") {
@@ -124,9 +127,8 @@ export const RoutinesGlobals = () => {
       abort.signal
     );
     const requests = new Map<string, string>();
-    void followNotices(
+    followConnectorEvents(
       transport,
-      ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) =>
         readiness.run(() => {
           const put = (

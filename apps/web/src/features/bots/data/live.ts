@@ -1,7 +1,6 @@
 import type { AttentionEvent } from "@abacus-ai/contract/contract/ai";
 import {
   conversationRefFromKey,
-  sessionConversationKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
 import type { QueryClient } from "@tanstack/react-query";
@@ -16,7 +15,11 @@ import type { QueryClient } from "@tanstack/react-query";
 import { Store, useSelector } from "@tanstack/react-store";
 
 import type { Collections } from "#renderer/data/db";
-import { followNotices } from "#renderer/data/queries/live";
+import {
+  followAttention,
+  followConnectorEvents,
+  followNotices,
+} from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 
 import type { ThreadAttention } from "./attention";
@@ -95,54 +98,27 @@ export const followBotsSources = (
   const invalidate = (options: { queryKey: readonly unknown[] }): void =>
     void queryClient.invalidateQueries({ queryKey: options.queryKey });
 
-  void followNotices(
+  followAttention(
     transport,
-    ({ signal: s }) => transport.client.ai.attention({}, { signal: s }),
     (event) =>
       permissionsStore.setState((state) => applyAttentionEvent(state, event)),
     signal
   );
 
-  const cleared = new Set<string>();
-  void followNotices(
+  followConnectorEvents(
     transport,
-    ({ signal: s }) => {
-      cleared.clear();
-      connectorAsksStore.setState(() => ({}));
-      const stream = transport.client.connectors.events({}, { signal: s });
-      // Keyless events do not snapshot. Restore every known session's asks,
-      // including bots whose transcripts have never been mounted.
-      void collections.sessions
-        .preload()
-        .then(async () => {
-          await Promise.all(
-            collections.sessions.toArray.map(async (session) => {
-              if (s.aborted) return;
-              const requests = await transport.client.connectors.requests(
-                {
-                  conversationKey: sessionConversationKey(
-                    session.workspaceId,
-                    session.id
-                  ),
-                },
-                { signal: s }
-              );
-              if (s.aborted) return;
-              connectorAsksStore.setState((state) => ({
-                ...state,
-                ...Object.fromEntries(
-                  requests
-                    .filter((request) => !cleared.has(request.requestId))
-                    .map((request) => [request.requestId, session.id])
-                ),
-              }));
-            })
-          );
-        })
-        .catch(() => undefined);
-      return stream;
-    },
     (event) => {
+      if (event.type === "snapshot") {
+        connectorAsksStore.setState(() =>
+          Object.fromEntries(
+            event.requests.flatMap((request) => {
+              const sessionId = sessionOfKey(request.conversationKey);
+              return sessionId == null ? [] : [[request.requestId, sessionId]];
+            })
+          )
+        );
+        return;
+      }
       if (event.type === "status-changed") {
         invalidate(queries.connectorStatuses());
         return;
@@ -158,14 +134,11 @@ export const followBotsSources = (
         }
         return;
       }
-      if (event.type === "cleared") {
-        cleared.add(event.requestId);
-        connectorAsksStore.setState((state) => {
-          if (!(event.requestId in state)) return state;
-          const { [event.requestId]: _gone, ...rest } = state;
-          return rest;
-        });
-      }
+      connectorAsksStore.setState((state) => {
+        if (!(event.requestId in state)) return state;
+        const { [event.requestId]: _gone, ...rest } = state;
+        return rest;
+      });
     },
     signal
   );

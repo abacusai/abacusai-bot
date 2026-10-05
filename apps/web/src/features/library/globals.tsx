@@ -1,7 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { followNotices } from "#renderer/data/queries/live";
+import {
+  followConnectorEvents,
+  followNotices,
+} from "#renderer/data/queries/live";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 /** Library snapshots have separate notice streams; table resync is not a notice. */
@@ -23,9 +26,8 @@ export const LibraryGlobals = () => {
       messaging,
       abort.signal
     );
-    void followNotices(
+    followConnectorEvents(
       transport,
-      ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) => {
         if (event.type === "status-changed") {
           invalidate(
