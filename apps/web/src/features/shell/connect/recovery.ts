@@ -34,7 +34,6 @@ export const MISSED_NOTICE_FAMILIES: ReadonlySet<string> = new Set([
   "settings",
   "skills",
   "system",
-  "update",
 ]);
 
 /** An oRPC query key starts with its procedure path: `[["account", "state"], …]`. */

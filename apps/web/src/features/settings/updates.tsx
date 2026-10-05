@@ -1,5 +1,5 @@
 import type { UpdateStatus } from "@abacus-ai/contract/update";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -9,6 +9,7 @@ import {
   SettingRow,
 } from "#renderer/components/form-kit/page";
 import { followNotices } from "#renderer/data/queries/notices";
+import type { Transport } from "#renderer/data/transport";
 import { getLogDump } from "#renderer/lib/log-ring";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { showError, showInfo } from "#renderer/lib/toast";
@@ -38,52 +39,91 @@ export const updatePhase = (
     return status.failedPhase === "download" ? "downloadFailed" : "checkFailed";
   return "latest";
 };
+/**
+ * The update status: `update.status` once, then each status `update.events`
+ * pushes (whole statuses; the first yield is the current one), written into
+ * that query by one follower per document. The pill, the critical dialog
+ * and the About page share both. The follower is not the query's fetch, so
+ * the query settles and an awaited `invalidateQueries()` resolves; it runs
+ * while any of them is mounted and starts again on a remount. Its stream is
+ * `followNotices`': an end or a transient error reopens it after a second,
+ * a replaced socket at once (its first yield is the status then, so a
+ * reconnect needs no refetch), and a final code or a closed transport stops
+ * it.
+ */
+export const updateStatusQuery = (transport: Transport) =>
+  transport.orpc.update.status.queryOptions({
+    input: {},
+    staleTime: Infinity,
+  });
+
+const followers = new WeakMap<
+  QueryClient,
+  { mounted: number; abort: AbortController }
+>();
+
+const useUpdateFollower = (
+  transport: Transport,
+  queryClient: QueryClient
+): void => {
+  useEffect(() => {
+    let follower = followers.get(queryClient);
+    if (follower == null) {
+      const started = { mounted: 0, abort: new AbortController() };
+      followers.set(queryClient, started);
+      const { queryKey } = updateStatusQuery(transport);
+      void followNotices(
+        transport,
+        ({ signal }) => transport.client.update.events({}, { signal }),
+        (status) => queryClient.setQueryData(queryKey, status),
+        started.abort.signal
+      );
+      follower = started;
+    }
+    const current = follower;
+    current.mounted += 1;
+    return () => {
+      current.mounted -= 1;
+      if (current.mounted > 0) return;
+      current.abort.abort();
+      if (followers.get(queryClient) === current) followers.delete(queryClient);
+    };
+  }, [transport, queryClient]);
+};
+
+/** While installing, an earlier failure is not shown. */
+const presented = (status: UpdateStatus | undefined) =>
+  status?.installing && !status.installStalled
+    ? { ...status, error: null, failedPhase: null, installStalled: false }
+    : status;
+
 export const useUpdateStatus = () => {
-  const { transport } = useAppContext();
-  const seed = useQuery(
-    transport.orpc.update.status.queryOptions({ input: {} })
-  );
-  const [live, setLive] = useState<UpdateStatus | undefined>();
+  const { transport, queryClient } = useAppContext();
+  const live = updateStatusQuery(transport);
+  const { data: incoming } = useQuery(live);
+  useUpdateFollower(transport, queryClient);
   const [clicked, setClicked] = useState(false);
   const [installError, setInstallError] = useState<string | null>(null);
-  useEffect(() => {
-    const abort = new AbortController();
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.update.events({}, { signal }),
-      (status) => {
-        setLive(
-          status.installing && !status.installStalled
-            ? {
-                ...status,
-                error: null,
-                failedPhase: null,
-                installStalled: false,
-              }
-            : status
-        );
-        if (
-          (!status.installing || status.installStalled) &&
-          (status.failedPhase === "install" || status.installStalled)
-        ) {
-          setClicked(false);
-          setInstallError(null);
-        }
-      },
-      abort.signal
-    );
-    return () => abort.abort();
-  }, [transport]);
-  const incoming = live ?? seed.data;
-  const status =
-    incoming?.installing && !incoming.installStalled
-      ? { ...incoming, error: null, failedPhase: null, installStalled: false }
-      : incoming;
+  // An install that failed or stalled releases the pressed state, once per
+  // status that says so.
+  const [seen, setSeen] = useState(incoming);
+  if (seen !== incoming) {
+    setSeen(incoming);
+    if (
+      incoming != null &&
+      (!incoming.installing || incoming.installStalled) &&
+      (incoming.failedPhase === "install" || incoming.installStalled)
+    ) {
+      setClicked(false);
+      setInstallError(null);
+    }
+  }
+  const status = presented(incoming);
   const install = async () => {
     setClicked(true);
     setInstallError(null);
     if (status)
-      setLive({
+      queryClient.setQueryData(live.queryKey, {
         ...status,
         error: null,
         failedPhase: null,
