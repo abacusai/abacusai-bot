@@ -145,8 +145,13 @@ export const SidebarSlot = ({
             transition={
               motionPref === "reduced" ? reducedTransition : springs.sidebar
             }
-            onPointerEnter={intent.hold}
-            onPointerLeave={intent.leave}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "mouse") intent.hold();
+            }}
+            onPointerLeave={(event) => {
+              // A finger lifting is not leaving; focus leaving still closes it.
+              if (event.pointerType === "mouse") intent.leave();
+            }}
             onFocus={intent.hold}
             onBlur={(event) => {
               // Focus left the sidebar for somewhere else: close after the grace.

@@ -28,7 +28,8 @@ export const useSidebarToggle = () => {
     panelOpen: false,
   });
   const toggle = (): void => {
-    if (layout.forcedFloating) {
+    // Forced to float, or a phone: the toggle shows and hides the overlay.
+    if (layout.forcedFloating || layout.band === "xs") {
       if (floatingOpen) closeFloating();
       else openFloating("peek");
       return;

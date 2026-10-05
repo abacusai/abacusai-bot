@@ -14,7 +14,8 @@ const AREAS: ShellArea[] = [
 
 describe("bandFor", () => {
   it.each([
-    [799, "sm"],
+    [390, "xs"],
+    [799, "xs"],
     [800, "sm"],
     [899, "sm"],
     [900, "md"],
