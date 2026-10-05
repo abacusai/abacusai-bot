@@ -10,7 +10,8 @@ import type { AiClient } from "#renderer/data/ai";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
-import { chatLoading, createChatRuntime } from "./runtime";
+import { chatLoading } from "./lazy-runtime";
+import { createChatRuntime } from "./runtime";
 
 const queryClients: QueryClient[] = [];
 afterEach(() => {
@@ -45,7 +46,12 @@ const setup = (hydrate: AiClient["hydrate"]) => {
     ai,
     chat,
     queryClient,
-    loading: chatLoading({ chat, queryClient, transport }),
+    loading: chatLoading({
+      chat,
+      prepareChat: async () => {},
+      queryClient,
+      transport,
+    }),
   };
 };
 

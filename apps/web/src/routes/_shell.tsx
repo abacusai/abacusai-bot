@@ -131,14 +131,18 @@ export const Route = createFileRoute("/_shell")({
   },
   validateSearch: ShellSearch,
   search: { middlewares: [stripSearchParams(SHELL_DEFAULTS)] },
-  loader: ({ context }) =>
-    unlessConnecting(
+  loader: ({ context }) => {
+    // The chat runtime's code, ahead of the first thread (it is not in the
+    // entry chunk).
+    void context.prepareChat().catch(() => undefined);
+    return unlessConnecting(
       context.transport,
       Promise.all([
         context.db.collections.sessions.preload().catch(ignoreLoadError),
         context.db.collections.workspaces.preload().catch(ignoreLoadError),
       ])
-    ),
+    );
+  },
   component: ShellRoute,
   pendingComponent: ShellPending,
   errorComponent: ShellFailure,

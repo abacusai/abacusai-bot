@@ -48,9 +48,9 @@ import {
 } from "./admission";
 import { deferred, type Deferred } from "./deferred";
 import { createDispatcher, type Dispatcher } from "./dispatcher";
+import { PAGE_SIZE } from "./page-size";
 import { runPump, type ConnectionState } from "./pump";
 
-export const PAGE_SIZE = 50;
 /** A hovered `ai.hydrate` page, acquired once a new generation starts. */
 export type Seed = (signal: AbortSignal) => Promise<AiHydration | undefined>;
 /** Processor retention (§10). */
