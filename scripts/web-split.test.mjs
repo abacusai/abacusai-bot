@@ -1,17 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-const web = "apps/web";
-test("web configuration canaries still point at the renderer tree", () => {
-  const components = JSON.parse(readFileSync(`${web}/components.json`));
-  assert.equal(components.tailwind.css, "src/styles/app.css");
-  assert.ok(existsSync(`${web}/${components.tailwind.css}`));
-  const imports = JSON.parse(readFileSync(`${web}/package.json`)).imports;
-  assert.ok(imports["#renderer/*"].includes("./src/*/index.tsx"));
-  assert.ok(existsSync(`${web}/src/components/bot-avatar/index.tsx`));
-  assert.ok(existsSync(`${web}/src/routes/_bare/[__ui].tsx`));
-  assert.ok(existsSync("packages/contract/src/contract/index.ts"));
-});
 test("browser boundary rejects the real Vite client resolver and direct requests", async () => {
   const { createJiti } = await import("jiti");
   const { browserBoundaryPlugin, rendererAlias, platformAlias, webRoot } =

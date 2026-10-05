@@ -82,7 +82,9 @@ it("R7-T25 resolves every consumer declaration in the new tree or main", () => {
   for (const row of rows)
     expect(resolves(row.consumer), row.id + ": " + row.consumer).toBe(true);
   expect(resolves("src/app.tsx#App")).toBe(false);
-  expect(resolves("src/features/settings/companion.tsx#Missing")).toBe(false);
+  expect(resolves("apps/web/src/features/settings/companion.tsx#Missing")).toBe(
+    false
+  );
 });
 
 it("R7-T25 requires final status metadata and preserves acceptance gaps", () => {

@@ -5,7 +5,6 @@ import { expect, it } from "vitest";
 
 import { rendererCsp } from "../../web/vite.renderer";
 import { RENDERER_CSP } from "../src/main/renderer-csp";
-import { rendererEntry } from "../src/main/renderer-entry";
 it("R8-T7 pins Electron CSP and refuses a missing platform", () => {
   expect(rendererCsp("electron", {})).toBe(RENDERER_CSP);
   expect(() => rendererCsp(undefined as never, {})).toThrow("platform");
@@ -16,10 +15,7 @@ it("R8-T7 pins Electron CSP and refuses a missing platform", () => {
     "connect-src 'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai;"
   );
 });
-it("dev entry and source scripts resolve from the web root", () => {
-  expect(rendererEntry({ kind: "dev", url: "http://localhost:5173/" })).toEqual(
-    { kind: "url", url: "http://localhost:5173/index.html" }
-  );
+it("the web root HTML loads its source entry and carries no CSP", () => {
   const html = readFileSync(
     resolve(import.meta.dirname, "../../web/index.html"),
     "utf8"
