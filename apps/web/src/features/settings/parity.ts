@@ -36,11 +36,11 @@ export const PHASE5_PARITY = [
     id: "ST4",
     status: "green",
     evidence:
-      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+      "Appearance page: appearance.test.tsx (gallery, controls, import), appearance.browser-gating.test.tsx, theme.look.test.ts; packaged acceptance remains open.",
     visible: false,
-    target: "features/settings/index.tsx",
+    target: "features/settings/appearance.tsx",
     specStatus: "Parity",
-    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/appearance.tsx#AppearancePage",
   },
   {
     id: "ST5",
@@ -245,11 +245,11 @@ export const PHASE5_PARITY = [
     id: "ST24",
     status: "green",
     evidence:
-      "R7-T25 implementation consumer and exact-id checks; packaged acceptance remains open.",
+      "Appearance page: appearance.test.tsx (gallery, controls, import), appearance.browser-gating.test.tsx, theme.look.test.ts; packaged acceptance remains open.",
     visible: false,
-    target: "features/settings/index.tsx",
+    target: "features/settings/appearance.tsx",
     specStatus: "New",
-    consumer: "apps/web/src/features/settings/index.tsx#SettingsSidebar",
+    consumer: "apps/web/src/features/settings/appearance.tsx#AppearancePage",
   },
   {
     id: "ST25",

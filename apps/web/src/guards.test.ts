@@ -140,6 +140,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "start/start-resources",
   ],
   settings: [
+    "appearance",
     "companion",
     "account-usage",
     "changelog",

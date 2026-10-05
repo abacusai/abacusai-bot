@@ -15,11 +15,7 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { BotMemoryList } from "#renderer/components/bot-memory-list";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
-import {
-  Choice,
-  Segments,
-  SettingSwitch,
-} from "#renderer/components/form-kit/controls";
+import { Choice, SettingSwitch } from "#renderer/components/form-kit/controls";
 import {
   AreaPage,
   GroupCard,
@@ -176,117 +172,6 @@ export const GeneralPage = () => {
             {m === "YOLO" && <StatePill>{t("phase5.careful")}</StatePill>}
           </SettingRow>
         ))}
-      </GroupCard>
-    </AreaPage>
-  );
-};
-export const AppearanceTheme = () => {
-  const { t } = useTranslation();
-  const prefs = usePrefs();
-  const update = useUpdatePrefs();
-  const { transport } = useAppContext();
-  const cache = useQueryClient();
-  // Inline rather than windowChromeQuery: sharing data/queries/window with
-  // this chunk would split it into a chunk of its own on Electron.
-  const chrome = useQuery(
-    transport.orpc.window.chrome.queryOptions({
-      input: {},
-      enabled: IS_ELECTRON,
-    })
-  );
-  const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
-  const fail = () => showError(t("phase5.saveFailed"));
-  return (
-    <AreaPage title={t("settings.pages.appearance")}>
-      <GroupCard>
-        <SettingRow
-          id="theme"
-          title={t("settings.theme.label")}
-          detail={t("settings.theme.description")}
-        >
-          <Segments
-            label={t("phase5.settings.theme")}
-            value={prefs.theme}
-            values={["system", "light", "dark"].map((x) => ({
-              value: x,
-              label: t(`theme.${x}`),
-            }))}
-            onChange={(theme) =>
-              void update({ theme: theme as PrefsRow["theme"] }).catch(fail)
-            }
-          />
-        </SettingRow>
-        {IS_ELECTRON && (
-          <SettingRow
-            id="density"
-            title={t("phase5.settings.density")}
-            detail={
-              info.data?.platform === "darwin"
-                ? t("phase5.settings.densityDetail")
-                : undefined
-            }
-          >
-            <Segments
-              label={t("phase5.settings.density")}
-              value={chrome.data?.density ?? "comfortable"}
-              values={["comfortable", "compact"].map((x) => ({
-                value: x,
-                label: t(`phase5.${x}`),
-              }))}
-              onChange={(density) =>
-                void transport.client.window
-                  .setDensity({ density: density as "comfortable" | "compact" })
-                  .then(() =>
-                    cache.invalidateQueries({
-                      queryKey: transport.orpc.window.chrome.queryKey({
-                        input: {},
-                      }),
-                    })
-                  )
-                  .catch(fail)
-              }
-            />
-          </SettingRow>
-        )}
-        <SettingRow id="textSize" title={t("phase5.settings.textSize")}>
-          <Segments
-            label={t("phase5.settings.textSize")}
-            value={String(prefs.appearance?.textSize ?? 14)}
-            values={[13, 14, 15].map((x) => ({
-              value: String(x),
-              label: String(x),
-            }))}
-            onChange={(size) =>
-              void update({
-                appearance: { textSize: Number(size) as 13 | 14 | 15 },
-              }).catch(fail)
-            }
-          />
-        </SettingRow>
-        <SettingRow id="reduceMotion" title={t("phase5.settings.reduceMotion")}>
-          <Segments
-            label={t("phase5.settings.reduceMotion")}
-            value={prefs.motion.reduce}
-            values={["system", "on", "off"].map((x) => ({
-              value: x,
-              label: t(`phase5.${x}`),
-            }))}
-            onChange={(reduce) =>
-              void update({
-                motion: { reduce: reduce as "system" | "on" | "off" },
-              }).catch(fail)
-            }
-          />
-        </SettingRow>
-        <SettingRow id="bubbleTint" title={t("phase5.settings.bubbleTint")}>
-          <SettingSwitch
-            id="bubbleTint"
-            checked={prefs.appearance?.bubbleTint ?? true}
-            onCheckedChange={(bubbleTint) =>
-              void update({ appearance: { bubbleTint } }).catch(fail)
-            }
-          />
-        </SettingRow>
       </GroupCard>
     </AreaPage>
   );
