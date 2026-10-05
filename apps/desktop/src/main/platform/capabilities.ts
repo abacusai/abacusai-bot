@@ -1,3 +1,6 @@
+// Self-contained: the browser smoke test loads this file directly.
+import { ORPCError } from "@orpc/server";
+
 export type HostPlatform = "electron" | "web-host";
 export const WEB_HOST_DENIED = [
   "window",
@@ -22,6 +25,7 @@ export const WEB_HOST_DENIED = [
   "system.showItemInFolder",
   "system.openPrivacyPane",
   "skills.openFile",
+  "voice.whisper.fetch",
 ] as const;
 // Exact paths: a new contract procedure requires an explicit platform decision.
 export const WEB_HOST_ALLOWED = [
@@ -156,7 +160,6 @@ export const WEB_HOST_ALLOWED = [
   "memory.bots",
   "memory.clearBot",
   "memory.events",
-  "voice.whisper.fetch",
   "voice.whisper.progress",
   "voice.requestMicrophone",
   "messaging.snapshot",
@@ -220,3 +223,12 @@ export const supportsProcedure = (
       procedure === "mcp.import" &&
       (input as { source?: string } | undefined)?.source === "file"
     ));
+
+export const assertHostCapability = (
+  platform: HostPlatform,
+  procedure: string,
+  input?: unknown
+): void => {
+  if (!supportsProcedure(platform, procedure, input))
+    throw new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
+};

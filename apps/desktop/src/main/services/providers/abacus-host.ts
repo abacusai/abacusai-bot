@@ -4,8 +4,9 @@
  * `ABACUSAI_BOT_ABACUS_HOST` is a developer override for preprod. The value
  * feeds `shell.openExternal` and the request carrying `ABACUS_API_KEY`, so it
  * is honored only in an unpackaged build or a test build (a `-test.` version),
- * over https, for an `*.abacus.ai` host; anything else silently falls back to
- * production.
+ * over https, for an `*.abacus.ai` host or a dev-pod host under the single dotted
+ * `ABACUSAI_BOT_DEV_ENDPOINT_SUFFIX`;
+ * anything else silently falls back to production.
  */
 import { app } from "electron";
 
@@ -34,20 +35,40 @@ const DEFAULT_ROUTELLM_V1 = "https://routellm.abacus.ai/v1";
 export const isTestBuild = (version: string = app.getVersion()): boolean =>
   /-test\./.test(version);
 
+// A single dotted DNS suffix excludes bare domains and suffix lookalikes.
+const DEV_ENDPOINT_SUFFIX_RE =
+  /^\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+const isDevPod = (host: string): boolean => {
+  if (app.isPackaged && !isTestBuild()) return false;
+  const suffix = (
+    process.env.ABACUSAI_BOT_DEV_ENDPOINT_SUFFIX ?? ""
+  ).toLowerCase();
+  return DEV_ENDPOINT_SUFFIX_RE.test(suffix) && host.endsWith(suffix);
+};
+
 const overrideHost = (): URL | null => {
   const raw = (process.env.ABACUSAI_BOT_ABACUS_HOST ?? "").trim();
 
   // Powerless in a released build: an env var an attacker can set must not
   // redirect a signed app's sign-in or key-bearing requests. A test build is
   // packaged too, but exists to be pointed at preprod, so it may read it.
-  if (raw.length === 0 || (app.isPackaged && !isTestBuild())) return null;
+  if (
+    raw.length === 0 ||
+    (import.meta.env.ABACUS_WEB_HOST !== true &&
+      app.isPackaged &&
+      !isTestBuild())
+  )
+    return null;
 
   try {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase();
 
     if (url.protocol !== "https:") return null;
-    if (host !== "abacus.ai" && !host.endsWith(".abacus.ai")) return null;
+    const devPod = isDevPod(host);
+    if (host !== "abacus.ai" && !host.endsWith(".abacus.ai") && !devPod)
+      return null;
 
     return url;
   } catch {
@@ -75,6 +96,9 @@ export const abacusRoutellmV1 = (): string => {
   const url = overrideHost();
 
   if (url == null) return DEFAULT_ROUTELLM_V1;
+
+  // A dev pod serves both sign-in and the API on the same host.
+  if (isDevPod(url.hostname)) return `${url.origin}/v1`;
 
   // apps.abacus.ai -> routellm.abacus.ai. Rewrite the leading DNS label on a
   // parsed URL, never a substring replace (which matches `apps.abacus.ai.evil.com`).

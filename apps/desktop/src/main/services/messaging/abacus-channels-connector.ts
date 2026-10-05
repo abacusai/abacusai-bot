@@ -6,6 +6,7 @@ import { BrowserWindow } from "electron";
 import QRCode from "qrcode";
 
 import { parentWindow } from "../../bring-to-front";
+import type { HostPlatform } from "../../platform/capabilities";
 import { resolveAbacusApiKey } from "../providers/abacus";
 import { abacusRoutellmV1, abacusUserAgent } from "../providers/abacus-host";
 import {
@@ -122,7 +123,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
 
   constructor(
     private readonly callbacks: ConnectorCallbacks,
-    private readonly channel: SharedChannel = "discord"
+    private readonly channel: SharedChannel = "discord",
+    private readonly platform: HostPlatform = "electron"
   ) {
     this.id = `abacus_${channel}`;
   }
@@ -236,7 +238,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
    * discord.com link routes to the Discord desktop app, which takes over the
    * authorize flow. Shares the web connector's session so a sign-in carries.
    */
-  openLink(target: "install" | "dm" = "install"): void {
+  openLink(target: "install" | "dm" = "install"): void | string {
     const url =
       this.link.status === "pending"
         ? target === "dm"
@@ -245,6 +247,7 @@ export class AbacusChannelsConnector implements MessagingConnector {
         : undefined;
     if (url == null || !isWebUrl(url))
       throw new Error("There is no install link to open. Press Link first.");
+    if (this.platform === "web-host") return url;
     if (this.linkWindow != null && !this.linkWindow.isDestroyed()) {
       void this.linkWindow.loadURL(url);
       this.linkWindow.show();

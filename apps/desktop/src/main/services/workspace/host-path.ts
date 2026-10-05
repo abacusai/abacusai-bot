@@ -88,7 +88,7 @@ export type HostFile =
   | { ok: true; realFile: string; stat: Stats }
   | {
       ok: false;
-      error: "not-found" | "outside-root" | "not-a-file" | string;
+      error: "not-found" | "outside-root" | "not-a-file" | "realpath-failed";
     };
 
 /**
@@ -116,9 +116,7 @@ export async function openHostFile(
       error:
         (err as NodeJS.ErrnoException | null)?.code === "ENOENT"
           ? "not-found"
-          : err instanceof Error
-            ? err.message
-            : "realpath-failed",
+          : "realpath-failed",
     };
   }
 

@@ -12,9 +12,12 @@ import { app } from "electron";
 export function resourcesRoot(): string {
   // Packaged, the main process runs from inside app.asar, so a relative path
   // would resolve into the archive rather than beside it.
-  return app.isPackaged
-    ? process.resourcesPath
-    : join(import.meta.dirname, "..", "..", "resources");
+  return (
+    process.env.ABACUSAI_BOT_RESOURCES ||
+    (app.isPackaged
+      ? process.resourcesPath
+      : join(import.meta.dirname, "..", "..", "resources"))
+  );
 }
 
 /** A path inside the resources directory, in either shape of the app. */
@@ -30,7 +33,7 @@ const REPO = join(import.meta.dirname, "..", "..", "..", "..");
 
 /** The agent bundle the app spawns, one process per session. */
 export function agentEntry(): string {
-  return app.isPackaged
+  return app.isPackaged || process.env.ABACUSAI_BOT_RESOURCES
     ? resourcePath("agent", "main.js")
     : join(REPO, "packages", "agent", "dist", "main.js");
 }
@@ -41,7 +44,7 @@ export function agentEntry(): string {
  * the spawner appends this directory to the child's PATH.
  */
 export function agentVendorDir(): string {
-  return app.isPackaged
+  return app.isPackaged || process.env.ABACUSAI_BOT_RESOURCES
     ? resourcePath("agent", "vendor")
     : join(REPO, "packages", "agent", "vendor");
 }

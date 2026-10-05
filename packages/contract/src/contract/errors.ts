@@ -41,6 +41,7 @@ export interface RpcErrorData {
   UNSUPPORTED: { procedure: string };
   UNAVAILABLE: { retryAfterMs?: number };
   RESYNC_REQUIRED: { stream: string };
+  PAYLOAD_TOO_LARGE: { limit: number; alternative: string };
   TIMEOUT: { ms: number };
   INTERNAL_SERVER_ERROR: undefined;
 }
@@ -64,6 +65,10 @@ export const COMMON_ERRORS = {
   RESYNC_REQUIRED: {
     status: 409,
     data: type<RpcErrorData["RESYNC_REQUIRED"]>(),
+  },
+  PAYLOAD_TOO_LARGE: {
+    status: 413,
+    data: type<RpcErrorData["PAYLOAD_TOO_LARGE"]>(),
   },
   TIMEOUT: { status: 504, data: type<RpcErrorData["TIMEOUT"]>() },
   INTERNAL_SERVER_ERROR: { status: 500 },

@@ -10,7 +10,7 @@
  * Both ways in are covered, because they are meant to be one code path: the
  * browser sign-in and a key pasted into the keys panel.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
 
@@ -47,6 +47,8 @@ vi.mock("./services/providers/abacus", () => ({
 }));
 vi.mock("./services/providers/account-service", () => ({
   signOut: vi.fn(),
+  adoptWebAccount: vi.fn(),
+  skipOnboarding: vi.fn(),
 }));
 vi.mock("./profile-home", () => ({
   profileKeyFor: vi.fn(() => "acct-test"),
@@ -57,6 +59,7 @@ vi.mock("./profile-home", () => ({
 }));
 vi.mock("./services/providers/abacus-auth-service", () => ({
   cancelAbacusAuth: vi.fn(),
+  openAbacusAuthInBrowser: vi.fn(),
   startAbacusAuth: vi.fn(async () => ({ ok: true, key: "s2_key" })),
 }));
 vi.mock("./services/providers/abacus-connector-service", () => ({
@@ -73,6 +76,7 @@ vi.mock("./services/providers/openrouter", () => ({
   clearOpenRouterCache: vi.fn(),
 }));
 vi.mock("./services/providers/openrouter-auth-service", () => ({
+  cancelOpenRouterAuth: vi.fn(),
   startOpenRouterAuth: vi.fn(),
 }));
 vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
@@ -80,12 +84,18 @@ vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
 import { ABACUS_CONNECTORS_SERVER_NAME } from "@abacus-ai/contract/contracts";
 
 import { wireHostEvents } from "./handler";
+import { electronHostPlatform } from "./host-operations/electron";
 import { activateProfile, profileKeyFor } from "./profile-home";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {
   abacusCredentialRejected,
   fetchAbacusAccount,
 } from "./services/providers/abacus";
+import {
+  adoptWebAccount,
+  signOut,
+  skipOnboarding,
+} from "./services/providers/account-service";
 
 const createBot = vi.fn();
 const updateBot = vi.fn();
@@ -137,7 +147,11 @@ beforeEach(() => {
   };
 
   const operations = wireHostEvents(
-    host as unknown as Parameters<typeof wireHostEvents>[0]
+    host as unknown as Parameters<typeof wireHostEvents>[0],
+    electronHostPlatform
+  );
+  handlers.set("adopt", (_event, ...args) =>
+    operations.adoptAbacusCredential(...(args as [string, "web"]))
   );
   handlers.set("auth", (_event, ...args) =>
     operations.startAbacusAuth(...(args as [boolean, boolean]))
@@ -337,5 +351,121 @@ describe("signing in with a key that cannot be attributed", () => {
     const result = await handlers.get("auth")?.({});
 
     expect(result).toMatchObject({ ok: true });
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+describe("web credential adoption", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(adoptWebAccount).mockClear();
+    vi.mocked(signOut).mockClear();
+    vi.mocked(skipOnboarding).mockClear();
+    let key = "previous-key";
+    vi.mocked(readSettings).mockImplementation(
+      () => ({ apiKeys: { ABACUS_API_KEY: key } }) as never
+    );
+    vi.mocked(saveApiKey).mockImplementation((_provider, value) => {
+      key = value;
+      return { apiKeys: { ABACUS_API_KEY: key } } as never;
+    });
+  });
+
+  it("keeps an identified key and account (200)", async () => {
+    expect(await handlers.get("adopt")?.({}, "new-key", "web")).toEqual({
+      ok: true,
+      accountDetailsPending: false,
+    });
+    expect(adoptWebAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "ada@example.com" })
+    );
+    expect(readSettings().apiKeys?.ABACUS_API_KEY).toBe("new-key");
+  });
+
+  it.each([401, 403])(
+    "restores the previous key on definitive rejection (%i)",
+    async () => {
+      vi.mocked(fetchAbacusAccount).mockResolvedValue(null);
+      vi.mocked(abacusCredentialRejected).mockReturnValue(true);
+      expect(await handlers.get("adopt")?.({}, "new-key", "web")).toEqual({
+        ok: false,
+        error: "unidentified-account",
+      });
+      expect(readSettings().apiKeys?.ABACUS_API_KEY).toBe("previous-key");
+      expect(vi.getTimerCount()).toBe(0);
+    }
+  );
+
+  it.each(["500", "network error", "timeout"])(
+    "keeps the key pending on %s and identifies with backoff",
+    async (failure) => {
+      const real = await vi.importActual<
+        typeof import("./services/providers/abacus")
+      >("./services/providers/abacus");
+      real.clearAbacusCache();
+      vi.mocked(fetchAbacusAccount).mockImplementation(real.fetchAbacusAccount);
+      vi.mocked(abacusCredentialRejected).mockImplementation(
+        real.abacusCredentialRejected
+      );
+      const fetch = vi.fn();
+      if (failure === "500")
+        fetch.mockResolvedValue(new Response(null, { status: 500 }));
+      else
+        fetch.mockRejectedValue(
+          failure === "timeout"
+            ? new DOMException("Timed out", "TimeoutError")
+            : new TypeError("fetch failed")
+        );
+      vi.stubGlobal("fetch", fetch);
+      expect(await handlers.get("adopt")?.({}, "new-key", "web")).toEqual({
+        ok: true,
+        accountDetailsPending: true,
+      });
+      expect(readSettings().apiKeys?.ABACUS_API_KEY).toBe("new-key");
+      expect(signOut).toHaveBeenCalled();
+      expect(skipOnboarding).toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1200);
+      vi.mocked(fetchAbacusAccount).mockResolvedValue({
+        email: "new@example.com",
+      } as never);
+      await vi.advanceTimersByTimeAsync(2399);
+      expect(adoptWebAccount).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(adoptWebAccount).toHaveBeenCalledWith({
+        email: "new@example.com",
+      });
+      expect(vi.getTimerCount()).toBe(0);
+    }
+  );
+
+  it("clears a pending credential if a background lookup definitively rejects it", async () => {
+    vi.mocked(fetchAbacusAccount).mockResolvedValue(null);
+    await handlers.get("adopt")?.({}, "new-key", "web");
+    vi.mocked(abacusCredentialRejected).mockReturnValue(true);
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(readSettings().apiKeys?.ABACUS_API_KEY).toBe("");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not apply an old lookup after sign-out", async () => {
+    vi.mocked(fetchAbacusAccount).mockResolvedValue(null);
+    await handlers.get("adopt")?.({}, "new-key", "web");
+    let resolve!: (value: never) => void;
+    vi.mocked(fetchAbacusAccount).mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      })
+    );
+    await vi.advanceTimersByTimeAsync(1200);
+    await handlers.get("save")?.({}, "abacus", "");
+    resolve({ email: "old@example.com" } as never);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(adoptWebAccount).not.toHaveBeenCalled();
+    expect(readSettings().apiKeys?.ABACUS_API_KEY).toBe("");
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

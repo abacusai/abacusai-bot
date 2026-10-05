@@ -62,14 +62,15 @@ export const runStartupMigrations = async (
 ): Promise<RunMigrationsResult | null> => {
   const userData = app.getPath("userData");
   const dark = progressWindowDark(userData);
-  progress = createMigrationProgress({
-    open: () =>
-      openProgressWindow({
-        appName,
-        dark,
-        backgroundColor: dark ? WINDOW_SURFACE.dark : WINDOW_SURFACE.light,
-      }),
-  });
+  if (import.meta.env.ABACUS_WEB_HOST !== true)
+    progress = createMigrationProgress({
+      open: () =>
+        openProgressWindow({
+          appName,
+          dark,
+          backgroundColor: dark ? WINDOW_SURFACE.dark : WINDOW_SURFACE.light,
+        }),
+    });
   try {
     const result = await runMigrations({
       home: abacusBotHome(),
@@ -96,7 +97,7 @@ export const runStartupMigrations = async (
     return null;
   } finally {
     // Off screen now, before the main window is created.
-    progress.finish();
+    progress?.finish();
   }
 };
 

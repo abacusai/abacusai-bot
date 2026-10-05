@@ -20,7 +20,7 @@ export const auth = {
     start: mutation.input(NoInput).output(type<{ challenge: string }>()),
     complete: mutation
       .input(v.object({ code: v.pipe(v.string(), v.nonEmpty()) }))
-      .output(type<import("../account").AccountState>()),
+      .output(type<import("../account").WebAuthCompleteResult>()),
   },
   openRouter: {
     start: mutation.input(NoInput).output(type<OpenRouterAuthOutcome>()),
