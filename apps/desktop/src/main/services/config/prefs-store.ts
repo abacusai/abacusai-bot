@@ -74,7 +74,19 @@ const DEFAULTS: PrefsValues = {
   },
   // Spec 05 §31.5 a: none of these exist in the old renderer (no legacy map).
   keymap: {},
-  appearance: { textSize: 14, bubbleTint: true },
+  appearance: {
+    textSize: 14,
+    bubbleTint: true,
+    palette: "default",
+    accent: null,
+    contrast: "system",
+    radius: "default",
+    uiFont: "",
+    codeFont: "",
+    codeFontSize: 12,
+    translucency: true,
+    custom: null,
+  },
   // Spec 06 §23.5 b (`haptics` is revisited by R6-T31).
   notch: {
     enabled: true,

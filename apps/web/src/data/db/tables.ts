@@ -330,14 +330,25 @@ const PREFS_WRITABLE = [
   "sounds",
 ] as const;
 
-const PREFS_GROUPS: ReadonlySet<string> = new Set<PrefsGroup>([
-  "sidebar",
-  "pinned",
-  "models",
-  "dismissals",
-  "motion",
-  "sounds",
-]);
+/**
+ * The prefs fields that group leaves (B.2): a write merges into the group,
+ * leaf by leaf, as main's prefs store does. Keyed by PrefsGroup, so a new
+ * group cannot be left out (it would replace its siblings optimistically).
+ */
+const GROUP_FIELDS: Record<PrefsGroup, true> = {
+  sidebar: true,
+  pinned: true,
+  models: true,
+  dismissals: true,
+  motion: true,
+  sounds: true,
+  appearance: true,
+  notch: true,
+  tour: true,
+};
+export const PREFS_GROUPS: ReadonlySet<string> = new Set(
+  Object.keys(GROUP_FIELDS)
+);
 
 const sameValue = (a: unknown, b: unknown): boolean =>
   JSON.stringify(a) === JSON.stringify(b);

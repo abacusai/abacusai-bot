@@ -203,4 +203,50 @@ describe("startup theme: live", () => {
     prefs.update({ theme: "light" });
     expect(nativeTheme.themeSource).toBe("dark");
   });
+
+  it("follows a one-scheme theme's own scheme, at startup and live", () => {
+    const prefs = new PrefsStore({ file: null });
+    prefs.update({ theme: "light", appearance: { palette: "midnight" } });
+    const nativeTheme = fakeNativeTheme(false);
+    expect(applyStartupTheme(prefs, nativeTheme)).toBe(true);
+    expect(nativeTheme.themeSource).toBe("dark");
+    const options = mainWindowOptions({
+      prefs,
+      nativeTheme,
+      chromeInput: () => input({ dark: nativeTheme.shouldUseDarkColors }),
+      base: {},
+    });
+    expect(options.backgroundColor).toBe(WINDOW_SURFACE.dark);
+
+    const refresh = vi.fn();
+    followPrefsTheme(prefs, nativeTheme, refresh);
+    prefs.update({ appearance: { palette: "grove" } });
+    expect(nativeTheme.themeSource).toBe("light");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    prefs.update({
+      appearance: {
+        custom: { name: "Night", dark: { bg: "#000000" } },
+        palette: "custom",
+      },
+    });
+    expect(nativeTheme.themeSource).toBe("dark");
+    expect(refresh).toHaveBeenCalledTimes(2);
+    // An accent change leaves the scheme and the chrome alone.
+    prefs.update({ appearance: { accent: "#2f6fde" } });
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-applies the chrome when translucency is turned off or on", () => {
+    const prefs = new PrefsStore({ file: null });
+    const nativeTheme = fakeNativeTheme(false);
+    const refresh = vi.fn();
+    followPrefsTheme(prefs, nativeTheme, refresh);
+    prefs.update({ appearance: { translucency: false } });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(nativeTheme.themeSource).toBe("system");
+    prefs.update({ appearance: { accent: "#3366ff" } });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    prefs.update({ appearance: { translucency: true } });
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
 });

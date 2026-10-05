@@ -17,7 +17,7 @@ import type {
   WorkspaceRow,
 } from "@abacus-ai/contract/contract";
 
-import type { LazyTransport } from "../db/tables";
+import { PREFS_GROUPS, type LazyTransport } from "../db/tables";
 import type { Transport } from "../transport/types";
 import { FixtureTable } from "./fixture-table";
 import { fixturePrefs } from "./rows";
@@ -35,15 +35,6 @@ export interface FixtureSeed {
 }
 
 type DbClient = Transport["client"]["db"];
-
-const PREFS_GROUPS: ReadonlySet<string> = new Set([
-  "sidebar",
-  "pinned",
-  "models",
-  "dismissals",
-  "motion",
-  "sounds",
-]);
 
 export class FixtureDb {
   readonly prefs: FixtureTable<PrefsRow, "app">;
