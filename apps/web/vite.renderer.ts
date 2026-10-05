@@ -50,6 +50,30 @@ export const platformAlias = (platform: RendererPlatform) =>
         : [];
     })
   );
+/** Every alias one platform's renderer resolves: the shared roots and its `#platform` files. */
+export const rendererAliases = (platform: RendererPlatform) => ({
+  ...rendererAlias,
+  ...platformAlias(platform),
+});
+/** The gallery and fixture flags; a build with neither is a release build. */
+export const rendererFlags = (command: string) => {
+  const gallery = process.env.VITE_UI_GALLERY === "1";
+  const fixtures = process.env.VITE_NEXT_DB_FIXTURES === "1";
+  return {
+    gallery,
+    fixtures,
+    release: command === "build" && !gallery && !fixtures,
+  };
+};
+/** React with the compiler for the app tree; the registry under src/ui/ stays plain. */
+export const compilerReact = (
+  compiler: NonNullable<Parameters<typeof react>[0]>["compiler"]
+) =>
+  react({
+    include: RENDERER_MODULES,
+    exclude: RENDERER_REGISTRY_SRC,
+    compiler,
+  });
 export const assertBrowserImport = (resolved: string): void => {
   const id = resolved.replaceAll("\\", "/");
   if (
@@ -132,11 +156,7 @@ export const rendererPlugins = (
   mode = "production"
 ): PluginOption[] => {
   const root = webRoot;
-  const flags = {
-    gallery: process.env.VITE_UI_GALLERY === "1",
-    fixtures: process.env.VITE_NEXT_DB_FIXTURES === "1",
-  };
-  const release = command === "build" && !flags.gallery && !flags.fixtures;
+  const { release, ...flags } = rendererFlags(command);
   return [
     platformPlugin(platform, mode, command),
     ...(platform === "browser" ? [browserBoundaryPlugin()] : []),
@@ -163,11 +183,24 @@ export const rendererPlugins = (
     // instance last. Each sets oxc's refresh flag in its `config` hook and the
     // last one wins, so reversed, the old renderer loses Fast Refresh. The
     // compiler instance does its own refresh for the files it compiles.
-    react({
-      include: RENDERER_MODULES,
-      exclude: RENDERER_REGISTRY_SRC,
-      compiler: { logDiagnostics: true },
-    }),
+    compilerReact({ logDiagnostics: true }),
     react({ exclude: [NODE_MODULES, RENDERER_APP_SRC] }),
   ];
 };
+/**
+ * What the browser and Electron renderer configs share. Each adds its own
+ * `build` (entries, outDir, sourcemaps); Electron adds its main and preload.
+ */
+export const rendererConfig = (
+  platform: RendererPlatform,
+  command: string,
+  mode: string
+) => ({
+  root: webRoot,
+  plugins: rendererPlugins(platform, command, mode),
+  resolve: {
+    alias: rendererAliases(platform),
+    dedupe: ["react", "react-dom"],
+  },
+  worker: { format: "es" as const },
+});
