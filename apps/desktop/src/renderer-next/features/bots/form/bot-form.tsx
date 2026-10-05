@@ -154,7 +154,27 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
   useEffect(() => {
     if (!bot) return;
     const next = valuesForBot(bot, routine);
+    for (const group of ["look", "checkIn"] as const) {
+      const current = form.getFieldValue(group);
+      const merged = { ...current };
+      const nextBaseline = { ...baseline[group] };
+      for (const leaf of Object.keys(current)) {
+        const key = leaf as keyof typeof current;
+        if (equalValue(current[key], baseline[group][key])) {
+          Object.assign(merged, { [leaf]: next[group][key] });
+          Object.assign(nextBaseline, { [leaf]: next[group][key] });
+        }
+      }
+      if (!equalValue(current, merged))
+        form.setFieldValue(group, merged as never, {
+          dontUpdateMeta: true,
+          dontValidate: true,
+          dontRunListeners: true,
+        });
+      Object.assign(baseline, { [group]: nextBaseline });
+    }
     for (const key of Object.keys(next) as Array<keyof BotFormValues>) {
+      if (key === "look" || key === "checkIn") continue;
       if (equalValue(form.getFieldValue(key), baseline[key])) {
         if (!equalValue(next[key], baseline[key])) {
           form.setFieldValue(key, next[key], {

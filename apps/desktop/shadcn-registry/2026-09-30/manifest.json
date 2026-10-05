@@ -65,6 +65,13 @@
       "sha256": "d52220e168417a5e4732b913a31756d54c81d0243f2cd3102ef9eb96cb0472e3"
     },
     {
+      "path": "/r/styles/base-mira/checkbox.json",
+      "file": "r/styles/base-mira/checkbox.json",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "sha256": "e0bfd1a67d0a4d76da9b531f205b8f3b786bd8c29bf2fd6c3477265f6085e41f"
+    },
+    {
       "path": "/r/styles/base-mira/collapsible.json",
       "file": "r/styles/base-mira/collapsible.json",
       "status": 200,

@@ -27,6 +27,8 @@ export const DELIVERY = {
   "devices.stream.chunks": "lossless-actionable",
   "mcp.runtime.events": "coalescing",
   "update.events": "coalescing",
+  "notch.events": "coalescing",
+  "notch.openCommands": "lossless-actionable",
   "window.events": "coalescing",
   "system.events": "coalescing",
   "settings.events": "coalescing",

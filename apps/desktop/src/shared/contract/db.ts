@@ -45,6 +45,7 @@ const write = <TInput extends v.GenericSchema>(input: TInput) =>
   mutation.input(input).output(type<TablePosition>());
 
 export const BotCreateInputSchema = v.object({
+  sponsoredFirstRun: v.optional(v.boolean()),
   name: v.pipe(v.string(), v.nonEmpty()),
   title: v.optional(v.string()),
   description: v.string(),

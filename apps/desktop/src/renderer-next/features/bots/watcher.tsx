@@ -1,3 +1,15 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+
+import { useDb } from "#next/data/db";
+import { usePrefs } from "#next/data/db/prefs";
+import {
+  documentSoundPlayer as soundPlayer,
+  setDocumentSoundPrefs,
+} from "#next/lib/document-sound";
+import { isThreadSeen } from "#next/lib/navigation/visible-thread";
+import { createNotifier } from "#next/lib/notify";
 /**
  * `BotsGlobals`: the bots area's document-wide subscriptions, mounted once
  * by the shell route (the sidebar is not always mounted, but unread, cues
@@ -5,18 +17,8 @@
  * `ai.runFinished` for unread/cues/notifications, and the `waiting_permission`
  * level for needs-you.
  */
-import { getEventMeta } from "@orpc/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-
-import { useDb } from "#next/data/db";
-import { usePrefs } from "#next/data/db/prefs";
-import { followNotices } from "#next/data/queries/live";
-import { isThreadSeen } from "#next/lib/navigation/visible-thread";
-import { createNotifier } from "#next/lib/notify";
-import { createSoundPlayer, type SoundPlayer } from "#next/lib/sound";
-import type { PrefsRow } from "#shared/contract/rows";
+import { subscribeRunFinished } from "#next/lib/run-finished";
+import type { SoundPlayer } from "#next/lib/sound";
 
 import { followBotsSources } from "./data/live";
 import { useAllSessions } from "./data/queries";
@@ -29,20 +31,6 @@ import {
   newlyWaiting,
   type BotsWatcherDeps,
 } from "./notify";
-
-let player: SoundPlayer | null = null;
-let soundPrefs: PrefsRow["sounds"] = { enabled: true, perEvent: {} };
-
-/** The document's player (one AudioContext, unlocked on first pointerdown). */
-const soundPlayer = (): SoundPlayer => {
-  player ??= createSoundPlayer({
-    isThreadVisible: (threadId) => isThreadSeen(threadId, () => true),
-    isWindowFocused: () => document.hasFocus(),
-    prefs: () => soundPrefs,
-    now: () => Date.now(),
-  });
-  return player;
-};
 
 export const playBotCue = (
   cue: Parameters<SoundPlayer["play"]>[0],
@@ -61,7 +49,11 @@ export const BotsGlobals = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   useEffect(() => {
-    soundPrefs = prefs.sounds;
+    setDocumentSoundPrefs(prefs.sounds);
+  }, [prefs.sounds]);
+  const soundPrefs = useRef(prefs.sounds);
+  useEffect(() => {
+    soundPrefs.current = prefs.sounds;
   }, [prefs.sounds]);
   const notificationsOn = useRef(true);
   useEffect(() => {
@@ -79,7 +71,7 @@ export const BotsGlobals = () => {
       notifier: createNotifier({
         isWindowFocused: () => document.hasFocus(),
         notificationsEnabled: () => notificationsOn.current,
-        sounds: () => soundPrefs,
+        sounds: () => soundPrefs.current,
         now: () => new Date(),
         send: (input) => transport.client.system.notify(input),
       }),
@@ -111,22 +103,40 @@ export const BotsGlobals = () => {
       },
       abort.signal
     );
-    let lastEventId: string | undefined;
-    void followNotices(
-      transport,
-      ({ signal }) =>
-        transport.client.ai.runFinished(
-          lastEventId == null ? {} : { lastEventId },
-          { signal }
-        ),
-      (notice) => {
-        // A reopened stream resumes after the last notice seen (§24.11).
-        lastEventId = getEventMeta(notice as object)?.id ?? lastEventId;
-        if (deps.current != null) handleRunFinished(deps.current, notice);
-      },
-      abort.signal
-    );
-    void db.collections.routines.preload().catch(() => undefined);
+    const ready = async (): Promise<void> => {
+      while (!abort.signal.aborted) {
+        try {
+          await Promise.all([
+            db.collections.bots.preload(),
+            db.collections.routines.preload(),
+          ]);
+          return;
+        } catch {
+          await new Promise<void>((resolve) => {
+            const done = () => {
+              clearTimeout(timer);
+              abort.signal.removeEventListener("abort", done);
+              resolve();
+            };
+            const timer = setTimeout(done, 250);
+            abort.signal.addEventListener("abort", done, { once: true });
+          });
+        }
+      }
+    };
+    let delivery = ready();
+    const queued = new Set<string>();
+    const unsubscribeFinished = subscribeRunFinished(transport, (notice) => {
+      if (queued.has(notice.runId)) return;
+      queued.add(notice.runId);
+      if (queued.size > 10_000) queued.delete(queued.values().next().value!);
+      delivery = delivery.then(() => {
+        if (!abort.signal.aborted && deps.current != null)
+          handleRunFinished(deps.current, notice);
+      });
+      return delivery;
+    });
+    abort.signal.addEventListener("abort", unsubscribeFinished, { once: true });
     const unlock = (): void => soundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {

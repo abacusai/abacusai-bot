@@ -1,3 +1,4 @@
+import { cueForNotice } from "#next/lib/attention/cues";
 import { isCheckInRoutine } from "#next/lib/bots/check-in";
 /**
  * The bots watcher (spec 03 §6.7, §17; spec 05 §23.3 "03's watcher"): what
@@ -22,7 +23,10 @@ export interface BotsWatcherDeps {
   /** The thread is on screen in a focused window. */
   seen(threadId: string): boolean;
   unread: UnreadStore;
-  play(cue: Cue, options: { threadId: string; botId: string }): void;
+  play(
+    cue: Cue,
+    options: { threadId: string; botId: string; dedupeKey?: string }
+  ): void;
   notifier: Pick<Notifier, "notify">;
   labels: {
     done(bot: string): { title: string; body: string };
@@ -54,9 +58,15 @@ export const handleRunFinished = (
   if (bot == null) return;
   const cueOptions = { threadId: notice.threadId, botId: bot.id };
   const spoke = notice.hasVisibleAssistantText;
-  if (notice.outcome === "error") deps.play("failed", cueOptions);
-  else if (target.checkIn) deps.play("done", cueOptions);
-  else if (spoke) deps.play("received", cueOptions);
+  const cue = cueForNotice(notice, {
+    checkInRoutineIds: new Set(
+      deps
+        .routines()
+        .filter((row) => row.botId != null && isCheckInRoutine(row, row.botId))
+        .map((row) => row.id)
+    ),
+  });
+  if (cue) deps.play(cue.kind, { ...cueOptions, dedupeKey: cue.dedupeKey });
 
   if (deps.seen(notice.threadId))
     react(bot.id, notice.outcome === "error" ? "sad" : "happy");
@@ -103,7 +113,11 @@ export const handleWaiting = (
   const bot = deps.bots().find((row) => row.id === target.botId);
   if (bot == null) return;
   if (deps.seen(session.id)) react(bot.id, "surprised");
-  deps.play("needs-you", { threadId: session.id, botId: bot.id });
+  deps.play("needs-you", {
+    threadId: session.id,
+    botId: bot.id,
+    dedupeKey: `${session.id}:${session.turn.updatedAt}`,
+  });
   const copy = deps.labels.needsYou(bot.name);
   deps.notifier.notify({
     kind: "needs-you",
@@ -126,7 +140,11 @@ export const handleConnectorAsk = (
   const bot = deps.bots().find((row) => row.id === target.botId);
   if (!bot) return;
   if (deps.seen(session.id)) react(bot.id, "surprised");
-  deps.play("needs-you", { threadId: session.id, botId: bot.id });
+  deps.play("needs-you", {
+    threadId: session.id,
+    botId: bot.id,
+    dedupeKey: requestId,
+  });
   const copy = deps.labels.needsYou(bot.name);
   deps.notifier.notify({
     kind: "needs-you",

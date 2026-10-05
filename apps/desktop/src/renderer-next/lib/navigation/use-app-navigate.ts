@@ -39,7 +39,7 @@ export const useAppNavigate = (): ((
   options: AppNavigateOptions
 ) => Promise<void>) => {
   const router = useRouter();
-  return ({ transition, ...options }) =>
+  return ({ transition, ...options }: AppNavigateOptions) =>
     router.navigate(
       withIntent(options as NavigateOptions<RegisteredRouter>, transition)
     );

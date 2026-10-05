@@ -71,3 +71,9 @@ export const devContentSize = (
   if (match == null) return null;
   return { width: Number(match[1]), height: Number(match[2]) };
 };
+
+export const NOTCH_ENTRY = "notch.html";
+export const notchEntry = (base: RendererBase): RendererEntry =>
+  base.kind === "file"
+    ? { kind: "file", path: join(base.directory, NOTCH_ENTRY) }
+    : { kind: "url", url: new URL(NOTCH_ENTRY, base.url).href };

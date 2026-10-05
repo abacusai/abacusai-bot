@@ -665,3 +665,9 @@ html[data-reduce-motion="on"] .bav * {
 .dark .accent-outline {
   border-color: transparent;
 }
+
+/* OnboardMotion: three wobbles before the spring reveals the bot. */
+.bav-hatch-egg[data-animate] { display: inline-flex; animation: bav-hatch-wobble 220ms ease-in-out 3; }
+@keyframes bav-hatch-wobble { 0%,100% { rotate: -6deg; } 50% { rotate: 6deg; } }
+@media (prefers-reduced-motion: reduce) { .bav-hatch-egg[data-animate] { animation: none; } }
+[data-reduced-motion=true] .bav-hatch-egg[data-animate] { animation: none; }

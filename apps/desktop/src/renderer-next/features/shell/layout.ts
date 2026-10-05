@@ -63,11 +63,20 @@ export const shellLayout = (input: {
   area: ShellArea | undefined;
   pinned: boolean;
   panelOpen: boolean;
+  view?: string;
 }): ShellLayoutState => {
   const band = bandFor(input.width);
   let sidebar: SidebarMode = input.pinned ? "pinned" : "floating";
   if (band === "sm" && input.area === "bots" && input.pinned) sidebar = "strip";
   if (band === "sm" && input.area === "sessions") sidebar = "floating";
+
+  if (
+    input.area === "sessions" &&
+    band === "xl" &&
+    input.panelOpen &&
+    input.view !== "full"
+  )
+    sidebar = "floating";
 
   return {
     band,

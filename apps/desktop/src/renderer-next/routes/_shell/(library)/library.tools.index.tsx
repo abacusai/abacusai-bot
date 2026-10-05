@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { LibraryPageEmpty } from "#next/features/library";
+import { ToolsPage } from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
 
 const ToolsRoute = () => {
@@ -13,7 +13,7 @@ const ToolsRoute = () => {
           {t("library.pages.tools")}
         </span>
       </TopBarSlot>
-      <LibraryPageEmpty page="tools" />
+      <ToolsPage />
     </>
   );
 };

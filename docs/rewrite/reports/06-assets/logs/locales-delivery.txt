@@ -1,0 +1,14 @@
+[sync-locales] Base locale en-US.json: 2325 keys
+  de-DE.json: 2325 keys, missing 0, extra 0 (OK)
+  es-419.json: 2325 keys, missing 0, extra 0 (OK)
+  es-ES.json: 2325 keys, missing 0, extra 0 (OK)
+  fr-FR.json: 2325 keys, missing 0, extra 0 (OK)
+  hi-IN.json: 2325 keys, missing 0, extra 0 (OK)
+  id-ID.json: 2325 keys, missing 0, extra 0 (OK)
+  it-IT.json: 2325 keys, missing 0, extra 0 (OK)
+  ja-JP.json: 2325 keys, missing 0, extra 0 (OK)
+  ko-KR.json: 2325 keys, missing 0, extra 0 (OK)
+  pt-BR.json: 2325 keys, missing 0, extra 0 (OK)
+
+[sync-locales] All locale files are in sync.
+[sync-locales] All t() keys resolve against the base locale.
