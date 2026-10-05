@@ -11,29 +11,28 @@ export const ConnectScreen = ({
   restart(): void;
 }) => {
   const { t } = useTranslation();
+  const kind =
+    error && (error instanceof ConnectError ? error.kind : "connection");
   return (
     <main
       className="flex h-screen flex-col items-center justify-center gap-4"
       role="status"
     >
       <p>{error?.message ?? t(`web.connect.${stage}`)}</p>
-      {error instanceof ConnectError && error.kind === "signin" && (
+      {kind === "signin" && (
         <a
           href={`/chatllm/signin?redirectUrl=${encodeURIComponent("/bot/" + location.hash)}`}
         >
-          {t("web.connect.signin")}
+          {t("phase5.signIn")}
         </a>
       )}
-      {error instanceof ConnectError && error.kind === "tier" && (
-        <a href="/chatllm">{t("web.connect.upgrade")}</a>
+      {kind === "tier" && <a href="/chatllm">{t("web.connect.upgrade")}</a>}
+      {kind === "connection" && (
+        <button onClick={() => location.reload()}>
+          {t("shell.boot.reload")}
+        </button>
       )}
-      {error &&
-        (!(error instanceof ConnectError) || error.kind === "connection") && (
-          <button onClick={() => location.reload()}>
-            {t("shell.boot.reload")}
-          </button>
-        )}
-      {error instanceof ConnectError && error.kind === "version" && (
+      {kind === "version" && (
         <button onClick={restart}>{t("web.connect.restart")}</button>
       )}
     </main>

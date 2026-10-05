@@ -55,13 +55,14 @@ export const pickHostFolder = async (
     const dialog = document.createElement("dialog");
     const list = document.createElement("div");
     const title = document.createElement("p");
-    title.textContent = i18n.t("web.files.select");
+    title.textContent = root;
     let selected = root;
     let history = [root];
     let navigation = 0;
     let closed = false;
     const up = document.createElement("button");
     up.textContent = "Up";
+    up.disabled = true;
     const home = document.createElement("button");
     home.textContent = "Root";
     const done = (path: string | null) => {
@@ -70,40 +71,41 @@ export const pickHostFolder = async (
       dialog.remove();
       resolve(path);
     };
+    const show = (
+      children: { kind: string; name: string; absolutePath: string }[]
+    ) =>
+      list.replaceChildren(
+        ...children
+          .filter((child) => child.kind === "directory")
+          .map((child) => {
+            const button = document.createElement("button");
+            button.textContent = child.name;
+            button.onclick = () => {
+              history.push(child.absolutePath);
+              void browse(child.absolutePath).catch((error) => {
+                dialog.remove();
+                reject(error);
+              });
+            };
+            return button;
+          })
+      );
     const browse = async (path: string) => {
       const request = ++navigation;
       const children = await client.files.treeChildren({ directoryPath: path });
       if (closed || request !== navigation) return;
       selected = path;
       up.disabled = history.length === 1;
-      list.replaceChildren();
       title.textContent = path;
-      for (const child of children.filter(
-        (child) => child.kind === "directory"
-      )) {
-        const button = document.createElement("button");
-        button.textContent = child.name;
-        button.onclick = () => {
-          history.push(child.absolutePath);
-          void browse(child.absolutePath).catch((error) => {
-            dialog.remove();
-            reject(error);
-          });
-        };
-        list.append(button);
-      }
+      show(children);
     };
     const choose = document.createElement("button");
     choose.textContent = i18n.t("web.files.open");
-    choose.onclick = () => {
-      if (selected) done(selected);
-    };
+    choose.onclick = () => done(selected);
     const cancel = document.createElement("button");
-    cancel.textContent = i18n.t("web.files.cancel");
+    cancel.textContent = i18n.t("phase5.cancel");
     cancel.onclick = () => done(null);
     dialog.addEventListener("cancel", () => done(null), { once: true });
-    up.disabled = true;
-    title.textContent = root;
     up.onclick = () => {
       if (history.length <= 1) return;
       history.pop();
@@ -116,20 +118,7 @@ export const pickHostFolder = async (
     dialog.append(title, up, home, list, choose, cancel);
     document.body.append(dialog);
     dialog.showModal();
-    for (const child of snapshot.fileTree.filter(
-      (child) => child.kind === "directory"
-    )) {
-      const button = document.createElement("button");
-      button.textContent = child.name;
-      button.onclick = () => {
-        history.push(child.absolutePath);
-        void browse(child.absolutePath).catch((error) => {
-          dialog.remove();
-          reject(error);
-        });
-      };
-      list.append(button);
-    }
+    show(snapshot.fileTree);
   });
 };
 export const viewHostFile = async (

@@ -1,5 +1,7 @@
 import type { AppClient } from "#renderer/data/transport/types";
 import { reserveAuthorization } from "#renderer/lib/browser/authorization";
+import { pickHostFolder, viewHostFile } from "#renderer/lib/browser/files";
+import { browserNotify } from "#renderer/lib/browser/notifications";
 type BrowserSystem = Pick<
   AppClient["system"],
   "openExternal" | "notify" | "openPath" | "showItemInFolder"
@@ -10,19 +12,13 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
     if (/^(https?:|mailto:)/i.test(url))
       window.open(url, "_blank", "noopener,noreferrer");
   },
-  notify: async (input) =>
-    (await import("#renderer/lib/browser/notifications")).browserNotify(input),
+  notify: browserNotify,
   openPath: async ({ path }) => {
-    await (
-      await import("#renderer/lib/browser/files")
-    ).viewHostFile(client, path);
+    await viewHostFile(client, path);
     return { outcome: "opened" as const };
   },
   showItemInFolder: async () => {},
-  dialog: {
-    openFolder: async () =>
-      (await import("#renderer/lib/browser/files")).pickHostFolder(client),
-  },
+  dialog: { openFolder: () => pickHostFolder(client) },
 });
 
 export const openSharedLink = async (

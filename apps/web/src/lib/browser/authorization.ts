@@ -29,16 +29,13 @@ export const reserveAuthorization = () => {
       link.onclick = () => fallback?.remove();
       const close = document.createElement("button");
       close.textContent = "Cancel";
-      close.onclick = () => {
+      const cancel = () => {
         cancelled = true;
         popup?.close();
         fallback?.remove();
       };
-      fallback.addEventListener("cancel", () => {
-        cancelled = true;
-        popup?.close();
-        fallback?.remove();
-      });
+      close.onclick = cancel;
+      fallback.addEventListener("cancel", cancel);
       fallback.append(link, close);
       document.body.append(fallback);
       fallback.showModal();

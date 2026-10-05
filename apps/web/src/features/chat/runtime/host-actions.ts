@@ -70,31 +70,29 @@ export const hostActionsFor = (transport: Transport): ChatHostActions => {
           "change",
           async () => {
             try {
-              if (!IS_ELECTRON) {
-                const files = Array.from(input.files ?? []);
-                if (!files.length) {
-                  finish(null);
-                  return;
-                }
-                const paths = await uploadFiles(files, await context?.());
-                finish(
-                  paths.map((path, i) => ({
-                    path,
-                    name: files[i]!.name,
-                    size: files[i]!.size,
-                  }))
-                );
-                return;
-              }
-              const paths = Array.from(input.files ?? []).map((file) => {
-                const path = transport.host.getPathForFile?.(file);
-                if (!path)
-                  throw new Error(
-                    "The host cannot resolve the selected file's path"
-                  );
-                return { path, name: file.name, size: file.size };
-              });
-              finish(paths.length === 0 ? null : paths);
+              const files = Array.from(input.files ?? []);
+              // Electron reads the picked files in place; browsers upload them.
+              const paths = IS_ELECTRON
+                ? files.map((file) => {
+                    const path = transport.host.getPathForFile?.(file);
+                    if (!path)
+                      throw new Error(
+                        "The host cannot resolve the selected file's path"
+                      );
+                    return path;
+                  })
+                : files.length > 0
+                  ? await uploadFiles(files, await context?.())
+                  : [];
+              finish(
+                files.length === 0
+                  ? null
+                  : paths.map((path, i) => ({
+                      path,
+                      name: files[i]!.name,
+                      size: files[i]!.size,
+                    }))
+              );
             } catch (error) {
               input.remove();
               reject(error);

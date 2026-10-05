@@ -15,7 +15,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { Store, useStore } from "@tanstack/react-store";
 
-import { webSignIn } from "#platform/sign-in";
+import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import {
@@ -275,11 +275,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
           if (!current()) return;
           if (statuses[connectorId]?.reason === "not-signed-in") {
             store.setState(() => ({ connectorId, phase: "signing-in" }));
-            const result = IS_ELECTRON
-              ? await deps.transport.client.auth.abacus.start({
-                  intent: "signin",
-                })
-              : await webSignIn(deps.transport);
+            const result = await signInAbacus(deps.transport, {
+              intent: "signin",
+            });
             if (!current()) return;
             if (!result.ok) {
               finish(id, result);

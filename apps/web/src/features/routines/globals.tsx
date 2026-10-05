@@ -4,12 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { claimBrowserAttention } from "#platform/attention";
+import { cueClaim } from "#platform/attention";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/live";
 import { permissionCueKey } from "#renderer/lib/attention/cues";
 import { createNotifier, notifyAttention } from "#renderer/lib/notify";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { createReadinessQueue } from "#renderer/lib/readiness-queue";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
@@ -46,13 +45,7 @@ export const RoutinesGlobals = () => {
       isWindowFocused: () => document.hasFocus(),
       prefs: sounds,
       now: () => Date.now(),
-      claim: !IS_ELECTRON
-        ? (cueId, threadId) =>
-            claimBrowserAttention(`sound:${cueId}:${threadId ?? ""}`)
-        : (cueId, threadId) =>
-            transport.client.window
-              .claimCue({ cueId, threadId })
-              .then((result) => result.play),
+      claim: cueClaim(transport),
     });
     const unlock = () => player.unlock();
     document.addEventListener("pointerdown", unlock);

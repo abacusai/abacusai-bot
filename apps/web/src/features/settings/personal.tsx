@@ -29,6 +29,7 @@ import {
 import { SoundPreview } from "#renderer/components/sound-preview";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { windowChromeQuery } from "#renderer/data/queries/window";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
@@ -182,12 +183,7 @@ export const AppearanceTheme = () => {
   const update = useUpdatePrefs();
   const { transport } = useAppContext();
   const cache = useQueryClient();
-  const chrome = useQuery(
-    transport.orpc.window.chrome.queryOptions({
-      input: {},
-      enabled: IS_ELECTRON,
-    })
-  );
+  const chrome = useQuery(windowChromeQuery(transport.orpc));
   const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
   const fail = () => showError(t("phase5.saveFailed"));
   return (

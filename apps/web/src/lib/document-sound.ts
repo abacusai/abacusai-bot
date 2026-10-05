@@ -1,9 +1,8 @@
 import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { useEffect } from "react";
 
-import { claimBrowserAttention } from "#platform/attention";
+import { cueClaim } from "#platform/attention";
 import type { Transport } from "#renderer/data/transport";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { isThreadSeen } from "./navigation/visible-thread";
 import { createSoundPlayer } from "./sound";
@@ -28,13 +27,7 @@ export const documentSoundPlayer = () =>
 /** The shell owns cross-window arbitration for the shared document player. */
 export const useDocumentSoundOwner = (transport: Transport): void => {
   useEffect(() => {
-    claim = !IS_ELECTRON
-      ? (cueId, threadId) =>
-          claimBrowserAttention(`sound:${cueId}:${threadId ?? ""}`)
-      : (cueId, threadId) =>
-          transport.client.window
-            .claimCue({ cueId, threadId })
-            .then((result) => result.play);
+    claim = cueClaim(transport);
     return () => {
       claim = async () => false;
     };

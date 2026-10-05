@@ -8,12 +8,12 @@ export const installActivity = (transport: Transport): (() => void) => {
     const now = Date.now();
     if (now - last < 5000) return;
     last = now;
-    if (IS_ELECTRON)
-      void transport.client.window.activity().catch(() => undefined);
-    else {
-      markActivity();
-      void transport.client.system.activity().catch(() => undefined);
-    }
+    markActivity();
+    void (
+      IS_ELECTRON
+        ? transport.client.window.activity()
+        : transport.client.system.activity()
+    ).catch(() => undefined);
   };
   const events = ["pointerdown", "keydown", "wheel"] as const;
   events.forEach((event) =>

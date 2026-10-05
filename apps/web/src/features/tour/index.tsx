@@ -28,10 +28,7 @@ export const TourHost = () => {
   const [rect, setRect] = useState<Box | null>(null);
   const [busy, setBusy] = useState(false);
   const status = useQuery({
-    ...transport.orpc.notch.status.queryOptions({
-      input: {},
-      enabled: IS_ELECTRON,
-    }),
+    ...transport.orpc.notch.status.queryOptions({ input: {} }),
     enabled: IS_ELECTRON && active !== null,
   });
   const stops = TOUR_STOPS.filter(

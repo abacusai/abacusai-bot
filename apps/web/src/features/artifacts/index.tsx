@@ -13,7 +13,6 @@ import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { platformSystem } from "#renderer/lib/platform-system";
 import { showInfo, showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -220,7 +219,7 @@ export const ArtifactsPage = ({
             {
               label: t("phase5.reveal"),
               run: () =>
-                void platformSystem(transport.client)
+                void transport.client.system
                   .showItemInFolder({ path: a.location })
                   .catch(() => showError(t("phase5.failed"))),
             },

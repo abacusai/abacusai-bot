@@ -57,7 +57,7 @@ const OnboardingRoute = () => {
       });
     }
     return () => {
-      if (IS_ELECTRON && step === "models") {
+      if (step === "models") {
         void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
         void cancelSignIn(transport).catch(() => undefined);
       }
@@ -70,7 +70,7 @@ const OnboardingRoute = () => {
   const auth = (intent: "signup" | "signin", profileId?: string) => {
     if (
       startSignIn(transport, intent, profileId, async (outcome) => {
-        if (IS_ELECTRON && step === "models") {
+        if (step === "models") {
           void queryClient.invalidateQueries();
           return;
         }
@@ -254,15 +254,11 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
           context.transport.orpc.models.list.queryOptions({ input: {} })
         ),
         // A local runtime is optional; the pane presents its unavailable state.
-        !IS_ELECTRON
-          ? Promise.resolve()
-          : context.queryClient
-              .ensureQueryData(
-                context.transport.orpc.localModels.state.queryOptions({
-                  input: {},
-                })
-              )
-              .catch(() => undefined),
+        context.queryClient
+          .ensureQueryData(
+            context.transport.orpc.localModels.state.queryOptions({ input: {} })
+          )
+          .catch(() => undefined),
       ]);
     if (params.step === "connectors")
       await context.queryClient.ensureQueryData(

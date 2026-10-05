@@ -2,12 +2,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { createRoot } from "react-dom/client";
 
-import {
-  installBrowserAttention,
-  requestNotificationPermission,
-} from "#platform/attention";
-import { ConnectScreen } from "#platform/connect";
-
 /**
  * renderer boot (spec 01 §8.6): styles, the stored theme before the
  * first paint, i18n, then bootstrap() (transport, system facts, the
@@ -16,7 +10,7 @@ import { ConnectScreen } from "#platform/connect";
  * never a blank window, and tells main through a bounded readiness call.
  */
 import "./styles/app.css";
-import { resolveBrowserHost, type ConnectStage } from "#platform/connect";
+import { connectHost } from "#platform/connect";
 import { installLease } from "#platform/lease";
 import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
@@ -109,34 +103,7 @@ const start = async (forceRestart = false): Promise<void> => {
   try {
     // 4. English is bundled; the user's language follows prefs.
     await initI18n();
-    if (IS_BROWSER) {
-      installBrowserAttention();
-      window.addEventListener("pointerdown", requestNotificationPermission, {
-        once: true,
-      });
-      let stage: ConnectStage = "starting";
-      const connect = async (forceRestart = false): Promise<void> => {
-        try {
-          await resolveBrowserHost((value) => {
-            stage = value;
-            root.render(
-              <ConnectScreen stage={stage} restart={() => void start(true)} />
-            );
-          }, forceRestart);
-          await getTransport();
-        } catch (error) {
-          root.render(
-            <ConnectScreen
-              stage={stage}
-              error={error instanceof Error ? error : new Error(String(error))}
-              restart={() => void start(true)}
-            />
-          );
-          throw error;
-        }
-      };
-      await connect(forceRestart);
-    }
+    await connectHost(root, () => void start(true), forceRestart);
 
     const queryClient = createQueryClient();
     const onTransportLost = createTransportLostHandler({
@@ -185,8 +152,7 @@ const start = async (forceRestart = false): Promise<void> => {
     await importLegacyDrafts(boot.system.legacyComposerDrafts ?? {}, (keys) =>
       boot.transport.client.system.acknowledgeLegacyDrafts({ keys })
     );
-    if (IS_BROWSER && transport)
-      installLease(() => transport?.state === "open");
+    installLease(() => boot.transport.state === "open");
     installActivity(boot.transport);
     installUiContinuity();
     installLogRing(boot.transport);

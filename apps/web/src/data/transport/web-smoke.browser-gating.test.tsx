@@ -82,12 +82,7 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
   const queryClient = createQueryClient();
   try {
     await awaitWebSocketOpen(socket);
-    const transport = createWebSocketTransport(url, {
-      WebSocket: class {
-        constructor() {
-          return socket;
-        }
-      } as unknown as typeof WebSocket,
+    const transport = createWebSocketTransport(socket, {
       flowControl: false,
       inspectCall: inspect,
     });

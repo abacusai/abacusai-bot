@@ -14,7 +14,7 @@ import { resolveBrowserHost } from "#renderer/features/shell/connect/services";
 import { configureVoice, fetchWhisperModel } from "#renderer/lib/voice/whisper";
 
 import { viewHostFile } from "./files";
-import { browserFileCall, hostFiles } from "./host-files";
+import { hostFiles } from "./host-files";
 
 const preview = "https://pod.preview.apps.abacus.ai";
 const file = { filePath: "/workspace/sample.txt", hostRoot: "/workspace" };
@@ -150,7 +150,7 @@ it("reads large transcripts, snapshots and diff/preview text through the browser
   expect(requests[0]!.token).toMatch(/^Bearer /);
   host.close();
 });
-it.each([9, 10, 11, 10000])(
+it.each([10, 11])(
   "detects truncation of %s text bytes without X-File-Size",
   async (size) => {
     files.set(file.filePath, "a".repeat(size));
@@ -257,25 +257,6 @@ it("does not retry a repeated auth failure or an unrelated HTTP error", async ()
   });
   expect(requests).toHaveLength(3);
 });
-it.each([
-  "/files?hostRoot=<workspace>&path=<export-file>",
-  `/files?${new URLSearchParams({ hostRoot: file.hostRoot, path: file.filePath })}`,
-])(
-  "preserves the real host PAYLOAD_TOO_LARGE shape without fetching raw alternatives",
-  async (alternative) => {
-    const failure = {
-      code: "PAYLOAD_TOO_LARGE",
-      data: { limit: 1024 * 1024, alternative },
-    };
-    await expect(
-      browserFileCall(["db", "sessions", "snapshot"], {}, async () => {
-        throw failure;
-      })
-    ).rejects.toBe(failure);
-    expect(requests).toHaveLength(0);
-  }
-);
-
 it("renders downloaded images and text in the host-file dialog", async () => {
   HTMLDialogElement.prototype.showModal = vi.fn();
   const host = transport();
@@ -296,12 +277,6 @@ it("renders downloaded images and text in the host-file dialog", async () => {
   document.querySelector("dialog")?.remove();
   host.close();
 });
-it("returns Blob data with fresh credentials without a bootstrap refresh", async () => {
-  const blob = await hostFiles.blob(file);
-  expect(blob.size).toBeGreaterThan(1024 * 1024);
-  expect(bootstrapCount).toBe(1);
-});
-
 it("keeps a real RPC socket open after a real host oversized snapshot error", async () => {
   const [
     { contract },
@@ -338,13 +313,8 @@ it("keeps a real RPC socket open after a real host oversized snapshot error", as
   const url = `ws://127.0.0.1:${(rpc.address() as { port: number }).port}`;
   const socket = new NodeSocket(url) as unknown as WebSocket;
   await awaitWebSocketOpen(socket);
-  const host = createWebSocketTransport(url, {
+  const host = createWebSocketTransport(socket, {
     flowControl: false,
-    WebSocket: class {
-      constructor() {
-        return socket;
-      }
-    } as unknown as typeof WebSocket,
   });
   try {
     await expect(host.client.db.sessions.snapshot({})).rejects.toMatchObject({

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { webSignIn } from "#platform/sign-in";
+import { signInAbacus } from "#platform/sign-in";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
   AreaPage,
@@ -61,9 +61,7 @@ export const AccountPage = () => {
     const id = ++attempt.current;
     setPending(true);
     try {
-      const result = IS_ELECTRON
-        ? await transport.client.auth.abacus.start({ intent: "signin" })
-        : await webSignIn(transport);
+      const result = await signInAbacus(transport, { intent: "signin" });
       if (id !== attempt.current) return;
       if (result.ok)
         await cache.invalidateQueries({

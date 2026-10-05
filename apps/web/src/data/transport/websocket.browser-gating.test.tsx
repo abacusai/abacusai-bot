@@ -115,13 +115,7 @@ it("the real RPC link sends flow headers and JSON acknowledgements only for cons
   const url = `ws://127.0.0.1:${(server.address() as { port: number }).port}`;
   const socket = new NodeSocket(url) as unknown as WebSocket;
   await awaitWebSocketOpen(socket);
-  const transport = createWebSocketTransport(url, {
-    WebSocket: class {
-      constructor() {
-        return socket;
-      }
-    } as unknown as typeof WebSocket,
-  });
+  const transport = createWebSocketTransport(socket, {});
   try {
     const iterator = await transport.client.update.events({});
     await new Promise((resolve) => setTimeout(resolve, 10));

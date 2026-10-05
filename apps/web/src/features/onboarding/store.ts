@@ -1,7 +1,7 @@
 import type { AbacusAuthOutcome } from "@abacus-ai/contract/contracts";
 import { Store } from "@tanstack/react-store";
 
-import { webSignIn } from "#platform/sign-in";
+import { signInAbacus } from "#platform/sign-in";
 import type { Transport } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { SignInFailure } from "#renderer/lib/sign-in-failure";
@@ -31,14 +31,10 @@ export const startSignIn = (
     outcome: null,
   };
   onboardingStore.setState((state) => ({ ...state, signIn: attempt }));
-  void (
-    IS_ELECTRON
-      ? transport.client.auth.abacus.start({
-          intent,
-          ...(profileId ? { browserProfileId: profileId } : {}),
-        })
-      : webSignIn(transport)
-  )
+  void signInAbacus(transport, {
+    intent,
+    ...(profileId ? { browserProfileId: profileId } : {}),
+  })
     .catch((error: unknown): AbacusAuthOutcome => ({
       ok: false,
       error: error instanceof SignInFailure ? error.message : "auth-failed",

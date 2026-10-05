@@ -458,22 +458,20 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                 ) : provider === "gemini" ? (
                   props.addKey
                 ) : (
-                  IS_ELECTRON && (
-                    <Button
-                      disabled={busy}
-                      onClick={() =>
-                        provider === "abacus"
-                          ? props.signIn("signin")
-                          : void perform(async () => {
-                              await transport.client.auth.openRouter.start({});
-                              await models.refetch();
-                              await keys.refetch();
-                            })
-                      }
-                    >
-                      {t("onboarding.pages.connectLabel")}
-                    </Button>
-                  )
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      provider === "abacus"
+                        ? props.signIn("signin")
+                        : void perform(async () => {
+                            await transport.client.auth.openRouter.start({});
+                            await models.refetch();
+                            await keys.refetch();
+                          })
+                    }
+                  >
+                    {t("onboarding.pages.connectLabel")}
+                  </Button>
                 )}
               </div>
             ))}

@@ -1,10 +1,7 @@
-export type { ConnectStage } from "#renderer/features/shell/connect/services";
-export const ConnectScreen = (
-  _props: import("react").ComponentProps<
-    typeof import("#renderer/features/shell/connect").ConnectScreen
-  >
-) => null;
-export const resolveBrowserHost: typeof import("#renderer/features/shell/connect/services").resolveBrowserHost =
-  async () => {
-    throw new Error("Browser connection is unavailable on Electron");
-  };
+import type { Root } from "react-dom/client";
+/** Electron's MessagePort needs no connect step. */
+export const connectHost = async (
+  _root: Root,
+  _restart: () => void,
+  _forceRestart: boolean
+): Promise<void> => {};

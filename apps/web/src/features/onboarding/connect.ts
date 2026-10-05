@@ -7,7 +7,6 @@ import {
   reserveAuthorization,
   completeConnectorAuthorization,
 } from "#renderer/lib/browser/authorization";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 
 /** Pairing is deferred; enabling and persisting the queue happen on the click. */
 export const connectOnboarding = async (
@@ -17,7 +16,7 @@ export const connectOnboarding = async (
 ) => {
   const authorization = reserveAuthorization();
   const connector = connectorById(id);
-  if (IS_ELECTRON && connector?.kind === "messaging") {
+  if (connector?.kind === "messaging") {
     await transport.client.messaging.updatePlatform({
       platformId: connector.platform,
       enabled: true,

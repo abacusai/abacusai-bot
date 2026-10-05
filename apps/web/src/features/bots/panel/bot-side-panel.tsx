@@ -421,9 +421,7 @@ export const FilesTab = ({
           onReveal={
             IS_ELECTRON
               ? (path) =>
-                  void platformSystem(transport.client).showItemInFolder({
-                    path,
-                  })
+                  void transport.client.system.showItemInFolder({ path })
               : undefined
           }
         />
@@ -475,7 +473,7 @@ export const FilesTab = ({
             <ContextMenuContent>
               <ContextMenuItem
                 onClick={() =>
-                  void platformSystem(transport.client).showItemInFolder({
+                  void transport.client.system.showItemInFolder({
                     path: file.location,
                   })
                 }

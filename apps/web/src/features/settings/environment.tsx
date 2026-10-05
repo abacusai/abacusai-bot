@@ -16,7 +16,6 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -267,7 +266,7 @@ const ElectronBrowserPage = () => {
                 size="sm"
                 variant="secondary"
                 onClick={() =>
-                  void platformSystem(transport.client).openExternal({
+                  void transport.client.system.openExternal({
                     url: status.chrome.installUrl,
                   })
                 }

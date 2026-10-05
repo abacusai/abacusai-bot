@@ -9,25 +9,19 @@ export const toHotkeyPlatform = (platform: string): HotkeyPlatform =>
   platform === "darwin" ? "mac" : platform === "win32" ? "windows" : "linux";
 
 declare const __ABACUS_PLATFORM__: "electron" | "browser";
-export const PLATFORM = __ABACUS_PLATFORM__;
+const PLATFORM = __ABACUS_PLATFORM__;
 export const IS_ELECTRON = PLATFORM === "electron";
 export const IS_BROWSER = PLATFORM === "browser";
+const browserOs = (): string => {
+  const os =
+    (navigator as Navigator & { userAgentData?: { platform: string } })
+      .userAgentData?.platform ?? navigator.platform;
+  return /Mac|iPhone|iPad/.test(os)
+    ? "darwin"
+    : /Win/.test(os)
+      ? "win32"
+      : "linux";
+};
+/** The user's OS for hotkeys and labels: the host's on Electron, the browser's otherwise. */
 export const uiPlatform = (hostPlatform: string): HotkeyPlatform =>
-  IS_ELECTRON
-    ? toHotkeyPlatform(hostPlatform)
-    : toHotkeyPlatform(
-        /Mac|iPhone|iPad/.test(
-          (navigator as Navigator & { userAgentData?: { platform: string } })
-            .userAgentData?.platform ?? navigator.platform
-        )
-          ? "darwin"
-          : /Win/.test(
-                (
-                  navigator as Navigator & {
-                    userAgentData?: { platform: string };
-                  }
-                ).userAgentData?.platform ?? navigator.platform
-              )
-            ? "win32"
-            : "linux"
-      );
+  toHotkeyPlatform(IS_ELECTRON ? hostPlatform : browserOs());

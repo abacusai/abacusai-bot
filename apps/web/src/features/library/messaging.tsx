@@ -26,7 +26,6 @@ import {
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openSharedLink } from "#renderer/lib/platform-system";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -86,11 +85,7 @@ const DesktopMessagingPage = () => {
     >
       <GroupCard>
         {s?.platforms
-          .filter((p) =>
-            IS_ELECTRON
-              ? ["whatsapp", "telegram", "discord"].includes(p.id)
-              : p.id.startsWith("abacus_")
-          )
+          .filter((p) => ["whatsapp", "telegram", "discord"].includes(p.id))
           .map((p) => (
             <SettingRow
               key={p.id}
@@ -180,9 +175,7 @@ const PlatformSheet = () => {
   const search = useSearch({ strict: false }) as {
     platform?: MessagingPlatformId;
   };
-  return search.platform &&
-    (IS_ELECTRON ||
-      !["whatsapp", "telegram", "discord"].includes(search.platform)) ? (
+  return search.platform ? (
     <PlatformDetail key={search.platform} platform={search.platform} />
   ) : null;
 };
@@ -195,10 +188,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   );
   const s = query.data;
   const p = s?.platforms.find((p) => p.id === platform);
-  const sharedId =
-    !IS_ELECTRON && platform.startsWith("abacus_")
-      ? platform
-      : SHARED_BOT_PLATFORM_OF[platform];
+  const sharedId = SHARED_BOT_PLATFORM_OF[platform];
   const shared = s?.platforms.find((p) => p.id === sharedId);
   const navigate = useAppNavigate();
   const flow = useConnectFlow();
@@ -231,11 +221,9 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     const ready = flowRef.current.registerPairing(platform, async () => {
       await connectPlatform({ transport, queryClient: cache }, platform);
       if (!live) return;
-      if (IS_ELECTRON)
-        await transport.client.messaging.showLogin({ platformId: platform });
-      if (sharedId && (!IS_ELECTRON || SHARED_LINK_REQUIRED.has(platform))) {
-        if (sharedId !== platform)
-          await connectPlatform({ transport, queryClient: cache }, sharedId);
+      await transport.client.messaging.showLogin({ platformId: platform });
+      if (sharedId && SHARED_LINK_REQUIRED.has(platform)) {
+        await connectPlatform({ transport, queryClient: cache }, sharedId);
         const next = await transport.client.messaging.pairShared({
           platformId: sharedId,
         });
@@ -277,18 +265,16 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
           {(error || p?.errorMessage) && (
             <p role="alert">{error ?? p?.errorMessage}</p>
           )}
-          {IS_ELECTRON && (
-            <Button
-              variant="secondary"
-              onClick={() =>
-                void transport.client.messaging.showLogin({
-                  platformId: platform,
-                })
-              }
-            >
-              {t("phase5.openLogin")}
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            onClick={() =>
+              void transport.client.messaging.showLogin({
+                platformId: platform,
+              })
+            }
+          >
+            {t("phase5.openLogin")}
+          </Button>
           {p && p.fields.length > 0 && <PlatformCredentials platform={p} />}
           {shared?.sharedLink && (
             <>
@@ -313,7 +299,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                 <>
                   <Button
                     onClick={() =>
-                      void openSharedLink(transport.client, {
+                      void transport.client.messaging.openSharedLink({
                         platformId: sharedId,
                         target: "install",
                       })
@@ -323,7 +309,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                   </Button>
                   <Button
                     onClick={() =>
-                      void openSharedLink(transport.client, {
+                      void transport.client.messaging.openSharedLink({
                         platformId: sharedId,
                         target: "dm",
                       })

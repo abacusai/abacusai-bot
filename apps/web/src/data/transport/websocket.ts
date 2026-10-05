@@ -28,18 +28,18 @@ type CallInterceptorOptions = Parameters<
 
 export interface WebSocketTransportOptions {
   /** For tests; the global `WebSocket` otherwise. */
-  WebSocket?: new (url: string, protocols?: string[]) => WebSocket;
-  protocols?: string[];
+  WebSocket?: new (url: string) => WebSocket;
   flowControl?: boolean;
   inspectCall?: (path: string, error?: unknown) => void;
 }
 
+/** Takes a URL, or a socket the caller has already opened. */
 export const createWebSocketTransport = (
-  url: string,
+  url: string | WebSocket,
   options: WebSocketTransportOptions = {}
 ): Transport => {
   const Socket = options.WebSocket ?? WebSocket;
-  const websocket = new Socket(url, options.protocols);
+  const websocket = typeof url === "string" ? new Socket(url) : url;
   const signal = createCloseSignal();
   websocket.addEventListener("close", () => signal.fire("port-closed"));
 
@@ -128,12 +128,5 @@ export const connectWebSocketTransport = async (
 ): Promise<Transport> => {
   const socket = new WebSocket(url, protocols);
   await awaitWebSocketOpen(socket);
-  return createWebSocketTransport(url, {
-    WebSocket: class {
-      constructor() {
-        return socket;
-      }
-    } as unknown as typeof WebSocket,
-    protocols,
-  });
+  return createWebSocketTransport(socket);
 };
