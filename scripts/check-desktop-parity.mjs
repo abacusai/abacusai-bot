@@ -24,7 +24,7 @@ export const checkDesktopParity = (
   for (const key of Object.keys(actual))
     assert.ok(
       actual[key] <= baseline[key] * 1.01,
-      `${key}: ${actual[key]} exceeds 99f20795 +1% (${baseline[key]}); see scripts/fixtures/web-split-desktop-baseline.md`
+      `${key}: ${actual[key]} exceeds ${baseline.commit} +1% (${baseline[key]}); see scripts/fixtures/web-split-desktop-baseline.md`
     );
   const graph = JSON.parse(
     readFileSync(resolve(directory, "chunk-sizes.json"), "utf8")
