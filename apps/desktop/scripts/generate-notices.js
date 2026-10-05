@@ -55,12 +55,17 @@ function record(directory) {
     packages.set(dir, readJson(path.join(dir, "package.json")));
 }
 
-function visitSourceMaps(directory) {
+function visitSourceMaps(directory, { optional = false } = {}) {
+  // An optional directory (main's lazy chunks) may be absent or hold no maps
+  // once nothing is split off; that is not a missing build.
+  if (optional && !fs.existsSync(directory)) return;
   const maps = fs
     .readdirSync(directory)
     .filter((name) => name.endsWith(".map"));
-  if (maps.length === 0)
+  if (maps.length === 0) {
+    if (optional) return;
     throw new Error(`Build before packaging: no source maps in ${directory}`);
+  }
   for (const file of maps) {
     const map = readJson(path.join(directory, file));
     for (const source of map.sources) {
@@ -133,6 +138,7 @@ visit(path.join(root, "apps/updater"));
 visitSourceMaps(path.join(root, "packages/agent/dist"));
 for (const bundle of ["main", "preload", "renderer/assets"])
   visitSourceMaps(path.join(desktop, "dist", bundle));
+visitSourceMaps(path.join(desktop, "dist", "main/assets"), { optional: true });
 visitSourceImports(path.join(desktop, "src"));
 visitSourceImports(path.join(root, "apps/web/src"));
 

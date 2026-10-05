@@ -321,6 +321,12 @@ function summarizeToolCall(
   }
 }
 
+/** A result's first text block, or "" when it starts with something else. */
+const firstText = (result: ToolResult): string => {
+  const block = result.content[0];
+  return block?.type === "text" ? block.text : "";
+};
+
 /** Pure-read tools; the permission gate skips these to avoid prompt fatigue. */
 function isReadOnlyBrowserTool(
   name: string,
@@ -1592,7 +1598,7 @@ export class McpBrowserServer extends McpHttpServer {
       if (fresh?.tree != null && snapshot.refMap.has(args.ref)) {
         const retried = await this.interactStep(wc, args, sessionId);
         if (retried.isError !== true) {
-          const text = retried.content[0]?.text ?? "";
+          const text = firstText(retried);
           result = this.ok(
             `(The page had re-rendered; refs were refreshed and the action retried.) ${text}`
           );
@@ -1602,7 +1608,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (before == null || result.isError === true) return result;
 
     const changes = await this.reportChanges(wc, sessionId, before);
-    const text = result.content[0]?.text ?? "";
+    const text = firstText(result);
 
     return this.ok(changes.length > 0 ? `${text}\n${changes}` : text);
   }
@@ -2036,7 +2042,7 @@ export class McpBrowserServer extends McpHttpServer {
 
   /** An element the snapshot had and the page no longer has. */
   private static isVanished(result: ToolResult): boolean {
-    const text = result.content[0]?.text ?? "";
+    const text = firstText(result);
 
     return text.includes("not found on the page");
   }

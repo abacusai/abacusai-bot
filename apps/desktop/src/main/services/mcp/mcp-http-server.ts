@@ -1,12 +1,40 @@
 import http from "http";
 import type net from "net";
 
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import type { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type {
+  CallToolResult,
+  ListToolsResult,
+} from "@modelcontextprotocol/sdk/types.js";
+
+/**
+ * What a tool returns: the SDK's own result type, so a block the SDK would
+ * reject at run time (an unknown type, non-base64 image data) fails to compile
+ * instead of reaching the model as a -32602 validation dump.
+ */
+export type McpToolResult = CallToolResult;
+
 import { localMcpServerToken } from "./mcp-config-service";
 
 /**
  * The HTTP side every built-in MCP server shares: a loopback listener behind
- * the per-boot bearer token, JSON-RPC over POST, and an SSE stream for clients
- * that open one. A subclass supplies only its tool list and `executeTool`.
+ * the per-boot bearer token, speaking MCP's Streamable HTTP transport through
+ * the SDK, which owns the protocol (version negotiation, ping, notifications
+ * that get no reply). A subclass supplies only its tool list and
+ * `executeTool`.
+ *
+ * Stateless: each request gets its own SDK server and transport, built around
+ * the `session` query parameter the runtime MCP config puts in the URL, which
+ * names the calling conversation. A GET opens the standalone SSE stream a
+ * client may hold for server notifications; that pair lives until the stream
+ * closes so `notifyToolListChanged` can reach it. With no session there is
+ * nothing for a DELETE to end, so it gets 405 (as the spec allows) and a
+ * client closes its own GET stream.
+ *
+ * DNS rebinding: only the loopback authorities this server is reached at are
+ * accepted as Host, and a request carrying any other page's Origin is refused,
+ * checked before the token so a rebound page learns nothing.
  */
 
 /** One entry of `tools/list`, passed through as written. */
@@ -14,16 +42,6 @@ export interface McpToolListing {
   name: string;
   description: string;
   inputSchema: unknown;
-}
-
-export interface McpToolResult {
-  content: Array<{
-    type: string;
-    text?: string;
-    data?: string;
-    mimeType?: string;
-  }>;
-  isError?: boolean;
 }
 
 interface McpServerInfo {
@@ -34,34 +52,29 @@ interface McpServerInfo {
   listChanged?: boolean;
 }
 
-interface JsonRpcMessage {
-  jsonrpc: "2.0";
-  id?: number | string | null;
-  method?: string;
-  params?: Record<string, unknown>;
+interface Connection {
+  server: Server;
+  transport: StreamableHTTPServerTransport;
 }
 
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  id: number | string | null;
-  result?: unknown;
-  error?: { code: number; message: string };
-}
-
-const PROTOCOL_VERSION = "2024-11-05";
+type Sdk = typeof import("./mcp-sdk");
 
 /** How long stop() lets an in-flight response finish. */
 const STOP_GRACE_MS = 1_000;
 
+/** One load for every server, shared by concurrent first starts. */
+let sdkPromise: Promise<Sdk> | null = null;
+
 export abstract class McpHttpServer {
-  private server: http.Server | null = null;
+  private listener: http.Server | null = null;
   private port: number | null = null;
   private starting: Promise<number> | null = null;
   /** Bumped by stop(), so a start() it overtook knows to give up. */
   private generation = 0;
-  /** Open SSE streams, by the id handed out in their `endpoint` event. */
-  private readonly streams = new Map<string, http.ServerResponse>();
-  private streamCounter = 0;
+  /** Set before the listener exists, so every request can use it. */
+  private sdk: Sdk | null = null;
+  /** Open notification streams (GET), each with the SDK server behind it. */
+  private readonly streams = new Set<Connection>();
 
   protected constructor(private readonly info: McpServerInfo) {}
 
@@ -80,33 +93,45 @@ export abstract class McpHttpServer {
    * up wins: that start() rejects and closes what it opened.
    */
   start(): Promise<number> {
-    if (this.server != null) return Promise.resolve(this.port!);
+    if (this.listener != null) return Promise.resolve(this.port!);
     if (this.starting != null) return this.starting;
-    const generation = this.generation;
-    const starting = new Promise<number>((resolve, reject) => {
-      const server = http.createServer((req, res) =>
-        this.handleRequest(req, res)
-      );
-      server.once("error", reject);
-      // Loopback only: these servers are for the agent on this machine.
-      server.listen(0, "127.0.0.1", () => {
-        server.off("error", reject);
-        if (generation !== this.generation) {
-          server.close();
-          reject(
-            new Error(`${this.info.name} MCP server stopped while starting`)
-          );
-          return;
-        }
-        this.server = server;
-        this.port = (server.address() as net.AddressInfo).port;
-        resolve(this.port);
-      });
-    }).finally(() => {
+    const starting = this.listen(this.generation).finally(() => {
       if (this.starting === starting) this.starting = null;
     });
     this.starting = starting;
     return starting;
+  }
+
+  private async listen(generation: number): Promise<number> {
+    const superseded = (): Error =>
+      new Error(`${this.info.name} MCP server stopped while starting`);
+    // Loaded here rather than imported at the top: see mcp-sdk.ts.
+    sdkPromise ??= import("./mcp-sdk").catch((error: unknown) => {
+      // A failed load is retried on the next start, not cached.
+      sdkPromise = null;
+      throw error;
+    });
+    const sdk = await sdkPromise;
+    if (generation !== this.generation) throw superseded();
+    this.sdk = sdk;
+    return new Promise<number>((resolve, reject) => {
+      const listener = http.createServer((req, res) => {
+        void this.handleRequest(req, res);
+      });
+      listener.once("error", reject);
+      // Loopback only: these servers are for the agent on this machine.
+      listener.listen(0, "127.0.0.1", () => {
+        listener.off("error", reject);
+        if (generation !== this.generation) {
+          listener.close();
+          reject(superseded());
+          return;
+        }
+        this.listener = listener;
+        this.port = (listener.address() as net.AddressInfo).port;
+        resolve(this.port);
+      });
+    });
   }
 
   /**
@@ -117,20 +142,14 @@ export abstract class McpHttpServer {
   stop(): void {
     this.generation += 1;
     this.starting = null;
-    for (const res of this.streams.values()) {
-      try {
-        res.end();
-      } catch {
-        /* already closed */
-      }
-    }
+    for (const connection of this.streams) void this.close(connection);
     this.streams.clear();
-    if (this.server != null) {
-      const server = this.server;
-      server.close();
-      server.closeIdleConnections();
-      setTimeout(() => server.closeAllConnections(), STOP_GRACE_MS).unref();
-      this.server = null;
+    if (this.listener != null) {
+      const listener = this.listener;
+      listener.close();
+      listener.closeIdleConnections();
+      setTimeout(() => listener.closeAllConnections(), STOP_GRACE_MS).unref();
+      this.listener = null;
       this.port = null;
     }
   }
@@ -140,7 +159,7 @@ export abstract class McpHttpServer {
   }
 
   isRunning(): boolean {
-    return this.server != null;
+    return this.listener != null;
   }
 
   /**
@@ -149,27 +168,48 @@ export abstract class McpHttpServer {
    * client checks before it listens.
    */
   notifyToolListChanged(): void {
-    this.broadcast({
-      jsonrpc: "2.0",
-      method: "notifications/tools/list_changed",
-    });
-  }
-
-  private broadcast(message: JsonRpcMessage): void {
-    const frame = `event: message\ndata: ${JSON.stringify(message)}\n\n`;
-    for (const res of this.streams.values()) {
-      try {
-        res.write(frame);
-      } catch {
-        /* closed; its close handler drops it from the map */
-      }
+    for (const { server } of this.streams) {
+      server.sendToolListChanged().catch(() => {
+        /* closed; its close handler drops it from the set */
+      });
     }
   }
 
-  private handleRequest(
+  private async close({ server, transport }: Connection): Promise<void> {
+    await transport.close().catch(() => undefined);
+    await server.close().catch(() => undefined);
+  }
+
+  /** The SDK server for one request, bound to the conversation asking. */
+  private serverFor(sdk: Sdk, callerSession?: string): Server {
+    const server = new sdk.Server(
+      { name: this.info.name, version: this.info.version },
+      {
+        capabilities: {
+          tools: { listChanged: this.info.listChanged === true },
+        },
+        jsonSchemaValidator: sdk.validator,
+      }
+    );
+    // The definitions are JSON Schema already and go out exactly as written.
+    server.setRequestHandler(
+      sdk.ListToolsRequestSchema,
+      () => ({ tools: this.listTools(callerSession) }) as ListToolsResult
+    );
+    server.setRequestHandler(sdk.CallToolRequestSchema, (request) =>
+      this.executeTool(
+        request.params.name,
+        request.params.arguments ?? {},
+        callerSession
+      )
+    );
+    return server;
+  }
+
+  private async handleRequest(
     req: http.IncomingMessage,
     res: http.ServerResponse
-  ): void {
+  ): Promise<void> {
     const url = new URL(req.url ?? "/", "http://localhost");
 
     // No CORS headers on purpose: a wildcard origin would let any page the
@@ -177,29 +217,6 @@ export abstract class McpHttpServer {
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
-      return;
-    }
-
-    if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
-      // Per-boot bearer token from the runtime MCP config; a browser gets 401.
-      if (
-        req.headers.authorization !==
-        `Bearer ${localMcpServerToken(this.info.name)}`
-      ) {
-        this.json(res, 401, {
-          jsonrpc: "2.0",
-          id: null,
-          error: { code: -32000, message: "Unauthorized" },
-        });
-        return;
-      }
-      if (req.method === "GET") this.openStream(res);
-      else if (req.method === "POST") this.handlePost(req, res, url);
-      else if (req.method === "DELETE") this.closeStream(url, res);
-      else {
-        res.writeHead(405);
-        res.end();
-      }
       return;
     }
 
@@ -212,153 +229,89 @@ export abstract class McpHttpServer {
       return;
     }
 
-    res.writeHead(404);
-    res.end();
+    if (url.pathname !== "/mcp" && url.pathname !== "/mcp/") {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+
+    const allowedHosts = [`127.0.0.1:${this.port}`, `localhost:${this.port}`];
+    const allowedOrigins = allowedHosts.map((host) => `http://${host}`);
+    const origin = req.headers.origin;
+    if (
+      !allowedHosts.includes(req.headers.host ?? "") ||
+      (origin != null && !allowedOrigins.includes(origin))
+    ) {
+      this.json(res, 403, {
+        jsonrpc: "2.0",
+        id: null,
+        error: { code: -32000, message: "Forbidden host or origin" },
+      });
+      return;
+    }
+
+    // Per-boot bearer token from the runtime MCP config; a browser gets 401.
+    if (
+      req.headers.authorization !==
+      `Bearer ${localMcpServerToken(this.info.name)}`
+    ) {
+      this.json(res, 401, {
+        jsonrpc: "2.0",
+        id: null,
+        error: { code: -32000, message: "Unauthorized" },
+      });
+      return;
+    }
+
+    // Stateless: no session for a DELETE to end (see above).
+    if (req.method === "DELETE") {
+      res.writeHead(405, { Allow: "GET, POST" });
+      res.end();
+      return;
+    }
+
+    const sdk = this.sdk!;
+    const connection: Connection = {
+      server: this.serverFor(sdk, url.searchParams.get("session") ?? undefined),
+      // No session id: stateless, so a request needs no prior initialize
+      // and nothing is left behind when a client goes away without a DELETE.
+      transport: new sdk.StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+        // The same allowlists as above, so the transport enforces them too.
+        enableDnsRebindingProtection: true,
+        allowedHosts,
+        allowedOrigins,
+      }),
+    };
+    const isStream = req.method === "GET";
+    if (isStream) this.streams.add(connection);
+    res.on("close", () => {
+      if (isStream) this.streams.delete(connection);
+      void this.close(connection);
+    });
+
+    try {
+      await connection.server.connect(connection.transport);
+      await connection.transport.handleRequest(req, res);
+    } catch (error) {
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      this.json(res, 500, {
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+          code: -32603,
+          message: `Internal error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      });
+    }
   }
 
   private json(res: http.ServerResponse, status: number, body: unknown): void {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(body));
-  }
-
-  private openStream(res: http.ServerResponse): void {
-    const streamId = `session-${++this.streamCounter}`;
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    res.write(`event: endpoint\ndata: /mcp?sessionId=${streamId}\n\n`);
-    this.streams.set(streamId, res);
-    res.on("close", () => this.streams.delete(streamId));
-  }
-
-  private closeStream(url: URL, res: http.ServerResponse): void {
-    const streamId = url.searchParams.get("sessionId");
-    const stream = streamId != null ? this.streams.get(streamId) : undefined;
-    if (stream != null) {
-      try {
-        stream.end();
-      } catch {
-        /* already closed */
-      }
-      this.streams.delete(streamId!);
-    }
-    res.writeHead(200);
-    res.end();
-  }
-
-  private handlePost(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    url: URL
-  ): void {
-    let body = "";
-    req.on("data", (chunk: Buffer) => {
-      body += chunk.toString();
-    });
-    req.on("end", async () => {
-      // Malformed JSON is a Parse error (-32700); a handler that threw is an
-      // Internal error (-32603) carrying the request id and message.
-      let message: JsonRpcMessage;
-      try {
-        message = JSON.parse(body) as JsonRpcMessage;
-      } catch {
-        this.json(res, 400, {
-          jsonrpc: "2.0",
-          id: null,
-          error: { code: -32700, message: "Parse error" },
-        });
-        return;
-      }
-
-      // A notification (or a client's response) carries no id and gets no
-      // reply: JSON-RPC forbids one, and MCP answers the POST with 202.
-      if (message.id == null) {
-        res.writeHead(202);
-        res.end();
-        return;
-      }
-
-      let response: JsonRpcResponse;
-      try {
-        // The runtime MCP config URL carries the UI session id, which is how
-        // a tool knows which conversation is asking.
-        const callerSession = url.searchParams.get("session") ?? undefined;
-        response = await this.dispatch(message, callerSession);
-      } catch (error) {
-        this.json(res, 500, {
-          jsonrpc: "2.0",
-          id: message.id,
-          error: {
-            code: -32603,
-            message: `Internal error: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        });
-        return;
-      }
-
-      // A client on the SSE transport gets its answer over its stream.
-      const stream = this.streams.get(url.searchParams.get("sessionId") ?? "");
-      if (stream != null) {
-        try {
-          stream.write(`event: message\ndata: ${JSON.stringify(response)}\n\n`);
-        } catch {
-          /* closed */
-        }
-        res.writeHead(202);
-        res.end();
-        return;
-      }
-      this.json(res, 200, response);
-    });
-  }
-
-  private async dispatch(
-    request: JsonRpcMessage,
-    callerSession?: string
-  ): Promise<JsonRpcResponse> {
-    const id = request.id ?? null;
-    const params = request.params ?? {};
-    switch (request.method) {
-      case "initialize":
-        return {
-          jsonrpc: "2.0",
-          id,
-          result: {
-            protocolVersion: PROTOCOL_VERSION,
-            capabilities: {
-              tools: { listChanged: this.info.listChanged === true },
-            },
-            serverInfo: { name: this.info.name, version: this.info.version },
-          },
-        };
-      case "tools/list":
-        return {
-          jsonrpc: "2.0",
-          id,
-          result: { tools: this.listTools(callerSession) },
-        };
-      case "tools/call": {
-        const name = typeof params.name === "string" ? params.name : "";
-        const args = (params.arguments ?? {}) as Record<string, unknown>;
-        return {
-          jsonrpc: "2.0",
-          id,
-          result: await this.executeTool(name, args, callerSession),
-        };
-      }
-      case "ping":
-        return { jsonrpc: "2.0", id, result: {} };
-      default:
-        return {
-          jsonrpc: "2.0",
-          id,
-          error: {
-            code: -32601,
-            message: `Method not found: ${request.method}`,
-          },
-        };
-    }
   }
 }

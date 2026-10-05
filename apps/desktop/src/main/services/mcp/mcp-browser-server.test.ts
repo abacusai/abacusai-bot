@@ -240,6 +240,7 @@ const rpc = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
@@ -358,6 +359,7 @@ describe("the transport", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: "{ not json",
@@ -382,10 +384,23 @@ describe("the transport", () => {
   });
 
   it("handshakes and pings", async () => {
+    // The protocol version the agent's client asks for, agreed to as is.
     expect(
-      await rpc({ jsonrpc: "2.0", id: 1, method: "initialize" })
+      await rpc({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: {},
+          clientInfo: { name: "abacusai-bot", version: "1.0.0" },
+        },
+      })
     ).toMatchObject({
-      result: { serverInfo: { name: "browser" } },
+      result: {
+        protocolVersion: "2024-11-05",
+        serverInfo: { name: "browser" },
+      },
     });
     // A notification has no id and gets no response, only the 202.
     const initialized = await fetch(
@@ -394,6 +409,7 @@ describe("the transport", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -1302,64 +1318,45 @@ describe("the transport, at its edges", () => {
     expect(res.status).toBe(405);
   });
 
-  it("opens an SSE stream and hands back an endpoint to post to", async () => {
+  it("opens a stream for server notifications that only the client closes", async () => {
     const controller = new AbortController();
     const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${token}`,
+      },
       signal: controller.signal,
     });
 
+    expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
+    // Stateless: no session for the client to echo, or to DELETE.
+    expect(res.headers.get("mcp-session-id")).toBeNull();
 
+    const deleted = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(deleted.status).toBe(405);
+
+    // The stream is untouched by the DELETE: still open, nothing on it.
     const reader = res.body!.getReader();
-    const first = new TextDecoder().decode((await reader.read()).value);
-
-    expect(first).toContain("event: endpoint");
-    expect(first).toMatch(/sessionId=session-\d+/);
-
-    const sessionId = /sessionId=(session-\d+)/.exec(first)![1];
-
-    // A post naming that session is answered over the stream, and the POST
-    // itself just acknowledges.
-    const posted = await fetch(
-      `http://127.0.0.1:${port}/mcp?sessionId=${sessionId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
-      }
-    );
-
-    expect(posted.status).toBe(202);
-    expect(new TextDecoder().decode((await reader.read()).value)).toContain(
-      "event: message"
-    );
-
-    const deleted = await fetch(
-      `http://127.0.0.1:${port}/mcp?sessionId=${sessionId}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    expect(deleted.status).toBe(200);
+    const outcome = await Promise.race([
+      reader.read().then(() => "ended"),
+      new Promise((resolve) => setTimeout(() => resolve("open"), 50)),
+    ]);
+    expect(outcome).toBe("open");
     controller.abort();
   });
 
-  it("tolerates a DELETE for a session that is already gone", async () => {
-    const res = await fetch(
-      `http://127.0.0.1:${port}/mcp?sessionId=session-does-not-exist`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+  it("answers DELETE with 405: a stateless server has no session to end", async () => {
+    const res = await fetch(`http://127.0.0.1:${port}/mcp?sessionId=any`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(405);
+    expect(res.headers.get("allow")).toBe("GET, POST");
   });
 
   it("reports its port and that it is running", () => {
@@ -1385,7 +1382,7 @@ describe("the transport, at its edges", () => {
       jsonrpc: "2.0",
       id: 99,
       method: "tools/call",
-      params: null,
+      params: { name: "" },
     });
 
     expect(res).toMatchObject({ id: 99 });
@@ -1407,6 +1404,7 @@ describe("when a tool is gated", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -1871,13 +1869,19 @@ describe("housekeeping", () => {
     const controller = new AbortController();
 
     const stream = await fetch(`http://127.0.0.1:${throwawayPort}/mcp`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${token}`,
+      },
       signal: controller.signal,
     });
     const reader = stream.body!.getReader();
-    await reader.read();
 
     throwaway.stop();
+
+    // The open stream ends (or its socket drops) rather than hanging.
+    const ended = await reader.read().catch(() => ({ done: true }));
+    expect(ended.done).toBe(true);
 
     expect(throwaway.isRunning()).toBe(false);
     expect(throwaway.getPort()).toBeNull();
@@ -2082,6 +2086,7 @@ describe("summarising a call for the permission prompt", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -2113,6 +2118,7 @@ describe("summarising a call for the permission prompt", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -2257,6 +2263,7 @@ describe("with the shipped timeouts rather than the test ones", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -2290,6 +2297,7 @@ describe("with the shipped timeouts rather than the test ones", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -2363,6 +2371,7 @@ describe("arguments the model left out", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ jsonrpc: "2.0", ...body }),
@@ -2389,6 +2398,7 @@ describe("arguments the model left out", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -2460,6 +2470,7 @@ describe("the last few corners", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "ping" }),
@@ -2487,6 +2498,7 @@ describe("the last few corners", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
@@ -2914,6 +2926,7 @@ describe("which pane a browser event is for", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({

@@ -124,3 +124,95 @@ describe("start and stop", () => {
     });
   });
 });
+
+describe("a start overtaken while the SDK is still loading", () => {
+  it("gives up, and the next start works", async () => {
+    // A fresh module, so the SDK has not been loaded yet.
+    vi.resetModules();
+    const { McpHttpServer: FreshBase } = await import("./mcp-http-server");
+    class Fresh extends FreshBase {
+      constructor() {
+        super({ name: "test", version: "1.0.0" });
+      }
+      protected listTools() {
+        return [];
+      }
+      protected executeTool(): Promise<McpToolResult> {
+        return Promise.resolve({ content: [] });
+      }
+    }
+    const server = new Fresh();
+
+    const first = server.start();
+    server.stop();
+
+    await expect(first).rejects.toThrow(/stopped while starting/);
+    expect(server.isRunning()).toBe(false);
+    expect(await server.start()).toBe(server.getPort());
+    expect(server.isRunning()).toBe(true);
+    server.stop();
+  });
+});
+
+describe("DNS rebinding", () => {
+  /** A raw request, since fetch will not send a Host of the caller's choosing. */
+  const send = (
+    port: number,
+    method: string,
+    headers: Record<string, string>
+  ): Promise<number> =>
+    new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/mcp",
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json, text/event-stream",
+            Authorization: `Bearer ${localMcpServerToken("test")}`,
+            ...headers,
+          },
+        },
+        (res) => {
+          resolve(res.statusCode ?? 0);
+          res.destroy();
+        }
+      );
+      req.on("error", reject);
+      req.end(
+        method === "POST"
+          ? JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" })
+          : undefined
+      );
+    });
+
+  it.each(["POST", "GET", "DELETE"])(
+    "refuses %s with a foreign Host or Origin, before anything else",
+    async (method) => {
+      const server = build();
+      const port = await server.start();
+
+      expect(await send(port, method, { Host: "attacker.example" })).toBe(403);
+      expect(
+        await send(port, method, { Host: `attacker.example:${port}` })
+      ).toBe(403);
+      expect(
+        await send(port, method, {
+          Host: `127.0.0.1:${port}`,
+          Origin: "http://attacker.example",
+        })
+      ).toBe(403);
+    }
+  );
+
+  it("accepts the loopback authorities the agent and the tests use", async () => {
+    const server = build();
+    const port = await server.start();
+
+    // The runtime MCP config names localhost; the tests use 127.0.0.1.
+    expect(await send(port, "POST", { Host: `localhost:${port}` })).toBe(200);
+    expect(await send(port, "POST", { Host: `127.0.0.1:${port}` })).toBe(200);
+  });
+});
