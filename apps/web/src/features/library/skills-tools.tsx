@@ -31,6 +31,10 @@ import {
   DialogDescription,
 } from "#renderer/ui/dialog";
 import { Input } from "#renderer/ui/input";
+/** Device and messaging tools run only on the desktop host. */
+const VISIBLE_TOOLSETS = TOOLSETS_FOR_DISPLAY.filter(
+  (s) => IS_ELECTRON || !["device", "messaging"].includes(s.id)
+);
 /** @public Shared phase-5 integration API. */
 export const selectSkills = (
   live: readonly unknown[] | undefined,
@@ -331,62 +335,54 @@ export const ToolsPage = () => {
         onChange={(e) => setQ(e.target.value)}
       />
       <GroupCard>
-        {TOOLSETS_FOR_DISPLAY.filter(
-          (s) => IS_ELECTRON || !["device", "messaging"].includes(s.id)
-        )
-          .filter((s) =>
-            foldSearch(
-              s.id +
-                " " +
-                t(`capabilities.toolsets.${s.labelKey}.label`) +
-                " " +
-                s.tools.map((t) => t.name).join(" ")
-            ).includes(foldSearch(q))
-          )
-          .map((s) => (
-            <SettingRow
-              key={s.id}
-              id={s.id}
-              title={t(`capabilities.toolsets.${s.labelKey}.label`)}
-              detail={s.tools.map((tool) => tool.name).join(", ")}
-            >
-              <Button
-                size="sm"
-                variant="secondary"
-                nativeButton={false}
-                render={
-                  <AppLink
-                    to="/library/tools/$toolsetId"
-                    params={{ toolsetId: s.id }}
-                  />
-                }
-              >
-                {t("phase5.details")}
-              </Button>
-              {s.alwaysOn || s.status === "planned" ? (
-                <StatePill>
-                  {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}
-                </StatePill>
-              ) : (
-                <SettingSwitch
-                  id={s.id}
-                  checked={query.data?.[s.id] !== false}
-                  onCheckedChange={(enabled) => void change(s.id, enabled)}
+        {VISIBLE_TOOLSETS.filter((s) =>
+          foldSearch(
+            s.id +
+              " " +
+              t(`capabilities.toolsets.${s.labelKey}.label`) +
+              " " +
+              s.tools.map((t) => t.name).join(" ")
+          ).includes(foldSearch(q))
+        ).map((s) => (
+          <SettingRow
+            key={s.id}
+            id={s.id}
+            title={t(`capabilities.toolsets.${s.labelKey}.label`)}
+            detail={s.tools.map((tool) => tool.name).join(", ")}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              nativeButton={false}
+              render={
+                <AppLink
+                  to="/library/tools/$toolsetId"
+                  params={{ toolsetId: s.id }}
                 />
-              )}
-            </SettingRow>
-          ))}
+              }
+            >
+              {t("phase5.details")}
+            </Button>
+            {s.alwaysOn || s.status === "planned" ? (
+              <StatePill>
+                {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}
+              </StatePill>
+            ) : (
+              <SettingSwitch
+                id={s.id}
+                checked={query.data?.[s.id] !== false}
+                onCheckedChange={(enabled) => void change(s.id, enabled)}
+              />
+            )}
+          </SettingRow>
+        ))}
       </GroupCard>
     </AreaPage>
   );
 };
 export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   const { t } = useTranslation();
-  const set = TOOLSETS_FOR_DISPLAY.find(
-    (s) =>
-      s.id === toolsetName &&
-      (IS_ELECTRON || !["device", "messaging"].includes(s.id))
-  );
+  const set = VISIBLE_TOOLSETS.find((s) => s.id === toolsetName);
   return (
     <AreaPage
       title={
