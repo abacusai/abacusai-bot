@@ -356,3 +356,98 @@ and browser pending-result tests. Adoption tests cover 200, 401/403, actual 500,
 network-error and timeout fetch behavior, backoff recovery, background rejection,
 and sign-out during an in-flight lookup. Publication is version 1.0.86-dev3 with
 no temporary exchange preload; deployment evidence is recorded in REPORT5.md.
+
+## Simplification pass
+
+Rebased onto `rewrite/web-split` after its simplification pass. Conflicts kept
+both sides: the desktop entry keeps PR 2's move of the file readers into
+`app-operations/node.ts`, which now parses decks with the contract parser;
+`auth.web.*` keeps the host's `webAuth` dispatch and refuses with the new
+`unsupported()` helper; the host-only reply bound keeps `unsupported()` for
+capability refusals.
+
+The browser- and hosting-facing contracts are unchanged: connect-token format
+and `Sec-WebSocket-Protocol` carriage, Origin, owner and org checks, `/healthz`
+fields, `/files` and `/upload` with their headers and typed error bodies,
+`auth.web.start/complete`, bootstrap env names, tarball layout, `--verify`,
+exit-75 relaunch, the 1 MiB reply bound and 16 MiB kill switch,
+`ABACUS_WEB_HOST`, and the dev-endpoint suffix gates.
+
+Removed or consolidated:
+
+- `composeHost` (main) owns only the shared startup order and returns the host
+  operations. The desktop's `getDeps` detour and `wireHostEvents`'s
+  supplied-operations parameter are gone; the web host builds its own RPC deps
+  in `apps/host/src/compose.ts`, which now absorbs `host-operations.ts`.
+- Web sign-in is an optional `HostPlatformOperations.webAuth` factory given
+  `adoptAbacusCredential`, replacing the cast `webAuth: undefined` field and
+  the `Object.assign` patch. Node's cancel operations are no-ops, so sign-out
+  no longer checks the platform. Two web-adoption guards that only mattered if
+  a rejected key still returned an account were folded into one condition.
+- The host's own `unsupported()` is replaced by the `rpc/errors` helper, and
+  `payloadTooLarge()` is added beside it. `assertHostCapability` throws the same
+  `UNSUPPORTED` shape inline because the browser smoke test loads
+  `capabilities.ts` standalone. Both drop the extra "not available on the web
+  host" message; code, status and `data.procedure` are unchanged.
+  `HostUnsupportedError` stays for shim access. The redundant `render_` clause
+  is gone because the exact allow-list already refuses those names.
+- Duplicate guards were removed: browser profiles, MCP OAuth and MCP admin no
+  longer take a platform and re-check what ServiceHost checks. MCP import is
+  checked once in ServiceHost. `skills.openFile` keeps its single service guard.
+- The `HostFileOperations` trash seam (`platform/files.ts`, FileTreeService and
+  ServiceHost parameters) is gone. The host's Electron shim already routes
+  `shell.trashItem` to the host trash. The baseline-only artifact rule reads
+  `ABACUS_WEB_HOST` instead of a constructor flag.
+- The log archive and skill picker helpers moved back into the desktop entry,
+  their only caller. The host returns a cancelled import directly.
+  `app-operations/node.ts` holds only the shared file operations.
+- The web-host reply bound moved from the shared middleware into
+  `rpc/payload-size.ts` as `boundWebHostReply`, so `impl.ts` matches its base
+  apart from one dispatch.
+- The flow-controlled socket hands acks straight to its `FlowRegistry` and
+  validates frames in one proxy, replacing a fake MessagePort, `withFlowAcks`
+  and a second proxy. The backlog check is inlined into its timer.
+- `/file` (unused alias) is removed. `/files` reads Whisper models only through
+  the now-required service, so the `model-unavailable` branch is gone.
+  `createHostHttpServer`'s upload and Whisper parameters are required.
+- `HostLease` lost its never-called run tracking. Trash and shim paths use
+  `abacusBotHome()`. `--verify` no longer re-imports the native addons that
+  `runtime-packages.json` already loads. The Electron platform adapter
+  references its functions directly.
+- The renderer shows host notices through `platformSystem().notify` (that is,
+  `#platform/system`) rather than an `IS_BROWSER` dynamic import.
+- Tests: the mock-socket backlog unit test (covered by the real stalled-socket
+  1013 test) and the retired `ABACUSAI_BOT_HOST_MODE` setup lines were removed.
+  The `/file` alias assertion was also removed. Every refusal, token-fixture,
+  flow-control, frame-grammar, `/files`, `/upload`, preflight, adoption,
+  disposal, migration, shim-drift, bundle-verifier and dev-suffix test remains.
+
+Fixed while trimming: the development proxy minted fractional expiries, which
+the host's integer-expiry check rejects. It now floors them.
+
+Left alone: the per-service `platform` injections that select web-host
+behaviour at runtime (connectors, messaging, MCP lifecycle, skills). They are
+the platform-injection seam the capability table depends on, and desktop tests
+pin their Electron paths. The three sync services' web-host env gates were also
+left alone; a shared helper would save only a few lines. `HostPlatformOperations`
+`any` types, the bundle scripts and the dev proxy were otherwise left alone,
+apart from the expiry fix.
+
+`git diff --stat rewrite/web-split..HEAD`:
+
+| | Files | Insertions | Deletions |
+| --- | --- | --- | --- |
+| Before (rebased PR 2) | 98 | 6,077 | 533 |
+| After, code and tests (before this notes section) | 93 | 5,782 | 421 |
+| After, including this section | 93 | 5,877 | 421 |
+| `apps/host` before / after | 37 / 36 | 3,749 / 3,733 | 0 / 0 |
+| `apps/desktop` before / after | 45 / 41 | 1,708 / 1,429 | 524 / 412 |
+
+Validation: `pnpm --filter @abacus-ai/host test` (11 files / 99 tests), the
+desktop main vitest projects, `pnpm smoke:rpc`, `pnpm --filter @abacus-ai/host
+bundle` (the verifier runs inside it) and a separate run of
+`verify-host-bundle.mjs` on the x64 tarball (about 69 MiB): health, auth
+refusals, PTY, native search, agent ready and natural disposal exit. Under
+`env -u NO_COLOR xvfb-run -a pnpm check`, 32 of 33 tasks pass. The one failure
+is `notch.electron.test.ts`, which fails on this machine because libgtk-3 is
+not installed. It is unrelated to this pass.
