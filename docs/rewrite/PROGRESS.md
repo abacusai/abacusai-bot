@@ -23,6 +23,7 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | 7 | cut-over | r3 (final; D1–D9 followed as written, §19 open questions pending user) | C1–C14 merged 75516d5f (legacy renderer deleted, AG-UI unconditional, version 1.0.86); perf pass 7fa1816e (M1/M2/M4/M5/M6 pass vs shipped v1.0.85 on a user-login home; M3 RSS 810 MB vs ≤761 MB fails, notch companion 146 MB); r1 fixes fb8899d5 (11/11) | Codex r1 fixed; Codex r2 verification running; tree green (4,330 unit + 302 serial) | implemented; release gate not green (M3, signed RC, Windows/Linux, hardware, §19 decisions) |
 
 | 8 PR 1 | web and contract workspace split | spec 08 r2; r1 responses | rewrite/web-split | acceptance in [implementation notes](specs/reviews/08-web-split.impl-notes-pr1.md) | implemented; macOS Electron acceptance pending |
+| 8 PR 2 | authenticated Node host and Linux runtime bundle | spec 08 r2 §6; same-origin amendment | rewrite/headless-host | acceptance in [implementation notes](specs/reviews/08-web-split.impl-notes-pr2.md) | implemented; staging handoff and arm64/macOS acceptance pending |
 
 ## Cutover release N implementation, 1 October 2026
 

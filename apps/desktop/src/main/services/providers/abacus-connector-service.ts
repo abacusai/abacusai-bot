@@ -12,6 +12,7 @@ import type {
 import { shell } from "electron";
 
 import { bringToFront } from "../../bring-to-front";
+import type { HostPlatform } from "../../platform/capabilities";
 import { credentialFor } from "../config/settings";
 import { openConnectWindow, type ConnectWindow } from "./abacus-connect-window";
 import { abacusAppHost, abacusUserAgent } from "./abacus-host";
@@ -302,7 +303,8 @@ const HINT_RE = /^[^\s@/?#&]{1,64}@[^\s@/?#&]{1,255}$/;
 
 export const startConnectorConnect = (
   service: string,
-  options: ConnectorConnectOptions = {}
+  options: ConnectorConnectOptions = {},
+  platform: HostPlatform = "electron"
 ): Promise<AbacusConnectorOutcome> => {
   const serviceKey = service.toLowerCase();
   // The same service again supersedes: one loopback per connector.
@@ -314,6 +316,14 @@ export const startConnectorConnect = (
   }
   if (abacusApiKey().length === 0) {
     return Promise.resolve({ ok: false, error: "not-signed-in" });
+  }
+
+  if (platform === "web-host") {
+    const url = new URL(CONNECT_PATH, abacusAppHost());
+    url.searchParams.set("service", serviceKey);
+    if (options.hint && HINT_RE.test(options.hint))
+      url.searchParams.set("hint", options.hint);
+    return Promise.resolve({ ok: true, url: url.toString() });
   }
 
   const callbackPath = crypto.randomBytes(16).toString("hex");

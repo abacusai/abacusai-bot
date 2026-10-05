@@ -4,7 +4,7 @@ import type { RpcDeps } from "./deps";
 
 export type RpcTransportKind = "message-port" | "websocket" | "memory";
 
-export type RpcWindowKind = "main" | "notch" | "dev";
+export type RpcWindowKind = "main" | "notch" | "dev" | "web";
 
 /**
  * Per connection, fixed when the port or socket is upgraded. `webContentsId`

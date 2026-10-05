@@ -15,6 +15,7 @@ import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";
 import { forbidden, unsupported } from "../errors";
 import type { BusChannel, BusChannels } from "../event-bus";
+import { boundWebHostReply } from "../payload-size";
 import { SubscriberQueue } from "../subscriber-queue";
 
 export const impl: ImplementerInternalWithMiddlewares<
@@ -23,11 +24,13 @@ export const impl: ImplementerInternalWithMiddlewares<
   RpcContext
 > = implement(contract)
   .$context<RpcContext>()
-  .use(({ context, path, next }, input) => {
+  .use(async ({ context, path, next }, input) => {
     const procedure = path.join(".");
     if (!supportsProcedure(context.platform ?? "electron", procedure, input))
       throw unsupported(procedure);
-    return next({ context: {} });
+    return context.platform === "web-host"
+      ? boundWebHostReply(procedure, input, () => next({ context: {} }))
+      : next({ context: {} });
   });
 
 /** The caller's webContents id; `FORBIDDEN` over a transport with no window. */

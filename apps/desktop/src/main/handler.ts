@@ -2,6 +2,7 @@ import {
   readCustomInstructions,
   writeCustomInstructions,
 } from "@abacus-ai/agent/custom-instructions";
+import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
 import type {
   IpcEvent,
   AbacusAccountInfo,
@@ -15,9 +16,7 @@ import {
   abacusConnectorsMcpEntry,
 } from "@abacus-ai/contract/contracts";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
-import { app } from "electron";
 
-import { registerLoginItem } from "./login-item";
 import { sessionDefaultWorkspace } from "./paths";
 import {
   activateProfile,
@@ -36,22 +35,11 @@ import {
   setDefaultModel,
   storedKeyProviders,
 } from "./services/config/settings";
-import { LocalModelService } from "./services/local-models/local-model-service";
 import {
   abacusCredentialRejected,
   clearAbacusCache,
   fetchAbacusAccount,
 } from "./services/providers/abacus";
-import {
-  cancelAbacusAuth,
-  openAbacusAuthInBrowser,
-  startAbacusAuth,
-} from "./services/providers/abacus-auth-service";
-import { listBrowserSignInProfiles } from "./services/providers/abacus-browser-profiles";
-import {
-  cancelAllConnectorConnects,
-  cancelConnectorConnect,
-} from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
   fetchReferralSummary,
@@ -59,29 +47,54 @@ import {
   sendReferralEmailInvites,
   sendReferralWhatsappInvites,
 } from "./services/providers/abacus-referral-service";
-import { shouldAutoSignIn } from "./services/providers/abacus-signin-config";
-import { signOut as clearLocalAccount } from "./services/providers/account-service";
+import {
+  adoptWebAccount,
+  signOut as clearLocalAccount,
+  skipOnboarding,
+} from "./services/providers/account-service";
 import { listAvailableModels } from "./services/providers/models";
 import { clearOpenRouterCache } from "./services/providers/openrouter";
-import {
-  cancelOpenRouterAuth,
-  startOpenRouterAuth,
-} from "./services/providers/openrouter-auth-service";
-import {
-  clearSignInSession,
-  rememberSessionAccount,
-} from "./services/providers/sign-in-session";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
-import { requestMicrophoneAccess } from "./services/voice/microphone";
 
-/** The local model runtime, alive from the handlers' registration to quit. */
-let localModels: LocalModelService | null = null;
+type AdoptCredentialResult =
+  | { ok: true; accountDetailsPending?: boolean }
+  | { ok: false; error: "unidentified-account" };
 
-export const disposeLocalModels = (): void => {
-  localModels?.dispose();
-  localModels = null;
-};
+/** The browser sign-in a web host offers; desktop hosts sign in natively. */
+export interface WebAuth {
+  start: () => Promise<{ challenge: string }>;
+  complete: (input: { code: string }) => Promise<WebAuthCompleteResult>;
+}
+
+export interface HostPlatformOperations {
+  webAuth?: (
+    adopt: (key: string, surface: "web") => Promise<AdoptCredentialResult>
+  ) => WebAuth;
+  startAbacusAuth: (
+    intent: "signin" | "signup",
+    profile?: string
+  ) => Promise<any>;
+  startOpenRouterAuth: () => Promise<any>;
+  cancelAbacusAuth: () => void;
+  openAbacusAuthInBrowser: () => void;
+  listBrowserSignInProfiles: () => any;
+  shouldAutoSignIn: () => Promise<boolean>;
+  cancelOpenRouterAuth: () => void;
+  cancelConnectorConnect: () => void;
+  cancelAllConnectorConnects: () => void;
+  clearSignInSession: () => Promise<void>;
+  rememberSessionAccount: (email: string) => void;
+  registerLoginItem: () => void;
+  relaunch: () => void;
+  requestMicrophoneAccess: () => Promise<any>;
+  localModels: {
+    state: () => any;
+    install: (modelId: string) => Promise<LocalModelInstallOutcome>;
+    cancelInstall: () => void;
+    remove: (modelId: string) => void;
+  };
+}
 
 /**
  * What the legacy IPC handlers do beyond forwarding to ServiceHost, as named
@@ -92,8 +105,24 @@ export const disposeLocalModels = (): void => {
  */
 export const createHostOperations = (
   serviceHost: ServiceHost,
-  dispatchEvent: (event: IpcEvent) => void
+  dispatchEvent: (event: IpcEvent) => void,
+  platform: HostPlatformOperations
 ) => {
+  const {
+    startAbacusAuth,
+    startOpenRouterAuth,
+    cancelAbacusAuth,
+    openAbacusAuthInBrowser,
+    listBrowserSignInProfiles,
+    shouldAutoSignIn,
+    cancelOpenRouterAuth,
+    cancelConnectorConnect,
+    cancelAllConnectorConnects,
+    clearSignInSession,
+    rememberSessionAccount,
+    registerLoginItem,
+    requestMicrophoneAccess,
+  } = platform;
   /** The connector gateway MCP entry exists exactly while an Abacus key does. */
   const syncAbacusGateway = (key?: string): void => {
     if (key != null && key.trim().length > 0) {
@@ -139,6 +168,44 @@ export const createHostOperations = (
     });
   };
 
+  let adoptionRevision = 0;
+  let identificationTimer: ReturnType<typeof setTimeout> | undefined;
+  const cancelIdentification = () => {
+    adoptionRevision += 1;
+    clearTimeout(identificationTimer);
+    identificationTimer = undefined;
+  };
+  const storedAbacusKey = () =>
+    readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
+
+  // A web host has one owner and does not choose Electron profile directories.
+  // Retry its optional account details without holding the sign-in RPC open.
+  const scheduleIdentification = (
+    key: string,
+    revision: number,
+    delay = 1200
+  ) => {
+    const current = () =>
+      revision === adoptionRevision && storedAbacusKey() === key;
+    identificationTimer = setTimeout(async () => {
+      if (!current()) return;
+      const account = await fetchAbacusAccount(true);
+      if (!current()) return;
+      if (abacusCredentialRejected()) {
+        await clearAbacusCredential(account);
+      } else if (account != null) {
+        adoptWebAccount(account);
+        credentialsChanged("abacus", key);
+        serviceHost.restoreSessionsForAccount(
+          accountStashKey(account.email, key)
+        );
+      } else {
+        scheduleIdentification(key, revision, Math.min(delay * 2, 60_000));
+      }
+    }, delay);
+    identificationTimer.unref?.();
+  };
+
   /** Resolve a newly stored key past the short propagation delay after signup. */
   const identifyAbacusAccount = async (): Promise<AbacusAccountInfo | null> => {
     let account = await fetchAbacusAccount(true);
@@ -156,17 +223,41 @@ export const createHostOperations = (
   const adoptAbacusCredential = async (
     rawKey: string,
     /** Where the key was minted; the app's own window keeps that account's session. */
-    surface?: "in_app" | "browser"
-  ): Promise<{ ok: true } | { ok: false; error: "unidentified-account" }> => {
+    surface?: "in_app" | "browser" | "web"
+  ): Promise<AdoptCredentialResult> => {
+    cancelIdentification();
+    const revision = adoptionRevision;
     const key = rawKey.trim();
     const previousKey =
       readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
     saveApiKey("abacus", key);
     // Clear the old account cache so validation cannot inherit the previous
-    // user; nothing is announced until the key has an identity and a profile.
+    // user. Electron still requires an identity to select an isolated profile.
     clearAbacusCache();
 
-    const account = await identifyAbacusAccount();
+    const account =
+      surface === "web"
+        ? await fetchAbacusAccount(true)
+        : await identifyAbacusAccount();
+    if (revision !== adoptionRevision)
+      return { ok: false, error: "unidentified-account" };
+    // A rejected key falls through to restore the previous one.
+    if (surface === "web" && (account != null || !abacusCredentialRejected())) {
+      if (account == null) {
+        clearLocalAccount();
+        skipOnboarding();
+        credentialsChanged("abacus", key);
+        scheduleIdentification(key, revision);
+        return { ok: true, accountDetailsPending: true };
+      }
+      // Web identity is optional; no desktop profile directory is selected.
+      adoptWebAccount(account);
+      credentialsChanged("abacus", key);
+      serviceHost.restoreSessionsForAccount(
+        accountStashKey(account.email, key)
+      );
+      return { ok: true, accountDetailsPending: false };
+    }
     const profileKey = account != null ? profileKeyFor(account) : null;
     if (account == null || profileKey == null) {
       // A failed switch must not sign the previous account out.
@@ -193,8 +284,7 @@ export const createHostOperations = (
       clearLocalAccount();
       credentialsChanged("abacus", "");
       setTimeout(() => {
-        app.relaunch();
-        app.quit();
+        platform.relaunch();
       }, 300);
       return { ok: true };
     }
@@ -217,6 +307,7 @@ export const createHostOperations = (
     stashedSessions: number;
     settings: ReturnType<typeof readSettings>;
   }> => {
+    cancelIdentification();
     const departingKey =
       readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus]?.trim() ?? "";
     const account =
@@ -272,7 +363,10 @@ export const createHostOperations = (
       if (key.trim().length === 0)
         return (await clearAbacusCredential()).settings;
 
-      const result = await adoptAbacusCredential(key);
+      const result = await adoptAbacusCredential(
+        key,
+        serviceHost.platform === "web-host" ? "web" : undefined
+      );
       if (result.ok === false) throw new Error(result.error);
       return readSettings();
     }
@@ -363,6 +457,7 @@ export const createHostOperations = (
   };
 
   return {
+    webAuth: platform.webAuth?.(adoptAbacusCredential),
     credentialsChanged,
     syncAbacusGateway,
     getAbacusAccount,
@@ -401,34 +496,23 @@ export const createHostOperations = (
         serviceHost.sendMessagingText("whatsapp", chatId, text)
       ),
     requestMicrophoneAccess: () => requestMicrophoneAccess(),
-    localModels: {
-      state: () => localModels?.state(),
-      install: (modelId: string): Promise<LocalModelInstallOutcome> =>
-        localModels == null
-          ? Promise.resolve({
-              ok: false,
-              error: "local models are not available",
-            })
-          : localModels.install(modelId),
-      cancelInstall: (): void => {
-        localModels?.cancelInstall();
-      },
-      remove: (modelId: string): void => {
-        localModels?.remove(modelId);
-      },
-    },
+    adoptAbacusCredential,
+    localModels: platform.localModels,
   };
 };
 
 export type HostOperations = ReturnType<typeof createHostOperations>;
 
-export const wireHostEvents = (serviceHost: ServiceHost): HostOperations => {
+export const wireHostEvents = (
+  serviceHost: ServiceHost,
+  platform: HostPlatformOperations
+): HostOperations => {
   // One function feeds both the legacy renderer and the oRPC event bus.
   serviceHost.setEventDispatcher(emitHostEvent);
   // Bus-only pushes (no legacy event), such as a retired terminal generation.
   serviceHost.setBusDispatcher(emitBusChannel);
 
-  const ops = createHostOperations(serviceHost, emitHostEvent);
+  const ops = createHostOperations(serviceHost, emitHostEvent, platform);
 
   // The connector flow stores agent credentials through the same path a
   // pasted key takes, so the announcement above happens for those too.

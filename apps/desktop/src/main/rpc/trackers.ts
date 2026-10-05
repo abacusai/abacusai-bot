@@ -14,7 +14,9 @@ import type { MainEventBus } from "./event-bus";
 /** Device streams whose group of pictures is kept; one streams at a time. */
 const MAX_TRACKED_DEVICE_STREAMS = 4;
 
-export const createEventTrackers = (bus: MainEventBus): EventTrackers => {
+export const createEventTrackers = (
+  bus: MainEventBus
+): EventTrackers & { dispose(): void } => {
   let deviceBuild: { phase: DeviceBuildPhase; error?: string } | null = null;
   const groups = new Map<
     number,
@@ -23,7 +25,7 @@ export const createEventTrackers = (bus: MainEventBus): EventTrackers => {
 
   // From capture start, before any subscriber: scrcpy drains video before
   // `start` even returns the stream id a subscriber needs.
-  bus.listenChannel("device-chunk", (chunk) => {
+  const stopChunks = bus.listenChannel("device-chunk", (chunk) => {
     let group = groups.get(chunk.streamId);
     if (chunk.isKey) {
       groups.delete(chunk.streamId);
@@ -42,7 +44,7 @@ export const createEventTrackers = (bus: MainEventBus): EventTrackers => {
     if (group.bytes > DEVICE_CHUNK_MAX_BYTES) groups.delete(chunk.streamId);
   });
 
-  bus.listen(
+  const stopBuild = bus.listen(
     (event) => event.type === "device-build-state",
     (event) => {
       if (event.type !== "device-build-state") return;
@@ -54,6 +56,11 @@ export const createEventTrackers = (bus: MainEventBus): EventTrackers => {
   );
 
   return {
+    dispose: () => {
+      stopChunks();
+      stopBuild();
+      groups.clear();
+    },
     deviceBuild: () => deviceBuild,
     deviceStreamReplay: (streamId) => [...(groups.get(streamId)?.chunks ?? [])],
   };

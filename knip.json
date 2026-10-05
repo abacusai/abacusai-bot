@@ -79,6 +79,21 @@
       ],
       "project": ["src/**/*.ts"],
       "ignoreExportsUsedInFile": true
+    },
+    "apps/host": {
+      "entry": ["src/index.ts", "src/**/*.test.ts", "scripts/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/*.mjs", "*.config.ts"],
+      "ignoreExportsUsedInFile": true,
+      "ignoreDependencies": [
+        "@abacus-ai/agent",
+        "@abacus-ai/connectors",
+        "@abacus-ai/updater",
+        "extract-zip",
+        "pptxgenjs",
+        "qrcode",
+        "tuf-js",
+        "@abacus-ai/config"
+      ]
     }
   },
   "tags": ["-public"]

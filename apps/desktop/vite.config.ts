@@ -156,6 +156,7 @@ export default defineConfig(({ command, mode }) => {
             },
             options: {
               define: {
+                "import.meta.env.ABACUS_WEB_HOST": "false",
                 "import.meta.env.ABACUS_DEV_HARNESS": JSON.stringify(!release),
               },
               build: {

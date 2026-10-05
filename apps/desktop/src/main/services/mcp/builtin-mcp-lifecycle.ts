@@ -11,6 +11,7 @@ import type {
   McpMode,
 } from "@abacus-ai/contract/contracts";
 
+import type { HostPlatform } from "../../platform/capabilities";
 import type { ChromeBrowserService } from "../browser/chrome/chrome-browser-service";
 import type { BuiltinPermissionScope } from "./builtin-tool-permissions";
 import type { McpAgentToolsServer } from "./mcp-agent-tools-server";
@@ -24,6 +25,7 @@ import {
 import type { McpDeviceServer } from "./mcp-device-server";
 
 type BuiltinMcpLifecycleDeps = {
+  platform?: () => HostPlatform;
   mcpConfigService: McpConfigService;
   browserServer: McpBrowserServer;
   chromeBrowser: ChromeBrowserService;
@@ -44,7 +46,7 @@ export class BuiltinMcpLifecycle {
   }
 
   isBrowserEnabled(): boolean {
-    return this.browserEnabled;
+    return this.deps.platform?.() !== "web-host" && this.browserEnabled;
   }
 
   getBrowserStatus(): McpBrowserStatus {
@@ -52,7 +54,7 @@ export class BuiltinMcpLifecycle {
     return {
       running: this.deps.browserServer.isRunning(),
       port: this.deps.browserServer.getPort(),
-      enabled: this.browserEnabled,
+      enabled: this.isBrowserEnabled(),
       approval: state.builtinBrowserApproval ?? "always",
       engine: state.browserEngine ?? "builtin",
       chrome: this.deps.chromeBrowser.status(),
@@ -147,7 +149,7 @@ export class BuiltinMcpLifecycle {
         ? `${url}?session=${encodeURIComponent(sessionId)}`
         : url;
     const builtins: Record<string, { url: string }> = {};
-    if (mode === "code" && this.browserEnabled) {
+    if (mode === "code" && this.isBrowserEnabled()) {
       await this.startBrowserServer();
       const port = this.deps.browserServer.getPort();
       if (port != null) {
@@ -158,6 +160,7 @@ export class BuiltinMcpLifecycle {
     }
     if (
       mode === "code" &&
+      this.deps.platform?.() !== "web-host" &&
       !this.deps.mcpConfigService.isBuiltinDevicesDisabled() &&
       this.deps.deviceServer.isToolchainAvailable()
     ) {
@@ -200,7 +203,7 @@ export class BuiltinMcpLifecycle {
   }
 
   async startBrowserServer(): Promise<void> {
-    if (!this.browserEnabled || this.deps.browserServer.isRunning()) return;
+    if (!this.isBrowserEnabled() || this.deps.browserServer.isRunning()) return;
     try {
       await this.deps.browserServer.start();
     } catch (err) {

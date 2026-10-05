@@ -21,6 +21,10 @@ import { decideLocalOpen } from "#main/local-open-guard";
 import { WORKSPACE_DIR_NAME } from "#main/paths";
 import { resourcePath } from "#main/resources";
 
+import {
+  assertHostCapability,
+  type HostPlatform,
+} from "../../platform/capabilities";
 import { DESKTOP_DIR } from "../mcp/mcp-config-service";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 
@@ -386,6 +390,9 @@ function safeRealpath(p: string): string {
 }
 
 export class SkillsService {
+  constructor(
+    private readonly platform: () => HostPlatform = () => "electron"
+  ) {}
   /** Memoizes the layout setup so list/install skip the migration syscalls. */
   private layoutEnsured = false;
 
@@ -818,6 +825,7 @@ export class SkillsService {
   }
 
   async openFile(request: OpenSkillFileRequest): Promise<SkillMutationResult> {
+    assertHostCapability(this.platform(), "skills.openFile");
     try {
       // Same roots remove() enforces; opening gets the same boundary as deleting.
       const ws = request.workspacePath;

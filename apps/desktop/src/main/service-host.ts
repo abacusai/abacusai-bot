@@ -195,6 +195,10 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
+import {
+  assertHostCapability,
+  type HostPlatform,
+} from "./platform/capabilities";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -475,6 +479,7 @@ const SELF_LANE_BOTS: Record<
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 export class ServiceHost {
+  constructor(readonly platform: HostPlatform = "electron") {}
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
@@ -609,7 +614,7 @@ export class ServiceHost {
         isConnected: p.state === "connected",
       })),
   });
-  readonly skillsService = new SkillsService();
+  readonly skillsService = new SkillsService(() => this.platform);
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
@@ -646,6 +651,7 @@ export class ServiceHost {
 
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
+    if (this.platform === "web-host") return null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
     // and the first browser call opens the allow page if it is not connected.
     if (this.builtinMcpLifecycle.getBrowserEngine() === "chrome")
@@ -824,6 +830,7 @@ export class ServiceHost {
       }),
   });
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
+    platform: () => this.platform,
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
     chromeBrowser: this.chromeBrowser,
@@ -904,7 +911,8 @@ export class ServiceHost {
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
-      connect: startConnectorConnect,
+      connect: (service, options) =>
+        startConnectorConnect(service, options, this.platform),
       disconnect: disconnectAbacusConnector,
       // The MCP file is user-editable, so the url and headers under the
       // app's own name are rewritten rather than assumed.
@@ -1012,6 +1020,7 @@ export class ServiceHost {
   async mcpOAuthSignIn(
     request: McpOAuthSignInRequest
   ): Promise<{ success: boolean; error?: string; cancelled?: boolean }> {
+    assertHostCapability(this.platform, "mcp.oauthSignIn");
     const server = this.listMcpServers({ mode: request.mode }).find(
       (entry) => entry.id === request.name
     );
@@ -1187,6 +1196,7 @@ export class ServiceHost {
     new AgentSessionManagerService();
   /** Given callbacks, not this host, so it cannot reach further than needed. */
   private readonly messagingGatewayService = new MessagingGatewayService({
+    platform: () => this.platform,
     resolveWorkspaceId: () => {
       const workspaces = this.workspaceService.getWorkspaces();
       const configured = readGatewaySettings().workspaceId;
@@ -1608,26 +1618,8 @@ export class ServiceHost {
     },
     // Work that needs Electron, exposed to the agent as named services rather
     // than a whole MCP server. See packages/agent/src/host-services.ts.
-    runHostService: async (service, payload) => {
-      switch (service) {
-        case "render_document":
-          return await renderDocument(payload as RenderDocumentRequest);
-        case "document_templates":
-          return await documentTemplates();
-        case "design_catalog":
-          return await designCatalog();
-        case "render_design":
-          return await renderDesign(payload as RenderDesignRequest);
-        case "deck_templates":
-          return await deckTemplates();
-        case "deck_slots":
-          return await deckSlots(payload as DeckSlotsRequest);
-        case "render_deck":
-          return await renderDeck(payload as RenderDeckRequest);
-        default:
-          throw new Error(`Unknown host service: ${String(service)}`);
-      }
-    },
+    runHostService: (service, payload) =>
+      this.runAgentHostService(service, payload),
   });
   private readonly agentCommunicationService = new AgentCommunicationService(
     (workspaceId, sessionId, command) => {
@@ -1745,6 +1737,32 @@ export class ServiceHost {
     emitEvent: (event) => this.emitEvent(event),
   });
 
+  async runAgentHostService(
+    service: string,
+    payload: unknown
+  ): Promise<unknown> {
+    if (service.startsWith("render_"))
+      assertHostCapability(this.platform, service);
+    switch (service) {
+      case "render_document":
+        return await renderDocument(payload as RenderDocumentRequest);
+      case "document_templates":
+        return await documentTemplates();
+      case "design_catalog":
+        return await designCatalog();
+      case "render_design":
+        return await renderDesign(payload as RenderDesignRequest);
+      case "deck_templates":
+        return await deckTemplates();
+      case "deck_slots":
+        return await deckSlots(payload as DeckSlotsRequest);
+      case "render_deck":
+        return await renderDeck(payload as RenderDeckRequest);
+      default:
+        throw new Error(`Unknown host service: ${String(service)}`);
+    }
+  }
+
   initialize(): void {
     if (this.initializedAt != null) {
       return;
@@ -1781,7 +1799,8 @@ export class ServiceHost {
     this.diagnosticsSyncService.start();
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
     this.workspaceRuntimeService.scheduleRefresh(0);
-    void this.builtinMcpLifecycle.startBrowserServer();
+    if (this.platform === "electron")
+      void this.builtinMcpLifecycle.startBrowserServer();
     // Failures are per-connector and reported through the pane.
     void this.messagingGatewayService
       .syncConnectors()
@@ -1798,6 +1817,9 @@ export class ServiceHost {
   stop(): void {
     this.startedAt = null;
     this.workspaceRuntimeService.stop();
+    this.logSyncService.stop();
+    this.diagnosticsSyncService.stop();
+    this.debugSyncService.stop();
   }
 
   hasDevicesBootedByUs(): boolean {
@@ -1814,6 +1836,7 @@ export class ServiceHost {
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
     this.mcpDeviceServer.stop();
+    this.mcpAgentToolsServer.stop();
     this.deviceMirrorService.dispose();
     this.initializedAt = null;
     this.workspaceService.dispose();
@@ -1824,9 +1847,9 @@ export class ServiceHost {
     this.sessionArtifactsService.dispose();
     const agentsStopped = this.agentManagerService.dispose();
     this.fileSearchService.dispose();
-    void this.messagingGatewayService.dispose();
+    const messagingStopped = this.messagingGatewayService.dispose();
     this.workspaceRuntimeService.reset();
-    return agentsStopped;
+    return Promise.all([agentsStopped, messagingStopped]).then(() => {});
   }
 
   setEventDispatcher(dispatcher: EventDispatcher): void {
@@ -2339,7 +2362,7 @@ export class ServiceHost {
   openSharedChannelLink(
     platformId: MessagingPlatformId,
     target?: "install" | "dm"
-  ): Promise<void> {
+  ): Promise<void | string> {
     return this.messagingGatewayService.openSharedChannelLink(
       platformId,
       target
@@ -3038,6 +3061,12 @@ export class ServiceHost {
     return this.gitService.listBranches(workspacePath);
   }
 
+  hostUploadFolder(workspaceId: string, sessionId: string): string | null {
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (!session || session.workspaceId !== workspaceId) return null;
+    return this.resolveWorkspaceContextPath({ workspaceId, sessionId });
+  }
+
   private localWorkspacePath(workspaceId: string): string | null {
     const workspace = this.workspaceService
       .getWorkspaces()
@@ -3290,9 +3319,10 @@ export class ServiceHost {
     return this.mcpAdminService.setMcpServerDisabled(request);
   }
 
-  importMcpServers(
+  async importMcpServers(
     request: ImportMcpServersRequest
   ): Promise<ImportMcpServersResult> {
+    assertHostCapability(this.platform, "mcp.import", request);
     return this.mcpAdminService.importMcpServers(request);
   }
 
@@ -3333,6 +3363,7 @@ export class ServiceHost {
   }
 
   getDeviceStatus(): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const toolchain = this.deviceService.getToolchain();
     return {
       available: toolchain.ios || toolchain.android,
@@ -3347,6 +3378,7 @@ export class ServiceHost {
   }
 
   async listLocalDevices(): Promise<LocalDeviceInfo[]> {
+    assertHostCapability(this.platform, "devices");
     try {
       return await this.deviceService.listDevices();
     } catch (err) {
@@ -3358,6 +3390,7 @@ export class ServiceHost {
   async captureDeviceScreenshot(
     request: CaptureDeviceScreenshotRequest
   ): Promise<CaptureDeviceScreenshotResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const buffer = await this.deviceService.screenshotBuffer(
         request.platform,
@@ -3372,6 +3405,7 @@ export class ServiceHost {
   async bootLocalDevice(
     request: BootLocalDeviceRequest
   ): Promise<BootLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const device = await this.deviceService.boot(
         request.platform,
@@ -3391,6 +3425,7 @@ export class ServiceHost {
 
   /** The user may have just installed Xcode or Android Studio. */
   refreshDeviceStatus(): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     this.deviceService.refreshToolchain();
     const status = this.getDeviceStatus();
     this.emitEvent({
@@ -3404,6 +3439,7 @@ export class ServiceHost {
   async createLocalDevice(
     request: CreateLocalDeviceRequest
   ): Promise<CreateLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const device = await this.deviceService.createDevice(request.platform);
       return { success: true, device };
@@ -3468,6 +3504,7 @@ export class ServiceHost {
   }
 
   setDevicesEnabled(enabled: boolean): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const state = this.mcpConfigService.readState();
     state.builtinDevicesDisabled = !enabled;
     this.mcpConfigService.writeState(state);
@@ -3486,6 +3523,7 @@ export class ServiceHost {
   }
 
   setDevicesApproval(approval: BrowserApproval): DeviceStatus {
+    assertHostCapability(this.platform, "devices");
     const state = this.mcpConfigService.readState();
     state.builtinDevicesApproval = approval;
     this.mcpConfigService.writeState(state);
@@ -3501,6 +3539,7 @@ export class ServiceHost {
   }
 
   getDeviceProjectInfo(): DeviceProjectInfo {
+    assertHostCapability(this.platform, "devices");
     const workspace = this.workspaceService.getActiveWorkspace();
     if (workspace?.path == null || workspace.isRemote === true) {
       return { ios: false, android: false, framework: null };
@@ -3516,6 +3555,7 @@ export class ServiceHost {
   async interactLocalDevice(
     request: InteractLocalDeviceRequest
   ): Promise<InteractLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     try {
       const message = await this.deviceService.interact(request.platform, {
         action: request.action,
@@ -3539,6 +3579,7 @@ export class ServiceHost {
   buildAndRunLocalDevice(
     request: BuildAndRunLocalDeviceRequest
   ): Promise<BuildAndRunLocalDeviceResult> {
+    assertHostCapability(this.platform, "devices");
     return this.deviceMirrorService.buildAndRunLocalDevice(request);
   }
 
@@ -3547,10 +3588,12 @@ export class ServiceHost {
     sender: Electron.WebContents,
     opts?: { keepStreamId?: number | null; isRestart?: boolean }
   ): Promise<StartDeviceStreamResult> {
+    assertHostCapability(this.platform, "devices");
     return this.deviceMirrorService.startDeviceStream(request, sender, opts);
   }
 
   stopDeviceStream(streamId?: number): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.stopDeviceStream(streamId);
   }
 
@@ -3561,22 +3604,27 @@ export class ServiceHost {
   }
 
   openScreenRecordingSettings(): Promise<void> {
+    assertHostCapability(this.platform, "system.openPrivacyPane");
     return openScreenRecordingSettings();
   }
 
   openAccessibilitySettings(): Promise<void> {
+    assertHostCapability(this.platform, "system.openPrivacyPane");
     return openAccessibilitySettings();
   }
 
   streamDeviceTouch(request: StreamDeviceTouchRequest): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.streamDeviceTouch(request);
   }
 
   streamDeviceKey(request: StreamDeviceKeyRequest): void {
+    assertHostCapability(this.platform, "devices");
     this.deviceMirrorService.streamDeviceKey(request);
   }
 
   async installMaestro(): Promise<InstallMaestroResult> {
+    assertHostCapability(this.platform, "devices");
     const result = await this.deviceService.installMaestro();
     const status = this.getDeviceStatus();
     this.emitEvent({
@@ -3618,6 +3666,7 @@ export class ServiceHost {
   async clearBrowserData(
     _request?: ClearBrowserDataRequest
   ): Promise<ClearBrowserDataResult> {
+    assertHostCapability(this.platform, "browser.clearData");
     try {
       const { session } = await import("electron");
       // Profile-import partitions belong to the browser-profiles flow.
@@ -4406,24 +4455,28 @@ export class ServiceHost {
   }
 
   listBrowserProfiles(): ReturnType<BrowserProfilesService["listProfiles"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.listProfiles();
   }
 
   refreshBrowserProfiles(): ReturnType<
     BrowserProfilesService["refreshProfiles"]
   > {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.refreshProfiles();
   }
 
   importBrowserProfile(
     profileId: string
   ): ReturnType<BrowserProfilesService["importProfile"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.importProfile(profileId);
   }
 
   clearImportedBrowserProfile(
     profileId: string
   ): ReturnType<BrowserProfilesService["clearImportedProfile"]> {
+    assertHostCapability(this.platform, "browser.profiles");
     return this.browserProfilesService.clearImportedProfile(profileId);
   }
 }

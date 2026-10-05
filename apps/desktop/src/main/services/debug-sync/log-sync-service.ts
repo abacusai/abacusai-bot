@@ -64,6 +64,11 @@ export class LogSyncService {
   }
 
   private enabled(): boolean {
+    if (
+      import.meta.env.ABACUS_WEB_HOST === true &&
+      !process.env.ABACUSAI_BOT_LOG_SYNC_URL
+    )
+      return false;
     if (this.disabledForRun != null) return false;
     const settings = readSettings();
     const toggle = settings.serverDebugSync ?? true; // default on
@@ -83,7 +88,11 @@ export class LogSyncService {
 
   private syncUrl(): string {
     const override = (process.env.ABACUSAI_BOT_LOG_SYNC_URL ?? "").trim();
-    if (override.length > 0 && !app.isPackaged) return override;
+    if (
+      override.length > 0 &&
+      (import.meta.env.ABACUS_WEB_HOST === true || !app.isPackaged)
+    )
+      return override;
     return `${abacusRoutellmV1()}/abacusaibot_log_sync`;
   }
 

@@ -56,6 +56,14 @@ export function buildAgentConfigEnv(
   // this process owns both the registry and the settings file.
   const preferences = readToolsetPreferences();
   const excluded = excludedBuiltinTools(preferences);
+  if (import.meta.env.ABACUS_WEB_HOST === true)
+    excluded.push(
+      "browser_task",
+      "browser_navigate",
+      "browser_snapshot",
+      "browser_interact",
+      "browser_execute"
+    );
   if (excluded.length > 0) {
     envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");
   }

@@ -122,7 +122,7 @@ export function collectClientEnvironment(
   );
 
   return {
-    platform,
+    platform: import.meta.env.ABACUS_WEB_HOST === true ? "web_host" : platform,
     arch,
     os_name: name,
     os_version: version,

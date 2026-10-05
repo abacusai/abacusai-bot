@@ -44,6 +44,13 @@ interface DebugSyncOptions {
 export class DebugSyncService {
   private readonly readTranscript: (id: string) => StoredTranscript | null;
   private readonly clientVersion: string;
+  stop(): void {
+    for (const timer of this.timers.values()) clearTimeout(timer);
+    this.timers.clear();
+    this.pending.clear();
+    this.livePending.clear();
+  }
+
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly pending = new Set<string>();
   private backgroundUploads = 0;
@@ -130,6 +137,11 @@ export class DebugSyncService {
   }
 
   private enabled(): boolean {
+    if (
+      import.meta.env.ABACUS_WEB_HOST === true &&
+      !process.env.ABACUSAI_BOT_DEBUG_SYNC_URL
+    )
+      return false;
     if (this.disabledForRun != null) return false;
     const settings = readSettings();
     const toggle = settings.serverDebugSync ?? true; // default on
@@ -180,7 +192,11 @@ export class DebugSyncService {
   /** `<routellm base>/abacusaibot_debug_sync`, with a dev-only localhost override. */
   private syncUrl(): string {
     const override = (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL ?? "").trim();
-    if (override.length > 0 && !app.isPackaged) return override;
+    if (
+      override.length > 0 &&
+      (import.meta.env.ABACUS_WEB_HOST === true || !app.isPackaged)
+    )
+      return override;
     return `${abacusRoutellmV1()}/abacusaibot_debug_sync`;
   }
 

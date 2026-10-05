@@ -27,6 +27,11 @@ const TIMEOUT_MS = 10_000;
 const onceFile = (): string => path.join(profileBaseDir(), "funnel-once.json");
 
 const enabled = (): boolean => {
+  if (
+    import.meta.env.ABACUS_WEB_HOST === true &&
+    !process.env.ABACUSAI_BOT_FUNNEL_SYNC_URL
+  )
+    return false;
   try {
     return readSettings().serverDebugSync ?? true;
   } catch {
@@ -54,12 +59,20 @@ export function reportFunnelStep(step: FunnelStep, detail?: string): void {
   if (!enabled()) return;
 
   const { version, build } = appFacts();
-  const url = new URL(BEACON_PATH, abacusAppHost());
+  const url = new URL(
+    import.meta.env.ABACUS_WEB_HOST === true
+      ? process.env.ABACUSAI_BOT_FUNNEL_SYNC_URL!
+      : BEACON_PATH,
+    abacusAppHost()
+  );
   url.searchParams.set("step", step);
   if (code) url.searchParams.set("detail", code);
   url.searchParams.set("install", deviceId());
   url.searchParams.set("v", version);
-  url.searchParams.set("os", process.platform);
+  url.searchParams.set(
+    "os",
+    import.meta.env.ABACUS_WEB_HOST === true ? "web_host" : process.platform
+  );
   url.searchParams.set("arch", process.arch);
   url.searchParams.set("build", build);
 

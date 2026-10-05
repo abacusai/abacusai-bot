@@ -21,6 +21,9 @@
     },
     {
       "path": "./packages/contract"
+    },
+    {
+      "path": "./apps/host"
     }
   ]
 }

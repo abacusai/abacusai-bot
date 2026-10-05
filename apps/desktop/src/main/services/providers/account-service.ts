@@ -66,3 +66,17 @@ export const forgetAccount = (): AccountState => {
 
   return EMPTY_ACCOUNT_STATE;
 };
+
+export const adoptWebAccount = (account: {
+  name?: string | null;
+  email?: string | null;
+}): AccountState =>
+  writeAccountState({
+    ...readAccountState(),
+    account: {
+      username: account.name ?? "",
+      email: account.email ?? "",
+      createdAt: new Date().toISOString(),
+    },
+    onboarded: true,
+  });
