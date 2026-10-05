@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
+import { Store } from "@tanstack/react-store";
 import { createRoot } from "react-dom/client";
 
 /**
@@ -177,7 +178,7 @@ const start = async (forceRestart = false): Promise<void> => {
       context: {
         queryClient,
         transport: boot.transport,
-        system: boot.system,
+        system: new Store(boot.system),
         db: boot.db,
         t: fixedT(),
       },

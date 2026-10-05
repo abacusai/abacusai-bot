@@ -11,6 +11,7 @@ import {
   createRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
+import type { Store } from "@tanstack/react-store";
 import type { TFunction } from "i18next";
 
 import { RoutePending, PaneError } from "#renderer/components/page-state";
@@ -38,7 +39,12 @@ type SidebarId = Area;
 export interface RouterContext {
   queryClient: QueryClient;
   transport: Transport;
-  system: SystemInfo;
+  /**
+   * The host's system facts. A store, not a value: the browser mounts the
+   * router with a placeholder before the host answers (spec 09 D12).
+   * Components read it with `useSystem()`.
+   */
+  system: Store<SystemInfo>;
   /** The document's collections and prefs writer (spec 01 §8.3). */
   db: Db;
   /** `i18n.getFixedT(null)`, for loaders and not-found copy. */

@@ -1,4 +1,3 @@
-import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
  * Everything `__root` mounts around the routes (spec 01 §6.1): collections,
  * hotkeys with the platform from `system.info`, tooltips, the registry
@@ -19,7 +18,7 @@ import { resolveKeymap } from "#renderer/lib/keyboard/actions";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { uiPlatform } from "#renderer/lib/platform";
 import { ThemeEffect } from "#renderer/lib/theme-effect";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { useSystem } from "#renderer/lib/use-app-context";
 import { TooltipProvider } from "#renderer/ui/tooltip";
 
 import { AppToaster } from "./app-toaster";
@@ -108,7 +107,7 @@ const useShellActions = (): ShellActions => {
 const ShortcutHandler = () => {
   const actions = useShellActions();
   const prefs = usePrefs();
-  const { system } = useAppContext();
+  const system = useSystem();
   return (
     <AppHotkeys
       actions={actions}
@@ -120,15 +119,14 @@ const ShortcutHandler = () => {
 export const AppRoot = ({
   transport,
   db,
-  system,
   children,
 }: {
   transport: Transport;
   db: Db;
-  system: SystemInfo;
   children: ReactNode;
 }) => {
   const chrome = useChromeState(transport);
+  const system = useSystem();
   return (
     <DbProvider value={db}>
       <AppHotkeysProvider platform={uiPlatform(system.platform)}>
