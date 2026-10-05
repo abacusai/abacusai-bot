@@ -74,7 +74,7 @@ import { useSidebarToggle } from "./use-sidebar-toggle";
 const Pane = ({ children }: { children?: ReactNode }) => (
   <main
     data-slot="pane"
-    className="pane bg-background text-foreground relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
+    className="pane bg-background text-foreground phone:rounded-none relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
     <div
       data-slot="pane-scroll"
@@ -265,8 +265,9 @@ export const ShellLayout = ({
           </PaneBoundary>
           <div
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 pr-(--pane-inset) pb-(--pane-inset)",
-              phone && "pl-(--pane-inset)"
+              "flex min-h-0 min-w-0 flex-1",
+              // A phone's pane runs edge to edge, like a native screen.
+              !phone && "pr-(--pane-inset) pb-(--pane-inset)"
             )}
           >
             <ResizablePanelGroup orientation="horizontal" className="gap-0">

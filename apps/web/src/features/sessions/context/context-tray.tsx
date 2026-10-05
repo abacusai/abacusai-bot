@@ -66,9 +66,9 @@ export const SessionContextTray = ({
   return (
     <div
       data-slot="session-context-tray"
-      className="flex flex-wrap items-center justify-between gap-1 text-[13px]"
+      className="phone:flex-nowrap phone:overflow-x-auto no-scrollbar flex flex-wrap items-center justify-between gap-1 text-[13px]"
     >
-      <div className="flex items-center gap-1">
+      <div className="phone:shrink-0 flex items-center gap-1">
         <Popover>
           <PopoverTrigger
             render={

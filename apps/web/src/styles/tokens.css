@@ -335,3 +335,29 @@ html {
     user-select: none;
   }
 }
+
+/* Phone entrance: content rises into place on a short stagger (--rise-i). */
+@keyframes phone-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+[data-band="xs"] .phone-rise {
+  animation: phone-rise 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(var(--rise-i, 0) * 50ms);
+}
+html[data-reduce-motion="on"] .phone-rise {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-rise {
+    animation: none !important;
+  }
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
