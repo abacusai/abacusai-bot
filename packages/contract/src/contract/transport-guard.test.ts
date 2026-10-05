@@ -80,9 +80,7 @@ describe("the transport guard (A-T7)", () => {
   const files = SCANNED.flatMap((dir) => walk(join(SRC, dir)));
 
   it("scans the data layer and the contract", () => {
-    expect(files.some((file) => file.includes(join("apps", "web")))).toBe(
-      true
-    );
+    expect(files.some((file) => file.includes(join("apps", "web")))).toBe(true);
     expect(files.length).toBeGreaterThan(20);
   });
 
