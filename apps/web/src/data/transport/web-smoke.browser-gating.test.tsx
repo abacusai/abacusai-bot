@@ -154,7 +154,12 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
       await screen.findByRole("heading", { name: "Account" })
     ).toBeDefined();
     const search = screen.getByRole("textbox", { name: "Search settings" });
+    fireEvent.focus(search);
     fireEvent.change(search, { target: { value: "local" } });
+    // The index loads on focus; its results replace the page list.
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Appearance" })).toBeNull()
+    );
     expect(document.querySelector('a[href*="provider=local"]')).toBeNull();
     await visit("/bots", '[data-slot="shell"]');
     const { startTour, tourSignedOut } =

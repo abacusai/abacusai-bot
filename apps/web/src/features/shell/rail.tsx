@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "#renderer/ui/avatar";
 import { useFloatingIntent } from "./floating-intent";
 import type { ShellArea } from "./layout";
 import { shellStore, type AreaLocation } from "./shell-store";
+import { preloadSidebar } from "./sidebars";
 
 /** Where the rail sends an area: its last location, else its home. */
 const railTarget = (
@@ -28,10 +29,12 @@ const railTarget = (
 ): AreaLocation => last[area] ?? { pathname: AREA_HOME[area], search: {} };
 
 const RailLink = ({
+  area,
   target,
   transition,
   ...props
 }: {
+  area: ShellArea;
   target: AreaLocation;
   transition: NavType;
   className?: string;
@@ -44,6 +47,8 @@ const RailLink = ({
 }) => (
   <AppLink
     {...(props as object)}
+    onPointerEnter={() => preloadSidebar(area)}
+    onFocus={() => preloadSidebar(area)}
     to={target.pathname as never}
     search={target.search as never}
     transition={transition}
@@ -64,6 +69,7 @@ const RailItem = ({
   target: AreaLocation;
 }) => (
   <RailLink
+    area={area}
     target={target}
     transition={area === "settings" ? "settings-in" : "nav-lateral"}
     aria-current={active ? "page" : undefined}
@@ -142,6 +148,7 @@ export const Rail = ({
       ))}
       <div className="flex-1" />
       <RailLink
+        area="settings"
         target={railTarget("settings", last)}
         transition="settings-in"
         aria-label={t("shell.rail.settings")}

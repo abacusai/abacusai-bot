@@ -10,11 +10,36 @@ import {
   type ComponentType,
 } from "react";
 
-const LazyArtifactsSidebar = lazy(() =>
-  import("#renderer/features/artifacts").then((m) => ({
-    default: m.ArtifactsSidebar,
-  }))
-);
+/**
+ * The lazily loaded sidebars' chunks, also warmed from the rail. Each import
+ * picks its sidebar export inline so the bundler keeps only what the sidebar
+ * needs; returning the whole namespace would retain every export, including
+ * the development galleries.
+ */
+const SIDEBAR_CHUNKS = {
+  artifacts: () =>
+    import("#renderer/features/artifacts").then((m) => ({
+      default: m.ArtifactsSidebar,
+    })),
+  library: () =>
+    import("#renderer/features/library").then((m) => ({
+      default: m.LibrarySidebar,
+    })),
+  settings: () =>
+    import("#renderer/features/settings").then((m) => ({
+      default: m.SettingsSidebar,
+    })),
+};
+
+/** A rail hover or focus: fetch the area's sidebar chunk before the click. */
+export const preloadSidebar = (area: ShellArea): void => {
+  if (area in SIDEBAR_CHUNKS)
+    void SIDEBAR_CHUNKS[area as keyof typeof SIDEBAR_CHUNKS]().catch(
+      () => undefined
+    );
+};
+
+const LazyArtifactsSidebar = lazy(SIDEBAR_CHUNKS.artifacts);
 const ArtifactsSidebar = () =>
   createElement(
     Suspense,
@@ -25,11 +50,7 @@ import {
   BotsNeedsYou,
   BotsSidebar,
 } from "#renderer/features/bots/sidebar/bots-sidebar";
-const LazyLibrarySidebar = lazy(() =>
-  import("#renderer/features/library").then((m) => ({
-    default: m.LibrarySidebar,
-  }))
-);
+const LazyLibrarySidebar = lazy(SIDEBAR_CHUNKS.library);
 const LibrarySidebar = () =>
   createElement(
     Suspense,
@@ -41,11 +62,7 @@ import {
   RoutinesNeedsYou,
 } from "#renderer/features/routines/sidebar";
 import { SessionsSidebar } from "#renderer/features/sessions/sessions-sidebar";
-const LazySettingsSidebar = lazy(() =>
-  import("#renderer/features/settings").then((m) => ({
-    default: m.SettingsSidebar,
-  }))
-);
+const LazySettingsSidebar = lazy(SIDEBAR_CHUNKS.settings);
 const SettingsSidebar = () =>
   createElement(
     Suspense,
