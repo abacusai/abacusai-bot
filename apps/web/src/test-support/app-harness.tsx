@@ -55,6 +55,7 @@ import { resetReadinessForTests } from "#renderer/features/shell/readiness";
 import { resetShellStore } from "#renderer/features/shell/shell-store";
 import { i18n, initI18n } from "#renderer/lib/i18n";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { showError } from "#renderer/lib/toast";
 import { createAppRouter, type AppRouter } from "#renderer/router";
 
 export const SYSTEM_INFO: SystemInfo = {
@@ -442,7 +443,7 @@ export const createHarness = async (
   const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
   const { collections } = appDb;
   await collections.prefs.preload();
-  const queryClient = createQueryClient();
+  const queryClient = createQueryClient({ showError });
   const history =
     options.history ?? createMemoryHistory({ initialEntries: [path] });
   const router = createAppRouter({

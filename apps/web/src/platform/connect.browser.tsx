@@ -53,6 +53,7 @@ import {
   DARK_QUERY,
   setLookStore,
 } from "#renderer/lib/theme";
+import { showError } from "#renderer/lib/toast";
 import { createAppRouter } from "#renderer/router";
 
 export { HostStatus } from "#renderer/features/shell/connect";
@@ -127,7 +128,7 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
     forceRestart: takeRestartRequest(),
   });
 
-  const queryClient = createQueryClient();
+  const queryClient = createQueryClient({ showError });
   const db = installDb(async () => transport);
   // Closed is terminal on the web (sign-in, tier, contract): the banner or
   // the connect screen says why; nothing reloads.
