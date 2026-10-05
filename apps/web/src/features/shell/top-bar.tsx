@@ -49,7 +49,7 @@ const BarButton = ({
     aria-label={label}
     title={label}
     className={cn(
-      "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground size-7",
+      "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground phone:size-10 phone:rounded-full phone:[&_svg]:size-5 phone:active:bg-foreground/[0.08] size-7",
       className
     )}
     {...props}
@@ -59,7 +59,7 @@ const BarButton = ({
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
+    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
   >
     {children}
   </header>
@@ -95,13 +95,16 @@ const Leading = ({
     <div
       data-slot="topbar-leading"
       className={cn(
-        "flex items-center gap-0.5 pl-2",
+        "phone:pl-1.5 flex items-center gap-0.5 pl-2",
         sidebarInLayout
           ? "w-[calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x))] min-w-min flex-none"
           : "flex-none pr-2.5"
       )}
     >
       <BarButton
+        // Phones keep their browser's own back gesture; settings still
+        // needs a way out.
+        className={settings ? undefined : "phone:hidden"}
         label={t(settings ? "settings.backToApp" : "shell.topBar.back")}
         disabled={!settings && !canGoBack}
         onClick={() =>
@@ -117,6 +120,7 @@ const Leading = ({
         <ArrowLeft />
       </BarButton>
       <BarButton
+        className="phone:hidden"
         label={t("shell.topBar.forward")}
         disabled={!canGoForward}
         onClick={() => router.history.forward()}
@@ -195,7 +199,7 @@ const Identity = ({
             ref={setIdentityTarget}
             className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden empty:hidden [&:not(:empty)+span]:hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
           />
-          <span className="text-sidebar-foreground min-w-0 truncate font-medium">
+          <span className="text-sidebar-foreground phone:font-semibold min-w-0 truncate font-medium">
             {fallback}
           </span>
         </>

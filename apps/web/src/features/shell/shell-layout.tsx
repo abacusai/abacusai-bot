@@ -18,7 +18,13 @@ import {
   type AnyRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 import {
   PaneBoundary,
@@ -27,6 +33,7 @@ import {
 } from "#renderer/components/page-state";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
+import { cn } from "#renderer/lib/cn";
 import {
   AREA_PANEL_TABS,
   type SidePanelTabId,
@@ -67,7 +74,7 @@ import { useSidebarToggle } from "./use-sidebar-toggle";
 const Pane = ({ children }: { children?: ReactNode }) => (
   <main
     data-slot="pane"
-    className="pane bg-background text-foreground relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
+    className="pane bg-background text-foreground phone:rounded-none relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
   >
     <div
       data-slot="pane-scroll"
@@ -152,16 +159,21 @@ export const ShellLayout = ({
   const shown = location.maskedLocation ?? location;
   const pathname = shown.pathname;
   const searchKey = JSON.stringify(shown.search);
+  const phone = band === "xs";
+  const lastOwner = useRef<ShellArea | undefined>(undefined);
   useEffect(() => {
     intent.cancel();
-    closeFloating();
     const owner = areaOf(router, pathname);
+    // A phone's drawer holds the rail: picking an area there shows its list,
+    // so only a move within the area (picking an item) closes it.
+    if (!(phone && owner !== lastOwner.current)) closeFloating();
+    lastOwner.current = owner;
     if (owner != null)
       rememberLocation(owner, {
         pathname,
         search: JSON.parse(searchKey) as Record<string, unknown>,
       });
-  }, [pathname, searchKey, router, intent]);
+  }, [pathname, searchKey, router, intent, phone]);
 
   useEffect(() => {
     if (area != null && panel.tab != null) rememberTab(area, panel.tab);
@@ -185,7 +197,12 @@ export const ShellLayout = ({
         data-slot="shell"
         data-band={band}
         data-sidebar={layout.sidebar}
-        className="shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden"
+        className={cn(
+          "shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden",
+          // Clear the notch and the home indicator (viewport-fit=cover).
+          phone &&
+            "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+        )}
         style={
           {
             "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
@@ -223,19 +240,36 @@ export const ShellLayout = ({
           />
         </TopBar.Root>
         <div className="relative flex min-h-0 min-w-0">
-          <Rail
-            area={area}
-            floatingEnabled={floatingEnabled}
-            initials={initials}
-          />
+          {!phone && (
+            <Rail
+              area={area}
+              floatingEnabled={floatingEnabled}
+              initials={initials}
+            />
+          )}
           <PaneBoundary resetKey={area}>
             <SidebarSlot
               mode={layout.sidebar}
               sidebarId={sidebar}
               onEscape={() => closeFloating()}
+              rail={
+                phone ? (
+                  <Rail
+                    area={area}
+                    floatingEnabled={false}
+                    initials={initials}
+                  />
+                ) : undefined
+              }
             />
           </PaneBoundary>
-          <div className="flex min-h-0 min-w-0 flex-1 pr-(--pane-inset) pb-(--pane-inset)">
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1",
+              // A phone's pane runs edge to edge, like a native screen.
+              !phone && "pr-(--pane-inset) pb-(--pane-inset)"
+            )}
+          >
             <ResizablePanelGroup orientation="horizontal" className="gap-0">
               <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
                 <Pane>

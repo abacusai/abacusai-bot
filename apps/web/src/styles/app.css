@@ -7,6 +7,8 @@
 @import "./tokens.css";
 
 @custom-variant dark (&:is(.dark *));
+/* A phone (the shell's `xs` band, below 800): narrow-width reflows only. */
+@custom-variant phone (&:where([data-band="xs"] *));
 
 @theme inline {
     --font-heading: var(--font-sans);

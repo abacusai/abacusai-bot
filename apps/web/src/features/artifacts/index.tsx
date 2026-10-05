@@ -159,7 +159,10 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const list = search.view === "list" || !!search.item;
-  const columns = list ? 1 : Math.max(1, Math.floor(size.width / 210));
+  // Phone widths fit two narrower cards instead of one stretched card.
+  const columns = list
+    ? 1
+    : Math.max(1, Math.floor(size.width / (size.width < 440 ? 160 : 210)));
   const entries = artifactListEntries(filtered, list && search.sort !== "name");
   const window = cardWindow(
     entries.length,
@@ -259,9 +262,9 @@ export const ArtifactsPage = ({
   );
   return (
     <div className="flex size-full flex-col">
-      <header className="flex h-14 items-center gap-3 px-5">
+      <header className="phone:h-auto phone:flex-wrap phone:px-4 phone:py-3 flex h-14 items-center gap-3 px-5">
         <h1 className="text-base font-semibold">{t("shell.rail.artifacts")}</h1>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
           {t("phase5.items", { count: filtered.length })}
         </span>
         <div className="ml-auto">
