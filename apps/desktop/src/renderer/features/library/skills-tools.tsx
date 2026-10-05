@@ -125,12 +125,20 @@ export const SkillsPage = () => {
             </Button>
           ))}
         </div>
-        {["project", "global"].map((source) => (
+        {(workspacePath ? ["project", "global"] : ["global"]).map((source) => (
           <section key={source}>
             <h2 className="mb-2 text-sm font-semibold">
               {t(source === "project" ? "phase5.workspace" : "phase5.global")}
             </h2>
             <GroupCard>
+              {!query.isPending &&
+                !query.data?.skills.some(
+                  (skill) => skill.source === source
+                ) && (
+                  <p className="text-muted-foreground p-4 text-sm">
+                    {t("phase5.noInstalledSkills")}
+                  </p>
+                )}
               {query.data?.skills
                 .filter((s) => s.source === source)
                 .map((s) => (
@@ -313,6 +321,7 @@ export const ToolsPage = () => {
     >
       <Input
         aria-label={t("phase5.searchTools")}
+        placeholder={t("phase5.searchTools")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -321,7 +330,7 @@ export const ToolsPage = () => {
           foldSearch(
             s.id +
               " " +
-              t(`capabilities.toolsets.${s.labelKey}`) +
+              t(`capabilities.toolsets.${s.labelKey}.label`) +
               " " +
               s.tools.map((t) => t.name).join(" ")
           ).includes(foldSearch(q))
@@ -329,15 +338,22 @@ export const ToolsPage = () => {
           <SettingRow
             key={s.id}
             id={s.id}
-            title={t(`capabilities.toolsets.${s.labelKey}`)}
+            title={t(`capabilities.toolsets.${s.labelKey}.label`)}
             detail={s.tools.map((tool) => tool.name).join(", ")}
           >
-            <AppLink
-              to="/library/tools/$toolsetId"
-              params={{ toolsetId: s.id }}
+            <Button
+              size="sm"
+              variant="secondary"
+              nativeButton={false}
+              render={
+                <AppLink
+                  to="/library/tools/$toolsetId"
+                  params={{ toolsetId: s.id }}
+                />
+              }
             >
               {t("phase5.details")}
-            </AppLink>
+            </Button>
             {s.alwaysOn || s.status === "planned" ? (
               <StatePill>
                 {t(s.alwaysOn ? "phase5.alwaysOn" : "phase5.planned")}
@@ -360,9 +376,18 @@ export const ToolsetPage = ({ toolsetName }: { toolsetName: string }) => {
   const set = TOOLSETS_FOR_DISPLAY.find((s) => s.id === toolsetName);
   return (
     <AreaPage
-      title={set ? t(`capabilities.toolsets.${set.labelKey}`) : toolsetName}
+      title={
+        set
+          ? t(`capabilities.toolsets.${set.labelKey}.label`)
+          : t("phase5.unavailable")
+      }
     >
       <AppLink to="/library/tools">{t("phase5.allTools")}</AppLink>
+      {!set?.tools.length && (
+        <p className="text-muted-foreground bg-card rounded-xl border p-4 text-sm">
+          {t("phase5.toolsUnavailable")}
+        </p>
+      )}
       {set?.tools.map((tool) => (
         <SettingRow
           key={tool.name}

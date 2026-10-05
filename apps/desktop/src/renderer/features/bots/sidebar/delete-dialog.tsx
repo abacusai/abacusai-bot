@@ -8,6 +8,7 @@ import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Spinner } from "#renderer/components/spinner";
 import { useDb } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import {
@@ -20,7 +21,6 @@ import {
   AlertDialogTitle,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import { Spinner } from "#renderer/ui/spinner";
 import type { BotRow } from "#shared/contract/rows";
 
 import { deleteBot } from "../data/bot-actions";

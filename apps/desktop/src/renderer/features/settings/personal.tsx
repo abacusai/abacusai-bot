@@ -416,7 +416,9 @@ export const MemoryPage = () => {
         !memoryQuery.isError &&
         memories.length === 0 &&
         !botNotes.data?.some((bot) => bot.noteDays > 0) && (
-          <p>{t("memory.empty")}</p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {t("memory.empty")}
+          </p>
         )}
       <GroupCard>
         <SettingRow
@@ -463,104 +465,112 @@ export const MemoryPage = () => {
         </form>
       </GroupCard>
       {memoryError && <p role="alert">{memoryError}</p>}
-      {(["remember", "user", "memory"] as const).map((target) => (
-        <GroupCard key={target} title={t(`phase5.memoryTargets.${target}`)}>
-          {memories
-            .filter((m) => m.scope === "global" && m.target === target)
-            .map((m) => (
-              <SettingRow key={m.id} id={`memory-${m.id}`} title={m.entry}>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    void forget(m.id);
-                  }}
+      {(["remember", "user", "memory"] as const)
+        .filter((target) =>
+          memories.some((m) => m.scope === "global" && m.target === target)
+        )
+        .map((target) => (
+          <GroupCard key={target} title={t(`phase5.memoryTargets.${target}`)}>
+            {memories
+              .filter((m) => m.scope === "global" && m.target === target)
+              .map((m) => (
+                <SettingRow key={m.id} id={`memory-${m.id}`} title={m.entry}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      void forget(m.id);
+                    }}
+                  >
+                    {t("phase5.forget")}
+                  </Button>
+                </SettingRow>
+              ))}
+            <ConfirmAction
+              title={t("phase5.clearAll")}
+              description={t("phase5.forgetDescription")}
+              label={t("phase5.clearAll")}
+              onConfirm={() => transport.client.memory.forgetAll({ target })}
+            />
+          </GroupCard>
+        ))}
+      {(memories.some((m) => m.scope === "bot") ||
+        botNotes.data?.some((bot) => bot.noteDays > 0)) && (
+        <GroupCard title={t("phase5.rememberedByBots")}>
+          {bots.map((bot) => {
+            const entries = memories.filter(
+              (row) => row.scope === "bot" && row.botId === bot.id
+            );
+            const noteDays =
+              botNotes.data?.find((item) => item.botId === bot.id)?.noteDays ??
+              0;
+            if (!entries.length && !noteDays) return null;
+            return (
+              <Collapsible key={bot.id}>
+                <SettingRow
+                  id={`memory-bot-${bot.id}`}
+                  title={t("phase5.botMemoryCount", {
+                    name: bot.name,
+                    count: entries.length,
+                  })}
+                  detail={entries
+                    .slice(0, 3)
+                    .map((row) => row.entry)
+                    .join(" · ")}
                 >
-                  {t("phase5.forget")}
-                </Button>
-              </SettingRow>
-            ))}
-          <ConfirmAction
-            title={t("phase5.clearAll")}
-            description={t("phase5.forgetDescription")}
-            label={t("phase5.clearAll")}
-            onConfirm={() => transport.client.memory.forgetAll({ target })}
-          />
+                  <BotAvatar look={resolveLook(bot)} size={28} />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    nativeButton={false}
+                    render={
+                      <AppLink
+                        to="/bots/$botId"
+                        params={{ botId: bot.id }}
+                        search={{ tab: "memory" }}
+                        transition="settings-out"
+                      />
+                    }
+                  >
+                    {t("phase5.openAction")}
+                  </Button>
+                  <CollapsibleTrigger
+                    render={<Button size="sm" variant="ghost" />}
+                  >
+                    {t("phase5.showMemory")}
+                  </CollapsibleTrigger>
+                </SettingRow>
+                <CollapsibleContent className="px-3 pb-3">
+                  <BotMemoryList
+                    entries={entries}
+                    pendingId={pendingMemory}
+                    onForget={(row) => void forget(row.id)}
+                  />
+                  {noteDays > 0 && (
+                    <p className="text-muted-foreground text-xs">
+                      {t("bots.panel.memory.notes", { count: noteDays })}
+                    </p>
+                  )}
+                  <ConfirmAction
+                    title={t("bots.panel.memory.clear")}
+                    description={t("phase5.forgetDescription")}
+                    label={t("phase5.clearAll")}
+                    onConfirm={async () => {
+                      const next = await transport.client.memory.clearBot({
+                        botId: bot.id,
+                      });
+                      cache.setQueryData(
+                        transport.orpc.memory.bots.queryKey({ input: {} }),
+                        next
+                      );
+                    }}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </GroupCard>
-      ))}
-      <GroupCard title={t("phase5.rememberedByBots")}>
-        {bots.map((bot) => {
-          const entries = memories.filter(
-            (row) => row.scope === "bot" && row.botId === bot.id
-          );
-          const noteDays =
-            botNotes.data?.find((item) => item.botId === bot.id)?.noteDays ?? 0;
-          if (!entries.length && !noteDays) return null;
-          return (
-            <Collapsible key={bot.id}>
-              <SettingRow
-                id={`memory-bot-${bot.id}`}
-                title={t("phase5.botMemoryCount", {
-                  name: bot.name,
-                  count: entries.length,
-                })}
-                detail={entries
-                  .slice(0, 3)
-                  .map((row) => row.entry)
-                  .join(" · ")}
-              >
-                <BotAvatar look={resolveLook(bot)} size={28} />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  nativeButton={false}
-                  render={
-                    <AppLink
-                      to="/bots/$botId"
-                      params={{ botId: bot.id }}
-                      search={{ tab: "memory" }}
-                      transition="settings-out"
-                    />
-                  }
-                >
-                  {t("phase5.openAction")}
-                </Button>
-                <CollapsibleTrigger
-                  render={<Button size="sm" variant="ghost" />}
-                >
-                  {t("phase5.showMemory")}
-                </CollapsibleTrigger>
-              </SettingRow>
-              <CollapsibleContent className="px-3 pb-3">
-                <BotMemoryList
-                  entries={entries}
-                  pendingId={pendingMemory}
-                  onForget={(row) => void forget(row.id)}
-                />
-                {noteDays > 0 && (
-                  <p className="text-muted-foreground text-xs">
-                    {t("bots.panel.memory.notes", { count: noteDays })}
-                  </p>
-                )}
-                <ConfirmAction
-                  title={t("bots.panel.memory.clear")}
-                  description={t("phase5.forgetDescription")}
-                  label={t("phase5.clearAll")}
-                  onConfirm={async () => {
-                    const next = await transport.client.memory.clearBot({
-                      botId: bot.id,
-                    });
-                    cache.setQueryData(
-                      transport.orpc.memory.bots.queryKey({ input: {} }),
-                      next
-                    );
-                  }}
-                />
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </GroupCard>
+      )}
     </AreaPage>
   );
 };
@@ -637,6 +647,7 @@ export const NotificationsPage = () => {
             id={`sound-${cue}`}
             title={t(`phase5.cues.${cue}`)}
           >
+            <SoundPreview cue={cue} />
             <SettingSwitch
               id={`sound-${cue}`}
               checked={prefs.sounds.perEvent[cue] !== false}
@@ -648,7 +659,6 @@ export const NotificationsPage = () => {
                 }).catch(fail)
               }
             />
-            <SoundPreview cue={cue} />
           </SettingRow>
         ))}
         <SettingRow
@@ -672,30 +682,36 @@ export const NotificationsPage = () => {
         </SettingRow>
         <QuietTimes quiet={q} />
       </GroupCard>
-      <GroupCard title={t("phase5.settings.perBot")}>
-        {bots.map((bot) => (
-          <SettingRow id={`sounds-bot-${bot.id}`} key={bot.id} title={bot.name}>
-            <Choice
+      {bots.length > 0 && (
+        <GroupCard title={t("phase5.settings.perBot")}>
+          {bots.map((bot) => (
+            <SettingRow
               id={`sounds-bot-${bot.id}`}
-              value={prefs.sounds.perBot?.[bot.id] ?? "all"}
-              options={["all", "needs-me", "nothing"].map((x) => ({
-                value: x,
-                label: t(`phase5.botSounds.${x}`),
-              }))}
-              onChange={(level) =>
-                void update({
-                  sounds: {
-                    perBot: {
-                      ...prefs.sounds.perBot,
-                      [bot.id]: level as "all" | "needs-me" | "nothing",
+              key={bot.id}
+              title={bot.name}
+            >
+              <Choice
+                id={`sounds-bot-${bot.id}`}
+                value={prefs.sounds.perBot?.[bot.id] ?? "all"}
+                options={["all", "needs-me", "nothing"].map((x) => ({
+                  value: x,
+                  label: t(`phase5.botSounds.${x}`),
+                }))}
+                onChange={(level) =>
+                  void update({
+                    sounds: {
+                      perBot: {
+                        ...prefs.sounds.perBot,
+                        [bot.id]: level as "all" | "needs-me" | "nothing",
+                      },
                     },
-                  },
-                }).catch(fail)
-              }
-            />
-          </SettingRow>
-        ))}
-      </GroupCard>
+                  }).catch(fail)
+                }
+              />
+            </SettingRow>
+          ))}
+        </GroupCard>
+      )}
     </AreaPage>
   );
 };
@@ -740,6 +756,7 @@ export const QuietTimes = ({
               <input
                 className="bg-muted rounded-md p-2"
                 type="time"
+                disabled={!quiet.enabled}
                 value={f.state.value}
                 onChange={(e) => f.handleChange(e.target.value)}
                 onBlur={() => {

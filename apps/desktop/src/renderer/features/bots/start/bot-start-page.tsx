@@ -160,9 +160,10 @@ export const BotStartPage = ({
           <p className="text-muted-foreground text-[13px]">
             {t("bots.start.templates")}
           </p>
-          {!empty && (
+          {
             <div className="flex flex-wrap items-center gap-2">
               <ToggleGroup
+                className="flex-wrap"
                 value={[category]}
                 onValueChange={(items) => {
                   if (items[0])
@@ -216,14 +217,8 @@ export const BotStartPage = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          )}
-          <div
-            className={
-              empty
-                ? "flex flex-wrap justify-center gap-2"
-                : "grid grid-cols-3 gap-2"
-            }
-          >
+          }
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
             {templates.map((template) => (
               <button
                 key={template.id}
@@ -231,7 +226,7 @@ export const BotStartPage = ({
                 onClick={() => pick(template.id)}
                 data-slot="bot-template"
                 aria-describedby={`template-${template.id}`}
-                className={`bg-card hover:bg-muted flex text-left ${empty ? "items-center gap-2 rounded-full px-3 py-2" : "flex-col gap-2 rounded-2xl p-3.5"}`}
+                className="bg-card hover:bg-muted flex min-w-0 flex-col gap-2 rounded-xl border p-3.5 text-left"
               >
                 <span className="flex items-center gap-2">
                   <BotAvatar
@@ -240,7 +235,7 @@ export const BotStartPage = ({
                       avatarShape: template.avatarShape,
                       avatarColor: template.avatarColor,
                     })}
-                    size={empty ? 24 : 32}
+                    size={32}
                   />
                   <span className="text-sm font-medium">
                     {t(`bots.templates.${template.id}.name`)}
@@ -248,15 +243,11 @@ export const BotStartPage = ({
                 </span>
                 <span
                   id={`template-${template.id}`}
-                  className={
-                    empty
-                      ? "sr-only"
-                      : "text-muted-foreground line-clamp-2 min-h-9 text-[13px]"
-                  }
+                  className="text-muted-foreground line-clamp-2 min-h-9 text-[13px]"
                 >
                   {t(`bots.templates.${template.id}.description`)}
                 </span>
-                {!empty && template.connectors && (
+                {template.connectors && (
                   <span className="text-muted-foreground flex items-center gap-1 text-xs">
                     {t("bots.start.uses")}
                     {template.connectors.map((id) => (

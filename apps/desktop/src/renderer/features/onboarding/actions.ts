@@ -30,6 +30,8 @@ export interface CompletionDeps {
   /** Resolves only once the destination has committed. */
   navigate(exit: OnboardingExit): Promise<void>;
   startTour(): void;
+  /** After the account is onboarded, resolve its freshly created first bot. */
+  resolveExit?(exit: OnboardingExit): Promise<OnboardingExit>;
 }
 const tails = new WeakMap<Db, Map<string, Promise<void>>>();
 export const finishCompletion = (
@@ -73,15 +75,29 @@ export const finishCompletion = (
   );
   return work;
 };
-export const completeOnboarding = async (
+const completing = new WeakMap<Db, Promise<void>>();
+export const completeOnboarding = (
   deps: CompletionDeps,
   exit: OnboardingExit
 ): Promise<void> => {
-  await deps.db.updatePrefs({ onboardingExit: exit });
-  const account = await deps.transport.client.account.skipOnboarding({});
-  deps.queryClient.setQueryData(
-    accountStateQuery(deps.transport).queryKey,
-    account
+  const existing = completing.get(deps.db);
+  if (existing) return existing;
+  const run = (async () => {
+    await deps.db.updatePrefs({ onboardingExit: exit });
+    const account = await deps.transport.client.account.skipOnboarding({});
+    deps.queryClient.setQueryData(
+      accountStateQuery(deps.transport).queryKey,
+      account
+    );
+    const resolved = (await deps.resolveExit?.(exit)) ?? exit;
+    if (resolved !== exit)
+      await deps.db.updatePrefs({ onboardingExit: resolved });
+    await finishCompletion(deps, resolved);
+  })();
+  completing.set(deps.db, run);
+  void run.then(
+    () => completing.delete(deps.db),
+    () => completing.delete(deps.db)
   );
-  await finishCompletion(deps, exit);
+  return run;
 };

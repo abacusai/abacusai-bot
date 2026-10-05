@@ -76,6 +76,18 @@ const CheckoutTree = ({
   return (
     <FileTree
       model={model}
+      style={
+        {
+          "--trees-theme-sidebar-bg": "var(--background)",
+          "--trees-theme-sidebar-fg": "var(--foreground)",
+          "--trees-theme-input-bg": "var(--card)",
+          "--trees-theme-list-hover-bg": "var(--muted)",
+          "--trees-theme-list-active-selection-bg": "var(--accent)",
+          "--trees-theme-list-active-selection-fg": "var(--accent-foreground)",
+          "--trees-theme-focus-ring": "var(--ring)",
+          colorScheme: "inherit",
+        } as React.CSSProperties
+      }
       renderContextMenu={
         renderMenu
           ? (item, context) =>

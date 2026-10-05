@@ -100,7 +100,10 @@ export class NotchController {
       "display-removed",
       "display-metrics-changed",
     ] as const) {
-      const run = () => this.schedule();
+      const run = () => {
+        this.#metrics.clear();
+        this.schedule();
+      };
       (screen as unknown as EventEmitter).on(event, run);
       this.#stops.push(() =>
         (screen as unknown as EventEmitter).removeListener(event, run)

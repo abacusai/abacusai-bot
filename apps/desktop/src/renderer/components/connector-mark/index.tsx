@@ -368,12 +368,23 @@ export const ConnectorMark = ({
   initial,
   className,
 }: ConnectorMarkProps) => {
-  const mark = isMarkId(id) ? MARKS[id] : null;
+  const alias = id.replace(/^(?:messaging|abacus)-/, "");
+  const markId =
+    (
+      {
+        "google-drive": "drive",
+        "google-calendar": "calendar",
+        "google-mail": "gmail",
+        "microsoft-outlook": "outlook",
+        twitter: "x",
+      } as Record<string, string>
+    )[alias] ?? alias;
+  const mark = isMarkId(markId) ? MARKS[markId] : null;
   const glyph = Math.round(size * 0.68);
   return (
     <span
       data-slot="connector-mark"
-      data-mark={mark != null ? id : "neutral"}
+      data-mark={mark != null ? markId : "neutral"}
       role={label != null ? "img" : undefined}
       aria-label={label}
       aria-hidden={label == null ? true : undefined}

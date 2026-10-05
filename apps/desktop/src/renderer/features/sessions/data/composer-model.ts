@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import {
   botModelGroups,
   effectiveModelLabel,
@@ -46,6 +47,15 @@ export const useSessionComposerModel = (row?: SessionRow) => {
   });
   return {
     error,
+    onResumeOnFreePool: async () => {
+      if (!row) return;
+      await setSessionModel(db, transport.client, row, "abacus/openllm");
+      if (row.status === "running")
+        await confirmFreePoolModel(transport, {
+          workspaceId: row.workspaceId,
+          sessionId: row.id,
+        });
+    },
     onBlocked: () =>
       void navigate({ to: "/settings/models", transition: "nav-lateral" }),
     missing: checkout.data?.exists === false,

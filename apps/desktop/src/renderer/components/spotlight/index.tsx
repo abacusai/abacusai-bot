@@ -1,5 +1,11 @@
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { placeCard, type Box } from "./geometry";
@@ -21,6 +27,29 @@ export const Spotlight = ({
 }) => {
   const card = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const [bounds, setBounds] = useState({
+    width: 340,
+    height: 240,
+    viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
+  });
+  useLayoutEffect(() => {
+    const measure = () =>
+      setBounds({
+        width: card.current?.offsetWidth ?? 340,
+        height: card.current?.offsetHeight ?? 240,
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+      });
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (card.current) observer.observe(card.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   useEffect(() => {
     const prior = document.activeElement as HTMLElement | null;
     const roots = [...document.body.children].filter(
@@ -68,11 +97,10 @@ export const Spotlight = ({
     if (!busy)
       card.current?.querySelector<HTMLElement>("[data-tour-next]")?.focus();
   }, [busy, children]);
-  const location = placeCard(
-    rect,
-    { width: 340, height: 240 },
-    { width: innerWidth, height: innerHeight }
-  );
+  const location = placeCard(rect, bounds, {
+    width: bounds.viewportWidth,
+    height: bounds.viewportHeight,
+  });
   return createPortal(
     <div
       data-spotlight-portal
@@ -87,10 +115,17 @@ export const Spotlight = ({
           boxShadow: "0 0 0 9999px rgb(0 0 0 / .55), 0 0 0 2px var(--primary)",
         }}
         animate={{
-          x: rect ? rect.x - 4 : innerWidth / 2,
-          y: rect ? rect.y - 4 : innerHeight / 2,
-          width: rect ? rect.width + 8 : 0,
-          height: rect ? rect.height + 8 : 0,
+          x: rect ? Math.max(2, rect.x - 4) : innerWidth / 2,
+          y: rect ? Math.max(40, rect.y - 4) : innerHeight / 2,
+          width: rect
+            ? Math.min(rect.width + 8, innerWidth - Math.max(2, rect.x - 4) - 2)
+            : 0,
+          height: rect
+            ? Math.min(
+                rect.height + 8,
+                innerHeight - Math.max(40, rect.y - 4) - 2
+              )
+            : 0,
         }}
         transition={
           reduced
@@ -105,7 +140,7 @@ export const Spotlight = ({
         aria-labelledby={titleId}
         aria-describedby={bodyId}
         aria-busy={busy}
-        className="bg-popover text-popover-foreground absolute w-[340px] rounded-2xl p-4 shadow-2xl"
+        className="bg-popover text-popover-foreground absolute max-h-[calc(100dvh-72px)] w-[340px] max-w-[calc(100vw-32px)] overflow-y-auto rounded-2xl p-4 shadow-2xl"
         animate={{ x: location.x, y: location.y }}
         transition={
           reduced

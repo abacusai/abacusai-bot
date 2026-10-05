@@ -44,6 +44,8 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { authenticatedTestHome } from "./authenticated-test-home.mjs";
+
 const desktop = join(import.meta.dirname, "..");
 const repo = join(desktop, "../..");
 const require = createRequire(import.meta.url);
@@ -233,13 +235,20 @@ export const collapsedProblems = (name, collapsed) => {
     problems.push(
       `${name}: pane left ${collapsed.pane.left} (want the rail's right ${collapsed.rail.right})`
     );
-  if (
-    collapsed.pinnedPane != null &&
-    !(collapsed.pane.width > collapsed.pinnedPane.width)
-  )
-    problems.push(
-      `${name}: pane width ${collapsed.pane.width} did not grow from pinned ${collapsed.pinnedPane.width}`
-    );
+  if (collapsed.pinnedPane != null) {
+    if (collapsed.pinnedMode === "floating") {
+      // The md band floats even when the preference is pinned. Unpinning
+      // should preserve the pane, since there was no sidebar column to remove.
+      for (const key of ["left", "width"])
+        if (!near(collapsed.pane[key], collapsed.pinnedPane[key]))
+          problems.push(
+            `${name}: the forced-floating pane reflowed (${key} ${collapsed.pinnedPane[key]} → ${collapsed.pane[key]})`
+          );
+    } else if (!(collapsed.pane.width > collapsed.pinnedPane.width))
+      problems.push(
+        `${name}: pane width ${collapsed.pane.width} did not grow from pinned ${collapsed.pinnedPane.width}`
+      );
+  }
   return problems;
 };
 
@@ -384,6 +393,7 @@ const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
     readFileSync(join(repo, "node_modules/electron/path.txt"), "utf8").trim()
   );
   const log = join(scratch, `electron-${tag}.log`);
+  const authPreload = authenticatedTestHome(home);
   const child = spawn(
     electron,
     [
@@ -397,6 +407,9 @@ const launch = (width, scratch, home, tag = `${width}`, env = {}) => {
       cwd: desktop,
       env: {
         ...process.env,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${authPreload}`]
+          .filter(Boolean)
+          .join(" "),
         ABACUSAI_BOT_HOME: home,
         ABACUSAI_BOT_USERDATA: join(scratch, `ud-${tag}`),
         ABACUSBOT_RENDERER_GENERATION: "wco",
@@ -679,6 +692,9 @@ const main = async () => {
           await settle(cdp, "/bots/chief-of-staff");
           const pinnedPane = (await waitStable(cdp, rect('[data-slot="pane"]')))
             .value;
+          const pinnedMode = await cdp.evaluate(
+            `document.querySelector('[data-slot="shell"]')?.dataset.sidebar`
+          );
           await cdp.evaluate("window.__abacusDev.setPinned(false)");
           await settle(cdp, "/bots/chief-of-staff");
           const collapsed = `collapsed@${width}-${theme}.png`;
@@ -700,6 +716,7 @@ const main = async () => {
             floating: floatingMode,
             stable: settled.stable,
             pinnedPane,
+            pinnedMode,
           };
           failures.push(...collapsedProblems(collapsed, collapsedState));
           const paneBefore = settled.value?.pane ?? null;

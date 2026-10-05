@@ -122,6 +122,7 @@ export const sessionsCollectionOptions = (
   });
 
 const BOT_CREATE_FIELDS = [
+  "sponsoredFirstRun",
   "name",
   "title",
   "description",

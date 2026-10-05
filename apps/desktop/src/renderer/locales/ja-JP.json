@@ -450,7 +450,8 @@
       "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
       "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
       "senderReadOnly": "自動返信の会話です。{{bot}} がここであなたに代わって {{sender}} に返信します。閲覧はできますが入力はできません。返信の仕方を変えるには、{{bot}} 自身のチャットで伝えてください。",
-      "openError": "ボットのチャットを開けませんでした。"
+      "openError": "ボットのチャットを開けませんでした。",
+      "senderReadOnlyFallback": "{{bot}} はこの会話で返信します。"
     },
     "deleteDialog": {
       "checkIn": "Its check-in keeps running as an ordinary routine.",
@@ -1275,10 +1276,10 @@
     "pages.connect.body": "Finish signing in in your browser…",
     "pages.connect.waiting": "Finish signing in in your browser…",
     "pages.connected.body": "アカウントの準備ができました。ボットがモデル、ファイル、ツールを使って作業します。",
-    "pages.connected.promise1": "Best-in-class, The best-in-class open-source AI agent",
-    "pages.connected.promise2": "Access Access to free models",
-    "pages.connected.promise3": "Get work done Gets your work done, and connects to all your services",
-    "pages.connected.promise4": "Runs locally. Chat with it wherever you work.",
+    "pages.connected.promise1": "アカウントが接続されました。",
+    "pages.connected.promise2": "使用するモデルを選択します。",
+    "pages.connected.promise3": "必要に応じてアプリを接続します。",
+    "pages.connected.promise4": "エージェントに覚えておいてほしい指示を追加します。",
     "pages.models.title": "Hook up your AI",
     "pages.models.body": "Connect powerful models to unlock more inside your bot.",
     "pages.models.abacus": "Abacus.AI",
@@ -1533,7 +1534,7 @@
       "emptyTitle": "No routines yet",
       "emptyDescription": "Routines run a prompt on a schedule or from a webhook.",
       "routineTitle": "Routine",
-      "routineDescription": "Runs and settings for this routine arrive soon.",
+      "routineDescription": "このルーティンのスケジュール、指示、実行履歴を確認します。",
       "createTitle": "新しいルーティン",
       "createDescription": "Say what it should do and when."
     },
@@ -1543,12 +1544,17 @@
       "paused": "Paused",
       "empty": "No routines yet"
     },
-    "onDemand": "On demand"
+    "onDemand": "On demand",
+    "triggers": {
+      "manual": "手動",
+      "schedule": "スケジュール",
+      "webhook": "Webhook"
+    }
   },
   "sessions": {
     "yesterday": "Yesterday",
     "page": {
-      "newTitle": "New session",
+      "newTitle": "新規セッション",
       "newDescription": "Pick a folder and tell the agent what to do.",
       "sessionTitle": "Session",
       "sessionDescription": "The conversation opens here in a coming update.",
@@ -1556,9 +1562,9 @@
       "reviewDescription": "Keep or undo what the agent changed."
     },
     "sidebar": {
-      "label": "Sessions",
-      "new": "New session",
-      "pinned": "Pinned",
+      "label": "セッション",
+      "new": "新規セッション",
+      "pinned": "ピン留め",
       "empty": "セッションはまだありません",
       "search": "セッションを検索…",
       "actions": "Session actions for {{name}}",
@@ -1602,27 +1608,27 @@
       "starters": {
         "build-a-store": {
           "name": "Build an online store",
-          "detail": "A boutique candle brand: a hero, a product grid, product pages with scent and size options, a slide-out cart and checkout."
+          "detail": "ストアとショッピングカートを作成します。"
         },
         "design-an-infographic": {
           "name": "Turn a repo into an infographic",
-          "detail": "Clones n8n, reads the source, and lays out a one page poster of what really happens when a workflow runs."
+          "detail": "コードベースを図でわかりやすく説明します。"
         },
         "find-flights": {
           "name": "Find me flights",
-          "detail": "Opens the browser, checks a couple of sites, and comes back with three real options and links. Books nothing."
+          "detail": "経路、日付、料金を比較します。"
         },
         "process-a-spreadsheet": {
           "name": "Clean up a spreadsheet",
-          "detail": "Reads every sheet, fixes the headers, types and duplicates, and saves a summarised copy beside the original."
+          "detail": "データを整理して結果をまとめます。"
         },
         "restyle-a-repo": {
           "name": "Restyle Excalidraw",
-          "detail": "Clones the repo, reads how it styles itself, and mocks up a restyled toolbar in its own colors, wired to nothing."
+          "detail": "既存アプリのインターフェースを刷新します。"
         },
         "review-pull-requests": {
           "name": "Review my pull requests",
-          "detail": "Reads each diff, names bugs and missing tests by file and line, and posts reviews without touching your code."
+          "detail": "変更内容のバグや不足しているテストを確認します。"
         }
       },
       "recent": "Pick up where you left off in {{workspace}}"
@@ -1840,19 +1846,19 @@
     "stops": {
       "rail": {
         "body": "独自の指示・スケジュール・チャットを持つ常駐エージェントです。繰り返し任せる仕事にはボットを作りましょう。",
-        "title": "あなたのボット"
+        "title": "ボット"
       },
       "make-bot": {
         "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Make a bot"
+        "title": "Who do you need?"
       },
       "workspaces": {
         "body": "開いたことのあるフォルダーと、その中のすべての会話です。ここでワークスペースを切り替えたり、先週のセッションを開き直したりできます。",
-        "title": "ワークスペース"
+        "title": "セッション"
       },
       "start-session": {
         "body": "現在のワークスペースに空の入力欄を開きます。作業ごとにセッションを分ければ、文脈はその作業のものだけで済みます。",
-        "title": "セッションを始める"
+        "title": "新規セッション"
       },
       "connectors": {
         "body": "普段使っているツールを接続します。無料の Abacus.AI アカウントなら、ワンクリックでまとめて接続できます。",
@@ -1860,11 +1866,11 @@
       },
       "changes": {
         "body": "エージェントの編集はすべて差分として表示され、どこかへ渡る前に確認できます。隣のタブにはファイルと実行中のサブエージェントがあります。",
-        "title": "変更"
+        "title": "Changes"
       },
       "preview-terminal": {
         "body": "ワークスペース内の本物のシェルで、エージェントと同じフォルダーを使います。タイトルバーのターミナルボタンで表示と非表示を切り替えます。",
-        "title": "ターミナル"
+        "title": "Terminal"
       },
       "memory": {
         "body": "セッションをまたいで引き継がれる内容と、常に従う指示です。読み、編集し、古くなったものは削除できます。",
@@ -1876,15 +1882,15 @@
       },
       "welcome": {
         "body": "ウィンドウを簡単にご案内します。{{n}} か所を巡ります。いつでも終了できます。",
-        "title": "AbacusAI Bot へようこそ"
+        "title": "Welcome to AbacusAI Bot"
       },
       "talk": {
         "body": "ここでボットに仕事を頼めます。ボットは質問したり、作業内容を見せたりできます。",
-        "title": "ボットと話す"
+        "title": "What should we build?"
       },
       "notch": {
         "body": "返信や承認依頼がワークスペースの上に表示されます。会話全体を見るにはアプリを開いてください。",
-        "title": "あなたのコンパニオン"
+        "title": "コンパニオン"
       }
     },
     "steps": {
@@ -2493,7 +2499,7 @@
     },
     "panel": {
       "label": "Side panel",
-      "emptyDescription": "This panel fills in with a later update.",
+      "emptyDescription": "項目を選択すると、ここに詳細が表示されます。",
       "tabs": {
         "changes": "Changes",
         "terminal": "Terminal",
@@ -2847,7 +2853,8 @@
       "done_one": "Done in {{duration}}, {{count}} step",
       "done_other": "Done in {{duration}}, {{count}} steps",
       "stopped": "Stopped",
-      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}",
+      "done_zero": "{{duration}}で完了"
     },
     "subagent": {
       "done_one": "Done, {{count}} step, {{duration}}",
@@ -3352,36 +3359,36 @@
     "allTools": "All tools",
     "alwaysOn": "Always on",
     "approve": "承認",
-    "artifactGone": "Artifact gone",
+    "artifactGone": "This file is no longer on disk.",
     "artifactPreview": "Artifact preview",
     "artifactView": "Artifact view",
     "auto": "Auto",
     "category": "Category",
     "closePreview": "Close preview",
-    "connectName": "Connect name",
-    "connectWaiting": "Connect waiting",
-    "connectorsDescription": "Connectors description",
-    "credentialsLocal": "Credentials local",
+    "connectName": "{{name}}に接続",
+    "connectWaiting": "ログインを完了してこのサービスに接続してください。",
+    "connectorsDescription": "エージェントが作業に使用できるサービスを接続します。",
+    "credentialsLocal": "認証情報はこのコンピューターに保存されます。",
     "defaultWorkspace": "Default workspace",
     "deliverToBot": "Deliver to bot",
     "details": "Details",
-    "disconnectDescription": "Disconnect description",
-    "disconnectTitle": "Disconnect title",
+    "disconnectDescription": "エージェントはこのサービスにアクセスできなくなります。後で再接続できます。",
+    "disconnectTitle": "{{name}}との接続を解除しますか？",
     "documentation": "Documentation",
     "done": "完了",
     "editSkill": "Edit skill",
     "executionShell": "Execution shell",
-    "fileMissing": "File missing",
+    "fileMissing": "This file is no longer on disk.",
     "followWorkspace": "Follow workspace",
     "fullAccess": "Full access",
     "global": "グローバル",
-    "goSession": "Go session",
+    "goSession": "Open as a session",
     "grid": "Grid",
-    "items": "Items",
-    "linkQr": "Link qr",
+    "items": "{{count}} 件",
+    "linkQr": "アカウント連携用QRコード",
     "list": "List",
     "marketplace": "Marketplace",
-    "messagingDescription": "Messaging description",
+    "messagingDescription": "ボットがメッセージを送受信する場所を選びます。",
     "messagingEnabled": "メッセージングを有効にする",
     "noBot": "No bot",
     "nothingMatches": "一致するものがありません",
@@ -3390,26 +3397,26 @@
     "openLogin": "Open login",
     "openSharedChat": "Open shared chat",
     "planned": "Planned",
-    "poweredSkills": "Powered skills",
+    "poweredSkills": "skills.shを見る",
     "reject": "拒否",
-    "remoteUnattended": "Remote unattended",
-    "remoteWarning": "Remote warning",
-    "respondInbound": "Respond inbound",
-    "restartSkills": "Restart skills",
+    "remoteUnattended": "無人のリモートタスクを許可",
+    "remoteWarning": "リモートからの要求は、確認なしでコマンドの実行やファイルの変更を行えます。",
+    "respondInbound": "受信メッセージに返信",
+    "restartSkills": "更新されたスキルを読み込むにはアプリを再起動してください。",
     "reveal": "Reveal",
     "searchArtifacts": "Search artifacts",
     "searchConnectors": "Search コネクタ",
     "searchSkills": "Search skills",
     "searchTools": "Search tools",
-    "skillsDescription": "Skills description",
+    "skillsDescription": "エージェントが再利用できる指示を、全体またはワークスペースにインストールします。",
     "sort": "Sort",
-    "toolsDescription": "Tools description",
+    "toolsDescription": "エージェントが使用できるツールを選びます。",
     "uninstall": "Uninstall",
     "uninstallSkill": "スキルをアンインストール",
-    "uninstallSkillDescription": "Uninstall skill description",
+    "uninstallSkillDescription": "このコンピューターから/{{id}}を削除しますか？後で再インストールできます。",
     "unlink": "Unlink",
-    "unlinkDescription": "Unlink description",
-    "unlinkTitle": "Unlink title",
+    "unlinkDescription": "このアカウントからのメッセージはボットに届かなくなります。",
+    "unlinkTitle": "このアカウントの連携を解除しますか？",
     "whatItCanDo": "What it can do",
     "workspace": "ワークスペース",
     "connectGmail": "Connect Gmail",
@@ -3438,7 +3445,7 @@
     "terminalShell": "Terminal shell",
     "thisVersion": "This version",
     "whatsNew": "What's new",
-    "draftModelUnavailable": "The chat kit has not exposed draft model adoption yet.",
+    "draftModelUnavailable": "会話でモデルを選び直してください。",
     "threadGone": "This thread was removed.",
     "inviteChannels": {
       "link": "Invite link",
@@ -3457,7 +3464,7 @@
       "web": "Web"
     },
     "formats": {
-      "pdf": "Pdf",
+      "pdf": "PDF",
       "word": "Word",
       "spreadsheet": "Spreadsheet",
       "slides": "Slides",
@@ -3502,7 +3509,15 @@
     "invalidMcp": "名前とコマンド、または有効なHTTP(S) URLを入力してください。",
     "chooseRecipients": "宛先を少なくとも1つ選択してください。",
     "authRequired": "認証が必要です",
-    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire."
+    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire.",
+    "artifactTypes": {
+      "file": "ファイル",
+      "image": "画像",
+      "link": "リンク"
+    },
+    "connecting": "Loading",
+    "toolsUnavailable": "このバージョンでは、これらのツールは利用できません。",
+    "noInstalledSkills": "この範囲にはスキルがインストールされていません。インポートするか、マーケットプレイスを開いてください。"
   },
   "browserPermission": {
     "allow": "許可",

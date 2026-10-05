@@ -1,9 +1,4 @@
-import {
-  createFileRoute,
-  Outlet,
-  notFound,
-  redirect,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
@@ -84,16 +79,12 @@ export const Route = createFileRoute("/_shell/(routines)/routines/$routineId")({
         throw notFound();
       if (deps.run) {
         if (
-          context.db.collections.routineRuns.get(deps.run)?.routineId !==
-          params.routineId
+          !preload &&
+          context.db.collections.routineRuns.toArray.some(
+            (run) =>
+              run.sessionId === deps.run && run.routineId === params.routineId
+          )
         )
-          throw redirect({
-            to: "/routines/$routineId",
-            params,
-            search: { run: undefined },
-            replace: true,
-          });
-        if (!preload)
           await chatRuntimeFor(context.transport).session(deps.run).load();
       }
     },

@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { ConnectorMark } from "#renderer/components/connector-mark";
+import { Spinner } from "#renderer/components/spinner";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
@@ -23,8 +24,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
 } from "#renderer/ui/dropdown-menu";
-import { Spinner } from "#renderer/ui/spinner";
 
 import type { OnboardingExit } from "./actions";
 import {
@@ -129,6 +130,15 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     ...transport.orpc.auth.abacus.browserProfiles.queryOptions({ input: {} }),
     enabled: step === "welcome",
   });
+  const refetchProfiles = profiles.refetch;
+  useEffect(() => {
+    if (step !== "welcome") return;
+    const focus = () => {
+      void refetchProfiles();
+    };
+    window.addEventListener("focus", focus);
+    return () => window.removeEventListener("focus", focus);
+  }, [step, refetchProfiles]);
   const models = useQuery({
     ...transport.orpc.models.list.queryOptions({ input: {} }),
     enabled: step === "models",
@@ -143,6 +153,12 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   });
   const { data: bots } = useLiveQuery(db.collections.bots);
   const defaultProfile = profiles.data?.find((profile) => profile.isDefault);
+  const quickProfile = profiles.data?.find(
+    (profile) => profile.isDefault && profile.hasAbacusSession === true
+  );
+  const sessionProfiles =
+    profiles.data?.filter((profile) => profile.hasAbacusSession !== false) ??
+    [];
   const connected = connectedProviders(
     (models.data ?? []).filter((m) => m.configured),
     keys.data ?? []
@@ -158,6 +174,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     if (
       !props.preview &&
       liveFirst.state === "ready" &&
+      !liveFirst.result.preview &&
       bots &&
       !bots.some((item) => item.id === liveFirst.result.bot.id)
     ) {
@@ -206,15 +223,14 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     if (target !== "ignore" && target !== "complete")
       void props.navigate(target);
   };
-  const skip = () =>
-    void perform(async () => {
-      await props.cancelSignIn();
-      await props.navigate("models");
-    });
   const button = (label: string, action: () => void, secondary = false) => (
     <Button
       size="lg"
-      className="h-11 rounded-xl px-6"
+      className={
+        secondary
+          ? "h-10 rounded-xl px-5"
+          : "onboarding-continue h-11 rounded-xl px-6"
+      }
       variant={secondary ? "secondary" : "default"}
       disabled={busy}
       onClick={action}
@@ -281,30 +297,24 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
           </div>
           {button(t("onboarding.connectCta"), () => props.signIn("signup"))}
-          <div className="flex items-center gap-1">
-            {button(
-              defaultProfile
-                ? t("onboarding.haveAccountContinueWith", {
-                    browser: defaultProfile.browserName,
-                  })
-                : t("onboarding.haveAccountCta"),
-              () => props.signIn("signin", defaultProfile?.id),
+          {quickProfile ? (
+            button(
+              t("onboarding.haveAccountCta"),
+              () => props.signIn("signin", quickProfile.id),
               true
-            )}
-            {!!profiles.data?.length && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="secondary"
-                      aria-label={t("onboarding.signInOptions")}
-                    />
-                  }
-                >
-                  ⌄
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {profiles.data.map((profile) => (
+            )
+          ) : sessionProfiles.length ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button size="lg" variant="secondary" disabled={busy} />
+                }
+              >
+                {t("onboarding.haveAccountCta")}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuGroup>
+                  {sessionProfiles.map((profile) => (
                     <DropdownMenuItem
                       key={profile.id}
                       onClick={() => props.signIn("signin", profile.id)}
@@ -318,10 +328,16 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                   <DropdownMenuItem onClick={() => props.signIn("signin")}>
                     {t("onboarding.signInAnotherWay")}
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            button(
+              t("onboarding.haveAccountCta"),
+              () => props.signIn("signin"),
+              true
+            )
+          )}
           {defaultProfile && (
             <p>
               {t("onboarding.usesBrowserSessions", {
@@ -329,9 +345,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               })}
             </p>
           )}
-          <Button variant="ghost" onClick={skip}>
-            {t("onboarding.pages.skip")}
-          </Button>
         </>
       )}
       {step === "connect" && (
@@ -356,7 +369,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               props.signIn(attempt.intent, attempt.profileId)
             )}
           <Button
-            variant="ghost"
+            variant="default"
             onClick={() => void transport.client.auth.abacus.openInBrowser({})}
           >
             {t("onboarding.openInBrowserCta")}
@@ -372,9 +385,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           >
             {t("onboarding.signInAnotherWay")}
           </Button>
-          <Button variant="ghost" onClick={skip}>
-            {t("onboarding.pages.skip")}
-          </Button>
+
           <Button
             variant="ghost"
             onClick={() =>
@@ -390,9 +401,14 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       )}
       {step === "connected" && (
         <>
-          {[1, 2, 3, 4].map((n) => (
-            <p key={n}>{t(`onboarding.pages.connected.promise${n}`)}</p>
-          ))}
+          <ul className="bg-card w-full space-y-3 rounded-xl border p-5 text-left text-sm">
+            {[1, 2, 3, 4].map((n) => (
+              <li key={n} className="flex gap-3">
+                <span aria-hidden>✓</span>
+                <span>{t(`onboarding.pages.connected.promise${n}`)}</span>
+              </li>
+            ))}
+          </ul>
           {button(t("onboarding.connectedCta"), advance)}
         </>
       )}
@@ -430,19 +446,13 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             ))}
             {props.localModel}
           </div>
-          <div className="w-full rounded-xl border p-4">
-            <h2>{t("onboarding.setupExistingTitle")}</h2>
-            <p>{t("onboarding.setupExistingBody")}</p>
-            <Button variant="ghost" onClick={advance}>
-              {t("onboarding.setupExistingLater")}
-            </Button>
-          </div>
+          <p className="text-sm">{t("onboarding.setupExistingBody")}</p>
           {button(t("onboarding.setupDoneCta"), advance)}
         </>
       )}
       {step === "connectors" && (
         <>
-          <div className="grid w-full grid-cols-3 gap-3">
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
             {CONNECTORS.filter(
               (c) => c.onboarding || (more && c.kind === "platform")
             )
@@ -450,19 +460,10 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
               .map((c) => (
                 <div
                   key={c.id}
-                  className="bg-muted flex flex-col items-center gap-3 rounded-xl border p-4"
+                  className="bg-card flex min-h-32 flex-col items-center gap-3 rounded-xl border p-4 [&>span:not([data-slot])]:flex-1 [&>span:not([data-slot])]:content-center"
                 >
                   <ConnectorMark
-                    id={
-                      (
-                        {
-                          "google-drive": "drive",
-                          "google-calendar": "calendar",
-                        } as Record<string, string>
-                      )[c.logo ?? ""] ??
-                      c.logo ??
-                      c.id
-                    }
+                    id={c.logo ?? c.id}
                     initial={c.name.slice(0, 1)}
                     size={28}
                   />
@@ -492,7 +493,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           <Button variant="ghost" onClick={() => setMore(!more)}>
             {t("onboarding.pages.more")}
           </Button>
-          {button(t("onboarding.connectorsContinue"), advance)}
+          {button(t("onboarding.connectorsContinue"), () => {
+            if (!facts.ownsBot)
+              void perform(() => props.complete({ to: "new-bot" }));
+            else advance();
+          })}
         </>
       )}
       {step === "first-bot" && (
@@ -510,7 +515,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             <>
               <div className="bg-muted w-full rounded-xl border p-5">
                 <h2>
-                  {bots?.some((b) => b.id === bot.id)
+                  {(first.state === "ready" && first.result.preview) ||
+                  bots?.some((b) => b.id === bot.id)
                     ? bot.name
                     : t("onboarding.pages.removed")}
                 </h2>

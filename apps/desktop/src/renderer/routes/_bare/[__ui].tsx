@@ -73,7 +73,7 @@ const GalleryChat = ({
   const expanded = useComposerExpanded("bots-gallery");
   const slots = useBotChatSlots(bot, "bots-gallery", expanded);
   return replayState.current ? (
-    <div className="h-[650px]">
+    <div className="h-[calc(100dvh-180px)] min-h-64">
       <ChatView
         threadId="bots-gallery"
         runtime={replayState.current.runtime}
@@ -205,5 +205,7 @@ function Phase5View({ fixture }: { fixture: string }) {
       </RunReportFrame>
     ) : null,
   };
-  return <div className="h-[650px]">{components[fixture]}</div>;
+  return (
+    <div className="h-[calc(100dvh-180px)] min-h-64">{components[fixture]}</div>
+  );
 }

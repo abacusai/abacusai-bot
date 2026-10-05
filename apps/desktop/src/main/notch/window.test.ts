@@ -8,6 +8,7 @@ vi.mock("electron", async () => {
       size = [300, 100];
       isDestroyed = () => false;
       getContentSize = () => this.size;
+      setBounds() {}
       setAlwaysOnTop() {}
       setVisibleOnAllWorkspaces() {}
       setIgnoreMouseEvents() {}

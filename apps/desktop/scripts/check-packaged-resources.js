@@ -71,7 +71,9 @@ const FORBIDDEN = [];
 
 /** Where electron-builder --dir leaves the resources, per platform. */
 function resourcesDir() {
-  const dist = path.join(import.meta.dirname, "..", "release");
+  const dist = path.resolve(
+    process.argv[2] ?? path.join(import.meta.dirname, "..", "release")
+  );
   if (!fs.existsSync(dist)) {
     throw new Error("No release/ directory. Run `pnpm package:dir` first.");
   }

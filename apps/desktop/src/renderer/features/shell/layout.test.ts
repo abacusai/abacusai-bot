@@ -40,6 +40,8 @@ describe("shellLayout", () => {
 
             let sidebar = pinned ? "pinned" : "floating";
             if (band === "sm" && area === "bots" && pinned) sidebar = "strip";
+            if (band === "md" || (band === "sm" && area !== "bots"))
+              sidebar = "floating";
             if (
               area === "sessions" &&
               (band === "sm" || (band === "xl" && panelOpen))

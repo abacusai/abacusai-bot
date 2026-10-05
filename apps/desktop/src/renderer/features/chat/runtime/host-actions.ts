@@ -3,7 +3,10 @@
  * external links, revealing files, the attach pickers, pasted files and
  * thumbnails. Built from the transport in production; faked in fixtures.
  */
+import type { CreditActions } from "#renderer/components/credits-card";
+import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
+import { creditsTier } from "#renderer/lib/credits";
 
 interface PickedPath {
   path: string;
@@ -11,7 +14,7 @@ interface PickedPath {
   size?: number;
 }
 
-export interface ChatHostActions {
+export interface ChatHostActions extends CreditActions {
   openExternal(url: string): Promise<void>;
   accountTier(): Promise<"free" | "basic" | "paid" | "unknown">;
   showItemInFolder(path: string): Promise<void>;
@@ -30,20 +33,10 @@ export interface ChatHostActions {
 export const hostActionsFor = (transport: Transport): ChatHostActions => {
   const client = transport.client;
   return {
+    ...creditActionsFor(transport),
     accountTier: async () => {
       const account = await client.account.abacus();
-      const tier = (
-        account?.subscription_tier ??
-        account?.plan ??
-        ""
-      ).toLowerCase();
-      return tier === "free"
-        ? "free"
-        : tier === "basic"
-          ? "basic"
-          : ["pro", "max", "enterprise", "paid"].includes(tier)
-            ? "paid"
-            : "unknown";
+      return creditsTier(account);
     },
     openExternal: (url) => client.system.openExternal({ url }),
     showItemInFolder: (path) => client.system.showItemInFolder({ path }),

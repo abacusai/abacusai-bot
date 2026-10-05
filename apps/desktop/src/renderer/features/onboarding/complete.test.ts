@@ -72,6 +72,20 @@ describe("R6-T6 completion persistence boundaries", () => {
       once: true,
     });
   });
+  it("creates the sponsored first bot only after onboarding, once across concurrent completion", async () => {
+    const { deps, calls } = setup();
+    deps.resolveExit = async () => {
+      expect(calls).toEqual(["exit", "account"]);
+      calls.push("first-bot");
+      return { to: "bot", botId: "chief" };
+    };
+    await Promise.all([
+      completeOnboarding(deps, { to: "new-bot" }),
+      completeOnboarding(deps, { to: "new-bot" }),
+    ]);
+    expect(calls.filter((call) => call === "first-bot")).toHaveLength(1);
+    expect(calls.indexOf("first-bot")).toBeLessThan(calls.indexOf("commit"));
+  });
   it("shares the completion tail with a concurrent shell resume", async () => {
     const { deps, calls } = setup();
     await Promise.all([

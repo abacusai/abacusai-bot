@@ -178,7 +178,11 @@ const View = ({
   play: boolean;
 }) => {
   const [runtime] = useState(() =>
-    fixtureRuntime(fixture, { ...(step != null ? { step } : {}), play })
+    fixtureRuntime(
+      fixture,
+      { ...(step != null ? { step } : {}), play },
+      `gallery-${fixture}`
+    )
   );
   useEffect(
     () => () => {
@@ -193,7 +197,7 @@ const View = ({
     if (runtime == null) return;
     const picker = runtime.scenario.view?.openPicker;
     if (picker == null) return;
-    const observer = new MutationObserver(() => {
+    const openPicker = () => {
       const view = document.querySelector(
         `[data-scenario="${runtime.scenario.id}"]`
       );
@@ -202,15 +206,17 @@ const View = ({
           ? view?.querySelector<HTMLButtonElement>(
               '[data-slot="chat-model-picker"]'
             )
-          : [
-              ...(view?.querySelectorAll<HTMLButtonElement>("button") ?? []),
-            ].find((button) => button.textContent?.includes("Supervised"));
+          : view?.querySelector<HTMLButtonElement>(
+              '[data-slot="chat-mode-picker"]'
+            );
       if (button != null) {
         observer.disconnect();
         button.click();
       }
-    });
+    };
+    const observer = new MutationObserver(openPicker);
     observer.observe(document.body, { subtree: true, childList: true });
+    openPicker();
     return () => observer.disconnect();
   }, [runtime]);
   const [model, setModel] = useState<string | null>("route-llm");
@@ -226,7 +232,7 @@ const View = ({
         </span>
       </div>
       <div
-        className="bg-background h-[720px] overflow-hidden rounded-xl border"
+        className="bg-background h-[calc(100dvh-180px)] min-h-64 overflow-hidden rounded-xl border"
         style={
           scenario.skin === "bot"
             ? (botAccentStyle(BOT_AVATAR_COLORS[0]!) as CSSProperties)

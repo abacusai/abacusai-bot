@@ -8,6 +8,7 @@ import {
 import { OnboardingFrame } from "#renderer/features/onboarding";
 import { accountStateQuery } from "#renderer/features/onboarding/actions";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+import { canSignOutOfAbacus } from "#shared/settings";
 const Layout = () => {
   const matches = useMatches();
   const step = matches.at(-1)?.params as { step?: OnboardingStepId };
@@ -22,7 +23,11 @@ export const Route = createFileRoute("/_bare/onboarding")({
     const account = await context.queryClient.ensureQueryData(
       accountStateQuery(context.transport)
     );
-    if (account.onboarded) throw redirect({ to: "/bots/new", replace: true });
+    if (
+      account.onboarded &&
+      canSignOutOfAbacus(await context.transport.client.settings.get({}))
+    )
+      throw redirect({ to: "/bots/new", replace: true });
   },
   loader: ({ context }) =>
     Promise.all([

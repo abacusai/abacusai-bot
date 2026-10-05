@@ -121,6 +121,32 @@ describe("screenshot gate checks", () => {
     expect(collapsedProblems("c", { ...ok, slot: null })).toHaveLength(1);
   });
 
+  it("keeps the pane fixed when the pinned preference already floats in the md band", async () => {
+    const { collapsedProblems } = await load();
+    const pane = { left: 56, width: 836 };
+    const ok = {
+      floating: true,
+      stable: true,
+      slot: { left: 56, width: 0 },
+      pane,
+      rail: { right: 56 },
+      occupied: "0px",
+      pinnedPane: pane,
+      pinnedMode: "floating",
+    };
+    expect(collapsedProblems("c", ok)).toEqual([]);
+    expect(
+      collapsedProblems("c", { ...ok, pane: { ...pane, width: 840 } })
+    ).toHaveLength(1);
+    expect(
+      collapsedProblems("c", { ...ok, pane: { ...pane, left: 60 } })
+    ).toHaveLength(2);
+    // A supported pinned column still has to release space on collapse.
+    expect(
+      collapsedProblems("c", { ...ok, pinnedMode: "pinned" })
+    ).toHaveLength(1);
+  });
+
   it("runs the native-frame probe on Linux, and records a skip elsewhere that fails when required (Codex impl r2 #5)", async () => {
     const { nativeFrameStatus } = await load();
     expect(nativeFrameStatus("linux", true)).toEqual({ run: true });
