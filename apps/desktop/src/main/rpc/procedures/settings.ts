@@ -1,10 +1,35 @@
 import type { SettingsEvent } from "@abacus-ai/contract/contract";
 
+import type { RpcContext } from "../context";
 import { impl, isType, onIpcEvents, stream } from "./impl";
+
+/** Shown in place of a stored key: set, and nothing more. */
+const REDACTED_KEY = "configured";
+
+/**
+ * The settings file as a connection may see it. A browser tab of the hosted
+ * web app gets every stored key replaced by a marker: the key is the host's,
+ * and a page that holds it can leak it.
+ */
+const forConnection = <T extends { apiKeys?: Record<string, string> }>(
+  context: RpcContext,
+  settings: T
+): T =>
+  context.platform !== "web-host" || settings.apiKeys == null
+    ? settings
+    : {
+        ...settings,
+        apiKeys: Object.fromEntries(
+          Object.entries(settings.apiKeys).map(([name, key]) => [
+            name,
+            key.trim().length > 0 ? REDACTED_KEY : "",
+          ])
+        ),
+      };
 
 export const settingsRouter = impl.settings.router({
   get: impl.settings.get.handler(({ context }) =>
-    context.deps.host.readSettings()
+    forConnection(context, context.deps.host.readSettings())
   ),
   promptHistory: {
     list: impl.settings.promptHistory.list.handler(({ input, context }) =>
@@ -18,12 +43,19 @@ export const settingsRouter = impl.settings.router({
     listProviders: impl.settings.keys.listProviders.handler(({ context }) =>
       context.deps.host.storedKeyProviders()
     ),
-    save: impl.settings.keys.save.handler(({ input, context }) =>
-      context.deps.host.saveApiKey(input.provider, input.key)
+    save: impl.settings.keys.save.handler(async ({ input, context }) =>
+      forConnection(
+        context,
+        await context.deps.host.saveApiKey(input.provider, input.key)
+      )
     ),
   },
-  setDefaultModel: impl.settings.setDefaultModel.handler(({ input, context }) =>
-    context.deps.host.setDefaultModel(input.modelId)
+  setDefaultModel: impl.settings.setDefaultModel.handler(
+    async ({ input, context }) =>
+      forConnection(
+        context,
+        await context.deps.host.setDefaultModel(input.modelId)
+      )
   ),
   toolsets: {
     get: impl.settings.toolsets.get.handler(({ context }) =>
