@@ -1,5 +1,6 @@
 import { TOOLSETS_FOR_DISPLAY } from "@abacus-ai/contract/toolsets";
 import { useLiveQuery } from "@tanstack/react-db";
+import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useState } from "react";
@@ -25,7 +26,6 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
-import { useDebouncedValue } from "#renderer/lib/use-debounced-value";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -217,7 +217,8 @@ export const MarketplaceDialog = ({ onInstalled }: { onInstalled(): void }) => {
   const { transport } = useAppContext();
   const navigate = useAppNavigate();
   const [q, setQ] = useState("");
-  const queryText = useDebouncedValue(q, 350);
+  // Delays the search input; the field itself stays immediate.
+  const [queryText] = useDebouncedValue(q, { wait: 350 });
   const [installed, setInstalled] = useState<string[]>([]);
   const install = useMutation(
     succeeding(
