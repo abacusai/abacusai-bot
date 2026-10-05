@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_BROWSER } from "#renderer/lib/platform";
+import { platformSystem } from "#renderer/lib/platform-system";
 
 /** Missing kind retains the session-only behavior of older producers. */
 export const notificationHref = (
@@ -44,12 +44,12 @@ export const NotificationClicks = ({
       transport,
       ({ signal }) => transport.client.system.events({}, { signal }),
       (event) => {
+        // A web host's notices; Electron's main process shows its own.
         if (event.type === "notification") {
-          if (IS_BROWSER)
-            void import("#renderer/lib/browser/notifications").then(
-              ({ browserNotify }) =>
-                browserNotify({ title: event.title, body: event.body })
-            );
+          void platformSystem(transport.client).notify({
+            title: event.title,
+            body: event.body,
+          });
           return;
         }
         const href = notificationHref(event.metadata);
