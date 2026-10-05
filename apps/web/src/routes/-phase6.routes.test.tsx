@@ -1,3 +1,5 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -162,3 +164,23 @@ it("the shell gate reads settings once, skips hover preloads and rereads after a
   await act(() => harness!.router.navigate({ to: "/routines" }));
   expect(reads()).toBeGreaterThan(first);
 });
+it.each(["/bots/new", "/bots/new?step=setup", "/routines"])(
+  "%s renders before its non-essential queries answer",
+  async (path) => {
+    const os = implement(contract);
+    const never = () => new Promise<never>(() => undefined);
+    harness = await renderApp(path, {
+      procedures: {
+        bots: {
+          chatPreviews: os.bots.chatPreviews.handler(never),
+          senderChats: os.bots.senderChats.handler(never),
+        },
+        connectors: { statuses: os.connectors.statuses.handler(never) },
+        messaging: { snapshot: os.messaging.snapshot.handler(never) },
+        models: { list: os.models.list.handler(never) },
+      },
+    });
+    await waitFor(() => expect(harness!.router.state.status).toBe("idle"));
+    expect(harness.router.state.matches.at(-1)?.status).toBe("success");
+  }
+);

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
@@ -62,9 +62,14 @@ export const BotStartPage = ({
       search: { step: "setup", template: id, category },
     });
   };
-  const connected = Object.entries(connectors.data ?? {})
-    .filter(([, row]) => row.state === "connected")
-    .map(([id]) => id);
+  // Ranked by what was connected when the gallery mounted (cached, or none
+  // yet): statuses that arrive later would move cards under the pointer,
+  // so they rank the next visit instead.
+  const [connected] = useState(() =>
+    Object.entries(connectors.data ?? {})
+      .filter(([, row]) => row.state === "connected")
+      .map(([id]) => id)
+  );
   const templates = orderedTemplateIds(category, connected)
     .map((id) => BOT_TEMPLATES.find((item) => item.id === id)!)
     .filter(Boolean);

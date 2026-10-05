@@ -37,12 +37,13 @@ const BotsAreaError = () => {
 export const Route = createFileRoute("/_shell/(bots)/bots")({
   staticData: { area: "bots", sidebar: "bots" },
   loader: async ({ context }) => {
+    // The sidebar rows render without previews and fill them in.
+    void context.queryClient.prefetchQuery(
+      botsQueries(context.transport.orpc).chatPreviews()
+    );
     await Promise.all([
       context.db.collections.bots.preload(),
       context.db.collections.routines.preload(),
-      context.queryClient.ensureQueryData(
-        botsQueries(context.transport.orpc).chatPreviews()
-      ),
     ]);
   },
   component: BotsLayout,

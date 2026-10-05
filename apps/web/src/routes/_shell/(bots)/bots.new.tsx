@@ -36,17 +36,22 @@ export const Route = createFileRoute("/_shell/(bots)/bots/new")({
     template: search.template,
   }),
   loader: async ({ context, deps }) => {
-    await context.db.collections.bots.preload();
+    // Connected connectors only reorder the gallery and the model picker
+    // labels the app default until the catalog lands: neither waits.
     const queries = botsQueries(context.transport.orpc);
-    await context.queryClient.ensureQueryData(queries.connectorStatuses());
-    if (deps.step === "setup") {
-      await context.queryClient.ensureQueryData(queries.models());
-      if (deps.template && getDraft().templateId !== deps.template)
-        selectTemplate(
-          deps.template,
-          context.t(`bots.templates.${deps.template}.name`)
-        );
-    }
+    void context.queryClient.prefetchQuery(queries.connectorStatuses());
+    if (deps.step === "setup")
+      void context.queryClient.prefetchQuery(queries.models());
+    await context.db.collections.bots.preload();
+    if (
+      deps.step === "setup" &&
+      deps.template &&
+      getDraft().templateId !== deps.template
+    )
+      selectTemplate(
+        deps.template,
+        context.t(`bots.templates.${deps.template}.name`)
+      );
   },
   component: NewRoute,
 });
