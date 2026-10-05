@@ -110,6 +110,12 @@ export const createTransport = (
     get state() {
       return signal.state;
     },
+    generation: 1,
+    onChange: signal.onChange,
+    writeTicket: () => 0,
+    confirmWrites: () => {},
+    suspendWrites: () => {},
+    revokeWrites: () => {},
     onClose: signal.onClose,
     close,
   };

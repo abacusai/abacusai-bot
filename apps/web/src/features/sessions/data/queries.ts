@@ -12,6 +12,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { useCollections } from "#renderer/data/db";
+import { followNotices } from "#renderer/data/queries/live";
 import type { Transport } from "#renderer/data/transport";
 import type { AppQueryUtils } from "#renderer/data/transport/types";
 
@@ -73,21 +74,27 @@ export const useCheckoutIdentity = (checkout: CheckoutRef) => {
     workspace?.path
   );
 };
-const watchCheckout = async (
+/**
+ * Keeps the host watching this checkout while the view is mounted. The
+ * watch lives as long as its stream, so it is reopened on every new socket
+ * (`followNotices`) until this checkout's view goes away.
+ */
+const watchCheckout = (
   transport: Transport,
   workspaceId: string,
   sessionId: string | undefined,
   signal: AbortSignal
-) => {
-  try {
-    for await (const _ of await transport.client.git.watch(
-      { checkout: { workspaceId, ...(sessionId ? { sessionId } : {}) } },
-      { signal: signal }
-    )) {
-      if (signal.aborted) break;
-    }
-  } catch {}
-};
+) =>
+  followNotices(
+    transport,
+    ({ signal }) =>
+      transport.client.git.watch(
+        { checkout: { workspaceId, ...(sessionId ? { sessionId } : {}) } },
+        { signal }
+      ),
+    () => undefined,
+    signal
+  );
 
 export const useCheckoutWatch = (
   transport: Transport,

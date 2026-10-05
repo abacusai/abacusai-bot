@@ -5,11 +5,14 @@ import type { AiSendAck } from "@abacus-ai/contract/contract/ai";
  * until the agent's echo of its id is processed; RPC outcomes that arrive
  * after the echo are ignored. Definitive failures remove the entry;
  * uncertain ones keep it and re-send the same run id and message id
- * (main answers a repeat with the recorded original ack, §14.5).
+ * (main answers a repeat with the recorded original ack, §14.5). A send
+ * that never left the page (`HOST_UNAVAILABLE`, spec 09 D2) stays as "Not
+ * sent" for the user's Retry or Discard.
  */
 import type { UIMessage } from "@tanstack/ai-client";
 
 import { isDefinitive, type AiClient } from "#renderer/data/ai";
+import { isHostUnavailable } from "#renderer/data/transport/lifecycle";
 
 export interface SubmissionEnvelope {
   runId: string;
@@ -38,7 +41,10 @@ type AdmissionKind =
   | "rejected"
   | "duplicate"
   | "unconfirmed"
-  | "stale";
+  | "unsent"
+  | "stale"
+  /** A re-send lost its permit before it settled: reconcile again. */
+  | "reconcile";
 
 export interface AdmissionResult {
   kind: AdmissionKind;
@@ -59,6 +65,19 @@ export interface AdmissionHost {
   onDefinitiveError?(error: unknown): void;
   /** Re-send delays for an uncertain admission. */
   readonly reconcileDelaysMs: readonly number[];
+  /**
+   * Resolves once the thread is subscribed again on the current socket
+   * (and, after a host restart, re-hydrated): an uncertain re-send waits
+   * for it, so history decides before the same ids go out again.
+   */
+  settled?(): Promise<void>;
+  /**
+   * What a re-send may go out under: the socket and the session revision
+   * it was reconciled on. `signal` aborts as soon as either changes (the
+   * re-send may still be held by the transport then), and the re-send is
+   * reconciled again instead.
+   */
+  permit?(): { signal: AbortSignal; release(): void };
   schedule(ms: number, run: () => void): void;
   newId(prefix: "u" | "run"): string;
 }
@@ -88,12 +107,13 @@ const find = (host: AdmissionHost, id: string): OutboxEntry | undefined =>
 
 const statusOf = (
   ack: AiSendAck
-): Exclude<AdmissionKind, "unconfirmed" | "stale" | "duplicate"> =>
+): Exclude<AdmissionKind, "unconfirmed" | "unsent" | "stale" | "duplicate"> =>
   ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
 
 const admit = async (
   host: AdmissionHost,
-  entryId: string
+  entryId: string,
+  permit?: AbortSignal
 ): Promise<AdmissionResult> => {
   const entry = find(host, entryId);
   if (entry == null) return { kind: "stale" };
@@ -110,20 +130,37 @@ const admit = async (
   };
   let ack: AiSendAck;
   try {
-    ack = await host.ai.send({
-      threadId: host.threadId,
-      runId: entry.runId,
-      messages: [userMessage(entry)] as Parameters<
-        AiClient["send"]
-      >[0]["messages"],
-      ...(entry.forwardedProps != null
-        ? { forwardedProps: entry.forwardedProps }
-        : {}),
-    });
+    ack = await host.ai.send(
+      {
+        threadId: host.threadId,
+        runId: entry.runId,
+        messages: [userMessage(entry)] as Parameters<
+          AiClient["send"]
+        >[0]["messages"],
+        ...(entry.forwardedProps != null
+          ? { forwardedProps: entry.forwardedProps }
+          : {}),
+      },
+      permit != null ? { signal: permit } : undefined
+    );
   } catch (error) {
     if (stale()) return { kind: "stale" };
+    if (permit?.aborted) {
+      patch(host, entryId, { attempts: entry.attempts });
+      return { kind: "reconcile" };
+    }
     if (host.echoed(entryId, entry.retry ? entry.runId : undefined))
       return { kind: "started" };
+    if (isHostUnavailable(error)) {
+      // A re-send that never left: the first send is still uncertain.
+      if (entry.state === "unconfirmed") {
+        patch(host, entryId, { attempts: entry.attempts });
+        scheduleReconcile(host, entryId, entry.attempts);
+        return { kind: "unconfirmed" };
+      }
+      patch(host, entryId, { state: "failed" });
+      return { kind: "unsent" };
+    }
     if (isDefinitive(error)) {
       remove(host, entryId);
       host.onDefinitiveError?.(error);
@@ -147,7 +184,11 @@ const admit = async (
 
 /**
  * Uncertain delivery: re-send the same ids after 1 s and 3 s unless the
- * echo confirmed it; after two failed re-sends the entry is `failed`.
+ * echo confirmed it; after two failed re-sends the entry is `failed`. A
+ * re-send first waits until the thread is subscribed again (`settled`):
+ * across a dropped socket the same host answers the repeat as `duplicate`,
+ * and after a host restart the re-hydrated history has removed an entry it
+ * already holds, so it is not sent twice.
  */
 const scheduleReconcile = (
   host: AdmissionHost,
@@ -163,15 +204,26 @@ const scheduleReconcile = (
     return;
   }
   host.schedule(delay, () => {
-    const now = host.token();
-    if (now.retired || now.rev !== token.rev) return;
-    const entry = find(host, entryId);
-    if (
-      entry == null ||
-      host.echoed(entryId, entry.retry ? entry.runId : undefined)
-    )
-      return;
-    void admit(host, entryId).catch(() => {
+    void (async () => {
+      for (;;) {
+        await host.settled?.();
+        const now = host.token();
+        if (now.retired || now.rev !== token.rev) return;
+        const entry = find(host, entryId);
+        if (
+          entry == null ||
+          host.echoed(entryId, entry.retry ? entry.runId : undefined)
+        )
+          return;
+        const permit = host.permit?.();
+        try {
+          const result = await admit(host, entryId, permit?.signal);
+          if (result.kind !== "reconcile") return;
+        } finally {
+          permit?.release();
+        }
+      }
+    })().catch(() => {
       // Definitive on a re-send: the entry is already gone.
     });
   });

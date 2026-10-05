@@ -46,6 +46,11 @@ export interface ChatRuntime {
 
 export interface ChatRuntimeOptions {
   sessionOptions?: Omit<ThreadSessionOptions, "ai" | "threadId">;
+  /**
+   * The transport's connection (spec 09 D3): each new socket resumes the
+   * sessions that gave up while there was none.
+   */
+  connection?: Pick<Transport, "state" | "generation" | "onChange">;
   capacity?: number;
   maxSessions?: number;
   host?: ChatHostActions;
@@ -83,6 +88,7 @@ export const createChatRuntime = (
     const created = new ThreadSession({
       ai,
       threadId,
+      ...(options.connection != null ? { connection: options.connection } : {}),
       ...options.sessionOptions,
       log:
         options.sessionOptions?.log ??
@@ -92,6 +98,17 @@ export const createChatRuntime = (
     queueMicrotask(evict);
     return created;
   };
+
+  const { connection } = options;
+  if (connection != null) {
+    let generation = connection.generation;
+    connection.onChange(() => {
+      if (connection.state !== "open" || connection.generation === generation)
+        return;
+      generation = connection.generation;
+      for (const found of sessions.values()) found.resume();
+    });
+  }
 
   return {
     session,
@@ -135,6 +152,7 @@ export const chatRuntimeFor = (
   if (runtime == null) {
     runtime = createChatRuntime(transport.client.ai, {
       host: hostActionsFor(transport, credentialsChanged),
+      connection: transport,
     });
     registry.set(transport.client, runtime);
   }

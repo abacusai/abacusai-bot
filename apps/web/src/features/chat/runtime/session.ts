@@ -18,6 +18,7 @@ import {
 import { Store } from "@tanstack/react-store";
 
 import { isNotFound, type AiClient } from "#renderer/data/ai";
+import { untilOpen, type ConnectionSource } from "#renderer/data/queries/live";
 
 import { isAllowed } from "../kit/permissions/decisions";
 import {
@@ -131,6 +132,11 @@ export interface ThreadSessionOptions {
   pumpRetryDelaysMs?: readonly number[];
   readyCapMs?: number;
   newId?: (prefix: "u" | "run") => string;
+  /**
+   * The transport's connection (spec 09 D3): the readiness cap starts once
+   * it is open, and the pump does not spend its retries while it is down.
+   */
+  connection?: ConnectionSource;
   /** Test seam: wraps the constructed client (the ordering property test). */
   onClient?: (client: ChatClient, g: number) => void;
   onConsumed?: (seq: number, g: number) => void;
@@ -177,6 +183,14 @@ export class ThreadSession {
   #rev = 0;
   #live: Generation | null = null;
   #pending: Generation | null = null;
+  /**
+   * 1009 closes blamed on this thread's replay in a row, across pumps and
+   * hydrations (`onCut`); at two the thread stops: Retry only.
+   */
+  #cuts = 0;
+  #oversized = false;
+  /** The transport generation the live pump last subscribed on. */
+  #subscribedOn: number | undefined;
   #retired = false;
   #recoveries = 0;
   #timers = new Set<ReturnType<typeof setTimeout>>();
@@ -315,9 +329,23 @@ export class ThreadSession {
     });
   }
 
+  /**
+   * A new socket opened (spec 09 D3): a session that gave up while the host
+   * was unreachable starts again; a healthy one is left alone.
+   */
+  resume(): void {
+    if (this.#retired || this.hostStore.state.notFound || this.#oversized)
+      return;
+    const { phase, connection } = this.hostStore.state;
+    if (phase === "error" || connection === "error")
+      void this.reconnect().catch(() => undefined);
+  }
+
   /** The connection error's Retry, and a `NOT_FOUND` row that came back. */
   reconnect(): Promise<void> {
     this.#recoveries = 0;
+    this.#cuts = 0;
+    this.#oversized = false;
     return this.#start().ready.promise;
   }
 
@@ -724,12 +752,24 @@ export class ThreadSession {
     this.#live?.abort.abort();
     this.#live?.dispatcher?.close();
     this.#pending = gen;
-    gen.capTimer = this.#after(this.#options.readyCapMs ?? READY_CAP_MS, () => {
-      if (gen.g !== this.#gen || gen.swapped || this.#retired) return;
-      if (gen.client == null)
-        this.#fail(gen, new Error("chat: hydration timed out"));
-      else this.#swap(gen, true);
-    });
+    const arm = (): void => {
+      gen.capTimer = this.#after(
+        this.#options.readyCapMs ?? READY_CAP_MS,
+        () => {
+          if (gen.g !== this.#gen || gen.swapped || this.#retired) return;
+          if (gen.client == null)
+            this.#fail(gen, new Error("chat: hydration timed out"));
+          else this.#swap(gen, true);
+        }
+      );
+    };
+    // The cap bounds the host's replay, not the wait for a socket.
+    const { connection } = this.#options;
+    if (connection == null || connection.state === "open") arm();
+    else
+      void untilOpen(connection, gen.abort.signal).then((open) => {
+        if (open && !gen.abort.signal.aborted) arm();
+      });
     if (!this.hostStore.state.ready) this.#host({ phase: "loading" });
     void this.#build(gen, seed);
     return gen;
@@ -867,7 +907,20 @@ export class ThreadSession {
       push: (seq, event) => dispatcher.push({ seq, event }),
       onConnection: (connection) => {
         if (gen.g !== this.#gen) return;
+        if (connection === "connected")
+          this.#subscribedOn = this.#options.connection?.generation;
         this.#host({ connection });
+      },
+      onCut: () => {
+        if (gen.g !== this.#gen) return true;
+        this.#cuts += 1;
+        if (this.#cuts < 2) return false;
+        this.#oversized = true;
+        this.#host({
+          connection: "error",
+          error: new Error("chat: an event is too large to deliver"),
+        });
+        return true;
       },
       onRecover: () => {
         if (gen.g !== this.#gen) return;
@@ -880,6 +933,9 @@ export class ThreadSession {
       ...(this.#options.pumpRetryDelaysMs != null
         ? { retryDelaysMs: this.#options.pumpRetryDelaysMs }
         : {}),
+      ...(this.#options.connection != null
+        ? { connection: this.#options.connection }
+        : {}),
     });
 
     this.#checkReady(gen);
@@ -890,7 +946,10 @@ export class ThreadSession {
       return;
     gen.appliedSeq = seq;
     // Reset only after accepted live progress has actually been consumed.
-    if (seq > gen.positions.checkpoint) this.#recoveries = 0;
+    if (seq > gen.positions.checkpoint) {
+      this.#recoveries = 0;
+      this.#cuts = 0;
+    }
     this.#options.onConsumed?.(seq, gen.g);
     if (isTerminal(event)) {
       const messages = gen.client?.getMessages() ?? [];
@@ -1005,6 +1064,8 @@ export class ThreadSession {
   }
 
   #recover(): void {
+    // Stopped for an undeliverable event: only the user's Retry restarts.
+    if (this.#oversized) return;
     const delays = this.#options.recoveryDelaysMs ?? RECOVERY_DELAYS_MS;
     const delay = delays[this.#recoveries];
     this.#recoveries += 1;
@@ -1082,6 +1143,63 @@ export class ThreadSession {
     return timer;
   }
 
+  /**
+   * The thread's stream is subscribed again on the transport's current
+   * socket, and no new generation is still hydrating (spec 09 D3). A send
+   * whose delivery is uncertain waits for this before going out again: if
+   * the host restarted meanwhile, the pump's `abacus.resync` has hydrated a
+   * new generation by then, and the swap dropped every entry the history
+   * already holds.
+   */
+  #settled(): Promise<void> {
+    const connection = this.#options.connection;
+    const settled = (): boolean =>
+      this.#retired ||
+      connection == null ||
+      (connection.state === "open" &&
+        this.#subscribedOn === connection.generation &&
+        this.#pending == null);
+    if (settled()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const subscription = this.hostStore.subscribe(() => {
+        if (!settled()) return;
+        subscription.unsubscribe();
+        resolve();
+      });
+    });
+  }
+
+  /** See `AdmissionHost.permit`. */
+  #permit(): { signal: AbortSignal; release(): void } {
+    const connection = this.#options.connection;
+    const generation = connection?.generation;
+    const rev = this.#rev;
+    const abort = new AbortController();
+    const check = (): void => {
+      if (abort.signal.aborted) return;
+      const moved =
+        this.#retired ||
+        this.#rev !== rev ||
+        (connection != null &&
+          (connection.state !== "open" ||
+            connection.generation !== generation ||
+            this.#subscribedOn !== generation));
+      // After the link heard the close: an abort on a dead socket sends
+      // nothing.
+      if (moved) setTimeout(() => abort.abort(), 0);
+    };
+    const off = connection?.onChange?.(check);
+    const subscription = this.hostStore.subscribe(check);
+    check();
+    return {
+      signal: abort.signal,
+      release: () => {
+        off?.();
+        subscription.unsubscribe();
+      },
+    };
+  }
+
   #createAdmission(): AdmissionHost {
     return {
       ai: this.#ai,
@@ -1103,6 +1221,8 @@ export class ThreadSession {
               (message) => message.id === messageId
             ),
       reconcileDelaysMs: this.#options.reconcileDelaysMs ?? RECONCILE_DELAYS_MS,
+      settled: () => this.#settled(),
+      permit: () => this.#permit(),
       schedule: (ms, run) => {
         if (!this.#retired) this.#after(ms, run);
       },

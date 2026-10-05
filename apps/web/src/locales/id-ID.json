@@ -3885,9 +3885,11 @@
       "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
+      "reconnecting": "Menyambungkan ulang",
       "upgrade": "Upgrade to Pro",
       "download": "Unduh aplikasi desktop",
-      "restart": "Restart your computer"
+      "restart": "Restart your computer",
+      "retry": "Coba lagi"
     },
     "files": {
       "open": "Open folder"
