@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
+import { WebMessagingPage } from "#platform/whatsapp-phone";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
@@ -45,7 +46,7 @@ import {
   useConnectFlow,
 } from "./connect-flow";
 export const MessagingPage = () =>
-  IS_ELECTRON ? <DesktopMessagingPage /> : null;
+  IS_ELECTRON ? <DesktopMessagingPage /> : <WebMessagingPage />;
 const DesktopMessagingPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();

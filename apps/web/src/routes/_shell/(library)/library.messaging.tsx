@@ -1,10 +1,9 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { MessagingPage } from "#renderer/features/library/messaging";
 import { MessagingSearch } from "#renderer/features/library/search";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 
 const MessagingRoute = () => {
   const { t } = useTranslation();
@@ -21,9 +20,6 @@ const MessagingRoute = () => {
 };
 
 export const Route = createFileRoute("/_shell/(library)/library/messaging")({
-  beforeLoad: () => {
-    if (!IS_ELECTRON) throw notFound();
-  },
   validateSearch: MessagingSearch,
   component: MessagingRoute,
 });

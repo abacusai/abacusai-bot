@@ -29,13 +29,12 @@ it("filters desktop messaging templates from the web catalog and every category"
     BOT_TEMPLATES.some((template) => template.id === "chief-of-staff")
   ).toBe(true);
 });
-it("hides messaging navigation, direct routes and native tool groups while retaining other tools", async () => {
+it("serves the browser's own messaging page and hides native tool groups while retaining other tools", async () => {
   const app = await renderApp("/library/tools");
   try {
     await screen.findByRole("heading", { name: "Tools" });
     for (const id of ["device", "messaging"])
       expect(document.querySelector(`[data-setting-id="${id}"]`)).toBeNull();
-    expect(document.querySelector('a[href="/library/messaging"]')).toBeNull();
     expect(
       document.querySelector('[data-setting-id="terminal"]')
     ).not.toBeNull();
@@ -60,12 +59,12 @@ it("hides messaging navigation, direct routes and native tool groups while retai
         search: { platform: "abacus_telegram" },
       });
     });
+    // The desktop's own-account lanes stay desktop-only; the browser links WhatsApp to the server-run agent.
     expect(
       document.querySelector('[data-setting-id="gatewayEnabled"]')
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Connect" })).toBeNull();
-    expect(await screen.findByText(enUS.errors.notFoundTitle)).toBeDefined();
-    expect(screen.queryByText("Messaging")).toBeNull();
+    expect(await screen.findByText(enUS.web.whatsapp.rowDetail)).toBeDefined();
+    expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
