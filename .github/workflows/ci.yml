@@ -142,7 +142,26 @@ jobs:
         working-directory: apps/desktop
         run: node -e 'require("electron")'
 
-      - run: pnpm run test
+      - name: Prepare Linux desktop tests
+        if: runner.os == 'Linux'
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e 'require("electron")'
+          sandbox=$(node -p 'require("path").join(require("path").dirname(require.resolve("electron/package.json")), "dist", "chrome-sandbox")')
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a pnpm run test
+          else
+            pnpm run test
+          fi
 
       # The agent resolves these at runtime rather than shelling out to whatever
       # is on PATH, so a vendor step that half-succeeded is a search tool that
@@ -220,6 +239,46 @@ jobs:
               if (!events.some(event => typeof event.type === "string")) throw new Error("events carry no type")
             })
           '
+
+  # renderer-next's screenshot gate (spec 01 §10.2) in the real Electron
+  # window: every route and band, the collapsed, floating, split, compact and
+  # full-screen states, axe, and the Linux native-frame probe. The probe runs
+  # only on Linux, so this job requires it: a run that skipped it fails
+  # (ABACUSBOT_REQUIRE_NATIVE_FRAME). macOS runs record it as skipped.
+  screenshots-next:
+    name: renderer-next screenshots (Linux)
+    needs: [check]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The workspace packages main imports; the script builds the app itself
+      # (VITE_UI_GALLERY=1, the fixture tables).
+      - run: pnpm exec turbo run build --filter=@abacus-ai/desktop^...
+
+      # The same setuid helper the packaged-app smoke test sets up, for the
+      # unpacked Electron the script launches.
+      - name: Chromium's setuid sandbox helper
+        working-directory: apps/desktop
+        run: |
+          set -euo pipefail
+          # Electron 44 downloads its binary on first require, not on install.
+          node -e 'require("electron")'
+          sandbox=$(node -p 'require("path").join(require("path").dirname(require.resolve("electron/package.json")), "dist", "chrome-sandbox")')
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+
+      - name: Screenshot gate (native-frame probe required)
+        working-directory: apps/desktop
+        env:
+          ABACUSBOT_REQUIRE_NATIVE_FRAME: "1"
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots-next.mjs --require-native-frame
 
   package:
     name: Package (${{ matrix.os }})

@@ -3,7 +3,13 @@
  * transcript on disk rather than tracked in the bot record: a copy would be
  * wrong exactly when a turn was interrupted, which is when the row matters.
  */
+import { messageCreatedAt } from "../debug-sync/sync-log";
 import type { TranscriptService } from "../session/transcript-service";
+
+interface ThreadLike {
+  source: { kind: string };
+  messages: readonly unknown[];
+}
 
 export interface BotChatPreview {
   /** The last message, flattened to one line. Empty when there is none. */
@@ -37,11 +43,52 @@ const lastLine = (content: string): string => {
   return lines[lines.length - 1] ?? "";
 };
 
+/**
+ * An AG-UI thread's preview (spec 03 §24.12 c): the last assistant text part
+ * with a visible last line, `at` from the message's creation time.
+ */
+const aguiPreview = (messages: readonly unknown[]): BotChatPreview | null => {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index] as {
+      role?: unknown;
+      parts?: unknown;
+    } | null;
+    if (message?.role !== "assistant" || !Array.isArray(message.parts))
+      continue;
+    for (let part = message.parts.length - 1; part >= 0; part--) {
+      const candidate = message.parts[part] as {
+        type?: unknown;
+        content?: unknown;
+      } | null;
+      if (candidate?.type !== "text") continue;
+      const text = lastLine(
+        typeof candidate.content === "string" ? candidate.content : ""
+      );
+      if (text.length === 0) continue;
+      return {
+        text: text.slice(0, MAX_PREVIEW),
+        at: messageCreatedAt(message),
+      };
+    }
+  }
+  return null;
+};
+
 export const botChatPreview = (
-  transcripts: TranscriptService,
-  sessionId: string | null
+  transcripts: Pick<TranscriptService, "read">,
+  sessionId: string | null,
+  threads?: { readCurrentFile(sessionId: string): ThreadLike | null }
 ): BotChatPreview | null => {
   if (sessionId == null) return null;
+
+  // A thread main persists as AG-UI has no v1 transcript to read.
+  let thread: ThreadLike | null = null;
+  try {
+    thread = threads?.readCurrentFile(sessionId) ?? null;
+  } catch {
+    thread = null;
+  }
+  if (thread?.source.kind === "agui") return aguiPreview(thread.messages);
 
   const stored = transcripts.read(sessionId);
   if (stored == null) return null;

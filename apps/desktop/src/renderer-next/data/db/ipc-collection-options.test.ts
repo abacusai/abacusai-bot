@@ -414,6 +414,35 @@ describe("ipcCollectionOptions (B-T1)", () => {
     expect(context.view()).toEqual([]);
   });
 
+  it("(11b) idempotentDelete: a NOT_FOUND delete resolves as deleted after a resync (03 §24.5)", async () => {
+    const notFound = Object.assign(new Error("gone"), { code: "NOT_FOUND" });
+    const context = setup([{ id: "a", label: "A" }], {
+      idempotentDelete: true,
+    });
+    await live(context);
+    // Main already dropped it without this client seeing the batch yet.
+    context.table.rows.delete("a");
+    context.table.deleteHandler = async () => {
+      throw notFound;
+    };
+    await context.collection.delete("a").isPersisted.promise;
+    await vi.waitFor(() => expect(context.view()).toEqual([]));
+    expect(context.table.snapshotCalls).toBe(2);
+  });
+
+  it("(11c) without idempotentDelete a NOT_FOUND delete rolls back", async () => {
+    const notFound = Object.assign(new Error("gone"), { code: "NOT_FOUND" });
+    const context = setup([{ id: "a", label: "A" }]);
+    await live(context);
+    context.table.deleteHandler = async () => {
+      throw notFound;
+    };
+    await expect(
+      context.collection.delete("a").isPersisted.promise
+    ).rejects.toBe(notFound);
+    expect(context.view()).toEqual([{ id: "a", label: "A" }]);
+  });
+
   it("(12) overflow: reset then EOF reopens, re-snapshots, and a mutation echoes after", async () => {
     const context = setup([{ id: "a", label: "A" }]);
     await live(context);

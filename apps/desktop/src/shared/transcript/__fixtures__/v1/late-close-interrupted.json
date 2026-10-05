@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "sessionId": "sess-late-close-interrupted",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Go",
+      "at": 1788256800000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-a",
+      "status": "created",
+      "description": "Closed late as interrupted",
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "sa-text",
+      "source": "bot",
+      "content": "Working...",
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "Stop",
+      "at": 1788256803000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-a",
+      "status": "completed",
+      "outcome": "interrupted",
+      "endTime": 1788256804500,
+      "at": 1788256804000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Stopped.",
+      "at": 1788256805000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-b",
+      "status": "created",
+      "description": "Open when a user text came, never closed",
+      "at": 1788256806000
+    },
+    {
+      "type": "text",
+      "id": "sb-text",
+      "source": "bot",
+      "content": "Looking...",
+      "at": 1788256807000
+    },
+    {
+      "type": "text",
+      "id": "u3",
+      "source": "user",
+      "content": "Anything?",
+      "at": 1788256808000
+    }
+  ]
+}

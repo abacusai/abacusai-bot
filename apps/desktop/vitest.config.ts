@@ -31,6 +31,8 @@ const ciTimeouts = process.env.CI
   : {};
 
 const CONTENDS_FOR_THE_MACHINE = [
+  // Spawns several CLI children; fragmented stream timeouts need the machine alone.
+  "src/main/services/session/cli-manager-taps.test.ts",
   "src/main/services/browser/browser-snapshot.browser.test.ts",
   "src/main/services/mcp/mcp-browser-server.test.ts",
   // About renderer code, but it spawns the same Electron: the terminal grid
@@ -45,10 +47,17 @@ const CONTENDS_FOR_THE_MACHINE = [
   "src/main/rpc/tables/memories.fs.test.ts",
   // Drives the built renderer-next in Electron (spec 01 R1-T11b).
   "src/main/dev/renderer-next.electron.test.ts",
+  "src/main/dev/chat-kit.electron.test.ts",
+  "src/main/dev/chat-real-session.electron.test.ts",
+  // The migration kill-injection harness enumerates thousands of kill points
+  // (spec 00 C); under the parallel project's load one matrix exceeds ten
+  // minutes, so it runs alone with the 60 s per-test budget of this project.
+  "src/main/migrations/runner.crash.test.ts",
 ];
 
 export default defineConfig({
   test: {
+    ...(process.env.CI ? { maxWorkers: 2 } : {}),
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
@@ -112,6 +121,7 @@ export default defineConfig({
           include: CONTENDS_FOR_THE_MACHINE,
           // One at a time, and given room. See the note on the list above.
           fileParallelism: false,
+          sequence: { groupOrder: 1 },
           testTimeout: 60_000,
         },
       },

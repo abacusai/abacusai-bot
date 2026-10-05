@@ -19,6 +19,7 @@ import type {
   PermissionRequest,
   ToolDisplayData,
 } from "../protocol.js";
+import { BoundedMap, BoundedSet, MESSAGE_IDS_KEPT } from "./bounded.js";
 import { aguiEvent, custom } from "./event.js";
 import {
   childMessageId,
@@ -26,6 +27,7 @@ import {
   reasoningMessageId,
   resultMessageId,
   steerMessageId,
+  nativeId,
   toolKey,
   userMessageId,
 } from "./ids.js";
@@ -102,11 +104,16 @@ export class AguiEmitter {
   private assistant: { key: string | undefined; id: string } | null = null;
   /** The last assistant message id, for tool calls announced after it closed. */
   private lastAssistantId: string | undefined;
-  /** Legacy `msg-N` → AG-UI id, from `message_open`. */
-  private readonly messageIds = new Map<string, string>();
-  private readonly usedMessageIds = new Set<string>();
+  /** Legacy `msg-N` → AG-UI id, from `message_open`. Bounded (bounded.ts). */
+  private readonly messageIds = new BoundedMap<string, string>(
+    MESSAGE_IDS_KEPT
+  );
+  /** AG-UI message ids handed out, the newest `MESSAGE_IDS_KEPT`. */
+  private readonly usedMessageIds = new BoundedSet<string>(MESSAGE_IDS_KEPT);
   private reasoning: OpenReasoning | null = null;
   private reasoningCount = 0;
+  /** The open run has had a parent assistant message (see `errorAnchor`). */
+  private runHadAssistant = false;
   private fallbackCount = 0;
   private steerCount = 0;
 
@@ -168,6 +175,29 @@ export class AguiEmitter {
   runOpened(): void {
     this.hiddenDepth = 0;
     this.hiddenTypes.length = 0;
+    this.runHadAssistant = false;
+  }
+
+  /**
+   * Before a `RUN_ERROR`: an empty assistant message for a run that opened
+   * none. A receive-only `StreamProcessor` (main's transcript, the chat kit's
+   * client) meets a `RUN_ERROR` with no assistant message by creating one and
+   * marking it pending, and then renames it to the next `TEXT_MESSAGE_START`
+   * it sees: the next run's user echo, which becomes an assistant message.
+   * With an assistant message of the run's own, nothing is pending.
+   */
+  errorAnchor(runId: string): AguiEvent[] {
+    if (this.runHadAssistant) return [];
+    this.runHadAssistant = true;
+    const id = this.uniqueMessageId(nativeId(`${runId}:error`));
+
+    return [
+      aguiEvent(EventType.TEXT_MESSAGE_START, {
+        messageId: id,
+        role: "assistant",
+      }),
+      aguiEvent(EventType.TEXT_MESSAGE_END, { messageId: id }),
+    ];
   }
 
   /** Set by the host before `session.stop()` / `resetConversation()`. */
@@ -278,7 +308,9 @@ export class AguiEmitter {
       case "message_open":
         return this.messageOpen(
           event.key,
-          event.messageId ?? this.fallbackMessageId(event.key)
+          event.messageId != null
+            ? nativeId(event.messageId)
+            : this.fallbackMessageId(event.key)
         );
 
       case "message_close": {
@@ -383,7 +415,10 @@ export class AguiEmitter {
 
     if (options.dequeued) out.push(custom("queue.dequeued", { content }));
     out.push(
-      ...this.userMessage(options.messageId ?? userMessageId(runId), content)
+      ...this.userMessage(
+        nativeId(options.messageId ?? userMessageId(runId)),
+        content
+      )
     );
 
     return out;
@@ -715,7 +750,7 @@ export class AguiEmitter {
     const base =
       this.state.agentSessionId ?? this.ctx.runs.openRunId() ?? "run";
 
-    return `${base}:${this.ctx.incarnation}:${key}`;
+    return nativeId(`${base}:${this.ctx.incarnation}:${key}`);
   }
 
   private uniqueMessageId(requested: string): string {
@@ -735,6 +770,7 @@ export class AguiEmitter {
     this.assistant = { key, id };
     this.lastAssistantId = id;
     this.reasoningCount = 0;
+    this.runHadAssistant = true;
 
     return [
       aguiEvent(EventType.TEXT_MESSAGE_START, {
@@ -841,9 +877,10 @@ export class AguiEmitter {
     subagentRunId: string | undefined,
     legacyId: string
   ): string {
+    // A provider's tool call id passes through, under the reservation.
     return subagentRunId != null
       ? childToolCallId(subagentRunId, legacyId)
-      : legacyId;
+      : nativeId(legacyId);
   }
 
   private tool(

@@ -9,8 +9,8 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CollectionsProvider, createCollections } from "#next/data/collections";
-import { directDbSource, FixtureDb } from "#next/data/fixture-db/fixture-db";
+import { createDb, DbProvider } from "#next/data/db";
+import { fixtureTransport, FixtureDb } from "#next/data/fixture-db/fixture-db";
 import { fixturePrefs } from "#next/data/fixture-db/rows";
 import { AppearanceTheme } from "#next/features/settings";
 import { initI18n } from "#next/lib/i18n";
@@ -37,12 +37,11 @@ const mount = async (
 ) => {
   await initI18n();
   const db = new FixtureDb({ prefs });
-  const collections = createCollections(directDbSource(db), { backoffMs: [5] });
+  const appDb = createDb(fixtureTransport(db), { retryDelayMs: () => 5 });
+  const { collections } = appDb;
   cleanups.push(() => collections.prefs.cleanup());
   await collections.prefs.preload();
-  render(
-    <CollectionsProvider value={collections}>{children}</CollectionsProvider>
-  );
+  render(<DbProvider value={appDb}>{children}</DbProvider>);
   return { db, collections };
 };
 

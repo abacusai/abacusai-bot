@@ -1,5 +1,6 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
+import { BotsGlobals } from "#next/features/bots";
 import { ShellLayout } from "#next/features/shell";
 import { ignoreLoadError } from "#next/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#next/lib/navigation/search";
@@ -13,12 +14,15 @@ const ShellRoute = () => {
   const { transport, system } = Route.useRouteContext();
   const chrome = useChromeState(transport);
   return (
-    <ShellLayout
-      geometryMissing={
-        import.meta.env.DEV && chrome.mode === "overlay-unavailable"
-      }
-      initials={initialsOf(system.homeDir)}
-    />
+    <>
+      <ShellLayout
+        geometryMissing={
+          import.meta.env.DEV && chrome.mode === "overlay-unavailable"
+        }
+        initials={initialsOf(system.homeDir)}
+      />
+      <BotsGlobals />
+    </>
   );
 };
 
@@ -27,8 +31,8 @@ export const Route = createFileRoute("/_shell")({
   search: { middlewares: [stripSearchParams(SHELL_DEFAULTS)] },
   loader: ({ context }) =>
     Promise.all([
-      context.collections.sessions.preload().catch(ignoreLoadError),
-      context.collections.workspaces.preload().catch(ignoreLoadError),
+      context.db.collections.sessions.preload().catch(ignoreLoadError),
+      context.db.collections.workspaces.preload().catch(ignoreLoadError),
     ]),
   component: ShellRoute,
 });
