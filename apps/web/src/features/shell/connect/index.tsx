@@ -1,13 +1,17 @@
 /**
- * The host connection, as the browser shows it (spec 09 D4). Sign-in, tier
- * and daily-limit refusals replace the app (`ConnectScreen`); every other
+ * The host connection, as the browser shows it (spec 09 D4). Sign-in and tier
+ * refusals replace the app (`ConnectScreen`), a full web host the busy page
+ * (`LimitScreen`); every other
  * stage and error is a slim banner over the running shell (`HostStatus`),
  * with the same copy and actions.
  */
 import { useSelector } from "@tanstack/react-store";
 import { useTranslation } from "react-i18next";
 
+import { BotAvatar } from "#renderer/components/bot-avatar";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
+import { defaultLook } from "#renderer/lib/bots/avatar";
+import { Button } from "#renderer/ui/button";
 
 import {
   ConnectError,
@@ -73,6 +77,7 @@ export const ConnectScreen = ({
   restart?(): void;
 }) => {
   const { t } = useTranslation();
+  if (kindOf(error) === "limit") return <LimitScreen />;
   return (
     <main
       className="bg-background text-foreground fixed inset-0 z-50 flex h-screen flex-col items-center justify-center gap-4"
@@ -86,6 +91,59 @@ export const ConnectScreen = ({
       ) : (
         <ConnectAction error={error} restart={restart} />
       )}
+    </main>
+  );
+};
+
+/**
+ * The web host is out of room (the free hosts are at capacity): a full page
+ * with the sleeping bot, a way to keep going in the desktop app, and a retry.
+ */
+export const LimitScreen = () => {
+  const { t } = useTranslation();
+  return (
+    <main
+      data-slot="host-limit"
+      className="bg-background text-foreground fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
+    >
+      <div className="flex w-full max-w-[400px] flex-col items-center gap-6 text-center">
+        <BotAvatar
+          look={defaultLook("AbacusAI Bot")}
+          mood="asleep"
+          size={112}
+        />
+        <div className="flex flex-col gap-3">
+          <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">
+            {t("web.connect.busyTitle")}
+          </h1>
+          <p className="text-muted-foreground text-[15px] leading-[22px] text-pretty">
+            {t("web.connect.busyBody")}
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-3">
+          <Button
+            size="lg"
+            className="h-12 w-full rounded-full text-base"
+            nativeButton={false}
+            render={
+              <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener" />
+            }
+          >
+            {t("web.connect.busyDownload")}
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="h-12 w-full rounded-full text-base"
+            onClick={() => location.reload()}
+          >
+            {t("web.connect.retry")}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {t("web.connect.busyNote")}
+        </p>
+      </div>
     </main>
   );
 };
