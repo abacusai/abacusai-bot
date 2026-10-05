@@ -1,10 +1,10 @@
 import { KeymapEditor } from "#renderer/components/keymap-editor";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { uiPlatform } from "#renderer/lib/platform";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { useSystem } from "#renderer/lib/use-app-context";
 
 export const KeyboardPage = () => {
-  const { system } = useAppContext();
+  const system = useSystem();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
   return (

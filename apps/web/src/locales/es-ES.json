@@ -3885,9 +3885,11 @@
       "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
+      "reconnecting": "Reconectando",
       "upgrade": "Upgrade to Pro",
       "download": "Descargar la app de escritorio",
-      "restart": "Restart your computer"
+      "restart": "Restart your computer",
+      "retry": "Reintentar"
     },
     "files": {
       "open": "Open folder"

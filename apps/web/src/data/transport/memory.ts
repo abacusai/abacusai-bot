@@ -59,6 +59,14 @@ export const createMemoryTransport = <TContext extends Context>(
     get state() {
       return transport.state;
     },
+    get generation() {
+      return transport.generation;
+    },
+    onChange: (listener) => transport.onChange(listener),
+    writeTicket: () => 0,
+    confirmWrites: () => {},
+    suspendWrites: () => {},
+    revokeWrites: () => {},
     onClose: (listener) => transport.onClose(listener),
     close: () => {
       transport.close();

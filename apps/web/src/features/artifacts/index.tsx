@@ -14,7 +14,7 @@ import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showInfo, showError } from "#renderer/lib/toast";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { useAppContext, useSystem } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   ContextMenu,
@@ -532,7 +532,7 @@ export { artifactGalleryRows } from "./gallery";
 
 /** Native driver seeds gallery files inside its isolated application home. */
 export const ArtifactsStressGallery = () => {
-  const { system } = useAppContext();
+  const system = useSystem();
   return (
     <ArtifactsPage
       fixtureRows={artifactStressRows.map((row) => ({

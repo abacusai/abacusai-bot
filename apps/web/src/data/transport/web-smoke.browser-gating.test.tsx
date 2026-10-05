@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
+import { Store } from "@tanstack/react-store";
 import {
   render,
   waitFor,
@@ -97,7 +98,11 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
     });
     if (!result.ok) throw result.error;
     const router = createAppRouter({
-      context: { ...result.boot, t: (() => "") as never },
+      context: {
+        ...result.boot,
+        system: new Store(result.boot.system),
+        t: (() => "") as never,
+      },
     });
     await router.navigate({ to: "/bots" });
     await router.load();

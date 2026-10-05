@@ -109,13 +109,21 @@ export const platformPlugin = (
     config: () => ({
       define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
     }),
-    transformIndexHtml: () => [
-      {
-        tag: "meta",
-        attrs: { "http-equiv": "Content-Security-Policy", content: csp },
-        injectTo: "head-prepend" as const,
-      },
-    ],
+    transformIndexHtml: (html: string) => ({
+      // The static splash is the browser's: Electron mounts from a local
+      // file and keeps its blank first frame.
+      html:
+        platform === "electron"
+          ? html.replace(/\s*<!-- splash:[\s\S]*<!-- \/splash -->\s*/, "")
+          : html,
+      tags: [
+        {
+          tag: "meta",
+          attrs: { "http-equiv": "Content-Security-Policy", content: csp },
+          injectTo: "head-prepend" as const,
+        },
+      ],
+    }),
   };
 };
 export const rendererPlugins = (

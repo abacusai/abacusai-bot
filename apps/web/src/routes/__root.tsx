@@ -25,12 +25,12 @@ const Devtools =
 import { UpdateOwner } from "#platform/updates";
 
 const RootComponent = () => {
-  const { transport, db, system } = Route.useRouteContext();
+  const { transport, db } = Route.useRouteContext();
   useEffect(() => {
     if (import.meta.env.MODE !== "test") return installLogRing(transport);
   }, [transport]);
   return (
-    <AppRoot transport={transport} db={db} system={system}>
+    <AppRoot transport={transport} db={db}>
       <ActionBindingsProvider>
         <Outlet />
         <RoutinesGlobals />

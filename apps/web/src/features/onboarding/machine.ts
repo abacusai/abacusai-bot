@@ -13,6 +13,8 @@ export interface FlowFacts {
   ownsBot: boolean;
   webSignup?: boolean;
   email?: string;
+  /** Not from the host yet (spec 09 D12): render, but act on nothing. */
+  provisional?: boolean;
 }
 export type FlowEvent =
   | { type: "sign-up" | "sign-in" | "retry"; attempt: string }

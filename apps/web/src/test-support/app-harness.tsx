@@ -26,6 +26,7 @@ import {
   RouterProvider,
   type RouterHistory,
 } from "@tanstack/react-router";
+import { Store } from "@tanstack/react-store";
 import { act, render } from "@testing-library/react";
 
 import type { AiClient } from "#renderer/data/ai";
@@ -48,7 +49,7 @@ import {
   createMemoryTransport,
   type MemoryTransport,
 } from "#renderer/data/transport/memory";
-import type { AppClient } from "#renderer/data/transport/types";
+import type { AppClient, Transport } from "#renderer/data/transport/types";
 import { fixtureRuntime } from "#renderer/features/chat/fixtures/player";
 import { resetReadinessForTests } from "#renderer/features/shell/readiness";
 import { resetShellStore } from "#renderer/features/shell/shell-store";
@@ -385,6 +386,8 @@ export interface HarnessOptions {
     input: Parameters<AppClient["files"]["rename"]>[0]
   ) => Promise<void>;
   openExternal?: (url: string) => void;
+  /** The router's view of the transport (a provisional, still-connecting one). */
+  wrapTransport?: (transport: MemoryTransport) => Transport;
 }
 
 export interface AppHarness {
@@ -446,8 +449,8 @@ export const createHarness = async (
     history,
     context: {
       queryClient,
-      transport,
-      system,
+      transport: options.wrapTransport?.(transport) ?? transport,
+      system: new Store(system),
       db: appDb,
       t: i18n.getFixedT(null, "translation") as never,
     },

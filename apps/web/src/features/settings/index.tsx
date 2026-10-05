@@ -9,7 +9,7 @@ import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import type { SettingsPageId } from "#renderer/lib/navigation/areas";
 import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { useAppContext, useSystem } from "#renderer/lib/use-app-context";
 import { Input } from "#renderer/ui/input";
 
 import type { SettingEntry } from "./search-index";
@@ -61,7 +61,8 @@ export const SettingsSidebar = () => {
   const c = useCollections();
   const bots = useLiveQuery(c.bots).data ?? [];
   const memories = useLiveQuery(c.memories).data ?? [];
-  const { system, transport } = useAppContext();
+  const { transport } = useAppContext();
+  const system = useSystem();
   const notes = useQuery({
     ...transport.orpc.memory.bots.queryOptions({ input: {} }),
     enabled: !!q.trim(),

@@ -9,7 +9,7 @@
  * A throwing listener does not stop the others; its error is rethrown on a
  * microtask so it still reaches the global error handler.
  */
-export type TransportState = "open" | "closed";
+import type { TransportState } from "./lifecycle";
 
 /** `port-closed`: the other end went away. `explicit`: our own `close()`. */
 export type CloseReason = "port-closed" | "explicit";
@@ -19,6 +19,8 @@ type CloseListener = (reason: CloseReason) => void;
 export interface CloseSignal {
   readonly state: TransportState;
   onClose(listener: CloseListener): () => void;
+  /** Runs after the state flips (once: open → closed). */
+  onChange(listener: () => void): () => void;
   /** Close with this reason; a no-op once closed. */
   fire(reason: CloseReason): void;
 }
@@ -28,6 +30,7 @@ export const createCloseSignal = (): CloseSignal => {
   let closedWith: CloseReason = "explicit";
   // Registrations, not functions: the same function added twice fires twice.
   const pending = new Set<{ listener: CloseListener }>();
+  const changes = new Set<{ listener: () => void }>();
 
   const call = (listener: CloseListener, reason: CloseReason): void => {
     try {
@@ -59,6 +62,13 @@ export const createCloseSignal = (): CloseSignal => {
         pending.delete(registration);
       };
     },
+    onChange(listener) {
+      const registration = { listener };
+      if (state !== "closed") changes.add(registration);
+      return () => {
+        changes.delete(registration);
+      };
+    },
     fire(reason) {
       if (state === "closed") return;
       state = "closed";
@@ -66,6 +76,9 @@ export const createCloseSignal = (): CloseSignal => {
       const registrations = [...pending];
       pending.clear();
       for (const { listener } of registrations) call(listener, reason);
+      const watchers = [...changes];
+      changes.clear();
+      for (const { listener } of watchers) call(() => listener(), reason);
     },
   };
 };

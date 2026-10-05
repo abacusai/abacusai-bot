@@ -9,7 +9,8 @@ import type { StreamChunk } from "@tanstack/ai";
 
 /** `CUSTOM abacus.subscribed` / `abacus.resync`: no event id, never dispatched. */
 export type ControlEvent =
-  | { kind: "subscribed"; epoch?: string }
+  /** `seq`: the relay's head when the subscription started. */
+  | { kind: "subscribed"; epoch?: string; seq?: number }
   | { kind: "resync"; epoch?: string };
 
 const controlValue = (event: StreamChunk): Record<string, unknown> => {
@@ -23,10 +24,13 @@ export const controlOf = (event: StreamChunk): ControlEvent | null => {
   if (event.type !== "CUSTOM") return null;
   const name = (event as { name?: string }).name;
   if (name !== "abacus.subscribed" && name !== "abacus.resync") return null;
-  const epoch = controlValue(event).epoch;
+  const { epoch, seq } = controlValue(event);
+  if (name === "abacus.resync")
+    return { kind: "resync", ...(typeof epoch === "string" ? { epoch } : {}) };
   return {
-    kind: name === "abacus.subscribed" ? "subscribed" : "resync",
+    kind: "subscribed",
     ...(typeof epoch === "string" ? { epoch } : {}),
+    ...(typeof seq === "number" ? { seq } : {}),
   };
 };
 

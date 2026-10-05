@@ -110,6 +110,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "first-bot",
     "connect",
     "gallery",
+    "gate",
     "machine",
     "pairing-banner",
     "steps/local-models",
@@ -152,6 +153,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
   ],
   shell: [
     "connect",
+    "connect/recovery",
     "connect/services",
     "lease",
     "app-root",

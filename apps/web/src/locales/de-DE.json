@@ -3885,9 +3885,11 @@
       "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
+      "reconnecting": "Verbindung wird wiederhergestellt",
       "upgrade": "Upgrade to Pro",
       "download": "Desktop-App herunterladen",
-      "restart": "Restart your computer"
+      "restart": "Restart your computer",
+      "retry": "Erneut versuchen"
     },
     "files": {
       "open": "Open folder"

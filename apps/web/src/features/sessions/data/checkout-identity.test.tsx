@@ -50,7 +50,11 @@ it("git watch aborts and reopens when effective checkout changes", async () => {
     );
     yield* [];
   });
-  const transport = { client: { git: { watch } } } as never;
+  const transport = {
+    state: "open",
+    generation: 1,
+    client: { git: { watch } },
+  } as never;
   const checkout = { workspaceId: "w", sessionId: "s" };
   const hook = renderHook(
     ({ identity }) => useCheckoutWatch(transport, checkout, identity),

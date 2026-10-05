@@ -2,10 +2,7 @@ import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
-import {
-  chatLoading,
-  chatRuntimeFor,
-} from "#renderer/features/chat/runtime/runtime";
+import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { useConnectFlow } from "#renderer/features/library/connect-flow";
 import { ConnectorFieldsDialog } from "#renderer/features/library/connectors";
 import { RoutinePage, RoutineGone } from "#renderer/features/routines/page";
@@ -14,7 +11,7 @@ import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { RoutineSearch } from "#renderer/lib/navigation/search";
 const RoutineRoute = () => {
   const { t } = useTranslation();
-  const { transport, db } = Route.useRouteContext();
+  const { transport, db, chat } = Route.useRouteContext();
   const flow = useConnectFlow();
   return (
     <>
@@ -24,7 +21,7 @@ const RoutineRoute = () => {
           <ChatView
             threadId={runId}
             skin="bot"
-            runtime={chatRuntimeFor(transport)}
+            runtime={chat}
             composer={{
               mode: "full",
               placeholder: "",
@@ -75,6 +72,8 @@ export const Route = createFileRoute("/_shell/(routines)/routines/$routineId")({
     await Promise.all([
       context.db.collections.routines.preload(),
       context.db.collections.routineRuns.preload(),
+      // A run report is a chat view.
+      preload ? undefined : context.prepareChat(),
     ]);
     if (!context.db.collections.routines.get(params.routineId))
       throw notFound();
@@ -85,10 +84,7 @@ export const Route = createFileRoute("/_shell/(routines)/routines/$routineId")({
           run.sessionId === deps.run && run.routineId === params.routineId
       )
     ) {
-      const chat = chatLoading({
-        ...context,
-        chat: chatRuntimeFor(context.transport),
-      });
+      const chat = chatLoading(context);
       // A hover fetches the run's first page only; the click loads it.
       if (preload) chat.warm(deps.run);
       else await chat.load(deps.run);

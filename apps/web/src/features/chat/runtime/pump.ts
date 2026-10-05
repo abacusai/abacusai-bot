@@ -14,6 +14,7 @@ import {
   resumePoint,
   type AiClient,
 } from "#renderer/data/ai";
+import { untilOpen, type ConnectionSource } from "#renderer/data/queries/live";
 
 import { isTerminal, terminalRunId } from "../store/apply";
 
@@ -48,8 +49,28 @@ export interface PumpOptions {
   onLive?(): void;
   /** Reconnect delays (§3.3); the last failure sets `"error"`. */
   retryDelaysMs?: readonly number[];
+  /**
+   * The transport (spec 09 D3): a failure while its socket is down, or on a
+   * socket since replaced, does not count against the retry budget; the
+   * pump waits for the next socket and resumes from its position.
+   */
+  connection?: ConnectionSource;
+  /**
+   * The host closed the socket for an oversized frame (1009) while this
+   * stream was replaying (behind the head it was subscribed at, or a join
+   * below its checkpoint) and had delivered nothing on that socket: the
+   * frame was most likely this stream's next event. The session counts
+   * these across pumps and hydrations; `true` stops the stream (replaying
+   * it would close the next socket too) until the user's Retry. A 1009 the
+   * stream cannot be blamed for (it was caught up: another stream, a query
+   * or a DB frame) only reconnects, as any drop.
+   */
+  onCut?(): boolean;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
+
+/** Close code 1009: an event larger than the host's frame limit. */
+const OVERSIZED = 1009;
 
 /** Two waits, then the third failure sets `"error"` (§3.3, R2-T34). */
 const RETRY_DELAYS_MS = [250, 1000, 4000] as const;
@@ -83,11 +104,21 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
   const delays = options.retryDelaysMs ?? RETRY_DELAYS_MS;
   const sleep = options.sleep ?? defaultSleep;
   let stopped = false;
+  // The head this subscription replays up to (`abacus.subscribed`).
+  let replayTo = positions.checkpoint;
 
   const accept = (event: StreamChunk): Handled => {
     if (signal.aborted || stopped) return "stop";
     const control = controlOf(event);
     if (control?.kind === "subscribed") {
+      replayTo = control.seq ?? positions.receivedSeq;
+      // Another host lifetime: the `abacus.resync` that follows decides.
+      if (
+        control.epoch != null &&
+        positions.epoch != null &&
+        control.epoch !== positions.epoch
+      )
+        return "continue";
       onConnection("connected");
       return "continue";
     }
@@ -105,9 +136,30 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
 
   const caughtUp = (): boolean => positions.receivedSeq >= positions.checkpoint;
 
+  const { connection } = options;
+  /** The socket went away under this attempt: not the stream's fault. */
+  const dropped = (generation: number | undefined): boolean =>
+    connection != null &&
+    connection.state !== "closed" &&
+    (connection.state !== "open" || connection.generation !== generation);
+  /** A 1009 close this stream is to blame for (see `onCut`). */
+  const cut = (generation: number | undefined, delivered: boolean): boolean =>
+    generation != null &&
+    connection?.closeCode?.(generation) === OVERSIZED &&
+    !delivered &&
+    positions.receivedSeq < replayTo;
+  const stopForCut = (): boolean => {
+    if (options.onCut?.() !== true) return false;
+    stopped = true;
+    onConnection("error");
+    return true;
+  };
+
   if (activeRunId != null) {
     let terminal = false;
     let first = true;
+    const generation = connection?.generation;
+    const before = positions.receivedSeq;
     try {
       const iterator = await ai.joinRun({ runId: activeRunId }, { signal });
       for await (const event of iterator) {
@@ -121,6 +173,9 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
       }
     } catch {
       if (signal.aborted) return;
+      // A join replays from the run's start, up to the checkpoint at least.
+      if (cut(generation, positions.receivedSeq > before) && stopForCut())
+        return;
       if (!caughtUp()) {
         stopped = true;
         onRecover("join-failed");
@@ -138,6 +193,8 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
 
   let failures = 0;
   while (!signal.aborted && !stopped) {
+    const generation = connection?.generation;
+    let delivered = false;
     try {
       const iterator = await ai.subscribe(
         {
@@ -152,6 +209,7 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
         if (handled === "stop") return;
         if (handled === "accepted") {
           failures = 0;
+          delivered = true;
           options.onLive?.();
         }
       }
@@ -162,6 +220,12 @@ export const runPump = async (options: PumpOptions): Promise<void> => {
         onConnection("error");
         onNotFound();
         return;
+      }
+      if (dropped(generation)) {
+        if (cut(generation, delivered) && stopForCut()) return;
+        onConnection("reconnecting");
+        await untilOpen(connection!, signal);
+        continue;
       }
       failures += 1;
       if (failures > delays.length) {

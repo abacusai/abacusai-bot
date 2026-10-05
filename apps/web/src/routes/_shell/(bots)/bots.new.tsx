@@ -16,12 +16,17 @@ import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 const NewRoute = () => {
   const { t } = useTranslation();
   const search = Route.useSearch();
-  const { chat } = Route.useRouteContext();
+  const { chat, prepareChat } = Route.useRouteContext();
   return (
     <>
       <TopBarSlot>{t("bots.page.newTitle")}</TopBarSlot>
       {search.step === "setup" ? (
-        <BotSetupForm load={(id) => chat.session(id).load()} />
+        <BotSetupForm
+          load={async (id) => {
+            await prepareChat();
+            return chat.session(id).load();
+          }}
+        />
       ) : (
         <BotStartPage category={search.category} />
       )}

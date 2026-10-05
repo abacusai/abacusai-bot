@@ -3885,9 +3885,11 @@
       "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
+      "reconnecting": "다시 연결하는 중",
       "upgrade": "Upgrade to Pro",
       "download": "데스크톱 앱 받기",
-      "restart": "Restart your computer"
+      "restart": "Restart your computer",
+      "retry": "다시 시도"
     },
     "files": {
       "open": "Open folder"
