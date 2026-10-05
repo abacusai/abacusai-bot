@@ -1,8 +1,9 @@
+import { execFile } from "child_process";
+import { existsSync, mkdirSync } from "fs";
+
 // The account-profile home MUST resolve before any import below reads a path
 // under abacusBotHome(). Stores open files at module load. Keep this first.
 import "./profile-home-init";
-import { execFile } from "child_process";
-import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import os from "os";
 import { join } from "path";
@@ -35,6 +36,13 @@ import type {
   OpenFilePathResult,
   UsageSnapshot,
 } from "#shared/contracts";
+
+import { NotchController } from "./notch/controller";
+import { wireMainNotchEvents } from "./notch/main-events";
+import {
+  NOTCH_BANNER_SUPPRESSION,
+  NotchNotificationPolicy,
+} from "./notch/notifications";
 
 /**
  * Where Playwright's default `chrome` channel looks for Google Chrome (stable
@@ -102,7 +110,7 @@ import {
   prefsFileAfterMigrations,
   runStartupMigrations,
 } from "./migrations/startup";
-import { CueArbiter, mainOnlyCueWindows } from "./notch/cue-arbiter";
+import { CueArbiter } from "./notch/cue-arbiter";
 import { resolvePastedFilePath } from "./pasted-temp-files";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
 import { mainWindowLifecycle } from "./recreate-main-window";
@@ -373,7 +381,13 @@ setBringToFront(() => {
 // English: i18n is renderer-only.
 let backgroundTaskNotified = false;
 function notifyTaskRunningInBackground(): void {
-  if (backgroundTaskNotified) return;
+  if (
+    backgroundTaskNotified ||
+    (RENDERER_GENERATION === "wco" &&
+      NOTCH_BANNER_SUPPRESSION &&
+      notchController?.hasSeen())
+  )
+    return;
   const prefs = readNotificationSettings();
   if (!prefs.enabled) return;
   backgroundTaskNotified = true;
@@ -448,6 +462,11 @@ const rendererSwaps = new RendererSwapScheduler({
     settle
       .then(() => {
         // A new window's first document gave up: show the committed one.
+        if (outcome !== "gave-up") {
+          const url = experienceRuntime?.activeRendererUrl();
+          if (url) notchBase = { kind: "experience", url };
+          notchController?.schedule();
+        }
         if (outcome === "gave-up" && detail?.live === true)
           reloadRendererContent?.();
       })
@@ -692,7 +711,7 @@ async function createWindow(restored?: RecreatedWindowState) {
     if (state == null) return;
     publishToWindowViews(
       emitBusChannel,
-      rpcTransport?.registeredIds() ?? [],
+      rpcTransport?.registeredIds("main") ?? [],
       rendererWebContents()?.id ?? null,
       { type: "state", state }
     );
@@ -705,6 +724,8 @@ async function createWindow(restored?: RecreatedWindowState) {
   mainWindow.on("unmaximize", publishWindowState);
   mainWindow.on("closed", () => {
     if (mainWindowRef !== mainWindow) return;
+    if (process.platform === "win32") notchController?.dispose();
+    notchNotifications.dispose();
     mainWindowRef = null;
     setMainWindow(null);
     rendererHost?.dispose();
@@ -716,6 +737,7 @@ async function createWindow(restored?: RecreatedWindowState) {
       console.warn("[browser-runtime] cleanup failed", error);
     }
   });
+  wireMainNotchEvents(mainWindow, () => notchController?.appChanged());
 
   // Spellcheck languages: the OS locale when supported, en-US as fallback.
   // The dictionary download goes through the proxy-aware shim in
@@ -823,6 +845,7 @@ async function createWindow(restored?: RecreatedWindowState) {
       if (base.kind === "experience")
         // A verified installed experience supersedes the asar baseline.
         console.log(`[experience] serving renderer from ${base.url.href}`);
+      notchBase = base;
       const entry = rendererEntry(base, RENDERER_GENERATION);
       void (
         entry.kind === "url"
@@ -1428,24 +1451,32 @@ const appOperations: AppOperations = {
     }
   },
 
-  showNotification(title, body, metadata) {
-    // Gated here, the one place every notification passes through.
-    const prefs = readNotificationSettings();
-    if (!prefs.enabled) return;
-    const notification = new Notification({
-      title,
-      body,
-      silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
-    });
-    notification.on("click", () => {
-      const win = revealMainWindow();
-      // Consumed by the onNotificationClicked subscriber in app.tsx.
-      if (win && metadata) {
-        rendererWebContents()?.send("notification-clicked", metadata);
-        emitBusChannel("system", { type: "notification-clicked", metadata });
+  showNotification(title, body, metadata, attention) {
+    notchNotifications.notify(
+      { ...attention, botReply: metadata?.kind === "bot" },
+      () => {
+        // Gated here, the one place every notification passes through.
+        const prefs = readNotificationSettings();
+        if (!prefs.enabled) return;
+        const notification = new Notification({
+          title,
+          body,
+          silent: notificationSilent(RENDERER_GENERATION, prefs.sound),
+        });
+        notification.on("click", () => {
+          const win = revealMainWindow();
+          // Consumed by the onNotificationClicked subscriber in app.tsx.
+          if (win && metadata) {
+            rendererWebContents()?.send("notification-clicked", metadata);
+            emitBusChannel("system", {
+              type: "notification-clicked",
+              metadata,
+            });
+          }
+        });
+        notification.show();
       }
-    });
-    notification.show();
+    );
   },
 
   // Agent-produced image as a data URL. Real paths on both sides, anything
@@ -1649,7 +1680,7 @@ function publishChromeState(): void {
   // Every view in the window, a swap candidate included.
   publishToWindowViews(
     emitBusChannel,
-    rpcTransport?.registeredIds() ?? [],
+    rpcTransport?.registeredIds("main") ?? [],
     contents.id,
     { type: "chrome", chrome }
   );
@@ -1657,22 +1688,57 @@ function publishChromeState(): void {
 
 /** Null until whenReady has registered the IPC handlers. */
 let rpcTransport: MessagePortTransport | null = null;
+let notchController: NotchController | null = null;
+const notchNotifications = new NotchNotificationPolicy({
+  enabled: () => prefsStore.get().notch?.showInNotch === true,
+  presented: (key) => notchController?.hasPresented(key) ?? false,
+});
+let notchBase: RendererBase | null = null;
 
 /**
  * Mount the oRPC router on the MessagePort transport, beside the legacy IPC
  * (spec 00 A.4). Called once, after the handlers it shares operations with.
  */
+function wireNotchContents(contents: WebContents): void {
+  rpcTransport?.registerRendererContents(contents, "notch");
+}
+
 function installRpc(
   host: HostOperations,
   rendererState: RendererStateStore
 ): void {
-  // Before the notch exists, the main renderer is the only audible document.
-  const cueArbiter = new CueArbiter({
-    windows: mainOnlyCueWindows({
-      mainRendererId: () => rendererWebContents()?.id ?? null,
-      state: (id) =>
-        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+  notchController = new NotchController({
+    platform: process.platform,
+    generation: RENDERER_GENERATION,
+    packaged: app.isPackaged,
+    preload: join(import.meta.dirname, "../preload/index.cjs"),
+    prefs: () => prefsStore.get(),
+    base: () => notchBase,
+    readiness: rendererReadiness,
+    wire: wireNotchContents,
+    unregister: (id) => rpcTransport?.unregisterRendererContents(id),
+    revealMain: revealMainWindow,
+    mainState: () => ({
+      visible: mainWindowRef?.isVisible() ?? false,
+      focused: mainWindowRef?.isFocused() ?? false,
     }),
+    publish: (webContentsId, event) =>
+      emitBusChannel("notch", { webContentsId, event }),
+    command: (command) => emitBusChannel("notch-open", command),
+  });
+  prefsStore.onChanged(() => notchController?.schedule());
+  const cueArbiter = new CueArbiter({
+    windows: {
+      mainRendererId: () => rendererWebContents()?.id ?? null,
+      mainFocused: () => mainWindowRef?.isFocused() ?? false,
+      audible: () =>
+        mainWindowRef?.isFocused()
+          ? (rendererWebContents()?.id ?? null)
+          : (notchController?.audible() ?? rendererWebContents()?.id ?? null),
+      canPlay: (id) =>
+        id === rendererWebContents()?.id ||
+        notchController?.canPlay(id) === true,
+    },
     // Each renderer generation reports its thread once; forget it when gone.
     onWindowGone: (id, forget) => {
       const contents = electronWebContents.fromId(id);
@@ -1696,10 +1762,24 @@ function installRpc(
       // Every window a port is registered for is the main window's renderer
       // (the live view or a swap candidate); the notch comes later.
       state: (id) =>
-        rpcTransport?.isRegistered(id) === true ? mainWindowState() : null,
+        notchController?.state(id) ??
+        (rpcTransport?.isRegistered(id) === true ? mainWindowState() : null),
       chrome: (id) =>
-        rpcTransport?.isRegistered(id) === true ? chromeState() : null,
-      reportReady: (id, report) => rendererReadiness.report(id, report),
+        notchController?.owns(id)
+          ? null
+          : rpcTransport?.isRegistered(id) === true
+            ? chromeState()
+            : null,
+      reportReady: (id, report) => {
+        rendererReadiness.report(id, report);
+        if (notchController?.owns(id) && report.barrier === "subscriptions")
+          notchController.documentReady(id);
+        if (
+          id === rendererWebContents()?.id &&
+          report.barrier === "subscriptions"
+        )
+          notchController?.start();
+      },
     },
     bus: mainEventBus,
     tables: createTables({
@@ -1711,6 +1791,7 @@ function installRpc(
     threads: workspaceServiceHost.threadStore,
     trackers: createEventTrackers(mainEventBus),
     cues: cueArbiter,
+    notch: notchController,
   };
   rpcTransport = installMessagePortTransport({
     ipcMain,
@@ -2227,6 +2308,8 @@ let quitGracefulInProgress = false;
 app.on("before-quit", (event) => {
   // So the window 'close' handler stops intercepting.
   markQuitting();
+  notchController?.dispose();
+  notchNotifications.dispose();
   // The progress window refuses to close by itself; free it before the quit.
   disposeMigrationProgress();
   logStore().flush();

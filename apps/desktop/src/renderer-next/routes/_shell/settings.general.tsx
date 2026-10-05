@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SettingsPageEmpty } from "#next/features/settings";
+import { GeneralPage } from "#next/features/settings";
 import { TopBarSlot } from "#next/features/shell";
 
 const GeneralSettingsRoute = () => {
@@ -10,10 +10,10 @@ const GeneralSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.pages.general")}
+          {t("settings.sidebar.label")}
         </span>
       </TopBarSlot>
-      <SettingsPageEmpty page="general" />
+      <GeneralPage />
     </>
   );
 };

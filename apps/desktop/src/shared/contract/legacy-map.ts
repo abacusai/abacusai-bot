@@ -308,10 +308,13 @@ export const LEGACY_BRIDGE_MAP: Record<keyof AgentApi, LegacyDestination> = {
   installMaestro: m("devices.installMaestro"),
   fetchWhisperFile: m(
     "voice.whisper.fetch",
-    "progress via the voice.whisper.progress iterator"
+    "renderer-next lib/voice/whisper; progress via voice.whisper.progress"
   ),
   isWhisperCached: r(NO_CALLER),
-  requestMicrophoneAccess: m("voice.requestMicrophone"),
+  requestMicrophoneAccess: m(
+    "voice.requestMicrophone",
+    "renderer-next lib/voice/use-dictation"
+  ),
   streamDeviceTouch: m(
     "devices.stream.touch",
     "was ipcRenderer.send; call without await"
@@ -383,13 +386,19 @@ export const LEGACY_TOP_LEVEL_MAP: Record<string, LegacyDestination> = {
   platform: q("system.info", "platform (was a sync preload value)"),
   reportFunnelStep: m("system.funnelStep", "fire-and-forget"),
   getAccountState: q("account.state"),
-  skipAccountOnboarding: m("account.skipOnboarding"),
+  skipAccountOnboarding: m(
+    "account.skipOnboarding",
+    "renderer-next features/onboarding/actions: persisted exit first"
+  ),
   signOutAccount: m("account.signOut"),
   forgetAccount: m("account.forget"),
   savePastedTempFiles: m("files.savePastedTemp", "Uint8Array payloads"),
   saveLogs: m("system.logs.save"),
   appendLogs: m("system.logs.append", "fire-and-forget; batched client-side"),
-  showNotification: m("system.notify"),
+  showNotification: m(
+    "system.notify",
+    "renderer-next lib/notify: kind + dedupeKey; main/notch/notifications"
+  ),
   onNotificationClicked: s(
     "system.events",
     '{ type: "notification-clicked", metadata }'
@@ -585,6 +594,10 @@ export const LEGACY_EVENT_MAP: Record<
   "messaging-agent-message": {
     destination: "ai.subscribe CUSTOM abacus.messaging.sent",
     note: "retired as a separate event once the emitter lands",
+  },
+  "exec-backend": {
+    destination: 'settings.events { type: "exec-backend", backend }',
+    note: "backend or terminal shell changed; invalidates execBackend and sandboxSupport in every window",
   },
   "credentials-changed": {
     destination:

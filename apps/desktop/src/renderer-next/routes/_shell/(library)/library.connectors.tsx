@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { ConnectorSheet, LibraryPageEmpty } from "#next/features/library";
+import {
+  ConnectorSheet,
+  ConnectorsPage,
+  ConnectorFieldsDialog,
+} from "#next/features/library";
 import { TopBarSlot } from "#next/features/shell";
 import { ConnectorsSearch } from "#next/lib/navigation/search";
 
@@ -15,7 +19,8 @@ const ConnectorsRoute = () => {
           {t("library.pages.connectors")}
         </span>
       </TopBarSlot>
-      <LibraryPageEmpty page="connectors" />
+      <ConnectorsPage />
+      <ConnectorFieldsDialog />
       {connector != null && <ConnectorSheet connector={connector} />}
     </>
   );
@@ -23,6 +28,7 @@ const ConnectorsRoute = () => {
 
 /** `?connector=` opens the sheet; the mask hides it from the URL. */
 export const Route = createFileRoute("/_shell/(library)/library/connectors")({
+  search: { middlewares: [stripSearchParams({ category: "featured" })] },
   validateSearch: ConnectorsSearch,
   component: ConnectorsRoute,
 });

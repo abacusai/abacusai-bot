@@ -122,13 +122,16 @@ export const checkLegacyDiff = ({ cwd = desktop, base, allow }) => {
 
 const main = () => {
   const base = resolveBase(process.argv.slice(2), process.env);
-  const { allow } = JSON.parse(
+  const { allow, terminalAllow = [] } = JSON.parse(
     readFileSync(
       join(import.meta.dirname, "legacy-renderer-allow.json"),
       "utf8"
     )
   );
-  const { mergeBase, changed, problems } = checkLegacyDiff({ base, allow });
+  const { mergeBase, changed, problems } = checkLegacyDiff({
+    base,
+    allow: [...allow, ...terminalAllow],
+  });
 
   if (problems.length > 0) {
     console.error(`check-legacy-renderer-diff (base ${base} @ ${mergeBase}):`);

@@ -1,0 +1,64 @@
+- Checking registry.
+✔ Checking registry.
+- Updating files.
+✔ Created 41 files:
+  - src/renderer-next/ui/button.tsx
+  - src/renderer-next/ui/drawer.tsx
+  - src/renderer-next/ui/tabs.tsx
+  - src/renderer-next/ui/dropdown-menu.tsx
+  - src/renderer-next/ui/context-menu.tsx
+  - src/renderer-next/ui/popover.tsx
+  - src/renderer-next/ui/tooltip.tsx
+  - src/renderer-next/ui/hover-card.tsx
+  - src/renderer-next/ui/resizable.tsx
+  - src/renderer-next/ui/scroll-area.tsx
+  - src/renderer-next/ui/kbd.tsx
+  - src/renderer-next/ui/label.tsx
+  - src/renderer-next/ui/input.tsx
+  - src/renderer-next/ui/textarea.tsx
+  - src/renderer-next/ui/empty.tsx
+  - src/renderer-next/ui/spinner.tsx
+  - src/renderer-next/ui/skeleton.tsx
+  - src/renderer-next/ui/separator.tsx
+  - src/renderer-next/ui/badge.tsx
+  - src/renderer-next/ui/avatar.tsx
+  - src/renderer-next/ui/toggle.tsx
+  - src/renderer-next/ui/switch.tsx
+  - src/renderer-next/ui/select.tsx
+  - src/renderer-next/ui/native-select.tsx
+  - src/renderer-next/ui/message.tsx
+  - src/renderer-next/ui/bubble.tsx
+  - src/renderer-next/ui/marker.tsx
+  - src/renderer-next/ui/collapsible.tsx
+  - src/renderer-next/ui/dialog.tsx
+  - src/renderer-next/ui/alert-dialog.tsx
+  - src/renderer-next/ui/sheet.tsx
+  - src/renderer-next/ui/toast.tsx
+  - src/renderer-next/ui/message-scroller.tsx
+  - src/renderer-next/ui/attachment.tsx
+  - src/renderer-next/ui/questionnaire.tsx
+  - src/renderer-next/ui/input-group.tsx
+  - src/renderer-next/ui/field.tsx
+  - src/renderer-next/ui/item.tsx
+  - src/renderer-next/ui/toggle-group.tsx
+  - src/renderer-next/ui/combobox.tsx
+  - src/renderer-next/ui/command.tsx
+The `tooltip` component has been added. Remember to wrap your app with the `TooltipProvider` component.
+
+```tsx title="app/layout.tsx"
+import { TooltipProvider } from "@/components/ui/tooltip"
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+
+Finished in 166ms on 41 files using 8 threads.
+check:ui-registry: 41 files match the snapshot

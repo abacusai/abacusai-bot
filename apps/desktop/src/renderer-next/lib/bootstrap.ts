@@ -167,6 +167,34 @@ export const bootstrap = async (deps: BootstrapDeps): Promise<BootResult> => {
     return fail("prefs", error);
   }
 
+  const accountOptions = transport.orpc.account.state.queryOptions({
+    input: {},
+    staleTime: Infinity,
+    retry: false,
+  });
+  let accountTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      deps.queryClient.fetchQuery(accountOptions),
+      new Promise((_, reject) => {
+        accountTimer = setTimeout(
+          () => reject(new Error("account timeout")),
+          2000
+        );
+      }),
+    ]);
+  } catch (error) {
+    console.warn("[boot] account unavailable; allowing shell", error);
+    await deps.queryClient.cancelQueries({ queryKey: accountOptions.queryKey });
+    deps.queryClient.setQueryData(accountOptions.queryKey, {
+      account: null,
+      apps: [],
+      onboarded: true,
+    });
+  } finally {
+    clearTimeout(accountTimer);
+  }
+
   return {
     ok: true,
     boot: { transport, system, queryClient: deps.queryClient, db },

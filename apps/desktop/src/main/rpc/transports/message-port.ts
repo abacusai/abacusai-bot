@@ -99,7 +99,8 @@ export interface MessagePortTransport {
   /** Whether `webContentsId` is registered. */
   isRegistered(webContentsId: number): boolean;
   /** Every registered webContents id: the live view and any swap candidate. */
-  registeredIds(): number[];
+  registeredIds(kind?: RendererKind): number[];
+  unregisterRendererContents(id: number): void;
   dispose(): void;
 }
 
@@ -230,8 +231,18 @@ export const installMessagePortTransport = ({
       return registry.has(webContentsId);
     },
 
-    registeredIds() {
-      return [...registry.keys()];
+    registeredIds(kind) {
+      return [...registry]
+        .filter(([, entry]) => kind == null || entry.kind === kind)
+        .map(([id]) => id);
+    },
+    unregisterRendererContents(id) {
+      const entry = registry.get(id);
+      if (!entry) return;
+      closeActivePort(id);
+      entry.teardown();
+      registry.delete(id);
+      readiness?.discard(id);
     },
 
     dispose() {

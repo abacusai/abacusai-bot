@@ -188,7 +188,7 @@ export const BOT_PARITY = [
   },
   {
     id: "P32",
-    status: "partial",
+    status: "implemented",
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
   },
@@ -212,7 +212,7 @@ export const BOT_PARITY = [
   },
   {
     id: "P36",
-    status: "partial",
+    status: "implemented",
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity",
   },
@@ -224,7 +224,7 @@ export const BOT_PARITY = [
   },
   {
     id: "P38",
-    status: "partial",
+    status: "implemented",
     target: "features/bots/form/bot-form.tsx",
     specStatus: "Parity + New (accessory)",
   },

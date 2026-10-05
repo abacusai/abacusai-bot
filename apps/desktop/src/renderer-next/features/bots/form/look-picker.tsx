@@ -36,7 +36,7 @@ export const LookPicker = ({
             key={shape}
             value={shape}
             aria-label={t(`bots.avatar.shapes.${shape}`)}
-            className="size-9 p-1"
+            className={`size-9 p-1 ${value.shape === shape ? "bot-accent-control" : ""}`}
           >
             <BotAvatar size={26} look={{ ...value, shape }} />
           </ToggleGroupItem>
@@ -76,16 +76,12 @@ export const LookPicker = ({
           <ToggleGroupItem
             key={accessory}
             value={accessory}
-            disabled={accessory !== "none"}
             className="h-7 rounded-full text-xs"
           >
             {t(`bots.avatar.accessories.${accessory}`)}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <p className="text-muted-foreground text-center text-xs">
-        {t("bots.form.accessoryUnavailable")}
-      </p>
     </div>
   );
 };

@@ -1,0 +1,174 @@
+{
+  "checks": [
+    "template weekday create-and-run streams a read-only report",
+    "real editor chat updates the routine through cronjob",
+    "pause persists through the routine collection",
+    "routine-written artifact renders in its preview",
+    "native Settings enter/leave/lateral use one pane+sidebar transition; report, preview and dialogs use none",
+    "credential connector fields persist and its card becomes Connected",
+    "local STDIO MCP becomes Connected in a running session, then disables and removes",
+    "native stress fixture measured",
+    "native routine-fired preview schedules two audible tones",
+    "production routine-fired synthesis renders nonzero native OfflineAudioContext output"
+  ],
+  "transitions": [
+    {
+      "path": "/settings/general",
+      "types": ["settings-in"],
+      "captured": [
+        {
+          "types": ["settings-in"],
+          "groups": [
+            "::view-transition-group(root)",
+            "::view-transition-group(app-pane)",
+            "::view-transition-group(app-sidebar)",
+            "::view-transition-new(root)",
+            "::view-transition-new(root)",
+            "::view-transition-old(root)",
+            "::view-transition-old(root)",
+            "::view-transition-new(app-sidebar)",
+            "::view-transition-old(app-sidebar)",
+            "::view-transition-new(app-pane)",
+            "::view-transition-old(app-pane)"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/settings/appearance",
+      "types": ["nav-lateral"],
+      "captured": [
+        {
+          "types": ["nav-lateral"],
+          "groups": [
+            "::view-transition-group(app-pane)",
+            "::view-transition-group(app-sidebar)",
+            "::view-transition-group(root)",
+            "::view-transition-new(root)",
+            "::view-transition-new(root)",
+            "::view-transition-old(root)",
+            "::view-transition-old(root)",
+            "::view-transition-new(app-sidebar)",
+            "::view-transition-old(app-sidebar)",
+            "::view-transition-new(app-pane)",
+            "::view-transition-old(app-pane)"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/artifacts",
+      "types": ["settings-out"],
+      "captured": [
+        {
+          "types": ["settings-out"],
+          "groups": [
+            "::view-transition-group(root)",
+            "::view-transition-group(app-sidebar)",
+            "::view-transition-group(app-pane)",
+            "::view-transition-new(root)",
+            "::view-transition-new(root)",
+            "::view-transition-old(root)",
+            "::view-transition-old(root)",
+            "::view-transition-new(app-sidebar)",
+            "::view-transition-old(app-sidebar)",
+            "::view-transition-new(app-pane)",
+            "::view-transition-old(app-pane)"
+          ]
+        }
+      ]
+    }
+  ],
+  "axe": [
+    {
+      "path": "/routines/new",
+      "violations": []
+    },
+    {
+      "path": "/artifacts",
+      "violations": []
+    },
+    {
+      "path": "/library/connectors",
+      "violations": []
+    },
+    {
+      "path": "/library/mcp",
+      "violations": []
+    },
+    {
+      "path": "/library/messaging",
+      "violations": []
+    },
+    {
+      "path": "/settings/general",
+      "violations": []
+    },
+    {
+      "path": "/settings/appearance",
+      "violations": []
+    },
+    {
+      "path": "/settings/notifications",
+      "violations": []
+    },
+    {
+      "path": "/settings/keyboard",
+      "violations": []
+    },
+    {
+      "path": "/settings/models",
+      "violations": []
+    },
+    {
+      "path": "/settings/memory",
+      "violations": []
+    },
+    {
+      "path": "/settings/usage",
+      "violations": []
+    },
+    {
+      "path": "/settings/account",
+      "violations": []
+    },
+    {
+      "path": "/settings/environment",
+      "violations": []
+    },
+    {
+      "path": "/settings/browser",
+      "violations": []
+    },
+    {
+      "path": "/settings/devices",
+      "violations": []
+    },
+    {
+      "path": "/settings/language",
+      "violations": []
+    },
+    {
+      "path": "/settings/about",
+      "violations": []
+    }
+  ],
+  "performance": {
+    "paints": [352.7955000000002, 42.81554200000028, 32.14708400000018],
+    "medianPaint": 42.81554200000028,
+    "medianFps": 59.880239520962,
+    "maxCards": 44,
+    "images": 44,
+    "requested": 36
+  },
+  "tones": [440, 440],
+  "rms": 0.005298500206261703,
+  "thumbnails": {
+    "decoded": 44,
+    "near": 16,
+    "mounted": 44
+  },
+  "sourceHead": "b51797f9",
+  "platform": "macOS",
+  "profile": "isolated real main, loopback fake provider, production gallery build, no DB fixtures"
+}

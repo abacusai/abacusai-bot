@@ -6,7 +6,11 @@
  *
  * Compound: Root, Leading, Identity, Actions, PanelTabs, PanelToggle.
  */
-import { useCanGoBack, useRouter } from "@tanstack/react-router";
+import {
+  useCanGoBack,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,12 +18,13 @@ import {
   PanelLeft,
   PanelRight,
 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#next/lib/cn";
 import { useCanGoForward } from "#next/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#next/lib/navigation/search";
+import { useAppNavigate } from "#next/lib/navigation/use-app-navigate";
 import { Badge } from "#next/ui/badge";
 import { Button } from "#next/ui/button";
 import {
@@ -30,6 +35,7 @@ import {
 } from "#next/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "#next/ui/tabs";
 
+import { shellStore } from "./shell-store";
 import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
 
 const BarButton = ({
@@ -80,6 +86,10 @@ const Leading = ({
   const { t } = useTranslation();
   const router = useRouter();
   const canGoBack = useCanGoBack();
+  const settings = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/settings"),
+  });
+  const navigate = useAppNavigate();
   const canGoForward = useCanGoForward();
   return (
     <div
@@ -92,9 +102,17 @@ const Leading = ({
       )}
     >
       <BarButton
-        label={t("shell.topBar.back")}
-        disabled={!canGoBack}
-        onClick={() => router.history.back()}
+        label={t(settings ? "settings.backToApp" : "shell.topBar.back")}
+        disabled={!settings && !canGoBack}
+        onClick={() =>
+          settings
+            ? void navigate({
+                ...shellStore.state.lastLocationOutsideSettings,
+                to: shellStore.state.lastLocationOutsideSettings.pathname,
+                transition: "settings-out",
+              } as Parameters<typeof navigate>[0])
+            : router.history.back()
+        }
       >
         <ArrowLeft />
       </BarButton>
@@ -161,9 +179,17 @@ const Identity = ({
   </div>
 );
 
-const Actions = ({ folded }: { folded: boolean }) => {
+const Actions = ({
+  folded,
+  tabs = [],
+}: {
+  folded: boolean;
+  tabs?: readonly SidePanelTabId[];
+}) => {
   const { t } = useTranslation();
-  const actions = useTopBarActionList();
+  const actions = useTopBarActionList().filter(
+    (action) => !tabs.includes(action.id as SidePanelTabId)
+  );
   if (actions.length === 0) return null;
   if (folded)
     return (
@@ -186,18 +212,22 @@ const Actions = ({ folded }: { folded: boolean }) => {
     );
   return (
     <div data-slot="topbar-actions" className="flex items-center gap-0.5">
-      {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant="ghost"
-          size="sm"
-          className="titlebar-nodrag"
-          onClick={action.onSelect}
-        >
-          {action.icon}
-          {action.label}
-        </Button>
-      ))}
+      {actions.map((action) =>
+        action.render != null ? (
+          <Fragment key={action.id}>{action.render}</Fragment>
+        ) : (
+          <Button
+            key={action.id}
+            variant="ghost"
+            size="sm"
+            className="titlebar-nodrag"
+            onClick={action.onSelect}
+          >
+            {action.icon}
+            {action.label}
+          </Button>
+        )
+      )}
     </div>
   );
 };
@@ -222,6 +252,7 @@ const PanelTabs = ({
       className="titlebar-nodrag mr-2"
     >
       <TabsList
+        data-tour="topbar-panel-tabs"
         aria-label={t("shell.topBar.panelTabs")}
         data-topbar-tabs=""
         className="gap-1 bg-transparent p-0 group-data-horizontal/tabs:h-7"

@@ -4,6 +4,7 @@
  * quiet hours and the per-bot level, then — for notifications — focus, the
  * user's switch and per-document dedupe.
  */
+import type { NotificationMetadata } from "#shared/contract";
 import type {
   BotSoundLevel,
   PrefsRow,
@@ -61,26 +62,27 @@ export interface NotifyDeps {
   sounds(): PrefsRow["sounds"];
   now(): Date;
   send(input: {
+    kind?: "needs-you" | "done" | "failed";
+    dedupeKey?: string;
     title: string;
     body: string;
-    metadata?: { workspaceId?: string; sessionId?: string };
+    metadata?: NotificationMetadata;
   }): Promise<unknown>;
 }
 
 export interface AttentionNotice {
-  kind: "needs-you" | "done";
+  kind: "needs-you" | "done" | "failed";
   dedupeKey: string;
   botId: string | null;
   title: string;
   body: string;
-  metadata: { sessionId: string; workspaceId?: string };
+  metadata: NotificationMetadata & { sessionId: string };
 }
 
 const DEDUPE_CAP = 500;
 
 /** A per-document notifier; `notify` returns whether it sent. */
-export const createNotifier = (deps: NotifyDeps) => {
-  const seen = new Set<string>();
+export const createNotifier = (deps: NotifyDeps, seen = new Set<string>()) => {
   return {
     notify(notice: AttentionNotice): boolean {
       if (deps.isWindowFocused()) return false;
@@ -99,6 +101,8 @@ export const createNotifier = (deps: NotifyDeps) => {
         seen.delete(seen.values().next().value as string);
       void deps
         .send({
+          kind: notice.kind,
+          dedupeKey: notice.dedupeKey,
           title: notice.title,
           body: notice.body,
           metadata: notice.metadata,
@@ -110,3 +114,9 @@ export const createNotifier = (deps: NotifyDeps) => {
 };
 
 export type Notifier = ReturnType<typeof createNotifier>;
+
+/** Call the owning document notifier; all gates are centralized here. */
+export const notifyAttention = (
+  notifier: Notifier,
+  notice: AttentionNotice
+): boolean => notifier.notify(notice);

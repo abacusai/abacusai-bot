@@ -64,7 +64,7 @@ export const settingsRouter = impl.settings.router({
       context.deps.serviceHost.setExecBackend(input.backend)
     ),
   },
-  // The only destination for a credential change: a save or a removal.
+  // Global changes fan out to every window on one coalescing stream.
   events: impl.settings.events.handler(({ context, signal }) =>
     stream<SettingsEvent>({
       path: "settings.events",
@@ -72,7 +72,7 @@ export const settingsRouter = impl.settings.router({
       signal,
       attach: onIpcEvents(
         context,
-        isType("credentials-changed"),
+        isType("credentials-changed", "exec-backend"),
         (event): SettingsEvent | null =>
           event.type === "credentials-changed"
             ? {
@@ -82,9 +82,14 @@ export const settingsRouter = impl.settings.router({
                   ? {}
                   : { configured: event.configured }),
               }
-            : null
+            : event.type === "exec-backend"
+              ? { type: "exec-backend", backend: event.backend }
+              : null
       ),
-      coalesceKey: (event) => `credentials-changed:${event.provider}`,
+      coalesceKey: (event) =>
+        event.type === "exec-backend"
+          ? event.type
+          : `credentials-changed:${event.provider}`,
     })
   ),
 });

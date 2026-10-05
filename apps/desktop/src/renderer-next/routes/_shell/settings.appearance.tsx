@@ -10,7 +10,7 @@ const AppearanceSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.pages.appearance")}
+          {t("settings.sidebar.label")}
         </span>
       </TopBarSlot>
       <AppearanceTheme />

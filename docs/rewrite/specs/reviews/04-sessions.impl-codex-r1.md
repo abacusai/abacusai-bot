@@ -1,0 +1,43 @@
+Status after the fix pass: all 21 findings addressed. See [per-finding fixes and regression evidence](04-sessions.impl-fixes-r1.md). This resolves the implementation findings; the full R4 acceptance matrix remains partial. Original review follows.
+
+1. **blocker — `apps/desktop/src/renderer-next/components/file-tree/index.tsx:16`** — `useFileTree` constructs its model once, retaining the initial `onRename` callback. The router preserves components across session parameter changes, so opening session B after A can rename a file in A’s checkout. Use callbacks that read current props and recreate the model when checkout identity changes. Test A → B → rename through the mounted router.
+
+2. **major — `apps/desktop/src/renderer-next/features/sessions/session-workspace.tsx:65`** — The agent controller survives session changes but tracks only status and incarnation. Stopped A → stopped B skips B’s auto-start; pending retries can still start A. Recreate and dispose the controller per session identity.
+
+3. **major — `apps/desktop/src/renderer-next/features/sessions/data/agent-start.ts:31`** — Restoration records `lastIncarnation` before `switchConversation` succeeds. A rejection permanently suppresses restoration for that incarnation, while Retry only calls `agent.start`. Record successful restoration after resolution and make Retry repeat the failed restoration with generation guards.
+
+4. **major — `apps/desktop/src/renderer-next/features/sessions/start/session-start-page.tsx:101`** — A failed materialization leaves stage `created`, which removes the composer and checkout tray. The user cannot choose “No worktree” to recover; Continue repeats the failed operation. Keep the checkout picker available beside the read-only envelope and resume after an explicit detach.
+
+5. **major — `apps/desktop/src/renderer-next/features/sessions/session-workspace.tsx:88`** — The git subscription depends on session ID but not worktree identity. Detaching or attaching a checkout leaves the subscription watching its original checkout. Main only retargets paths when the checkout key stays unchanged. Include effective checkout identity in the effect dependencies and reopen the subscription.
+
+6. **major — `apps/desktop/src/renderer-next/features/sessions/data/live.ts:53`** — Session updates invalidate only `checkoutStatus`. Tree, search, branch and PR query keys still contain the same session ID after its checkout changes, leaving cached results from the previous checkout. Invalidate every checkout-dependent query on checkout changes, or include effective checkout identity in their keys.
+
+7. **major — `apps/desktop/src/renderer-next/components/file-tree/index.tsx:27`** — Every Files render creates a new `paths` array and calls `resetPaths`. Installed `@pierre/trees` resets expansion even for identical paths; selecting a file or loading children therefore collapses folders. Memoize paths and preserve expanded paths when applying actual topology changes. The same-path collapse was reproduced against the installed package.
+
+8. **major — `apps/desktop/src/renderer-next/features/sessions/files/files-tab.tsx:99`** — Lazy children accumulate permanently outside the query cache. Rename, Trash and tree-change invalidation refetch the root but retain old descendants, so deleted or renamed files remain selectable. Store children by checkout and directory, replace results, and invalidate them with the root.
+
+9. **major — `apps/desktop/src/renderer-next/features/sessions/dock/session-dock.tsx:159`** — Selection changes only the URL; it never dispatches the reducer’s `focus` action or updates `last`. After selecting another tab within one leaf, focusing a second leaf restores the first leaf’s obsolete active tab. Persist leaf focus and last selection whenever the active URL tab changes.
+
+10. **major — `apps/desktop/src/renderer-next/features/sessions/dock/session-dock.tsx:107`** — Once the toggle sets local `full`, it permanently overrides `search.view`. Subsequent history or session navigation can show a layout that contradicts the URL. Synchronize or clear the temporary transition state after navigation. `R4-T15` misses this because it tests `sessionLayout`, which the rendered dock never calls.
+
+11. **minor — `apps/desktop/src/renderer-next/features/sessions/dock/dock-store.ts:112`** — The limits accept a vertical split containing another vertical split, producing three stacked leaves rather than the specified column with at most two rows. This tree was reproduced with two successive bottom moves. Validate allowed orientation and child structure, not only depth and leaf count.
+
+12. **major — `apps/desktop/src/renderer-next/features/sessions/dock/panel-tabs-store.ts:44`** — Preview eviction removes the tab record but leaves its reference in the dock tree. An evicted active preview can leave a blank pane, and empty leaves continue consuming layout limits. Remove the evicted reference through the reducer and repair active and last references atomically.
+
+13. **minor — `apps/desktop/src/renderer-next/features/sessions/dock/session-dock.tsx:247`** — Missing terminal references are exempt from selection repair indefinitely. After snapshot reconciliation removes a terminal, a stale terminal URL leaves an empty selected panel. Wait for the initial terminal snapshot, then normalize absent references to an existing neighbour or the closed state.
+
+14. **major — `apps/desktop/src/renderer-next/features/sessions/terminal/terminal-tab.tsx:55`** — Cancellation is checked before `terminal.start`, but never after it resolves. Unmounting during the RPC runs the no-op cleanup; the continuation subsequently installs an orphaned input listener, output pump and observer. Check cancellation after the await and make partial initialization cleanup-safe. A remount can otherwise send keystrokes twice.
+
+15. **major — `apps/desktop/src/renderer-next/features/sessions/terminal/terminal-registry.ts:32`** — The theme supplies raw `oklch()` tokens. Ghostty-web 0.4.0’s WASM color parser accepts hex or comma-form `rgb()`, otherwise selecting engine defaults. Its canvas background can therefore differ from its default text palette, particularly in light mode. Convert resolved colors to supported RGB values before constructing the theme.
+
+16. **major — `apps/desktop/src/renderer-next/features/sessions/session-workspace.tsx:104`** — Every local PDF/HTML viewer uses `file-${row.id}`, including independent previews and the Files viewer. Materializing another file replaces that runtime, and resource-wide state events update both viewers to the replacement. Assign stable, separate resource IDs per preview and Files viewer, and close each runtime with its owner.
+
+17. **major — `apps/desktop/src/renderer-next/components/browser-surface/index.tsx:88`** — Registration depends on lease object identity. Serialized runtime updates provide fresh lease objects, causing re-registration; `register` then makes that surface the desired owner. Background browser updates can steal presentation from the user’s selected leaf. Depend on lease identity fields and preserve ownership across equivalent updates.
+
+18. **major — `apps/desktop/src/renderer-next/features/sessions/changes/full-diff-dialog.tsx:49`** — The tool-diff query key omits `toolKey`. Switching between two edits to the same path while the dialog remains mounted reuses the previous query and displays the wrong historical patch. Pass the tool identity explicitly and include it in the query key.
+
+19. **major — `apps/desktop/src/renderer-next/features/sessions/context/context-tray.tsx:195`** — The backend picker is disabled only while a turn is busy. An idle running agent permits changing the global backend, and the tray immediately displays a backend the existing process has not adopted. Pass agent-running state separately and guard both the trigger and mutation handlers.
+
+20. **major — `apps/desktop/src/renderer-next/features/sessions/device/device-tab.tsx:61`** — Decoder failures only set error text. `DeviceStreamPlayer.push` catches configuration and decoding errors internally, so missing WebCodecs or unsupported codecs never reach the catch that starts the implemented Simulator fallback. Route fatal errors through one controller that stops the stream, disposes the decoder and starts fallback once.
+
+21. **minor — `apps/desktop/src/renderer-next/components/device/stream-player.test.ts:15`** — The key-frame barrier assertions still pass with the barrier guard deleted, as reproduced: the fresh player has no decoder, so a later guard drops the delta anyway. Configure a mocked decoder, call `resetBarrier`, assert that a delta is blocked, then prove the next key frame resumes decoding.

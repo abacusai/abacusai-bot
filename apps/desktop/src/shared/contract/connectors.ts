@@ -32,7 +32,20 @@ export const connectors = {
   /** Every registry connector's state on this machine, keyed by connector id. */
   statuses: query.input(NoInput).output(type<ConnectorStatuses>()),
   /** A flow with no fields: a browser hop or a plain install. */
-  connect: mutation.input(ConnectorIdInput).output(type<ConnectorOutcome>()),
+  connect: mutation
+    .input(
+      v.object({
+        ...ConnectorIdInput.entries,
+        options: v.optional(
+          v.object({
+            autostart: v.optional(v.boolean()),
+            hint: v.optional(v.string()),
+            owner: v.optional(v.literal("first-run")),
+          })
+        ),
+      })
+    )
+    .output(type<ConnectorOutcome>()),
   submitFields: mutation
     .input(
       v.object({

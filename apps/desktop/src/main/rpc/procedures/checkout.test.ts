@@ -159,7 +159,14 @@ afterEach(async () => {
   service.dispose();
   vi.restoreAllMocks();
   await git(primary, "worktree", "prune").catch(() => undefined);
-  await fs.rm(root, { recursive: true, force: true });
+  // The last refresh can still have a git process releasing its working
+  // directory after disposal. Windows holds that directory until it exits.
+  await fs.rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 100,
+  });
 });
 
 const connect = (extra: object = {}): TestClient => {

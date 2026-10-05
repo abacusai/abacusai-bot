@@ -272,7 +272,7 @@ describe("r2 pageable message units", () => {
     ).toBeLessThanOrEqual(MAX_ROWS);
   });
 
-  it("a closed bot tool group remains accessible after its header is evicted", async () => {
+  it("a closed migrated tool group remains accessible after its header is evicted", async () => {
     const parts = Array.from({ length: 250 }, (_, i) => ({
       type: "tool-call" as const,
       id: `tool-${i}`,
@@ -303,13 +303,15 @@ describe("r2 pageable message units", () => {
         },
       },
     };
-    current = await renderRelay(new FakeRelay({ history: [message] }), "bot");
-    fireEvent.click(
-      await screen.findByRole("button", { name: /Worked through/ })
+    current = await renderRelay(
+      new FakeRelay({ history: [message] }),
+      "session"
     );
     const header = await screen.findByRole("button", {
       name: "Migrated tools",
     });
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(header);
     expect(header.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
     await waitFor(() =>

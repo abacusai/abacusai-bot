@@ -49,20 +49,24 @@ export const windowRouter = impl.window.router({
       throw forbidden("not-main", "Only the main window reports its thread");
     context.deps.cues.setVisibleThread(id, input.threadId);
   }),
-  claimCue: impl.window.claimCue.handler(async ({ input, context }) => ({
-    play: await context.deps.cues.claim(
-      requireWindow(context),
-      input.cueId,
-      input.threadId
-    ),
-  })),
+  claimCue: impl.window.claimCue.handler(async ({ input, context }) => {
+    if (context.windowKind === "notch")
+      context.deps.notch?.requireActive(requireWindow(context));
+    return {
+      play: await context.deps.cues.claim(
+        requireWindow(context),
+        input.cueId,
+        input.threadId
+      ),
+    };
+  }),
   setDensity: impl.window.setDensity.handler(({ input, context }) => {
     requireWindow(context);
     return context.deps.app.setTitlebarDensity(input.density);
   }),
   activity: impl.window.activity.handler(({ context }) => {
     requireWindow(context);
-    context.deps.app.markRendererActivity();
+    if (context.windowKind === "main") context.deps.app.markRendererActivity();
   }),
   ready: impl.window.ready.handler(({ input, context }) => {
     context.deps.windows.reportReady(requireWindow(context), input);

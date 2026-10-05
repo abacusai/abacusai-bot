@@ -158,3 +158,26 @@ describe("R2-T22 permission lifecycle", () => {
     }
   );
 });
+
+it("route permission actions receive the card descriptor without admitting or answering it", async () => {
+  const relay = await memoryRelay({ events: events() });
+  const show = vi.fn((descriptor: { id: string }) => (
+    <button>Terminal {descriptor.id}</button>
+  ));
+  current = await renderRelay(
+    relay,
+    "session",
+    {},
+    { slots: { permissionActions: show } }
+  );
+  fireEvent.click(
+    screen
+      .getAllByRole("button")
+      .find((b) => b.textContent?.startsWith("Edit"))!
+  );
+  await screen.findByRole("button", { name: "Terminal p2" });
+  expect(show.mock.calls.some(([descriptor]) => descriptor.id === "p2")).toBe(
+    true
+  );
+  expect(relay.stats.respond).toHaveLength(0);
+});

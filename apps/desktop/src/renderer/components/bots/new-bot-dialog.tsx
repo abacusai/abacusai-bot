@@ -52,31 +52,12 @@ import type { BotTemplate } from "./bot-templates";
  * mission, persona or schedule, the bot's chat is told once.
  */
 
-/**
- * The standing instruction a bot with no instructions starts with. Plain and
- * short on purpose: told to guess its lane and offer a menu, a bot with a
- * throwaway name would pad a paragraph of guesses and then go poking through
- * the workspace unasked, and users rated that first message down.
- */
-export const NAME_ONLY_MISSION = [
-  "Your mission is not set yet, and you do not guess it. Your first message is",
-  "two short sentences: greet the user by your name, and ask what they want you",
-  "to do. No menu of offers, no guesses from your name or from the workspace,",
-  "and no tools until the user has answered: do not list, read or run anything",
-  "in the workspace. Once they tell you, treat that as your standing mission",
-  "from then on.",
-].join(" ");
-
-/**
- * What a check-in routine asks the bot to do when it fires. Stored routines
- * are recognised by this exact text (isCheckInRoutine), so do not reword it.
- */
-export const CHECK_IN_PROMPT = [
-  "This is your scheduled check-in. Look at what has changed since you last",
-  "spoke to the user — anything your mission tracks, anything they asked you",
-  "to keep an eye on — and message them with what is worth knowing. If there",
-  "is nothing new, say so in one line rather than inventing an update.",
-].join(" ");
+export { NAME_ONLY_MISSION, CHECK_IN_PROMPT } from "#shared/bots/check-in";
+import {
+  NAME_ONLY_MISSION,
+  CHECK_IN_PROMPT,
+  describeCheckIn,
+} from "#shared/bots/check-in";
 
 export type CheckInSchedule = Extract<
   SchedulePreset,
@@ -99,26 +80,6 @@ const isCheckInRoutine = (
   },
   botId: string
 ): boolean => routine.botId === botId && routine.prompt === CHECK_IN_PROMPT;
-
-/** The schedule in words, for the bot's own ears (English, like its prompt). */
-const describeCheckIn = (
-  preset: CheckInSchedule | "off",
-  time: string,
-  weekday: Weekday
-): string => {
-  switch (preset) {
-    case "off":
-      return "off";
-    case "hourly":
-      return "every hour";
-    case "daily":
-      return `every day at ${time}`;
-    case "weekdays":
-      return `weekdays at ${time}`;
-    case "weekly":
-      return `weekly on ${weekdayName(weekday, "en-US")} at ${time}`;
-  }
-};
 
 export const NewBotDialog = ({
   isOpen,

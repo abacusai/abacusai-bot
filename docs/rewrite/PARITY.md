@@ -192,9 +192,9 @@ handler stays until the cut-over).
 | 178 | `stopDeviceStream` | preload/bridge.ts:998 | `devices.stream.stop` | M |  |
 | 179 | `getSimulatorWindowSource` | preload/bridge.ts:1003 | `devices.simulatorWindowSource` | Q |  |
 | 180 | `installMaestro` | preload/bridge.ts:1008 | `devices.installMaestro` | M |  |
-| 181 | `fetchWhisperFile` | preload/bridge.ts:1012 | `voice.whisper.fetch` | M | progress via the voice.whisper.progress iterator |
+| 181 | `fetchWhisperFile` | preload/bridge.ts:1012 | `voice.whisper.fetch` | M | renderer-next lib/voice/whisper; progress via voice.whisper.progress |
 | 182 | `isWhisperCached` | preload/bridge.ts:1017 | — | R | no renderer caller |
-| 183 | `requestMicrophoneAccess` | preload/bridge.ts:1019 | `voice.requestMicrophone` | M |  |
+| 183 | `requestMicrophoneAccess` | preload/bridge.ts:1019 | `voice.requestMicrophone` | M | renderer-next lib/voice/use-dictation |
 | 184 | `streamDeviceTouch` | preload/bridge.ts:1023 | `devices.stream.touch` | M | was ipcRenderer.send; call without await |
 | 185 | `streamDeviceKey` | preload/bridge.ts:1025 | `devices.stream.key` | M | was ipcRenderer.send; call without await |
 | 186 | `openScreenRecordingSettings` | preload/bridge.ts:1027 | `system.openPrivacyPane` | M | input { pane: "screen-recording" } |
@@ -214,61 +214,61 @@ handler stays until the cut-over).
 
 | # | Legacy | Defined at | Procedure | Kind | Notes |
 |---|---|---|---|---|---|
-| 1 | `openFolderDialog` | preload/index.ts:50 | `system.dialog.openFolder` | M |  |
-| 2 | `openFilesDialog` | preload/index.ts:52 | `system.dialog.openFiles` | M | data: Buffer → Uint8Array (custom serializer) |
-| 3 | `readClipboardImage` | preload/index.ts:61 | — | R | no renderer caller; composer paste uses the DOM clipboard |
-| 4 | `fetchUrlAttachment` | preload/index.ts:67 | — | R | no renderer caller |
-| 5 | `openExternal` | preload/index.ts:75 | `system.openExternal` | M | same isSafeExternalUrl guard |
-| 6 | `openFilePath` | preload/index.ts:79 | `system.openPath` | M | same local-open-guard |
-| 7 | `showItemInFolder` | preload/index.ts:82 | `system.showItemInFolder` | M |  |
-| 8 | `getAppVersion` | preload/index.ts:85 | `system.info` | Q | appVersion |
-| 9 | `showAboutPanel` | preload/index.ts:86 | `window.showAbout` | M |  |
-| 10 | `isFullScreen` | preload/index.ts:87 | `window.state` | Q | { fullScreen, focused, maximized } |
-| 11 | `onFullScreenChange` | preload/index.ts:89 | `window.events` | S | { type: "state", state } |
-| 12 | `getWindowChrome` | preload/index.ts:98 | `window.chrome` | Q |  |
-| 13 | `onWindowChromeChange` | preload/index.ts:100 | `window.events` | S | { type: "chrome", chrome } |
-| 14 | `recreateMainWindow` | preload/index.ts:110 | — | R | main-only plumbing for the Linux native-frame fallback (spec 00-window-chrome); the new renderer never asks for it |
-| 15 | `restartApp` | preload/index.ts:112 | `system.restart` | M |  |
-| 16 | `getHomeDir` | preload/index.ts:114 | `system.info` | Q | homeDir |
-| 17 | `hasGoogleChrome` | preload/index.ts:115 | `browser.hasGoogleChrome` | Q |  |
-| 18 | `setThemeSource` | preload/index.ts:117 | `db.prefs.update` | T | the prefs row's theme drives nativeTheme.themeSource in main |
-| 19 | `platform` | preload/index.ts:119 | `system.info` | Q | platform (was a sync preload value) |
-| 20 | `reportFunnelStep` | preload/index.ts:122 | `system.funnelStep` | M | fire-and-forget |
-| 21 | `getAccountState` | preload/index.ts:127 | `account.state` | Q |  |
-| 22 | `skipAccountOnboarding` | preload/index.ts:129 | `account.skipOnboarding` | M |  |
-| 23 | `signOutAccount` | preload/index.ts:131 | `account.signOut` | M |  |
-| 24 | `forgetAccount` | preload/index.ts:133 | `account.forget` | M |  |
-| 25 | `savePastedTempFiles` | preload/index.ts:137 | `files.savePastedTemp` | M | Uint8Array payloads |
-| 26 | `saveLogs` | preload/index.ts:148 | `system.logs.save` | M |  |
-| 27 | `appendLogs` | preload/index.ts:154 | `system.logs.append` | M | fire-and-forget; batched client-side |
-| 28 | `showNotification` | preload/index.ts:158 | `system.notify` | M |  |
-| 29 | `onNotificationClicked` | preload/index.ts:164 | `system.events` | S | { type: "notification-clicked", metadata } |
-| 30 | `power.getKeepAwake` | preload/index.ts:176 | — | R | no renderer caller |
-| 31 | `power.setKeepAwake` | preload/index.ts:178 | — | R | no renderer caller |
-| 32 | `power.setAgentBusy` | preload/index.ts:181 | — | R | main derives busy from run state (AG-UI RUN_STARTED/RUN_FINISHED) instead of trusting a renderer edge |
-| 33 | `update.check` | preload/index.ts:186 | `update.check` | M |  |
-| 34 | `update.install` | preload/index.ts:189 | `update.install` | M |  |
-| 35 | `update.getStatus` | preload/index.ts:192 | `update.status` | Q |  |
-| 36 | `update.onStatusChange` | preload/index.ts:195 | `update.events` | S | UpdateStatus iterator; the first yield is the current status |
-| 37 | `skills.listInstalled` | preload/index.ts:206 | `skills.listInstalled` | Q |  |
-| 38 | `skills.searchMarketplace` | preload/index.ts:208 | `skills.search` | Q |  |
-| 39 | `skills.install` | preload/index.ts:210 | `skills.install` | M |  |
-| 40 | `skills.remove` | preload/index.ts:212 | `skills.remove` | M |  |
-| 41 | `skills.openFile` | preload/index.ts:213 | `skills.openFile` | M |  |
-| 42 | `skills.importLocal` | preload/index.ts:215 | `skills.importLocal` | M |  |
-| 43 | `files.readImageAsDataUrl` | preload/index.ts:219 | `files.readImageAsDataUrl` | Q |  |
-| 44 | `files.readFileAsText` | preload/index.ts:230 | `files.readText` | Q |  |
-| 45 | `files.readPptx` | preload/index.ts:242 | `files.readPptx` | Q |  |
-| 46 | `versions` | preload/index.ts:249 | `system.info` | Q | versions |
-| 47 | `durableState.snapshot` | preload/index.ts:253 | `durableState.snapshot` | Q | old renderer only; the new renderer uses db.prefs; the sync sendSync read stays in the legacy preload |
-| 48 | `durableState.set` | preload/index.ts:254 | `durableState.set` | M | old renderer only |
-| 49 | `durableState.remove` | preload/index.ts:257 | `durableState.set` | M | value: null (old renderer only) |
-| 50 | `durableState.clear` | preload/index.ts:260 | `durableState.clear` | M | old renderer only |
-| 51 | `reportUiActivity` | preload/index.ts:266 | `window.activity` | M | fire-and-forget; feeds the swap deferral |
-| 52 | `signalRendererReady` | preload/index.ts:272 | `window.ready` | M | renderer-host also accepts this, per webContents, as the swap-ready signal |
-| 53 | `getPathForFile` | preload/index.ts:278 | `(preload) window.abacusHost.getPathForFile` | M | needs webUtils in the preload; the only non-port preload export |
+| 1 | `openFolderDialog` | preload/index.ts | `system.dialog.openFolder` | M |  |
+| 2 | `openFilesDialog` | preload/index.ts | `system.dialog.openFiles` | M | data: Buffer → Uint8Array (custom serializer) |
+| 3 | `readClipboardImage` | preload/index.ts | — | R | no renderer caller; composer paste uses the DOM clipboard |
+| 4 | `fetchUrlAttachment` | preload/index.ts | — | R | no renderer caller |
+| 5 | `openExternal` | preload/index.ts | `system.openExternal` | M | same isSafeExternalUrl guard |
+| 6 | `openFilePath` | preload/index.ts | `system.openPath` | M | same local-open-guard |
+| 7 | `showItemInFolder` | preload/index.ts | `system.showItemInFolder` | M |  |
+| 8 | `getAppVersion` | preload/index.ts | `system.info` | Q | appVersion |
+| 9 | `showAboutPanel` | preload/index.ts | `window.showAbout` | M |  |
+| 10 | `isFullScreen` | preload/index.ts | `window.state` | Q | { fullScreen, focused, maximized } |
+| 11 | `onFullScreenChange` | preload/index.ts | `window.events` | S | { type: "state", state } |
+| 12 | `getWindowChrome` | preload/index.ts | `window.chrome` | Q |  |
+| 13 | `onWindowChromeChange` | preload/index.ts | `window.events` | S | { type: "chrome", chrome } |
+| 14 | `recreateMainWindow` | preload/index.ts | — | R | main-only plumbing for the Linux native-frame fallback (spec 00-window-chrome); the new renderer never asks for it |
+| 15 | `restartApp` | preload/index.ts | `system.restart` | M |  |
+| 16 | `getHomeDir` | preload/index.ts | `system.info` | Q | homeDir |
+| 17 | `hasGoogleChrome` | preload/index.ts | `browser.hasGoogleChrome` | Q |  |
+| 18 | `setThemeSource` | preload/index.ts | `db.prefs.update` | T | the prefs row's theme drives nativeTheme.themeSource in main |
+| 19 | `platform` | preload/index.ts | `system.info` | Q | platform (was a sync preload value) |
+| 20 | `reportFunnelStep` | preload/index.ts | `system.funnelStep` | M | fire-and-forget |
+| 21 | `getAccountState` | preload/index.ts | `account.state` | Q |  |
+| 22 | `skipAccountOnboarding` | preload/index.ts | `account.skipOnboarding` | M | renderer-next features/onboarding/actions: persisted exit first |
+| 23 | `signOutAccount` | preload/index.ts | `account.signOut` | M |  |
+| 24 | `forgetAccount` | preload/index.ts | `account.forget` | M |  |
+| 25 | `savePastedTempFiles` | preload/index.ts | `files.savePastedTemp` | M | Uint8Array payloads |
+| 26 | `saveLogs` | preload/index.ts | `system.logs.save` | M |  |
+| 27 | `appendLogs` | preload/index.ts | `system.logs.append` | M | fire-and-forget; batched client-side |
+| 28 | `showNotification` | preload/index.ts | `system.notify` | M | renderer-next lib/notify: kind + dedupeKey; main/notch/notifications |
+| 29 | `onNotificationClicked` | preload/index.ts | `system.events` | S | { type: "notification-clicked", metadata } |
+| 30 | `power.getKeepAwake` | preload/index.ts | — | R | no renderer caller |
+| 31 | `power.setKeepAwake` | preload/index.ts | — | R | no renderer caller |
+| 32 | `power.setAgentBusy` | preload/index.ts | — | R | main derives busy from run state (AG-UI RUN_STARTED/RUN_FINISHED) instead of trusting a renderer edge |
+| 33 | `update.check` | preload/index.ts | `update.check` | M |  |
+| 34 | `update.install` | preload/index.ts | `update.install` | M |  |
+| 35 | `update.getStatus` | preload/index.ts | `update.status` | Q |  |
+| 36 | `update.onStatusChange` | preload/index.ts | `update.events` | S | UpdateStatus iterator; the first yield is the current status |
+| 37 | `skills.listInstalled` | preload/index.ts | `skills.listInstalled` | Q |  |
+| 38 | `skills.searchMarketplace` | preload/index.ts | `skills.search` | Q |  |
+| 39 | `skills.install` | preload/index.ts | `skills.install` | M |  |
+| 40 | `skills.remove` | preload/index.ts | `skills.remove` | M |  |
+| 41 | `skills.openFile` | preload/index.ts | `skills.openFile` | M |  |
+| 42 | `skills.importLocal` | preload/index.ts | `skills.importLocal` | M |  |
+| 43 | `files.readImageAsDataUrl` | preload/index.ts | `files.readImageAsDataUrl` | Q |  |
+| 44 | `files.readFileAsText` | preload/index.ts | `files.readText` | Q |  |
+| 45 | `files.readPptx` | preload/index.ts | `files.readPptx` | Q |  |
+| 46 | `versions` | preload/index.ts | `system.info` | Q | versions |
+| 47 | `durableState.snapshot` | preload/index.ts | `durableState.snapshot` | Q | old renderer only; the new renderer uses db.prefs; the sync sendSync read stays in the legacy preload |
+| 48 | `durableState.set` | preload/index.ts | `durableState.set` | M | old renderer only |
+| 49 | `durableState.remove` | preload/index.ts | `durableState.set` | M | value: null (old renderer only) |
+| 50 | `durableState.clear` | preload/index.ts | `durableState.clear` | M | old renderer only |
+| 51 | `reportUiActivity` | preload/index.ts | `window.activity` | M | fire-and-forget; feeds the swap deferral |
+| 52 | `signalRendererReady` | preload/index.ts | `window.ready` | M | renderer-host also accepts this, per webContents, as the swap-ready signal |
+| 53 | `getPathForFile` | preload/index.ts | `(preload) window.abacusHost.getPathForFile` | M | needs webUtils in the preload; the only non-port preload export |
 
-## `IpcEvent` variants (46)
+## `IpcEvent` variants (47)
 
 | `IpcEvent.type` | New home | Notes |
 |---|---|---|
@@ -285,6 +285,7 @@ handler stays until the cut-over).
 | `cronjobs-updated` | db.routines.changes (feed notify) |  |
 | `device-build-state` | devices.events { type: "build-state", phase, error? } |  |
 | `device-status-updated` | devices.events { type: "status", status } |  |
+| `exec-backend` | settings.events { type: "exec-backend", backend } | backend or terminal shell changed; invalidates execBackend and sandboxSupport in every window |
 | `file-tree-root-updated` | files.events { type: "tree-root-changed" } | the renderer invalidates files.treeRoot / treeChildren |
 | `git-state-updated` | db.gitState.changes |  |
 | `local-cli-ndjson` | ai.subscribe (AG-UI) | the NDJSON stream is not mounted on oRPC |
@@ -329,7 +330,7 @@ handler stays until the cut-over).
 | `window:chrome-changed` | window.events { type: "chrome", chrome } | legacy renderer hears it only in wco mode |
 | `agent:device-stream-chunk` | devices.stream.chunks({ streamId }) | binary through the Uint8Array serializer |
 
-## Contract procedures (264)
+## Contract procedures (278)
 
 Every procedure, with the legacy members it replaces (none: new in the contract).
 
@@ -522,6 +523,20 @@ Every procedure, with the legacy members it replaces (none: new in the contract)
 | `messaging.updatePlatform` | mutation | `agent.updateMessagingPlatform` |
 | `messaging.updateSettings` | mutation | `agent.updateMessagingSettings` |
 | `models.list` | query | `agent.listModels` |
+| `notch.ackOpen` | mutation |  |
+| `notch.events` | subscription |  |
+| `notch.focus` | mutation |  |
+| `notch.haptic` | mutation |  |
+| `notch.layout` | query |  |
+| `notch.openCommands` | subscription |  |
+| `notch.openInApp` | mutation |  |
+| `notch.presented` | mutation |  |
+| `notch.preview` | mutation |  |
+| `notch.retry` | mutation |  |
+| `notch.setInteractive` | mutation |  |
+| `notch.setShape` | mutation |  |
+| `notch.status` | query |  |
+| `notch.visibility` | mutation |  |
 | `referrals.gmailContacts` | query | `agent.listReferralGmailContacts` |
 | `referrals.sendEmail` | mutation | `agent.sendReferralEmailInvites` |
 | `referrals.sendWhatsapp` | mutation | `agent.sendReferralWhatsappInvites` |
