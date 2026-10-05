@@ -709,3 +709,59 @@ tests): this host no longer has the GTK runtime Electron needs
 (`libgtk-3.so.0` is missing), so the native suite reports "requires a display".
 No native or notch code changed in this pass; the other 283 desktop test files
 pass. Rerun on a host with GTK (or with the runtime reinstalled) to close it.
+
+## Same-origin host path
+
+Preprod showed the per-conversation preview hostname has no DNS on self-serve
+(`ERR_NAME_NOT_RESOLVED` on `/healthz`). The server now also returns
+`host_base` (camelCased to `hostBase`) from `_getOrCreateAbacusBotHost` and
+`_bootstrapAbacusBotHost`: a same-origin path, `/api/botHost/<hashed
+conversation>`, that it proxies to the host with the prefix stripped, owner
+identity headers injected and `Origin`, `Authorization` and
+`Sec-WebSocket-Protocol` passed through. `preview_host` stays for one release
+and is null.
+
+SPA changes:
+
+- `connect/services.ts` parses `hostBase` (nullish; must start with a single
+  `/`, so a protocol-relative or absolute value is refused) and `previewHost`
+  (now nullish). `hostHttpBase()` is the one place a host URL is derived:
+  `location.origin + hostBase` (trailing slash dropped), else
+  `https://<previewHost>` when `hostBase` is null, else a typed connection
+  error. `BrowserConnection.origin` became `base`; `/healthz`, `/files`,
+  `/upload` and the WebSocket (`base` with `http`→`ws`, plus `/rpc`, so
+  `wss://<location.host>/api/botHost/<id>/rpc` in production) all use it. The
+  token refresh compares the refreshed `hostHttpBase()` with `base`.
+  `getOrCreateAbacusBotHost`'s `previewHost` is no longer read.
+- Unchanged: token in `Sec-WebSocket-Protocol`, Bearer on `/files` and
+  `/upload`, typed errors, 403 retry window, `PAYLOAD_TOO_LARGE`, lease and
+  keep-alive.
+- The preview-host fallback is the second branch of `hostHttpBase()` plus the
+  nullish `previewHost` fields; delete both once the server stops sending it.
+- CSP: browser `connect-src` is `'self'` by default. `VITE_CONNECT_SRC` is now an
+  optional extra list appended (deduplicated) to `'self'`; empty or unset is
+  valid, so the "required" error is gone. `apps/web/.env.production` sets it
+  empty. The bundle check accepts `connect-src 'self'` followed by optional
+  extras.
+- Fixture: `bootstrap-server.json` carries `hostBase: "/api/botHost/1c0d9e2f7a"`
+  and `previewHost: null`; the generator maps `host_base`/`hostBase` to that
+  value and keeps literal `None` as null.
+
+Publisher: it no longer needs to pass the preview hosts in `VITE_CONNECT_SRC`
+and can drop the variable (or leave it empty) for both channels. Passing the old
+`'self' https://… wss://…` list still builds; it only widens the policy.
+
+Host (PR 2): routes stay at `/healthz`, `/rpc`, `/files`, `/upload` because the
+proxy strips the prefix. `Origin` is now the apps origin (already in
+`ABACUSAI_BOT_HOST_ORIGINS`); the host must not emit absolute or root-relative
+redirects or links that the browser follows (the `PAYLOAD_TOO_LARGE`
+`alternative` path is data only and the SPA never resolves it). The server
+proxy needs a body limit at least the host's upload limit, so the host's own
+413 reaches the SPA, and a WebSocket idle timeout longer than the quietest RPC
+period.
+
+Tests: connect flow with `hostBase` (health and WebSocket URLs on the current
+origin), URL derivation, fallback when `hostBase` is null, refusal of a missing
+or off-origin path, refresh refusing a changed path, `/upload` and `/files`
+URLs under `hostBase`, and the CSP pin (`'self'` alone for unset/empty/blank,
+extras appended without a duplicate `'self'`).
