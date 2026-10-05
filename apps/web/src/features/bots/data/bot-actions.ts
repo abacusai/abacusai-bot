@@ -16,6 +16,7 @@ import type {
 import { DeleteKeyNotFoundError } from "@tanstack/db";
 
 import type { Collections, Db } from "#renderer/data/db";
+import { isRpcError } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { CHECK_IN_PROMPT } from "#renderer/lib/bots/check-in";
@@ -26,18 +27,6 @@ import { botsUnreadStore } from "./unread-store";
 
 type BotsCollection = Collections["bots"];
 
-export const codeOf = (error: unknown): string | null => {
-  const code = (error as { code?: unknown } | null)?.code;
-  return typeof code === "string" ? code : null;
-};
-
-const dataOf = (error: unknown): Record<string, unknown> | null => {
-  const data = (error as { data?: unknown } | null)?.data;
-  return typeof data === "object" && data !== null
-    ? (data as Record<string, unknown>)
-    : null;
-};
-
 /** What a failed create/save tells the form (§6.4). */
 type BotSaveError =
   | { kind: "limit" }
@@ -47,16 +36,18 @@ type BotSaveError =
   | { kind: "other"; detail: string | null };
 
 export const saveErrorOf = (error: unknown): BotSaveError => {
-  const code = codeOf(error);
-  const data = dataOf(error);
-  if (code === "PRECONDITION_FAILED" && data?.reason === "bot-limit")
+  const typed = isRpcError(error) ? error : null;
+  if (
+    typed?.code === "PRECONDITION_FAILED" &&
+    typed.data?.reason === "bot-limit"
+  )
     return { kind: "limit" };
-  if (code === "CONFLICT") return { kind: "conflict" };
-  if (code === "NOT_FOUND") return { kind: "not-found" };
-  if (code === "BAD_REQUEST")
+  if (typed?.code === "CONFLICT") return { kind: "conflict" };
+  if (typed?.code === "NOT_FOUND") return { kind: "not-found" };
+  if (typed?.code === "BAD_REQUEST")
     return {
       kind: "bad-request",
-      field: typeof data?.field === "string" ? data.field : null,
+      field: typeof typed.data?.field === "string" ? typed.data.field : null,
     };
   return {
     kind: "other",
@@ -82,7 +73,7 @@ export const createBot = async (
     await bots.insert(row).isPersisted.promise;
     return row.id;
   } catch (error) {
-    if (codeOf(error) !== "CONFLICT") throw error;
+    if (!isRpcError(error) || error.code !== "CONFLICT") throw error;
     const retry = { ...row, id: mintId() };
     await bots.insert(retry).isPersisted.promise;
     return retry.id;
@@ -213,7 +204,7 @@ export const forgetMemory = async (
     return "forgotten";
   } catch (error) {
     if (error instanceof DeleteKeyNotFoundError) return "forgotten";
-    if (codeOf(error) === "CONFLICT") return "stale";
+    if (isRpcError(error) && error.code === "CONFLICT") return "stale";
     throw error;
   }
 };

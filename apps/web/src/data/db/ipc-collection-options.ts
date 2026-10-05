@@ -41,6 +41,8 @@ import type {
   UtilsRecord,
 } from "@tanstack/db";
 
+import { isRpcError } from "#renderer/data/query-client";
+
 /** What `transport.client.db.<table>` offers; mutations only where they exist. */
 export interface IpcTableClient<Row, Key extends string> {
   snapshot(
@@ -140,12 +142,6 @@ export type IpcCollectionOptions<
 };
 
 const DEFAULT_ECHO_TIMEOUT_MS = 10_000;
-
-/** A typed `NOT_FOUND` from main (oRPC error `code`), never a message match. */
-const isNotFoundError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === "NOT_FOUND";
 
 /** 0.5 s, 1 s, 2 s, then every 5 s. */
 const defaultRetryDelayMs = (attempt: number): number =>
@@ -719,8 +715,9 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
             toInput(mutation.key as Key, mutation.original) as never
           );
         } catch (error) {
-          if (config.idempotentDelete !== true || !isNotFoundError(error))
-            throw error;
+          // A typed NOT_FOUND from main, never a message match.
+          const gone = isRpcError(error) && error.code === "NOT_FOUND";
+          if (config.idempotentDelete !== true || !gone) throw error;
           // Already gone in main: the snapshot drops it for real.
           await utils.resync().catch(() => undefined);
           continue;

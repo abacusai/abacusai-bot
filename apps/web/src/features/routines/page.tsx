@@ -7,15 +7,12 @@ import { usePanelRef } from "react-resizable-panels";
 import { EmptyState } from "#renderer/components/empty-state";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
+import { isRpcError } from "#renderer/data/query-client";
 import { persistedStore } from "#renderer/lib/continuity/registry";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  rpcError,
-  errorText,
-} from "#renderer/lib/use-app-context";
+import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import {
@@ -481,9 +478,10 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
       );
       setText("");
     } catch (e) {
-      if (rpcError(e)?.code === "NOT_FOUND") setGone(true);
+      const code = isRpcError(e) ? e.code : null;
+      if (code === "NOT_FOUND") setGone(true);
       const reply =
-        rpcError(e)?.code === "TIMEOUT"
+        code === "TIMEOUT"
           ? t("phase5.editTimeout")
           : `${t("phase5.editFailed")} ${errorText(e)}`;
       store.setState((log) => [...log, { user, reply }].slice(-10));

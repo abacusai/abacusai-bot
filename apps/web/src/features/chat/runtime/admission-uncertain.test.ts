@@ -180,7 +180,8 @@ describe("R2-T35 uncertain admission", () => {
 
   it("(f) UNAVAILABLE is definitive: the entry leaves at once", async () => {
     const relay = await memoryRelay();
-    relay.faults.send = () => new ORPCError("UNAVAILABLE", { data: {} });
+    relay.faults.send = () =>
+      new ORPCError("UNAVAILABLE", { status: 503, data: {} });
     const session = await open(relay);
     await expect(session.submit("hello")).rejects.toBeInstanceOf(ORPCError);
     expect(session.hostStore.state.outbox).toEqual([]);

@@ -9,7 +9,11 @@
  * intent.ts`), so a mutation is a write held until the sign-in gate
  * authorizes it, whichever hook sent it.
  */
-import { isDefinedError } from "@orpc/client";
+import type {
+  RpcErrorCode,
+  RpcErrorData,
+} from "@abacus-ai/contract/contract/errors";
+import { isDefinedError, type ORPCError } from "@orpc/client";
 import {
   hashKey,
   isCancelledError,
@@ -55,11 +59,26 @@ declare module "@tanstack/react-query" {
 // oxlint-disable-next-line no-restricted-imports -- the one place they come from
 export { useMutation, useMutationState } from "@tanstack/react-query";
 
+/**
+ * A contract error from main (`contract/errors.ts`), its data by code. The
+ * data may be missing: the schemas are type-only, so a throw without data
+ * (the host's sign-in PRECONDITION_FAILED) is still defined.
+ */
+export type RpcError = {
+  [Code in RpcErrorCode]: ORPCError<Code, RpcErrorData[Code] | undefined>;
+}[RpcErrorCode];
+
+/**
+ * `isDefinedError` for a caught `unknown`: true only for the contract's
+ * typed errors, and narrows `code` and `data` by them. Errors are branched
+ * on these, never on message text.
+ */
+export const isRpcError = (error: unknown): error is RpcError =>
+  isDefinedError(error);
+
 /** Only a transient UNAVAILABLE is worth retrying (spec 00 A.5). */
 const shouldRetry = (failureCount: number, error: unknown): boolean =>
-  isDefinedError(error) &&
-  (error as { code?: unknown }).code === "UNAVAILABLE" &&
-  failureCount < 3;
+  isRpcError(error) && error.code === "UNAVAILABLE" && failureCount < 3;
 
 export interface QueryClientOptions {
   /**

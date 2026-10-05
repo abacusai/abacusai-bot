@@ -8,6 +8,7 @@ import * as v from "valibot";
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { isRpcError } from "#renderer/data/query-client";
 import {
   composeSchedule,
   WEEKDAYS,
@@ -17,7 +18,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError } from "#renderer/lib/toast";
-import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -155,20 +156,18 @@ export const RoutineDialog = ({
           transition: "nav-forward",
         });
       } catch (e) {
-        if (
-          rpcError(e)?.code === "BAD_REQUEST" &&
-          rpcError(e)?.data.field === "schedule"
-        ) {
+        const refused = isRpcError(e) && e.code === "BAD_REQUEST" ? e : null;
+        if (refused?.data?.field === "schedule") {
           setScheduleError(
-            String(rpcError(e)?.data.detail ?? t("phase5.mainScheduleError"))
+            String(refused.data.detail ?? t("phase5.mainScheduleError"))
           );
           return;
         }
         setError(
-          rpcError(e)?.code === "BAD_REQUEST"
+          refused
             ? t("phase5.mainScheduleError") +
                 " " +
-                String(rpcError(e)?.data.detail ?? "")
+                String(refused.data?.detail ?? "")
             : t("phase5.saveRoutineFailed")
         );
       }
@@ -619,7 +618,7 @@ async function insertWithConflictRetry(
     await insert(id);
     return id;
   } catch (e) {
-    if (rpcError(e)?.code !== "CONFLICT") throw e;
+    if (!isRpcError(e) || e.code !== "CONFLICT") throw e;
     const retryId = `routine-${crypto.randomUUID()}`;
     await insert(retryId);
     return retryId;

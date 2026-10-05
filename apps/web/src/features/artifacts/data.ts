@@ -6,9 +6,10 @@ import type {
   WorkspaceRow,
 } from "@abacus-ai/contract/contract/rows";
 
+import { isRpcError } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { platformSystem } from "#renderer/lib/platform-system";
-import { foldSearch, rpcError } from "#renderer/lib/use-app-context";
+import { foldSearch } from "#renderer/lib/use-app-context";
 export interface ArtifactSource {
   botIds: string[];
   routine: string | null;
@@ -129,9 +130,9 @@ export const openArtifact = async (
       maxBytes: 1,
     });
   } catch (e) {
-    const typed = rpcError(e);
+    const typed = isRpcError(e) ? e : null;
     if (typed?.code === "NOT_FOUND") return "missing";
-    if (typed?.code === "CONFLICT" && typed.data.reason === "not-a-file") {
+    if (typed?.code === "CONFLICT" && typed.data?.reason === "not-a-file") {
       await platformSystem(transport.client).showItemInFolder({
         path: a.location,
       });

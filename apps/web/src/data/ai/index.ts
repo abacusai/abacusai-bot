@@ -8,4 +8,4 @@ import type { Transport } from "#renderer/data/transport";
 export type AiClient = Transport["client"]["ai"];
 
 export { controlOf, eventSeq, resumePoint } from "./events";
-export { isDefinitive, isNotFound, rpcCode } from "./errors";
+export { isDefinitive, isNotFound } from "./errors";

@@ -25,14 +25,18 @@ import {
 import { SoundPreview } from "#renderer/components/sound-preview";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import { optimistic, useMutation } from "#renderer/data/query-client";
+import {
+  optimistic,
+  useMutation,
+  isRpcError,
+} from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";
-import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -236,7 +240,7 @@ export const MemoryPage = () => {
     } catch (error) {
       setMemoryError(
         t(
-          rpcError(error)?.code === "CONFLICT"
+          isRpcError(error) && error.code === "CONFLICT"
             ? "phase5.memoryConflict"
             : "phase5.saveFailed"
         )

@@ -23,7 +23,8 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Spinner } from "#renderer/components/spinner";
-import { isNotFound, rpcCode } from "#renderer/data/ai";
+import { isNotFound } from "#renderer/data/ai";
+import { isRpcError } from "#renderer/data/query-client";
 import { cn } from "#renderer/lib/cn";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
@@ -461,7 +462,7 @@ export const ThreadComposer = () => {
             else config.onFirstSend?.(route.text);
           })
           .catch((thrown: unknown) => {
-            if (rpcCode(thrown) === "CONFLICT") {
+            if (isRpcError(thrown) && thrown.code === "CONFLICT") {
               void runtime.queue
                 .enqueue(threadId, route.text)
                 .catch(() => restore(t("chat.composer.queueFailed")));

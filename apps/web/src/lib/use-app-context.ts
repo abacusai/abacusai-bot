@@ -1,5 +1,4 @@
 import type { SystemInfo } from "@abacus-ai/contract/contract";
-import { ORPCError } from "@orpc/client";
 import { useRouter } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 
@@ -19,20 +18,3 @@ export const foldSearch = (text: string): string =>
     .toLocaleLowerCase();
 export const errorText = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
-
-export const rpcError = (
-  error: unknown
-): {
-  code: string;
-  data: { field?: string; detail?: string; reason?: string };
-} | null =>
-  error instanceof ORPCError && error.defined
-    ? {
-        code: error.code,
-        data: (error.data ?? {}) as {
-          field?: string;
-          detail?: string;
-          reason?: string;
-        },
-      }
-    : null;
