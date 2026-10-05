@@ -1,20 +1,13 @@
-import { ORPCError } from "@orpc/server";
-
+import { unsupported } from "../errors";
 import { impl } from "./impl";
 
 export const authRouter = impl.auth.router({
   web: {
     start: impl.auth.web.start.handler(() => {
-      throw new ORPCError("UNSUPPORTED", {
-        status: 501,
-        data: { procedure: "auth.web.start" },
-      });
+      throw unsupported("auth.web.start");
     }),
     complete: impl.auth.web.complete.handler(() => {
-      throw new ORPCError("UNSUPPORTED", {
-        status: 501,
-        data: { procedure: "auth.web.complete" },
-      });
+      throw unsupported("auth.web.complete");
     }),
   },
   openRouter: {

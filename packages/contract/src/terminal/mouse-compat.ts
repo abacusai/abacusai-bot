@@ -1,5 +1,4 @@
 import { encodeMouse } from "@abacus-ai/contract/terminal/mouse";
-/// <reference lib="dom" />
 /**
  * Mouse and focus reporting: the half of the protocol ghostty-web asks about
  * but never answers.

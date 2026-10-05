@@ -40,6 +40,10 @@ export const forbidden = (reason: string, message?: string): RpcError =>
     data: { reason },
   });
 
+/** A procedure this host platform does not offer (capability table). */
+export const unsupported = (procedure: string): RpcError =>
+  new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
+
 export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
   new ORPCError("NOT_FOUND", {
     status: 404,

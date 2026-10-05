@@ -6,7 +6,6 @@ import type { IpcEvent } from "@abacus-ai/contract/contracts";
  * event iterator is built from.
  */
 import {
-  ORPCError,
   implement,
   type ImplementerInternalWithMiddlewares,
 } from "@orpc/server";
@@ -14,7 +13,7 @@ import {
 import { supportsProcedure } from "../../platform/capabilities";
 import type { RpcContext } from "../context";
 import { DELIVERY, type StreamPath } from "../delivery";
-import { forbidden } from "../errors";
+import { forbidden, unsupported } from "../errors";
 import type { BusChannel, BusChannels } from "../event-bus";
 import { SubscriberQueue } from "../subscriber-queue";
 
@@ -27,7 +26,7 @@ export const impl: ImplementerInternalWithMiddlewares<
   .use(({ context, path, next }, input) => {
     const procedure = path.join(".");
     if (!supportsProcedure(context.platform ?? "electron", procedure, input))
-      throw new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
+      throw unsupported(procedure);
     return next({ context: {} });
   });
 
