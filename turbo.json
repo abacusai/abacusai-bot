@@ -23,10 +23,11 @@
       "cache": false
     },
     "//#format:check": {
+      "dependsOn": ["@abacus-ai/web#generate:routes"],
       "cache": false
     },
     "//#lint": {
-      "dependsOn": ["//#typecheck:tools"],
+      "dependsOn": ["//#typecheck:tools", "@abacus-ai/web#generate:routes"],
       "cache": false
     },
     "build": {
@@ -99,7 +100,20 @@
         "$TURBO_ROOT$/CHANGELOG.md"
       ]
     },
+    "@abacus-ai/web#generate:routes": {
+      "cache": false
+    },
+    "@abacus-ai/web#typecheck": {
+      "dependsOn": ["^typecheck", "^build", "generate:routes"]
+    },
+    "@abacus-ai/web#check:i18n": {
+      "dependsOn": ["generate:routes"]
+    },
+    "@abacus-ai/web#check:locales": {
+      "dependsOn": ["generate:routes"]
+    },
     "//#check:knip": {
+      "dependsOn": ["@abacus-ai/web#generate:routes"],
       "cache": false
     },
     "//#check:scripts": {
