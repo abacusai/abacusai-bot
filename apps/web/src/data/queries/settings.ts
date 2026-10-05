@@ -9,4 +9,5 @@ export const settingsKeys = (orpc: AppQueryUtils) => ({
   providers: orpc.settings.keys.listProviders.key(),
   account: orpc.account.key(),
   models: orpc.models.list.key(),
+  settings: orpc.settings.get.key(),
 });

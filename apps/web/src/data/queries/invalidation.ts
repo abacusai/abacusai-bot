@@ -32,7 +32,7 @@ export const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
     ];
   if (notice.event.type === "credentials-changed") {
     const keys = settingsKeys(orpc);
-    return [keys.providers, keys.account, keys.models];
+    return [keys.providers, keys.account, keys.models, keys.settings];
   }
   return [];
 };

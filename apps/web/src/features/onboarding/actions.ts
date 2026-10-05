@@ -7,6 +7,13 @@ import type { Transport } from "#renderer/data/transport";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 export const accountStateQuery = (transport: Transport) =>
   transport.orpc.account.state.queryOptions({ input: {}, staleTime: Infinity });
+/**
+ * The settings the route gates read to decide "signed in". Never stale by
+ * time: a credential change invalidates it (`keysFor`), and the gates use
+ * `fetchQuery`, which refetches an invalidated entry before answering.
+ */
+export const signedInQuery = (transport: Transport) =>
+  transport.orpc.settings.get.queryOptions({ input: {}, staleTime: Infinity });
 export const FUNNEL_BY_STEP: Partial<Record<OnboardingStepId, FunnelStep>> = {
   welcome: "screen_auth",
   connected: "screen_welcome",

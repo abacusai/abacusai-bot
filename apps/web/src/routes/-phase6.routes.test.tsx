@@ -142,3 +142,23 @@ it.each([false, true])(
   },
   15000
 );
+it("the shell gate reads settings once, skips hover preloads and rereads after a credential change", async () => {
+  harness = await renderApp("/bots/new");
+  const reads = () =>
+    harness!.calls.filter(([name]) => name === "settings.get").length;
+  const first = reads();
+  expect(first).toBeGreaterThan(0);
+  for (const href of ["/sessions/new", "/routines", "/library/connectors"])
+    await act(() => harness!.router.preloadRoute({ to: href as never }));
+  await act(() => harness!.router.navigate({ to: "/routines" }));
+  await act(() => harness!.router.navigate({ to: "/bots/new" }));
+  expect(reads()).toBe(first);
+  const { queryClient, transport } = harness.router.options.context;
+  await act(() =>
+    queryClient.invalidateQueries({
+      queryKey: transport.orpc.settings.get.key(),
+    })
+  );
+  await act(() => harness!.router.navigate({ to: "/routines" }));
+  expect(reads()).toBeGreaterThan(first);
+});

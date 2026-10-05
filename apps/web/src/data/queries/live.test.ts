@@ -79,7 +79,7 @@ describe("keysFor", () => {
         source: "settings",
         event: { type: "credentials-changed" } as never,
       })
-    ).toHaveLength(3);
+    ).toContainEqual(transport.orpc.settings.get.key());
     transport.close();
   });
 });

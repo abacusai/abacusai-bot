@@ -137,6 +137,10 @@ export const AccountPage = () => {
                     keepOtherApiKeys: !removeOthers,
                   });
                 await transport.client.account.signOut({});
+                // The shell gate caches "signed in"; do not race the notice.
+                await cache.invalidateQueries({
+                  queryKey: transport.orpc.settings.get.key(),
+                });
                 void navigate({ to: "/bots/new", transition: "settings-out" });
               }}
             />
