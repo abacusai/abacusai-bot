@@ -58,7 +58,7 @@ it("initializes and starts under the shim; migrates workspace stores without tou
       ).localCode
     ).toEqual({});
     expect(await transport.client.system.info()).toMatchObject({
-      platform: "linux",
+      platform: process.platform,
     });
     expect(await transport.client.account.state()).toHaveProperty("onboarded");
     await expect(transport.client.update.status()).rejects.toMatchObject({
