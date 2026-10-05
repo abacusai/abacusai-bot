@@ -118,6 +118,8 @@ export interface IpcCollectionConfig<Row extends object, Key extends string> {
   echoTimeoutMs?: number;
   /** Sync on creation (the shell's tables), not on first use. */
   startSync?: boolean;
+  /** TanStack DB's idle teardown delay; its default (5 minutes) if unset. */
+  gcTime?: number;
   /** Delay before reconnect attempt `n` (0-based) after an error or EOF. */
   retryDelayMs?: (attempt: number) => number;
   /**
@@ -666,6 +668,7 @@ export function ipcCollectionOptions<Row extends object, Key extends string>(
   const options: IpcCollectionOptions<Row, Key> = {
     id: config.id,
     getKey: config.getKey,
+    ...(config.gcTime == null ? {} : { gcTime: config.gcTime }),
     startSync: config.startSync ?? false,
     sync: { sync, rowUpdateMode: "full" },
     utils,

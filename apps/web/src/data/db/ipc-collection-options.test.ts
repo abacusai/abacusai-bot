@@ -58,6 +58,19 @@ const live = async (context: ReturnType<typeof setup>) => {
 };
 
 describe("ipcCollectionOptions (B-T1)", () => {
+  it("never tears down a table whose gcTime is Infinity", async () => {
+    const context = setup([{ id: "a", label: "A" }], { gcTime: Infinity });
+    await live(context);
+    vi.useFakeTimers();
+    try {
+      const subscription = context.collection.subscribeChanges(() => undefined);
+      subscription.unsubscribe();
+      await vi.advanceTimersByTimeAsync(24 * 60 * 60_000);
+      expect(context.collection.status).toBe("ready");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("(1) applies batches buffered during the snapshot after it, in order", async () => {
     const context = setup([{ id: "a", label: "A" }]);
     const held = context.table.holdSnapshot();
