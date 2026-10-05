@@ -104,7 +104,7 @@ export const useSessionComposerModel = (row?: SessionRow) => {
             to: "/settings/models",
             search: { provider },
             transition: "nav-lateral",
-          } as never),
+          }),
       }),
       onChange: (id: string | null) => {
         if (!row) {

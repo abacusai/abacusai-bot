@@ -34,7 +34,7 @@ export const usePanel = (area: ShellArea | undefined) => {
       to: ".",
       search: (previous: Record<string, unknown>) => ({ ...previous, tab }),
       replace: true,
-    } as never);
+    });
   };
   const toggle = (): void => {
     if (area == null) return;

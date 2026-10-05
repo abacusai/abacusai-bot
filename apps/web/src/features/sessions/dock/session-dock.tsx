@@ -211,7 +211,7 @@ export const SessionDock = ({
       search: (p: Record<string, unknown>) => ({ ...p, tab }),
       replace: true,
       transition: "none",
-    } as never);
+    });
   const close = (ref: string) => {
     if (!/^(terminal|browser|preview):/.test(ref)) {
       select(undefined);
@@ -422,7 +422,7 @@ export const SessionDock = ({
             search: (p: Record<string, unknown>) => ({ ...p, view }),
             replace: true,
             transition: "none",
-          } as never)
+          })
             .finally(() =>
               setFull((current) => (current === pending ? null : current))
             )

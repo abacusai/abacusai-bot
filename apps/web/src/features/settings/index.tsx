@@ -152,7 +152,7 @@ export const SettingsSidebar = () => {
                   matchRoute({
                     to: `/settings/${page}`,
                     fuzzy: true,
-                  } as never) !== false
+                  }) !== false
                 }
                 title={t(`settings.pages.${page}`)}
               />

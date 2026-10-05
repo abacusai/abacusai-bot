@@ -66,5 +66,6 @@ const Root = () => {
 };
 export const Route = createRootRouteWithContext<NotchRouterContext>()({
   component: Root,
+  // The notch's own route: `to` is typed by the main window's router.
   notFoundComponent: () => <Navigate to={"/idle" as never} replace />,
 });

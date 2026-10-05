@@ -85,7 +85,7 @@ const useShellActions = (): ShellActions => {
       void navigate({
         href,
         transition: area === "routines" ? "none" : "nav-lateral",
-      } as never);
+      });
     },
     togglePinned: sidebar.toggle,
     // Reopens the tab last shown in this area (§7.9).
@@ -94,7 +94,7 @@ const useShellActions = (): ShellActions => {
       void navigate({
         href: "/settings/general",
         transition: "settings-in",
-      } as never),
+      }),
     closeFloating,
   };
 };

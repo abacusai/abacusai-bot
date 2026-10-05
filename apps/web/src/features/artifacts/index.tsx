@@ -240,7 +240,8 @@ export const ArtifactsPage = ({
             {
               label: t("phase5.goSession"),
               run: () =>
-                void navigate(target as Parameters<typeof navigate>[0]),
+                // Built from the artifact's data at runtime.
+                void navigate(target as never),
             },
           ]
         : []),

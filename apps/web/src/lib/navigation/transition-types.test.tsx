@@ -394,6 +394,27 @@ describe("the router's document view transition", () => {
     expect(started).toEqual([]);
   });
 
+  // The diff is a pop-up over the session's pane (one pane key): no intent
+  // types it, a drill included.
+  it.each(["nav-forward", "none"])(
+    "starts none opening a session's diff over its pane, whatever the intent (%s)",
+    async (intent) => {
+      harness = await renderApp("/sessions/review-prs");
+      await go({
+        to: "/sessions/$sessionId/diff",
+        params: { sessionId: "review-prs" },
+        search: { path: "a.ts", scope: "unstaged", source: "git" },
+        ...withIntent(intent),
+      });
+      await waitFor(() =>
+        expect(harness!.router.state.location.pathname).toBe(
+          "/sessions/review-prs/diff"
+        )
+      );
+      expect(started).toEqual([]);
+    }
+  );
+
   it("starts none closing a masked sheet with back, or between search-only entries", async () => {
     harness = await renderApp("/routines");
     await go({ to: "/routines/new" });
