@@ -9,9 +9,11 @@ import { createRoot } from "react-dom/client";
  * collections over that transport, prefs) before the router exists. Every
  * step is guarded: a failure anywhere renders the static BootFailure screen,
  * never a blank window, and tells main through a bounded readiness call.
+ * The browser mounts its app before its host is reachable instead
+ * (`mountPlatformApp`, spec 09 D12).
  */
 import "./styles/app.css";
-import { connectHost } from "#platform/connect";
+import { mountPlatformApp } from "#platform/connect";
 import { installLease } from "#platform/lease";
 import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
@@ -39,7 +41,6 @@ import {
 import { installLogRing } from "#renderer/lib/log-ring";
 import { guardSingleViewTransition } from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
-import { IS_BROWSER } from "#renderer/lib/platform";
 import { applyTheme, DARK_QUERY, resolveTheme } from "#renderer/lib/theme";
 import { toast } from "#renderer/ui/toast";
 
@@ -98,13 +99,13 @@ const renderConnectionLost = (): void => {
   );
 };
 
-const start = async (forceRestart = false): Promise<void> => {
+const start = async (): Promise<void> => {
   let transport: Transport | null = null;
   let db: Db | null = null;
   try {
     // 4. English is bundled; the user's language follows prefs.
     await initI18n();
-    await connectHost(root, () => void start(true), forceRestart);
+    if (await mountPlatformApp(root)) return;
 
     const queryClient = createQueryClient();
     const onTransportLost = createTransportLostHandler({
@@ -209,8 +210,7 @@ const start = async (forceRestart = false): Promise<void> => {
   } catch (error) {
     // Anything unexpected: the failure screen, and main hears it (bounded).
     console.error("[renderer] boot failed", error);
-    if (!IS_BROWSER || transport)
-      renderFailure(error instanceof Error ? error : new Error(String(error)));
+    renderFailure(error instanceof Error ? error : new Error(String(error)));
     void reportFailedBoot(
       transport,
       error instanceof Error ? error.message : String(error)

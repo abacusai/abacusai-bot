@@ -1,4 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+
+import { unlessConnecting } from "#renderer/features/onboarding/gate";
+
 export const Route = createFileRoute("/_shell/(routines)/routines")({
   staticData: { area: "routines", sidebar: "routines" },
   loader: async ({ context }) => {
@@ -9,11 +12,14 @@ export const Route = createFileRoute("/_shell/(routines)/routines")({
     void context.queryClient.prefetchQuery(
       context.transport.orpc.bots.senderChats.queryOptions({ input: {} })
     );
-    await Promise.all([
-      context.db.collections.routines.preload(),
-      context.db.collections.routineRuns.preload(),
-      context.db.collections.bots.preload(),
-    ]);
+    await unlessConnecting(
+      context.transport,
+      Promise.all([
+        context.db.collections.routines.preload(),
+        context.db.collections.routineRuns.preload(),
+        context.db.collections.bots.preload(),
+      ])
+    );
   },
   component: Outlet,
 });

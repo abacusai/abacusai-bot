@@ -19,7 +19,10 @@ import {
   startFirstRunGmail,
   startWebsiteSignIn,
 } from "#renderer/features/onboarding/first-run";
-import { guardStep } from "#renderer/features/onboarding/machine";
+import {
+  guardStep,
+  type FlowFacts,
+} from "#renderer/features/onboarding/machine";
 import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
 import {
   onboardingStore,
@@ -167,13 +170,22 @@ const OnboardingRoute = () => {
   });
   const completeWebsiteSignup = useEffectEvent(() => finish({ to: "new-bot" }));
   useEffect(() => {
+    // Nothing is known yet: no sign-in starts, nothing completes.
+    if (facts.provisional) return;
     if (step === "welcome" && !facts.signedIn)
       void startWebsiteSignIn(transport, automaticallySignIn).catch(() => {});
     if (facts.signedIn && facts.email)
       void startFirstRunGmail(transport, facts.email).catch(() => {});
     if (facts.signedIn && facts.webSignup && step === "connected")
       void completeWebsiteSignup();
-  }, [step, facts.signedIn, facts.email, facts.webSignup, transport]);
+  }, [
+    step,
+    facts.provisional,
+    facts.signedIn,
+    facts.email,
+    facts.webSignup,
+    transport,
+  ]);
   const connect = (id: string) => connectOnboarding(db, transport, id);
   return (
     <OnboardingStepPage
@@ -201,10 +213,18 @@ const OnboardingRoute = () => {
     />
   );
 };
-const factsOf = async (context: import("#renderer/router").RouterContext) => {
+/**
+ * The facts a step decides on, from the host. Reads with the load's signal:
+ * a navigation away cancels them, and they wait for the host as long as
+ * the load does (never held as writes).
+ */
+const factsOf = async (
+  context: import("#renderer/router").RouterContext,
+  signal: AbortSignal
+): Promise<FlowFacts> => {
   const [settings, account] = await Promise.all([
-    context.transport.client.settings.get({}),
-    context.transport.client.account.abacus({}),
+    context.transport.client.settings.get({}, { signal }),
+    context.transport.client.account.abacus({}, { signal }),
   ]);
   return {
     signedIn: canSignOutOfAbacus(settings),
@@ -216,11 +236,24 @@ const factsOf = async (context: import("#renderer/router").RouterContext) => {
     ),
   };
 };
+/**
+ * While onboarding renders provisionally (the browser's host is still
+ * connecting, spec 09 D12) nothing is known: the step renders as asked,
+ * acts on no fact and redirects nowhere. Once the host answers, the
+ * parent's gate re-runs and this route's guard decides from fresh facts.
+ */
+const UNKNOWN_FACTS: FlowFacts = {
+  signedIn: false,
+  payingTier: false,
+  ownsBot: false,
+  provisional: true,
+};
 export const Route = createFileRoute("/_bare/onboarding/$step")({
   params: { parse: v.parser(v.object({ step: v.picklist(ONBOARDING_STEPS) })) },
-  beforeLoad: async ({ context, params }) => {
+  beforeLoad: async ({ context, params, abortController }) => {
+    if (context.provisional) return;
     await context.db.collections.bots.preload();
-    const facts = await factsOf(context);
+    const facts = await factsOf(context, abortController.signal);
     const guarded = guardStep(
       params.step as OnboardingStepId,
       facts,
@@ -233,8 +266,10 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
         replace: true,
       });
   },
-  loader: async ({ context, params, cause }) => {
-    if (cause === "preload") return { facts: await factsOf(context) };
+  loader: async ({ context, params, cause, abortController }) => {
+    if (context.provisional) return { facts: UNKNOWN_FACTS };
+    const { signal } = abortController;
+    if (cause === "preload") return { facts: await factsOf(context, signal) };
     if (IS_ELECTRON && params.step === "welcome")
       await context.queryClient.ensureQueryData(
         context.transport.orpc.auth.abacus.browserProfiles.queryOptions({
@@ -242,7 +277,10 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
         })
       );
     if (params.step === "connected")
-      await context.transport.client.account.abacus({ refresh: true });
+      await context.transport.client.account.abacus(
+        { refresh: true },
+        { signal }
+      );
     if (params.step === "models")
       await Promise.all([
         context.queryClient.ensureQueryData(
@@ -266,7 +304,7 @@ export const Route = createFileRoute("/_bare/onboarding/$step")({
       );
     if (params.step === "first-bot")
       await context.db.collections.routines.preload();
-    return { facts: await factsOf(context) };
+    return { facts: await factsOf(context, signal) };
   },
   component: OnboardingRoute,
 });

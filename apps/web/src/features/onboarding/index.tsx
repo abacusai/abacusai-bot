@@ -170,9 +170,9 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     heading.current?.focus();
   }, [step]);
   useEffect(() => {
-    if (step !== "first-bot" || props.preview) return;
+    if (step !== "first-bot" || props.preview || facts.provisional) return;
     ensureFirstBot(facts.ownsBot, props.createFirstBot);
-  }, [step, facts.ownsBot, props]);
+  }, [step, facts.ownsBot, facts.provisional, props]);
   useEffect(() => {
     if (
       !props.preview &&

@@ -7,6 +7,7 @@
 import { useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 
+import { HostStatus } from "#platform/connect";
 import { AppIconSprite } from "#renderer/components/app-icon";
 import { DbProvider, type Db } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -133,6 +134,7 @@ export const AppRoot = ({
         <TooltipProvider>
           <AppToaster toolbarHeight={chrome.toolbarHeight}>
             <AppIconSprite />
+            <HostStatus />
             <ThemeEffect />
             <PlatformEffect platform={system.platform} />
             <ChromeEffect transport={transport} />

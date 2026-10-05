@@ -1,13 +1,17 @@
 /**
- * The host connection, as the browser shows it (spec 09 D4): the stage, or
- * why the host is out of reach with the action that remedies it.
+ * The host connection, as the browser shows it (spec 09 D4). Sign-in, tier
+ * and daily-limit refusals replace the app (`ConnectScreen`); every other
+ * stage and error is a slim banner over the running shell (`HostStatus`),
+ * with the same copy and actions.
  */
+import { useSelector } from "@tanstack/react-store";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 
 import {
   ConnectError,
+  hostConnection,
   restartHost,
   retryHostNow,
   type ConnectStage,
@@ -83,5 +87,33 @@ export const ConnectScreen = ({
         <ConnectAction error={error} restart={restart} />
       )}
     </main>
+  );
+};
+
+/** The shell's view of `hostConnection`: nothing while a socket is open. */
+export const HostStatus = () => {
+  const { t } = useTranslation();
+  const { stage, error, attempting } = useSelector(
+    hostConnection,
+    (state) => state
+  );
+  const kind = kindOf(error);
+  if (kind === "signin" || kind === "tier" || kind === "limit")
+    return <ConnectScreen stage={stage} error={error} />;
+  if (stage === "open") return null;
+  return (
+    <div
+      data-slot="host-status"
+      role="status"
+      className="bg-muted text-muted-foreground fixed inset-x-0 top-0 z-40 flex items-center justify-center gap-3 px-4 py-1 text-xs"
+    >
+      <span>{t(`web.connect.${stage}`)}</span>
+      {error && <span className="text-foreground">{error.message}</span>}
+      <ConnectAction
+        error={error}
+        restart={restartHost}
+        attempting={attempting}
+      />
+    </div>
   );
 };
