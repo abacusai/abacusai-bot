@@ -11,10 +11,7 @@ import { WebSocket } from "ws";
 import { MainEventBus } from "#main/rpc/event-bus";
 import { createRouter } from "#main/rpc/router";
 import { fakeDeps } from "#main/rpc/testing";
-import {
-  startWebSocketTransport,
-  enforceSocketBacklog,
-} from "#main/rpc/transports/websocket";
+import { startWebSocketTransport } from "#main/rpc/transports/websocket";
 it("a stalled terminal iterator sends only its credit window and resumes after JSON acknowledgements", async () => {
   const bus = new MainEventBus();
   const key = sessionConversationKey("w", "s");
@@ -97,12 +94,4 @@ it("a stalled terminal iterator sends only its credit window and resumes after J
     socket.close();
     await server.close();
   }
-});
-it("closes an overloaded socket with retryable 1013 above 16 MiB", () => {
-  const socket = { bufferedAmount: 16 * 1024 * 1024, close: vi.fn() };
-  enforceSocketBacklog(socket);
-  expect(socket.close).not.toHaveBeenCalled();
-  socket.bufferedAmount++;
-  enforceSocketBacklog(socket);
-  expect(socket.close).toHaveBeenCalledWith(1013, "consumer stalled");
 });

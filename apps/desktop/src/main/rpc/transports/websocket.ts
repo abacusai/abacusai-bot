@@ -14,24 +14,18 @@ import {
   FLOW_CONTEXT_KEY,
   FlowRegistry,
   isFlowAck,
-  withFlowAcks,
 } from "@abacus-ai/contract/contract/flow-control";
 import { RPCHandler } from "@orpc/server/ws";
-import type { VerifyClientCallbackAsync } from "ws";
-import { WebSocketServer } from "ws";
+import {
+  WebSocketServer,
+  type VerifyClientCallbackAsync,
+  type WebSocket,
+} from "ws";
 
 import type { RpcContext } from "../context";
 import type { RpcDeps } from "../deps";
 import { rpcHandlerOptions } from "../handler-options";
 import type { AppRouter } from "../router";
-
-export const enforceSocketBacklog = (socket: {
-  bufferedAmount: number;
-  close(code: number, reason: string): void;
-}): void => {
-  if (socket.bufferedAmount > 16 * 1024 * 1024)
-    socket.close(1013, "consumer stalled");
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -139,54 +133,52 @@ export const startWebSocketTransport = async ({
       }) as typeof socket.send;
     }
     const flows = flowControl ? new FlowRegistry() : undefined;
+    // A stalled consumer is cut off rather than buffered without bound.
     const timer = flowControl
       ? setInterval(() => {
-          enforceSocketBacklog(socket);
+          if (socket.bufferedAmount > 16 * 1024 * 1024)
+            socket.close(1013, "consumer stalled");
         }, 100)
       : undefined;
     socket.once("close", () => {
       clearInterval(timer);
       flows?.close();
     });
-    const adapter = flows
-      ? withFlowAcks(
-          {
-            postMessage: () => {},
-            addEventListener: (
-              type: string,
-              listener: (event: { data: unknown }) => void
-            ) => {
-              socket.addEventListener(type as "message", (event) => {
-                if (type === "message") {
-                  try {
-                    const decoded = JSON.parse(event.data.toString());
-                    if (isFlowAck(decoded)) {
-                      listener({ data: decoded });
-                      return;
-                    }
-                    if (!isRpcRequestFrame(decoded)) {
-                      socket.close(1008, "malformed RPC frame");
-                      return;
-                    }
-                  } catch {
-                    if (typeof event.data === "string") {
-                      socket.close(1008, "malformed RPC frame");
-                      return;
-                    }
-                    /* Binary oRPC frames pass through unchanged. */
-                  }
-                }
-                listener(event);
-              });
-            },
-          },
-          flows
-        )
-      : undefined;
-    const rpcSocket = adapter
+    // Acknowledgements go to the registry; anything else must be an oRPC
+    // request frame. Binary frames that are not JSON pass through unchanged.
+    const onMessage =
+      (listener: (event: WebSocket.MessageEvent) => void) =>
+      (event: WebSocket.MessageEvent) => {
+        try {
+          const decoded = JSON.parse(event.data.toString());
+          if (isFlowAck(decoded)) {
+            flows?.ack(decoded);
+            return;
+          }
+          if (!isRpcRequestFrame(decoded)) {
+            socket.close(1008, "malformed RPC frame");
+            return;
+          }
+        } catch {
+          if (typeof event.data === "string") {
+            socket.close(1008, "malformed RPC frame");
+            return;
+          }
+        }
+        listener(event);
+      };
+    const rpcSocket = flows
       ? new Proxy(socket, {
           get(target, key) {
-            if (key === "addEventListener") return adapter.addEventListener;
+            if (key === "addEventListener")
+              return (
+                type: "message",
+                listener: (event: WebSocket.MessageEvent) => void
+              ) =>
+                target.addEventListener(
+                  type,
+                  type === "message" ? onMessage(listener) : listener
+                );
             const value = Reflect.get(target, key, target);
             return typeof value === "function" ? value.bind(target) : value;
           },
