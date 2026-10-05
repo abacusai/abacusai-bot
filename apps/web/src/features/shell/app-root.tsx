@@ -1,7 +1,7 @@
 /**
  * Everything `__root` mounts around the routes (spec 01 §6.1): collections,
  * hotkeys with the platform from `system.info`, tooltips, the registry
- * Toaster, the icon sprite, the theme/chrome/readiness/invalidation effects,
+ * Toaster, the icon sprite, the theme/chrome/readiness effects,
  * the occlusion watcher, the app's shortcut handler and the command menu.
  */
 import { useStore } from "@tanstack/react-store";
@@ -11,7 +11,6 @@ import { HostStatus } from "#platform/connect";
 import { AppIconSprite } from "#renderer/components/app-icon";
 import { DbProvider, type Db } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { useInvalidationBridge } from "#renderer/data/queries/invalidation";
 import type { Transport } from "#renderer/data/transport";
 import { ChromeEffect, useChromeState } from "#renderer/lib/chrome-state";
 import { inertWhileHidden } from "#renderer/lib/inert-hidden";
@@ -37,11 +36,6 @@ import {
 import { usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
 import { useSidebarToggle } from "./use-sidebar-toggle";
-
-const InvalidationBridge = ({ transport }: { transport: Transport }): null => {
-  useInvalidationBridge(transport);
-  return null;
-};
 
 /**
  * `html[data-platform]`: where the window's vibrancy (macOS) or mica
@@ -142,8 +136,7 @@ export const AppRoot = ({
               transport={transport}
               collections={db.collections}
             />
-            <InvalidationBridge transport={transport} />
-            <NotificationClicks transport={transport} />
+            <NotificationClicks transport={transport} db={db} />
             <OcclusionEffect />
             <InertHiddenEffect />
             <ShortcutHandler />

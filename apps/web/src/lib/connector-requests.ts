@@ -16,12 +16,9 @@ import {
  * fails is an error on the card and answers nothing; `success: false` is the
  * no-running-agent case and proceeds. A cancelled flow answers `declined`.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-import {
-  followConnectorEvents,
-  followNotices,
-} from "#renderer/data/queries/live";
+import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import {
   reserveAuthorization,
@@ -235,45 +232,14 @@ export const useConnectorRequests = (
   };
 };
 
-/** Pending asks per conversation key, from the keyless stream (attention). */
-const reduceAskCounts = (
-  asks: ReadonlyMap<string, string>,
-  event: ConnectorsEvent
-): Map<string, string> => {
-  const next = new Map(asks);
-  if (event.type === "snapshot") {
-    next.clear();
-    for (const request of event.requests)
-      next.set(request.requestId, request.conversationKey);
-  } else if (event.type === "request")
-    next.set(event.request.requestId, event.request.conversationKey);
-  else if (event.type === "cleared") next.delete(event.requestId);
-  return next;
-};
-
-const countAsks = (
-  asks: ReadonlyMap<string, string>
-): Record<string, number> => {
-  const counts: Record<string, number> = {};
-  for (const key of asks.values()) counts[key] = (counts[key] ?? 0) + 1;
-  return counts;
-};
-
 /** `Record<conversationKey, pending asks>` for every conversation. */
 export const usePendingConnectorAsks = (
   transport: Transport
 ): Record<string, number> => {
-  const [asks, setAsks] = useState<ReadonlyMap<string, string>>(
-    () => new Map()
-  );
-  useEffect(() => {
-    const abort = new AbortController();
-    followConnectorEvents(
-      transport,
-      (event) => setAsks((previous) => reduceAskCounts(previous, event)),
-      abort.signal
-    );
-    return () => abort.abort();
-  }, [transport]);
-  return countAsks(asks);
+  const asks = noticeSnapshot("connectors", transport);
+  const snapshot = useSyncExternalStore(asks.subscribe, asks.get);
+  const counts: Record<string, number> = {};
+  for (const { conversationKey } of snapshot?.requests ?? [])
+    counts[conversationKey] = (counts[conversationKey] ?? 0) + 1;
+  return counts;
 };

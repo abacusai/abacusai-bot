@@ -26,7 +26,7 @@ export const botsQueries = (orpc: AppQueryUtils) => ({
   memoryBots: () => orpc.memory.bots.queryOptions({ input: {} }),
   // The host builds the catalog from provider APIs (hundreds of ms) and it
   // changes only with credentials or providers, whose changes invalidate it
-  // (keysFor, LibraryGlobals, the models page): fresh for five minutes.
+  // (the settings notice follower, the models page): fresh for five minutes.
   // Inline: a shared helper module would split into a chunk of its own.
   models: () =>
     orpc.models.list.queryOptions({ input: {}, staleTime: 5 * 60_000 }),

@@ -12,7 +12,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { useCollections } from "#renderer/data/db";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import type { AppQueryUtils } from "#renderer/data/transport/types";
 

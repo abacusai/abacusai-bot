@@ -6,16 +6,11 @@ import { useTranslation } from "react-i18next";
 import { BrowserAskHost } from "#platform/ask-host";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import {
-  followAttention,
-  followConnectorEvents,
-  followNotices,
-} from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
 import {
   documentSoundPlayer,
   setDocumentSoundPrefs,
 } from "#renderer/lib/document-sound";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { isThreadSeen } from "#renderer/lib/navigation/visible-thread";
 import { createNotifier } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -37,7 +32,6 @@ export const SessionsGlobals = ({
   }) => boolean;
 }) => {
   const { t } = useTranslation();
-  const navigate = useAppNavigate();
   const transport = useSessionsTransport();
   const db = useDb();
   const prefs = usePrefs();
@@ -114,7 +108,8 @@ export const SessionsGlobals = ({
     });
     let first = true;
     const waiting = new Set<string>();
-    followAttention(
+    followNotice(
+      "attention",
       transport,
       (event) => {
         if (event.type === "snapshot") {
@@ -133,7 +128,8 @@ export const SessionsGlobals = ({
       },
       abort.signal
     );
-    followConnectorEvents(
+    followNotice(
+      "connectors",
       transport,
       (event) => {
         if (event.type === "request") {
@@ -144,9 +140,9 @@ export const SessionsGlobals = ({
       },
       abort.signal
     );
-    void followNotices(
+    followNotice(
+      "files",
       transport,
-      ({ signal }) => transport.client.files.events({}, { signal }),
       (event) => {
         if (event.type === "preview-open")
           show({ conversationKey: event.conversationKey, path: event.path });
@@ -154,38 +150,15 @@ export const SessionsGlobals = ({
       abort.signal
     );
     if (IS_ELECTRON)
-      void followNotices(
+      followNotice(
+        "browser",
         transport,
-        ({ signal }) => transport.client.browser.events({}, { signal }),
         (event) => {
           if (event.type === "open-preview")
             show({ conversationKey: event.conversationKey, url: event.url });
         },
         abort.signal
       );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.system.events({}, { signal }),
-      (event) => {
-        if (event.type !== "notification-clicked") return;
-        const id = event.metadata.sessionId;
-        if (!id) return;
-        const row = db.collections.sessions.get(id);
-        if (row?.owner?.kind === "bot")
-          void navigate({
-            to: "/bots/$botId",
-            params: { botId: row.owner.botId },
-            transition: "nav-lateral",
-          });
-        else if (row)
-          void navigate({
-            to: "/sessions/$sessionId",
-            params: { sessionId: id },
-            transition: "nav-lateral",
-          });
-      },
-      abort.signal
-    );
     const unlock = () => documentSoundPlayer().unlock();
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => {
@@ -193,6 +166,6 @@ export const SessionsGlobals = ({
       abort.abort();
       window.removeEventListener("pointerdown", unlock);
     };
-  }, [transport, db, qc, navigate]);
+  }, [transport, db, qc]);
   return <BrowserAskHost />;
 };

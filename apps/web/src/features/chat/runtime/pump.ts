@@ -14,7 +14,10 @@ import {
   resumePoint,
   type AiClient,
 } from "#renderer/data/ai";
-import { untilOpen, type ConnectionSource } from "#renderer/data/queries/live";
+import {
+  untilOpen,
+  type ConnectionSource,
+} from "#renderer/data/queries/notices";
 
 import { isTerminal, terminalRunId } from "../store/apply";
 

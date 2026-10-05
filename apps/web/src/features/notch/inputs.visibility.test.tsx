@@ -17,7 +17,7 @@ vi.mock("@tanstack/react-db", () => ({ useLiveQuery: () => ({ data: [] }) }));
 vi.mock("#renderer/lib/run-finished", () => ({
   runFinishedFeed: () => ({ subscribe: () => () => {} }),
 }));
-vi.mock("#renderer/data/queries/live", () => ({
+vi.mock("#renderer/data/queries/notices", () => ({
   followNotices: async (
     _t: unknown,
     subscribe: any,

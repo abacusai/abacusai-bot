@@ -16,7 +16,7 @@ import {
   terminalKeyHandler,
   type TerminalAction,
 } from "#renderer/components/terminal/keys";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { TerminalActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import { uiPlatform } from "#renderer/lib/platform";
 

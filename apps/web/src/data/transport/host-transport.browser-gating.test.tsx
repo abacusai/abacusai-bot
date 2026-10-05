@@ -8,7 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 
 import { isHostUnavailable } from "./lifecycle";
 import { createHostTransport, type HostTransport } from "./websocket";

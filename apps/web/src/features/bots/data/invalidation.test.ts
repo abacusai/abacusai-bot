@@ -2,7 +2,7 @@ import { contract } from "@abacus-ai/contract/contract";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /** R3-T5: only each source's specified derived queries are invalidated. */
 import { implement } from "@orpc/server";
-import { waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { createDb, type Db } from "#renderer/data/db";
@@ -13,7 +13,7 @@ import {
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
 import { createMemoryTransport } from "#renderer/data/transport/memory";
 
-import { connectorAsksStore, followBotsSources } from "./live";
+import { followBotsSources, useConnectorAsks } from "./live";
 import { botsQueries } from "./queries";
 const impl = implement(contract);
 const source = () => {
@@ -48,7 +48,6 @@ afterEach(async () => {
   db?.stop();
   if (db)
     await Promise.all(Object.values(db.collections).map((c) => c.cleanup()));
-  connectorAsksStore.setState(() => ({}));
 });
 it("routes previews, messaging, memory, connector status, sender insert and bot rename precisely", async () => {
   const bots = source(),
@@ -105,10 +104,9 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
     controller.signal
   );
   await waitFor(() => expect(bots.isOpen() && connectors.isOpen()).toBe(true));
+  const asks = renderHook(() => useConnectorAsks(transport!));
   connectors.push({ type: "snapshot", requests: [pending] });
-  await waitFor(() =>
-    expect(connectorAsksStore.state[pending.requestId]).toBe(session.id)
-  );
+  await waitFor(() => expect(asks.result.current).toEqual({ [session.id]: 1 }));
   expect(onConnectorAsk).not.toHaveBeenCalled();
   const q = botsQueries(transport.orpc);
   const expectKeys = async (
@@ -140,8 +138,8 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
   await waitFor(() =>
     expect(onConnectorAsk).toHaveBeenCalledWith(session.id, "live")
   );
+  await waitFor(() => expect(asks.result.current).toEqual({ [session.id]: 2 }));
   connectors.push({ type: "cleared", requestId: pending.requestId });
-  await waitFor(() =>
-    expect(connectorAsksStore.state[pending.requestId]).toBeUndefined()
-  );
+  await waitFor(() => expect(asks.result.current).toEqual({ [session.id]: 1 }));
+  asks.unmount();
 });

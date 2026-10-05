@@ -20,7 +20,7 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";

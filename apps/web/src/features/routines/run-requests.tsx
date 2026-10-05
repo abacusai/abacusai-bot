@@ -6,7 +6,7 @@ import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useEffect, useState } from "react";
 
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 export const RunRequests = ({
   sessionId,

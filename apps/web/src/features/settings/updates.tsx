@@ -8,7 +8,7 @@ import {
   GroupCard,
   SettingRow,
 } from "#renderer/components/form-kit/page";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { getLogDump } from "#renderer/lib/log-ring";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { showError, showInfo } from "#renderer/lib/toast";

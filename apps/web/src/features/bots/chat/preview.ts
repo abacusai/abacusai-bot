@@ -14,7 +14,7 @@ import {
   previewKind,
   resolveWorkspacePath,
 } from "#renderer/components/file-preview";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 
 export type BotOpenTarget =
@@ -55,9 +55,9 @@ export const usePreviewOpenBridge = (
   useEffect(() => {
     if (conversationKey == null) return;
     const abort = new AbortController();
-    void followNotices(
+    followNotice(
+      "files",
       transport,
-      ({ signal }) => transport.client.files.events({}, { signal }),
       (event) => {
         if (event.type !== "preview-open" || event.path.length === 0) return;
         if (
