@@ -30,8 +30,6 @@ import {
   SheetTitle,
 } from "#renderer/ui/sheet";
 
-import { callApps } from "../shell/connect/services";
-
 const Link = v.object({
   status: v.picklist(["linked", "pending", "unlinked"]),
   code: v.nullish(v.string()),
@@ -39,10 +37,16 @@ const Link = v.object({
 });
 type Link = v.InferOutput<typeof Link>;
 
+/** The browser's same-origin server call (the platform module passes it in). */
+export type CallApps = (service: string, input: unknown) => Promise<unknown>;
+
 const STATUS_KEY = ["whatsapp-phone", "status"] as const;
 const POLL_MS = 3000;
 
-const linkStatus = async (linking: boolean): Promise<Link> =>
+const linkStatus = async (
+  callApps: CallApps,
+  linking: boolean
+): Promise<Link> =>
   v.parse(
     Link,
     await callApps("getAbacusBotWhatsAppStatus", linking ? { linking } : {})
@@ -62,10 +66,12 @@ const masked = (phone: string) => {
 type Step = "number" | "code" | "done";
 
 const LinkSheet = ({
+  callApps,
   open,
   onOpenChange,
   linked,
 }: {
+  callApps: CallApps;
   open: boolean;
   onOpenChange(open: boolean): void;
   linked: Link | undefined;
@@ -87,7 +93,7 @@ const LinkSheet = ({
     if (!open || step !== "code") return;
     let live = true;
     const timer = setInterval(() => {
-      void linkStatus(true)
+      void linkStatus(callApps, true)
         .then((link) => {
           if (!live) return;
           if (link.code) setCode(link.code);
@@ -103,7 +109,7 @@ const LinkSheet = ({
       live = false;
       clearInterval(timer);
     };
-  }, [open, step, cache]);
+  }, [open, step, cache, callApps]);
 
   const start = async () => {
     setBusy(true);
@@ -366,12 +372,12 @@ const LinkSheet = ({
 };
 
 /** Library › Messaging in the browser: WhatsApp, run by the server. */
-export const WebMessagingPage = () => {
+export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const status = useQuery({
     queryKey: STATUS_KEY,
-    queryFn: () => linkStatus(false),
+    queryFn: () => linkStatus(callApps, false),
     retry: false,
   });
   const linked = status.data?.status === "linked";
@@ -408,7 +414,12 @@ export const WebMessagingPage = () => {
       <p className="text-muted-foreground px-1 text-[13px]">
         {t("web.whatsapp.note")}
       </p>
-      <LinkSheet open={open} onOpenChange={setOpen} linked={status.data} />
+      <LinkSheet
+        callApps={callApps}
+        open={open}
+        onOpenChange={setOpen}
+        linked={status.data}
+      />
     </AreaPage>
   );
 };
