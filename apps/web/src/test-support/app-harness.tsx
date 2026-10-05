@@ -129,13 +129,13 @@ const shellRouter = (
         ),
       },
       events: os.settings.events.handler(quiet as never),
-      get: os.settings.get.handler(
-        () =>
-          ({
-            defaultModel: null,
-            apiKeys: signedIn ? { ABACUS_API_KEY: "test-credential" } : {},
-          }) as never
-      ),
+      get: os.settings.get.handler(({ context }) => {
+        context.calls.push(["settings.get", null]);
+        return {
+          defaultModel: null,
+          apiKeys: signedIn ? { ABACUS_API_KEY: "test-credential" } : {},
+        } as never;
+      }),
       defaultMode: {
         get: os.settings.defaultMode.get.handler(
           options.defaultMode ?? (() => "YOLO" as never)

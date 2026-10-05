@@ -16,17 +16,15 @@ export const IdleView = () => {
         isCheckInRoutine(routine, bot.id)
       )
     : null;
-  const toggle = async () => {
+  // The switch flips at once; a refusal rolls the row back and says so.
+  const toggle = () => {
     if (!routine || busy) return;
-    setBusy(true);
-    try {
-      await db.collections.routines.update(routine.id, (draft) => {
+    setError(false);
+    void db.collections.routines
+      .update(routine.id, (draft) => {
         draft.enabled = !routine.enabled;
-      }).isPersisted.promise;
-    } catch {
-      setError(true);
-    }
-    setBusy(false);
+      })
+      .isPersisted.promise.catch(() => setError(true));
   };
   const launch = async (call: boolean) => {
     if (!bot || busy) return;
@@ -51,11 +49,7 @@ export const IdleView = () => {
             {t("notch.actions.call")}
           </Button>
           {routine && (
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() => void toggle()}
-            >
+            <Button variant="ghost" disabled={busy} onClick={toggle}>
               {t(
                 routine.enabled ? "notch.actions.pause" : "notch.actions.resume"
               )}

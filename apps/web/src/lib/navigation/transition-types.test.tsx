@@ -89,11 +89,13 @@ describe("inferNavType", () => {
       at("/sessions/$sessionId", "s1"),
       at("/sessions/$sessionId", "s2"),
       "new",
-      "nav-lateral",
+      null,
     ],
+    [at("/bots/$botId", "b1"), at("/bots/$botId", "b2"), "new", null],
     [at("/bots/new"), at("/settings/general"), "new", "settings-in"],
     [at("/settings/general"), at("/bots/new"), "new", "settings-out"],
-    [at("/settings/general"), at("/settings/appearance"), "new", "nav-lateral"],
+    [at("/settings/general"), at("/settings/appearance"), "new", null],
+    [at("/library/skills"), at("/library/mcp"), "new", null],
     [at("/bots/new"), at("/sessions/new"), "new", "nav-lateral"],
     [
       at("/bots/$botId", "b1"),
@@ -107,7 +109,14 @@ describe("inferNavType", () => {
       "new",
       "nav-back",
     ],
+    [at("/bots/$botId", "b1"), at("/bots/new"), "back", "nav-back"],
     [at("/bots/new"), at("/sessions/new"), "back", "nav-back"],
+    [
+      at("/sessions/$sessionId", "s2"),
+      at("/sessions/$sessionId", "s1"),
+      "back",
+      null,
+    ],
   ] as const)("%o → %o (%s) is %s", (from, to, direction, expected) => {
     expect(inferNavType(from, to, direction)).toBe(expected);
   });
@@ -133,6 +142,51 @@ describe("inferNavType", () => {
       "nav-forward"
     );
     expect(inferNavType(from, to, "new", "none")).toBeNull();
+  });
+
+  it("ignores a pane-move intent between siblings of one area", () => {
+    const sibling = (fullPath: string, key: string) => ({
+      fullPath,
+      paneKey: key,
+    });
+    for (const intent of ["nav-lateral", "nav-forward", "nav-back"] as const)
+      expect(
+        inferNavType(
+          sibling("/bots/$botId", "b1"),
+          sibling("/bots/$botId", "b2"),
+          "new",
+          intent
+        )
+      ).toBeNull();
+    expect(
+      inferNavType(
+        sibling("/settings/general", "g"),
+        sibling("/settings/keyboard", "k"),
+        "new",
+        "nav-lateral"
+      )
+    ).toBeNull();
+  });
+
+  it("keeps a designed type between siblings: onboarding steps", () => {
+    const step = (key: string) => ({
+      fullPath: "/onboarding/$step",
+      paneKey: key,
+    });
+    expect(
+      inferNavType(step("welcome"), step("models"), "new", "onboarding-step")
+    ).toBe("onboarding-step");
+  });
+
+  it("keeps drills within one area: the bot chat ↔ editor morph", () => {
+    const chat = { fullPath: "/bots/$botId", paneKey: "chat" };
+    const editor = { fullPath: "/bots/$botId/edit", paneKey: "edit" };
+    expect(inferNavType(chat, editor, "new", "nav-forward")).toBe(
+      "nav-forward"
+    );
+    expect(inferNavType(editor, chat, "new", "nav-back")).toBe("nav-back");
+    expect(inferNavType(chat, editor, "new")).toBe("nav-forward");
+    expect(inferNavType(editor, chat, "back")).toBe("nav-back");
   });
 
   it("ranks every leaf the route table knows", () => {
@@ -184,9 +238,9 @@ describe("the router's document view transition", () => {
       to: "/routines",
       ...withIntent("nav-forward"),
     } as never);
-    // Past defaultPendingMs (150): the pending pane is committed.
+    // Past defaultPendingMs (400): the pending pane is committed.
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 600));
     });
     expect(screen.getByTestId("pending-pane")).toBeTruthy();
     expect(document.querySelector('[data-slot="shell"]')).not.toBeNull();
@@ -299,12 +353,8 @@ describe("the router's document view transition", () => {
 
   it("plays nav-back on browser back, and infers (not the saved intent) going forward", async () => {
     harness = await renderApp("/bots/new");
-    await go({
-      to: "/bots/$botId",
-      params: { botId: "chief-of-staff" },
-      ...withIntent("nav-lateral"),
-    });
-    expect(types()).toEqual(["nav-lateral"]);
+    await go({ to: "/sessions/new", ...withIntent("nav-forward") });
+    expect(types()).toEqual(["nav-forward"]);
     started = [];
     await back();
     await waitFor(() =>
@@ -314,11 +364,9 @@ describe("the router's document view transition", () => {
     started = [];
     await forward();
     await waitFor(() =>
-      expect(harness!.router.state.location.pathname).toBe(
-        "/bots/chief-of-staff"
-      )
+      expect(harness!.router.state.location.pathname).toBe("/sessions/new")
     );
-    expect(started).toEqual([["nav-forward"]]);
+    expect(started).toEqual([["nav-lateral"]]);
   });
 
   it("infers nav-forward for a creation (/sessions/new → /sessions/<id>)", async () => {
@@ -328,6 +376,22 @@ describe("the router's document view transition", () => {
       params: { sessionId: "review-prs" },
     });
     expect(started).toEqual([["nav-forward"]]);
+  });
+
+  it("starts none between sibling threads (/sessions/<a> → /sessions/<b>), either way", async () => {
+    harness = await renderApp("/sessions/review-prs");
+    await go({
+      to: "/sessions/$sessionId",
+      params: { sessionId: "terminal-tab" },
+      ...withIntent("nav-lateral"),
+    });
+    await back();
+    await waitFor(() =>
+      expect(harness!.router.state.location.pathname).toBe(
+        "/sessions/review-prs"
+      )
+    );
+    expect(started).toEqual([]);
   });
 
   it("starts none closing a masked sheet with back, or between search-only entries", async () => {
@@ -350,11 +414,7 @@ describe("the router's document view transition", () => {
     await go({ to: "/settings/general" });
     await go({ to: "/settings/appearance" });
     await go({ to: "/sessions/new" });
-    expect(started).toEqual([
-      ["settings-in"],
-      ["nav-lateral"],
-      ["settings-out"],
-    ]);
+    expect(started).toEqual([["settings-in"], ["settings-out"]]);
   });
 });
 
@@ -365,9 +425,7 @@ describe("motion constants", () => {
         /animation: (\d+)ms vt-(?:fade|slide)[a-z-]* both;/g
       ),
     ].map((m) => Number(m[1]));
-    expect(new Set(ms)).toEqual(
-      new Set([durations.crossFade, durations.drill, notch.contentFade])
-    );
+    expect(new Set(ms)).toEqual(new Set([durations.route, notch.contentFade]));
     expect(tokensCss).toContain(
       `${durations.reduced}ms vt-fade-out both !important`
     );

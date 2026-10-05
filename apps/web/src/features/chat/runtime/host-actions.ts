@@ -1,9 +1,9 @@
-import { uploadFiles, viewHostFile } from "#platform/files";
 /**
  * What the chat kit asks of the host besides `ai.*` (spec 02 §7.5, §8.6):
  * external links, revealing files, the attach pickers, pasted files and
  * thumbnails. Built from the transport in production; faked in fixtures.
  */
+import { uploadFiles, viewHostFile } from "#platform/files";
 import type { CreditActions } from "#renderer/components/credits-card";
 import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
@@ -40,10 +40,13 @@ export interface ChatHostActions extends CreditActions {
   readImage(filePath: string, hostRoot: string): Promise<string>;
 }
 
-export const hostActionsFor = (transport: Transport): ChatHostActions => {
+export const hostActionsFor = (
+  transport: Transport,
+  credentialsChanged?: () => Promise<unknown>
+): ChatHostActions => {
   const client = transport.client;
   return {
-    ...creditActionsFor(transport),
+    ...creditActionsFor(transport, credentialsChanged),
     accountTier: async () => {
       const account = await client.account.abacus();
       return creditsTier(account);

@@ -81,7 +81,6 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
       memory: { events: impl.memory.events.handler(memory.stream as never) },
       connectors: {
         events: impl.connectors.events.handler(connectors.stream as never),
-        requests: impl.connectors.requests.handler(() => [pending] as never),
       },
       ai: { attention: impl.ai.attention.handler(attention.stream as never) },
     },
@@ -106,6 +105,7 @@ it("routes previews, messaging, memory, connector status, sender insert and bot 
     controller.signal
   );
   await waitFor(() => expect(bots.isOpen() && connectors.isOpen()).toBe(true));
+  connectors.push({ type: "snapshot", requests: [pending] });
   await waitFor(() =>
     expect(connectorAsksStore.state[pending.requestId]).toBe(session.id)
   );

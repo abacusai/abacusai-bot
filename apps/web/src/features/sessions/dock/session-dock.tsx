@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
   Fragment,
+  Suspense,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -41,6 +42,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "#renderer/ui/resizable";
+import { Skeleton } from "#renderer/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
 import { useSessionsTransport, useGitState } from "../data/queries";
@@ -82,6 +84,24 @@ export interface SessionDockProps {
     newTerminal: () => void
   ) => ReactNode;
 }
+/**
+ * A tab whose chunk is still loading. Its own boundary, so the dock and its
+ * panes keep their layout instead of the whole dock suspending.
+ */
+const TabPending = () => {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="status"
+      aria-label={t("common.loading")}
+      data-slot="dock-tab-pending"
+      className="flex size-full min-w-0 flex-col gap-2 p-3"
+    >
+      <Skeleton className="h-3 w-2/5" />
+      <Skeleton className="h-3 w-3/4" />
+    </div>
+  );
+};
 const terminalId = () => `terminal:terminal-${crypto.randomUUID()}`;
 export const SessionDock = ({
   row,
@@ -614,7 +634,9 @@ export const SessionDock = ({
                 style={{ display: visible ? undefined : "none" }}
               >
                 <PaneBoundary resetKey={tab.ref}>
-                  {renderTab(tab, visible, () => close(ref))}
+                  <Suspense fallback={<TabPending />}>
+                    {renderTab(tab, visible, () => close(ref))}
+                  </Suspense>
                 </PaneBoundary>
               </div>
             ) : null;

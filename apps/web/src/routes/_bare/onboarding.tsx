@@ -7,7 +7,10 @@ import {
 } from "@tanstack/react-router";
 
 import { OnboardingFrame } from "#renderer/features/onboarding";
-import { accountStateQuery } from "#renderer/features/onboarding/actions";
+import {
+  accountStateQuery,
+  signedInQuery,
+} from "#renderer/features/onboarding/actions";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 const Layout = () => {
   const matches = useMatches();
@@ -19,13 +22,16 @@ const Layout = () => {
   );
 };
 export const Route = createFileRoute("/_bare/onboarding")({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, preload }) => {
+    if (preload) return;
     const account = await context.queryClient.ensureQueryData(
       accountStateQuery(context.transport)
     );
     if (
       account.onboarded &&
-      canSignOutOfAbacus(await context.transport.client.settings.get({}))
+      canSignOutOfAbacus(
+        await context.queryClient.fetchQuery(signedInQuery(context.transport))
+      )
     )
       throw redirect({ to: "/bots/new", replace: true });
   },

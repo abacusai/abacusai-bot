@@ -12,11 +12,11 @@ import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Input } from "#renderer/ui/input";
 
-import {
-  searchSettings,
-  settingsIndexFor,
-  type SettingEntry,
-} from "./search-index";
+import type { SettingEntry } from "./search-index";
+
+/** The search index, fetched the first time the search box is focused. */
+type SearchIndex = typeof import("./search-index");
+const loadSearchIndex = (): Promise<SearchIndex> => import("./search-index");
 
 export type SettingsPage = SettingsPageId;
 
@@ -51,6 +51,13 @@ export const SettingsSidebar = () => {
   const { t } = useTranslation();
   const matchRoute = useMatchRoute();
   const [q, setQ] = useState("");
+  const [index, setIndex] = useState<SearchIndex | null>(null);
+  const loadIndex = () => {
+    if (index == null)
+      void loadSearchIndex()
+        .then((module) => setIndex(() => module))
+        .catch(() => undefined);
+  };
   const c = useCollections();
   const bots = useLiveQuery(c.bots).data ?? [];
   const memories = useLiveQuery(c.memories).data ?? [];
@@ -63,43 +70,46 @@ export const SettingsSidebar = () => {
     ...transport.orpc.account.usage.queryOptions({ input: {} }),
     enabled: !!q.trim(),
   });
-  const entries: SettingEntry[] = [
-    ...settingsIndexFor(IS_ELECTRON, uiPlatform(system.platform)),
-    ...bots.flatMap((bot) => [
-      {
-        id: `sounds-bot-${bot.id}`,
-        page: "notifications" as const,
-        labelKey: "",
-        label: `${bot.name} · ${t("phase5.settings.perBot")}`,
-      },
-      ...(memories.some((row) => row.botId === bot.id) ||
-      notes.data?.some((item) => item.botId === bot.id && item.noteDays > 0)
-        ? [
-            {
-              id: `memory-bot-${bot.id}`,
-              page: "memory" as const,
-              labelKey: "",
-              label: `${bot.name} · ${t("phase5.rememberedByBots")}`,
-            },
-          ]
-        : []),
-    ]),
-    ...memories
-      .filter((row) => row.scope === "global")
-      .map((row) => ({
-        id: `memory-${row.id}`,
-        page: "memory" as const,
-        labelKey: "",
-        label: row.entry,
-      })),
-    ...(usage.data?.models ?? []).map((model) => ({
-      id: `usage-${model.id}`,
-      page: "usage" as const,
-      labelKey: "",
-      label: model.modelId,
-    })),
-  ];
-  const results = q.trim() ? searchSettings(q, t, entries) : null;
+  const searching = q.trim() !== "" && index != null;
+  const entries: SettingEntry[] = !searching
+    ? []
+    : [
+        ...index.settingsIndexFor(IS_ELECTRON, uiPlatform(system.platform)),
+        ...bots.flatMap((bot) => [
+          {
+            id: `sounds-bot-${bot.id}`,
+            page: "notifications" as const,
+            labelKey: "",
+            label: `${bot.name} · ${t("phase5.settings.perBot")}`,
+          },
+          ...(memories.some((row) => row.botId === bot.id) ||
+          notes.data?.some((item) => item.botId === bot.id && item.noteDays > 0)
+            ? [
+                {
+                  id: `memory-bot-${bot.id}`,
+                  page: "memory" as const,
+                  labelKey: "",
+                  label: `${bot.name} · ${t("phase5.rememberedByBots")}`,
+                },
+              ]
+            : []),
+        ]),
+        ...memories
+          .filter((row) => row.scope === "global")
+          .map((row) => ({
+            id: `memory-${row.id}`,
+            page: "memory" as const,
+            labelKey: "",
+            label: row.entry,
+          })),
+        ...(usage.data?.models ?? []).map((model) => ({
+          id: `usage-${model.id}`,
+          page: "usage" as const,
+          labelKey: "",
+          label: model.modelId,
+        })),
+      ];
+  const results = searching ? index.searchSettings(q, t, entries) : null;
   return (
     <NavList.Root label={t("settings.sidebar.label")}>
       <NavList.Header title={t("settings.sidebar.label")} />
@@ -107,7 +117,11 @@ export const SettingsSidebar = () => {
         aria-label={t("phase5.searchSettings")}
         placeholder={t("phase5.searchSettings")}
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onFocus={loadIndex}
+        onChange={(e) => {
+          loadIndex();
+          setQ(e.target.value);
+        }}
       />
       {results ? (
         <NavList.Rows>
@@ -155,19 +169,3 @@ export const SettingsSidebar = () => {
     </NavList.Root>
   );
 };
-
-export {
-  GeneralPage,
-  AppearanceTheme,
-  LanguagePage,
-  MemoryPage,
-  NotificationsPage,
-} from "./personal";
-export { ModelsPage } from "./models";
-export { AccountPage, UsagePage } from "./account-usage";
-export { EnvironmentPage, BrowserPage, DevicesPage } from "./environment";
-
-export { KeyboardPage } from "./keyboard";
-export { SettingsSearch, ModelsSearch, AccountSearch } from "./search";
-export { ChangelogPage } from "./changelog";
-export { InviteDialog } from "./invite";

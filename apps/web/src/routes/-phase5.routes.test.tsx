@@ -111,3 +111,75 @@ it("R5-T3 sidebar preloads do not hydrate a chat or start a routine", async () =
     await app.cleanup();
   }
 });
+it("a hover preload fetches a session's first page, and the click builds the session from it", async () => {
+  let release!: () => void;
+  const hydrating = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const hydrate = vi.fn(() => hydrating);
+  const app = await createHarness("/sessions/new", { beforeHydrate: hydrate });
+  try {
+    const sessions = vi.spyOn(app.router.options.context.chat, "session");
+    await app.router.preloadRoute({
+      to: "/sessions/$sessionId",
+      params: { sessionId: "review-prs" },
+    });
+    await waitFor(() => expect(hydrate).toHaveBeenCalledTimes(1));
+    expect(sessions).not.toHaveBeenCalled();
+    release();
+    await act(() =>
+      app.router.navigate({
+        to: "/sessions/$sessionId",
+        params: { sessionId: "review-prs" },
+      })
+    );
+    expect(hydrate).toHaveBeenCalledTimes(1);
+    expect(app.router.options.context.chat.session("review-prs").ready).toBe(
+      true
+    );
+  } finally {
+    await app.cleanup();
+  }
+});
+it("hovering an opened bot whose chat is ready preloads the chat itself, not the skeleton", async () => {
+  const hydrate = vi.fn(async () => {});
+  const seed = defaultSeed();
+  const bot = { ...seed.bots![0]!, sessionId: "bot-test" };
+  const forever = {
+    ...seed.sessions![0]!,
+    id: "bot-test",
+    botOwned: true,
+    turn: null,
+  };
+  const app = await renderApp(`/bots/${bot.id}`, {
+    beforeHydrate: hydrate,
+    seed: {
+      ...seed,
+      bots: [bot, ...seed.bots!.slice(1)],
+      sessions: [...seed.sessions!, forever],
+    },
+  });
+  try {
+    await waitFor(() =>
+      expect(app.router.state.matches.at(-1)?.loaderData).toMatchObject({
+        ready: true,
+      })
+    );
+    await act(() => app.router.navigate({ to: "/routines" }));
+    hydrate.mockClear();
+    const matches = await app.router.preloadRoute({
+      to: "/bots/$botId",
+      params: { botId: bot.id },
+    });
+    expect(matches?.at(-1)?.loaderData).toEqual({
+      ready: true,
+      botId: bot.id,
+      sessionId: "bot-test",
+      workspaceId: "default",
+    });
+    expect(hydrate).not.toHaveBeenCalled();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});

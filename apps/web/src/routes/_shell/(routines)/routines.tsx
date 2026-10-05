@@ -2,16 +2,17 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 export const Route = createFileRoute("/_shell/(routines)/routines")({
   staticData: { area: "routines", sidebar: "routines" },
   loader: async ({ context }) => {
+    // Auto-replies and sender chats are sidebar extras that fill in.
+    void context.queryClient.prefetchQuery(
+      context.transport.orpc.messaging.snapshot.queryOptions({ input: {} })
+    );
+    void context.queryClient.prefetchQuery(
+      context.transport.orpc.bots.senderChats.queryOptions({ input: {} })
+    );
     await Promise.all([
       context.db.collections.routines.preload(),
       context.db.collections.routineRuns.preload(),
       context.db.collections.bots.preload(),
-      context.queryClient.ensureQueryData(
-        context.transport.orpc.messaging.snapshot.queryOptions({ input: {} })
-      ),
-      context.queryClient.ensureQueryData(
-        context.transport.orpc.bots.senderChats.queryOptions({ input: {} })
-      ),
     ]);
   },
   component: Outlet,

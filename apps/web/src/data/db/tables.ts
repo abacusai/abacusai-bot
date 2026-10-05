@@ -38,6 +38,16 @@ export type TableOverrides = Pick<
   "echoTimeoutMs" | "retryDelayMs" | "startSync" | "signal"
 >;
 
+/**
+ * bots and routines never garbage-collect: they are small, every area reads
+ * them, and main does no work for an idle subscription. Dropping them 5
+ * minutes after the last reader made the next loader pay a fresh changes +
+ * snapshot. The other lazy tables keep TanStack DB's default: while
+ * subscribed, main polls artifacts, fingerprints git for gitState and
+ * watches the memory directories.
+ */
+const PERMANENT = Infinity;
+
 const tableOf =
   <Row, Key extends string>(
     transport: LazyTransport,
@@ -152,6 +162,7 @@ export const botsCollectionOptions = (
 ): IpcCollectionOptions<BotRow, string> =>
   ipcCollectionOptions<BotRow, string>({
     id: "bots",
+    gcTime: PERMANENT,
     table: tableOf(transport, (db) => db.bots),
     getKey: byId,
     toInsertInput: (row) => ({
@@ -188,6 +199,7 @@ export const routinesCollectionOptions = (
 ): IpcCollectionOptions<RoutineRow, string> =>
   ipcCollectionOptions<RoutineRow, string>({
     id: "routines",
+    gcTime: PERMANENT,
     table: tableOf(transport, (db) => db.routines),
     getKey: byId,
     toInsertInput: (row) => ({

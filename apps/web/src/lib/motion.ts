@@ -9,7 +9,8 @@ import { usePrefs } from "#renderer/data/db/prefs";
 
 export const durations = {
   crossFade: 200,
-  drill: 200,
+  /** Route view transitions: drills and area changes (`inferNavType`). */
+  route: 120,
   sharedElement: 420,
   layout: 240,
   childFade: 120,

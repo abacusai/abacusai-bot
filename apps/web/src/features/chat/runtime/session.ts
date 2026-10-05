@@ -49,7 +49,9 @@ import { deferred, type Deferred } from "./deferred";
 import { createDispatcher, type Dispatcher } from "./dispatcher";
 import { runPump, type ConnectionState } from "./pump";
 
-const PAGE_SIZE = 50;
+export const PAGE_SIZE = 50;
+/** A hovered `ai.hydrate` page, acquired once a new generation starts. */
+export type Seed = (signal: AbortSignal) => Promise<AiHydration | undefined>;
 /** Processor retention (§10). */
 const MAX_MESSAGES = 300;
 const READY_CAP_MS = 5000;
@@ -257,14 +259,27 @@ export class ThreadSession {
     };
   }
 
-  /** The current generation's readiness; one promise for every caller (§3.2). */
-  load(options: { signal?: AbortSignal } = {}): Promise<void> {
+  /** A generation is live or loading: `load()` reuses it, seed unused. */
+  get started(): boolean {
+    const current = this.#pending ?? this.#live;
+    return !this.#retired && current != null && !current.failed;
+  }
+
+  /**
+   * The current generation's readiness; one promise for every caller (§3.2).
+   * `seed` yields a recent `ai.hydrate` page a hover fetched; only a new
+   * generation calls it, inside its own ready cap and with its abort
+   * signal, and builds from the page instead of asking again (`undefined`
+   * falls back to `ai.hydrate`).
+   */
+  load(options: { signal?: AbortSignal; seed?: Seed } = {}): Promise<void> {
     if (this.#retired)
       return Promise.reject(new ThreadRetiredError(this.threadId));
     if (options.signal?.aborted)
       return Promise.reject(new DOMException("Load aborted", "AbortError"));
     const current = this.#pending ?? this.#live;
-    const gen = current == null || current.failed ? this.#start() : current;
+    const gen =
+      current == null || current.failed ? this.#start(options.seed) : current;
     this.#loadWaiters += 1;
     if (!options.signal) {
       const finished = () => {
@@ -668,7 +683,7 @@ export class ThreadSession {
 
   // ─── generations (§3.3) ────────────────────────────────────────────
 
-  #start(): Generation {
+  #start(seed?: Seed): Generation {
     // A cancellation belongs to the generation that issued it.
     this.#cancelAttempt += 1;
     if (this.#cancelTimer != null) {
@@ -716,20 +731,24 @@ export class ThreadSession {
       else this.#swap(gen, true);
     });
     if (!this.hostStore.state.ready) this.#host({ phase: "loading" });
-    void this.#build(gen);
+    void this.#build(gen, seed);
     return gen;
   }
 
-  async #build(gen: Generation): Promise<void> {
+  async #build(gen: Generation, seed?: Seed): Promise<void> {
     let snapshot: AiHydration;
     try {
-      snapshot = await this.#ai.hydrate(
-        {
-          threadId: this.threadId,
-          limit: PAGE_SIZE,
-        },
-        { signal: gen.abort.signal }
-      );
+      const seeded =
+        seed == null
+          ? undefined
+          : await seed(gen.abort.signal).catch(() => undefined);
+      if (gen.abort.signal.aborted) return;
+      snapshot =
+        seeded ??
+        (await this.#ai.hydrate(
+          { threadId: this.threadId, limit: PAGE_SIZE },
+          { signal: gen.abort.signal }
+        ));
     } catch (error) {
       if (
         gen.g !== this.#gen ||

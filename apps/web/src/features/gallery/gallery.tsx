@@ -377,7 +377,7 @@ const MotionSection = () => {
           style={shared}
         />
       </Atoms.Row>
-      <Atoms.Row label={`view-transition types (${durations.crossFade} ms)`}>
+      <Atoms.Row label={`view-transition types (${durations.route} ms)`}>
         {NAV_TYPES.map((type: NavType) => (
           <Button
             key={type}

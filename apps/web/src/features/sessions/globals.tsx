@@ -6,7 +6,11 @@ import { useTranslation } from "react-i18next";
 import { BrowserAskHost } from "#platform/ask-host";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { followNotices } from "#renderer/data/queries/live";
+import {
+  followAttention,
+  followConnectorEvents,
+  followNotices,
+} from "#renderer/data/queries/live";
 import {
   documentSoundPlayer,
   setDocumentSoundPrefs,
@@ -110,9 +114,8 @@ export const SessionsGlobals = ({
     });
     let first = true;
     const waiting = new Set<string>();
-    void followNotices(
+    followAttention(
       transport,
-      ({ signal }) => transport.client.ai.attention({}, { signal }),
       (event) => {
         if (event.type === "snapshot") {
           waiting.clear();
@@ -130,9 +133,8 @@ export const SessionsGlobals = ({
       },
       abort.signal
     );
-    void followNotices(
+    followConnectorEvents(
       transport,
-      ({ signal }) => transport.client.connectors.events({}, { signal }),
       (event) => {
         if (event.type === "request") {
           const ref = conversationRefFromKey(event.request.conversationKey);

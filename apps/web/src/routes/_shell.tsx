@@ -12,6 +12,7 @@ import { BotsGlobals } from "#renderer/features/bots/watcher";
 import {
   accountStateQuery,
   finishCompletion,
+  signedInQuery,
 } from "#renderer/features/onboarding/actions";
 import {
   needsOnboarding,
@@ -82,13 +83,15 @@ const ShellRoute = () => {
 };
 
 export const Route = createFileRoute("/_shell")({
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, preload }) => {
+    // A hover preload never commits, so the gate waits for the click.
+    if (preload) return;
     const account = await context.queryClient.ensureQueryData(
       accountStateQuery(context.transport)
     );
     const prefs = context.db.collections.prefs.get("app") ?? DEFAULT_PREFS;
     const signedIn = canSignOutOfAbacus(
-      await context.transport.client.settings.get({})
+      await context.queryClient.fetchQuery(signedInQuery(context.transport))
     );
     if (needsOnboarding(account, signedIn))
       throw redirect({
