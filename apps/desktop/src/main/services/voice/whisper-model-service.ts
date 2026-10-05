@@ -47,6 +47,13 @@ export const modelFileFor = (url: string): string | null => {
   return file;
 };
 
+/** The Hugging Face URL of a validated model file: fixed origin, path only. */
+const remoteUrl = (file: string): URL => {
+  const url = new URL(WHISPER_REMOTE_HOST);
+  url.pathname = `${WHISPER_MODEL_ID}/resolve/main/${file}`;
+  return url;
+};
+
 export class WhisperModelService {
   private readonly downloads = new Map<
     string,
@@ -130,9 +137,7 @@ export class WhisperModelService {
     const doFetch = this.options.fetch ?? fetch;
     let response: Response;
     try {
-      response = await doFetch(
-        `${WHISPER_REMOTE_HOST}${WHISPER_MODEL_ID}/resolve/main/${file}`
-      );
+      response = await doFetch(remoteUrl(file).href);
     } catch (error) {
       return {
         status: 502,

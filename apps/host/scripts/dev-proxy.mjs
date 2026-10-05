@@ -20,6 +20,15 @@ const upstream = new URL(
 const vite = new URL(process.env.HOST_PROXY_VITE || "http://127.0.0.1:5173");
 const port = Number(process.env.HOST_PROXY_PORT || 443);
 const previewHost = `local.preview.apps.abacus.ai${port === 443 ? "" : `:${port}`}`;
+// Only the path and query of the incoming request reach the chosen upstream;
+// an absolute request-target cannot redirect the proxy to another host.
+const upstreamUrl = (base, requestUrl) => {
+  const incoming = new URL(requestUrl, "http://localhost");
+  const url = new URL(base);
+  url.pathname = incoming.pathname;
+  url.search = incoming.search;
+  return url;
+};
 const token = () => {
   const payload = Buffer.from(
     JSON.stringify({ o: owner, g: org, e: Math.floor(Date.now() / 1000) + 600 })
@@ -104,7 +113,7 @@ const proxy = createServer(
         authorization: `Bearer ${token()}`,
       });
     const request = (target.protocol === "https:" ? httpsRequest : httpRequest)(
-      new URL(req.url, target),
+      upstreamUrl(target, req.url),
       { method: req.method, headers },
       (response) => {
         res.writeHead(response.statusCode, { ...response.headers, ...cors });
@@ -121,7 +130,7 @@ const proxy = createServer(
 const sockets = new WebSocketServer({ noServer: true });
 proxy.on("upgrade", (req, socket, head) => {
   const hmr = req.headers["sec-websocket-protocol"]?.includes("vite-hmr");
-  const target = new URL(req.url, hmr ? vite : upstream);
+  const target = upstreamUrl(hmr ? vite : upstream, req.url);
   target.protocol = "ws:";
   const protocols = hmr
     ? ["vite-hmr"]

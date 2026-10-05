@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { get } from "node:https";
 import { tmpdir } from "node:os";
@@ -50,12 +50,18 @@ it("exposes file metadata through the dev preview proxy", async () => {
       child.once("error", reject);
       child.once("exit", (code) => reject(new Error(`proxy exited: ${code}`)));
     });
+    // The proxy mints its certificate under TMPDIR; trust that one only.
+    const certDir = (await readdir(home)).find((entry) =>
+      entry.startsWith("host-dev-cert-")
+    );
+    const ca = await readFile(join(home, certDir ?? "", "cert.pem"));
     const request = (origin: string, method = "GET") =>
       new Promise<import("node:http").IncomingMessage>((resolve, reject) => {
         const req = get(
           `https://127.0.0.1:${port}/files`,
           {
-            rejectUnauthorized: false,
+            ca,
+            servername: "local.preview.apps.abacus.ai",
             method,
             headers: { Host: "local.preview.apps.abacus.ai", Origin: origin },
           },
