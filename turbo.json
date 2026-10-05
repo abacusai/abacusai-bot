@@ -104,7 +104,7 @@
     "//#check:knip": {
       "cache": false
     },
-    "//#check:web-split": {
+    "//#check:scripts": {
       "cache": false
     },
     "@abacus-ai/web#test": {

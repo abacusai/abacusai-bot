@@ -4,10 +4,10 @@ import { test } from "node:test";
 
 test("CI AG-UI smoke requires executed tests from the complete renamed spawn suite", async () => {
   const ci = fs.readFileSync(
-    new URL("../../.github/workflows/ci.yml", import.meta.url),
+    new URL("../.github/workflows/ci.yml", import.meta.url),
     "utf8"
   );
-  assert.ok(ci.includes("node scripts/cutover/agui-smoke.mjs"));
+  assert.ok(ci.includes("node scripts/agui-smoke.mjs"));
   assert.ok(!ci.includes("--testNamePattern 'same bytes on fd 3'"));
   const { requireExecutedTests } = await import("./agui-smoke.mjs");
   assert.throws(

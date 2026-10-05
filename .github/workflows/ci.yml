@@ -83,7 +83,7 @@ jobs:
       # later.
       - run: pnpm run typecheck
       - run: pnpm run check:knip
-      - run: pnpm run check:web-split
+      - run: pnpm run check:scripts
       # The guard compares the browser graph with the Electron renderer's, so
       # both builds have to exist; turbo builds the desktop's dependencies too.
       - name: Browser bundle platform guard
@@ -232,7 +232,7 @@ jobs:
       - name: The agent speaks AG-UI with a compat stream
         shell: bash
         run: |
-          node scripts/cutover/agui-smoke.mjs
+          node scripts/agui-smoke.mjs
 
   # renderer's screenshot gate (spec 01 §10.2) in the real Electron
   # window: every route and band, the collapsed, floating, split, compact and
