@@ -84,6 +84,7 @@ it("retains the source and removes a partial trash copy when copying fails", asy
 
 it("logs a broken trash entry and continues sweeping", async () => {
   const home = await mkdtemp(join(tmpdir(), "trash-sweep-"));
+  vi.stubEnv("ABACUSAI_BOT_HOME", home);
   const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   try {
     await mkdir(join(home, "trash"));
@@ -91,7 +92,7 @@ it("logs a broken trash entry and continues sweeping", async () => {
     await writeFile(join(home, "trash/old"), "expired");
     const { utimes } = await import("node:fs/promises");
     await utimes(join(home, "trash/old"), 0, 0);
-    await expect(sweepTrash(home)).resolves.toBeUndefined();
+    await expect(sweepTrash()).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledWith(
       "[host-trash] sweep entry failed",
       join(home, "trash/broken"),
@@ -99,6 +100,7 @@ it("logs a broken trash entry and continues sweeping", async () => {
     );
     expect(await readdir(join(home, "trash"))).toEqual(["broken"]);
   } finally {
+    vi.unstubAllEnvs();
     warn.mockRestore();
     await rm(home, { recursive: true, force: true });
   }

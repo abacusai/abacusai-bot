@@ -2,8 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { readFileSync, mkdtempSync } from "node:fs";
 import { request as httpRequest } from "node:http";
-import { createServer } from "node:https";
-import { request as httpsRequest } from "node:https";
+import { createServer, request as httpsRequest } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,7 +22,7 @@ const port = Number(process.env.HOST_PROXY_PORT || 443);
 const previewHost = `local.preview.apps.abacus.ai${port === 443 ? "" : `:${port}`}`;
 const token = () => {
   const payload = Buffer.from(
-    JSON.stringify({ o: owner, g: org, e: Date.now() / 1000 + 600 })
+    JSON.stringify({ o: owner, g: org, e: Math.floor(Date.now() / 1000) + 600 })
   ).toString("base64url");
   return `${payload}.${createHmac("sha256", secret).update(payload).digest("hex")}`;
 };

@@ -8,7 +8,6 @@ const fixture = await vi.hoisted(async () => {
   const { tmpdir } = await import("node:os");
   const home = mkdtempSync(join(tmpdir(), "host-compose-"));
   process.env.ABACUSAI_BOT_HOME = home;
-  process.env.ABACUSAI_BOT_HOST_MODE = "1";
   delete process.env.ABACUS_API_KEY;
   mkdirSync(join(home, "host-userdata"));
   const config = '{"apiKeys":{"ABACUS_API_KEY":"sentinel"}}\n';

@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, cp, rm, readdir, stat } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join, basename } from "node:path";
+
+import { abacusBotHome } from "#main/paths";
+
+/** Moves into a dated trash under the bot home; a sweep removes month-old days. */
 export const trashItem = async (file: string): Promise<void> => {
-  const home =
-    process.env.ABACUSAI_BOT_HOME || join(homedir(), ".abacusai-bot");
-  const dir = join(home, "trash", new Date().toISOString().slice(0, 10));
+  const dir = join(
+    abacusBotHome(),
+    "trash",
+    new Date().toISOString().slice(0, 10)
+  );
   await mkdir(dir, { recursive: true });
   const destination = join(dir, `${randomUUID()}-${basename(file)}`);
   try {
@@ -27,8 +32,8 @@ export const trashItem = async (file: string): Promise<void> => {
   }
 };
 
-export const sweepTrash = async (home: string) => {
-  const root = join(home, "trash");
+export const sweepTrash = async () => {
+  const root = join(abacusBotHome(), "trash");
   try {
     for (const name of await readdir(root)) {
       const file = join(root, name);

@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { abacusBotHome as botHome } from "#main/paths";
+
 import { trashItem } from "./filesystem";
 import { shutdown } from "./shutdown";
 import { HostUnsupportedError } from "./unsupported";
-const botHome = () =>
-  process.env.ABACUSAI_BOT_HOME || join(homedir(), ".abacusai-bot");
 const unavailable = (name: string): any =>
   new Proxy(
     function () {

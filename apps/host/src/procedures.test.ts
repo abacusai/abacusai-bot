@@ -5,7 +5,6 @@ const fixture = await vi.hoisted(async () => {
   const { join } = await import("node:path");
   const home = mkdtempSync(join(tmpdir(), "host-procedures-"));
   process.env.ABACUSAI_BOT_HOME = home;
-  process.env.ABACUSAI_BOT_HOST_MODE = "1";
   delete process.env.ABACUS_API_KEY;
   return { home, unsupported: [] as string[] };
 });
