@@ -1,7 +1,6 @@
 import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
-import { Store } from "@tanstack/react-store";
 
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+import { persistedStore } from "#renderer/lib/continuity/registry";
 
 import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
 export interface PanelTab {
@@ -18,20 +17,10 @@ export interface PanelTabs {
   last: string | null;
   tree?: DockNode;
 }
-const KEY = "abacusai-bot:abacus.sessions.tabs";
-const restore = (): Record<string, PanelTabs> => {
-  try {
-    return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-};
-export const panelTabsStore = new Store<Record<string, PanelTabs>>(restore());
-panelTabsStore.subscribe((s) => {
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(s));
-  } catch {}
-});
+export const panelTabsStore = persistedStore<Record<string, PanelTabs>>(
+  "abacusai-bot:abacus.sessions.tabs",
+  () => ({})
+);
 export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
 // Kept out of sessionStorage: restored references have no pending start.
 const pendingTerminalStarts = new Map<
@@ -181,9 +170,3 @@ export const promoteTabs = (from: string, to: string): void =>
     delete next[from];
     return next;
   });
-
-bindContinuityStore(KEY, {
-  read: () => panelTabsStore.state,
-  write: (value) =>
-    panelTabsStore.setState(() => value as Record<string, PanelTabs>),
-});

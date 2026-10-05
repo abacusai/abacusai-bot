@@ -1,4 +1,5 @@
 import { useParams, useSearch } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { Activity, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usePanelRef } from "react-resizable-panels";
@@ -6,7 +7,7 @@ import { usePanelRef } from "react-resizable-panels";
 import { EmptyState } from "#renderer/components/empty-state";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+import { persistedStore } from "#renderer/lib/continuity/registry";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showInfo, showError } from "#renderer/lib/toast";
@@ -448,30 +449,24 @@ export const RoutinePage = ({
   );
 };
 type Exchange = { user: string; reply: string };
-const readLog = (id: string): Exchange[] => {
-  try {
-    return JSON.parse(
-      sessionStorage.getItem(`abacusai-bot:routine-editor:${id}`) ?? "[]"
-    ) as Exchange[];
-  } catch {
-    return [];
-  }
-};
 export const EditorChat = ({ routineId }: { routineId: string }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [log, setLog] = useState(() => readLog(routineId));
-  const [gone, setGone] = useState(false);
-  useEffect(
-    () =>
-      bindContinuityStore(`abacusai-bot:routine-editor:${routineId}`, {
-        read: () => log,
-        write: (value) => setLog(value as Exchange[]),
-      }),
-    [routineId, log]
+  // The last ten exchanges, read back when the editor mounts. Registered
+  // for continuity while mounted, from the effect: a discarded render
+  // never binds, and an unmounted editor is not captured.
+  const [store] = useState(() =>
+    persistedStore<Exchange[]>(
+      `abacusai-bot:routine-editor:${routineId}`,
+      () => [],
+      { bind: false }
+    )
   );
+  useEffect(() => store.bind(), [store]);
+  const log = useSelector(store, (state) => state);
+  const [gone, setGone] = useState(false);
   const send = async () => {
     const user = text.trim();
     if (!user || busy) return;
@@ -481,11 +476,8 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
         routineId,
         text: user,
       });
-      const next = [...log, { user, reply: result.reply }].slice(-10);
-      setLog(next);
-      sessionStorage.setItem(
-        `abacusai-bot:routine-editor:${routineId}`,
-        JSON.stringify(next)
+      store.setState((log) =>
+        [...log, { user, reply: result.reply }].slice(-10)
       );
       setText("");
     } catch (e) {
@@ -494,12 +486,7 @@ export const EditorChat = ({ routineId }: { routineId: string }) => {
         rpcError(e)?.code === "TIMEOUT"
           ? t("phase5.editTimeout")
           : `${t("phase5.editFailed")} ${errorText(e)}`;
-      const next = [...log, { user, reply }].slice(-10);
-      setLog(next);
-      sessionStorage.setItem(
-        `abacusai-bot:routine-editor:${routineId}`,
-        JSON.stringify(next)
-      );
+      store.setState((log) => [...log, { user, reply }].slice(-10));
     }
     setBusy(false);
   };
