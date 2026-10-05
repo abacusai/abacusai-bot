@@ -9,3 +9,6 @@ export const ABACUS_PLAN_URL = "https://agent.abacus.ai/";
 /** Where a Pro account tops up, rather than the plan chooser it has used. */
 export const ABACUS_BUY_CREDITS_URL =
   "https://apps.abacus.ai/chatllm/admin/profile?buyCredits=true";
+
+/** Where the desktop app is downloaded: where a web user out of time is sent. */
+export const DESKTOP_DOWNLOAD_URL = "https://bot.abacus.ai";

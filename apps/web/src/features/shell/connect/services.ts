@@ -3,7 +3,7 @@ import * as v from "valibot";
 export type ConnectStage = "starting" | "installing" | "connecting";
 export class ConnectError extends Error {
   constructor(
-    readonly kind: "signin" | "tier" | "version" | "connection",
+    readonly kind: "signin" | "tier" | "limit" | "version" | "connection",
     message: string,
     readonly network = false
   ) {
@@ -86,6 +86,9 @@ export const callApps = async (
       : `Connection service failed (${response.status})`;
   if (body?.errorType === "AbacusBotHostTierRequired")
     throw new ConnectError("tier", message);
+  // Today's web time is used up, or the free hosts are at capacity.
+  if (body?.errorType === "AbacusBotHostLimitReached")
+    throw new ConnectError("limit", message);
   if (
     response.status === 401 ||
     /not.?logged.?in/i.test(`${body?.errorType ?? ""} ${message}`)

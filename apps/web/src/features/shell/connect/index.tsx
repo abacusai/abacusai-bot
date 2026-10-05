@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
 
+import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
+
 import { ConnectError, type ConnectStage } from "./services";
 export const ConnectScreen = ({
   stage,
@@ -27,6 +29,11 @@ export const ConnectScreen = ({
         </a>
       )}
       {kind === "tier" && <a href="/chatllm">{t("web.connect.upgrade")}</a>}
+      {kind === "limit" && (
+        <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener">
+          {t("web.connect.download")}
+        </a>
+      )}
       {kind === "connection" && (
         <button onClick={() => location.reload()}>
           {t("shell.boot.reload")}
