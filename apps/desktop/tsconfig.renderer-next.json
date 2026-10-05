@@ -1,0 +1,17 @@
+{
+  "extends": "@abacus-ai/config/typescript/react",
+  "compilerOptions": {
+    // `vite/client` only: no `electron` and no `node`. The new renderer
+    // reaches main only through its Transport, so neither may type-check here
+    // (spec 01 §3.4).
+    "types": ["vite/client"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.tmp/desktop.renderer-next.tsbuildinfo"
+  },
+  "include": ["src/renderer-next", "src/shared"],
+  // Shared tests run under Node and are checked by the other projects.
+  "exclude": ["src/shared/**/*.test.ts"]
+}

@@ -1,4 +1,5 @@
 import { AgentStatus } from "#shared/agent-types";
+import { ConflictError } from "#shared/conflict";
 import type {
   AgentSessionListItem,
   AgentSessionSnapshot,
@@ -79,6 +80,29 @@ export class AgentSessionManagerService {
   // lists but written back by persist(): a momentarily wrong registry must
   // not erase sessions for good. They re-attach when the id reappears.
   private orphanedRecords: SessionRecord[] = [];
+  private readonly changeListeners = new Set<() => void>();
+
+  /**
+   * Called on every change to the records, persisted now or debounced: the
+   * sessions table's direct hook (spec 00 B.2), which covers writes that emit
+   * no event (run outcomes, rehoming, worktrees).
+   */
+  onChanged(listener: () => void): () => void {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
+    };
+  }
+
+  private changed(): void {
+    for (const listener of Array.from(this.changeListeners)) {
+      try {
+        listener();
+      } catch (error) {
+        console.error("[sessions] change listener threw", error);
+      }
+    }
+  }
 
   initialize(allowedWorkspaceIds: string[]): void {
     const allowed = new Set(allowedWorkspaceIds);
@@ -116,10 +140,18 @@ export class AgentSessionManagerService {
     workspaceId: string,
     routineId: string | null = null,
     owner: SessionOwner | null = null,
-    runTrigger: string | null = null
+    runTrigger: string | null = null,
+    /** The caller's own id (an optimistic insert); a taken one is refused. */
+    id?: string
   ): AgentSessionListItem {
+    if (
+      id != null &&
+      (this.sessions.has(id) ||
+        this.orphanedRecords.some((record) => record.id === id))
+    )
+      throw new ConflictError(`A session with id "${id}" already exists.`);
     const now = new Date().toISOString();
-    const sessionId = crypto.randomUUID();
+    const sessionId = id ?? crypto.randomUUID();
     const record: SessionRecord = {
       id: sessionId,
       workspaceId,
@@ -522,6 +554,7 @@ export class AgentSessionManagerService {
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   private schedulePersist(): void {
+    this.changed();
     if (this.persistTimer != null) return;
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
@@ -539,5 +572,6 @@ export class AgentSessionManagerService {
       ...this.sessions.values(),
       ...this.orphanedRecords,
     ]);
+    this.changed();
   }
 }

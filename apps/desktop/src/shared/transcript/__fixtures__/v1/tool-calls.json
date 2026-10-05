@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "sessionId": "sess-tool-calls",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Fix the failing test in src/sum.ts",
+      "at": 1788256800000
+    },
+    {
+      "type": "tool_call",
+      "id": "s-bash",
+      "toolCall": {
+        "id": "call_bash",
+        "name": "bash",
+        "args": {
+          "command": "npm test",
+          "timeout": 60000
+        },
+        "status": "success"
+      },
+      "at": 1788256801000,
+      "toolResult": {
+        "toolCallId": "call_bash",
+        "output": "1 failing",
+        "data": {
+          "type": "bash",
+          "command": "npm test",
+          "output": "1 failing",
+          "exitCode": 1,
+          "duration": 2300
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "s-read",
+      "toolCall": {
+        "id": "call_read",
+        "name": "read",
+        "args": {
+          "file_path": "src/sum.ts",
+          "limit": 40
+        },
+        "status": "success"
+      },
+      "at": 1788256802000,
+      "toolResult": {
+        "toolCallId": "call_read",
+        "output": "export const sum = (a, b) => a - b;",
+        "data": {
+          "type": "read",
+          "content": "export const sum = (a, b) => a - b;",
+          "startLine": 1,
+          "lineCount": 1,
+          "filePath": "src/sum.ts"
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "s-edit",
+      "toolCall": {
+        "id": "call_edit",
+        "name": "edit",
+        "args": {
+          "file_path": "src/sum.ts",
+          "old_str": "a - b",
+          "new_str": "a + b"
+        },
+        "status": "success"
+      },
+      "at": 1788256803000,
+      "toolResult": {
+        "toolCallId": "call_edit",
+        "output": "Edited src/sum.ts",
+        "data": {
+          "type": "file_mutation",
+          "originalContent": "export const sum = (a, b) => a - b;\n",
+          "finalContent": "export const sum = (a, b) => a + b;\n",
+          "diff": "-export const sum = (a, b) => a - b;\n+export const sum = (a, b) => a + b;",
+          "additions": 1,
+          "deletions": 1
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "s-write",
+      "toolCall": {
+        "id": "call_write",
+        "name": "write",
+        "args": {
+          "file_path": "src/sum.test.ts",
+          "content": "test('sum', () => {});\n"
+        },
+        "status": "success"
+      },
+      "at": 1788256804000,
+      "toolResult": {
+        "toolCallId": "call_write",
+        "output": "Created src/sum.test.ts",
+        "data": {
+          "type": "file_mutation",
+          "finalContent": "test('sum', () => {});\n",
+          "isNewFile": true,
+          "additions": 1,
+          "deletions": 0
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "s-mcp",
+      "toolCall": {
+        "id": "call_mcp",
+        "name": "mcp__linear__create_issue",
+        "args": {
+          "server_id": "linear",
+          "tool_name": "create_issue",
+          "arguments": {
+            "title": "Sum is wrong"
+          }
+        },
+        "status": "success",
+        "endpoint": "mcp_call"
+      },
+      "toolResult": {
+        "toolCallId": "call_mcp",
+        "output": "Created ISSUE-1",
+        "data": {
+          "type": "mcp",
+          "content": "Created ISSUE-1",
+          "isError": false
+        }
+      },
+      "at": 1788256805000
+    },
+    {
+      "type": "tool_call",
+      "id": "s-unknown",
+      "toolCall": {
+        "id": "call_unknown",
+        "name": "some_future_tool",
+        "args": {
+          "anything": [1, 2, 3]
+        },
+        "status": "success"
+      },
+      "at": 1788256806000,
+      "toolResult": {
+        "toolCallId": "call_unknown",
+        "output": "ok",
+        "data": {
+          "type": "generic",
+          "output": "ok"
+        }
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "s-noresult",
+      "toolCall": {
+        "id": "call_grep",
+        "name": "grep",
+        "args": {
+          "pattern": "sum"
+        },
+        "status": "success"
+      },
+      "at": 1788256807000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Fixed: `sum` now adds.",
+      "at": 1788256808000
+    }
+  ]
+}

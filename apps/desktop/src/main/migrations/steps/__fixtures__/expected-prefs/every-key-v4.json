@@ -1,0 +1,78 @@
+{
+  "prefs": {
+    "provenance": {
+      "browserHomepage": "legacy",
+      "creditsExhaustedAt": "legacy",
+      "defaultMode": "legacy",
+      "dismissals.referralCardUntil": "legacy",
+      "dismissals.upsell": "legacy",
+      "language": "legacy",
+      "lastPickedWorkspaceId": "legacy",
+      "models.favoriteModelIds": "legacy",
+      "models.perWorkspace": "legacy",
+      "models.selectedModelId": "legacy",
+      "motion.reduce": "default",
+      "onboardingStep": "legacy",
+      "panes": "default",
+      "pinned.botIds": "legacy",
+      "pinned.sessionIds": "legacy",
+      "recentFolders": "legacy",
+      "sidebar.openSection": "legacy",
+      "sidebar.pinned": "legacy",
+      "sounds.enabled": "default",
+      "sounds.perEvent": "default",
+      "theme": "legacy",
+      "workspaceExpanded": "legacy"
+    },
+    "row": {
+      "browserHomepage": "https://example.com/",
+      "creditsExhaustedAt": 1790000000000,
+      "defaultMode": "PLAN",
+      "dismissals": {
+        "referralCardUntil": 1790604800000,
+        "upsell": true
+      },
+      "id": "app",
+      "language": "de-DE",
+      "lastPickedWorkspaceId": "ws-1",
+      "models": {
+        "favoriteModelIds": ["abacus/route-llm-code", "gpt-5"],
+        "perWorkspace": {
+          "ws-1": "gpt-5"
+        },
+        "selectedModelId": "abacus/route-llm-code"
+      },
+      "motion": {
+        "reduce": "system"
+      },
+      "onboardingStep": null,
+      "panes": {},
+      "pinned": {
+        "botIds": ["bot-a"],
+        "sessionIds": ["s-1", "s-2"]
+      },
+      "recentFolders": ["/Users/fixture/project", "/Users/fixture/other"],
+      "sidebar": {
+        "openSection": "routines",
+        "pinned": false
+      },
+      "sounds": {
+        "enabled": true,
+        "perEvent": {}
+      },
+      "theme": "dark",
+      "updatedAt": "2026-09-30T12:00:00.000Z",
+      "workspaceExpanded": {
+        "ws-1": true
+      }
+    }
+  },
+  "stats": {
+    "imported": 13,
+    "invalid": 0,
+    "keptUser": 0,
+    "keys": 10,
+    "reset": 0,
+    "written": 1
+  }
+}

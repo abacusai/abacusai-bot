@@ -10,8 +10,21 @@ import type { OpenFilePathResult } from "#shared/contracts";
 import type { FunnelStep } from "#shared/funnel";
 import type { PptxReadResult } from "#shared/pptx";
 import type { UpdateStatus } from "#shared/update";
+import type { WindowChromeState } from "#shared/window-chrome-state";
 
 import { createBridge } from "./bridge";
+import { installRpcPortHandshake, type HandshakeWindow } from "./rpc-port";
+
+// The oRPC port handshake (spec 00 A.4.4). Its listener is in place before any
+// page script runs, so a page's first request cannot be missed. Additive: the
+// legacy `window.api` below is unchanged. No test delay here: the shipped
+// preload never reads ABACUS_TEST_HANDSHAKE_DELAY_MS; the real-Electron
+// handshake test builds its own preload entry that passes one.
+installRpcPortHandshake(
+  ipcRenderer,
+  (globalThis as unknown as { window: HandshakeWindow }).window,
+  "main"
+);
 
 // Read synchronously so the state exists before the first renderer module
 // runs; a shell without the store leaves this null (localStorage fallback).
@@ -82,6 +95,20 @@ const api = {
     return () =>
       ipcRenderer.removeListener("window:full-screen-changed", listener);
   },
+  getWindowChrome: (): Promise<WindowChromeState> =>
+    ipcRenderer.invoke("window:chrome"),
+  onWindowChromeChange: (
+    callback: (state: WindowChromeState) => void
+  ): (() => void) => {
+    const listener = (
+      _event: IpcRendererEvent,
+      state: WindowChromeState
+    ): void => callback(state);
+    ipcRenderer.on("window:chrome-changed", listener);
+    return () => ipcRenderer.removeListener("window:chrome-changed", listener);
+  },
+  recreateMainWindow: (): Promise<void> =>
+    ipcRenderer.invoke("window:recreate"),
   restartApp: (): Promise<void> => ipcRenderer.invoke("restart-app"),
 
   getHomeDir: (): Promise<string> => ipcRenderer.invoke("get-home-dir"),
@@ -251,14 +278,23 @@ const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
 };
 
+// The only preload export the new renderer needs besides the port:
+// `webUtils` runs in the preload context alone.
+const abacusHost = {
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+};
+
 // Expose through contextBridge when isolated, else on the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld("api", api);
+    contextBridge.exposeInMainWorld("abacusHost", abacusHost);
   } catch (error) {
     console.error(error);
   }
 } else {
   // @ts-expect-error (define in dts)
   window.api = api;
+  // @ts-expect-error (define in dts)
+  window.abacusHost = abacusHost;
 }

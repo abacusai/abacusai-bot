@@ -1,0 +1,8 @@
+{"type":"event","event":{"type":"mode_changed","mode":"DEFAULT","source":"startup"}}
+{"type":"ready","model":"fake/fake-1","mode":"DEFAULT","agentSessionId":"<SESSION_ID_1>","agentSessionFile":"<SESSION_FILE_1>"}
+{"type":"skills_loaded","skills":[]}
+{"type":"mcp_servers","servers":[]}
+{"type":"event","event":{"type":"error","error":{"message":"A message could not be read by the agent and was not sent. Try sending it again.","code":"malformed_command"}}}
+{"type":"event","event":{"type":"notification","severity":"warning","message":"\"sideways\" is not a mode. Use one of: default, acceptedits, plan, auto, yolo. Staying in default."}}
+{"type":"event","event":{"type":"mode_changed","mode":"DEFAULT","source":"user"}}
+{"type":"event","event":{"type":"error","error":{"message":"Model \"nope/missing\" not found. Use --list-models to see available models.","code":"model_unavailable"}}}

@@ -1,0 +1,74 @@
+{
+  "prefs": {
+    "provenance": {
+      "browserHomepage": "legacy",
+      "creditsExhaustedAt": "default",
+      "defaultMode": "default",
+      "dismissals.referralCardUntil": "default",
+      "dismissals.upsell": "default",
+      "language": "legacy",
+      "lastPickedWorkspaceId": "legacy",
+      "models.favoriteModelIds": "default",
+      "models.perWorkspace": "default",
+      "models.selectedModelId": "default",
+      "motion.reduce": "default",
+      "onboardingStep": "legacy",
+      "panes": "default",
+      "pinned.botIds": "default",
+      "pinned.sessionIds": "default",
+      "recentFolders": "default",
+      "sidebar.openSection": "default",
+      "sidebar.pinned": "default",
+      "sounds.enabled": "default",
+      "sounds.perEvent": "default",
+      "theme": "default",
+      "workspaceExpanded": "default"
+    },
+    "row": {
+      "browserHomepage": null,
+      "creditsExhaustedAt": null,
+      "defaultMode": "YOLO",
+      "dismissals": {
+        "referralCardUntil": null,
+        "upsell": false
+      },
+      "id": "app",
+      "language": "system",
+      "lastPickedWorkspaceId": "ws-1",
+      "models": {
+        "favoriteModelIds": [],
+        "perWorkspace": {},
+        "selectedModelId": null
+      },
+      "motion": {
+        "reduce": "system"
+      },
+      "onboardingStep": "welcome",
+      "panes": {},
+      "pinned": {
+        "botIds": [],
+        "sessionIds": []
+      },
+      "recentFolders": [],
+      "sidebar": {
+        "openSection": null,
+        "pinned": true
+      },
+      "sounds": {
+        "enabled": true,
+        "perEvent": {}
+      },
+      "theme": "system",
+      "updatedAt": "2026-09-30T12:00:00.000Z",
+      "workspaceExpanded": {}
+    }
+  },
+  "stats": {
+    "imported": 4,
+    "invalid": 9,
+    "keptUser": 0,
+    "keys": 8,
+    "reset": 0,
+    "written": 1
+  }
+}

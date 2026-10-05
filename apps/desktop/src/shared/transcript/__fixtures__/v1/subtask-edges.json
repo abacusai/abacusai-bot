@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "sessionId": "sess-subtask-edges",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Start",
+      "at": 1788256800000
+    },
+    {
+      "type": "subtask",
+      "id": "stray",
+      "status": "completed",
+      "outcome": "completed",
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Working on it.",
+      "at": 1788256802000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-open",
+      "status": "created",
+      "description": "Left open by a crash",
+      "at": 1788256803000
+    },
+    {
+      "type": "tool_call",
+      "id": "so-1",
+      "toolCall": {
+        "id": "so-call",
+        "name": "bash",
+        "args": {
+          "command": "make"
+        },
+        "status": "executing"
+      },
+      "at": 1788256804000
+    },
+    {
+      "type": "tool_group",
+      "id": "so-group",
+      "category": "read",
+      "summary": "Read 1 file",
+      "tools": [
+        {
+          "type": "tool_call",
+          "id": "so-g1",
+          "toolCall": {
+            "id": "so-gc",
+            "name": "read",
+            "args": {
+              "file_path": "Makefile"
+            },
+            "status": "success"
+          },
+          "at": 1788256805000,
+          "toolResult": {
+            "toolCallId": "so-gc",
+            "output": "all:"
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "Are you still there?",
+      "at": 1788256806000
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "Yes.",
+      "at": 1788256807000
+    },
+    {
+      "type": "subtask",
+      "id": "sub-trailing",
+      "status": "created",
+      "description": "Never closed",
+      "at": 1788256808000
+    },
+    {
+      "type": "thinking",
+      "id": "st-think",
+      "content": "Still going",
+      "isSpinny": false,
+      "at": 1788256809000
+    }
+  ]
+}

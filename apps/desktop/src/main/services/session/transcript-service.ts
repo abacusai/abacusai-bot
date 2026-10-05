@@ -10,15 +10,9 @@ import path from "path";
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
 
 import { abacusBotHome } from "../../paths";
+import { isSafeSessionId, type ThreadStore } from "./thread-store";
 
 const TRANSCRIPTS_DIR = (): string => path.join(abacusBotHome(), "transcripts");
-
-// Ids arrive over IPC: a path separator or leading dot would let a caller
-// write outside the transcripts folder.
-const isSafeSessionId = (sessionId: string): boolean =>
-  typeof sessionId === "string" &&
-  /^[A-Za-z0-9._-]+$/.test(sessionId) &&
-  !sessionId.startsWith(".");
 
 const transcriptPath = (sessionId: string): string | null =>
   isSafeSessionId(sessionId)
@@ -32,9 +26,22 @@ export interface StoredTranscript {
   segments: unknown[];
 }
 
+export interface TranscriptServiceOptions {
+  /**
+   * The v2 twin (spec 00 C.3): written after every v1 write and removed with
+   * the v1 file, for the transition until main persists v2 itself.
+   */
+  threads?: ThreadStore;
+}
+
 export class TranscriptService {
   // Fires after the atomic rename; optional so persistence never depends on it.
   private onPersist?: (sessionId: string) => void;
+  private readonly threads?: ThreadStore;
+
+  constructor(options: TranscriptServiceOptions = {}) {
+    this.threads = options.threads;
+  }
 
   setOnPersist(callback: (sessionId: string) => void): void {
     this.onPersist = callback;
@@ -75,6 +82,13 @@ export class TranscriptService {
       console.error("[transcripts] failed to write transcript", error);
       return;
     }
+    // Isolated: a failed v2 write is repaired by the next `readCurrent`, and
+    // must not stop `onPersist`.
+    try {
+      this.threads?.writeFromV1(sessionId, payload);
+    } catch (error) {
+      console.error("[transcripts] failed to write the v2 thread", error);
+    }
     // Only after a clean persist; a listener error must not reach the write path.
     try {
       this.onPersist?.(sessionId);
@@ -90,6 +104,11 @@ export class TranscriptService {
       fs.rmSync(filePath, { force: true });
     } catch (error) {
       console.error("[transcripts] failed to remove transcript", error);
+    }
+    try {
+      this.threads?.remove(sessionId);
+    } catch (error) {
+      console.error("[transcripts] failed to remove the v2 thread", error);
     }
   }
 }

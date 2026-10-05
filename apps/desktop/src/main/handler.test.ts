@@ -82,6 +82,7 @@ import { ABACUS_CONNECTORS_SERVER_NAME } from "#shared/contracts";
 
 import { registerIpcHandlers } from "./handler";
 import { activateProfile, profileKeyFor } from "./profile-home";
+import { mainEventBus } from "./rpc/event-bus";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {
   abacusCredentialRejected,
@@ -93,6 +94,12 @@ const removeMcpServer = vi.fn();
 const refreshAgentProviders = vi.fn();
 const restoreSessionsForAccount = vi.fn(() => 0);
 const stashSessionsForAccount = vi.fn(() => 0);
+const startDeviceStream = vi.fn(
+  async (_request: unknown, _sender: Electron.WebContents) => ({
+    success: true,
+    streamId: 7,
+  })
+);
 
 beforeEach(() => {
   handlers.clear();
@@ -116,11 +123,13 @@ beforeEach(() => {
     restoreSessionsForAccount,
     stashSessionsForAccount,
     setEventDispatcher: vi.fn(),
+    setBusDispatcher: vi.fn(),
     setCredentialSaver: vi.fn(),
     ensureMcpServer,
     removeMcpServer,
     refreshAgentProviders,
     syncLogsNow: vi.fn(),
+    startDeviceStream,
   };
 
   registerIpcHandlers(
@@ -130,6 +139,39 @@ beforeEach(() => {
   // case below asserts only the transition it triggers.
   ensureMcpServer.mockClear();
   removeMcpServer.mockClear();
+});
+
+describe("a device stream started over legacy IPC", () => {
+  it("delivers each chunk to the legacy channel and to the oRPC bus", async () => {
+    const send = vi.fn();
+    const sender = { id: 3, send, isDestroyed: () => false };
+    await handlers.get("agent:start-device-stream")?.(
+      { sender },
+      { platform: "android", deviceId: "emulator-5554" }
+    );
+    const given = startDeviceStream.mock.calls.at(-1)![1];
+
+    const published: unknown[] = [];
+    const stop = mainEventBus.listenChannel("device-chunk", (chunk) =>
+      published.push(chunk)
+    );
+    const chunk = {
+      streamId: 7,
+      data: new Uint8Array([1]),
+      isKey: true,
+      format: "h264",
+    };
+    given.send("agent:device-stream-chunk", chunk);
+    given.send("something-else", 1);
+    stop();
+
+    expect(send.mock.calls).toEqual([
+      ["agent:device-stream-chunk", chunk],
+      ["something-else", 1],
+    ]);
+    expect(published).toEqual([chunk]);
+    expect(given.isDestroyed()).toBe(false);
+  });
 });
 
 describe("acquiring an Abacus.AI key", () => {

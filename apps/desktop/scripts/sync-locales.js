@@ -19,6 +19,25 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const LOCALE_DIR = path.join(ROOT, "src/renderer/locales");
 const BASE_LOCALE = "en-US.json";
 const checkOnly = process.argv.includes("--check");
+// renderer-next reuses old strings under new keys (spec 01 §9.3): with this
+// flag a missing newKey takes the same locale's oldKey translation.
+const applyKeymap = process.argv.includes("--apply-keymap");
+const KEYMAP_PATH = path.join(ROOT, "scripts/locale-keymap.json");
+
+function loadKeymap() {
+  const raw = JSON.parse(fs.readFileSync(KEYMAP_PATH, "utf8"));
+  delete raw.$comment;
+  return raw;
+}
+
+function getPath(obj, dotted) {
+  let node = obj;
+  for (const part of dotted.split(".")) {
+    if (!isPlainObject(node)) return undefined;
+    node = node[part];
+  }
+  return node;
+}
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -36,21 +55,27 @@ function isPlainObject(value) {
 // like `agent`), so a shallow copy would see the section as a non-string
 // and replace the whole translated subtree with en-US, silently reverting
 // every translation in the file the next time anyone ran this script.
-function syncLocale(baseObj, localeObj) {
+function syncLocale(baseObj, localeObj, fill = () => undefined, prefix = "") {
   const synced = {};
   for (const key of Object.keys(baseObj)) {
     const baseValue = baseObj[key];
     const existing = isPlainObject(localeObj) ? localeObj[key] : undefined;
+    const full = prefix === "" ? key : `${prefix}.${key}`;
     if (isPlainObject(baseValue)) {
       synced[key] = syncLocale(
         baseValue,
-        isPlainObject(existing) ? existing : {}
+        isPlainObject(existing) ? existing : {},
+        fill,
+        full
       );
     } else {
+      const mapped = fill(full);
       synced[key] =
         typeof existing === "string" && existing.trim() !== ""
           ? existing
-          : baseValue;
+          : typeof mapped === "string" && mapped.trim() !== ""
+            ? mapped
+            : baseValue;
     }
   }
   return synced;
@@ -72,7 +97,11 @@ function flattenKeys(obj, prefix = "") {
   return keys;
 }
 
-const SOURCE_DIR = path.join(ROOT, "src/renderer");
+// Both renderers' t() calls resolve against the one set of locale files.
+const SOURCE_DIRS = [
+  path.join(ROOT, "src/renderer"),
+  path.join(ROOT, "src/renderer-next"),
+];
 
 // CLDR plural categories i18next appends to a plural key.
 const PLURAL_SUFFIXES = ["_one", "_other", "_zero", "_two", "_few", "_many"];
@@ -127,7 +156,7 @@ function checkKeyUsage(baseKeys) {
       }
     }
   };
-  walk(SOURCE_DIR);
+  for (const dir of SOURCE_DIRS) walk(dir);
 
   if (problems.length > 0) {
     console.error(
@@ -167,7 +196,12 @@ function main() {
     const baseKeySet = new Set(baseKeys);
     const missing = baseKeys.filter((k) => !localeKeySet.has(k));
     const extra = localeKeys.filter((k) => !baseKeySet.has(k));
-    const synced = syncLocale(baseObj, localeObj);
+    const keymap = applyKeymap ? loadKeymap() : {};
+    const synced = syncLocale(baseObj, localeObj, (newKey) =>
+      keymap[newKey] === undefined
+        ? undefined
+        : getPath(localeObj, keymap[newKey])
+    );
     const nextContent = serializeLocale(synced);
     const prevContent = fs.readFileSync(filePath, "utf8");
 

@@ -1,0 +1,300 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Start",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "stray",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "stray",
+              "outcome": "completed",
+              "partIndex": null,
+              "status": "completed",
+              "type": "subtask"
+            },
+            {
+              "at": 1788256802000,
+              "id": "b1",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256803000,
+              "id": "sub-open",
+              "partIndex": 1,
+              "status": "created",
+              "type": "subtask"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Working on it.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b1"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "subagent": {
+            "description": "Left open by a crash",
+            "id": "sub-open",
+            "messages": [
+              {
+                "id": "sub-open:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256804000,
+                        "id": "so-1",
+                        "partIndex": 0,
+                        "type": "tool_call"
+                      },
+                      {
+                        "category": "read",
+                        "id": "so-group",
+                        "partIndex": null,
+                        "summary": "Read 1 file",
+                        "type": "tool_group"
+                      },
+                      {
+                        "at": 1788256805000,
+                        "groupId": "so-group",
+                        "id": "so-g1",
+                        "partIndex": 2,
+                        "type": "tool_call"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:04.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "arguments": "{\"command\":\"make\"}",
+                    "id": "so-call",
+                    "input": {
+                      "command": "make"
+                    },
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "so-1",
+                        "status": "executing"
+                      }
+                    },
+                    "name": "bash",
+                    "state": "error",
+                    "type": "tool-call"
+                  },
+                  {
+                    "content": "",
+                    "id": "so-1:result",
+                    "metadata": {
+                      "abacus": {}
+                    },
+                    "outcome": "cancelled",
+                    "state": "error",
+                    "toolCallId": "so-call",
+                    "type": "tool-result"
+                  },
+                  {
+                    "arguments": "{\"file_path\":\"Makefile\"}",
+                    "id": "so-gc",
+                    "input": {
+                      "file_path": "Makefile"
+                    },
+                    "metadata": {
+                      "abacus": {
+                        "segmentId": "so-g1",
+                        "status": "success"
+                      }
+                    },
+                    "name": "read",
+                    "output": "all:",
+                    "state": "complete",
+                    "type": "tool-call"
+                  },
+                  {
+                    "content": "all:",
+                    "id": "so-g1:result",
+                    "metadata": {
+                      "abacus": {}
+                    },
+                    "state": "complete",
+                    "toolCallId": "so-gc",
+                    "type": "tool-result"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {}
+            },
+            "name": "delegate",
+            "status": "finished"
+          },
+          "type": "subagent"
+        }
+      ],
+      "role": "assistant"
+    },
+    {
+      "id": "u2",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256806000,
+              "id": "u2",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:06.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Are you still there?",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u2"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "b2",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256807000,
+              "id": "b2",
+              "partIndex": 0,
+              "type": "text"
+            },
+            {
+              "at": 1788256808000,
+              "id": "sub-trailing",
+              "partIndex": 1,
+              "status": "created",
+              "type": "subtask"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:07.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Yes.",
+          "metadata": {
+            "abacus": {
+              "segmentId": "b2"
+            }
+          },
+          "type": "text"
+        },
+        {
+          "subagent": {
+            "description": "Never closed",
+            "error": {
+              "message": "interrupted"
+            },
+            "id": "sub-trailing",
+            "messages": [
+              {
+                "id": "sub-trailing:0",
+                "metadata": {
+                  "abacus": {
+                    "segments": [
+                      {
+                        "at": 1788256809000,
+                        "id": "st-think",
+                        "partIndex": 0,
+                        "type": "thinking"
+                      }
+                    ]
+                  },
+                  "tanstack": {
+                    "createdAt": "2026-09-01T10:00:09.000Z"
+                  }
+                },
+                "parts": [
+                  {
+                    "content": "Still going",
+                    "stepId": "st-think",
+                    "type": "thinking"
+                  }
+                ],
+                "role": "assistant"
+              }
+            ],
+            "metadata": {
+              "abacus": {}
+            },
+            "name": "delegate",
+            "status": "error"
+          },
+          "type": "subagent"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 10,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-subtask-edges",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

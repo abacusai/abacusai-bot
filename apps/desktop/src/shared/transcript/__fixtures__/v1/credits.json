@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "sessionId": "sess-credits",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "First question",
+      "at": 1788256800000,
+      "messageIndex": 0
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "First answer.",
+      "at": 1788256801000,
+      "messageIndex": 1
+    },
+    {
+      "type": "credits",
+      "id": "cr1",
+      "creditsUsed": 12,
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "u2",
+      "source": "user",
+      "content": "Second question",
+      "at": 1788256803000,
+      "messageIndex": 2
+    },
+    {
+      "type": "text",
+      "id": "b2",
+      "source": "bot",
+      "content": "Second answer.",
+      "at": 1788256804000,
+      "messageIndex": 3
+    },
+    {
+      "type": "credits",
+      "id": "cr2",
+      "creditsUsed": 3.5,
+      "at": 1788256805000
+    },
+    {
+      "type": "credits",
+      "id": "cr3",
+      "creditsUsed": 1,
+      "at": 1788256806000
+    }
+  ]
+}

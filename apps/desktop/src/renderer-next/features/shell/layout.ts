@@ -1,0 +1,76 @@
+/**
+ * The shell's layout as a pure function of window width, area, the user's
+ * pinned preference and whether the side panel is open (spec 01 §7.1, canvas
+ * `WidthRules`, `BW1000/BW900/BW800`, `W900/W800`). Never writes prefs:
+ * growing the window restores the user's choice.
+ */
+export type Band = "sm" | "md" | "lg" | "xl";
+
+/** Lower bounds, px. 800 is the window minimum. */
+export const BAND_MIN = { sm: 800, md: 900, lg: 1000, xl: 1100 } as const;
+
+export const bandFor = (width: number): Band =>
+  width >= BAND_MIN.xl
+    ? "xl"
+    : width >= BAND_MIN.lg
+      ? "lg"
+      : width >= BAND_MIN.md
+        ? "md"
+        : "sm";
+
+export type ShellArea =
+  | "bots"
+  | "sessions"
+  | "routines"
+  | "artifacts"
+  | "library"
+  | "settings";
+
+export type SidebarMode =
+  /** In layout, 280 wide. */
+  | "pinned"
+  /** Out of layout; floats over the content on rail hover. */
+  | "floating"
+  /** Bots at 800: the 88 px avatar strip. */
+  | "strip";
+
+export interface ShellLayoutState {
+  band: Band;
+  sidebar: SidebarMode;
+  /** What the sidebar column occupies in layout, px (TopBar alignment). */
+  sidebarOccupied: 0 | 88 | 280;
+  /** `null`: closed. */
+  sidePanel: null | "layout" | "drawer";
+  titleBar: {
+    /** Status text beside the identity (hidden from md down). */
+    status: boolean;
+    /** Actions fold into ⋯ at sm. */
+    actionsFolded: boolean;
+    /** The app name shows only while the sidebar is pinned. */
+    appName: boolean;
+  };
+}
+
+export const shellLayout = (input: {
+  width: number;
+  area: ShellArea | undefined;
+  pinned: boolean;
+  panelOpen: boolean;
+}): ShellLayoutState => {
+  const band = bandFor(input.width);
+  let sidebar: SidebarMode = input.pinned ? "pinned" : "floating";
+  if (band === "sm" && input.area === "bots" && input.pinned) sidebar = "strip";
+  if (band === "sm" && input.area === "sessions") sidebar = "floating";
+
+  return {
+    band,
+    sidebar,
+    sidebarOccupied: sidebar === "pinned" ? 280 : sidebar === "strip" ? 88 : 0,
+    sidePanel: input.panelOpen ? (band === "xl" ? "layout" : "drawer") : null,
+    titleBar: {
+      status: band === "xl" || band === "lg",
+      actionsFolded: band === "sm",
+      appName: sidebar === "pinned",
+    },
+  };
+};
