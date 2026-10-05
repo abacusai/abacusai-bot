@@ -102,6 +102,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "messaging",
     "search",
     "skills-tools",
+    "whatsapp-phone",
   ],
   notch: ["gallery"],
   onboarding: [
