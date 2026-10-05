@@ -30,12 +30,15 @@ export const rendererCsp = (
   if (platform !== "electron" && platform !== "browser")
     throw new Error("Renderer platform is required");
   if (platform === "electron") return CSP_BASE + "connect-src 'self' data:;";
-  const sources =
-    env.VITE_CONNECT_SRC ??
-    "'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai";
-  if (!sources.trim())
-    throw new Error("VITE_CONNECT_SRC is required for browser builds");
-  return CSP_BASE + `connect-src ${sources}; frame-src 'self' blob:;`;
+  // The host is proxied same-origin; VITE_CONNECT_SRC only adds extra sources.
+  const sources = new Set([
+    "'self'",
+    ...(env.VITE_CONNECT_SRC ?? "").split(/\s+/),
+  ]);
+  sources.delete("");
+  return (
+    CSP_BASE + `connect-src ${[...sources].join(" ")}; frame-src 'self' blob:;`
+  );
 };
 /** `#platform/<name>` → `src/platform/<name>.<platform>.ts(x)`, one per file. */
 export const platformAlias = (platform: RendererPlatform) =>
@@ -98,7 +101,7 @@ export const platformPlugin = (
   };
   if (platform === "browser" && command === "serve" && env.VITE_WEB_HOST_URL) {
     const origin = new URL(env.VITE_WEB_HOST_URL).origin;
-    env.VITE_CONNECT_SRC = `${env.VITE_CONNECT_SRC ?? "'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai"} ${origin} ${origin.replace(/^ws/, "http")}`;
+    env.VITE_CONNECT_SRC = `${env.VITE_CONNECT_SRC ?? ""} ${origin} ${origin.replace(/^ws/, "http")}`;
   }
   const csp = rendererCsp(platform, env);
   return {

@@ -17,7 +17,7 @@ export const uploadFiles = async (
   files.forEach((file) => body.append("files", file, file.name));
   const token = host.token;
   const upload = () =>
-    fetch(`${host.origin}/upload?${new URLSearchParams({ ...context })}`, {
+    fetch(`${host.base}/upload?${new URLSearchParams({ ...context })}`, {
       method: "POST",
       credentials: "include",
       headers: { Authorization: `Bearer ${host.token}` },

@@ -16,7 +16,9 @@ import { configureVoice, fetchWhisperModel } from "#renderer/lib/voice/whisper";
 import { viewHostFile } from "./files";
 import { hostFiles } from "./host-files";
 
-const preview = "https://pod.preview.apps.abacus.ai";
+// The same-origin path the server proxies to the host.
+const hostBase = "/api/botHost/1c0d9e2f7a";
+const preview = location.origin + hostBase;
 const file = { filePath: "/workspace/sample.txt", hostRoot: "/workspace" };
 const originalFetch = globalThis.fetch;
 let server: ReturnType<typeof createServer>;
@@ -91,7 +93,8 @@ beforeEach(async () => {
           success: true,
           result: {
             deploymentConversationId: "conversation",
-            previewHost: new URL(preview).host,
+            hostBase,
+            previewHost: null,
           },
         });
       if (url === "/api/_bootstrapAbacusBotHost") {
@@ -100,7 +103,8 @@ beforeEach(async () => {
           success: true,
           result: {
             status: "ready",
-            previewHost: new URL(preview).host,
+            hostBase,
+            previewHost: null,
             token: `${btoa(JSON.stringify({ o: "owner", n: bootstrapCount }))}.signature`,
             version: null,
             detail: null,

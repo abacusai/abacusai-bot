@@ -25,7 +25,7 @@ const response = async (
   if (maxBytes != null) query.set("maxBytes", String(maxBytes));
   const token = host.token;
   const fetchFile = () =>
-    fetch(`${host.origin}/files?${query}`, {
+    fetch(`${host.base}/files?${query}`, {
       credentials: "include",
       headers: {
         Authorization: `Bearer ${host.token}`,

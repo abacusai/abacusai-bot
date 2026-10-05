@@ -12,7 +12,7 @@ import {
 } from "#renderer/features/chat/runtime/host-actions";
 import { renderRelay } from "#renderer/features/chat/testing";
 import { renderApp } from "#renderer/test-support/app-harness";
-const host = vi.hoisted(() => ({ origin: "", token: "fixture-token" }));
+const host = vi.hoisted(() => ({ base: "", token: "fixture-token" }));
 vi.mock("#renderer/features/shell/connect/services", async (original) => ({
   ...(await original<
     typeof import("#renderer/features/shell/connect/services")
@@ -53,7 +53,7 @@ it("fake HTTP host requires session/workspace, accepts multipart and returns the
     );
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  host.origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  host.base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   const nativeFetch = globalThis.fetch;
   // Node fetch cannot encode jsdom FormData. Serialize the browser form at the
   // fixture boundary, then exercise the actual HTTP request/response contract.

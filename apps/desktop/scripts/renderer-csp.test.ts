@@ -8,11 +8,18 @@ import { RENDERER_CSP } from "../src/main/renderer-csp";
 it("R8-T7 pins Electron CSP and refuses a missing platform", () => {
   expect(rendererCsp("electron", {})).toBe(RENDERER_CSP);
   expect(() => rendererCsp(undefined as never, {})).toThrow("platform");
-  expect(() => rendererCsp("browser", { VITE_CONNECT_SRC: "" })).toThrow(
-    "VITE_CONNECT_SRC"
-  );
-  expect(rendererCsp("browser", {})).toContain(
-    "connect-src 'self' https://*.preview.apps.abacus.ai wss://*.preview.apps.abacus.ai;"
+});
+it("pins the browser connect-src to 'self' with optional extra sources", () => {
+  for (const env of [{}, { VITE_CONNECT_SRC: "" }, { VITE_CONNECT_SRC: " " }])
+    expect(rendererCsp("browser", env)).toContain(
+      "connect-src 'self'; frame-src 'self' blob:;"
+    );
+  expect(
+    rendererCsp("browser", {
+      VITE_CONNECT_SRC: "'self' https://extra.example wss://extra.example",
+    })
+  ).toContain(
+    "connect-src 'self' https://extra.example wss://extra.example; frame-src"
   );
 });
 it("the web root HTML loads its source entry and carries no CSP", () => {

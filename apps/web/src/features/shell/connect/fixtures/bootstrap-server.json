@@ -1,10 +1,11 @@
 [
   {
     "source": "server response fixture (kept in step with the hosting service)",
-    "python": "{'status': 'starting', 'previewHost': host._preview_host(11, obj.logged_in_info),\n                          'detail': 'Waiting for the computer to become active', 'token': None, 'version': None}",
+    "python": "{'status': 'starting', 'hostBase': host._host_base(conversation), 'previewHost': None,\n                          'detail': 'Waiting for the computer to become active', 'token': None, 'version': None}",
     "result": {
       "status": "starting",
-      "previewHost": "pod.preview.apps.abacus.ai",
+      "hostBase": "/api/botHost/1c0d9e2f7a",
+      "previewHost": null,
       "detail": "Waiting for the computer to become active",
       "token": null,
       "version": null
@@ -12,22 +13,24 @@
   },
   {
     "source": "server response fixture (kept in step with the hosting service)",
-    "python": "{'status': 'starting', 'detail': 'restart pending', 'token': None,\n                           'version': None, 'previewHost': host._preview_host(11, obj.logged_in_info)}",
+    "python": "{'status': 'starting', 'detail': 'restart pending', 'token': None,\n                           'version': None, 'hostBase': host._host_base(conversation), 'previewHost': None}",
     "result": {
       "status": "starting",
       "detail": "restart pending",
       "token": null,
       "version": null,
-      "previewHost": "pod.preview.apps.abacus.ai"
+      "hostBase": "/api/botHost/1c0d9e2f7a",
+      "previewHost": null
     }
   },
   {
     "source": "server response fixture (kept in step with the hosting service)",
-    "python": "{'status': 'ready', 'token': mint_connect_token(secret, owner, org, int(time.time()) + ABACUSAIBOT_HOST_TOKEN_SECONDS),\n                'preview_host': preview_host, 'version': manifest['version'], 'detail': None}",
+    "python": "{'status': 'ready', 'token': mint_connect_token(secret, owner, org, int(time.time()) + ABACUSAIBOT_HOST_TOKEN_SECONDS),\n                'host_base': host_base, 'preview_host': None, 'version': manifest['version'], 'detail': None}",
     "result": {
       "status": "ready",
       "token": "eyJvIjoib3duZXIiLCJnIjoib3JnIiwiZSI6OTk5OTk5OTk5OX0.signature",
-      "previewHost": "pod.preview.apps.abacus.ai",
+      "hostBase": "/api/botHost/1c0d9e2f7a",
+      "previewHost": null,
       "version": "1.2-web.3",
       "detail": null
     }

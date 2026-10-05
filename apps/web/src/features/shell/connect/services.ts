@@ -10,21 +10,24 @@ export class ConnectError extends Error {
     super(message);
   }
 }
-const Host = v.object({
-  deploymentConversationId: v.string(),
-  previewHost: v.string(),
-});
+const Host = v.object({ deploymentConversationId: v.string() });
+/** Same-origin path the server proxies to the host (`/api/botHost/<id>`). */
+const HostBase = v.nullish(v.pipe(v.string(), v.regex(/^\/(?!\/)/)));
+// Legacy per-conversation preview hostname; null once `hostBase` ships.
+const PreviewHost = v.nullish(v.string());
 const Bootstrap = v.variant("status", [
   v.object({
     status: v.literal("starting"),
     token: v.nullable(v.pipe(v.string(), v.minLength(1))),
     version: v.nullable(v.string()),
-    previewHost: v.string(),
+    hostBase: HostBase,
+    previewHost: PreviewHost,
     detail: v.nullable(v.string()),
   }),
   v.object({
     status: v.literal("ready"),
-    previewHost: v.string(),
+    hostBase: HostBase,
+    previewHost: PreviewHost,
     token: v.pipe(v.string(), v.minLength(1)),
     version: v.nullable(v.string()),
     detail: v.nullable(v.string()),
@@ -35,6 +38,16 @@ const Health = v.object({
   owner: v.string(),
   contractVersion: v.number(),
 });
+/** HTTP prefix for `/healthz`, `/rpc`, `/files` and `/upload`. */
+export const hostHttpBase = (boot: {
+  hostBase?: string | null;
+  previewHost?: string | null;
+}): string => {
+  if (boot.hostBase) return location.origin + boot.hostBase.replace(/\/+$/, "");
+  // Fallback for servers that still answer only `previewHost`; remove with it.
+  if (boot.previewHost) return `https://${boot.previewHost}`;
+  throw new ConnectError("connection", "Invalid connection service response");
+};
 const parse = <T>(schema: v.GenericSchema<unknown, T>, value: unknown): T => {
   try {
     return v.parse(schema, value);
@@ -86,10 +99,11 @@ const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 export interface BrowserConnection {
   url: string;
+  /** HTTP prefix of the host routes (no trailing slash). */
+  base: string;
   token: string;
   tokenIssuedAt: number;
   deploymentConversationId: string;
-  origin: string;
   local?: boolean;
 }
 let connection: BrowserConnection | undefined;
@@ -133,7 +147,7 @@ export const refreshUploadToken = (
     return Promise.resolve(host);
   refreshing ??= bootstrap(host.deploymentConversationId)
     .then((boot) => {
-      if (`https://${boot.previewHost}` !== host.origin)
+      if (hostHttpBase(boot) !== host.base)
         throw new ConnectError(
           "connection",
           "Host identity changed; reconnect before uploading"
@@ -168,7 +182,7 @@ export const resolveBrowserHost = async (
       );
     connection = {
       url: url.href,
-      origin: url.origin.replace(/^ws/, "http"),
+      base: url.origin.replace(/^ws/, "http"),
       token,
       tokenIssuedAt: Date.now(),
       deploymentConversationId: "local",
@@ -181,7 +195,7 @@ export const resolveBrowserHost = async (
   const boot = await bootstrap(host.deploymentConversationId, forceRestart);
   const tokenIssuedAt = Date.now();
   stage("installing");
-  const origin = `https://${boot.previewHost}`;
+  const base = hostHttpBase(boot);
   let owner: string;
   try {
     const payload = JSON.parse(
@@ -197,7 +211,7 @@ export const resolveBrowserHost = async (
   for (;;) {
     let response: Response | undefined;
     try {
-      response = await fetch(`${origin}/healthz`, { credentials: "include" });
+      response = await fetch(`${base}/healthz`, { credentials: "include" });
     } catch {
       /* Proxy may still be starting. */
     }
@@ -227,8 +241,8 @@ export const resolveBrowserHost = async (
   }
   stage("connecting");
   connection = {
-    origin,
-    url: origin.replace(/^https:/, "wss:") + "/rpc",
+    base,
+    url: base.replace(/^http/, "ws") + "/rpc",
     token: boot.token,
     tokenIssuedAt,
     deploymentConversationId: host.deploymentConversationId,

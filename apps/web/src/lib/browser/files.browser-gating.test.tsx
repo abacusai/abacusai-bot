@@ -83,7 +83,7 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
         success: true,
         result: {
           deploymentConversationId: "conversation",
-          previewHost: "pod.preview.apps.abacus.ai",
+          previewHost: null,
         },
       })
     )
@@ -94,7 +94,6 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
           ...serverFixtures.find(
             (fixture) => fixture.result.status === "ready"
           )!.result,
-          previewHost: "pod.preview.apps.abacus.ai",
           token,
         },
       })
@@ -118,7 +117,6 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
           ...serverFixtures.find(
             (fixture) => fixture.result.status === "ready"
           )!.result,
-          previewHost: "pod.preview.apps.abacus.ai",
           token: "fresh.token",
         },
       })
@@ -131,7 +129,6 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
           ...serverFixtures.find(
             (fixture) => fixture.result.status === "ready"
           )!.result,
-          previewHost: "pod.preview.apps.abacus.ai",
           token: "retry.token",
         },
       })
@@ -148,6 +145,14 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
   expect(host.url).toBe(url);
   const uploads = fetch.mock.calls.filter(([url]) =>
     String(url).includes("/upload?")
+  );
+  const { hostBase } = serverFixtures.find(
+    (fixture) => fixture.result.status === "ready"
+  )!.result;
+  expect(uploads.map(([url]) => url)).toEqual(
+    Array(2).fill(
+      `${location.origin}${hostBase}/upload?workspaceId=workspace&sessionId=session`
+    )
   );
   expect(uploads.map(([, options]) => options)).toEqual([
     expect.objectContaining({

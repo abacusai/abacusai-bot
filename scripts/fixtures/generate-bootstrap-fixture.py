@@ -14,6 +14,7 @@ from pathlib import Path
 
 tests, server = (Path(arg).resolve() for arg in sys.argv[1:3])
 preview = 'pod.preview.apps.abacus.ai'
+host_base = '/api/botHost/1c0d9e2f7a'
 token = 'eyJvIjoib3duZXIiLCJnIjoib3JnIiwiZSI6OTk5OTk5OTk5OX0.signature'
 fixtures = []
 for path in (tests, server):
@@ -39,6 +40,8 @@ for path in (tests, server):
                 result[key] = value.value
             elif key in ('previewHost', 'preview_host'):
                 result[key] = preview
+            elif key in ('hostBase', 'host_base'):
+                result[key] = host_base
             elif key == 'token':
                 result[key] = token
             elif key == 'version':

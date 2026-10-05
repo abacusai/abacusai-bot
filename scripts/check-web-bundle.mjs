@@ -77,7 +77,8 @@ export const checkWebBundle = async (
   );
   assert.match(
     html.replaceAll("&#39;", "'"),
-    /connect-src 'self' https:\/\/\*\.preview\.apps\.abacus\.ai wss:\/\/\*\.preview\.apps\.abacus\.ai;/
+    // Same-origin host proxy; VITE_CONNECT_SRC may append extra sources.
+    /connect-src 'self'[ ;]/
   );
   return {
     chunks: chunks.length,
