@@ -24,7 +24,10 @@ import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import {
+  useAppContext,
+  useOptimisticToggle,
+} from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -146,6 +149,26 @@ export const McpPage = () => {
       queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
     });
   };
+  const setDisabled = useOptimisticToggle({
+    queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
+    mutationFn: async (change: { name: string; disabled: boolean }) => {
+      const result = await transport.client.mcp.setDisabled({
+        mode: "code",
+        ...change,
+      });
+      if (!result.success) throw new Error(result.error ?? t("phase5.failed"));
+    },
+    apply: (servers: McpServerInfo[], change) =>
+      servers.map((server) =>
+        server.name === change.name
+          ? {
+              ...server,
+              config: { ...server.config, disabled: change.disabled },
+            }
+          : server
+      ),
+    onError: () => showError(t("phase5.failed")),
+  });
   const importServers = async (
     source: "claude" | "cursor" | "deepagent" | "file" | "json"
   ) => {
@@ -293,13 +316,10 @@ export const McpPage = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() =>
-                      void mutate(
-                        transport.client.mcp.setDisabled({
-                          mode: "code",
-                          name: server.name,
-                          disabled: !server.config.disabled,
-                        })
-                      ).catch(() => showError(t("phase5.failed")))
+                      setDisabled.mutate({
+                        name: server.name,
+                        disabled: !server.config.disabled,
+                      })
                     }
                   >
                     {t(

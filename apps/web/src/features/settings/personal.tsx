@@ -35,7 +35,11 @@ import { isQuietNow } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";
-import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
+import {
+  useAppContext,
+  rpcError,
+  useOptimisticToggle,
+} from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -587,7 +591,6 @@ export const MemoryPage = () => {
 export const NotificationsPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
   const bots = useLiveQuery(useCollections().bots).data ?? [];
@@ -595,6 +598,15 @@ export const NotificationsPage = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   const fail = () => showError(t("phase5.saveFailed"));
+  const setNotify = useOptimisticToggle({
+    queryKey: transport.orpc.settings.notifications.get.queryKey({
+      input: {},
+    }),
+    mutationFn: (value: { enabled: boolean; sound: boolean }) =>
+      transport.client.settings.notifications.set(value),
+    apply: (_data: NonNullable<typeof notification.data>, value) => value,
+    onError: fail,
+  });
   const q = prefs.sounds.quietHours ?? {
     enabled: false,
     start: "22:00",
@@ -616,21 +628,12 @@ export const NotificationsPage = () => {
           <SettingSwitch
             id="notify"
             checked={notification.data?.enabled ?? true}
-            onCheckedChange={(enabled) => {
-              const key = transport.orpc.settings.notifications.get.queryKey({
-                input: {},
-              });
-              const previous = notification.data;
-              const value = { enabled, sound: previous?.sound ?? true };
-              cache.setQueryData(key, value);
-              void transport.client.settings.notifications
-                .set(value)
-                .then((result) => cache.setQueryData(key, result))
-                .catch(() => {
-                  cache.setQueryData(key, previous);
-                  fail();
-                });
-            }}
+            onCheckedChange={(enabled) =>
+              setNotify.mutate({
+                enabled,
+                sound: notification.data?.sound ?? true,
+              })
+            }
           />
         </SettingRow>
         <SettingRow id="sounds" title={t("phase5.settings.sounds")}>
