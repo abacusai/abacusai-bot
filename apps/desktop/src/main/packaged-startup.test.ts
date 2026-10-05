@@ -44,6 +44,26 @@ const RUNTIME_PROVIDED = new Set([
 
 const BUNDLES = ["dist/main/index.js", "dist/preload/index.cjs"];
 
+/**
+ * The chunks main splits off for its dynamic imports (the MCP SDK). They
+ * load later than the entry, but an unresolvable import in one fails the same
+ * way, only at the moment the feature is first used.
+ */
+const MAIN_CHUNKS = "dist/main/assets";
+
+/** Every file the main and preload processes can load. */
+const loadedBundles = (): string[] => {
+  const chunks = resolve(DESKTOP, MAIN_CHUNKS);
+  return [
+    ...BUNDLES,
+    ...(existsSync(chunks)
+      ? readdirSync(chunks)
+          .filter((name) => name.endsWith(".js"))
+          .map((name) => `${MAIN_CHUNKS}/${name}`)
+      : []),
+  ];
+};
+
 /** What the main and preload bundles are built from. */
 const SOURCES = [
   "src/main",
@@ -152,7 +172,10 @@ const bareImports = (source: string): string[] => {
     /(?:^|[\s;{}(])(?:import|export)\s*(?:[\w*{},\s]*?\s*from\s*)?["']([^"'.][^"']*)["']/g,
     // `__require(` too: rolldown's CommonJS shim, which is how a bundled
     // package's own requires come out, and what a `\b` cannot see past.
-    /(?:^|[^\w$.])(?:__)?require\(\s*["']([^"'.][^"']*)["']\s*\)/g,
+    // Not one that opens a template literal: that is code generated as text,
+    // such as Ajv's `require("ajv/dist/runtime/...")` for standalone
+    // validators, which never runs here.
+    /(?:^|[^\w$.`])(?:__)?require\(\s*["']([^"'.][^"']*)["']\s*\)/g,
     /\bimport\(\s*["']([^"'.][^"']*)["']\s*\)/g,
   ];
 
@@ -174,6 +197,20 @@ const bareImports = (source: string): string[] => {
   return [...found].sort();
 };
 
+describe("reading imports out of a bundle", () => {
+  it("skips code that only exists as text in a template literal", () => {
+    // The two shapes Ajv's code generator leaves in the MCP SDK chunk.
+    const source = [
+      'code: (0, codegen_1._)`require("ajv/dist/runtime/validation_error").default`',
+      'formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${name}`',
+      'var equal = __require("fast-deep-equal");',
+      'const x = require("left-pad");',
+    ].join("\n");
+
+    expect(bareImports(source)).toEqual(["fast-deep-equal", "left-pad"]);
+  });
+});
+
 describe("the packaged bundles", () => {
   it("import nothing the packaged app does not contain", () => {
     buildIfStale();
@@ -187,7 +224,7 @@ describe("the packaged bundles", () => {
     // requires its own dependencies at run time, so those must be in the tree.
     const packaged = packagedDependencies();
 
-    const unresolvable = BUNDLES.flatMap((bundle) =>
+    const unresolvable = loadedBundles().flatMap((bundle) =>
       bareImports(readFileSync(resolve(DESKTOP, bundle), "utf8"))
         .filter(
           (specifier) =>
@@ -199,6 +236,37 @@ describe("the packaged bundles", () => {
 
     expect(unresolvable).toEqual([]);
     // A build takes longer than a unit test's default budget.
+  }, 600_000);
+});
+
+describe("the main entry", () => {
+  /** The npm packages a bundle's source map says it was built from. */
+  const packagesIn = (bundle: string): string[] =>
+    (
+      JSON.parse(readFileSync(resolve(DESKTOP, `${bundle}.map`), "utf8")) as {
+        sources: string[];
+      }
+    ).sources.filter((source) => source.includes("node_modules/"));
+
+  it("leaves the MCP SDK to a chunk loaded when a server first starts", () => {
+    buildIfStale();
+    const sdk = (sources: string[]): string[] =>
+      sources.filter((source) =>
+        source.includes("node_modules/@modelcontextprotocol/sdk/")
+      );
+    // Its zod schemas and Ajv would otherwise be evaluated at every launch.
+    expect(sdk(packagesIn("dist/main/index.js"))).toEqual([]);
+
+    // One chunk, the one mcp-http-server.ts imports, holding all of it.
+    const chunks = loadedBundles().filter((bundle) =>
+      /^dist\/main\/assets\/mcp-sdk-[\w-]+\.js$/.test(bundle)
+    );
+    expect(chunks).toHaveLength(1);
+    const chunk = chunks[0]!;
+    expect(sdk(packagesIn(chunk))).not.toEqual([]);
+    expect(
+      readFileSync(resolve(DESKTOP, "dist/main/index.js"), "utf8")
+    ).toContain(`import("./assets/${chunk.split("/").pop()}")`);
   }, 600_000);
 });
 

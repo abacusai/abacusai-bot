@@ -56,7 +56,17 @@ const post = (port: number, body: object): Promise<string> =>
   new Promise((resolve, reject) => {
     const payload = JSON.stringify(body);
     const req = http.request(
-      { host: "127.0.0.1", port, path: "/mcp", method: "POST", headers: AUTH },
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/mcp",
+        method: "POST",
+        headers: {
+          ...AUTH,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+      },
       (res) => {
         let data = "";
         res.on("data", (c: Buffer) => (data += c.toString()));
@@ -76,7 +86,11 @@ describe("dynamic tool availability", () => {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize",
-      params: {},
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "test", version: "1.0.0" },
+      },
     });
     const parsed = JSON.parse(body) as {
       result: { capabilities: { tools: { listChanged: boolean } } };
@@ -88,11 +102,17 @@ describe("dynamic tool availability", () => {
     server = build();
     const port = await server.start();
 
-    // Open the SSE channel the way the agent's MCP client does.
+    // Open the stream a Streamable HTTP client holds for server notifications.
     const frames: string[] = [];
     const sse = await new Promise<http.IncomingMessage>((resolve, reject) => {
       const req = http.request(
-        { host: "127.0.0.1", port, path: "/mcp", method: "GET", headers: AUTH },
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/mcp",
+          method: "GET",
+          headers: { ...AUTH, Accept: "text/event-stream" },
+        },
         resolve
       );
       req.on("error", reject);
@@ -100,7 +120,7 @@ describe("dynamic tool availability", () => {
     });
     sse.on("data", (c: Buffer) => frames.push(c.toString()));
 
-    // Let the endpoint handshake frame arrive, then flip availability.
+    // Let the stream register, then flip availability.
     await new Promise((r) => setTimeout(r, 20));
     server.notifyToolListChanged();
     await new Promise((r) => setTimeout(r, 20));

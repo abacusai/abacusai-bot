@@ -1,0 +1,160 @@
+[
+  {
+    "name": "browser_navigate",
+    "description": "Navigate the browser. goto loads a URL; back, forward and reload move through history.\n\nPut the query in the URL whenever the site allows it; one goto replaces a dozen clicks:\n  google.com/travel/flights?q=Flights from BLR to DEL on 2026-09-20 one way\n  google.com/maps/search/coffee+near+me   ·   amazon.in/s?k=usb+c+cable\n\nThe result already lists the page's clickable elements with @eN refs, so you can act\nright away without a separate snapshot.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "goto",
+            "back",
+            "forward",
+            "reload"
+          ],
+          "description": "Navigation action; a call with only a url is a \"goto\""
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to navigate to (required for \"goto\")"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "name": "browser_snapshot",
+    "description": "Read the page. Every element you can act on has an @eN ref that stays the same\nfor as long as the element is on the page.\n\nsnapshot:    the element tree. Add find:\"Delhi\" to list only elements whose label\n             matches, or interactive_only:true to drop plain text. Prefer find over\n             reading a whole tree.\nextract:     structured rows without writing JavaScript: selector (required), optional\n             fields {\"price\": \".price\"} mapping names to selectors inside each row, limit.\n             A <table> comes back as rows of cells.\nscreenshot:  an image of the viewport plus a short description of where the page is.\ntext:        visible text, optionally scoped by selector.\nurl / title: just that.\nfind:        shorthand for snapshot with find:\"...\" (same result).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "snapshot",
+            "extract",
+            "screenshot",
+            "text",
+            "url",
+            "title",
+            "find"
+          ],
+          "description": "What to read"
+        },
+        "find": {
+          "type": "string",
+          "description": "snapshot only: list only elements whose label, placeholder or value contains this text (e.g. \"Add to cart\")"
+        },
+        "interactive_only": {
+          "type": "boolean",
+          "description": "snapshot only: leave out plain text nodes"
+        },
+        "selector": {
+          "type": "string",
+          "description": "CSS selector: the rows for \"extract\" (required there), or the region for \"text\""
+        },
+        "fields": {
+          "type": "object",
+          "description": "extract only: column name → selector inside each row, e.g. {\"title\":\"h2\",\"price\":\".a-price\"}",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "limit": {
+          "type": "number",
+          "description": "extract only: maximum rows (default 25, max 100)"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  {
+    "name": "browser_interact",
+    "description": "Act on an element by its @eN ref. The result says what changed (new elements with\ntheir refs, a new URL, a dialog that appeared), so you rarely need\nanother snapshot. Refs stay valid while the element exists.\n\nclick:         click (params: ref)\nfill:          replace a field's text (params: ref, text)\npick:          fill an autocomplete and choose the matching suggestion from its dropdown,\n               then confirm the field took it (params: ref, text). Use this for city,\n               airport, product and address boxes; plain fill leaves them unchanged.\ntype:          append text without clearing (params: ref, text)\nselect:        choose an option in a <select> (params: ref, value; option text works)\npress:         a key or combo (params: key, e.g. Enter, Escape, ArrowDown, Control+a)\ndismiss:       close the cookie banner, consent dialog or overlay on top of the page\ncheck / uncheck: a checkbox (params: ref)\nhover, focus, scroll_into_view: (params: ref)\nscroll:        the page or an element (params: direction, amount, optional ref)\nwait:          until text appears, a URL matches, or an element exists\n               (params: text | url_pattern | ref, amount = timeout ms). Use this instead\n               of snapshotting in a loop while results load.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "click",
+            "fill",
+            "pick",
+            "type",
+            "select",
+            "press",
+            "dismiss",
+            "hover",
+            "scroll",
+            "scroll_into_view",
+            "focus",
+            "check",
+            "uncheck",
+            "wait"
+          ],
+          "description": "Interaction action"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Element ref from a snapshot or a previous result, e.g. \"@e3\""
+        },
+        "selector": {
+          "type": "string",
+          "description": "Advanced: a CSS selector instead of a ref. Only when no ref exists for the element."
+        },
+        "text": {
+          "type": "string",
+          "description": "Text for fill/pick/type, or the text to wait for in wait"
+        },
+        "value": {
+          "type": "string",
+          "description": "Option value or label for select"
+        },
+        "key": {
+          "type": "string",
+          "description": "Key for press, e.g. \"Enter\", \"Tab\", \"Escape\", \"ArrowDown\", \"Control+a\""
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ],
+          "description": "Scroll direction"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Scroll pixels (default 500) or wait timeout ms (default 5000)"
+        },
+        "url_pattern": {
+          "type": "string",
+          "description": "URL glob pattern for wait, e.g. \"**/results**\""
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  {
+    "name": "browser_execute",
+    "description": "Run JavaScript in the page and return the result. For anything browser_snapshot extract\ncannot express: shadow roots, iframes, computed styles. A bare expression is returned\nas-is; `return` also works.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "JavaScript code to execute. Runs inside an async function; a bare expression or a return statement both work."
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  }
+]
