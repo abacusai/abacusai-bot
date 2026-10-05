@@ -259,9 +259,9 @@ export const ArtifactsPage = ({
   );
   return (
     <div className="flex size-full flex-col">
-      <header className="flex h-14 items-center gap-3 px-5">
+      <header className="phone:h-auto phone:flex-wrap phone:px-4 phone:py-3 flex h-14 items-center gap-3 px-5">
         <h1 className="text-base font-semibold">{t("shell.rail.artifacts")}</h1>
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
           {t("phase5.items", { count: filtered.length })}
         </span>
         <div className="ml-auto">

@@ -307,3 +307,31 @@ html:active-view-transition-type(session-view)::view-transition-old(.session-vie
 html:active-view-transition-type(session-view)::view-transition-new(.session-view) {
   animation-duration: 120ms;
 }
+
+/*
+ * Touch screens (gated by capability, never by width): no tap flash, no font
+ * inflation, no pull-to-refresh over the app, 16 px inputs so iOS does not
+ * zoom into them, and controls that respond at once and are not selected by a
+ * long press. Pointer devices are unchanged.
+ */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em);
+  }
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

@@ -26,6 +26,7 @@ import { Spinner } from "#renderer/components/spinner";
 import { isNotFound, rpcCode } from "#renderer/data/ai";
 import { cn } from "#renderer/lib/cn";
 import { useMotionPreference } from "#renderer/lib/motion";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
 import {
   Attachment,
@@ -568,6 +569,9 @@ export const ThreadComposer = () => {
     );
   };
 
+  // The 800 px band and phones (chat-kit W800): the model chip is an icon button.
+  const narrow = useMediaQuery("(max-width: 899px)");
+
   if (config.readOnly != null || gone)
     return (
       <div
@@ -622,6 +626,7 @@ export const ThreadComposer = () => {
     config.model != null ? (
       <ModelChip
         binding={config.model}
+        compact={narrow}
         onUseLocalModel={config.onUseLocalModel}
         onOpenChange={(open) => setModelMenu(threadId, open)}
       />

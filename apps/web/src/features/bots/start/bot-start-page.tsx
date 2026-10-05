@@ -161,9 +161,9 @@ export const BotStartPage = ({
             {t("bots.start.templates")}
           </p>
           {
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="phone:flex-nowrap flex flex-wrap items-center gap-2">
               <ToggleGroup
-                className="flex-wrap"
+                className="phone:min-w-0 phone:flex-nowrap phone:overflow-x-auto phone:[scrollbar-width:none] flex-wrap"
                 value={[category]}
                 onValueChange={(items) => {
                   if (items[0])
@@ -181,7 +181,11 @@ export const BotStartPage = ({
                     "research",
                   ] as const
                 ).map((id) => (
-                  <ToggleGroupItem key={id} value={id}>
+                  <ToggleGroupItem
+                    key={id}
+                    value={id}
+                    className="phone:shrink-0"
+                  >
                     {t(`bots.start.categories.${id}`)}
                   </ToggleGroupItem>
                 ))}

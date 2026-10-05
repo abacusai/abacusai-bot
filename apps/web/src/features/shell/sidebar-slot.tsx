@@ -19,8 +19,9 @@ import {
   useMotionValue,
   type Transition,
 } from "motion/react";
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 
+import { cn } from "#renderer/lib/cn";
 import {
   motionFor,
   reducedTransition,
@@ -65,10 +66,13 @@ export const SidebarSlot = ({
   mode,
   sidebarId,
   onEscape,
+  rail,
 }: {
   mode: SidebarMode;
   sidebarId: ShellArea | undefined;
   onEscape?: () => void;
+  /** A phone: the rail is off screen and opens with the sidebar, beside it. */
+  rail?: ReactNode;
 }) => {
   const floating = useStore(shellStore, (state) => state.floating);
   const motionPref = useMotionPreference();
@@ -138,7 +142,12 @@ export const SidebarSlot = ({
             ref={floatingRef}
             data-slot="sidebar-floating"
             data-reason={floating.reason ?? undefined}
-            className="border-sidebar-border bg-sidebar fixed top-[calc(var(--toolbar-h)+4px)] bottom-1 left-[calc(var(--rail-w)+4px)] z-30 flex w-(--sidebar-w) flex-col overflow-hidden rounded-(--pane-radius) border pt-2 shadow-[0_24px_64px_rgb(0_0_0/0.18)] dark:shadow-[0_24px_64px_rgb(0_0_0/0.6)]"
+            className={cn(
+              "border-sidebar-border bg-sidebar fixed top-[calc(var(--toolbar-h)+4px)] bottom-1 z-30 flex overflow-hidden rounded-(--pane-radius) border pt-2 shadow-[0_24px_64px_rgb(0_0_0/0.18)] dark:shadow-[0_24px_64px_rgb(0_0_0/0.6)]",
+              rail == null
+                ? "left-[calc(var(--rail-w)+4px)] w-(--sidebar-w) flex-col"
+                : "top-[calc(var(--toolbar-h)+env(safe-area-inset-top)+4px)] bottom-[calc(env(safe-area-inset-bottom)+4px)] left-[calc(env(safe-area-inset-left)+4px)] w-[calc(var(--rail-w)+var(--sidebar-w))] max-w-[calc(100vw-8px)] flex-row"
+            )}
             initial={{ opacity: 0, x: motionPref === "reduced" ? 0 : -8 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: motionPref === "reduced" ? 0 : -8 }}
@@ -160,7 +169,10 @@ export const SidebarSlot = ({
             }}
             onKeyDown={onKeyDown}
           >
-            <SidebarContent sidebarId={sidebarId} />
+            {rail}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <SidebarContent sidebarId={sidebarId} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -220,7 +220,7 @@ export const SessionStartPage = ({
           <p className="text-foreground/75 mb-2 text-xs">
             {t("sessions.start.try")}
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="phone:grid-cols-2 grid grid-cols-3 gap-2">
             {starters.map((starter) => (
               <Button
                 key={starter.id}

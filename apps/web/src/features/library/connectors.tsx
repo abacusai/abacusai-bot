@@ -139,9 +139,12 @@ export const ConnectorsPage = () => {
                   detail={statuses.data?.[e.id]?.account ?? e.description}
                 >
                   <ConnectorMark id={e.logo ?? e.id} size={28} />
-                  <StatePill>
-                    {t(group ? "phase5.connected" : "phase5.available")}
-                  </StatePill>
+                  {/* The section heading already says it; a phone folds the pill. */}
+                  <span className="phone:hidden contents">
+                    <StatePill>
+                      {t(group ? "phase5.connected" : "phase5.available")}
+                    </StatePill>
+                  </span>
                   <Button
                     size="sm"
                     variant="secondary"
