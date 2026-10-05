@@ -207,7 +207,7 @@ export const BotRowView = ({
                 {mark != null && <ConnectorMark id={mark} size={16} />}
                 <span
                   style={{ visibility: menuOpen ? "hidden" : undefined }}
-                  className="text-muted-foreground ml-auto shrink-0 text-[11px] group-focus-within/row:invisible group-hover/row:invisible"
+                  className="text-muted-foreground ml-auto shrink-0 text-[11px] group-focus-within/row:invisible group-hover/row:invisible [@media(hover:none)]:invisible"
                 >
                   {stamp}
                 </span>
@@ -250,7 +250,7 @@ export const BotRowView = ({
               variant="ghost"
               size="icon-sm"
               aria-label={t("bots.sidebar.options", { name: bot.name })}
-              className="bg-sidebar-accent text-muted-foreground absolute top-1.5 right-1.5 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
+              className="bg-sidebar-accent text-muted-foreground absolute top-1.5 right-1.5 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
             />
           }
         >

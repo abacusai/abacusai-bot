@@ -6,9 +6,10 @@
  */
 import { SHELL_GEOMETRY } from "./geometry";
 
-export type Band = "sm" | "md" | "lg" | "xl";
+/** `xs`: a phone browser, below the desktop window minimum. */
+export type Band = "xs" | "sm" | "md" | "lg" | "xl";
 
-/** Lower bounds, px. 800 is the window minimum. */
+/** Lower bounds, px. 800 is the desktop window minimum; below it is `xs`. */
 export const BAND_MIN = { sm: 800, md: 900, lg: 1000, xl: 1100 } as const;
 
 export const bandFor = (width: number): Band =>
@@ -18,7 +19,9 @@ export const bandFor = (width: number): Band =>
       ? "lg"
       : width >= BAND_MIN.md
         ? "md"
-        : "sm";
+        : width >= BAND_MIN.sm
+          ? "sm"
+          : "xs";
 
 export type ShellArea =
   | "bots"
@@ -70,6 +73,9 @@ export const shellLayout = (input: {
   if (band === "sm" && input.area === "bots" && input.pinned) sidebar = "strip";
   if (band === "md" || (band === "sm" && input.area !== "bots"))
     sidebar = "floating";
+  // Below the window minimum (a phone browser): the `sm` rules, with every
+  // sidebar floating (the canvas's unpinned mode) so none takes the pane's width.
+  if (band === "xs") sidebar = "floating";
 
   if (
     input.area === "sessions" &&
@@ -92,7 +98,7 @@ export const shellLayout = (input: {
     sidePanel: input.panelOpen ? (band === "xl" ? "layout" : "drawer") : null,
     titleBar: {
       status: band === "xl" || band === "lg",
-      actionsFolded: band === "sm",
+      actionsFolded: band === "sm" || band === "xs",
       appName: sidebar === "pinned",
     },
   };

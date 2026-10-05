@@ -144,7 +144,7 @@ const NavItem = ({
     aria-current={active ? "page" : undefined}
     title={hint}
     className={cn(
-      "text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent h-(--row-h) flex-nowrap gap-2 rounded-lg px-2 py-0 text-[13px]",
+      "text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent phone:rounded-xl phone:px-3 phone:text-[15px] h-(--row-h) flex-nowrap gap-2 rounded-lg px-2 py-0 text-[13px]",
       indent && "pl-7",
       className
     )}

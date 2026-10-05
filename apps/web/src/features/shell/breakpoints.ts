@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 
 import { BAND_MIN, type Band } from "./layout";
 
-const QUERIES = [BAND_MIN.md, BAND_MIN.lg, BAND_MIN.xl].map(
+const QUERIES = [BAND_MIN.sm, BAND_MIN.md, BAND_MIN.lg, BAND_MIN.xl].map(
   (px) => `(min-width: ${px}px)`
 );
 
@@ -19,12 +19,15 @@ const subscribe = (onChange: () => void): (() => void) => {
 };
 
 const currentBand = (): Band => {
-  const [md, lg, xl] = QUERIES.map((query) => window.matchMedia(query).matches);
-  return xl ? "xl" : lg ? "lg" : md ? "md" : "sm";
+  const [sm, md, lg, xl] = QUERIES.map(
+    (query) => window.matchMedia(query).matches
+  );
+  return xl ? "xl" : lg ? "lg" : md ? "md" : sm ? "sm" : "xs";
 };
 
 /** A width in the band, for the pure layout function. */
 export const BAND_WIDTH: Record<Band, number> = {
+  xs: 390,
   sm: BAND_MIN.sm,
   md: BAND_MIN.md,
   lg: BAND_MIN.lg,

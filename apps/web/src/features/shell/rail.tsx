@@ -117,10 +117,14 @@ export const Rail = ({
       data-slot="rail"
       data-tour="rail-bots-sessions"
       className="flex w-(--rail-w) shrink-0 flex-col items-center pt-1 pb-3"
-      onPointerEnter={() => {
+      // Hover intent is a mouse gesture: a tap navigates and never opens or
+      // closes the floating sidebar (the title-bar toggle does on a phone).
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "mouse") return;
         if (floatingEnabled) intent.hover();
       }}
-      onPointerLeave={() => {
+      onPointerLeave={(event) => {
+        if (event.pointerType !== "mouse") return;
         // Moving onto the floating sidebar holds it open.
         if (floatingEnabled) intent.leave();
         else intent.cancel();

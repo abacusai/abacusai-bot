@@ -674,7 +674,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       </MessageScrollerViewport>
       <MessageScrollerButton
         direction="end"
-        className="bg-popover text-popover-foreground border opacity-100 shadow-lg"
+        className="bg-popover text-popover-foreground phone:h-10 phone:min-w-10 phone:rounded-full phone:bg-popover/85 phone:backdrop-blur-lg border opacity-100 shadow-lg"
         aria-label={
           marker.count > 0
             ? t("chat.transcript.jumpNew", { count: marker.count })

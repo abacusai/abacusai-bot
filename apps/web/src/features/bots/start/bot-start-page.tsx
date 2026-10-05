@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
@@ -73,7 +74,7 @@ export const BotStartPage = ({
       className="size-full overflow-auto"
       style={accentVars(look)}
     >
-      <div className="mx-auto flex w-[calc(100%-48px)] max-w-[760px] flex-col items-center gap-5 py-8">
+      <div className="phone:w-[calc(100%-32px)] phone:pt-6 mx-auto flex w-[calc(100%-48px)] max-w-[760px] flex-col items-center gap-5 py-8">
         {empty && (
           <>
             <h1 className="text-[22px] font-semibold">
@@ -161,9 +162,9 @@ export const BotStartPage = ({
             {t("bots.start.templates")}
           </p>
           {
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="phone:flex-nowrap flex flex-wrap items-center gap-2">
               <ToggleGroup
-                className="flex-wrap"
+                className="phone:min-w-0 phone:flex-nowrap phone:overflow-x-auto phone:[scrollbar-width:none] phone:pe-6 phone:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] flex-wrap"
                 value={[category]}
                 onValueChange={(items) => {
                   if (items[0])
@@ -181,7 +182,11 @@ export const BotStartPage = ({
                     "research",
                   ] as const
                 ).map((id) => (
-                  <ToggleGroupItem key={id} value={id}>
+                  <ToggleGroupItem
+                    key={id}
+                    value={id}
+                    className="phone:shrink-0"
+                  >
                     {t(`bots.start.categories.${id}`)}
                   </ToggleGroupItem>
                 ))}
@@ -218,32 +223,36 @@ export const BotStartPage = ({
               </DropdownMenu>
             </div>
           }
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
-            {templates.map((template) => (
+          {/* Phones list templates as rows: avatar, then name and purpose. */}
+          <div className="phone:grid-cols-1 grid grid-cols-2 gap-2 xl:grid-cols-3">
+            {templates.map((template, index) => (
               <button
                 key={template.id}
                 type="button"
                 onClick={() => pick(template.id)}
                 data-slot="bot-template"
                 aria-describedby={`template-${template.id}`}
-                className="bg-card hover:bg-muted flex min-w-0 flex-col gap-2 rounded-xl border p-3.5 text-left"
+                style={{ "--rise-i": Math.min(index, 8) } as CSSProperties}
+                className="bg-card hover:bg-muted phone-rise phone:grid phone:grid-cols-[40px_minmax(0,1fr)] phone:gap-x-3 phone:gap-y-1 phone:rounded-2xl phone:p-3 phone:active:bg-muted flex min-w-0 flex-col gap-2 rounded-xl border p-3.5 text-left"
               >
-                <span className="flex items-center gap-2">
-                  <BotAvatar
-                    look={resolveLook({
-                      name: template.name,
-                      avatarShape: template.avatarShape,
-                      avatarColor: template.avatarColor,
-                    })}
-                    size={32}
-                  />
+                <span className="phone:contents flex items-center gap-2">
+                  <span className="phone:row-span-3 phone:self-center flex">
+                    <BotAvatar
+                      look={resolveLook({
+                        name: template.name,
+                        avatarShape: template.avatarShape,
+                        avatarColor: template.avatarColor,
+                      })}
+                      size={32}
+                    />
+                  </span>
                   <span className="text-sm font-medium">
                     {t(`bots.templates.${template.id}.name`)}
                   </span>
                 </span>
                 <span
                   id={`template-${template.id}`}
-                  className="text-muted-foreground line-clamp-2 min-h-9 text-[13px]"
+                  className="text-muted-foreground phone:min-h-0 line-clamp-2 min-h-9 text-[13px]"
                 >
                   {t(`bots.templates.${template.id}.description`)}
                 </span>
