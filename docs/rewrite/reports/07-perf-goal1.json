@@ -1,0 +1,1848 @@
+{
+  "mode": "comparative packaged probe on user-login scratch copies",
+  "machine": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpus": "Apple M3",
+    "ramBytes": 17179869184
+  },
+  "producer": {
+    "kind": "perf",
+    "provenance": "user-login",
+    "sourceVersion": "v1.0.85",
+    "sourceGenerated": false,
+    "description": "user-login, shipped v1.0.85, not source-generated",
+    "status": "complete",
+    "shellObserved": true,
+    "workload": {
+      "bots": 12,
+      "sessions": 40,
+      "histories": 2000,
+      "longSessionMessages": 1000,
+      "creation": "shipped window.api on private scratch copy"
+    }
+  },
+  "builds": {
+    "old": {
+      "executableSha256": "f3ad435032fab43a896deb2bfb8b62cb98851d40da53c76b53f784eee9cb4ca0",
+      "asarSha256": "2d72a5790a5d596246e6acaf79ff5df8ec63ec09a6bf8c8e896ab5b4d03da58d"
+    },
+    "new": {
+      "executableSha256": "e06891704834df56f24489e1f971428161ae17312143624af13736255cc0ab34",
+      "asarSha256": "856e58f77eb3e3d82986da18e08af0cbe38e00aafe53646be69463b54590fc65"
+    }
+  },
+  "metrics": {
+    "M1": {
+      "old": {
+        "median": 2020.800048828125,
+        "p90": 2042.900146484375,
+        "samples": [2011.400146484375, 2020.800048828125, 2042.900146484375]
+      },
+      "new": {
+        "median": 1719.900146484375,
+        "p90": 1931.599853515625,
+        "samples": [1719.900146484375, 1705.900146484375, 1931.599853515625]
+      },
+      "changePercent": -14.890137325473829,
+      "budget": 2222.880053710938,
+      "numericBudgetMet": true,
+      "acceptance": "requires complete gate evidence"
+    },
+    "M2": {
+      "old": {
+        "median": 1522.699951171875,
+        "p90": 1548.10009765625,
+        "samples": [1519.800048828125, 1522.699951171875, 1548.10009765625]
+      },
+      "new": {
+        "median": 1294.60009765625,
+        "p90": 1305.699951171875,
+        "samples": [1292.300048828125, 1294.60009765625, 1305.699951171875]
+      },
+      "changePercent": -14.9799606508215,
+      "budget": 1674.9699462890626,
+      "numericBudgetMet": true,
+      "acceptance": "requires complete gate evidence"
+    },
+    "M3": {
+      "old": {
+        "median": 691863552,
+        "p90": 734216192,
+        "samples": [691863552, 685899776, 734216192]
+      },
+      "new": {
+        "median": 880394240,
+        "p90": 886013952,
+        "samples": [886013952, 877395968, 880394240]
+      },
+      "changePercent": 27.24969214739035,
+      "budget": 761049907.2,
+      "numericBudgetMet": false,
+      "acceptance": "requires complete gate evidence"
+    },
+    "M4": {
+      "old": {
+        "median": 22516868,
+        "p90": 22528480,
+        "samples": [22504244, 22528480, 22516868]
+      },
+      "new": {
+        "median": 26516064,
+        "p90": 26651544,
+        "samples": [26496716, 26516064, 26651544]
+      },
+      "changePercent": 17.760889303077132,
+      "budget": 24768554.8,
+      "numericBudgetMet": false,
+      "acceptance": "requires complete gate evidence"
+    },
+    "M5": {
+      "old": {
+        "median": 730.800048828125,
+        "p90": 741.900146484375,
+        "samples": [730.800048828125, 741.900146484375, 693.199951171875]
+      },
+      "new": {
+        "median": 85.400146484375,
+        "p90": 91.89990234375,
+        "samples": [85.400146484375, 91.89990234375, 81.5]
+      },
+      "changePercent": -88.31415698160961,
+      "budget": 803.8800537109375,
+      "numericBudgetMet": true,
+      "acceptance": "requires complete gate evidence"
+    },
+    "M6": {
+      "old": {
+        "median": 1001567,
+        "p90": 1001567,
+        "samples": [1001567, 1001567, 1001567]
+      },
+      "new": {
+        "median": 1207159,
+        "p90": 1207159,
+        "samples": [1207159, 1207159, 1207159]
+      },
+      "changePercent": 20.52703413750652,
+      "budget": 1001567,
+      "numericBudgetMet": false,
+      "acceptance": "requires complete gate evidence"
+    }
+  },
+  "runs": [
+    {
+      "build": "old",
+      "pair": 0,
+      "discarded": true,
+      "M2": 1526.39990234375,
+      "M1": 2051.5,
+      "M4": 22508628,
+      "M5": 735.5,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 691355648,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 64491,
+            "parent": 64490,
+            "rssBytes": 275136512
+          },
+          {
+            "pid": 64501,
+            "parent": 64491,
+            "rssBytes": 106348544
+          },
+          {
+            "pid": 64502,
+            "parent": 64491,
+            "rssBytes": 46252032
+          },
+          {
+            "pid": 64564,
+            "parent": 64491,
+            "rssBytes": 263618560
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1001567,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/index-q-sg76TU.js",
+            "gzipBytes": 925415
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-C0FnF6B9.js",
+            "gzipBytes": 710
+          },
+          {
+            "asarPath": "dist/renderer/assets/jsx-runtime-CKeovgl0.js",
+            "gzipBytes": 2992
+          },
+          {
+            "asarPath": "dist/renderer/assets/query-keys-Hj7P2HG3.js",
+            "gzipBytes": 24756
+          },
+          {
+            "asarPath": "dist/renderer/assets/use-theme-CGAJ02li.js",
+            "gzipBytes": 914
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/index-D9jQnvzF.css",
+            "gzipBytes": 46108
+          }
+        ]
+      }
+    },
+    {
+      "build": "new",
+      "pair": 0,
+      "discarded": true,
+      "M2": 4720.60009765625,
+      "M1": 5530.300048828125,
+      "M4": 26624796,
+      "M5": 83,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 872480768,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 64740,
+            "parent": 64490,
+            "rssBytes": 270778368
+          },
+          {
+            "pid": 64749,
+            "parent": 64740,
+            "rssBytes": 108855296
+          },
+          {
+            "pid": 64750,
+            "parent": 64740,
+            "rssBytes": 45105152
+          },
+          {
+            "pid": 64813,
+            "parent": 64740,
+            "rssBytes": 287604736
+          },
+          {
+            "pid": 64880,
+            "parent": 64740,
+            "rssBytes": 160137216
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1207159,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/main-rhcw4Ng0.js",
+            "gzipBytes": 9540
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-Dd_uD5pT.js",
+            "gzipBytes": 627
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSelector-hMeUlnhI.js",
+            "gzipBytes": 3849
+          },
+          {
+            "asarPath": "dist/renderer/assets/useTranslation-C4fzJ8NF.js",
+            "gzipBytes": 4240
+          },
+          {
+            "asarPath": "dist/renderer/assets/matchContext-jlmOrjiL.js",
+            "gzipBytes": 155
+          },
+          {
+            "asarPath": "dist/renderer/assets/compiler-runtime-DdEb7m_W.js",
+            "gzipBytes": 234
+          },
+          {
+            "asarPath": "dist/renderer/assets/frame-CQGisaUp.js",
+            "gzipBytes": 821
+          },
+          {
+            "asarPath": "dist/renderer/assets/spinner-DoqPDy5j.js",
+            "gzipBytes": 181090
+          },
+          {
+            "asarPath": "dist/renderer/assets/redirect-AmaS3P9G.js",
+            "gzipBytes": 304
+          },
+          {
+            "asarPath": "dist/renderer/assets/not-found-i5RsCZif.js",
+            "gzipBytes": 111
+          },
+          {
+            "asarPath": "dist/renderer/assets/root-DLTE-HSj.js",
+            "gzipBytes": 52
+          },
+          {
+            "asarPath": "dist/renderer/assets/Match-DO_EsbqY.js",
+            "gzipBytes": 1780
+          },
+          {
+            "asarPath": "dist/renderer/assets/Matches-GtOcHBhM.js",
+            "gzipBytes": 18558
+          },
+          {
+            "asarPath": "dist/renderer/assets/sound-DOvbnGxL.js",
+            "gzipBytes": 10194
+          },
+          {
+            "asarPath": "dist/renderer/assets/chevron-down-CNmRlT3p.js",
+            "gzipBytes": 1520
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-mCnq-mu5.js",
+            "gzipBytes": 2803
+          },
+          {
+            "asarPath": "dist/renderer/assets/hotkey-manager-B4gkC1Bb.js",
+            "gzipBytes": 6690
+          },
+          {
+            "asarPath": "dist/renderer/assets/ui-DE1RYzs3.js",
+            "gzipBytes": 15005
+          },
+          {
+            "asarPath": "dist/renderer/assets/hover-card-BqHHar1V.js",
+            "gzipBytes": 5255
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-qGVRGLA3.js",
+            "gzipBytes": 120
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-BcBXMRra.js",
+            "gzipBytes": 293
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-DGWbWN6g.js",
+            "gzipBytes": 1616
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/log-ring-BZ2uGgM8.js",
+            "gzipBytes": 610
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-kBeCKY2x.js",
+            "gzipBytes": 119791
+          },
+          {
+            "asarPath": "dist/renderer/assets/separator-0BiUZ2KB.js",
+            "gzipBytes": 6773
+          },
+          {
+            "asarPath": "dist/renderer/assets/useParams-edixy8GZ.js",
+            "gzipBytes": 194
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSearch-BuW7dCbE.js",
+            "gzipBytes": 170
+          },
+          {
+            "asarPath": "dist/renderer/assets/dropdown-menu-0FDckRBw.js",
+            "gzipBytes": 11885
+          },
+          {
+            "asarPath": "dist/renderer/assets/turns-CO8eSM_q.js",
+            "gzipBytes": 17312
+          },
+          {
+            "asarPath": "dist/renderer/assets/local-models-DyqHcex1.js",
+            "gzipBytes": 1137
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-BDhsOj2r.js",
+            "gzipBytes": 1458
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-requests-DeJo6Fjf.js",
+            "gzipBytes": 11347
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-BglAJ6CW.js",
+            "gzipBytes": 2312
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-request-card-DF2vB5WK.js",
+            "gzipBytes": 4278
+          },
+          {
+            "asarPath": "dist/renderer/assets/link-Ch3HzHVM.js",
+            "gzipBytes": 2216
+          },
+          {
+            "asarPath": "dist/renderer/assets/app-link-DMIwPhN7.js",
+            "gzipBytes": 379
+          },
+          {
+            "asarPath": "dist/renderer/assets/resizable-BpinGj3w.js",
+            "gzipBytes": 13432
+          },
+          {
+            "asarPath": "dist/renderer/assets/alert-dialog-DQZJ9_Dq.js",
+            "gzipBytes": 5083
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-Cktpx59b.js",
+            "gzipBytes": 316050
+          },
+          {
+            "asarPath": "dist/renderer/assets/useNavigate-D5KOICuw.js",
+            "gzipBytes": 273
+          },
+          {
+            "asarPath": "dist/renderer/assets/fileRoute-Bk5pnR5L.js",
+            "gzipBytes": 1110
+          },
+          {
+            "asarPath": "dist/renderer/assets/searchMiddleware-C0hj9KBZ.js",
+            "gzipBytes": 512
+          },
+          {
+            "asarPath": "dist/renderer/assets/lazyRouteComponent-AMenGOe8.js",
+            "gzipBytes": 419
+          },
+          {
+            "asarPath": "dist/renderer/assets/useStore-Jt_fedF3.js",
+            "gzipBytes": 107
+          },
+          {
+            "asarPath": "dist/renderer/assets/empty-state-BUK85Zdy.js",
+            "gzipBytes": 1990
+          },
+          {
+            "asarPath": "dist/renderer/assets/field-PduoNJwE.js",
+            "gzipBytes": 16674
+          },
+          {
+            "asarPath": "dist/renderer/assets/form-kit-D0cM1gZ0.js",
+            "gzipBytes": 16214
+          },
+          {
+            "asarPath": "dist/renderer/assets/useBlocker-CXHfK7xh.js",
+            "gzipBytes": 678
+          },
+          {
+            "asarPath": "dist/renderer/assets/confirm-CUpFW1vI.js",
+            "gzipBytes": 2195
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-K2XYybxl.js",
+            "gzipBytes": 3679
+          },
+          {
+            "asarPath": "dist/renderer/assets/cues-BWDDQkLq.js",
+            "gzipBytes": 2017
+          },
+          {
+            "asarPath": "dist/renderer/assets/routines-Jufz3BL8.js",
+            "gzipBytes": 20890
+          },
+          {
+            "asarPath": "dist/renderer/assets/areas-Bc_iaQJF.js",
+            "gzipBytes": 287
+          },
+          {
+            "asarPath": "dist/renderer/assets/tour-Bh9-227c.js",
+            "gzipBytes": 4432
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-memory-list-CQmAvQoU.js",
+            "gzipBytes": 677
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-_RTWrVrb.js",
+            "gzipBytes": 42486
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-mark-DqueaLFN.js",
+            "gzipBytes": 3501
+          },
+          {
+            "asarPath": "dist/renderer/assets/shared-element-CcviPcKT.js",
+            "gzipBytes": 362
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-DMzaIjuM.js",
+            "gzipBytes": 47875
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CuCK8vrz.js",
+            "gzipBytes": 74695
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-D9DWX5i0.js",
+            "gzipBytes": 88148
+          },
+          {
+            "asarPath": "dist/renderer/assets/runtime-D1c6OXEy.js",
+            "gzipBytes": 44406
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-DEkFX9xS.js",
+            "gzipBytes": 10389
+          },
+          {
+            "asarPath": "dist/renderer/assets/actions-mKPtWnRH.js",
+            "gzipBytes": 549
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-B8Ger0ke.css",
+            "gzipBytes": 31752
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-tazUtPIO.css",
+            "gzipBytes": 2366
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-D_YvtmJ6.css",
+            "gzipBytes": 540
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CMAYOTMG.css",
+            "gzipBytes": 174
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-DId50OC-.css",
+            "gzipBytes": 1624
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-CghTNAii.css",
+            "gzipBytes": 972
+          },
+          {
+            "asarPath": "dist/renderer/assets/_shell-srLdvBgn.js",
+            "gzipBytes": 1537
+          },
+          {
+            "asarPath": "dist/renderer/assets/preview-consumers-DJ-d_Qdq.js",
+            "gzipBytes": 140
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-C8L5cyRS.js",
+            "gzipBytes": 747
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots.new-BaxvyMvp.js",
+            "gzipBytes": 504
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-CMjqlTKQ.js",
+            "gzipBytes": 86
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions.new-DOfYUxT7.js",
+            "gzipBytes": 1363
+          },
+          {
+            "asarPath": "dist/renderer/assets/native-presenter-CBsyQi_G.js",
+            "gzipBytes": 833
+          }
+        ]
+      }
+    },
+    {
+      "build": "old",
+      "pair": 1,
+      "discarded": false,
+      "M2": 1519.800048828125,
+      "M1": 2011.400146484375,
+      "M4": 22504244,
+      "M5": 730.800048828125,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 691863552,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 65024,
+            "parent": 64490,
+            "rssBytes": 276037632
+          },
+          {
+            "pid": 65030,
+            "parent": 65024,
+            "rssBytes": 104497152
+          },
+          {
+            "pid": 65031,
+            "parent": 65024,
+            "rssBytes": 46268416
+          },
+          {
+            "pid": 65093,
+            "parent": 65024,
+            "rssBytes": 265060352
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1001567,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/index-q-sg76TU.js",
+            "gzipBytes": 925415
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-C0FnF6B9.js",
+            "gzipBytes": 710
+          },
+          {
+            "asarPath": "dist/renderer/assets/jsx-runtime-CKeovgl0.js",
+            "gzipBytes": 2992
+          },
+          {
+            "asarPath": "dist/renderer/assets/query-keys-Hj7P2HG3.js",
+            "gzipBytes": 24756
+          },
+          {
+            "asarPath": "dist/renderer/assets/use-theme-CGAJ02li.js",
+            "gzipBytes": 914
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/index-D9jQnvzF.css",
+            "gzipBytes": 46108
+          }
+        ]
+      }
+    },
+    {
+      "build": "new",
+      "pair": 1,
+      "discarded": false,
+      "M2": 1292.300048828125,
+      "M1": 1719.900146484375,
+      "M4": 26496716,
+      "M5": 85.400146484375,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 886013952,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 65267,
+            "parent": 64490,
+            "rssBytes": 276348928
+          },
+          {
+            "pid": 65273,
+            "parent": 65267,
+            "rssBytes": 119488512
+          },
+          {
+            "pid": 65274,
+            "parent": 65267,
+            "rssBytes": 45121536
+          },
+          {
+            "pid": 65337,
+            "parent": 65267,
+            "rssBytes": 286310400
+          },
+          {
+            "pid": 65403,
+            "parent": 65267,
+            "rssBytes": 158744576
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1207159,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/main-rhcw4Ng0.js",
+            "gzipBytes": 9540
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-Dd_uD5pT.js",
+            "gzipBytes": 627
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSelector-hMeUlnhI.js",
+            "gzipBytes": 3849
+          },
+          {
+            "asarPath": "dist/renderer/assets/useTranslation-C4fzJ8NF.js",
+            "gzipBytes": 4240
+          },
+          {
+            "asarPath": "dist/renderer/assets/matchContext-jlmOrjiL.js",
+            "gzipBytes": 155
+          },
+          {
+            "asarPath": "dist/renderer/assets/compiler-runtime-DdEb7m_W.js",
+            "gzipBytes": 234
+          },
+          {
+            "asarPath": "dist/renderer/assets/frame-CQGisaUp.js",
+            "gzipBytes": 821
+          },
+          {
+            "asarPath": "dist/renderer/assets/spinner-DoqPDy5j.js",
+            "gzipBytes": 181090
+          },
+          {
+            "asarPath": "dist/renderer/assets/redirect-AmaS3P9G.js",
+            "gzipBytes": 304
+          },
+          {
+            "asarPath": "dist/renderer/assets/not-found-i5RsCZif.js",
+            "gzipBytes": 111
+          },
+          {
+            "asarPath": "dist/renderer/assets/root-DLTE-HSj.js",
+            "gzipBytes": 52
+          },
+          {
+            "asarPath": "dist/renderer/assets/Match-DO_EsbqY.js",
+            "gzipBytes": 1780
+          },
+          {
+            "asarPath": "dist/renderer/assets/Matches-GtOcHBhM.js",
+            "gzipBytes": 18558
+          },
+          {
+            "asarPath": "dist/renderer/assets/sound-DOvbnGxL.js",
+            "gzipBytes": 10194
+          },
+          {
+            "asarPath": "dist/renderer/assets/chevron-down-CNmRlT3p.js",
+            "gzipBytes": 1520
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-mCnq-mu5.js",
+            "gzipBytes": 2803
+          },
+          {
+            "asarPath": "dist/renderer/assets/hotkey-manager-B4gkC1Bb.js",
+            "gzipBytes": 6690
+          },
+          {
+            "asarPath": "dist/renderer/assets/ui-DE1RYzs3.js",
+            "gzipBytes": 15005
+          },
+          {
+            "asarPath": "dist/renderer/assets/hover-card-BqHHar1V.js",
+            "gzipBytes": 5255
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-qGVRGLA3.js",
+            "gzipBytes": 120
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-BcBXMRra.js",
+            "gzipBytes": 293
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-DGWbWN6g.js",
+            "gzipBytes": 1616
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/log-ring-BZ2uGgM8.js",
+            "gzipBytes": 610
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-kBeCKY2x.js",
+            "gzipBytes": 119791
+          },
+          {
+            "asarPath": "dist/renderer/assets/separator-0BiUZ2KB.js",
+            "gzipBytes": 6773
+          },
+          {
+            "asarPath": "dist/renderer/assets/useParams-edixy8GZ.js",
+            "gzipBytes": 194
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSearch-BuW7dCbE.js",
+            "gzipBytes": 170
+          },
+          {
+            "asarPath": "dist/renderer/assets/dropdown-menu-0FDckRBw.js",
+            "gzipBytes": 11885
+          },
+          {
+            "asarPath": "dist/renderer/assets/turns-CO8eSM_q.js",
+            "gzipBytes": 17312
+          },
+          {
+            "asarPath": "dist/renderer/assets/local-models-DyqHcex1.js",
+            "gzipBytes": 1137
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-BDhsOj2r.js",
+            "gzipBytes": 1458
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-requests-DeJo6Fjf.js",
+            "gzipBytes": 11347
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-BglAJ6CW.js",
+            "gzipBytes": 2312
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-request-card-DF2vB5WK.js",
+            "gzipBytes": 4278
+          },
+          {
+            "asarPath": "dist/renderer/assets/link-Ch3HzHVM.js",
+            "gzipBytes": 2216
+          },
+          {
+            "asarPath": "dist/renderer/assets/app-link-DMIwPhN7.js",
+            "gzipBytes": 379
+          },
+          {
+            "asarPath": "dist/renderer/assets/resizable-BpinGj3w.js",
+            "gzipBytes": 13432
+          },
+          {
+            "asarPath": "dist/renderer/assets/alert-dialog-DQZJ9_Dq.js",
+            "gzipBytes": 5083
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-Cktpx59b.js",
+            "gzipBytes": 316050
+          },
+          {
+            "asarPath": "dist/renderer/assets/useNavigate-D5KOICuw.js",
+            "gzipBytes": 273
+          },
+          {
+            "asarPath": "dist/renderer/assets/fileRoute-Bk5pnR5L.js",
+            "gzipBytes": 1110
+          },
+          {
+            "asarPath": "dist/renderer/assets/searchMiddleware-C0hj9KBZ.js",
+            "gzipBytes": 512
+          },
+          {
+            "asarPath": "dist/renderer/assets/lazyRouteComponent-AMenGOe8.js",
+            "gzipBytes": 419
+          },
+          {
+            "asarPath": "dist/renderer/assets/useStore-Jt_fedF3.js",
+            "gzipBytes": 107
+          },
+          {
+            "asarPath": "dist/renderer/assets/empty-state-BUK85Zdy.js",
+            "gzipBytes": 1990
+          },
+          {
+            "asarPath": "dist/renderer/assets/field-PduoNJwE.js",
+            "gzipBytes": 16674
+          },
+          {
+            "asarPath": "dist/renderer/assets/form-kit-D0cM1gZ0.js",
+            "gzipBytes": 16214
+          },
+          {
+            "asarPath": "dist/renderer/assets/useBlocker-CXHfK7xh.js",
+            "gzipBytes": 678
+          },
+          {
+            "asarPath": "dist/renderer/assets/confirm-CUpFW1vI.js",
+            "gzipBytes": 2195
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-K2XYybxl.js",
+            "gzipBytes": 3679
+          },
+          {
+            "asarPath": "dist/renderer/assets/cues-BWDDQkLq.js",
+            "gzipBytes": 2017
+          },
+          {
+            "asarPath": "dist/renderer/assets/routines-Jufz3BL8.js",
+            "gzipBytes": 20890
+          },
+          {
+            "asarPath": "dist/renderer/assets/areas-Bc_iaQJF.js",
+            "gzipBytes": 287
+          },
+          {
+            "asarPath": "dist/renderer/assets/tour-Bh9-227c.js",
+            "gzipBytes": 4432
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-memory-list-CQmAvQoU.js",
+            "gzipBytes": 677
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-_RTWrVrb.js",
+            "gzipBytes": 42486
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-mark-DqueaLFN.js",
+            "gzipBytes": 3501
+          },
+          {
+            "asarPath": "dist/renderer/assets/shared-element-CcviPcKT.js",
+            "gzipBytes": 362
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-DMzaIjuM.js",
+            "gzipBytes": 47875
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CuCK8vrz.js",
+            "gzipBytes": 74695
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-D9DWX5i0.js",
+            "gzipBytes": 88148
+          },
+          {
+            "asarPath": "dist/renderer/assets/runtime-D1c6OXEy.js",
+            "gzipBytes": 44406
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-DEkFX9xS.js",
+            "gzipBytes": 10389
+          },
+          {
+            "asarPath": "dist/renderer/assets/actions-mKPtWnRH.js",
+            "gzipBytes": 549
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-B8Ger0ke.css",
+            "gzipBytes": 31752
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-tazUtPIO.css",
+            "gzipBytes": 2366
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-D_YvtmJ6.css",
+            "gzipBytes": 540
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CMAYOTMG.css",
+            "gzipBytes": 174
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-DId50OC-.css",
+            "gzipBytes": 1624
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-CghTNAii.css",
+            "gzipBytes": 972
+          },
+          {
+            "asarPath": "dist/renderer/assets/_shell-srLdvBgn.js",
+            "gzipBytes": 1537
+          },
+          {
+            "asarPath": "dist/renderer/assets/preview-consumers-DJ-d_Qdq.js",
+            "gzipBytes": 140
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-C8L5cyRS.js",
+            "gzipBytes": 747
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots.new-BaxvyMvp.js",
+            "gzipBytes": 504
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-CMjqlTKQ.js",
+            "gzipBytes": 86
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions.new-DOfYUxT7.js",
+            "gzipBytes": 1363
+          },
+          {
+            "asarPath": "dist/renderer/assets/native-presenter-CBsyQi_G.js",
+            "gzipBytes": 833
+          }
+        ]
+      }
+    },
+    {
+      "build": "old",
+      "pair": 2,
+      "discarded": false,
+      "M2": 1522.699951171875,
+      "M1": 2020.800048828125,
+      "M4": 22528480,
+      "M5": 741.900146484375,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 685899776,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 65584,
+            "parent": 64490,
+            "rssBytes": 276316160
+          },
+          {
+            "pid": 65590,
+            "parent": 65584,
+            "rssBytes": 104366080
+          },
+          {
+            "pid": 65591,
+            "parent": 65584,
+            "rssBytes": 46235648
+          },
+          {
+            "pid": 65653,
+            "parent": 65584,
+            "rssBytes": 258981888
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1001567,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/index-q-sg76TU.js",
+            "gzipBytes": 925415
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-C0FnF6B9.js",
+            "gzipBytes": 710
+          },
+          {
+            "asarPath": "dist/renderer/assets/jsx-runtime-CKeovgl0.js",
+            "gzipBytes": 2992
+          },
+          {
+            "asarPath": "dist/renderer/assets/query-keys-Hj7P2HG3.js",
+            "gzipBytes": 24756
+          },
+          {
+            "asarPath": "dist/renderer/assets/use-theme-CGAJ02li.js",
+            "gzipBytes": 914
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/index-D9jQnvzF.css",
+            "gzipBytes": 46108
+          }
+        ]
+      }
+    },
+    {
+      "build": "new",
+      "pair": 2,
+      "discarded": false,
+      "M2": 1294.60009765625,
+      "M1": 1705.900146484375,
+      "M4": 26516064,
+      "M5": 91.89990234375,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 877395968,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 65844,
+            "parent": 64490,
+            "rssBytes": 276267008
+          },
+          {
+            "pid": 65850,
+            "parent": 65844,
+            "rssBytes": 109297664
+          },
+          {
+            "pid": 65851,
+            "parent": 65844,
+            "rssBytes": 45121536
+          },
+          {
+            "pid": 65914,
+            "parent": 65844,
+            "rssBytes": 286949376
+          },
+          {
+            "pid": 65980,
+            "parent": 65844,
+            "rssBytes": 159760384
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1207159,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/main-rhcw4Ng0.js",
+            "gzipBytes": 9540
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-Dd_uD5pT.js",
+            "gzipBytes": 627
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSelector-hMeUlnhI.js",
+            "gzipBytes": 3849
+          },
+          {
+            "asarPath": "dist/renderer/assets/useTranslation-C4fzJ8NF.js",
+            "gzipBytes": 4240
+          },
+          {
+            "asarPath": "dist/renderer/assets/matchContext-jlmOrjiL.js",
+            "gzipBytes": 155
+          },
+          {
+            "asarPath": "dist/renderer/assets/compiler-runtime-DdEb7m_W.js",
+            "gzipBytes": 234
+          },
+          {
+            "asarPath": "dist/renderer/assets/frame-CQGisaUp.js",
+            "gzipBytes": 821
+          },
+          {
+            "asarPath": "dist/renderer/assets/spinner-DoqPDy5j.js",
+            "gzipBytes": 181090
+          },
+          {
+            "asarPath": "dist/renderer/assets/redirect-AmaS3P9G.js",
+            "gzipBytes": 304
+          },
+          {
+            "asarPath": "dist/renderer/assets/not-found-i5RsCZif.js",
+            "gzipBytes": 111
+          },
+          {
+            "asarPath": "dist/renderer/assets/root-DLTE-HSj.js",
+            "gzipBytes": 52
+          },
+          {
+            "asarPath": "dist/renderer/assets/Match-DO_EsbqY.js",
+            "gzipBytes": 1780
+          },
+          {
+            "asarPath": "dist/renderer/assets/Matches-GtOcHBhM.js",
+            "gzipBytes": 18558
+          },
+          {
+            "asarPath": "dist/renderer/assets/sound-DOvbnGxL.js",
+            "gzipBytes": 10194
+          },
+          {
+            "asarPath": "dist/renderer/assets/chevron-down-CNmRlT3p.js",
+            "gzipBytes": 1520
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-mCnq-mu5.js",
+            "gzipBytes": 2803
+          },
+          {
+            "asarPath": "dist/renderer/assets/hotkey-manager-B4gkC1Bb.js",
+            "gzipBytes": 6690
+          },
+          {
+            "asarPath": "dist/renderer/assets/ui-DE1RYzs3.js",
+            "gzipBytes": 15005
+          },
+          {
+            "asarPath": "dist/renderer/assets/hover-card-BqHHar1V.js",
+            "gzipBytes": 5255
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-qGVRGLA3.js",
+            "gzipBytes": 120
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-BcBXMRra.js",
+            "gzipBytes": 293
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-DGWbWN6g.js",
+            "gzipBytes": 1616
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/log-ring-BZ2uGgM8.js",
+            "gzipBytes": 610
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-kBeCKY2x.js",
+            "gzipBytes": 119791
+          },
+          {
+            "asarPath": "dist/renderer/assets/separator-0BiUZ2KB.js",
+            "gzipBytes": 6773
+          },
+          {
+            "asarPath": "dist/renderer/assets/useParams-edixy8GZ.js",
+            "gzipBytes": 194
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSearch-BuW7dCbE.js",
+            "gzipBytes": 170
+          },
+          {
+            "asarPath": "dist/renderer/assets/dropdown-menu-0FDckRBw.js",
+            "gzipBytes": 11885
+          },
+          {
+            "asarPath": "dist/renderer/assets/turns-CO8eSM_q.js",
+            "gzipBytes": 17312
+          },
+          {
+            "asarPath": "dist/renderer/assets/local-models-DyqHcex1.js",
+            "gzipBytes": 1137
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-BDhsOj2r.js",
+            "gzipBytes": 1458
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-requests-DeJo6Fjf.js",
+            "gzipBytes": 11347
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-BglAJ6CW.js",
+            "gzipBytes": 2312
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-request-card-DF2vB5WK.js",
+            "gzipBytes": 4278
+          },
+          {
+            "asarPath": "dist/renderer/assets/link-Ch3HzHVM.js",
+            "gzipBytes": 2216
+          },
+          {
+            "asarPath": "dist/renderer/assets/app-link-DMIwPhN7.js",
+            "gzipBytes": 379
+          },
+          {
+            "asarPath": "dist/renderer/assets/resizable-BpinGj3w.js",
+            "gzipBytes": 13432
+          },
+          {
+            "asarPath": "dist/renderer/assets/alert-dialog-DQZJ9_Dq.js",
+            "gzipBytes": 5083
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-Cktpx59b.js",
+            "gzipBytes": 316050
+          },
+          {
+            "asarPath": "dist/renderer/assets/useNavigate-D5KOICuw.js",
+            "gzipBytes": 273
+          },
+          {
+            "asarPath": "dist/renderer/assets/fileRoute-Bk5pnR5L.js",
+            "gzipBytes": 1110
+          },
+          {
+            "asarPath": "dist/renderer/assets/searchMiddleware-C0hj9KBZ.js",
+            "gzipBytes": 512
+          },
+          {
+            "asarPath": "dist/renderer/assets/lazyRouteComponent-AMenGOe8.js",
+            "gzipBytes": 419
+          },
+          {
+            "asarPath": "dist/renderer/assets/useStore-Jt_fedF3.js",
+            "gzipBytes": 107
+          },
+          {
+            "asarPath": "dist/renderer/assets/empty-state-BUK85Zdy.js",
+            "gzipBytes": 1990
+          },
+          {
+            "asarPath": "dist/renderer/assets/field-PduoNJwE.js",
+            "gzipBytes": 16674
+          },
+          {
+            "asarPath": "dist/renderer/assets/form-kit-D0cM1gZ0.js",
+            "gzipBytes": 16214
+          },
+          {
+            "asarPath": "dist/renderer/assets/useBlocker-CXHfK7xh.js",
+            "gzipBytes": 678
+          },
+          {
+            "asarPath": "dist/renderer/assets/confirm-CUpFW1vI.js",
+            "gzipBytes": 2195
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-K2XYybxl.js",
+            "gzipBytes": 3679
+          },
+          {
+            "asarPath": "dist/renderer/assets/cues-BWDDQkLq.js",
+            "gzipBytes": 2017
+          },
+          {
+            "asarPath": "dist/renderer/assets/routines-Jufz3BL8.js",
+            "gzipBytes": 20890
+          },
+          {
+            "asarPath": "dist/renderer/assets/areas-Bc_iaQJF.js",
+            "gzipBytes": 287
+          },
+          {
+            "asarPath": "dist/renderer/assets/tour-Bh9-227c.js",
+            "gzipBytes": 4432
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-memory-list-CQmAvQoU.js",
+            "gzipBytes": 677
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-_RTWrVrb.js",
+            "gzipBytes": 42486
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-mark-DqueaLFN.js",
+            "gzipBytes": 3501
+          },
+          {
+            "asarPath": "dist/renderer/assets/shared-element-CcviPcKT.js",
+            "gzipBytes": 362
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-DMzaIjuM.js",
+            "gzipBytes": 47875
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CuCK8vrz.js",
+            "gzipBytes": 74695
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-D9DWX5i0.js",
+            "gzipBytes": 88148
+          },
+          {
+            "asarPath": "dist/renderer/assets/runtime-D1c6OXEy.js",
+            "gzipBytes": 44406
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-DEkFX9xS.js",
+            "gzipBytes": 10389
+          },
+          {
+            "asarPath": "dist/renderer/assets/actions-mKPtWnRH.js",
+            "gzipBytes": 549
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-B8Ger0ke.css",
+            "gzipBytes": 31752
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-tazUtPIO.css",
+            "gzipBytes": 2366
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-D_YvtmJ6.css",
+            "gzipBytes": 540
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CMAYOTMG.css",
+            "gzipBytes": 174
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-DId50OC-.css",
+            "gzipBytes": 1624
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-CghTNAii.css",
+            "gzipBytes": 972
+          },
+          {
+            "asarPath": "dist/renderer/assets/_shell-srLdvBgn.js",
+            "gzipBytes": 1537
+          },
+          {
+            "asarPath": "dist/renderer/assets/preview-consumers-DJ-d_Qdq.js",
+            "gzipBytes": 140
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-C8L5cyRS.js",
+            "gzipBytes": 747
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots.new-BaxvyMvp.js",
+            "gzipBytes": 504
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-CMjqlTKQ.js",
+            "gzipBytes": 86
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions.new-DOfYUxT7.js",
+            "gzipBytes": 1363
+          },
+          {
+            "asarPath": "dist/renderer/assets/native-presenter-CBsyQi_G.js",
+            "gzipBytes": 833
+          }
+        ]
+      }
+    },
+    {
+      "build": "old",
+      "pair": 3,
+      "discarded": false,
+      "M2": 1548.10009765625,
+      "M1": 2042.900146484375,
+      "M4": 22516868,
+      "M5": 693.199951171875,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 734216192,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 66189,
+            "parent": 64490,
+            "rssBytes": 317292544
+          },
+          {
+            "pid": 66195,
+            "parent": 66189,
+            "rssBytes": 106659840
+          },
+          {
+            "pid": 66196,
+            "parent": 66189,
+            "rssBytes": 46301184
+          },
+          {
+            "pid": 66258,
+            "parent": 66189,
+            "rssBytes": 263962624
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1001567,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/index-q-sg76TU.js",
+            "gzipBytes": 925415
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-C0FnF6B9.js",
+            "gzipBytes": 710
+          },
+          {
+            "asarPath": "dist/renderer/assets/jsx-runtime-CKeovgl0.js",
+            "gzipBytes": 2992
+          },
+          {
+            "asarPath": "dist/renderer/assets/query-keys-Hj7P2HG3.js",
+            "gzipBytes": 24756
+          },
+          {
+            "asarPath": "dist/renderer/assets/use-theme-CGAJ02li.js",
+            "gzipBytes": 914
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/index-D9jQnvzF.css",
+            "gzipBytes": 46108
+          }
+        ]
+      }
+    },
+    {
+      "build": "new",
+      "pair": 3,
+      "discarded": false,
+      "M2": 1305.699951171875,
+      "M1": 1931.599853515625,
+      "M4": 26651544,
+      "M5": 81.5,
+      "initialRoute": "/sessions/<short-session>",
+      "M3": {
+        "rssBytes": 880394240,
+        "companionRssBytes": null,
+        "processes": [
+          {
+            "pid": 66452,
+            "parent": 64490,
+            "rssBytes": 276512768
+          },
+          {
+            "pid": 66458,
+            "parent": 66452,
+            "rssBytes": 117112832
+          },
+          {
+            "pid": 66459,
+            "parent": 66452,
+            "rssBytes": 44662784
+          },
+          {
+            "pid": 66522,
+            "parent": 66452,
+            "rssBytes": 285949952
+          },
+          {
+            "pid": 66588,
+            "parent": 66452,
+            "rssBytes": 156155904
+          }
+        ]
+      },
+      "M6": {
+        "gzipBytes": 1207159,
+        "resources": [
+          {
+            "asarPath": "dist/renderer/assets/main-rhcw4Ng0.js",
+            "gzipBytes": 9540
+          },
+          {
+            "asarPath": "dist/renderer/assets/rolldown-runtime-Dd_uD5pT.js",
+            "gzipBytes": 627
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSelector-hMeUlnhI.js",
+            "gzipBytes": 3849
+          },
+          {
+            "asarPath": "dist/renderer/assets/useTranslation-C4fzJ8NF.js",
+            "gzipBytes": 4240
+          },
+          {
+            "asarPath": "dist/renderer/assets/matchContext-jlmOrjiL.js",
+            "gzipBytes": 155
+          },
+          {
+            "asarPath": "dist/renderer/assets/compiler-runtime-DdEb7m_W.js",
+            "gzipBytes": 234
+          },
+          {
+            "asarPath": "dist/renderer/assets/frame-CQGisaUp.js",
+            "gzipBytes": 821
+          },
+          {
+            "asarPath": "dist/renderer/assets/spinner-DoqPDy5j.js",
+            "gzipBytes": 181090
+          },
+          {
+            "asarPath": "dist/renderer/assets/redirect-AmaS3P9G.js",
+            "gzipBytes": 304
+          },
+          {
+            "asarPath": "dist/renderer/assets/not-found-i5RsCZif.js",
+            "gzipBytes": 111
+          },
+          {
+            "asarPath": "dist/renderer/assets/root-DLTE-HSj.js",
+            "gzipBytes": 52
+          },
+          {
+            "asarPath": "dist/renderer/assets/Match-DO_EsbqY.js",
+            "gzipBytes": 1780
+          },
+          {
+            "asarPath": "dist/renderer/assets/Matches-GtOcHBhM.js",
+            "gzipBytes": 18558
+          },
+          {
+            "asarPath": "dist/renderer/assets/sound-DOvbnGxL.js",
+            "gzipBytes": 10194
+          },
+          {
+            "asarPath": "dist/renderer/assets/chevron-down-CNmRlT3p.js",
+            "gzipBytes": 1520
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-mCnq-mu5.js",
+            "gzipBytes": 2803
+          },
+          {
+            "asarPath": "dist/renderer/assets/hotkey-manager-B4gkC1Bb.js",
+            "gzipBytes": 6690
+          },
+          {
+            "asarPath": "dist/renderer/assets/ui-DE1RYzs3.js",
+            "gzipBytes": 15005
+          },
+          {
+            "asarPath": "dist/renderer/assets/hover-card-BqHHar1V.js",
+            "gzipBytes": 5255
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-qGVRGLA3.js",
+            "gzipBytes": 120
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-BcBXMRra.js",
+            "gzipBytes": 293
+          },
+          {
+            "asarPath": "dist/renderer/assets/messaging-DGWbWN6g.js",
+            "gzipBytes": 1616
+          },
+          {
+            "asarPath": "dist/renderer/assets/preload-helper-HclGiUj8.js",
+            "gzipBytes": 672
+          },
+          {
+            "asarPath": "dist/renderer/assets/log-ring-BZ2uGgM8.js",
+            "gzipBytes": 610
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-kBeCKY2x.js",
+            "gzipBytes": 119791
+          },
+          {
+            "asarPath": "dist/renderer/assets/separator-0BiUZ2KB.js",
+            "gzipBytes": 6773
+          },
+          {
+            "asarPath": "dist/renderer/assets/useParams-edixy8GZ.js",
+            "gzipBytes": 194
+          },
+          {
+            "asarPath": "dist/renderer/assets/useSearch-BuW7dCbE.js",
+            "gzipBytes": 170
+          },
+          {
+            "asarPath": "dist/renderer/assets/dropdown-menu-0FDckRBw.js",
+            "gzipBytes": 11885
+          },
+          {
+            "asarPath": "dist/renderer/assets/turns-CO8eSM_q.js",
+            "gzipBytes": 17312
+          },
+          {
+            "asarPath": "dist/renderer/assets/local-models-DyqHcex1.js",
+            "gzipBytes": 1137
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-BDhsOj2r.js",
+            "gzipBytes": 1458
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-requests-DeJo6Fjf.js",
+            "gzipBytes": 11347
+          },
+          {
+            "asarPath": "dist/renderer/assets/registry-BglAJ6CW.js",
+            "gzipBytes": 2312
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-request-card-DF2vB5WK.js",
+            "gzipBytes": 4278
+          },
+          {
+            "asarPath": "dist/renderer/assets/link-Ch3HzHVM.js",
+            "gzipBytes": 2216
+          },
+          {
+            "asarPath": "dist/renderer/assets/app-link-DMIwPhN7.js",
+            "gzipBytes": 379
+          },
+          {
+            "asarPath": "dist/renderer/assets/resizable-BpinGj3w.js",
+            "gzipBytes": 13432
+          },
+          {
+            "asarPath": "dist/renderer/assets/alert-dialog-DQZJ9_Dq.js",
+            "gzipBytes": 5083
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-Cktpx59b.js",
+            "gzipBytes": 316050
+          },
+          {
+            "asarPath": "dist/renderer/assets/useNavigate-D5KOICuw.js",
+            "gzipBytes": 273
+          },
+          {
+            "asarPath": "dist/renderer/assets/fileRoute-Bk5pnR5L.js",
+            "gzipBytes": 1110
+          },
+          {
+            "asarPath": "dist/renderer/assets/searchMiddleware-C0hj9KBZ.js",
+            "gzipBytes": 512
+          },
+          {
+            "asarPath": "dist/renderer/assets/lazyRouteComponent-AMenGOe8.js",
+            "gzipBytes": 419
+          },
+          {
+            "asarPath": "dist/renderer/assets/useStore-Jt_fedF3.js",
+            "gzipBytes": 107
+          },
+          {
+            "asarPath": "dist/renderer/assets/empty-state-BUK85Zdy.js",
+            "gzipBytes": 1990
+          },
+          {
+            "asarPath": "dist/renderer/assets/field-PduoNJwE.js",
+            "gzipBytes": 16674
+          },
+          {
+            "asarPath": "dist/renderer/assets/form-kit-D0cM1gZ0.js",
+            "gzipBytes": 16214
+          },
+          {
+            "asarPath": "dist/renderer/assets/useBlocker-CXHfK7xh.js",
+            "gzipBytes": 678
+          },
+          {
+            "asarPath": "dist/renderer/assets/confirm-CUpFW1vI.js",
+            "gzipBytes": 2195
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-K2XYybxl.js",
+            "gzipBytes": 3679
+          },
+          {
+            "asarPath": "dist/renderer/assets/cues-BWDDQkLq.js",
+            "gzipBytes": 2017
+          },
+          {
+            "asarPath": "dist/renderer/assets/routines-Jufz3BL8.js",
+            "gzipBytes": 20890
+          },
+          {
+            "asarPath": "dist/renderer/assets/areas-Bc_iaQJF.js",
+            "gzipBytes": 287
+          },
+          {
+            "asarPath": "dist/renderer/assets/tour-Bh9-227c.js",
+            "gzipBytes": 4432
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-memory-list-CQmAvQoU.js",
+            "gzipBytes": 677
+          },
+          {
+            "asarPath": "dist/renderer/assets/settings-_RTWrVrb.js",
+            "gzipBytes": 42486
+          },
+          {
+            "asarPath": "dist/renderer/assets/connector-mark-DqueaLFN.js",
+            "gzipBytes": 3501
+          },
+          {
+            "asarPath": "dist/renderer/assets/shared-element-CcviPcKT.js",
+            "gzipBytes": 362
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-DMzaIjuM.js",
+            "gzipBytes": 47875
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CuCK8vrz.js",
+            "gzipBytes": 74695
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-D9DWX5i0.js",
+            "gzipBytes": 88148
+          },
+          {
+            "asarPath": "dist/renderer/assets/runtime-D1c6OXEy.js",
+            "gzipBytes": 44406
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-DEkFX9xS.js",
+            "gzipBytes": 10389
+          },
+          {
+            "asarPath": "dist/renderer/assets/actions-mKPtWnRH.js",
+            "gzipBytes": 549
+          },
+          {
+            "asarPath": "dist/renderer/assets/transition-types-B8Ger0ke.css",
+            "gzipBytes": 31752
+          },
+          {
+            "asarPath": "dist/renderer/assets/bot-avatar-tazUtPIO.css",
+            "gzipBytes": 2366
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-D_YvtmJ6.css",
+            "gzipBytes": 540
+          },
+          {
+            "asarPath": "dist/renderer/assets/shell-CMAYOTMG.css",
+            "gzipBytes": 174
+          },
+          {
+            "asarPath": "dist/renderer/assets/chat-DId50OC-.css",
+            "gzipBytes": 1624
+          },
+          {
+            "asarPath": "dist/renderer/assets/onboarding-CghTNAii.css",
+            "gzipBytes": 972
+          },
+          {
+            "asarPath": "dist/renderer/assets/_shell-srLdvBgn.js",
+            "gzipBytes": 1537
+          },
+          {
+            "asarPath": "dist/renderer/assets/preview-consumers-DJ-d_Qdq.js",
+            "gzipBytes": 140
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots-C8L5cyRS.js",
+            "gzipBytes": 747
+          },
+          {
+            "asarPath": "dist/renderer/assets/bots.new-BaxvyMvp.js",
+            "gzipBytes": 504
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions-CMjqlTKQ.js",
+            "gzipBytes": 86
+          },
+          {
+            "asarPath": "dist/renderer/assets/sessions.new-DOfYUxT7.js",
+            "gzipBytes": 1363
+          },
+          {
+            "asarPath": "dist/renderer/assets/native-presenter-CBsyQi_G.js",
+            "gzipBytes": 833
+          }
+        ]
+      }
+    }
+  ],
+  "gaps": [
+    "Signed artifacts, Windows reference machine and packaged phase-budget checks are separate evidence.",
+    "M2 wrong-theme frame classification is not yet implemented; no M2 acceptance is claimed.",
+    "M3 companion RSS attribution is not implemented; process-tree RSS includes the companion and cannot establish its separate cap."
+  ]
+}

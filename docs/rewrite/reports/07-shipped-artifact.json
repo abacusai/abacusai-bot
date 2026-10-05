@@ -1,0 +1,14 @@
+{
+  "version": "v1.0.85",
+  "asset": "AbacusAI-Bot-1.0.85-arm64.zip",
+  "sha256": "e2ab8da004af1570ad6165bc009311b5badb5de1337f0d88d2f960641a2dd2df",
+  "bytes": 168595419,
+  "observations": [
+    "Launched original packaged executable with ABACUSAI_BOT_HOME and ABACUSAI_BOT_BASE pointing to an isolated empty test home.",
+    "Connected to its renderer through CDP and enumerated the shipped window.api surface.",
+    "Stopped the owned source process after inspection. No user home or credentials were used."
+  ],
+  "limitations": [
+    "This is not a completed synthetic-content fixture or perf-home. No migration acceptance is claimed from this empty-home observation."
+  ]
+}

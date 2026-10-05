@@ -1,3 +1,6 @@
+import { randomBytes } from "node:crypto";
+import path from "node:path";
+
 /**
  * The one-time, versioned migration runner (spec 00 C.1). Runs in main
  * inside `whenReady`, after the single-instance lock and before any service
@@ -33,9 +36,12 @@
  * the next launch retries from that step. `runMigrations` never throws.
  * Applied steps are never rolled back automatically.
  */
-import { randomBytes } from "node:crypto";
-import path from "node:path";
-
+import {
+  completeAttempt,
+  completedAttempts,
+  rebuildRestoreIndex,
+  writeAttemptManifest,
+} from "./attempt-records";
 import {
   backupDirName,
   backupPathFor,
@@ -324,9 +330,28 @@ export const runMigrations = async (
     if (finished) {
       // Only the staging's deletion was cut short.
       try {
+        // Older journals predate retained records; they remain recoverable.
+        if (exists(path.join(journal.backupDir, "attempt.json"), io)) {
+          const partial =
+            record?.partial?.some(
+              (entry) => entry.attempt === journal.attempt
+            ) ?? false;
+          completeAttempt(
+            journal.backupDir,
+            journal.attempt,
+            partial,
+            now().toISOString(),
+            io
+          );
+        }
         removeStaging(staging);
       } catch (error) {
-        log(`cannot delete ${staging}: ${errorMessage(error)}`);
+        unresolve(
+          attempt,
+          destinationsOf(journal),
+          `completion failed: ${errorMessage(error)}`
+        );
+        continue;
       }
       result.recovered.push({ staging, action: "finished" });
       continue;
@@ -403,12 +428,17 @@ export const runMigrations = async (
   }
 
   // ── Steps ────────────────────────────────────────────────────────────
-  const appliedIds = new Set(current.applied.map((entry) => entry.id));
+  const appliedIds = new Set(
+    current.applied
+      .filter((entry) => !entry.restoredAt)
+      .map((entry) => entry.id)
+  );
   const pending = [...options.steps]
     .sort((a, b) => a.id - b.id)
     .filter((step) => !appliedIds.has(step.id));
 
   for (const [index, step] of pending.entries()) {
+    const attempt = newAttempt();
     const staging = stagingFor(home, step);
     const started = Date.now();
     const fraction = (share: number, label?: string) => {
@@ -427,6 +457,7 @@ export const runMigrations = async (
       removeStaging(staging);
       io.mkdirSync(staging);
       const context: MigrationContext = {
+        attempt,
         home,
         userData,
         appVersion: options.appVersion,
@@ -446,7 +477,6 @@ export const runMigrations = async (
       return fail(step, error);
     }
 
-    const attempt = newAttempt();
     const commit = formatStamp(now());
     const backupName = backupDirName(commit, step.id, step.name, attempt);
     const journal: CommitJournal = {
@@ -508,6 +538,7 @@ export const runMigrations = async (
       // 2. The journal, once.
       writeJournal(staging, journal, io);
       journaled = true;
+      writeAttemptManifest(journal, roots, io);
       // 3. Moves, each followed by an appended `done`.
       const total = journal.writes.length + journal.removals.length;
       let moved = 0;
@@ -590,7 +621,10 @@ export const runMigrations = async (
           attempt,
           backup: backupName,
         };
-        next.applied = [...current.applied, entry];
+        next.applied = [
+          ...current.applied.filter((old) => old.id !== entry.id),
+          entry,
+        ];
         if (others.length > 0) next.partial = others;
         else delete next.partial;
       }
@@ -637,6 +671,25 @@ export const runMigrations = async (
       return fail(step, error);
     }
 
+    // The record is the commit point. Completion failure must never undo it.
+    try {
+      completeAttempt(
+        journal.backupDir,
+        attempt,
+        partial,
+        now().toISOString(),
+        io
+      );
+    } catch (error) {
+      result.unresolved.push({
+        staging,
+        id: step.id,
+        name: step.name,
+        destinations: destinationsOf(journal),
+        error: errorMessage(error),
+      });
+      return fail(step, error);
+    }
     // 5. The staging. A failure here is finished on the next launch.
     try {
       appendLog(staging, attempt, { op: "recorded" }, io);
@@ -653,6 +706,12 @@ export const runMigrations = async (
     log(
       `${partial ? `committed with ${plan.pending} left for the next launch:` : "applied"} ${step.id} ${step.name} in ${Date.now() - started} ms ${JSON.stringify(plan.stats)}`
     );
+    if (partial) {
+      log(
+        `stopping after pending step ${step.id}; later steps wait for the next launch`
+      );
+      break;
+    }
   }
 
   // ── Housekeeping, on every launch that got here without a failure ─────
@@ -662,7 +721,22 @@ export const runMigrations = async (
     // Not empty (a staging we could not delete) or already gone.
   }
   try {
+    rebuildRestoreIndex(home, io, log);
+    const retained = new Set(
+      completedAttempts(home, io, log)
+        .filter(({ manifest }) => {
+          const applied = current.applied.find(
+            (entry) => entry.id === manifest.step
+          );
+          return (
+            applied === undefined ||
+            now().getTime() - Date.parse(applied.appliedAt) <= 30 * 86400000
+          );
+        })
+        .map(({ directory }) => path.basename(directory))
+    );
     const pruned = pruneBackups(home, {
+      retained,
       now: now(),
       referenced: new Set([
         ...current.applied.map(backupOf),
@@ -670,7 +744,10 @@ export const runMigrations = async (
       ]),
       io,
     });
-    if (pruned.length > 0) log(`pruned ${pruned.length} old backups`);
+    if (pruned.length > 0) {
+      log(`pruned ${pruned.length} old backups`);
+      rebuildRestoreIndex(home, io, log);
+    }
   } catch (error) {
     log(`pruning failed: ${errorMessage(error)}`);
   }

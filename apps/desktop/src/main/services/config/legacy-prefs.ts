@@ -1,3 +1,5 @@
+import path from "node:path";
+
 /**
  * The old renderer's durable state (`userData/renderer-state.json`) mapped
  * onto the prefs row (spec 00 C.4). One mapping, three import points: the
@@ -25,6 +27,8 @@ import {
 } from "#shared/contract/rows";
 
 import { PREFS_DEFAULTS, type PrefsStore } from "./prefs-store";
+import { readRendererStateFile } from "./renderer-state";
+import { readRetiredPrefs, RETIRED_PREFS_FILE } from "./retired-prefs";
 
 /** Every legacy key that maps to something, and the prefs fields it feeds. */
 export const LEGACY_PREFS_KEYS: ReadonlyMap<string, readonly PrefsField[]> =
@@ -411,7 +415,8 @@ export interface LegacyImportStats {
 export const importLegacyPrefs = (
   prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">,
   read: (key: string) => string | undefined,
-  fields: readonly PrefsField[] = LEGACY_PREFS_FIELDS
+  fields: readonly PrefsField[] = LEGACY_PREFS_FIELDS,
+  retiredKeys: ReadonlySet<string> = new Set()
 ): LegacyImportStats => {
   const legacy = composeLegacyPrefs(read, fields);
   const provenance = prefs.provenance();
@@ -425,7 +430,17 @@ export const importLegacyPrefs = (
     )
   );
   const { invalid } = prefs.importLegacy(legacy.patch);
-  const reset = prefs.resetLegacy(legacy.absent);
+  const reset = prefs.resetLegacy(
+    legacy.absent.filter(
+      (field) =>
+        !Array.from(LEGACY_PREFS_KEYS).some(
+          ([key, mapped]) =>
+            mapped.includes(field) &&
+            read(key) === undefined &&
+            retiredKeys.has(key)
+        )
+    )
+  );
   return {
     keys: legacy.keys.length,
     imported: named.length - keptUser.length - invalid,
@@ -460,60 +475,19 @@ export const importLegacySoundOptOut = (
   return "reset";
 };
 
-/** `config.json`'s sound opt-out and its writes (`setNotificationSettings`). */
-export interface LegacySoundSource {
-  read(): unknown;
-  onWrite(listener: () => void): () => void;
-}
-
-/** The legacy side of the live sync: `RendererStateStore`'s read face. */
-export interface LegacyStateSource {
-  get(key: string): string | undefined;
-  onSet(listener: (key: string, value: string | null) => void): () => void;
-}
-
-/**
- * The live legacy sync (spec 00 C.4 point 2), for the transition only: the
- * old renderer stays the shipped UI until the cut-over, so every change it
- * makes to a mapped key is carried into `prefs.json` as it happens. Starts
- * with a full import, which also covers a launch whose migration step failed
- * and anything an older build changed while this one was not running.
- * Returns the unsubscribe.
- */
-export const installLegacyPrefsSync = (
-  legacy: LegacyStateSource,
-  prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">,
-  log: (message: string, error: unknown) => void = (message, error) =>
-    console.error(message, error),
-  sound?: LegacySoundSource
-): (() => void) => {
-  const read = (key: string): string | undefined => legacy.get(key);
-  const syncSound = (): void => {
-    if (sound == null) return;
-    try {
-      importLegacySoundOptOut(prefs, sound.read());
-    } catch (error) {
-      log("[legacy-prefs] sound opt-out sync failed", error);
-    }
-  };
-  try {
-    importLegacyPrefs(prefs, read);
-  } catch (error) {
-    log("[legacy-prefs] startup import failed", error);
-  }
-  syncSound();
-  const offState = legacy.onSet((key) => {
-    const fields = LEGACY_PREFS_KEYS.get(key);
-    if (fields === undefined) return;
-    try {
-      importLegacyPrefs(prefs, read, fields);
-    } catch (error) {
-      log(`[legacy-prefs] sync of ${key} failed`, error);
-    }
-  });
-  const offSound = sound?.onWrite(syncSound) ?? (() => undefined);
-  return () => {
-    offState();
-    offSound();
-  };
+/** Read-only startup import kept through release N, including after N+1. */
+export const importLegacyPrefsAtStartup = (
+  source: string,
+  prefs: Pick<PrefsStore, "importLegacy" | "resetLegacy" | "provenance">
+): LegacyImportStats => {
+  const legacy = readRendererStateFile(source);
+  const retired = readRetiredPrefs(
+    path.join(path.dirname(source), RETIRED_PREFS_FILE)
+  );
+  return importLegacyPrefs(
+    prefs,
+    (key) => legacy.get(key),
+    LEGACY_PREFS_FIELDS,
+    new Set(Object.keys(retired?.keys ?? {}))
+  );
 };

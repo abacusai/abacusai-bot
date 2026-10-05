@@ -59,8 +59,6 @@ const overrideHost = (): URL | null => {
  * Origin of the RouteLLM host, for surfaces off its root rather than /v1
  * (the web search proxy, the service proxies at /api/services/*).
  */
-export const abacusRoutellmOrigin = (): string =>
-  abacusRoutellmV1().replace(/\/v1$/, "");
 
 /** Origin of the sign-in / connect pages (apps.abacus.ai in production). */
 /** Whether the app is pointed away from production (see the override above). */

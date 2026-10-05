@@ -20,43 +20,25 @@ const bases: Record<string, RendererBase> = {
 };
 
 describe("rendererEntry", () => {
-  it("keeps the legacy URLs exactly as they were", () => {
-    expect(rendererEntry(bases.dev!, "legacy")).toEqual({
+  it("loads index.html for wco", () => {
+    expect(rendererEntry(bases.dev!)).toEqual({
       kind: "url",
-      url: "http://localhost:5173/",
+      url: "http://localhost:5173/index.html",
     });
-    expect(rendererEntry(bases.experience!, "legacy")).toEqual({
+    expect(rendererEntry(bases.experience!)).toEqual({
       kind: "url",
-      url: `app://bundle.${"a".repeat(32)}.${"b".repeat(32)}/`,
+      url: `app://bundle.${"a".repeat(32)}.${"b".repeat(32)}/index.html`,
     });
-    expect(rendererEntry(bases.file!, "legacy")).toEqual({
+    expect(rendererEntry(bases.file!)).toEqual({
       kind: "file",
       path: join("/app/dist/renderer", "index.html"),
     });
   });
 
-  it("loads index-next.html for wco", () => {
-    expect(rendererEntry(bases.dev!, "wco")).toEqual({
-      kind: "url",
-      url: "http://localhost:5173/index-next.html",
-    });
-    expect(rendererEntry(bases.experience!, "wco")).toEqual({
-      kind: "url",
-      url: `app://bundle.${"a".repeat(32)}.${"b".repeat(32)}/index-next.html`,
-    });
-    expect(rendererEntry(bases.file!, "wco")).toEqual({
-      kind: "file",
-      path: join("/app/dist/renderer", "index-next.html"),
-    });
-  });
-
   it("points an experience swap at the generation's document", () => {
     const url = new URL("app://bundle.x/");
-    expect(experienceEntryUrl(url, "legacy")).toBe(url);
-    expect(experienceEntryUrl(url, "wco")?.href).toBe(
-      "app://bundle.x/index-next.html"
-    );
-    expect(experienceEntryUrl(null, "wco")).toBeNull();
+    expect(experienceEntryUrl(url)?.href).toBe("app://bundle.x/index.html");
+    expect(experienceEntryUrl(null)).toBeNull();
   });
 });
 

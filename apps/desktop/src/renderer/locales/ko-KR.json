@@ -74,83 +74,8 @@
     }
   },
   "bots": {
-    "avatarColor": "Color",
-    "avatarLabel": "Avatar variant",
-    "botOptions": "Bot options",
-    "cancel": "취소",
-    "changeAvatar": "Try another avatar",
-    "create": "만들기",
-    "delete": "삭제",
-    "deleteBody": "{{name}}와(과) 해당 채팅이 삭제됩니다. 되돌릴 수 없습니다.",
-    "deleteBot": "봇 삭제",
-    "deleteError": "봇을 삭제하지 못했습니다.",
-    "deleteTitle": "봇 삭제",
-    "descriptionLabel": "미션",
-    "descriptionPlaceholder": "이 봇이 무엇을 해 주기를 원하나요?",
-    "descriptionRequired": "미션이 필요합니다.",
-    "editBot": "봇 편집",
-    "editTitle": "봇 편집",
-    "emptyDescription": "이름과 고유한 미션, 기록이 유지되는 채팅을 가진 봇을 만들어 보세요.",
-    "emptyTitle": "아직 봇이 없습니다",
-    "home": {
-      "categories": {
-        "featured": "Featured",
-        "finance": "Finance",
-        "marketing": "Marketing",
-        "personal-assistant": "Personal Assistant",
-        "productivity": "Productivity",
-        "recruiting": "Recruiting",
-        "research": "Research",
-        "social-media": "Social Media"
-      },
-      "categoriesLabel": "Template categories",
-      "createCta": "Create Bot",
-      "getStarted": "시작하기",
-      "heading": "Create your",
-      "headingAccent": "Bot",
-      "namePlaceholder": "새 봇",
-      "subtitle": "Name your bot and get started in seconds.",
-      "suggestions": "추천",
-      "templatesDivider": "Or start with a template"
-    },
-    "modelDefault": "App default",
-    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
-    "modelLabel": "Model",
-    "nameLabel": "이름",
-    "namePlaceholder": "예: Scout",
-    "nameRequired": "이름이 필요합니다.",
-    "newBot": "새 봇",
-    "newDialog": {
-      "checkIn": {
-        "daily": "Daily",
-        "hourly": "Hourly",
-        "off": "Off",
-        "weekdays": "Weekdays",
-        "weekly": "Weekly"
-      },
-      "checkInDayLabel": "Day",
-      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
-      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
-      "checkInLabel": "Scheduled check-ins",
-      "checkInRoutineName": "{{name}} check-in",
-      "checkInTimeLabel": "Time",
-      "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Keeps track of my research topics",
-      "instructionsLabel": "Instructions",
-      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
-      "moreOptions": "More options: description, scheduled check-ins, model",
-      "namePlaceholder": "Research Buddy",
-      "title": "New bot"
-    },
     "openError": "봇의 채팅을 열지 못했습니다.",
-    "personaLabel": "Persona",
-    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
-    "pin": "Pin",
-    "pinned": "Pinned",
     "save": "저장",
-    "saveError": "봇을 저장하지 못했습니다.",
-    "senderChat": "{{platform}}에서 {{sender}}와의 자동 답장 채팅",
-    "senderChatReadOnly": "자동 답장 대화입니다. {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
     "templates": {
       "appointment-assistant": {
         "description": "Keeps appointments organized from confirmation through prep, reminders, and rescheduling.",
@@ -329,14 +254,6 @@
         "name": "WhatsApp Agent"
       }
     },
-    "title": "봇",
-    "titleLabel": "역할",
-    "titlePlaceholder": "예: Research Scout",
-    "unpin": "Unpin",
-    "viewBots": "봇",
-    "viewSessions": "세션",
-    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
     "page": {
       "newTitle": "Make a bot",
       "newDescription": "Give it a name and a mission, and it keeps one chat that remembers.",
@@ -348,7 +265,6 @@
       "detailsDescription": "Mission, persona, model and memory."
     },
     "sidebar": {
-      "label": "봇",
       "new": "새 봇",
       "empty": "아직 봇이 없습니다",
       "search": "Search bots",
@@ -373,7 +289,8 @@
       "pinned": "Pinned",
       "edit": "봇 편집",
       "delete": "봇 삭제",
-      "emptyTitle": "아직 봇이 없습니다"
+      "emptyTitle": "아직 봇이 없습니다",
+      "label": "봇"
     },
     "avatar": {
       "shapes": {
@@ -427,19 +344,19 @@
       }
     },
     "model": {
-      "defaultGroup": "Default",
-      "appDefault": "App default",
       "favorites": "Favorites",
-      "localProvider": "On this machine",
       "connectOpenRouter": "OpenRouter 연결",
       "connectGoogleAi": "Google AI Studio 연결",
-      "tierFree": "Free",
-      "tierLocal": "Local",
       "default": "Default",
       "local": "On this machine",
       "free": "Free",
       "search": "Search models",
-      "favorite": "Favourite {{name}}"
+      "favorite": "Favourite {{name}}",
+      "defaultGroup": "Default",
+      "appDefault": "App default",
+      "localProvider": "On this machine",
+      "tierFree": "Free",
+      "tierLocal": "Local"
     },
     "checkIn": {
       "label": "Scheduled check-ins",
@@ -521,8 +438,8 @@
         "connect": "Connect {{provider}}",
         "connecting": "Connecting…",
         "decline": "Not now",
-        "failed": "Could not connect {{provider}}.",
         "stop": "연결 중단",
+        "failed": "Could not connect {{provider}}.",
         "refreshFailed": "Connected, but the agent couldn't load it: {{error}}"
       },
       "placeholder": "{{name}}에게 메시지",
@@ -627,72 +544,92 @@
       "chat": "This chat is gone",
       "bot": "This bot was deleted",
       "make": "Make a bot"
-    }
-  },
-  "browserPermission": {
-    "allow": "허용",
-    "deny": "거부",
-    "never": "다시 묻지 않기",
-    "session": "종료할 때까지 허용",
-    "title": "브라우저 작업"
-  },
-  "browserSettings": {
-    "approval": {
-      "always": "묻지 않기",
-      "ask": "항상 묻기"
     },
-    "approvalSubtitle": "에이전트가 탐색 전에 승인을 요청할지 선택하세요.",
-    "approvalTitle": "승인",
-    "chrome": {
-      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
-      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
-      "connecting": "Waiting for you to allow the connection in your browser…",
-      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
-      "install": "Install the extension",
-      "connect": "Connect",
-      "disconnect": "Disconnect",
-      "tokenTitle": "Extension token",
-      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
-      "tokenSave": "Save token",
-      "tokenSaved": "Token saved.",
-      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    "avatarColor": "Color",
+    "avatarLabel": "Avatar variant",
+    "botOptions": "Bot options",
+    "cancel": "취소",
+    "changeAvatar": "Try another avatar",
+    "create": "만들기",
+    "delete": "삭제",
+    "deleteBody": "{{name}}와(과) 해당 채팅이 삭제됩니다. 되돌릴 수 없습니다.",
+    "deleteBot": "봇 삭제",
+    "deleteError": "봇을 삭제하지 못했습니다.",
+    "deleteTitle": "봇 삭제",
+    "descriptionLabel": "미션",
+    "descriptionPlaceholder": "이 봇이 무엇을 해 주기를 원하나요?",
+    "descriptionRequired": "미션이 필요합니다.",
+    "editBot": "봇 편집",
+    "editTitle": "봇 편집",
+    "emptyDescription": "이름과 고유한 미션, 기록이 유지되는 채팅을 가진 봇을 만들어 보세요.",
+    "emptyTitle": "아직 봇이 없습니다",
+    "home": {
+      "categories": {
+        "featured": "Featured",
+        "finance": "Finance",
+        "marketing": "Marketing",
+        "personal-assistant": "Personal Assistant",
+        "productivity": "Productivity",
+        "recruiting": "Recruiting",
+        "research": "Research",
+        "social-media": "Social Media"
+      },
+      "categoriesLabel": "Template categories",
+      "createCta": "Create Bot",
+      "getStarted": "시작하기",
+      "heading": "Create your",
+      "headingAccent": "Bot",
+      "namePlaceholder": "새 봇",
+      "subtitle": "Name your bot and get started in seconds.",
+      "suggestions": "추천",
+      "templatesDivider": "Or start with a template"
     },
-    "clearAction": "모든 브라우징 데이터 삭제",
-    "clearSubtitle": "앱 내 브라우저의 사이트 데이터와 캐시를 삭제합니다",
-    "clearTitle": "브라우징 데이터",
-    "cleared": "브라우징 데이터를 삭제했습니다.",
-    "dataSection": "데이터",
-    "done": "완료",
-    "engine": {
-      "builtin": "Built-in browser",
-      "chrome": "My Chrome"
+    "modelDefault": "App default",
+    "modelHelp": "The model this bot's chat runs on. Bots do well on cheap models: the bot loop is built for them.",
+    "modelLabel": "Model",
+    "nameLabel": "이름",
+    "namePlaceholder": "예: Scout",
+    "nameRequired": "이름이 필요합니다.",
+    "newBot": "새 봇",
+    "newDialog": {
+      "checkIn": {
+        "daily": "Daily",
+        "hourly": "Hourly",
+        "off": "Off",
+        "weekdays": "Weekdays",
+        "weekly": "Weekly"
+      },
+      "checkInDayLabel": "Day",
+      "checkInError": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
+      "checkInHelp": "The bot wakes up on this schedule and messages you proactively.",
+      "checkInLabel": "Scheduled check-ins",
+      "checkInRoutineName": "{{name}} check-in",
+      "checkInTimeLabel": "Time",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Keeps track of my research topics",
+      "instructionsLabel": "Instructions",
+      "instructionsPlaceholder": "You are a sharp, concise research assistant. Track topics I mention and proactively surface updates.",
+      "moreOptions": "More options: description, scheduled check-ins, model",
+      "namePlaceholder": "Research Buddy",
+      "title": "New bot"
     },
-    "engineSection": "Which browser",
-    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
-    "engineTitle": "Browser the agent uses",
-    "homepageInvalid": "Enter a valid web address.",
-    "homepageSave": "Save",
-    "homepageSaved": "Home page saved.",
-    "homepageTitle": "Home page",
-    "masterSubtitle": "에이전트가 내장 브라우저를 제어하도록 허용",
-    "masterTitle": "Browser",
-    "permissionsSection": "권한",
-    "subtitle": "에이전트의 내장 브라우저를 관리합니다.",
-    "title": "Browser"
+    "personaLabel": "Persona",
+    "personaPlaceholder": "Dry wit, brutally concise, calls me \"boss\", opens with a single emoji",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "saveError": "봇을 저장하지 못했습니다.",
+    "senderChat": "{{platform}}에서 {{sender}}와의 자동 답장 채팅",
+    "senderChatReadOnly": "자동 답장 대화입니다. {{bot}}이(가) 여기서 회원님 대신 {{sender}}에게 답장합니다. 볼 수는 있지만 입력할 수 없습니다. 답장 방식을 바꾸려면 {{bot}}의 채팅에서 말해 주세요.",
+    "title": "봇",
+    "titleLabel": "역할",
+    "titlePlaceholder": "예: Research Scout",
+    "unpin": "Unpin",
+    "viewBots": "봇",
+    "viewSessions": "세션",
+    "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
   },
   "capabilities": {
-    "skills": {
-      "emptyDescription": "설치한 스킬이 여기에 표시됩니다. 당분간은 설정에서 관리하세요.",
-      "emptyTitle": "아직 스킬이 없습니다"
-    },
-    "tabs": {
-      "label": "Capabilities",
-      "mcp": "MCP",
-      "connectors": "커넥터",
-      "skills": "스킬",
-      "tools": "도구"
-    },
     "toolDescriptions": {
       "ast_edit": "Structural search-and-replace that cannot break the syntax.",
       "bash": "작업 폴더에서 셸 명령을 실행합니다.",
@@ -781,21 +718,6 @@
       "x_search": "Search public posts and threads on X.",
       "xai_video_edit": "Edit an already generated video.",
       "xai_video_extend": "Extend a generated video further."
-    },
-    "tools": {
-      "alwaysOn": "Always on",
-      "disabledDetail": "Off. The agent isn't told these tools exist.",
-      "enabledDetail": "On. The agent can call these tools.",
-      "mcpNote": "연결된 MCP 서버는 이 목록 외에 자체 도구를 추가합니다.",
-      "noMatches": "No toolset matches that.",
-      "noModelTools": "This capability doesn't add any tools the model calls directly.",
-      "planned": "Not available yet",
-      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
-      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
-      "resizePanels": "Resize toolsets and details",
-      "searchPlaceholder": "Search toolsets and tools…",
-      "toolCount_one": "{{count}} tool",
-      "toolCount_other": "{{count}} tools"
     },
     "toolsets": {
       "a2a": {
@@ -914,12 +836,33 @@
         "description": "Search public posts and threads on X.",
         "label": "X (Twitter) Search"
       }
+    },
+    "skills": {
+      "emptyDescription": "설치한 스킬이 여기에 표시됩니다. 당분간은 설정에서 관리하세요.",
+      "emptyTitle": "아직 스킬이 없습니다"
+    },
+    "tabs": {
+      "label": "Capabilities",
+      "mcp": "MCP",
+      "connectors": "커넥터",
+      "skills": "스킬",
+      "tools": "도구"
+    },
+    "tools": {
+      "alwaysOn": "Always on",
+      "disabledDetail": "Off. The agent isn't told these tools exist.",
+      "enabledDetail": "On. The agent can call these tools.",
+      "mcpNote": "연결된 MCP 서버는 이 목록 외에 자체 도구를 추가합니다.",
+      "noMatches": "No toolset matches that.",
+      "noModelTools": "This capability doesn't add any tools the model calls directly.",
+      "planned": "Not available yet",
+      "plannedDetail": "Nothing implements this yet, so it can't be switched on. It's listed here so you can see what's planned. This isn't a missing API key.",
+      "restartNote": "Changes apply to the next session: the agent is handed its tool list when a session starts.",
+      "resizePanels": "Resize toolsets and details",
+      "searchPlaceholder": "Search toolsets and tools…",
+      "toolCount_one": "{{count}} tool",
+      "toolCount_other": "{{count}} tools"
     }
-  },
-  "changelog": {
-    "current": "This version",
-    "empty": "No releases to show yet.",
-    "subtitle": "Every release, newest first. The version you are running is marked."
   },
   "common": {
     "back": "Back",
@@ -930,16 +873,8 @@
     "sidebar": "Sidebar",
     "toggleSidebar": "Toggle sidebar"
   },
-  "connectorRequest": {
-    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
-    "connect": "Connect {{provider}}",
-    "connecting": "Connecting…",
-    "decline": "Not now",
-    "failed": "Could not connect {{provider}}.",
-    "stop": "연결 중단",
-    "title": "{{provider}} is not connected"
-  },
   "connectors": {
+    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
     "abacusConnectCancelled": "Stopped adding {{name}}.",
     "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
@@ -972,7 +907,6 @@
       "web": "Web & Browsers",
       "abacus-connectors": "Abacus.AI Connectors"
     },
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
     "clientId": "Client ID",
     "clientSecret": "Client secret (if issued)",
     "connect": "Connect {{name}}",
@@ -1002,115 +936,21 @@
     "wrongAccountBrowser": "{{name}} attached to a different Abacus.AI account: your browser is signed into another one. In the browser, sign into the account this app uses, then connect again."
   },
   "creditsCard": {
+    "paidBody": "Top up your account to keep going.",
+    "paidTitle": "You've used all your Pro Abacus.AI credits",
+    "topUpCta": "Top up",
     "body": "Unlock the full potential",
     "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "dismiss": "Dismiss",
     "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
-    "paidBody": "Top up your account to keep going.",
-    "paidTitle": "You've used all your Pro Abacus.AI credits",
     "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
     "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
-    "topUpCta": "Top up",
     "upsellTitle": "Unlock the full potential on desktop and web",
     "inviteCta": "Or invite friends for free credits"
-  },
-  "deepAgentCard": {
-    "body": "Open DeepAgent on the web",
-    "cta": "Go to Abacus AI Agent",
-    "title": "Go to DeepAgent"
-  },
-  "deliverables": {
-    "files": "Files",
-    "openInBrowser": "Open in browser",
-    "showInFolder": "Show in folder",
-    "showLess": "Show less",
-    "showMore": "+{{count}} more"
-  },
-  "devicePanel": {
-    "axPermissionNeeded": "창을 표시하지 않고 시뮬레이터를 미러링하려면 손쉬운 사용 권한이 필요합니다.",
-    "boot": "부팅",
-    "bootFailed": "기기를 부팅하지 못했습니다",
-    "buildDone": "앱이 기기에서 실행되었습니다",
-    "buildFailed": "빌드 실패",
-    "buildRun": "빌드 및 실행",
-    "buildRunHint": "워크스페이스를 빌드하여 이 기기에서 실행합니다",
-    "buildRunUnavailable": "이 워크스페이스에는 빌드할 {{platform}} 프로젝트가 없습니다",
-    "captureFailed": "기기 화면을 캡처할 수 없습니다",
-    "createDevice": "{{platform}} 기기 만들기",
-    "createDeviceFailed": "기기를 만들 수 없습니다",
-    "creatingDevice": "만드는 중…",
-    "deviceCreated": "{{name}} 생성됨",
-    "grantAccess": "액세스 허용",
-    "howToAddDevice": "{{platform}} 기기를 추가하는 방법",
-    "installingMaestro": "Maestro 설치 중…",
-    "interactMaestroHint": "iOS 시뮬레이터와 상호작용하려면 Maestro를 설치하세요",
-    "keyBack": "뒤로",
-    "keyHome": "홈",
-    "keyRecents": "최근 앱",
-    "maestroInstallFailed": "Maestro 설치에 실패했습니다",
-    "maestroInstalled": "Maestro가 설치되었습니다. 이제 iOS 시뮬레이터와 상호작용할 수 있습니다",
-    "modeLive": "실시간",
-    "modePoll": "느림(스크린샷)",
-    "noDevices": "기기 없음",
-    "noPlatformDevices": "{{platform}} 기기를 찾을 수 없습니다.",
-    "notBooted": "이 기기는 실행 중이 아닙니다. 화면을 보려면 부팅하세요.",
-    "openNative": "네이티브 시뮬레이터 창 열기",
-    "phase": {
-      "booting": "기기 부팅 중…",
-      "building": "빌드 중…",
-      "installing": "설치 중…",
-      "launching": "실행 중…"
-    },
-    "refresh": "기기 새로고침",
-    "screenAlt": "{{name}}의 화면",
-    "screenPermissionNeeded": "시뮬레이터를 부드럽게 미러링하려면 화면 기록 권한이 필요합니다.",
-    "selectDevice": "기기 선택",
-    "stateShutdown": "꺼짐",
-    "typeHint": "화면을 클릭한 다음 키보드로 입력하세요"
-  },
-  "devicePermission": {
-    "title": "기기 작업"
-  },
-  "deviceSettings": {
-    "approvalSubtitle": "에이전트가 기기 작업을 실행할 수 있는 시점",
-    "approvalTitle": "도구 승인",
-    "detected": "감지됨",
-    "maestroHint": "iOS 시뮬레이터에서 에이전트가 탭하고 입력할 수 있도록 Maestro를 설치하세요.",
-    "masterSubtitle": "에이전트가 시뮬레이터와 에뮬레이터에서 앱을 빌드, 설치, 테스트할 수 있게 합니다",
-    "masterTitle": "기기 도구 사용",
-    "notDetected": "감지되지 않음",
-    "subtitle": "Code 에이전트용 iOS 시뮬레이터 및 Android 에뮬레이터 도구",
-    "title": "기기",
-    "toolchainAndroid": "Android(adb)",
-    "toolchainIos": "iOS 시뮬레이터(Xcode)",
-    "toolchainMaestro": "Maestro(iOS 상호작용)",
-    "toolchainSection": "감지된 툴체인"
-  },
-  "deviceSetup": {
-    "androidAvdDesc": "Android SDK는 있지만 가상 기기가 없습니다. Android Studio의 Tools → Device Manager에서 만드세요.",
-    "androidDesc": "Android Studio를 설치한 다음 Tools → Device Manager에서 가상 기기를 만드세요.",
-    "androidTitle": "Android · Android Studio",
-    "download": "다운로드",
-    "iosDesc": "Mac App Store에서 Xcode를 설치하고 한 번 실행하여 설정을 완료하세요. 그러면 시뮬레이터가 여기에 표시됩니다.",
-    "iosRuntimeDesc": "Xcode가 설치되어 있지만 시뮬레이터를 찾을 수 없습니다. Xcode → 설정 → Components에서 iOS 런타임을 다운로드하세요.",
-    "iosTitle": "iOS · Xcode",
-    "recheck": "다시 확인"
-  },
-  "diff": {
-    "noChanges": "표시할 변경 사항이 없습니다"
-  },
-  "error": {
-    "keepsCrashing": "앱에서 같은 오류가 계속 발생합니다. 로컬 데이터를 초기화하면 해결될 수 있습니다.",
-    "ouch": "아야!",
-    "reloadApp": "앱 새로고침",
-    "resetLocalData": "로컬 데이터 초기화",
-    "somethingWrong": "문제가 발생했습니다",
-    "tryAgain": "다시 시도",
-    "unexpected": "예기치 않은 오류가 발생했습니다."
   },
   "execBackends": {
     "daytona": {
@@ -1145,112 +985,23 @@
     "unimplemented": "AbacusAI Bot can't run commands here yet.",
     "unsupportedPlatform": "Not available on Windows: the container needs the workspace at a POSIX host path. Use the local backend instead."
   },
-  "firstBot": {
-    "title": "We set up your first bot"
-  },
-  "greeting": {
-    "afternoon": {
-      "1": "좋은 오후",
-      "2": "오후 작업",
-      "3": "딥 워크 시간",
-      "4": "잘 해내고 있어요",
-      "5": "꾸준한 진전"
-    },
-    "dawn": {
-      "1": "이른 기상",
-      "2": "새벽 순찰",
-      "3": "해와 함께 일어나기",
-      "4": "일출 세션",
-      "5": "세상보다 먼저 일어나기"
-    },
-    "earlyEvening": {
-      "1": "저녁 교대",
-      "2": "골든 아워",
-      "3": "마무리 중",
-      "4": "마지막 한 번 더",
-      "5": "거의 다 됐어요"
-    },
-    "earlyMorning": {
-      "1": "커피 타임",
-      "2": "아침 에너지",
-      "3": "새로운 시작",
-      "4": "일어나서 빛나기",
-      "5": "아침의 활력"
-    },
-    "evening": {
-      "1": "좋은 저녁",
-      "2": "저녁 세션",
-      "3": "나이트 모드",
-      "4": "하루를 마무리하며",
-      "5": "여유로운 생산성"
-    },
-    "lateNight": {
-      "1": "깊은 밤",
-      "2": "마녀의 시간",
-      "3": "야간 근무",
-      "4": "헌신 모드",
-      "5": "세상이 잠든 사이"
-    },
-    "lunch": {
-      "1": "점심 체크인",
-      "2": "오후 시작",
-      "3": "점심 후 파워",
-      "4": "충전하고 출발",
-      "5": "두 번째 바람"
-    },
-    "midMorning": {
-      "1": "좋은 아침",
-      "2": "최고의 생산성",
-      "3": "오전 플로우",
-      "4": "무언가 만들어 봅시다",
-      "5": "집중 모드"
-    },
-    "night": {
-      "1": "올빼미족",
-      "2": "밤샘 작업",
-      "3": "심야 작업",
-      "4": "조용한 시간",
-      "5": "업무 외 시간"
-    },
-    "preDawn": {
-      "1": "아직 진행 중",
-      "2": "이른 시간",
-      "3": "새벽 전",
-      "4": "헌신적",
-      "5": "진정한 헌신"
-    }
-  },
-  "jobs": {
-    "delete": "삭제",
-    "empty": "예약된 작업이 없습니다. 채팅에서 에이전트에게 “평일 아침 9시마다 받은함 요약해 줘”라고 말하면 여기에 표시됩니다.",
-    "enabled": "활성",
-    "lastRun": "마지막 {{time}}",
-    "nextRun": "다음 {{time}}",
-    "runNow": "지금 실행",
-    "startFailed": "실행을 시작하지 못했습니다.",
-    "started": "시작됨. 전용 세션에서 실행됩니다."
-  },
   "localModels": {
     "description": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
     "download": "Download {{size}} and use it",
     "downloading": "{{received}} of {{total}} ({{percent}}%)",
+    "stopDownload": "Stop download",
+    "title": "Use a local model",
+    "unavailable": "This build of the app cannot run models locally.",
+    "use": "Use {{model}}",
+    "useLocal": "Use a local model",
     "installed": "Installed",
     "machine": "This computer has {{memory}} of memory.",
     "onThisMachine": "On this machine",
     "recommended": "Recommended",
     "remove": "Remove",
     "sectionHint": "Models the app downloads and runs here with the bundled llama.cpp. They join RouteLLM - Open as its last resort.",
-    "stopDownload": "Stop download",
     "tight": "That is tight for this model; answers will be slow.",
-    "title": "Use a local model",
-    "unavailable": "This build of the app cannot run models locally.",
-    "use": "Use {{model}}",
-    "useLocal": "Use a local model",
     "verifying": "Checking the download…"
-  },
-  "logs": {
-    "saveFailed": "Could not save logs: {{error}}",
-    "saved": "Logs saved to {{path}}"
   },
   "mcpManagement": {
     "add": "추가",
@@ -1486,83 +1237,21 @@
       "waitingTelegram": "Waiting for Start to be tapped in Telegram…"
     }
   },
-  "notificationSettings": {
-    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
-    "enableTitle": "Notify me",
-    "soundSubtitle": "Uses your system notification sound.",
-    "soundTitle": "Play a sound",
-    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
-    "title": "Notifications"
-  },
-  "notifications": {
-    "codeSessionFallback": "코드 세션",
-    "permissionRequired": "🔔 권한 필요",
-    "taskCompleted": "✅ 작업 완료",
-    "toolFallback": "도구",
-    "waitingForApproval": "승인 대기 중: {{toolName}}"
-  },
   "onboarding": {
-    "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "브라우저가 열려 로그인하거나 계정을 만들 수 있습니다. 앱은 전용 API 키를 받으며, 비밀번호는 앱에 전달되지 않습니다.",
     "connectCta": "가입 / 로그인",
     "openInBrowserCta": "내 브라우저 사용",
     "haveAccountCta": "이미 계정이 있습니다",
-    "connectTitle": "Abacus.AI 연결",
-    "connectorsContinueCta": "Continue",
-    "connectorsSkipCta": "Continue without connectors",
-    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
-    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
-    "setupConnectorsCta": "Browse connectors",
-    "setupConnectorsTitle": "Connectors",
     "setupDoneCta": "Continue to AbacusAI Bot",
-    "setupKeyHint": "Stored on this machine only.",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "setupKeyPlaceholder": "Paste your {{provider}} API key",
-    "setupSaveCta": "Save",
-    "setupSignInCta": "Sign in / Create Free Account",
-    "signInCta": "Abacus.AI에 로그인",
-    "skipCta": "Not now",
-    "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
     "welcomeTagline": "지속 메모리를 갖춘 나만의 오픈소스 AI 동료",
     "welcomeTitle": "Welcome to AbacusAI Bot",
-    "welcomeCapabilityMemory": "Persistent Memory",
-    "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
     "connectedCta": "Continue",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
     "setupExistingLater": "Connect later",
-    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
-    "connectedTitleLead": "Welcome to",
     "connectedTitleName": "AbacusAI Bot",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
-    "connectorsTitleLead": "Connect with your",
-    "connectorsTitleAccent": "tools & services",
-    "connectorsSubtitle": "Chat where you work",
-    "connectorsConnectCta": "Connect",
-    "connectorsConnectedCta": "Connected",
-    "connectorsMore": "{{count}}+ more in Settings",
     "abacusUnidentified": "Couldn't verify which account this key belongs to. Nothing was saved. Please try signing in again.",
-    "setupTitleLead": "Hook up your",
-    "setupTitleAccent": "AI",
-    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
-    "setupBlurbAbacusLead": "Get world-class models free",
-    "setupBlurbAbacusAccent": "2000 free credits",
-    "setupBlurbOpenrouterLead": "Unlock",
-    "setupBlurbOpenrouterAccent": "FREE models",
-    "setupBlurbOpenrouterTail": "with one connection",
-    "setupBlurbGeminiLead": "Use Gemini",
-    "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogTitle": "Go to {{provider}} and get your API key",
-    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
-    "setupKeyDialogLink": "Open {{provider}}",
     "continueWithBrowser": "{{browser}} · {{profile}}(으)로 계속",
     "signInAnotherWay": "다른 방법으로 로그인",
     "haveAccountContinueWith": "이미 계정이 있습니다 · {{browser}}(으)로 계속",
@@ -1615,44 +1304,55 @@
     "pages.finishPairing": "연결 완료",
     "pages.localModels": "Use a local model",
     "pages.localDetails": "A model that runs on this computer: no account, no key, no quota. Slower than the cloud, but it never runs out.",
+    "abacusConnected": "Abacus.AI is successfully connected",
+    "connectBody": "브라우저가 열려 로그인하거나 계정을 만들 수 있습니다. 앱은 전용 API 키를 받으며, 비밀번호는 앱에 전달되지 않습니다.",
+    "connectTitle": "Abacus.AI 연결",
+    "connectorsContinueCta": "Continue",
+    "connectorsSkipCta": "Continue without connectors",
+    "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
+    "setupConnectorsBody": "Gmail, Drive, Slack, GitHub, Notion and the rest. Attach the ones you use and the agent can work in them, not just talk about them.",
+    "setupConnectorsCta": "Browse connectors",
+    "setupConnectorsTitle": "Connectors",
+    "setupKeyHint": "Stored on this machine only.",
+    "setupKeyPlaceholder": "Paste your {{provider}} API key",
+    "setupSaveCta": "Save",
+    "setupSignInCta": "Sign in / Create Free Account",
+    "signInCta": "Abacus.AI에 로그인",
+    "skipCta": "Not now",
+    "welcomeCapabilityModels": "Access",
+    "welcomeFreeBadge": "Free to start",
+    "welcomeCapabilityMemory": "Persistent Memory",
+    "welcomeCapabilityConnectors": "100+ Connectors",
+    "connectedPromiseAgent": "The best-in-class open-source AI agent",
+    "connectedPromiseModels": "Access to free models",
+    "connectedPromiseWork": "Gets your work done, and connects to all your services",
+    "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
+    "connectedTitleLead": "Welcome to",
+    "connectedPromiseAgentLead": "Best-in-class,",
+    "connectedPromiseModelsLead": "Access",
+    "connectedPromiseWorkLead": "Get work done",
+    "connectedPromiseLocalLead": "Runs locally.",
+    "connectedPromiseLocal": "Chat with it wherever you work.",
+    "connectorsTitleLead": "Connect with your",
+    "connectorsTitleAccent": "tools & services",
+    "connectorsSubtitle": "Chat where you work",
+    "connectorsConnectCta": "Connect",
+    "connectorsConnectedCta": "Connected",
+    "connectorsMore": "{{count}}+ more in Settings",
+    "setupTitleLead": "Hook up your",
+    "setupTitleAccent": "AI",
+    "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
+    "setupBlurbAbacusLead": "Get world-class models free",
+    "setupBlurbAbacusAccent": "2000 free credits",
+    "setupBlurbOpenrouterLead": "Unlock",
+    "setupBlurbOpenrouterAccent": "FREE models",
+    "setupBlurbOpenrouterTail": "with one connection",
+    "setupBlurbGeminiLead": "Use Gemini",
+    "setupBlurbGeminiAccent": "free to create anything",
+    "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
+    "setupKeyDialogLink": "Open {{provider}}",
     "connectedPromiseChat": "",
     "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord."
-  },
-  "openFile": {
-    "failed": "해당 파일을 열지 못했습니다.",
-    "refusedInvalid": "해당 링크는 파일을 가리키지 않습니다.",
-    "refusedMissing": "해당 파일이 더 이상 없습니다.",
-    "refusedOutside": "해당 파일은 작업 폴더 밖에 있어 열지 않았습니다.",
-    "revealed": "해당 파일은 열면 실행되므로 파일 관리자에서 표시했습니다."
-  },
-  "permissions": {
-    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
-    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
-    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
-    "networkHostAlways": "Always allow {{host}} this session",
-    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
-    "sandboxDeniedAlways": "Always allow these this session",
-    "sandboxDeniedHost": "Reach {{host}}",
-    "sandboxDeniedRead": "Read {{path}}",
-    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
-    "sandboxDeniedWrite": "Write {{path}}"
-  },
-  "profile": {
-    "title": "Profile",
-    "connectedAccount": "Abacus.AI account",
-    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
-    "organization": "Organization",
-    "plan": "Plan",
-    "credits": "Credits this month",
-    "creditsValue": "{{used}} of {{granted}} used",
-    "members": "Team members",
-    "dangerZone": "Danger zone",
-    "permissionsTitle": "Default permission mode",
-    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
-    "permissionsFullAccess": "Full access",
-    "permissionsAuto": "Auto",
-    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
-    "notSignedInShort": "로그인되지 않음"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1846,21 +1546,7 @@
     "onDemand": "On demand"
   },
   "sessions": {
-    "delete": "Delete session",
-    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
-    "deleteError": "Could not delete that session. Try again.",
-    "deleteTitle": "Delete this session?",
-    "emptyDescription": "세션을 시작해 원하는 폴더에서 에이전트와 작업하세요.",
-    "emptyTitle": "아직 세션이 없습니다",
-    "newSession": "New session",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "sessionOptions": "Session options",
-    "title": "Sessions",
-    "unpin": "Unpin",
-    "today": "Today",
     "yesterday": "Yesterday",
-    "daysAgo": "{{count}} days ago",
     "page": {
       "newTitle": "New session",
       "newDescription": "Pick a folder and tell the agent what to do.",
@@ -2097,81 +1783,46 @@
     },
     "permission": {
       "openTerminal": "Open in Terminal"
-    }
-  },
-  "sidebarNav": {
-    "app": "App",
-    "artifacts": "산출물",
-    "capabilities": "기능",
-    "connectors": "커넥터",
-    "memory": "Memory",
-    "messaging": "Messaging",
-    "newSession": "새 세션",
-    "routines": "Routines",
-    "usage": "사용량",
-    "whatsNew": "What's new"
-  },
-  "skills": {
-    "appliesToBoth": "스킬은 모든 워크스페이스에서 에이전트가 사용할 수 있습니다.",
-    "back": "뒤로",
-    "browseMarketplace": "마켓플레이스 둘러보기",
-    "cancel": "취소",
-    "done": "완료",
-    "edit": "스킬 파일 편집",
-    "install": "설치",
-    "installFailed": "설치에 실패했습니다",
-    "installGlobalTitle": "전역으로 설치",
-    "installed": "설치됨",
-    "installs": "설치 {{count}}회",
-    "marketplaceTitle": "스킬 마켓플레이스",
-    "noResults": "스킬을 찾을 수 없습니다.",
-    "noSkills": "사용 가능한 스킬이 없습니다.",
-    "openFailed": "스킬 파일을 열지 못했습니다.",
-    "poweredBy": "제공",
-    "removeFailed": "스킬을 제거하지 못했습니다.",
-    "restartBanner": "새로 추가한 스킬을 사용하려면 앱을 다시 시작하세요.",
-    "restartNote": "새 스킬은 앱을 다시 시작한 후에 적용됩니다.",
-    "restartNow": "지금 다시 시작",
-    "searchError": "마켓플레이스에 연결할 수 없습니다.",
-    "searchPlaceholder": "스킬 검색…",
-    "searchPrompt": "설치할 스킬을 검색하세요.",
-    "sources": {
-      "global": "전역",
-      "project": "작업 공간"
     },
-    "title": "스킬",
-    "uninstall": "스킬 제거",
-    "uninstallConfirm": "스킬 \"{{id}}\"을(를) 제거하시겠습니까? 스킬 파일이 삭제됩니다.",
-    "upload": "업로드",
-    "uploadFailed": "선택한 스킬을 가져오지 못했습니다.",
-    "uploadFromFile": "파일에서…",
-    "uploadFromFolder": "폴더에서…",
-    "uploadTitle": "컴퓨터에서 스킬 가져오기"
+    "delete": "Delete session",
+    "deleteBody": "“{{label}}” and its transcript are deleted. This cannot be undone.",
+    "deleteError": "Could not delete that session. Try again.",
+    "deleteTitle": "Delete this session?",
+    "emptyDescription": "세션을 시작해 원하는 폴더에서 에이전트와 작업하세요.",
+    "emptyTitle": "아직 세션이 없습니다",
+    "newSession": "New session",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "sessionOptions": "Session options",
+    "title": "Sessions",
+    "unpin": "Unpin",
+    "today": "Today",
+    "daysAgo": "{{count}} days ago"
   },
   "terminalShells": {
     "busybox": {
-      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in.",
-      "label": "BusyBox sh"
+      "label": "BusyBox sh",
+      "description": "The POSIX shell bundled with the app (busybox ash), the same one the agent's bash tool runs under, with grep, sed, awk and friends built in."
     },
     "cmd": {
-      "description": "The Windows command prompt.",
-      "label": "Command Prompt"
+      "label": "Command Prompt",
+      "description": "The Windows command prompt."
+    },
+    "powershell": {
+      "label": "Windows PowerShell",
+      "description": "Windows PowerShell, the one that ships with Windows."
+    },
+    "pwsh": {
+      "label": "PowerShell",
+      "description": "PowerShell 7 or later, installed separately."
+    },
+    "system": {
+      "label": "Default shell",
+      "description": "Whatever this machine calls its default shell."
     },
     "fellBack": "{{selected}} isn't usable right now, so new terminals open in {{effective}}.",
     "inUse": "In use",
     "notInstalled": "Not found on this machine.",
-    "powershell": {
-      "description": "Windows PowerShell, the one that ships with Windows.",
-      "label": "Windows PowerShell"
-    },
-    "pwsh": {
-      "description": "PowerShell 7 or later, installed separately.",
-      "label": "PowerShell"
-    },
-    "system": {
-      "description": "Whatever this machine calls its default shell.",
-      "label": "Default shell"
-    },
     "title": "Terminal shell"
   },
   "theme": {
@@ -2186,6 +1837,56 @@
     "progress": "{{total}}단계 중 {{current}}단계",
     "replay": "둘러보기",
     "skip": "둘러보기 건너뛰기",
+    "stops": {
+      "rail": {
+        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
+        "title": "내 봇"
+      },
+      "make-bot": {
+        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
+        "title": "Make a bot"
+      },
+      "workspaces": {
+        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다.",
+        "title": "워크스페이스"
+      },
+      "start-session": {
+        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다.",
+        "title": "세션 시작"
+      },
+      "connectors": {
+        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다.",
+        "title": "커넥터"
+      },
+      "changes": {
+        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다.",
+        "title": "변경 사항"
+      },
+      "preview-terminal": {
+        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다.",
+        "title": "터미널"
+      },
+      "memory": {
+        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요.",
+        "title": "Memory"
+      },
+      "artifacts": {
+        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다.",
+        "title": "산출물"
+      },
+      "welcome": {
+        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다.",
+        "title": "AbacusAI Bot에 오신 것을 환영합니다"
+      },
+      "talk": {
+        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다.",
+        "title": "봇과 대화하기"
+      },
+      "notch": {
+        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요.",
+        "title": "나의 도우미"
+      }
+    },
     "steps": {
       "artifacts": {
         "title": "결과물",
@@ -2245,56 +1946,6 @@
       "welcome": {
         "title": "AbacusAI Bot에 오신 것을 환영합니다",
         "body": "창을 한 바퀴 돌아봅니다. 각 패널이 무엇이고 어디에 쓰는지. 짧은 열다섯 곳이고, 언제든 나갈 수 있습니다."
-      }
-    },
-    "stops": {
-      "rail": {
-        "title": "내 봇",
-        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요."
-      },
-      "make-bot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "workspaces": {
-        "title": "워크스페이스",
-        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다."
-      },
-      "start-session": {
-        "title": "세션 시작",
-        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다."
-      },
-      "connectors": {
-        "title": "커넥터",
-        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다."
-      },
-      "changes": {
-        "title": "변경 사항",
-        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다."
-      },
-      "preview-terminal": {
-        "title": "터미널",
-        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다."
-      },
-      "memory": {
-        "title": "Memory",
-        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요."
-      },
-      "artifacts": {
-        "title": "산출물",
-        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
-      },
-      "welcome": {
-        "title": "AbacusAI Bot에 오신 것을 환영합니다",
-        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다."
-      },
-      "talk": {
-        "title": "봇과 대화하기",
-        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다."
-      },
-      "notch": {
-        "title": "나의 도우미",
-        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요."
       }
     }
   },
@@ -2364,10 +2015,104 @@
     "theme": "테마",
     "whatsNew": "What's new"
   },
-  "visualizer": {
-    "loading": "시각화를 불러오는 중…"
-  },
   "workspace": {
+    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
+    "premiumUpgrade": {
+      "continueOn": "Continue on {{model}} (free)",
+      "exhaustedTitle": "You've used up your free credits",
+      "poolOutTitle": "Every free source is used up for now",
+      "switchNote": "Pick another model in the model picker to keep going",
+      "connectNote": "Connect one of these to keep going. No card needed.",
+      "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
+      "connectCta": "Connect",
+      "continueCta": "Continue",
+      "localMeta": "Free, no limits · downloads once",
+      "localName": "A model on this computer",
+      "setUpCta": "Set up",
+      "sourceCerebras": "Cerebras",
+      "sourceCerebrasMeta": "빠른 GPT-OSS와 Qwen · 무료 체험 키",
+      "sourceGemini": "Google AI Studio",
+      "sourceGeminiMeta": "Gemini · free API key",
+      "sourceGroq": "Groq",
+      "sourceGroqMeta": "빠른 오픈 모델 · API 키, 빠듯한 무료 한도",
+      "sourceMistral": "Mistral",
+      "sourceMistralMeta": "Devstral 및 Mistral · 무료 API 키",
+      "sourceNvidia": "NVIDIA",
+      "sourceNvidiaMeta": "Kimi, GLM, DeepSeek · 무료 API 키",
+      "sourceOpenrouter": "OpenRouter",
+      "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
+      "topUpMeta": "Add credits to your account"
+    },
+    "preview": {
+      "pptxSlideFailed": "Slide {{number}} could not be rendered",
+      "addSurface": "Add surface",
+      "address": "Browser address",
+      "addressPlaceholder": "URL 또는 파일 경로를 입력하세요…",
+      "back": "뒤로 가기",
+      "browserProfile": "브라우저 프로필",
+      "browserProfileClear": "깨끗한 세션으로 초기화",
+      "browserProfileCleared": "프로필 세션이 초기화되었습니다",
+      "browserProfileImportError": "프로필 가져오기에 실패했습니다",
+      "browserProfileImported": "프로필을 성공적으로 가져왔습니다",
+      "browserProfileNone": "기본값 (프로필 없음)",
+      "browserProfileRefresh": "프로필 새로고침",
+      "clearSiteData": "Clear site data",
+      "closeSurface": "Close {{title}}",
+      "developerTools": "Developer tools",
+      "emptyDescription": "탐색기에서 파일을 열거나, 채팅의 링크를 클릭하거나, 웹을 탐색하세요.",
+      "emptyTitle": "열린 미리보기가 없습니다",
+      "forward": "앞으로 가기",
+      "hardReload": "Hard reload",
+      "htmlShowRendered": "Show rendered deck",
+      "htmlShowSource": "Show source",
+      "imageError": "Could not show this image here ({{error}}).",
+      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
+      "loading": "불러오는 중…",
+      "mdShowRendered": "Show rendered markdown",
+      "moreActions": "More browser actions",
+      "noProfiles": "브라우저 프로필을 찾을 수 없습니다",
+      "openBrowser": "브라우저 열기",
+      "openExternal": "외부 앱에서 열기",
+      "pageUnavailable": "This page is unavailable",
+      "pptxError": "This presentation could not be read ({{error}}).",
+      "pptxMoreWarnings": "+{{count}} more",
+      "pptxNoNotes": "No speaker notes on this slide.",
+      "pptxNotes": "Notes",
+      "pptxSlideCount": "Slide {{current}} of {{total}}",
+      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
+      "pptxWarnings": "{{count}} rendering warning",
+      "pptxWarnings_other": "{{count}} rendering warnings",
+      "refresh": "새로고침",
+      "reload": "Reload",
+      "sectionFileCount": "{{count}}개 파일",
+      "sourceError": "Could not read this file ({{error}}).",
+      "split": "분할",
+      "stop": "로딩 중지",
+      "toggleTooltip": "미리보기 전환",
+      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
+      "tryAgain": "Try again",
+      "unified": "통합",
+      "zoom": "Zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset zoom"
+    },
+    "renameWorkspace": "작업 공간 이름 변경",
+    "voice": {
+      "errors": {
+        "permission-denied": "Microphone access was denied. Allow it in system settings.",
+        "transcription-failed": "Could not transcribe that. Try again.",
+        "microphone-in-use": "The microphone is in use by another app.",
+        "no-microphone": "No microphone was found.",
+        "unsupported": "Recording is not available here."
+      },
+      "downloading": "Downloading the speech model… {{percent}}%",
+      "start": "Dictate",
+      "stop": "Stop and transcribe",
+      "transcribing": "Transcribing…"
+    },
+    "workspaceOptions": "작업 공간 옵션",
+    "yesterday": "어제",
     "addWorkspace": "작업 공간 추가",
     "ageDays": "{{count}}일",
     "ageHours": "{{count}}시간",
@@ -2450,7 +2195,6 @@
     "deleteWorkspacePermanently": "Delete Permanently",
     "deleteWorkspacePermanentlyDescription": "\"{{name}}\" was already deleted. This erases its chats and their history for good. Your files and the folder on disk are not touched. This action cannot be undone.",
     "deletedWorkspaceBadge": "Deleted",
-    "deletedWorkspaceReadOnly": "This workspace was deleted, so its chats are read-only. Add its folder back as a workspace to continue these conversations.",
     "deliverable": {
       "delivered": "Delivered",
       "delivering": "Delivering",
@@ -2568,92 +2312,11 @@
       "pending": "열림",
       "reviews": "승인 {{approved}}건 · 변경 요청 {{changes}}건 · 대기 {{requested}}건"
     },
-    "premiumUpgrade": {
-      "connectNote": "Connect one of these to keep going. No card needed.",
-      "continueOn": "Continue on {{model}} (free)",
-      "exhaustedTitle": "You've used up your free credits",
-      "localNote": "Every free source is connected. A model on this computer keeps going with no limits.",
-      "poolOutTitle": "Every free source is used up for now",
-      "switchNote": "Pick another model in the model picker to keep going",
-      "connectCta": "Connect",
-      "continueCta": "Continue",
-      "localMeta": "Free, no limits · downloads once",
-      "localName": "A model on this computer",
-      "setUpCta": "Set up",
-      "sourceCerebras": "Cerebras",
-      "sourceCerebrasMeta": "빠른 GPT-OSS와 Qwen · 무료 체험 키",
-      "sourceGemini": "Google AI Studio",
-      "sourceGeminiMeta": "Gemini · free API key",
-      "sourceGroq": "Groq",
-      "sourceGroqMeta": "빠른 오픈 모델 · API 키, 빠듯한 무료 한도",
-      "sourceMistral": "Mistral",
-      "sourceMistralMeta": "Devstral 및 Mistral · 무료 API 키",
-      "sourceNvidia": "NVIDIA",
-      "sourceNvidiaMeta": "Kimi, GLM, DeepSeek · 무료 API 키",
-      "sourceOpenrouter": "OpenRouter",
-      "sourceOpenrouterMeta": "Free models · sign in with Google or GitHub",
-      "topUpMeta": "Add credits to your account"
-    },
-    "preview": {
-      "addSurface": "Add surface",
-      "address": "Browser address",
-      "addressPlaceholder": "URL 또는 파일 경로를 입력하세요…",
-      "back": "뒤로 가기",
-      "browserProfile": "브라우저 프로필",
-      "browserProfileClear": "깨끗한 세션으로 초기화",
-      "browserProfileCleared": "프로필 세션이 초기화되었습니다",
-      "browserProfileImportError": "프로필 가져오기에 실패했습니다",
-      "browserProfileImported": "프로필을 성공적으로 가져왔습니다",
-      "browserProfileNone": "기본값 (프로필 없음)",
-      "browserProfileRefresh": "프로필 새로고침",
-      "clearSiteData": "Clear site data",
-      "closeSurface": "Close {{title}}",
-      "developerTools": "Developer tools",
-      "emptyDescription": "탐색기에서 파일을 열거나, 채팅의 링크를 클릭하거나, 웹을 탐색하세요.",
-      "emptyTitle": "열린 미리보기가 없습니다",
-      "forward": "앞으로 가기",
-      "hardReload": "Hard reload",
-      "htmlShowRendered": "Show rendered deck",
-      "htmlShowSource": "Show source",
-      "imageError": "Could not show this image here ({{error}}).",
-      "imageOutsideWorkspace": "This file is outside the workspace, so it is not shown here. Open it in an external app instead.",
-      "loading": "불러오는 중…",
-      "mdShowRendered": "Show rendered markdown",
-      "moreActions": "More browser actions",
-      "noProfiles": "브라우저 프로필을 찾을 수 없습니다",
-      "openBrowser": "브라우저 열기",
-      "openExternal": "외부 앱에서 열기",
-      "pageUnavailable": "This page is unavailable",
-      "pptxError": "This presentation could not be read ({{error}}).",
-      "pptxMoreWarnings": "+{{count}} more",
-      "pptxNoNotes": "No speaker notes on this slide.",
-      "pptxNotes": "Notes",
-      "pptxSlideCount": "Slide {{current}} of {{total}}",
-      "pptxSlideFailed": "Slide {{number}} could not be rendered",
-      "pptxSlidesFailed": "{{failed}} of {{total}} slides could not be rendered",
-      "pptxWarnings": "{{count}} rendering warning",
-      "pptxWarnings_other": "{{count}} rendering warnings",
-      "refresh": "새로고침",
-      "reload": "Reload",
-      "sectionFileCount": "{{count}}개 파일",
-      "sourceError": "Could not read this file ({{error}}).",
-      "split": "분할",
-      "stop": "로딩 중지",
-      "toggleTooltip": "미리보기 전환",
-      "truncatedFile": "This file is too large to open in full. Only the beginning is shown, and editing is disabled here so saving cannot overwrite the rest. Open it in an external editor to change it.",
-      "tryAgain": "Try again",
-      "unified": "통합",
-      "zoom": "Zoom",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "zoomReset": "Reset zoom"
-    },
     "refreshModels": "Refresh models",
     "renameChat": "채팅 이름 변경",
     "renameChatPlaceholder": "새 채팅 이름 입력",
     "renameEmptyName": "이름은 비워 둘 수 없습니다",
     "renameError": "이름 변경 실패",
-    "renameWorkspace": "작업 공간 이름 변경",
     "renameWorkspacePlaceholder": "새 작업 공간 이름 입력",
     "resizeInspector": "Resize workspace inspector",
     "resizeSidebar": "Resize workspace sidebar",
@@ -2744,19 +2407,6 @@
       "show": "Show the thought process"
     },
     "unpinChat": "고정 해제",
-    "voice": {
-      "downloading": "Downloading the speech model… {{percent}}%",
-      "errors": {
-        "microphone-in-use": "The microphone is in use by another app.",
-        "no-microphone": "No microphone was found.",
-        "permission-denied": "Microphone access was denied. Allow it in system settings.",
-        "transcription-failed": "Could not transcribe that. Try again.",
-        "unsupported": "Recording is not available here."
-      },
-      "start": "Dictate",
-      "stop": "Stop and transcribe",
-      "transcribing": "Transcribing…"
-    },
     "welcome": {
       "addWorkspace": "새 작업 공간 추가",
       "defaultWorkspace": "Default workspace",
@@ -2805,7 +2455,6 @@
       "sendBlocked": "보낼 수 없습니다: {{path}}이(가) 더 이상 존재하지 않습니다.",
       "title": "폴더를 찾을 수 없습니다"
     },
-    "workspaceOptions": "작업 공간 옵션",
     "workspaceRenamed": "작업 공간 이름이 변경되었습니다",
     "workspaces": "Workspaces",
     "worktree": {
@@ -2814,8 +2463,7 @@
       "description": "Choose which checkout the agent will read and change for this chat.",
       "error": "Worktree operation failed",
       "select": "Select worktree"
-    },
-    "yesterday": "어제"
+    }
   },
   "reactions": {
     "feedback": "이 답변에 반응하기",
@@ -2861,9 +2509,6 @@
       "loadError": "Couldn't load",
       "retry": "Retry"
     },
-    "status": {
-      "ready": "Ready"
-    },
     "command": {
       "title": "Command menu",
       "placeholder": "Search areas, pages, bots and sessions",
@@ -2882,6 +2527,9 @@
       "title": "Couldn't start",
       "description": "The app couldn't reach its background process.",
       "reload": "Reload"
+    },
+    "status": {
+      "ready": "Ready"
     }
   },
   "errors": {
@@ -2931,7 +2579,6 @@
       "language": "Language",
       "keyboard": "Keyboard"
     },
-    "emptyDescription": "These settings arrive in a coming update.",
     "theme": {
       "label": "Theme",
       "description": "Follow the system, or always light or dark."
@@ -2974,19 +2621,20 @@
         "notch-reply": "Reply in the notch"
       }
     },
-    "backToApp": "Back to the app"
+    "backToApp": "Back to the app",
+    "emptyDescription": "These settings arrive in a coming update."
   },
   "onboardingFlow": {
-    "description": "Onboarding arrives in a coming update.",
     "steps": {
       "welcome": "Welcome",
-      "connect": "Connect",
       "connected": "Connected",
       "models": "Models",
       "connectors": "Connectors",
       "first-bot": "Your first bot",
-      "done": "Done"
-    }
+      "done": "Done",
+      "connect": "Connect"
+    },
+    "description": "Onboarding arrives in a coming update."
   },
   "chat": {
     "announce": {
@@ -3019,12 +2667,10 @@
       "attachFailed": "Couldn't attach this file",
       "attachFiles": "Files or images",
       "attachFolder": "Folder",
-      "botPlaceholder": "{{name}}에게 메시지",
       "busyBot": "Add to the queue, or stop",
       "busySession": "Steer the run, or queue the next step",
       "channelBot": "This chat lives in your messaging app. Reply there.",
       "dictate": "Dictate",
-      "dictateSoon": "Dictation arrives soon",
       "files": "Files",
       "gone": "This conversation no longer exists.",
       "mini": "Reply, or steer the run",
@@ -3042,7 +2688,9 @@
       "skills": "스킬",
       "stop": "중지",
       "uploading": "Wait for the attachments to finish saving",
-      "pasteUnavailable": "Pasting files isn't available here"
+      "pasteUnavailable": "Pasting files isn't available here",
+      "botPlaceholder": "{{name}}에게 메시지",
+      "dictateSoon": "Dictation arrives soon"
     },
     "day": {
       "today": "Today",
@@ -3302,11 +2950,11 @@
       "transcribing": "Transcribing…",
       "error": "Microphone access was denied. Allow it in system settings."
     },
-    "done": {
-      "title": "완료"
-    },
     "failed": {
       "title": "문제가 발생했습니다"
+    },
+    "done": {
+      "title": "완료"
     }
   },
   "phase5": {
@@ -3349,7 +2997,6 @@
     "runNow": "지금 실행",
     "routineOn": "Routine on",
     "runs": "Runs",
-    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire.",
     "showMore": "Show more",
     "runGone": "This run was removed.",
     "routineGone": "This routine is gone.",
@@ -3854,6 +3501,359 @@
     "unbind": "Unbind",
     "invalidMcp": "이름과 명령 또는 유효한 HTTP(S) URL을 입력하세요.",
     "chooseRecipients": "받는 사람을 한 명 이상 선택하세요.",
-    "authRequired": "인증이 필요합니다"
+    "authRequired": "인증이 필요합니다",
+    "noRuns": "This routine has not fired yet. Run it now, or wait for its next fire."
+  },
+  "browserPermission": {
+    "allow": "허용",
+    "deny": "거부",
+    "never": "다시 묻지 않기",
+    "session": "종료할 때까지 허용",
+    "title": "브라우저 작업"
+  },
+  "browserSettings": {
+    "approval": {
+      "always": "묻지 않기",
+      "ask": "항상 묻기"
+    },
+    "approvalSubtitle": "에이전트가 탐색 전에 승인을 요청할지 선택하세요.",
+    "approvalTitle": "승인",
+    "chrome": {
+      "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
+      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
+      "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
+      "connecting": "Waiting for you to allow the connection in your browser…",
+      "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",
+      "install": "Install the extension",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "tokenTitle": "Extension token",
+      "tokenPlaceholder": "Paste the extension's token to skip the allow page",
+      "tokenSave": "Save token",
+      "tokenSaved": "Token saved.",
+      "tokenHint": "Optional. The token is shown on the extension's allow page; with it saved, the app connects without asking each time."
+    },
+    "clearAction": "모든 브라우징 데이터 삭제",
+    "clearSubtitle": "앱 내 브라우저의 사이트 데이터와 캐시를 삭제합니다",
+    "clearTitle": "브라우징 데이터",
+    "cleared": "브라우징 데이터를 삭제했습니다.",
+    "dataSection": "데이터",
+    "done": "완료",
+    "engine": {
+      "builtin": "Built-in browser",
+      "chrome": "My Chrome"
+    },
+    "engineSection": "Which browser",
+    "engineSubtitle": "The app's own browser, or your Chrome with your logins and tabs.",
+    "engineTitle": "Browser the agent uses",
+    "homepageInvalid": "Enter a valid web address.",
+    "homepageSave": "Save",
+    "homepageSaved": "Home page saved.",
+    "homepageTitle": "Home page",
+    "masterSubtitle": "에이전트가 내장 브라우저를 제어하도록 허용",
+    "masterTitle": "Browser",
+    "permissionsSection": "권한",
+    "subtitle": "에이전트의 내장 브라우저를 관리합니다.",
+    "title": "Browser"
+  },
+  "changelog": {
+    "current": "This version",
+    "empty": "No releases to show yet.",
+    "subtitle": "Every release, newest first. The version you are running is marked."
+  },
+  "connectorRequest": {
+    "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
+    "connect": "Connect {{provider}}",
+    "connecting": "Connecting…",
+    "decline": "Not now",
+    "failed": "Could not connect {{provider}}.",
+    "stop": "연결 중단",
+    "title": "{{provider}} is not connected"
+  },
+  "deepAgentCard": {
+    "body": "Open DeepAgent on the web",
+    "cta": "Go to Abacus AI Agent",
+    "title": "Go to DeepAgent"
+  },
+  "deliverables": {
+    "files": "Files",
+    "openInBrowser": "Open in browser",
+    "showInFolder": "Show in folder",
+    "showLess": "Show less",
+    "showMore": "+{{count}} more"
+  },
+  "devicePanel": {
+    "axPermissionNeeded": "창을 표시하지 않고 시뮬레이터를 미러링하려면 손쉬운 사용 권한이 필요합니다.",
+    "boot": "부팅",
+    "bootFailed": "기기를 부팅하지 못했습니다",
+    "buildDone": "앱이 기기에서 실행되었습니다",
+    "buildFailed": "빌드 실패",
+    "buildRun": "빌드 및 실행",
+    "buildRunHint": "워크스페이스를 빌드하여 이 기기에서 실행합니다",
+    "buildRunUnavailable": "이 워크스페이스에는 빌드할 {{platform}} 프로젝트가 없습니다",
+    "captureFailed": "기기 화면을 캡처할 수 없습니다",
+    "createDevice": "{{platform}} 기기 만들기",
+    "createDeviceFailed": "기기를 만들 수 없습니다",
+    "creatingDevice": "만드는 중…",
+    "deviceCreated": "{{name}} 생성됨",
+    "grantAccess": "액세스 허용",
+    "howToAddDevice": "{{platform}} 기기를 추가하는 방법",
+    "installingMaestro": "Maestro 설치 중…",
+    "interactMaestroHint": "iOS 시뮬레이터와 상호작용하려면 Maestro를 설치하세요",
+    "keyBack": "뒤로",
+    "keyHome": "홈",
+    "keyRecents": "최근 앱",
+    "maestroInstallFailed": "Maestro 설치에 실패했습니다",
+    "maestroInstalled": "Maestro가 설치되었습니다. 이제 iOS 시뮬레이터와 상호작용할 수 있습니다",
+    "modeLive": "실시간",
+    "modePoll": "느림(스크린샷)",
+    "noDevices": "기기 없음",
+    "noPlatformDevices": "{{platform}} 기기를 찾을 수 없습니다.",
+    "notBooted": "이 기기는 실행 중이 아닙니다. 화면을 보려면 부팅하세요.",
+    "openNative": "네이티브 시뮬레이터 창 열기",
+    "phase": {
+      "booting": "기기 부팅 중…",
+      "building": "빌드 중…",
+      "installing": "설치 중…",
+      "launching": "실행 중…"
+    },
+    "refresh": "기기 새로고침",
+    "screenAlt": "{{name}}의 화면",
+    "screenPermissionNeeded": "시뮬레이터를 부드럽게 미러링하려면 화면 기록 권한이 필요합니다.",
+    "selectDevice": "기기 선택",
+    "stateShutdown": "꺼짐",
+    "typeHint": "화면을 클릭한 다음 키보드로 입력하세요"
+  },
+  "devicePermission": {
+    "title": "기기 작업"
+  },
+  "deviceSettings": {
+    "approvalSubtitle": "에이전트가 기기 작업을 실행할 수 있는 시점",
+    "approvalTitle": "도구 승인",
+    "detected": "감지됨",
+    "maestroHint": "iOS 시뮬레이터에서 에이전트가 탭하고 입력할 수 있도록 Maestro를 설치하세요.",
+    "masterSubtitle": "에이전트가 시뮬레이터와 에뮬레이터에서 앱을 빌드, 설치, 테스트할 수 있게 합니다",
+    "masterTitle": "기기 도구 사용",
+    "notDetected": "감지되지 않음",
+    "subtitle": "Code 에이전트용 iOS 시뮬레이터 및 Android 에뮬레이터 도구",
+    "title": "기기",
+    "toolchainAndroid": "Android(adb)",
+    "toolchainIos": "iOS 시뮬레이터(Xcode)",
+    "toolchainMaestro": "Maestro(iOS 상호작용)",
+    "toolchainSection": "감지된 툴체인"
+  },
+  "deviceSetup": {
+    "androidAvdDesc": "Android SDK는 있지만 가상 기기가 없습니다. Android Studio의 Tools → Device Manager에서 만드세요.",
+    "androidDesc": "Android Studio를 설치한 다음 Tools → Device Manager에서 가상 기기를 만드세요.",
+    "androidTitle": "Android · Android Studio",
+    "download": "다운로드",
+    "iosDesc": "Mac App Store에서 Xcode를 설치하고 한 번 실행하여 설정을 완료하세요. 그러면 시뮬레이터가 여기에 표시됩니다.",
+    "iosRuntimeDesc": "Xcode가 설치되어 있지만 시뮬레이터를 찾을 수 없습니다. Xcode → 설정 → Components에서 iOS 런타임을 다운로드하세요.",
+    "iosTitle": "iOS · Xcode",
+    "recheck": "다시 확인"
+  },
+  "diff": {
+    "noChanges": "표시할 변경 사항이 없습니다"
+  },
+  "error": {
+    "keepsCrashing": "앱에서 같은 오류가 계속 발생합니다. 로컬 데이터를 초기화하면 해결될 수 있습니다.",
+    "ouch": "아야!",
+    "reloadApp": "앱 새로고침",
+    "resetLocalData": "로컬 데이터 초기화",
+    "somethingWrong": "문제가 발생했습니다",
+    "tryAgain": "다시 시도",
+    "unexpected": "예기치 않은 오류가 발생했습니다."
+  },
+  "firstBot": {
+    "title": "We set up your first bot"
+  },
+  "greeting": {
+    "afternoon": {
+      "1": "좋은 오후",
+      "2": "오후 작업",
+      "3": "딥 워크 시간",
+      "4": "잘 해내고 있어요",
+      "5": "꾸준한 진전"
+    },
+    "dawn": {
+      "1": "이른 기상",
+      "2": "새벽 순찰",
+      "3": "해와 함께 일어나기",
+      "4": "일출 세션",
+      "5": "세상보다 먼저 일어나기"
+    },
+    "earlyEvening": {
+      "1": "저녁 교대",
+      "2": "골든 아워",
+      "3": "마무리 중",
+      "4": "마지막 한 번 더",
+      "5": "거의 다 됐어요"
+    },
+    "earlyMorning": {
+      "1": "커피 타임",
+      "2": "아침 에너지",
+      "3": "새로운 시작",
+      "4": "일어나서 빛나기",
+      "5": "아침의 활력"
+    },
+    "evening": {
+      "1": "좋은 저녁",
+      "2": "저녁 세션",
+      "3": "나이트 모드",
+      "4": "하루를 마무리하며",
+      "5": "여유로운 생산성"
+    },
+    "lateNight": {
+      "1": "깊은 밤",
+      "2": "마녀의 시간",
+      "3": "야간 근무",
+      "4": "헌신 모드",
+      "5": "세상이 잠든 사이"
+    },
+    "lunch": {
+      "1": "점심 체크인",
+      "2": "오후 시작",
+      "3": "점심 후 파워",
+      "4": "충전하고 출발",
+      "5": "두 번째 바람"
+    },
+    "midMorning": {
+      "1": "좋은 아침",
+      "2": "최고의 생산성",
+      "3": "오전 플로우",
+      "4": "무언가 만들어 봅시다",
+      "5": "집중 모드"
+    },
+    "night": {
+      "1": "올빼미족",
+      "2": "밤샘 작업",
+      "3": "심야 작업",
+      "4": "조용한 시간",
+      "5": "업무 외 시간"
+    },
+    "preDawn": {
+      "1": "아직 진행 중",
+      "2": "이른 시간",
+      "3": "새벽 전",
+      "4": "헌신적",
+      "5": "진정한 헌신"
+    }
+  },
+  "jobs": {
+    "delete": "삭제",
+    "empty": "예약된 작업이 없습니다. 채팅에서 에이전트에게 “평일 아침 9시마다 받은함 요약해 줘”라고 말하면 여기에 표시됩니다.",
+    "enabled": "활성",
+    "lastRun": "마지막 {{time}}",
+    "nextRun": "다음 {{time}}",
+    "runNow": "지금 실행",
+    "startFailed": "실행을 시작하지 못했습니다.",
+    "started": "시작됨. 전용 세션에서 실행됩니다."
+  },
+  "logs": {
+    "saveFailed": "Could not save logs: {{error}}",
+    "saved": "Logs saved to {{path}}"
+  },
+  "notificationSettings": {
+    "enableSubtitle": "When a task finishes, or a tool is waiting for your approval. Only while the window is not focused.",
+    "enableTitle": "Notify me",
+    "soundSubtitle": "Uses your system notification sound.",
+    "soundTitle": "Play a sound",
+    "subtitle": "What AbacusAI Bot tells you while you are looking elsewhere",
+    "title": "Notifications"
+  },
+  "notifications": {
+    "codeSessionFallback": "코드 세션",
+    "permissionRequired": "🔔 권한 필요",
+    "taskCompleted": "✅ 작업 완료",
+    "toolFallback": "도구",
+    "waitingForApproval": "승인 대기 중: {{toolName}}"
+  },
+  "openFile": {
+    "failed": "해당 파일을 열지 못했습니다.",
+    "refusedInvalid": "해당 링크는 파일을 가리키지 않습니다.",
+    "refusedMissing": "해당 파일이 더 이상 없습니다.",
+    "refusedOutside": "해당 파일은 작업 폴더 밖에 있어 열지 않았습니다.",
+    "revealed": "해당 파일은 열면 실행되므로 파일 관리자에서 표시했습니다."
+  },
+  "permissions": {
+    "credentialAlways": "“Always” also keeps these readable for the rest of this session.",
+    "credentialRead": "Reads a credential store the sandbox otherwise hides:",
+    "networkHost": "A sandboxed command wants to reach a host that is not on the allow list. The connection is waiting on your answer.",
+    "networkHostAlways": "Always allow {{host}} this session",
+    "sandboxDenied": "The sandbox refused something this command tried. Allow it?",
+    "sandboxDeniedAlways": "Always allow these this session",
+    "sandboxDeniedHost": "Reach {{host}}",
+    "sandboxDeniedRead": "Read {{path}}",
+    "sandboxDeniedRerun": "If you allow it, the command runs again with that access.",
+    "sandboxDeniedWrite": "Write {{path}}"
+  },
+  "profile": {
+    "title": "Profile",
+    "connectedAccount": "Abacus.AI account",
+    "notSignedIn": "Not signed in to Abacus.AI. Connect in Settings → API keys to see your organization, plan and credits.",
+    "organization": "Organization",
+    "plan": "Plan",
+    "credits": "Credits this month",
+    "creditsValue": "{{used}} of {{granted}} used",
+    "members": "Team members",
+    "dangerZone": "Danger zone",
+    "permissionsTitle": "Default permission mode",
+    "permissionsDescription": "What new sessions, bots and routines run in. Full access: no prompts and no sandbox. Auto: no prompts, but the operating system confines shell commands to the workspace and hides credential stores.",
+    "permissionsFullAccess": "Full access",
+    "permissionsAuto": "Auto",
+    "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
+    "notSignedInShort": "로그인되지 않음"
+  },
+  "sidebarNav": {
+    "app": "App",
+    "artifacts": "산출물",
+    "capabilities": "기능",
+    "connectors": "커넥터",
+    "memory": "Memory",
+    "messaging": "Messaging",
+    "newSession": "새 세션",
+    "routines": "Routines",
+    "usage": "사용량",
+    "whatsNew": "What's new"
+  },
+  "skills": {
+    "appliesToBoth": "스킬은 모든 워크스페이스에서 에이전트가 사용할 수 있습니다.",
+    "back": "뒤로",
+    "browseMarketplace": "마켓플레이스 둘러보기",
+    "cancel": "취소",
+    "done": "완료",
+    "edit": "스킬 파일 편집",
+    "install": "설치",
+    "installFailed": "설치에 실패했습니다",
+    "installGlobalTitle": "전역으로 설치",
+    "installed": "설치됨",
+    "installs": "설치 {{count}}회",
+    "marketplaceTitle": "스킬 마켓플레이스",
+    "noResults": "스킬을 찾을 수 없습니다.",
+    "noSkills": "사용 가능한 스킬이 없습니다.",
+    "openFailed": "스킬 파일을 열지 못했습니다.",
+    "poweredBy": "제공",
+    "removeFailed": "스킬을 제거하지 못했습니다.",
+    "restartBanner": "새로 추가한 스킬을 사용하려면 앱을 다시 시작하세요.",
+    "restartNote": "새 스킬은 앱을 다시 시작한 후에 적용됩니다.",
+    "restartNow": "지금 다시 시작",
+    "searchError": "마켓플레이스에 연결할 수 없습니다.",
+    "searchPlaceholder": "스킬 검색…",
+    "searchPrompt": "설치할 스킬을 검색하세요.",
+    "sources": {
+      "global": "전역",
+      "project": "작업 공간"
+    },
+    "title": "스킬",
+    "uninstall": "스킬 제거",
+    "uninstallConfirm": "스킬 \"{{id}}\"을(를) 제거하시겠습니까? 스킬 파일이 삭제됩니다.",
+    "upload": "업로드",
+    "uploadFailed": "선택한 스킬을 가져오지 못했습니다.",
+    "uploadFromFile": "파일에서…",
+    "uploadFromFolder": "폴더에서…",
+    "uploadTitle": "컴퓨터에서 스킬 가져오기"
+  },
+  "visualizer": {
+    "loading": "시각화를 불러오는 중…"
   }
 }

@@ -422,22 +422,6 @@ const TranscriptV1Source = v.object({
   afterClear: v.optional(v.string()),
 });
 
-export const ThreadFileV2Schema = v.looseObject({
-  version: v.literal(2),
-  threadId: v.string(),
-  updatedAt: v.string(),
-  source: v.variant("kind", [
-    TranscriptV1Source,
-    v.looseObject({
-      kind: v.literal("agui"),
-      migratedFrom: v.optional(v.object({ updatedAt: v.string() })),
-      afterClear: v.optional(v.string()),
-    }),
-  ]),
-  messages: v.array(UIMessageSchema),
-  runs: v.optional(v.array(v.unknown())),
-});
-
 // ─── The strict schema of a file the v1 mapper wrote (C-T2) ─────────────────
 
 const Str = v.string();

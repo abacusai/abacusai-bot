@@ -50,7 +50,7 @@ const shouldRunCliInDebugMode = (): boolean =>
  * NDJSON on a compatibility channel, fd 3 or RS-prefixed lines on stdout, which
  * feeds the same pipeline below; nothing selects it until the new renderer does.
  */
-export type AgentWire = "ndjson" | "agui";
+export type AgentWire = "agui";
 
 /** The inline compat line prefix under `--wire agui` (agent: agui/channel.ts). */
 const INLINE_COMPAT_PREFIX = "\u001e";
@@ -130,7 +130,6 @@ type AgentManagerServiceOptions = {
     origin?: NdjsonOrigin
   ) => void;
   /** Which wire to spawn a session with. Absent: `ndjson`, as always. */
-  resolveWire?: (sessionId: string) => AgentWire;
   /** One AG-UI event from an agui runtime's stdout (the renderer's relay). */
   emitAgui?: (
     workspaceId: string,
@@ -640,9 +639,8 @@ export class AgentManagerService {
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
     if (request.mode != null) spawnArgs.push("--permission-mode", request.mode);
-    const wire: AgentWire =
-      this.options.resolveWire?.(request.sessionId) ?? "ndjson";
-    if (wire === "agui") {
+    const wire: AgentWire = "agui";
+    {
       spawnArgs.push(
         "--wire",
         "agui",
@@ -662,10 +660,7 @@ export class AgentManagerService {
         cwd: workspacePath,
         env,
         // agui: fd 3 is the compatibility channel the agent negotiates.
-        stdio:
-          wire === "agui"
-            ? ["pipe", "pipe", "pipe", "pipe"]
-            : ["pipe", "pipe", "pipe"],
+        stdio: ["pipe", "pipe", "pipe", "pipe"],
       }) as ChildProcessWithoutNullStreams;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -710,7 +705,7 @@ export class AgentManagerService {
       readiness,
       resolveReadiness,
       wire,
-      compatMode: wire === "agui" ? "pending" : "none",
+      compatMode: "pending",
       compatLines: new LineSplitter({
         maxLineChars: MAX_BUFFER_SIZE,
         onOverflow: (chars) =>
@@ -724,7 +719,7 @@ export class AgentManagerService {
         // An oversize line would fail to parse: a lost agent event, so be loud.
         onOverflow: (chars) =>
           console.error(
-            `[CLI] ${request.sessionId}: ${wire === "agui" ? "AG-UI" : "NDJSON"} line exceeded ${MAX_BUFFER_SIZE} characters (${chars} so far) and is dropped whole; the event is lost.`
+            `[CLI] ${request.sessionId}: ${"AG-UI"} line exceeded ${MAX_BUFFER_SIZE} characters (${chars} so far) and is dropped whole; the event is lost.`
           ),
       }),
       stderrBuffer: "",
@@ -793,10 +788,8 @@ export class AgentManagerService {
       // One streaming decoder per pipe: a character split across chunks
       // is joined, not replaced (spec 07 review r1 #11).
       const lines = runtime.stdoutLines.push(chunk);
-      if (wire === "agui") {
+      {
         this.handleAguiLines(request.sessionId, lines, resolveStartup);
-      } else {
-        this.handleStdoutLines(request.sessionId, lines, resolveStartup);
       }
     });
 
@@ -874,16 +867,9 @@ export class AgentManagerService {
       // either wire and on fd 3 (a no-op when the pipe's end delivered it).
       if (ownsSession()) {
         const last = runtime.stdoutLines.end();
-        if (wire === "agui")
-          this.handleAguiLines(request.sessionId, last, resolveStartup);
-        else this.handleStdoutLines(request.sessionId, last, resolveStartup);
-        this.handleCompatLines(
-          request.sessionId,
-          runtime.compatLines.end(),
-          resolveStartup
-        );
+        this.handleAguiLines(request.sessionId, last, resolveStartup);
       }
-      if (wire === "agui") {
+      {
         // Before the ownership check: the relay tells runtimes apart itself.
         this.options.emitAguiExit?.(request.workspaceId, request.sessionId, {
           origin: { wire, runtime: child },
@@ -1086,21 +1072,6 @@ export class AgentManagerService {
       success: true,
       state: { ...runtime.state },
     };
-  }
-
-  private handleStdoutLines(
-    sessionId: string,
-    lines: readonly string[],
-    onReady: () => void
-  ): void {
-    const runtime = this.runtimes.get(sessionId);
-    if (runtime == null) {
-      return;
-    }
-
-    for (const line of lines) {
-      this.handleNdjsonLine(runtime, line, onReady);
-    }
   }
 
   /**

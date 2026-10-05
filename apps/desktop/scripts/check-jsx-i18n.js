@@ -32,12 +32,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SCAN_DIRS = ["src/renderer", "src/renderer-next"];
+const SCAN_DIRS = ["src/renderer", "src/renderer"];
 // Registry output (never edited) and the dev-only, English-only gallery.
-const SKIP_DIRS = [
-  "src/renderer-next/ui",
-  "src/renderer-next/features/gallery",
-];
+const SKIP_DIRS = ["src/renderer/ui", "src/renderer/features/gallery"];
 const BASELINE_PATH = path.join(
   import.meta.dirname,
   "i18n-literals-baseline.json"

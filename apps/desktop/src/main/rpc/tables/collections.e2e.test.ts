@@ -1,7 +1,7 @@
 /**
  * B-T4: every table end to end. Main's real router and table feeds over a
  * real MessageChannel (with main's flow control), and the renderer's real
- * collections (renderer-next/data/db) in the same process. Per table: the
+ * collections (renderer/data/db) in the same process. Per table: the
  * snapshot, a live change, a reset (truncate and reload) and, where the
  * table has one, a mutation that round-trips, with `awaitReceived` settling
  * inside the handler and `awaitApplied` after it.
@@ -28,7 +28,7 @@ import { PrefsStore } from "../../services/config/prefs-store";
 import { MainEventBus } from "../event-bus";
 import { connectInProcess, fakeDeps, type TestClient } from "../testing";
 
-const DB_TABLES_MODULE = "../../../renderer-next/data/db/tables";
+const DB_TABLES_MODULE = "../../../renderer/data/db/tables";
 
 type Position = { epoch: string; seq: number };
 

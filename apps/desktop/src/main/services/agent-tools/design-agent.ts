@@ -17,15 +17,6 @@ import { resolveChatEndpoint, type ChatEndpoint } from "./chat-endpoint";
 
 const MAX_SCREENS = 8;
 
-export type DesignRequest = {
-  context: string;
-  outputDir: string;
-  screens?: number;
-  /** `high` is a finished-looking mockup; `wire` is a greyscale wireframe. */
-  fidelity?: "high" | "wire";
-  device?: "desktop" | "phone" | "both";
-};
-
 export type DesignResult = {
   canvasPath: string;
   directory: string;

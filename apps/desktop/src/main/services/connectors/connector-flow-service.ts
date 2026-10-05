@@ -9,7 +9,6 @@ import {
   connectorById,
   connectUi,
   HOME_PLACEHOLDER,
-  type Connector,
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
 
@@ -193,5 +192,3 @@ export class ConnectorFlowService {
 }
 
 /** Whether the kind's flow needs the renderer to collect fields first. */
-export const needsFields = (connector: Connector): boolean =>
-  connectUi(connector) === "fields";

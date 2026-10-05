@@ -13,7 +13,6 @@ import { browser } from "./browser";
 import { connectors } from "./connectors";
 import { db } from "./db";
 import { devices } from "./devices";
-import { durableState } from "./durable-state";
 import { files } from "./files";
 import { git } from "./git";
 import { localModels } from "./local-models";
@@ -62,7 +61,6 @@ export const contract = {
   window,
   update,
   skills,
-  durableState,
   db,
 };
 
@@ -71,10 +69,6 @@ export type Contract = typeof contract;
 /** Bumped on any breaking change to the contract's shape. */
 export const CONTRACT_VERSION = 1;
 
-export { COMMON_ERRORS, RPC_ERROR_CODES } from "./errors";
-export type { RpcErrorCode, RpcErrorData } from "./errors";
-export { CUSTOM_JSON_SERIALIZERS, uint8ArraySerializer } from "./serializer";
-export type { ProcedureKind, ProcedureMeta } from "./base";
 export type {
   AiHydration,
   AiSendAck,
@@ -89,31 +83,17 @@ export type { RoutinesEvent } from "./routines";
 export type { BrowserEvent } from "./browser";
 export type { ConnectorsEvent } from "./connectors";
 export type { DevicesEvent } from "./devices";
-export type { FileSearchResult, FilesEvent } from "./files";
-export type {
-  CheckoutKey,
-  CheckoutRef,
-  CheckoutStatus,
-  GitDiffResult,
-  GitDiscardEntry,
-  GitDiscardResult,
-} from "./checkout";
-export { checkoutKey, PRIMARY_CHECKOUT } from "./checkout";
+export type { FilesEvent } from "./files";
+
 export type { McpRuntimeEvent } from "./mcp";
 export type { MemoryEvent } from "./memory";
 export type { MessagingEvent } from "./messaging";
 export type { SettingsEvent } from "./settings";
-export type {
-  NotificationMetadata,
-  PickedFile,
-  SystemEvent,
-  SystemInfo,
-} from "./system";
+export type { NotificationMetadata, SystemEvent, SystemInfo } from "./system";
 export type { TerminalEvent, TerminalOutputChunk } from "./terminal";
-export type { WhisperFile } from "./voice";
+
 export type {
   SetDensityResult,
-  TitlebarDensity,
   WindowChromeState,
   WindowEvent,
   WindowState,

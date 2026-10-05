@@ -13,6 +13,9 @@ const autoUpdater = new EventEmitter() as EventEmitter &
 const checkForUpdates = vi.fn(async () => undefined);
 autoUpdater.checkForUpdates = checkForUpdates;
 
+vi.mock("node:fs", () => ({ existsSync: () => true }));
+vi.stubGlobal("process", { ...process, resourcesPath: "/synthetic/resources" });
+
 vi.mock("electron-updater", () => ({
   default: { autoUpdater },
 }));

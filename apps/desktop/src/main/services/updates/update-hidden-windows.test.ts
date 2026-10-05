@@ -4,6 +4,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const autoUpdater = Object.assign(new EventEmitter(), {
   setFeedURL: vi.fn(),
+  checkForUpdates: vi.fn(async () => ({
+    isUpdateAvailable: true,
+    updateInfo: { version: "1.0.82" },
+  })),
   quitAndInstall: vi.fn(),
 });
 const markRelaunchHidden = vi.fn();
@@ -38,12 +42,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("installs a downloaded update from a hidden Windows window", () => {
+it("installs a downloaded update from a hidden Windows window", async () => {
   vi.spyOn(process, "platform", "get").mockReturnValue("win32");
   const service = new UpdateService({ isSafeToRestart: () => true });
   autoUpdater.emit("update-downloaded", { version: "1.0.82" });
 
-  vi.advanceTimersByTime(60_000);
+  await vi.advanceTimersByTimeAsync(60_000);
 
   expect(autoUpdater.quitAndInstall).toHaveBeenCalledWith(true, true);
   expect(markRelaunchHidden).not.toHaveBeenCalled();

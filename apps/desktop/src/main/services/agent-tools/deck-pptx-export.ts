@@ -10,13 +10,6 @@ import fs from "fs/promises";
 import path from "path";
 
 import type { BrowserWindow } from "electron";
-import PptxGenJsImport from "pptxgenjs";
-
-// The package ships as ESM-with-default under CJS interop; both shapes appear
-// depending on how the bundler resolves it.
-const PptxGenJs = ((PptxGenJsImport as unknown as { default?: unknown })
-  .default ?? PptxGenJsImport) as new () => PptxInstance;
-
 /** Only the surface this file uses; the package's own types are ESM-only. */
 interface PptxInstance {
   defineLayout(layout: { name: string; width: number; height: number }): void;
@@ -227,6 +220,9 @@ const build = async (
   captures: SlideCapture[],
   outputPath: string
 ): Promise<number> => {
+  const { default: PptxGenJsImport } = await import("pptxgenjs");
+  const PptxGenJs = ((PptxGenJsImport as unknown as { default?: unknown })
+    .default ?? PptxGenJsImport) as new () => PptxInstance;
   const deck = new PptxGenJs();
 
   deck.defineLayout({ name: "DECK16x9", width: SLIDE_W, height: SLIDE_H });

@@ -54,15 +54,27 @@ async function hostTools(): Promise<string[]> {
   provider.calls.length = 0;
 
   await new Promise<void>((resolve) => {
-    const child = spawn(process.execPath, [HOST, "--permission-mode", "YOLO"], {
-      cwd,
-      env: {
-        ...process.env,
-        ABACUSAI_BOT_HOME: home,
-        NO_COLOR: "1",
-      },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    const child = spawn(
+      process.execPath,
+      [
+        HOST,
+        "--thread-id",
+        "tool-roster-e2e",
+        "--compat-fd",
+        "-1",
+        "--permission-mode",
+        "YOLO",
+      ],
+      {
+        cwd,
+        env: {
+          ...process.env,
+          ABACUSAI_BOT_HOME: home,
+          NO_COLOR: "1",
+        },
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
     let seen = "";
     // The host is asked to stop, and the promise settles on its exit, not
     // on the ask. Settling early let afterAll remove the temp dirs while the

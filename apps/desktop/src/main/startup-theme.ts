@@ -24,7 +24,6 @@ import {
   WINDOW_SURFACE,
   windowChromeOptions,
   type WindowChromeInput,
-  type WindowChromeMode,
 } from "./window-chrome-options";
 
 export interface ThemeTarget {
@@ -52,7 +51,6 @@ export const applyStartupTheme = (
  * which keeps its own.
  */
 export const themedBackground = (input: WindowChromeInput): string | null => {
-  if (input.mode !== "wco") return null;
   const surface = input.dark ? WINDOW_SURFACE.dark : WINDOW_SURFACE.light;
   if (input.platform === "darwin" || input.platform === "win32")
     return input.reducedTransparency ? surface : TRANSPARENT;
@@ -66,15 +64,13 @@ export const themedBackground = (input: WindowChromeInput): string | null => {
  * `chromeInput()` (read after it) sees the stored scheme.
  */
 export function mainWindowOptions(options: {
-  generation: WindowChromeMode;
   prefs: Pick<PrefsStore, "get">;
   nativeTheme: ThemeTarget;
   /** Read after the theme is applied. */
   chromeInput: () => WindowChromeInput;
   base: BaseWindowConstructorOptions;
 }): BaseWindowConstructorOptions & { backgroundColor: string } {
-  if (options.generation === "wco")
-    applyStartupTheme(options.prefs, options.nativeTheme);
+  applyStartupTheme(options.prefs, options.nativeTheme);
   const input = options.chromeInput();
   const chrome = windowChromeOptions(input);
   const backgroundColor =
