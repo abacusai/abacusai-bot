@@ -3,6 +3,7 @@ import { LayoutGroup } from "motion/react";
 import { useTranslation } from "react-i18next";
 
 import { botsQueries } from "#renderer/features/bots/data/queries";
+import { unlessConnecting } from "#renderer/features/onboarding/gate";
 import { Button } from "#renderer/ui/button";
 const BotsLayout = () => (
   <LayoutGroup id="bots">
@@ -41,10 +42,13 @@ export const Route = createFileRoute("/_shell/(bots)/bots")({
     void context.queryClient.prefetchQuery(
       botsQueries(context.transport.orpc).chatPreviews()
     );
-    await Promise.all([
-      context.db.collections.bots.preload(),
-      context.db.collections.routines.preload(),
-    ]);
+    await unlessConnecting(
+      context.transport,
+      Promise.all([
+        context.db.collections.bots.preload(),
+        context.db.collections.routines.preload(),
+      ])
+    );
   },
   component: BotsLayout,
   errorComponent: BotsAreaError,

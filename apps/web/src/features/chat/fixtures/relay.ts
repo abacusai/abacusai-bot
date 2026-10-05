@@ -87,15 +87,17 @@ export interface FakeRelayOptions {
 
 type Listener = (item: RelayEvent) => void;
 
+/** As main's relay: `seq` is its head when the stream started. */
 const control = (
   name: "abacus.subscribed" | "abacus.resync",
-  epoch: string
+  epoch: string,
+  seq: number
 ): SequencedChunk => ({
   seq: null,
   event: {
     type: "CUSTOM",
     name,
-    value: { epoch },
+    value: { seq, epoch },
     timestamp: Date.now(),
   } as StreamChunk,
 });
@@ -536,7 +538,7 @@ export class FakeRelay {
    */
   #iterate(
     replay: RelayEvent[],
-    first: SequencedChunk | null,
+    first: readonly SequencedChunk[],
     signal: AbortSignal,
     until: (item: RelayEvent) => boolean,
     live: boolean
@@ -572,7 +574,7 @@ export class FakeRelay {
     signal.addEventListener("abort", onAbort, { once: true });
     async function* run(): AsyncGenerator<SequencedChunk> {
       try {
-        if (first != null) yield first;
+        yield* first;
         for (;;) {
           if (dropped != null) throw dropped;
           while (queue.length > 0) {
@@ -621,17 +623,20 @@ export class FakeRelay {
         after < this.floor ||
         after > this.#seq ||
         (epoch != null && epoch !== this.epoch);
+      // As main: `abacus.subscribed` first, then `abacus.resync` when the
+      // resume point is from another lifetime or outside the ring.
+      const subscribed = control("abacus.subscribed", this.epoch, this.#seq);
       if (outside)
         return this.#iterate(
           [],
-          control("abacus.resync", this.epoch),
+          [subscribed, control("abacus.resync", this.epoch, this.#seq)],
           signal,
           () => false,
           true
         );
       return this.#iterate(
         this.log.filter((item) => item.seq > after),
-        control("abacus.subscribed", this.epoch),
+        [subscribed],
         signal,
         () => false,
         true
@@ -646,7 +651,7 @@ export class FakeRelay {
           (item.event as { runId: string }).runId === runId
       );
       if (start == null)
-        return this.#iterate([], null, signal, () => true, false);
+        return this.#iterate([], [], signal, () => true, false);
       let terminal = false;
       const replay = this.log.filter((item) => {
         if (item.seq < start.seq || terminal) return false;
@@ -658,7 +663,7 @@ export class FakeRelay {
       let delivered = 0;
       const inner = this.#iterate(
         replay,
-        null,
+        [],
         signal,
         (item) =>
           isTerminalEvent(item.event) && runOfTerminal(item.event) === runId,

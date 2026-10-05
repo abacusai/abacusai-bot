@@ -1,9 +1,42 @@
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
+/**
+ * Reaching the browser's host (spec 09 D4). One blocking call decides who
+ * the user is (`getOrCreateAbacusBotHost`: sign-in and tier); readiness
+ * (bootstrap, `/healthz`, the socket) runs behind `hostConnection`, which
+ * the shell renders, while the app is already usable. `runHostConnection`
+ * owns the page's sockets: it opens each generation of the host transport
+ * and replaces a dropped socket with jittered backoff (0.5 s to 8 s).
+ */
+import { Store } from "@tanstack/react-store";
 import * as v from "valibot";
-export type ConnectStage = "starting" | "installing" | "connecting";
+
+import {
+  awaitWebSocketOpen,
+  UNRESPONSIVE,
+  type HostTransport,
+} from "#renderer/data/transport/websocket";
+
+export type ConnectStage =
+  | "starting"
+  | "installing"
+  | "connecting"
+  | "open"
+  | "reconnecting";
+/**
+ * Why the host is out of reach, by remedy: `signin`, `tier` and `limit`
+ * replace the app; `version` (the host is older) offers a restart of the
+ * user's computer, `reload` (this page is older, or the host refused it for
+ * good) a reload; `connection` is retried.
+ */
 export class ConnectError extends Error {
   constructor(
-    readonly kind: "signin" | "tier" | "limit" | "version" | "connection",
+    readonly kind:
+      | "signin"
+      | "tier"
+      | "limit"
+      | "version"
+      | "reload"
+      | "connection",
     message: string,
     readonly network = false
   ) {
@@ -55,26 +88,66 @@ const parse = <T>(schema: v.GenericSchema<unknown, T>, value: unknown): T => {
     throw new ConnectError("connection", "Invalid connection service response");
   }
 };
+/** One HTTP attempt answers within this, or counts as unanswered. */
+const ATTEMPT_MS = 30_000;
+
+/**
+ * `request(signal)` (a fetch and its body), or `timedOut` once `ms` passed:
+ * a request a proxy accepted and never completed must not hold readiness
+ * past its deadline. The signal also aborts the fetch.
+ */
+const within = async <T>(
+  ms: number,
+  request: (signal: AbortSignal) => Promise<T>
+): Promise<T | typeof timedOut> => {
+  const abort = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<typeof timedOut>((resolve) => {
+    timer = setTimeout(
+      () => {
+        abort.abort();
+        resolve(timedOut);
+      },
+      Math.max(0, ms)
+    );
+  });
+  try {
+    return await Promise.race([request(abort.signal), expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const timedOut = Symbol("timed out");
+
 export const callApps = async (
   service: string,
-  input: unknown
+  input: unknown,
+  ms = ATTEMPT_MS
 ): Promise<unknown> => {
-  let response: Response;
-  try {
-    response = await fetch(`/api/_${service}`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json", "REAI-UI": "1" },
-      body: JSON.stringify(input),
-    });
-  } catch {
-    throw new ConnectError(
+  const unavailable = () =>
+    new ConnectError(
       "connection",
       "Connection service unavailable. Please retry.",
       true
     );
+  let answer;
+  try {
+    answer = await within(ms, async (signal) => {
+      const response = await fetch(`/api/_${service}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "REAI-UI": "1" },
+        body: JSON.stringify(input),
+        signal,
+      });
+      return { response, body: await response.json().catch(() => null) };
+    });
+  } catch {
+    throw unavailable();
   }
-  const body = (await response.json().catch(() => null)) as {
+  if (answer === timedOut) throw unavailable();
+  const response = answer.response;
+  const body = answer.body as {
     success?: boolean;
     result?: unknown;
     error?: string;
@@ -100,6 +173,8 @@ export const callApps = async (
 };
 const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+/** Poll `n` (0-based) of the apps server or `/healthz`: 0.5 s doubling to 3 s. */
+export const pollDelayMs = (n: number): number => Math.min(500 * 2 ** n, 3000);
 export interface BrowserConnection {
   url: string;
   /** HTTP prefix of the host routes (no trailing slash). */
@@ -114,28 +189,41 @@ export const browserConnection = (): BrowserConnection => {
   if (!connection) throw new Error("Browser host is not connected");
   return connection;
 };
+/**
+ * "Restart your computer", asked once: the first bootstrap call that the
+ * apps server accepted consumes it, so neither a later poll nor a later
+ * attempt of the connection loop restarts the host again.
+ */
+export interface RestartRequest {
+  requested: boolean;
+}
+
 const bootstrap = async (
   deploymentConversationId: string,
-  forceRestart = false
+  restart: RestartRequest = { requested: false }
 ) => {
   const deadline = Date.now() + 7 * 60_000;
-  for (;;) {
+  for (let polls = 0; ; polls += 1) {
+    const forceRestart = restart.requested;
     const boot = parse(
       Bootstrap,
-      await callApps("bootstrapAbacusBotHost", {
-        deploymentConversationId,
-        ...(forceRestart ? { forceRestart: true } : {}),
-      })
+      await callApps(
+        "bootstrapAbacusBotHost",
+        {
+          deploymentConversationId,
+          ...(forceRestart ? { forceRestart: true } : {}),
+        },
+        Math.min(ATTEMPT_MS, deadline - Date.now())
+      )
     );
-    // Restart only once; subsequent polls must not restart a healthy host.
-    forceRestart = false;
+    if (forceRestart) restart.requested = false;
     if (boot.status === "ready") return boot;
     if (Date.now() >= deadline)
       throw new ConnectError(
         "connection",
         boot.detail ?? "Computer start timed out"
       );
-    await delay(3000);
+    await delay(pollDelayMs(polls));
   }
 };
 let refreshing: Promise<BrowserConnection> | undefined;
@@ -164,11 +252,20 @@ export const refreshUploadToken = (
     });
   return refreshing;
 };
-export const resolveBrowserHost = async (
-  stage: (value: ConnectStage) => void,
-  forceRestart = false
-): Promise<BrowserConnection> => {
-  stage("starting");
+export interface HostIdentity {
+  deploymentConversationId: string;
+}
+
+let identified: HostIdentity | undefined;
+
+/** The user's host once `identifyHost()` answered; keys last-known state. */
+export const hostIdentity = (): HostIdentity | undefined => identified;
+
+/**
+ * The blocking step: the user's host, or the sign-in or tier refusal that
+ * replaces the app. A development host (`VITE_WEB_HOST_URL`) is ready at once.
+ */
+export const identifyHost = async (): Promise<HostIdentity> => {
   if (import.meta.env.DEV && import.meta.env.VITE_WEB_HOST_URL) {
     const url = new URL(import.meta.env.VITE_WEB_HOST_URL);
     if (!/^wss?:$/.test(url.protocol))
@@ -191,11 +288,39 @@ export const resolveBrowserHost = async (
       deploymentConversationId: "local",
       local: true,
     };
+    identified = { deploymentConversationId: "local" };
+    return identified;
+  }
+  const host = parse(Host, await callApps("getOrCreateAbacusBotHost", {}));
+  identified = { deploymentConversationId: host.deploymentConversationId };
+  return identified;
+};
+
+let page: HostTransport | undefined;
+
+/** The page's one host transport (spec 09 D2), from boot on. */
+export const pageTransport = (): HostTransport => {
+  if (!page) throw new Error("Browser host is not identified");
+  return page;
+};
+
+export const setPageTransport = (transport: HostTransport): void => {
+  page = transport;
+};
+
+const IDENTITY_MISMATCH = "Host identity mismatch";
+
+/** Readiness: the host started (bootstrap), healthy, and its token. */
+export const readyHost = async (
+  identity: HostIdentity,
+  stage: (value: ConnectStage) => void,
+  restart?: RestartRequest
+): Promise<BrowserConnection> => {
+  if (connection?.local) {
     stage("connecting");
     return connection;
   }
-  const host = parse(Host, await callApps("getOrCreateAbacusBotHost", {}));
-  const boot = await bootstrap(host.deploymentConversationId, forceRestart);
+  const boot = await bootstrap(identity.deploymentConversationId, restart);
   const tokenIssuedAt = Date.now();
   stage("installing");
   const base = hostHttpBase(boot);
@@ -211,19 +336,40 @@ export const resolveBrowserHost = async (
   }
   const installDeadline = Date.now() + 5 * 60_000;
   let denialDeadline: number | undefined;
-  for (;;) {
+  for (let polls = 0; ; polls += 1) {
     let response: Response | undefined;
+    let body: unknown = null;
     try {
-      response = await fetch(`${base}/healthz`, { credentials: "include" });
+      const answer = await within(
+        Math.min(ATTEMPT_MS, installDeadline - Date.now()),
+        async (signal) => {
+          const reply = await fetch(`${base}/healthz`, {
+            credentials: "include",
+            signal,
+          });
+          return {
+            reply,
+            body: reply.ok ? await reply.json().catch(() => null) : null,
+          };
+        }
+      );
+      // Unanswered: polled again until the install deadline.
+      if (answer !== timedOut) ({ reply: response, body } = answer);
     } catch {
       /* Proxy may still be starting. */
     }
     if (response?.ok) {
-      const health = parse(Health, await response.json().catch(() => null));
+      const health = parse(Health, body);
       if (!health.ok || health.owner !== owner)
-        throw new ConnectError("connection", "Host identity mismatch");
-      if (health.contractVersion !== CONTRACT_VERSION)
+        throw new ConnectError("connection", IDENTITY_MISMATCH);
+      // The older side updates: the host by a restart, this page by a reload.
+      if (health.contractVersion < CONTRACT_VERSION)
         throw new ConnectError("version", "Restart your computer to update it");
+      if (health.contractVersion > CONTRACT_VERSION)
+        throw new ConnectError(
+          "reload",
+          "This page is out of date. Reload to update it."
+        );
       break;
     }
     if (response?.status === 403) denialDeadline ??= Date.now() + 65_000;
@@ -240,7 +386,7 @@ export const resolveBrowserHost = async (
         "connection",
         "Host did not become ready. Please retry."
       );
-    await delay(3000);
+    await delay(pollDelayMs(polls));
   }
   stage("connecting");
   connection = {
@@ -248,7 +394,345 @@ export const resolveBrowserHost = async (
     url: base.replace(/^http/, "ws") + "/rpc",
     token: boot.token,
     tokenIssuedAt,
-    deploymentConversationId: host.deploymentConversationId,
+    deploymentConversationId: identity.deploymentConversationId,
   };
   return connection;
+};
+
+/** Identity, then readiness, in one go. */
+export const resolveBrowserHost = async (
+  stage: (value: ConnectStage) => void,
+  forceRestart = false
+): Promise<BrowserConnection> => {
+  stage("starting");
+  return readyHost(await identifyHost(), stage, { requested: forceRestart });
+};
+
+export interface HostConnectionState {
+  stage: ConnectStage;
+  /** The last failure, shown with the stage until the next socket opens. */
+  error: Error | null;
+  /** The transport generation that is open, or the last one that was. */
+  generation: number;
+  /** An attempt is in flight (Retry has nothing to hurry). */
+  attempting: boolean;
+}
+
+export const hostConnection = new Store<HostConnectionState>({
+  stage: "starting",
+  error: null,
+  generation: 0,
+  attempting: false,
+});
+
+/** Reconnect attempt `n` (0-based): 0.5 s doubling to 8 s, half of it jitter. */
+export const reconnectDelayMs = (
+  n: number,
+  random: () => number = Math.random
+): number => {
+  const ceiling = Math.min(500 * 2 ** n, 8000);
+  return ceiling / 2 + (random() * ceiling) / 2;
+};
+
+/** A socket that closes sooner than this after opening counts as a failure. */
+const STABLE_MS = 5_000;
+
+/** A token this old is re-minted (bootstrap) before the next socket. */
+const TOKEN_REFRESH_MS = 8 * 60_000;
+
+/**
+ * Attempts in a row that failed or dropped at once before the loop slows to
+ * one a minute (Retry, or the network coming back, still starts one now).
+ */
+const MAX_UNSTABLE = 6;
+const SLOW_RETRY_MS = 60_000;
+
+/** Identity mismatches in a row before they are final (a reload). */
+const MAX_IDENTITY_MISMATCH = 3;
+
+/**
+ * Liveness: a probe after 30 s without a frame while visible (and on
+ * `online`, `pageshow`, visible again); a probe with no answer and no other
+ * frame in 10 s ends the socket.
+ */
+const PROBE_EVERY_MS = 30_000;
+const PROBE_TIMEOUT_MS = 10_000;
+
+/**
+ * What a socket's close code means (spec 09 D5):
+ * - `refused` (1008, policy: a malformed frame or a missing token): this
+ *   page is refused for good; a reload is the remedy.
+ * - `stalled` (1013, the host cut off a consumer that stopped reading),
+ *   `oversized` (1009, a frame larger than the limit) and `unresponsive`
+ *   (4000, our liveness probe gave up): the next socket keeps the token
+ *   but backs off as after a failure, so a slow host or link is not
+ *   reconnected to at once, again and again; the chat streams decide what
+ *   to replay (`pump.ts`).
+ * - `dropped`, anything else (1006 above all: a network drop, or a token
+ *   the proxy refused at the upgrade, which the browser cannot tell apart):
+ *   a socket that lived reconnects with its token; one that dropped at
+ *   once counts as a failure and the next attempt re-bootstraps.
+ */
+export const closePolicy = (
+  code: number
+): "refused" | "stalled" | "oversized" | "unresponsive" | "dropped" =>
+  code === 1008
+    ? "refused"
+    : code === 1013
+      ? "stalled"
+      : code === 1009
+        ? "oversized"
+        : code === UNRESPONSIVE
+          ? "unresponsive"
+          : "dropped";
+
+let wake: (() => void) | null = null;
+
+/** The banner's Retry: the next attempt starts now instead of after its wait. */
+export const retryHostNow = (): void => wake?.();
+
+const RESTART_KEY = "abacusai-bot:restart-host";
+
+/**
+ * "Restart your computer": reload and force a restart on the next boot (the
+ * request is local storage, consumed by that boot).
+ */
+export const restartHost = (): void => {
+  try {
+    localStorage.setItem(RESTART_KEY, "1");
+  } catch {
+    // Without storage the reload still reconnects, without the restart.
+  }
+  location.reload();
+};
+
+/** Whether this boot follows `restartHost()`; asks once. */
+export const takeRestartRequest = (): boolean => {
+  try {
+    const requested = localStorage.getItem(RESTART_KEY) === "1";
+    localStorage.removeItem(RESTART_KEY);
+    return requested;
+  } catch {
+    return false;
+  }
+};
+
+export interface HostConnectionOptions {
+  forceRestart?: boolean;
+  /** For tests; the global `WebSocket` otherwise. */
+  WebSocket?: new (url: string, protocols: string[]) => WebSocket;
+  random?: () => number;
+  /** Liveness probe; `system.info` over the transport by default. */
+  probe?: (signal: AbortSignal) => Promise<unknown>;
+}
+
+const visible = (): boolean => document.visibilityState !== "hidden";
+
+const waitUntilVisible = (): Promise<void> =>
+  new Promise((resolve) => {
+    if (visible()) return resolve();
+    const shown = (): void => {
+      if (!visible()) return;
+      document.removeEventListener("visibilitychange", shown);
+      resolve();
+    };
+    document.addEventListener("visibilitychange", shown);
+  });
+
+/** `ms`, or until Retry or the network coming back. */
+const pause = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    window.addEventListener("online", done);
+    function done(): void {
+      clearTimeout(timer);
+      window.removeEventListener("online", done);
+      if (wake === done) wake = null;
+      resolve();
+    }
+    wake = done;
+  });
+
+/**
+ * Probes the socket that `generation` runs on: on `online`, when the tab
+ * becomes visible, on `pageshow` and every 30 s while visible. A probe that
+ * gets no answer in time means the link is gone even though the socket says
+ * open (sleep, a network change, a proxy that dropped it without a FIN):
+ * `drop()` ends the generation, and the loop replaces the socket.
+ */
+const watchLiveness = (
+  transport: HostTransport,
+  generation: number,
+  probe: (signal: AbortSignal) => Promise<unknown>
+): (() => void) => {
+  let probing = false;
+  const check = (quietOnly: boolean): void => {
+    if (probing || !visible()) return;
+    if (transport.state !== "open" || transport.generation !== generation)
+      return;
+    // Any frame is proof of life: the timer probes only a quiet socket.
+    if (quietOnly && Date.now() - transport.heardAt() < PROBE_EVERY_MS) return;
+    probing = true;
+    const sentAt = Date.now();
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), PROBE_TIMEOUT_MS);
+    void probe(abort.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(timer);
+        probing = false;
+        if (
+          abort.signal.aborted &&
+          transport.heardAt() < sentAt &&
+          transport.state === "open" &&
+          transport.generation === generation
+        )
+          transport.drop("unresponsive");
+      });
+  };
+  const onVisibility = (): void => {
+    if (visible()) check(false);
+  };
+  const onEvent = (): void => check(false);
+  const interval = setInterval(() => check(true), PROBE_EVERY_MS);
+  window.addEventListener("online", onEvent);
+  window.addEventListener("pageshow", onEvent);
+  document.addEventListener("visibilitychange", onVisibility);
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("online", onEvent);
+    window.removeEventListener("pageshow", onEvent);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
+};
+
+/**
+ * Opens every generation of `transport` until it closes for good. A
+ * sign-in, tier, limit, contract or policy refusal closes it; any other
+ * failure is shown and retried with backoff, and after `MAX_UNSTABLE` in a
+ * row once a minute. A dropped socket first
+ * reconnects with the current token; a failed attempt, or a token older
+ * than eight minutes, starts over from bootstrap, and a hidden tab never
+ * bootstraps (an idle pod is not restarted for nobody): it waits until it
+ * is visible. Close codes follow `closePolicy`.
+ */
+export const runHostConnection = async (
+  transport: HostTransport,
+  identity: HostIdentity,
+  options: HostConnectionOptions = {}
+): Promise<void> => {
+  const Socket = options.WebSocket ?? WebSocket;
+  const probe =
+    options.probe ??
+    ((signal: AbortSignal) => transport.client.system.info({}, { signal }));
+  const restart: RestartRequest = { requested: options.forceRestart ?? false };
+  let failures = 0;
+  let mismatches = 0;
+  let fresh = false;
+  const set = (patch: Partial<HostConnectionState>): void =>
+    hostConnection.setState((state) => ({ ...state, ...patch }));
+  // A call: the state changes across every await below.
+  const closed = (): boolean => transport.state === "closed";
+  const terminal = (error: ConnectError): void => {
+    set({ error, attempting: false });
+    transport.fail();
+  };
+  /** After a failure: back off, slower once it keeps failing. */
+  const backOff = async (): Promise<void> => {
+    fresh = false;
+    failures += 1;
+    set({ attempting: false });
+    await pause(
+      failures >= MAX_UNSTABLE
+        ? SLOW_RETRY_MS
+        : reconnectDelayMs(failures, options.random)
+    );
+    await waitUntilVisible();
+  };
+  while (!closed()) {
+    const reconnecting = transport.generation > 0;
+    try {
+      let host = connection;
+      if (
+        host == null ||
+        !fresh ||
+        Date.now() - host.tokenIssuedAt >= TOKEN_REFRESH_MS
+      ) {
+        await waitUntilVisible();
+        if (closed()) return;
+        set({ attempting: true });
+        host = await readyHost(
+          identity,
+          (stage) => set({ stage: reconnecting ? "reconnecting" : stage }),
+          restart
+        );
+        mismatches = 0;
+      }
+      set({ attempting: true });
+      const socket = new Socket(host.url, [
+        "abacus-rpc",
+        `abacus-token.${host.token}`,
+      ]);
+      await awaitWebSocketOpen(socket);
+      if (closed()) {
+        socket.close();
+        return;
+      }
+      const ended = transport.attach(socket);
+      const generation = transport.generation;
+      const openedAt = Date.now();
+      set({ stage: "open", error: null, generation, attempting: false });
+      const unwatch = watchLiveness(transport, generation, probe);
+      const close = await ended;
+      unwatch();
+      if (closed()) return;
+      set({ stage: "reconnecting" });
+      const policy = closePolicy(close.code);
+      if (policy === "refused") {
+        terminal(
+          new ConnectError(
+            "reload",
+            "The host refused this page's connection. Reload to reconnect."
+          )
+        );
+        return;
+      }
+      if (policy === "dropped" && Date.now() - openedAt >= STABLE_MS) {
+        failures = 0;
+        fresh = true;
+        await pause(reconnectDelayMs(0, options.random));
+      } else {
+        // Accepted, then dropped at once (a dead pod behind a live proxy),
+        // cut off for a stalled or oversized stream, or unresponsive: a
+        // failure, so the backoff grows. Only an unexplained drop
+        // re-bootstraps.
+        const keepToken = policy !== "dropped";
+        await backOff();
+        fresh = keepToken;
+      }
+    } catch (error) {
+      if (error instanceof ConnectError && error.kind !== "connection") {
+        terminal(error);
+        return;
+      }
+      if (
+        error instanceof ConnectError &&
+        error.message === IDENTITY_MISMATCH &&
+        ++mismatches >= MAX_IDENTITY_MISMATCH
+      ) {
+        terminal(
+          new ConnectError(
+            "reload",
+            "The host answering is not yours. Reload to reconnect."
+          )
+        );
+        return;
+      }
+      set({
+        stage: reconnecting ? "reconnecting" : hostConnection.state.stage,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+      await backOff();
+    }
+  }
 };

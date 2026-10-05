@@ -2,7 +2,7 @@ import { createContext, type ReactNode } from "react";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { uiPlatform } from "#renderer/lib/platform";
-import { useAppContext } from "#renderer/lib/use-app-context";
+import { useSystem } from "#renderer/lib/use-app-context";
 
 import { resolveKeymap } from "./actions";
 
@@ -23,7 +23,7 @@ export const ActionBindingsProvider = ({
   children: ReactNode;
 }) => {
   const prefs = usePrefs();
-  const { system } = useAppContext();
+  const system = useSystem();
   const bindings = resolveKeymap(prefs.keymap, uiPlatform(system.platform));
   return (
     <ActionBindingsContext value={bindings.window}>

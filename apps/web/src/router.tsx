@@ -11,16 +11,15 @@ import {
   createRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
+import type { Store } from "@tanstack/react-store";
 import type { TFunction } from "i18next";
 
 import { RoutePending, PaneError } from "#renderer/components/page-state";
 import type { Db } from "#renderer/data/db";
 import { invalidateCredentials } from "#renderer/data/queries/settings";
 import type { Transport } from "#renderer/data/transport";
-import {
-  chatRuntimeFor,
-  type ChatRuntime,
-} from "#renderer/features/chat/runtime/runtime";
+import { lazyChatRuntimeFor } from "#renderer/features/chat/runtime/lazy-runtime";
+import type { ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
 
 import { routeTree } from "./routeTree.gen";
@@ -38,7 +37,12 @@ type SidebarId = Area;
 export interface RouterContext {
   queryClient: QueryClient;
   transport: Transport;
-  system: SystemInfo;
+  /**
+   * The host's system facts. A store, not a value: the browser mounts the
+   * router with a placeholder before the host answers (spec 09 D12).
+   * Components read it with `useSystem()`.
+   */
+  system: Store<SystemInfo>;
   /** The document's collections and prefs writer (spec 01 §8.3). */
   db: Db;
   /** `i18n.getFixedT(null)`, for loaders and not-found copy. */
@@ -46,8 +50,11 @@ export interface RouterContext {
   /**
    * The document's chat runtime (spec 02 §2, §14.8): thread loaders await
    * `chat.session(id).load()`. One per transport, kept across Fast Refresh.
+   * Its code loads on demand (spec 09 P2): `chat.session()` needs
+   * `prepareChat()` first, which thread loaders await.
    */
   chat: ChatRuntime;
+  prepareChat(): Promise<void>;
   /**
    * After this window changed a credential: invalidates at once what a
    * `credentials-changed` notice would, since the route gates cache "signed
@@ -122,7 +129,10 @@ export const routeMasks = [
 
 export interface AppRouterOptions {
   /** `chat` defaults to the transport's runtime; tests may pass their own. */
-  context: Omit<RouterContext, "chat" | "credentialsChanged"> & {
+  context: Omit<
+    RouterContext,
+    "chat" | "prepareChat" | "credentialsChanged"
+  > & {
     chat?: ChatRuntime;
   };
   history?: RouterHistory;
@@ -131,14 +141,18 @@ export interface AppRouterOptions {
 export const createAppRouter = ({ context, history }: AppRouterOptions) => {
   const credentialsChanged = () =>
     invalidateCredentials(context.queryClient, context.transport.orpc);
+  const chat: Pick<RouterContext, "chat" | "prepareChat"> =
+    context.chat != null
+      ? { chat: context.chat, prepareChat: async () => {} }
+      : lazyChatRuntimeFor(context.transport, credentialsChanged);
   return createRouter({
     routeTree,
     history: history ?? createHashHistory(),
     context: {
       ...context,
       credentialsChanged,
-      chat:
-        context.chat ?? chatRuntimeFor(context.transport, credentialsChanged),
+      chat: chat.chat,
+      prepareChat: chat.prepareChat,
     } satisfies RouterContext,
     routeMasks,
     defaultPreload: "intent",

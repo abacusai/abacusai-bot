@@ -24,7 +24,7 @@ import { useComposerExpanded } from "#renderer/features/chat/composer/composer";
 import { loadFixtureRuntime } from "#renderer/features/chat/fixture-runtime";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
-import { chatLoading } from "#renderer/features/chat/runtime/runtime";
+import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import {
@@ -234,7 +234,11 @@ export const Route = createFileRoute("/_shell/(bots)/bots/$botId")({
   loader: async ({ context, params, preload }) => {
     if (fixtureReady != null) await fixtureReady;
     if (fixtureState.current) {
-      await context.db.collections.bots.preload();
+      // A bot with a real session renders the chat runtime, not the fixture.
+      await Promise.all([
+        context.db.collections.bots.preload(),
+        context.prepareChat(),
+      ]);
       return {
         ready: true as const,
         botId: params.botId,

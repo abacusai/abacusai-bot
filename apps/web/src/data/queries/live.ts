@@ -2,13 +2,54 @@
  * The one place renderer opens a low-rate notice stream (spec 00 A.12):
  * `window.events`, `settings.events`, … Consumed as raw iterators with a
  * signal; a stream that ends or fails is reopened after a short delay while
- * the transport is open. (`experimental_liveOptions` would cache the last
- * event as query data; nothing here needs that yet.)
+ * the transport is open, at once on the next connection after a socket was
+ * replaced, and only after the first one opens on a page still connecting
+ * (spec 09 D3). (`experimental_liveOptions` would cache the last event as
+ * query data; nothing here needs that yet.)
  */
 import type { AttentionEvent } from "@abacus-ai/contract/contract/ai";
 import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
 
 import type { Transport } from "#renderer/data/transport";
+import type { TransportState } from "#renderer/data/transport/lifecycle";
+
+/** What a consumer that follows the connection reads. */
+export interface ConnectionSource {
+  readonly state: TransportState;
+  /** +1 per opened socket; a MessagePort stays at 1. */
+  readonly generation?: number;
+  /** Runs after every state or generation change. Returns an unsubscribe. */
+  onChange?(listener: () => void): () => void;
+  /** The close code that ended `generation`, once it has (web only). */
+  closeCode?(generation: number): number | undefined;
+}
+
+/**
+ * Resolves `true` once `source` is open, `false` when it closed for good or
+ * `signal` aborted first.
+ */
+export const untilOpen = (
+  source: ConnectionSource,
+  signal?: AbortSignal
+): Promise<boolean> => {
+  if (signal?.aborted || source.state === "closed")
+    return Promise.resolve(false);
+  if (source.state === "open" || source.onChange == null)
+    return Promise.resolve(source.state === "open");
+  return new Promise((resolve) => {
+    const finish = (open: boolean): void => {
+      off();
+      signal?.removeEventListener("abort", aborted);
+      resolve(open);
+    };
+    const aborted = (): void => finish(false);
+    const off = source.onChange!(() => {
+      if (source.state === "open") finish(true);
+      else if (source.state === "closed") finish(false);
+    });
+    signal?.addEventListener("abort", aborted, { once: true });
+  });
+};
 
 const REOPEN_MS = 1_000;
 
@@ -32,15 +73,16 @@ const isFinal = (error: unknown): boolean =>
 
 /**
  * Consume `open()`'s iterator until `signal` aborts, calling `onEvent` per
- * event. Resolves when aborted or when the transport closed.
+ * event. Resolves when aborted or when the transport closed for good.
  */
 export const followNotices = async <T>(
-  transport: Pick<Transport, "state">,
+  transport: ConnectionSource,
   open: (options: { signal: AbortSignal }) => Promise<AsyncIterable<T>>,
   onEvent: (event: T) => void,
   signal: AbortSignal
 ): Promise<void> => {
-  while (!signal.aborted && transport.state === "open") {
+  while (await untilOpen(transport, signal)) {
+    const generation = transport.generation;
     try {
       const events = await open({ signal });
       for await (const event of events) {
@@ -48,12 +90,14 @@ export const followNotices = async <T>(
         onEvent(event);
       }
     } catch (error) {
-      // Reopened below unless it can never succeed; a closed transport
-      // stops the loop.
+      // Reopened below unless it can never succeed.
       if (isFinal(error)) return;
     }
-    if (signal.aborted || transport.state !== "open") return;
-    await new Promise((resolve) => setTimeout(resolve, REOPEN_MS));
+    if (signal.aborted) return;
+    // The same connection failed or ended the stream: pause before the
+    // reopen. A replaced one reopens as soon as the next socket is open.
+    if (transport.state === "open" && transport.generation === generation)
+      await new Promise((resolve) => setTimeout(resolve, REOPEN_MS));
   }
 };
 

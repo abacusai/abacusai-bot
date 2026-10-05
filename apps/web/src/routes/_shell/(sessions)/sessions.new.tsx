@@ -112,7 +112,12 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/new")({
   loaderDeps: ({ search }) => ({ workspace: search.workspace }),
   loader: async ({ context, deps, preload }) => {
     const { sessions, workspaces } = context.db.collections;
-    await Promise.all([sessions.preload(), workspaces.preload()]);
+    await Promise.all([
+      sessions.preload(),
+      workspaces.preload(),
+      // The composer starts a thread through the chat runtime.
+      preload ? undefined : context.prepareChat(),
+    ]);
     const pickable = [...workspaces.values()].filter(
       (w) => w.status !== "deleted" && (w.kind == null || w.kind === "auto")
     );

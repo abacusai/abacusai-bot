@@ -30,8 +30,8 @@ import { SessionId } from "@abacus-ai/contract/contract/ids";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
-import { chatLoading } from "#renderer/features/chat/runtime/runtime";
 import { deriveSessionTitle } from "#renderer/features/chat/runtime/send";
 import { SessionChangesCard } from "#renderer/features/sessions/changes/changes-card";
 import { SessionContextTray } from "#renderer/features/sessions/context/context-tray";
@@ -484,9 +484,12 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/$sessionId")({
     const chat = chatLoading(context);
     // A hover fetches the first page only; the click builds the session.
     if (preload) chat.warm(params.sessionId);
-    // The router also calls parameter changes "stay" for this route id.
-    else if (cause !== "stay" || !context.chat.session(params.sessionId).ready)
-      await chat.load(params.sessionId);
+    else {
+      await context.prepareChat();
+      // The router also calls parameter changes "stay" for this route id.
+      if (cause !== "stay" || !context.chat.session(params.sessionId).ready)
+        await chat.load(params.sessionId);
+    }
   },
   notFoundComponent: SessionGone,
   component: SessionRoute,

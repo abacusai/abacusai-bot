@@ -3885,9 +3885,11 @@
       "starting": "Starting your workspace",
       "installing": "Installing",
       "connecting": "Connecting",
+      "reconnecting": "再接続しています",
       "upgrade": "Upgrade to Pro",
       "download": "デスクトップアプリを入手",
-      "restart": "Restart your computer"
+      "restart": "Restart your computer",
+      "retry": "再試行"
     },
     "files": {
       "open": "Open folder"

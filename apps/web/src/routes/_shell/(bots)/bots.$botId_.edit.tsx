@@ -8,8 +8,16 @@ import { botsQueries } from "#renderer/features/bots/data/queries";
 import { BotEditorPage } from "#renderer/features/bots/form/bot-form";
 const EditRoute = () => {
   const { botId } = Route.useParams();
-  const { chat } = Route.useRouteContext();
-  return <BotEditorPage botId={botId} load={(id) => chat.session(id).load()} />;
+  const { chat, prepareChat } = Route.useRouteContext();
+  return (
+    <BotEditorPage
+      botId={botId}
+      load={async (id) => {
+        await prepareChat();
+        return chat.session(id).load();
+      }}
+    />
+  );
 };
 export const Route = createFileRoute("/_shell/(bots)/bots/$botId_/edit")({
   params: { parse: v.parser(v.object({ botId: BotId })) },

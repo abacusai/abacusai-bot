@@ -5,6 +5,9 @@
 import { createCollection } from "@tanstack/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { untilOpen } from "#renderer/data/queries/live";
+import type { TransportState } from "#renderer/data/transport/lifecycle";
+
 import { FakeTable } from "./fake-table";
 import {
   ipcCollectionOptions,
@@ -828,5 +831,73 @@ describe("ipcCollectionOptions: snapshot loop and echo (impl review r1)", () => 
     await pending;
     expect(context.table.connections).toHaveLength(2);
     expect(context.table.snapshotCalls).toBe(2);
+  });
+});
+
+describe("across a replaced socket (spec 09 D3)", () => {
+  it("is live again within one backoff step once the next socket opens", async () => {
+    // As the host transport: a call waits for an open socket, and the
+    // socket's streams fail when it drops.
+    let state: TransportState = "open";
+    const listeners = new Set<() => void>();
+    const link = {
+      get state() {
+        return state;
+      },
+      onChange(listener: () => void) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    const set = (next: TransportState) => {
+      state = next;
+      for (const listener of Array.from(listeners)) listener();
+    };
+    const table = new FakeTable<Row>([{ id: "a", label: "A" }]);
+    const client = {
+      ...table.client,
+      snapshot: async (...args: Parameters<typeof table.client.snapshot>) => {
+        await untilOpen(link);
+        return table.client.snapshot(...args);
+      },
+      changes: async (...args: Parameters<typeof table.client.changes>) => {
+        await untilOpen(link, args[1]?.signal);
+        return table.client.changes(...args);
+      },
+    };
+    const collection = createCollection(
+      ipcCollectionOptions<Row, string>({
+        id: `rows-${Math.random()}`,
+        table: async () => client,
+        getKey: (row) => row.id,
+        retryDelayMs: () => 500,
+      })
+    );
+    cleanups.push(() => collection.cleanup());
+    await collection.preload();
+    await vi.waitFor(() =>
+      expect(collection.utils.status().state).toBe("live")
+    );
+    vi.useFakeTimers();
+    try {
+      // The socket drops; a row changes while none is open.
+      set("reconnecting");
+      table.live.fail(new Error("socket closed"));
+      table.rows.set("b", { id: "b", label: "B" });
+      table.seq += 1;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(collection.utils.status().state).not.toBe("live");
+      set("open");
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() =>
+        expect(collection.utils.status().state).toBe("live")
+      );
+      expect(collection.toArray.map((row) => row.id).sort()).toEqual([
+        "a",
+        "b",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
