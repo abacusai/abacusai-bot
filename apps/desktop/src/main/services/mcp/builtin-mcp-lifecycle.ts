@@ -109,9 +109,10 @@ export class BuiltinMcpLifecycle {
     if (enabled) {
       await this.startBrowserServer();
     } else {
-      this.stopBrowserServer();
-      // Deny in-flight prompts so awaiting executeTool calls do not hang.
+      // Deny in-flight prompts first, so a waiting call answers "denied"
+      // while the server still lets in-flight responses finish.
       this.deps.flushPermissions("deny", "browser");
+      this.stopBrowserServer();
     }
     const status = this.getBrowserStatus();
     this.deps.emitEvent({

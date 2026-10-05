@@ -387,9 +387,23 @@ describe("the transport", () => {
     ).toMatchObject({
       result: { serverInfo: { name: "browser" } },
     });
-    expect(
-      await rpc({ jsonrpc: "2.0", id: 2, method: "notifications/initialized" })
-    ).toMatchObject({ result: {} });
+    // A notification has no id and gets no response, only the 202.
+    const initialized = await fetch(
+      `http://127.0.0.1:${port}/mcp?session=session-1`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+        }),
+      }
+    );
+    expect(initialized.status).toBe(202);
+    expect(await initialized.text()).toBe("");
     expect(await rpc({ jsonrpc: "2.0", id: 3, method: "ping" })).toMatchObject({
       result: {},
     });
@@ -2341,43 +2355,36 @@ describe("arguments the model left out", () => {
     expect((await call("browser_interact", {})).isError).toBe(true);
   });
 
-  it("answers a request that carries no id", async () => {
-    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "ping" }),
-    });
-
-    expect(await res.json()).toMatchObject({ id: null });
-  });
-
-  it("answers an idless initialize, tools/list, notification and unknown method", async () => {
-    const send = async (method: string): Promise<unknown> => {
+  it("answers nothing to an idless message, which is a notification", async () => {
+    const send = async (
+      body: Record<string, unknown>
+    ): Promise<{ status: number; text: string }> => {
       const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ jsonrpc: "2.0", method }),
+        body: JSON.stringify({ jsonrpc: "2.0", ...body }),
       });
-      return res.json();
+      return { status: res.status, text: await res.text() };
     };
 
     for (const method of [
+      "ping",
       "initialize",
       "tools/list",
       "notifications/initialized",
       "nope/nope",
     ]) {
-      expect(await send(method)).toMatchObject({ id: null });
+      expect(await send({ method })).toEqual({ status: 202, text: "" });
     }
   });
 
-  it("answers an idless tools/call", async () => {
+  it("does not run a tools/call sent as a notification", async () => {
+    respondWith(() => {
+      throw new Error("a notification ran a tool");
+    });
     const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
       method: "POST",
       headers: {
@@ -2387,11 +2394,12 @@ describe("arguments the model left out", () => {
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "tools/call",
-        params: { name: "browser_navigate" },
+        params: { name: "browser_snapshot", arguments: { action: "snapshot" } },
       }),
     });
 
-    expect(await res.json()).toMatchObject({ id: null });
+    expect(res.status).toBe(202);
+    expect(evaluated).toEqual([]);
   });
 });
 

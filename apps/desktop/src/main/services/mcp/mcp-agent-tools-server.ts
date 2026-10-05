@@ -1,6 +1,4 @@
 import fs from "fs";
-import http from "http";
-import net from "net";
 import path from "path";
 import { pathToFileURL } from "url";
 
@@ -79,24 +77,10 @@ import {
 } from "../messaging/sender-resolution";
 import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
-import { localMcpServerToken } from "./mcp-config-service";
+import { McpHttpServer, type McpToolListing } from "./mcp-http-server";
 import { agentTool, AGENT_TOOLS } from "./tools";
 import type { ToolDefinition, ToolResult } from "./tools/definition";
 import { readTranscriptTail } from "./transcript-tail";
-
-interface JsonRpcRequest {
-  jsonrpc: "2.0";
-  id?: number | string;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  id: number | string | null;
-  result?: unknown;
-  error?: { code: number; message: string; data?: unknown };
-}
 
 const SERVER_NAME = "agent-tools";
 const SERVER_VERSION = "1.0.0";
@@ -283,70 +267,11 @@ export interface McpAgentToolsServerOptions {
  * Not read from the platform catalog: that carries i18n keys and the main
  * process has no translator.
  */
-export class McpAgentToolsServer {
-  private server: http.Server | null = null;
-  private port: number | null = null;
-  private activeSessions = new Map<string, { res: http.ServerResponse }>();
-  private sessionCounter = 0;
-
-  constructor(private readonly options: McpAgentToolsServerOptions) {}
-
-  async start(): Promise<number> {
-    if (this.server != null) return this.port!;
-
-    const port = await this.findAvailablePort();
-    this.port = port;
-    this.server = http.createServer((req, res) => this.handleRequest(req, res));
-
-    return new Promise((resolve, reject) => {
-      this.server!.listen(port, "127.0.0.1", () => resolve(port));
-      this.server!.on("error", reject);
-    });
-  }
-
-  stop(): void {
-    for (const [, session] of this.activeSessions) {
-      try {
-        session.res.end();
-      } catch {
-        /* already closed */
-      }
-    }
-    this.activeSessions.clear();
-
-    if (this.server != null) {
-      this.server.closeAllConnections();
-      this.server.close();
-      this.server = null;
-      this.port = null;
-    }
-  }
-
-  /**
-   * Push `notifications/tools/list_changed` to every connected client so an
-   * open conversation re-runs `tools/list`: a platform's tools appear the
-   * moment it connects. Paired with `listChanged: true` in the initialize
-   * capabilities, which a client checks before it listens.
-   */
-  notifyToolListChanged(): void {
-    const frame = `event: message\ndata: ${JSON.stringify({
-      jsonrpc: "2.0",
-      method: "notifications/tools/list_changed",
-    })}\n\n`;
-    for (const [, session] of this.activeSessions) {
-      try {
-        session.res.write(frame);
-      } catch {
-        /* closed; its own close handler drops it from the map */
-      }
-    }
-  }
-
-  getPort(): number | null {
-    return this.port;
-  }
-  isRunning(): boolean {
-    return this.server != null;
+export class McpAgentToolsServer extends McpHttpServer {
+  constructor(private readonly options: McpAgentToolsServerOptions) {
+    // listChanged: a platform's tools appear the moment it connects, and
+    // service-host calls notifyToolListChanged when they do.
+    super({ name: SERVER_NAME, version: SERVER_VERSION, listChanged: true });
   }
 
   /** The always-on tools guarantee this. */
@@ -356,236 +281,20 @@ export class McpAgentToolsServer {
     return AGENT_TOOLS.some((definition) => isToolEnabled(definition, enabled));
   }
 
-  private async findAvailablePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const srv = net.createServer();
-      srv.listen(0, "127.0.0.1", () => {
-        const addr = srv.address() as net.AddressInfo;
-        srv.close(() => resolve(addr.port));
-      });
-      srv.on("error", reject);
-    });
-  }
+  protected listTools(callerSession?: string): McpToolListing[] {
+    const enabled = this.options.enabledToolsets();
+    const forBot = this.isBotCaller(callerSession);
+    const forEditor = this.isRoutineEditor(callerSession);
 
-  private handleRequest(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-
-    // No CORS headers on purpose: a wildcard origin would let any page the
-    // user browsed call tools/call on loopback.
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
-      // Per-boot bearer token from the runtime MCP config; a browser gets 401.
-      if (
-        req.headers.authorization !==
-        `Bearer ${localMcpServerToken(SERVER_NAME)}`
-      ) {
-        res.writeHead(401, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: null,
-            error: { code: -32000, message: "Unauthorized" },
-          })
-        );
-        return;
-      }
-      if (req.method === "GET") this.handleSseConnection(res);
-      else if (req.method === "POST") this.handleJsonRpcPost(req, res);
-      else if (req.method === "DELETE") this.handleSessionDelete(req, res);
-      else {
-        res.writeHead(405);
-        res.end();
-      }
-      return;
-    }
-
-    if (url.pathname === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          status: "ok",
-          server: SERVER_NAME,
-          version: SERVER_VERSION,
-        })
-      );
-      return;
-    }
-
-    res.writeHead(404);
-    res.end();
-  }
-
-  private handleSseConnection(res: http.ServerResponse): void {
-    const sessionId = `session-${++this.sessionCounter}`;
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    res.write(`event: endpoint\ndata: /mcp?sessionId=${sessionId}\n\n`);
-    this.activeSessions.set(sessionId, { res });
-    res.on("close", () => {
-      this.activeSessions.delete(sessionId);
-    });
-  }
-
-  private handleJsonRpcPost(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    let body = "";
-    req.on("data", (chunk: Buffer) => {
-      body += chunk.toString();
-    });
-    req.on("end", async () => {
-      // Malformed JSON is a Parse error (-32700); a handler that threw is an
-      // Internal error (-32603) carrying the request id and message.
-      let request: JsonRpcRequest;
-
-      try {
-        request = JSON.parse(body) as JsonRpcRequest;
-      } catch {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: null,
-            error: { code: -32700, message: "Parse error" },
-          })
-        );
-        return;
-      }
-
-      try {
-        const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-        // The runtime MCP config URL carries the UI session id, which is how
-        // a tool knows which conversation is asking.
-        const callerSession = url.searchParams.get("session") ?? undefined;
-        const response = await this.processJsonRpc(request, callerSession);
-        const sessionId = url.searchParams.get("sessionId");
-
-        if (sessionId != null && this.activeSessions.has(sessionId)) {
-          const session = this.activeSessions.get(sessionId)!;
-          try {
-            session.res.write(
-              `event: message\ndata: ${JSON.stringify(response)}\n\n`
-            );
-          } catch {
-            /* closed */
-          }
-          res.writeHead(202);
-          res.end();
-        } else {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(response));
-        }
-      } catch (error) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: request.id ?? null,
-            error: {
-              code: -32603,
-              message: `Internal error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          })
-        );
-      }
-    });
-  }
-
-  private handleSessionDelete(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-    const sessionId = url.searchParams.get("sessionId");
-
-    if (sessionId != null) {
-      const session = this.activeSessions.get(sessionId);
-      if (session != null) {
-        try {
-          session.res.end();
-        } catch {
-          /* ignore */
-        }
-        this.activeSessions.delete(sessionId);
-      }
-    }
-
-    res.writeHead(200);
-    res.end();
-  }
-
-  private async processJsonRpc(
-    request: JsonRpcRequest,
-    callerSession?: string
-  ): Promise<JsonRpcResponse> {
-    const { method, params, id } = request;
-
-    switch (method) {
-      case "initialize":
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: {
-            protocolVersion: "2024-11-05",
-            capabilities: { tools: { listChanged: true } },
-            serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
-          },
-        };
-      case "notifications/initialized":
-        return { jsonrpc: "2.0", id: id ?? null, result: {} };
-      case "tools/list": {
-        const enabled = this.options.enabledToolsets();
-        const forBot = this.isBotCaller(callerSession);
-        const forEditor = this.isRoutineEditor(callerSession);
-
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: {
-            tools: AGENT_TOOLS.filter((definition) =>
-              forEditor
-                ? definition.name === "cronjob"
-                : this.isListed(definition.name, enabled, forBot)
-            ).map((definition) => ({
-              name: definition.name,
-              description: definition.description,
-              inputSchema: definition.inputSchema,
-            })),
-          },
-        };
-      }
-      case "tools/call": {
-        const toolName = (params as { name?: string })?.name ?? "";
-        const toolArgs = ((params as { arguments?: Record<string, unknown> })
-          ?.arguments ?? {}) as Record<string, unknown>;
-
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: await this.executeTool(toolName, toolArgs, callerSession),
-        };
-      }
-      case "ping":
-        return { jsonrpc: "2.0", id: id ?? null, result: {} };
-      default:
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          error: { code: -32601, message: `Method not found: ${method}` },
-        };
-    }
+    return AGENT_TOOLS.filter((definition) =>
+      forEditor
+        ? definition.name === "cronjob"
+        : this.isListed(definition.name, enabled, forBot)
+    ).map((definition) => ({
+      name: definition.name,
+      description: definition.description,
+      inputSchema: definition.inputSchema,
+    }));
   }
 
   /** The editor turn behind a routine page's composer. */

@@ -1,40 +1,18 @@
 import fs from "fs";
-import http from "http";
-import net from "net";
 import path from "path";
 
 import { DeviceService, type DevicePlatform } from "../device/device-service";
-import { localMcpServerToken } from "./mcp-config-service";
+import {
+  McpHttpServer,
+  type McpToolListing,
+  type McpToolResult as ToolResult,
+} from "./mcp-http-server";
 
 /**
  * Built-in MCP server ("device") exposing iOS simulators and Android devices
  * to the local Code agent. Same HTTP JSON-RPC shape as McpBrowserServer; the
  * driving lives in DeviceService. Injected only when xcrun or adb is present.
  */
-
-interface ToolResult {
-  content: Array<{
-    type: string;
-    text?: string;
-    data?: string;
-    mimeType?: string;
-  }>;
-  isError?: boolean;
-}
-
-interface JsonRpcRequest {
-  jsonrpc: "2.0";
-  id?: number | string;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-interface JsonRpcResponse {
-  jsonrpc: "2.0";
-  id: number | string | null;
-  result?: unknown;
-  error?: { code: number; message: string; data?: unknown };
-}
 
 const SERVER_NAME = "device";
 const SERVER_VERSION = "1.0.0";
@@ -363,14 +341,7 @@ export interface McpDeviceServerOptions {
   deviceService?: DeviceService;
 }
 
-export class McpDeviceServer {
-  private server: http.Server | null = null;
-  private port: number | null = null;
-  private activeSessions = new Map<
-    string,
-    { transport: "sse"; res: http.ServerResponse }
-  >();
-  private sessionCounter = 0;
+export class McpDeviceServer extends McpHttpServer {
   private readonly deviceService: DeviceService;
   /**
    * Real paths of every artifact device_build has produced since launch,
@@ -380,6 +351,7 @@ export class McpDeviceServer {
   private readonly builtArtifacts = new Set<string>();
 
   constructor(private readonly options: McpDeviceServerOptions = {}) {
+    super({ name: SERVER_NAME, version: SERVER_VERSION });
     this.deviceService = options.deviceService ?? new DeviceService();
   }
 
@@ -388,262 +360,15 @@ export class McpDeviceServer {
     return this.deviceService.isAvailable();
   }
 
-  async start(): Promise<number> {
-    if (this.server != null) return this.port!;
-    const port = await this.findAvailablePort();
-    this.port = port;
-    this.server = http.createServer((req, res) => this.handleRequest(req, res));
-    return new Promise((resolve, reject) => {
-      this.server!.listen(port, "127.0.0.1", () => {
-        resolve(port);
-      });
-      this.server!.on("error", reject);
-    });
+  protected listTools(): McpToolListing[] {
+    return Object.entries(TOOLS_SCHEMA).map(([name, s]) => ({
+      name,
+      description: s.description,
+      inputSchema: s.inputSchema,
+    }));
   }
 
-  stop(): void {
-    for (const [, session] of this.activeSessions) {
-      try {
-        session.res.end();
-      } catch {
-        /* ignore */
-      }
-    }
-    this.activeSessions.clear();
-    if (this.server != null) {
-      this.server.close();
-      this.server = null;
-      this.port = null;
-    }
-  }
-
-  getPort(): number | null {
-    return this.port;
-  }
-  isRunning(): boolean {
-    return this.server != null;
-  }
-
-  private async findAvailablePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const srv = net.createServer();
-      srv.listen(0, "127.0.0.1", () => {
-        const addr = srv.address() as net.AddressInfo;
-        srv.close(() => resolve(addr.port));
-      });
-      srv.on("error", reject);
-    });
-  }
-
-  private handleRequest(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-
-    // No CORS headers: a wildcard origin would let any page the user browsed
-    // call tools/call on loopback.
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
-      // Per-boot bearer token from the runtime MCP config; a browser gets 401.
-      if (
-        req.headers.authorization !==
-        `Bearer ${localMcpServerToken(SERVER_NAME)}`
-      ) {
-        res.writeHead(401, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: null,
-            error: { code: -32000, message: "Unauthorized" },
-          })
-        );
-        return;
-      }
-      if (req.method === "GET") this.handleSseConnection(res);
-      else if (req.method === "POST") this.handleJsonRpcPost(req, res);
-      else if (req.method === "DELETE") this.handleSessionDelete(req, res);
-      else {
-        res.writeHead(405);
-        res.end();
-      }
-      return;
-    }
-    if (url.pathname === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          status: "ok",
-          server: SERVER_NAME,
-          version: SERVER_VERSION,
-        })
-      );
-      return;
-    }
-    res.writeHead(404);
-    res.end();
-  }
-
-  private handleSseConnection(res: http.ServerResponse): void {
-    const sessionId = `session-${++this.sessionCounter}`;
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    res.write(`event: endpoint\ndata: /mcp?sessionId=${sessionId}\n\n`);
-    this.activeSessions.set(sessionId, { transport: "sse", res });
-    res.on("close", () => {
-      this.activeSessions.delete(sessionId);
-    });
-  }
-
-  private handleJsonRpcPost(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    let body = "";
-    req.on("data", (chunk: Buffer) => {
-      body += chunk.toString();
-    });
-    req.on("end", async () => {
-      // Malformed JSON is a Parse error (-32700); a handler that threw is an
-      // Internal error (-32603) carrying the request id and message.
-      let request: JsonRpcRequest;
-      try {
-        request = JSON.parse(body) as JsonRpcRequest;
-      } catch {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: null,
-            error: { code: -32700, message: "Parse error" },
-          })
-        );
-        return;
-      }
-
-      try {
-        // The URL carries the session id, which is how a prompt knows whether
-        // the asking session is in Bypass mode.
-        const agentSessionId =
-          new URL(
-            req.url ?? "/",
-            `http://localhost:${this.port}`
-          ).searchParams.get("session") ?? undefined;
-        const response = await this.processJsonRpc(request, agentSessionId);
-        const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-        const sessionId = url.searchParams.get("sessionId");
-        if (sessionId != null && this.activeSessions.has(sessionId)) {
-          const session = this.activeSessions.get(sessionId)!;
-          try {
-            session.res.write(
-              `event: message\ndata: ${JSON.stringify(response)}\n\n`
-            );
-          } catch {
-            /* closed */
-          }
-          res.writeHead(202);
-          res.end();
-        } else {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(response));
-        }
-      } catch (error) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id: request.id ?? null,
-            error: {
-              code: -32603,
-              message: `Internal error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          })
-        );
-      }
-    });
-  }
-
-  private handleSessionDelete(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
-    const url = new URL(req.url ?? "/", `http://localhost:${this.port}`);
-    const sessionId = url.searchParams.get("sessionId");
-    if (sessionId != null) {
-      const session = this.activeSessions.get(sessionId);
-      if (session) {
-        try {
-          session.res.end();
-        } catch {
-          /* ignore */
-        }
-        this.activeSessions.delete(sessionId);
-      }
-    }
-    res.writeHead(200);
-    res.end();
-  }
-
-  private async processJsonRpc(
-    request: JsonRpcRequest,
-    sessionId?: string
-  ): Promise<JsonRpcResponse> {
-    const { method, params, id } = request;
-    switch (method) {
-      case "initialize":
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: {
-            protocolVersion: "2024-11-05",
-            capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
-          },
-        };
-      case "notifications/initialized":
-        return { jsonrpc: "2.0", id: id ?? null, result: {} };
-      case "tools/list":
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: {
-            tools: Object.entries(TOOLS_SCHEMA).map(([name, s]) => ({
-              name,
-              description: s.description,
-              inputSchema: s.inputSchema,
-            })),
-          },
-        };
-      case "tools/call": {
-        const toolName = (params as { name?: string })?.name ?? "";
-        const toolArgs = ((params as { arguments?: Record<string, unknown> })
-          ?.arguments ?? {}) as Record<string, unknown>;
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          result: await this.executeTool(toolName, toolArgs, sessionId),
-        };
-      }
-      case "ping":
-        return { jsonrpc: "2.0", id: id ?? null, result: {} };
-      default:
-        return {
-          jsonrpc: "2.0",
-          id: id ?? null,
-          error: { code: -32601, message: `Method not found: ${method}` },
-        };
-    }
-  }
-
-  private async executeTool(
+  protected async executeTool(
     name: string,
     args: Record<string, unknown>,
     sessionId?: string

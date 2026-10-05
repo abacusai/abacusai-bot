@@ -50,21 +50,14 @@ const server = (
 const listedTools = async (
   instance: McpAgentToolsServer,
   session?: string
-): Promise<string[]> => {
-  const response = (await (
+): Promise<string[]> =>
+  (
     instance as unknown as {
-      processJsonRpc: (
-        request: unknown,
-        callerSession?: string
-      ) => Promise<{ result: { tools: { name: string }[] } }>;
+      listTools: (callerSession?: string) => Array<{ name: string }>;
     }
-  ).processJsonRpc(
-    { jsonrpc: "2.0", id: 1, method: "tools/list" },
-    session
-  )) as { result: { tools: { name: string }[] } };
-
-  return response.result.tools.map((entry) => entry.name);
-};
+  )
+    .listTools(session)
+    .map((entry) => entry.name);
 
 const call = async (
   instance: McpAgentToolsServer,
