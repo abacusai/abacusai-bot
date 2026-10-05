@@ -61,7 +61,14 @@ app.whenReady().then(async () => {
     const swapped = await host.swap(new URL(page), {
       barrier: "subscriptions",
     });
-    const afterSwap = await geometry();
+    // The fake readiness barrier precedes Chromium's geometry event.
+    // Wait for the new view's overlay before testing its CSS reservations.
+    const geometryDeadline = Date.now() + 5_000;
+    let afterSwap = await geometry();
+    while (afterSwap.width === 0 && Date.now() < geometryDeadline) {
+      await sleep(50);
+      afterSwap = await geometry();
+    }
     const click = async (x: number, y: number) => {
       host.webContents.sendInputEvent({
         type: "mouseDown",

@@ -48,7 +48,7 @@ const BUNDLES = ["dist/main/index.js", "dist/preload/index.cjs"];
 const SOURCES = [
   "src/main",
   "src/preload",
-  "src/shared",
+  "../../packages/contract/src",
   "vite.config.ts",
   "package.json",
 ];

@@ -2,20 +2,16 @@ import type { ChildProcess } from "node:child_process";
 import { resolve } from "node:path";
 
 import { NATIVE_PACKAGES } from "@abacus-ai/config/native-packages";
-import tailwindcss from "@tailwindcss/vite";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react from "@vitejs/plugin-react";
 import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
-import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
-  alias,
-  RENDERER_MODULES,
-  RENDERER_APP_SRC,
-  RENDERER_REGISTRY_SRC,
-  NODE_MODULES,
-} from "./vite.shared.ts";
+  rendererPlugins,
+  rendererAlias,
+  platformAlias,
+  webRoot,
+} from "../web/vite.renderer";
+import { alias } from "./vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
@@ -63,66 +59,41 @@ const RELAUNCH_GRACE_MS = 8000;
 // referenced from it and never packaged (see electron-builder.yml).
 const sourcemap = "hidden";
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const flags = {
     gallery: process.env.VITE_UI_GALLERY === "1",
     fixtures: process.env.VITE_NEXT_DB_FIXTURES === "1",
   };
   const release = command === "build" && !flags.gallery && !flags.fixtures;
   return {
+    root: webRoot,
+    envDir: root,
     build: {
-      outDir: "dist/renderer",
+      outDir: resolve(root, "dist/renderer"),
+      emptyOutDir: true,
       sourcemap,
       // Two documents: the shipped renderer and the rewrite's (spec 01 §3.3).
       // Both land at the root of dist/renderer, so the experience bundle
       // carries both unchanged.
       rolldownOptions: {
         input: {
-          main: resolve(root, "index.html"),
-          notch: resolve(root, "notch.html"),
+          main: resolve(webRoot, "index.html"),
+          notch: resolve(webRoot, "notch.html"),
         },
       },
     },
     plugins: [
-      releaseBuildPlugin(root, release, flags),
+      ...rendererPlugins("electron", command, mode),
       {
         name: "abacus:dev-server-handle",
         configureServer(server) {
           devServer = server;
         },
       },
-      // Before the React transform: it rewrites route files into split chunks.
-      tanstackRouter({
-        target: "react",
-        routesDirectory: "./src/renderer/routes",
-        generatedRouteTree: "./src/renderer/routeTree.gen.ts",
-        routeFileIgnorePrefix: "-",
-        autoCodeSplitting: true,
-        quoteStyle: "double",
-      }),
-      tanstackRouter({
-        target: "react",
-        routesDirectory: "./src/renderer/notch-routes",
-        generatedRouteTree: "./src/renderer/notchRouteTree.gen.ts",
-        routeFileIgnorePrefix: "-",
-        autoCodeSplitting: true,
-        quoteStyle: "double",
-      }),
-      tailwindcss(),
-      // Order matters (spec 01 §3.3): the compiler instance first, the plain
-      // instance last. Each sets oxc's refresh flag in its `config` hook and the
-      // last one wins, so reversed, the old renderer loses Fast Refresh. The
-      // compiler instance does its own refresh for the files it compiles.
-      react({
-        include: RENDERER_MODULES,
-        exclude: RENDERER_REGISTRY_SRC,
-        compiler: { logDiagnostics: true },
-      }),
-      react({ exclude: [NODE_MODULES, RENDERER_APP_SRC] }),
       ...electron(
         simpleOptions({
           main: {
-            input: "src/main/index.ts",
+            input: resolve(root, "src/main/index.ts"),
             plugins: [electronAliases],
             onstart: async ({ startup }) => {
               await startup();
@@ -187,11 +158,15 @@ export default defineConfig(({ command }) => {
               define: {
                 "import.meta.env.ABACUS_DEV_HARNESS": JSON.stringify(!release),
               },
-              build: { outDir: "dist/main", emptyOutDir: true, sourcemap },
+              build: {
+                outDir: resolve(root, "dist/main"),
+                emptyOutDir: true,
+                sourcemap,
+              },
             },
           },
           preload: {
-            input: "src/preload/index.ts",
+            input: resolve(root, "src/preload/index.ts"),
             plugins: [electronAliases],
             bundleDeps: { both: { exclude: ELECTRON_NATIVE } },
             // `.cjs`, not the plugin's default `.mjs`: the content it emits is
@@ -199,7 +174,7 @@ export default defineConfig(({ command }) => {
             // extension. An .mjs file holding `require` calls fails at load.
             options: {
               build: {
-                outDir: "dist/preload",
+                outDir: resolve(root, "dist/preload"),
                 sourcemap,
                 rolldownOptions: { output: { entryFileNames: "[name].cjs" } },
               },
@@ -210,7 +185,7 @@ export default defineConfig(({ command }) => {
     ],
     resolve: {
       // See vite.shared.ts.
-      alias,
+      alias: { ...rendererAlias, ...platformAlias("electron") },
       dedupe: ["react", "react-dom"],
     },
     worker: { format: "es" },

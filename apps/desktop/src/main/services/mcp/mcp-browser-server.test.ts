@@ -2891,7 +2891,7 @@ describe("which pane a browser event is for", () => {
   it("stamps the caller's conversation on the preview event", async () => {
     const { McpBrowserServer } = await import("./mcp-browser-server");
     const { sessionConversationKey } =
-      await import("#shared/conversation-scope");
+      await import("@abacus-ai/contract/conversation-scope");
     const key = sessionConversationKey("workspace-1", "keyed");
     const other = new McpBrowserServer({
       target: () => fakeTarget,

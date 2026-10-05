@@ -1,4 +1,7 @@
-import type { TerminalEvent, TerminalOutputChunk } from "#shared/contract";
+import type {
+  TerminalEvent,
+  TerminalOutputChunk,
+} from "@abacus-ai/contract/contract";
 
 import { notFound } from "../errors";
 import { impl, isType, onIpcEvents, stream } from "./impl";

@@ -16,7 +16,7 @@ import type {
   MaterializeSessionWorktreeResult,
   SetSessionWorktreeResult,
   WorktreeListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 export interface WorktreeMaterializerDeps {
   session(sessionId: string): AgentSessionListItem | null;

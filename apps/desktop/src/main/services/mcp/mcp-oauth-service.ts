@@ -8,7 +8,7 @@ import {
   MCP_OAUTH_CALLBACK_PORT,
   mcpOAuthRedirectUri,
   type McpOAuthEntry,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";
 

@@ -1,11 +1,6 @@
-import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
-import {
-  alias,
-  RENDERER_MODULES,
-  RENDERER_REGISTRY_SRC,
-} from "./vite.shared.ts";
+import { alias } from "./vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a
@@ -63,47 +58,24 @@ const CONTENDS_FOR_THE_MACHINE = [
 
 export default defineConfig({
   test: {
-    ...(process.env.CI ? { maxWorkers: 2 } : {}),
+    maxWorkers: process.env.CI ? 2 : 4,
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
-      exclude: [
-        "**/*.test.*",
-        "**/dist/**",
-        "**/*.config.ts",
-        "src/renderer/locales/**",
-        "src/renderer/routeTree.gen.ts",
-        "src/renderer/ui/**",
-      ],
+      exclude: ["**/*.test.*", "**/dist/**", "**/*.config.ts"],
     },
     projects: [
-      {
-        // The rewrite's renderer (spec 01 §3.7): compiled as it ships.
-        plugins: [
-          react({
-            include: RENDERER_MODULES,
-            exclude: RENDERER_REGISTRY_SRC,
-            compiler: true,
-          }),
-        ],
-        resolve: { alias },
-        test: {
-          name: "renderer",
-          environment: "jsdom",
-          // Tests read tokens.css as text (`?raw`); nothing is styled.
-          css: { include: [/tokens\.css/] },
-          ...ciTimeouts,
-          include: ["src/renderer/**/*.test.{ts,tsx}"],
-          setupFiles: ["./src/renderer/test-support/setup.ts"],
-        },
-      },
       {
         resolve: { alias },
         test: {
           name: "main",
           environment: "node",
           ...ciTimeouts,
-          include: ["src/main/**/*.test.ts", "scripts/vite-resolution.test.ts"],
+          include: [
+            "src/main/**/*.test.ts",
+            "scripts/vite-resolution.test.ts",
+            "scripts/renderer-csp.test.ts",
+          ],
           exclude: [...defaultExclude, ...CONTENDS_FOR_THE_MACHINE],
         },
       },
@@ -127,15 +99,6 @@ export default defineConfig({
           environment: "node",
           ...ciTimeouts,
           include: ["src/preload/**/*.test.ts"],
-        },
-      },
-      {
-        resolve: { alias },
-        test: {
-          name: "shared",
-          environment: "node",
-          ...ciTimeouts,
-          include: ["src/shared/**/*.test.ts"],
         },
       },
     ],

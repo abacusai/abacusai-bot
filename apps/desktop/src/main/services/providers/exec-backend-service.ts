@@ -11,7 +11,7 @@ import {
   type BackendId,
   type BackendStatus,
   type ExecBackend,
-} from "#shared/exec-backends";
+} from "@abacus-ai/contract/exec-backends";
 
 /**
  * Binary lookups are cached for the process lifetime; shelling out on every

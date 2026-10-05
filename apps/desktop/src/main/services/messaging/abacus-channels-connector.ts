@@ -1,7 +1,9 @@
+import type {
+  MessagingPlatformId,
+  SharedChannelLink,
+} from "@abacus-ai/contract/messaging";
 import { BrowserWindow } from "electron";
 import QRCode from "qrcode";
-
-import type { MessagingPlatformId, SharedChannelLink } from "#shared/messaging";
 
 import { parentWindow } from "../../bring-to-front";
 import { resolveAbacusApiKey } from "../providers/abacus";

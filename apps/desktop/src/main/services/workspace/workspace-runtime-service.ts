@@ -12,7 +12,7 @@ import type {
   GitStateSnapshot,
   IpcEvent,
   WorkspaceState,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import type { FileTreeService } from "./file-tree-service";
 import type { GitService } from "./git-service";

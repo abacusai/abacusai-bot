@@ -1,4 +1,4 @@
-import type { BotsEvent } from "#shared/contract";
+import type { BotsEvent } from "@abacus-ai/contract/contract";
 
 import { impl, isType, onIpcEvents, stream } from "./impl";
 

@@ -9,7 +9,7 @@
  * names abacus.ai, which is stored in the clear. Safari and Firefox keep
  * their cookies out of reach; their users sign in through the browser.
  */
-import type { BrowserSignInProfile } from "#shared/contracts";
+import type { BrowserSignInProfile } from "@abacus-ai/contract/contracts";
 
 import {
   discoverBrowserProfiles,

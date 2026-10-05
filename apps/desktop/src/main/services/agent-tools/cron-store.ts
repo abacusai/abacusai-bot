@@ -8,10 +8,10 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { ConflictError } from "#shared/conflict";
-import { EntityNotFoundError } from "#shared/not-found";
-import type { RoutineRun, RoutineRunKind } from "#shared/routines";
-import { matches, nextRun, parseCron } from "#shared/routines/cron";
+import { ConflictError } from "@abacus-ai/contract/conflict";
+import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
+import type { RoutineRun, RoutineRunKind } from "@abacus-ai/contract/routines";
+import { matches, nextRun, parseCron } from "@abacus-ai/contract/routines/cron";
 
 import {
   isMigrationWriteBlocked,
@@ -28,7 +28,11 @@ import {
 } from "./routine-attempts";
 
 // One parser for main and the new renderer (spec 05 §31.7).
-export { CronParseError, nextRun, parseCron } from "#shared/routines/cron";
+export {
+  CronParseError,
+  nextRun,
+  parseCron,
+} from "@abacus-ai/contract/routines/cron";
 
 export type CronTrigger = "schedule" | "webhook" | "manual" | "create";
 

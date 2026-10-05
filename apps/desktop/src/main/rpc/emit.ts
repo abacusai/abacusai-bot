@@ -1,5 +1,5 @@
 /** Dispatch host events to the oRPC event bus. */
-import type { IpcEvent } from "#shared/contracts";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { mainEventBus, type BusChannel, type BusChannels } from "./event-bus";
 

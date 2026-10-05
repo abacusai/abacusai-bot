@@ -15,8 +15,8 @@ import type {
   RoutineRunRow,
   SessionRow,
   WorkspaceRow,
-} from "#shared/contract/rows";
-import type { IpcEvent } from "#shared/contracts";
+} from "@abacus-ai/contract/contract/rows";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import type { PrefsStore } from "../../services/config/prefs-store";
 import type { MainEventBus } from "../event-bus";

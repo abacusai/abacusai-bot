@@ -1,6 +1,6 @@
-import type { BrowserEvent } from "#shared/contract";
-import type { IpcEvent } from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
+import type { BrowserEvent } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { checkLocalPreviewFile } from "../../services/browser/local-preview-file";
 import { forbidden } from "../errors";

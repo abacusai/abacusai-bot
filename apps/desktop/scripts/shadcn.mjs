@@ -7,11 +7,11 @@
  * 1. `shadcn add <items> --dry-run` against the local registry proxy (replay
  *    of the committed snapshot; `--record` fetches upstream and records a new
  *    snapshot instead). Its planned file list must stay under
- *    src/renderer/{ui,lib,components} and its planned dependencies inside
+ *    ../web/src/{ui,lib,components} and its planned dependencies inside
  *    the measured registry set (§3.1).
  * 2. Only then the real `add`, replayed from the snapshot (offline).
  * 3. `shadcn info --json` must resolve ui/css/icons to renderer, and
- *    src/renderer must be untouched.
+ *    ../web/src must be untouched.
  *
  * Also exports `addFromSnapshot()` for check:ui-registry.
  */
@@ -27,11 +27,13 @@ import {
 } from "./shadcn-init.mjs";
 import { run, startRegistryProxy } from "./shadcn-registry-proxy.mjs";
 
-const desktop = join(import.meta.dirname, "..");
+const desktop = join(import.meta.dirname, "../../web");
 export const shadcnBin = join(desktop, "../../node_modules/.bin/shadcn");
 
 /** The committed snapshot: the newest dated directory. */
-export const latestSnapshot = (root = join(desktop, "shadcn-registry")) => {
+export const latestSnapshot = (
+  root = join(desktop, "../desktop/shadcn-registry")
+) => {
   const dates = readdirSync(root)
     .filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name))
     .sort();
@@ -86,11 +88,7 @@ export const INITIAL_ITEMS = [
   "collapsible",
 ];
 
-const ALLOWED_DIRS = [
-  "src/renderer/ui/",
-  "src/renderer/lib/",
-  "src/renderer/components/",
-];
+const ALLOWED_DIRS = ["src/ui/", "src/lib/", "src/components/"];
 
 const fail = (message) => {
   console.error(`shadcn: ${message}`);
@@ -172,15 +170,16 @@ const main = async () => {
   if (items.length === 0) fail("no items");
 
   // §5.1 step 5 / §13: the scoping and token lines app.css must keep.
-  const css = readFileSync(
-    join(desktop, "src/renderer/styles/app.css"),
-    "utf8"
-  );
+  const css = readFileSync(join(desktop, "src/styles/app.css"), "utf8");
   const missing = REQUIRED_CSS_LINES.filter((line) => !css.includes(line));
   if (missing.length > 0) fail(`styles/app.css lost: ${missing.join(" | ")}`);
 
   const snapshot = record
-    ? join(desktop, "shadcn-registry", new Date().toISOString().slice(0, 10))
+    ? join(
+        desktop,
+        "../desktop/shadcn-registry",
+        new Date().toISOString().slice(0, 10)
+      )
     : latestSnapshot();
 
   const plan = await addFromSnapshot({ items, snapshot, record, dryRun: true });
@@ -207,20 +206,18 @@ const main = async () => {
     })
   );
   const rel = (path) => path.replace(`${desktop}/`, "");
-  if (rel(info.config.resolvedPaths.ui) !== "src/renderer/ui")
+  if (rel(info.config.resolvedPaths.ui) !== "src/ui")
     fail(`ui resolves to ${info.config.resolvedPaths.ui}`);
-  if (
-    rel(info.config.resolvedPaths.tailwindCss) !== "src/renderer/styles/app.css"
-  )
+  if (rel(info.config.resolvedPaths.tailwindCss) !== "src/styles/app.css")
     fail(`css resolves to ${info.config.resolvedPaths.tailwindCss}`);
   if (info.config.iconLibrary !== "lucide")
     fail(`icons are ${info.config.iconLibrary}`);
-  const dirty = execFileSync("git", ["status", "--porcelain", "src/renderer"], {
+  const dirty = execFileSync("git", ["status", "--porcelain", "src"], {
     cwd: desktop,
     encoding: "utf8",
   });
-  if (dirty.trim() !== "") fail(`src/renderer changed:\n${dirty}`);
-  console.log("shadcn: added; run oxfmt on src/renderer/ui");
+  if (dirty.trim() !== "") fail(`../web/src changed:\n${dirty}`);
+  console.log("shadcn: added; run oxfmt on ../web/src/ui");
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();

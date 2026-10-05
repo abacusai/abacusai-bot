@@ -17,7 +17,7 @@
  * so its caller waits only until the deadline, while subsequent commands
  * remain queued until a response or process invalidation.
  */
-import type { DesktopEvent } from "#shared/agent-types";
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 
 /** The agent refused the model; `message` is its own words. */
 export class ModelUnavailableError extends Error {

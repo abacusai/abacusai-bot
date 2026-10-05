@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * Saving a connector must not wait for another connector to shut down.
  *
@@ -18,8 +19,6 @@
  * connector's; a stuck Discord stands in for it here.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

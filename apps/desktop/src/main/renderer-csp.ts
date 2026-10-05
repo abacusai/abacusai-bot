@@ -3,7 +3,7 @@
 // in sync with that <meta>.
 export const RENDERER_CSP =
   "default-src 'self'; script-src 'self' 'unsafe-eval'; " +
-  "style-src 'self' 'unsafe-inline'; media-src 'self' blob: data:; " +
+  "style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob: data:; " +
   "img-src 'self' blob: data:; connect-src 'self' data:;";
 
 interface HeadersReceivedDetails {

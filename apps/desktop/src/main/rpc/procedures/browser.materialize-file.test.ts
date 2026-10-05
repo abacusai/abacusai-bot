@@ -11,18 +11,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import type {
   AgentSessionListItem,
   SessionArtifact,
   WorkspaceListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   draftConversationKey,
   sessionConversationKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CheckoutService } from "../../services/workspace/checkout-service";
 import { FileTreeService } from "../../services/workspace/file-tree-service";

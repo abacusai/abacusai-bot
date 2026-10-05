@@ -1,4 +1,4 @@
-import type { ModelAvailability } from "#shared/models";
+import type { ModelAvailability } from "@abacus-ai/contract/models";
 
 import { hasCredential, readSettings } from "../config/settings";
 

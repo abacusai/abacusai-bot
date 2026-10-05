@@ -3,13 +3,13 @@
  * prompts, "this run only" grants, and the pending-prompt bookkeeping that
  * lets a settings flip resolve everything still waiting.
  */
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 import type {
   BrowserPermissionRequest,
   IpcEvent,
   RespondBrowserPermissionRequest,
-} from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
+} from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import type { McpConfigService } from "./mcp-config-service";
 

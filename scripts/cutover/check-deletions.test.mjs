@@ -7,7 +7,7 @@ test("migrated shared code resolves and a deleted legacy shim fails", () => {
   const desktop = path.resolve("apps/desktop");
   assert.ok(
     resolveLocal(
-      "#shared/transcript/v1-types",
+      "@abacus-ai/contract/transcript/v1-types",
       path.join(desktop, "src/main/index.ts"),
       desktop
     )

@@ -7,10 +7,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { LocalModelProgress } from "@abacus-ai/contract/local-models";
+import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { LocalModelProgress } from "#shared/local-models";
-import { LOCAL_MODEL_CATALOG } from "#shared/local-models";
 
 const resources = vi.hoisted(() => ({ root: "" }));
 

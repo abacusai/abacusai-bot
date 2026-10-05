@@ -10,16 +10,19 @@ export const gitBlob = (data) =>
 export const resolveLocal = (specifier, importer, desktop) => {
   const clean = specifier.split("?")[0];
   const aliases = {
-    "#main/": "main",
-    "#shared/": "shared",
-    "#preload/": "preload",
-    "#renderer/": "renderer",
-    "#locales/": "renderer/locales",
+    "#main/": path.join(desktop, "src/main"),
+    "@abacus-ai/contract/": path.resolve(
+      desktop,
+      "../../packages/contract/src"
+    ),
+    "#preload/": path.join(desktop, "src/preload"),
+    "#renderer/": path.resolve(desktop, "../web/src"),
+    "#locales/": path.resolve(desktop, "../web/src/locales"),
   };
   let target;
   for (const [alias, tree] of Object.entries(aliases))
     if (clean.startsWith(alias))
-      target = path.join(desktop, "src", tree, clean.slice(alias.length));
+      target = path.join(tree, clean.slice(alias.length));
   if (clean.startsWith("."))
     target = path.resolve(path.dirname(importer), clean);
   if (!target) return null;
@@ -63,7 +66,12 @@ export const checkDeletions = (repo) => {
           resolveLocal(value, file, desktop);
     }
   };
-  visit(path.join(desktop, "src"));
+  for (const tree of [
+    "apps/desktop/src",
+    "apps/web/src",
+    "packages/contract/src",
+  ])
+    visit(path.join(repo, tree));
 };
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   checkDeletions(process.cwd());

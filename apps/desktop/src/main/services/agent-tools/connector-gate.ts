@@ -9,8 +9,8 @@ import type {
   ConnectorRequest,
   IpcEvent,
   RespondConnectorRequest,
-} from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
+} from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 type EmitEvent = (event: IpcEvent) => void;
 

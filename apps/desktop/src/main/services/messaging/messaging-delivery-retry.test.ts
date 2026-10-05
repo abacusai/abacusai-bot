@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * A reply that fails to deliver is retried, and a failure that survives the
  * retries is recorded, never dropped. One console line was all a failed
@@ -5,8 +6,6 @@
  * recipient got nothing, and nobody knew.
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

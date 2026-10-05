@@ -90,7 +90,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const root = path.resolve(import.meta.dirname, "../src/renderer");
+  const root = path.resolve(import.meta.dirname, "../../web/src");
   const english = JSON.parse(
     fs.readFileSync(path.join(root, "locales/en-US.json"))
   );

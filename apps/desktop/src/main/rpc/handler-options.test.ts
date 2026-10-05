@@ -1,3 +1,4 @@
+import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
 /**
  * Errors inside event iterators get the same mapping and logging as a call's
  * (spec 00 A.4.2, A.5; Codex impl-r1 #9, Claude impl-r1 #3). oRPC consumes a
@@ -6,8 +7,6 @@
  * generic "Internal server error" and was never logged.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
 
 import { UnavailableAguiSource } from "./ai/source";
 import {

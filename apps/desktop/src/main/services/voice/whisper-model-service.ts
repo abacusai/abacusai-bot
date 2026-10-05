@@ -7,12 +7,12 @@
 import fs from "fs";
 import path from "path";
 
-import type { IpcEvent } from "#shared/contracts";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import {
   WHISPER_MODEL_ID,
   WHISPER_REMOTE_HOST,
   type WhisperFileResult,
-} from "#shared/voice";
+} from "@abacus-ai/contract/voice";
 
 import { abacusBotHome } from "../../paths";
 

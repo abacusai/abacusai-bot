@@ -9,9 +9,9 @@ export type ReleaseKind = "experience" | "foundation" | "none";
  * update is a foundation release by construction.
  */
 const EXPERIENCE_PREFIXES = [
-  "apps/desktop/index.html",
-  "apps/desktop/notch.html",
-  "apps/desktop/src/renderer/",
+  "apps/web/index.html",
+  "apps/web/notch.html",
+  "apps/web/src/",
   "packages/agent/src/",
 ];
 
@@ -21,6 +21,10 @@ const IGNORED_PREFIXES = [
   ".github/",
   ".vscode/",
   "apps/updater/",
+  "apps/host/",
+  "apps/web/src/features/shell/connect/",
+  "apps/web/src/features/shell/lease.ts",
+  "apps/web/vite.config.ts",
   "docs/",
   "packages/test-support/",
 ];

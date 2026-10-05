@@ -10,9 +10,11 @@
  */
 import os from "node:os";
 
+import type {
+  AgentSessionSnapshot,
+  UsageSnapshot,
+} from "@abacus-ai/contract/contracts";
 import { describe, expect, it } from "vitest";
-
-import type { AgentSessionSnapshot, UsageSnapshot } from "#shared/contracts";
 
 import {
   buildLogDump,

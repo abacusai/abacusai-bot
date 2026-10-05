@@ -1,3 +1,4 @@
+import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 /**
  * What the agent was doing, as the log file records it.
  *
@@ -11,8 +12,6 @@
  * user's work to whoever reads the bundle.
  */
 import { describe, expect, it } from "vitest";
-
-import type { AgentEvent, DesktopEvent } from "#shared/agent-types";
 
 import { describeAgentEvent } from "./agent-event-log";
 

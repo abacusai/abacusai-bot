@@ -13,7 +13,7 @@ vi.mock("../renderer-host", () => ({
   sendToRenderer: (...args: unknown[]) => sent.push(args),
 }));
 
-import type { IpcEvent } from "#shared/contracts";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { emitBusChannel, emitHostEvent, publishIpcEvent } from "./emit";
 import { mainEventBus } from "./event-bus";

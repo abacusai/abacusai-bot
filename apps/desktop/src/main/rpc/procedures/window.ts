@@ -1,4 +1,4 @@
-import type { WindowEvent } from "#shared/contract";
+import type { WindowEvent } from "@abacus-ai/contract/contract";
 
 import { forbidden } from "../errors";
 import { impl, onChannel, requireWindow, stream } from "./impl";

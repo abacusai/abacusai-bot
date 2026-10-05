@@ -1,4 +1,4 @@
-import type { GitWatchEvent } from "#shared/contract/git";
+import type { GitWatchEvent } from "@abacus-ai/contract/contract/git";
 
 import { unwrapResult } from "../errors";
 import { impl, stream } from "./impl";

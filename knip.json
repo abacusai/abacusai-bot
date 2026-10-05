@@ -3,13 +3,9 @@
   "workspaces": {
     "apps/desktop": {
       "entry": [
-        "src/renderer/{main,notch}.tsx",
-        "src/renderer/routes/**/*.tsx",
-        "src/renderer/notch-routes/**/*.tsx",
         "src/main/index.ts",
         "src/main/window-chrome.e2e-entry.ts",
         "src/main/rpc/transports/rpc-handshake.e2e-main.ts",
-        "src/renderer/test-support/notch-fit.tsx",
         "src/preload/index.ts",
         "src/**/*.test.{ts,tsx}",
         "scripts/before-pack.cjs",
@@ -38,22 +34,51 @@
         "*.config.ts",
         "vite.shared.ts"
       ],
-      "ignore": [
-        "src/renderer/routeTree.gen.ts",
-        "src/renderer/notchRouteTree.gen.ts",
-        "src/renderer/ui/**"
-      ],
+      "ignore": [],
+      "ignoreExportsUsedInFile": true,
+      "ignoreDependencies": ["@abacus-ai/web"],
+      "paths": {
+        "ort-dist/*": ["../../node_modules/onnxruntime-web/dist/*"]
+      }
+    },
+    "apps/web": {
       "ignoreExportsUsedInFile": true,
       "ignoreDependencies": [
         "@testing-library/dom",
         "@fontsource-variable/inter",
         "@fontsource-variable/jetbrains-mono",
         "tailwindcss",
-        "tw-animate-css"
+        "tw-animate-css",
+        "shadcn",
+        "@tanstack/router-generator"
       ],
       "paths": {
         "ort-dist/*": ["../../node_modules/onnxruntime-web/dist/*"]
-      }
+      },
+      "entry": [
+        "src/{main,notch}.tsx",
+        "src/routes/**/*.tsx",
+        "src/notch-routes/**/*.tsx",
+        "src/test-support/notch-fit.tsx",
+        "src/**/*.test.{ts,tsx}",
+        "src/platform/*.{ts,tsx}"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "*.ts"],
+      "ignore": [
+        "src/routeTree.gen.ts",
+        "src/notchRouteTree.gen.ts",
+        "src/ui/**"
+      ]
+    },
+    "packages/contract": {
+      "entry": [
+        "src/**/*.test.ts",
+        "src/*.ts!",
+        "src/contract/**/*.ts!",
+        "src/transcript/*.ts!"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignoreExportsUsedInFile": true
     }
   },
   "tags": ["-public"]

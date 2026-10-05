@@ -134,6 +134,7 @@ visitSourceMaps(path.join(root, "packages/agent/dist"));
 for (const bundle of ["main", "preload", "renderer/assets"])
   visitSourceMaps(path.join(desktop, "dist", bundle));
 visitSourceImports(path.join(desktop, "src"));
+visitSourceImports(path.join(root, "apps/web/src"));
 
 const supplements = readJson(path.join(desktop, "build/licenses/sources.json"));
 const sections = [];

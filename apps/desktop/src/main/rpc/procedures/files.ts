@@ -1,4 +1,4 @@
-import type { FilesEvent } from "#shared/contract";
+import type { FilesEvent } from "@abacus-ai/contract/contract";
 
 import {
   conflict,

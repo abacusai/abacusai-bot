@@ -33,13 +33,15 @@ describe("detached Electron dev resolution", () => {
       const options = electronOptions.find((option) => option.name === name)!;
       const root = resolve(import.meta.dirname, "..");
       const paths = {
-        "#shared/contract": "src/shared/contract/index.ts",
-        "#shared/conversation-scope": "src/shared/conversation-scope.ts",
-        "#renderer/data/db": "src/renderer/data/db/index.ts",
+        "@abacus-ai/contract/contract":
+          "../../packages/contract/src/contract/index.ts",
+        "@abacus-ai/contract/conversation-scope":
+          "../../packages/contract/src/conversation-scope.ts",
+        "#renderer/data/db": "../web/src/data/db/index.ts",
         "#renderer/features/sessions/device/device-tab":
-          "src/renderer/features/sessions/device/device-tab.tsx",
+          "../web/src/features/sessions/device/device-tab.tsx",
         "#renderer/components/bot-avatar":
-          "src/renderer/components/bot-avatar/index.tsx",
+          "../web/src/components/bot-avatar/index.tsx",
         "#main/rpc/procedures/impl": "src/main/rpc/procedures/impl.ts",
         "#preload/index": "src/preload/index.ts",
       };

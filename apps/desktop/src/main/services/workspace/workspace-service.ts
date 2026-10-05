@@ -8,8 +8,8 @@ import type {
   RelocateWorkspaceResult,
   SwitchWorkspaceResult,
   WorkspacePathStatus,
-} from "#shared/contracts";
-import { WORKSPACE_NOT_FOUND } from "#shared/not-found";
+} from "@abacus-ai/contract/contracts";
+import { WORKSPACE_NOT_FOUND } from "@abacus-ai/contract/not-found";
 
 import { workspaceStore } from "../session/workspace-store";
 

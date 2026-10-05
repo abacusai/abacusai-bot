@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * A connector that has been stopped must go quiet.
  *
@@ -11,8 +12,6 @@
  * small any more, which is what makes this worth pinning.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 let enabled = true;
 

@@ -26,7 +26,7 @@ const serve = process.argv.includes("--serve");
 const entry = `
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/websocket";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 import { MainEventBus } from "#main/rpc/event-bus";
 import { createRouter } from "#main/rpc/router";
 import { fakeDeps, IDLE_UPDATE_STATUS } from "#main/rpc/testing";
@@ -38,9 +38,14 @@ export const run = async ({ serve }) => {
     router: createRouter(),
     deps: fakeDeps({
       bus,
-      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot" },
-      host: { sessionHomePath: () => "/h/AbacusAI" },
-      serviceHost: { getMetadata: () => ({ materialIconsBasePath: null }) },
+      app: { appVersion: () => "smoke", homeDir: () => "/h", botHome: () => "/h/.abacusai-bot", account: { get: () => ({ account: null, apps: [], onboarded: true }) }, markRendererActivity: () => {} },
+      host: { sessionHomePath: () => "/h/AbacusAI", readSettings: () => ({ apiKeys: { ABACUS_API_KEY: "smoke" } }), getAbacusAccount: () => null, listModels: () => [], readApiKeyProviders: () => [], getConnectorStatuses: () => ({}) },
+      serviceHost: {
+ ensureSessionHomeWorkspace: () => null, getMetadata: () => ({ materialIconsBasePath: null, workspaces: [], activeWorkspaceId: null }),
+ listAllAgentSessions: () => [], listSessionTurnStates: () => [], listBots: () => [], listRoutines: () => [], listRoutineHistories: () => [], listSessionArtifacts: () => [], listBotMemories: () => [], listMemories: () => ({ global: [], bots: [] }),
+ listBotChatPreviews: () => [], listBotSenderChats: () => [], getNotificationSettings: () => ({ enabled: true, sound: true }),
+ getMessagingSnapshot: () => ({ platforms: [], pending: [], approved: [], autoReplies: [], workspaceId: null, botId: null, gatewayEnabled: false, respondToInbound: false, autoApproveTools: false }), listConnectorRequests: () => [], listConnectorStatuses: () => ({}),
+ },
     }),
   });
   if (serve) {
@@ -103,7 +108,7 @@ await build({
   external: [/^@orpc\//, "ws", "bufferutil", "utf-8-validate", "valibot"],
   resolve: {
     alias: {
-      "#shared": join(SRC, "shared"),
+      "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),
       "#main": join(SRC, "main"),
     },
   },

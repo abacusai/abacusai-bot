@@ -15,7 +15,7 @@ import {
   type LocalModelProgress,
   type LocalModelSpec,
   type LocalModelState,
-} from "#shared/local-models";
+} from "@abacus-ai/contract/local-models";
 
 import { removeCustomProvider, upsertCustomProvider } from "../config/settings";
 import { LlamaServer, llamaServerAvailable } from "./llama-server";

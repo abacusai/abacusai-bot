@@ -47,7 +47,7 @@ vi.mock("electron", () => {
   );
 });
 
-import { v1ToThreadFile } from "#shared/transcript/thread-file";
+import { v1ToThreadFile } from "@abacus-ai/contract/transcript/thread-file";
 
 import { connectInProcess, fakeDeps } from "../../rpc/testing";
 import {

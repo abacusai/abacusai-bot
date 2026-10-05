@@ -8,15 +8,12 @@ test(
   { timeout: 60000 },
   () => {
     const files = [
-      "src/main",
-      "src/shared",
-      "src/preload",
-      "src/renderer",
-      "scripts/lib",
-    ].map(
-      (area) =>
-        `apps/desktop/${area}/__cutover_knip_canary/unused.${area.startsWith("scripts") ? "mjs" : "ts"}`
-    );
+      "apps/desktop/src/main/__cutover_knip_canary/unused.ts",
+      "apps/desktop/src/preload/__cutover_knip_canary/unused.ts",
+      "apps/desktop/scripts/lib/__cutover_knip_canary/unused.mjs",
+      "apps/web/src/__cutover_knip_canary/unused.ts",
+      "packages/contract/src/__cutover_knip_canary/unused.ts",
+    ];
     const productionConfig = fs.readFileSync("knip.json", "utf8");
     try {
       for (const file of files) {
@@ -33,6 +30,10 @@ test(
           "knip.json",
           "--workspace",
           "apps/desktop",
+          "--workspace",
+          "apps/web",
+          "--workspace",
+          "packages/contract",
           "--include",
           "files",
           "--no-gitignore",

@@ -8,7 +8,7 @@
  *
  * No Electron at runtime: only its types.
  */
-import type { DeviceStreamChunk } from "#shared/contracts";
+import type { DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 
 import type { BusChannels } from "./event-bus";
 

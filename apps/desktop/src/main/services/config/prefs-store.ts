@@ -21,21 +21,20 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
-import * as v from "valibot";
-
-import { AgentMode } from "#shared/agent-types";
+import { AgentMode } from "@abacus-ai/contract/agent-types";
 import {
   PREFS_GROUP_ENTRIES,
   PREFS_SCALAR_ENTRIES,
   PrefsPatchSchema,
-} from "#shared/contract/db";
+} from "@abacus-ai/contract/contract/db";
 import type {
   PrefsField,
   PrefsGroup,
   PrefsLeaf,
   PrefsPatch,
   PrefsRow,
-} from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/rows";
+import * as v from "valibot";
 
 import { abacusBotHome } from "../../paths";
 

@@ -1,3 +1,10 @@
+import {
+  DEFAULT_FLOW_WINDOW,
+  FLOW_ACK,
+  FlowRegistry,
+  parseFlowHeader,
+} from "@abacus-ai/contract/contract/flow-control";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 /**
  * Backpressure through the real oRPC adapters (Codex impl-r1 #1). oRPC
  * 1.15.4's server peer drains an iterator into the port as fast as it can and
@@ -8,14 +15,6 @@
  */
 import { isDefinedError } from "@orpc/client";
 import { afterEach, describe, expect, it } from "vitest";
-
-import {
-  DEFAULT_FLOW_WINDOW,
-  FLOW_ACK,
-  FlowRegistry,
-  parseFlowHeader,
-} from "#shared/contract/flow-control";
-import type { IpcEvent } from "#shared/contracts";
 
 import { MainEventBus } from "./event-bus";
 import { LOSSLESS_ACTIONABLE_MAX_EVENTS } from "./subscriber-queue";

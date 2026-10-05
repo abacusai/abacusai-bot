@@ -6,13 +6,31 @@ update tool, shared configuration, and test support.
 ```text
 apps/desktop/src/main/       Electron main process and host services
 apps/desktop/src/preload/    typed IPC bridge
-apps/desktop/src/renderer/   React interface
-apps/desktop/src/shared/     contracts shared by main and renderer
+apps/web/src/               React interface for Electron and the browser
+packages/contract/src/      contracts shared by main and renderer
 apps/updater/                release and experience-update tooling
 packages/agent/              model loop, tools, permissions, and harness
 packages/config/             shared build and lint configuration
 packages/test-support/       test doubles used by agent suites
 ```
+
+## Renderer and contract workspaces
+
+`@abacus-ai/web` owns the renderer sources, HTML entries, styles, locales, and
+renderer dependencies. Both Vite builds use `apps/web` as their root. The desktop
+build writes `index.html` and `notch.html` to `apps/desktop/dist/renderer`; the
+browser build writes only `index.html` to `apps/web/dist`, with `/web/` asset URLs.
+Shared plugins inject the platform constant and CSP. Native components load
+inside `IS_ELECTRON` branches, and native queries use `enabled: IS_ELECTRON`.
+Native routes reject browser navigation in `beforeLoad` with `notFound()`.
+
+`@abacus-ai/contract` owns the composite TypeScript project for schemas, procedure
+contracts, and cross-process types. Main, preload, and web reference it. Runtime
+aliases resolve its directory indexes in Vite, Vitest, and bundled smoke tests.
+The browser connects through the Apps host bootstrap and an authenticated
+WebSocket; Electron retains its MessagePort handshake. The capability guard
+allows every Electron procedure and provides the host's `UNSUPPORTED` policy.
+The headless host workspace is added by the next slice.
 
 ## Runtime processes
 

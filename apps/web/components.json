@@ -1,0 +1,25 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-mira",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/app.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "#renderer/components",
+    "utils": "#renderer/lib/cn",
+    "ui": "#renderer/ui",
+    "lib": "#renderer/lib",
+    "hooks": "#renderer/lib/hooks"
+  },
+  "menuColor": "default-translucent",
+  "menuAccent": "subtle",
+  "registries": {}
+}

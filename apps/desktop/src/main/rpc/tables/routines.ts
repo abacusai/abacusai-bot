@@ -1,4 +1,4 @@
-import type { RoutineRow } from "#shared/contract/rows";
+import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 
 import type { TableSources } from "./sources";
 

@@ -3,9 +3,10 @@ import http from "http";
 import net from "net";
 import path from "path";
 
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
+
 import { emitHostEvent } from "#main/rpc/emit";
-import type { IpcEvent } from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
 
 import { abacusBotHome } from "../../paths";
 import {

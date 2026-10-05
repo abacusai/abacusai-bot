@@ -1,0 +1,189 @@
+import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
+import { Store } from "@tanstack/react-store";
+
+import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+
+import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
+export interface PanelTab {
+  ref: string;
+  title: string;
+  openedAt: number;
+  path?: string;
+  sessionId?: string;
+  shell?: import("@abacus-ai/contract/terminal-shells").TerminalShellId;
+  url?: string;
+}
+export interface PanelTabs {
+  tabs: PanelTab[];
+  last: string | null;
+  tree?: DockNode;
+}
+const KEY = "abacusai-bot:abacus.sessions.tabs";
+const restore = (): Record<string, PanelTabs> => {
+  try {
+    return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+};
+export const panelTabsStore = new Store<Record<string, PanelTabs>>(restore());
+panelTabsStore.subscribe((s) => {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(s));
+  } catch {}
+});
+export const EMPTY_TABS: PanelTabs = { tabs: [], last: null };
+// Kept out of sessionStorage: restored references have no pending start.
+const pendingTerminalStarts = new Map<
+  string,
+  Map<string, { owners: number }>
+>();
+
+export const openTerminalTab = (
+  key: string,
+  tab: Omit<PanelTab, "openedAt">
+): void => {
+  let pending = pendingTerminalStarts.get(key);
+  if (!pending) {
+    pending = new Map();
+    pendingTerminalStarts.set(key, pending);
+  }
+  pending.set(tab.ref, { owners: 0 });
+  openTab(key, tab);
+};
+
+/** Retain a new tab while its adapter and terminal.start are pending. */
+export const retainTerminalStart = (key: string, id: string): (() => void) => {
+  const pending = pendingTerminalStarts.get(key);
+  const ref = `terminal:${id}`;
+  const entry = pending?.get(ref);
+  if (!entry) return () => {};
+  entry.owners++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    entry.owners--;
+    queueMicrotask(() => {
+      if (entry.owners || pending?.get(ref) !== entry) return;
+      pending.delete(ref);
+      if (!pending.size) pendingTerminalStarts.delete(key);
+    });
+  };
+};
+export const updateTabs = (
+  key: string,
+  fn: (tabs: PanelTabs) => PanelTabs
+): void => {
+  panelTabsStore.setState((s) => ({ ...s, [key]: fn(s[key] ?? EMPTY_TABS) }));
+};
+const removeRefs = (s: PanelTabs, refs: string[]): PanelTabs => {
+  let tree = s.tree;
+  for (const ref of refs)
+    if (tree) tree = dockReducer(tree, { type: "close", tab: ref });
+  const tabs = s.tabs.filter((tab) => !refs.includes(tab.ref));
+  const index = s.tabs.findIndex((tab) => tab.ref === s.last);
+  const next =
+    s.tabs.slice(index + 1).find((tab) => !refs.includes(tab.ref)) ??
+    s.tabs
+      .slice(0, index)
+      .reverse()
+      .find((tab) => !refs.includes(tab.ref));
+  return {
+    ...s,
+    tabs,
+    tree,
+    last: tabs.some((tab) => tab.ref === s.last)
+      ? s.last
+      : (next?.ref ?? tabs[0]?.ref ?? null),
+  };
+};
+export const focusTab = (key: string, ref: string) =>
+  updateTabs(key, (s) => {
+    if (
+      !s.tabs.some((tab) => tab.ref === ref) ||
+      (s.last === ref &&
+        (!s.tree || dockLeaves(s.tree).some((leaf) => leaf.active === ref)))
+    )
+      return s;
+    return {
+      ...s,
+      last: ref,
+      tree: s.tree ? dockReducer(s.tree, { type: "focus", tab: ref }) : s.tree,
+    };
+  });
+export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
+  updateTabs(key, (s) => {
+    const exists = s.tabs.find((t) => t.ref === tab.ref);
+    let tabs = exists
+      ? s.tabs.map((t) => (t.ref === tab.ref ? { ...t, ...tab } : t))
+      : [...s.tabs, { ...tab, openedAt: Date.now() }];
+    const previews = tabs.filter((t) => t.ref.startsWith("preview:"));
+    const evicted =
+      previews.length > 50
+        ? previews.slice(0, previews.length - 50).map((tab) => tab.ref)
+        : [];
+    const repaired = removeRefs({ ...s, tabs }, evicted);
+    tabs = repaired.tabs;
+    let tree = repaired.tree;
+    if (tree && !dockLeaves(tree).some((leaf) => leaf.tabs.includes(tab.ref))) {
+      const first = dockLeaves(tree)[0]!;
+      tree = dockReducer(tree, {
+        type: "move",
+        tab: tab.ref,
+        target: first.id,
+        id: tab.ref,
+      });
+    }
+    return { ...s, tabs, tree, last: tab.ref };
+  });
+export const closeTab = (key: string, ref: string): string | undefined => {
+  const pending = pendingTerminalStarts.get(key);
+  pending?.delete(ref);
+  if (pending && !pending.size) pendingTerminalStarts.delete(key);
+  let next: string | undefined;
+  updateTabs(key, (s) => {
+    const repaired = removeRefs(s, [ref]);
+    next = repaired.last ?? undefined;
+    return repaired;
+  });
+  return next;
+};
+export const reconcileTerminals = (
+  key: string,
+  states: TerminalSessionSnapshot[],
+  title = "Terminal"
+): void => {
+  updateTabs(key, (s) =>
+    removeRefs(
+      s,
+      s.tabs
+        .filter(
+          (tab) =>
+            tab.ref.startsWith("terminal:") &&
+            !pendingTerminalStarts.get(key)?.has(tab.ref) &&
+            !states.some((state) => `terminal:${state.terminalId}` === tab.ref)
+        )
+        .map((tab) => tab.ref)
+    )
+  );
+  const previousLast = panelTabsStore.state[key]?.last;
+  for (const state of states)
+    openTab(key, {
+      ref: `terminal:${state.terminalId}`,
+      title,
+    });
+  updateTabs(key, (s) => ({ ...s, last: previousLast ?? s.last }));
+};
+export const promoteTabs = (from: string, to: string): void =>
+  panelTabsStore.setState((s) => {
+    const next = { ...s, [to]: s[from] ?? s[to] ?? EMPTY_TABS };
+    delete next[from];
+    return next;
+  });
+
+bindContinuityStore(KEY, {
+  read: () => panelTabsStore.state,
+  write: (value) =>
+    panelTabsStore.setState(() => value as Record<string, PanelTabs>),
+});

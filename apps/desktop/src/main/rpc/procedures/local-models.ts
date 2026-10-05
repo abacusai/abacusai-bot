@@ -1,4 +1,4 @@
-import type { LocalModelProgress } from "#shared/local-models";
+import type { LocalModelProgress } from "@abacus-ai/contract/local-models";
 
 import { unavailable } from "../errors";
 import { impl, isType, onIpcEvents, stream } from "./impl";

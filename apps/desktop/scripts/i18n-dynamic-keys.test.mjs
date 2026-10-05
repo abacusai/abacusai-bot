@@ -38,21 +38,17 @@ test("R7-T26 every remaining leaf belongs to the final consumer set", () => {
   const root = path.resolve(import.meta.dirname, "..");
   const keys = flatten(
     JSON.parse(
-      fs.readFileSync(path.join(root, "src/renderer/locales/en-US.json"))
+      fs.readFileSync(path.join(root, "../web/src/locales/en-US.json"))
     )
   );
   const manifest = JSON.parse(
     fs.readFileSync(path.join(root, "scripts/i18n-dynamic-keys.json"))
   );
-  const sources = sourceFiles(path.join(root, "src/renderer"));
-  for (const locale of fs.readdirSync(
-    path.join(root, "src/renderer/locales")
-  )) {
+  const sources = sourceFiles(path.join(root, "../web/src"));
+  for (const locale of fs.readdirSync(path.join(root, "../web/src/locales"))) {
     if (!locale.endsWith(".json")) continue;
     const localeKeys = flatten(
-      JSON.parse(
-        fs.readFileSync(path.join(root, "src/renderer/locales", locale))
-      )
+      JSON.parse(fs.readFileSync(path.join(root, "../web/src/locales", locale)))
     );
     assert.doesNotThrow(
       () => consumers(localeKeys, sources, manifest, keys),

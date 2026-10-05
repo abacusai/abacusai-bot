@@ -2,8 +2,7 @@ import { execFile } from "node:child_process";
 import os from "node:os";
 
 import { sandboxBackendFor } from "@abacus-ai/agent/sandbox-support";
-
-import type { SandboxSupport } from "#shared/contracts";
+import type { SandboxSupport } from "@abacus-ai/contract/contracts";
 
 import type { ResolvedAgentArtifact } from "../session/artifact-resolver-service";
 

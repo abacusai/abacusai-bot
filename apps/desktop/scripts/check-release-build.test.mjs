@@ -18,6 +18,7 @@ test("release boot graph follows static imports but permits deferred presentatio
       "release-build.json",
       JSON.stringify({ gallery: false, fixtures: false, modules: [] })
     );
+    write("notch.html", "<div></div>");
     write("index.html", '<script src="/assets/main.js"></script>');
     const graph = [
       {
@@ -30,9 +31,7 @@ test("release boot graph follows static imports but permits deferred presentatio
       {
         file: "assets/chat.js",
         imports: [],
-        modules: [
-          { id: "<desktop>/src/renderer/features/chat/markdown/markdown.tsx" },
-        ],
+        modules: [{ id: "<web>/src/features/chat/markdown/markdown.tsx" }],
       },
     ];
     write("chunk-sizes.json", JSON.stringify(graph));
@@ -51,8 +50,8 @@ test("release boot graph follows static imports but permits deferred presentatio
 });
 
 test("release gallery exclusion accepts Windows and normalized module ids", () => {
-  const root = "D:\\a\\abacusai-bot\\apps\\desktop";
-  const route = path.win32.join(root, "src/renderer/routes/_bare/[__ui].tsx");
+  const root = "D:\\a\\abacusai-bot\\apps\\web";
+  const route = path.win32.join(root, "src/routes/_bare/[__ui].tsx");
   const plugin = releaseBuildPlugin(root, true, {});
   for (const id of [
     route,
@@ -62,8 +61,52 @@ test("release gallery exclusion accepts Windows and normalized module ids", () =
     assert.match(plugin.load(id), /throw notFound\(\)/);
   }
   assert.equal(
-    plugin.load(path.win32.join(root, "src/renderer/routes/__root.tsx")),
+    plugin.load(path.win32.join(root, "src/routes/__root.tsx")),
     undefined
   );
   assert.equal(releaseBuildPlugin(root, false, {}).load(route), undefined);
+});
+
+test("release guard refuses a zero-match gallery and normalizes both roots", () => {
+  const root = "D:\\a\\repo\\apps\\web";
+  const plugin = releaseBuildPlugin(root, true, {});
+  const assets = [];
+  const context = { emitFile: (asset) => assets.push(asset) };
+  assert.throws(
+    () => plugin.generateBundle.call(context, {}, {}),
+    /matched no modules/
+  );
+  plugin.load(path.win32.join(root, "src/routes/_bare/[__ui].tsx"));
+  plugin.generateBundle.call(
+    context,
+    {},
+    {
+      chunk: {
+        type: "chunk",
+        fileName: "assets/main.js",
+        code: "",
+        imports: [],
+        dynamicImports: [],
+        modules: {
+          "D:\\a\\repo\\apps\\web\\src\\main.tsx": { renderedLength: 1 },
+          "D:\\a\\repo\\apps\\desktop\\src\\main\\index.ts": {
+            renderedLength: 1,
+          },
+        },
+      },
+    }
+  );
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "chunk-graph-"));
+  fs.mkdirSync(path.join(directory, "assets"));
+  fs.writeFileSync(path.join(directory, "assets/main.js"), "final bytes");
+  plugin.writeBundle({ dir: directory });
+  const graph = JSON.parse(
+    fs.readFileSync(path.join(directory, "chunk-sizes.json"), "utf8")
+  );
+  assert.equal(graph[0].bytes, Buffer.byteLength("final bytes"));
+  fs.rmSync(directory, { recursive: true });
+  assert.deepEqual(graph[0].modules.map((module) => module.id).sort(), [
+    "<desktop>/src/main/index.ts",
+    "<web>/src/main.tsx",
+  ]);
 });

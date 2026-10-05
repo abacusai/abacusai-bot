@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * Turning a messaging platform on must not wait for it to connect.
  *
@@ -9,8 +10,6 @@
  * "disable a connector and then you cannot turn it back on" report.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

@@ -40,7 +40,7 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     });
     buildSync({
       absWorkingDir: desktop,
-      entryPoints: ["src/renderer/lib/sound.ts"],
+      entryPoints: ["../web/src/lib/sound.ts"],
       bundle: true,
       platform: "browser",
       format: "iife",
@@ -50,15 +50,15 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
     const audioScript = readFileSync(join(scratch, "sound.js"), "utf8");
     buildSync({
       absWorkingDir: desktop,
-      entryPoints: ["src/renderer/test-support/notch-fit.tsx"],
+      entryPoints: ["../web/src/test-support/notch-fit.tsx"],
       bundle: true,
       platform: "browser",
       format: "iife",
       jsx: "automatic",
       alias: {
-        "#renderer": "./src/renderer",
-        "#shared": "./src/shared",
-        "#locales": "./src/renderer/locales",
+        "#renderer": "./../web/src",
+        "@abacus-ai/contract": "../../packages/contract/src",
+        "#locales": "./../web/src/locales",
       },
       outfile: join(scratch, "fit.js"),
     });

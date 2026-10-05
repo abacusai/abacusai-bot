@@ -1,9 +1,8 @@
 /** Which files a settled tool call adds to the artifacts ledger. */
 import path from "path";
 
+import { artifactPathLine } from "@abacus-ai/contract/deliverables";
 import { describe, expect, it } from "vitest";
-
-import { artifactPathLine } from "#shared/deliverables";
 
 import { extractArtifacts } from "./session-artifacts.utils";
 

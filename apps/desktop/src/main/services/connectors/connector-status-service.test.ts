@@ -1,11 +1,10 @@
+import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
 /**
  * One status per registry connector, each kind from its own truth. What used
  * to be four separate "is it connected?" computations across the panel, the
  * onboarding step, the environment notice and the tool is one table here.
  */
 import { describe, expect, it } from "vitest";
-
-import type { MessagingSnapshot } from "#shared/messaging";
 
 import {
   buildConnectorStatuses,

@@ -1,4 +1,4 @@
-import type { RoutinesEvent } from "#shared/contract";
+import type { RoutinesEvent } from "@abacus-ai/contract/contract";
 
 import { impl, stream } from "./impl";
 

@@ -7,9 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { TimeoutError } from "@abacus-ai/contract/timeout-error";
 import { afterEach, describe, expect, it, vi, onTestFinished } from "vitest";
-
-import { TimeoutError } from "#shared/timeout-error";
 
 import {
   createJob,

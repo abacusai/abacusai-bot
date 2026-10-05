@@ -9,7 +9,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
-import { LOCAL_MODEL_CONTEXT } from "#shared/local-models";
+import { LOCAL_MODEL_CONTEXT } from "@abacus-ai/contract/local-models";
 
 import { resourcePath } from "../../resources";
 

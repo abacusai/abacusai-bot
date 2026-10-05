@@ -19,7 +19,7 @@ mkdirSync(home);
 mkdirSync(join(home, "gallery"));
 writeFileSync(
   join(home, "gallery/image.png"),
-  readFileSync(join(desktop, "src/renderer/assets/icon2.png"))
+  readFileSync(join(desktop, "../web/src/assets/icon2.png"))
 );
 
 const provider = await FakeProvider.start();

@@ -50,13 +50,13 @@ const report = fs.existsSync(reportPath)
   : { shots: [], failures: [], notes: [] };
 report.notes = [...new Set(report.notes)];
 report.routeTree = fs
-  .readdirSync(path.join(desktop, "src/renderer/routes"), { recursive: true })
+  .readdirSync(path.join(desktop, "../web/src/routes"), { recursive: true })
   .filter(
     (file) => file.endsWith(".tsx") && !path.basename(file).startsWith("-")
   )
   .map((file) => {
     const code = fs.readFileSync(
-      path.join(desktop, "src/renderer/routes", file),
+      path.join(desktop, "../web/src/routes", file),
       "utf8"
     );
     const id = code.match(/createFileRoute\(\s*["']([^"']+)["']/)?.[1];
@@ -74,7 +74,7 @@ report.routeTree = fs
           .join("/")
       : "layout";
     return {
-      file: "apps/desktop/src/renderer/routes/" + file,
+      file: "apps/web/src/routes/" + file,
       id: id ?? "root",
       route: route.replace(/\/$/, "") || "/",
     };
@@ -191,7 +191,7 @@ async function waitMain() {
   throw new Error("No main renderer CDP target");
 }
 const read = (relative) =>
-  fs.readFileSync(path.join(desktop, "src/renderer", relative), "utf8");
+  fs.readFileSync(path.join(desktop, "../web/src", relative), "utf8");
 const quoted = (text) =>
   [...text.matchAll(/"([a-z][a-z0-9-]+)"/g)].map((m) => m[1]);
 const steps = [
@@ -653,7 +653,10 @@ async function liveCases(cdp, empty, seeded = false) {
   );
   for (const id of [
     ...fs
-      .readFileSync(path.join(desktop, "src/shared/toolsets.ts"), "utf8")
+      .readFileSync(
+        path.join(desktop, "../../packages/contract/src/toolsets.ts"),
+        "utf8"
+      )
       .matchAll(/id: "([^"]+)"/g),
   ].map((m) => m[1]))
     add(
