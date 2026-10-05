@@ -390,11 +390,7 @@ export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
         <SettingRow
           id="whatsapp"
           title={t("web.whatsapp.title")}
-          detail={
-            status.error instanceof Error
-              ? status.error.message
-              : t("web.whatsapp.rowDetail")
-          }
+          detail={t("web.whatsapp.rowDetail")}
         >
           <ConnectorMark id="whatsapp" size={28} />
           {linked && (
@@ -411,6 +407,11 @@ export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
           </Button>
         </SettingRow>
       </GroupCard>
+      {status.error instanceof Error && (
+        <p role="alert" className="text-destructive px-1 text-[13px]">
+          {status.error.message}
+        </p>
+      )}
       <p className="text-muted-foreground px-1 text-[13px]">
         {t("web.whatsapp.note")}
       </p>
