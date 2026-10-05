@@ -48,8 +48,12 @@ export const SidebarCreditsCard = () => {
     ],
     staleTime: 60_000,
   });
+  // Fresh for five minutes, as the bots catalog (features/bots/data/queries).
   const models = useQuery(
-    transport.orpc.models.list.queryOptions({ input: {} })
+    transport.orpc.models.list.queryOptions({
+      input: {},
+      staleTime: 5 * 60_000,
+    })
   );
   const keys = useQuery(
     transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })

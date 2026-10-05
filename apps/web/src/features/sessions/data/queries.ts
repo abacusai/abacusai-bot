@@ -171,7 +171,9 @@ export const sessionsQueries = (orpc: AppQueryUtils, identity?: string) => {
       }),
     exec: () => orpc.settings.execBackend.get.queryOptions({ input: {} }),
     sandbox: () => orpc.settings.sandboxSupport.queryOptions({ input: {} }),
-    models: () => orpc.models.list.queryOptions({ input: {} }),
+    // Fresh for five minutes, as the bots catalog (features/bots/data/queries).
+    models: () =>
+      orpc.models.list.queryOptions({ input: {}, staleTime: 5 * 60_000 }),
     settings: () => orpc.settings.get.queryOptions({ input: {} }),
   };
 };
