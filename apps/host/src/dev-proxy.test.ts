@@ -97,4 +97,4 @@ it("exposes file metadata through the dev preview proxy", async () => {
     await new Promise<void>((resolve) => upstream.close(() => resolve()));
     await rm(home, { recursive: true, force: true });
   }
-});
+}, 30_000); // spawns node and openssl; Windows runners take seconds
