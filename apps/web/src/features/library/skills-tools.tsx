@@ -15,16 +15,13 @@ import {
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { optimistic, useMutation } from "#renderer/data/query-client";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showError } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  foldSearch,
-  useOptimisticToggle,
-} from "#renderer/lib/use-app-context";
+import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { useDebouncedValue } from "#renderer/lib/use-debounced-value";
 import { Button } from "#renderer/ui/button";
 import {
@@ -309,16 +306,18 @@ export const ToolsPage = () => {
     transport.orpc.settings.toolsets.get.queryOptions({ input: {} })
   );
   const [q, setQ] = useState("");
-  const toggle = useOptimisticToggle({
-    queryKey: transport.orpc.settings.toolsets.get.queryKey({ input: {} }),
-    mutationFn: (change: { toolsetId: string; enabled: boolean }) =>
-      transport.client.settings.toolsets.setEnabled(change),
-    apply: (data: NonNullable<typeof query.data>, change) => ({
-      ...data,
-      [change.toolsetId]: change.enabled,
-    }),
-    onError: () => showError(t("phase5.failed")),
-  });
+  const toggle = useMutation(
+    transport.orpc.settings.toolsets.setEnabled.mutationOptions({
+      ...optimistic(
+        transport.orpc.settings.toolsets.get.queryKey({ input: {} }),
+        (data, change: { toolsetId: string; enabled: boolean }) => ({
+          ...data,
+          [change.toolsetId]: change.enabled,
+        })
+      ),
+      meta: { errorToast: "phase5.failed" },
+    })
+  );
   return (
     <AreaPage
       title={t("library.pages.tools")}

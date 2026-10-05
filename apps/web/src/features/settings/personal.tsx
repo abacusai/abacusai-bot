@@ -25,17 +25,14 @@ import {
 import { SoundPreview } from "#renderer/components/sound-preview";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { optimistic, useMutation } from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  rpcError,
-  useOptimisticToggle,
-} from "#renderer/lib/use-app-context";
+import { useAppContext, rpcError } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -483,15 +480,15 @@ export const NotificationsPage = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   const fail = () => showError(t("phase5.saveFailed"));
-  const setNotify = useOptimisticToggle({
-    queryKey: transport.orpc.settings.notifications.get.queryKey({
-      input: {},
-    }),
-    mutationFn: (value: { enabled: boolean; sound: boolean }) =>
-      transport.client.settings.notifications.set(value),
-    apply: (_data: NonNullable<typeof notification.data>, value) => value,
-    onError: fail,
-  });
+  const setNotify = useMutation(
+    transport.orpc.settings.notifications.set.mutationOptions({
+      ...optimistic(
+        transport.orpc.settings.notifications.get.queryKey({ input: {} }),
+        (_data, value: { enabled: boolean; sound: boolean }) => value
+      ),
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
   const q = prefs.sounds.quietHours ?? {
     enabled: false,
     start: "22:00",

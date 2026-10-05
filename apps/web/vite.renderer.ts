@@ -150,6 +150,32 @@ export const platformPlugin = (
     }),
   };
 };
+/**
+ * Chunk groups both renderer builds share. Query's mutation hooks
+ * (`useMutation`, `useMutationState` and the observer behind them) go in a
+ * `mutations` chunk of their own. The settings, library and session pages
+ * use them, and so does the main window's entry (the title bar's update
+ * action, settings/updates.tsx), which therefore loads the chunk at start;
+ * the notch, which never mutates, does not. Without the group, each set of
+ * pages sharing them split off a chunk of its own; folded into the module
+ * both documents share, the notch would load them. The match is by package
+ * and file name, not by the packages' build directories, and the bundle
+ * guard (scripts/check-web-bundle.mjs) checks the chunk holds exactly these
+ * modules and stays out of the notch.
+ */
+export const rendererChunkGroups = {
+  groups: [
+    {
+      name: "mutations",
+      // Only these modules: their dependencies (React, query-core's
+      // managers, mutation.js for the cache) stay in the entry chunks, which
+      // never import this one back.
+      includeDependenciesRecursively: false,
+      test: /[\\/]@tanstack[\\/](?:react-query[\\/](?:.+[\\/])?(?:useMutation|useMutationState)|query-core[\\/](?:.+[\\/])?mutationObserver)\.[cm]?js$/,
+    },
+  ],
+};
+
 export const rendererPlugins = (
   platform: RendererPlatform,
   command: string,

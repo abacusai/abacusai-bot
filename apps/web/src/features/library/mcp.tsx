@@ -22,13 +22,15 @@ import {
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/notices";
+import {
+  optimistic,
+  succeeding,
+  useMutation,
+} from "#renderer/data/query-client";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  useOptimisticToggle,
-} from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -151,26 +153,25 @@ export const McpPage = () => {
       queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
     });
   };
-  const setDisabled = useOptimisticToggle({
-    queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
-    mutationFn: async (change: { name: string; disabled: boolean }) => {
-      const result = await transport.client.mcp.setDisabled({
-        mode: "code",
-        ...change,
-      });
-      if (!result.success) throw new Error(result.error ?? t("phase5.failed"));
-    },
-    apply: (servers: McpServerInfo[], change) =>
-      servers.map((server) =>
-        server.name === change.name
-          ? {
-              ...server,
-              config: { ...server.config, disabled: change.disabled },
-            }
-          : server
-      ),
-    onError: () => showError(t("phase5.failed")),
-  });
+  const setDisabled = useMutation(
+    succeeding(
+      transport.orpc.mcp.setDisabled.mutationOptions({
+        ...optimistic(
+          transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
+          (servers, change: { name: string; disabled: boolean }) =>
+            servers.map((server) =>
+              server.name === change.name
+                ? {
+                    ...server,
+                    config: { ...server.config, disabled: change.disabled },
+                  }
+                : server
+            )
+        ),
+        meta: { errorToast: "phase5.failed" },
+      })
+    )
+  );
   const importServers = async (
     source: "claude" | "cursor" | "deepagent" | "file" | "json"
   ) => {
@@ -319,6 +320,7 @@ export const McpPage = () => {
                     variant="ghost"
                     onClick={() =>
                       setDisabled.mutate({
+                        mode: "code",
                         name: server.name,
                         disabled: !server.config.disabled,
                       })

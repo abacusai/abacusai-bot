@@ -64,6 +64,12 @@ export default defineConfig({
                 message:
                   "The React Compiler memoises and React 19 forwards refs.",
               },
+              {
+                name: "@tanstack/react-query",
+                importNames: ["useMutation", "useMutationState"],
+                message:
+                  "Import from #renderer/data/query-client: the app's mutation policy, and the chunk group the build keeps them in.",
+              },
             ],
             patterns: [
               {
