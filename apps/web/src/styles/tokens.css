@@ -220,41 +220,45 @@ html {
   view-transition-name: app-sidebar;
   view-transition-class: sidebar;
 }
+/* The overlay never takes a click: input reaches the live page underneath. */
+::view-transition {
+  pointer-events: none;
+}
 
 ::view-transition-group(*) {
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 html:active-view-transition-type(nav-lateral)::view-transition-old(.pane),
 html:active-view-transition-type(nav-lateral)::view-transition-old(.sidebar) {
-  animation: 200ms vt-fade-out both;
+  animation: 120ms vt-fade-out both;
 }
 html:active-view-transition-type(nav-lateral)::view-transition-new(.pane),
 html:active-view-transition-type(nav-lateral)::view-transition-new(.sidebar) {
-  animation: 200ms vt-fade-in both;
+  animation: 120ms vt-fade-in both;
 }
 html:active-view-transition-type(nav-forward)::view-transition-old(.pane) {
-  animation: 200ms vt-slide-out-start both;
+  animation: 120ms vt-slide-out-start both;
 }
 html:active-view-transition-type(nav-forward)::view-transition-new(.pane) {
-  animation: 200ms vt-slide-in-end both;
+  animation: 120ms vt-slide-in-end both;
 }
 html:active-view-transition-type(nav-back)::view-transition-old(.pane) {
-  animation: 200ms vt-slide-out-end both;
+  animation: 120ms vt-slide-out-end both;
 }
 html:active-view-transition-type(nav-back)::view-transition-new(.pane) {
-  animation: 200ms vt-slide-in-start both;
+  animation: 120ms vt-slide-in-start both;
 }
 html:active-view-transition-type(settings-in)::view-transition-old(.pane),
 html:active-view-transition-type(settings-out)::view-transition-old(.pane),
 html:active-view-transition-type(settings-in)::view-transition-old(.sidebar),
 html:active-view-transition-type(settings-out)::view-transition-old(.sidebar) {
-  animation: 200ms vt-fade-out both;
+  animation: 120ms vt-fade-out both;
 }
 html:active-view-transition-type(settings-in)::view-transition-new(.pane),
 html:active-view-transition-type(settings-out)::view-transition-new(.pane),
 html:active-view-transition-type(settings-in)::view-transition-new(.sidebar),
 html:active-view-transition-type(settings-out)::view-transition-new(.sidebar) {
-  animation: 200ms vt-fade-in both;
+  animation: 120ms vt-fade-in both;
 }
 /*
  * Reduced motion: no movement, a 120 ms cross-fade (old out, new in; never

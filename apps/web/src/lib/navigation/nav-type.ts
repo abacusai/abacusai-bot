@@ -5,12 +5,18 @@
  *
  * 1. Same pane key (a pop-up opening or closing over its background, a
  *    search-only change) → none.
- * 2. Back in history → `nav-back`. Forward to an entry committed before →
- *    inference (rule 4), never the entry's saved intent.
- * 3. A new entry's explicit intent.
- * 4. Inference from ROUTE_RANK: into settings `settings-in`, out of it
+ * 2. A sibling move within one area (equal ROUTE_RANK: session → session,
+ *    bot → bot, settings page → settings page, library tab → library tab)
+ *    → none, whatever the direction or a plain pane-move intent says: the
+ *    sidebar stays put and the pane swap reads quicker without an
+ *    animation. Only a new entry's designed type that is not a plain pane
+ *    move (an onboarding step) still plays there.
+ * 3. Back in history → `nav-back`. Forward to an entry committed before →
+ *    inference (rule 5), never the entry's saved intent.
+ * 4. A new entry's explicit intent.
+ * 5. Inference from ROUTE_RANK: into settings `settings-in`, out of it
  *    `settings-out`; another area `nav-lateral`; same area, deeper
- *    `nav-forward`, shallower `nav-back`, equal `nav-lateral`.
+ *    `nav-forward` (list → detail, a drill), shallower `nav-back`.
  */
 import type { NavType } from "#renderer/lib/motion";
 
@@ -83,6 +89,13 @@ const normalizeFullPath = (fullPath: string): string =>
 const rankOf = (fullPath: string): { area: RouteArea; rank: number } =>
   ROUTE_RANK[normalizeFullPath(fullPath)] ?? { area: "root", rank: 0 };
 
+/** The plain pane moves a sibling move within one area does not animate. */
+const PANE_MOVES: ReadonlySet<string> = new Set([
+  "nav-lateral",
+  "nav-forward",
+  "nav-back",
+]);
+
 export interface PaneLocation {
   /** The leaf route's full path (`/bots/$botId`). */
   fullPath: string;
@@ -99,16 +112,20 @@ export const inferNavType = (
 ): NavType | null => {
   if (from == null) return null;
   if (from.paneKey === to.paneKey) return null;
+  const a = rankOf(from.fullPath);
+  const b = rankOf(to.fullPath);
+  if (a.area === b.area && a.rank === b.rank)
+    return direction === "new" &&
+      intent !== undefined &&
+      intent !== "none" &&
+      !PANE_MOVES.has(intent)
+      ? intent
+      : null;
   if (direction === "back") return "nav-back";
   if (direction === "new" && intent !== undefined)
     return intent === "none" ? null : intent;
-
-  const a = rankOf(from.fullPath);
-  const b = rankOf(to.fullPath);
   if (b.area === "settings" && a.area !== "settings") return "settings-in";
   if (a.area === "settings" && b.area !== "settings") return "settings-out";
   if (a.area !== b.area) return "nav-lateral";
-  if (b.rank > a.rank) return "nav-forward";
-  if (b.rank < a.rank) return "nav-back";
-  return "nav-lateral";
+  return b.rank > a.rank ? "nav-forward" : "nav-back";
 };
