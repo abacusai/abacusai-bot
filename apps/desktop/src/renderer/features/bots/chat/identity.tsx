@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RoutePending } from "#renderer/components/page-state";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { Button } from "#renderer/ui/button";
-import { Skeleton } from "#renderer/ui/skeleton";
 import type { BotRow } from "#shared/contract/rows";
 
 import { BotFace } from "../avatar";
@@ -29,17 +29,8 @@ export const BotGone = ({ chat = false }: { chat?: boolean }) => {
     </div>
   );
 };
-export const BotPending = () => (
-  <div
-    data-testid="pending-pane"
-    aria-busy
-    className="mx-auto flex max-w-[720px] flex-col gap-4 p-8"
-  >
-    <Skeleton className="mx-auto size-14 rounded-full" />
-    <Skeleton className="h-24 w-3/4" />
-    <Skeleton className="h-24 w-1/2 self-end" />
-  </div>
-);
+export const BotPending = RoutePending;
+
 export const BotIdentity = ({
   bot,
   docked = true,
@@ -56,6 +47,8 @@ export const BotIdentity = ({
   return (
     <Button
       data-slot="bot-docked-identity"
+      className="max-w-full min-w-0 justify-start overflow-hidden"
+      title={bot.name}
       variant="ghost"
       onClick={onToggle}
       aria-label={t("bots.panel.detailsFor", { name: bot.name })}
@@ -69,10 +62,10 @@ export const BotIdentity = ({
       }}
     >
       <BotFace bot={bot} mood={moodFor(attention)} size={22} />
-      <span>{bot.name}</span>
+      <span className="min-w-0 truncate">{bot.name}</span>
       <span
         data-slot="bot-identity-status"
-        className="text-muted-foreground hidden text-xs xl:inline"
+        className="text-muted-foreground hidden max-w-48 shrink-0 truncate text-xs xl:inline"
       >
         {attention.kind === "idle"
           ? bot.title
@@ -116,7 +109,7 @@ export const BotTranscriptIdentity = ({
     <div className="flex flex-col items-center gap-1 pt-7 pb-2">
       <Button
         variant="ghost"
-        className="h-auto flex-col"
+        className="h-auto max-w-full flex-col whitespace-normal"
         aria-hidden={docked}
         tabIndex={docked ? -1 : 0}
         onClick={onToggle}
@@ -126,7 +119,9 @@ export const BotTranscriptIdentity = ({
         <div ref={ref} style={style}>
           <BotFace bot={bot} mood={moodFor(attention)} size={56} />
         </div>
-        <span className="text-[15px] font-semibold">{bot.name}</span>
+        <span className="max-w-full text-[15px] font-semibold break-words">
+          {bot.name}
+        </span>
       </Button>
       <p className="text-muted-foreground text-xs">
         {attention.kind === "idle"

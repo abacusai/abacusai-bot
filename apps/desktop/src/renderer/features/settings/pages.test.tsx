@@ -167,12 +167,13 @@ it.each([
       },
     },
   });
-  await screen.findByText("ada@example.com");
-  if ("ABACUS_API_KEY" in apiKeys)
+  if ("ABACUS_API_KEY" in apiKeys) {
+    await screen.findByText("ada@example.com");
     expect(
       await screen.findByRole("button", { name: enUS.phase5.signOut })
     ).not.toBeNull();
-  else {
+  } else {
+    await screen.findByRole("button", { name: "Sign Up For Free" });
     expect(
       screen.queryByRole("button", { name: enUS.phase5.signOut })
     ).toBeNull();
@@ -287,4 +288,51 @@ it("the quit watchdog event replaces the critical dialog with a stalled banner",
   expect(
     await screen.findAllByText(enUS.phase5.updates.stalled)
   ).not.toHaveLength(0);
+});
+
+it("keeps Account usable when the referral service is unavailable", async () => {
+  app = await renderApp("/settings/account", {
+    procedures: {
+      referrals: {
+        summary: os.referrals.summary.handler(() => {
+          throw new Error("Unavailable");
+        }),
+      },
+      account: {
+        abacus: os.account.abacus.handler(
+          () => ({ name: "Ada", email: "ada@example.com" }) as never
+        ),
+      },
+    },
+  });
+  await screen.findByText("ada@example.com");
+  const row = within(
+    document.querySelector<HTMLElement>('[data-setting-id="inviteLink"]')!
+  );
+  expect(
+    row.getByRole("button", { name: enUS.phase5.copy }).hasAttribute("disabled")
+  ).toBe(true);
+  expect(screen.queryByText(enUS.errors.genericTitle)).toBeNull();
+});
+
+it("opens model setup when the optional local runtime is unavailable", async () => {
+  app = await renderApp("/onboarding/models", {
+    signedIn: true,
+    procedures: {
+      localModels: {
+        state: os.localModels.state.handler(() => {
+          throw new Error("The local model runtime is not up");
+        }),
+      },
+    },
+  });
+  expect(
+    await screen.findByRole("heading", {
+      name: enUS.onboarding["pages.models.title"],
+    })
+  ).not.toBeNull();
+  expect(
+    screen.getByRole("button", { name: enUS.onboarding.setupDoneCta })
+  ).not.toBeNull();
+  expect(screen.queryByText(enUS.errors.genericTitle)).toBeNull();
 });

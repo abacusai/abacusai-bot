@@ -37,13 +37,17 @@ export const useBotModelBinding = (
     models: catalog,
     favorites: prefs.models.favoriteModelIds,
     defaultModel: settings.data?.defaultModel,
-    freeTier: account.data?.plan?.toLowerCase() === "free",
+    freeTier:
+      (account.data?.subscription_tier ?? account.data?.plan)?.toLowerCase() ===
+      "free",
     labels: {
       defaultGroup: t("bots.model.default"),
       appDefault: t("bots.form.modelDefault"),
       favorites: t("bots.model.favorites"),
       localProvider: t("bots.model.local"),
       connectOpenRouter: t("bots.model.connectOpenRouter"),
+      connectSource: (provider) =>
+        t("onboarding.setupKeyDialogTitle", { provider }),
       connectGoogleAi: t("bots.model.connectGoogleAi"),
       tierFree: t("bots.model.free"),
       tierLocal: t("bots.model.local"),
@@ -79,23 +83,30 @@ export const ModelPicker = ({
   const [open, setOpen] = useState(false);
   if (readOnly)
     return (
-      <span>
+      <span className="min-w-0 truncate" title={binding.label}>
         {binding.value === null ? t("bots.form.modelDefault") : binding.label}
       </span>
     );
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        render={<Button variant="secondary" className="w-full justify-start" />}
+        render={
+          <Button
+            variant="secondary"
+            className="max-w-full min-w-0 shrink justify-start overflow-hidden"
+          />
+        }
       >
         <motion.span
           data-slot="bot-model-value"
+          className="min-w-0 truncate"
+          title={binding.label}
           layoutId={pref === "full" ? binding.layoutId : undefined}
         >
           {binding.value === null ? t("bots.form.modelDefault") : binding.label}
         </motion.span>
       </PopoverTrigger>
-      <PopoverContent className="max-h-96 w-[360px] overflow-auto">
+      <PopoverContent className="max-h-[min(384px,var(--available-height))] w-[min(360px,var(--available-width))] overflow-auto">
         <Input
           aria-label={t("bots.model.search")}
           placeholder={t("bots.model.search")}

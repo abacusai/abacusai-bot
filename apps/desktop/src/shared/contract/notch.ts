@@ -6,8 +6,10 @@ import { NoInput } from "./ids";
 
 export interface NotchLayout {
   displayId: number;
+  /** Fractional DIP correction after rounding the native integer frame. */
+  offsetX?: number;
   mode: "notch" | "plain" | "capsule";
-  notch: { width: number; height: number } | null;
+  notch: { x?: number; width: number; height: number } | null;
   growth: "down" | "up";
   maxShape: { width: number; height: number };
 }

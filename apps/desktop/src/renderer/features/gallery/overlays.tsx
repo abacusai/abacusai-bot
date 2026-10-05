@@ -3,7 +3,13 @@
  * exactly that one (bound to the URL, so reloads and screenshots are
  * deterministic). Gallery copy is dev-only English (spec 01 §9.3).
  */
-import { createContext, use, type ReactElement } from "react";
+import {
+  createContext,
+  use,
+  useState,
+  useEffect,
+  type ReactElement,
+} from "react";
 
 import {
   AlertDialog,
@@ -73,6 +79,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "#renderer/ui/hover-card";
+import { Input } from "#renderer/ui/input";
 import { InputGroupAddon } from "#renderer/ui/input-group";
 import {
   Popover,
@@ -123,6 +130,7 @@ const FRUITS = ["Apple", "Banana", "Cherry", "Grape", "Mango"];
 
 const DialogExample = () => {
   const state = useOverlay("dialog");
+  const [name, setName] = useState("Morning brief");
   return (
     <Dialog {...state}>
       <DialogTrigger render={<Button variant="outline" />}>
@@ -135,6 +143,13 @@ const DialogExample = () => {
             Give the session a name you will recognise.
           </DialogDescription>
         </DialogHeader>
+        <label className="grid gap-2 text-sm">
+          Session name
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
         <DialogFooter>
           <Button variant="outline" onClick={() => state.onOpenChange(false)}>
             Cancel
@@ -162,7 +177,7 @@ const AlertDialogExample = () => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction>Delete</AlertDialogAction>
+          <AlertDialogAction variant="destructive">Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -176,7 +191,14 @@ const SheetExample = () => {
       <SheetTrigger render={<Button variant="outline" />}>
         Open sheet
       </SheetTrigger>
-      <SheetContent side="right">
+      <SheetContent
+        side="right"
+        className="bg-popover shadow-xl"
+        style={{
+          top: "var(--toolbar-h)",
+          height: "calc(100dvh - var(--toolbar-h))",
+        }}
+      >
         <SheetHeader>
           <SheetTitle>Bot details</SheetTitle>
           <SheetDescription>Mission, persona and model.</SheetDescription>
@@ -227,6 +249,21 @@ const DropdownMenuExample = () => {
 
 const ContextMenuExample = () => {
   const state = useOverlay("context-menu");
+  useEffect(() => {
+    if (!state.open) return;
+    const trigger = document.querySelector(
+      '[data-slot="context-menu-trigger"]'
+    );
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    trigger.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      })
+    );
+  }, [state.open]);
   return (
     <ContextMenu {...state}>
       <ContextMenuTrigger className="text-muted-foreground flex h-20 w-48 items-center justify-center rounded-md border border-dashed text-xs">

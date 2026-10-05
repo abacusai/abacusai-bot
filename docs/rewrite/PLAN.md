@@ -381,3 +381,9 @@ Release N deletes the legacy renderer and the NDJSON-only host path, window.api,
 - **Boot (decision D).** The `failed` readiness report is bounded and best effort; `initI18n`, the locale chunk (English fallback) and the dev hooks are guarded, and any throw in `start()` renders BootFailure; a port lost before the Toaster exists shows a static screen instead of a toast.
 - **Legacy renderer guard.** `check:legacy-diff` compares with the merge-base with `main` and is part of the root `check`; deliberate product changes to the old renderer on the rewrite branch are listed, pinned to their commit, in `apps/desktop/scripts/legacy-renderer-allow.json`.
 
+
+### Amendment, 2 Oct 2026: user decisions after the cut-over review
+
+- Notch companion memory (about 146 MB) is accepted for now. The M3 RSS overage is not a blocker; memory optimisation is deferred.
+- Release mechanics (signed candidates, rollout, soak, dormant release) are deferred. The branch carries a local version bump only (1.0.86).
+- Next work is visual quality: fix the notch geometry on physical-notch Macs (overflow, corner shape), informed by open-source notch apps as ideas only, and run a full screenshot audit of every flow reviewed independently by three models, cross-checked, then fixed.

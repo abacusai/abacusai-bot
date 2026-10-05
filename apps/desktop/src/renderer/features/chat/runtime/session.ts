@@ -352,17 +352,25 @@ export class ThreadSession {
    * Retry after a failed or cancelled run (§3.7): a new run id with the last
    * user message's id and text.
    */
-  async retry(): Promise<AdmissionResult> {
+  async retry(
+    forwardedProps?: Record<string, unknown>,
+    fallbackMessage?: string
+  ): Promise<AdmissionResult> {
     const messages = this.hostStore.state.messages;
     const last = messages.findLast((message) => message.role === "user");
-    if (last == null) return { kind: "rejected", reason: "empty" };
+    if (last == null) {
+      if (!fallbackMessage) return { kind: "rejected", reason: "empty" };
+      return submitAdmission(this.#admission, fallbackMessage, forwardedProps)
+        .result;
+    }
     const text = last.parts
       .filter((part) => part.type === "text")
       .map((part) => (part as { content: string }).content)
       .join("");
     if (this.hostStore.state.outbox.length > 0)
       return { kind: "rejected", reason: "busy" };
-    return submitAdmission(this.#admission, text, undefined, last.id).result;
+    return submitAdmission(this.#admission, text, forwardedProps, last.id)
+      .result;
   }
 
   /** The Stop target (§4.5): the active run, else the newest admission. */

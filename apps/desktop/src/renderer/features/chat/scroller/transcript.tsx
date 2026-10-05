@@ -582,7 +582,12 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     }
     if (marker.id === message.id)
       rows.push(
-        <Marker key="new-marker" variant="separator" data-slot="new-marker">
+        <Marker
+          key="new-marker"
+          className="py-3"
+          variant="separator"
+          data-slot="new-marker"
+        >
           <MarkerContent>
             {t("chat.transcript.new", { count: marker.count })}
           </MarkerContent>
@@ -632,7 +637,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           anchor.current = null;
         }}
       >
-        {slots.header}
+        {slots.header && <div className="px-4 pt-3">{slots.header}</div>}
         {window.start === 0 ? <OlderRow /> : null}
         {window.start > 0 ? (
           <Placeholder
@@ -646,7 +651,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         ) : null}
         <MessageScrollerContent
           aria-busy={active}
-          className="mx-auto w-full max-w-[720px] gap-3 px-4 pt-6 pb-4"
+          className="mx-auto w-full max-w-[720px] min-w-0 gap-3 px-4 pt-6 pb-12"
         >
           {orphans.map((outcome) => (
             <MessageScrollerItem key={`outcome-${outcome.runId}`}>
@@ -669,6 +674,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       </MessageScrollerViewport>
       <MessageScrollerButton
         direction="end"
+        className="bg-popover text-popover-foreground border opacity-100 shadow-lg"
         aria-label={
           marker.count > 0
             ? t("chat.transcript.jumpNew", { count: marker.count })

@@ -4,6 +4,7 @@ import type { NotchPresentation } from "./presenter";
 export interface Shape {
   width: number;
   height: number;
+  compactHeight?: number;
 }
 export const shapeSettled = (
   element: HTMLElement,
@@ -35,7 +36,7 @@ export const shapeSettled = (
       remaining.delete(event.propertyName);
       if (!remaining.size) finish();
     };
-    const timer = setTimeout(finish, 450); // canvas 350 ms + spec deadline margin 100 ms
+    const timer = setTimeout(finish, 350); // 250 ms transition plus a 100 ms deadline margin
     element.addEventListener("transitionend", end);
     element.addEventListener("transitioncancel", finish);
     signal.addEventListener("abort", finish, { once: true });
@@ -167,9 +168,7 @@ export class NotchDirector {
       }
       if (!current()) return;
       const from = this.deps.renderedSize();
-      const target = p.expanded
-        ? shape
-        : { ...shape, height: Math.min(shape.height, 36) };
+      const target = shape;
       await bounded(
         this.deps.setShape(
           {
@@ -219,7 +218,7 @@ export class NotchDirector {
         this.#unavailable.set(id, Date.now() + 30_000);
       }
       this.#held.clear();
-      const compact = { ...shape, height: 32 };
+      const compact = { ...shape, height: shape.compactHeight ?? 32 };
       const fallback = { ...p, expanded: false };
       this.#current = fallback;
       this.deps.commit(fallback, compact);

@@ -65,9 +65,16 @@ export const createNotchWindow = (
   let view: WebContentsView | null = null;
   try {
     win.excludedFromShownWindowsMenu = true;
-    win.setAlwaysOnTop(true, platform === "darwin" ? "status" : "pop-up-menu");
+    win.setAlwaysOnTop(
+      true,
+      platform === "darwin" ? "screen-saver" : "pop-up-menu"
+    );
     if (platform === "darwin")
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
+      win.setVisibleOnAllWorkspaces(true, {
+        visibleOnFullScreen: true,
+        skipTransformProcessType: true,
+      });
+    win.setBounds(placement.bounds);
     win.setIgnoreMouseEvents(true, { forward: true });
     view = createNotchView(preload);
     win.contentView.addChildView(view);

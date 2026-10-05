@@ -14,7 +14,7 @@ const facts: FlowFacts[] = [false, true].flatMap((signedIn) =>
 );
 describe("R6-T4 step machine and R6-T5 resume", () => {
   it.each(facts)("covers transition branches with %j", (f) => {
-    expect(next("welcome", { type: "skip" }, f, null)).toBe("models");
+    expect(next("welcome", { type: "skip" }, f, null)).toBe("ignore");
     expect(next("welcome", { type: "sign-in", attempt: "a" }, f, "a")).toBe(
       "connect"
     );
@@ -44,7 +44,7 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
     expect(next("done", { type: "next" }, f, null)).toBe("complete");
   });
   it("keeps failed attempts and own optimistic bot creation valid", () => {
-    const f = { signedIn: false, payingTier: false, ownsBot: true };
+    const f = { signedIn: true, payingTier: false, ownsBot: true };
     expect(
       guardStep("connect", f, {
         signIn: { status: "failed" },

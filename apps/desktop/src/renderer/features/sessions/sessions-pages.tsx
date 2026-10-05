@@ -18,8 +18,8 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
   const [error, setError] = useState<string | null>(null);
   if (!session) return null;
   return (
-    <div className="flex min-w-0 items-center gap-1">
-      <span className="text-muted-foreground truncate">
+    <div className="flex max-w-full min-w-0 flex-1 items-center gap-1">
+      <span className="text-muted-foreground hidden max-w-40 shrink-0 truncate xl:inline">
         {workspace?.label} /
       </span>
       {editing ? (
@@ -45,7 +45,8 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="truncate font-medium"
+          className="min-w-0 shrink justify-start overflow-hidden font-medium"
+          title={session.label}
           aria-label={t("sessions.sidebar.rename")}
           onClick={() => {
             setLabel(session.label);
@@ -53,7 +54,9 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
             setError(null);
           }}
         >
-          {session.label || t("sessions.untitled")}
+          <span className="truncate">
+            {session.label || t("sessions.untitled")}
+          </span>
         </Button>
       )}
       {error ? <span role="alert">{error}</span> : null}

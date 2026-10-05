@@ -17,7 +17,7 @@ describe("R6-T23 canvas shadow geometry", () => {
     expect(p.layout.mode).toBe("notch");
     expect(
       notchPlacement(display, null, { width: 296, height: 32 }).layout.mode
-    ).toBe("plain");
+    ).toBe("capsule");
   });
   it("keeps the bottom growth edge fixed for mixed shape changes", () => {
     const a = capsulePlacement(display, { width: 500, height: 36 });
@@ -44,4 +44,48 @@ describe("R6-T23 canvas shadow geometry", () => {
     if (edge === "left") expect(p.bounds.x).toBe(workArea.x + 12);
     if (edge === "auto") expect(p.bounds.y + p.bounds.height).toBe(-56);
   });
+});
+
+it.each([1, 1.5, 2, 3])(
+  "keeps measured points at scale %s without double scaling",
+  (scaleFactor) => {
+    const d = { ...display, scaleFactor };
+    const notch = { x: 430, width: 185, height: 40 };
+    const collapsed = notchPlacement(d, notch, { width: 281, height: 32 });
+    const expanded = notchPlacement(d, notch, { width: 445, height: 180 });
+    expect(collapsed.bounds.y).toBe(d.bounds.y);
+    expect(collapsed.bounds.height).toBe(72);
+    for (const p of [collapsed, expanded]) {
+      expect(p.bounds.x + p.bounds.width / 2).toBe(
+        d.bounds.x + notch.x + notch.width / 2
+      );
+      expect(p.bounds.y).toBe(d.bounds.y);
+    }
+  }
+);
+it("floats below the menu bar without a hardware cutout", () => {
+  const d = { ...display, workArea: { ...display.workArea, y: -766 } };
+  const p = notchPlacement(d, null, { width: 296, height: 36 });
+  expect(p.layout.mode).toBe("capsule");
+  expect(p.bounds.y).toBe(-758);
+});
+it("ignores menu-bar auto-hide for hardware anchoring", () => {
+  const notch = { x: 430, width: 185, height: 33 };
+  const shape = { width: 445, height: 101 };
+  expect(
+    notchPlacement({ ...display, workArea: display.bounds }, notch, shape)
+  ).toEqual(notchPlacement(display, notch, shape));
+});
+
+it("retains the half-point hardware center when the native width is even", () => {
+  const p = notchPlacement(
+    {
+      id: 1,
+      bounds: { x: 0, y: 0, width: 1710, height: 1107 },
+      workArea: { x: 0, y: 34, width: 1710, height: 1073 },
+    },
+    { x: 763, width: 185, height: 33 },
+    { width: 560, height: 220 }
+  );
+  expect(p.bounds.x + p.bounds.width / 2 + (p.layout.offsetX ?? 0)).toBe(855.5);
 });

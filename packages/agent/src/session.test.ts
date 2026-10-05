@@ -618,6 +618,17 @@ describe("a provider timeout in the chat", () => {
   });
 });
 
+it("does not diagnose a provider authorization denial as an invalid key", () => {
+  const failure = classifyProviderFailure(
+    '403 {"error":"This app is not allowed for this API"}'
+  );
+  expect(failure.summary).toBe("The model provider denied access");
+  expect(failure.remedy).toContain("Settings → Models");
+  expect(classifyProviderFailure("401 Unauthorized").summary).toBe(
+    "The model provider rejected the key"
+  );
+});
+
 describe("a request the provider's tier will not take", () => {
   // Groq's free tier: an 8,000 tokens-per-minute cap on a prompt that is
   // 14,000 tokens before the user says a word. Its sentence names a per-minute

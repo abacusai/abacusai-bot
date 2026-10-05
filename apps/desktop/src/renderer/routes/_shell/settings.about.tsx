@@ -10,7 +10,7 @@ const AboutSettingsRoute = () => {
     <>
       <TopBarSlot>
         <span className="text-sidebar-foreground truncate font-medium">
-          {t("settings.sidebar.label")}
+          {t("settings.pages.about")}
         </span>
       </TopBarSlot>
       <AboutPage />

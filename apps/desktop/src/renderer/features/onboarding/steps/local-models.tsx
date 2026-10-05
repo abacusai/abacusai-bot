@@ -75,7 +75,7 @@ export const OnboardingLocalModels = ({
               {t("localModels.description")}
             </DialogDescription>
           </DialogHeader>
-          {state.data?.runtimeAvailable === false ? (
+          {state.isError || state.data?.runtimeAvailable === false ? (
             <p>{t("localModels.unavailable")}</p>
           ) : (
             state.data?.catalog.map((model) => (
