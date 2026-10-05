@@ -17,12 +17,7 @@
     "#platform/*": [
       "./src/platform/*.electron.tsx",
       "./src/platform/*.electron.ts"
-    ],
-    "#platform/system": "./src/platform/adapters.electron.ts",
-    "#platform/sign-in": "./src/platform/adapters.electron.ts",
-    "#platform/files": "./src/platform/adapters.electron.ts",
-    "#platform/attention": "./src/platform/adapters.electron.ts",
-    "#platform/lease": "./src/platform/adapters.electron.ts"
+    ]
   },
   "scripts": {
     "build": "vite build",

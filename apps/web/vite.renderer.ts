@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 import tailwindcss from "@tailwindcss/vite";
@@ -36,32 +37,15 @@ export const rendererCsp = (
     throw new Error("VITE_CONNECT_SRC is required for browser builds");
   return CSP_BASE + `connect-src ${sources}; frame-src 'self' blob:;`;
 };
+/** `#platform/<name>` → `src/platform/<name>.<platform>.ts(x)`, one per file. */
 export const platformAlias = (platform: RendererPlatform) =>
   Object.fromEntries(
-    [
-      "ask-host",
-      "companion",
-      "about",
-      "updates",
-      "local-models",
-      "browser-tab",
-      "device-tab",
-      "presenter",
-      "transport",
-      "host-files",
-      "connect",
-      "lease",
-      "sign-in",
-      "system",
-      "files",
-      "attention",
-    ].map((name) => [
-      `#platform/${name}`,
-      resolve(
-        webRoot,
-        `src/platform/${platform === "electron" && ["system", "sign-in", "files", "attention", "lease"].includes(name) ? "adapters" : name}.${platform}.${["presenter", "transport", "host-files", "lease", "sign-in", "system", "files", "attention"].includes(name) ? "ts" : "tsx"}`
-      ),
-    ])
+    readdirSync(resolve(webRoot, "src/platform")).flatMap((file) => {
+      const name = new RegExp(`^(.+)\\.${platform}\\.tsx?$`).exec(file)?.[1];
+      return name
+        ? [[`#platform/${name}`, resolve(webRoot, "src/platform", file)]]
+        : [];
+    })
   );
 export const assertBrowserImport = (resolved: string): void => {
   const id = resolved.replaceAll("\\", "/");

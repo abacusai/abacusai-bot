@@ -1,15 +1,17 @@
-import { resolve } from "node:path";
-
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
 import {
-  alias,
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
 } from "../desktop/vite.shared";
-import { browserBoundaryPlugin, platformAlias, webRoot } from "./vite.renderer";
+import {
+  browserBoundaryPlugin,
+  platformAlias,
+  rendererAlias,
+  webRoot,
+} from "./vite.renderer";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,
@@ -48,12 +50,8 @@ export default defineConfig({
       ],
       resolve: {
         alias: {
-          ...alias,
+          ...rendererAlias,
           ...platformAlias(platform as "electron" | "browser"),
-          "ort-dist": resolve(
-            import.meta.dirname,
-            "../../node_modules/onnxruntime-web/dist"
-          ),
         },
       },
       test: {

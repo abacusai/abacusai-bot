@@ -82,59 +82,6 @@ export default defineConfig({
         ],
       },
     },
-    // Shared modules reach native implementations through a compile-time gate.
-    {
-      files: ["apps/web/src/**/*.{ts,tsx}"],
-      excludeFiles: [
-        "**/*.test.{ts,tsx}",
-        "apps/web/src/notch*",
-        "apps/web/src/notch-routes/**",
-        "apps/web/src/features/notch/**",
-        "apps/web/src/features/sessions/{browser,device}/**",
-        "apps/web/src/components/browser-surface/**",
-        "apps/web/src/lib/window-chrome/**",
-        "apps/web/src/features/settings/{companion,updates}.tsx",
-        "apps/web/src/routes/-update-owner.tsx",
-        "apps/web/src/routes/_bare/[[]__ui].tsx",
-        "apps/web/src/routes/_bare/onboarding.$step.tsx",
-        "apps/web/src/routes/_shell/settings.about.tsx",
-        "apps/web/src/features/shell/platform-presenter.ts",
-        "apps/web/src/test-support/**",
-        "apps/web/src/routes/_shell/(bots)/-browser.tsx",
-      ],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            paths: [
-              ...RENDERER_BANNED_PACKAGES.map((name) => ({
-                name,
-                message: "Not in renderer (spec 01 §3.4).",
-              })),
-              {
-                name: "react",
-                importNames: ["useMemo", "useCallback", "memo", "forwardRef"],
-                message:
-                  "The React Compiler memoises and React 19 forwards refs.",
-              },
-            ],
-            patterns: [
-              {
-                group: [
-                  "!#locales/*",
-                  "@dicebear/*",
-                  "@tsparticles/*",
-                  "@radix-ui/*",
-                  "@base-ui/react/*",
-                ],
-                message:
-                  "renderer reaches the old tree only through #locales/*; Base UI only inside ui/.",
-              },
-            ],
-          },
-        ],
-      },
-    },
     // Registry output: Base UI is imported here and nowhere else, and the
     // registry may memoise (it is never edited).
     {

@@ -80,6 +80,7 @@ import type {
   WindowState,
 } from "@abacus-ai/contract/contract";
 import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import { parsePptx } from "@abacus-ai/contract/pptx/parser";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
@@ -154,7 +155,7 @@ import {
 } from "./services/diagnostics/log-dump";
 import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
 import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
-import { parsePptx } from "./services/pptx/pptx-parser";
+import { ZipArchive } from "./services/pptx/zip";
 import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   readAccountState,
@@ -1531,7 +1532,7 @@ const appOperations: AppOperations = {
       }
 
       const buf = await fs.readFile(realFile);
-      const deck = parsePptx(buf);
+      const deck = parsePptx(ZipArchive.open(buf));
       return { success: true, deck, sizeBytes: stat.size };
     } catch (err) {
       return {

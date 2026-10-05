@@ -125,7 +125,7 @@ html {
   app-region: no-drag;
 }
 
-/* NO_DRAG_SELECTOR (lib/window-chrome/overlay-slots.ts); R1-T9 keeps them equal. */
+/* NO_DRAG_SELECTOR (lib/overlay-slots.ts); R1-T9 keeps them equal. */
 [data-slot="tour-spotlight"],
 [data-slot="dialog-content"],
 [data-slot="dialog-overlay"],

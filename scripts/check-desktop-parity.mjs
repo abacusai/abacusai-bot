@@ -12,9 +12,6 @@ export const checkDesktopParity = (
       "utf8"
     )
   );
-  console.log(
-    "Regenerate desktop baseline: bash scripts/fixtures/regenerate-web-split-desktop-baseline.sh (conditions: scripts/fixtures/web-split-desktop-baseline.md)"
-  );
   const actual = { chunks: 0, bytes: 0, gzipBytes: 0 };
   for (const file of readdirSync(directory, { recursive: true }).filter(
     (file) => file.endsWith(".js")
@@ -27,7 +24,7 @@ export const checkDesktopParity = (
   for (const key of Object.keys(actual))
     assert.ok(
       actual[key] <= baseline[key] * 1.01,
-      `${key}: ${actual[key]} exceeds 99f20795 +1% (${baseline[key]})`
+      `${key}: ${actual[key]} exceeds 99f20795 +1% (${baseline[key]}); see scripts/fixtures/web-split-desktop-baseline.md`
     );
   const graph = JSON.parse(
     readFileSync(resolve(directory, "chunk-sizes.json"), "utf8")
@@ -42,8 +39,7 @@ export const checkDesktopParity = (
     );
     assert.ok(
       chunk.modules.every(
-        (module) =>
-          !module.id.includes("/shared/home/") && !/^[A-Za-z]:/.test(module.id)
+        (module) => !module.id.startsWith("/") && !/^[A-Za-z]:/.test(module.id)
       ),
       "Absolute build paths in graph"
     );

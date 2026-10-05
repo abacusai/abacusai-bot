@@ -11,10 +11,10 @@ import {
   RESERVED_OCCLUDER_SLOTS,
 } from "./overlay-slots";
 
-import tokensCss from "../../styles/tokens.css?raw";
+import tokensCss from "../styles/tokens.css?raw";
 
 const sources = readSourceFiles(
-  ["../../ui/*.tsx", "../../components/spotlight/*.tsx"],
+  ["../ui/*.tsx", "../components/spotlight/*.tsx"],
   import.meta.dirname
 );
 
