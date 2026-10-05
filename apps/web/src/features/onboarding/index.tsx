@@ -433,7 +433,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       {step === "connected" && (
         <>
           <ul className="bg-card w-full space-y-3 rounded-xl border p-5 text-left text-sm">
-            {[1, 2, 3, 4].map((n) => (
+            {/* The browser skips the models step, so it doesn't promise one. */}
+            {(IS_ELECTRON ? [1, 2, 3, 4] : [1, 3, 4]).map((n) => (
               <li key={n} className="flex gap-3">
                 <span aria-hidden>✓</span>
                 <span>{t(`onboarding.pages.connected.promise${n}`)}</span>
