@@ -22,12 +22,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The renderer bundle (monaco, shiki, katex) no longer fits in Node's default
-  # ~2GB old-space during the transform. Without this the build dies with
-  # `FATAL ERROR: JavaScript heap out of memory` and exit 134, which names a
-  # symptom rather than a cause.
+  # Keep the existing heap cap until a final-build peak measurement is available.
   NODE_OPTIONS: --max-old-space-size=4096
   TURBO_TELEMETRY_DISABLED: 1
+  ABACUS_BUILD_COMMIT: ${{ github.sha }}
 
 jobs:
   # Which release unit does this change touch? Renderer and agent source are
@@ -84,6 +82,8 @@ jobs:
       # not exist fails here rather than in six platform jobs several minutes
       # later.
       - run: pnpm run typecheck
+      - run: pnpm run check:knip
+      - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |
           pnpm --filter @abacus-ai/desktop run check:i18n
@@ -222,31 +222,18 @@ jobs:
       # The desktop app spawns the agent and speaks NDJSON to it. This asserts
       # the host still answers on stdout in the protocol, whatever it has to
       # say: a stack trace on stderr and silence on stdout is a dead app.
-      - name: The desktop entry still speaks NDJSON
+      - name: The agent speaks AG-UI with a compat stream
         shell: bash
         run: |
-          set -uo pipefail
-          export ABACUSAI_BOT_HOME="$RUNNER_TEMP/abacusai-bot-empty"
-          output=$(echo '{"type":"send","message":"hi"}' | node packages/agent/dist/main.js 2>/dev/null | head -20)
+          node scripts/cutover/agui-smoke.mjs
 
-          echo "$output"
-          echo "$output" | node -e '
-            let raw = ""
-            process.stdin.on("data", chunk => { raw += chunk })
-            process.stdin.on("end", () => {
-              const events = raw.split("\n").filter(Boolean).map(line => JSON.parse(line))
-              if (events.length === 0) throw new Error("the agent emitted no protocol events")
-              if (!events.some(event => typeof event.type === "string")) throw new Error("events carry no type")
-            })
-          '
-
-  # renderer-next's screenshot gate (spec 01 §10.2) in the real Electron
+  # renderer's screenshot gate (spec 01 §10.2) in the real Electron
   # window: every route and band, the collapsed, floating, split, compact and
   # full-screen states, axe, and the Linux native-frame probe. The probe runs
   # only on Linux, so this job requires it: a run that skipped it fails
   # (ABACUSBOT_REQUIRE_NATIVE_FRAME). macOS runs record it as skipped.
-  screenshots-next:
-    name: renderer-next screenshots (Linux)
+  screenshots:
+    name: renderer screenshots (Linux)
     needs: [check]
     runs-on: ubuntu-latest
     steps:
@@ -278,7 +265,7 @@ jobs:
         working-directory: apps/desktop
         env:
           ABACUSBOT_REQUIRE_NATIVE_FRAME: "1"
-        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots-next.mjs --require-native-frame
+        run: xvfb-run -a --server-args="-screen 0 1920x1080x24" node scripts/screenshots.mjs --require-native-frame
 
   package:
     name: Package (${{ matrix.os }})
@@ -302,12 +289,15 @@ jobs:
       # electron-builder walks dist/ and extraResources. Calling package:dir on
       # its own does neither and produces an asar with no main entry.
       - run: pnpm run build
+      - name: Reject React Compiler bailouts
+        run: pnpm --filter @abacus-ai/desktop run check:react-compiler
+
+      - name: Bundle budgets
+        run: pnpm --dir apps/desktop run measure:size && pnpm exec size-limit
 
       - name: Package unpacked app
         env:
-          # Without this, electron-builder picks up whatever identity happens to
-          # be in the runner keychain and fails confusingly. Unsigned is the
-          # correct outcome for a build from this repo.
+          # Use an unsigned package in public CI.
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: pnpm --filter @abacus-ai/desktop run package:dir
 
@@ -360,31 +350,26 @@ jobs:
 
           launch() { if [ "$RUNNER_OS" = "Linux" ]; then xvfb-run -a "$@"; else "$@"; fi; }
 
-          # ABACUSAI_BOT_SMOKE_TEST makes the app print the marker and exit 0 once
-          # it is fully up. The timeout is the backstop for an app that hangs
-          # before that point rather than crashing, which is also a failure to start.
-          ABACUSAI_BOT_SMOKE_TEST=1 launch "$app" > app.log 2>&1 &
+          # Smoke waits for renderer readiness and a resolved companion outcome.
+          scratch=$(mktemp -d)
+          trap 'rm -rf "$scratch"' EXIT
+          ABACUSAI_BOT_HOME="$scratch/home" ABACUSAI_BOT_SMOKE_TEST=1 launch "$app" > app.log 2>&1 &
           pid=$!
-
-          ready=""
-          for _ in $(seq 1 60); do
-            if grep -qF '[smoke] main process ready' app.log 2>/dev/null; then
-              ready=1
-              break
-            fi
+          for _ in $(seq 1 110); do
             if ! kill -0 "$pid" 2>/dev/null; then break; fi
             sleep 1
           done
-
-          kill "$pid" 2>/dev/null || true
-          wait "$pid" 2>/dev/null || true
-
-          cat app.log
-
-          if [ -z "$ready" ]; then
-            echo "::error::the packaged app never reported that it started (see the log above)"
+          if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            echo "::error::packaged smoke exceeded its readiness bound"
+            cat app.log
             exit 1
           fi
+          wait "$pid"
+          cat app.log
+          grep -qF '[smoke] main process ready' app.log
+          grep -qF '[smoke] renderer ready' app.log
+          grep -qE '\[smoke\] notch (ready|n/a|disabled: (probe failed|no internal display|no cut-out|off by pref))$' app.log
 
           # Belt and braces: the marker says the ready chain finished, this checks
           # nothing blew up on the way. ERR_MODULE_NOT_FOUND and Electron's own

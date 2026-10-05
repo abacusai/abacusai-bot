@@ -40,7 +40,10 @@ const { UpdateService, failedPhaseOf } = await import("./update-service");
 beforeEach(() => {
   autoUpdater.removeAllListeners();
   autoUpdater.setFeedURL = () => {};
-  autoUpdater.checkForUpdates = async () => undefined;
+  autoUpdater.checkForUpdates = async () => ({
+    isUpdateAvailable: true,
+    updateInfo: { version: "1.0.19" },
+  });
   autoUpdater.quitAndInstall = () => {};
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});

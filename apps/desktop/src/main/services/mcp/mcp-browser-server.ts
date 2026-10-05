@@ -3,7 +3,7 @@ import http from "http";
 import net from "net";
 import path from "path";
 
-import { emitIpcEvent } from "#main/rpc/emit";
+import { emitHostEvent } from "#main/rpc/emit";
 import type { IpcEvent } from "#shared/contracts";
 import type { ConversationKey } from "#shared/conversation-scope";
 
@@ -700,7 +700,7 @@ export class McpBrowserServer {
       sessionId == null
         ? null
         : (this.options.conversationKeyForSession?.(sessionId) ?? null);
-    emitIpcEvent({
+    emitHostEvent({
       type: "mcp-open-preview",
       url,
       ...(conversationKey == null ? {} : { conversationKey }),
@@ -1410,7 +1410,7 @@ export class McpBrowserServer {
     };
     if (x != null) payload.x = x;
     if (y != null) payload.y = y;
-    emitIpcEvent(payload as unknown as IpcEvent);
+    emitHostEvent(payload as unknown as IpcEvent);
   }
 
   private async animateCursorToElement(

@@ -310,7 +310,7 @@ The `/__ui` gallery replays scripted conversations through `@shadcn/helpers/tans
 | `@shadcn/react` message-scroller, questionnaire + registry chat parts | Transcript skin, HITL forms | [use] React ≥19 |
 | `@shadcn/helpers/tanstack-ai` | Scripted fixtures | [verify] pins ai-client 0.20 vs 0.36 |
 | `temml` (351★) | Math | [use] MIT, active |
-| ~~`node-mac-notch`~~ | Exact notch metrics | [dropped] does not exist on npm; notch metrics come from a one-shot JXA probe of `NSScreen.safeAreaInsets` (spec 06 §10.2), no inference fallback |
+| ~~`JXA notch probe`~~ | Exact notch metrics | [dropped] does not exist on npm; notch metrics come from a one-shot JXA probe of `NSScreen.safeAreaInsets` (spec 06 §10.2), no inference fallback |
 | `@tanstack/react-hotkeys` | Typed shortcuts (⌘K, ⌘N, ⌘., ⌘⇧Space) | [use] |
 | `prompt-area` | @-mentions, / commands in the composer | [not used] registry `input-group` + `combobox` (spec 02 §8) |
 | `streamdown`, `boring-avatars` | — | [skip] TanStack Markdown and BotAvatar cover them |
@@ -354,7 +354,7 @@ All as routes; connector sheet masked; update states; account/credits; sounds an
 Onboarding routes, first-bot hatch, spotlight tour, notch entry with states, reactions, sounds and haptics; Windows capsule.Gate: fresh-install run-through recorded; notch tested on a notched Mac, an external display and Windows.
 7
 ### Cut-over
-Delete the old renderer, conversation layer, NDJSON host, `window.api`, zustand stores, unused patches; knip clean; size-limit set; PARITY.md all green; migration runs on real data from a backup.Gate: `pnpm check` green; release build smoke on macOS and Windows.
+Release N deletes the legacy renderer and the NDJSON-only host path, window.api, zustand stores and unused patches. The compat stream stays for main taps. Parity is green, retired or deferred with an owner. Upgrade checks use shipped layouts with synthetic data, plus optional local dogfood copies. Gate: full checks, packaged smoke on macOS, Windows and Linux, and signed RC acceptance in the private pipeline. Release N+1 registers steps 3 and 4 after N has been at 100% for at least 14 days with no rollback trigger or migrated-data P0/P1. The supported rollback uses --restore-legacy-files.
 
 ## Open questions
 

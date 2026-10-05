@@ -50,7 +50,6 @@ interface Entry {
 }
 export interface NotchControllerOptions {
   platform: string;
-  generation: string;
   packaged: boolean;
   preload: string;
   prefs(): PrefsRow;
@@ -81,6 +80,7 @@ export class NotchController {
   #started = false;
   #disposed = false;
   #metricsFailed = false;
+  #reconciled = false;
   #shortcut: NotchStatus["shortcut"] = "off";
   #lastDisplay: number | null = null;
   constructor(options: NotchControllerOptions) {
@@ -90,7 +90,7 @@ export class NotchController {
     if (
       this.#started ||
       this.#disposed ||
-      this.#o.generation !== "wco" ||
+      false ||
       !["darwin", "win32"].includes(this.#o.platform)
     )
       return;
@@ -139,7 +139,10 @@ export class NotchController {
   }
   reconcile(): Promise<void> {
     this.#chain = this.#chain
-      .then(() => this.#reconcile())
+      .then(async () => {
+        await this.#reconcile();
+        this.#reconciled = true;
+      })
       .catch((error) => console.warn("[notch] reconcile failed", error));
     return this.#chain;
   }
@@ -592,20 +595,32 @@ export class NotchController {
       this.hasSeen() && Date.now() - (this.#presentations.get(key) ?? 0) <= 1500
     );
   }
+  smokeOutcome(): import("../smoke").CompanionSmoke {
+    if (this.#o.platform === "linux") return "n/a";
+    if (!this.#o.prefs().notch?.enabled) return "disabled: off by pref";
+    if (this.#failures.length > 0) return "failed";
+    if ([...this.#entries.values()].some((entry) => entry.ready))
+      return "ready";
+    if (!this.#reconciled) return "pending";
+    if (this.#metricsFailed) return "disabled: probe failed";
+    if (this.#o.platform === "darwin") {
+      const internal = screen.getAllDisplays().filter((d) => d.internal);
+      if (!internal.length) return "disabled: no internal display";
+      if (internal.every((d) => this.#metrics.get(metricsCacheKey(d)) === null))
+        return "disabled: no cut-out";
+    }
+    return "pending";
+  }
   status(): NotchStatus {
-    const reason =
-      this.#o.generation !== "wco"
-        ? "generation"
-        : !["darwin", "win32"].includes(this.#o.platform)
-          ? "platform"
-          : !this.#o.prefs().notch?.enabled
-            ? "disabled"
-            : this.#failures.filter((at) => Date.now() - at < 600_000).length >=
-                3
-              ? "failed"
-              : this.#metricsFailed
-                ? "metrics-unavailable"
-                : undefined;
+    const reason = !["darwin", "win32"].includes(this.#o.platform)
+      ? "platform"
+      : !this.#o.prefs().notch?.enabled
+        ? "disabled"
+        : this.#failures.filter((at) => Date.now() - at < 600_000).length >= 3
+          ? "failed"
+          : this.#metricsFailed
+            ? "metrics-unavailable"
+            : undefined;
     return {
       available: !reason && [...this.#entries.values()].some((e) => e.ready),
       ...(reason ? { reason } : {}),

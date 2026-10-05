@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/renderer-next/styles/app.css",
+    "css": "src/renderer/styles/app.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "#next/components",
-    "utils": "#next/lib/cn",
-    "ui": "#next/ui",
-    "lib": "#next/lib",
-    "hooks": "#next/lib/hooks"
+    "components": "#renderer/components",
+    "utils": "#renderer/lib/cn",
+    "ui": "#renderer/ui",
+    "lib": "#renderer/lib",
+    "hooks": "#renderer/lib/hooks"
   },
   "menuColor": "default-translucent",
   "menuAccent": "subtle",

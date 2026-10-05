@@ -19,6 +19,7 @@ import { resourcePath } from "#main/resources";
 import type { ExperienceStore } from "./experience-store";
 import { checkAgentBundle } from "./health-check";
 import { verifyExperience } from "./integrity";
+import { RefusedTargets } from "./refused-targets";
 
 const TARGET = "experience/latest.zip";
 const MAX_FILES = 10_000;
@@ -90,6 +91,7 @@ export const rendererChangeNeedsReadiness = (
 export class ExperienceUpdater {
   #checking: Promise<void> | undefined;
   #target: string | undefined;
+  #refused = new RefusedTargets();
   #timer: NodeJS.Timeout | undefined;
   #warnedNoRoot = false;
   readonly #deps: ExperienceUpdaterDeps;
@@ -201,7 +203,8 @@ export class ExperienceUpdater {
 
     const targetHash = target.hashes.sha256;
 
-    if (targetHash === this.#target) return this.#target;
+    if (targetHash === this.#target || this.#refused.has(targetHash))
+      return targetHash;
 
     const archive =
       (await updater.findCachedTarget(target)) ??
@@ -233,7 +236,9 @@ export class ExperienceUpdater {
       });
       // TUF verified the archive; this re-verifies the extracted tree against
       // the manifest, whose protocol/foundationApi literals gate compatibility.
-      const manifest = await verifyExperience(temporary, app.getVersion());
+      const manifest = await this.#refused.verify(targetHash, () =>
+        verifyExperience(temporary, app.getVersion())
+      );
 
       if (manifest.experienceVersion === store.version) {
         return targetHash;

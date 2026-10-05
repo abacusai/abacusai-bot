@@ -12,10 +12,3 @@ export const FREE_POOL_PROVIDERS = [
   "cerebras",
   "groq",
 ] as const;
-
-export type FreePoolProvider = (typeof FREE_POOL_PROVIDERS)[number];
-
-export const isFreePoolProvider = (
-  provider: string
-): provider is FreePoolProvider =>
-  (FREE_POOL_PROVIDERS as readonly string[]).includes(provider);

@@ -180,11 +180,6 @@ export interface RpcDeps {
     installUpdate(): Promise<{ success: boolean; error?: string }>;
     getStatus(): UpdateStatus;
   };
-  rendererState: {
-    snapshot(): Record<string, string>;
-    set(key: string, value: string | null): void;
-    clear(): void;
-  };
   windows: RpcWindows;
   bus: MainEventBus;
   ai: AguiSource;

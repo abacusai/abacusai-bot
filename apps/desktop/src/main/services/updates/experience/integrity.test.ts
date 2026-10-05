@@ -1,9 +1,12 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { buildExperience } from "@abacus-ai/updater/experience";
 import { describe, expect, it } from "vitest";
+
+import { FOUNDATION_API, EXPERIENCE_PROTOCOL } from "#shared/experience";
 
 import { verifyExperience } from "./integrity";
 
@@ -24,6 +27,17 @@ const buildFixture = async () => {
   await fs.writeFile(path.join(renderer, "index.html"), "<html></html>");
   await fs.writeFile(path.join(renderer, "assets", "app.js"), "render();");
   await fs.writeFile(path.join(agent, "main.js"), "process.exit(0);");
+  const stamp = JSON.stringify({
+    commit: "a".repeat(40),
+    dirty: false,
+    foundationApi: FOUNDATION_API,
+    protocol: EXPERIENCE_PROTOCOL,
+    generation: FOUNDATION_API >= 2 ? "wco" : "legacy",
+    builtAt: "2026-10-01T00:00:00.000Z",
+  });
+  for (const dir of [renderer, agent])
+    await fs.writeFile(path.join(dir, "build.json"), stamp);
+  await fs.writeFile(path.join(renderer, "notch.html"), "<html></html>");
   const output = path.join(root, "experience");
 
   await buildExperience({ agent, foundation: FOUNDATION, output, renderer });
@@ -128,4 +142,54 @@ describe("experience integrity", () => {
       await fs.rm(root, { force: true, recursive: true });
     }
   });
+});
+
+it.each(["foundationApi", "commit", "generation"])(
+  "R7-T2: verifier rejects hand-authenticated %s provenance",
+  async (field) => {
+    const { root, current } = await buildFixture();
+    try {
+      const file = path.join(current, "agent", "build.json");
+      const stamp = JSON.parse(await fs.readFile(file, "utf8"));
+      stamp[field] =
+        field === "foundationApi"
+          ? FOUNDATION_API === 2
+            ? 1
+            : 2
+          : field === "commit"
+            ? "b".repeat(40)
+            : "obsolete";
+      await fs.writeFile(file, JSON.stringify(stamp));
+      const manifestFile = path.join(current, "manifest.json");
+      const manifest = JSON.parse(await fs.readFile(manifestFile, "utf8"));
+      const bytes = await fs.readFile(file);
+      manifest.files["agent/build.json"] = {
+        size: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      };
+      // TUF signs a tree; its table digests can all be correct and still stale.
+      await fs.writeFile(manifestFile, JSON.stringify(manifest));
+      await expect(verifyExperience(current, FOUNDATION)).rejects.toThrow(
+        /provenance/i
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  }
+);
+
+it("R7-T2 API 2 refuses a hand-authenticated tree without notch.html", async () => {
+  const { root, current } = await buildFixture();
+  try {
+    await fs.rm(path.join(current, "renderer", "notch.html"));
+    const file = path.join(current, "manifest.json");
+    const manifest = JSON.parse(await fs.readFile(file, "utf8"));
+    delete manifest.files["renderer/notch.html"];
+    await fs.writeFile(file, JSON.stringify(manifest));
+    await expect(verifyExperience(current, FOUNDATION)).rejects.toThrow(
+      /entry point/
+    );
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
 });

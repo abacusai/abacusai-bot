@@ -8,4 +8,4 @@
  */
 export const EXPERIENCE_PROTOCOL = "abacus.desktop/1";
 
-export const FOUNDATION_API = 1;
+export const FOUNDATION_API = 2;

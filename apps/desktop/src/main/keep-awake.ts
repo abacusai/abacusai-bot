@@ -1,4 +1,4 @@
-import { ipcMain, powerSaveBlocker } from "electron";
+import { powerSaveBlocker } from "electron";
 import Store from "electron-store";
 
 /**
@@ -19,13 +19,6 @@ let blockerId: number | null = null;
  * is dropped when that webContents is destroyed, its renderer process goes,
  * or it navigates away (a reload or a swap), since the old renderer clears
  * it only from an effect cleanup that a crash never runs.
- */
-const legacyReports = new Map<number, boolean>();
-/** Senders whose lifetime events are already followed. */
-const followedSenders = new Set<number>();
-/**
- * Main's own: the AG-UI relay's run state (spec 07 review r1 #10), which
- * the new renderer relies on; re-evaluated on every relay busy change.
  */
 let mainBusy = false;
 
@@ -53,13 +46,8 @@ export function followMainAgentBusy(source: {
   return stop;
 }
 
-function legacyBusy(): boolean {
-  for (const busy of legacyReports.values()) if (busy) return true;
-  return false;
-}
-
 function reconcile(): void {
-  const shouldBlock = isEnabled() && (legacyBusy() || mainBusy);
+  const shouldBlock = isEnabled() && mainBusy;
   const active = blockerId !== null && powerSaveBlocker.isStarted(blockerId);
 
   if (shouldBlock && !active) {
@@ -68,62 +56,4 @@ function reconcile(): void {
     powerSaveBlocker.stop(blockerId);
     blockerId = null;
   }
-}
-
-/** The parts of a sender's webContents keep-awake listens to. */
-interface ReportingSender {
-  readonly id: number;
-  once(event: "destroyed", listener: () => void): unknown;
-  on(
-    event: "render-process-gone",
-    listener: (...args: unknown[]) => void
-  ): unknown;
-  on(
-    event: "did-start-navigation",
-    listener: (
-      event: unknown,
-      url: string,
-      isSameDocument: boolean,
-      isMainFrame: boolean
-    ) => void
-  ): unknown;
-}
-
-function forgetSender(id: number): void {
-  if (!legacyReports.delete(id)) return;
-  reconcile();
-}
-
-function followSender(sender: ReportingSender): void {
-  const id = sender.id;
-  if (followedSenders.has(id)) return;
-  followedSenders.add(id);
-  sender.once("destroyed", () => {
-    followedSenders.delete(id);
-    forgetSender(id);
-  });
-  sender.on("render-process-gone", () => forgetSender(id));
-  sender.on(
-    "did-start-navigation",
-    (_event, _url, isSameDocument, isMainFrame) => {
-      if (isMainFrame && !isSameDocument) forgetSender(id);
-    }
-  );
-}
-
-export function registerKeepAwakeHandlers(): void {
-  ipcMain.handle("power:get-keep-awake", () => isEnabled());
-
-  ipcMain.handle("power:set-keep-awake", (_event, enabled: boolean) => {
-    powerStore.set("keepAwakeEnabled", !!enabled);
-    reconcile();
-    return isEnabled();
-  });
-
-  ipcMain.handle("power:set-agent-busy", (event, busy: boolean) => {
-    const sender = event.sender as unknown as ReportingSender;
-    followSender(sender);
-    legacyReports.set(sender.id, !!busy);
-    reconcile();
-  });
 }

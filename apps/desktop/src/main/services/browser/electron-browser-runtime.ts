@@ -12,7 +12,6 @@ import {
 } from "electron";
 
 import { publishIpcEvent } from "#main/rpc/emit";
-import { IpcChannels } from "#shared/channels";
 import type {
   BrowserRuntimeBounds,
   BrowserRuntimeCapture,
@@ -943,7 +942,6 @@ export class ElectronBrowserRuntime {
       state: this.state(lease),
       emittedAt: new Date().toISOString(),
     };
-    window.webContents.send(IpcChannels.Event, event);
     publishIpcEvent(event);
   }
 

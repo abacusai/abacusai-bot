@@ -7,7 +7,6 @@ import { browserRouter } from "./procedures/browser";
 import { connectorsRouter } from "./procedures/connectors";
 import { dbRouter } from "./procedures/db";
 import { devicesRouter } from "./procedures/devices";
-import { durableStateRouter } from "./procedures/durable-state";
 import { filesRouter } from "./procedures/files";
 import { gitRouter } from "./procedures/git";
 import { impl } from "./procedures/impl";
@@ -63,7 +62,6 @@ export const createRouter = () =>
     window: windowRouter,
     update: updateRouter,
     skills: skillsRouter,
-    durableState: durableStateRouter,
     db: dbRouter,
   });
 

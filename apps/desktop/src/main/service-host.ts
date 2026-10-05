@@ -183,7 +183,6 @@ import {
   botDefaultWorkspace,
   sessionDefaultWorkspace,
 } from "./paths";
-import { RENDERER_GENERATION } from "./renderer-generation";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -250,7 +249,7 @@ import {
 import { stopAllServed } from "./services/agent-tools/static-server";
 import { WebhookRelay } from "./services/agent-tools/webhook-relay";
 import { WebhookService } from "./services/agent-tools/webhook-service";
-import { AguiRelayService, defaultWire } from "./services/agui/relay-service";
+import { AguiRelayService } from "./services/agui/relay-service";
 import { botChatPreview } from "./services/bots/bot-chat-preview";
 import {
   clearBotMemory,
@@ -395,13 +394,6 @@ type BusDispatcher = <C extends BusChannel>(
   payload: BusChannels[C]
 ) => void;
 
-/** Assistant prose, as opposed to tool cards, status and errors. */
-const isAgentText = (payload: DesktopEvent): boolean =>
-  payload.type === "event" &&
-  (payload.event.type === "text_delta" ||
-    payload.event.type === "thinking_delta" ||
-    payload.event.type === "thinking_complete");
-
 /** The bot each self lane gets on first link, one per platform. */
 const SELF_LANE_BOTS: Record<
   SelfLanePlatform,
@@ -483,15 +475,9 @@ export class ServiceHost {
    * Main's AG-UI relay (agent spec §5.2): the renderer's `ai.*` procedures,
    * and the wire each session's agent is spawned with: `--wire agui` for
    * every spawn in the new-renderer build, `--wire ndjson` in the legacy
-   * build until the new renderer asks for a thread (`defaultWire`).
+   * build until the new renderer asks for a thread (`unconditional AG-UI`).
    */
   readonly aguiRelay: AguiRelayService = new AguiRelayService({
-    aguiForEverySpawn: defaultWire({
-      generation: RENDERER_GENERATION,
-      isPackaged: app.isPackaged,
-      env: process.env,
-      log: (message) => console.warn(`[agui] ${message}`),
-    }),
     files: this.threadStore,
     host: {
       workspaceOf: (threadId) => {
@@ -517,6 +503,14 @@ export class ServiceHost {
           ...(session.model != null ? { model: session.model } : {}),
           ...(session.mode != null ? { mode: session.mode } : {}),
         });
+        // A first send can start an idle session without renderer warm-up.
+        // Put restoration on the same command pipe before the admitted run.
+        if (result.success && session.conversationId)
+          this.switchAgentConversation({
+            workspaceId: session.workspaceId,
+            sessionId: threadId,
+            conversationId: session.conversationId,
+          });
         return result.success;
       },
       send: (threadId, command) =>
@@ -1427,7 +1421,6 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    resolveWire: (sessionId) => this.aguiRelay.wireFor(sessionId),
     emitAgui: (_workspaceId, sessionId, event, origin) => {
       this.aguiRelay.ingest(sessionId, event, origin);
     },
@@ -1438,7 +1431,6 @@ export class ServiceHost {
       // An agui runtime serves only the new renderer (spec 00-agent-agui
       // §2.1): its compat lines feed main's taps below, never the old
       // renderer's `local-cli-ndjson` stream.
-      const toOldRenderer = origin?.wire !== "agui";
       // Recorded before the filter: a stopped session is exactly one whose
       // log somebody is about to want.
       if (payload.type === "ready" && payload.agentSessionId != null) {
@@ -1460,18 +1452,7 @@ export class ServiceHost {
       if (passedFilter) {
         // A relayed turn's own words are notes around a <reply> tag, addressed
         // to nobody; the gateway echoes what it actually sent instead.
-        if (
-          toOldRenderer &&
-          (!isAgentText(payload) ||
-            !this.messagingGatewayService.relayingSession(sessionId))
-        )
-          this.emitEvent({
-            type: "local-cli-ndjson",
-            workspaceId,
-            sessionId,
-            payload,
-            emittedAt: new Date().toISOString(),
-          });
+
         // Same filtered stream, so a post-Stop tail cannot file cancelled work.
         this.sessionArtifactsService.recordFromNdjson(
           workspaceId,
@@ -1492,7 +1473,7 @@ export class ServiceHost {
       const communicationUpdate =
         this.agentCommunicationService.handleDesktopEvent(payload);
       if (communicationUpdate.autoAllowDecision != null) {
-        if (origin?.wire === "agui") {
+        if (origin != null) {
           // Bound to the runtime that asked: a replacement process that now
           // owns the session id never receives another process's answer.
           this.agentManagerService.sendCommandToRuntime(
@@ -1505,13 +1486,6 @@ export class ServiceHost {
               decision: communicationUpdate.autoAllowDecision.decision,
             }
           );
-        } else {
-          this.agentCommunicationService.respondPermission({
-            workspaceId,
-            sessionId,
-            permissionId: communicationUpdate.autoAllowDecision.permissionId,
-            decision: communicationUpdate.autoAllowDecision.decision,
-          });
         }
       }
       if (communicationUpdate.statePatch != null) {
@@ -1560,19 +1534,6 @@ export class ServiceHost {
         const conversation = this.conversationKeyForSession(sessionId);
         if (conversation != null)
           this.connectorGate.release(conversation, ended);
-        this.emitEvent({
-          type: "local-cli-ndjson",
-          workspaceId,
-          sessionId,
-          payload: {
-            type: "event",
-            event: {
-              type: "error",
-              error: { message: "Something went wrong." },
-            },
-          },
-          emittedAt: new Date().toISOString(),
-        });
       }
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
@@ -1762,23 +1723,6 @@ export class ServiceHost {
       // Actually stop it, or the slow tool's events would still be forwarded
       // when it finally lands and the session would go busy again.
       this.stopAgentTurn({ workspaceId, sessionId });
-      this.emitEvent({
-        type: "local-cli-ndjson",
-        workspaceId,
-        sessionId,
-        payload: {
-          type: "event",
-          event: {
-            type: "error",
-            error: {
-              message:
-                `Agent timed out: nothing came back for ${INACTIVITY_TIMEOUT_MINUTES} minutes${doing}. ` +
-                `The turn was stopped. Send a message to pick it back up.`,
-            },
-          },
-        },
-        emittedAt: new Date().toISOString(),
-      });
     }
   );
 
@@ -1819,10 +1763,8 @@ export class ServiceHost {
           emittedAt: new Date().toISOString(),
         });
     };
-    this.transcriptService.setOnPersist(persisted);
     // The relay's AG-UI threads have no v1 save (spec 03 §24.12 c).
     this.threadStore.onAguiPersist(persisted);
-    this.debugSyncService.sweepOnStartup();
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
     this.workspaceRuntimeService.ensureWorkspaceWatchers();
@@ -1834,6 +1776,11 @@ export class ServiceHost {
       .catch((error: unknown) => {
         console.error("[messaging] failed to start connectors:", error);
       });
+  }
+
+  /** Startup catch-up starts after the main renderer is interactive. */
+  startBackgroundSync(): void {
+    this.debugSyncService.sweepOnStartup();
   }
 
   stop(): void {
@@ -2760,10 +2707,6 @@ export class ServiceHost {
   readTranscript(sessionId: string): TranscriptSegment[] {
     return (this.transcriptService.read(sessionId)?.segments ??
       []) as TranscriptSegment[];
-  }
-
-  writeTranscript(sessionId: string, segments: TranscriptSegment[]): void {
-    this.transcriptService.write(sessionId, segments);
   }
 
   submitTurnFeedback(

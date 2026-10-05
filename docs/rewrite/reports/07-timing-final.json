@@ -1,0 +1,54 @@
+{
+  "prependDriftPx": [0, 0, 0],
+  "a_firstPaintMs": 104,
+  "a_messages": 1000,
+  "a_rows": {
+    "messages": 34,
+    "tools": 56,
+    "subagents": 5,
+    "total": 95
+  },
+  "a_scrollFpsMedian": 59.9,
+  "a_scrollFrameP95Ms": 18.6,
+  "b_readinessMs": 16,
+  "b_messages": 350,
+  "b_rows": {
+    "messages": 100,
+    "tools": 0,
+    "subagents": 0,
+    "total": 100
+  },
+  "c_firstPaintMs": 71,
+  "c_rows": {
+    "messages": 34,
+    "tools": 66,
+    "subagents": 0,
+    "total": 100
+  },
+  "d_deltas": 171,
+  "d_tasks": 2312,
+  "d_taskP95Ms": 4.66,
+  "d_busyTaskP95Ms": 7.83,
+  "d_taskMaxMs": 30.13,
+  "d_longTasks": 0,
+  "e_history": {
+    "activations": 20,
+    "commitMs": {
+      "median": 26.5,
+      "p95": 43.89999999944121,
+      "max": 43.89999999944121
+    },
+    "maxDriftPx": 0,
+    "peakRows": 100
+  },
+  "e_tools": {
+    "activations": 20,
+    "commitMs": {
+      "median": 22.5,
+      "p95": 31.299999999813735,
+      "max": 31.299999999813735
+    },
+    "maxDriftPx": 0.1328125,
+    "peakRows": 100
+  }
+}

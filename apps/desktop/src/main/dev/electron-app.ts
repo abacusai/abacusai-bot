@@ -2,7 +2,7 @@
  * The Electron acceptance harness the chat gates share (spec 02 §13, the
  * foundation's R1-T11b pattern): the real app from `dist/` built with
  * `VITE_UI_GALLERY=1` (dev hooks, no fixture tables), an isolated profile,
- * the dev mutation harness over a private file, and CDP on the renderer-next page.
+ * the dev mutation harness over a private file, and CDP on the renderer page.
  *
  * Without a display or a usable build a suite skips locally, and fails loudly
  * where it is required (`CI`, or `ABACUSBOT_REQUIRE_ELECTRON_SUITES=1`); a
@@ -26,8 +26,7 @@ import { dirname, join, resolve } from "node:path";
 import { harnessAvailability } from "../services/browser/browser-snapshot-harness";
 
 export const DESKTOP = resolve(import.meta.dirname, "../../..");
-export const REPO = resolve(DESKTOP, "../..");
-const FIXTURE_MARKER = "renderer-next fixture-db: dev fixture tables";
+const FIXTURE_MARKER = "renderer fixture-db: dev fixture tables";
 
 export const REQUIRED =
   process.env.ABACUSBOT_REQUIRE_ELECTRON_SUITES === "1" ||
@@ -43,8 +42,8 @@ const assets = (): string[] => {
 
 /** "ok", or why the current dist/ cannot serve an acceptance run. */
 const buildState = (): string => {
-  if (!existsSync(join(DESKTOP, "dist/renderer/index-next.html")))
-    return "no renderer-next build";
+  if (!existsSync(join(DESKTOP, "dist/renderer/index.html")))
+    return "no renderer build";
   if (!existsSync(join(DESKTOP, "dist/main/index.js"))) return "no main build";
   const sources = assets();
   if (!sources.some((source) => source.includes("__abacusDev")))
@@ -112,7 +111,7 @@ export interface App {
   readonly home: string;
   readonly output: string[];
   send(method: string, params?: object): Promise<any>;
-  /** Evaluates in the renderer-next page, awaiting promises, by value. */
+  /** Evaluates in the renderer page, awaiting promises, by value. */
   evaluate<T>(expression: string): Promise<T>;
   until(expression: string, timeoutMs?: number, what?: string): Promise<void>;
   /** A dev mutation harness op (`src/main/dev/mutation-harness.ts`). */
@@ -143,6 +142,7 @@ export const launch = async (options: {
     JSON.stringify({ account: null, apps: [], onboarded: true })
   );
   options.prepareHome?.(home);
+  const authPreload = authenticatedTestHome(home);
   const electron = createRequire(import.meta.url)(
     "electron"
   ) as unknown as string;
@@ -167,6 +167,9 @@ export const launch = async (options: {
         ABACUSBOT_DEV_HARNESS: "1",
         ABACUSBOT_DEV_HARNESS_FILE: harnessFile,
         ...options.env,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${authPreload}`]
+          .filter(Boolean)
+          .join(" "),
       },
       stdio: ["pipe", "pipe", "pipe"],
     }
@@ -200,7 +203,7 @@ export const launch = async (options: {
         webSocketDebuggerUrl: string;
       }>;
       url =
-        targets.find((t) => t.type === "page" && t.url.includes("index-next"))
+        targets.find((t) => t.type === "page" && t.url.includes("index.html"))
           ?.webSocketDebuggerUrl ?? null;
     } catch {
       // not yet
@@ -210,7 +213,7 @@ export const launch = async (options: {
   if (url == null) {
     await close();
     throw new Error(
-      `renderer-next page never appeared\n${output.join("").slice(-4000)}`
+      `renderer page never appeared\n${output.join("").slice(-4000)}`
     );
   }
   const ws = new WebSocket(url);
@@ -288,9 +291,6 @@ export const launch = async (options: {
 };
 
 /** Writes a file under the app home before launch. */
-export const writeHomeFile = (home: string, name: string, text: string) => {
-  writeFileSync(join(home, name), text);
-};
 
 /** Median and p95 of a list of numbers. */
 export const stats = (values: readonly number[]) => {
@@ -300,4 +300,35 @@ export const stats = (values: readonly number[]) => {
       ? Number.NaN
       : sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]!;
   return { median: at(0.5), p95: at(0.95), max: sorted.at(-1) ?? Number.NaN };
+};
+
+/** Isolated fake credential and account endpoints; acceptance never contacts Abacus. */
+export const authenticatedTestHome = (home: string): string => {
+  const configPath = join(home, "config.json");
+  const config = existsSync(configPath)
+    ? JSON.parse(readFileSync(configPath, "utf8"))
+    : {};
+  config.apiKeys = {
+    ...config.apiKeys,
+    ABACUS_API_KEY: "acceptance-invalid-key",
+  };
+  writeFileSync(configPath, JSON.stringify(config));
+  const preload = join(home, "fake-abacus.cjs");
+  writeFileSync(
+    preload,
+    `
+const realFetch = globalThis.fetch;
+globalThis.fetch = (input, options) => {
+  const url = new URL(typeof input === "string" ? input : input.url ?? String(input));
+  if (url.hostname === "abacus.ai" || url.hostname.endsWith(".abacus.ai")) {
+    const body = url.pathname === "/v1/account"
+      ? { id: "acceptance-account", name: "Acceptance", email: "acceptance@example.test", subscription_tier: "free", credits_granted: 100, credits_used: 0 }
+      : { data: [] };
+    return Promise.resolve(new Response(JSON.stringify(body), { status: url.pathname === "/v1/account" || url.pathname === "/v1/models" ? 200 : 503, headers: { "content-type": "application/json" } }));
+  }
+  return realFetch(input, options);
+};
+`
+  );
+  return preload;
 };

@@ -107,7 +107,10 @@ export const clearBackendProbeCache = (): void => {
  */
 export const resolveBackend = (stored: BackendId | undefined): BackendId => {
   const requested = stored ?? DEFAULT_BACKEND;
-  const status = backendStatuses().find((entry) => entry.id === requested);
+  const backend = SELECTABLE_EXEC_BACKENDS.find(
+    (entry) => entry.id === requested
+  );
+  const status = backend == null ? undefined : statusFor(backend);
 
   return status?.ready === true ? requested : DEFAULT_BACKEND;
 };

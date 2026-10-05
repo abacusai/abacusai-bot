@@ -46,7 +46,6 @@ describe("ai.send and reserved ids", () => {
         markStopped: () => undefined,
       },
       files: new ThreadStore({ home: () => home, log: () => undefined }),
-      aguiForEverySpawn: true,
       ackTimeoutMs: 50,
       log: () => undefined,
     });

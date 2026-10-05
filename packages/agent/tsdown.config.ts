@@ -1,6 +1,8 @@
 import { NATIVE_PACKAGES } from "@abacus-ai/config/native-packages";
 import { defineConfig } from "tsdown";
 
+import { writeBuildProvenance } from "../../scripts/build-provenance.mjs";
+
 /**
  * The agent is private and consumed only from this repository, so it ships as a
  * bundle rather than as a tree: the desktop app copies `dist/` beside its asar
@@ -11,6 +13,7 @@ import { defineConfig } from "tsdown";
  * be (see @abacus-ai/config/native-packages).
  */
 export default defineConfig({
+  onSuccess: () => writeBuildProvenance("dist"),
   // usage-stats and custom-instructions are their own tiny entries: the
   // desktop's Electron main imports them directly (`@abacus-ai/agent/usage`,
   // `@abacus-ai/agent/custom-instructions`), and routing either through the
