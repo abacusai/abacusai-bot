@@ -175,7 +175,7 @@ export const settingsIndexFor = (
     (entry) =>
       (electron ||
         (!["browser", "devices", "about"].includes(entry.page) &&
-          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|tour|key-notch)/.test(
+          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|tour|key-notch|invite-whatsapp)/.test(
             entry.id
           ))) &&
       (uiOS !== "mac" || !entry.id.endsWith("@terminal"))
