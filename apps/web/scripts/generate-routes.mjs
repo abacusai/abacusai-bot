@@ -8,7 +8,7 @@ import { join } from "node:path";
 
 import { Generator, getConfig } from "@tanstack/router-generator";
 
-const desktop = join(import.meta.dirname, "../../web");
+const web = join(import.meta.dirname, "..");
 
 const config = getConfig(
   {
@@ -19,9 +19,9 @@ const config = getConfig(
     quoteStyle: "double",
     disableLogging: true,
   },
-  desktop
+  web
 );
 
-const generator = new Generator({ config, root: desktop });
+const generator = new Generator({ config, root: web });
 await generator.run();
 console.log("generate-routes: routeTree.gen.ts up to date");

@@ -6,14 +6,14 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { loadEnv, type Plugin, type PluginOption } from "vite";
 
-import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
+import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
   RENDERER_APP_SRC,
   NODE_MODULES,
   alias as desktopAlias,
-} from "../desktop/vite.shared";
+} from "./vite.shared";
 
 export const webRoot = import.meta.dirname;
 export const rendererAlias = {

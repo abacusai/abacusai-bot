@@ -11,7 +11,7 @@ import {
   platformAlias,
   webRoot,
 } from "../web/vite.renderer";
-import { alias } from "./vite.shared.ts";
+import { alias } from "../web/vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
@@ -205,7 +205,7 @@ export default defineConfig(({ command, mode }) => {
       ),
     ],
     resolve: {
-      // See vite.shared.ts.
+      // See apps/web/vite.shared.ts.
       alias: { ...rendererAlias, ...platformAlias("electron") },
       dedupe: ["react", "react-dom"],
     },

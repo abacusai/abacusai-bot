@@ -22,8 +22,6 @@
   },
   "scripts": {
     "build": "vite build",
-    "check:i18n": "node scripts/check-jsx-i18n.js",
-    "check:locales": "node scripts/sync-locales.js --check && node --test scripts/i18n-dynamic-keys.test.mjs && node scripts/check-ui-copy.mjs && node --test scripts/check-ui-copy.test.mjs",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "check:ui-registry": "node --test scripts/shadcn-registry-proxy.test.mjs && node scripts/shadcn-registry-snapshot.mjs --check",
@@ -35,7 +33,6 @@
     "package:mac": "electron-builder --config electron-builder.yml --mac",
     "package:win": "electron-builder --config electron-builder.yml --win",
     "start": "electron .",
-    "sync:locales": "node scripts/sync-locales.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run --project main --project preload",
@@ -47,11 +44,9 @@
     "check:release": "node scripts/check-release-build.mjs",
     "check:release-versions": "node scripts/check-release-versions.mjs",
     "generate:notices": "node scripts/generate-notices.js",
-    "generate:routes": "node scripts/generate-routes.mjs",
     "check:chat-bundle": "node scripts/check-chat-bundle.mjs",
     "measure:size": "node scripts/measure-release-size.mjs",
     "smoke:rpc": "node scripts/rpc-ws-smoke.mjs",
-    "sync:chat-fixtures": "node scripts/sync-chat-fixtures.mjs",
     "ui:add": "shadcn add",
     "ui:audit": "node scripts/ui-audit-capture.mjs"
   },
@@ -82,7 +77,6 @@
     "@tanstack/ai": "0.63.0",
     "@tanstack/ai-client": "0.36.0",
     "@tanstack/db": "0.9.2",
-    "@tanstack/router-generator": "1.167.39",
     "@types/node": "catalog:",
     "@types/qrcode": "^1.5.6",
     "@types/react": "catalog:",
@@ -94,7 +88,6 @@
     "electron-builder": "^26.15.3",
     "es-module-lexer": "2.3.2",
     "ghostty-web": "0.4.0",
-    "i18next": "^25.8.7",
     "jsdom": "^30.0.1",
     "oxc-parser": "0.150.0",
     "rolldown": "1.2.4",
@@ -102,6 +95,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-electron": "^1.1.1",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "3.25.76"
   }
 }

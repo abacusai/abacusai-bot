@@ -93,8 +93,8 @@ jobs:
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |
-          pnpm --filter @abacus-ai/desktop run check:i18n
-          pnpm --filter @abacus-ai/desktop run check:locales
+          pnpm --filter @abacus-ai/web run check:i18n
+          pnpm --filter @abacus-ai/web run check:locales
 
       # Fails on any high/critical advisory that is not on the documented
       # exception list in the script: each entry names why it is accepted, and

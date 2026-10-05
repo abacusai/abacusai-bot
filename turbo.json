@@ -95,10 +95,8 @@
       "env": ["VITE_CONNECT_SRC", "VITE_UI_GALLERY", "VITE_NEXT_DB_FIXTURES"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/apps/desktop/vite.shared.ts",
-        "$TURBO_ROOT$/apps/desktop/scripts/**",
-        "$TURBO_ROOT$/apps/desktop/src/main/**",
-        "$TURBO_ROOT$/scripts/build-provenance.mjs"
+        "$TURBO_ROOT$/scripts/build-provenance.mjs",
+        "$TURBO_ROOT$/CHANGELOG.md"
       ]
     },
     "//#check:knip": {
@@ -108,28 +106,41 @@
       "cache": false
     },
     "@abacus-ai/web#test": {
+      "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/apps/desktop/vite.shared.ts",
-        "$TURBO_ROOT$/apps/desktop/scripts/**",
+        "$TURBO_ROOT$/scripts/build-provenance.mjs",
+        "$TURBO_ROOT$/CHANGELOG.md",
+        "$TURBO_ROOT$/docs/rewrite/specs/06-onboarding-tour-notch.md",
+        "$TURBO_ROOT$/packages/contract/src/**",
+        "$TURBO_ROOT$/packages/agent/src/**",
         "$TURBO_ROOT$/apps/desktop/src/main/**",
-        "$TURBO_ROOT$/scripts/build-provenance.mjs"
-      ]
-    },
-    "@abacus-ai/web#typecheck": {
-      "dependsOn": ["^typecheck", "^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/apps/desktop/vite.shared.ts",
-        "$TURBO_ROOT$/apps/desktop/scripts/**",
-        "$TURBO_ROOT$/apps/desktop/src/main/**",
-        "$TURBO_ROOT$/scripts/build-provenance.mjs"
+        "$TURBO_ROOT$/apps/desktop/scripts/rpc-ws-smoke.mjs",
+        "$TURBO_ROOT$/apps/desktop/build/icons/32x32.png"
       ]
     },
     "@abacus-ai/desktop#dev": {
       "dependsOn": ["@abacus-ai/agent#build", "@abacus-ai/desktop#vendor"],
       "cache": false,
       "persistent": true
+    },
+    "@abacus-ai/host#typecheck": {
+      "dependsOn": ["^typecheck", "^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/desktop/src/main/**",
+        "$TURBO_ROOT$/apps/desktop/src/preload/*.d.ts",
+        "$TURBO_ROOT$/apps/desktop/tsconfig.main.json"
+      ]
+    },
+    "@abacus-ai/host#build": {
+      "dependsOn": ["^build", "typecheck"],
+      "outputs": ["dist/**"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/main/**"]
+    },
+    "@abacus-ai/host#test": {
+      "dependsOn": ["^build", "build", "vendor"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/main/**"]
     }
   },
   "globalEnv": ["ABACUS_BUILD_COMMIT", "ABACUS_RELEASE"]

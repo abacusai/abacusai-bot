@@ -1,17 +1,14 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
-import {
-  RENDERER_MODULES,
-  RENDERER_REGISTRY_SRC,
-} from "../desktop/vite.shared";
+import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
   browserBoundaryPlugin,
   platformAlias,
   rendererAlias,
   webRoot,
 } from "./vite.renderer";
+import { RENDERER_MODULES, RENDERER_REGISTRY_SRC } from "./vite.shared";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,

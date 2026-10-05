@@ -3,7 +3,7 @@
 /**
  * i18n bare-literal guard (regression ratchet).
  *
- * Scans the renderer source tree (../web/src/) for user-facing English
+ * Scans the renderer source tree (src/) for user-facing English
  * string literals that should go through react-i18next
  * (`t('...')` / `i18n.t('...')`). Rule: all user-facing UI strings must be
  * localized. Never hard-code English text in components.
@@ -32,9 +32,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const SCAN_DIRS = ["../web/src", "../web/src"];
+const SCAN_DIRS = ["src"];
 // Registry output (never edited) and the dev-only, English-only gallery.
-const SKIP_DIRS = ["../web/src/ui", "../web/src/features/gallery"];
+const SKIP_DIRS = ["src/ui", "src/features/gallery"];
 const BASELINE_PATH = path.join(
   import.meta.dirname,
   "i18n-literals-baseline.json"
@@ -172,7 +172,7 @@ function main() {
     `\n[i18n-guard] FAIL: ${fresh.length} new bare user-facing literal(s) found.`
   );
   console.error(
-    "Wrap these in t(...) / i18n.t(...) and add a key to ../web/src/locales/en-US.json."
+    "Wrap these in t(...) / i18n.t(...) and add a key to src/locales/en-US.json."
   );
   console.error(
     "(If this is genuinely not user-facing, add an `i18n-ignore` comment on the line, or run `node scripts/check-jsx-i18n.js --update` if you have a deliberate reason.)\n"
