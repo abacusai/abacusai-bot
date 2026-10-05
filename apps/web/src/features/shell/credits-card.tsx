@@ -33,7 +33,7 @@ const readDismissed = () => {
   }
 };
 export const SidebarCreditsCard = () => {
-  const { transport } = useAppContext();
+  const { transport, credentialsChanged } = useAppContext();
   const { t } = useTranslation();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
@@ -148,7 +148,7 @@ export const SidebarCreditsCard = () => {
         </GroupCard>
       ) : tier === "paid" || canConnect ? (
         <CreditsCard
-          host={creditActionsFor(transport)}
+          host={creditActionsFor(transport, credentialsChanged)}
           tier={tier}
           {...(canConnect
             ? {

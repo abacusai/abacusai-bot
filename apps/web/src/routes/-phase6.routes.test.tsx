@@ -1,6 +1,12 @@
 import { contract } from "@abacus-ai/contract/contract";
 import { implement } from "@orpc/server";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { onboardingStore } from "#renderer/features/onboarding";
@@ -144,25 +150,102 @@ it.each([false, true])(
   },
   15000
 );
-it("the shell gate reads settings once, skips hover preloads and rereads after a credential change", async () => {
-  harness = await renderApp("/bots/new");
-  const reads = () =>
-    harness!.calls.filter(([name]) => name === "settings.get").length;
-  const first = reads();
+/**
+ * `settings.events` streams the test feeds (every follower's), and a host
+ * whose sign-in it flips.
+ */
+const settingsHost = () => {
+  const os = implement(contract);
+  const host = { signedIn: true, reads: 0, opens: 0 };
+  const streams = new Set<{ send(event: unknown): void; end(): void }>();
+  const procedures = {
+    settings: {
+      get: os.settings.get.handler(() => {
+        host.reads += 1;
+        return {
+          defaultModel: null,
+          apiKeys: host.signedIn ? { ABACUS_API_KEY: "test-credential" } : {},
+        } as never;
+      }),
+      events: os.settings.events.handler(async function* ({ signal }) {
+        host.opens += 1;
+        const queue: unknown[] = [];
+        let wake = () => {};
+        let ended = false;
+        const stream = {
+          send: (event: unknown) => {
+            queue.push(event);
+            wake();
+          },
+          end: () => {
+            ended = true;
+            wake();
+          },
+        };
+        streams.add(stream);
+        signal?.addEventListener("abort", () => wake(), { once: true });
+        try {
+          while (!signal?.aborted && !ended) {
+            if (queue.length > 0) yield queue.shift() as never;
+            else await new Promise<void>((resolve) => (wake = resolve));
+          }
+        } finally {
+          streams.delete(stream);
+        }
+      }),
+    },
+  };
+  return {
+    host,
+    procedures,
+    notify: (event: unknown) => {
+      for (const stream of streams) stream.send(event);
+    },
+    drop: () => {
+      for (const stream of Array.from(streams)) stream.end();
+    },
+    open: () => streams.size,
+  };
+};
+it("the shell gate reads settings once, skips hover preloads, and a credential notice signs the shell out", async () => {
+  const { host, procedures, notify, open } = settingsHost();
+  harness = await renderApp("/bots/new", { procedures });
+  const first = host.reads;
   expect(first).toBeGreaterThan(0);
+  await waitFor(() => expect(open()).toBeGreaterThan(0));
   for (const href of ["/sessions/new", "/routines", "/library/connectors"])
     await act(() => harness!.router.preloadRoute({ to: href as never }));
   await act(() => harness!.router.navigate({ to: "/routines" }));
   await act(() => harness!.router.navigate({ to: "/bots/new" }));
-  expect(reads()).toBe(first);
-  const { queryClient, transport } = harness.router.options.context;
-  await act(() =>
-    queryClient.invalidateQueries({
-      queryKey: transport.orpc.settings.get.key(),
-    })
-  );
+  expect(host.reads).toBe(first);
+  // The host signs out (another window, a revoked key) and says so.
+  host.signedIn = false;
+  await act(async () => {
+    notify({ type: "credentials-changed", provider: "abacus" });
+  });
   await act(() => harness!.router.navigate({ to: "/routines" }));
-  expect(reads()).toBeGreaterThan(first);
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
+  );
+  expect(host.reads).toBeGreaterThan(first);
+});
+it("a reopened settings stream re-reads the gate's settings: a notice may have been lost", async () => {
+  const { host, procedures, drop, open } = settingsHost();
+  harness = await renderApp("/bots/new", { procedures });
+  await waitFor(() => expect(open()).toBeGreaterThan(0));
+  const first = host.reads;
+  const opens = host.opens;
+  // Signed out while the stream was down: no notice will ever say so.
+  host.signedIn = false;
+  await act(async () => drop());
+  await waitFor(() => expect(host.opens).toBeGreaterThanOrEqual(2 * opens), {
+    timeout: 3_000,
+  });
+  await act(() => harness!.router.navigate({ to: "/routines" }));
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
+  );
+  expect(host.reads).toBeGreaterThan(first);
 });
 it.each(["/bots/new", "/bots/new?step=setup", "/routines"])(
   "%s renders before its non-essential queries answer",
@@ -184,3 +267,34 @@ it.each(["/bots/new", "/bots/new?step=setup", "/routines"])(
     expect(harness.router.state.matches.at(-1)?.status).toBe("success");
   }
 );
+it("signing out on the account page reaches the sign-in wall without waiting for a notice", async () => {
+  const { host, procedures } = settingsHost();
+  const os = implement(contract);
+  harness = await renderApp("/settings/account", {
+    procedures: {
+      ...procedures,
+      account: {
+        abacus: os.account.abacus.handler(() =>
+          host.signedIn
+            ? ({ name: "Ada", email: "ada@example.com", plan: null } as never)
+            : null
+        ),
+        signOut: os.account.signOut.handler(() => {
+          host.signedIn = false;
+          return { account: null, apps: [], onboarded: true } as never;
+        }),
+      },
+      auth: {
+        abacus: {
+          signOut: os.auth.abacus.signOut.handler(() => ({}) as never),
+        },
+      },
+    },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: /^Sign out/ }));
+  const dialog = await screen.findByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name: /^Sign out/ }));
+  await waitFor(() =>
+    expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
+  );
+});

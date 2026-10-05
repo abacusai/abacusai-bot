@@ -47,6 +47,8 @@ export interface FlowDeps {
   db: Db;
   queryClient: QueryClient;
   navigate(platform: MessagingPlatformId): Promise<void>;
+  /** After a sign-in: the router context's credential refresh. */
+  credentialsChanged?(): Promise<unknown>;
 }
 export type FlowState = {
   connectorId: string | null;
@@ -283,6 +285,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
               finish(id, result);
               return;
             }
+            await deps.credentialsChanged?.();
           }
         }
         const ui = connectUi(entry);
@@ -371,13 +374,14 @@ export const startConnect = (
     ? documentFlow.start(connectorId, options)
     : Promise.resolve({ ok: false, error: "flow-not-mounted" });
 export const useConnectFlow = () => {
-  const { transport, db } = useAppContext();
+  const { transport, db, credentialsChanged } = useAppContext();
   const queryClient = useQueryClient();
   const navigate = useAppNavigate();
   const flow = flowFor({
     transport,
     db,
     queryClient,
+    credentialsChanged,
     navigate: (platform) =>
       navigate({
         to: "/library/messaging",

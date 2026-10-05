@@ -120,14 +120,21 @@ export const createChatRuntime = (
 const KEY = Symbol.for("abacus.chat.sessions");
 type Registry = WeakMap<object, ChatRuntime>;
 
-/** The document's runtime for a transport; survives Fast Refresh (§3.1). */
-export const chatRuntimeFor = (transport: Transport): ChatRuntime => {
+/**
+ * The document's runtime for a transport; survives Fast Refresh (§3.1).
+ * `credentialsChanged` (from the router, which creates it first) is what a
+ * host action calls after it changed a credential.
+ */
+export const chatRuntimeFor = (
+  transport: Transport,
+  credentialsChanged?: () => Promise<unknown>
+): ChatRuntime => {
   const holder = globalThis as unknown as Record<symbol, Registry | undefined>;
   const registry = (holder[KEY] ??= new WeakMap());
   let runtime = registry.get(transport.client);
   if (runtime == null) {
     runtime = createChatRuntime(transport.client.ai, {
-      host: hostActionsFor(transport),
+      host: hostActionsFor(transport, credentialsChanged),
     });
     registry.set(transport.client, runtime);
   }

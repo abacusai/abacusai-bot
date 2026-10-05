@@ -25,17 +25,16 @@ type Notice =
  */
 export const keysFor = (orpc: AppQueryUtils, notice: Notice): QueryKey[] => {
   if (notice.source === "window") return [];
-  if (notice.event.type === "exec-backend")
-    return [
-      orpc.settings.execBackend.get.queryOptions({ input: {} }).queryKey,
-      orpc.settings.sandboxSupport.queryOptions({ input: {} }).queryKey,
-    ];
-  if (notice.event.type === "credentials-changed") {
-    const keys = settingsKeys(orpc);
-    return [keys.providers, keys.account, keys.models, keys.settings];
-  }
+  if (notice.event.type === "exec-backend") return execBackendKeys(orpc);
+  if (notice.event.type === "credentials-changed")
+    return Object.values(settingsKeys(orpc));
   return [];
 };
+
+const execBackendKeys = (orpc: AppQueryUtils): QueryKey[] => [
+  orpc.settings.execBackend.get.queryOptions({ input: {} }).queryKey,
+  orpc.settings.sandboxSupport.queryOptions({ input: {} }).queryKey,
+];
 
 export const useInvalidationBridge = (transport: Transport): void => {
   const queryClient = useQueryClient();
@@ -60,9 +59,22 @@ export const useInvalidationBridge = (transport: Transport): void => {
         },
         abort.signal
       );
+    // `settings.events` has no snapshot: a notice sent while the stream was
+    // down is lost, so every reopen invalidates what a notice could have.
+    let opened = false;
     void followNotices(
       transport,
-      ({ signal }) => transport.client.settings.events({}, { signal }),
+      async ({ signal }) => {
+        const events = await transport.client.settings.events({}, { signal });
+        if (opened)
+          for (const queryKey of [
+            ...Object.values(settingsKeys(transport.orpc)),
+            ...execBackendKeys(transport.orpc),
+          ])
+            void queryClient.invalidateQueries({ queryKey });
+        opened = true;
+        return events;
+      },
       (event) => invalidate({ source: "settings", event }),
       abort.signal
     );

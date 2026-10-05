@@ -1,5 +1,5 @@
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,8 +25,7 @@ export const AccountPage = () => {
     new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(
       Number(value) || 0
     );
-  const { transport } = useAppContext();
-  const cache = useQueryClient();
+  const { transport, credentialsChanged } = useAppContext();
   const navigate = useAppNavigate();
   const account = useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: {} }),
@@ -63,10 +62,7 @@ export const AccountPage = () => {
     try {
       const result = await signInAbacus(transport, { intent: "signin" });
       if (id !== attempt.current) return;
-      if (result.ok)
-        await cache.invalidateQueries({
-          queryKey: transport.orpc.account.abacus.queryKey(),
-        });
+      if (result.ok) await credentialsChanged();
       else if (!result.cancelled) setError(result.error);
     } catch (e) {
       setError(errorText(e));
@@ -138,9 +134,7 @@ export const AccountPage = () => {
                   });
                 await transport.client.account.signOut({});
                 // The shell gate caches "signed in"; do not race the notice.
-                await cache.invalidateQueries({
-                  queryKey: transport.orpc.settings.get.key(),
-                });
+                await credentialsChanged();
                 void navigate({ to: "/bots/new", transition: "settings-out" });
               }}
             />

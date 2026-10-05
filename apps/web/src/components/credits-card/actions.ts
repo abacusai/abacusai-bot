@@ -5,7 +5,11 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 
 import type { CreditActions } from "./index";
-export const creditActionsFor = (transport: Transport): CreditActions => {
+/** `connected`: what the document re-reads once a source connects. */
+export const creditActionsFor = (
+  transport: Transport,
+  connected?: () => Promise<unknown>
+): CreditActions => {
   const client = transport.client;
   return {
     openExternal: (url) => platformSystem(client).openExternal({ url }),
@@ -34,6 +38,7 @@ export const creditActionsFor = (transport: Transport): CreditActions => {
         await client.settings.keys.save({ provider: source, key });
       }
       await client.models.list({ refresh: true });
+      await connected?.();
       return true;
     },
     markCreditsExhausted: async () => {
