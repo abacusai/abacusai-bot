@@ -59,6 +59,9 @@ const columnWidth = (mode: SidebarMode): number =>
       ? SHELL_GEOMETRY.sidebarStripW
       : 0;
 
+/** Sheet and drawer curve, the one vaul and LibreChat settle on. */
+const PHONE_DRAWER_EASE = [0.32, 0.72, 0, 1] as const;
+
 const FOCUSABLE =
   "a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
@@ -136,6 +139,21 @@ export const SidebarSlot = ({
         )}
       </motion.div>
       <AnimatePresence>
+        {floatingOpen &&
+          rail != null && (
+            // A phone's drawer dims what it covers; a tap there closes it.
+            <motion.div
+              key="floating-scrim"
+              aria-hidden
+              data-slot="sidebar-scrim"
+              className="fixed inset-0 z-30 bg-black/30 dark:bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              transition={{ duration: motionPref === "reduced" ? 0 : 0.3 }}
+              onClick={() => onEscape?.()}
+            />
+          )}
         {floatingOpen && (
           <motion.div
             key="floating-sidebar"
@@ -146,14 +164,42 @@ export const SidebarSlot = ({
               "border-sidebar-border bg-sidebar fixed top-[calc(var(--toolbar-h)+4px)] bottom-1 z-30 flex overflow-hidden rounded-(--pane-radius) border pt-2 shadow-[0_24px_64px_rgb(0_0_0/0.18)] dark:shadow-[0_24px_64px_rgb(0_0_0/0.6)]",
               rail == null
                 ? "left-[calc(var(--rail-w)+4px)] w-(--sidebar-w) flex-col"
-                : "top-[calc(var(--toolbar-h)+env(safe-area-inset-top)+4px)] bottom-[calc(env(safe-area-inset-bottom)+4px)] left-[calc(env(safe-area-inset-left)+4px)] w-[calc(var(--rail-w)+var(--sidebar-w))] max-w-[calc(100vw-8px)] flex-row"
+                : // A phone's drawer: full height from the left edge, like a
+                  // native navigation drawer.
+                  "top-0 bottom-0 left-0 z-40 w-[min(88vw,calc(var(--rail-w)+var(--sidebar-w)))] flex-row rounded-none rounded-r-[24px] border-y-0 border-l-0 pt-[calc(env(safe-area-inset-top)+12px)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-[0_0_48px_rgb(0_0_0/0.25)]"
             )}
-            initial={{ opacity: 0, x: motionPref === "reduced" ? 0 : -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: motionPref === "reduced" ? 0 : -8 }}
-            transition={
-              motionPref === "reduced" ? reducedTransition : springs.sidebar
-            }
+            {...(rail == null
+              ? {
+                  initial: { opacity: 0, x: motionPref === "reduced" ? 0 : -8 },
+                  animate: { opacity: 1, x: 0 },
+                  exit: { opacity: 0, x: motionPref === "reduced" ? 0 : -8 },
+                  transition:
+                    motionPref === "reduced"
+                      ? reducedTransition
+                      : springs.sidebar,
+                }
+              : {
+                  // Slides on the drawer curve; a leftward swipe closes it.
+                  initial: { x: motionPref === "reduced" ? 0 : "-100%" },
+                  animate: { x: 0 },
+                  exit: { x: motionPref === "reduced" ? 0 : "-100%" },
+                  transition:
+                    motionPref === "reduced"
+                      ? reducedTransition
+                      : { duration: 0.3, ease: PHONE_DRAWER_EASE },
+                  drag: "x" as const,
+                  dragDirectionLock: true,
+                  dragConstraints: { left: 0, right: 0 },
+                  dragElastic: { left: 1, right: 0 },
+                  dragSnapToOrigin: true,
+                  onDragEnd: (
+                    _: unknown,
+                    info: { offset: { x: number }; velocity: { x: number } }
+                  ) => {
+                    if (info.offset.x < -72 || info.velocity.x < -400)
+                      onEscape?.();
+                  },
+                })}
             onPointerEnter={(event) => {
               if (event.pointerType === "mouse") intent.hold();
             }}

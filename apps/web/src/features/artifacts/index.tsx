@@ -159,7 +159,10 @@ export const ArtifactsPage = ({
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const list = search.view === "list" || !!search.item;
-  const columns = list ? 1 : Math.max(1, Math.floor(size.width / 210));
+  // Phone widths fit two narrower cards instead of one stretched card.
+  const columns = list
+    ? 1
+    : Math.max(1, Math.floor(size.width / (size.width < 440 ? 160 : 210)));
   const entries = artifactListEntries(filtered, list && search.sort !== "name");
   const window = cardWindow(
     entries.length,

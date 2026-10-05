@@ -124,8 +124,9 @@ export const SessionStartPage = ({
   return (
     <div
       data-slot="sessions-start"
-      className="phone:justify-end phone:px-0 phone:pt-6 phone:pb-3 flex size-full min-h-0 flex-col items-center justify-center px-6 py-8"
+      className="phone:justify-end phone:px-0 phone:pt-6 phone:pb-3 relative isolate flex size-full min-h-0 flex-col items-center justify-center px-6 py-8"
     >
+      <div aria-hidden className="phone-glow phone:block hidden" />
       {/* Phones read bottom-up like a native agent screen: headline, a
           swipeable row of starters, then the composer under the thumb. */}
       <div className="phone:gap-5 flex w-full max-w-[680px] flex-col gap-6">
@@ -173,7 +174,7 @@ export const SessionStartPage = ({
           </div>
         ) : (
           <div
-            className="phone-rise phone:order-4 phone:px-3"
+            className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
             style={{ "--rise-i": 3 } as CSSProperties}
           >
             {renderComposer({
@@ -261,7 +262,7 @@ export const SessionStartPage = ({
                 key={starter.id}
                 variant="secondary"
                 style={{ "--rise-i": index + 1 } as CSSProperties}
-                className="phone-rise phone:h-[132px] phone:w-[156px] phone:shrink-0 phone:snap-start phone:justify-between h-auto min-h-20 flex-col items-start gap-2 rounded-2xl p-3 text-start whitespace-normal"
+                className="phone-rise phone:h-[132px] phone:w-[156px] phone:shrink-0 phone:snap-start phone:justify-between phone:rounded-[22px] phone:border phone:border-foreground/[0.08] phone:bg-foreground/[0.045] phone:backdrop-blur-xl phone:p-3.5 phone:font-medium h-auto min-h-20 flex-col items-start gap-2 rounded-2xl p-3 text-start whitespace-normal"
                 onClick={() => {
                   prefill(id, starter.prompt);
                   requestAnimationFrame(() =>

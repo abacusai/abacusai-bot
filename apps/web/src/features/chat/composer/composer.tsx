@@ -678,7 +678,7 @@ export const ThreadComposer = () => {
               : "min-h-13 flex-row items-center gap-2 rounded-full px-2",
             skin === "session" &&
               expanded &&
-              "min-h-[100px] rounded-[20px] ps-4"
+              "phone:rounded-[26px] phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] rounded-[20px] ps-4"
           )}
         >
           {expanded ? <Attachments /> : null}
@@ -743,7 +743,7 @@ export const ThreadComposer = () => {
         ) : null}
         {view.slots.composerContext != null ? (
           <div
-            className="mx-3 -mt-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]"
+            className="phone:mx-0 phone:mt-2 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 phone:pb-0 mx-3 -mt-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]"
             data-slot="composer-context"
           >
             {view.slots.composerContext}

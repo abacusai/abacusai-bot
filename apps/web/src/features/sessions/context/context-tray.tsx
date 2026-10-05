@@ -66,9 +66,9 @@ export const SessionContextTray = ({
   return (
     <div
       data-slot="session-context-tray"
-      className="phone:flex-nowrap phone:overflow-x-auto no-scrollbar flex flex-wrap items-center justify-between gap-1 text-[13px]"
+      className="phone:justify-start phone:flex-nowrap phone:overflow-x-auto phone:gap-1.5 phone:[&_button]:h-8 phone:[&_button]:shrink-0 phone:[&_button]:rounded-full phone:[&_button]:bg-foreground/[0.06] phone:[&_button]:px-3 no-scrollbar flex flex-wrap items-center justify-between gap-1 text-[13px]"
     >
-      <div className="phone:shrink-0 flex items-center gap-1">
+      <div className="phone:shrink-0 phone:gap-1.5 flex items-center gap-1">
         <Popover>
           <PopoverTrigger
             render={
@@ -228,7 +228,9 @@ export const SessionContextTray = ({
             </HoverCardContent>
           </HoverCard>
         ) : sessionId ? (
-          <span className="text-foreground/75">{t("sessions.tray.noPr")}</span>
+          <span className="text-foreground/75 phone:inline-flex phone:h-8 phone:shrink-0 phone:items-center phone:rounded-full phone:bg-foreground/[0.06] phone:px-3">
+            {t("sessions.tray.noPr")}
+          </span>
         ) : null}
       </div>
       <Popover>

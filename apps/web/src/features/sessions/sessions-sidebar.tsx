@@ -427,7 +427,7 @@ const SessionSidebarRow = ({
           )}
           hint={`${session.label} · ${session.worktreeBranch ?? session.workspaceId}`}
           indent={indent}
-          className="min-w-0 flex-1 pr-8"
+          className="phone:pr-11 min-w-0 flex-1 pr-8"
           trailing={
             attention.kind !== "idle" ? (
               <span
@@ -450,7 +450,7 @@ const SessionSidebarRow = ({
               <Button
                 size="icon-sm"
                 variant="ghost"
-                className="absolute right-0"
+                className="phone:top-1/2 phone:size-9 phone:-translate-y-1/2 absolute right-0"
                 aria-label={t("sessions.sidebar.actions", {
                   name: session.label,
                 })}

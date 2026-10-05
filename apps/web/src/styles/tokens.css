@@ -361,3 +361,57 @@ html[data-reduce-motion="on"] .phone-rise {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Phone new-session backdrop: a soft glow behind the headline. */
+.phone-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 20% 38%, oklch(0.7 0.16 295 / 0.16), transparent 70%),
+    radial-gradient(60% 40% at 85% 55%, oklch(0.72 0.12 240 / 0.12), transparent 70%);
+}
+.dark .phone-glow {
+  background:
+    radial-gradient(70% 45% at 20% 38%, oklch(0.55 0.2 295 / 0.32), transparent 70%),
+    radial-gradient(60% 40% at 85% 55%, oklch(0.55 0.15 240 / 0.22), transparent 70%);
+}
+
+/* Phones get a native-height bar with full-size touch targets. */
+[data-band="xs"] {
+  --toolbar-h: 52px;
+  --row-h: 44px;
+}
+
+/*
+ * Phone press feedback: controls and cards shrink a touch under the finger
+ * and spring back (ease-out, no delay), instead of the desktop 1 px nudge.
+ */
+[data-band="xs"] :is([data-slot="button"], [data-slot="popover-trigger"], [data-slot="bot-template"], [data-slot="toggle-group-item"]) {
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 200ms,
+    color 200ms,
+    opacity 200ms;
+}
+[data-band="xs"] :is([data-slot="button"], [data-slot="popover-trigger"], [data-slot="toggle-group-item"]):active:not(:disabled) {
+  transform: scale(0.96);
+}
+[data-band="xs"] [data-slot="bot-template"]:active {
+  transform: scale(0.98);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-band="xs"] :is([data-slot="button"], [data-slot="popover-trigger"], [data-slot="bot-template"], [data-slot="toggle-group-item"]):active {
+    transform: none;
+  }
+}
+/* Inline code inside a tinted user bubble takes the bubble's own ink. */
+[data-band="xs"] [data-role="user"] .chat-prose :not(pre) > code {
+  background: color-mix(in oklab, currentColor 16%, transparent);
+  color: inherit;
+}
+/* Phone reading size for chat prose. */
+[data-band="xs"] .chat-prose {
+  font-size: 0.9375rem;
+}
