@@ -3889,7 +3889,11 @@
       "upgrade": "Upgrade to Pro",
       "download": "Baixar o app para desktop",
       "restart": "Restart your computer",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "busyTitle": "We're at capacity right now",
+      "busyBody": "AbacusAI Bot on the web is full at the moment. Get the free desktop app to keep going: it runs on your own computer, with no waiting.",
+      "busyDownload": "Download the app",
+      "busyNote": "Free · open source · Mac, Windows and Linux"
     },
     "files": {
       "open": "Open folder"
