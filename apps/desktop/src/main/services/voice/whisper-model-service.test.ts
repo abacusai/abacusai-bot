@@ -6,9 +6,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import type { IpcEvent } from "#shared/contracts";
 
 import { modelFileFor, WhisperModelService } from "./whisper-model-service";
 

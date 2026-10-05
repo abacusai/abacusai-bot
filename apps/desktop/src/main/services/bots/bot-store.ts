@@ -7,7 +7,6 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
-
 import {
   MAX_BOT_DESCRIPTION,
   MAX_BOT_PERSONA,
@@ -20,14 +19,14 @@ import {
   type Bot,
   type BotCreateInput,
   type BotUpdateInput,
-} from "#shared/bots";
-import { ConflictError } from "#shared/conflict";
-import { EntityNotFoundError } from "#shared/not-found";
+} from "@abacus-ai/contract/bots";
+import { ConflictError } from "@abacus-ai/contract/conflict";
+import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 import {
   ForbiddenError,
   InvalidInputError,
   PreconditionError,
-} from "#shared/service-errors";
+} from "@abacus-ai/contract/service-errors";
 
 import { abacusBotHome } from "../../paths";
 

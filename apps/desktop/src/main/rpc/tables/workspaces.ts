@@ -1,4 +1,4 @@
-import type { WorkspaceRow } from "#shared/contract/rows";
+import type { WorkspaceRow } from "@abacus-ai/contract/contract/rows";
 
 import type { TableSources } from "./sources";
 

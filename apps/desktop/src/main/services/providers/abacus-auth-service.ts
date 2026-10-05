@@ -2,9 +2,8 @@ import crypto from "crypto";
 import http from "http";
 import type { AddressInfo } from "net";
 
+import type { AbacusAuthIntent } from "@abacus-ai/contract/contracts";
 import { app, shell } from "electron";
-
-import type { AbacusAuthIntent } from "#shared/contracts";
 
 import { bringToFront } from "../../bring-to-front";
 import { readSettings } from "../config/settings";

@@ -1,3 +1,7 @@
+import {
+  AgentStatus,
+  type DesktopEvent,
+} from "@abacus-ai/contract/agent-types";
 /**
  * What the user sees when a turn stops coming back.
  *
@@ -8,8 +12,6 @@
  * only diagnosis available, so it has to survive into the message.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-
-import { AgentStatus, type DesktopEvent } from "#shared/agent-types";
 
 import {
   SessionTurnStateService,

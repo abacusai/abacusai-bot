@@ -8,23 +8,24 @@ import os from "node:os";
 import path from "path";
 
 import { connectorById } from "@abacus-ai/connectors/registry";
-import { app } from "electron";
-
 import {
   AgentStatus,
   type AgentMode,
   type DesktopEvent,
-} from "#shared/agent-types";
+} from "@abacus-ai/contract/agent-types";
 import type {
   BotChangeNotice,
   Bot,
   BotChatHandle,
   BotCreateInput,
   BotUpdateInput,
-} from "#shared/bots";
-import { ConflictError } from "#shared/conflict";
-import { checkoutKey, type GitDiffResult } from "#shared/contract/checkout";
-import type { GitStateRow } from "#shared/contract/rows";
+} from "@abacus-ai/contract/bots";
+import { ConflictError } from "@abacus-ai/contract/conflict";
+import {
+  checkoutKey,
+  type GitDiffResult,
+} from "@abacus-ai/contract/contract/checkout";
+import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import type {
   ConnectorConnectOptions,
   TranscriptSegment,
@@ -130,16 +131,16 @@ import type {
   SetSessionWorktreeRequest,
   SetSessionWorktreeResult,
   WorkspaceGitContext,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import type {
   BotChatPreview,
   BotSenderChat,
   NotificationSettings,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   ABACUS_CONNECTORS_SERVER_NAME,
   abacusConnectorsMcpEntry,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import type {
   ConnectorRequest,
   ConnectorOutcome,
@@ -147,13 +148,16 @@ import type {
   McpOAuthSignInRequest,
   SessionOwner,
   RespondConnectorRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 import {
   conversationRefFromKey,
   sessionConversationKey,
   type ConversationKey,
-} from "#shared/conversation-scope";
-import type { BackendId, BackendStatus } from "#shared/exec-backends";
+} from "@abacus-ai/contract/conversation-scope";
+import type {
+  BackendId,
+  BackendStatus,
+} from "@abacus-ai/contract/exec-backends";
 import {
   describePlatformForAgent,
   reportableLivePlatforms,
@@ -162,21 +166,29 @@ import {
   type MessagingSnapshot,
   type UpdateMessagingPlatformRequest,
   type UpdateMessagingSettingsRequest,
-} from "#shared/messaging";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
-import { detectRememberRequest } from "#shared/remember";
+} from "@abacus-ai/contract/messaging";
+import {
+  EntityNotFoundError,
+  WORKSPACE_NOT_FOUND,
+} from "@abacus-ai/contract/not-found";
+import { detectRememberRequest } from "@abacus-ai/contract/remember";
 import type {
   Routine,
   RoutineCreateInput,
   RoutineListItem,
   RoutineUpdateInput,
-} from "#shared/routines";
+} from "@abacus-ai/contract/routines";
 import type {
   TerminalShellId,
   TerminalShellState,
-} from "#shared/terminal-shells";
-import { TimeoutError } from "#shared/timeout-error";
-import { isToolsetEnabled, TOOLSETS, TOOLSETS_BY_ID } from "#shared/toolsets";
+} from "@abacus-ai/contract/terminal-shells";
+import { TimeoutError } from "@abacus-ai/contract/timeout-error";
+import {
+  isToolsetEnabled,
+  TOOLSETS,
+  TOOLSETS_BY_ID,
+} from "@abacus-ai/contract/toolsets";
+import { app } from "electron";
 
 import {
   abacusBotHome,

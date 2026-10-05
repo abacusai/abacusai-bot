@@ -33,36 +33,65 @@ import { workspacesRouter } from "./procedures/workspaces";
  * Every procedure reaches main through its context's deps, so this module and
  * everything it imports load without Electron.
  */
-export const createRouter = () =>
-  impl.router({
-    workspaces: workspacesRouter,
-    git: gitRouter,
-    files: filesRouter,
-    sessions: sessionsRouter,
-    agent: agentRouter,
-    ai: aiRouter,
-    bots: botsRouter,
-    routines: routinesRouter,
-    notch: notchRouter,
-    settings: settingsRouter,
-    models: modelsRouter,
-    localModels: localModelsRouter,
-    account: accountRouter,
-    auth: authRouter,
-    referrals: referralsRouter,
-    connectors: connectorsRouter,
-    mcp: mcpRouter,
-    browser: browserRouter,
-    terminal: terminalRouter,
-    memory: memoryRouter,
-    devices: devicesRouter,
-    voice: voiceRouter,
-    messaging: messagingRouter,
-    system: systemRouter,
-    window: windowRouter,
-    update: updateRouter,
-    skills: skillsRouter,
-    db: dbRouter,
-  });
+const routes: {
+  workspaces: typeof workspacesRouter;
+  git: typeof gitRouter;
+  files: typeof filesRouter;
+  sessions: typeof sessionsRouter;
+  agent: typeof agentRouter;
+  ai: typeof aiRouter;
+  bots: typeof botsRouter;
+  routines: typeof routinesRouter;
+  notch: typeof notchRouter;
+  settings: typeof settingsRouter;
+  models: typeof modelsRouter;
+  localModels: typeof localModelsRouter;
+  account: typeof accountRouter;
+  auth: typeof authRouter;
+  referrals: typeof referralsRouter;
+  connectors: typeof connectorsRouter;
+  mcp: typeof mcpRouter;
+  browser: typeof browserRouter;
+  terminal: typeof terminalRouter;
+  memory: typeof memoryRouter;
+  devices: typeof devicesRouter;
+  voice: typeof voiceRouter;
+  messaging: typeof messagingRouter;
+  system: typeof systemRouter;
+  window: typeof windowRouter;
+  update: typeof updateRouter;
+  skills: typeof skillsRouter;
+  db: typeof dbRouter;
+} = {
+  workspaces: workspacesRouter,
+  git: gitRouter,
+  files: filesRouter,
+  sessions: sessionsRouter,
+  agent: agentRouter,
+  ai: aiRouter,
+  bots: botsRouter,
+  routines: routinesRouter,
+  notch: notchRouter,
+  settings: settingsRouter,
+  models: modelsRouter,
+  localModels: localModelsRouter,
+  account: accountRouter,
+  auth: authRouter,
+  referrals: referralsRouter,
+  connectors: connectorsRouter,
+  mcp: mcpRouter,
+  browser: browserRouter,
+  terminal: terminalRouter,
+  memory: memoryRouter,
+  devices: devicesRouter,
+  voice: voiceRouter,
+  messaging: messagingRouter,
+  system: systemRouter,
+  window: windowRouter,
+  update: updateRouter,
+  skills: skillsRouter,
+  db: dbRouter,
+};
+export const createRouter = (): typeof routes => impl.router(routes);
 
 export type AppRouter = ReturnType<typeof createRouter>;

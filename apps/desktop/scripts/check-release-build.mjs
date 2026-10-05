@@ -12,6 +12,9 @@ export const checkReleaseBuild = (dist = path.join(desktop, "dist")) => {
     JSON.parse(fs.readFileSync(path.join(desktop, "package.json"), "utf8"))
       .version
   );
+  for (const name of ["index.html", "notch.html"])
+    if (!fs.existsSync(path.join(dist, "renderer", name)))
+      throw new Error(`Missing renderer entry: ${name}`);
   const policy = JSON.parse(
     fs.readFileSync(path.join(dist, "renderer", "release-build.json"), "utf8")
   );

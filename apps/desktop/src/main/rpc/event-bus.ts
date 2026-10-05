@@ -1,16 +1,19 @@
-import type { SystemEvent, WindowEvent } from "#shared/contract";
-import type { DeviceStreamChunk, IpcEvent } from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
-import type { UpdateStatus } from "#shared/update";
+import type { SystemEvent, WindowEvent } from "@abacus-ai/contract/contract";
+import type {
+  DeviceStreamChunk,
+  IpcEvent,
+} from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 
 /** Pushes that never went through the `IpcEvent` catch-all. */
 export interface BusChannels {
   update: UpdateStatus;
   notch: {
     webContentsId: number;
-    event: import("#shared/contract/notch").NotchEvent;
+    event: import("@abacus-ai/contract/contract/notch").NotchEvent;
   };
-  "notch-open": import("#shared/contract/notch").OpenCommand;
+  "notch-open": import("@abacus-ai/contract/contract/notch").OpenCommand;
   system: SystemEvent;
   /** Scoped to one window by its webContents id. */
   window: { webContentsId: number; event: WindowEvent };

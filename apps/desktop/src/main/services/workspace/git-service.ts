@@ -7,7 +7,7 @@ import { promisify } from "util";
 import type {
   GitDiffResult,
   GitDiscardResult,
-} from "#shared/contract/checkout";
+} from "@abacus-ai/contract/contract/checkout";
 import type {
   CreateGitBranchResult,
   GetGitBranchesResult,
@@ -24,7 +24,7 @@ import type {
   CreateWorktreeResult,
   ListWorktreesResult,
   WorktreeListItem,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { parseNumstatZ, parseStatusZ } from "./git-porcelain";
 

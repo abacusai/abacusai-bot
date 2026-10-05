@@ -5,7 +5,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
 
-import { BOT_TEMPLATES } from "../../apps/desktop/src/shared/bots/templates.ts";
+import { BOT_TEMPLATES } from "../../packages/contract/src/bots/templates.ts";
 import { accountStub } from "./account-stub.mjs";
 import { launch, connect } from "./cdp.mjs";
 import { sourceFetchProxyScript } from "./source-fetch-proxy.mjs";

@@ -13,7 +13,7 @@ import type {
   RunFinishedNotice,
   StreamChunk,
   UIMessage,
-} from "#shared/contract";
+} from "@abacus-ai/contract/contract";
 
 import { unavailable } from "../errors";
 

@@ -1,12 +1,11 @@
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * The Connect card's half of the round trip: what the suspended tool call is
  * told when the user answers, that it is always told something, and that
  * only the conversation that asked can see, answer, or release the ask.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { IpcEvent } from "#shared/contracts";
-import { sessionConversationKey } from "#shared/conversation-scope";
 
 import { ConnectorGate } from "./connector-gate";
 

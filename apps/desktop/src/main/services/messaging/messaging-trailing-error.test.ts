@@ -1,3 +1,5 @@
+import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * What a remote user is told when the agent reports an error after answering.
  *
@@ -9,9 +11,6 @@
  * a turn that had in fact just answered the question correctly.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import { AgentStatus } from "#shared/agent-types";
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
   const actual =

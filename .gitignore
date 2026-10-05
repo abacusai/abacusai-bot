@@ -39,3 +39,6 @@ __pycache__/
 
 # Local cut-over build logs, shipped artifacts and synthetic test homes.
 .build/
+
+# Browser build analysis, kept outside published dist.
+apps/web/build-metadata/

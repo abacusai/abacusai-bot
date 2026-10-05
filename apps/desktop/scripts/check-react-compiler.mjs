@@ -6,7 +6,8 @@ import { createBuilder } from "vite";
 
 let diagnostics = 0;
 const builder = await createBuilder({
-  root: fileURLToPath(new URL("..", import.meta.url)),
+  root: fileURLToPath(new URL("../../web", import.meta.url)),
+  configFile: fileURLToPath(new URL("../vite.config.ts", import.meta.url)),
   build: {
     rolldownOptions: {
       onLog(level, log, handler) {

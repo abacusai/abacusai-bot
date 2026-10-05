@@ -1,3 +1,12 @@
+import type { Contract } from "@abacus-ai/contract/contract";
+import {
+  createFlowControlLinkInterceptor,
+  FLOW_CONTEXT_KEY,
+  FlowRegistry,
+  withFlowAcks,
+} from "@abacus-ai/contract/contract/flow-control";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 /**
  * Test support for the router: fake deps, and a client connected to the real
  * router over a real in-process MessageChannel with the real oRPC adapters.
@@ -7,16 +16,6 @@ import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/message-port";
 import type { ContractRouterClient } from "@orpc/contract";
 import { RPCHandler } from "@orpc/server/message-port";
-
-import type { Contract } from "#shared/contract";
-import {
-  createFlowControlLinkInterceptor,
-  FLOW_CONTEXT_KEY,
-  FlowRegistry,
-  withFlowAcks,
-} from "#shared/contract/flow-control";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
-import type { UpdateStatus } from "#shared/update";
 
 import { CueArbiter, mainOnlyCueWindows } from "../notch/cue-arbiter";
 import { PrefsStore } from "../services/config/prefs-store";

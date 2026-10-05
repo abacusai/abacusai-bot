@@ -17,7 +17,7 @@ const { AgentSessionManagerService } =
   await import("../../services/session/agent-session-manager-service");
 const { ModelSwitchWaiters } =
   await import("../../services/session/model-switch");
-const { AgentMode } = await import("#shared/agent-types");
+const { AgentMode } = await import("@abacus-ai/contract/agent-types");
 const { connectInProcess, fakeDeps } = await import("../testing");
 
 const WS = "11111111-1111-4111-8111-111111111111";

@@ -11,9 +11,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { v1ToThreadFile } from "@abacus-ai/contract/transcript/thread-file";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { v1ToThreadFile } from "#shared/transcript/thread-file";
 
 import { fingerprintV1 } from "../../services/session/thread-store";
 import { backupsRoot, migratingRoot } from "../backup";
@@ -24,12 +23,7 @@ import { transcriptsV2 } from "./001-transcripts-v2";
 
 const SHARED_FIXTURES = path.join(
   __dirname,
-  "..",
-  "..",
-  "..",
-  "shared",
-  "transcript",
-  "__fixtures__"
+  "../../../../../../packages/contract/src/transcript/__fixtures__"
 );
 
 let root: string;

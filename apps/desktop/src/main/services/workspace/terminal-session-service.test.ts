@@ -2,14 +2,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import {
   conversationKey,
   draftConversationRef,
   sessionConversationRef,
-} from "#shared/conversation-scope";
-import type { TerminalShellId } from "#shared/terminal-shells";
+} from "@abacus-ai/contract/conversation-scope";
+import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TerminalSessionService } from "./terminal-session-service";
 

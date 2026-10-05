@@ -1,6 +1,6 @@
 import fs from "fs";
 
-import type { SessionArtifact } from "#shared/contracts";
+import type { SessionArtifact } from "@abacus-ai/contract/contracts";
 
 import { extractArtifacts } from "./session-artifacts.utils";
 import { workspaceStore } from "./workspace-store";

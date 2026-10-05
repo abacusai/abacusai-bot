@@ -1,3 +1,4 @@
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 /**
  * Diagnostics-sync service: uploads a secret-free snapshot of this install
  * (OS, versions, model, key presence, toggles, MCP server ids, connector
@@ -5,8 +6,6 @@
  * content. Success is not logged: it would grow the `main` log.
  */
 import { app } from "electron";
-
-import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { readSettings, storedKeyProviders } from "../config/settings";
 import {

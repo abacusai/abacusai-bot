@@ -1,12 +1,11 @@
+import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * What a bot's chat shows for an auto-reply turn: the message that came in,
  * and the words that went back out. Not the rules preamble, which is the same
  * paragraph every turn, and not the model's notes around its <reply> tag.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import { AgentStatus } from "#shared/agent-types";
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
   const actual =

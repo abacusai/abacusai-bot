@@ -1,3 +1,5 @@
+import { AgentStatus } from "@abacus-ai/contract/agent-types";
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * A reply the model wrapped before a tool call is still the reply.
  *
@@ -8,9 +10,6 @@
  * narration. Nothing was sent, and nothing was logged as failed.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import { AgentStatus } from "#shared/agent-types";
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => {
   const actual =

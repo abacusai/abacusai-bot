@@ -37,7 +37,7 @@ import {
   decideConversion,
   isSameOrNewer,
   v1ToThreadFile,
-} from "#shared/transcript/thread-file";
+} from "@abacus-ai/contract/transcript/thread-file";
 
 import {
   ARCHIVE_INDEX_NAME,

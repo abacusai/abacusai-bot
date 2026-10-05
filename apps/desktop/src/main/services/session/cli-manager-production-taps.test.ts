@@ -60,7 +60,11 @@ vi.mock("electron-store", () => ({
   },
 }));
 
-import { AgentMode, AgentStatus, type DesktopEvent } from "#shared/agent-types";
+import {
+  AgentMode,
+  AgentStatus,
+  type DesktopEvent,
+} from "@abacus-ai/contract/agent-types";
 
 import { AgentManagerService } from "./cli-manager-service";
 import { SessionTurnStateService } from "./session-turn-state-service";

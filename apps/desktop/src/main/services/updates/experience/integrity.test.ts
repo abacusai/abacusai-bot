@@ -3,10 +3,12 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import {
+  FOUNDATION_API,
+  EXPERIENCE_PROTOCOL,
+} from "@abacus-ai/contract/experience";
 import { buildExperience } from "@abacus-ai/updater/experience";
 import { describe, expect, it } from "vitest";
-
-import { FOUNDATION_API, EXPERIENCE_PROTOCOL } from "#shared/experience";
 
 import { verifyExperience } from "./integrity";
 

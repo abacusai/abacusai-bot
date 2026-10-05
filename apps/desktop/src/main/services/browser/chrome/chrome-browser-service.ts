@@ -7,7 +7,7 @@
  */
 import { spawn } from "node:child_process";
 
-import type { ChromeBrowserStatus } from "#shared/contracts";
+import type { ChromeBrowserStatus } from "@abacus-ai/contract/contracts";
 
 import type { BrowserTargetSource } from "../browser-target";
 import {

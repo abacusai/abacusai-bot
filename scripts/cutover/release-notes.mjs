@@ -28,7 +28,7 @@ export const visibleNotes = (files) =>
     return rows;
   });
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const base = "apps/desktop/src/renderer/features";
+  const base = "apps/web/src/features";
   const files = fs
     .readdirSync(base)
     .map((area) => path.join(base, area, "parity.ts"))

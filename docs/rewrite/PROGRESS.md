@@ -22,6 +22,8 @@ Working loop per slice: spec (docs/rewrite/specs/<slice>.md) → adversarial spe
 | — | main requirements from specs 3–6 (+ cut-over defects #9/#10/#11, step-1 handovers, Bot.avatarAccessory) | specs 03 §24, 04 §26, 05 §31, 06 §23 + notes | merged 0ab59029; fixes 8eaec2b1; r2 fixes e75cb79d; accessory a868db96 (all Codex) | Codex r1 + Claude r1 + Codex r2 fixed; tree green (3,528 tests) | done |
 | 7 | cut-over | r3 (final; D1–D9 followed as written, §19 open questions pending user) | C1–C14 merged 75516d5f (legacy renderer deleted, AG-UI unconditional, version 1.0.86); perf pass 7fa1816e (M1/M2/M4/M5/M6 pass vs shipped v1.0.85 on a user-login home; M3 RSS 810 MB vs ≤761 MB fails, notch companion 146 MB); r1 fixes fb8899d5 (11/11) | Codex r1 fixed; Codex r2 verification running; tree green (4,330 unit + 302 serial) | implemented; release gate not green (M3, signed RC, Windows/Linux, hardware, §19 decisions) |
 
+| 8 PR 1 | web and contract workspace split | spec 08 r2; r1 responses | rewrite/web-split | acceptance in [implementation notes](specs/reviews/08-web-split.impl-notes-pr1.md) | implemented; macOS Electron acceptance pending |
+
 ## Cutover release N implementation, 1 October 2026
 
 C5 completion and C6–C14 are implemented in ordered commits on codex-cutover. See [the cutover report](reports/07-cutover.md) for focused checks and final gates. Release acceptance remains pending hardware, signed RC, comparative performance and §19 decisions. N keeps migration steps 1, 2 and 5 registered. Steps 3 and 4 remain reserved for N+1. Restore tooling is shipped early so support can exercise its synthetic two-profile and two-cycle checks before retirement.

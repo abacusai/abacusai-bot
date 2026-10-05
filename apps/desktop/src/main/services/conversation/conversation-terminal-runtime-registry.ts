@@ -1,4 +1,4 @@
-import type { TerminalShellId } from "#shared/terminal-shells";
+import type { TerminalShellId } from "@abacus-ai/contract/terminal-shells";
 
 import {
   conversationBelongsToWorkspace,

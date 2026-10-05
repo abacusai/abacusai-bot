@@ -19,10 +19,10 @@ vi.mock("../../services/session/workspace-store", () => ({
   },
 }));
 
-import { ConflictError } from "#shared/conflict";
-import type { ChangeBatch } from "#shared/contract/rows";
-import type { IpcEvent } from "#shared/contracts";
-import type { RoutineListItem } from "#shared/routines";
+import { ConflictError } from "@abacus-ai/contract/conflict";
+import type { ChangeBatch } from "@abacus-ai/contract/contract/rows";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
+import type { RoutineListItem } from "@abacus-ai/contract/routines";
 
 import { createTables, type Tables } from ".";
 import {

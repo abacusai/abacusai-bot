@@ -6,7 +6,6 @@ import {
 import { existsSync } from "fs";
 import { delimiter } from "path";
 
-import { agentVendorDir } from "#main/resources";
 import {
   AgentMode,
   AgentStatus,
@@ -16,7 +15,7 @@ import {
   type DesktopCommand,
   type DesktopEvent,
   type HostService,
-} from "#shared/agent-types";
+} from "@abacus-ai/contract/agent-types";
 import type {
   AgentMcpLogEntry,
   AgentMcpServer,
@@ -26,8 +25,10 @@ import type {
   StartAgentSessionRequest,
   StartAgentSessionResult,
   StopAgentSessionResult,
-} from "#shared/contracts";
-import { WORKSPACE_MISSING_ERROR } from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
+import { WORKSPACE_MISSING_ERROR } from "@abacus-ai/contract/contracts";
+
+import { agentVendorDir } from "#main/resources";
 
 import { describeAgentEvent } from "../diagnostics/agent-event-log";
 import { logStore } from "../diagnostics/log-store";

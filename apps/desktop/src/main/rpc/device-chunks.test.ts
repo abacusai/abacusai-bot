@@ -1,11 +1,10 @@
+import type { DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 /**
  * Device mirror chunks (Codex impl-r1 #4, #5): one dual-delivering sender for
  * both start paths, and a subscription that always opens on a key frame,
  * however late it arrives or however often it reopens.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { DeviceStreamChunk } from "#shared/contracts";
 
 import { DEVICE_CHUNK_MAX_BYTES } from "./delivery";
 import { LEGACY_DEVICE_CHUNK_CHANNEL } from "./device-chunks";

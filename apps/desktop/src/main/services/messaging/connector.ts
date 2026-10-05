@@ -1,12 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import type { BrowserWindow } from "electron";
-
 import type {
   MessagingPlatformId,
   MessagingPlatformState,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
+import type { BrowserWindow } from "electron";
 
 import { abacusBotHome } from "../../paths";
 

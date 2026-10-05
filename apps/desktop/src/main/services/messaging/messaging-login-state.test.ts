@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * `needs_login` is a healthy connector waiting on a human, and the gateway
  * treats it that way.
@@ -13,8 +14,6 @@
  * than on every sync.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

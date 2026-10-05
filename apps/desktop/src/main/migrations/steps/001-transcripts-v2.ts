@@ -32,7 +32,7 @@ import path from "node:path";
 import {
   decideConversion,
   v1ToThreadFile,
-} from "#shared/transcript/thread-file";
+} from "@abacus-ai/contract/transcript/thread-file";
 
 import type { MigrationStep, PlannedWrite } from "../types";
 import {

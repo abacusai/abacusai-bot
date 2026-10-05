@@ -48,9 +48,17 @@ const bundle = async (options: {
     input: options.input,
     platform: options.platform,
     external: ["electron"],
+    transform: {
+      define: { __ABACUS_PLATFORM__: '"electron"', "import.meta.env": "{}" },
+    },
     resolve: {
       alias: {
-        "#shared": join(SRC, "shared"),
+        "#platform/transport": resolve(
+          DESKTOP,
+          "../web/src/platform/transport.electron.ts"
+        ),
+        "@abacus-ai/contract": join(SRC, "../../../packages/contract/src"),
+        "#renderer": resolve(DESKTOP, "../web/src"),
         "#main": join(SRC, "main"),
         "#preload": join(SRC, "preload"),
       },
@@ -128,7 +136,7 @@ describe.skipIf(!availability.usable)(
       writeFileSync(
         join(dir, "page-entry.ts"),
         [
-          `import { createTransport, getTransport } from ${JSON.stringify(join(SRC, "renderer/data/transport/index.ts"))};`,
+          `import { createTransport, getTransport } from ${JSON.stringify(resolve(DESKTOP, "../web/src/data/transport/index.ts"))};`,
           "(window as any).__captureUiContinuity = () => ({ capturedAt: Date.now() });",
           "(window as any).__restoreUiContinuity = async (snapshot: any) => { await new Promise(r => setTimeout(r, 100)); (window as any).__restored = { ...snapshot, restoredAt: Date.now(), stage1At: (window as any).__stage1At }; };",
           "const report = (value: unknown) => { (window as any).__rpc = value; };",
@@ -157,7 +165,7 @@ describe.skipIf(!availability.usable)(
       );
       writeFileSync(
         join(dir, "page.html"),
-        '<!doctype html><html><head><meta charset="utf-8"></head><body><script src="page.js"></script></body></html>'
+        '<!doctype html><html><head><meta charset="utf-8"></head><body><script>addEventListener("error", event => { window.__rpc = { ok: false, message: event.message }; });</script><script src="page.js"></script></body></html>'
       );
 
       await bundle({

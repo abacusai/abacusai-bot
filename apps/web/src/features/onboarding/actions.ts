@@ -1,0 +1,103 @@
+import type { PrefsRow } from "@abacus-ai/contract/contract";
+import type { FunnelStep } from "@abacus-ai/contract/funnel";
+import type { QueryClient } from "@tanstack/react-query";
+
+import type { Db } from "#renderer/data/db";
+import type { Transport } from "#renderer/data/transport";
+import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+export const accountStateQuery = (transport: Transport) =>
+  transport.orpc.account.state.queryOptions({ input: {}, staleTime: Infinity });
+export const FUNNEL_BY_STEP: Partial<Record<OnboardingStepId, FunnelStep>> = {
+  welcome: "screen_auth",
+  connected: "screen_welcome",
+  models: "screen_models",
+  connectors: "screen_connectors",
+};
+export const enterStep = async (
+  db: Db,
+  transport: Transport,
+  step: OnboardingStepId
+): Promise<void> => {
+  await db.updatePrefs({ onboardingStep: step, onboardingFlow: 2 });
+  const name = FUNNEL_BY_STEP[step];
+  if (name) await transport.client.system.funnelStep({ step: name });
+};
+export type OnboardingExit = NonNullable<PrefsRow["onboardingExit"]>;
+export interface CompletionDeps {
+  db: Db;
+  transport: Transport;
+  queryClient: QueryClient;
+  /** Resolves only once the destination has committed. */
+  navigate(exit: OnboardingExit): Promise<void>;
+  startTour(): void;
+  /** After the account is onboarded, resolve its freshly created first bot. */
+  resolveExit?(exit: OnboardingExit): Promise<OnboardingExit>;
+}
+const tails = new WeakMap<Db, Map<string, Promise<void>>>();
+export const finishCompletion = (
+  deps: CompletionDeps,
+  exit: OnboardingExit
+): Promise<void> => {
+  let runs = tails.get(deps.db);
+  if (!runs) {
+    runs = new Map();
+    tails.set(deps.db, runs);
+  }
+  const key = JSON.stringify(exit);
+  const existing = runs.get(key);
+  if (existing) return existing;
+  let completed = false;
+  const work = (async () => {
+    await deps.transport.client.system.funnelStep({
+      step: "onboarding_done",
+      once: true,
+    });
+    let cleaned = true;
+    try {
+      await deps.db.updatePrefs({ onboardingStep: null });
+    } catch (error) {
+      cleaned = false;
+      console.warn("[onboarding] step cleanup deferred", error);
+    }
+    await deps.navigate(exit);
+    if (exit.to === "bot-tour") deps.startTour();
+    if (cleaned) {
+      await deps.db.updatePrefs({ onboardingExit: null });
+      completed = true;
+    }
+  })();
+  runs.set(key, work);
+  void work.then(
+    () => {
+      if (!completed) runs.delete(key);
+    },
+    () => runs.delete(key)
+  );
+  return work;
+};
+const completing = new WeakMap<Db, Promise<void>>();
+export const completeOnboarding = (
+  deps: CompletionDeps,
+  exit: OnboardingExit
+): Promise<void> => {
+  const existing = completing.get(deps.db);
+  if (existing) return existing;
+  const run = (async () => {
+    await deps.db.updatePrefs({ onboardingExit: exit });
+    const account = await deps.transport.client.account.skipOnboarding({});
+    deps.queryClient.setQueryData(
+      accountStateQuery(deps.transport).queryKey,
+      account
+    );
+    const resolved = (await deps.resolveExit?.(exit)) ?? exit;
+    if (resolved !== exit)
+      await deps.db.updatePrefs({ onboardingExit: resolved });
+    await finishCompletion(deps, resolved);
+  })();
+  completing.set(deps.db, run);
+  void run.then(
+    () => completing.delete(deps.db),
+    () => completing.delete(deps.db)
+  );
+  return run;
+};

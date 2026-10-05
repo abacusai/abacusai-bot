@@ -1,3 +1,15 @@
+import { fileURLToPath } from "node:url";
+
+import type { Bot } from "@abacus-ai/contract/bots";
+import type {
+  AgentSessionListItem,
+  GitStateSnapshot,
+  IpcEvent,
+  MemorySnapshot,
+  SessionArtifact,
+  WorkspaceListItem,
+} from "@abacus-ai/contract/contracts";
+import type { RoutineListItem } from "@abacus-ai/contract/routines";
 /**
  * B-T4: every table end to end. Main's real router and table feeds over a
  * real MessageChannel (with main's flow control), and the renderer's real
@@ -12,23 +24,14 @@
 import { createCollection, type Collection } from "@tanstack/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Bot } from "#shared/bots";
-import type {
-  AgentSessionListItem,
-  GitStateSnapshot,
-  IpcEvent,
-  MemorySnapshot,
-  SessionArtifact,
-  WorkspaceListItem,
-} from "#shared/contracts";
-import type { RoutineListItem } from "#shared/routines";
-
 import { createTables, type TableName, type Tables } from ".";
 import { PrefsStore } from "../../services/config/prefs-store";
 import { MainEventBus } from "../event-bus";
 import { connectInProcess, fakeDeps, type TestClient } from "../testing";
 
-const DB_TABLES_MODULE = "../../../renderer/data/db/tables";
+const DB_TABLES_MODULE = fileURLToPath(
+  new URL("../../../../../web/src/data/db/tables.ts", import.meta.url)
+);
 
 type Position = { epoch: string; seq: number };
 

@@ -7,9 +7,8 @@
 import fs from "fs";
 import path from "path";
 
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 import { app } from "electron";
-
-import { PROVIDER_ENV_VARS } from "#shared/settings";
 
 import { abacusBotHome } from "../../paths";
 import { readSettings } from "../config/settings";

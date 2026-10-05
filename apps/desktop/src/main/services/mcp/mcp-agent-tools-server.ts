@@ -16,16 +16,19 @@ import {
   resolveConnector,
   type Connector,
 } from "@abacus-ai/connectors/registry";
-
-import { emitHostEvent } from "#main/rpc/emit";
-import type { ConnectorStatus, ConnectorStatuses } from "#shared/contracts";
-import type { ConversationKey } from "#shared/conversation-scope";
-import { artifactPathLine } from "#shared/deliverables";
+import type {
+  ConnectorStatus,
+  ConnectorStatuses,
+} from "@abacus-ai/contract/contracts";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
+import { artifactPathLine } from "@abacus-ai/contract/deliverables";
 import {
   isMessagingPlatformId,
   type MessagingPlatformId,
   describePlatformForAgent,
-} from "#shared/messaging";
+} from "@abacus-ai/contract/messaging";
+
+import { emitHostEvent } from "#main/rpc/emit";
 
 import { WORKSPACE_DIR_NAME } from "../../paths";
 import {

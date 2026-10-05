@@ -6,8 +6,8 @@
  * interceptor has returned, so its errors (a failed snapshot on the first
  * read, a failure after the first yield) are mapped where they are thrown.
  */
-import { flowControlHandlerInterceptor } from "#shared/contract/flow-control";
-import { CUSTOM_JSON_SERIALIZERS } from "#shared/contract/serializer";
+import { flowControlHandlerInterceptor } from "@abacus-ai/contract/contract/flow-control";
+import { CUSTOM_JSON_SERIALIZERS } from "@abacus-ai/contract/contract/serializer";
 
 import { logRpcError, toRpcError } from "./errors";
 

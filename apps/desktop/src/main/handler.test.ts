@@ -77,7 +77,7 @@ vi.mock("./services/providers/openrouter-auth-service", () => ({
 }));
 vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
 
-import { ABACUS_CONNECTORS_SERVER_NAME } from "#shared/contracts";
+import { ABACUS_CONNECTORS_SERVER_NAME } from "@abacus-ai/contract/contracts";
 
 import { wireHostEvents } from "./handler";
 import { activateProfile, profileKeyFor } from "./profile-home";

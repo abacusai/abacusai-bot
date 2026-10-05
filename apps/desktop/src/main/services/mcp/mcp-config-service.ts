@@ -3,8 +3,11 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
-
-import type { McpMode, McpServerEntry, McpServerInfo } from "#shared/contracts";
+import type {
+  McpMode,
+  McpServerEntry,
+  McpServerInfo,
+} from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";
 import { environmentNoticeService } from "../providers/environment-notice-service";

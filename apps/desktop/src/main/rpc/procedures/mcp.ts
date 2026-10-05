@@ -1,5 +1,5 @@
-import type { McpRuntimeEvent } from "#shared/contract";
-import type { IpcEvent } from "#shared/contracts";
+import type { McpRuntimeEvent } from "@abacus-ai/contract/contract";
+import type { IpcEvent } from "@abacus-ai/contract/contracts";
 
 import { impl, isType, onIpcEvents, stream } from "./impl";
 

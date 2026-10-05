@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * Connecting a platform mid-conversation has to put its tools in front of the
  * agent that is waiting for them.
@@ -10,8 +11,6 @@
  * reads are not the same as a `tools/list` running again.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 vi.mock("./messaging-config-service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./messaging-config-service")>()),

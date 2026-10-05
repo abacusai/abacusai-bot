@@ -26,7 +26,7 @@ export default defineConfig({
   extends: [base, node],
   ignorePatterns: [
     ...(base.ignorePatterns ?? []),
-    "apps/desktop/src/renderer/notchRouteTree.gen.ts",
+    "apps/web/src/notchRouteTree.gen.ts",
   ],
   // Repeated at the entry config: `plugins` in an extended config is additive,
   // so without this the unicorn and react-perf correctness rules come back.
@@ -36,7 +36,7 @@ export default defineConfig({
     // The rewrite (spec 01 §3.4): the React Compiler is on, so its rules are
     // errors, and the legacy stack is banned by import.
     {
-      files: ["apps/desktop/src/renderer/**/*.{ts,tsx}"],
+      files: ["apps/web/src/**/*.{ts,tsx}"],
       env: { browser: true, node: false },
       plugins: ["react", "import"],
       rules: {
@@ -85,7 +85,7 @@ export default defineConfig({
     // Registry output: Base UI is imported here and nowhere else, and the
     // registry may memoise (it is never edited).
     {
-      files: ["apps/desktop/src/renderer/ui/**/*.{ts,tsx}"],
+      files: ["apps/web/src/ui/**/*.{ts,tsx}"],
       rules: {
         "react/preserve-manual-memoization": "off",
         "no-restricted-imports": [
@@ -108,7 +108,7 @@ export default defineConfig({
     // File routes export `Route`; the router plugin reads them by name, and
     // these are the only files that may default-export at all.
     {
-      files: ["apps/desktop/src/renderer/routes/**/*.tsx"],
+      files: ["apps/web/src/routes/**/*.tsx"],
       rules: { "import/no-default-export": "off" },
     },
   ],

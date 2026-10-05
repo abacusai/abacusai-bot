@@ -6,7 +6,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import type { DesktopCommand } from "#shared/agent-types";
+import type { DesktopCommand } from "@abacus-ai/contract/agent-types";
 import type {
   AddMcpServerRequest,
   ImportMcpServersRequest,
@@ -21,7 +21,7 @@ import type {
   RestartMcpServerRequest,
   SetMcpServerDisabledRequest,
   UpdateMcpServerRequest,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";
 import { credentialFor } from "../config/settings";

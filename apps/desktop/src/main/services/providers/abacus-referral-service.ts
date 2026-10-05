@@ -4,7 +4,7 @@ import type {
   ReferralGmailContact,
   ReferralInviteOutcome,
   ReferralSummary,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import {
   abacusApiCall,

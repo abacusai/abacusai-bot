@@ -1,5 +1,5 @@
-import type { AbacusAccountInfo } from "#shared/contracts";
-import type { ModelAvailability, ModelTier } from "#shared/models";
+import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
+import type { ModelAvailability, ModelTier } from "@abacus-ai/contract/models";
 
 import { hasCredential, readSettings } from "../config/settings";
 import { abacusRoutellmV1, abacusUserAgent } from "./abacus-host";

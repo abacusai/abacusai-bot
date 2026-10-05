@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 export const buildConstants = () => {
-  const experience = read("apps/desktop/src/shared/experience.ts");
+  const experience = read("packages/contract/src/experience.ts");
   const foundationApi = Number(
     experience.match(/FOUNDATION_API\s*=\s*(\d+)/)?.[1]
   );

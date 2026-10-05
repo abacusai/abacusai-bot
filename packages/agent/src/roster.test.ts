@@ -25,7 +25,7 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..", "..", "..");
 const TOOLSETS = fs.readFileSync(
-  path.join(REPO_ROOT, "apps", "desktop", "src", "shared", "toolsets.ts"),
+  path.join(REPO_ROOT, "packages", "contract", "src", "toolsets.ts"),
   "utf8"
 );
 const GATE_ROSTER = fs.readFileSync(

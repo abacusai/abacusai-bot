@@ -1,4 +1,4 @@
-import type { MessagingEvent } from "#shared/contract";
+import type { MessagingEvent } from "@abacus-ai/contract/contract";
 
 import { impl, isType, onIpcEvents, stream } from "./impl";
 

@@ -1,5 +1,5 @@
-import type { RoutineRunRow } from "#shared/contract/rows";
-import type { RoutineRun } from "#shared/routines";
+import type { RoutineRunRow } from "@abacus-ai/contract/contract/rows";
+import type { RoutineRun } from "@abacus-ai/contract/routines";
 
 import { attemptForSession } from "../../services/agent-tools/routine-attempts";
 import type { TableSources } from "./sources";

@@ -8,7 +8,7 @@
  * 1. `init --base base --preset b1D0dv74 --yes` runs once in a throwaway
  *    package with the CLI's own Vite layout, through the registry proxy in
  *    record mode, so the snapshot also holds what init fetched.
- * 2. Its CSS and `cn` helper are transplanted into src/renderer.
+ * 2. Its CSS and `cn` helper are transplanted into ../web/src.
  * 3. This package's components.json is written from the constant below.
  *
  * Asserts on the way: the preset decoded as expected, init wrote only the
@@ -36,8 +36,8 @@ export const SHADCN_VERSION = "4.21.0";
 /** Mira with lucide and translucent menus (Codex r2 #1). */
 export const PRESET = "b1D0dv74";
 
-const desktop = join(import.meta.dirname, "..");
-const next = join(desktop, "src/renderer");
+const desktop = join(import.meta.dirname, "../../web");
+const next = join(desktop, "src");
 
 /** The dependencies init adds, measured (§3.1). */
 export const INIT_DEPENDENCIES = [
@@ -65,7 +65,7 @@ export const COMPONENTS_JSON = {
   tsx: true,
   tailwind: {
     config: "",
-    css: "src/renderer/styles/app.css",
+    css: "src/styles/app.css",
     baseColor: "neutral",
     cssVariables: true,
     prefix: "",

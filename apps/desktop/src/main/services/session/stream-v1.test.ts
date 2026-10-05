@@ -7,9 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { parseTranscriptV1 } from "@abacus-ai/contract/transcript/thread-file";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { parseTranscriptV1 } from "#shared/transcript/thread-file";
 
 import { streamTranscriptV1 } from "./stream-v1";
 import { fingerprintV1 } from "./thread-store";

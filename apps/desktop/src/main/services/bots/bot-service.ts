@@ -14,9 +14,9 @@ import {
   type BotCreateInput,
   type BotUpdateInput,
   SPONSORED_RUN_MARKER,
-} from "#shared/bots";
-import type { SessionOwner } from "#shared/contracts";
-import { EntityNotFoundError } from "#shared/not-found";
+} from "@abacus-ai/contract/bots";
+import type { SessionOwner } from "@abacus-ai/contract/contracts";
+import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
 
 import {
   botDir,

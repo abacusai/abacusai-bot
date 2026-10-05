@@ -3,14 +3,13 @@ import http from "http";
 import type { AddressInfo } from "net";
 
 import { connectorForService } from "@abacus-ai/connectors/registry";
-import { shell } from "electron";
-
 import type {
   AbacusConnectorInfo,
   AbacusConnectorOutcome,
   AbacusConnectorsSnapshot,
   ConnectorConnectOptions,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
+import { shell } from "electron";
 
 import { bringToFront } from "../../bring-to-front";
 import { credentialFor } from "../config/settings";

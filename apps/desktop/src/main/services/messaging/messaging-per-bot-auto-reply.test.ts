@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * An auto-reply belongs to the bot that set it up.
  *
@@ -9,8 +10,6 @@
  * deleting the row deletes the conversations with her too.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 const revoked: string[] = [];
 let pairingRow: Record<string, unknown> | null = null;

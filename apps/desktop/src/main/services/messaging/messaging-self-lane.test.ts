@@ -1,3 +1,4 @@
+import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 /**
  * The self lane: the user typing at their own chat (WhatsApp's
  * message-yourself, a shared Abacus AI bot's DM) is answered whenever the
@@ -7,8 +8,6 @@
  * moment a link finished.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { MessagingPlatformId } from "#shared/messaging";
 
 const settings = {
   gatewayEnabled: true,

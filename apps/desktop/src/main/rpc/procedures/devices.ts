@@ -1,5 +1,5 @@
-import type { DevicesEvent } from "#shared/contract";
-import type { DeviceStreamChunk } from "#shared/contracts";
+import type { DevicesEvent } from "@abacus-ai/contract/contract";
+import type { DeviceStreamChunk } from "@abacus-ai/contract/contracts";
 
 import { DEVICE_CHUNK_MAX_BYTES } from "../delivery";
 import { deviceChunkSender } from "../device-chunks";

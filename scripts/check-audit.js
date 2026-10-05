@@ -53,13 +53,6 @@ const TARGETS = {
         "The defence is the one described for GHSA-jmr9-qjv8-65gv above, and " +
         "2.0.2 is still the newest release that does not exist. Delete when " +
         "extract-zip >=2.0.2 ships.",
-      "GHSA-ch52-4w7c-c8xp":
-        "http-cache-semantics <=4.2.0 via electron-builder's @electron/get: " +
-        "max-stale handling can serve one user's cached response to another. " +
-        "Only `got` inside electron-builder uses it, to download Electron " +
-        "binaries on the single-user packaging machine; the app ships none of " +
-        "it and no cache is shared between users. Delete when a patched " +
-        "http-cache-semantics ships.",
       "GHSA-vfj7-8cjw-p6xm":
         "braces <=3.0.3 via ultracite's fast-glob: stack exhaustion on deeply " +
         "nested brace patterns. The patterns come from this repository's own " +

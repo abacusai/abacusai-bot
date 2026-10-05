@@ -5,10 +5,13 @@ import { join } from "node:path";
 import electronUpdater, { type UpdateInfo } from "electron-updater";
 
 const { autoUpdater } = electronUpdater;
+import type {
+  UpdateFailedPhase,
+  UpdateStatus,
+} from "@abacus-ai/contract/update";
 import { app, BaseWindow, powerMonitor } from "electron";
 
 import { emitBusChannel } from "#main/rpc/emit";
-import type { UpdateFailedPhase, UpdateStatus } from "#shared/update";
 
 import { markQuitting, clearQuitting } from "../../app-quit-state";
 import { isNotchWindow } from "../../notch/registry";

@@ -83,6 +83,13 @@ jobs:
       # later.
       - run: pnpm run typecheck
       - run: pnpm run check:knip
+      - run: pnpm run check:web-split
+      # The guard compares the browser graph with the Electron renderer's, so
+      # both builds have to exist; turbo builds the desktop's dependencies too.
+      - name: Browser bundle platform guard
+        run: |
+          pnpm exec turbo run build --filter=@abacus-ai/desktop --filter=@abacus-ai/web
+          node scripts/check-web-bundle.mjs
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |

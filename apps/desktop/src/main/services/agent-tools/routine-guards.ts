@@ -4,7 +4,7 @@
  * overlapping fire is skipped, an overlong run is failed, and a routine that
  * keeps failing is paused until someone looks.
  */
-import type { RoutineRunItem } from "#shared/contracts";
+import type { RoutineRunItem } from "@abacus-ai/contract/contracts";
 
 /** How long a run may go before it is presumed stuck. */
 export const ROUTINE_RUN_TIMEOUT_MS = 30 * 60 * 1000;

@@ -174,7 +174,7 @@ vi.mock("electron", () => ({
 import {
   draftConversationKey,
   sessionConversationKey,
-} from "#shared/conversation-scope";
+} from "@abacus-ai/contract/conversation-scope";
 
 import { ElectronBrowserRuntime } from "./electron-browser-runtime";
 

@@ -9,7 +9,7 @@ import type {
   IpcEvent,
   McpBrowserStatus,
   McpMode,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 import type { ChromeBrowserService } from "../browser/chrome/chrome-browser-service";
 import type { BuiltinPermissionScope } from "./builtin-tool-permissions";

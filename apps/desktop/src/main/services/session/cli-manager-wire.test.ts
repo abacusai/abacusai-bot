@@ -9,9 +9,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { DesktopEvent } from "#shared/agent-types";
 
 import { AgentManagerService, type NdjsonOrigin } from "./cli-manager-service";
 

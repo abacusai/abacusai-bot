@@ -11,12 +11,11 @@ import {
   HOME_PLACEHOLDER,
   type McpConnector,
 } from "@abacus-ai/connectors/registry";
-
 import type {
   ConnectorConnectOptions,
   ConnectorOutcome,
   McpServerEntry,
-} from "#shared/contracts";
+} from "@abacus-ai/contract/contracts";
 
 export interface FlowSources {
   /** The platform's browser hop and its inverse, by service key. */

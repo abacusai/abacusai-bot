@@ -15,6 +15,12 @@
     },
     {
       "path": "./packages/test-support"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./packages/contract"
     }
   ]
 }

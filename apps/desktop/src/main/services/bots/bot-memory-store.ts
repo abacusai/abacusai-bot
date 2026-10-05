@@ -7,7 +7,7 @@
 import fs from "fs";
 import path from "path";
 
-import { ConflictError } from "#shared/conflict";
+import { ConflictError } from "@abacus-ai/contract/conflict";
 
 import { botDir, listBots } from "./bot-store";
 

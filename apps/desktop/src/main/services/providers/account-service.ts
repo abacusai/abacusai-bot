@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
 
-import { EMPTY_ACCOUNT_STATE, type AccountState } from "#shared/account";
+import {
+  EMPTY_ACCOUNT_STATE,
+  type AccountState,
+} from "@abacus-ai/contract/account";
 
 import { abacusBotHome } from "../../paths";
 

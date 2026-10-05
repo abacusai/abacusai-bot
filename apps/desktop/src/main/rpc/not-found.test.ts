@@ -17,7 +17,7 @@ vi.mock("../services/session/workspace-store", () => ({
 const { WorkspaceService } =
   await import("../services/workspace/workspace-service");
 const { EntityNotFoundError, WORKSPACE_NOT_FOUND } =
-  await import("#shared/not-found");
+  await import("@abacus-ai/contract/not-found");
 const { connectInProcess, fakeDeps } = await import("./testing");
 
 const connections: Array<{ closeClient(): void; closeServer(): void }> = [];

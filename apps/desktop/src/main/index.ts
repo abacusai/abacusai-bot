@@ -10,6 +10,10 @@ import { join } from "path";
 import path from "path";
 import { promisify } from "util";
 
+import type {
+  AbacusAccountInfo,
+  UsageSnapshot,
+} from "@abacus-ai/contract/contracts";
 import {
   app,
   shell,
@@ -29,8 +33,6 @@ import {
 } from "electron";
 import type { WebContents } from "electron";
 import Store from "electron-store";
-
-import type { AbacusAccountInfo, UsageSnapshot } from "#shared/contracts";
 
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
@@ -73,9 +75,13 @@ export function hasGoogleChrome(
     }
   });
 }
-import type { WindowChromeState, WindowState } from "#shared/contract";
-import { funnelDetail, isFunnelStep } from "#shared/funnel";
-import { PROVIDER_ENV_VARS } from "#shared/settings";
+import type {
+  WindowChromeState,
+  WindowState,
+} from "@abacus-ai/contract/contract";
+import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import { parsePptx } from "@abacus-ai/contract/pptx/parser";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
@@ -149,7 +155,7 @@ import {
 } from "./services/diagnostics/log-dump";
 import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
 import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
-import { parsePptx } from "./services/pptx/pptx-parser";
+import { ZipArchive } from "./services/pptx/zip";
 import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   readAccountState,
@@ -1526,7 +1532,7 @@ const appOperations: AppOperations = {
       }
 
       const buf = await fs.readFile(realFile);
-      const deck = parsePptx(buf);
+      const deck = parsePptx(ZipArchive.open(buf));
       return { success: true, deck, sizeBytes: stat.size };
     } catch (err) {
       return {

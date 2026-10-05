@@ -25,9 +25,9 @@ import {
   type GitDiffResult,
   type GitDiscardEntry,
   type GitDiscardResult,
-} from "#shared/contract/checkout";
-import type { FileSearchResult } from "#shared/contract/files";
-import type { GitStateRow } from "#shared/contract/rows";
+} from "@abacus-ai/contract/contract/checkout";
+import type { FileSearchResult } from "@abacus-ai/contract/contract/files";
+import type { GitStateRow } from "@abacus-ai/contract/contract/rows";
 import {
   WORKSPACE_MISSING_ERROR,
   type AgentSessionListItem,
@@ -36,9 +36,12 @@ import {
   type GitChangeItem,
   type GitDiffScope,
   type WorkspaceListItem,
-} from "#shared/contracts";
-import { ForbiddenError } from "#shared/forbidden";
-import { EntityNotFoundError, WORKSPACE_NOT_FOUND } from "#shared/not-found";
+} from "@abacus-ai/contract/contracts";
+import { ForbiddenError } from "@abacus-ai/contract/forbidden";
+import {
+  EntityNotFoundError,
+  WORKSPACE_NOT_FOUND,
+} from "@abacus-ai/contract/not-found";
 
 import { isMigrationWriteBlockedTree } from "../../migrations/write-block";
 import { isInsideWorkspace, type FileTreeService } from "./file-tree-service";

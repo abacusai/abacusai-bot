@@ -38,10 +38,9 @@ const GATE_ROSTER = path.join(
 /** The registry the Capabilities pane and the exclude list are both built from. */
 const TOOLSETS = path.join(
   REPO_ROOT,
-  "apps",
-  "desktop",
+  "packages",
+  "contract",
   "src",
-  "shared",
   "toolsets.ts"
 );
 
