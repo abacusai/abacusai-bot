@@ -1,0 +1,20 @@
+{
+  "$comment": "Deliberate old-renderer changes made on the rewrite branch that are not the rewrite (product work that must ship in the legacy UI). check-legacy-renderer-diff accepts a listed file only while it is exactly as that commit left it; any later edit fails again.",
+  "allow": [
+    {
+      "path": "src/renderer/components/onboarding/onboarding-flow.tsx",
+      "commit": "a79707f6",
+      "why": "Sign-in: bring the default browser's sessions into the app window"
+    },
+    {
+      "path": "src/renderer/components/onboarding/onboarding-flow.test.tsx",
+      "commit": "a79707f6",
+      "why": "Sign-in: bring the default browser's sessions into the app window"
+    },
+    {
+      "path": "src/renderer/components/onboarding/sign-in-step.tsx",
+      "commit": "a79707f6",
+      "why": "Sign-in: bring the default browser's sessions into the app window"
+    }
+  ]
+}

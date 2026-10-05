@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "sessionId": "sess-bracket-turn-fields",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Delegate",
+      "messageIndex": 0,
+      "at": 1788256800000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "On it.",
+      "messageIndex": 1,
+      "regenerateAttempt": 1,
+      "versions": {
+        "current": 1,
+        "total": 2,
+        "siblings": [
+          { "messageIndex": 1, "regenerateAttempt": 0 },
+          { "messageIndex": 1, "regenerateAttempt": 1 }
+        ]
+      },
+      "at": 1788256801000
+    },
+    {
+      "type": "text",
+      "id": "b1b",
+      "source": "bot",
+      "content": "Also this.",
+      "messageIndex": 1,
+      "versions": { "current": 2, "total": 2, "siblings": [] },
+      "at": 1788256801500
+    },
+    {
+      "type": "subtask",
+      "id": "sub",
+      "status": "created",
+      "kind": "delegate",
+      "at": 1788256802000
+    },
+    {
+      "type": "text",
+      "id": "c1",
+      "source": "bot",
+      "content": "Child turn one.",
+      "messageIndex": 3,
+      "regenerateAttempt": 0,
+      "at": 1788256803000
+    },
+    {
+      "type": "text",
+      "id": "c2",
+      "source": "bot",
+      "content": "Child turn two.",
+      "messageIndex": 4,
+      "versions": { "current": 1, "total": 1, "siblings": [] },
+      "at": 1788256804000
+    },
+    {
+      "type": "subtask",
+      "id": "sub",
+      "status": "completed",
+      "outcome": "completed",
+      "at": 1788256805000
+    }
+  ]
+}

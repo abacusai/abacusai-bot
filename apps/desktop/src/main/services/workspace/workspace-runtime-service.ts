@@ -115,7 +115,7 @@ const cloneRuntimeSnapshot = (snapshot: RuntimeSnapshot): RuntimeSnapshot => {
   };
 };
 
-const buildGitChangeSectionsSnapshot = (
+export const buildGitChangeSectionsSnapshot = (
   gitChanges: RuntimeSnapshot["gitChanges"]
 ): GitStateSnapshot["gitChangeSections"] => {
   const staged = gitChanges
@@ -172,7 +172,20 @@ export class WorkspaceRuntimeService {
     workspacePath: null,
   };
 
+  /**
+   * Whether git changes carry fingerprints (spec 04 §26.4 b): only while the
+   * new renderer reads `gitState`, so the legacy app pays nothing and its
+   * events are as they were.
+   */
+  private fingerprints = false;
+
   constructor(private readonly deps: WorkspaceRuntimeDeps) {}
+
+  setFingerprints(on: boolean): void {
+    if (this.fingerprints === on) return;
+    this.fingerprints = on;
+    if (on) this.scheduleRefresh(0);
+  }
 
   getSnapshot(): RuntimeSnapshot {
     return this.runtimeSnapshot;
@@ -468,7 +481,10 @@ export class WorkspaceRuntimeService {
       };
     }
 
-    const gitStatus = await this.deps.gitService.readGitChanges(workspace.path);
+    const gitStatus = await this.deps.gitService.readGitChanges(
+      workspace.path,
+      { fingerprints: this.fingerprints }
+    );
     if (requestToken !== this.activeRequestToken) {
       return null;
     }

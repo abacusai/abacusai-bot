@@ -7,7 +7,11 @@
  * named operation the legacy IPC handler calls, map the result.
  */
 import type { AccountState } from "#shared/account";
-import type { WindowChromeState, WindowState } from "#shared/contract";
+import type {
+  SetDensityResult,
+  WindowChromeState,
+  WindowState,
+} from "#shared/contract";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -21,6 +25,7 @@ import type {
   BrowserRuntimeState,
   BrowserRuntimeCapture,
 } from "#shared/contracts";
+import type { ConversationKey } from "#shared/conversation-scope";
 import type { PptxReadResult } from "#shared/pptx";
 import type {
   ImportLocalSkillsRequest,
@@ -29,7 +34,9 @@ import type {
 import type { UpdateStatus } from "#shared/update";
 
 import type { HostOperations } from "../handler";
+import type { CueArbiter } from "../notch/cue-arbiter";
 import type { ServiceHost } from "../service-host";
+import type { LoginItem } from "../services/config/login-item";
 import type { AguiSource, ThreadReader } from "./ai/source";
 import type { MainEventBus } from "./event-bus";
 import type { ReadinessReport } from "./readiness";
@@ -55,7 +62,8 @@ export interface AppOperations {
   botHome(): string;
   restartApp(): void;
   hasGoogleChrome(): boolean;
-  reportFunnelStep(step: unknown, detail: unknown): void;
+  /** `once`: the persisted first-time report (`reportFunnelStepOnce`). */
+  reportFunnelStep(step: unknown, detail: unknown, once?: boolean): void;
   account: {
     get(): AccountState;
     skip(): AccountState;
@@ -99,6 +107,13 @@ export interface AppOperations {
     request: ImportLocalSkillsRequest
   ): Promise<ImportLocalSkillsResult>;
   showAboutPanel(): void;
+  /**
+   * `settings:set-titlebar-density`'s body: persist, then (wco) refresh and
+   * publish the chrome and recreate the window on macOS.
+   */
+  setTitlebarDensity(value: unknown): Promise<SetDensityResult>;
+  /** Open at login (macOS, Windows). */
+  loginItem: LoginItem;
   /** The user-input beacon the renderer swap defers on. */
   markRendererActivity(): void;
 }
@@ -108,6 +123,13 @@ export interface BrowserRuntimeOperations {
   materialize(
     request: MaterializeBrowserRuntimeRequest
   ): Promise<BrowserRuntimeState> | BrowserRuntimeState;
+  /** A checked local file (real paths; spec 04 §12.8). */
+  materializeFile(request: {
+    conversationKey: ConversationKey;
+    resourceId: string;
+    file: string;
+    root: string;
+  }): Promise<BrowserRuntimeState> | BrowserRuntimeState;
   present(
     request: PresentBrowserRuntimeRequest
   ): Promise<BrowserRuntimeState> | BrowserRuntimeState;
@@ -169,4 +191,6 @@ export interface RpcDeps {
   /** The thread store (`ServiceHost.threadStore`); optional for test deps. */
   threads?: ThreadReader;
   trackers: EventTrackers;
+  /** `window.claimCue` / `window.visibleThread` (spec 06 §14.2). */
+  cues: CueArbiter;
 }

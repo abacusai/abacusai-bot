@@ -19,6 +19,8 @@ export interface Bot {
   avatarColor: string;
   /** One of BOT_AVATAR_SHAPES. */
   avatarShape: string;
+  /** Optional for records written before accessories. */
+  avatarAccessory?: AvatarAccessoryId | null;
   /** Null means the active workspace when first opened. */
   workspaceId: string | null;
   /** The forever chat. Null until first opened, or after its session died. */
@@ -57,6 +59,7 @@ export interface BotCreateInput {
   persona?: string;
   avatarColor?: string;
   avatarShape?: string;
+  avatarAccessory?: AvatarAccessoryId | null;
   workspaceId?: string | null;
   model?: string | null;
   channel?: string | null;
@@ -82,6 +85,7 @@ export type BotUpdateInput = Partial<
     | "persona"
     | "avatarColor"
     | "avatarShape"
+    | "avatarAccessory"
     | "model"
     | "channel"
   >
@@ -150,3 +154,18 @@ export const botInitials = (name: string): string => {
   if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
   return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase();
 };
+
+/** Spec 03 §14.1 accessories, including the empty look. */
+export const AVATAR_ACCESSORY_IDS = [
+  "none",
+  "glasses",
+  "shades",
+  "bow",
+  "cap",
+  "headphones",
+  "antenna",
+  "crown",
+  "monocle",
+] as const;
+
+export type AvatarAccessoryId = (typeof AVATAR_ACCESSORY_IDS)[number];

@@ -28,6 +28,6 @@ export const Route = createFileRoute("/_shell/(artifacts)/artifacts/")({
     q: search.q,
   }),
   loader: ({ context }) =>
-    context.collections.artifacts.preload().catch(ignoreLoadError),
+    context.db.collections.artifacts.preload().catch(ignoreLoadError),
   component: ArtifactsRoute,
 });

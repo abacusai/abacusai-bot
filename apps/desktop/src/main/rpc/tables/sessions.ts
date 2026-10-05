@@ -11,6 +11,7 @@ export const readSessionRows = (sources: TableSources): SessionRow[] => {
     const turn = turns.get(session.id);
     return {
       ...session,
+      worktreeOperationId: session.worktreeOperationId ?? null,
       turn:
         turn == null || turn.workspaceId !== session.workspaceId
           ? null

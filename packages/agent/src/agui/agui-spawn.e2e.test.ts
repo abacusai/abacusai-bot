@@ -278,10 +278,15 @@ describe("dist/main.js", () => {
 
       const out = lines(stdout).map((line) => JSON.parse(line) as AguiEvent);
       const tail = out
-        .slice(-2)
+        .slice(-3)
         .map((event) => (event.type === "CUSTOM" ? event.name : event.type));
 
-      expect(tail).toEqual(["wire.compat_lost", "RUN_ERROR"]);
+      // The reply's open message is closed before the terminal.
+      expect(tail).toEqual([
+        "wire.compat_lost",
+        "TEXT_MESSAGE_END",
+        "RUN_ERROR",
+      ]);
       expect((out.at(-1) as { code?: string }).code).toBe("compat_lost");
       // The unread reply text is intact before them.
       expect(

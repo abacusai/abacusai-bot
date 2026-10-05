@@ -1,41 +1,37 @@
 /**
- * The dev fixture mode: the collections over a FixtureDb served through a
- * real oRPC memory transport (the path `VITE_NEXT_DB_FIXTURES=1` takes).
+ * The dev fixture mode (gallery and visual screenshots only): the app's
+ * `createDb()` over a FixtureDb served through a real oRPC memory transport
+ * (the path `VITE_NEXT_DB_FIXTURES=1` takes).
  */
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createCollections } from "../collections";
-import { updatePrefs } from "../collections/prefs";
-import { createMemoryDbSource } from "./memory-source";
+import { createDb, type Db } from "../db";
+import { createMemoryDbTransport } from "./memory-source";
 
-const cleanups: Array<() => Promise<void>> = [];
+const dbs: Db[] = [];
 afterEach(async () => {
-  for (const cleanup of cleanups.splice(0)) await cleanup();
+  for (const db of dbs.splice(0)) {
+    db.stop();
+    for (const collection of Object.values(db.collections))
+      await collection.cleanup().catch(() => undefined);
+  }
 });
 
-describe("createMemoryDbSource", () => {
-  it("serves snapshots, live changes and prefs writes over oRPC", async () => {
-    const { db, source } = createMemoryDbSource();
-    const collections = createCollections(source, { backoffMs: [5] });
-    cleanups.push(
-      () => collections.bots.cleanup(),
-      () => collections.prefs.cleanup(),
-      () => collections.sessions.cleanup(),
-      () => collections.workspaces.cleanup()
-    );
-    await collections.bots.preload();
-    expect(collections.bots.size).toBe(5);
+describe("createMemoryDbTransport", () => {
+  it("serves snapshots, live changes and prefs patches over oRPC", async () => {
+    const { db: fixture, transport } = createMemoryDbTransport();
+    const db = createDb(transport, { retryDelayMs: () => 5 });
+    dbs.push(db);
+    const { bots, prefs } = db.collections;
+    await bots.preload();
+    expect(bots.size).toBe(5);
 
-    db.bots.remove("trend-scout");
-    await waitFor(() =>
-      expect(collections.bots.has("trend-scout")).toBe(false)
-    );
+    fixture.bots.remove("trend-scout");
+    await waitFor(() => expect(bots.has("trend-scout")).toBe(false));
 
-    await collections.prefs.preload();
-    await updatePrefs(collections, (draft) => {
-      draft.theme = "dark";
-    });
-    expect(db.prefs.rows.get("app")?.theme).toBe("dark");
+    await prefs.preload();
+    await db.updatePrefs({ theme: "dark" });
+    expect(fixture.prefs.rows.get("app")?.theme).toBe("dark");
   });
 });

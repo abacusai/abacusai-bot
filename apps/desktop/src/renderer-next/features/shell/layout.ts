@@ -4,6 +4,8 @@
  * `WidthRules`, `BW1000/BW900/BW800`, `W900/W800`). Never writes prefs:
  * growing the window restores the user's choice.
  */
+import { SHELL_GEOMETRY } from "./geometry";
+
 export type Band = "sm" | "md" | "lg" | "xl";
 
 /** Lower bounds, px. 800 is the window minimum. */
@@ -38,7 +40,12 @@ export interface ShellLayoutState {
   band: Band;
   sidebar: SidebarMode;
   /** What the sidebar column occupies in layout, px (TopBar alignment). */
-  sidebarOccupied: 0 | 88 | 280;
+  sidebarOccupied: number;
+  /**
+   * Floating although the user pinned it (sessions at 800): the title-bar
+   * toggle and ⌘B reveal it instead of unpinning (Codex impl r1 #7).
+   */
+  forcedFloating: boolean;
   /** `null`: closed. */
   sidePanel: null | "layout" | "drawer";
   titleBar: {
@@ -65,7 +72,13 @@ export const shellLayout = (input: {
   return {
     band,
     sidebar,
-    sidebarOccupied: sidebar === "pinned" ? 280 : sidebar === "strip" ? 88 : 0,
+    sidebarOccupied:
+      sidebar === "pinned"
+        ? SHELL_GEOMETRY.sidebarW
+        : sidebar === "strip"
+          ? SHELL_GEOMETRY.sidebarStripW
+          : 0,
+    forcedFloating: sidebar === "floating" && input.pinned,
     sidePanel: input.panelOpen ? (band === "xl" ? "layout" : "drawer") : null,
     titleBar: {
       status: band === "xl" || band === "lg",

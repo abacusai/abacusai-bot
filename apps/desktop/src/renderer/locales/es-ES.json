@@ -350,7 +350,283 @@
     "sidebar": {
       "label": "Bots",
       "new": "Nuevo bot",
-      "empty": "Aún no hay bots"
+      "empty": "Aún no hay bots",
+      "search": "Search bots",
+      "searchPlaceholder": "Search bots",
+      "noMatches": "No bots match",
+      "needsYou": "Needs you",
+      "yesterday": "Yesterday",
+      "waiting_one": "{{count}} waiting on you",
+      "waiting_other": "{{count}} waiting on you",
+      "unread": "Unread",
+      "options": "Options for {{name}}",
+      "emptyBody": "Make one for a job you hand off often.",
+      "moreWaiting_one": "{{count}} more",
+      "moreWaiting_other": "{{count}} more",
+      "markUnread": "Mark as unread",
+      "duplicate": "Duplicate",
+      "pauseCheckIns": "Pause check-ins",
+      "resumeCheckIns": "Resume check-ins",
+      "title": "Bots",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned",
+      "edit": "Editar bot",
+      "delete": "Eliminar bot",
+      "emptyTitle": "Aún no hay bots"
+    },
+    "avatar": {
+      "shapes": {
+        "blob": "Blob",
+        "round": "Round",
+        "squircle": "Squircle",
+        "pebble": "Pebble",
+        "leaf": "Leaf",
+        "drop": "Drop",
+        "bean": "Bean",
+        "slab": "Slab",
+        "mochi": "Mochi",
+        "egg": "Egg",
+        "pillow": "Pillow",
+        "jelly": "Jelly",
+        "star": "Star",
+        "flower": "Flower",
+        "heart": "Heart",
+        "cloud": "Cloud",
+        "hex": "Hex",
+        "gem": "Gem",
+        "clover": "Clover",
+        "burst": "Burst",
+        "bunny": "Bunny",
+        "cat": "Cat",
+        "bear": "Bear",
+        "ghost": "Ghost"
+      },
+      "colors": {
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "teal": "Teal",
+        "indigo": "Indigo",
+        "stone": "Stone"
+      },
+      "accessories": {
+        "none": "None",
+        "glasses": "Glasses",
+        "shades": "Shades",
+        "bow": "Bow",
+        "cap": "Cap",
+        "headphones": "Headphones",
+        "antenna": "Antenna",
+        "crown": "Crown",
+        "monocle": "Monocle"
+      }
+    },
+    "model": {
+      "defaultGroup": "Default",
+      "appDefault": "App default",
+      "favorites": "Favorites",
+      "localProvider": "On this machine",
+      "connectOpenRouter": "Conectar OpenRouter",
+      "connectGoogleAi": "Conectar Google AI Studio",
+      "tierFree": "Free",
+      "tierLocal": "Local",
+      "default": "Default",
+      "local": "On this machine",
+      "free": "Free",
+      "search": "Search models",
+      "favorite": "Favourite {{name}}"
+    },
+    "checkIn": {
+      "label": "Scheduled check-ins",
+      "off": "Off",
+      "hourly": "Hourly",
+      "daily": "Daily",
+      "weekdays": "Weekdays",
+      "weekly": "Weekly",
+      "summary": {
+        "off": "Off",
+        "hourly": "Every hour",
+        "daily": "Every day, {{time}}",
+        "weekdays": "Weekdays, {{time}}",
+        "weekly": "Every {{day}}, {{time}}",
+        "custom": "Custom",
+        "paused": "Paused"
+      },
+      "time": "Time",
+      "day": "Day",
+      "minute": "At minute",
+      "paused": "Paused",
+      "custom": "Custom schedule: {{schedule}}",
+      "customLabel": "Custom",
+      "editInRoutines": "Edit in Routines",
+      "routineName": "{{name}} check-in",
+      "error": "The bot was created, but its check-in could not be scheduled. Add one under Routines.",
+      "createFailed": "The bot was made, but its check-in wasn't saved"
+    },
+    "start": {
+      "categories": {
+        "featured": "Featured",
+        "finance": "Finance",
+        "marketing": "Marketing",
+        "personal-assistant": "Personal Assistant",
+        "productivity": "Productivity",
+        "recruiting": "Recruiting",
+        "research": "Research",
+        "social-media": "Social Media"
+      },
+      "emptyTitle": "Who do you need?",
+      "emptyBody": "A bot is a standing agent with its own instructions, schedule, memory and chats. Start from a template, or name one and describe the job.",
+      "setup": "Set up {{name}}",
+      "namePlaceholder": "Nuevo bot",
+      "templates": "Or start with a template",
+      "more": "More",
+      "uses": "Uses"
+    },
+    "chat": {
+      "deliverables": {
+        "files": "Files",
+        "showInFolder": "Show in folder",
+        "openInBrowser": "Open in browser",
+        "showAll": "Show all ({{count}} more)",
+        "showLess": "Show less"
+      },
+      "preview": {
+        "openExternally": "Open with default app",
+        "noViewer": "There is no preview for this kind of file here.",
+        "failed": "Couldn't read this file.",
+        "truncated": "Showing the start of a long file.",
+        "slide": "Slide {{n}}"
+      },
+      "feedback": {
+        "rate": "Rate this reply",
+        "helpful": "Good response",
+        "notHelpful": "Bad response",
+        "tellUsMore": "Tell us more",
+        "placeholder": "What went wrong?",
+        "send": "Send",
+        "sent": "Thanks for the feedback",
+        "notSynced": "Couldn't send feedback yet",
+        "failed": "Couldn't send your feedback. Please try again."
+      },
+      "reaction": "El agente reaccionó con {{emoji}}",
+      "yesterday": "Yesterday",
+      "connector": {
+        "title": "{{provider}} is not connected",
+        "body": "{{provider}} has to be connected before the agent can use it. It is waiting on you.",
+        "connect": "Connect {{provider}}",
+        "connecting": "Connecting…",
+        "decline": "Not now",
+        "failed": "Could not connect {{provider}}.",
+        "stop": "Detener conexión",
+        "refreshFailed": "Connected, but the agent couldn't load it: {{error}}"
+      },
+      "placeholder": "Mensaje a {{name}}",
+      "openApp": "Open {{app}}",
+      "pause": "Pause auto-reply",
+      "resume": "Resume",
+      "paused": "Check-ins paused.",
+      "channelReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
+      "channelReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+      "senderReadOnly": "Conversación de respuesta automática: {{bot}} responde a {{sender}} aquí en tu nombre. Puedes mirar pero no escribir; para cambiar cómo responde, díselo a {{bot}} en su propio chat.",
+      "openError": "No se ha podido abrir el chat del bot."
+    },
+    "deleteDialog": {
+      "checkIn": "Its check-in keeps running as an ordinary routine.",
+      "title": "Eliminar bot",
+      "body": "Esto elimina a {{name}} y su chat. No se puede deshacer.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar",
+      "error": "No se ha podido eliminar el bot."
+    },
+    "status": {
+      "needsYou": "Needs you",
+      "needsYouTitle": "Needs you · {{title}}",
+      "checkingIn": "Checking in",
+      "working": "Working",
+      "workingOn": "Working · {{caption}}",
+      "error": "Stopped with an error",
+      "paused": "Check-ins paused",
+      "on": "on {{app}}",
+      "idle": "Idle",
+      "needs-you": "Needs you",
+      "routine": "Checking in",
+      "unread": "Unread"
+    },
+    "notify": {
+      "doneBody": "Has a reply for you",
+      "needsYouTitle": "{{name}} needs you",
+      "needsYouBody": "Waiting for your approval"
+    },
+    "errors": {
+      "pin": "Couldn't pin",
+      "duplicate": "Couldn't duplicate the bot",
+      "checkIn": "Couldn't change the check-in",
+      "limit": "You have 50 bots, the most there can be. Delete one to make another.",
+      "retry": "Try again",
+      "memory": "Couldn't change memory",
+      "memoryConflict": "That changed while you were looking. The list is up to date."
+    },
+    "form": {
+      "name": "Nombre",
+      "persona": "Persona",
+      "instructions": "Instructions",
+      "description": "Description (optional)",
+      "model": "Model",
+      "modelDefault": "App default",
+      "create": "Crear",
+      "save": "Guardar",
+      "saveError": "No se ha podido guardar el bot.",
+      "cancel": "Cancel",
+      "shape": "Shape",
+      "colour": "Colour",
+      "accessory": "Accessory",
+      "moreShapes": "More shapes",
+      "remoteChange": "Changed in another window",
+      "discardTitle": "Discard changes?",
+      "discardBody": "Your changes have not been saved.",
+      "keepEditing": "Keep editing",
+      "discard": "Discard",
+      "validation": {
+        "required": "Enter a name",
+        "too-long": "This is too long",
+        "color": "Choose a valid colour"
+      },
+      "accessoryUnavailable": "Accessories are not available yet."
+    },
+    "panel": {
+      "detailsTitle": "Details",
+      "detailsFor": "Details for {{name}}",
+      "modelValue": "Model: {{model}}",
+      "memoryTitle": "Memory",
+      "memoryCount": "{{count}} things",
+      "filesTitle": "Files",
+      "checkIns": "Check-ins",
+      "senderChats": "Chats on your behalf",
+      "on": "On",
+      "reachable": "Also reachable on",
+      "connected": "Connected",
+      "memoryIntro": "What {{name}} remembers. It writes here on its own.",
+      "forgetEntry": "Forget {{entry}}",
+      "filesIntro": "Files this bot made or was given. Also in Artifacts.",
+      "filesEmpty": "Nothing here yet",
+      "backFiles": "Back to files",
+      "memory": {
+        "empty": "This bot has not saved any core memories yet.",
+        "forget": "Forget this",
+        "notes": "{{count}} day(s) of working notes on disk.",
+        "clear": "Clear all",
+        "clearConfirm": "Forget everything here?"
+      }
+    },
+    "gone": {
+      "chat": "This chat is gone",
+      "bot": "This bot was deleted",
+      "make": "Make a bot"
     }
   },
   "browserPermission": {
@@ -2343,6 +2619,277 @@
       "connectors": "Connectors",
       "first-bot": "Your first bot",
       "done": "Done"
+    }
+  },
+  "chat": {
+    "announce": {
+      "approval": "Needs your approval: {{title}}",
+      "error": "Error: {{message}}",
+      "finished": "Reply finished",
+      "stopped": "Stopped",
+      "newMessages_one": "{{count}} new message",
+      "newMessages_other": "{{count}} new messages"
+    },
+    "busy": {
+      "agents_one": "Waiting on {{count}} agent",
+      "agents_other": "Waiting on {{count}} agents",
+      "needsYou": "Needs you",
+      "retrying": "Retrying, {{attempt}} of {{max}}",
+      "tools_one": "Running {{count}} tool",
+      "tools_other": "Running {{count}} tools",
+      "typing": "Typing",
+      "working": "Working"
+    },
+    "code": {
+      "copied": "Copied",
+      "copy": "Copy code",
+      "showLess": "Show less",
+      "showMore_one": "Show {{count}} more line",
+      "showMore_other": "Show {{count}} more lines"
+    },
+    "composer": {
+      "attach": "Adjuntar",
+      "attachFailed": "Couldn't attach this file",
+      "attachFiles": "Files or images",
+      "attachFolder": "Folder",
+      "botPlaceholder": "Mensaje a {{name}}",
+      "busyBot": "Add to the queue, or stop",
+      "busySession": "Steer the run, or queue the next step",
+      "channelBot": "This chat lives in your messaging app. Reply there.",
+      "dictate": "Dictate",
+      "dictateSoon": "Dictation arrives soon",
+      "files": "Files",
+      "gone": "This conversation no longer exists.",
+      "mini": "Reply, or steer the run",
+      "modeFailed": "Couldn't change the mode",
+      "model": "Model: {{name}}",
+      "models": "Models",
+      "notReady": "The agent isn't ready. Try again.",
+      "queue": "Add to the queue",
+      "queueFailed": "Couldn't add that to the queue",
+      "rejected": "The agent didn't accept that message.",
+      "removeAttachment": "Remove attachment",
+      "routineRun": "A routine run. Open the routine to change it.",
+      "searchModels": "Search models",
+      "send": "Send",
+      "skills": "Skills",
+      "stop": "Detener",
+      "uploading": "Wait for the attachments to finish saving",
+      "pasteUnavailable": "Pasting files isn't available here"
+    },
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "error": {
+      "crashed": "The agent stopped unexpectedly",
+      "label": "Error",
+      "open": "Open",
+      "retry": "Reintentar",
+      "switchModel": "Switch model"
+    },
+    "message": {
+      "credits_one": "Used {{count}} credit",
+      "credits_other": "Used {{count}} credits",
+      "discard": "Discard",
+      "notSent": "Not sent",
+      "retry": "Reintentar",
+      "sending": "Sending",
+      "workedThrough_one": "Worked through {{count}} step",
+      "workedThrough_other": "Worked through {{count}} steps"
+    },
+    "mode": {
+      "ACCEPTEDITS": "Auto-accept edits",
+      "AUTO": "Auto",
+      "DEFAULT": "Supervised",
+      "PLAN": "Plan",
+      "YOLO": "Full access",
+      "description": {
+        "ACCEPTEDITS": "Change files, ask before commands",
+        "AUTO": "Sandboxed, no prompts",
+        "DEFAULT": "Approve edits and commands one by one",
+        "PLAN": "Read and propose, change nothing",
+        "YOLO": "No approvals"
+      }
+    },
+    "notice": {
+      "dismiss": "Dismiss",
+      "historyTooLarge": "Earlier history is too large to show here ({{size}}, the limit is {{limit}}).",
+      "showInFolder": "Show in folder"
+    },
+    "part": {
+      "compaction": "Earlier conversation summarised",
+      "details": "Details",
+      "featureLimit": "{{feature}} limit reached",
+      "summary": "Summary",
+      "thinking": "Thinking",
+      "thoughts": "Thoughts"
+    },
+    "permission": {
+      "action": {
+        "allow": "Permitir",
+        "allowOnce": "Allow once",
+        "alwaysAcceptEdits": "Always accept edits this session",
+        "alwaysAllow": "Always allow",
+        "alwaysAllowFolder": "Always allow {{folder}}",
+        "alwaysAllowHost": "Always allow this host, this session",
+        "alwaysAllowRule": "Always allow {{rule}}",
+        "alwaysAllowSite": "Always allow this site, this session",
+        "alwaysAllowThese": "Always allow these this session",
+        "deny": "Denegar",
+        "planAcceptAll": "Yes, and accept all edits",
+        "planApproveEach": "Yes, and approve each edit",
+        "planFullAccess": "Yes, with full access",
+        "planKeepPlanning": "No, keep planning",
+        "runInBackground": "Run in background",
+        "skipAll": "Skip all"
+      },
+      "addNote": "Add a note",
+      "alsoInNotch": "Also in the notch",
+      "chip": {
+        "browser": "Use the browser",
+        "connect": "Connect {{host}}",
+        "createFile": "Create {{name}}",
+        "deleteFile": "Delete {{name}}",
+        "editFile": "Edit {{name}}",
+        "generic": "Use {{tool}}",
+        "outside": "Outside the folder",
+        "plan": "Approve the plan",
+        "question": "Answer a question",
+        "runCommand": "Run command"
+      },
+      "notePlaceholder": "Tell the agent what to do instead",
+      "pending_one": "{{count}} request waiting",
+      "pending_other": "{{count}} requests waiting",
+      "problem": {
+        "earlierTurn": "This request belongs to an earlier turn.",
+        "incarnation": "The agent restarted. This request is gone.",
+        "invalid": "Couldn't send that answer",
+        "noResponse": "No response from the agent. Try again.",
+        "notPending": "Already answered"
+      },
+      "sandboxRunsAgain": "If you allow it, the command runs again with that access.",
+      "showAll": "Show all",
+      "title": {
+        "browserAction": "{{description}}",
+        "createFile": "Create {{name}}?",
+        "credentials": "This command reads saved credentials",
+        "deleteFile": "Delete {{name}}?",
+        "editFile": "Edit {{name}}?",
+        "editOutside": "Edit outside the folder?",
+        "exitPlan": "Ready to build this plan?",
+        "fetchUrl": "Open {{origin}}?",
+        "generic": "Use {{tool}}?",
+        "networkHost": "Connect to {{host}}?",
+        "networkHostDescription": "The sandbox blocked this host. Allowing it lets the command download packages.",
+        "notebook": {
+          "delete": "Delete a {{cell}} in {{name}}?",
+          "insert": "Insert a {{cell}} in {{name}}?",
+          "replace": "Replace a {{cell}} in {{name}}?"
+        },
+        "notebookOutside": "Edit a notebook outside the folder?",
+        "overwriteFile": "Overwrite {{name}}?",
+        "question": "The agent asks you a question",
+        "readOutside": "Read outside the folder?",
+        "runCommand": "Run this command?",
+        "sandboxDenied": "The sandbox refused something this command tried",
+        "sandboxDeniedDescription": "It tried something outside what the sandbox allows.",
+        "writeOutside": "Write outside the folder?"
+      },
+      "verb": {
+        "reach": "reach",
+        "read": "read",
+        "write": "write"
+      }
+    },
+    "question": {
+      "next": "Siguiente",
+      "previous": "Back",
+      "progress": "{{current}} of {{total}}",
+      "submit": "Submit"
+    },
+    "queue": {
+      "edit": "Edit",
+      "editLabel": "Edit queued message",
+      "fewer": "Show fewer",
+      "label": "Queued messages",
+      "more_one": "{{count}} more waiting",
+      "more_other": "{{count}} more waiting",
+      "problem": {
+        "noAnswer": "Couldn't reach the agent",
+        "restarted": "The agent restarted, so the queue changed",
+        "wentOut": "That message already went out"
+      },
+      "remove": "Remove queued message",
+      "waiting": {
+        "permission": "Waits for your answer",
+        "step": "Sends at the next step",
+        "turn": "Sends after this reply"
+      }
+    },
+    "run": {
+      "done_one": "Done in {{duration}}, {{count}} step",
+      "done_other": "Done in {{duration}}, {{count}} steps",
+      "stopped": "Stopped",
+      "usage": "In {{input}} ({{cached}} cached) · Out {{output}}"
+    },
+    "subagent": {
+      "done_one": "Done, {{count}} step, {{duration}}",
+      "done_other": "Done, {{count}} steps, {{duration}}",
+      "failed": "Failed",
+      "kind": {
+        "browser": "Browser task",
+        "component": "Component",
+        "delegate": "Sub-agent",
+        "generic": "Agent"
+      },
+      "open": "Open agent",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps",
+      "stop": "Detener",
+      "stopHint": "Stops the whole reply"
+    },
+    "tool": {
+      "diff": "Changes",
+      "meta": {
+        "exit": "exit {{code}}",
+        "lines": "lines {{from}} to {{to}}",
+        "matches_one": "{{count}} match",
+        "matches_other": "{{count}} matches"
+      },
+      "moreSteps_one": "{{count}} more step",
+      "moreSteps_other": "{{count}} more steps",
+      "openFile": "Open file",
+      "show": "Show",
+      "showAll_one": "Show all {{count}} line",
+      "showAll_other": "Show all {{count}} lines",
+      "status": {
+        "done": "done",
+        "failed": "failed",
+        "needsYou": "needs you",
+        "refused": "refused",
+        "running": "runs",
+        "stopped": "stopped"
+      },
+      "earlierSteps_one": "{{count}} earlier step",
+      "earlierSteps_other": "{{count}} earlier steps"
+    },
+    "transcript": {
+      "jump": "Jump to the end",
+      "jumpNew_one": "{{count}} new message",
+      "jumpNew_other": "{{count}} new messages",
+      "label": "Conversation",
+      "new_one": "{{count}} new",
+      "new_other": "{{count}} new",
+      "olderFailed": "Couldn't load earlier messages",
+      "retry": "Reintentar",
+      "showEarlier": "Show earlier",
+      "showLater": "Show later"
+    },
+    "view": {
+      "gone": "This conversation no longer exists.",
+      "retry": "Reintentar",
+      "unavailable": "The agent isn't available yet"
     }
   }
 }

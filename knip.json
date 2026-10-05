@@ -5,13 +5,19 @@
       "entry": [
         "src/renderer-next/main.tsx",
         "src/renderer-next/routes/**/*.tsx",
-        "src/renderer-next/**/*.test.{ts,tsx}"
+        "src/renderer-next/features/*/index.ts",
+        "src/renderer-next/**/*.test.{ts,tsx}",
+        "src/renderer-next/features/chat/index.ts",
+        "src/renderer-next/features/bots/index.ts",
+        "src/renderer-next/data/transport/index.ts"
       ],
       "project": ["src/renderer-next/**/*.{ts,tsx}"],
       "ignore": [
         "src/renderer-next/routeTree.gen.ts",
         "src/renderer-next/ui/**"
-      ]
+      ],
+      "ignoreExportsUsedInFile": true
     }
-  }
+  },
+  "tags": ["-public"]
 }

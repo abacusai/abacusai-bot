@@ -1,34 +1,59 @@
 /**
- * R1-T11: the router seam adds view-transition types only on the commit of a
- * new history entry, with the entry's own intent or the inferred type; on the
- * real app router over memory history.
+ * R1-T11: route-level view transitions are the router's document-level
+ * `document.startViewTransition`, carrying the types `installTransitionTypes`
+ * computes (spec 01 §6.7 as amended). jsdom has no view transitions, so the
+ * harness stubs `document.startViewTransition` and `CSS.supports` the way
+ * Chromium answers them; every case runs the real app router. Each started
+ * transition is recorded with its types: an untyped commit must start none.
  */
-import { waitFor, act } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { durations, offsets } from "#next/lib/motion";
 import { renderApp, type AppHarness } from "#next/test-support/app-harness";
 
 import { inferNavType, ROUTE_RANK } from "./nav-type";
-import { installTransitionTypes, transitionTypeSink } from "./transition-types";
 
 import tokensCss from "../../styles/tokens.css?raw";
 
 let harness: AppHarness | null = null;
-let added: string[] = [];
+let started: string[][] = [];
+
+type Stubbed = Document & { startViewTransition?: unknown };
+const originalStart = (document as Stubbed).startViewTransition;
+const originalCss = (window as { CSS?: unknown }).CSS;
 
 beforeEach(() => {
-  added = [];
-  vi.spyOn(transitionTypeSink, "add").mockImplementation((type) => {
-    added.push(type);
-  });
+  started = [];
+  (document as Stubbed).startViewTransition = ((
+    arg: (() => unknown) | { update: () => unknown; types?: string[] }
+  ) => {
+    const update = typeof arg === "function" ? arg : arg.update;
+    const types = typeof arg === "function" ? [] : [...(arg.types ?? [])];
+    started.push(types);
+    const done = Promise.resolve().then(update);
+    return {
+      updateCallbackDone: done,
+      ready: done,
+      finished: done,
+      types: new Set(types),
+      skipTransition: () => undefined,
+    };
+  }) as never;
+  (window as { CSS?: unknown }).CSS = {
+    supports: (query: string) =>
+      query === "selector(:active-view-transition-type(a))",
+  };
 });
 
 afterEach(async () => {
-  vi.restoreAllMocks();
   await harness?.cleanup();
   harness = null;
+  (document as Stubbed).startViewTransition = originalStart;
+  (window as { CSS?: unknown }).CSS = originalCss;
 });
+
+const types = (): string[] => started.flat();
 
 const go = async (options: Record<string, unknown>) => {
   await act(async () => {
@@ -116,18 +141,36 @@ describe("inferNavType", () => {
   });
 });
 
-describe("the seam on the app router", () => {
-  it("adds nothing while a slow navigation is pending, then its intent on commit", async () => {
+describe("the router's document view transition", () => {
+  it("starts none while a slow navigation shows its pending screen, then one with the intent on commit", async () => {
     harness = await renderApp("/sessions/new");
-    const release = harness.db.routines.holdSnapshot();
+    // BotsGlobals already preloads routines for cross-area Needs you.
+    // Hold this navigation's loader rather than a snapshot consumed at boot.
+    const route = harness.router.routesById["/_shell/(routines)/routines"];
+    const original = route.options.loader;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = () => {
+        route.options.loader = original;
+        resolve();
+      };
+    });
+    route.options.loader = async (args) => {
+      await gate;
+      return typeof original === "function"
+        ? original(args)
+        : original?.handler(args);
+    };
     const navigation = harness.router.navigate({
       to: "/routines",
       ...withIntent("nav-forward"),
     } as never);
+    // Past defaultPendingMs (150): the pending pane is committed.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 400));
     });
-    expect(added).toEqual([]);
+    expect(screen.getByTestId("pending-pane")).toBeTruthy();
+    expect(started).toEqual([]);
     release();
     await act(async () => {
       await navigation;
@@ -135,63 +178,52 @@ describe("the seam on the app router", () => {
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe("/routines")
     );
-    expect(added).toEqual(["nav-forward"]);
+    expect(started).toEqual([["nav-forward"]]);
   });
 
-  it("adds nothing on a pending offer and the intent on the commit (seam unit)", () => {
-    const committed: Array<() => void> = [];
-    const location = {
-      pathname: "/bots/b1",
-      state: {
-        __TSR_key: "k2",
-        __TSR_index: 1,
-        navIntent: { id: "i", type: "nav-lateral" },
-      },
+  it("types the committing location, not router.latestLocation (Claude impl r1 #2)", async () => {
+    harness = await renderApp("/sessions/new");
+    // BotsGlobals already preloads routines for cross-area Needs you.
+    // Hold this navigation's loader rather than a snapshot consumed at boot.
+    const route = harness.router.routesById["/_shell/(routines)/routines"];
+    const original = route.options.loader;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = () => {
+        route.options.loader = original;
+        resolve();
+      };
+    });
+    route.options.loader = async (args) => {
+      await gate;
+      return typeof original === "function"
+        ? original(args)
+        : original?.handler(args);
     };
-    const fake = {
-      startTransition: (fn: () => void, _expected?: unknown) => {
-        committed.push(fn);
-        return Promise.resolve(true);
-      },
-      latestLocation: location,
-      options: {},
-      stores: {
-        resolvedLocation: {
-          get: () => ({
-            pathname: "/bots/new",
-            state: { __TSR_key: "k1", __TSR_index: 0 },
-          }),
-        },
-      },
-      getMatchedRoutes: (pathname: string) =>
-        pathname === "/bots/new"
-          ? [[], {}, { id: "/_shell/(bots)/bots/new", fullPath: "/bots/new" }]
-          : [
-              [],
-              { botId: "b1" },
-              { id: "/_shell/(bots)/bots/$botId", fullPath: "/bots/$botId" },
-            ],
+    const navigation = harness.router.navigate({
+      to: "/routines",
+      ...withIntent("nav-forward"),
+    } as never);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    // A newer history change the router has parsed but not started loading:
+    // the commit about to happen is still /routines.
+    const router = harness.router as unknown as {
+      latestLocation: unknown;
+      buildLocation(options: unknown): unknown;
     };
-    installTransitionTypes(fake as never);
-    void fake.startTransition(() => undefined, [
-      { status: "pending" },
-    ] as never);
-    committed.at(-1)!();
-    expect(added).toEqual([]);
-    void fake.startTransition(() => undefined, [
-      { status: "success" },
-    ] as never);
-    committed.at(-1)!();
-    expect(added).toEqual(["nav-lateral"]);
-    // A re-commit of the same entry (invalidate) adds nothing.
-    void fake.startTransition(() => undefined, [
-      { status: "success" },
-    ] as never);
-    committed.at(-1)!();
-    expect(added).toEqual(["nav-lateral"]);
+    const committing = router.latestLocation;
+    router.latestLocation = router.buildLocation({ to: "/settings/general" });
+    release();
+    await act(async () => {
+      await navigation;
+    });
+    router.latestLocation = committing;
+    expect(started[0]).toEqual(["nav-forward"]);
   });
 
-  it("adds nothing for a blocked navigation, and the next one is unaffected", async () => {
+  it("starts none for a blocked navigation, and the next one is unaffected", async () => {
     harness = await renderApp("/bots/new");
     const unblock = harness.router.history.block({
       blockerFn: () => true,
@@ -205,10 +237,10 @@ describe("the seam on the app router", () => {
       await settle();
     });
     expect(harness.router.state.location.pathname).toBe("/bots/new");
-    expect(added).toEqual([]);
+    expect(started).toEqual([]);
     unblock();
     await go({ to: "/sessions/new" });
-    expect(added).toEqual(["nav-lateral"]);
+    expect(started).toEqual([["nav-lateral"]]);
   });
 
   it("commits only the second of two rapid navigations, with its own intent", async () => {
@@ -229,44 +261,53 @@ describe("the seam on the app router", () => {
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe("/routines")
     );
-    expect(added).toEqual(["nav-forward"]);
+    expect(types()).toEqual(["nav-forward"]);
   });
 
-  it("adds nothing when invalidate() re-commits the same entry", async () => {
+  it("starts none when invalidate() re-commits the same entry", async () => {
     harness = await renderApp("/bots/new");
     await go({ to: "/sessions/new" });
-    added = [];
+    started = [];
     await act(async () => {
       await harness!.router.invalidate();
     });
-    expect(added).toEqual([]);
+    expect(started).toEqual([]);
   });
 
-  it("plays nav-back going back, and infers (not the saved intent) going forward", async () => {
+  it("plays nav-back on browser back, and infers (not the saved intent) going forward", async () => {
     harness = await renderApp("/bots/new");
     await go({
       to: "/bots/$botId",
       params: { botId: "chief-of-staff" },
       ...withIntent("nav-lateral"),
     });
-    expect(added).toEqual(["nav-lateral"]);
-    added = [];
+    expect(types()).toEqual(["nav-lateral"]);
+    started = [];
     await back();
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe("/bots/new")
     );
-    expect(added).toEqual(["nav-back"]);
-    added = [];
+    expect(started).toEqual([["nav-back"]]);
+    started = [];
     await forward();
     await waitFor(() =>
       expect(harness!.router.state.location.pathname).toBe(
         "/bots/chief-of-staff"
       )
     );
-    expect(added).toEqual(["nav-forward"]);
+    expect(started).toEqual([["nav-forward"]]);
   });
 
-  it("adds nothing closing a masked sheet with back, or between search-only entries", async () => {
+  it("infers nav-forward for a creation (/sessions/new → /sessions/<id>)", async () => {
+    harness = await renderApp("/sessions/new");
+    await go({
+      to: "/sessions/$sessionId",
+      params: { sessionId: "review-prs" },
+    });
+    expect(started).toEqual([["nav-forward"]]);
+  });
+
+  it("starts none closing a masked sheet with back, or between search-only entries", async () => {
     harness = await renderApp("/routines");
     await go({ to: "/routines/new" });
     await back();
@@ -274,26 +315,23 @@ describe("the seam on the app router", () => {
       expect(harness!.router.state.location.pathname).toBe("/routines")
     );
     await go({ to: "/artifacts", search: { type: "deck" } });
-    added = [];
+    started = [];
     await go({ to: "/artifacts", search: { type: "image" } });
     await back();
     await forward();
-    expect(added).toEqual([]);
+    expect(started).toEqual([]);
   });
 
-  it("adds settings-in entering Settings and settings-out leaving it", async () => {
-    const documentTypes: string[] = [];
-    vi.spyOn(transitionTypeSink, "document").mockImplementation((type) => {
-      documentTypes.push(type);
-    });
+  it("types settings-in entering Settings and settings-out leaving it", async () => {
     harness = await renderApp("/bots/new");
     await go({ to: "/settings/general" });
     await go({ to: "/settings/appearance" });
     await go({ to: "/sessions/new" });
-    expect(added).toEqual(["settings-in", "nav-lateral", "settings-out"]);
-    // The router's document-level view transition gets the same types
-    // (jsdom has no startViewTransition, so the router only asks).
-    expect(documentTypes).toEqual([]);
+    expect(started).toEqual([
+      ["settings-in"],
+      ["nav-lateral"],
+      ["settings-out"],
+    ]);
   });
 });
 
@@ -307,8 +345,47 @@ describe("motion constants", () => {
     expect(new Set(ms)).toEqual(
       new Set([durations.crossFade, durations.drill])
     );
-    expect(tokensCss).toContain(`${durations.reduced}ms vt-fade-in`);
+    expect(tokensCss).toContain(
+      `${durations.reduced}ms vt-fade-out both !important`
+    );
+    expect(tokensCss).toContain(
+      `${durations.reduced}ms vt-fade-in both !important`
+    );
     expect(tokensCss).toContain(`translate: ${offsets.drill}px 0`);
     expect(tokensCss).toContain(`translate: -${offsets.drill}px 0`);
+  });
+});
+
+describe("reduced motion CSS (Codex impl r1 #9, Claude impl r1 #13)", () => {
+  const block = (start: string): string => {
+    const from = tokensCss.indexOf(start);
+    expect(from).toBeGreaterThanOrEqual(0);
+    let depth = 0;
+    for (let i = tokensCss.indexOf("{", from); i < tokensCss.length; i += 1) {
+      if (tokensCss[i] === "{") depth += 1;
+      if (tokensCss[i] === "}") depth -= 1;
+      if (depth === 0) return tokensCss.slice(from, i + 1);
+    }
+    return "";
+  };
+
+  it("the OS rule never applies when prefs say off", () => {
+    const media = block("@media (prefers-reduced-motion: reduce)");
+    const selectors = [...media.matchAll(/^\s*(html[^{]*)\{/gm)].map((m) =>
+      m[1]!.trim()
+    );
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors)
+      expect(selector).toContain(':not([data-reduce-motion="off"])');
+  });
+
+  it("fades the old snapshot out, never in", () => {
+    const olds = [
+      ...tokensCss.matchAll(
+        /::view-transition-old\(\*\)\s*\{\s*animation:\s*([^;]+);/g
+      ),
+    ].map((m) => m[1]!);
+    expect(olds.length).toBe(2);
+    for (const animation of olds) expect(animation).toContain("vt-fade-out");
   });
 });

@@ -7,6 +7,7 @@ import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
 import { base, mutation, query, subscription } from "./base";
+import { AvatarAccessorySchema } from "./bots";
 import {
   AgentModeSchema,
   BotId,
@@ -50,6 +51,7 @@ export const BotCreateInputSchema = v.object({
   persona: v.optional(v.string()),
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
+  avatarAccessory: AvatarAccessorySchema,
   workspaceId: v.optional(v.nullable(v.string())),
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
@@ -62,6 +64,7 @@ export const BotUpdateInputSchema = v.object({
   persona: v.optional(v.string()),
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
+  avatarAccessory: AvatarAccessorySchema,
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
 });
@@ -89,6 +92,32 @@ export const RoutineUpdateInputSchema = v.object({
 
 const NullableTimestamp = v.nullable(v.number());
 
+export const BOT_SOUND_LEVELS = ["all", "needs-me", "nothing"] as const;
+export const PREFS_TEXT_SIZES = [13, 14, 15] as const;
+/** `@abacus-ai/connectors`' `MessagingPlatform` (checked in contract.types.test). */
+export const PREFS_MESSAGING_PLATFORMS = [
+  "whatsapp",
+  "telegram",
+  "discord",
+] as const;
+
+/** Local wall-clock `HH:MM`, 24-hour. */
+const ClockTime = v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/));
+
+const OnboardingExitSchema = v.variant("to", [
+  v.strictObject({
+    to: v.literal("bot"),
+    botId: v.pipe(v.string(), v.nonEmpty()),
+    edit: v.optional(v.literal(true)),
+  }),
+  v.strictObject({ to: v.literal("new-session") }),
+  v.strictObject({ to: v.literal("new-bot") }),
+  v.strictObject({
+    to: v.literal("bot-tour"),
+    botId: v.pipe(v.string(), v.nonEmpty()),
+  }),
+]);
+
 /**
  * Each prefs group's leaves (spec 00 B.2, C.4). Provenance is kept per leaf,
  * so a patch may carry any subset of a group's leaves.
@@ -106,7 +135,31 @@ export const PREFS_GROUP_ENTRIES = {
   },
   dismissals: { referralCardUntil: NullableTimestamp, upsell: v.boolean() },
   motion: { reduce: v.picklist(["system", "on", "off"]) },
-  sounds: { enabled: v.boolean(), perEvent: v.record(v.string(), v.boolean()) },
+  sounds: {
+    enabled: v.boolean(),
+    perEvent: v.record(v.string(), v.boolean()),
+    perBot: v.record(v.string(), v.picklist(BOT_SOUND_LEVELS)),
+    quietHours: v.strictObject({
+      enabled: v.boolean(),
+      start: ClockTime,
+      end: ClockTime,
+    }),
+  },
+  appearance: {
+    textSize: v.picklist(PREFS_TEXT_SIZES),
+    bubbleTint: v.boolean(),
+  },
+  notch: {
+    enabled: v.boolean(),
+    haptics: v.boolean(),
+    idleVisible: v.boolean(),
+    extraDisplays: v.boolean(),
+    showInNotch: v.boolean(),
+  },
+  tour: {
+    status: v.picklist(["unseen", "done", "skipped"]),
+    at: NullableTimestamp,
+  },
 } as const;
 
 /** The scalar (non-group) prefs fields, each one leaf. */
@@ -121,6 +174,16 @@ export const PREFS_SCALAR_ENTRIES = {
   browserHomepage: v.nullable(v.string()),
   onboardingStep: v.nullable(v.string()),
   panes: v.record(v.string(), v.number()),
+  keymap: v.record(v.string(), v.nullable(v.string())),
+  onboardingFlow: v.nullable(v.pipe(v.number(), v.integer())),
+  onboardingExit: v.nullable(OnboardingExitSchema),
+  onboardingPairing: v.pipe(
+    v.array(v.picklist(PREFS_MESSAGING_PLATFORMS)),
+    v.check(
+      (platforms) => new Set(platforms).size === platforms.length,
+      "duplicate platform"
+    )
+  ),
 } as const;
 
 const prefsGroup = <E extends v.ObjectEntries>(entries: E) =>
@@ -150,6 +213,13 @@ export const PrefsPatchSchema = v.strictObject({
   panes: v.optional(S.panes),
   motion: prefsGroup(G.motion),
   sounds: prefsGroup(G.sounds),
+  keymap: v.optional(S.keymap),
+  appearance: prefsGroup(G.appearance),
+  notch: prefsGroup(G.notch),
+  tour: prefsGroup(G.tour),
+  onboardingFlow: v.optional(S.onboardingFlow),
+  onboardingExit: v.optional(S.onboardingExit),
+  onboardingPairing: v.optional(S.onboardingPairing),
 });
 
 export const MemoryDeleteInputSchema = v.object({
@@ -167,9 +237,19 @@ export const MemoryDeleteInputSchema = v.object({
 export const db = {
   sessions: {
     ...readTable<SessionRow>(),
-    /** A valid, unused client id is honoured; a taken one is `CONFLICT`. */
+    /**
+     * A valid, unused client id is honoured; a taken one is `CONFLICT`.
+     * `model` and `mode` are persisted at creation (spec 04 §26.4 d): the
+     * agent's first start (`agent.start` without overrides, the relay's
+     * start-on-send) runs on them.
+     */
     insert: write(
-      v.object({ id: v.optional(SessionId), workspaceId: WorkspaceId })
+      v.object({
+        id: v.optional(SessionId),
+        workspaceId: WorkspaceId,
+        model: v.optional(v.nullable(v.pipe(v.string(), v.nonEmpty()))),
+        mode: v.optional(v.nullable(AgentModeSchema)),
+      })
     ),
     /** Only `label` and `model` are writable; any other field is `FORBIDDEN`. */
     update: write(

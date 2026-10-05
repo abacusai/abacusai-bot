@@ -5,6 +5,10 @@ import path from "path";
 import { promisify } from "util";
 
 import type {
+  GitDiffResult,
+  GitDiscardResult,
+} from "#shared/contract/checkout";
+import type {
   CreateGitBranchResult,
   GetGitBranchesResult,
   GetGitCurrentBranchResult,
@@ -25,6 +29,53 @@ import type {
 import { parseNumstatZ, parseStatusZ } from "./git-porcelain";
 
 const execFileAsync = promisify(execFile);
+
+/** Paths are passed verbatim: a `*` or `:(glob)` in a name is not a pattern. */
+const LITERAL_PATHSPECS = {
+  env: { ...process.env, GIT_LITERAL_PATHSPECS: "1" },
+  maxBuffer: 64 * 1024 * 1024,
+};
+
+/** Paths per git call, well under any platform's argument limit. */
+const PATHSPEC_CHUNK = 200;
+
+const chunks = <T>(items: T[], size: number): T[][] => {
+  const out: T[][] = [];
+  for (let start = 0; start < items.length; start += size)
+    out.push(items.slice(start, start + size));
+  return out;
+};
+
+const fingerprint = (...parts: string[]): string =>
+  createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 24);
+
+const pathExists = async (target: string): Promise<boolean> => {
+  try {
+    await fs.lstat(target);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** A hash of what the worktree holds at `target` ("absent" when nothing). */
+const worktreeHash = async (target: string): Promise<string> => {
+  try {
+    const stat = await fs.lstat(target);
+    if (stat.isSymbolicLink())
+      return fingerprint("link", await fs.readlink(target));
+    if (stat.isDirectory()) return "directory";
+    return createHash("sha256")
+      .update(await fs.readFile(target))
+      .digest("hex");
+  } catch {
+    return "absent";
+  }
+};
+
+/** `git diff`'s answer for a binary file: no hunks, a "Binary files" line. */
+const isBinaryPatch = (patch: string): boolean =>
+  !/^@@ /m.test(patch) && /^Binary files .* differ$/m.test(patch);
 
 const worktreeId = (worktreePath: string): string =>
   createHash("sha256")
@@ -591,7 +642,15 @@ export class GitService {
     await fs.rm(checkoutPath, { recursive: true, force: true }).catch(() => {});
   }
 
-  async readGitChanges(workspacePath: string): Promise<GitStatusResult> {
+  /**
+   * `fingerprints`: also compute each change's fingerprints (spec 04 §26.4
+   * b), for the new renderer's `gitState` rows; the legacy runtime asks for
+   * them only while those rows are read.
+   */
+  async readGitChanges(
+    workspacePath: string,
+    options: { fingerprints?: boolean; checkoutRelative?: boolean } = {}
+  ): Promise<GitStatusResult> {
     if (!(await this.isInsideWorkTree(workspacePath))) {
       return {
         available: false,
@@ -609,9 +668,29 @@ export class GitService {
         "-uall",
         "-z",
       ]);
-      const changes = parseStatusZ(statusOutput.stdout).sort((a, b) =>
-        a.path.localeCompare(b.path)
-      );
+      let changes: GitChangeItem[] = parseStatusZ(statusOutput.stdout);
+      if (options.checkoutRelative === true) {
+        const location = await this.repositoryLocation(workspacePath);
+        const prefix = location?.prefix ?? "";
+        changes = changes
+          .filter((change) => change.path.startsWith(prefix))
+          .map((change) => ({
+            ...change,
+            path: change.path.slice(prefix.length),
+            ...(change.origPath != null && {
+              origPath: path
+                .relative(
+                  workspacePath,
+                  path.join(location!.top, change.origPath)
+                )
+                .split(path.sep)
+                .join("/"),
+            }),
+          }));
+      }
+      changes.sort((a, b) => a.path.localeCompare(b.path));
+      if (options.fingerprints === true)
+        await this.addFingerprints(workspacePath, changes);
 
       return {
         available: true,
@@ -839,6 +918,448 @@ export class GitService {
       changes: [],
       message: "Unable to read git status for this workspace.",
     };
+  }
+
+  // ─── checkout-aware operations (spec 04 §26.4) ─────────────────────────
+
+  /**
+   * Fingerprints for each change (spec 04 §26.4 b): `staged` = hash(HEAD
+   * commit, index blob), `unstaged` = hash(index blob or HEAD blob, worktree
+   * bytes). A missing side hashes as "absent", so an index-only change, a new
+   * HEAD and a same-size edit of the worktree each give a new value. A git
+   * failure leaves the change without fingerprints rather than failing the
+   * status read.
+   */
+  async addFingerprints(
+    checkoutPath: string,
+    changes: GitChangeItem[]
+  ): Promise<void> {
+    if (changes.length === 0) return;
+    try {
+      const head = await this.headCommit(checkoutPath);
+      const paths = changes.map((change) => change.path);
+      const [index, tree] = await Promise.all([
+        this.indexBlobs(checkoutPath, paths),
+        head == null
+          ? Promise.resolve(new Map<string, string>())
+          : this.headBlobs(checkoutPath, paths),
+      ]);
+      await Promise.all(
+        changes.map(async (change) => {
+          const fingerprints: { staged?: string; unstaged?: string } = {};
+          const indexBlob = index.get(change.path) ?? null;
+          if (change.stagedStatus != null)
+            fingerprints.staged = fingerprint(
+              head ?? "unborn",
+              indexBlob ?? "absent"
+            );
+          if (change.unstagedStatus != null)
+            fingerprints.unstaged = fingerprint(
+              indexBlob ?? tree.get(change.path) ?? "absent",
+              await worktreeHash(path.join(checkoutPath, change.path))
+            );
+          change.fingerprints = fingerprints;
+        })
+      );
+    } catch (error) {
+      console.warn(
+        `[git] fingerprints for ${checkoutPath} failed: ${this.errorMessage(error)}`
+      );
+    }
+  }
+
+  /** HEAD's commit id; null on an unborn branch. */
+  async headCommit(checkoutPath: string): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync("git", [
+        "-C",
+        checkoutPath,
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        "HEAD",
+      ]);
+      return stdout.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** path → the index's blob ids (every stage, for a conflict). */
+  private async indexBlobs(
+    checkoutPath: string,
+    paths: string[]
+  ): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    for (const chunk of chunks(paths, PATHSPEC_CHUNK)) {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", checkoutPath, "ls-files", "--stage", "-z", "--", ...chunk],
+        LITERAL_PATHSPECS
+      );
+      // `<mode> <blob> <stage>\t<path>`
+      for (const record of stdout.split("\0")) {
+        const tab = record.indexOf("\t");
+        if (tab === -1) continue;
+        const [, blob, stage] = record.slice(0, tab).split(" ");
+        const file = record.slice(tab + 1);
+        const previous = out.get(file);
+        const entry = `${stage}:${blob}`;
+        out.set(file, previous == null ? entry : `${previous},${entry}`);
+      }
+    }
+    return out;
+  }
+
+  /** path → HEAD's blob id. */
+  private async headBlobs(
+    checkoutPath: string,
+    paths: string[]
+  ): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    for (const chunk of chunks(paths, PATHSPEC_CHUNK)) {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", checkoutPath, "ls-tree", "-r", "-z", "HEAD", "--", ...chunk],
+        LITERAL_PATHSPECS
+      );
+      // `<mode> <type> <object>\t<path>`
+      for (const record of stdout.split("\0")) {
+        const tab = record.indexOf("\t");
+        if (tab === -1) continue;
+        const [, , object] = record.slice(0, tab).split(" ");
+        if (object != null) out.set(record.slice(tab + 1), object);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Where `checkoutPath` sits in its repository: git's top level (a real
+   * path) and the checkout's prefix under it (`""` at the top, else ending
+   * in `/`). Null outside a work tree. Git resolves `HEAD:<path>` and the
+   * status output from the top level but pathspecs from `-C`, so every
+   * discard step runs at the top level on the prefixed path.
+   */
+  async repositoryLocation(
+    checkoutPath: string
+  ): Promise<{ top: string; prefix: string } | null> {
+    try {
+      const { stdout } = await execFileAsync("git", [
+        "-C",
+        checkoutPath,
+        "rev-parse",
+        "--show-toplevel",
+        "--show-prefix",
+      ]);
+      const [top, prefix = ""] = stdout.split("\n");
+      if (top == null || top.length === 0) return null;
+      return { top, prefix };
+    } catch {
+      return null;
+    }
+  }
+
+  /** HEAD's object at a top-level-relative path (null: absent or unborn). */
+  private async headObject(
+    top: string,
+    gitPath: string
+  ): Promise<{ mode: string; type: string; object: string } | null> {
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", top, "ls-tree", "-z", "HEAD", "--", gitPath],
+        LITERAL_PATHSPECS
+      );
+      for (const record of stdout.split("\0")) {
+        const tab = record.indexOf("\t");
+        if (tab === -1 || record.slice(tab + 1) !== gitPath) continue;
+        const [mode, type, object] = record.slice(0, tab).split(" ");
+        if (mode != null && type != null && object != null)
+          return { mode, type, object };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * One file's diff with its kind (spec 04 §26.4 h). The whole-file view
+   * against nothing is used only when git reports the path untracked; a
+   * tracked path with no change in `scope` is `none`, never all-added.
+   * `relativePath` is checkout-relative with `/` separators.
+   */
+  async diffForPath(
+    checkoutPath: string,
+    relativePath: string,
+    scope: GitDiffScope = "unstaged"
+  ): Promise<GitDiffResult> {
+    if (!(await this.isInsideWorkTree(checkoutPath))) return { kind: "none" };
+    try {
+      const location = await this.repositoryLocation(checkoutPath);
+      const status = await execFileAsync(
+        "git",
+        [
+          "-C",
+          checkoutPath,
+          "status",
+          "--porcelain",
+          "-uall",
+          "-z",
+          "--",
+          relativePath,
+        ],
+        LITERAL_PATHSPECS
+      );
+      // Status paths are top-level relative, whatever `-C` is.
+      const gitPath = `${location?.prefix ?? ""}${relativePath}`;
+      const entry = parseStatusZ(status.stdout).find(
+        (change) => change.path === gitPath
+      );
+      if (entry?.status === "??") {
+        if (scope === "staged") return { kind: "none" };
+        const patch = await this.diffAgainstNothing(checkoutPath, relativePath);
+        return isBinaryPatch(patch)
+          ? { kind: "binary" }
+          : { kind: "untracked", patch };
+      }
+      const { stdout } = await execFileAsync(
+        "git",
+        [
+          "-C",
+          checkoutPath,
+          "diff",
+          ...(scope === "staged" ? ["--cached"] : []),
+          "--no-color",
+          "--find-renames",
+          "--submodule=diff",
+          "--no-ext-diff",
+          "--",
+          relativePath,
+        ],
+        LITERAL_PATHSPECS
+      );
+      if (stdout.trim().length === 0) return { kind: "none" };
+      if (isBinaryPatch(stdout)) return { kind: "binary" };
+      return { kind: "patch", patch: stdout };
+    } catch {
+      return { kind: "none" };
+    }
+  }
+
+  /**
+   * Puts each entry back as HEAD has it (spec 04 §26.4 c). Entries are
+   * checkout-relative with `/` separators, spelled exactly as the change
+   * git reports (a fresh `git status` of the checkout): anything else (a
+   * directory, another case, a path through a symlink, an unchanged file)
+   * is `not-changed` and nothing happens to it. What git reports decides
+   * the action, not the caller: a path HEAD has is restored from HEAD; one
+   * it lacks (untracked, a staged addition, a rename's destination) goes to
+   * the Trash first and only then leaves the index, so its content is
+   * recoverable; a Trash failure stops that entry before any index change.
+   * A rename's source (git's, which the caller's `origPath` must match) is
+   * restored from HEAD afterwards, and is refused up front (`occupied`) when
+   * something other than HEAD's content sits there. A path a migration may
+   * still roll back is `blocked`. `partial`: a later step failed after an
+   * earlier one changed something.
+   *
+   * With `requireTopLevel`, the checkout must be its repository's top level
+   * (a worktree whose `.git` file is gone would otherwise act on whatever
+   * repository git finds above it).
+   */
+  async discard(
+    checkoutPath: string,
+    entries: Array<{ path: string; origPath?: string }>,
+    trash: (absolutePath: string) => Promise<void>,
+    options: {
+      requireTopLevel?: boolean;
+      isBlocked?: (absolutePath: string) => boolean;
+    } = {}
+  ): Promise<GitDiscardResult> {
+    const result: GitDiscardResult = { discarded: [], failed: [] };
+    const failAll = (detail: string): GitDiscardResult => ({
+      discarded: [],
+      failed: entries.map((entry) => ({
+        path: entry.path,
+        reason: "git" as const,
+        detail,
+      })),
+    });
+    const location = await this.repositoryLocation(checkoutPath);
+    if (location == null) return failAll("Not a git checkout.");
+    const { top, prefix } = location;
+    if (options.requireTopLevel === true && prefix !== "")
+      return failAll(
+        `${checkoutPath} is not the top level of its own repository (git found ${top}).`
+      );
+    let changes: Map<string, { origPath?: string }>;
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        [
+          "-C",
+          top,
+          "status",
+          "--porcelain",
+          "-uall",
+          "-z",
+          ...(prefix === "" ? [] : ["--", prefix]),
+        ],
+        LITERAL_PATHSPECS
+      );
+      changes = new Map(
+        parseStatusZ(stdout).map((change) => [
+          change.path,
+          change.origPath == null ? {} : { origPath: change.origPath },
+        ])
+      );
+    } catch (error) {
+      return failAll(this.errorMessage(error));
+    }
+    const absoluteOf = (gitPath: string): string =>
+      path.join(top, ...gitPath.split("/"));
+    const isBlocked = options.isBlocked ?? (() => false);
+
+    for (const entry of entries) {
+      const fail = (
+        reason: GitDiscardResult["failed"][number]["reason"],
+        detail: string
+      ): void => {
+        result.failed.push({ path: entry.path, reason, detail });
+      };
+      const gitPath = `${prefix}${entry.path}`;
+      const change = changes.get(gitPath);
+      if (change == null) {
+        fail("not-changed", `git reports no change at ${entry.path}`);
+        continue;
+      }
+      const expectedOrig =
+        entry.origPath == null ? undefined : `${prefix}${entry.origPath}`;
+      if (expectedOrig !== change.origPath) {
+        fail(
+          "not-changed",
+          change.origPath == null
+            ? `${entry.path} is not a rename`
+            : `${entry.path} was renamed from ${change.origPath.slice(prefix.length)}`
+        );
+        continue;
+      }
+      const absolute = absoluteOf(gitPath);
+      const origin = change.origPath;
+      if (
+        isBlocked(absolute) ||
+        (origin != null && isBlocked(absoluteOf(origin)))
+      ) {
+        fail("blocked", "A pending migration may still restore this file.");
+        continue;
+      }
+      let changed = false;
+      try {
+        if ((await fs.lstat(absolute).catch(() => null))?.isDirectory()) {
+          fail(
+            "not-changed",
+            "Discard files individually; directories may hold new files."
+          );
+          continue;
+        }
+        // The rename's source must be free (or already HEAD's content)
+        // before anything moves: restoring it overwrites what is there.
+        if (origin != null) {
+          const head = await this.headObject(top, origin);
+          if (head == null || head.type !== "blob") {
+            fail("git", `HEAD has no file at ${origin.slice(prefix.length)}`);
+            continue;
+          }
+          const source = await fs
+            .lstat(absoluteOf(origin))
+            .catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return null;
+              throw error;
+            });
+          if (source != null) {
+            // Hashing follows symlinks. Only a regular file with HEAD's
+            // type can qualify as already restored, before trashing anything.
+            const sameType =
+              source.isFile() &&
+              (head.mode === "100644" || head.mode === "100755");
+            const current = sameType ? await this.hashFile(top, origin) : null;
+            if (!sameType || current !== head.object) {
+              fail(
+                "occupied",
+                `${origin.slice(prefix.length)} holds new content; move it before discarding the rename`
+              );
+              continue;
+            }
+          }
+        }
+        const head = await this.headObject(top, gitPath);
+        if (head != null) {
+          await this.restoreFromHead(top, gitPath);
+          changed = true;
+        } else {
+          if (await pathExists(absolute)) {
+            try {
+              await trash(absolute);
+            } catch (error) {
+              fail("trash", this.errorMessage(error));
+              continue;
+            }
+            changed = true;
+          }
+          await execFileAsync(
+            "git",
+            [
+              "-C",
+              top,
+              "rm",
+              "--cached",
+              "--quiet",
+              "--ignore-unmatch",
+              "--",
+              gitPath,
+            ],
+            LITERAL_PATHSPECS
+          );
+          changed = true;
+        }
+        if (origin != null) await this.restoreFromHead(top, origin);
+        result.discarded.push(entry.path);
+      } catch (error) {
+        fail(changed ? "partial" : "git", this.errorMessage(error));
+      }
+    }
+    return result;
+  }
+
+  private async hashFile(top: string, gitPath: string): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync(
+        "git",
+        ["-C", top, "hash-object", "--", gitPath],
+        LITERAL_PATHSPECS
+      );
+      return stdout.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  private async restoreFromHead(top: string, gitPath: string): Promise<void> {
+    await execFileAsync(
+      "git",
+      [
+        "-C",
+        top,
+        "restore",
+        "--source=HEAD",
+        "--staged",
+        "--worktree",
+        "--",
+        gitPath,
+      ],
+      LITERAL_PATHSPECS
+    );
   }
 
   async stageFile(

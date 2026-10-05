@@ -1,16 +1,17 @@
 /**
- * The dev fixture mode (VITE_NEXT_DB_FIXTURES=1): main's `db.*` answers
- * UNAVAILABLE until spec 00 sub-slice B lands, so the shell's tables come from
- * a FixtureDb served over a real oRPC memory transport (the same link,
- * serializer and flow control as the MessagePort). Everything else still goes
- * to main. Loaded only through a dynamic import behind the env flag, so
- * production bundles never contain it.
+ * The dev fixture mode (VITE_NEXT_DB_FIXTURES=1), for the UI gallery
+ * (`dev:next:fixtures`) and the visual screenshot run only: the shell's
+ * tables come from a seeded FixtureDb served over a real oRPC memory transport
+ * (the same link, serializer and flow control as the MessagePort), so those
+ * runs show stable rows. Everything else still goes to main, and every other
+ * run, acceptance included, reads main's real `db.*`. Loaded only through a
+ * dynamic import behind the env flag, so production bundles never contain it.
  */
 import { implement, type Router } from "@orpc/server";
 
 import { contract } from "#shared/contract";
 
-import type { DbSource } from "../collections/table-source";
+import type { LazyTransport } from "../db/tables";
 import { createMemoryTransport } from "../transport/memory";
 import { FixtureDb, fixtureDbClient, type FixtureSeed } from "./fixture-db";
 import type { FixtureTable } from "./fixture-table";
@@ -23,6 +24,14 @@ import {
 } from "./rows";
 
 const os = implement(contract);
+
+/**
+ * Said once when a fixture build boots; also the marker the Electron
+ * acceptance suite looks for in a build to refuse it (acceptance reads
+ * main's real db.*).
+ */
+const FIXTURE_BUILD_MARKER =
+  "renderer-next fixture-db: dev fixture tables, not main's db.*";
 
 type Handlerish = (input: never) => unknown;
 
@@ -66,10 +75,15 @@ const defaultFixtureSeed = (): FixtureSeed => ({
   routines: fixtureRoutines(),
 });
 
-export const createMemoryDbSource = (
+/**
+ * The fixture tables over a real oRPC memory transport. Only its `db.*`
+ * exists; `createDb(transport)` reads nothing else.
+ */
+export const createMemoryDbTransport = (
   seed: FixtureSeed = defaultFixtureSeed()
-): { db: FixtureDb; source: DbSource } => {
+): { db: FixtureDb; transport: LazyTransport } => {
   const db = new FixtureDb(seed);
   const transport = createMemoryTransport(buildRouter(db), {});
-  return { db, source: async () => transport.client.db };
+  if (import.meta.env.MODE !== "test") console.info(FIXTURE_BUILD_MARKER);
+  return { db, transport: async () => transport };
 };

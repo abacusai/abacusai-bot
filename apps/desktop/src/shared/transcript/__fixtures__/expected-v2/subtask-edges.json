@@ -34,6 +34,10 @@
       "id": "stray",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 1,
+            "segmentId": "b1"
+          },
           "segments": [
             {
               "at": 1788256801000,
@@ -78,7 +82,7 @@
             "id": "sub-open",
             "messages": [
               {
-                "id": "sub-open:0",
+                "id": "sub-open#0",
                 "metadata": {
                   "abacus": {
                     "segments": [
@@ -112,9 +116,6 @@
                   {
                     "arguments": "{\"command\":\"make\"}",
                     "id": "so-call",
-                    "input": {
-                      "command": "make"
-                    },
                     "metadata": {
                       "abacus": {
                         "segmentId": "so-1",
@@ -127,9 +128,11 @@
                   },
                   {
                     "content": "",
-                    "id": "so-1:result",
+                    "id": "so-1#result",
                     "metadata": {
-                      "abacus": {}
+                      "abacus": {
+                        "synthesised": true
+                      }
                     },
                     "outcome": "cancelled",
                     "state": "error",
@@ -139,9 +142,6 @@
                   {
                     "arguments": "{\"file_path\":\"Makefile\"}",
                     "id": "so-gc",
-                    "input": {
-                      "file_path": "Makefile"
-                    },
                     "metadata": {
                       "abacus": {
                         "segmentId": "so-g1",
@@ -149,13 +149,12 @@
                       }
                     },
                     "name": "read",
-                    "output": "all:",
                     "state": "complete",
                     "type": "tool-call"
                   },
                   {
                     "content": "all:",
-                    "id": "so-g1:result",
+                    "id": "so-g1#result",
                     "metadata": {
                       "abacus": {}
                     },
@@ -212,6 +211,10 @@
       "id": "b2",
       "metadata": {
         "abacus": {
+          "feedback": {
+            "index": 3,
+            "segmentId": "b2"
+          },
           "segments": [
             {
               "at": 1788256807000,
@@ -251,7 +254,7 @@
             "id": "sub-trailing",
             "messages": [
               {
-                "id": "sub-trailing:0",
+                "id": "sub-trailing#0",
                 "metadata": {
                   "abacus": {
                     "segments": [

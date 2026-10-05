@@ -1,6 +1,7 @@
 import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
+import type { SessionOwner } from "../contracts";
 import type { ChatHydrationResult, StreamChunk } from "./agui";
 import type { AiThreadSnapshot } from "./ai-thread";
 import { mutation, query, subscription } from "./base";
@@ -102,19 +103,92 @@ export interface AiHydration extends ChatHydrationResult {
 }
 
 /**
+ * A run's end, once per run id, from the relay's authoritative terminal
+ * (spec 03 §24.11): the first terminal of the run, main's own
+ * (`agent_exit`, `agent_crashed`, `inactivity_timeout`) included; never
+ * from compat `turn_complete` or a provisional idle. Command errors are not
+ * runs and publish nothing. Its event id is the terminal's relay seq.
+ */
+export interface RunFinishedNotice {
+  threadId: string;
+  runId: string;
+  outcome: "success" | "cancelled" | "error";
+  /** `outcome: "error"`: the terminal's code, when it has one. */
+  errorCode?: string;
+  /**
+   * The run's assistant messages hold a text part whose trimmed content is
+   * non-empty and not exactly `NO_REPLY`.
+   */
+  hasVisibleAssistantText: boolean;
+  owner: SessionOwner | null;
+  routineId: string | null;
+  at: number;
+}
+
+/**
+ * One thread's answerable permissions (spec 06 §11.2): its live
+ * incarnation's `permission.pending`, never with zero counts.
+ */
+export interface AttentionSummary {
+  threadId: string;
+  /** The agent's opaque incarnation string (`AiThreadSnapshot.incarnation`). */
+  incarnation: string;
+  questions: number;
+  approvals: number;
+  /** When main first saw the oldest of them (epoch ms). */
+  oldestAt: number;
+  /** The oldest one's message. */
+  firstTitle: string | null;
+}
+
+/**
+ * `ai.attention`: a snapshot taken atomically with registration, then
+ * revisioned changes (one monotonic revision per relay process). No resume:
+ * a reconnect starts from a fresh snapshot.
+ */
+export type AttentionEvent =
+  | { type: "snapshot"; revision: number; items: AttentionSummary[] }
+  | { type: "upsert"; revision: number; item: AttentionSummary }
+  | { type: "remove"; revision: number; threadId: string };
+
+/**
  * The AG-UI conversation (spec 00 A.3, spec 02 §14). The thread id is the
  * session id. Main serves every one of these from its AG-UI relay.
  */
 export const ai = {
   /**
+   * Every thread's run ends (spec 03 §24.11), lossless-actionable (10,000
+   * pending, then `RESYNC_REQUIRED`). Each carries its event id, so
+   * `lastEventId` resumes from the relay's bounded notice ring; a resume
+   * point the ring no longer holds replays what it still has.
+   */
+  runFinished: subscription
+    .input(v.object({ lastEventId: v.optional(v.string()) }))
+    .output(eventIterator(type<RunFinishedNotice>())),
+  /**
+   * Which threads wait on the user and how (spec 06 §11.2): first yield a
+   * `snapshot`, then `upsert`/`remove` with increasing revisions.
+   * Lossless-actionable; an overflow ends it with `RESYNC_REQUIRED` and the
+   * client resubscribes.
+   */
+  attention: subscription
+    .input(v.object({}))
+    .output(eventIterator(type<AttentionEvent>())),
+  /**
    * Replay after `lastEventId` (events with a greater seq), then live. The
    * first yield is always `CUSTOM abacus.subscribed`; a resume point the ring
-   * no longer holds starts with `CUSTOM abacus.resync`. Neither carries an
-   * event id. Never returns by itself.
+   * no longer holds, or one from another relay `epoch` (the checkpoint's
+   * `abacus.epoch`, which a resume should carry), starts with
+   * `CUSTOM abacus.resync`. Neither carries an event id. Never returns by
+   * itself. `NOT_FOUND` for an unknown thread.
    */
   subscribe: subscription
     .input(
-      v.object({ threadId: SessionId, lastEventId: v.optional(v.string()) })
+      v.object({
+        threadId: SessionId,
+        lastEventId: v.optional(v.string()),
+        epoch: v.optional(v.string()),
+      })
     )
     .output(eventIterator(type<StreamChunk>())),
   /**
@@ -125,7 +199,9 @@ export const ai = {
   send: mutation.input(AiSendInputSchema).output(type<AiSendAck>()),
   /**
    * The completed transcript (excluding the active run's messages), the
-   * active run, and the session-scoped state at one relay seq (`abacus.cursor`).
+   * active run, and the session-scoped state at one relay seq (`abacus.cursor`,
+   * the thread's own last seq). `NOT_FOUND` for an unknown thread, and for a
+   * `before` cursor the transcript does not hold.
    */
   hydrate: query
     .input(
@@ -167,8 +243,9 @@ export const ai = {
   /**
    * The agent's host queue, which is authoritative (agent spec §3.1.6). Entry
    * ids are per agent process, so an edit or removal names the incarnation
-   * it was read from; a mismatch or a gone entry is answered on the stream
-   * with `CUSTOM queue.command_rejected` and changes nothing.
+   * it was read from; the agent checks both and finds the entry by id in one
+   * step (spec 02 §14.6). A mismatch or a gone entry is answered on the
+   * stream with `CUSTOM queue.command_rejected` and changes nothing.
    */
   queue: {
     enqueue: mutation
