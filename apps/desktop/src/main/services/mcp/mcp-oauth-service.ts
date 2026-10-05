@@ -11,10 +11,6 @@ import {
 } from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";
-import {
-  assertHostCapability,
-  type HostPlatform,
-} from "../../platform/capabilities";
 
 /**
  * Signing in to an MCP server: the interactive half of MCP OAuth (RFC 9728,
@@ -356,7 +352,6 @@ export interface McpOAuthResult {
 }
 
 export interface McpOAuthOptions {
-  platform?: HostPlatform;
   /** Pre-registered client details from the server entry, if any. */
   oauth?: McpOAuthEntry;
   /** Opens the authorization URL; injectable so tests run headlessly. */
@@ -468,7 +463,6 @@ export const signInToMcpServer = async (
   serverUrl: string,
   options: McpOAuthOptions = {}
 ): Promise<McpOAuthResult> => {
-  assertHostCapability(options.platform ?? "electron", "mcp.oauthSignIn");
   cancelAllMcpSignIns();
 
   try {

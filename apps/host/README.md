@@ -92,7 +92,7 @@ allowed Origin and browser URL; set them consistently.
 
 `GET /files?hostRoot=<workspace>&path=<file>` streams downloads without the
 WebSocket size limit. It uses the same Bearer connect token, exact Origin and
-proxy owner checks as uploads. `/file` is an alias. `/upload` requires
+proxy owner checks as uploads. `/upload` requires
 `workspaceId` and `sessionId`, resolves the session workspace on the server,
 ignores `baseFolder`, and gives attachment names unique prefixes.
 

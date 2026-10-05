@@ -6,6 +6,9 @@ import {
   StandardRPCSerializer,
 } from "@orpc/client/standard";
 
+import { openHostFile } from "../services/workspace/host-path";
+import { payloadTooLarge } from "./errors";
+
 const serializer = new StandardRPCSerializer(
   new StandardRPCJsonSerializer({
     customJsonSerializers: CUSTOM_JSON_SERIALIZERS,
@@ -100,4 +103,63 @@ export const rpcPayloadSize = async (
   }
   // Includes the same custom base64 encoding and metadata as the RPC link.
   return Buffer.byteLength(JSON.stringify(serializer.serialize(value)));
+};
+
+const FILE_READERS = new Set([
+  "files.readText",
+  "files.readImageAsDataUrl",
+  "files.readPptx",
+]);
+// Reserve space below the 1 MiB frame for oRPC framing and metadata.
+const REPLY_LIMIT = 900 * 1024;
+
+/**
+ * Web-host replies and iterator events stay below the socket's frame cap. An
+ * oversized one is the defined PAYLOAD_TOO_LARGE with an HTTP alternative;
+ * file readers are refused from the file size before anything is read.
+ */
+export const boundWebHostReply = async <R extends { output: unknown }>(
+  procedure: string,
+  input: unknown,
+  next: () => R | PromiseLike<R>
+): Promise<R> => {
+  const file = input as
+    | { hostRoot?: string; filePath?: string; maxBytes?: number }
+    | undefined;
+  const tooLarge = () =>
+    payloadTooLarge(
+      file?.hostRoot && file.filePath
+        ? `/files?${new URLSearchParams({ hostRoot: file.hostRoot, path: file.filePath })}`
+        : "/files?hostRoot=<workspace>&path=<export-file>"
+    );
+  if (FILE_READERS.has(procedure) && file?.hostRoot && file.filePath) {
+    const opened = await openHostFile(file.filePath, file.hostRoot);
+    if (opened.ok) {
+      const size =
+        procedure === "files.readText"
+          ? Math.min(opened.stat.size, file.maxBytes ?? 524288)
+          : opened.stat.size;
+      const cap =
+        procedure === "files.readImageAsDataUrl" ? 675 * 1024 : REPLY_LIMIT;
+      if (size > cap) throw tooLarge();
+    }
+  }
+  const result = await next();
+  const check = async (value: unknown) => {
+    if ((await rpcPayloadSize(value, REPLY_LIMIT)) > REPLY_LIMIT)
+      throw tooLarge();
+    return value;
+  };
+  const output = result.output;
+  if (output && typeof output === "object" && Symbol.asyncIterator in output) {
+    const inner = output as AsyncIterable<unknown>;
+    return {
+      ...result,
+      output: (async function* () {
+        for await (const value of inner) yield await check(value);
+      })(),
+    };
+  }
+  await check(output);
+  return result;
 };

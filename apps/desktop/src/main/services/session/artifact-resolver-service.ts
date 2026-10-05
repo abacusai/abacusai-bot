@@ -19,18 +19,12 @@ export type ResolvedAgentArtifact = {
 };
 
 export class ArtifactResolverService {
-  constructor(
-    private readonly baselineOnly: boolean | (() => boolean) = false
-  ) {}
   resolveBundledCliPath(): ResolvedAgentArtifact {
     // An installed experience supersedes the baseline bundle for new sessions;
-    // running sessions keep the process they started with.
+    // running sessions keep the process they started with. A web host only
+    // runs the baseline it was verified with.
     const entry =
-      ((
-        typeof this.baselineOnly === "function"
-          ? this.baselineOnly()
-          : this.baselineOnly
-      )
+      (import.meta.env.ABACUS_WEB_HOST === true
         ? null
         : experienceAgentEntry()) ?? agentEntry();
 

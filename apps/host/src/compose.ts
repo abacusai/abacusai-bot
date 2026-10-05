@@ -1,14 +1,64 @@
+import { composeHost } from "#main/compose-host";
+import type { HostPlatformOperations } from "#main/handler";
+import { CueArbiter } from "#main/notch/cue-arbiter";
+import type { RpcDeps } from "#main/rpc/deps";
+import { unsupported } from "#main/rpc/errors";
+import { mainEventBus } from "#main/rpc/event-bus";
+import { createTables } from "#main/rpc/tables";
+import { createEventTrackers } from "#main/rpc/trackers";
+import { ServiceHost } from "#main/service-host";
+import { PrefsStore } from "#main/services/config/prefs-store";
+
+import { createNodeAppOperations } from "./app-operations";
+import { createWebAuth } from "./auth-web";
+import { HostLease } from "./lease";
+import { shutdown } from "./shutdown";
+
+const refuse = (procedure: string) => () => {
+  throw unsupported(procedure);
+};
+
+/** Native sign-in, login items and local models have no web-host form. */
+const nodeHostPlatform: HostPlatformOperations = {
+  webAuth: createWebAuth,
+  startAbacusAuth: refuse("auth.abacus.start"),
+  startOpenRouterAuth: refuse("auth.openRouter.start"),
+  cancelAbacusAuth: () => {},
+  openAbacusAuthInBrowser: refuse("auth.abacus.openInBrowser"),
+  listBrowserSignInProfiles: refuse("auth.abacus.browserProfiles"),
+  shouldAutoSignIn: async () => false,
+  cancelOpenRouterAuth: () => {},
+  cancelConnectorConnect: () => {},
+  cancelAllConnectorConnects: () => {},
+  clearSignInSession: async () => {},
+  rememberSessionAccount: () => {},
+  registerLoginItem: () => {},
+  relaunch: () => shutdown(75),
+  requestMicrophoneAccess: async () => true,
+  localModels: {
+    state: refuse("localModels.state"),
+    install: refuse("localModels.install"),
+    cancelInstall: () => {},
+    remove: refuse("localModels.remove"),
+  },
+};
+
+const IDLE_UPDATE = {
+  checking: false,
+  available: false,
+  downloading: false,
+  downloaded: false,
+  installing: false,
+  error: null,
+  progress: null,
+  updateInfo: null,
+  installStalled: false,
+  criticalUpdate: false,
+  failedPhase: null,
+};
+
 export const composeNodeHost = async () => {
-  const { HostLease } = await import("./lease");
-  const { createNodeAppOperations } = await import("./app-operations");
-  const { createNodeHostOperations, nodeHostPlatform } =
-    await import("./host-operations");
-  const { composeHost } = await import("#main/compose-host");
-  const { ServiceHost } = await import("#main/service-host");
-  const { CueArbiter } = await import("#main/notch/cue-arbiter");
-  const { unsupported } = await import("./unsupported");
-  const { trashItem } = await import("./filesystem");
-  const serviceHost = new ServiceHost("web-host", { trashItem });
+  const serviceHost = new ServiceHost("web-host");
   const lease = new HostLease(
     () =>
       serviceHost.aguiRelay.busy ||
@@ -20,13 +70,24 @@ export const composeNodeHost = async () => {
             .some((run) => run.outcome === "running")
         )
   );
-  const appOps = createNodeAppOperations(lease, serviceHost);
-  const composition = await composeHost({
+  const appOps = createNodeAppOperations(lease);
+  const host = await composeHost({
     serviceHost,
-    appOps,
-    hostOps: createNodeHostOperations(serviceHost),
     hostPlatform: nodeHostPlatform,
-    platform: "web-host",
+  });
+  if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
+    serviceHost.startBackgroundSync();
+  const tables = createTables({
+    bus: mainEventBus,
+    sources: serviceHost,
+    prefsStore: new PrefsStore(),
+  });
+  const trackers = createEventTrackers(mainEventBus);
+  const refuseBrowser = refuse("browser");
+  const deps: RpcDeps = {
+    serviceHost,
+    host,
+    app: appOps,
     windows: {
       mainRendererId: () => null,
       contents: () => null,
@@ -35,31 +96,19 @@ export const composeNodeHost = async () => {
       reportReady: () => {},
     },
     browserRuntime: {
-      materialize: () => unsupported(),
-      materializeFile: () => unsupported(),
-      present: () => unsupported(),
-      navigate: () => unsupported(),
-      capture: () => unsupported(),
-      hide: () => unsupported(),
-      close: () => unsupported(),
-      promoteScope: () => unsupported(),
+      materialize: refuseBrowser,
+      materializeFile: refuseBrowser,
+      present: refuseBrowser,
+      navigate: refuseBrowser,
+      capture: refuseBrowser,
+      hide: refuseBrowser,
+      close: refuseBrowser,
+      promoteScope: refuseBrowser,
     },
     update: {
-      checkForUpdates: async () => unsupported("update.check"),
-      installUpdate: async () => unsupported("update.install"),
-      getStatus: () => ({
-        checking: false,
-        available: false,
-        downloading: false,
-        downloaded: false,
-        installing: false,
-        error: null,
-        progress: null,
-        updateInfo: null,
-        installStalled: false,
-        criticalUpdate: false,
-        failedPhase: null,
-      }),
+      checkForUpdates: async () => refuse("update.check")(),
+      installUpdate: async () => refuse("update.install")(),
+      getStatus: () => IDLE_UPDATE,
     },
     cues: new CueArbiter({
       windows: {
@@ -70,18 +119,27 @@ export const composeNodeHost = async () => {
       },
       onWindowGone: (_id, forget) => forget(),
     }),
-  });
-  const stopOutput = composition.deps.bus.listen(
+    bus: mainEventBus,
+    tables,
+    ai: serviceHost.aguiRelay,
+    threads: serviceHost.threadStore,
+    trackers,
+  };
+  const stopOutput = mainEventBus.listen(
     (event) => event.type === "terminal-output",
     () => lease.terminalOutput()
   );
   return {
-    ...composition,
+    serviceHost,
+    deps,
     lease,
     appOps,
     dispose: async () => {
       stopOutput();
-      await composition.dispose();
+      trackers.dispose();
+      tables.dispose();
+      serviceHost.stopCronScheduler();
+      await serviceHost.dispose();
     },
   };
 };

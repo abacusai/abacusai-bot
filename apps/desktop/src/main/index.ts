@@ -1,15 +1,19 @@
 import { execFile } from "child_process";
 import { existsSync } from "fs";
-import fs from "fs/promises";
-import os from "os";
 
 // The account-profile home MUST resolve before any import below reads a path
 // under abacusBotHome(). Stores open files at module load. Keep this first.
 import "./profile-home-init";
+import fs from "fs/promises";
+import os from "os";
 import { join } from "path";
 import path from "path";
 import { promisify } from "util";
 
+import type {
+  AbacusAccountInfo,
+  UsageSnapshot,
+} from "@abacus-ai/contract/contracts";
 import {
   app,
   shell,
@@ -30,11 +34,7 @@ import {
 import type { WebContents } from "electron";
 import Store from "electron-store";
 
-import {
-  nodeFileOperations,
-  saveLogArchive,
-  importPickedSkills,
-} from "./app-operations/node";
+import { nodeFileOperations } from "./app-operations/node";
 import { composeHost } from "./compose-host";
 import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import { NotchController } from "./notch/controller";
@@ -88,10 +88,10 @@ import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
 import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
+import type { HostOperations } from "./handler";
 import {
   disposeLocalModels,
   electronHostPlatform,
-  type HostOperations,
 } from "./host-operations/electron";
 import { followMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
@@ -115,7 +115,7 @@ import {
   rendererWebContents,
   setActiveRendererHost,
 } from "./renderer-host";
-import { resourcePath } from "./resources";
+import { agentEntry, resourcePath, resourcesRoot } from "./resources";
 import type { AppOperations, RpcDeps } from "./rpc/deps";
 import { emitBusChannel } from "./rpc/emit";
 import { mainEventBus } from "./rpc/event-bus";
@@ -147,8 +147,13 @@ import {
   reportFunnelStep,
   reportFunnelStepOnce,
 } from "./services/debug-sync/funnel-beacon";
-import { installMainLogCollector } from "./services/diagnostics/log-dump";
-import { logStore } from "./services/diagnostics/log-store";
+import {
+  buildLogDump,
+  collectEnvironmentInfo,
+  installMainLogCollector,
+} from "./services/diagnostics/log-dump";
+import { logStore, RETENTION_DAYS } from "./services/diagnostics/log-store";
+import { buildZip, type ZipFile } from "./services/diagnostics/zip-write";
 import { fetchAbacusAccount } from "./services/providers/abacus";
 import {
   readAccountState,
@@ -156,7 +161,9 @@ import {
   signOut,
   skipOnboarding,
 } from "./services/providers/account-service";
+import { getLocalUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
+import { ArtifactResolverService } from "./services/session/artifact-resolver-service";
 import {
   initializeExperienceRuntime,
   registerAppScheme,
@@ -217,6 +224,45 @@ installMainLogCollector((line) => logStore().append("main", line));
 // Local-only crash dumps: nothing is uploaded, but a native failure leaves
 // more than an opaque exit code.
 crashReporter.start({ uploadToServer: false });
+
+/** For the dump; a packaging failure reads as "every message fails to send". */
+const resolveArtifactError = (): string | null => {
+  try {
+    new ArtifactResolverService().resolveBundledCliPath();
+
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+};
+
+/** For the dump. A corrupt session log costs that section, not the file. */
+const collectUsageForDump = async (): Promise<{
+  usage: UsageSnapshot | null;
+  usageError: string | null;
+}> => {
+  try {
+    return { usage: await getLocalUsageSnapshot(), usageError: null };
+  } catch (error) {
+    return {
+      usage: null,
+      usageError: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+/**
+ * Plan and credits for the dump. Never a throw and never a refresh: a dump is
+ * asked for when something is already wrong, and a network round trip is not
+ * worth failing it over.
+ */
+const collectAccountForDump = async (): Promise<AbacusAccountInfo | null> => {
+  try {
+    return await fetchAbacusAccount();
+  } catch {
+    return null;
+  }
+};
 
 // After the collector, so what it catches is recorded. Without it one async
 // error puts up Electron's fatal dialog and blocks the main process.
@@ -1041,7 +1087,6 @@ async function createWindow(restored?: RecreatedWindowState) {
   loadAppContent();
 }
 
-/** Extension allow-list for the agent-image reader below. */
 const PICKED_FILE_MIME: Record<string, string> = {
   ".pdf": "application/pdf",
   ".png": "image/png",
@@ -1225,7 +1270,8 @@ const appOperations: AppOperations = {
     forget: () => forgetAccount(),
   },
 
-  // Pasted/dropped attachments go under <baseFolder>/.abacusai-bot/temp/.
+  // A summary of this run plus every retained day of logs: the run someone
+  // reports is rarely the one still going.
   async saveLogs(rendererLogs) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const result = await showSaveDialogFromApp({
@@ -1238,11 +1284,47 @@ const appOperations: AppOperations = {
     });
     if (result.canceled || !result.filePath) return { success: false };
 
-    return saveLogArchive(result.filePath, rendererLogs, {
-      appVersion: app.getVersion(),
-      isPackaged: app.isPackaged,
-      sessions: workspaceServiceHost.collectAgentDiagnostics(),
-    });
+    try {
+      const summary = buildLogDump({
+        appVersion: app.getVersion(),
+        isPackaged: app.isPackaged,
+        homeDir: abacusBotHome(),
+        rendererLogs: typeof rendererLogs === "string" ? rendererLogs : "",
+        sessions: workspaceServiceHost.collectAgentDiagnostics(),
+        environment: collectEnvironmentInfo({
+          resourcesPath: resourcesRoot(),
+          agentEntry: agentEntry(),
+          artifactError: resolveArtifactError(),
+        }),
+        retainedDays: RETENTION_DAYS,
+        account: await collectAccountForDump(),
+        ...(await collectUsageForDump()),
+      });
+
+      const files: ZipFile[] = [
+        { name: "summary.txt", content: Buffer.from(summary, "utf-8") },
+      ];
+
+      // `files()` flushes first, so the lines written a moment ago are in.
+      for (const file of logStore().files()) {
+        try {
+          files.push({
+            name: `logs/${file.name}`,
+            content: await fs.readFile(file.path),
+          });
+        } catch {
+          // A file that vanished mid-dump costs its day, not the bundle.
+        }
+      }
+
+      await fs.writeFile(result.filePath, buildZip(files));
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   },
 
   showNotification(title, body, metadata, attention) {
@@ -1273,8 +1355,8 @@ const appOperations: AppOperations = {
     );
   },
 
-  // Agent-produced image as a data URL. Real paths on both sides, anything
-  // escaping the root refused, extension allow-list, size cap.
+  // The picker lives here (needs the focused window); the service validates
+  // and copies. Always global scope.
   async importLocalSkills(request) {
     const kind = request?.kind === "folder" ? "folder" : "file";
     const result = await showOpenDialogFromApp({
@@ -1291,11 +1373,10 @@ const appOperations: AppOperations = {
     if (result.canceled || result.filePaths.length === 0) {
       return { success: false, cancelled: true };
     }
-    return importPickedSkills(
-      workspaceServiceHost.skillsService,
-      result.filePaths,
-      kind
-    );
+    return workspaceServiceHost.skillsService.importFromPaths({
+      paths: result.filePaths,
+      kind,
+    });
   },
 
   showAboutPanel: () => app.showAboutPanel(),
@@ -1363,7 +1444,7 @@ function wireNotchContents(contents: WebContents): void {
   rpcTransport?.registerRendererContents(contents, "notch");
 }
 
-function installRpc(host: HostOperations): RpcDeps {
+function installRpc(host: HostOperations): void {
   notchController = new NotchController({
     platform: process.platform,
     packaged: app.isPackaged,
@@ -1456,7 +1537,6 @@ function installRpc(host: HostOperations): RpcDeps {
     deps,
     readiness: rendererReadiness,
   });
-  return deps;
 }
 
 // Before `whenReady`, or a dev run shows "Electron" in the menu bar. Keep the
@@ -1530,11 +1610,9 @@ app
       });
     });
 
-    let composedDeps: RpcDeps;
     await composeHost({
       serviceHost: workspaceServiceHost,
       hostPlatform: electronHostPlatform,
-      platform: "electron",
       beforeInitialize: () => {
         const sessionPrefs = prefsFileAfterMigrations(prefsFile());
         if (sessionPrefs !== prefsFile())
@@ -1564,7 +1642,7 @@ app
           console.error("[legacy-prefs] startup import failed", error);
         }
         // After the dispatcher: the router shares the handlers' operations.
-        composedDeps = installRpc(hostOperations);
+        installRpc(hostOperations);
         // `prefs.theme` drives the native theme (spec 00 B.2), as `theme:set`
         // does for the legacy renderer.
         followPrefsTheme(prefsStore, nativeTheme, refreshWindowChrome);
@@ -1578,7 +1656,6 @@ app
           });
         }
       },
-      getDeps: () => composedDeps,
     });
 
     // Reap devices a previous run booted but never shut down (force quit and

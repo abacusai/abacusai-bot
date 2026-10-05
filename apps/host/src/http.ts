@@ -24,11 +24,8 @@ export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
   lease: HostLease,
-  uploadFolder: (
-    workspaceId: string,
-    sessionId: string
-  ) => string | null = () => null,
-  whisper?: Pick<WhisperModelService, "prepareFile">
+  uploadFolder: (workspaceId: string, sessionId: string) => string | null,
+  whisper: Pick<WhisperModelService, "prepareFile">
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -53,30 +50,24 @@ export const createHostHttpServer = (
     }
     if (
       (request.method === "GET" || request.method === "HEAD") &&
-      ["/files", "/file"].includes(url.pathname)
+      url.pathname === "/files"
     ) {
       try {
         const whisperUrl = url.searchParams.get("whisperUrl");
-        const model =
-          whisperUrl && whisper
-            ? await whisper.prepareFile(whisperUrl, {
-                download: request.method !== "HEAD",
-              })
-            : null;
-        if (whisperUrl && (!model || model.status !== 200 || !model.path)) {
+        const model = whisperUrl
+          ? await whisper.prepareFile(whisperUrl, {
+              download: request.method !== "HEAD",
+            })
+          : null;
+        if (model && !model.path) {
           json(
             response,
-            model?.status ?? 400,
-            model?.status === 404
+            model.status,
+            model.status === 404
               ? { error: "not-found" }
-              : model?.status === 403
+              : model.status === 403
                 ? { error: "forbidden", reason: "invalid-model-url" }
-                : {
-                    error: "conflict",
-                    reason: model
-                      ? "model-download-failed"
-                      : "model-unavailable",
-                  }
+                : { error: "conflict", reason: "model-download-failed" }
           );
           return;
         }

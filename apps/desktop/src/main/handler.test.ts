@@ -59,6 +59,7 @@ vi.mock("./profile-home", () => ({
 }));
 vi.mock("./services/providers/abacus-auth-service", () => ({
   cancelAbacusAuth: vi.fn(),
+  openAbacusAuthInBrowser: vi.fn(),
   startAbacusAuth: vi.fn(async () => ({ ok: true, key: "s2_key" })),
 }));
 vi.mock("./services/providers/abacus-connector-service", () => ({
@@ -75,13 +76,15 @@ vi.mock("./services/providers/openrouter", () => ({
   clearOpenRouterCache: vi.fn(),
 }));
 vi.mock("./services/providers/openrouter-auth-service", () => ({
+  cancelOpenRouterAuth: vi.fn(),
   startOpenRouterAuth: vi.fn(),
 }));
 vi.mock("./services/providers/usage", () => ({ getUsageSnapshot: vi.fn() }));
 
 import { ABACUS_CONNECTORS_SERVER_NAME } from "@abacus-ai/contract/contracts";
 
-import { wireHostEvents } from "./host-operations/electron";
+import { wireHostEvents } from "./handler";
+import { electronHostPlatform } from "./host-operations/electron";
 import { activateProfile, profileKeyFor } from "./profile-home";
 import { readSettings, saveApiKey } from "./services/config/settings";
 import {
@@ -144,7 +147,8 @@ beforeEach(() => {
   };
 
   const operations = wireHostEvents(
-    host as unknown as Parameters<typeof wireHostEvents>[0]
+    host as unknown as Parameters<typeof wireHostEvents>[0],
+    electronHostPlatform
   );
   handlers.set("adopt", (_event, ...args) =>
     operations.adoptAbacusCredential(...(args as [string, "web"]))

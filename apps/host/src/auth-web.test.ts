@@ -13,7 +13,7 @@ const setup = () => {
   );
   return {
     adoptAbacusCredential,
-    auth: createWebAuth({ adoptAbacusCredential } as never),
+    auth: createWebAuth(adoptAbacusCredential as never),
   };
 };
 afterEach(() => {

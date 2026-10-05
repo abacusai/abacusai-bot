@@ -1,11 +1,7 @@
 import { app } from "electron";
 
-import {
-  wireHostEvents as wire,
-  type HostPlatformOperations,
-} from "../handler";
+import type { HostPlatformOperations } from "../handler";
 import { registerLoginItem } from "../login-item";
-import type { ServiceHost } from "../service-host";
 import { LocalModelService } from "../services/local-models/local-model-service";
 import {
   cancelAbacusAuth,
@@ -34,19 +30,19 @@ export const disposeLocalModels = (): void => {
   localModels = null;
 };
 export const electronHostPlatform: HostPlatformOperations = {
-  startAbacusAuth: (...args) => startAbacusAuth(...args),
-  startOpenRouterAuth: (...args) => startOpenRouterAuth(...args),
-  cancelAbacusAuth: (...args) => cancelAbacusAuth(...args),
-  openAbacusAuthInBrowser: (...args) => openAbacusAuthInBrowser(...args),
-  listBrowserSignInProfiles: (...args) => listBrowserSignInProfiles(...args),
-  shouldAutoSignIn: (...args) => shouldAutoSignIn(...args),
-  cancelOpenRouterAuth: (...args) => cancelOpenRouterAuth(...args),
-  cancelConnectorConnect: (...args) => cancelConnectorConnect(...args),
-  cancelAllConnectorConnects: (...args) => cancelAllConnectorConnects(...args),
-  clearSignInSession: (...args) => clearSignInSession(...args),
-  rememberSessionAccount: (...args) => rememberSessionAccount(...args),
-  registerLoginItem: (...args) => registerLoginItem(...args),
-  requestMicrophoneAccess: (...args) => requestMicrophoneAccess(...args),
+  startAbacusAuth,
+  startOpenRouterAuth,
+  cancelAbacusAuth,
+  openAbacusAuthInBrowser,
+  listBrowserSignInProfiles,
+  shouldAutoSignIn,
+  cancelOpenRouterAuth,
+  cancelConnectorConnect,
+  cancelAllConnectorConnects,
+  clearSignInSession,
+  rememberSessionAccount,
+  registerLoginItem,
+  requestMicrophoneAccess,
   relaunch: () => {
     app.relaunch();
     app.quit();
@@ -68,7 +64,3 @@ export const electronHostPlatform: HostPlatformOperations = {
     },
   },
 };
-export const wireHostEvents = (host: ServiceHost) =>
-  wire(host, electronHostPlatform);
-
-export type { HostOperations } from "../handler";

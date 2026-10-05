@@ -199,10 +199,6 @@ import {
   assertHostCapability,
   type HostPlatform,
 } from "./platform/capabilities";
-import {
-  electronFileOperations,
-  type HostFileOperations,
-} from "./platform/files";
 import type { BusChannel, BusChannels } from "./rpc/event-bus";
 import { ConnectorGate } from "./services/agent-tools/connector-gate";
 import { CronScheduler } from "./services/agent-tools/cron-scheduler";
@@ -483,15 +479,7 @@ const SELF_LANE_BOTS: Record<
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
 export class ServiceHost {
-  readonly platform: HostPlatform;
-  private readonly files: HostFileOperations;
-  constructor(
-    platform: HostPlatform = "electron",
-    files: HostFileOperations = electronFileOperations
-  ) {
-    this.platform = platform;
-    this.files = files;
-  }
+  constructor(readonly platform: HostPlatform = "electron") {}
   private initializedAt: string | null = null;
   private startedAt: string | null = null;
   private eventDispatcher: EventDispatcher | null = null;
@@ -1040,10 +1028,10 @@ export class ServiceHost {
       return { success: false, error: "No such HTTP server is configured." };
     if (server.config.oauth === false)
       return { success: false, error: "OAuth is disabled for this server." };
-    const result = await signInToMcpServer(server.config.url, {
-      ...(server.config.oauth != null ? { oauth: server.config.oauth } : {}),
-      platform: this.platform,
-    });
+    const result = await signInToMcpServer(
+      server.config.url,
+      server.config.oauth != null ? { oauth: server.config.oauth } : {}
+    );
     if (result.ok) {
       await this.notifyMcpSignedIn(request.mode);
       return { success: true };
@@ -1064,19 +1052,13 @@ export class ServiceHost {
       this.conversationKeyForSession(sessionId),
   });
   private readonly workspaceService = new WorkspaceService();
-  private readonly browserProfilesService = new BrowserProfilesService(
-    () => this.platform
-  );
-  private readonly artifactResolverService = new ArtifactResolverService(
-    () => this.platform === "web-host"
-  );
+  private readonly browserProfilesService = new BrowserProfilesService();
+  private readonly artifactResolverService = new ArtifactResolverService();
 
   private readonly sandboxProbeService = new SandboxProbeService(() =>
     this.artifactResolverService.resolveBundledCliPath()
   );
-  private readonly fileTreeService = new FileTreeService({
-    trashItem: (file) => this.files.trashItem(file),
-  });
+  private readonly fileTreeService = new FileTreeService();
   private readonly fileSearchService = new FileSearchService();
   private readonly gitService = new GitService();
 
@@ -1092,12 +1074,11 @@ export class ServiceHost {
         .find((entry) => entry.id === workspaceId) ?? null,
     session: (sessionId) => this.agentSessionManagerService.get(sessionId),
     git: this.gitService,
-    files: new FileTreeService({
-      trashItem: (file) => this.files.trashItem(file),
-    }),
+    files: new FileTreeService(),
     search: (root, query) => this.fileSearchService.search(root, query),
     trash: async (absolutePath) => {
-      await this.files.trashItem(absolutePath);
+      const { shell } = await import("electron");
+      await shell.trashItem(absolutePath);
     },
   });
 
@@ -1650,7 +1631,6 @@ export class ServiceHost {
     }
   );
   private readonly mcpAdminService = new McpAdminService({
-    platform: () => this.platform,
     mcpConfigService: this.mcpConfigService,
     rewriteRuntimeConfig: (mode, sessionId) =>
       this.getRuntimeMcpPathForSpawn(mode, sessionId),
@@ -3339,9 +3319,10 @@ export class ServiceHost {
     return this.mcpAdminService.setMcpServerDisabled(request);
   }
 
-  importMcpServers(
+  async importMcpServers(
     request: ImportMcpServersRequest
   ): Promise<ImportMcpServersResult> {
+    assertHostCapability(this.platform, "mcp.import", request);
     return this.mcpAdminService.importMcpServers(request);
   }
 

@@ -24,17 +24,12 @@ import type {
 } from "@abacus-ai/contract/contracts";
 
 import { abacusBotHome } from "../../paths";
-import {
-  assertHostCapability,
-  type HostPlatform,
-} from "../../platform/capabilities";
 import { credentialFor } from "../config/settings";
 import { abacusRoutellmV1 } from "../providers/abacus-host";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import { BUILTIN_BROWSER_NAME, McpConfigService } from "./mcp-config-service";
 
 type McpAdminDeps = {
-  platform?: () => HostPlatform;
   mcpConfigService: McpConfigService;
   /**
    * Rewrite the runtime MCP file. Each spawn's ABACUSAI_BOT_MCP_CONFIG points
@@ -191,11 +186,6 @@ export class McpAdminService {
   async importMcpServers(
     request: ImportMcpServersRequest
   ): Promise<ImportMcpServersResult> {
-    assertHostCapability(
-      this.deps.platform?.() ?? "electron",
-      "mcp.import",
-      request
-    );
     try {
       let json: string | null = null;
       if (request.source === "deepagent") {

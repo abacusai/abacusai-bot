@@ -4,13 +4,11 @@ import { impl } from "./impl";
 export const authRouter = impl.auth.router({
   web: {
     start: impl.auth.web.start.handler(({ context }) => {
-      if (!context.deps.host.webAuth)
-        throw unsupported("auth.web.start");
+      if (!context.deps.host.webAuth) throw unsupported("auth.web.start");
       return context.deps.host.webAuth.start();
     }),
     complete: impl.auth.web.complete.handler(({ input, context }) => {
-      if (!context.deps.host.webAuth)
-        throw unsupported("auth.web.complete");
+      if (!context.deps.host.webAuth) throw unsupported("auth.web.complete");
       return context.deps.host.webAuth.complete(input);
     }),
   },

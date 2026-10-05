@@ -2,6 +2,7 @@ import {
   readCustomInstructions,
   writeCustomInstructions,
 } from "@abacus-ai/agent/custom-instructions";
+import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
 import type {
   IpcEvent,
   AbacusAccountInfo,
@@ -56,7 +57,20 @@ import { clearOpenRouterCache } from "./services/providers/openrouter";
 import { getUsageSnapshot } from "./services/providers/usage";
 import { accountStashKey } from "./services/session/account-session-stash";
 
+type AdoptCredentialResult =
+  | { ok: true; accountDetailsPending?: boolean }
+  | { ok: false; error: "unidentified-account" };
+
+/** The browser sign-in a web host offers; desktop hosts sign in natively. */
+export interface WebAuth {
+  start: () => Promise<{ challenge: string }>;
+  complete: (input: { code: string }) => Promise<WebAuthCompleteResult>;
+}
+
 export interface HostPlatformOperations {
+  webAuth?: (
+    adopt: (key: string, surface: "web") => Promise<AdoptCredentialResult>
+  ) => WebAuth;
   startAbacusAuth: (
     intent: "signin" | "signup",
     profile?: string
@@ -210,10 +224,7 @@ export const createHostOperations = (
     rawKey: string,
     /** Where the key was minted; the app's own window keeps that account's session. */
     surface?: "in_app" | "browser" | "web"
-  ): Promise<
-    | { ok: true; accountDetailsPending?: boolean }
-    | { ok: false; error: "unidentified-account" }
-  > => {
+  ): Promise<AdoptCredentialResult> => {
     cancelIdentification();
     const revision = adoptionRevision;
     const key = rawKey.trim();
@@ -230,7 +241,8 @@ export const createHostOperations = (
         : await identifyAbacusAccount();
     if (revision !== adoptionRevision)
       return { ok: false, error: "unidentified-account" };
-    if (surface === "web" && !abacusCredentialRejected()) {
+    // A rejected key falls through to restore the previous one.
+    if (surface === "web" && (account != null || !abacusCredentialRejected())) {
       if (account == null) {
         clearLocalAccount();
         skipOnboarding();
@@ -244,7 +256,6 @@ export const createHostOperations = (
       serviceHost.restoreSessionsForAccount(
         accountStashKey(account.email, key)
       );
-      registerLoginItem();
       return { ok: true, accountDetailsPending: false };
     }
     const profileKey = account != null ? profileKeyFor(account) : null;
@@ -264,7 +275,7 @@ export const createHostOperations = (
     const legacyKey = legacyProfileKeyFor(account);
     const aliases =
       legacyKey != null && legacyKey !== profileKey ? [legacyKey] : [];
-    if (surface !== "web" && activateProfile(profileKey, key, aliases)) {
+    if (activateProfile(profileKey, key, aliases)) {
       // This process still owns the departing profile; leave the new key only
       // in its target profile and relaunch there. `quit`, not `exit`: the
       // before-quit handler disposes the terminal PTYs, and a live pty reader
@@ -278,7 +289,6 @@ export const createHostOperations = (
       return { ok: true };
     }
 
-    if (surface === "web") adoptWebAccount(account);
     credentialsChanged("abacus", key);
     const restored = serviceHost.restoreSessionsForAccount(
       accountStashKey(account.email, key)
@@ -312,7 +322,7 @@ export const createHostOperations = (
     // A hop or sign-in still out would attach to, or mint a key for, an
     // account that is leaving; the partition is nobody's from here.
     cancelAllConnectorConnects();
-    if (serviceHost.platform !== "web-host") cancelAbacusAuth();
+    cancelAbacusAuth();
     await clearSignInSession();
 
     const settings = saveApiKey("abacus", "");
@@ -447,16 +457,7 @@ export const createHostOperations = (
   };
 
   return {
-    webAuth: undefined as
-      | undefined
-      | {
-          start: () => Promise<{ challenge: string }>;
-          complete: (input: {
-            code: string;
-          }) => Promise<
-            import("@abacus-ai/contract/account").WebAuthCompleteResult
-          >;
-        },
+    webAuth: platform.webAuth?.(adoptAbacusCredential),
     credentialsChanged,
     syncAbacusGateway,
     getAbacusAccount,
@@ -504,16 +505,14 @@ export type HostOperations = ReturnType<typeof createHostOperations>;
 
 export const wireHostEvents = (
   serviceHost: ServiceHost,
-  platform: HostPlatformOperations,
-  supplied?: HostOperations
+  platform: HostPlatformOperations
 ): HostOperations => {
   // One function feeds both the legacy renderer and the oRPC event bus.
   serviceHost.setEventDispatcher(emitHostEvent);
   // Bus-only pushes (no legacy event), such as a retired terminal generation.
   serviceHost.setBusDispatcher(emitBusChannel);
 
-  const ops =
-    supplied ?? createHostOperations(serviceHost, emitHostEvent, platform);
+  const ops = createHostOperations(serviceHost, emitHostEvent, platform);
 
   // The connector flow stores agent credentials through the same path a
   // pasted key takes, so the announcement above happens for those too.

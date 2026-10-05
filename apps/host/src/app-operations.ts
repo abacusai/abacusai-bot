@@ -2,13 +2,11 @@ import { homedir } from "node:os";
 
 import { isFunnelStep, funnelDetail } from "@abacus-ai/contract/funnel";
 
-import {
-  nodeFileOperations,
-  importPickedSkills,
-} from "#main/app-operations/node";
+import { nodeFileOperations } from "#main/app-operations/node";
 import { abacusBotHome } from "#main/paths";
 import type { AppOperations } from "#main/rpc/deps";
 import { emitBusChannel } from "#main/rpc/emit";
+import { unsupported } from "#main/rpc/errors";
 import {
   reportFunnelStep,
   reportFunnelStepOnce,
@@ -24,15 +22,15 @@ import { setTitlebarDensity } from "#main/window-chrome-settings";
 import { app } from "./electron-shim";
 import type { HostLease } from "./lease";
 import { shutdown } from "./shutdown";
-import { unsupported } from "./unsupported";
-export const createNodeAppOperations = (
-  lease: HostLease,
-  serviceHost: import("#main/service-host").ServiceHost
-): AppOperations => ({
+const refuse = (procedure: string) => async () => {
+  throw unsupported(procedure);
+};
+
+export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   ...nodeFileOperations,
   openFolderDialog: async () => null,
   openFilesDialog: async () => null,
-  openExternal: async () => unsupported("system.openExternal"),
+  openExternal: refuse("system.openExternal"),
   openFilePath: async () => ({ outcome: "refused", reason: "outside" }),
   showItemInFolder: () => {},
   appVersion: app.getVersion,
@@ -53,12 +51,14 @@ export const createNodeAppOperations = (
     signOut,
     forget: forgetAccount,
   },
-  saveLogs: async () => unsupported("system.saveLogs"),
+  saveLogs: refuse("system.saveLogs"),
   showNotification: (title, body, metadata) =>
     emitBusChannel("system", { type: "notification", title, body, metadata }),
-  importLocalSkills: (request) =>
-    importPickedSkills(serviceHost.skillsService, [], request.kind),
-  showAboutPanel: () => unsupported("system.about"),
+  // No native picker: the browser imports skills by upload.
+  importLocalSkills: async () => ({ success: false, cancelled: true }),
+  showAboutPanel: () => {
+    throw unsupported("system.about");
+  },
   setTitlebarDensity: async (value) => ({
     density: setTitlebarDensity(value),
     appliesOnRestart: false,

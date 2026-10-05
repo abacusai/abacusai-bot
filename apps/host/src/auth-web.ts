@@ -1,15 +1,18 @@
 import { randomBytes, createHash } from "node:crypto";
 
-import type { WebAuthCompleteResult } from "@abacus-ai/contract/account";
 import { ORPCError } from "@orpc/server";
 
-import type { HostOperations } from "#main/handler";
+import type { HostPlatformOperations, WebAuth } from "#main/handler";
 import {
   abacusAppHost,
   abacusUserAgent,
 } from "#main/services/providers/abacus-host";
 import { readAccountState } from "#main/services/providers/account-service";
-export const createWebAuth = (operations: HostOperations) => {
+
+/** Browser sign-in: a single-use ten-minute S256 verifier kept on the host. */
+export const createWebAuth: NonNullable<HostPlatformOperations["webAuth"]> = (
+  adopt
+): WebAuth => {
   let attempt: { verifier: string; expires: number } | undefined;
   return {
     start: async () => {
@@ -19,11 +22,7 @@ export const createWebAuth = (operations: HostOperations) => {
         challenge: createHash("sha256").update(verifier).digest("base64url"),
       };
     },
-    complete: async ({
-      code,
-    }: {
-      code: string;
-    }): Promise<WebAuthCompleteResult> => {
+    complete: async ({ code }) => {
       const pending = attempt;
       attempt = undefined;
       if (!pending || pending.expires <= Date.now())
@@ -51,7 +50,7 @@ export const createWebAuth = (operations: HostOperations) => {
       };
       const key = body.result?.apiKey ?? body.apiKey;
       if (!key) throw new ORPCError("UNAUTHORIZED");
-      const adopted = await operations.adoptAbacusCredential(key, "web");
+      const adopted = await adopt(key, "web");
       if (!adopted.ok) throw new ORPCError("UNAUTHORIZED");
       return {
         ...readAccountState(),

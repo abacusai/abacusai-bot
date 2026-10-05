@@ -15,8 +15,8 @@ import { createHostHttpServer } from "./http";
 import { HostLease } from "./lease";
 it("health reveals only readiness; uploads authenticate and save raw and multipart files without CORS", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-http-"));
-  const lease = new HostLease();
-  const app = createNodeAppOperations(lease, {} as never);
+  const lease = new HostLease(() => false);
+  const app = createNodeAppOperations(lease);
   app.botHome = () => home;
   const identity = {
     owner: "o",
@@ -229,7 +229,7 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
 
 it("serves typed file failures, HEAD, one-byte ranges and bounded previews", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-files-"));
-  const lease = new HostLease();
+  const lease = new HostLease(() => false);
   const identity = {
     owner: "o",
     org: "g",
@@ -246,13 +246,15 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
   };
   const server = createHostHttpServer(
     identity,
-    createNodeAppOperations(lease, {} as never),
-    lease
+    createNodeAppOperations(lease),
+    lease,
+    () => null,
+    { prepareFile: async () => ({ status: 404 }) }
   );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const url = (path: string, maxBytes?: string, route = "/files") =>
-    `${base}${route}?${new URLSearchParams({ hostRoot: home, path, ...(maxBytes == null ? {} : { maxBytes }) })}`;
+  const url = (path: string, maxBytes?: string) =>
+    `${base}/files?${new URLSearchParams({ hostRoot: home, path, ...(maxBytes == null ? {} : { maxBytes }) })}`;
   try {
     await writeFile(join(home, "file.txt"), "attachment");
     await writeFile(join(home, "empty"), "");
@@ -328,8 +330,6 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
     expect(emptyRange.status).toBe(416);
     expect(emptyRange.headers.get("content-range")).toBe("bytes */0");
     expect(await emptyRange.text()).toBe("");
-    const alias = await fetch(url("file.txt", "1", "/file"), { headers });
-    expect(await alias.text()).toBe("a");
     for (const invalid of ["-1", "1.5", "", "Infinity", "9007199254740992"]) {
       const result = await fetch(url("file.txt", invalid), { headers });
       expect(result.status).toBe(400);

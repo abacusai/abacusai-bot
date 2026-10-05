@@ -1,4 +1,6 @@
+// Self-contained: the browser smoke test loads this file directly.
 import { ORPCError } from "@orpc/server";
+
 export type HostPlatform = "electron" | "web-host";
 export const WEB_HOST_DENIED = [
   "window",
@@ -227,13 +229,6 @@ export const assertHostCapability = (
   procedure: string,
   input?: unknown
 ): void => {
-  if (
-    !supportsProcedure(platform, procedure, input) ||
-    (platform === "web-host" && procedure.startsWith("render_"))
-  )
-    throw new ORPCError("UNSUPPORTED", {
-      status: 501,
-      message: "not available on the web host",
-      data: { procedure },
-    });
+  if (!supportsProcedure(platform, procedure, input))
+    throw new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
 };

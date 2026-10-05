@@ -13,10 +13,6 @@ import {
   isMigrationWriteBlocked,
   isMigrationWriteBlockedTree,
 } from "../../migrations/write-block";
-import {
-  electronFileOperations,
-  type HostFileOperations,
-} from "../../platform/files";
 
 const execFileAsync = promisify(execFile);
 
@@ -120,9 +116,6 @@ interface TrackedDirectoryInfo {
 }
 
 export class FileTreeService {
-  constructor(
-    private readonly files: HostFileOperations = electronFileOperations
-  ) {}
   private readonly nodeCache = new Map<string, FileTreeNode[]>();
   private readonly trackedDirectorySetCache = new Map<
     string,
@@ -192,6 +185,7 @@ export class FileTreeService {
     filePath: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const { shell } = await import("electron");
       const normalizedWorkspace = path.resolve(workspacePath);
       const absPath = path.resolve(
         normalizedWorkspace,
@@ -203,7 +197,7 @@ export class FileTreeService {
       if (isMigrationWriteBlockedTree(absPath)) {
         return { success: false, error: MIGRATION_HELD };
       }
-      await this.files.trashItem(absPath);
+      await shell.trashItem(absPath);
       return { success: true };
     } catch (error) {
       return { success: false, error: String(error) };

@@ -44,6 +44,13 @@ export const forbidden = (reason: string, message?: string): RpcError =>
 export const unsupported = (procedure: string): RpcError =>
   new ORPCError("UNSUPPORTED", { status: 501, data: { procedure } });
 
+/** A web-host reply above the socket bound; `alternative` streams it over HTTP. */
+export const payloadTooLarge = (alternative: string): RpcError =>
+  new ORPCError("PAYLOAD_TOO_LARGE", {
+    status: 413,
+    data: { limit: 1024 * 1024, alternative },
+  });
+
 export const notFound = (entity: NotFoundEntity, id: string): RpcError =>
   new ORPCError("NOT_FOUND", {
     status: 404,
