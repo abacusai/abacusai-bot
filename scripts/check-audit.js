@@ -19,6 +19,14 @@ const TARGETS = {
     packageManager: "pnpm",
     cwd: repoRoot,
     accepted: {
+      // https://github.com/advisories/GHSA-86w9-cpqp-85rv (no patched release).
+      "GHSA-86w9-cpqp-85rv":
+        "node-forge <=1.4.0 via sandbox-runtime 0.0.76: RSA signature " +
+        "verification accepts a malformed DigestAlgorithm. The runtime's " +
+        "only forge consumers, mitm-ca.js and mitm-leaf.js, parse and mint " +
+        "local certificates; they never call forge RSA/certificate verification. " +
+        "TLS verification uses Node/OpenSSL. Delete when forge ships a patched " +
+        "release or sandbox-runtime introduces forge signature verification.",
       // Both name a patched version npm does not have yet, so there is nothing
       // to pin in `overrides`; both are defended at the call site. When the
       // release lands, the stale-entry check below fails on the entry.
@@ -45,6 +53,18 @@ const TARGETS = {
         "The defence is the one described for GHSA-jmr9-qjv8-65gv above, and " +
         "2.0.2 is still the newest release that does not exist. Delete when " +
         "extract-zip >=2.0.2 ships.",
+      "GHSA-ch52-4w7c-c8xp":
+        "http-cache-semantics <=4.2.0 via electron-builder's @electron/get: " +
+        "max-stale handling can serve one user's cached response to another. " +
+        "Only `got` inside electron-builder uses it, to download Electron " +
+        "binaries on the single-user packaging machine; the app ships none of " +
+        "it and no cache is shared between users. Delete when a patched " +
+        "http-cache-semantics ships.",
+      "GHSA-vfj7-8cjw-p6xm":
+        "braces <=3.0.3 via ultracite's fast-glob: stack exhaustion on deeply " +
+        "nested brace patterns. The patterns come from this repository's own " +
+        "lint and workspace configuration, never from user input, and nothing " +
+        "shipped depends on braces. Delete when a patched braces ships.",
     },
   },
 };

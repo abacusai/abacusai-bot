@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "sessionId": "sess-tool-group",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Look around the repo",
+      "at": 1788256800000
+    },
+    {
+      "type": "tool_group",
+      "id": "g1",
+      "category": "explore",
+      "summary": "Read 2 files, searched 1 pattern",
+      "at": 1788256801000,
+      "tools": [
+        {
+          "type": "tool_call",
+          "id": "g1-a",
+          "toolCall": {
+            "id": "ga",
+            "name": "read",
+            "args": {
+              "file_path": "README.md"
+            },
+            "status": "success"
+          },
+          "at": 1788256801000,
+          "toolResult": {
+            "toolCallId": "ga",
+            "output": "# Readme",
+            "data": {
+              "type": "read",
+              "content": "# Readme",
+              "lineCount": 1
+            }
+          }
+        },
+        {
+          "type": "tool_call",
+          "id": "g1-b",
+          "toolCall": {
+            "id": "gb",
+            "name": "read",
+            "args": {
+              "file_path": "package.json"
+            },
+            "status": "success"
+          },
+          "at": 1788256802000,
+          "toolResult": {
+            "toolCallId": "gb",
+            "output": "{}",
+            "data": {
+              "type": "read",
+              "content": "{}",
+              "lineCount": 1
+            }
+          }
+        },
+        {
+          "type": "tool_call",
+          "id": "g1-c",
+          "toolCall": {
+            "id": "gc",
+            "name": "grep",
+            "args": {
+              "pattern": "TODO"
+            },
+            "status": "success"
+          },
+          "at": 1788256803000,
+          "toolResult": {
+            "toolCallId": "gc",
+            "output": "3 matches",
+            "data": {
+              "type": "generic",
+              "output": "3 matches"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "The repo is a small TypeScript library.",
+      "at": 1788256804000
+    }
+  ]
+}

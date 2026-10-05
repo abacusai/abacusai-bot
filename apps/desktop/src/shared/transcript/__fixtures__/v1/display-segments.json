@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "sessionId": "sess-display-segments",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "segments": [
+    {
+      "type": "text",
+      "id": "u1",
+      "source": "user",
+      "content": "Show me everything",
+      "at": 1788256800000
+    },
+    {
+      "type": "thinking",
+      "id": "th1",
+      "content": "Planning.",
+      "isSpinny": false,
+      "at": 1788256801000
+    },
+    {
+      "type": "collapsible",
+      "id": "col1",
+      "title": "Plan",
+      "content": "1. Read\n2. Write",
+      "isSpinny": false,
+      "at": 1788256802000
+    },
+    {
+      "type": "collapsible",
+      "id": "col2",
+      "content": "Untitled body",
+      "isSpinny": false,
+      "at": 1788256803000
+    },
+    {
+      "type": "feature_limit",
+      "id": "fl1",
+      "featureName": "Image generation",
+      "limitType": "daily",
+      "at": 1788256804000
+    },
+    {
+      "type": "text",
+      "id": "b1",
+      "source": "bot",
+      "content": "Done.",
+      "at": 1788256805000
+    }
+  ]
+}

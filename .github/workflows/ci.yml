@@ -136,6 +136,12 @@ jobs:
       - name: Build what the tests execute
         run: pnpm run build
 
+      # Electron 44 installs on first require. Parallel Vitest workers can
+      # race while extracting into the same directory, especially on Windows.
+      - name: Install Electron before the desktop test workers start
+        working-directory: apps/desktop
+        run: node -e 'require("electron")'
+
       - run: pnpm run test
 
       # The agent resolves these at runtime rather than shelling out to whatever

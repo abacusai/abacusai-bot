@@ -1,0 +1,125 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256800000,
+              "id": "u1",
+              "partIndex": 0,
+              "type": "text"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:00.000Z"
+        }
+      },
+      "parts": [
+        {
+          "content": "Draw a cat, then animate it",
+          "metadata": {
+            "abacus": {
+              "segmentId": "u1"
+            }
+          },
+          "type": "text"
+        }
+      ],
+      "role": "user"
+    },
+    {
+      "id": "m-image",
+      "metadata": {
+        "abacus": {
+          "segments": [
+            {
+              "at": 1788256801000,
+              "id": "m-image",
+              "partIndex": 0,
+              "type": "media"
+            },
+            {
+              "at": 1788256802000,
+              "id": "m-video",
+              "partIndex": 1,
+              "type": "media"
+            },
+            {
+              "at": 1788256803000,
+              "id": "m-video-min",
+              "partIndex": 2,
+              "type": "media"
+            }
+          ]
+        },
+        "tanstack": {
+          "createdAt": "2026-09-01T10:00:01.000Z"
+        }
+      },
+      "parts": [
+        {
+          "metadata": {
+            "abacus": {
+              "height": 768,
+              "model": "image-model-1",
+              "prompt": "a cat",
+              "segmentId": "m-image",
+              "width": 1024
+            }
+          },
+          "source": {
+            "type": "url",
+            "value": "https://example.com/cat.png"
+          },
+          "type": "image"
+        },
+        {
+          "metadata": {
+            "abacus": {
+              "aspectRatio": "16:9",
+              "duration": 5,
+              "height": 720,
+              "loop": true,
+              "model": "video-model-1",
+              "prompt": "a cat walking",
+              "segmentId": "m-video",
+              "width": 1280
+            }
+          },
+          "source": {
+            "type": "url",
+            "value": "https://example.com/cat.mp4"
+          },
+          "type": "video"
+        },
+        {
+          "metadata": {
+            "abacus": {
+              "height": 360,
+              "loop": false,
+              "segmentId": "m-video-min",
+              "width": 640
+            }
+          },
+          "source": {
+            "type": "url",
+            "value": "https://example.com/min.mp4"
+          },
+          "type": "video"
+        }
+      ],
+      "role": "assistant"
+    }
+  ],
+  "source": {
+    "kind": "transcript-v1",
+    "segments": 4,
+    "updatedAt": "2026-09-01T10:30:00.000Z"
+  },
+  "threadId": "sess-media",
+  "updatedAt": "2026-09-01T10:30:00.000Z",
+  "version": 2
+}

@@ -6,7 +6,20 @@ import { promisify } from "util";
 
 import type { FileTreeNode, GitChangeItem } from "#shared/contracts";
 
+import {
+  isMigrationWriteBlocked,
+  isMigrationWriteBlockedTree,
+} from "../../migrations/write-block";
+
 const execFileAsync = promisify(execFile);
+
+/**
+ * A file an unresolved migration commit may cover (spec 00 C.1): the next
+ * launch's rollback depends on it staying as it is, so a workspace opened on
+ * the app's home cannot change it this launch.
+ */
+const MIGRATION_HELD =
+  "Held by an unfinished data migration; try again after restarting the app";
 
 /**
  * Whether `candidate` really lands inside `workspace`, symlinks followed. Real
@@ -149,6 +162,14 @@ export class FileTreeService {
       ) {
         return { success: false, error: "Path outside workspace" };
       }
+      // Both ends, and everything under either (a directory rename moves
+      // its descendants; renaming onto a path replaces what is there).
+      if (
+        isMigrationWriteBlockedTree(absFrom) ||
+        isMigrationWriteBlockedTree(absTo)
+      ) {
+        return { success: false, error: MIGRATION_HELD };
+      }
       await fsp.rename(absFrom, absTo);
       return { success: true };
     } catch (error) {
@@ -169,6 +190,9 @@ export class FileTreeService {
       );
       if (!(await isInsideWorkspace(absPath, normalizedWorkspace))) {
         return { success: false, error: "Path outside workspace" };
+      }
+      if (isMigrationWriteBlockedTree(absPath)) {
+        return { success: false, error: MIGRATION_HELD };
       }
       await shell.trashItem(absPath);
       return { success: true };
@@ -194,6 +218,9 @@ export class FileTreeService {
       ) {
         return { success: false, error: "Path outside workspace" };
       }
+      if (isMigrationWriteBlocked(absPath)) {
+        return { success: false, error: MIGRATION_HELD };
+      }
       await fsp.writeFile(absPath, content, "utf8");
       return { success: true };
     } catch (error) {
@@ -214,6 +241,9 @@ export class FileTreeService {
       );
       if (!(await isInsideWorkspace(absPath, normalizedWorkspace))) {
         return { success: false, error: "Path outside workspace" };
+      }
+      if (isMigrationWriteBlocked(absPath)) {
+        return { success: false, error: MIGRATION_HELD };
       }
       await fsp.writeFile(absPath, content, "utf8");
       return { success: true };

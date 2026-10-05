@@ -266,5 +266,7 @@ describe(`indexing this repository (${corpus.length} files, ${corpus.reduce((n, 
     }
 
     expect(failures, report(failures)).toEqual([]);
-  });
+    // The corpus grows with the repository (up to 5,000 files). This checks
+    // correctness, not parser speed; Windows needs room for the full AST walk.
+  }, 30_000);
 });

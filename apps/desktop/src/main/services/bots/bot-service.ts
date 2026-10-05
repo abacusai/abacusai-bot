@@ -228,8 +228,8 @@ export class BotService {
     return listBots();
   }
 
-  create(input: BotCreateInput): Bot {
-    const bot = createBot(input);
+  create(input: BotCreateInput, id?: string): Bot {
+    const bot = createBot(input, id);
     this.rewriteAllPersonas();
     this.callbacks.emitChanged();
 
