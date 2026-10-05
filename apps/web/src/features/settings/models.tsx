@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
-import { webSignIn } from "#platform/sign-in";
+import { signInAbacus } from "#platform/sign-in";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
@@ -464,7 +464,7 @@ export const ProviderDialog = ({
     try {
       const result = IS_ELECTRON
         ? await auth.start({})
-        : await webSignIn(transport);
+        : await signInAbacus(transport, {});
       if (id !== token.current) return;
       if (result.ok) {
         await refresh();
