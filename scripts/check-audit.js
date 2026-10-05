@@ -57,6 +57,14 @@ const TARGETS = {
         "nested brace patterns. The patterns come from this repository's own " +
         "lint and workspace configuration, never from user input, and nothing " +
         "shipped depends on braces. Delete when a patched braces ships.",
+      // https://github.com/advisories/GHSA-86w9-cpqp-85rv (no patched release).
+      "GHSA-86w9-cpqp-85rv":
+        "node-forge <=1.4.0 via sandbox-runtime 0.0.76: RSA signature " +
+        "verification accepts a malformed DigestAlgorithm. The runtime's " +
+        "only forge consumers, mitm-ca.js and mitm-leaf.js, parse and mint " +
+        "local certificates; they never call forge RSA/certificate verification. " +
+        "TLS verification uses Node/OpenSSL. Delete when forge ships a patched " +
+        "release or sandbox-runtime introduces forge signature verification.",
     },
   },
 };
