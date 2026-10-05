@@ -620,3 +620,92 @@ Implementation and notes are committed locally; nothing was pushed. Pre-existing
 spec edits and untracked PR3/PR4 review notes were left untouched.
 
 - Cleanup r6: browser Library Tools hides Messaging and its detail route; direct Messaging navigation throws `notFound()` in `beforeLoad`; WhatsApp referral actions, dialog choices and direct links are gated; startup copy says “Starting your workspace” in English and all synced locales. Browser regressions, full web Vitest, web build, bundle, TypeScript, Oxlint, formatting and locale/i18n checks pass.
+
+## Simplification pass
+
+A pass over the non-mechanical diff (everything except `c5e68e8d` moves and
+`b60daefb` import rewrite) to remove bespoke code, dead gates and duplicate
+tests. No contract changed: procedure names and shapes, `UNSUPPORTED`, the
+capability table, `system.activity`, the `/bot/` base, the connect services and
+their fields, the `abacus-token.` subprotocol, `/files` and `/upload`, CSP values
+and storage keys are as before.
+
+Removed or consolidated:
+
+- **Platform aliases.** One `src/platform/<name>.<platform>.ts(x)` file per
+  alias; `platformAlias()` reads the folder instead of listing names and special
+  cases, and `package.json#imports` keeps only the `#platform/*` pattern. The
+  Electron sign-in is defined beside `platformSystem` (re-exported by
+  `sign-in.electron.ts`) so the Electron chunk count stays at 309.
+- **Platform splits behind `#platform`.** `connectHost()` (browser connect
+  screen, attention install, socket open), `cueClaim()` (sound-cue arbitration,
+  formerly two copies of the same ternary) and `signInAbacus()` (four
+  `auth.abacus.start`/`webSignIn` ternaries) replace call-site checks; `main.tsx`
+  no longer branches on the platform for connect or lease.
+- **Dead gates.** The messaging page body is the base version (its route throws
+  `notFound` in browsers; only the `IS_ELECTRON` wrapper stays for bundle
+  pruning). The onboarding `models` step's cleanup, loader and Connect gates go
+  (`guardStep` redirects it). The tour's duplicate `enabled`, the onboarding
+  messaging-connector gate, the gallery fixture filter and `platformSystem`
+  calls inside Electron-only branches go. One `VISIBLE_TOOLSETS` list serves both
+  tools pages.
+- **Smaller.** `uiPlatform`, `ConnectScreen`'s error kinds, the authorization
+  fallback's cancel handler, the folder picker's directory list, the picked-file
+  mapping and the activity report each have one code path.
+  `createWebSocketTransport` accepts an already-open socket, so neither
+  `connectWebSocketTransport` nor the tests need a constructor shim. The browser
+  system adapter imports its helpers statically. Locale keys
+  `web.connect.signin`, `web.files.cancel` (duplicates of `phase5.*`) and
+  `web.files.select` (always overwritten before display) are removed.
+- **Re-export shims.** `lib/window-chrome/{overlay-slots,use-titlebar-area}.ts`
+  are gone and their tests sit beside the real modules; the desktop
+  `pptx-parser.ts` wrapper is gone (main calls the contract parser on a
+  `ZipArchive`), so git reads the shared parser as a move.
+- **Desktop.** `unsupported(procedure)` in `rpc/errors.ts` is used by the
+  capability middleware and the `auth.web` stubs; the preload reverts to
+  `Object.assign(window, …)`; a triple-slash directive the import sorter had
+  stranded below an import is removed.
+- **Tooling.** The second oxlint override (an exact copy of the renderer rule)
+  and the applied one-shot `rekey-web-parity.mjs` are removed. The web Vitest
+  config reuses `rendererAlias`. The parity check rejects any absolute module id
+  generically, and the baseline note is shortened (the script is the recipe).
+- **Tests.** The web CSP test no longer re-derives the Electron policy by
+  scraping desktop source (the desktop test pins it against the constant); the
+  favicon pin stays. Dropped: the duplicate dev-URL case, the path canary in
+  `web-split.test.mjs`, two `/files` cases (a stub pass-through and a duplicate
+  Blob read) and two redundant truncation sizes. `parity.test.ts`'s
+  missing-symbol case tests symbol lookup again.
+
+Left alone on purpose: the boundary plugin's four hooks (each closes a bypass
+the r2 reviews reproduced), the capability allowlist (exact paths fail closed
+for new procedures), the contract `exports` map (a wildcard would make every
+file public to knip), the hand-written router type (TS7056 without it), the
+notification `BroadcastChannel` fallback (jsdom and older browsers lack Web
+Locks), the `/files` reader (every branch is pinned), and an i18n override bundle
+for the host/desktop wording swaps (smaller, but riskier than this pass). About
+120 desktop and contract files carry only import-sorting and wrapping from the
+formatter run after `b60daefb`; they are needed by the format check.
+
+`git diff --stat` excluding the two mechanical commits (`rewrite/renderer..99f20795`
+plus `b60daefb..<tip>`; the spec commits are 4 files, +914):
+
+| | Files | Insertions | Deletions |
+|---|---:|---:|---:|
+| Before (`794e13c3`) | 573 | 12,220 | 4,109 |
+| After (`9cf872fc`, before this note) | 574 | 10,182 | 2,420 |
+
+The full `rewrite/renderer..<tip>` stat went from 1,294 files, +12,487/−4,376 to
+1,293 files, +10,593/−2,831. The pass itself is 73 files, +357/−706; about 3,000
+of the stat reduction is the pptx parser now reading as a move.
+
+Validation: web and desktop builds, `node scripts/check-web-bundle.mjs` (291
+chunks, 492 web modules; desktop 309 chunks, 6,118,359 bytes, 2,042,961 gzip
+against the pre-pass 309 / 6,119,132 / 2,043,375 and the 306 / 6,099,921 /
+2,036,433 baseline), `pnpm smoke:rpc`, web Vitest (218 files, 1,625 tests, both
+projects), contract Vitest (25 files, 419 tests), `scripts/web-split.test.mjs`,
+and `env -u NO_COLOR xvfb-run -a pnpm check --force`: 29/30 tasks. The one
+failure is `@abacus-ai/desktop#test`'s `notch.electron.test.ts` (1 of 2,809
+tests): this host no longer has the GTK runtime Electron needs
+(`libgtk-3.so.0` is missing), so the native suite reports "requires a display".
+No native or notch code changed in this pass; the other 283 desktop test files
+pass. Rerun on a host with GTK (or with the runtime reinstalled) to close it.
