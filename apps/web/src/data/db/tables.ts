@@ -139,6 +139,7 @@ const BOT_CREATE_FIELDS = [
   "avatarColor",
   "avatarShape",
   "avatarAccessory",
+  "wallpaper",
   "workspaceId",
   "model",
   "channel",
@@ -152,6 +153,7 @@ const BOT_UPDATE_FIELDS = [
   "avatarColor",
   "avatarShape",
   "avatarAccessory",
+  "wallpaper",
   "model",
   "channel",
 ] as const;

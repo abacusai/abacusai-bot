@@ -54,7 +54,7 @@ export const ConnectorRequestCard = ({
 
   return (
     <div
-      className="bg-card/60 mx-auto mb-2 flex w-full max-w-[720px] items-start gap-3 rounded-xl border px-3.5 py-3"
+      className="bg-card/60 mx-auto mb-2 flex w-full max-w-(--composer-max-w) items-start gap-3 rounded-xl border px-3.5 py-3"
       data-slot="connector-request"
       data-connector={request.connectorId}
       role="group"

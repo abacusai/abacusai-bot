@@ -20,6 +20,8 @@ export const SHELL_GEOMETRY = {
   rowH: 32,
   /** `--side-panel-min`: both sides of the in-layout split. */
   sidePanelMin: 360,
+  /** `--side-panel-max`: the in-layout panel's widest; resizable between min and max. */
+  sidePanelMax: 480,
   /** `--side-panel-drawer-w`: the drawer below 1100. */
   sidePanelDrawerW: 356,
   /** `--pane-inset`: the pane's right and bottom inset, and the pane/panel gutter. */
@@ -28,6 +30,10 @@ export const SHELL_GEOMETRY = {
   paneRadius: 12,
   /** `--drawer-padding`: the drawer's content padding. */
   drawerPadding: 16,
+  /** `--transcript-max-w`: the chat transcript's column clamp. */
+  transcriptMaxW: 960,
+  /** `--composer-max-w`: the composer column, a step narrower than the transcript. */
+  composerMaxW: 760,
 } as const;
 
 type ShellGeometryKey = keyof typeof SHELL_GEOMETRY;
@@ -41,8 +47,11 @@ export const GEOMETRY_VARS: Record<ShellGeometryKey, `--${string}`> = {
   sidebarHeaderH: "--sidebar-header-h",
   rowH: "--row-h",
   sidePanelMin: "--side-panel-min",
+  sidePanelMax: "--side-panel-max",
   sidePanelDrawerW: "--side-panel-drawer-w",
   paneInset: "--pane-inset",
   paneRadius: "--pane-radius",
   drawerPadding: "--drawer-padding",
+  transcriptMaxW: "--transcript-max-w",
+  composerMaxW: "--composer-max-w",
 };

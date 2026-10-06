@@ -697,6 +697,9 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       <MessageScrollerViewport
         ref={viewportRef}
         data-continuity-scroll="chat-transcript"
+        // The header's scroll-linked morph into the title bar reads this
+        // viewport's named timeline (bots.css).
+        data-identity-timeline={slots.header != null ? "" : undefined}
         preserveScrollOnPrepend
         style={{
           overflowAnchor: "none",
@@ -709,7 +712,11 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           anchor.current = null;
         }}
       >
-        {slots.header && <div className="px-4 pt-3">{slots.header}</div>}
+        {slots.header && (
+          <div className="[container-type:inline-size] px-4 pt-3">
+            {slots.header}
+          </div>
+        )}
         {window.start === 0 ? <OlderRow /> : null}
         {window.start > 0 ? (
           <Placeholder
@@ -723,7 +730,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         ) : null}
         <MessageScrollerContent
           aria-busy={active}
-          className="mx-auto w-full max-w-[720px] min-w-0 gap-3 px-4 pt-6 pb-12"
+          className="mx-auto w-full max-w-(--transcript-max-w) min-w-0 gap-3 px-4 pt-6 pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
         >
           {orphans.map((outcome) => (
             <MessageScrollerItem key={`outcome-${outcome.runId}`}>
@@ -746,7 +753,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       </MessageScrollerViewport>
       <MessageScrollerButton
         direction="end"
-        className="bg-popover text-popover-foreground phone:h-10 phone:min-w-10 phone:rounded-full phone:bg-popover/85 phone:backdrop-blur-lg border opacity-100 shadow-lg"
+        className="bg-popover text-popover-foreground phone:h-10 phone:min-w-10 phone:rounded-full phone:bg-popover/85 phone:backdrop-blur-lg border opacity-100 shadow-lg data-[direction=end]:bottom-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
         aria-label={
           marker.count > 0
             ? t("chat.transcript.jumpNew", { count: marker.count })

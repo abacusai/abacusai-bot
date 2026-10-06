@@ -200,3 +200,14 @@ describe("avatar accessories", () => {
     expect(rows[1].avatarAccessory).toBe("bow");
   });
 });
+
+describe("the chat wallpaper", () => {
+  it("is absent by default and round-trips through update, including back to none", () => {
+    const bot = createBot({ name: "Scout", description: "Watch the news." });
+    expect(getBot(bot.id)?.wallpaper).toBeUndefined();
+    updateBot(bot.id, { wallpaper: "doodle" });
+    expect(getBot(bot.id)?.wallpaper).toBe("doodle");
+    updateBot(bot.id, { wallpaper: null });
+    expect(getBot(bot.id)?.wallpaper).toBeNull();
+  });
+});

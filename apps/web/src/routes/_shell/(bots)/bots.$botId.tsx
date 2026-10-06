@@ -27,10 +27,7 @@ import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
-import {
-  TopBarSlot,
-  useTopBarActions,
-} from "#renderer/features/shell/top-bar-slots";
+import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -112,7 +109,6 @@ const ComposedChat = ({
   preview?: string;
   toggle(): void;
 }) => {
-  const { t } = useTranslation();
   const { chat } = Route.useRouteContext();
   const runtime =
     fixtureState.current && bot.sessionId == null
@@ -124,9 +120,8 @@ const ComposedChat = ({
     requestBrowserOpen({ sessionId, url })
   );
   const navigate = useAppNavigate();
-  useTopBarActions([
-    { id: "details", label: t("bots.panel.detailsTitle"), onSelect: toggle },
-  ]);
+  // The identity itself (header and dock) opens and closes the details
+  // panel; the title bar keeps only its panel toggle on the far right.
   return (
     <div
       data-testid="bot-chat"
@@ -152,6 +147,7 @@ const ComposedChat = ({
         composer={slots.composer}
         slots={{
           ...slots.chat,
+          wallpaper: bot.wallpaper ?? null,
           header: (
             <BotTranscriptIdentity
               bot={bot}

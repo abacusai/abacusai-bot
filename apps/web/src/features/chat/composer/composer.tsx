@@ -51,8 +51,9 @@ import { useChatView } from "../kit/context";
 import { composeReply, ReplyQuote } from "../kit/reply";
 import {
   composerChildren,
+  composerMorph,
+  composerReveal,
   composerSurface,
-  replyPreviewTransition,
 } from "../motion";
 import { routeSubmit } from "../runtime/send";
 import {
@@ -149,52 +150,63 @@ export const useComposerExpanded = (threadId: string): boolean => {
 const Attachments = () => {
   const { t } = useTranslation();
   const { threadId, draft } = useComposer();
+  const pref = useMotionPreference();
   if (draft.attachments.length === 0) return null;
   return (
-    <AttachmentGroup className="scroll-fade-x">
-      {draft.attachments.map((attachment) => (
-        <Attachment
-          key={attachment.id}
-          className="w-56"
-          data-state={attachment.state}
-        >
-          <AttachmentMedia>
-            {attachment.state === "uploading" ? (
-              <Spinner aria-hidden />
-            ) : attachment.preview != null ? (
-              <img
-                src={attachment.preview}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              <FileText aria-hidden />
-            )}
-          </AttachmentMedia>
-          <AttachmentContent>
-            <AttachmentTitle>{attachment.name}</AttachmentTitle>
-            <AttachmentDescription
-              className={cn(attachment.state === "error" && "text-destructive")}
-            >
-              {attachment.state === "error"
-                ? (attachment.error ?? t("chat.composer.attachFailed"))
-                : [
-                    attachment.name.split(".").at(-1)?.toUpperCase(),
-                    formatSize(attachment.size),
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-            </AttachmentDescription>
-          </AttachmentContent>
-          <AttachmentAction
-            aria-label={t("chat.composer.removeAttachment")}
-            onClick={() => removeAttachment(threadId, attachment.id)}
+    <motion.div
+      data-slot="composer-attachments"
+      className="overflow-hidden"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      transition={composerReveal(pref)}
+    >
+      <AttachmentGroup className="scroll-fade-x">
+        {draft.attachments.map((attachment) => (
+          <Attachment
+            key={attachment.id}
+            className="w-56"
+            data-state={attachment.state}
           >
-            <X aria-hidden />
-          </AttachmentAction>
-        </Attachment>
-      ))}
-    </AttachmentGroup>
+            <AttachmentMedia>
+              {attachment.state === "uploading" ? (
+                <Spinner aria-hidden />
+              ) : attachment.preview != null ? (
+                <img
+                  src={attachment.preview}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <FileText aria-hidden />
+              )}
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{attachment.name}</AttachmentTitle>
+              <AttachmentDescription
+                className={cn(
+                  attachment.state === "error" && "text-destructive"
+                )}
+              >
+                {attachment.state === "error"
+                  ? (attachment.error ?? t("chat.composer.attachFailed"))
+                  : [
+                      attachment.name.split(".").at(-1)?.toUpperCase(),
+                      formatSize(attachment.size),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentAction
+              aria-label={t("chat.composer.removeAttachment")}
+              onClick={() => removeAttachment(threadId, attachment.id)}
+            >
+              <X aria-hidden />
+            </AttachmentAction>
+          </Attachment>
+        ))}
+      </AttachmentGroup>
+    </motion.div>
   );
 };
 
@@ -627,6 +639,8 @@ export const ThreadComposer = () => {
 
   const surfaceTransition = composerSurface(pref);
   const childFade = composerChildren(pref);
+  const morph = composerMorph(pref, threadId);
+  const reveal = composerReveal(pref);
 
   const value: ComposerContextValue = {
     threadId,
@@ -711,13 +725,13 @@ export const ThreadComposer = () => {
           />
         ) : null}
         <motion.div
-          layout={pref === "full"}
-          layoutId={`composer:${threadId}`}
+          {...morph}
           transition={surfaceTransition}
           onDragOver={(event: DragEvent<HTMLDivElement>) =>
             event.preventDefault()
           }
           onDrop={onDrop}
+          data-slot="composer-surface"
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
             expanded
@@ -737,7 +751,7 @@ export const ThreadComposer = () => {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={replyPreviewTransition(pref)}
+                transition={reveal}
               >
                 <ReplyQuote
                   target={draft.replyTo}
@@ -789,6 +803,7 @@ export const ThreadComposer = () => {
           {expanded ? (
             <motion.div
               className="flex items-center gap-1.5"
+              layout={morph.layout ? "position" : false}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={childFade}
