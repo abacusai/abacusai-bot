@@ -384,6 +384,7 @@ const SessionRoute = () => {
             }}
             composer={{
               mode: "full",
+              sharedElement: true,
               placeholder: t("chat.composer.busySession"),
               attachmentsBase: root,
               attachmentContext: async () => ({
