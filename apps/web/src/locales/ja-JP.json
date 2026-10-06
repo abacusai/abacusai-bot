@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "権限モード",
       "noModels": "一致するモデルがありません",
-      "onThisMachine": "このマシン上"
+      "onThisMachine": "このマシン上",
+      "listening": "聞き取り中",
+      "dictationStarting": "音声入力を準備中",
+      "transcribing": "書き起こし中",
+      "stopDictation": "音声入力を停止",
+      "recordingTime": "録音時間"
     },
     "day": {
       "today": "Today",

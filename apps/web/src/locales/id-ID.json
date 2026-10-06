@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "Mode izin",
       "noModels": "Tidak ada model yang cocok",
-      "onThisMachine": "Di mesin ini"
+      "onThisMachine": "Di mesin ini",
+      "listening": "Mendengarkan",
+      "dictationStarting": "Menyiapkan dikte",
+      "transcribing": "Menuliskannya",
+      "stopDictation": "Berhenti mendikte",
+      "recordingTime": "Durasi rekaman"
     },
     "day": {
       "today": "Today",

@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "Modalità di autorizzazione",
       "noModels": "Nessun modello corrisponde",
-      "onThisMachine": "Su questo computer"
+      "onThisMachine": "Su questo computer",
+      "listening": "In ascolto",
+      "dictationStarting": "Preparazione della dettatura",
+      "transcribing": "Trascrizione in corso",
+      "stopDictation": "Interrompi la dettatura",
+      "recordingTime": "Durata della registrazione"
     },
     "day": {
       "today": "Today",

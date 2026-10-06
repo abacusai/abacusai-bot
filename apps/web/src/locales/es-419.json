@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "Modos de permisos",
       "noModels": "Ningún modelo coincide",
-      "onThisMachine": "En este equipo"
+      "onThisMachine": "En este equipo",
+      "listening": "Escuchando",
+      "dictationStarting": "Preparando el dictado",
+      "transcribing": "Transcribiendo",
+      "stopDictation": "Detener el dictado",
+      "recordingTime": "Tiempo de grabación"
     },
     "day": {
       "today": "Today",

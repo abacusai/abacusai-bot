@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "अनुमति मोड",
       "noModels": "कोई मॉडल मेल नहीं खाता",
-      "onThisMachine": "इस मशीन पर"
+      "onThisMachine": "इस मशीन पर",
+      "listening": "सुन रहा है",
+      "dictationStarting": "डिक्टेशन तैयार हो रहा है",
+      "transcribing": "लिखा जा रहा है",
+      "stopDictation": "डिक्टेशन रोकें",
+      "recordingTime": "रिकॉर्डिंग समय"
     },
     "day": {
       "today": "Today",

@@ -2753,7 +2753,12 @@
       "dictateSoon": "Dictation arrives soon",
       "modes": "권한 모드",
       "noModels": "일치하는 모델이 없습니다",
-      "onThisMachine": "이 컴퓨터에서"
+      "onThisMachine": "이 컴퓨터에서",
+      "listening": "듣는 중",
+      "dictationStarting": "받아쓰기 준비 중",
+      "transcribing": "받아 적는 중",
+      "stopDictation": "받아쓰기 중지",
+      "recordingTime": "녹음 시간"
     },
     "day": {
       "today": "Today",
