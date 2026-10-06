@@ -1,6 +1,7 @@
-import type { BotRow } from "@abacus-ai/contract/contract/rows";
+import type { ArtifactRow, BotRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,10 +12,12 @@ import {
   FilePreview,
   containmentRootFor,
 } from "#renderer/components/file-preview";
+import { FileTreeView } from "#renderer/components/file-tree";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { checkInFromRoutine } from "#renderer/lib/bots/check-in";
 import { weekdayName } from "#renderer/lib/bots/schedule";
+import { cn } from "#renderer/lib/cn";
 import { formatWhen } from "#renderer/lib/format-time";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -31,12 +34,6 @@ import {
   AlertDialogCancel,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-} from "#renderer/ui/context-menu";
 
 import { BotFace } from "../avatar";
 import {
@@ -371,18 +368,50 @@ export const MemoryTab = ({ bot }: { bot: BotRow }) => {
     </div>
   );
 };
+/**
+ * The bot's files as a tree (03-bots §12.3 amended, canvas `BotChatPanel`
+ * "Files"): the artifacts of every session the bot owns, laid out by their
+ * path under the workspace (elsewhere, by their absolute path), beside the
+ * open file. A click previews in this tab; a double-click or Enter opens
+ * the file in a new Files tab. Links sit under the tree.
+ */
+const treeOf = (
+  files: readonly ArtifactRow[],
+  workspaceRoot: string | null
+): { paths: string[]; byPath: Map<string, string> } => {
+  const byPath = new Map<string, string>();
+  const dirs = new Set<string>();
+  for (const file of files) {
+    if (file.kind === "link") continue;
+    const relative =
+      workspaceRoot && file.location.startsWith(`${workspaceRoot}/`)
+        ? file.location.slice(workspaceRoot.length + 1)
+        : file.location.replace(/^\/+/, "");
+    byPath.set(relative, file.location);
+    const parts = relative.split("/");
+    for (let i = 1; i < parts.length; i++)
+      dirs.add(`${parts.slice(0, i).join("/")}/`);
+  }
+  return {
+    paths: [...dirs, ...byPath.keys()].toSorted((a, b) => a.localeCompare(b)),
+    byPath,
+  };
+};
+
 export const FilesTab = ({
   bot,
   sessionId,
-  preview,
+  tab,
   workspaceRoot,
-  onClosePreview,
+  onOpen,
 }: {
   bot: BotRow;
-  preview?: string;
   sessionId?: string;
+  /** This Files tab; `tab.path` is the open file. */
+  tab: { id: string; path?: string };
   workspaceRoot: string | null;
-  onClosePreview(): void;
+  /** Show `path` here (undefined clears it), or in a new Files tab. */
+  onOpen(path: string | undefined, where: "here" | "tab"): void;
 }) => {
   const { t, i18n } = useTranslation();
   const db = useDb();
@@ -393,89 +422,104 @@ export const FilesTab = ({
   useEffect(() => {
     void db.collections.artifacts.preload();
   }, [db]);
-  if (preview)
-    return (
-      <div className="flex flex-col gap-2 p-3">
-        <Button variant="ghost" onClick={onClosePreview}>
-          {t("bots.panel.backFiles")}
-        </Button>
-        <FilePreview
-          path={preview}
-          hostRoot={containmentRootFor(preview, workspaceRoot)}
-          read={{
-            localUrl: IS_ELECTRON
-              ? async (filePath, hostRoot) => {
-                  const viewed = sessions.find(
-                    (row) => row.id === (sessionId ?? bot.sessionId)
-                  );
-                  if (!viewed?.workspaceId)
-                    throw new Error("Session workspace unavailable");
-                  const state =
-                    await transport.client.browser.runtime.materializeFile({
-                      filePath,
-                      hostRoot,
-                      conversationKey: sessionConversationKey(
-                        viewed.workspaceId,
-                        viewed.id
-                      ),
-                      resourceId: `bot-preview:${filePath}`,
-                    });
-                  await transport.client.browser.runtime.close(state.lease);
-                  return state.url;
-                }
-              : undefined,
-            text: (path, hostRoot) =>
-              transport.client.files.readText({ filePath: path, hostRoot }),
-            image: async (path, hostRoot) =>
-              (
-                await transport.client.files.readImageAsDataUrl({
-                  filePath: path,
-                  hostRoot,
-                })
-              ).dataUrl,
-            pptx: (path, hostRoot) =>
-              transport.client.files.readPptx({ filePath: path, hostRoot }),
-          }}
-          onOpenExternally={
-            IS_ELECTRON
-              ? (path) => void transport.client.system.openPath({ path })
-              : undefined
-          }
-          onReveal={
-            IS_ELECTRON
-              ? (path) =>
-                  void transport.client.system.showItemInFolder({ path })
-              : undefined
-          }
-        />
-      </div>
-    );
+  const preview = tab.path;
+  const tree = treeOf(files, workspaceRoot);
+  const links = files.filter((file) => file.kind === "link");
+  const open = (relative: string, where: "here" | "tab") => {
+    const location = tree.byPath.get(relative);
+    if (location) onOpen(location, where);
+  };
   return (
-    <div className="flex flex-col gap-3 p-4">
-      {files.length === 0 ? (
-        <EmptyState
-          title={t("bots.panel.filesEmpty")}
-          description={t("bots.panel.filesIntro")}
-        />
-      ) : (
-        <p className="text-muted-foreground text-xs">
-          {t("bots.panel.filesIntro")}
-        </p>
-      )}
-      {files.map((file) => (
-        <ContextMenu key={file.id}>
-          <ContextMenuTrigger render={<div />}>
+    <div
+      className="@container flex min-h-0 flex-1 flex-col"
+      data-slot="bot-files"
+    >
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          preview && "@xl:flex-row"
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-h-0 flex-col gap-3 overflow-y-auto p-3",
+            preview
+              ? "max-h-[40%] shrink-0 border-b @xl:max-h-none @xl:w-60 @xl:border-r @xl:border-b-0"
+              : "flex-1"
+          )}
+        >
+          {files.length === 0 ? (
+            <EmptyState
+              title={t("bots.panel.filesEmpty")}
+              description={t("bots.panel.filesIntro")}
+            />
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              {t("bots.panel.filesIntro")}
+            </p>
+          )}
+          {tree.paths.length > 0 && (
+            <FileTreeView
+              checkoutIdentity={`${bot.id}:${workspaceRoot ?? ""}`}
+              paths={tree.paths}
+              onSelect={(path) => {
+                if (!path.endsWith("/")) open(path, "here");
+              }}
+              onOpen={(path) => {
+                if (!path.endsWith("/")) open(path, "tab");
+              }}
+              onRename={() => undefined}
+              renderMenu={(item, context) =>
+                item.path.endsWith("/") ? null : (
+                  <div
+                    role="menu"
+                    className="bg-popover flex flex-col rounded-lg border p-1 shadow-md"
+                  >
+                    {[
+                      {
+                        label: t("bots.panel.openInNewTab"),
+                        run: () => open(item.path, "tab"),
+                      },
+                      ...(IS_ELECTRON
+                        ? [
+                            {
+                              label: t("artifacts.revealInFolder"),
+                              run: () =>
+                                void transport.client.system.showItemInFolder({
+                                  path: tree.byPath.get(item.path) ?? "",
+                                }),
+                            },
+                          ]
+                        : []),
+                    ].map((action) => (
+                      <Button
+                        key={action.label}
+                        role="menuitem"
+                        size="sm"
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => {
+                          context.close();
+                          action.run();
+                        }}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                )
+              }
+            />
+          )}
+          {links.map((file) => (
             <Button
+              key={file.id}
               variant="ghost"
               className="h-12 w-full justify-start"
               onClick={() =>
-                void (file.kind === "link"
-                  ? platformSystem(transport.client).openExternal({
-                      url: file.location,
-                    })
-                  : platformSystem(transport.client).openPath({
-                      path: file.location,
-                    }))
+                void platformSystem(transport.client).openExternal({
+                  url: file.location,
+                })
               }
             >
               <span
@@ -491,22 +535,71 @@ export const FilesTab = ({
                 </span>
               </span>
             </Button>
-          </ContextMenuTrigger>
-          {IS_ELECTRON && file.kind !== "link" && (
-            <ContextMenuContent>
-              <ContextMenuItem
-                onClick={() =>
-                  void transport.client.system.showItemInFolder({
-                    path: file.location,
-                  })
-                }
-              >
-                {t("artifacts.revealInFolder")}
-              </ContextMenuItem>
-            </ContextMenuContent>
-          )}
-        </ContextMenu>
-      ))}
+          ))}
+        </div>
+        {preview && (
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("bots.panel.backFiles")}
+              className="absolute top-1.5 right-2 z-10"
+              onClick={() => onOpen(undefined, "here")}
+            >
+              <X />
+            </Button>
+            <FilePreview
+              path={preview}
+              hostRoot={containmentRootFor(preview, workspaceRoot)}
+              read={{
+                localUrl: IS_ELECTRON
+                  ? async (filePath, hostRoot) => {
+                      const viewed = sessions.find(
+                        (row) => row.id === (sessionId ?? bot.sessionId)
+                      );
+                      if (!viewed?.workspaceId)
+                        throw new Error("Session workspace unavailable");
+                      const state =
+                        await transport.client.browser.runtime.materializeFile({
+                          filePath,
+                          hostRoot,
+                          conversationKey: sessionConversationKey(
+                            viewed.workspaceId,
+                            viewed.id
+                          ),
+                          resourceId: `bot-preview:${filePath}`,
+                        });
+                      await transport.client.browser.runtime.close(state.lease);
+                      return state.url;
+                    }
+                  : undefined,
+                text: (path, hostRoot) =>
+                  transport.client.files.readText({ filePath: path, hostRoot }),
+                image: async (path, hostRoot) =>
+                  (
+                    await transport.client.files.readImageAsDataUrl({
+                      filePath: path,
+                      hostRoot,
+                    })
+                  ).dataUrl,
+                pptx: (path, hostRoot) =>
+                  transport.client.files.readPptx({ filePath: path, hostRoot }),
+              }}
+              onOpenExternally={
+                IS_ELECTRON
+                  ? (path) => void transport.client.system.openPath({ path })
+                  : undefined
+              }
+              onReveal={
+                IS_ELECTRON
+                  ? (path) =>
+                      void transport.client.system.showItemInFolder({ path })
+                  : undefined
+              }
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
