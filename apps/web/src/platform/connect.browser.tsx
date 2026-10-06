@@ -1,6 +1,6 @@
 /**
- * Browser boot (spec 09 D4, D12). Only the identity call blocks: a sign-in
- * or tier refusal replaces the app. Then the router mounts at once over the
+ * Browser boot (spec 09 D4, D12). Only the bot account setup and the identity
+ * call block: a sign-in or tier refusal replaces the app. Then the router mounts at once over the
  * page's host transport, which is still connecting; readiness (bootstrap,
  * `/healthz`, the socket) runs behind `hostConnection` and shows in the
  * shell's banner. Calls made meanwhile wait for the socket, writes until
@@ -35,6 +35,7 @@ import {
   identifyHost,
   runHostConnection,
   setPageTransport,
+  setUpBotAccount,
   takeRestartRequest,
 } from "#renderer/features/shell/connect/services";
 import { installActivity } from "#renderer/lib/activity";
@@ -113,6 +114,7 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   });
   let identity;
   try {
+    await setUpBotAccount();
     identity = await identifyHost();
   } catch (error) {
     root.render(
