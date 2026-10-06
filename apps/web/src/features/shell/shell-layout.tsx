@@ -55,8 +55,10 @@ import {
   rememberTab,
 } from "./shell-store";
 import {
+  clampPanelWidth,
   PANE_MIN_PX,
   PANEL_DEFAULT_PX,
+  PANEL_MAX_PX,
   PANEL_MIN_PX,
   PANEL_PREF_KEY,
   SidePanelBody,
@@ -189,7 +191,9 @@ export const ShellLayout = ({
   useEffect(() => intent.cancel, [intent]);
 
   const [paneWidth] = useState(() => createPaneWidthWriter(db, PANEL_PREF_KEY));
-  const storedPanel = prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX;
+  const storedPanel = clampPanelWidth(
+    prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX
+  );
 
   return (
     <FloatingIntentContext value={intent}>
@@ -287,8 +291,11 @@ export const ShellLayout = ({
                   <ResizablePanel
                     id="side-panel"
                     minSize={PANEL_MIN_PX}
+                    maxSize={PANEL_MAX_PX}
                     defaultSize={storedPanel}
-                    onResize={(size) => paneWidth.write(size.inPixels)}
+                    onResize={(size) =>
+                      paneWidth.write(clampPanelWidth(size.inPixels))
+                    }
                   >
                     <SidePanelFrame>
                       <PaneBoundary resetKey={panel.tab}>

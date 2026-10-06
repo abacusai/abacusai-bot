@@ -6,6 +6,12 @@
 import { describe, expect, it } from "vitest";
 
 import { GEOMETRY_VARS, SHELL_GEOMETRY } from "./geometry";
+import {
+  clampPanelWidth,
+  PANEL_DEFAULT_PX,
+  PANEL_MAX_PX,
+  PANEL_MIN_PX,
+} from "./side-panel";
 
 import tokensCss from "../../styles/tokens.css?raw";
 
@@ -35,6 +41,21 @@ describe("shell geometry", () => {
     const g = SHELL_GEOMETRY;
     expect(g.composerMaxW).toBeLessThan(g.transcriptMaxW);
     expect(g.composerMaxW).toBeGreaterThan(g.sidePanelMin);
+  });
+
+  it("clamps the side panel between its min and max, the drawer and default inside", () => {
+    const g = SHELL_GEOMETRY;
+    expect([PANEL_MIN_PX, PANEL_MAX_PX]).toEqual([
+      g.sidePanelMin,
+      g.sidePanelMax,
+    ]);
+    expect(g.sidePanelMin).toBeLessThan(g.sidePanelMax);
+    expect(PANEL_DEFAULT_PX).toBeGreaterThanOrEqual(PANEL_MIN_PX);
+    expect(PANEL_DEFAULT_PX).toBeLessThanOrEqual(PANEL_MAX_PX);
+    expect(g.sidePanelDrawerW).toBeLessThanOrEqual(g.sidePanelMax);
+    expect(clampPanelWidth(100)).toBe(PANEL_MIN_PX);
+    expect(clampPanelWidth(420)).toBe(420);
+    expect(clampPanelWidth(900)).toBe(PANEL_MAX_PX);
   });
 
   it("leaves the pane and the panel their 360 px each at the 1100 minimum", () => {

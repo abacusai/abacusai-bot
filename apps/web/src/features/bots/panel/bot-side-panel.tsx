@@ -93,10 +93,12 @@ export const DetailsTab = ({
     >
       <div className="flex flex-col items-center gap-1 py-2">
         <BotFace bot={bot} size={72} />
-        <h2 className="max-w-full text-center text-base font-semibold break-words">
+        <h2 className="max-w-full text-center text-base font-semibold [overflow-wrap:anywhere]">
           {bot.name}
         </h2>
-        <p className="text-muted-foreground text-center text-xs">{bot.title}</p>
+        <p className="text-muted-foreground max-w-full text-center text-xs [overflow-wrap:anywhere]">
+          {bot.title}
+        </p>
         {bot.channel == null && (
           <AppLink
             to="/bots/$botId/edit"
@@ -112,23 +114,28 @@ export const DetailsTab = ({
           className="flex min-h-11 items-center justify-between gap-2 border-b px-3"
           aria-label={t("bots.panel.modelValue", { model: binding.label })}
         >
-          <span className="text-xs">{t("bots.form.model")}</span>
+          <span className="shrink-0 text-xs">{t("bots.form.model")}</span>
           {modelInComposer ? (
-            <span aria-hidden className="text-muted-foreground text-xs">
+            <span
+              aria-hidden
+              className="text-muted-foreground min-w-0 truncate text-xs"
+            >
               {binding.label}
             </span>
           ) : (
-            <ModelPicker binding={binding} readOnly={bot.channel != null} />
+            <div className="flex min-w-0 justify-end">
+              <ModelPicker binding={binding} readOnly={bot.channel != null} />
+            </div>
           )}
         </div>
         <AppLink
           to="/bots/$botId/check-in"
           params={{ botId: bot.id }}
           transition="none"
-          className="flex h-11 items-center justify-between border-b px-3 text-xs"
+          className="flex h-11 items-center justify-between gap-2 border-b px-3 text-xs"
         >
-          <span>{t("bots.checkIn.label")}</span>
-          <span className="text-muted-foreground">
+          <span className="shrink-0">{t("bots.checkIn.label")}</span>
+          <span className="text-muted-foreground min-w-0 truncate text-end">
             {!check.enabled
               ? t("bots.checkIn.paused")
               : check.preset === "custom"
@@ -176,12 +183,12 @@ export const DetailsTab = ({
                   key={session.id}
                   to="/bots/$botId/chats/$sessionId"
                   params={{ botId: bot.id, sessionId: session.id }}
-                  className="flex h-11 items-center justify-between text-xs"
+                  className="flex h-11 items-center justify-between gap-2 text-xs"
                 >
-                  <span>
+                  <span className="min-w-0 truncate">
                     {new Date(session.createdAt).toLocaleString(i18n.language)}
                   </span>
-                  <span>{session.runOutcome}</span>
+                  <span className="shrink-0">{session.runOutcome}</span>
                 </AppLink>
               ))}
           </section>
@@ -226,8 +233,10 @@ export const DetailsTab = ({
               className="flex h-11 items-center gap-2 text-xs"
             >
               <ConnectorMark id={platform.id} size={20} />
-              <span>{platform.id}</span>
-              <span className="ml-auto">{t("bots.panel.connected")}</span>
+              <span className="min-w-0 truncate">{platform.id}</span>
+              <span className="ml-auto shrink-0">
+                {t("bots.panel.connected")}
+              </span>
             </AppLink>
           ))}
         </section>
