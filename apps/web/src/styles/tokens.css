@@ -81,12 +81,17 @@ html {
   --muted-foreground: var(--sidebar-muted-foreground);
 }
 @media not (prefers-reduced-transparency: reduce) {
-  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"]) {
+  /* The whole document chain must be see-through, or the body's opaque
+     `--background` (app.css) hides the material under the chrome. */
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"]),
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"]) body,
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"]) #root {
     background-color: transparent;
   }
+  /* The native material is the chrome's surface: nothing painted over it. */
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     .shell-surface {
-    background-color: color-mix(in oklab, var(--sidebar) 35%, transparent);
+    background-color: transparent;
   }
 }
 
