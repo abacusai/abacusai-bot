@@ -27,6 +27,7 @@ import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
 import { cn } from "#renderer/lib/cn";
 import { useMotionPreference } from "#renderer/lib/motion";
+import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
 import {
@@ -614,6 +615,15 @@ export const ThreadComposer = () => {
 
   // The 800 px band and phones (chat-kit W800): the model chip is an icon button.
   const narrow = useMediaQuery("(max-width: 899px)");
+  // Cross-route morph (shared-element.ts): the surface is `composer` on the
+  // pages whose composers pair up. Unconditional: it sits above the early
+  // returns, and a read-only page carries no name (nothing to morph into).
+  const sharedStyle = useSharedElementName(
+    config.sharedElement && config.readOnly == null && !gone
+      ? "composer"
+      : null,
+    "composer"
+  );
 
   if (config.readOnly != null || gone)
     return (
@@ -731,6 +741,7 @@ export const ThreadComposer = () => {
             event.preventDefault()
           }
           onDrop={onDrop}
+          style={sharedStyle}
           data-slot="composer-surface"
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",

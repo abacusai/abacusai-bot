@@ -243,6 +243,7 @@ export const useBotChatSlots = (
     },
     composer: {
       mode: "full" as const,
+      sharedElement: true,
       placeholder: t("bots.chat.placeholder", {
         name: bot.name.length > 40 ? bot.name.slice(0, 39) + "…" : bot.name,
       }),
