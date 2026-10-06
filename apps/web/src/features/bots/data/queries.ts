@@ -65,14 +65,13 @@ export const useBots = (): {
 
 export const useBot = (botId: string): BotRow | undefined => {
   const collections = useCollections();
-  const { data } = useLiveQuery(
-    (q) =>
+  const { data } = useLiveQuery({
+    query: (q) =>
       q
         .from({ b: collections.bots })
         .where(({ b }) => eq(b.id, botId))
         .findOne(),
-    [botId]
-  );
+  });
   return data;
 };
 
