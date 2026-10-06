@@ -2752,7 +2752,12 @@
       "dictationStarting": "Getting dictation ready",
       "transcribing": "Writing it down",
       "stopDictation": "Stop dictating",
-      "recordingTime": "Recording time"
+      "recordingTime": "Recording time",
+      "favorites": "Favourites",
+      "noFavorites": "Star a model to keep it here.",
+      "providers": "Providers",
+      "providerNotConnected": "{{provider}} is not connected",
+      "providerConnectHint": "Connect it to use its models, including the free ones."
     },
     "day": {
       "today": "Today",

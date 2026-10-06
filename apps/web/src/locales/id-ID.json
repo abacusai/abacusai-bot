@@ -2752,7 +2752,12 @@
       "dictationStarting": "Menyiapkan dikte",
       "transcribing": "Menuliskannya",
       "stopDictation": "Berhenti mendikte",
-      "recordingTime": "Durasi rekaman"
+      "recordingTime": "Durasi rekaman",
+      "favorites": "Favorit",
+      "noFavorites": "Beri bintang pada model untuk menyimpannya di sini.",
+      "providers": "Penyedia",
+      "providerNotConnected": "{{provider}} belum terhubung",
+      "providerConnectHint": "Hubungkan untuk memakai modelnya, termasuk yang gratis."
     },
     "day": {
       "today": "Today",

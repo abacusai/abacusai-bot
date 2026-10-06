@@ -8,7 +8,13 @@ import type { PermissionRequest } from "@abacus-ai/agent";
 import type { UIMessage } from "@tanstack/ai-client";
 import type { LayoutProps } from "@tanstack/ai-react/ui";
 import { useSelector } from "@tanstack/react-store";
-import { AnimatePresence, motion } from "motion/react";
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  motionValue,
+  type AnimationPlaybackControls,
+} from "motion/react";
 import {
   createContext,
   use,
@@ -24,7 +30,11 @@ import { useTranslation } from "react-i18next";
 
 import { Spinner } from "#renderer/components/spinner";
 import { useAppHotkey } from "#renderer/lib/hotkeys";
-import { useMotionPreference } from "#renderer/lib/motion";
+import {
+  springs,
+  useMotionPreference,
+  type MotionPreference,
+} from "#renderer/lib/motion";
 import { hiddenUserMessage } from "#renderer/lib/user-message";
 import { Button } from "#renderer/ui/button";
 import {
@@ -224,38 +234,83 @@ const StopHotkey = () => {
 /** The gap between the last message and the floating composer's top edge. */
 export const COMPOSER_DOCK_GAP_PX = 16;
 
+/** What the dock's height places: the scroller's end padding and the jump button. */
+const DOCK_CONSUMERS =
+  '[data-slot="message-scroller-content"], [data-slot="message-scroller-button"][data-direction="end"], [data-slot="chat-empty"]';
+
 /**
  * The composer dock floats over the transcript's bottom edge. Its measured
- * height goes straight to a custom property on the layout (no React state,
- * no layout thrash): the scroller pads its end by it, so the last message
- * and "scroll to bottom" land above the composer, never under it.
+ * height goes to a custom property on the layout (no React state): the
+ * scroller pads its end by it, so the last message and "scroll to bottom"
+ * land above the composer, never under it.
+ *
+ * The dock's layout height changes in one step (the pill becomes the box)
+ * while the composer surface animates its shape with `springs.surface`
+ * (motion §9.1), so the padding follows the same spring: the transcript's
+ * end moves with the surface's visual edge, never ahead of it. Each frame
+ * of that spring styles the consumers inline rather than the inherited
+ * property: a custom property changing on the layout recalculates style
+ * for the whole transcript (4–13 ms a frame), an inline padding only for
+ * the one box. The property gets the settled value (the first measurement,
+ * reduced motion, the spring's end), so anything else reading it agrees.
  */
 const useComposerDockHeight = (
   layout: RefObject<HTMLDivElement | null>,
-  dock: RefObject<HTMLDivElement | null>
+  dock: RefObject<HTMLDivElement | null>,
+  pref: MotionPreference
 ): void => {
   useEffect(() => {
     const target = dock.current;
     const host = layout.current;
     if (target == null || host == null || typeof ResizeObserver === "undefined")
       return;
-    const write = (height: number) =>
-      host.style.setProperty("--composer-dock-h", `${Math.round(height)}px`);
-    write(target.getBoundingClientRect().height);
+    const height = motionValue(target.getBoundingClientRect().height);
+    const settle = (value: number) =>
+      host.style.setProperty("--composer-dock-h", `${Math.round(value)}px`);
+    const place = (value: number) => {
+      const px = `${Math.round(value)}px`;
+      for (const el of host.querySelectorAll<HTMLElement>(DOCK_CONSUMERS)) {
+        if (el.dataset.slot === "chat-empty") el.style.paddingBottom = px;
+        else if (el.dataset.slot === "message-scroller-button")
+          el.style.bottom = `calc(${px} + var(--composer-dock-gap, 16px))`;
+        else
+          el.style.paddingBottom = `calc(${px} + var(--composer-dock-gap, 16px))`;
+      }
+    };
+    settle(height.get());
+    const unsubscribe = height.on("change", place);
+    let running: AnimationPlaybackControls | null = null;
+    let measured = false;
     const observer = new ResizeObserver((entries) => {
       const entry = entries.at(-1);
       if (entry == null) return;
-      write(
+      const next =
         entry.borderBoxSize?.[0]?.blockSize ??
-          entry.target.getBoundingClientRect().height
-      );
+        entry.target.getBoundingClientRect().height;
+      running?.stop();
+      if (!measured || pref === "reduced") {
+        measured = true;
+        height.set(next);
+        settle(next);
+        return;
+      }
+      running = animate(height, next, {
+        ...springs.surface,
+        onComplete: () => settle(next),
+      });
     });
     observer.observe(target);
     return () => {
+      running?.stop();
+      unsubscribe();
       observer.disconnect();
       host.style.removeProperty("--composer-dock-h");
+      for (const el of host.querySelectorAll<HTMLElement>(DOCK_CONSUMERS)) {
+        el.style.removeProperty("padding-bottom");
+        el.style.removeProperty("bottom");
+      }
     };
-  }, [layout, dock]);
+  }, [layout, dock, pref]);
 };
 
 export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
@@ -266,7 +321,8 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
   const editing = useSelector(queueEditing, (state) => state[threadId] ?? null);
   const layoutRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
-  useComposerDockHeight(layoutRef, dockRef);
+  const pref = useMotionPreference();
+  useComposerDockHeight(layoutRef, dockRef, pref);
   const wallpaper =
     slots.wallpaper != null && slots.wallpaper !== "none"
       ? slots.wallpaper
@@ -302,7 +358,10 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
             <MessagesView>
               {(messages) =>
                 messages.length === 0 && slots.empty != null ? (
-                  <div className="flex flex-1 items-center justify-center pb-(--composer-dock-h,0px)">
+                  <div
+                    data-slot="chat-empty"
+                    className="flex flex-1 items-center justify-center pb-(--composer-dock-h,0px)"
+                  >
                     {slots.empty}
                   </div>
                 ) : Message == null ? null : (

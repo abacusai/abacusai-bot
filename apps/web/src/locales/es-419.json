@@ -2752,7 +2752,12 @@
       "dictationStarting": "Preparando el dictado",
       "transcribing": "Transcribiendo",
       "stopDictation": "Detener el dictado",
-      "recordingTime": "Tiempo de grabación"
+      "recordingTime": "Tiempo de grabación",
+      "favorites": "Favoritos",
+      "noFavorites": "Marca un modelo con una estrella para guardarlo aquí.",
+      "providers": "Proveedores",
+      "providerNotConnected": "{{provider}} no está conectado",
+      "providerConnectHint": "Conéctalo para usar sus modelos, incluidos los gratuitos."
     },
     "day": {
       "today": "Today",

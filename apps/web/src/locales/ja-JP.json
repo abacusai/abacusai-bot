@@ -2752,7 +2752,12 @@
       "dictationStarting": "音声入力を準備中",
       "transcribing": "書き起こし中",
       "stopDictation": "音声入力を停止",
-      "recordingTime": "録音時間"
+      "recordingTime": "録音時間",
+      "favorites": "お気に入り",
+      "noFavorites": "モデルにスターを付けると、ここに残ります。",
+      "providers": "プロバイダー",
+      "providerNotConnected": "{{provider}} は接続されていません",
+      "providerConnectHint": "接続すると、無料のものを含むモデルを使えます。"
     },
     "day": {
       "today": "Today",

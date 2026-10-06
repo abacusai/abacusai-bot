@@ -13,11 +13,10 @@ import {
 } from "motion/react";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { durations, springs } from "#renderer/lib/motion";
+import { durations, easings, springs } from "#renderer/lib/motion";
 
 import {
   cardEnter,
-  CHILD_FADE_DELAY_MS,
   composerChildren,
   composerExit,
   composerMorph,
@@ -35,17 +34,18 @@ describe("R2-T27 motion", () => {
     expectTypeOf(composerSurface).returns.toEqualTypeOf<Transition>();
   });
 
-  it("full motion: one critically damped spring for the surface, children after it settles", () => {
+  it("full motion: one critically damped spring for the surface, children fading with it", () => {
     expect(springs.surface).toEqual({
       type: "spring",
       visualDuration: durations.surface / 1000,
       bounce: 0,
     });
     expect(composerSurface("full")).toEqual({ layout: springs.surface });
-    expect(CHILD_FADE_DELAY_MS).toBe(durations.surface);
-    expect(composerChildren("full")).toMatchObject({
-      duration: durations.childFade / 1000,
-      delay: durations.surface / 1000,
+    // The toolbar row fades over the surface's visual duration, no delay:
+    // it is in by the time the surface settles, one motion with it.
+    expect(composerChildren("full")).toEqual({
+      duration: durations.surface / 1000,
+      ease: [...easings.standard],
     });
     // A row revealed in the surface is one motion with the surface: the
     // surface spring moves it into place (`layout="position"`) while its

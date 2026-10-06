@@ -2752,7 +2752,12 @@
       "dictationStarting": "Preparazione della dettatura",
       "transcribing": "Trascrizione in corso",
       "stopDictation": "Interrompi la dettatura",
-      "recordingTime": "Durata della registrazione"
+      "recordingTime": "Durata della registrazione",
+      "favorites": "Preferiti",
+      "noFavorites": "Aggiungi una stella a un modello per tenerlo qui.",
+      "providers": "Provider",
+      "providerNotConnected": "{{provider}} non è collegato",
+      "providerConnectHint": "Collegalo per usare i suoi modelli, compresi quelli gratuiti."
     },
     "day": {
       "today": "Today",
