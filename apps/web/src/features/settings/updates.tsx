@@ -9,10 +9,11 @@ import {
   SettingRow,
 } from "#renderer/components/form-kit/page";
 import { followNotices } from "#renderer/data/queries/notices";
+import { useMutation } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { getLogDump } from "#renderer/lib/log-ring";
 import { AppLink } from "#renderer/lib/navigation/app-link";
-import { showError, showInfo } from "#renderer/lib/toast";
+import { showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
@@ -119,31 +120,35 @@ export const useUpdateStatus = () => {
     }
   }
   const status = presented(incoming);
-  const install = async () => {
-    setClicked(true);
-    setInstallError(null);
-    if (status)
-      queryClient.setQueryData(live.queryKey, {
-        ...status,
-        error: null,
-        failedPhase: null,
-        installStalled: false,
-      });
-    try {
-      await transport.client.update.install({});
-    } catch (e) {
-      setClicked(false);
-      setInstallError(errorText(e));
-    }
-  };
+  const install = useMutation(
+    transport.orpc.update.install.mutationOptions({
+      onMutate: () => {
+        setClicked(true);
+        setInstallError(null);
+        if (status)
+          queryClient.setQueryData(live.queryKey, {
+            ...status,
+            error: null,
+            failedPhase: null,
+            installStalled: false,
+          });
+      },
+      onError: (e) => {
+        setClicked(false);
+        setInstallError(errorText(e));
+      },
+    })
+  );
+  const check = useMutation(
+    transport.orpc.update.check.mutationOptions({ meta: { errorToast: true } })
+  );
   return {
     status,
     clicked,
-    install,
+    install: () => install.mutate({}),
     installError,
     phase: installError ? "installFailed" : updatePhase(status, clicked),
-    check: () =>
-      transport.client.update.check({}).catch((e) => showError(errorText(e))),
+    check: () => check.mutate({}),
   };
 };
 export const AboutPage = () => {
@@ -151,6 +156,15 @@ export const AboutPage = () => {
   const { transport } = useAppContext();
   const info = useQuery(transport.orpc.system.info.queryOptions({ input: {} }));
   const update = useUpdateStatus();
+  const saveLogs = useMutation(
+    transport.orpc.system.logs.save.mutationOptions({
+      onSuccess: (result) => {
+        if (result.filePath)
+          showInfo(t("phase5.logsSaved", { path: result.filePath }));
+      },
+      meta: { errorToast: true },
+    })
+  );
   return (
     <AreaPage title={t("settings.pages.about")}>
       <GroupCard>
@@ -169,7 +183,7 @@ export const AboutPage = () => {
                     : "",
           })}
         >
-          <Button size="sm" onClick={() => void update.check()}>
+          <Button size="sm" onClick={() => update.check()}>
             {t("phase5.checkUpdates")}
           </Button>
           {info.data?.platform === "darwin" && (
@@ -191,7 +205,7 @@ export const AboutPage = () => {
           detail={update.installError ?? update.status?.error ?? undefined}
         >
           {["downloaded", "installFailed"].includes(update.phase) && (
-            <Button size="sm" onClick={() => void update.install()}>
+            <Button size="sm" onClick={() => update.install()}>
               {t(
                 update.phase === "installFailed"
                   ? "phase5.tryAgain"
@@ -200,7 +214,7 @@ export const AboutPage = () => {
             </Button>
           )}
           {["checkFailed", "downloadFailed"].includes(update.phase) && (
-            <Button size="sm" onClick={() => void update.check()}>
+            <Button size="sm" onClick={() => update.check()}>
               {t("phase5.retry")}
             </Button>
           )}
@@ -209,15 +223,8 @@ export const AboutPage = () => {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() =>
-              void transport.client.system.logs
-                .save({ rendererLogs: getLogDump() })
-                .then((result) => {
-                  if (result.filePath)
-                    showInfo(t("phase5.logsSaved", { path: result.filePath }));
-                })
-                .catch((e) => showError(errorText(e)))
-            }
+            disabled={saveLogs.isPending}
+            onClick={() => saveLogs.mutate({ rendererLogs: getLogDump() })}
           >
             {t("phase5.saveLogs")}
           </Button>
@@ -270,7 +277,7 @@ export const CriticalUpdateDialog = () => {
     }
   }, [open]);
   useEffect(() => {
-    if (open && remaining === 0 && !paused) void update.install();
+    if (open && remaining === 0 && !paused) update.install();
   }, [open, remaining, paused, update]);
   if (update.status?.installStalled)
     return (
@@ -299,7 +306,7 @@ export const CriticalUpdateDialog = () => {
         <AlertDialogFooter>
           <Button
             disabled={update.phase === "installing"}
-            onClick={() => void update.install()}
+            onClick={() => update.install()}
           >
             {t(
               update.phase === "installing"
@@ -327,8 +334,8 @@ export const UpdatePillButton = ({
   status: UpdateStatus | undefined;
   clicked?: boolean;
   installError?: string | null;
-  onInstall(): Promise<unknown>;
-  onCheck(): Promise<unknown>;
+  onInstall(): void;
+  onCheck(): void;
 }) => {
   const { t } = useTranslation();
   const phase = installError ? "installFailed" : updatePhase(status, clicked);
@@ -361,8 +368,8 @@ export const UpdatePillButton = ({
           : undefined
       }
       onClick={() => {
-        if (retry) void onCheck();
-        else if (install) void onInstall();
+        if (retry) onCheck();
+        else if (install) onInstall();
       }}
     >
       {retry && <span>{t("phase5.updates.downloadFailed")}</span>}
@@ -407,8 +414,8 @@ export const useUpdatePillAction = () => {
             />
           ),
           onSelect: () => {
-            if (retry) void update.check();
-            else if (install) void update.install();
+            if (retry) update.check();
+            else if (install) update.install();
           },
         },
       ]
