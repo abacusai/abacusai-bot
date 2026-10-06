@@ -27,6 +27,9 @@ if (INPUT_FILE == null) {
   process.exit(2);
 }
 
+// Other Electron suites must not share this process's profile or cache locks.
+app.setPath("userData", path.join(path.dirname(INPUT_FILE), "profile"));
+
 const outputPath = (inputFile) => `${inputFile}.out.json`;
 
 /** Fixed, so a fixture can reason about what is on screen and what is below. */

@@ -457,7 +457,11 @@ describe("gitState per checkout (R4-T33)", () => {
     await expect(watchB.next()).resolves.toMatchObject({
       value: { checkoutKey: checkoutKey(WS, "wt-b") },
     });
-    await vi.waitFor(() => expect(service.rows()).toHaveLength(2));
+    await Promise.all([
+      service.refresh(checkoutKey(WS, "wt-a")),
+      service.refresh(checkoutKey(WS, "wt-b")),
+    ]);
+    expect(service.rows()).toHaveLength(2);
 
     const rows = (await connection.client.db.gitState.snapshot()).rows;
     const byKey = new Map(rows.map((row) => [row.checkoutKey, row]));
