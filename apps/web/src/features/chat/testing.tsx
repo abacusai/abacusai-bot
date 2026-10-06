@@ -29,6 +29,8 @@ import { createChatRuntime, type ChatRuntime } from "./runtime/runtime";
 
 export interface Rendered {
   view: RenderResult;
+  /** Render another node in the same providers (same db, same runtime). */
+  rerender(node: ReactNode): Promise<void>;
   cleanup(): Promise<void>;
 }
 
@@ -39,24 +41,30 @@ export const renderWithDb = async (node: ReactNode): Promise<Rendered> => {
     retryDelayMs: () => 5,
   });
   await db.collections.prefs.preload();
+  const wrap = (child: ReactNode) => (
+    <HotkeysProvider
+      defaultOptions={{
+        hotkey: {
+          platform: "mac",
+          preventDefault: false,
+          stopPropagation: false,
+        },
+      }}
+    >
+      <DbProvider value={db}>{child}</DbProvider>
+    </HotkeysProvider>
+  );
   let view!: RenderResult;
   await act(async () => {
-    view = render(
-      <HotkeysProvider
-        defaultOptions={{
-          hotkey: {
-            platform: "mac",
-            preventDefault: false,
-            stopPropagation: false,
-          },
-        }}
-      >
-        <DbProvider value={db}>{node}</DbProvider>
-      </HotkeysProvider>
-    );
+    view = render(wrap(node));
   });
   return {
     view,
+    rerender: async (next) => {
+      await act(async () => {
+        view.rerender(wrap(next));
+      });
+    },
     cleanup: async () => {
       view.unmount();
       db.stop();
@@ -128,12 +136,14 @@ export const renderRelay = async (
   composer: Partial<ComposerConfig> = {},
   viewOptions: { focused?: boolean; slots?: ChatViewSlots } = {},
   host: ChatHostActions = inertHostActions
-): Promise<Rendered & { runtime: ChatRuntime }> => {
+): Promise<Rendered & { runtime: ChatRuntime; remount(): Promise<void> }> => {
   const runtime = createChatRuntime(relay.ai, { host });
   await runtime.session(relay.threadId).load();
-  const rendered = await renderWithDb(
+  let mount = 0;
+  const tree = () => (
     <div style={{ height: 800 }}>
       <ChatView
+        key={mount}
         threadId={relay.threadId}
         skin={skin}
         runtime={runtime}
@@ -143,9 +153,15 @@ export const renderRelay = async (
       />
     </div>
   );
+  const rendered = await renderWithDb(tree());
   return {
     ...rendered,
     runtime,
+    /** A fresh `ChatView` over the same runtime: a route re-entering the thread. */
+    remount: async () => {
+      mount += 1;
+      await rendered.rerender(tree());
+    },
     cleanup: async () => {
       await rendered.cleanup();
       runtime.forget(relay.threadId);
