@@ -2,6 +2,7 @@
  * B-T1: `ipcCollectionOptions` against a fake table client, with the real
  * `createCollection` from `@tanstack/db`.
  */
+import { ORPCError } from "@orpc/client";
 import { createCollection } from "@tanstack/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +10,14 @@ import { untilOpen } from "#renderer/data/queries/notices";
 import type { TransportState } from "#renderer/data/transport/lifecycle";
 
 import { FakeTable } from "./fake-table";
+
+/** Main's typed NOT_FOUND as the client receives it (a defined error). */
+const typedNotFound = () =>
+  new ORPCError("NOT_FOUND", {
+    defined: true,
+    message: "gone",
+    data: { entity: "session", id: "a" },
+  });
 import {
   ipcCollectionOptions,
   type IpcCollectionConfig,
@@ -431,7 +440,7 @@ describe("ipcCollectionOptions (B-T1)", () => {
   });
 
   it("(11b) idempotentDelete: a NOT_FOUND delete resolves as deleted after a resync (03 §24.5)", async () => {
-    const notFound = Object.assign(new Error("gone"), { code: "NOT_FOUND" });
+    const notFound = typedNotFound();
     const context = setup([{ id: "a", label: "A" }], {
       idempotentDelete: true,
     });
@@ -447,7 +456,7 @@ describe("ipcCollectionOptions (B-T1)", () => {
   });
 
   it("(11c) without idempotentDelete a NOT_FOUND delete rolls back", async () => {
-    const notFound = Object.assign(new Error("gone"), { code: "NOT_FOUND" });
+    const notFound = typedNotFound();
     const context = setup([{ id: "a", label: "A" }]);
     await live(context);
     context.table.deleteHandler = async () => {

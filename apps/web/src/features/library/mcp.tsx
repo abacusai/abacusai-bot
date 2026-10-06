@@ -6,7 +6,7 @@ import type {
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, type MutationFunctionContext } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,13 +22,16 @@ import {
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
 import { followNotices } from "#renderer/data/queries/notices";
+import {
+  optimistic,
+  succeeding,
+  useMutation,
+  useMutationState,
+} from "#renderer/data/query-client";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  useOptimisticToggle,
-} from "#renderer/lib/use-app-context";
+import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
@@ -68,7 +71,6 @@ export const useMcpRuntimeScope = () => {
 export const McpPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const navigate = useAppNavigate();
   const search = useSearch({ strict: false }) as {
     server?: string;
@@ -142,71 +144,116 @@ export const McpPage = () => {
       live = false;
     };
   }, [transport, sessionId, workspaceId, search.logs, t]);
-  const mutate = async (
-    call: Promise<{ success: boolean; error?: string }>
-  ) => {
-    const result = await call;
-    if (!result.success) throw new Error(result.error ?? t("phase5.failed"));
-    await cache.invalidateQueries({
-      queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
-    });
-  };
-  const setDisabled = useOptimisticToggle({
-    queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
-    mutationFn: async (change: { name: string; disabled: boolean }) => {
-      const result = await transport.client.mcp.setDisabled({
-        mode: "code",
-        ...change,
+  const listKey = transport.orpc.mcp.list.queryKey({ input: { mode: "code" } });
+  const removeServer = useMutation(
+    succeeding(
+      transport.orpc.mcp.remove.mutationOptions({
+        meta: { invalidates: [listKey] },
+      })
+    )
+  );
+  const importOptions = transport.orpc.mcp.import.mutationOptions({
+    onSuccess: (result) => {
+      if (!result.singleEntry) return;
+      setPrefill({
+        id: "new",
+        name: "",
+        config: result.singleEntry,
+        isBuiltin: false,
       });
-      if (!result.success) throw new Error(result.error ?? t("phase5.failed"));
+      void navigate({
+        to: "/library/mcp",
+        search: { server: "new" },
+        transition: "none",
+      });
     },
-    apply: (servers: McpServerInfo[], change) =>
-      servers.map((server) =>
-        server.name === change.name
-          ? {
-              ...server,
-              config: { ...server.config, disabled: change.disabled },
-            }
-          : server
-      ),
-    onError: () => showError(t("phase5.failed")),
+    meta: { invalidates: [listKey], errorToast: true },
   });
-  const importServers = async (
+  const importMutation = useMutation(
+    succeeding({
+      ...importOptions,
+      // A pasted configuration is read inside the call, so the import
+      // buttons stay disabled while the clipboard answers; a refusal fails
+      // the import with its message.
+      mutationFn: async (
+        input: Parameters<typeof transport.client.mcp.import>[0],
+        context: MutationFunctionContext
+      ) =>
+        importOptions.mutationFn!(
+          input.source === "json"
+            ? { ...input, json: await navigator.clipboard.readText() }
+            : input,
+          context
+        ),
+    })
+  );
+  const refresh = useMutation(
+    succeeding(
+      transport.orpc.mcp.refresh.mutationOptions({
+        meta: { errorToast: { reasonOr: "phase5.failed" } },
+      })
+    )
+  );
+  const restart = useMutation(
+    succeeding(
+      transport.orpc.mcp.restart.mutationOptions({
+        meta: { errorToast: { reasonOr: "phase5.failed" } },
+      })
+    )
+  );
+  const oauthSignIn = useMutation(
+    succeeding(
+      transport.orpc.mcp.oauthSignIn.mutationOptions({
+        // Signed in: reconnect the running session's servers.
+        onSuccess: (result) => {
+          if (!result.cancelled && scope) refresh.mutate(scope);
+        },
+        meta: { errorToast: { reasonOr: "phase5.failed" } },
+      })
+    )
+  );
+  const setDisabled = useMutation(
+    succeeding(
+      transport.orpc.mcp.setDisabled.mutationOptions({
+        ...optimistic(
+          listKey,
+          (servers, change: { name: string; disabled: boolean }) =>
+            servers.map((server) =>
+              server.name === change.name
+                ? {
+                    ...server,
+                    config: { ...server.config, disabled: change.disabled },
+                  }
+                : server
+            )
+        ),
+        meta: { errorToast: "phase5.failed" },
+      })
+    )
+  );
+  const importServers = (
     source: "claude" | "cursor" | "deepagent" | "file" | "json"
   ) => {
     if (!IS_ELECTRON && source === "file") return;
-    try {
-      const result = await transport.client.mcp.import({
-        mode: "code",
-        source,
-        ...(source === "json"
-          ? { json: await navigator.clipboard.readText() }
-          : {}),
-      });
-      if (!result.success) {
-        showError(result.error ?? t("phase5.failed"));
-        return;
-      }
-      if (result.singleEntry) {
-        setPrefill({
-          id: "new",
-          name: "",
-          config: result.singleEntry,
-          isBuiltin: false,
-        });
-        void navigate({
-          to: "/library/mcp",
-          search: { server: "new" },
-          transition: "none",
-        });
-      }
-      await cache.invalidateQueries({
-        queryKey: transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
-      });
-    } catch (e) {
-      showError(e instanceof Error ? e.message : t("phase5.failed"));
-    }
+    importMutation.mutate({ mode: "code", source });
   };
+  // Per server: one server's restart or sign-in leaves the others usable
+  // (a sign-in waits on the browser for up to 20 minutes).
+  const restarting = useMutationState({
+    filters: {
+      mutationKey: transport.orpc.mcp.restart.mutationKey(),
+      status: "pending",
+    },
+    select: (mutation) =>
+      (mutation.state.variables as { serverId: string }).serverId,
+  });
+  const signingIn = useMutationState({
+    filters: {
+      mutationKey: transport.orpc.mcp.oauthSignIn.mutationKey(),
+      status: "pending",
+    },
+    select: (mutation) => (mutation.state.variables as { name: string }).name,
+  });
   return (
     <>
       <AreaPage
@@ -235,24 +282,21 @@ export const McpPage = () => {
                 key={source}
                 size="sm"
                 variant="secondary"
-                onClick={() => void importServers(source)}
+                disabled={importMutation.isPending}
+                onClick={() => importServers(source)}
               >
                 {t(`phase5.imports.${source}`)}
               </Button>
             ))}
           <Button
             size="sm"
-            disabled={!scope}
+            disabled={!scope || refresh.isPending}
             title={t("phase5.mcpNoSession")}
             onClick={() =>
               scope &&
-              void transport.client.mcp
-                .refresh(scope)
-                .then((result) => {
-                  if (result.success) showInfo(t("phase5.refreshed"));
-                  else showError(result.error ?? t("phase5.failed"));
-                })
-                .catch(() => showError(t("phase5.failed")))
+              refresh.mutate(scope, {
+                onSuccess: () => showInfo(t("phase5.refreshed")),
+              })
             }
           >
             {t("phase5.refresh")}
@@ -319,6 +363,7 @@ export const McpPage = () => {
                     variant="ghost"
                     onClick={() =>
                       setDisabled.mutate({
+                        mode: "code",
                         name: server.name,
                         disabled: !server.config.disabled,
                       })
@@ -335,12 +380,10 @@ export const McpPage = () => {
                     description={t("phase5.removeServerDescription")}
                     label={t("phase5.remove")}
                     onConfirm={() =>
-                      mutate(
-                        transport.client.mcp.remove({
-                          mode: "code",
-                          name: server.name,
-                        })
-                      )
+                      removeServer.mutateAsync({
+                        mode: "code",
+                        name: server.name,
+                      })
                     }
                   />
                 </SettingRow>
@@ -348,19 +391,13 @@ export const McpPage = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    disabled={!scope || server.config.disabled}
+                    disabled={
+                      !scope ||
+                      server.config.disabled ||
+                      restarting.includes(server.id)
+                    }
                     onClick={() =>
-                      scope &&
-                      void transport.client.mcp
-                        .restart({
-                          ...scope,
-                          serverId: server.id,
-                        })
-                        .then((result) => {
-                          if (!result.success)
-                            showError(result.error ?? t("phase5.failed"));
-                        })
-                        .catch(() => showError(t("phase5.failed")))
+                      scope && restart.mutate({ ...scope, serverId: server.id })
                     }
                   >
                     {t("phase5.restart")}
@@ -388,25 +425,9 @@ export const McpPage = () => {
                     <Button
                       size="sm"
                       variant="ghost"
+                      disabled={signingIn.includes(server.name)}
                       onClick={() =>
-                        void transport.client.mcp
-                          .oauthSignIn({ mode: "code", name: server.name })
-                          .then(async (result) => {
-                            if (result.cancelled) return;
-                            if (!result.success) {
-                              showError(result.error ?? t("phase5.failed"));
-                              return;
-                            }
-                            if (scope) {
-                              const refreshed =
-                                await transport.client.mcp.refresh(scope);
-                              if (!refreshed.success)
-                                showError(
-                                  refreshed.error ?? t("phase5.failed")
-                                );
-                            }
-                          })
-                          .catch(() => showError(t("phase5.failed")))
+                        oauthSignIn.mutate({ mode: "code", name: server.name })
                       }
                     >
                       {t("phase5.signIn")}
@@ -534,10 +555,20 @@ export const McpServerDialog = ({
 }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const navigate = useAppNavigate();
   const entry = name === "new" ? prefill : servers.find((s) => s.name === name);
   const [error, setError] = useState<string | null>(null);
+  const meta = {
+    invalidates: [
+      transport.orpc.mcp.list.queryKey({ input: { mode: "code" } }),
+    ],
+  };
+  const add = useMutation(
+    succeeding(transport.orpc.mcp.add.mutationOptions({ meta }))
+  );
+  const update = useMutation(
+    succeeding(transport.orpc.mcp.update.mutationOptions({ meta }))
+  );
   const close = () =>
     void navigate({
       to: "/library/mcp",
@@ -557,21 +588,14 @@ export const McpServerDialog = ({
     onSubmit: async ({ value }) => {
       const parsed = v.parse(McpFormSchema, value);
       try {
-        const result = await transport.client.mcp[
-          name === "new" ? "add" : "update"
-        ]({ mode: "code", name: parsed.name, config: configFromForm(parsed) });
-        if (!result.success) {
-          setError(result.error ?? t("phase5.failed"));
-          return;
-        }
-        await cache.invalidateQueries({
-          queryKey: transport.orpc.mcp.list.queryKey({
-            input: { mode: "code" },
-          }),
+        await (name === "new" ? add : update).mutateAsync({
+          mode: "code",
+          name: parsed.name,
+          config: configFromForm(parsed),
         });
         close();
       } catch (e) {
-        setError(e instanceof Error ? e.message : t("phase5.failed"));
+        setError(errorText(e));
       }
     },
   });

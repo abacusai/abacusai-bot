@@ -45,7 +45,13 @@ type Open = (signal: AbortSignal) => AsyncGenerator<UpdateStatus>;
 const setup = (opens: Open[], queryClient = createQueryClient()) => {
   const listeners = new Set<() => void>();
   const client = {
-    update: { events: vi.fn(), status: vi.fn(async () => status("0")) },
+    update: {
+      events: vi.fn(),
+      status: vi.fn(async () => status("0")),
+      // The hook builds its install and check mutations from these.
+      install: vi.fn(),
+      check: vi.fn(),
+    },
   };
   const transport = {
     state: "open" as string,

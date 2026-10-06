@@ -14,21 +14,17 @@ export interface ShellMatch {
 export const useShellMatch = (): ShellMatch => {
   const pathname = useLocation({ select: (location) => location.pathname });
   const match = useMatches({
-    select: (matches: Array<{ staticData: unknown }>) => {
+    select: (matches) => {
       let area: ShellArea | undefined;
       let sidebar: ShellArea | undefined;
       for (const match of matches) {
-        const data = match.staticData as {
-          area?: ShellArea;
-          sidebar?: ShellArea;
-        };
-        area = data.area ?? area;
-        sidebar = data.sidebar ?? sidebar;
+        area = match.staticData.area ?? area;
+        sidebar = match.staticData.sidebar ?? sidebar;
       }
       return { area, sidebar };
     },
     structuralSharing: true,
-  } as never) as unknown as ShellMatch;
+  });
   const segment = pathname.split("/")[1];
   const fallback = [
     "bots",

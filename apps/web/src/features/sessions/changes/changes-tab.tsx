@@ -155,7 +155,7 @@ export const ChangesTab = ({
         }),
         replace: true,
         transition: "none",
-      } as never);
+      });
   };
   const keep = (selection: ChangeSelection) => {
     const fp = selection.change.fingerprints?.[selection.scope];

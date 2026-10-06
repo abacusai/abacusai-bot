@@ -113,7 +113,8 @@ const Leading = ({
                 ...shellStore.state.lastLocationOutsideSettings,
                 to: shellStore.state.lastLocationOutsideSettings.pathname,
                 transition: "settings-out",
-              } as Parameters<typeof navigate>[0])
+                // A location remembered at runtime.
+              } as never)
             : router.history.back()
         }
       >

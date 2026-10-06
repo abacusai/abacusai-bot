@@ -167,7 +167,8 @@ describe("R2-T20 admission isolation", () => {
     const relay = await memoryRelay({
       onSend: (input) => {
         const next = acks.shift();
-        if (next === "throw") throw new ORPCError("UNAVAILABLE", { data: {} });
+        if (next === "throw")
+          throw new ORPCError("UNAVAILABLE", { status: 503, data: {} });
         return { runId: input.runId, status: next! };
       },
     });

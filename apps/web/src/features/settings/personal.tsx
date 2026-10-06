@@ -25,17 +25,18 @@ import {
 import { SoundPreview } from "#renderer/components/sound-preview";
 import { useCollections } from "#renderer/data/db";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import {
+  optimistic,
+  useMutation,
+  isRpcError,
+} from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { isQuietNow } from "#renderer/lib/notify";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import type { Cue } from "#renderer/lib/sound";
 import { showError } from "#renderer/lib/toast";
-import {
-  useAppContext,
-  rpcError,
-  useOptimisticToggle,
-} from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -71,6 +72,25 @@ export const GeneralPage = () => {
     transport.orpc.settings.defaultMode.get.queryOptions({ input: {} })
   );
   const fail = () => showError(t("phase5.saveFailed"));
+  const setLoginItem = useMutation(
+    transport.orpc.system.loginItem.set.mutationOptions({
+      ...optimistic(
+        transport.orpc.system.loginItem.get.queryKey({ input: {} }),
+        (_old, value: { openAtLogin: boolean }) => value
+      ),
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
+  const setBotMode = useMutation(
+    transport.orpc.settings.defaultMode.set.mutationOptions({
+      onSuccess: (value) =>
+        cache.setQueryData(
+          transport.orpc.settings.defaultMode.get.queryKey({ input: {} }),
+          value
+        ),
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
   return (
     <AreaPage title={t("settings.pages.general")}>
       <CompanionSettings />
@@ -85,20 +105,9 @@ export const GeneralPage = () => {
               id="launchAtLogin"
               checked={login.data?.openAtLogin ?? false}
               disabled={!login.data}
-              onCheckedChange={(value) => {
-                const key = transport.orpc.system.loginItem.get.queryKey({
-                  input: {},
-                });
-                const previous = login.data;
-                cache.setQueryData(key, { openAtLogin: value });
-                void transport.client.system.loginItem
-                  .set({ openAtLogin: value })
-                  .then((result) => cache.setQueryData(key, result))
-                  .catch(() => {
-                    cache.setQueryData(key, previous);
-                    fail();
-                  });
-              }}
+              onCheckedChange={(openAtLogin) =>
+                setLoginItem.mutate({ openAtLogin })
+              }
             />
           </SettingRow>
         )}
@@ -145,17 +154,9 @@ export const GeneralPage = () => {
                 { value: "AUTO", label: t("phase5.auto") },
               ]}
               onChange={(mode) =>
-                void transport.client.settings.defaultMode
-                  .set({ mode: mode as AgentMode.Auto | AgentMode.Yolo })
-                  .then((value) =>
-                    cache.setQueryData(
-                      transport.orpc.settings.defaultMode.get.queryKey({
-                        input: {},
-                      }),
-                      value
-                    )
-                  )
-                  .catch(fail)
+                setBotMode.mutate({
+                  mode: mode as AgentMode.Auto | AgentMode.Yolo,
+                })
               }
             />
           </SettingRow>
@@ -239,7 +240,7 @@ export const MemoryPage = () => {
     } catch (error) {
       setMemoryError(
         t(
-          rpcError(error)?.code === "CONFLICT"
+          isRpcError(error) && error.code === "CONFLICT"
             ? "phase5.memoryConflict"
             : "phase5.saveFailed"
         )
@@ -252,6 +253,25 @@ export const MemoryPage = () => {
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
+  const saveInstructions = useMutation(
+    transport.orpc.memory.customInstructions.set.mutationOptions({
+      onSuccess: (saved) =>
+        cache.setQueryData(
+          transport.orpc.memory.customInstructions.get.queryKey({ input: {} }),
+          saved
+        ),
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
+  const clearBot = useMutation(
+    transport.orpc.memory.clearBot.mutationOptions({
+      onSuccess: (next) =>
+        cache.setQueryData(
+          transport.orpc.memory.bots.queryKey({ input: {} }),
+          next
+        ),
+    })
+  );
   const baseline = useRef(query.data ?? "");
   const [remoteChanged, setRemoteChanged] = useState(false);
   const form = useAppForm({
@@ -262,20 +282,14 @@ export const MemoryPage = () => {
     }),
     validators: { onDynamic: InstructionSchema },
     onSubmit: async ({ value }) => {
-      try {
-        const saved = await transport.client.memory.customInstructions.set(
-          v.parse(InstructionSchema, value)
-        );
-        cache.setQueryData(
-          transport.orpc.memory.customInstructions.get.queryKey({ input: {} }),
-          saved
-        );
-        baseline.current = saved;
-        setRemoteChanged(false);
-        form.reset({ text: saved });
-      } catch {
-        showError(t("phase5.saveFailed"));
-      }
+      // A failure is toasted by the mutation's meta; the field keeps the text.
+      const saved = await saveInstructions
+        .mutateAsync(v.parse(InstructionSchema, value))
+        .catch(() => null);
+      if (saved === null) return;
+      baseline.current = saved;
+      setRemoteChanged(false);
+      form.reset({ text: saved });
     },
   });
   useEffect(() => {
@@ -454,15 +468,7 @@ export const MemoryPage = () => {
                     title={t("bots.panel.memory.clear")}
                     description={t("phase5.forgetDescription")}
                     label={t("phase5.clearAll")}
-                    onConfirm={async () => {
-                      const next = await transport.client.memory.clearBot({
-                        botId: bot.id,
-                      });
-                      cache.setQueryData(
-                        transport.orpc.memory.bots.queryKey({ input: {} }),
-                        next
-                      );
-                    }}
+                    onConfirm={() => clearBot.mutateAsync({ botId: bot.id })}
                   />
                 </CollapsibleContent>
               </Collapsible>
@@ -483,15 +489,15 @@ export const NotificationsPage = () => {
     transport.orpc.settings.notifications.get.queryOptions({ input: {} })
   );
   const fail = () => showError(t("phase5.saveFailed"));
-  const setNotify = useOptimisticToggle({
-    queryKey: transport.orpc.settings.notifications.get.queryKey({
-      input: {},
-    }),
-    mutationFn: (value: { enabled: boolean; sound: boolean }) =>
-      transport.client.settings.notifications.set(value),
-    apply: (_data: NonNullable<typeof notification.data>, value) => value,
-    onError: fail,
-  });
+  const setNotify = useMutation(
+    transport.orpc.settings.notifications.set.mutationOptions({
+      ...optimistic(
+        transport.orpc.settings.notifications.get.queryKey({ input: {} }),
+        (_data, value: { enabled: boolean; sound: boolean }) => value
+      ),
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
   const q = prefs.sounds.quietHours ?? {
     enabled: false,
     start: "22:00",

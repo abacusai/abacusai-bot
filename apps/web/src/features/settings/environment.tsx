@@ -15,6 +15,7 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { optimistic, useMutation } from "#renderer/data/query-client";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
@@ -32,6 +33,29 @@ export const EnvironmentPage = () => {
   );
   const sandbox = useQuery(
     transport.orpc.settings.sandboxSupport.queryOptions({ input: {} })
+  );
+  const setBackend = useMutation(
+    transport.orpc.settings.execBackend.set.mutationOptions({
+      ...optimistic(
+        transport.orpc.settings.execBackend.get.queryKey({ input: {} }),
+        (old, { backend }: { backend: typeof old.selected }) => ({
+          ...old,
+          selected: backend,
+          effective: backend,
+        })
+      ),
+      meta: { errorToast: true },
+    })
+  );
+  const setShell = useMutation(
+    transport.orpc.terminal.shell.set.mutationOptions({
+      onSuccess: (value) =>
+        cache.setQueryData(
+          transport.orpc.terminal.shell.get.queryKey({ input: {} }),
+          value
+        ),
+      meta: { errorToast: true },
+    })
   );
   return (
     <AreaPage
@@ -70,31 +94,12 @@ export const EnvironmentPage = () => {
               ) : (
                 <Button
                   size="sm"
-                  disabled={!status?.ready || !backend.implemented}
-                  onClick={() => {
-                    const key =
-                      transport.orpc.settings.execBackend.get.queryKey({
-                        input: {},
-                      });
-                    const old = query.data;
-                    cache.setQueryData(
-                      key,
-                      old
-                        ? {
-                            ...old,
-                            selected: backend.id,
-                            effective: backend.id,
-                          }
-                        : old
-                    );
-                    void transport.client.settings.execBackend
-                      .set({ backend: backend.id })
-                      .then((value) => cache.setQueryData(key, value))
-                      .catch((e) => {
-                        cache.setQueryData(key, old);
-                        showError(errorText(e));
-                      });
-                  }}
+                  disabled={
+                    !status?.ready ||
+                    !backend.implemented ||
+                    setBackend.isPending
+                  }
+                  onClick={() => setBackend.mutate({ backend: backend.id })}
                 >
                   {t(status?.ready ? "phase5.use" : "phase5.unavailable")}
                 </Button>
@@ -132,18 +137,10 @@ export const EnvironmentPage = () => {
                   (x.available ? "" : ` · ${t("phase5.notFoundMachine")}`),
               }))}
               onChange={(selected) =>
-                void transport.client.terminal.shell
-                  .set({
-                    shell:
-                      selected as import("@abacus-ai/contract/terminal-shells").TerminalShellId,
-                  })
-                  .then((value) =>
-                    cache.setQueryData(
-                      transport.orpc.terminal.shell.get.queryKey({ input: {} }),
-                      value
-                    )
-                  )
-                  .catch((e) => showError(errorText(e)))
+                setShell.mutate({
+                  shell:
+                    selected as import("@abacus-ai/contract/terminal-shells").TerminalShellId,
+                })
               }
             />
           </SettingRow>
@@ -186,17 +183,41 @@ const ElectronBrowserPage = () => {
   const [token, setToken] = useState("");
   const [home, setHome] = useState(prefs.browserHomepage ?? "");
   const status = query.data;
-  const mutate = (
-    call: ReturnType<typeof transport.client.browser.setEnabled>
-  ) =>
-    void call
-      .then((value) =>
-        cache.setQueryData(
-          transport.orpc.browser.status.queryKey({ input: {} }),
-          value
-        )
-      )
-      .catch((e) => showError(errorText(e)));
+  // Each write answers with the new status.
+  const writesStatus = {
+    onSuccess: (value: NonNullable<typeof status>) =>
+      cache.setQueryData(
+        transport.orpc.browser.status.queryKey({ input: {} }),
+        value
+      ),
+    meta: { errorToast: true },
+  } as const;
+  const { browser } = transport.orpc;
+  const setEnabled = useMutation(
+    browser.setEnabled.mutationOptions(writesStatus)
+  );
+  const setEngine = useMutation(
+    browser.setEngine.mutationOptions(writesStatus)
+  );
+  const connectChrome = useMutation(
+    browser.chrome.connect.mutationOptions(writesStatus)
+  );
+  const disconnectChrome = useMutation(
+    browser.chrome.disconnect.mutationOptions(writesStatus)
+  );
+  const setExtensionToken = useMutation(
+    browser.chrome.setExtensionToken.mutationOptions(writesStatus)
+  );
+  const setApproval = useMutation(
+    browser.permissions.setApproval.mutationOptions(writesStatus)
+  );
+  const clearData = useMutation(
+    browser.clearData.mutationOptions({
+      onSuccess: () => showInfo(t("phase5.cleared")),
+      meta: { errorToast: true },
+    })
+  );
+  const chromeBusy = connectChrome.isPending || disconnectChrome.isPending;
   return (
     <AreaPage title={t("settings.pages.browser")}>
       <GroupCard>
@@ -207,9 +228,7 @@ const ElectronBrowserPage = () => {
           <SettingSwitch
             id="browserEnabled"
             checked={status?.enabled ?? false}
-            onCheckedChange={(enabled) =>
-              mutate(transport.client.browser.setEnabled({ enabled }))
-            }
+            onCheckedChange={(enabled) => setEnabled.mutate({ enabled })}
           />
         </SettingRow>
         <SettingRow
@@ -224,11 +243,7 @@ const ElectronBrowserPage = () => {
               { value: "chrome", label: "Chrome" },
             ]}
             onChange={(engine) =>
-              mutate(
-                transport.client.browser.setEngine({
-                  engine: engine as "builtin" | "chrome",
-                })
-              )
+              setEngine.mutate({ engine: engine as "builtin" | "chrome" })
             }
           />
         </SettingRow>
@@ -248,12 +263,12 @@ const ElectronBrowserPage = () => {
               </StatePill>
               <Button
                 size="sm"
+                disabled={chromeBusy}
                 onClick={() =>
-                  mutate(
-                    status.chrome.connected
-                      ? transport.client.browser.chrome.disconnect({})
-                      : transport.client.browser.chrome.connect({})
-                  )
+                  (status.chrome.connected
+                    ? disconnectChrome
+                    : connectChrome
+                  ).mutate({})
                 }
               >
                 {t(
@@ -282,12 +297,9 @@ const ElectronBrowserPage = () => {
                 onChange={(e) => setToken(e.target.value)}
               />
               <Button
+                disabled={setExtensionToken.isPending}
                 onClick={() => {
-                  mutate(
-                    transport.client.browser.chrome.setExtensionToken({
-                      token: token.trim(),
-                    })
-                  );
+                  setExtensionToken.mutate({ token: token.trim() });
                   setToken("");
                 }}
               >
@@ -335,11 +347,7 @@ const ElectronBrowserPage = () => {
               label: t(`phase5.${x}`),
             }))}
             onChange={(approval) =>
-              mutate(
-                transport.client.browser.permissions.setApproval({
-                  approval: approval as "ask" | "always",
-                })
-              )
+              setApproval.mutate({ approval: approval as "ask" | "always" })
             }
           />
         </SettingRow>
@@ -347,12 +355,8 @@ const ElectronBrowserPage = () => {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() =>
-              void transport.client.browser
-                .clearData({})
-                .then(() => showInfo(t("phase5.cleared")))
-                .catch((e) => showError(errorText(e)))
-            }
+            disabled={clearData.isPending}
+            onClick={() => clearData.mutate({})}
           >
             {t("phase5.clearAll")}
           </Button>
@@ -369,17 +373,24 @@ const ElectronDevicesPage = () => {
   const query = useQuery(
     transport.orpc.devices.status.queryOptions({ input: {} })
   );
-  const mutate = (
-    call: ReturnType<typeof transport.client.devices.setEnabled>
-  ) =>
-    void call
-      .then((result) =>
-        cache.setQueryData(
-          transport.orpc.devices.status.queryKey({ input: {} }),
-          result
-        )
-      )
-      .catch((e) => showError(errorText(e)));
+  const statusKey = transport.orpc.devices.status.queryKey({ input: {} });
+  // Each write answers with the new status.
+  const writesStatus = {
+    onSuccess: (value: NonNullable<typeof query.data>) =>
+      cache.setQueryData(statusKey, value),
+    meta: { errorToast: true },
+  } as const;
+  const setEnabled = useMutation(
+    transport.orpc.devices.setEnabled.mutationOptions(writesStatus)
+  );
+  const setApproval = useMutation(
+    transport.orpc.devices.setApproval.mutationOptions(writesStatus)
+  );
+  const installMaestro = useMutation(
+    transport.orpc.devices.installMaestro.mutationOptions({
+      meta: { invalidates: [statusKey], errorToast: true },
+    })
+  );
   return (
     <AreaPage title={t("settings.pages.devices")}>
       <GroupCard>
@@ -390,9 +401,7 @@ const ElectronDevicesPage = () => {
           <SettingSwitch
             id="deviceEnabled"
             checked={query.data?.enabled ?? false}
-            onCheckedChange={(enabled) =>
-              mutate(transport.client.devices.setEnabled({ enabled }))
-            }
+            onCheckedChange={(enabled) => setEnabled.mutate({ enabled })}
           />
         </SettingRow>
         {(["ios", "android", "maestro"] as const).map((key) => (
@@ -407,18 +416,8 @@ const ElectronDevicesPage = () => {
             {key === "maestro" && !query.data?.maestro && (
               <Button
                 size="sm"
-                onClick={() =>
-                  void transport.client.devices
-                    .installMaestro({})
-                    .then(() =>
-                      cache.invalidateQueries({
-                        queryKey: transport.orpc.devices.status.queryKey({
-                          input: {},
-                        }),
-                      })
-                    )
-                    .catch((e) => showError(errorText(e)))
-                }
+                disabled={installMaestro.isPending}
+                onClick={() => installMaestro.mutate({})}
               >
                 {t("phase5.install")}
               </Button>
@@ -437,11 +436,7 @@ const ElectronDevicesPage = () => {
               label: t(`phase5.${x}`),
             }))}
             onChange={(approval) =>
-              mutate(
-                transport.client.devices.setApproval({
-                  approval: approval as "ask" | "always",
-                })
-              )
+              setApproval.mutate({ approval: approval as "ask" | "always" })
             }
           />
         </SettingRow>

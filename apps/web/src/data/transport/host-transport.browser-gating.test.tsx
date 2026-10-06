@@ -6,9 +6,13 @@
  * per write, generations that end on a close or a liveness drop, and notice
  * loops that reopen on the next generation.
  */
+import { MutationObserver, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import enUS from "#locales/en-US.json";
 import { followNotices } from "#renderer/data/queries/notices";
+import { createQueryClient, optimistic } from "#renderer/data/query-client";
+import { initI18n } from "#renderer/lib/i18n";
 
 import { isHostUnavailable } from "./lifecycle";
 import { createHostTransport, type HostTransport } from "./websocket";
@@ -159,6 +163,103 @@ describe("createHostTransport", () => {
     expect(open.sent).toEqual([]);
     transport.confirmWrites();
     await vi.waitFor(() => expect(open.sent.length).toBe(1));
+  });
+
+  it("holds a useMutation write (oRPC mutationOptions) like any other write", async () => {
+    const transport = create();
+    const open = socket();
+    transport.attach(asSocket(open));
+    const queryClient = createQueryClient();
+    const observer = new MutationObserver(
+      queryClient,
+      transport.orpc.settings.toolsets.setEnabled.mutationOptions()
+    );
+    void observer
+      .mutate({ toolsetId: "browser", enabled: false })
+      .catch(() => undefined);
+    await flush();
+    expect(observer.getCurrentResult().isPending).toBe(true);
+    expect(open.sent).toEqual([]);
+    transport.confirmWrites();
+    await vi.waitFor(() => expect(open.sent.length).toBe(1));
+    expect(open.sent[0]).toContain("setEnabled");
+    queryClient.clear();
+  });
+
+  it("held optimistic writes revoked together each roll back, refetch once, and toast one not sent", async () => {
+    await initI18n();
+    const transport = create();
+    transport.attach(asSocket(socket()));
+    const showError = vi.fn();
+    const queryClient = createQueryClient({ showError });
+    const reads = { toolsets: vi.fn(), notifications: vi.fn() };
+    const keys = {
+      toolsets: transport.orpc.settings.toolsets.get.queryKey({ input: {} }),
+      notifications: transport.orpc.settings.notifications.get.queryKey({
+        input: {},
+      }),
+    };
+    const watched = [
+      new QueryObserver(queryClient, {
+        queryKey: keys.toolsets,
+        queryFn: async () => (reads.toolsets(), { browser: true }),
+        initialData: { browser: true },
+        staleTime: Infinity,
+      }),
+      new QueryObserver(queryClient, {
+        queryKey: keys.notifications,
+        queryFn: async () => (
+          reads.notifications(),
+          { enabled: false, sound: false }
+        ),
+        initialData: { enabled: false, sound: false },
+        staleTime: Infinity,
+      }),
+    ].map((observer) => observer.subscribe(() => {}));
+    const meta = { errorToast: "phase5.failed" };
+    const toolset = new MutationObserver(
+      queryClient,
+      transport.orpc.settings.toolsets.setEnabled.mutationOptions({
+        ...optimistic(keys.toolsets, (data, change: { enabled: boolean }) => ({
+          ...data,
+          browser: change.enabled,
+        })),
+        meta,
+      })
+    );
+    const notify = new MutationObserver(
+      queryClient,
+      transport.orpc.settings.notifications.set.mutationOptions({
+        ...optimistic(
+          keys.notifications,
+          (_data, value: { enabled: boolean; sound: boolean }) => value
+        ),
+        meta,
+      })
+    );
+    const writes = [
+      toolset.mutate({ toolsetId: "browser", enabled: false }),
+      notify.mutate({ enabled: true, sound: false }),
+    ].map((write) => write.catch(() => "failed"));
+    await vi.waitFor(() =>
+      expect(queryClient.getQueryData(keys.notifications)).toEqual({
+        enabled: true,
+        sound: false,
+      })
+    );
+    expect(queryClient.getQueryData(keys.toolsets)).toEqual({ browser: false });
+    transport.revokeWrites();
+    expect(await Promise.all(writes)).toEqual(["failed", "failed"]);
+    expect(queryClient.getQueryData(keys.toolsets)).toEqual({ browser: true });
+    expect(queryClient.getQueryData(keys.notifications)).toEqual({
+      enabled: false,
+      sound: false,
+    });
+    await vi.waitFor(() => expect(reads.toolsets).toHaveBeenCalledTimes(1));
+    expect(reads.notifications).toHaveBeenCalledTimes(1);
+    expect(showError.mock.calls).toEqual([[enUS.chat.message.notSent]]);
+    for (const stop of watched) stop();
+    queryClient.clear();
   });
 
   it("classifies by procedure: a read without a signal waits past the write deadline, a write with one is still held", async () => {

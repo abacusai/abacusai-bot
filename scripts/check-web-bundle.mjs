@@ -50,6 +50,36 @@ export const checkWebBundle = async (
       ),
     "Browser-only ignored modules in Electron bundle"
   );
+  // Query's mutation hooks share one chunk (rendererChunkGroups) that the
+  // notch never loads.
+  const hooks =
+    /[\\/](?:useMutation|useMutationState|mutationObserver)\.[cm]?js$/;
+  const mutationChunks = desktop.filter((c) =>
+    c.modules.some((m) => hooks.test(m.id))
+  );
+  assert.equal(
+    mutationChunks.length,
+    1,
+    "Query's mutation hooks split across chunks: check rendererChunkGroups"
+  );
+  assert.deepEqual(
+    mutationChunks[0].modules.map((m) => m.id.split(/[\\/]/).pop()).sort(),
+    ["mutationObserver.js", "useMutation.js", "useMutationState.js"],
+    "The mutations chunk must hold exactly Query's mutation hooks"
+  );
+  const byFile = new Map(desktop.map((c) => [c.file, c]));
+  const loads = (file, seen = new Set()) => {
+    if (seen.has(file)) return seen;
+    seen.add(file);
+    for (const next of byFile.get(file)?.imports ?? []) loads(next, seen);
+    return seen;
+  };
+  const notch = desktop.find((c) => /(?:^|\/)notch-[^/]*\.js$/.test(c.file));
+  assert.ok(notch, "No notch entry chunk in the Electron renderer");
+  assert.ok(
+    !loads(notch.file).has(mutationChunks[0].file),
+    "The notch must not load the mutations chunk"
+  );
   for (const module of desktop.flatMap((c) => c.modules)) {
     const path = module.id
       .replace(/^<web>\//, "apps/web/")

@@ -180,7 +180,7 @@ export const navigateAndSettle = async (
       resolve();
     }
   });
-  void router.navigate({ href } as never);
+  void router.navigate({ href });
   await resolved;
 
   const transition = (

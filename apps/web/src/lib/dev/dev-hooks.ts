@@ -67,7 +67,7 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
   installLoaderDelay(router, delay);
   const dev: AbacusDev = {
     navigate: async (href) => {
-      await router.navigate({ href } as never);
+      await router.navigate({ href });
     },
     call: (path, input = {}) => {
       const transport = (

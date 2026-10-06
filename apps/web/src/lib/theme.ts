@@ -12,7 +12,6 @@
 import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
 import { effectiveScheme } from "@abacus-ai/contract/look";
 import { Store } from "@tanstack/react-store";
-import { useSyncExternalStore } from "react";
 
 export type ThemePref = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
@@ -37,17 +36,6 @@ export const applyTheme = (doc: Document, resolved: ResolvedTheme): void => {
  * the user's (the `/__ui` gallery's `theme=light|dark`). Null: follow prefs.
  */
 export const themeOverride = new Store<ResolvedTheme | null>(null);
-
-/** A media query's live result. */
-export const useMedia = (query: string): boolean =>
-  useSyncExternalStore(
-    (onChange) => {
-      const list = window.matchMedia(query);
-      list.addEventListener("change", onChange);
-      return () => list.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(query).matches
-  );
 
 // WCAG 2 relative luminance and contrast ratio.
 const channel = (value: number): number => {

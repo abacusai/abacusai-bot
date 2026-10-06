@@ -20,7 +20,8 @@ const ModelsSettingsRoute = () => {
         ...location,
         to: location.pathname,
         transition: "settings-out",
-      } as Parameters<typeof navigate>[0]);
+        // A location remembered at runtime.
+      } as never);
       return;
     }
     if (!target.startsWith("session:"))

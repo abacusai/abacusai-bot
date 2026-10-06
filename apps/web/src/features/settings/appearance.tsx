@@ -10,7 +10,7 @@ import type {
  * the app as the row changes, so the page itself is the live preview.
  */
 import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   useState,
   type CSSProperties,
@@ -31,6 +31,7 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { windowChromeQuery } from "#renderer/data/queries/window";
+import { useMutation } from "#renderer/data/query-client";
 import {
   ACCENTS,
   findTheme,
@@ -44,11 +45,11 @@ import {
   CONTRAST_QUERY,
   DARK_QUERY,
   resolveTheme,
-  useMedia,
   type ResolvedTheme,
 } from "#renderer/lib/theme";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import {
   Collapsible,
@@ -335,10 +336,9 @@ export const AppearancePage = () => {
   const prefs = usePrefs();
   const update = useUpdatePrefs();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const look = lookOf(prefs.appearance);
-  const systemDark = useMedia(DARK_QUERY);
-  const systemHigh = useMedia(CONTRAST_QUERY);
+  const systemDark = useMediaQuery(DARK_QUERY);
+  const systemHigh = useMediaQuery(CONTRAST_QUERY);
   const high =
     look.contrast === "high" || (look.contrast === "system" && systemHigh);
   const wanted = resolveTheme(prefs.theme, systemDark);
@@ -354,6 +354,14 @@ export const AppearancePage = () => {
     transport.orpc.system.info.queryOptions({ input: {} })
   ).data?.platform;
   const fail = () => showError(t("phase5.saveFailed"));
+  const setDensity = useMutation(
+    transport.orpc.window.setDensity.mutationOptions({
+      meta: {
+        invalidates: [transport.orpc.window.chrome.queryKey({ input: {} })],
+        errorToast: "phase5.saveFailed",
+      },
+    })
+  );
   const save = (patch: Patch) => void update({ appearance: patch }).catch(fail);
   const themes = current.id === "custom" ? [...THEMES, current] : THEMES;
   const a = "settings.appearance.";
@@ -482,16 +490,9 @@ export const AppearancePage = () => {
             keys={["comfortable", "compact"]}
             prefix="phase5."
             onChange={(density) =>
-              void transport.client.window
-                .setDensity({ density: density as "comfortable" | "compact" })
-                .then(() =>
-                  cache.invalidateQueries({
-                    queryKey: transport.orpc.window.chrome.queryKey({
-                      input: {},
-                    }),
-                  })
-                )
-                .catch(fail)
+              setDensity.mutate({
+                density: density as "comfortable" | "compact",
+              })
             }
           />
         )}

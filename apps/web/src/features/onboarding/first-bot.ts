@@ -3,6 +3,7 @@ import { DeleteKeyNotFoundError } from "@tanstack/db";
 import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
+import { isRpcError } from "#renderer/data/query-client";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
 
@@ -71,7 +72,7 @@ export const ensureFirstBot = (
           firstBotStore.setState(() => ({
             state: "skipped",
             reason:
-              (error as { code?: string }).code === "NOT_FOUND"
+              isRpcError(error) && error.code === "NOT_FOUND"
                 ? "no_template"
                 : "create_failed",
           }));
@@ -95,7 +96,7 @@ const deletePersisted = async (
   } catch (error) {
     if (
       error instanceof DeleteKeyNotFoundError ||
-      (error as { code?: string }).code === "NOT_FOUND"
+      (isRpcError(error) && error.code === "NOT_FOUND")
     )
       return;
     throw error;

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { devicePoint, simulatorCrop } from "#renderer/components/device/crop";
 import { DeviceStreamPlayer } from "#renderer/components/device/stream-player";
 import { EmptyState } from "#renderer/components/empty-state";
+import { useMutation, useMutationState } from "#renderer/data/query-client";
 import type { Transport } from "#renderer/data/transport";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
@@ -240,8 +241,30 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
       t
     );
   }, [device, active, retry, transport, t]);
+  // Pointer and key events stay raw calls: one per event, nothing to guard.
   const action = (promise: Promise<unknown>) =>
     void promise.catch((e) => setError(String(e)));
+  const reports = { onError: (e: unknown) => setError(String(e)) };
+  const boot = useMutation(
+    transport.orpc.devices.boot.mutationOptions(reports)
+  );
+  const build = useMutation(
+    transport.orpc.devices.buildAndRun.mutationOptions(reports)
+  );
+  const interact = useMutation(
+    transport.orpc.devices.interact.mutationOptions(reports)
+  );
+  const sending = useMutationState({
+    filters: {
+      mutationKey: transport.orpc.devices.interact.mutationKey(),
+      status: "pending",
+    },
+    select: (mutation) =>
+      (mutation.state.variables as { action: string }).action,
+  }).includes("type");
+  const openPrivacyPane = useMutation(
+    transport.orpc.system.openPrivacyPane.mutationOptions(reports)
+  );
   const touch = (
     e: React.PointerEvent<HTMLCanvasElement>,
     phase: "down" | "move" | "up"
@@ -278,13 +301,11 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
               setPermission(false);
               setDevice(d);
               if (d.state !== "booted")
-                action(
-                  transport.client.devices.boot({
-                    platform: d.platform,
-                    deviceId: d.id,
-                    focus: true,
-                  })
-                );
+                boot.mutate({
+                  platform: d.platform,
+                  deviceId: d.id,
+                  focus: true,
+                });
             }}
           >
             {d.name}
@@ -304,14 +325,13 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
             <Button
               size="sm"
               variant="ghost"
+              disabled={boot.isPending}
               onClick={() =>
-                action(
-                  transport.client.devices.boot({
-                    platform: device.platform,
-                    deviceId: device.id,
-                    focus: true,
-                  })
-                )
+                boot.mutate({
+                  platform: device.platform,
+                  deviceId: device.id,
+                  focus: true,
+                })
               }
             >
               {t("sessions.device.open")}
@@ -319,13 +339,9 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
             <Button
               size="sm"
               variant="ghost"
+              disabled={build.isPending}
               onClick={() =>
-                action(
-                  transport.client.devices.buildAndRun({
-                    platform: device.platform,
-                    deviceId: device.id,
-                  })
-                )
+                build.mutate({ platform: device.platform, deviceId: device.id })
               }
             >
               {t("sessions.device.build")}
@@ -334,14 +350,12 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
               size="sm"
               variant="ghost"
               onClick={() =>
-                action(
-                  transport.client.devices.interact({
-                    platform: device.platform,
-                    deviceId: device.id,
-                    action: "press_key",
-                    key: "HOME",
-                  })
-                )
+                interact.mutate({
+                  platform: device.platform,
+                  deviceId: device.id,
+                  action: "press_key",
+                  key: "HOME",
+                })
               }
             >
               {t("sessions.device.home")}
@@ -364,13 +378,8 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
       {error ? <p role="alert">{error}</p> : null}
       {permission ? (
         <Button
-          onClick={() =>
-            action(
-              transport.client.system.openPrivacyPane({
-                pane: "screen-recording",
-              })
-            )
-          }
+          disabled={openPrivacyPane.isPending}
+          onClick={() => openPrivacyPane.mutate({ pane: "screen-recording" })}
         >
           {t("sessions.device.grant")}
         </Button>
@@ -425,14 +434,12 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
           className="flex gap-1"
           onSubmit={(e) => {
             e.preventDefault();
-            action(
-              transport.client.devices.interact({
-                platform: device.platform,
-                deviceId: device.id,
-                action: "type",
-                text,
-              })
-            );
+            interact.mutate({
+              platform: device.platform,
+              deviceId: device.id,
+              action: "type",
+              text,
+            });
             setText("");
           }}
         >
@@ -441,7 +448,11 @@ export const DeviceTab = ({ visible }: { visible: boolean }) => {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <Button type="submit" disabled={!text}>
+          <Button
+            type="submit"
+            // Only a send in flight: a Home press is its own action.
+            disabled={!text || sending}
+          >
             {t("sessions.device.send")}
           </Button>
         </form>

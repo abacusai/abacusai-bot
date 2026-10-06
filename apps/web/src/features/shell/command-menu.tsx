@@ -59,7 +59,7 @@ const CommandMenuBody = () => {
 
   const go = (href: string, transition: NavType = "nav-lateral"): void => {
     setCommandOpen(false);
-    void navigate({ href, transition } as never);
+    void navigate({ href, transition });
   };
 
   return (

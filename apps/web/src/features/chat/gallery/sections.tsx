@@ -84,7 +84,7 @@ const Nav = ({ fixture }: { fixture: string | undefined }) => {
         play: undefined,
       }),
       replace: true,
-    } as never);
+    });
   return (
     <div
       className="mt-4 flex flex-col gap-2 text-xs"

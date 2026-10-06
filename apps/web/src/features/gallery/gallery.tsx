@@ -492,13 +492,13 @@ export const Gallery = ({
   search: GallerySearchValue;
   extension?: GalleryExtension;
 }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/__ui" });
   const setSearch = (patch: Partial<GallerySearchValue>): void =>
     void navigate({
       to: "/__ui",
       search: (previous: GallerySearchValue) => ({ ...previous, ...patch }),
       replace: true,
-    } as never);
+    });
 
   // One theme for the whole document while the gallery is mounted.
   useEffect(() => {
