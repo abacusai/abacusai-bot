@@ -12,6 +12,8 @@ import { fakePi, type FakeTool } from "@abacus-ai/test-support/fake-pi";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { astGrepAvailable } from "../lang.js";
+import { gateToolCall } from "../permissions.js";
+import { AgentMode } from "../protocol.js";
 import editTool from "./edit-tool.js";
 
 let cwd: string;
@@ -297,6 +299,64 @@ describe("refusing edits it cannot apply safely", () => {
 
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain("Re-read");
+  });
+});
+
+describe("CRLF approval previews match file writes", () => {
+  it.each([
+    {
+      name: "a relaxed single-line edit",
+      original: "function f() {\r\n  return 1\r\n}\r\n",
+      oldText: "    return 1",
+      newText: "  return 2",
+      expected: "function f() {\r\n  return 2\r\n}\r\n",
+    },
+    {
+      name: "a relaxed multiline edit quoted with LF",
+      original: "function f() {\r\n  const a = 1\r\n  return a\r\n}\r\n",
+      oldText: "    const a = 1\n    return a",
+      newText: "  const a = 2\n  return a",
+      expected: "function f() {\r\n  const a = 2\r\n  return a\r\n}\r\n",
+    },
+    {
+      name: "a relaxed multiline edit quoted with CRLF",
+      original: "function f() {\r\n  const a = 1\r\n  return a\r\n}\r\n",
+      oldText: "    const a = 1\r\n    return a",
+      newText: "  const a = 2\r\n  return a",
+      expected: "function f() {\r\n  const a = 2\r\n  return a\r\n}\r\n",
+    },
+    {
+      name: "a BOM and an unterminated last line",
+      original: "\uFEFFconst a = 1\r\nconst b = 2",
+      oldText: "  const a = 1\n  const b = 2",
+      newText: "const a = 2\nconst b = 3",
+      expected: "\uFEFFconst a = 2\r\nconst b = 3",
+    },
+  ])("$name", async ({ original, oldText, newText, expected }) => {
+    const file = fixture("preview.ts", original);
+    const input = { path: file, oldText, newText };
+    const gate = gateToolCall(
+      { id: "call-1", name: "edit", type: "tool", input, args: input },
+      {
+        mode: AgentMode.Normal,
+        cwd,
+        allowedCommands: [],
+        allowedTools: [],
+        allowedReadPaths: [],
+        allowedWritePaths: [],
+        allowedOrigins: [],
+      }
+    );
+    if (gate.kind !== "ask" || gate.request.type !== "edit_file") {
+      throw new Error("expected an edit approval");
+    }
+
+    const result = await edit(file, [{ oldText, newText }]);
+
+    expect(result.isError).toBeFalsy();
+    expect(read(file)).toBe(expected);
+    expect(gate.request.originalContent).toBe(original);
+    expect(gate.request.newContent).toBe(read(file));
   });
 });
 
