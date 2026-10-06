@@ -697,6 +697,9 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       <MessageScrollerViewport
         ref={viewportRef}
         data-continuity-scroll="chat-transcript"
+        // The header's scroll-linked morph into the title bar reads this
+        // viewport's named timeline (bots.css).
+        data-identity-timeline={slots.header != null ? "" : undefined}
         preserveScrollOnPrepend
         style={{
           overflowAnchor: "none",
@@ -709,7 +712,11 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           anchor.current = null;
         }}
       >
-        {slots.header && <div className="px-4 pt-3">{slots.header}</div>}
+        {slots.header && (
+          <div className="px-4 pt-3 [container-type:inline-size]">
+            {slots.header}
+          </div>
+        )}
         {window.start === 0 ? <OlderRow /> : null}
         {window.start > 0 ? (
           <Placeholder
