@@ -40,7 +40,10 @@ import {
 } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { resolvePrefsLook } from "#renderer/lib/look";
-import { guardSingleViewTransition } from "#renderer/lib/navigation/single-transition";
+import {
+  guardSingleViewTransition,
+  settleSkippedViewTransitions,
+} from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import {
@@ -76,6 +79,9 @@ window.addEventListener("error", (event) => {
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer] unhandled rejection", event.reason);
 });
+// TanStack/router#7906: a route transition the browser skips (hidden window)
+// must not surface as an unhandled rejection.
+settleSkippedViewTransitions(document);
 // Dev and the acceptance build: a second view transition in one commit is
 // reported (and counted for R1-T11b).
 if (import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1")

@@ -51,3 +51,45 @@ export const guardSingleViewTransition = (
     report;
   return report;
 };
+
+/**
+ * TanStack/router#7906: `router.startViewTransition` calls
+ * `document.startViewTransition` and discards the returned object, so when
+ * the browser skips a transition it already started (the window went hidden
+ * mid-flight, a second transition pre-empted it, a snapshot timed out) the
+ * `ready` / `finished` promises reject with nobody listening: an unhandled
+ * rejection per interrupted navigation. This wrapper attaches a handler to
+ * both that drops only a skip (a `DOMException` the spec names `AbortError`,
+ * `InvalidStateError` or `TimeoutError`) and rethrows anything else, so an
+ * update callback that throws still surfaces (through `updateCallbackDone`,
+ * which it leaves alone). Composes with `guardSingleViewTransition`: both
+ * wrap and forward the same object.
+ */
+const SETTLED = Symbol.for("abacus.settledViewTransition");
+
+const SKIP_NAMES = new Set(["AbortError", "InvalidStateError", "TimeoutError"]);
+
+/** A rejection that only means the browser skipped the transition. */
+export const isSkippedTransition = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error != null &&
+  "name" in error &&
+  SKIP_NAMES.has(String((error as { name: unknown }).name));
+
+export const settleSkippedViewTransitions = (doc: Document): boolean => {
+  const target = doc as Document & { [SETTLED]?: true };
+  if (target[SETTLED]) return true;
+  if (typeof doc.startViewTransition !== "function") return false;
+  const original = doc.startViewTransition.bind(doc) as StartViewTransition;
+  const onReject = (error: unknown): void => {
+    if (!isSkippedTransition(error)) throw error;
+  };
+  doc.startViewTransition = ((arg?: unknown) => {
+    const transition = original(arg as never);
+    transition.ready.catch(onReject);
+    transition.finished.catch(onReject);
+    return transition;
+  }) as StartViewTransition;
+  target[SETTLED] = true;
+  return true;
+};
