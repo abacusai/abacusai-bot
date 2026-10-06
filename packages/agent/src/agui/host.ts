@@ -12,6 +12,8 @@ import { isBotSession } from "../bot/bot-config.js";
 import { BotSession } from "../bot/bot-session.js";
 import { tagEvent } from "../event-meta.js";
 import { parseModeStrict } from "../permissions.js";
+import { isPhoneSession } from "../phone/phone-config.js";
+import { PhoneSession } from "../phone/phone-session.js";
 import type { DesktopCommand, DesktopEvent } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
@@ -213,7 +215,11 @@ export class AguiHost {
     };
     const session =
       options.session?.(init) ??
-      (isBotSession() ? new BotSession(init) : new AbacusBotSession(init));
+      (isPhoneSession()
+        ? new PhoneSession(init)
+        : isBotSession()
+          ? new BotSession(init)
+          : new AbacusBotSession(init));
 
     this.core = new HostCore(
       session,

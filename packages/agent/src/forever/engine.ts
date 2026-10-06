@@ -244,6 +244,8 @@ export class ForeverEngine {
   private flushedSinceCompaction = false;
   /** True while a flush/consolidation turn runs: its output stays hidden. */
   private hiddenTurn = false;
+  /** The hidden turn's last assistant text, for its accept hook. */
+  private hiddenReply = "";
   /** What the current prompt's memory block was built from. */
   private promptMemoryFingerprint = "";
   private promptPersona = "";
@@ -362,8 +364,14 @@ export class ForeverEngine {
         {
           name: "abacusai-bot-bot-context",
           factory: (pi: ExtensionAPI): void => {
-            pi.on("session_before_compact", async () => {
+            pi.on("session_before_compact", async (event) => {
               this.flushedSinceCompaction = false;
+              const { messagesToSummarize, turnPrefixMessages } =
+                event.preparation;
+              await this.profile.beforeCompaction?.([
+                ...messagesToSummarize,
+                ...turnPrefixMessages,
+              ]);
             });
           },
         },
@@ -674,12 +682,14 @@ export class ForeverEngine {
   private async runHiddenTurn({
     customType,
     content,
+    accept,
   }: HiddenTurnPrompt): Promise<boolean> {
     const session = this.session;
 
     if (session == null) return false;
 
     this.hiddenTurn = true;
+    this.hiddenReply = "";
     let ok = false;
     this.emitInternal({ type: "hidden_turn", phase: "start", customType });
 
@@ -690,6 +700,7 @@ export class ForeverEngine {
       );
       const state = session.state as { errorMessage?: unknown } | undefined;
       ok = typeof state?.errorMessage !== "string" || state.errorMessage === "";
+      if (ok && accept != null) ok = await accept(this.hiddenReply);
     } catch {
       // Housekeeping must never surface as a failed reply.
     } finally {
@@ -1553,10 +1564,13 @@ export class ForeverEngine {
       }
 
       case "message_end": {
+        if (!this.hiddenTurn) this.profile.onMessage?.(event.message);
         if (!isAssistantMessage(event.message)) return;
         this.router.recordReply(event.message);
 
         const full = messageText(event.message);
+
+        if (this.hiddenTurn && full.length > 0) this.hiddenReply = full;
 
         if (!this.hiddenTurn) {
           if (this.rawStreamed.length === 0 && full.length > 0) {
@@ -1691,7 +1705,13 @@ export class ForeverEngine {
       }
 
       case "agent_end": {
-        this.estimatedTranscriptChars = estimateChars(event.messages);
+        // agent_end carries only this run's messages; the default (unset)
+        // keeps the bot's existing measurement.
+        this.estimatedTranscriptChars = estimateChars(
+          this.profile.memory.measureFlushOnFullTranscript === true
+            ? (this.session?.messages ?? event.messages)
+            : event.messages
+        );
         this.lastTurnUsage = turnUsage(event.messages as never);
 
         // A hidden housekeeping turn is not carried on: nobody is waiting on

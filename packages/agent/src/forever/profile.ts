@@ -8,6 +8,8 @@
 export interface HiddenTurnPrompt {
   customType: string;
   content: string;
+  /** Takes the turn's final reply; false counts the turn as failed. */
+  accept?(reply: string): boolean | Promise<boolean>;
 }
 
 /** What the chat remembers, and the hidden turns that keep it. */
@@ -20,6 +22,8 @@ export interface ForeverMemoryPolicy {
   fingerprint(): string;
   /** Flush once per compaction cycle past this share of the context window. */
   flushAtWindowShare: number;
+  /** Measure that share over the whole live transcript, not the last run. */
+  measureFlushOnFullTranscript?: boolean;
   flush(): HiddenTurnPrompt;
   /** The consolidation turn when one is due, else null; claiming it stamps the run. */
   claimConsolidation(): HiddenTurnPrompt | null;
@@ -50,4 +54,8 @@ export interface ForeverProfile {
   beforeTurn(message: string): string | Promise<string>;
   /** Housekeeping once the turn and its memory maintenance are over. */
   afterTurn(): void | Promise<void>;
+  /** Each user and assistant message of a visible turn, as it ends. */
+  onMessage?(message: unknown): void;
+  /** The messages a compaction is about to summarize away, before it does. */
+  beforeCompaction?(messages: readonly unknown[]): void | Promise<void>;
 }
