@@ -116,6 +116,7 @@ const deliver = (item: RelayEvent): SequencedChunk => ({
 export interface RelayStats {
   hydrate: number;
   subscribe: number;
+  react: number;
   joinRun: number;
   send: AiSendInput[];
   cancel: Array<{ runId?: string }>;
@@ -416,6 +417,7 @@ export class FakeRelay {
   readonly stats: RelayStats = {
     hydrate: 0,
     subscribe: 0,
+    react: 0,
     joinRun: 0,
     send: [],
     cancel: [],
@@ -434,6 +436,8 @@ export class FakeRelay {
     ) => Error | "end" | "stall" | null;
     /** Thrown after main recorded the ack: the response is lost. */
     send?: (call: number) => Error | null;
+    /** Main rejects the reaction: nothing is applied or broadcast. */
+    react?: (call: number) => Error | null;
     /** Thrown before main records anything: the prompt never arrived. */
     sendLost?: (call: number) => Error | null;
   } = {};
@@ -619,6 +623,9 @@ export class FakeRelay {
   /** Main's `AguiSource`, over the log. */
   readonly source: AguiSourceLike = {
     react: async (input) => {
+      this.stats.react += 1;
+      const fault = this.faults.react?.(this.stats.react);
+      if (fault != null) throw fault;
       this.emit({
         type: "CUSTOM",
         name: "message.reactions",

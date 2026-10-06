@@ -8,7 +8,7 @@ import type { AgentMode } from "@abacus-ai/contract/agent-types";
  */
 import { Store, useSelector } from "@tanstack/react-store";
 import { ArrowUp, FileText, Folder, Mic, Plus, X } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   createContext,
   use,
@@ -49,7 +49,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { useChatView } from "../kit/context";
 import { composeReply, ReplyQuote } from "../kit/reply";
-import { composerChildren, composerSurface } from "../motion";
+import {
+  composerChildren,
+  composerSurface,
+  replyPreviewTransition,
+} from "../motion";
 import { routeSubmit } from "../runtime/send";
 import {
   questionPending,
@@ -554,17 +558,17 @@ export const ThreadComposer = () => {
       return;
     }
     if (event.key === "Escape") {
+      if (trigger != null) {
+        event.preventDefault();
+        setTrigger(null);
+        return;
+      }
       if (draft.replyTo) {
         event.preventDefault();
         updateDraft(threadId, (current) => ({
           ...current,
           replyTo: undefined,
         }));
-        return;
-      }
-      if (trigger != null) {
-        event.preventDefault();
-        setTrigger(null);
         return;
       }
       event.currentTarget.blur();
@@ -668,10 +672,13 @@ export const ThreadComposer = () => {
         data-state={state}
         data-expanded={expanded ? "" : undefined}
         onKeyDown={(event) => {
+          // Escape cancels the reply from anywhere in the composer, but not
+          // from a portaled popover (a chip menu, a tooltip) closing itself.
           if (
             event.key === "Escape" &&
             !event.defaultPrevented &&
-            draft.replyTo
+            draft.replyTo &&
+            event.currentTarget.contains(event.target as Node)
           ) {
             event.preventDefault();
             updateDraft(threadId, (current) => ({
@@ -686,17 +693,6 @@ export const ThreadComposer = () => {
             setFocused(false);
         }}
       >
-        {draft.replyTo ? (
-          <ReplyQuote
-            target={draft.replyTo}
-            onCancel={() =>
-              updateDraft(threadId, (current) => ({
-                ...current,
-                replyTo: undefined,
-              }))
-            }
-          />
-        ) : null}
         {trigger != null ? (
           <TriggerMenu
             trigger={trigger}
@@ -732,6 +728,30 @@ export const ThreadComposer = () => {
               "phone:rounded-[26px] phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] rounded-[20px] ps-4"
           )}
         >
+          <AnimatePresence initial={false}>
+            {draft.replyTo ? (
+              <motion.div
+                key="reply"
+                data-slot="reply-preview"
+                className="w-full overflow-hidden"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={replyPreviewTransition(pref)}
+              >
+                <ReplyQuote
+                  target={draft.replyTo}
+                  onCancel={() => {
+                    updateDraft(threadId, (current) => ({
+                      ...current,
+                      replyTo: undefined,
+                    }));
+                    field.current?.focus();
+                  }}
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
           {expanded ? <Attachments /> : null}
           {expanded ? null : <Attach />}
           <label htmlFor={fieldId} className="sr-only">

@@ -356,13 +356,8 @@ export class AguiHost {
           typeof command.excerpt !== "string"
         )
           return;
-        this.write(
-          custom("message.reactions", {
-            messageId: command.messageId,
-            emoji: command.emoji,
-            selected: command.selected,
-          })
-        );
+        // Main applies and persists the reaction itself (`message.reactions`
+        // is its event); the agent only hears about a selection.
         if (command.selected)
           await this.core.handle({
             type: "send",
