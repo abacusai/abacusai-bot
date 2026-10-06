@@ -15,7 +15,7 @@ export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
     ? { bot, checkInRoutineId: "fixture-weekday-check-in" }
     : undefined;
   return (
-    <OnboardingFrame step={step}>
+    <OnboardingFrame step={step} previewBot={previewBot}>
       <OnboardingStepPage
         step={step}
         transport={transport}

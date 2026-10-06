@@ -37,6 +37,18 @@ export const springs = {
     visualDuration: durations.surface / 1000,
     bounce: 0,
   },
+  /**
+   * The onboarding avatars travelling between steps (canvas OnboardMotion's
+   * 420 ms shared-element flight, as a spring so an interrupted step change
+   * keeps its velocity). A little bounce: first-run is the delight tier.
+   */
+  avatar: {
+    type: "spring",
+    visualDuration: durations.sharedElement / 1000,
+    bounce: 0.18,
+  },
+  /** The connected check badge popping onto the avatar. */
+  badge: { type: "spring", visualDuration: 0.32, bounce: 0.3 },
 } as const;
 
 export const offsets = { drill: 12 } as const;

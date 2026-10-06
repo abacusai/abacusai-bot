@@ -1,15 +1,20 @@
 /**
  * The frame (spec 06 §7.1, canvas page 11): the full-window wash, the
  * progress pill in the title bar's drag strip (five marks; `connect` and
- * `connected` share mark 2, `first-bot` and `done` mark 5) and the centred
- * column. It is the `/onboarding` layout's
- * component, so it stays mounted while the step routes swap underneath.
+ * `connected` share mark 2, `first-bot` and `done` mark 5), the avatar stage
+ * and the centred column. It is the `/onboarding` layout's component, so it
+ * (and the stage's avatars) stay mounted while the step routes swap
+ * underneath.
  */
+import { useSelector } from "@tanstack/react-store";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+
+import { firstBotStore, type FirstBotResult } from "./first-bot";
+import { OnboardingStage, type FirstBotPhase } from "./stage";
 
 export const PROGRESS_MARK: Record<OnboardingStepId, number> = {
   welcome: 1,
@@ -44,21 +49,32 @@ export const OnboardingProgress = ({ step }: { step: OnboardingStepId }) => {
 
 export const OnboardingFrame = ({
   step,
-  stage,
+  previewBot,
   children,
 }: {
   step: OnboardingStepId;
-  /** The avatar stage, rendered above the step inside the column. */
-  stage?: ReactNode;
+  /** The gallery's first bot (the live flow reads `firstBotStore`). */
+  previewBot?: FirstBotResult;
   children: ReactNode;
 }) => {
   const reduce = useMotionPreference() === "reduced";
+  const live = useSelector(firstBotStore, (s) => s);
+  const first = previewBot
+    ? { state: "ready" as const, result: previewBot }
+    : live;
+  const bot = first.state === "ready" ? first.result.bot : null;
+  const phase: FirstBotPhase =
+    first.state === "ready"
+      ? "ready"
+      : first.state === "pending" || first.state === "idle"
+        ? "pending"
+        : "none";
   return (
     <div className="onboarding-frame" data-reduced-motion={reduce}>
       <OnboardingProgress step={step} />
       <div id="onboarding-consent" className="shrink-0 px-6" />
       <div className="onboarding-column">
-        {stage}
+        <OnboardingStage step={step} bot={bot} phase={phase} reduced={reduce} />
         {children}
       </div>
     </div>

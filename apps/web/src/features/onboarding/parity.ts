@@ -175,7 +175,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/hatch.tsx#FirstBotHatch",
+    consumer: "apps/web/src/features/onboarding/stage.tsx#OnboardingStage",
     owner: "phase-6",
   },
   {

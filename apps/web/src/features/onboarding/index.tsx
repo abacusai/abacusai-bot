@@ -6,14 +6,10 @@ import { useSelector } from "@tanstack/react-store";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BotAvatar } from "#renderer/components/bot-avatar";
 import { useDb } from "#renderer/data/db";
-import { resolveLook } from "#renderer/lib/bots/avatar";
-import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { ensureFirstBot, firstBotStore } from "./first-bot";
-import { FirstBotHatch } from "./hatch";
 import { next, connectedProviders } from "./machine";
 import { ConnectStep } from "./steps/connect";
 import { ConnectedStep } from "./steps/connected";
@@ -29,27 +25,6 @@ export { OnboardingFrame } from "./frame";
 export { onboardingStore } from "./store";
 export type { OnboardingPageProps } from "./steps/context";
 
-const Parade = () => (
-  <div className="onboarding-stage" aria-hidden="true">
-    {["bunny", "blob", "mochi", "cat", "star"].map((shape, i) => (
-      <span
-        key={shape}
-        className="onboarding-bob"
-        style={{ animationDelay: `${i * 0.4}s` }}
-      >
-        <BotAvatar
-          look={resolveLook({
-            name: shape,
-            avatarShape: shape,
-            avatarColor: ["pink", "green", "blue", "orange", "yellow"][i]!,
-          })}
-          size={[56, 72, 88, 72, 56][i]!}
-        />
-      </span>
-    ))}
-  </div>
-);
-
 export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const { step, transport, facts } = props;
   const { t } = useTranslation();
@@ -64,9 +39,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const [more, setMore] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const bot = first.state === "ready" ? first.result.bot : null;
-  const shared = useSharedElementName(
-    step === "done" && bot ? `bot-identity-${bot.id}` : null
-  );
   const profiles = useQuery({
     ...transport.orpc.auth.abacus.browserProfiles.queryOptions({ input: {} }),
     enabled: IS_ELECTRON && (step === "welcome" || step === "connect"),
@@ -167,39 +139,8 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const present =
     (first.state === "ready" && first.result.preview === true) ||
     (bot != null && (bots?.some((b) => b.id === bot.id) ?? false));
-  // The browser arrives signed in to the website: its welcome is the account
-  // hand-off starting (first-run.ts), never the desktop's sign-up wall.
-  const webWelcome = step === "welcome" && !IS_ELECTRON;
   return (
     <section className="onboarding-step" data-onboarding-step={step}>
-      {(step === "welcome" && !webWelcome) || (step === "done" && !bot) ? (
-        <Parade />
-      ) : step === "models" || step === "connectors" ? null : (
-        <div
-          className={step === "first-bot" ? "relative mb-6" : "mb-6"}
-          style={shared}
-        >
-          {step === "first-bot" && bot ? (
-            <FirstBotHatch
-              look={resolveLook({
-                name: bot.name,
-                avatarShape: bot.avatarShape,
-                avatarColor: bot.avatarColor,
-              })}
-            />
-          ) : (
-            <BotAvatar
-              look={resolveLook({
-                name: bot?.name ?? "Abacus",
-                avatarShape: bot?.avatarShape ?? "blob",
-                avatarColor: bot?.avatarColor ?? "#4ade80",
-              })}
-              size={96}
-              mood={step === "connect" || webWelcome ? "waiting" : "idle"}
-            />
-          )}
-        </div>
-      )}
       {step === "welcome" && (
         <WelcomeStep ctx={ctx} profiles={profiles.data} heading={heading} />
       )}
