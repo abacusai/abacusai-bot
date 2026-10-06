@@ -7,6 +7,8 @@ import react from "@vitejs/plugin-react";
 import { loadEnv, type Plugin, type PluginOption } from "vite";
 
 import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
+import { loadWebOverlay, overlayCsp, overlayTags } from "./vite.overlay.ts";
+export type { WebOverlay } from "./vite.overlay.ts";
 import {
   RENDERER_MODULES,
   RENDERER_REGISTRY_SRC,
@@ -114,11 +116,11 @@ export const browserBoundaryPlugin = (): Plugin => ({
     for (const id of this.getModuleIds()) assertBrowserImport(id);
   },
 });
-export const platformPlugin = (
+export const platformPlugin = async (
   platform: RendererPlatform,
   mode = "production",
   command = "build"
-) => {
+): Promise<Plugin[]> => {
   const env = {
     ...(platform === "browser" ? loadEnv(mode, webRoot, "VITE_") : {}),
     ...process.env,
@@ -127,28 +129,55 @@ export const platformPlugin = (
     const origin = new URL(env.VITE_WEB_HOST_URL).origin;
     env.VITE_CONNECT_SRC = `${env.VITE_CONNECT_SRC ?? ""} ${origin} ${origin.replace(/^ws/, "http")}`;
   }
-  const csp = rendererCsp(platform, env);
-  return {
-    name: "abacus:platform",
-    config: () => ({
-      define: { __ABACUS_PLATFORM__: JSON.stringify(platform) },
-    }),
-    transformIndexHtml: (html: string) => ({
-      // The static splash is the browser's: Electron mounts from a local
-      // file and keeps its blank first frame.
-      html:
-        platform === "electron"
-          ? html.replace(/\s*<!-- splash:[\s\S]*<!-- \/splash -->\s*/, "")
-          : html,
-      tags: [
-        {
-          tag: "meta",
-          attrs: { "http-equiv": "Content-Security-Policy", content: csp },
-          injectTo: "head-prepend" as const,
+  // The deployment overlay (vite.overlay.ts) is the browser build's only;
+  // Electron never reads the env.
+  const overlay =
+    platform === "browser"
+      ? await loadWebOverlay(
+          { mode, command: command === "serve" ? "serve" : "build", env },
+          env
+        )
+      : undefined;
+  const base = rendererCsp(platform, env);
+  const csp = overlay ? overlayCsp(base, overlay) : base;
+  const plugins: Plugin[] = [
+    {
+      name: "abacus:platform",
+      config: () => ({
+        define: {
+          __ABACUS_PLATFORM__: JSON.stringify(platform),
+          ...overlay?.define,
         },
-      ],
-    }),
-  };
+      }),
+      transformIndexHtml: (html: string) => ({
+        // The static splash is the browser's: Electron mounts from a local
+        // file and keeps its blank first frame.
+        html:
+          platform === "electron"
+            ? html.replace(/\s*<!-- splash:[\s\S]*<!-- \/splash -->\s*/, "")
+            : html,
+        tags: [
+          {
+            tag: "meta",
+            attrs: { "http-equiv": "Content-Security-Policy", content: csp },
+            injectTo: "head-prepend" as const,
+          },
+          ...(overlay ? overlayTags(overlay) : []),
+        ],
+      }),
+    },
+  ];
+  const { transformHtml } = overlay ?? {};
+  if (transformHtml)
+    plugins.push({
+      name: "abacus:web-overlay-html",
+      // After the tags above are in the document.
+      transformIndexHtml: {
+        order: "post",
+        handler: (html) => transformHtml(html),
+      },
+    });
+  return plugins;
 };
 /**
  * Chunk groups both renderer builds share. Query's mutation hooks
