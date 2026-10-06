@@ -26,7 +26,7 @@ export const StartComposer = ({
         runtime,
         session: runtime.session(threadId),
         skin: "session",
-        composer: { ...config, preStart: true },
+        composer: { ...config, preStart: true, sharedElement: true },
         slots: { composerContext: context },
         workspaceRoot: config.attachmentsBase,
         focused: true,

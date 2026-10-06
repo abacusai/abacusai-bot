@@ -80,6 +80,13 @@ export interface ComposerConfig {
   turnBusy?: boolean;
   /** Called after the first send of an untitled session (§8.3). */
   onFirstSend?: (text: string) => void;
+  /**
+   * The surface carries `view-transition-name: composer` so the router's
+   * route transition morphs it into the next page's composer (the bot start
+   * name pill, the bot chat, the session start and workspace composers).
+   * Exactly one such element may be mounted per page.
+   */
+  sharedElement?: boolean;
 }
 
 interface Activity {

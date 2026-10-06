@@ -19,6 +19,7 @@ import {
   orderedTemplateIds,
   type BotTemplateCategory,
 } from "#renderer/lib/bots/templates";
+import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 import {
@@ -46,6 +47,8 @@ export const BotStartPage = ({
   const { bots } = useBots();
   const draft = useBotDraft();
   const navigate = useAppNavigate();
+  // The name pill is this page's composer: it morphs into the bot chat's.
+  const composerStyle = useSharedElementName("composer", "composer");
   const transport = useBotsTransport();
   const connectors = useQuery(botsQueries(transport.orpc).connectorStatuses());
   const values = draft.values;
@@ -129,7 +132,10 @@ export const BotStartPage = ({
             setup();
           }}
         >
-          <InputGroup className="bg-muted h-[52px] rounded-full">
+          <InputGroup
+            className="bg-muted h-[52px] rounded-full"
+            style={composerStyle}
+          >
             <InputGroupInput
               autoFocus={empty}
               aria-label={t("bots.form.name")}

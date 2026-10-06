@@ -79,7 +79,8 @@ const GalleryChat = ({
         runtime={replayState.current.runtime}
         skin="bot"
         workspaceRoot={slots.workspaceRoot}
-        composer={slots.composer}
+        // The gallery has no route transition to morph into.
+        composer={{ ...slots.composer, sharedElement: false }}
         slots={{
           ...slots.chat,
           header: (

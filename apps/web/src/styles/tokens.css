@@ -294,6 +294,34 @@ html:active-view-transition-type(settings-out)::view-transition-new(.sidebar) {
   animation: 120ms vt-fade-in both;
 }
 /*
+ * The composer morph (shared-element.ts, `useSharedElementName("composer")`):
+ * the bot start name pill, the bot chat, the session start and the session
+ * workspace composers share one name, so a drill between them moves and
+ * resizes the group (durations.layout) while the two snapshots cross-fade
+ * (durations.route). The pair clips to the pill radius so the old pill and
+ * the new surface never show square corners mid-flight. The reduced-motion
+ * rules below cancel the group's animation (`*` matches it) and keep the
+ * cross-fade.
+ */
+::view-transition-group(composer) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-image-pair(composer) {
+  overflow: clip;
+  border-radius: 22px;
+}
+::view-transition-old(composer),
+::view-transition-new(composer) {
+  block-size: 100%;
+}
+::view-transition-old(composer) {
+  animation: 120ms vt-fade-out both;
+}
+::view-transition-new(composer) {
+  animation: 120ms vt-fade-in both;
+}
+/*
  * Reduced motion: no movement, a 120 ms cross-fade (old out, new in; never
  * the old snapshot faded in). `prefs.motion.reduce` wins over the OS:
  * "on" reduces everywhere, "off" keeps full motion even with the OS

@@ -4,7 +4,8 @@
  * `<ViewTransition name>` cannot join. An element that should morph across
  * routes (the bot identity) carries a CSS `view-transition-name` instead:
  * the browser pairs the old and the new element with that name inside the
- * router's transition. The class `shared` lets tokens.css time the group.
+ * router's transition. The class (`shared` by default; the composer passes
+ * `composer`) lets tokens.css time the group.
  *
  * The style is computed during render, so it is on the element when the
  * router's transition captures the new state. A name must be unique in the
@@ -15,12 +16,15 @@ import { useEffect, type CSSProperties } from "react";
 const MOUNTED = new Map<string, number>();
 
 /** The inline style for one named shared element, or none. */
-export const sharedElementStyle = (name: string | null): CSSProperties =>
+export const sharedElementStyle = (
+  name: string | null,
+  cls = "shared"
+): CSSProperties =>
   name == null
     ? {}
     : ({
         viewTransitionName: name,
-        viewTransitionClass: "shared",
+        viewTransitionClass: cls,
       } as CSSProperties);
 
 /** How many mounted elements carry `name` now (dev checks, tests). */
@@ -28,7 +32,10 @@ export const sharedElementMounts = (name: string): number =>
   MOUNTED.get(name) ?? 0;
 
 /** `style` for the element that carries `name` (null: no name). */
-export const useSharedElementName = (name: string | null): CSSProperties => {
+export const useSharedElementName = (
+  name: string | null,
+  cls = "shared"
+): CSSProperties => {
   useEffect(() => {
     if (name == null) return;
     const count = MOUNTED.get(name) ?? 0;
@@ -41,5 +48,5 @@ export const useSharedElementName = (name: string | null): CSSProperties => {
       else MOUNTED.set(name, left);
     };
   }, [name]);
-  return sharedElementStyle(name);
+  return sharedElementStyle(name, cls);
 };
