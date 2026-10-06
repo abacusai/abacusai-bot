@@ -28,6 +28,10 @@ export const SHELL_GEOMETRY = {
   paneRadius: 12,
   /** `--drawer-padding`: the drawer's content padding. */
   drawerPadding: 16,
+  /** `--transcript-max-w`: the chat transcript's column clamp. */
+  transcriptMaxW: 960,
+  /** `--composer-max-w`: the composer column, a step narrower than the transcript. */
+  composerMaxW: 760,
 } as const;
 
 type ShellGeometryKey = keyof typeof SHELL_GEOMETRY;
@@ -45,4 +49,6 @@ export const GEOMETRY_VARS: Record<ShellGeometryKey, `--${string}`> = {
   paneInset: "--pane-inset",
   paneRadius: "--pane-radius",
   drawerPadding: "--drawer-padding",
+  transcriptMaxW: "--transcript-max-w",
+  composerMaxW: "--composer-max-w",
 };

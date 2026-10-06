@@ -32,6 +32,10 @@
   --pane-inset: 8px;
   --pane-radius: 12px;
   --drawer-padding: 16px;
+  /* The chat column: a clamp that only matters on ultra-wide displays; the
+     composer sits a step narrower than the transcript, both centred. */
+  --transcript-max-w: 960px;
+  --composer-max-w: 760px;
   /* density */
   --row-h: 32px;
   --bot-accent: var(--primary);

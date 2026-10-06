@@ -31,6 +31,12 @@ describe("shell geometry", () => {
     }
   });
 
+  it("keeps the composer column narrower than the transcript, both wider than the pane minimum", () => {
+    const g = SHELL_GEOMETRY;
+    expect(g.composerMaxW).toBeLessThan(g.transcriptMaxW);
+    expect(g.composerMaxW).toBeGreaterThan(g.sidePanelMin);
+  });
+
   it("leaves the pane and the panel their 360 px each at the 1100 minimum", () => {
     const g = SHELL_GEOMETRY;
     const room = 1100 - g.railW - g.sidebarW - g.paneInset - g.paneInset;

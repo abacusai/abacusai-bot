@@ -249,7 +249,10 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
             }
           </MessagesView>
         </div>
-        <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col gap-1.5 pb-4">
+        <div
+          className="mx-auto flex w-full max-w-(--composer-max-w) min-w-0 flex-col gap-1.5 pb-4"
+          data-slot="composer-dock"
+        >
           <Notices />
           {skin === "bot" ? (
             <div className="px-4">
