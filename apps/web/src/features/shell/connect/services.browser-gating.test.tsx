@@ -17,6 +17,7 @@ import {
   resolveBrowserHost,
   refreshUploadToken,
   runHostConnection,
+  setUpBotAccount,
 } from "./services";
 const ready = serverFixtures.find(
   (fixture) => fixture.result.status === "ready"
@@ -706,5 +707,40 @@ describe("runHostConnection", () => {
     fetch.mockResolvedValueOnce(new Response(null, { status: 502 }));
     FakeSocket.all[0]!.dispatchEvent(new Event("error"));
     await vi.waitFor(() => expect(hostConnection.state.attempting).toBe(false));
+  });
+});
+
+it("sets up the bot account through the apps server before the identity step", async () => {
+  const fetch = vi.fn().mockResolvedValue(envelope(null));
+  vi.stubGlobal("fetch", fetch);
+  await setUpBotAccount();
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+    "/api/_setUpAbacusaibotWebAccount",
+  ]);
+  expect(fetch.mock.calls[0]![1]).toMatchObject({
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "REAI-UI": "1" },
+  });
+});
+it("a signed-out bot account setup is the sign-in refusal", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(
+          {
+            success: false,
+            error: "User not logged in",
+            errorType: "NotLoggedInError",
+          },
+          { status: 200 }
+        )
+      )
+  );
+  await expect(setUpBotAccount()).rejects.toMatchObject({
+    kind: "signin",
+    message: "User not logged in",
   });
 });
