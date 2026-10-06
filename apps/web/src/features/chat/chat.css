@@ -333,6 +333,16 @@ html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animatio
 [data-slot="composer-dock"] > * {
   pointer-events: auto;
 }
+/*
+ * The layout clips: while the composer morphs, motion drives it and its
+ * children with transforms, and a transformed box a few pixels past the
+ * layout's bottom edge would otherwise count as scrollable overflow of the
+ * pane above (`pane-scroll`, overflow auto), flashing its 10 px scrollbar
+ * and squeezing the whole chat column for a frame or two.
+ */
+[data-slot="chat-layout"] {
+  overflow: clip;
+}
 @media not (prefers-reduced-transparency: reduce) {
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="composer-surface"] {
