@@ -25,11 +25,17 @@ import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import {
+  openPanelTab,
+  panelScopeKey,
+  setPanelOpen,
+  updatePanelTab,
+} from "#renderer/features/shell/panel-store";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { activeTabOf, usePanelScope } from "#renderer/features/shell/use-panel";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
 
 import { BotBrowser, BotBrowserRegistration } from "./-browser";
@@ -61,45 +67,18 @@ const ReadyChat = ({
   sessionId: string;
 }) => {
   const bot = useBot(botId);
-  const search = Route.useSearch();
-  const navigate = useAppNavigate();
   const expanded = useComposerExpanded(sessionId);
   if (!bot) return <BotGone />;
-  return (
-    <ComposedChat
-      bot={bot}
-      sessionId={sessionId}
-      expanded={expanded}
-      detailsOpen={search.tab === "details"}
-      preview={search.preview}
-      toggle={() =>
-        void navigate({
-          to: "/bots/$botId",
-          params: { botId },
-          search: (previous) => ({
-            ...previous,
-            tab: previous.tab === "details" ? undefined : "details",
-          }),
-          transition: "none",
-        })
-      }
-    />
-  );
+  return <ComposedChat bot={bot} sessionId={sessionId} expanded={expanded} />;
 };
 const ComposedChat = ({
   bot,
   sessionId,
   expanded,
-  detailsOpen,
-  preview,
-  toggle,
 }: {
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
   expanded: boolean;
-  detailsOpen: boolean;
-  preview?: string;
-  toggle(): void;
 }) => {
   const { chat } = Route.useRouteContext();
   const runtime =
@@ -111,16 +90,23 @@ const ComposedChat = ({
   const slots = useBotChatSlots(bot, sessionId, expanded, false, (url) =>
     requestBrowserOpen({ sessionId, url })
   );
-  const navigate = useAppNavigate();
-  // The identity itself (header and dock) opens and closes the details
-  // panel; the title bar keeps only its panel toggle on the far right.
+  // The panel's state is the bot's, in the shell's store: the identity
+  // (header and dock) opens and closes the Details tab; the title bar keeps
+  // only its panel toggle on the far right.
+  const panelKey = panelScopeKey("bots", bot.id)!;
+  const panel = usePanelScope(panelKey);
+  const detailsOpen = panel.open && activeTabOf(panel)?.kind === "details";
+  const toggle = () => {
+    if (detailsOpen) setPanelOpen(panelKey, false);
+    else openPanelTab(panelKey, { kind: "details" });
+  };
   return (
     <div
       data-testid="bot-chat"
       className="size-full"
       style={accentVars(resolveLook(bot))}
     >
-      <BotBrowserRegistration sessionId={sessionId} />
+      <BotBrowserRegistration botId={bot.id} sessionId={sessionId} />
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
@@ -143,7 +129,7 @@ const ComposedChat = ({
           header: <BotTranscriptIdentity bot={bot} />,
         }}
       />
-      <SidePanelContent tab="details">
+      <SidePanelContent kind="details">
         <DetailsTab
           bot={bot}
           binding={slots.binding}
@@ -151,25 +137,40 @@ const ComposedChat = ({
           setTab={slots.setTab}
         />
       </SidePanelContent>
-      <SidePanelContent tab="memory">
+      <SidePanelContent kind="memory">
         <MemoryTab bot={bot} />
       </SidePanelContent>
-      <SidePanelContent tab="browser">
-        <BotBrowser sessionId={sessionId} />
+      <SidePanelContent kind="browser">
+        {(tab, active) => (
+          <BotBrowser
+            botId={bot.id}
+            sessionId={sessionId}
+            tab={tab}
+            active={active}
+          />
+        )}
       </SidePanelContent>
-      <SidePanelContent tab="files">
-        <FilesTab
-          sessionId={sessionId}
-          bot={bot}
-          preview={preview}
-          workspaceRoot={slots.workspaceRoot}
-          onClosePreview={() =>
-            void navigate({
-              search: (previous) => ({ ...previous, preview: undefined }),
-              transition: "none",
-            })
-          }
-        />
+      <SidePanelContent kind="files">
+        {(tab) => (
+          <FilesTab
+            sessionId={sessionId}
+            bot={bot}
+            tab={tab}
+            workspaceRoot={slots.workspaceRoot}
+            onOpen={(path, where) =>
+              where === "tab" && path != null
+                ? openPanelTab(
+                    panelKey,
+                    { kind: "files", path, title: path.split("/").at(-1) },
+                    { fresh: true }
+                  )
+                : updatePanelTab(panelKey, tab.id, {
+                    path,
+                    title: path?.split("/").at(-1),
+                  })
+            }
+          />
+        )}
       </SidePanelContent>
       <Outlet />
     </div>

@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { NavList } from "#renderer/components/nav-list";
+import type { PanelTab } from "#renderer/features/shell/panel-store";
 import { Rail } from "#renderer/features/shell/rail";
 import { shellStore } from "#renderer/features/shell/shell-store";
 import {
@@ -41,6 +42,13 @@ import {
 import { Button } from "#renderer/ui/button";
 
 import * as Atoms from "./atoms";
+
+const GALLERY_PANEL_TABS: PanelTab[] = [
+  { id: "memory:1", kind: "memory" },
+  { id: "files:1", kind: "files" },
+  { id: "browser:1", kind: "browser", title: "news.example.com" },
+  { id: "details:1", kind: "details" },
+];
 import { OverlayContext, OVERLAY_EXAMPLES } from "./overlays";
 import {
   GALLERY_OVERLAY_IDS,
@@ -200,9 +208,14 @@ const TopBarFrame = ({
       </TopBar.Identity>
       {panel && (
         <TopBar.PanelTabs
-          tabs={["memory", "files", "browser", "details"]}
-          value="memory"
+          tabs={GALLERY_PANEL_TABS}
+          active="memory:1"
+          title={(tab) => tab.title ?? tab.kind}
+          kinds={["details", "memory", "files", "browser"]}
           onChange={() => undefined}
+          onClose={() => undefined}
+          onReorder={() => undefined}
+          onAdd={() => undefined}
         />
       )}
       <TopBar.PanelToggle open={panel} onToggle={() => undefined} />
@@ -286,7 +299,7 @@ const ShellSection = () => {
       <Atoms.Row label="side panel in layout">
         <div className="bg-sidebar flex h-56 w-[400px] rounded-md border p-2">
           <SidePanelFrame>
-            <SidePanelBody tab="terminal" />
+            <SidePanelBody tab={{ id: "terminal:1", kind: "terminal" }} />
           </SidePanelFrame>
         </div>
       </Atoms.Row>

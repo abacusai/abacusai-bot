@@ -71,7 +71,12 @@ const PanelGallery = ({ kind }: { kind: string }) => {
       {kind === "bots-memory" ? (
         <MemoryTab bot={bot} />
       ) : kind === "bots-files" ? (
-        <FilesTab bot={bot} workspaceRoot={null} onClosePreview={() => {}} />
+        <FilesTab
+          bot={bot}
+          workspaceRoot={null}
+          tab={{ id: "files:gallery" }}
+          onOpen={() => {}}
+        />
       ) : (
         <DetailsTab
           bot={bot}

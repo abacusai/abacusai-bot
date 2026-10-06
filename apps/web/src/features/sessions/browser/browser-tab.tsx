@@ -4,7 +4,6 @@ import {
   sessionConversationKey,
   type ConversationKey,
 } from "@abacus-ai/contract/conversation-scope";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,7 +11,12 @@ import {
   ExternalLink,
   Ellipsis,
 } from "lucide-react";
-import { useEffect, useState, type ComponentProps } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useState,
+  type ComponentProps,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { BrowserSurface } from "#renderer/components/browser-surface";
@@ -29,15 +33,23 @@ import { Input } from "#renderer/ui/input";
 
 import { useSessionsTransport } from "../data/queries";
 import { acquireLocalFile } from "./local-materialization";
+/** What a browser tab opens on when nothing asked for a page. */
+export const NEW_TAB_URL = "https://www.google.com/";
+
 export const normalizeAddress = (raw: string): string => {
   const text = raw.trim();
-  if (!text) return "about:blank";
+  if (!text) return NEW_TAB_URL;
   if (/^[a-z][a-z\d+.-]*:/i.test(text) && !/^localhost:\d/.test(text))
     return text;
   return /^(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(text)
     ? `http://${text}`
     : `https://${text}`;
 };
+/**
+ * One browser tab over one runtime resource (`id`): its own page, history
+ * and address bar. Without a `url` it opens the new-tab page. `onState`
+ * reports the page it shows (the strip titles the tab after it).
+ */
 export const BrowserTab = ({
   row,
   id,
@@ -48,6 +60,7 @@ export const BrowserTab = ({
   presenter,
   blocked,
   scope,
+  onState,
 }: {
   row: Pick<SessionRow, "workspaceId" | "id">;
   scope?: ConversationKey;
@@ -58,18 +71,21 @@ export const BrowserTab = ({
   visible: boolean;
   presenter: ComponentProps<typeof BrowserSurface>["presenter"];
   blocked: ComponentProps<typeof BrowserSurface>["blocked"];
+  onState?(state: { url: string; title: string }): void;
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
   const [retry, setRetry] = useState(0);
-  const [profile, setProfile] = useState<string | undefined>();
-  const profiles = useQuery(
-    transport.orpc.browser.profiles.list.queryOptions({ input: {} })
-  );
   const [state, setState] = useState<BrowserRuntimeState | null>(null);
-  const [address, setAddress] = useState(url ?? "about:blank");
+  const [address, setAddress] = useState(url ?? NEW_TAB_URL);
   const [error, setError] = useState<string | null>(null);
   const key = scope ?? sessionConversationKey(row.workspaceId, row.id);
+  const apply = (next: BrowserRuntimeState) => {
+    setState(next);
+    setAddress(next.url);
+    onState?.({ url: next.url, title: next.title });
+  };
+  const report = useEffectEvent(apply);
   useEffect(() => {
     let live = true;
     const local = file
@@ -85,15 +101,13 @@ export const BrowserTab = ({
       : transport.client.browser.runtime.materialize({
           conversationKey: key,
           resourceId: id,
-          ...(url ? { url } : {}),
-          ...(profile ? { profileId: profile } : {}),
+          url: url ?? NEW_TAB_URL,
         });
     void promise
       .then((s) => {
         if (live) {
           setError(null);
-          setState(s);
-          setAddress(s.url);
+          report(s);
         }
       })
       .catch((e) => live && setError(String(e)));
@@ -101,7 +115,7 @@ export const BrowserTab = ({
       live = false;
       local?.release();
     };
-  }, [transport, key, id, url, file, root, retry, profile]);
+  }, [transport, key, id, url, file, root, retry]);
   useEffect(() => {
     const abort = new AbortController();
     void followNotices(
@@ -112,10 +126,8 @@ export const BrowserTab = ({
         if (
           event.type === "runtime-state" &&
           event.state.lease.resourceId === id
-        ) {
-          setState(event.state);
-          setAddress(event.state.url);
-        }
+        )
+          report(event.state);
       },
       abort.signal
     );
@@ -132,8 +144,7 @@ export const BrowserTab = ({
         lease: state.lease,
         navigation,
       });
-      setState(s);
-      setAddress(s.url);
+      apply(s);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -185,7 +196,7 @@ export const BrowserTab = ({
               if (e.key === "Enter")
                 void action({ action: "url", url: normalizeAddress(address) });
               if (e.key === "Escape") {
-                setAddress(state?.url ?? "about:blank");
+                setAddress(state?.url ?? NEW_TAB_URL);
                 e.currentTarget.blur();
               }
             }}
@@ -203,23 +214,6 @@ export const BrowserTab = ({
         >
           <ExternalLink />
         </Button>
-      </div>
-      <div className="flex min-w-0 shrink-0 items-center justify-between gap-1">
-        {!file ? (
-          <select
-            className="bg-card max-w-full min-w-0 flex-1 rounded-lg border px-2 py-1 text-xs"
-            aria-label={t("sessions.browser.profile")}
-            value={profile ?? ""}
-            onChange={(e) => setProfile(e.target.value || undefined)}
-          >
-            <option value="">{t("sessions.browser.defaultProfile")}</option>
-            {profiles.data?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.browserName} · {p.profileName}
-              </option>
-            ))}
-          </select>
-        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={

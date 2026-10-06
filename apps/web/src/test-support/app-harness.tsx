@@ -55,6 +55,7 @@ import { resetReadinessForTests } from "#renderer/features/shell/readiness";
 import { resetShellStore } from "#renderer/features/shell/shell-store";
 import { i18n, initI18n } from "#renderer/lib/i18n";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { resetPanelStore } from "#renderer/lib/side-panel/store";
 import { showError } from "#renderer/lib/toast";
 import { createAppRouter, type AppRouter } from "#renderer/router";
 
@@ -410,6 +411,7 @@ export const createHarness = async (
   await initI18n();
   await i18n.changeLanguage("en-US");
   resetShellStore();
+  resetPanelStore();
   resetReadinessForTests();
   const calls: Array<[string, unknown]> = [];
   const system = options.system ?? SYSTEM_INFO;

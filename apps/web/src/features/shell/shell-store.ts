@@ -1,10 +1,10 @@
 /**
  * Ephemeral shell UI (spec 01 §8.5). Nothing here is persisted: pinned lives
- * in prefs, the panel tab in the URL.
+ * in prefs, the side panel's tabs in `panelStore` (sessionStorage).
  */
 import { Store } from "@tanstack/react-store";
 
-import type { SidePanelTabId } from "#renderer/lib/navigation/search";
+import type { SessionTabRef } from "#renderer/lib/navigation/search";
 
 import type { ShellArea } from "./layout";
 
@@ -34,8 +34,8 @@ export interface ShellState {
   commandOpen: boolean;
   lastLocationOutsideSettings: AreaLocation;
   lastLocationByArea: Partial<Record<ShellArea, AreaLocation>>;
-  /** The side-panel tab last shown per area (⌘⌥B reopens it). */
-  lastTabByArea: Partial<Record<ShellArea, SidePanelTabId>>;
+  /** The sessions dock's tab last shown (⌘⌥B reopens it; `?tab=` is its state). */
+  lastSessionTab: SessionTabRef | null;
   occlusion: { any: boolean; rects: OcclusionRect[] };
 }
 
@@ -44,7 +44,7 @@ const initialShellState = (): ShellState => ({
   commandOpen: false,
   lastLocationOutsideSettings: { pathname: "/bots/new", search: {} },
   lastLocationByArea: {},
-  lastTabByArea: {},
+  lastSessionTab: null,
   occlusion: { any: false, rects: [] },
 });
 
@@ -99,11 +99,9 @@ export const rememberLocation = (
         }
   );
 
-export const rememberTab = (area: ShellArea, tab: SidePanelTabId): void =>
+export const rememberSessionTab = (tab: SessionTabRef): void =>
   shellStore.setState((state) =>
-    state.lastTabByArea[area] === tab
-      ? state
-      : { ...state, lastTabByArea: { ...state.lastTabByArea, [area]: tab } }
+    state.lastSessionTab === tab ? state : { ...state, lastSessionTab: tab }
   );
 
 export const setOcclusion = (rects: OcclusionRect[]): void =>

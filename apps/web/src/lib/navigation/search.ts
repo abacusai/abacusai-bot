@@ -17,14 +17,17 @@ export const optionalField = <
   schema: TSchema
 ) => v.fallback(v.optional(schema), undefined);
 
-const SIDE_PANEL_TABS = [
-  "changes",
-  "terminal",
+/** The side panel's tab kinds (`features/shell/panel-store`). */
+export const SIDE_PANEL_TABS = [
+  "details",
+  "memory",
   "files",
   "browser",
-  "memory",
-  "details",
+  "changes",
+  "terminal",
+  "device",
   "agent",
+  "thread",
 ] as const;
 const SidePanelTab = v.picklist(SIDE_PANEL_TABS);
 export type SidePanelTabId = v.InferOutput<typeof SidePanelTab>;
@@ -39,15 +42,20 @@ export const SessionTabRef = v.union([
 export type SessionTabRef = v.InferOutput<typeof SessionTabRef>;
 
 export const ShellSearch = v.object({
-  /** The side panel is open on this tab; absent = closed. */
+  /**
+   * A deep link: the shell opens this panel tab and strips the param (the
+   * panel's state lives in `panelStore`). Sessions keep it as their dock's
+   * active tab.
+   */
   tab: optionalField(v.union([SidePanelTab, SessionTabRef])),
 });
 export const SHELL_DEFAULTS = {} as const;
 
 const BOT_TABS = ["memory", "files", "browser", "details"] as const;
 export const BotSearch = v.object({
+  /** A deep link into the panel, consumed on arrival (see `ShellSearch`). */
   tab: optionalField(v.picklist(BOT_TABS)),
-  /** The Files tab's read-only preview (03-bots §5.2, §11.3a). */
+  /** A deep link to a Files tab's read-only preview (03-bots §5.2, §11.3a). */
   preview: optionalField(AbsPath),
 });
 

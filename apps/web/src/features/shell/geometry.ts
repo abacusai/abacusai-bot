@@ -20,8 +20,11 @@ export const SHELL_GEOMETRY = {
   rowH: 32,
   /** `--side-panel-min`: both sides of the in-layout split. */
   sidePanelMin: 360,
-  /** `--side-panel-max`: the in-layout panel's widest; resizable between min and max. */
-  sidePanelMax: 480,
+  /**
+   * `--side-panel-max`: the in-layout panel's absolute widest (a browser
+   * page wants room); `panelMaxFor` also caps it at 60 % of the split.
+   */
+  sidePanelMax: 960,
   /** `--side-panel-drawer-w`: the drawer below 1100. */
   sidePanelDrawerW: 356,
   /** `--pane-inset`: the pane's right and bottom inset, and the pane/panel gutter. */

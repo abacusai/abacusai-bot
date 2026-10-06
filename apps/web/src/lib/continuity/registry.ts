@@ -129,6 +129,32 @@ const tabs = v.record(
     tree: v.optional(dock),
   })
 );
+const panel = v.record(
+  v.string(),
+  v.object({
+    open: v.boolean(),
+    tabs: v.array(
+      v.object({
+        id: v.string(),
+        kind: v.picklist([
+          "details",
+          "memory",
+          "files",
+          "browser",
+          "changes",
+          "terminal",
+          "device",
+          "agent",
+          "thread",
+        ]),
+        title: v.optional(v.string()),
+        url: v.optional(v.string()),
+        path: v.optional(v.string()),
+      })
+    ),
+    active: nullableString,
+  })
+);
 export const CONTINUITY_STORES: ReadonlyArray<{
   key: string;
   storage: string;
@@ -162,6 +188,11 @@ export const CONTINUITY_STORES: ReadonlyArray<{
     key: "sessions.panelTabs.v1",
     storage: "abacusai-bot:abacus.sessions.tabs",
     schema: tabs,
+  },
+  {
+    key: "shell.panel.v1",
+    storage: "abacusai-bot:abacus.shell.panel",
+    schema: panel,
   },
   {
     key: "sessions.review.v1",
