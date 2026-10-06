@@ -11,6 +11,7 @@
  * the strip follows the column so it stays centred while it animates
  * (Claude impl r1 #18).
  */
+import { useRouterState } from "@tanstack/react-router";
 import { useStore } from "@tanstack/react-store";
 import {
   AnimatePresence,
@@ -81,6 +82,9 @@ export const SidebarSlot = ({
   const floating = useStore(shellStore, (state) => state.floating);
   const motionPref = useMotionPreference();
   const intent = useFloatingIntent();
+  const routePending = useRouterState({
+    select: (state) => state.status === "pending",
+  });
   const width = columnWidth(mode);
   const column = useMotionValue(width);
   const floatingRef = useRef<HTMLDivElement | null>(null);
@@ -88,14 +92,16 @@ export const SidebarSlot = ({
 
   useEffect(() => {
     // A route change that pins or unpins the sidebar (Sessions with its
-    // panel open ↔ Bots) commits inside the router's document view
-    // transition: the column jumps so the transition captures the final
+    // panel open ↔ Bots) is the router's document view transition's to
+    // animate: the column jumps, so the transition captures the final
     // geometry and its group animations carry the sidebar and the pane
-    // together (tokens.css), instead of this spring reflowing the live pane
-    // under the cross-fade. The check waits a frame: the router renders the
-    // new area's pending shell just before it starts the transition, and
-    // the browser runs frame callbacks before it captures the new state.
-    // Toggles outside a route change keep the spring.
+    // together (tokens.css), never this spring reflowing the live pane
+    // under the cross-fade. A cold area shows its pending shell first and
+    // starts the transition once the route resolves, so the column also
+    // jumps while the router is pending; a cached area commits straight
+    // into the transition, read from a frame callback (the browser runs
+    // those before it captures the new state). Toggles outside a route
+    // change keep the spring.
     let controls: ReturnType<typeof animate> | null = null;
     const frame = requestAnimationFrame(() => {
       controls = animate(
@@ -103,7 +109,9 @@ export const SidebarSlot = ({
         width,
         motionFor<Transition>(
           motionPref,
-          isRouteTransitionActive() ? { duration: 0 } : springs.sidebar,
+          routePending || isRouteTransitionActive()
+            ? { duration: 0 }
+            : springs.sidebar,
           { duration: 0 }
         )
       );
@@ -112,7 +120,7 @@ export const SidebarSlot = ({
       cancelAnimationFrame(frame);
       controls?.stop();
     };
-  }, [column, width, motionPref]);
+  }, [column, width, motionPref, routePending]);
 
   const floatingOpen = mode === "floating" && floating.open;
   const peek = floatingOpen && floating.reason === "peek";
