@@ -145,6 +145,18 @@ export const composeNodeHost = async () => {
   };
   // The user's WhatsApp number runs here, never in the desktop app.
   const phoneDir = join(abacusBotHome(), "phone");
+  const openPhoneSession = (): Promise<{
+    workspaceId: string;
+    sessionId: string;
+  }> => {
+    mkdirSync(phoneDir, { recursive: true });
+    // Nobody can approve a tool call over WhatsApp.
+    return serviceHost.openLaneSession(
+      "phone",
+      { ABACUSAI_BOT_PHONE_DIR: phoneDir },
+      AgentMode.Auto
+    );
+  };
   const phoneLane = new PhoneLane({
     call: channelsTransport({
       baseUrl: abacusRoutellmV1,
@@ -152,19 +164,23 @@ export const composeNodeHost = async () => {
       userAgent: abacusUserAgent,
     }),
     hasKey: () => resolveAbacusApiKey() != null,
-    openSession: () => {
-      mkdirSync(phoneDir, { recursive: true });
-      // Nobody can approve a tool call over WhatsApp.
-      return serviceHost.openLaneSession(
-        "phone",
-        { ABACUSAI_BOT_PHONE_DIR: phoneDir },
-        AgentMode.Auto
-      );
-    },
+    openSession: openPhoneSession,
     send: (workspaceId, sessionId, message) =>
       serviceHost.sendAgentMessage({ workspaceId, sessionId, message }),
     onAgentEvent: (listener) => serviceHost.onAgentEvent(listener),
     activity: () => lease.activity(),
+  });
+  // A connector the phone loop offered connected: nobody is at a card on a
+  // phone, so the loop hears it as a turn and tells the user.
+  const stopConnected = serviceHost.onConnectorsConnected((sessionId, note) => {
+    if (sessionId == null) return;
+    void openPhoneSession().then(
+      (phone) => {
+        if (phone.sessionId === sessionId) phoneLane.note(note);
+      },
+      (error: unknown) =>
+        console.warn("[phone] connected note not delivered", error)
+    );
   });
   const stopOutput = mainEventBus.listen(
     (event) => event.type === "terminal-output",
@@ -179,6 +195,7 @@ export const composeNodeHost = async () => {
     dispose: async () => {
       stopProvisionedKey();
       phoneLane.stop();
+      stopConnected();
       stopOutput();
       trackers.dispose();
       tables.dispose();

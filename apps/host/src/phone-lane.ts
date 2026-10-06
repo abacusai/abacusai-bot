@@ -29,7 +29,11 @@ interface PhoneInboxEntry {
   channel?: string;
   sender?: string | null;
   text?: string;
-  /** "linked": the user just linked WhatsApp; `sender` is their name there. */
+  /**
+   * "linked": the user just linked WhatsApp; `sender` is their name there.
+   * "note": the host's own news for the loop (a connector connected), never
+   * from the server, so never acknowledged.
+   */
   kind?: string;
 }
 
@@ -121,6 +125,8 @@ export class PhoneLane {
   private redeliver = true;
   /** Names this start to the server, so a replaced host's open poll stops taking messages. */
   private poller = randomUUID();
+  /** The newest message from the user: a turn of notes alone replies against it. */
+  private lastInboundId: string | null = null;
 
   constructor(
     private readonly deps: PhoneLaneDeps,
@@ -209,9 +215,21 @@ export class PhoneLane {
     if (this.seen.size > SEEN_IDS_KEPT)
       this.seen.delete(this.seen.values().next().value!);
     this.pending.push(entry);
+    this.lastInboundId = entry.id;
     this.lastArrivalAt = Date.now();
     void this.channel("typing", { message_id: entry.id });
     if (!this.busy) this.armBatch();
+  }
+
+  /**
+   * The host's news for the loop (a connector the user just connected): a
+   * turn of its own, so the user hears it without asking. It answers against
+   * the user's newest message, so with none this start, it waits for one.
+   */
+  note(text: string): void {
+    this.pending.push({ id: `note-${randomUUID()}`, kind: "note", text });
+    this.lastArrivalAt = Date.now();
+    if (!this.busy && this.lastInboundId != null) this.armBatch();
   }
 
   /** Start the next turn once no message has arrived for the batch window. */
@@ -230,12 +248,15 @@ export class PhoneLane {
 
   private async startTurn(): Promise<void> {
     if (!this.running || this.busy || this.pending.length === 0) return;
+    const replyTo =
+      this.pending.findLast((entry) => entry.kind !== "note")?.id ??
+      this.lastInboundId;
+    if (replyTo == null) return;
     const batch = this.pending.splice(0);
-    const replyTo = batch.at(-1)!.id;
     const turn: Turn = {
       sessionId: null,
       replyTo,
-      ids: batch.map((entry) => entry.id),
+      ids: batch.flatMap((entry) => (entry.kind === "note" ? [] : [entry.id])),
       startedAt: Date.now(),
       messages: batch.length,
       submitted: false,

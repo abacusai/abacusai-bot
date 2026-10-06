@@ -293,6 +293,53 @@ export const cancelAllConnectorConnects = (): void => {
   for (const hop of doomed) hop.close();
 };
 
+/** One Google consent attaches all of these; a link for any of them asks for the bundle. */
+export const GOOGLE_BUNDLE_SERVICES = [
+  "gmailuser",
+  "googledriveuser",
+  "googlecalendar",
+] as const;
+
+/**
+ * A one-tap connect link (WhatsApp, or a chat in the app) and the services it
+ * attaches. The server mints a request only its owner's browser can use and
+ * the page spends it once connected; a server that will not mint one gets the
+ * plain page for the one service. Null when signed out.
+ */
+export const createConnectLink = async (
+  service: string
+): Promise<{ url: string; services: string[] } | null> => {
+  const serviceKey = service.toLowerCase();
+  if (!SERVICE_RE.test(serviceKey) || abacusApiKey().length === 0) return null;
+  const bundled = (GOOGLE_BUNDLE_SERVICES as readonly string[]).includes(
+    serviceKey
+  );
+  const minted = await abacusApiCall("_createAbacusbotConnectLink", "POST", {
+    service: bundled ? "google" : serviceKey,
+  });
+  const request = minted.ok
+    ? (minted.result as { requestId?: unknown; services?: unknown } | null)
+    : null;
+  const url = new URL(CONNECT_PATH, abacusAppHost());
+  if (
+    typeof request?.requestId === "string" &&
+    Array.isArray(request.services)
+  ) {
+    url.searchParams.set("service", bundled ? "google" : serviceKey);
+    url.searchParams.set("r", request.requestId);
+    url.searchParams.set("autostart", "1");
+    return {
+      url: url.toString(),
+      services: request.services.filter(
+        (item): item is string => typeof item === "string"
+      ),
+    };
+  }
+  url.searchParams.set("service", serviceKey);
+  url.searchParams.set("autostart", "1");
+  return { url: url.toString(), services: [serviceKey] };
+};
+
 /**
  * Browser hop: open the connect page with a loopback port + secret path, wait
  * for its "done" ping, then confirm against the platform. Listener discipline
@@ -451,7 +498,7 @@ export const startConnectorConnect = (
                 {
                   ok: false,
                   error:
-                    "Timed out waiting for the connection. The user may still be mid-sign-in. Call connect_connector for it again to keep waiting; an an account attached late is picked up then.",
+                    "Timed out waiting for the connection. The user may still be mid-sign-in; an account attached late is picked up then.",
                 },
                 // They are most likely still signing in; leave them to it.
                 { reveal: false }

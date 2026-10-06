@@ -248,16 +248,25 @@ export interface McpAgentToolsServerOptions {
   connectors?: {
     /** Every registry connector's status on this machine, by connector id. */
     list: () => Promise<ConnectorStatuses>;
-    /** Resolves once the user answers. */
-    request: (input: {
+    /**
+     * A one-tap link for a platform connector, and every connector it attaches
+     * (one Google consent covers Gmail, Drive and Calendar). Null signed out.
+     */
+    link: (
+      connectorId: string
+    ) => Promise<{ url: string; connectorIds: string[] } | null>;
+    /** A Connect card in the conversation that asked; nothing waits on it. */
+    show: (input: {
       connectorId: string;
       label: string;
       reason?: string;
-      /** The conversation that asked, so the button appears only in it. */
       conversationKey: ConversationKey;
-      /** For the model on connect, when it is not "tools are in your list". */
-      connectedHint?: string;
-    }) => Promise<string>;
+    }) => void;
+    /** Follow these until they connect: tools refresh, cards clear, the asking chat is told. */
+    watch: (input: {
+      connectorIds: string[];
+      sessionId: string | null;
+    }) => void;
     /** Resolves to null or an error sentence. */
     disconnect?: (connectorId: string) => Promise<string | null>;
   };
@@ -1205,7 +1214,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         "It may be linking or waiting for a QR scan. Do not retry, do not " +
         "send the user to Settings, and do not ask them for the number: " +
         `call connect_connector with service "${platform}": it puts a ` +
-        "Connect button in front of the user right here and waits for them."
+        "Connect card in front of the user right here, without waiting."
     );
   }
 
@@ -1270,17 +1279,12 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (connectors == null)
       return this.err("Connectors are not available in this session.");
 
-    // A caller with no conversation gets no button: putting it "wherever the
-    // user is" lands a bot's ask in a stranger's session.
+    // A caller with no conversation gets no card: putting it "wherever the
+    // user is" lands a bot's ask in a stranger's session. It still gets a link.
     const conversationKey =
       callerSession == null
         ? null
         : (this.options.conversationKeyForSession?.(callerSession) ?? null);
-    if (conversationKey == null)
-      return this.err(
-        "This call has no conversation to ask in, so no Connect button can be shown. " +
-          "Tell the user which connector you need; they can connect it from Connectors."
-      );
 
     const statuses = await connectors.list();
     const statusOf = (connector: Connector): ConnectorStatus =>
@@ -1359,20 +1363,46 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     }
 
-    // The same Connect button for every kind: the card knows what each
-    // needs, whether a browser hop, a token, or a pairing dialog.
-    return this.ok(
-      await connectors.request({
+    // Nothing here waits for the user: the call answers at once, a card (in
+    // the app) and a link (anywhere) do the connecting, and the chat that
+    // asked is told when it lands.
+    const card = (): void => {
+      if (conversationKey == null) return;
+      connectors.show({
         connectorId: match.id,
         label: match.name,
         conversationKey,
-        ...(match.kind === "credential"
-          ? { connectedHint: `Use ${match.via}: they are authenticated now.` }
-          : {}),
         ...(typeof args.reason === "string" && args.reason.length > 0
           ? { reason: args.reason }
           : {}),
-      })
+      });
+    };
+    const link =
+      match.kind === "platform" ? await connectors.link(match.id) : null;
+    card();
+    connectors.watch({
+      connectorIds: link?.connectorIds ?? [match.id],
+      sessionId: callerSession ?? null,
+    });
+    if (link == null)
+      return this.ok(
+        conversationKey == null
+          ? `${match.name} is connected from Connectors in the AbacusAI Bot app. Tell the user so, and offer whatever part of the task does not need it.`
+          : `A Connect card for ${match.name} is in front of the user in the app. Say in one short line that it needs connecting there, ` +
+              "then carry on with whatever does not need it: this call does not wait, and you will be told when it is connected."
+      );
+    const covered = link.connectorIds
+      .map((id) => CONNECTORS.find((item) => item.id === id)?.name ?? id)
+      .join(", ");
+    return this.ok(
+      [
+        `Send the user this link to connect ${link.connectorIds.length > 1 ? `${covered}, all in one step` : match.name}:`,
+        link.url,
+        "",
+        "Put it in a message of its own with one short line in the user's language. Copy it exactly; never shorten or reword it. " +
+          "It opens the provider's own sign-in, and stays connected after that.",
+        "This call does not wait. Carry on with whatever does not need it. When it is connected you will be told, and its tools appear in your tool list then.",
+      ].join("\n")
     );
   }
 

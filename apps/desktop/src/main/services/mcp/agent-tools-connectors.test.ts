@@ -7,9 +7,9 @@ import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
  * not connected" and stopping: a dead end for something the user could fix
  * with one click. So the listing is the whole registry, connected or not (an
  * agent that only sees what it has cannot name what it needs), and asking
- * suspends the turn behind a Connect button rather than ending it. Every
- * connector in the registry is available to every chat, whatever its kind:
- * a platform account, a chat app, a token card. The button is the gate.
+ * answers at once with a one-tap link (and a Connect card in the app) rather
+ * than ending the turn, or holding it: nothing waits for the user. Every
+ * connector in the registry is available to every chat, whatever its kind.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +18,23 @@ import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 /** The statuses main would answer with, per test. */
 let statuses: ConnectorStatuses;
 
-const request = vi.fn(async () => "Slack is connected now. Carry on.");
+const link = vi.fn(async (connectorId: string) =>
+  connectorId === "abacus-googledriveuser"
+    ? {
+        url: "https://apps.example/chatllm/connect-connector?service=google&r=req&autostart=1",
+        connectorIds: [
+          "abacus-gmailuser",
+          "abacus-googledriveuser",
+          "abacus-googlecalendar",
+        ],
+      }
+    : {
+        url: `https://apps.example/chatllm/connect-connector?service=${connectorId}&r=req&autostart=1`,
+        connectorIds: [connectorId],
+      }
+);
+const show = vi.fn();
+const watch = vi.fn();
 
 const server = (): McpAgentToolsServer =>
   new McpAgentToolsServer({
@@ -31,7 +47,9 @@ const server = (): McpAgentToolsServer =>
         : sessionConversationKey("ws-1", sessionId),
     connectors: {
       list: async () => statuses,
-      request,
+      link,
+      show,
+      watch,
     },
     messaging: {
       runningPlatforms: () => [] as never,
@@ -104,72 +122,73 @@ describe("listing what exists", () => {
 });
 
 describe("asking for one", () => {
-  it("puts it in front of the user and waits", async () => {
+  it("answers at once with a link, puts a card in the chat that asked, and follows it", async () => {
     const text = await call({ service: "slack", reason: "to read #general" });
 
-    // The caller's session rides along so the Connect button lands in the chat
-    // that asked and not in whichever one the user happens to be reading.
-    expect(request).toHaveBeenCalledWith({
+    // The caller's session rides along so the card lands in the chat that
+    // asked and not in whichever one the user happens to be reading.
+    expect(show).toHaveBeenCalledWith({
       connectorId: "abacus-slack",
       label: "Slack",
       reason: "to read #general",
       conversationKey: sessionConversationKey("ws-1", "session-1"),
     });
-    expect(text).toContain("connected now");
+    expect(watch).toHaveBeenCalledWith({
+      connectorIds: ["abacus-slack"],
+      sessionId: "session-1",
+    });
+    expect(text).toContain("service=abacus-slack&r=req");
+    expect(text).toContain("This call does not wait");
   });
 
-  it("refuses a caller with no conversation to ask in", async () => {
+  it("offers one Google consent for Gmail, Drive and Calendar", async () => {
+    const text = await call({ service: "Google Drive" });
+
+    expect(text).toContain(
+      "Gmail, Google Drive, Google Calendar, all in one step"
+    );
+    expect(text).toContain("service=google&r=req");
+    expect(watch).toHaveBeenCalledWith({
+      connectorIds: [
+        "abacus-gmailuser",
+        "abacus-googledriveuser",
+        "abacus-googlecalendar",
+      ],
+      sessionId: "session-1",
+    });
+  });
+
+  it("still gives a caller with no conversation the link, with no card", async () => {
     const text = await call({ service: "slack" }, "nowhere");
 
-    expect(request).not.toHaveBeenCalled();
-    expect(text).toContain("no conversation to ask in");
+    expect(show).not.toHaveBeenCalled();
+    expect(text).toContain("service=abacus-slack&r=req");
   });
 
   it("does not ask for something already connected", async () => {
     const text = await call({ service: "gmailuser" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(link).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("already connected as Gmail - ada@example.com");
     // And no guessed tool names on the way out of it.
     expect(text).toContain("already in your tool list");
   });
 
-  it("asks for GitHub with the same button as everything else: the card takes a token", async () => {
-    for (const service of ["github", "GitHub"]) {
+  it("puts a card up, without waiting, for what only the app can connect (a token, a tool server)", async () => {
+    for (const service of ["github", "GitHub", "playwright"]) {
       vi.clearAllMocks();
 
-      const text = await call({ service, reason: "to open a pull request" });
+      const text = await call({ service });
 
-      expect(request).toHaveBeenCalledWith(
-        expect.objectContaining({ connectorId: "github", label: "GitHub" })
+      expect(link).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          conversationKey: sessionConversationKey("ws-1", "session-1"),
+        })
       );
-      expect(text).toContain("connected now");
+      expect(text).toContain("this call does not wait");
     }
-  });
-
-  it("asks for a tool server with the same button (Playwright is a connector here)", async () => {
-    // The regression: "connect playwright" was answered with "Playwright
-    // isn't a connector" and an npm install recipe. It is in the registry, so
-    // it gets the button, and connecting installs it.
-    const text = await call({ service: "playwright" });
-
-    expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({
-        connectorId: "playwright",
-        label: "Playwright",
-      })
-    );
-    expect(text).toContain("connected now");
-  });
-
-  it("tells the model what a token unlocks, since no tools arrive with it", async () => {
-    await call({ service: "github" });
-
-    expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({
-        connectedHint: "Use `gh` and git in bash: they are authenticated now.",
-      })
-    );
   });
 
   it("tells the model gh is authenticated once the token is stored", async () => {
@@ -177,14 +196,14 @@ describe("asking for one", () => {
 
     const text = await call({ service: "github" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("`gh` and git in bash");
   });
 
   it("says so when the service does not exist at all", async () => {
     const text = await call({ service: "myspace" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain('no connector called "myspace"');
     // The list it offers pairs name with id, so either token works next time.
     expect(text).toContain("Gmail (abacus-gmailuser)");
@@ -199,32 +218,22 @@ describe("asking for one", () => {
     expect(text).toContain("Gmail is already connected");
   });
 
-  it("shrugs off case, spaces and punctuation in the ask", async () => {
-    const text = await call({ service: "Google Drive" });
-
-    expect(request).toHaveBeenCalledWith({
-      connectorId: "abacus-googledriveuser",
-      label: "Google Drive",
-      conversationKey: sessionConversationKey("ws-1", "session-1"),
-    });
-    expect(text).toContain("connected now");
-  });
-
   it("names the candidates instead of guessing when an ask is ambiguous", async () => {
     const text = await call({ service: "google" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("more than one connector");
     expect(text).toContain("Google Calendar");
     expect(text).toContain("Google Drive");
   });
 
-  it("does not put a button up for a service the account cannot offer", async () => {
+  it("does not offer a service the account cannot", async () => {
     statuses["abacus-slack"] = { state: "unavailable", reason: "not-offered" };
 
     const text = await call({ service: "slack" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(link).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("does not offer it");
   });
 
@@ -236,7 +245,7 @@ describe("asking for one", () => {
 
     const text = await call({ service: "slack" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("not signed in to Abacus.AI");
   });
 });
@@ -264,10 +273,10 @@ describe("the chat apps", () => {
     expect(text).toMatch(/messaging-whatsapp\s+WhatsApp\s+connected/);
   });
 
-  it("put a Connect button in front of the user, like any other connector", async () => {
+  it("put a Connect card in front of the user, like any other connector", async () => {
     const text = await call({ service: "whatsapp" });
 
-    expect(request).toHaveBeenCalledWith(
+    expect(show).toHaveBeenCalledWith(
       expect.objectContaining({
         connectorId: "messaging-whatsapp",
         label: "WhatsApp",
@@ -281,19 +290,17 @@ describe("the chat apps", () => {
 
     const text = await call({ service: "whatsapp" });
 
-    expect(request).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
     expect(text).toContain("send_<platform>_message");
   });
 
-  it("still put the button up for a started platform that is not linked", async () => {
+  it("still put the card up for a started platform that is not linked", async () => {
     // The phone-side unlink: the connector object survives, waiting on a QR.
-    // "Running" once counted as connected here, and the one tool whose job is
-    // the Connect button answered that there was nothing to connect.
     statuses["messaging-whatsapp"] = { state: "pending", reason: "not-live" };
 
     const text = await call({ service: "whatsapp" });
 
-    expect(request).toHaveBeenCalledWith(
+    expect(show).toHaveBeenCalledWith(
       expect.objectContaining({ connectorId: "messaging-whatsapp" })
     );
     expect(text).not.toMatch(/messaging-whatsapp\s+WhatsApp\s+connected/);
@@ -316,7 +323,9 @@ describe("disconnecting", () => {
       workspacePath: () => null,
       connectors: {
         list: async () => statuses,
-        request,
+        link,
+        show,
+        watch,
         disconnect: async (connectorId: string) => {
           disconnected.push(connectorId);
           return null;
