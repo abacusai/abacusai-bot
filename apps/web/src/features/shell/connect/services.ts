@@ -274,16 +274,21 @@ const devHostUrl = (): string | undefined =>
 /**
  * Boot, before the identity step: the bot account behind this sign-in, set up
  * as the desktop's connect does (a fresh sign-up gets the bot's free tier), so
- * no gated call ever runs on an account the bot has not set up. Refusals map
- * like the identity step's: signed out is the sign-in screen. An apps server
- * that predates this step (404) has nothing to set up.
+ * no gated call ever runs on an account the bot has not set up. Refusals are
+ * the identity step's to explain (signed out, tier, an apps server without
+ * this step): any answer below 500 leaves the boot to it. Only a setup that
+ * could not run (network, server error) stops the boot.
  */
 export const setUpBotAccount = async (): Promise<void> => {
   if (devHostUrl()) return;
   try {
     await callApps("setUpAbacusaibotWebAccount", {});
   } catch (error) {
-    if (!(error instanceof ConnectError && error.status === 404)) throw error;
+    if (!(error instanceof ConnectError)) throw error;
+    const refused =
+      error.kind !== "connection" ||
+      (error.status !== undefined && error.status < 500);
+    if (!refused) throw error;
   }
 };
 
