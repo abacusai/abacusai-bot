@@ -86,15 +86,24 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           workspaceRoot={workspaceRoot}
         />
       );
+      const lastText =
+        scope.message != null &&
+        scope.message.parts.filter((part) => part.type === "text").at(-1) ===
+          part;
+      const reacted =
+        lastText &&
+        (scope.message?.metadata?.abacus?.reactions?.length ?? 0) > 0;
       return skin === "bot" && scope.role === "assistant" ? (
         <div
-          className="relative w-fit max-w-[min(520px,85%)] rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3 py-2"
+          className={cn(
+            "relative w-fit max-w-[min(520px,85%)] rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3 py-2",
+            // Room for the tapback pill hanging off the bottom edge.
+            reacted && "mb-2"
+          )}
           data-slot="bot-bubble"
         >
           {text}
-          {scope.message &&
-          scope.message.parts.filter((part) => part.type === "text").at(-1) ===
-            part ? (
+          {lastText && scope.message ? (
             <MessageReactionPills message={scope.message} />
           ) : null}
         </div>
