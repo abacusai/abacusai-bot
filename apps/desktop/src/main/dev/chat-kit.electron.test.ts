@@ -98,7 +98,9 @@ const HELPERS = `(() => {
 beforeAll(async () => {
   if (!ready.runnable) return;
   ready.prepare();
-  app = await launch({ port: PORT });
+  // Benchmark rendering without waiting for the hosted runner's display swap.
+  // Chromium's frame-rate limit and the 50 fps gate remain enabled.
+  app = await launch({ port: PORT, args: ["--disable-gpu-vsync"] });
   app.on("Runtime.exceptionThrown", (p) =>
     console.error("CHAT_RENDER_ERROR", JSON.stringify(p).slice(0, 3000))
   );

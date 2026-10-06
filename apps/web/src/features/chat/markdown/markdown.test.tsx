@@ -77,6 +77,9 @@ describe("R2-T17 markdown", () => {
     expect(container.querySelector(".chat-table table")).toBeTruthy();
     expect(container.querySelector(".chat-code-lang")?.textContent).toBe("ts");
     expect(screen.getByRole("button", { name: "Copy code" })).toBeTruthy();
+    const code = container.querySelector("pre")!;
+    code.focus();
+    expect(document.activeElement).toBe(code);
   });
 
   it("an unclosed fence renders as a block without Copy while streaming", () => {

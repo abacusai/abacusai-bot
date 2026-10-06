@@ -27,6 +27,12 @@ if (INPUT_FILE == null) {
   process.exit(2);
 }
 
+// Other Electron suites must not share this process's profile or cache locks.
+const profile = path.join(path.dirname(INPUT_FILE), "profile");
+fs.mkdirSync(profile, { recursive: true });
+app.setPath("userData", profile);
+app.setPath("sessionData", profile);
+
 const outputPath = (inputFile) => `${inputFile}.out.json`;
 
 /** Fixed, so a fixture can reason about what is on screen and what is below. */
@@ -79,9 +85,9 @@ app.whenReady().then(async () => {
       fs.writeFileSync(file, html);
 
       await window.loadFile(file);
-      // Load fires before layout has settled; two frames makes it final.
+      // Flush layout directly: a hidden window may never receive animation frames.
       await window.webContents.executeJavaScript(
-        "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+        "document.body.getBoundingClientRect()"
       );
 
       try {

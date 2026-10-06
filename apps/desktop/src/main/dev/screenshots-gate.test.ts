@@ -6,13 +6,18 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const script = pathToFileURL(
   resolve(import.meta.dirname, "../../../scripts/screenshots.mjs")
 ).href;
 
 type Checks = {
+  waitStable(
+    cdp: { evaluate(expression: string): Promise<unknown> },
+    expression: string,
+    timeoutMs?: number
+  ): Promise<{ value: unknown; stable: boolean }>;
   axeFailures(
     name: string,
     violations: Array<{ id: string; impact: string; nodes: string[] }>
@@ -32,6 +37,27 @@ type Checks = {
 const load = async (): Promise<Checks> => (await import(script)) as Checks;
 
 describe("screenshot gate checks", () => {
+  it("waits past a transient pane position before measuring alignment", async () => {
+    const { waitStable } = await load();
+    const evaluate = vi
+      .fn()
+      .mockResolvedValueOnce({ left: 337.34375 })
+      .mockResolvedValueOnce({ left: 337.34375 })
+      .mockResolvedValue({ left: 336 });
+    await expect(waitStable({ evaluate }, "pane")).resolves.toEqual({
+      value: { left: 336 },
+      stable: true,
+    });
+  });
+
+  it("reports geometry that keeps moving as unsettled", async () => {
+    const { waitStable } = await load();
+    let left = 336;
+    const cdp = { evaluate: async () => ({ left: ++left }) };
+    const result = await waitStable(cdp, "pane", 100);
+    expect(result.stable).toBe(false);
+  });
+
   it("fails on serious and critical axe violations, not on minor ones", async () => {
     const { axeFailures } = await load();
     expect(
