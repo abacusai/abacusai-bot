@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { splitPhoneBubbles } from "@abacus-ai/agent/phone-bubbles";
 import {
   AgentStatus,
@@ -89,6 +91,8 @@ type Turn = {
   sessionId: string | null;
   /** The newest message: replies, typing and reactions go against it. */
   replyTo: string;
+  /** The batch's inbox entries, acknowledged once the turn has answered them. */
+  ids: string[];
   startedAt: number;
   messages: number;
   /** The session started this turn; idles before it belong to housekeeping. */
@@ -113,6 +117,10 @@ export class PhoneLane {
   private batchTimer: NodeJS.Timeout | null = null;
   private turn: Turn | null = null;
   private readonly seen = new Set<string>();
+  /** This start's first poll asks the server for everything still unanswered. */
+  private redeliver = true;
+  /** Names this start to the server, so a replaced host's open poll stops taking messages. */
+  private poller = randomUUID();
 
   constructor(
     private readonly deps: PhoneLaneDeps,
@@ -130,6 +138,8 @@ export class PhoneLane {
   start(): void {
     if (this.running) return;
     this.running = true;
+    this.redeliver = true;
+    this.poller = randomUUID();
     this.unsubscribe = this.deps.onAgentEvent((sessionId, payload) =>
       this.onAgentEvent(sessionId, payload)
     );
@@ -157,11 +167,18 @@ export class PhoneLane {
       this.pollAbort = abort;
       try {
         const result = await this.deps.call<{ messages?: PhoneInboxEntry[] }>(
-          { action: "inbox", wait: INBOX_WAIT_SECS, lane: "phone" },
+          {
+            action: "inbox",
+            wait: INBOX_WAIT_SECS,
+            lane: "phone",
+            poller: this.poller,
+            ...(this.redeliver ? { redeliver: true } : {}),
+          },
           (INBOX_WAIT_SECS + 15) * 1000,
           abort.signal
         );
         failures = 0;
+        this.redeliver = false;
         for (const entry of result.messages ?? []) this.arrive(entry);
       } catch (error) {
         if (!this.running) return;
@@ -178,8 +195,16 @@ export class PhoneLane {
 
   /** One inbox entry: queued for the next turn, with "typing…" shown now. */
   arrive(entry: PhoneInboxEntry): void {
-    if (typeof entry.id !== "string" || this.seen.has(entry.id)) return;
-    if (entry.kind !== "linked" && !entry.text?.trim()) return;
+    if (typeof entry.id !== "string") return;
+    if (this.seen.has(entry.id)) {
+      // Back from the server: answered, but the ack was lost (or is on its way).
+      if (!this.inFlight(entry.id)) void this.ack([entry.id]);
+      return;
+    }
+    if (entry.kind !== "linked" && !entry.text?.trim()) {
+      void this.ack([entry.id]);
+      return;
+    }
     this.seen.add(entry.id);
     if (this.seen.size > SEEN_IDS_KEPT)
       this.seen.delete(this.seen.values().next().value!);
@@ -210,6 +235,7 @@ export class PhoneLane {
     const turn: Turn = {
       sessionId: null,
       replyTo,
+      ids: batch.map((entry) => entry.id),
       startedAt: Date.now(),
       messages: batch.length,
       submitted: false,
@@ -358,9 +384,34 @@ export class PhoneLane {
     this.log(
       `[phone] turn end outcome=${outcome} ms=${Date.now() - turn.startedAt} messages=${turn.messages} bubbles=${sent}/${bubbles.length} apology=${apologized ? 1 : 0}`
     );
+    // Answered (or apologized for): never hand it over again. Otherwise the
+    // server redelivers it, to this host later or to the next one.
+    // An "ok" whose every bubble failed to send was never seen: keep it.
+    const answered =
+      sent > 0 || apologized || (outcome === "ok" && bubbles.length === 0);
+    if (this.running && answered) await this.ack(turn.ids);
     this.deps.activity();
     if (this.turn === turn) this.turn = null;
     if (this.pending.length > 0) this.armBatch();
+  }
+
+  private inFlight(id: string): boolean {
+    return (
+      this.pending.some((entry) => entry.id === id) ||
+      (this.turn?.ids.includes(id) ?? false)
+    );
+  }
+
+  private async ack(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+      await this.deps.call(
+        { action: "ack", message_ids: ids },
+        CALL_TIMEOUT_MS
+      );
+    } catch (error) {
+      this.log(`[phone] ack failed: ${describe(error)}`);
+    }
   }
 
   private clearTurnTimers(turn: Turn): void {
