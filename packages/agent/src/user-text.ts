@@ -25,6 +25,13 @@ export const isHiddenUserText = (
   tags?: UserTextTags
 ): boolean => {
   const operator = tags?.operator ?? legacyOperator(text);
+  if (
+    tags?.visibleFrom != null &&
+    (!Number.isInteger(tags.visibleFrom) ||
+      tags.visibleFrom < 0 ||
+      tags.visibleFrom >= text.length)
+  )
+    return true;
   return (
     tags?.routineFire === true ||
     isRoutineFire(text) ||
@@ -40,8 +47,11 @@ export const isHiddenUserText = (
 export const visibleUserText = (text: string, tags?: UserTextTags): string => {
   if (isHiddenUserText(text, tags)) return "";
   const operator = tags?.operator ?? legacyOperator(text);
+  const boundary = tags?.visibleFrom ?? operator?.visibleFrom;
   const human =
-    operator?.visibleFrom != null ? text.slice(operator.visibleFrom) : text;
+    boundary != null && Number.isInteger(boundary) && boundary >= 0
+      ? text.slice(boundary)
+      : text;
   const withoutReminders = human.replaceAll(SYSTEM_REMINDER, "").trim();
   if (ROUTINE_FIRE.test(withoutReminders)) return "";
   return withoutReminders;

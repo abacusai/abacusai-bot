@@ -326,7 +326,9 @@ export class HostCore {
           return;
         }
 
-        await this.runTurn(command.message, "enqueue");
+        await this.runTurn(command.message, "enqueue", {
+          userText: command.userText,
+        });
 
         return;
 

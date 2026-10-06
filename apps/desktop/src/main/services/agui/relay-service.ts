@@ -852,6 +852,38 @@ export class AguiRelayService implements AguiSource {
     }
   }
 
+  async react(input: {
+    threadId: string;
+    messageId: string;
+    emoji: string;
+    selected: boolean;
+  }): Promise<void> {
+    const history = await this.hydrate(input.threadId);
+    const target = history.messages.find(
+      (message) => message.id === input.messageId
+    );
+    if (!target || (target.role !== "assistant" && target.role !== "user"))
+      throw badRequest("The reaction target is not a completed message");
+    if (
+      (target.metadata?.abacus?.reactions ?? []).includes(input.emoji) ===
+      input.selected
+    )
+      return;
+    await this.#ensureAguiRuntime(input.threadId);
+    this.#requireAgui(input.threadId);
+    const excerpt = target.parts
+      .flatMap((part) => (part.type === "text" ? [part.content] : []))
+      .join("")
+      .slice(0, 80);
+    this.#write(input.threadId, {
+      type: "message.react",
+      messageId: input.messageId,
+      emoji: input.emoji,
+      selected: input.selected,
+      excerpt,
+    });
+  }
+
   async cancel(threadId: string, runId?: string): Promise<void> {
     const runtime = this.#host.runtime(threadId);
     if (
@@ -890,9 +922,14 @@ export class AguiRelayService implements AguiSource {
   }
 
   readonly queue: AguiSource["queue"] = {
-    enqueue: async (threadId, message) => {
+    enqueue: async (threadId, message, userText) => {
       this.#requireAgui(threadId);
-      this.#write(threadId, { type: "enqueue", message, hidden: false });
+      this.#write(threadId, {
+        type: "enqueue",
+        message,
+        hidden: false,
+        ...(userText && { userText }),
+      });
     },
     update: async ({ threadId, incarnation, entryId, message }) => {
       if (this.#queueTarget(threadId, incarnation, entryId, "update"))

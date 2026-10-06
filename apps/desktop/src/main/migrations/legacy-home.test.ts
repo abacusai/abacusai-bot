@@ -85,7 +85,7 @@ describe("migrating a legacy home", () => {
     delete before[path.relative(home, path.join(leftover, "prefs.json"))];
 
     const first = await migrate();
-    expect(first).toMatchObject({ applied: [1, 2, 5], failed: null });
+    expect(first).toMatchObject({ applied: [1, 2, 5, 6], failed: null });
     expect(first.recovered).toEqual([
       { staging: leftover, action: "discarded" },
     ]);
@@ -163,6 +163,11 @@ describe("migrating a legacy home", () => {
         appVersion: "1.2.3",
         stats: expect.objectContaining({ routines: 0, written: 0 }),
       }),
+      expect.objectContaining({
+        id: 6,
+        name: "message-reactions",
+        stats: expect.objectContaining({ upgraded: 0 }),
+      }),
     ]);
 
     const settled = hashes(home);
@@ -231,7 +236,7 @@ describe("migrating a legacy home", () => {
     fs.rmdirSync(state);
     fs.renameSync(aside, state);
     const second = await migrate();
-    expect(second).toMatchObject({ applied: [2, 5], failed: null });
+    expect(second).toMatchObject({ applied: [2, 5, 6], failed: null });
     expect(
       readRecord(home).applied.find((entry) => entry.id === 2)?.stats.keys
     ).toBeGreaterThan(0);

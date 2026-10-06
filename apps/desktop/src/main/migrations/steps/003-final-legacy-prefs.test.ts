@@ -86,7 +86,7 @@ it("R7-T14: N+1 retires mapped keys with backups; N imports without resetting an
   expect(rebuildRestoreIndex(home)).toHaveLength(
     records[0]?.manifest.ops.length ?? 0
   );
-  expect(MIGRATION_STEPS.map((s) => s.id)).toEqual([1, 2, 5]);
+  expect(MIGRATION_STEPS.map((s) => s.id)).toEqual([1, 2, 5, 6]);
 });
 it("unlisted absent keys retain reset behavior; a damaged retirement record leaves prefs intact", () => {
   const source = path.join(userData, "renderer-state.json");

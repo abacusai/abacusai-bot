@@ -9,6 +9,9 @@
 
 /** Display-only tags. The prompt sent to the model remains verbatim. */
 export interface UserTextTags {
+  replyTo?: { messageId: string; role: "user" | "assistant"; excerpt: string };
+  /** UTF-16 boundary of the user's own text in a reply. */
+  visibleFrom?: number;
   routineFire?: true;
   systemReminder?: true;
   attachments?: Array<{ path: string; name: string; mimeType?: string }>;
@@ -19,7 +22,8 @@ export interface UserTextTags {
       | "auto-reply-intro"
       | "auto-reply-reminder"
       | "environment-notice"
-      | "routine-editor";
+      | "routine-editor"
+      | "user-reaction";
     /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
     visibleFrom?: number;
   };
@@ -435,6 +439,13 @@ export interface QueueEntry {
 /** Commands sent from main process to ndjson IPC host (stdin) */
 export type DesktopCommand =
   | {
+      type: "message.react";
+      messageId: string;
+      emoji: string;
+      selected: boolean;
+      excerpt: string;
+    }
+  | {
       type: "send";
       message: string;
       conversationId?: string;
@@ -452,7 +463,12 @@ export type DesktopCommand =
   | { type: "switch_conversation"; conversationId: string }
   | { type: "reset_conversation" }
   | { type: "list_skills" }
-  | { type: "enqueue"; message: string; hidden: boolean }
+  | {
+      type: "enqueue";
+      userText?: UserTextTags;
+      message: string;
+      hidden: boolean;
+    }
   | { type: "dequeue" }
   | { type: "get_queue" }
   | { type: "clear_queue" }
