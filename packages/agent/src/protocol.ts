@@ -7,6 +7,24 @@
 // Agent types (from packages/agent/src/agent/types.ts)
 // ============================================================================
 
+/** Display-only tags. The prompt sent to the model remains verbatim. */
+export interface UserTextTags {
+  routineFire?: true;
+  systemReminder?: true;
+  attachments?: Array<{ path: string; name: string; mimeType?: string }>;
+  operator?: {
+    kind:
+      | "kickstart"
+      | "mission-updated"
+      | "auto-reply-intro"
+      | "auto-reply-reminder"
+      | "environment-notice"
+      | "routine-editor";
+    /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
+    visibleFrom?: number;
+  };
+}
+
 export enum AgentMode {
   Normal = "DEFAULT",
   AcceptEdits = "ACCEPTEDITS",
@@ -192,7 +210,7 @@ export type AgentEvent =
    * A message sent mid-turn reached the model as a user message at a step
    * boundary; the desktop shows it in the transcript at that point.
    */
-  | { type: "user_message_steered"; content: string }
+  | { type: "user_message_steered"; content: string; userText?: UserTextTags }
   | {
       type: "error";
       // The error payload is inconsistent across models: text may be at
@@ -411,6 +429,7 @@ export interface QueueEntry {
   message: string;
   hidden?: true;
   waitingFor: "step" | "permission" | "turn";
+  userText?: UserTextTags;
 }
 
 /** Commands sent from main process to ndjson IPC host (stdin) */
@@ -420,6 +439,7 @@ export type DesktopCommand =
       message: string;
       conversationId?: string;
       activeSkills?: string[];
+      userText?: UserTextTags;
     }
   | { type: "stop" }
   | { type: "set_mode"; mode: string }

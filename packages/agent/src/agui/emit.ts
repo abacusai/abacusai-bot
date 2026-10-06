@@ -18,6 +18,7 @@ import type {
   DesktopEvent,
   PermissionRequest,
   ToolDisplayData,
+  UserTextTags,
 } from "../protocol.js";
 import { BoundedMap, BoundedSet, MESSAGE_IDS_KEPT } from "./bounded.js";
 import { aguiEvent, custom } from "./event.js";
@@ -409,7 +410,7 @@ export class AguiEmitter {
   userInput(
     runId: string,
     content: string,
-    options: { dequeued: boolean; messageId?: string }
+    options: { dequeued: boolean; messageId?: string; userText?: UserTextTags }
   ): AguiEvent[] {
     const out: AguiEvent[] = [];
 
@@ -417,7 +418,8 @@ export class AguiEmitter {
     out.push(
       ...this.userMessage(
         nativeId(options.messageId ?? userMessageId(runId)),
-        content
+        content,
+        options.userText
       )
     );
 
@@ -582,7 +584,8 @@ export class AguiEmitter {
         out.push(
           ...this.userMessage(
             steerMessageId(this.ctx.incarnation, this.steerCount),
-            event.content
+            event.content,
+            event.userText
           )
         );
 
@@ -863,9 +866,17 @@ export class AguiEmitter {
     ];
   }
 
-  private userMessage(messageId: string, content: string): AguiEvent[] {
+  private userMessage(
+    messageId: string,
+    content: string,
+    userText?: UserTextTags
+  ): AguiEvent[] {
     return [
-      aguiEvent(EventType.TEXT_MESSAGE_START, { messageId, role: "user" }),
+      aguiEvent(EventType.TEXT_MESSAGE_START, {
+        messageId,
+        role: "user",
+        ...(userText != null && { metadata: { abacus: { userText } } }),
+      }),
       aguiEvent(EventType.TEXT_MESSAGE_CONTENT, { messageId, delta: content }),
       aguiEvent(EventType.TEXT_MESSAGE_END, { messageId }),
     ];

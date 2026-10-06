@@ -19,6 +19,7 @@ import {
   type DesktopEvent,
   type PermissionDecision,
   type QueueEntry,
+  type UserTextTags,
 } from "../protocol.js";
 import { shutdownRuntime } from "../sandbox/index.js";
 import type { AbacusBotSession } from "../session.js";
@@ -44,7 +45,7 @@ export interface TurnHooks {
   beginTurn?(
     source: TurnSource,
     text: string,
-    options: { dequeued: boolean; echoed: boolean }
+    options: { dequeued: boolean; echoed: boolean; userText?: UserTextTags }
   ): TurnToken | undefined;
   /** The send owned by `token` is in flight. */
   sending?(token: TurnToken | undefined): void;
@@ -244,7 +245,9 @@ export class HostCore {
           return;
         }
 
-        await this.runTurn(command.message, "send");
+        await this.runTurn(command.message, "send", {
+          userText: command.userText,
+        });
 
         return;
 
@@ -506,10 +509,14 @@ export class HostCore {
   async runTurn(
     message: string,
     source: TurnSource,
-    options: { dequeued?: boolean; echoed?: boolean } = {}
+    options: {
+      dequeued?: boolean;
+      echoed?: boolean;
+      userText?: UserTextTags;
+    } = {}
   ): Promise<void> {
     if (this.busy) {
-      await this.admit(message);
+      await this.admit(message, options.userText);
 
       return;
     }
@@ -526,7 +533,12 @@ export class HostCore {
   async runHeld(
     message: string,
     source: TurnSource,
-    options: { dequeued?: boolean; echoed?: boolean; token?: TurnToken } = {}
+    options: {
+      dequeued?: boolean;
+      echoed?: boolean;
+      token?: TurnToken;
+      userText?: UserTextTags;
+    } = {}
   ): Promise<void> {
     const turn = this.turn;
 
@@ -537,6 +549,7 @@ export class HostCore {
           this.hooks.beginTurn?.(source, message, {
             dequeued: options.dequeued === true,
             echoed: options.echoed === true,
+            userText: options.userText,
           })
       );
 
@@ -566,6 +579,7 @@ export class HostCore {
           this.hooks.beginTurn?.("drain", next.message, {
             dequeued: true,
             echoed,
+            userText: next.userText,
           })
         );
       }
@@ -610,8 +624,8 @@ export class HostCore {
    * while a stop is landing (or a run is still preparing), hold it for the
    * turn after.
    */
-  async admit(message: string): Promise<QueueEntry> {
-    const { entry, steered } = this.admitNow(message);
+  async admit(message: string, userText?: UserTextTags): Promise<QueueEntry> {
+    const { entry, steered } = this.admitNow(message, userText);
 
     await steered;
 
@@ -619,9 +633,13 @@ export class HostCore {
   }
 
   /** `admit`'s synchronous part, so a caller can acknowledge before the steer lands. */
-  admitNow(message: string): { entry: QueueEntry; steered: Promise<void> } {
+  admitNow(
+    message: string,
+    userText?: UserTextTags
+  ): { entry: QueueEntry; steered: Promise<void> } {
     const entry: QueueEntry = {
       id: `q-${++this.queueIds}`,
+      ...(userText != null && { userText }),
       message,
       waitingFor:
         this.stopping || this.preparing || this.resetting
@@ -661,7 +679,11 @@ export class HostCore {
         event: { type: "user_message_dequeued", content: next.message },
       });
     }
-    await this.runTurn(next.message, "after_stop", { dequeued: true, echoed });
+    await this.runTurn(next.message, "after_stop", {
+      dequeued: true,
+      echoed,
+      userText: next.userText,
+    });
   }
 
   /** The prompt was answered: everything parked behind it is steered, in order. */
@@ -706,7 +728,8 @@ export class HostCore {
         );
 
         if (index !== -1) {
-          this.queue.splice(index, 1);
+          const [entry] = this.queue.splice(index, 1);
+          if (entry?.userText != null) event.event.userText = entry.userText;
         }
 
         this.emit(event);

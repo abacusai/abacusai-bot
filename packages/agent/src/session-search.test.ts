@@ -1047,3 +1047,23 @@ describe("the tool wrapper", () => {
     expect(result.content[0]?.text).toContain("Nothing in past sessions");
   });
 });
+
+it("indexes only the human part of operator turns", () => {
+  expect(
+    textOf({ type: "user", content: "[first run] Introduce yourself" })
+  ).toEqual([]);
+  expect(
+    textOf({
+      role: "user",
+      parts: [{ type: "text", content: "rules\n\n[Ada] hello" }],
+      metadata: {
+        abacus: {
+          userText: { operator: { kind: "auto-reply-intro", visibleFrom: 7 } },
+        },
+      },
+    })
+  ).toEqual(["[Ada] hello"]);
+  expect(
+    textOf({ role: "user", content: "[mission updated] New mission" })
+  ).toEqual([]);
+});

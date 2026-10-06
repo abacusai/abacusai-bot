@@ -10,6 +10,8 @@ import fs from "fs";
 import path from "path";
 
 import { abacusBotDir, agentDir } from "./config.js";
+import type { UserTextTags } from "./protocol.js";
+import { visibleUserText } from "./user-text.js";
 
 /** Excerpts per session. Enough to show relevance; more is padding. */
 const MAX_EXCERPTS = 3;
@@ -40,6 +42,8 @@ const sessionLogsDir = (): string => path.join(agentDir(), "sessions");
  */
 const SKIPPED_KEYS = new Set([
   // Ids and timestamps.
+  "metadata",
+  "userText",
   "id",
   "sessionId",
   "workspaceId",
@@ -77,7 +81,29 @@ export const textOf = (value: unknown, depth = 0): string[] => {
     return value.flatMap((entry) => textOf(entry, depth + 1));
 
   if (value != null && typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>)
+    const row = value as Record<string, unknown>;
+    if (row.role === "custom" && row.display === false) return [];
+    if (row.role === "user" || row.type === "user") {
+      const tags = (
+        row.metadata as { abacus?: { userText?: UserTextTags } } | undefined
+      )?.abacus?.userText;
+      const content = row.parts ?? row.content;
+      const raw =
+        typeof content === "string"
+          ? content
+          : Array.isArray(content)
+            ? content
+                .map((part) =>
+                  typeof part === "string"
+                    ? part
+                    : (part?.content ?? part?.text ?? "")
+                )
+                .join("")
+            : "";
+      const visible = visibleUserText(raw, tags);
+      return visible ? [visible] : [];
+    }
+    return Object.entries(row)
       .filter(([key]) => !SKIPPED_KEYS.has(key))
       .flatMap(([, entry]) => textOf(entry, depth + 1));
   }

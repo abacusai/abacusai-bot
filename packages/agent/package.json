@@ -45,7 +45,11 @@
       "types": "./dist/phone/phone-bubbles.d.ts",
       "default": "./dist/phone/phone-bubbles.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./user-text": {
+      "types": "./dist/user-text.d.ts",
+      "default": "./dist/user-text.js"
+    }
   },
   "scripts": {
     "build": "tsdown && node scripts/write-runtime-package.js",

@@ -7,10 +7,13 @@
  * changed: these are display derivations.
  */
 
-const SYSTEM_REMINDER = /<system_reminder>[\s\S]*?<\/system_reminder>/g;
-
-/** The scheduler's envelope. Its whole message is machine text. */
-const ROUTINE_FIRE = /^\[routine\] "/;
+export {
+  hasSystemReminder,
+  isRoutineFire,
+  isHiddenUserText,
+  legacyOperator,
+  visibleUserText,
+} from "@abacus-ai/agent/user-text";
 
 /** Absolute `@`-mentions the composer appends per attachment (non-image). */
 const FILE_REF = /(^|\s)@(\/[^\s]*\/([^\s/]+))/g;
@@ -42,21 +45,6 @@ export interface AttachmentRef {
   /** Set for an image (rendered as a thumbnail rather than a pill). */
   mimeType?: string;
 }
-
-/** Whether the text holds a `<system_reminder>` block. */
-export const hasSystemReminder = (text: string): boolean =>
-  text.search(SYSTEM_REMINDER) >= 0;
-
-/** The user's own words, or "" when the message was entirely the app's. */
-export const visibleUserText = (text: string): string => {
-  const withoutReminders = text.replaceAll(SYSTEM_REMINDER, "").trim();
-  if (ROUTINE_FIRE.test(withoutReminders)) return "";
-  return withoutReminders;
-};
-
-/** A routine firing: the message is hidden entirely in the old UI. */
-export const isRoutineFire = (text: string): boolean =>
-  ROUTINE_FIRE.test(text.replaceAll(SYSTEM_REMINDER, "").trim());
 
 /** The attachments the old UI rebuilds as pills and thumbnails. */
 export const attachmentRefs = (text: string): AttachmentRef[] => {

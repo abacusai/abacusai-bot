@@ -1,6 +1,24 @@
 // The wire protocol between the app and the agent process. Mirrored verbatim
 // at packages/agent/src/protocol.ts; change both together.
 
+/** Display-only tags. The prompt sent to the model remains verbatim. */
+export interface UserTextTags {
+  routineFire?: true;
+  systemReminder?: true;
+  attachments?: Array<{ path: string; name: string; mimeType?: string }>;
+  operator?: {
+    kind:
+      | "kickstart"
+      | "mission-updated"
+      | "auto-reply-intro"
+      | "auto-reply-reminder"
+      | "environment-notice"
+      | "routine-editor";
+    /** UTF-16 offset of the human text; absent means the whole turn is hidden. */
+    visibleFrom?: number;
+  };
+}
+
 export enum AgentMode {
   Normal = "DEFAULT",
   AcceptEdits = "ACCEPTEDITS",
@@ -163,7 +181,7 @@ export type AgentEvent =
   | { type: "subtask_start"; id: string; description?: string; kind?: string }
   | { type: "subtask_end"; id: string; status?: "completed" | "failed" }
   | { type: "user_message_dequeued"; content: string }
-  | { type: "user_message_steered"; content: string }
+  | { type: "user_message_steered"; content: string; userText?: UserTextTags }
   | {
       type: "error";
       // Inconsistent across models: the text may be at `message`, only at
@@ -366,6 +384,7 @@ export interface QueueEntry {
   message: string;
   hidden?: true;
   waitingFor: "step" | "permission" | "turn";
+  userText?: UserTextTags;
 }
 
 /** Commands sent from main process to ndjson IPC host (stdin) */
@@ -375,6 +394,7 @@ export type DesktopCommand =
       message: string;
       conversationId?: string;
       activeSkills?: string[];
+      userText?: UserTextTags;
     }
   | { type: "stop" }
   | { type: "set_mode"; mode: string }
