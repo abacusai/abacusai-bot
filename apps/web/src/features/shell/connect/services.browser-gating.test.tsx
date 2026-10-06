@@ -723,25 +723,27 @@ it("sets up the bot account through the apps server before the identity step", a
     headers: { "REAI-UI": "1" },
   });
 });
-it("a signed-out bot account setup is the sign-in refusal", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(
-      Response.json(
-        {
-          success: false,
-          error: "User not logged in",
-          errorType: "NotLoggedInError",
-        },
-        { status: 200 }
-      )
-    )
-  );
-  await expect(setUpBotAccount()).rejects.toMatchObject({
-    kind: "signin",
-    message: "User not logged in",
-  });
-});
+it.each([
+  [403, { title: "403 Forbidden" }],
+  [
+    200,
+    {
+      success: false,
+      error: "User not logged in",
+      errorType: "NotLoggedInError",
+    },
+  ],
+  [404, { success: false, error: "Not found" }],
+])(
+  "a refused bot account setup (%s) leaves the boot to the identity step",
+  async (status, body) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json(body, { status }))
+    );
+    await expect(setUpBotAccount()).resolves.toBeUndefined();
+  }
+);
 it("an apps server without the setup step leaves the boot to the identity step", async () => {
   vi.stubGlobal(
     "fetch",
@@ -753,24 +755,29 @@ it("an apps server without the setup step leaves the boot to the identity step",
   );
   await expect(setUpBotAccount()).resolves.toBeUndefined();
 });
-it("any other bot account setup failure stops the boot", async () => {
+it("a bot account setup that could not run stops the boot", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        Response.json(
-          {
-            success: false,
-            error: "Internal error",
-            errorType: "InternalError",
-          },
-          { status: 500 }
-        )
+    vi.fn().mockResolvedValue(
+      Response.json(
+        {
+          success: false,
+          error: "Internal error",
+          errorType: "InternalError",
+        },
+        { status: 500 }
       )
+    )
   );
   await expect(setUpBotAccount()).rejects.toMatchObject({
     kind: "connection",
     status: 500,
   });
+});
+it("a bot account setup that cannot reach the server stops the boot", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+  );
+  await expect(setUpBotAccount()).rejects.toMatchObject({ kind: "connection" });
 });
