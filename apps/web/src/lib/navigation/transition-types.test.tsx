@@ -18,6 +18,24 @@ import tokensCss from "../../styles/tokens.css?raw";
 
 let harness: AppHarness | null = null;
 let started: string[][] = [];
+/** Per started transition: a rendered `view-transition-name: composer` element was in the old DOM. */
+let composerAtStart: boolean[] = [];
+
+/**
+ * A rendered element named `composer`. While a pending fallback shows, React
+ * keeps the previous page in the DOM under `display: none`; the browser
+ * captures no snapshot of it, so it does not count.
+ */
+const composerNamed = (): boolean =>
+  Array.from(document.querySelectorAll<HTMLElement>("[style]")).some(
+    (el) =>
+      el.style.viewTransitionName === "composer" &&
+      !Array.from(
+        (function* () {
+          for (let n: HTMLElement | null = el; n; n = n.parentElement) yield n;
+        })()
+      ).some((n) => n.style.display === "none")
+  );
 
 type Stubbed = Document & { startViewTransition?: unknown };
 const originalStart = (document as Stubbed).startViewTransition;
@@ -25,12 +43,14 @@ const originalCss = (window as { CSS?: unknown }).CSS;
 
 beforeEach(() => {
   started = [];
+  composerAtStart = [];
   (document as Stubbed).startViewTransition = ((
     arg: (() => unknown) | { update: () => unknown; types?: string[] }
   ) => {
     const update = typeof arg === "function" ? arg : arg.update;
     const types = typeof arg === "function" ? [] : [...(arg.types ?? [])];
     started.push(types);
+    composerAtStart.push(composerNamed());
     const done = Promise.resolve().then(update);
     return {
       updateCallbackDone: done,
@@ -378,6 +398,41 @@ describe("the router's document view transition", () => {
     expect(started).toEqual([["nav-forward"]]);
   });
 
+  it("morphs the composer on /bots/new → /bots/<id>: named before and after the update", async () => {
+    harness = await renderApp("/bots/new");
+    expect(composerNamed()).toBe(true);
+    await go({ to: "/bots/$botId", params: { botId: "chief-of-staff" } });
+    expect(started).toEqual([["nav-forward"]]);
+    expect(composerAtStart).toEqual([true]);
+    await screen.findByTestId("bot-chat");
+    await waitFor(() => expect(composerNamed()).toBe(true));
+  });
+
+  it("names no composer at a pending-skeleton commit", async () => {
+    let release!: () => void;
+    const hydrating = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness = await renderApp("/bots/new", { beforeHydrate: () => hydrating });
+    const navigation = harness.router.navigate({
+      to: "/bots/$botId",
+      params: { botId: "chief-of-staff" },
+    });
+    // Past defaultPendingMs (400): the skeleton is committed, untyped.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    });
+    expect(screen.getByTestId("pending-pane")).toBeTruthy();
+    expect(started).toEqual([]);
+    expect(composerNamed()).toBe(false);
+    release();
+    await act(async () => {
+      await navigation;
+    });
+    await screen.findByTestId("bot-chat");
+    await waitFor(() => expect(composerNamed()).toBe(true));
+  });
+
   it("starts none between sibling threads (/sessions/<a> → /sessions/<b>), either way", async () => {
     harness = await renderApp("/sessions/review-prs");
     await go({
@@ -455,6 +510,22 @@ describe("motion constants", () => {
     );
     expect(tokensCss).toContain(`translate: ${offsets.drill}px 0`);
     expect(tokensCss).toContain(`translate: -${offsets.drill}px 0`);
+  });
+  it("time the composer morph's group and cross-fade", () => {
+    expect(tokensCss).toMatch(
+      new RegExp(
+        `::view-transition-group\\(composer\\) \\{\\s*animation-duration: ${durations.layout}ms;\\s*animation-timing-function: cubic-bezier\\(0\\.2, 0\\.8, 0\\.2, 1\\);`
+      )
+    );
+    expect(tokensCss).toContain(
+      `::view-transition-old(composer) {\n  animation: ${durations.route}ms vt-fade-out both;`
+    );
+    expect(tokensCss).toContain(
+      `::view-transition-new(composer) {\n  animation: ${durations.route}ms vt-fade-in both;`
+    );
+    expect(tokensCss).toMatch(
+      /::view-transition-image-pair\(composer\) \{\s*overflow: clip;\s*border-radius: 22px;/
+    );
   });
 });
 
