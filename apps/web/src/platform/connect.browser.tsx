@@ -28,6 +28,7 @@ import {
 } from "#renderer/data/transport/websocket";
 import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { followWriteAuthorization } from "#renderer/features/onboarding/gate";
+import { stashWhatsAppClaim } from "#renderer/features/onboarding/whatsapp";
 import { ConnectScreen } from "#renderer/features/shell/connect";
 import { followReconnects } from "#renderer/features/shell/connect/recovery";
 import {
@@ -105,6 +106,7 @@ const loadSystem = async (
 };
 
 export const mountPlatformApp = async (root: Root): Promise<boolean> => {
+  stashWhatsAppClaim();
   installBrowserAttention();
   window.addEventListener("pointerdown", requestNotificationPermission, {
     once: true,

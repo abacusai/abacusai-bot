@@ -174,6 +174,11 @@ export const CONTINUITY_STORES: ReadonlyArray<{
     prefix: true,
     schema: v.array(v.object({ user: v.string(), reply: v.string() })),
   },
+  {
+    key: "whatsapp.claim.v1",
+    storage: "abacusai-bot:whatsapp.claim",
+    schema: v.string(),
+  },
 ];
 const binding = new Map<
   string,

@@ -6,7 +6,7 @@
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -19,6 +19,7 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { cn } from "#renderer/lib/cn";
+import { maskedPhone } from "#renderer/lib/format/phone";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
@@ -40,6 +41,17 @@ type Link = v.InferOutput<typeof Link>;
 /** The browser's same-origin server call (the platform module passes it in). */
 export type CallApps = (service: string, input: unknown) => Promise<unknown>;
 
+/** AbacusAI Bot's own WhatsApp number, when the server offers it. */
+export interface BotNumber {
+  linked: boolean;
+  /** The user's linked number. */
+  phone: string | null;
+  /** The bot's number. */
+  number: string | null;
+  unlink(): Promise<void>;
+  connect(done: () => void): ReactNode;
+}
+
 const STATUS_KEY = ["whatsapp-phone", "status"] as const;
 const POLL_MS = 3000;
 
@@ -56,13 +68,6 @@ const linkStatus = async (
 const spaced = (code: string) =>
   code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
 
-/** `14155550142` shows as `+1 •••• 0142`: enough to recognise, nothing more. */
-const masked = (phone: string) => {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length <= 6) return `+${digits}`;
-  return `+${digits.slice(0, Math.max(1, digits.length - 10))} •••• ${digits.slice(-4)}`;
-};
-
 type Step = "number" | "code" | "done";
 
 const LinkSheet = ({
@@ -70,11 +75,13 @@ const LinkSheet = ({
   open,
   onOpenChange,
   linked,
+  bot,
 }: {
   callApps: CallApps;
   open: boolean;
   onOpenChange(open: boolean): void;
   linked: Link | undefined;
+  bot: BotNumber | undefined;
 }) => {
   const { t } = useTranslation();
   const cache = useQueryClient();
@@ -87,7 +94,8 @@ const LinkSheet = ({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const manage = linked?.status === "linked" && step === "number";
+  const manage =
+    (bot ? bot.linked : linked?.status === "linked") && step === "number";
 
   useEffect(() => {
     if (!open || step !== "code") return;
@@ -146,7 +154,9 @@ const LinkSheet = ({
     }
   };
 
-  const chatPhone = (phone ?? linked?.phone ?? "").replace(/\D/g, "");
+  const chatPhone = (
+    (bot ? bot.number : (phone ?? linked?.phone)) ?? ""
+  ).replace(/\D/g, "");
 
   return (
     <Sheet open={open} onOpenChange={reset}>
@@ -172,21 +182,21 @@ const LinkSheet = ({
                 ? "web.whatsapp.codeTitle"
                 : step === "done"
                   ? "web.whatsapp.doneTitle"
-                  : manage
+                  : manage || bot
                     ? "web.whatsapp.title"
                     : "web.whatsapp.sheetTitle"
             )}
           </SheetTitle>
           <SheetDescription className="sr-only">
-            {t("web.whatsapp.sheetBody")}
+            {t(bot ? "web.whatsappBot.body" : "web.whatsapp.sheetBody")}
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4 pb-2 text-[15px] leading-[21px]">
-          {manage && linked ? (
+          {manage ? (
             <>
               <p className="text-muted-foreground">
                 {t("web.whatsapp.linkedTo", {
-                  phone: masked(linked.phone ?? ""),
+                  phone: maskedPhone((bot ? bot.phone : linked?.phone) ?? ""),
                 })}
               </p>
               <Button
@@ -218,16 +228,21 @@ const LinkSheet = ({
                 description={t("web.whatsapp.unlinkConfirm")}
                 label={t("web.whatsapp.unlink")}
                 onConfirm={async () => {
-                  await callApps("unlinkAbacusBotWhatsApp", {});
-                  cache.setQueryData(STATUS_KEY, {
-                    status: "unlinked",
-                    code: null,
-                    phone: null,
-                  });
+                  if (bot) await bot.unlink();
+                  else {
+                    await callApps("unlinkAbacusBotWhatsApp", {});
+                    cache.setQueryData(STATUS_KEY, {
+                      status: "unlinked",
+                      code: null,
+                      phone: null,
+                    });
+                  }
                   reset(false);
                 }}
               />
             </>
+          ) : bot ? (
+            bot.connect(() => reset(false))
           ) : step === "number" ? (
             <form
               className="flex flex-col gap-4"
@@ -334,7 +349,7 @@ const LinkSheet = ({
                 </span>
                 {phone && (
                   <p className="text-[17px] font-semibold">
-                    {t("web.whatsapp.linkedTo", { phone: masked(phone) })}
+                    {t("web.whatsapp.linkedTo", { phone: maskedPhone(phone) })}
                   </p>
                 )}
                 <p className="text-muted-foreground">
@@ -372,15 +387,22 @@ const LinkSheet = ({
 };
 
 /** Library › Messaging in the browser: WhatsApp, run by the server. */
-export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
+export const WebMessagingPage = ({
+  callApps,
+  bot,
+}: {
+  callApps: CallApps;
+  bot?: BotNumber;
+}) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const status = useQuery({
     queryKey: STATUS_KEY,
     queryFn: () => linkStatus(callApps, false),
     retry: false,
+    enabled: !bot,
   });
-  const linked = status.data?.status === "linked";
+  const linked = bot ? bot.linked : status.data?.status === "linked";
   return (
     <AreaPage
       title={t("library.pages.messaging")}
@@ -390,7 +412,13 @@ export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
         <SettingRow
           id="whatsapp"
           title={t("web.whatsapp.title")}
-          detail={t("web.whatsapp.rowDetail")}
+          detail={
+            bot
+              ? bot.linked && bot.phone
+                ? maskedPhone(bot.phone)
+                : t("web.whatsappBot.rowDetail")
+              : t("web.whatsapp.rowDetail")
+          }
         >
           <ConnectorMark id="whatsapp" size={28} />
           {linked && (
@@ -400,7 +428,7 @@ export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
             size="sm"
             variant={linked ? "secondary" : "default"}
             className="rounded-full"
-            disabled={status.isPending || status.isError}
+            disabled={!bot && (status.isPending || status.isError)}
             onClick={() => setOpen(true)}
           >
             {t(linked ? "phase5.manage" : "phase5.connect")}
@@ -420,6 +448,7 @@ export const WebMessagingPage = ({ callApps }: { callApps: CallApps }) => {
         open={open}
         onOpenChange={setOpen}
         linked={status.data}
+        bot={bot}
       />
     </AreaPage>
   );
