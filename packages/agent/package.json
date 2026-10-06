@@ -41,6 +41,10 @@
       "types": "./dist/tool-display.d.ts",
       "default": "./dist/tool-display.js"
     },
+    "./phone-bubbles": {
+      "types": "./dist/phone/phone-bubbles.d.ts",
+      "default": "./dist/phone/phone-bubbles.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

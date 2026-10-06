@@ -13,6 +13,7 @@ import { BotSession } from "../bot/bot-session.js";
 import { tagEvent } from "../event-meta.js";
 import { parseModeStrict } from "../permissions.js";
 import { isPhoneSession } from "../phone/phone-config.js";
+import { channelsPagePublisher } from "../phone/phone-page-publisher.js";
 import { PhoneSession } from "../phone/phone-session.js";
 import type { DesktopCommand, DesktopEvent } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
@@ -216,7 +217,7 @@ export class AguiHost {
     const session =
       options.session?.(init) ??
       (isPhoneSession()
-        ? new PhoneSession(init)
+        ? new PhoneSession({ ...init, pagePublisher: channelsPagePublisher() })
         : isBotSession()
           ? new BotSession(init)
           : new AbacusBotSession(init));

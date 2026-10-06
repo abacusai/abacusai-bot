@@ -1483,6 +1483,8 @@ export class ServiceHost {
         );
         // Same reason: the remote user must not receive a cancelled tail.
         this.messagingGatewayService.handleAgentEvent(sessionId, payload);
+        for (const listener of this.agentEventListeners)
+          listener(sessionId, payload);
         this.settleRoutineRun(sessionId, payload);
         this.feedTurnWaiter(sessionId, payload);
       } else if (payload.type === "permission_needed") {
@@ -4320,6 +4322,7 @@ export class ServiceHost {
             ABACUSAI_BOT_CONTEXT_CAP_TOKENS: String(ROUTINE_CONTEXT_CAP_TOKENS),
           }
         : {}),
+      ...(sessionId != null ? this.laneEnv.get(sessionId) : undefined),
       // A run may use its own folder without the containment gate asking.
       ...this.routineFolderEnvForSession(sessionId),
       ...this.sponsoredRunEnvForRoutineSession(sessionId),
@@ -4361,6 +4364,42 @@ export class ServiceHost {
 
     return {
       ABACUSAI_BOT_ALLOWED_PATHS: [...new Set(paths)].join(path.delimiter),
+    };
+  }
+
+  /** Agent env for the sessions host lanes keep, by session id. */
+  private readonly laneEnv = new Map<string, Record<string, string>>();
+  private readonly agentEventListeners = new Set<
+    (sessionId: string, payload: DesktopEvent) => void
+  >();
+
+  /**
+   * The session a host lane (the hosted phone loop) keeps for good, in the
+   * bot workspace, spawned with `env` on top of the usual.
+   */
+  async openLaneSession(
+    lane: string,
+    env: Record<string, string>,
+    mode: AgentMode
+  ): Promise<{ workspaceId: string; sessionId: string }> {
+    const workspaceId = await this.ensureDefaultWorkspace();
+    if (workspaceId == null) throw new Error("No workspace for the lane.");
+    const session = this.agentSessionManagerService.laneSession(
+      lane,
+      workspaceId,
+      mode
+    );
+    this.laneEnv.set(session.id, env);
+    return { workspaceId: session.workspaceId, sessionId: session.id };
+  }
+
+  /** Every session's agent events, past the post-Stop filter. */
+  onAgentEvent(
+    listener: (sessionId: string, payload: DesktopEvent) => void
+  ): () => void {
+    this.agentEventListeners.add(listener);
+    return () => {
+      this.agentEventListeners.delete(listener);
     };
   }
 

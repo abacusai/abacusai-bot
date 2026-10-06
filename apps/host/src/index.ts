@@ -49,6 +49,7 @@ const main = async () => {
     },
   });
   console.log(`[host] listening on ${transport.port}`);
+  composition.phoneLane.start();
   const { sweepTrash } = await import("./filesystem");
   void sweepTrash();
   const { installShutdown, shutdown } = await import("./shutdown");
