@@ -3598,6 +3598,17 @@ export function classifyProviderFailure(raw: string): {
     };
   }
 
+  // The platform's answer to a key of the wrong kind (a terminal/CodeLLM key
+  // on a bot endpoint); the key itself is fine, and Settings → Models is the
+  // wrong place to look.
+  if (status === 403 && /not allowed for this api/i.test(text)) {
+    return {
+      summary: "This key isn't an AbacusAI Bot key",
+      remedy:
+        "Sign out in Settings → Account and sign in again to get a bot key.",
+    };
+  }
+
   if (status === 403) {
     return {
       summary: "The model provider denied access",
