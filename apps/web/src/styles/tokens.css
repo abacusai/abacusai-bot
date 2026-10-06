@@ -258,8 +258,21 @@ html {
   pointer-events: none;
 }
 
+/*
+ * One choreography per route change (durations.route): every group's
+ * geometry (the pane and the sidebar trading width, a shared element
+ * moving) and every snapshot's cross-fade run the same 120 ms on the
+ * standard curve, instead of the UA's 250 ms defaults under the 120 ms
+ * fades below. The named composer group and the session-view group keep
+ * their longer, designed morphs.
+ */
 ::view-transition-group(*) {
+  animation-duration: 120ms;
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 120ms;
 }
 html:active-view-transition-type(nav-lateral)::view-transition-old(.pane),
 html:active-view-transition-type(nav-lateral)::view-transition-old(.sidebar) {

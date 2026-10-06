@@ -28,6 +28,7 @@ import {
   springs,
   useMotionPreference,
 } from "#renderer/lib/motion";
+import { isRouteTransitionActive } from "#renderer/lib/navigation/route-transition";
 
 import { SidebarCreditsCard } from "./credits-card";
 import { useFloatingIntent } from "./floating-intent";
@@ -86,12 +87,31 @@ export const SidebarSlot = ({
   const returnFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const controls = animate(
-      column,
-      width,
-      motionFor<Transition>(motionPref, springs.sidebar, { duration: 0 })
-    );
-    return () => controls.stop();
+    // A route change that pins or unpins the sidebar (Sessions with its
+    // panel open ↔ Bots) commits inside the router's document view
+    // transition: the column jumps so the transition captures the final
+    // geometry and its group animations carry the sidebar and the pane
+    // together (tokens.css), instead of this spring reflowing the live pane
+    // under the cross-fade. The check waits a frame: the router renders the
+    // new area's pending shell just before it starts the transition, and
+    // the browser runs frame callbacks before it captures the new state.
+    // Toggles outside a route change keep the spring.
+    let controls: ReturnType<typeof animate> | null = null;
+    const frame = requestAnimationFrame(() => {
+      controls = animate(
+        column,
+        width,
+        motionFor<Transition>(
+          motionPref,
+          isRouteTransitionActive() ? { duration: 0 } : springs.sidebar,
+          { duration: 0 }
+        )
+      );
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      controls?.stop();
+    };
   }, [column, width, motionPref]);
 
   const floatingOpen = mode === "floating" && floating.open;
