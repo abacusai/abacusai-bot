@@ -50,6 +50,20 @@ const labelKeys: Record<string, string> = {
   updates: "phase5.settings.updates",
   logs: "phase5.saveLogs",
   changelog: "phase5.whatsNew",
+  palette: "settings.theme.label",
+  theme: "settings.appearance.mode",
+  ...Object.fromEntries(
+    [
+      "accent",
+      "contrast",
+      "radius",
+      "uiFont",
+      "codeFont",
+      "codeSize",
+      "translucency",
+      "importTheme",
+    ].map((id) => [id, `settings.appearance.${id}`])
+  ),
 };
 const groups: Partial<Record<SettingsPageId, string[]>> = {
   general: [
@@ -69,7 +83,22 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "mode-PLAN",
     "mode-YOLO",
   ],
-  appearance: ["theme", "density", "textSize", "reduceMotion", "bubbleTint"],
+  appearance: [
+    "palette",
+    "theme",
+    "accent",
+    "contrast",
+    "radius",
+    "density",
+    "translucency",
+    "textSize",
+    "uiFont",
+    "codeFont",
+    "codeSize",
+    "reduceMotion",
+    "bubbleTint",
+    "importTheme",
+  ],
   notifications: ["notify", "sounds", "quietHours", "showInNotch"],
   memory: ["customInstructions"],
   language: ["language"],
@@ -175,10 +204,11 @@ export const settingsIndexFor = (
     (entry) =>
       (electron ||
         (!["browser", "devices", "about"].includes(entry.page) &&
-          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|tour|key-notch|invite-whatsapp)/.test(
+          !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|translucency|tour|key-notch|invite-whatsapp)/.test(
             entry.id
           ))) &&
-      (uiOS !== "mac" || !entry.id.endsWith("@terminal"))
+      (uiOS !== "mac" || !entry.id.endsWith("@terminal")) &&
+      (uiOS !== "linux" || entry.id !== "translucency")
   ).map((entry) =>
     !electron && ["backend-local", "forgetAccount"].includes(entry.id)
       ? {

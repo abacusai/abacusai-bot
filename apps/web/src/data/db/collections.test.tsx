@@ -160,6 +160,29 @@ describe("prefs (spec 00 B.2 provenance)", () => {
     expect(db.collections.prefs.get("app")?.sidebar.openSection).toBe("bots");
   });
 
+  it("an appearance leaf write keeps the group's other leaves, optimistically and after", async () => {
+    const appearance = {
+      ...DEFAULT_PREFS.appearance,
+      palette: "grove",
+      accent: "#2f6fde",
+    };
+    const fixture = new FixtureDb({ prefs: fixturePrefs({ appearance }) });
+    const sent = vi.spyOn(fixture, "updatePrefs");
+    const db = setup(fixture);
+    await db.collections.prefs.preload();
+    let optimistic: unknown;
+    await act(async () => {
+      const done = db.updatePrefs({ appearance: { contrast: "high" } });
+      optimistic = db.collections.prefs.get("app")?.appearance;
+      await done;
+    });
+    const merged = { ...appearance, contrast: "high" };
+    expect(optimistic).toEqual(merged);
+    expect(sent).toHaveBeenCalledWith({ appearance: { contrast: "high" } });
+    expect(fixture.prefs.rows.get("app")?.appearance).toEqual(merged);
+    expect(db.collections.prefs.get("app")?.appearance).toEqual(merged);
+  });
+
   it("an explicit choice of the current value is still sent (it becomes the user's)", async () => {
     const fixture = new FixtureDb({ prefs: fixturePrefs({ theme: "dark" }) });
     const sent = vi.spyOn(fixture, "updatePrefs");

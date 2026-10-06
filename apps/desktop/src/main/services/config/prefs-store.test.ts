@@ -290,7 +290,19 @@ describe("PrefsStore", () => {
     const store = new PrefsStore({ file });
     expect(store.get()).toMatchObject({
       keymap: {},
-      appearance: { textSize: 14, bubbleTint: true },
+      appearance: {
+        textSize: 14,
+        bubbleTint: true,
+        palette: "default",
+        accent: null,
+        contrast: "system",
+        radius: "default",
+        uiFont: "",
+        codeFont: "",
+        codeFontSize: 12,
+        translucency: true,
+        custom: null,
+      },
       sounds: {
         enabled: true,
         perEvent: {},
@@ -336,9 +348,33 @@ describe("PrefsStore", () => {
       onboardingExit: "user",
       onboardingPairing: "user",
     });
-    expect(new PrefsStore({ file }).get().appearance).toEqual({
+    expect(new PrefsStore({ file }).get().appearance).toMatchObject({
       textSize: 15,
       bubbleTint: true,
+      palette: "default",
+    });
+  });
+
+  it("stores an imported theme and the look leaves, each its own provenance", () => {
+    const store = new PrefsStore({ file });
+    store.update({
+      appearance: {
+        palette: "custom",
+        accent: "#3366ff",
+        custom: { name: "Night", dark: { bg: "#101010" } },
+      },
+    });
+    const reread = new PrefsStore({ file });
+    expect(reread.get().appearance).toMatchObject({
+      palette: "custom",
+      accent: "#3366ff",
+      contrast: "system",
+      custom: { name: "Night", dark: { bg: "#101010" } },
+    });
+    expect(reread.provenance()).toMatchObject({
+      "appearance.palette": "user",
+      "appearance.custom": "user",
+      "appearance.contrast": "default",
     });
   });
 
@@ -346,6 +382,29 @@ describe("PrefsStore", () => {
     const store = new PrefsStore({ file: null });
     for (const patch of [
       { appearance: { textSize: 16 } },
+      { appearance: { accent: "red" } },
+      { appearance: { palette: "../x" } },
+      { appearance: { uiFont: 'Inter"; color: red' } },
+      { appearance: { codeFontSize: 40 } },
+      { appearance: { custom: { name: "x", dark: { bg: "#12" } } } },
+      { appearance: { custom: { name: "no variant" } } },
+      { appearance: { custom: { name: "no bg", dark: { fg: "#ffffff" } } } },
+      {
+        appearance: {
+          custom: {
+            name: "unknown",
+            dark: { bg: "#000000", background: "#101010" },
+          },
+        },
+      },
+      {
+        appearance: {
+          custom: {
+            name: "layout",
+            dark: { bg: "#000000", radius: "#101010" },
+          },
+        },
+      },
       {
         sounds: { quietHours: { enabled: true, start: "25:00", end: "07:00" } },
       },

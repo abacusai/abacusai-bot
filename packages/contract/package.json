@@ -17,6 +17,7 @@
     "./free-pool": "./src/free-pool.ts",
     "./funnel": "./src/funnel.ts",
     "./local-models": "./src/local-models.ts",
+    "./look": "./src/look.ts",
     "./message-reactions": "./src/message-reactions.ts",
     "./messaging": "./src/messaging.ts",
     "./models": "./src/models.ts",

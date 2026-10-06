@@ -435,7 +435,7 @@ const SessionSidebarRow = ({
                 aria-label={t(`sessions.attention.${attention.kind}`)}
                 className={
                   attention.kind === "needs-you"
-                    ? "text-amber-600"
+                    ? "text-[var(--bots-attention)]"
                     : "text-muted-foreground"
                 }
               >

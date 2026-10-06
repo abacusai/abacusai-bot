@@ -85,6 +85,21 @@ const CheckoutTree = ({
           "--trees-theme-list-active-selection-bg": "var(--accent)",
           "--trees-theme-list-active-selection-fg": "var(--accent-foreground)",
           "--trees-theme-focus-ring": "var(--ring)",
+          "--trees-theme-input-fg": "var(--foreground)",
+          "--trees-theme-input-border": "var(--input)",
+          "--trees-theme-sidebar-border": "var(--border)",
+          "--trees-theme-sidebar-header-fg": "var(--muted-foreground)",
+          "--trees-theme-scrollbar-thumb": "var(--border)",
+          "--trees-fg-muted-override": "var(--muted-foreground)",
+          "--trees-bg-muted-override": "var(--muted)",
+          // Unset without a chosen interface font: the library's default.
+          "--trees-font-family-override": "var(--ui-font-family)",
+          "--trees-theme-git-added-fg": "var(--bots-done)",
+          "--trees-theme-git-untracked-fg": "var(--bots-done)",
+          "--trees-theme-git-modified-fg": "var(--bots-attention)",
+          "--trees-theme-git-renamed-fg": "var(--accent-text, var(--primary))",
+          "--trees-theme-git-deleted-fg": "var(--destructive)",
+          "--trees-theme-git-ignored-fg": "var(--muted-foreground)",
           colorScheme: "inherit",
         } as React.CSSProperties
       }

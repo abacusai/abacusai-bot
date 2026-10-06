@@ -33,12 +33,12 @@ export const DiffView = ({
     <div
       data-slot="diff-view"
       tabIndex={0}
-      className="h-full w-full overflow-auto font-mono text-xs leading-5"
+      className="h-full w-full overflow-auto font-mono text-[length:var(--code-font-size,12px)] leading-5"
       aria-label={t("sessions.changes.diff")}
     >
       {diffRows(patch).map((hunk) => (
         <section key={hunk.id} id={hunk.id}>
-          <div className="text-foreground/75 bg-muted px-4 py-2">
+          <div className="text-muted-foreground bg-muted px-4 py-2">
             {hunk.header}
           </div>
           {hunk.lines.map((line, i) => (
@@ -56,13 +56,13 @@ export const DiffView = ({
             >
               <span
                 aria-hidden
-                className="text-foreground/75 mr-2 inline-block w-8 text-right"
+                className="text-muted-foreground mr-2 inline-block w-8 text-right"
               >
                 {line.old}
               </span>
               <span
                 aria-hidden
-                className="text-foreground/75 mr-4 inline-block w-8 text-right"
+                className="text-muted-foreground mr-4 inline-block w-8 text-right"
               >
                 {line.next}
               </span>

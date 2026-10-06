@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { AppearanceTheme } from "#renderer/features/settings/personal";
+import { AppearancePage } from "#renderer/features/settings/appearance";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 
 const AppearanceSettingsRoute = () => {
@@ -13,7 +13,7 @@ const AppearanceSettingsRoute = () => {
           {t("settings.pages.appearance")}
         </span>
       </TopBarSlot>
-      <AppearanceTheme />
+      <AppearancePage />
     </>
   );
 };

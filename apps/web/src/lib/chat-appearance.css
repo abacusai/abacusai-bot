@@ -8,3 +8,13 @@ html[data-bubble-tint="off"] [data-slot="chat-layout"][data-skin="bot"] [data-ro
   background-color: var(--chat-user-bubble);
   color: var(--foreground);
 }
+
+/*
+ * A theme's selection: as much of its accent as the text on it allows
+ * (lib/look.ts solves --selection with the foreground). The stock palette
+ * keeps the OS's.
+ */
+html[data-palette]:not([data-palette="default"]) ::selection {
+  background-color: var(--selection);
+  color: var(--foreground);
+}

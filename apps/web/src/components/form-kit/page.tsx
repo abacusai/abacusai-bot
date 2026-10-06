@@ -94,9 +94,9 @@ export const StatePill = ({
     variant="secondary"
     className={
       tone === "success"
-        ? "border border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+        ? "border border-[var(--bots-done)] bg-transparent text-[var(--bots-done)]"
         : tone === "warning"
-          ? "border border-amber-600/40 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+          ? "border border-[var(--bots-attention)] bg-transparent text-[var(--bots-attention)]"
           : undefined
     }
   >
