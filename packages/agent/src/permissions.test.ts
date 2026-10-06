@@ -769,6 +769,16 @@ describe("the edit approval diff", () => {
     expect(request.newContent).toBe("log(1)\nlog(2)\n");
   });
 
+  it("leaves the original formatting intact when no edit resolves", () => {
+    const original = "\uFEFFconst a = 1\r\nconst b = 2\n";
+    fs.writeFileSync(FILE, original);
+    const request = previewOf([
+      { oldText: "const missing = 1", newText: "const missing = 2" },
+    ]);
+
+    expect(request.newContent).toBe(original);
+  });
+
   it("previews the same relaxed match the tool will apply", () => {
     fs.writeFileSync(FILE, "function f() {\n  return 1\n}\n");
     const request = previewOf([

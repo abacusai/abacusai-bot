@@ -17,6 +17,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
+import { prepareEditContent } from "../edit-content.js";
 import {
   lineOf,
   resolveEdit,
@@ -129,12 +130,8 @@ async function applyFileEdits(
     );
   }
 
-  // Match against a normalized view, then restore what we stripped, so a
-  // CRLF file stays CRLF and a BOM survives the round-trip.
-  const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : "";
-  const withoutBom = bom ? raw.slice(1) : raw;
-  const crlf = withoutBom.includes("\r\n");
-  const content = crlf ? withoutBom.replaceAll("\r\n", "\n") : withoutBom;
+  const source = prepareEditContent(raw);
+  const { content } = source;
 
   const patches: Array<{
     start: number;
@@ -146,8 +143,8 @@ async function applyFileEdits(
   let widened = false;
 
   for (const [index, edit] of requested.entries()) {
-    const newText = crlf ? edit.newText.replaceAll("\r\n", "\n") : edit.newText;
-    const oldText = crlf ? edit.oldText.replaceAll("\r\n", "\n") : edit.oldText;
+    const newText = source.normalize(edit.newText);
+    const oldText = source.normalize(edit.oldText);
     const replaceAll = edit.replaceAll === true;
     const result = resolveEdit(content, oldText, newText, replaceAll);
     const label = requested.length > 1 ? `edits[${index}]` : "the edit";
@@ -244,7 +241,7 @@ async function applyFileEdits(
     }
   }
 
-  const restored = bom + (crlf ? updated.replaceAll("\n", "\r\n") : updated);
+  const restored = source.restore(updated);
   try {
     fs.writeFileSync(abs, restored, "utf8");
   } catch (error) {

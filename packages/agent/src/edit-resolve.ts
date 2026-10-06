@@ -372,9 +372,9 @@ function isDisproportionate(match: string, find: string): boolean {
 }
 
 /**
- * Find the span(s) `oldText` refers to. Without `replaceAll`, a strategy that
- * finds several occurrences is not usable, so the cascade moves on and reports
- * ambiguity only if nothing later resolves cleanly.
+ * Resolve edits against BOM-free, LF-normalized content. Without `replaceAll`,
+ * ambiguous matches fall through to later strategies and are reported only if
+ * nothing resolves cleanly.
  */
 export function resolveEdit(
   content: string,
