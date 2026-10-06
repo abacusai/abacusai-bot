@@ -667,6 +667,7 @@ export const DEFAULT_LOOK: Look = {
   codeFont: "",
   codeFontSize: 12,
   translucency: true,
+  railIconsOnly: false,
   custom: null,
 };
 export const lookOf = (appearance: PrefsRow["appearance"]): Look => ({

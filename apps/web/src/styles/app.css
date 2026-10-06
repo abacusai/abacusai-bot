@@ -207,4 +207,12 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
     color: var(--destructive) !important;
   }
 }
+/* A menu item is one line: a long label (de-DE, fr-FR) widens the menu
+   rather than wrapping under its icon; the menu's own max width clips. */
+@layer components {
+  [data-slot="context-menu-item"],
+  [data-slot="dropdown-menu-item"] {
+    white-space: nowrap;
+  }
+}
 .session-dock-mini [data-slot="composer-dock"] { position: static; }

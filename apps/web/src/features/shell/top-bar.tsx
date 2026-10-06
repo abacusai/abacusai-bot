@@ -24,6 +24,7 @@ import { Reorder } from "motion/react";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AppBrandMark } from "#renderer/components/app-icon";
 import { cn } from "#renderer/lib/cn";
 import {
   reducedTransition,
@@ -74,7 +75,8 @@ const Root = ({ children }: { children: ReactNode }) => (
 );
 
 /**
- * Back, forward, sidebar toggle and (pinned only) the app name. With a
+ * Back, forward, sidebar toggle and the brand: the app icon, with the app
+ * name while the sidebar is pinned. With a
  * sidebar column in layout its width ends at the content pane's left edge;
  * `min-width: min-content` keeps the buttons whole when the reservation is
  * wider than the column (the 88 px strip under macOS lights).
@@ -144,14 +146,22 @@ const Leading = ({
       >
         <PanelLeft />
       </BarButton>
-      {showAppName && (
-        <span
-          data-slot="topbar-app-name"
-          className="text-sidebar-foreground min-w-0 truncate pl-2 font-semibold"
-        >
-          {t("shell.appName")}
-        </span>
-      )}
+      {/* The brand: the app icon always, the name only while the sidebar
+          is pinned (icon only when it is collapsed or floating). */}
+      <span
+        data-slot="topbar-brand"
+        className="text-sidebar-foreground flex min-w-0 items-center gap-2 pl-2 font-semibold"
+      >
+        <AppBrandMark size={20} className="shrink-0" />
+        {showAppName && (
+          <span
+            data-slot="topbar-app-name"
+            className="min-w-0 truncate whitespace-nowrap"
+          >
+            {t("shell.appName")}
+          </span>
+        )}
+      </span>
     </div>
   );
 };

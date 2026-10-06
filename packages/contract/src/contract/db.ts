@@ -186,6 +186,7 @@ export const PREFS_GROUP_ENTRIES = {
       v.maxValue(18)
     ),
     translucency: v.boolean(),
+    railIconsOnly: v.boolean(),
     custom: v.nullable(
       v.pipe(
         v.strictObject({

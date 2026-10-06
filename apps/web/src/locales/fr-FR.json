@@ -2626,6 +2626,8 @@
       "fontDetail": "Une police de cet ordinateur ; vide pour celle par défaut.",
       "codeSize": "Taille du code",
       "translucency": "Fenêtre translucide",
+      "railIconsOnly": "Barre : icônes seules",
+      "railIconsOnlyDetail": "Masque les noms sous les icônes de la barre ; ils apparaissent au survol.",
       "importTheme": "Importer un thème VS Code",
       "openFile": "Ouvrir un fichier",
       "pasteLabel": "JSON du thème",

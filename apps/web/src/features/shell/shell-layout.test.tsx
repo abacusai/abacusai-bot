@@ -308,8 +308,13 @@ describe("ShellLayout", () => {
     status.unmount();
   });
 
-  it("shows the app name only while pinned; ⌘B-equivalent toggle writes prefs", async () => {
+  it("shows the app name only while pinned, the brand mark always; ⌘B-equivalent toggle writes prefs", async () => {
     await at(1280, "/bots/new");
+    const brand = () =>
+      document.querySelector(
+        '[data-slot="topbar-brand"] [data-slot="app-brand-mark"]'
+      );
+    expect(brand()).not.toBeNull();
     expect(
       document.querySelector('[data-slot="topbar-app-name"]')
     ).not.toBeNull();
@@ -320,6 +325,68 @@ describe("ShellLayout", () => {
     await waitFor(() =>
       expect(document.querySelector('[data-slot="topbar-app-name"]')).toBeNull()
     );
+    // Collapsed: the icon alone.
+    expect(brand()).not.toBeNull();
+  });
+
+  it("keeps every rail label on one line and names each item by it", async () => {
+    await at(1280, "/bots/new");
+    for (const area of [
+      "bots",
+      "sessions",
+      "routines",
+      "artifacts",
+      "library",
+    ]) {
+      const link = railLink(area);
+      const label = link.querySelector<HTMLElement>("span:last-child")!;
+      expect(label.className).toContain("whitespace-nowrap");
+      expect(label.className).toContain("truncate");
+      expect(link.hasAttribute("aria-label")).toBe(false);
+    }
+  });
+});
+
+describe("Rail: icons only (Settings › Appearance)", () => {
+  const seedIconsOnly = (pinned: boolean) => {
+    const seed = defaultSeed();
+    const prefs = fixturePrefs({ sidebar: { pinned, openSection: null } });
+    seed.prefs = {
+      ...prefs,
+      appearance: { ...prefs.appearance!, railIconsOnly: true },
+    };
+    return seed;
+  };
+
+  it("drops the labels, keeps the 48 px items and names them for assistive tech", async () => {
+    await at(1280, "/bots/new", seedIconsOnly(true));
+    expect(rail().dataset.iconsOnly).toBe("");
+    const link = railLink("sessions");
+    expect(link.textContent).toBe("");
+    expect(link.getAttribute("aria-label")).toBe("Sessions");
+    expect(link.className).toContain("size-(--rail-item)");
+  });
+
+  it("gives each item a tooltip while the sidebar is pinned, none while it floats", async () => {
+    await at(1280, "/bots/new", seedIconsOnly(true));
+    expect(railLink("sessions").dataset.slot).toBe("tooltip-trigger");
+    expect(
+      rail()
+        .querySelector('a[aria-label="Settings"]')
+        ?.getAttribute("data-slot")
+    ).toBe("tooltip-trigger");
+    // Unpinned: hovering the rail opens the floating sidebar instead.
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
+    await waitFor(() => expect(shell().dataset.sidebar).toBe("floating"));
+    expect(railLink("sessions").dataset.slot).toBeUndefined();
+    expect(railLink("sessions").getAttribute("aria-label")).toBe("Sessions");
+  });
+
+  it("labels stay with the pref off", async () => {
+    await at(1280, "/bots/new");
+    expect(rail().dataset.iconsOnly).toBeUndefined();
+    expect(railLink("sessions").textContent).toBe("Sessions");
+    expect(railLink("sessions").dataset.slot).toBeUndefined();
   });
 });
 

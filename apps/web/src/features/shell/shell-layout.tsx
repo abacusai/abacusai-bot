@@ -302,6 +302,7 @@ export const ShellLayout = ({
               <Rail
                 area={area}
                 floatingEnabled={floatingEnabled}
+                iconsOnly={prefs.appearance?.railIconsOnly === true}
                 initials={initials}
               />
             )}

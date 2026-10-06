@@ -2626,6 +2626,8 @@
       "fontDetail": "इस कंप्यूटर का कोई फ़ॉन्ट; डिफ़ॉल्ट के लिए खाली।",
       "codeSize": "कोड का आकार",
       "translucency": "पारभासी विंडो",
+      "railIconsOnly": "रेल: केवल आइकन",
+      "railIconsOnlyDetail": "रेल के आइकन के नीचे के नाम छिपाएँ; होवर करने पर दिखते हैं।",
       "importTheme": "VS Code थीम इम्पोर्ट करें",
       "openFile": "फ़ाइल खोलें",
       "pasteLabel": "थीम JSON",
