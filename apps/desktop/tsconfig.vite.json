@@ -12,6 +12,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "../web/vite.shared.ts",
-    "../web/vite.renderer.ts"
+    "../web/vite.renderer.ts",
+    "../web/vite.overlay.ts"
   ]
 }
