@@ -132,6 +132,7 @@ export interface App {
  */
 export const launch = async (options: {
   port: number;
+  args?: readonly string[];
   env?: Record<string, string>;
   prepareHome?: (home: string) => void;
 }): Promise<App> => {
@@ -158,6 +159,7 @@ export const launch = async (options: {
       "--disable-renderer-backgrounding",
       "--disable-backgrounding-occluded-windows",
       "--disable-background-timer-throttling",
+      ...(options.args ?? []),
     ],
     {
       cwd: DESKTOP,
