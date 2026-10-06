@@ -48,6 +48,8 @@ export interface ForeverProfile {
   replacesMcpTool(name: string): boolean;
   /** Tools that never ask for approval. */
   alwaysAllowedTools: readonly string[];
+  /** Whether anyone can answer an approval request; when not, a call that needs one is refused at once. */
+  canAskForApproval: boolean;
   memory: ForeverMemoryPolicy;
   continuations: ForeverContinuations;
   /** Extra context sent with the user's message; "" for none. */

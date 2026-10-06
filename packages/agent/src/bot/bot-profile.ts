@@ -85,6 +85,7 @@ export function createBotProfile(): ForeverProfile {
       name === BOT_TIME_TOOL_NAME ||
       name === BOT_REACTION_TOOL_NAME,
     alwaysAllowedTools: [BOT_REACTION_TOOL_NAME],
+    canAskForApproval: true,
     memory: {
       sessionStartPrompt: () => recentNotesPrompt(home),
       standingPrompt: () => coreMemoryPrompt(home),

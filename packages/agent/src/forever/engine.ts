@@ -1862,7 +1862,11 @@ export class ForeverEngine {
         return { block: true, reason: gate.reason };
       }
 
-      if (!process.stdout.writable || process.stdout.destroyed) {
+      if (
+        !this.profile.canAskForApproval ||
+        !process.stdout.writable ||
+        process.stdout.destroyed
+      ) {
         this.noteBlocked(event.toolCallId, "rejected");
 
         return {
