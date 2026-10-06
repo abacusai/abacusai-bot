@@ -2973,6 +2973,8 @@
       "reply": "답장",
       "copy": "메시지 복사",
       "moreReactions": "더 많은 반응",
+      "addReaction": "반응 추가",
+      "menu": "메시지 메뉴",
       "react": "{{emoji}} 반응",
       "removeReaction": "{{emoji}} 반응 삭제",
       "you": "나",

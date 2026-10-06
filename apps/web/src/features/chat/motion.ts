@@ -84,15 +84,6 @@ export const composerExit = (pref: MotionPreference): Transition =>
 export const queueRow = (pref: MotionPreference): Transition =>
   motionFor<Transition>(pref, { duration: 0.16 }, { ...reducedTransition });
 
-/** The hover action bar: a 140 ms fade with a 2 px rise; reduced: fade only. */
-export const ACTION_BAR_RISE_PX = 2;
-export const actionBarTransition = (pref: MotionPreference): Transition =>
-  motionFor(
-    pref,
-    { duration: 0.14, ease: [...easings.standard] },
-    { ...reducedTransition }
-  );
-
 /** A reaction pill popping onto the bubble edge (scale 0.6 → 1, overshoot). */
 export const reactionPillEnter = (pref: MotionPreference): Transition =>
   motionFor<Transition>(

@@ -49,7 +49,11 @@ import {
   useSubagentScope,
   type MessageDecoration,
 } from "./context";
-import { MessageActions, MessageReactionPills } from "./message-actions";
+import {
+  MessageActions,
+  MessageMenu,
+  MessageReactionPills,
+} from "./message-actions";
 import { useKitParts, MessageScope } from "./message-scope";
 import { ReplyQuote, jumpToMessage } from "./reply";
 
@@ -272,6 +276,7 @@ const UserMessage = ({
             ) : (
               <MessageReactionPills message={message} />
             )}
+            <MessageMenu message={message} text={body} />
           </div>
         ) : null}
         {paths.length > 0 ? (
@@ -384,7 +389,13 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
   const PartsView = Parts as ComponentType;
   return (
     <MessageScope
-      value={{ id: message.id, role: "assistant", streaming, message }}
+      value={{
+        id: message.id,
+        role: "assistant",
+        streaming,
+        message,
+        feedback: decoration?.actions,
+      }}
     >
       <MessageActions message={message} feedback={decoration?.actions}>
         <div

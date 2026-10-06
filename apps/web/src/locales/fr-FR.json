@@ -2973,6 +2973,8 @@
       "reply": "Répondre",
       "copy": "Copier le message",
       "moreReactions": "Plus de réactions",
+      "addReaction": "Ajouter une réaction",
+      "menu": "Menu du message",
       "react": "Réagir avec {{emoji}}",
       "removeReaction": "Supprimer la réaction {{emoji}}",
       "you": "Vous",

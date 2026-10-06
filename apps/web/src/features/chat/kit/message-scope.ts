@@ -1,12 +1,14 @@
 import type { UIMessage } from "@tanstack/ai-client";
 /** The message a part renders in (its role and whether it is still streaming). */
-import { createContext, use } from "react";
+import { createContext, use, type ReactNode } from "react";
 
 export interface MessageScopeValue {
   id: string;
   role: "user" | "assistant" | "system";
   streaming: boolean;
   message?: UIMessage;
+  /** The bot's feedback controls, for the first bubble's menu. */
+  feedback?: ReactNode;
 }
 
 const MessageScopeContext = createContext<MessageScopeValue>({
