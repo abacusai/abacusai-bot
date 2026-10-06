@@ -53,44 +53,64 @@ html[data-reduce-motion="on"] .bots-pop {
   .bot-form-columns > aside { width: 100%; padding: 16px 24px; }
 }
 /*
- * The identity's scroll-linked morph (spec 03 §16.2, chat/identity.tsx): the
- * bot transcript's viewport names a scroll timeline, scoped at the shell so
- * the title bar (outside the pane) can read it. Over the first 128 px of
- * scroll the header copy shrinks towards the title bar's corner and fades,
- * and the docked copy rises into place; both are one element to the eye.
- * While the timeline is inactive (nothing to scroll) or missing, the
- * IntersectionObserver's inline styles show exactly one copy.
+ * The identity's scroll-linked move (spec 03 §16.2, chat/identity.tsx): one
+ * element, laid out docked in the title bar. Each part (avatar, name,
+ * status) rests at its measured header offset (`--bi-x/y/s`, written by the
+ * stand-in's ResizeObserver) and travels to zero over the first 120 px of
+ * the transcript's scroll timeline, which the shell `timeline-scope`s so the
+ * title bar (outside the pane) can read it. The status dips out while it
+ * crosses from beneath the name to beside it. Where the animation does not
+ * run (reduced motion, no support, an inactive timeline), `data-docked`
+ * from the IntersectionObserver cuts between the two states with a 120 ms
+ * fade. Only translate, scale and opacity move; the parts are composited.
  */
 [data-slot="shell"] { timeline-scope: --chat-transcript; }
 [data-slot="message-scroller-viewport"][data-identity-timeline] { scroll-timeline-name: --chat-transcript; }
-@keyframes bot-identity-leave {
-  to { opacity: 0; translate: calc(-50cqi + 24px) -8px; scale: 0.4; }
+[data-slot="bot-identity"] > [data-part] {
+  transform-origin: 0 0;
+  translate: var(--bi-x, 0px) var(--bi-y, 0px);
+  scale: var(--bi-s, 1);
+  will-change: transform;
 }
-@keyframes bot-identity-dock {
-  from { opacity: 0; translate: 0 6px; scale: 0.85; }
-  to { opacity: 1; translate: 0 0; scale: 1; }
+[data-slot="bot-identity"][data-docked] > [data-part] { translate: 0 0; scale: 1; }
+[data-slot="bot-identity"][data-travels]:not([data-measured]) { opacity: 0; }
+[data-slot="bot-identity"][data-travels][data-measured] { transition: opacity 120ms; }
+@keyframes bot-identity-travel {
+  from { translate: var(--bi-x, 0px) var(--bi-y, 0px); scale: var(--bi-s, 1); }
+  to { translate: 0 0; scale: 1; }
 }
+@keyframes bot-identity-status-travel {
+  from { translate: var(--bi-x, 0px) var(--bi-y, 0px); scale: var(--bi-s, 1); opacity: 1; }
+  40% { opacity: 0; }
+  60% { opacity: 0; }
+  to { translate: 0 0; scale: 1; opacity: 1; }
+}
+@keyframes bot-identity-cut-dock { from { opacity: 0; } }
+@keyframes bot-identity-cut-header { from { opacity: 0; } }
 @supports (animation-timeline: scroll()) {
-  [data-slot="bot-transcript-identity"] {
-    transform-origin: 50% 0;
-    animation: bot-identity-leave linear both;
+  [data-slot="bot-identity"][data-travels] > [data-part] {
+    animation: bot-identity-travel linear both;
     animation-timeline: --chat-transcript;
-    animation-range: 0px 112px;
+    animation-range: 0px 120px;
   }
-  [data-slot="bot-docked-identity"] {
-    transform-origin: 0 50%;
-    animation: bot-identity-dock linear both;
-    animation-timeline: --chat-transcript;
-    animation-range: 48px 128px;
+  [data-slot="bot-identity"][data-travels] > [data-part="status"] {
+    animation-name: bot-identity-status-travel;
   }
 }
-/* Reduced motion: a cut between the two copies, driven by the observer. */
+/* No scroll-driven animations: the cut, with its fade. */
+@supports not (animation-timeline: scroll()) {
+  [data-slot="bot-identity"][data-travels][data-docked] { animation: bot-identity-cut-dock 120ms linear both; }
+  [data-slot="bot-identity"][data-travels]:not([data-docked]) { animation: bot-identity-cut-header 120ms linear both; }
+}
+/* Reduced motion: no travel; the cut, with its fade. */
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduce-motion="off"]) [data-slot="bot-docked-identity"] { transition: none !important; animation: none !important; }
-  html:not([data-reduce-motion="off"]) [data-slot="bot-transcript-identity"] { animation: none !important; }
+  html:not([data-reduce-motion="off"]) [data-slot="bot-identity"] > [data-part] { animation: none !important; }
+  html:not([data-reduce-motion="off"]) [data-slot="bot-identity"][data-travels][data-docked] { animation: bot-identity-cut-dock 120ms linear both; }
+  html:not([data-reduce-motion="off"]) [data-slot="bot-identity"][data-travels]:not([data-docked]) { animation: bot-identity-cut-header 120ms linear both; }
 }
-html[data-reduce-motion="on"] [data-slot="bot-docked-identity"] { transition: none !important; animation: none !important; }
-html[data-reduce-motion="on"] [data-slot="bot-transcript-identity"] { animation: none !important; }
+html[data-reduce-motion="on"] [data-slot="bot-identity"] > [data-part] { animation: none !important; }
+html[data-reduce-motion="on"] [data-slot="bot-identity"][data-travels][data-docked] { animation: bot-identity-cut-dock 120ms linear both; }
+html[data-reduce-motion="on"] [data-slot="bot-identity"][data-travels]:not([data-docked]) { animation: bot-identity-cut-header 120ms linear both; }
 
 /* Muted text on the selected row needs a stronger token than page text
    (stock palette only: a theme solves its chrome's muted text,

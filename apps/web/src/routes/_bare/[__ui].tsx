@@ -83,14 +83,7 @@ const GalleryChat = ({
         composer={{ ...slots.composer, sharedElement: false }}
         slots={{
           ...slots.chat,
-          header: (
-            <BotTranscriptIdentity
-              bot={bot}
-              onDock={() => {}}
-              onToggle={() => {}}
-              detailsOpen={false}
-            />
-          ),
+          header: <BotTranscriptIdentity bot={bot} />,
         }}
       />
     </div>

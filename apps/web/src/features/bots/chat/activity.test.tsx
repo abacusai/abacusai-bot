@@ -40,7 +40,7 @@ it("the routed avatar follows actual reasoning/text streams and the send reactio
   });
   const mood = () =>
     document
-      .querySelector('[data-slot="bot-docked-identity"] [data-mood]')
+      .querySelector('[data-slot="bot-identity"] [data-mood]')
       ?.getAttribute("data-mood");
   await screen.findByTestId("bot-chat");
   await act(async () => {
