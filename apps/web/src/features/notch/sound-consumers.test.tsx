@@ -50,7 +50,7 @@ vi.mock("#renderer/lib/motion", () => ({
 vi.mock("#renderer/lib/navigation/shared-element", () => ({
   useSharedElementName: () => undefined,
 }));
-vi.mock("#renderer/data/queries/live", () => {
+vi.mock("#renderer/data/queries/notices", () => {
   const followNotices = async (
     _t: unknown,
     subscribe: any,
@@ -61,17 +61,13 @@ vi.mock("#renderer/data/queries/live", () => {
   };
   return {
     followNotices,
-    followAttention: (t: any, receive: any, signal: AbortSignal) =>
+    followNotice: (stream: string, t: any, receive: any, signal: AbortSignal) =>
       void followNotices(
         t,
-        (options: unknown) => t.client.ai.attention({}, options),
-        receive,
-        signal
-      ),
-    followConnectorEvents: (t: any, receive: any, signal: AbortSignal) =>
-      void followNotices(
-        t,
-        (options: unknown) => t.client.connectors.events({}, options),
+        (options: unknown) =>
+          stream === "attention"
+            ? t.client.ai.attention({}, options)
+            : t.client[stream].events({}, options),
         receive,
         signal
       ),

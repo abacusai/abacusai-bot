@@ -21,7 +21,7 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";

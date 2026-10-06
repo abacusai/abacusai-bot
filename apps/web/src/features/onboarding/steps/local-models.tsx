@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { Button } from "#renderer/ui/button";
 import {

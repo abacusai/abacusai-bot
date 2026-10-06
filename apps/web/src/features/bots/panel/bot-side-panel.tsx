@@ -71,7 +71,7 @@ export const DetailsTab = ({
   const messaging = useQuery(queries.messaging());
   const routine = useCheckIn(bot.id);
   const sessions = useBotSessions(bot.id);
-  const files = useBotFiles(sessions.map((s) => s.id));
+  const files = useBotFiles(bot.id);
   const [deleting, setDeleting] = useState(false);
   const check = checkInFromRoutine(routine);
   const pinned = prefs.pinned.botIds.includes(bot.id);
@@ -365,7 +365,7 @@ export const FilesTab = ({
   const db = useDb();
   const transport = useBotsTransport();
   const sessions = useBotSessions(bot.id);
-  const files = useBotFiles(sessions.map((s) => s.id));
+  const files = useBotFiles(bot.id);
   const now = useNow();
   useEffect(() => {
     void db.collections.artifacts.preload();

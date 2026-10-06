@@ -1,20 +1,7 @@
-import { Store } from "@tanstack/react-store";
-
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
-const KEY = "abacusai-bot:abacus.sessions.reviews";
-const load = (): Record<string, Record<string, string>> => {
-  try {
-    return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-};
-export const reviewStore = new Store(load());
-reviewStore.subscribe((s) => {
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(s));
-  } catch {}
-});
+import { persistedStore } from "#renderer/lib/continuity/registry";
+export const reviewStore = persistedStore<
+  Record<string, Record<string, string>>
+>("abacusai-bot:abacus.sessions.reviews", () => ({}));
 export const reviewKey = (path: string, scope: string): string =>
   JSON.stringify([path, scope]);
 export const keepChange = (
@@ -35,9 +22,3 @@ export const isReviewed = (
 ): boolean =>
   fingerprint !== undefined &&
   reviewStore.state[id]?.[reviewKey(path, scope)] === fingerprint;
-
-bindContinuityStore(KEY, {
-  read: () => reviewStore.state,
-  write: (value) =>
-    reviewStore.setState(() => value as Record<string, Record<string, string>>),
-});

@@ -6,13 +6,14 @@ import type { PrefsPatch } from "@abacus-ai/contract/contract/rows";
  * transport, so no collection starts syncing before the boot timeouts and the
  * close handler exist (§8.6 step 5). The set lives on a global symbol, so a
  * Vite HMR re-run of this module reuses the live collections instead of
- * opening a second set of streams. The router context and `<DbProvider>`
- * hand the same instance to loaders and components; tests make their own.
+ * opening a second set of streams. The router context is the one source:
+ * loaders read it there, and the root hands the same instance to
+ * components through `<DbProvider>` (`useDb`); tests make their own.
  *
  * `prefs`, `workspaces` and `sessions` sync at once (the shell needs them);
  * the rest start on first use or a route's `collection.preload()`.
  */
-import { createCollection } from "@tanstack/db";
+import { BasicIndex, createCollection } from "@tanstack/db";
 import { createContext, use } from "react";
 
 import {
@@ -75,6 +76,16 @@ export const createDb = (
     ...overrides,
     signal: stopper.signal,
   });
+  // For the bots area's live queries: a check-in is the oldest of a bot's
+  // routines (`orderBy` with a limit), and a bot's files join its sessions
+  // on the session id. Without them TanStack DB scans: an artifact scan per
+  // session (sessions × artifacts), and warns.
+  collections.routines.createIndex((row) => row.createdAt, {
+    indexType: BasicIndex,
+  });
+  collections.artifacts.createIndex((row) => row.sessionId, {
+    indexType: BasicIndex,
+  });
   const write = createUpdatePrefs(collections.prefs, transport);
   return {
     collections,
@@ -93,7 +104,7 @@ type DbGlobal = { [GLOBAL_KEY]?: Db };
 /**
  * The document's collections, created on the first call over `transport`
  * (the one `bootstrap()` resolved); later calls, an HMR re-run included,
- * return the same set.
+ * return the same set. Only for HMR: nothing reads the global otherwise.
  */
 export const installDb = (transport: LazyTransport): Db => {
   const store = globalThis as DbGlobal;
@@ -105,11 +116,10 @@ const DbContext = createContext<Db | null>(null);
 
 export const DbProvider = DbContext.Provider;
 
-/** The collections and the prefs writer (the provider's, or the document's). */
+/** The collections and the prefs writer, from the nearest `<DbProvider>`. */
 export const useDb = (): Db => {
-  const provided = use(DbContext);
-  const db = provided ?? (globalThis as DbGlobal)[GLOBAL_KEY];
-  if (db == null) throw new Error("useDb outside <DbProvider> before boot");
+  const db = use(DbContext);
+  if (db == null) throw new Error("useDb outside <DbProvider>");
   return db;
 };
 

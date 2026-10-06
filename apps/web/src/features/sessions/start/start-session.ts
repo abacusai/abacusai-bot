@@ -11,7 +11,7 @@ import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
 import type { AppClient } from "#renderer/data/transport/types";
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+import { persistedStore } from "#renderer/lib/continuity/registry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
@@ -32,7 +32,6 @@ export interface StartDraft {
   stage: "draft" | "created" | "checkout-ready" | "handed-off";
   envelope: SubmissionEnvelope | null;
 }
-const KEY = "abacusai-bot:abacus.sessions.start";
 export const newStartDraft = (): StartDraft => ({
   id: crypto.randomUUID(),
   workspaceId: null,
@@ -41,19 +40,10 @@ export const newStartDraft = (): StartDraft => ({
   stage: "draft",
   envelope: null,
 });
-const load = (): StartDraft => {
-  try {
-    return JSON.parse(sessionStorage.getItem(KEY) ?? "null") ?? newStartDraft();
-  } catch {
-    return newStartDraft();
-  }
-};
-export const startDraftStore = new Store<StartDraft>(load());
-startDraftStore.subscribe((s) => {
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(s));
-  } catch {}
-});
+export const startDraftStore = persistedStore<StartDraft>(
+  "abacusai-bot:abacus.sessions.start",
+  newStartDraft
+);
 export const optimisticSession = (draft: StartDraft): SessionRow => {
   const now = new Date().toISOString();
   const picks = draft.envelope?.forwardedProps;
@@ -184,8 +174,3 @@ export const startSession = async (
     running.delete(store);
   }
 };
-
-bindContinuityStore(KEY, {
-  read: () => startDraftStore.state,
-  write: (value) => startDraftStore.setState(() => value as StartDraft),
-});

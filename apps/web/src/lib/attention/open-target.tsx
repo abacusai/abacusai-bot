@@ -2,7 +2,7 @@ import type { OpenCommand, OpenTarget } from "@abacus-ai/contract/contract";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 export const openTargetHref = (target: OpenTarget): string => {
   if (target.kind === "bot")

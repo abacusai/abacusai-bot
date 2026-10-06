@@ -6,11 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { cueClaim } from "#platform/attention";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
-import {
-  followAttention,
-  followConnectorEvents,
-  followNotices,
-} from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
 import { permissionCueKey } from "#renderer/lib/attention/cues";
 import { createNotifier, notifyAttention } from "#renderer/lib/notify";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -19,7 +15,6 @@ import { subscribeRunFinished } from "#renderer/lib/run-finished";
 import { createSoundPlayer } from "#renderer/lib/sound";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
-import { routineConnectorThreads } from "./attention";
 import { routineOwns } from "./notify";
 import { completionNotice, createFireHandler } from "./notify";
 const seenFires = new WeakMap<object, Set<string>>();
@@ -82,9 +77,9 @@ export const RoutinesGlobals = () => {
       (id, botId) => player.play("routine-fired", { threadId: id, botId }),
       seenFor(seenFires, transport)
     );
-    void followNotices(
+    followNotice(
+      "routines",
       transport,
-      ({ signal }) => transport.client.routines.events({}, { signal }),
       (event) => readiness.run(() => fire(event)),
       abort.signal
     );
@@ -111,7 +106,8 @@ export const RoutinesGlobals = () => {
         },
       });
     };
-    followAttention(
+    followNotice(
+      "attention",
       transport,
       (event) =>
         readiness.run(() => {
@@ -126,32 +122,17 @@ export const RoutinesGlobals = () => {
         }),
       abort.signal
     );
-    const requests = new Map<string, string>();
-    followConnectorEvents(
+    followNotice(
+      "connectors",
       transport,
-      (event) =>
-        readiness.run(() => {
-          const put = (
-            r: import("@abacus-ai/contract/contracts").ConnectorRequest
-          ) => {
-            const ref = conversationRefFromKey(r.conversationKey);
-            if (ref?.kind === "session")
-              requests.set(r.requestId, ref.sessionId);
-          };
-          if (event.type === "snapshot") {
-            requests.clear();
-            event.requests.forEach(put);
-          }
-          if (event.type === "request") {
-            put(event.request);
-            const thread = requests.get(event.request.requestId);
-            if (thread) attention(thread, event.request.requestId);
-          }
-          if (event.type === "cleared") requests.delete(event.requestId);
-          routineConnectorThreads.setState(() => [
-            ...new Set(requests.values()),
-          ]);
-        }),
+      (event) => {
+        if (event.type !== "request") return;
+        const ref = conversationRefFromKey(event.request.conversationKey);
+        if (ref?.kind === "session")
+          readiness.run(() =>
+            attention(ref.sessionId, event.request.requestId)
+          );
+      },
       abort.signal
     );
     const unsubscribe = subscribeRunFinished(transport, (notice) =>

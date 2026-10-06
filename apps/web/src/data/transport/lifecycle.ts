@@ -4,7 +4,7 @@
  * good. The browser's host transport also reports `"connecting"` (before its
  * first socket) and `"reconnecting"` (between sockets); each socket it opens
  * is a new `generation`. `"closed"` is always terminal. Consumers follow it
- * with `untilOpen` (`data/queries/live.ts`).
+ * with `untilOpen` (`data/queries/notices.ts`).
  */
 import { ORPCError } from "@orpc/client";
 

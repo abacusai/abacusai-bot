@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { useStore } from "@tanstack/react-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,14 +14,13 @@ import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
-import { routineConnectorThreads } from "./attention";
+import { useConnectorThreads } from "./attention";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
 import { routineOwns } from "./notify";
 import { RoutineSidebarRow } from "./row";
 export const RoutinesSidebar = () => {
   const { t, i18n } = useTranslation();
-  const connectorThreads = useStore(routineConnectorThreads, (state) => state);
-  const asks = new Set(connectorThreads);
+  const asks = useConnectorThreads();
   const { db, transport } = useAppContext();
   const { routines, runs, sessions, bots } = useRoutinesData();
   const status = useCollectionStatus(db.collections.routines);
@@ -195,14 +193,14 @@ export const RoutinesSidebar = () => {
   );
 };
 export const RoutinesNeedsYou = () => {
-  const connectors = useStore(routineConnectorThreads, (s) => s);
+  const connectors = useConnectorThreads();
   const { t } = useTranslation();
   const { routines, sessions } = useRoutinesData();
   const waiting = sessions.filter(
     (s) =>
       s.routineId != null &&
       routineOwns(routines.find((r) => r.id === s.routineId)) &&
-      (s.turn?.phase === "waiting_permission" || connectors.includes(s.id))
+      (s.turn?.phase === "waiting_permission" || connectors.has(s.id))
   );
   if (!waiting.length) return null;
   return (

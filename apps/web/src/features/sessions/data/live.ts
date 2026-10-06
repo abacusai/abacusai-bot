@@ -2,7 +2,7 @@ import { checkoutKey } from "@abacus-ai/contract/contract/checkout";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { Collections } from "#renderer/data/db";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 
 import { sessionsQueries } from "./queries";
@@ -97,9 +97,9 @@ export const followSessionsSources = (
           invalidateCheckout(checkout);
     }
   });
-  void followNotices(
+  followNotice(
+    "files",
     transport,
-    ({ signal }) => transport.client.files.events({}, { signal }),
     (event) => {
       if (event.type === "tree-root-changed")
         for (const checkout of checkouts(event.checkoutKey)) {

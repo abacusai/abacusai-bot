@@ -1,8 +1,10 @@
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 /** R3-T3,T4,T6,T7,T12,T15: real collections and the loader/action boundary. */
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDb, type Db } from "#renderer/data/db";
+import { createDb, DbProvider, type Db } from "#renderer/data/db";
 import {
   FixtureDb,
   fixtureTransport,
@@ -14,7 +16,13 @@ import { botAttention } from "./attention";
 import { createBot, updateBot, deleteBot, duplicateName } from "./bot-actions";
 import { loadBotChat, loadSenderChat } from "./loaders";
 import { resetOpenChats } from "./open-chat";
-import { botSessionsOf } from "./queries";
+import {
+  botSessionsOf,
+  useBotFiles,
+  useBotMemories,
+  useBotSessions,
+  useCheckIn,
+} from "./queries";
 import { createUnreadStore } from "./unread-store";
 let db: Db | undefined;
 afterEach(async () => {
@@ -251,6 +259,146 @@ describe("actions over real collections", () => {
       duplicateName("A".repeat(30), new Set(["A".repeat(28) + " 2"]))
     ).toBe("A".repeat(28) + " 3");
   });
+});
+describe("R3-T6 the bot's rows, filtered in the live query", () => {
+  it("joins sessions by owner.botId and the check-in's runs, files by session, memories by bot and scope", async () => {
+    const { bot, forever, sender, run, feed, db } = await setup();
+    // Oldest first: the run, then the sender chat, then the forever chat.
+    feed.sessions.upsert({ ...run, createdAt: "2026-01-01T00:00:01.000Z" });
+    feed.sessions.upsert({ ...sender, createdAt: "2026-01-01T00:00:02.000Z" });
+    feed.sessions.upsert({ ...forever, createdAt: "2026-01-01T00:00:03.000Z" });
+    feed.sessions.upsert({
+      ...fixtureSessions()[0]!,
+      id: "s-other",
+      owner: null,
+      routineId: null,
+    });
+    const artifact = (id: string, sessionId: string, updatedAt: number) =>
+      ({ id, sessionId, updatedAt }) as never;
+    feed.artifacts.upsert(artifact("a-old", "s-forever", 1));
+    feed.artifacts.upsert(artifact("a-new", "s-run", 2));
+    feed.artifacts.upsert(artifact("a-other", "s-other", 3));
+    const memory = (id: string, scope: string, botId: string | null) =>
+      ({ id, scope, botId, index: id.length, entry: id }) as never;
+    feed.memories.upsert(memory("m-bot", "bot", bot.id));
+    feed.memories.upsert(memory("m-global", "global", bot.id));
+    feed.memories.upsert(memory("m-else", "bot", "another-bot"));
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(DbProvider, { value: db }, children);
+    const { result, unmount } = renderHook(
+      () => {
+        const sessions = useBotSessions(bot.id);
+        return {
+          sessions: sessions.map((s) => s.id),
+          files: useBotFiles(bot.id).map((a) => a.id),
+          memories: useBotMemories(bot.id).map((m) => m.id),
+        };
+      },
+      { wrapper }
+    );
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        sessions: ["s-run", "s-sender", "s-forever"],
+        files: ["a-new", "a-old"],
+        memories: ["m-bot"],
+      })
+    );
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+
+  it("keeps one query across new sessions and check-ins: the rows change, never back to empty", async () => {
+    const { bot, forever, routine, feed, db } = await setup();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(DbProvider, { value: db }, children);
+    const seen: string[][] = [];
+    const { result, unmount } = renderHook(
+      () => {
+        const ids = useBotSessions(bot.id).map((s) => s.id);
+        seen.push(ids);
+        return { ids, checkIn: useCheckIn(bot.id)?.id };
+      },
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.ids).toHaveLength(3));
+    const first = seen.findIndex((ids) => ids.length > 0);
+    feed.sessions.upsert({ ...forever, id: "s-later" });
+    await waitFor(() => expect(result.current.ids).toContain("s-later"));
+    // An older exact-prompt routine is the check-in now: its runs join, the
+    // old one's leave, in the same query.
+    feed.routines.upsert({ ...routine, id: "routine-older", createdAt: 0 });
+    feed.sessions.upsert({
+      ...forever,
+      id: "s-older-run",
+      owner: null,
+      routineId: "routine-older",
+    });
+    await waitFor(() => expect(result.current.checkIn).toBe("routine-older"));
+    await waitFor(() =>
+      expect(result.current.ids).toEqual(
+        expect.arrayContaining(["s-older-run", "s-forever", "s-later"])
+      )
+    );
+    expect(result.current.ids).not.toContain("s-run");
+    expect(seen.slice(first).every((ids) => ids.length > 0)).toBe(true);
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+
+  it("joins a large bot's files by session id in bounded time", async () => {
+    const { bot, forever } = await setup();
+    const SESSIONS = 2_000;
+    const ARTIFACTS = 20_000;
+    const feed = new FixtureDb({
+      bots: [bot],
+      sessions: Array.from({ length: SESSIONS }, (_, i) => ({
+        ...forever,
+        id: `s-${i}`,
+      })),
+      artifacts: Array.from(
+        { length: ARTIFACTS },
+        (_, i) =>
+          ({
+            id: `a-${i}`,
+            // Every other artifact belongs to another bot's session.
+            sessionId: i % 2 === 0 ? `s-${i % SESSIONS}` : `elsewhere-${i}`,
+            updatedAt: i,
+          }) as never
+      ),
+    });
+    const large = createDb(fixtureTransport(feed));
+    await Promise.all([
+      large.collections.sessions.preload(),
+      large.collections.routines.preload(),
+      large.collections.artifacts.preload(),
+    ]);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(DbProvider, { value: large }, children);
+    const started = performance.now();
+    const { result, unmount } = renderHook(() => useBotFiles(bot.id), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current).toHaveLength(ARTIFACTS / 2), {
+      timeout: 20_000,
+    });
+    const built = performance.now() - started;
+    const before = performance.now();
+    feed.artifacts.upsert({
+      id: "a-new",
+      sessionId: "s-7",
+      updatedAt: ARTIFACTS,
+    } as never);
+    await waitFor(() => expect(result.current[0]?.id).toBe("a-new"));
+    const updated = performance.now() - before;
+    // Measured ~300 ms to build and ~50 ms per change here; without the
+    // `artifacts.sessionId` index the build scans artifacts per session
+    // (~7.5 s). Generous bounds: this guards the order of growth.
+    expect(built).toBeLessThan(2_500);
+    expect(updated).toBeLessThan(500);
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    large.stop();
+  }, 60_000);
 });
 describe("attention and unread", () => {
   it("joins ownerless check-in runs; each waiting session contributes independently", async () => {

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { applyAttention, emptyAttention } from "#renderer/lib/attention/events";
 import { runFinishedFeed } from "#renderer/lib/run-finished";

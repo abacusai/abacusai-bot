@@ -2,7 +2,7 @@ import type { BrowserPermissionRequest } from "@abacus-ai/contract/contracts";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
 import { Button } from "#renderer/ui/button";
 
 import { useSessionsTransport } from "../data/queries";
@@ -13,9 +13,9 @@ export const BrowserAskHost = () => {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const abort = new AbortController();
-    void followNotices(
+    followNotice(
+      "browser",
       transport,
-      ({ signal }) => transport.client.browser.events({}, { signal }),
       (event) => {
         if (event.type === "snapshot") setAsks(event.permissionRequests);
         if (event.type === "permission-request")
