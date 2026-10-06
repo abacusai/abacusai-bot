@@ -265,9 +265,25 @@ export const hostIdentity = (): HostIdentity | undefined => identified;
  * The blocking step: the user's host, or the sign-in or tier refusal that
  * replaces the app. A development host (`VITE_WEB_HOST_URL`) is ready at once.
  */
+/** A development host (`VITE_WEB_HOST_URL`): no apps server behind the page. */
+const devHostUrl = (): string | undefined =>
+  import.meta.env.DEV ? import.meta.env.VITE_WEB_HOST_URL : undefined;
+
+/**
+ * Boot, before the identity step: the bot account behind this sign-in, set up
+ * as the desktop's connect does (a fresh sign-up gets the bot's free tier), so
+ * no gated call ever runs on an account the bot has not set up. Refusals map
+ * like the identity step's: signed out is the sign-in screen.
+ */
+export const setUpBotAccount = async (): Promise<void> => {
+  if (devHostUrl()) return;
+  await callApps("setUpAbacusaibotWebAccount", {});
+};
+
 export const identifyHost = async (): Promise<HostIdentity> => {
-  if (import.meta.env.DEV && import.meta.env.VITE_WEB_HOST_URL) {
-    const url = new URL(import.meta.env.VITE_WEB_HOST_URL);
+  const devHost = devHostUrl();
+  if (devHost) {
+    const url = new URL(devHost);
     if (!/^wss?:$/.test(url.protocol))
       throw new ConnectError(
         "connection",
