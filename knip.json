@@ -60,7 +60,6 @@
       "project": ["src/**/*.ts", "scripts/*.mjs", "*.config.ts"],
       "ignoreExportsUsedInFile": true,
       "ignoreDependencies": [
-        "@abacus-ai/agent",
         "@abacus-ai/connectors",
         "@abacus-ai/updater",
         "extract-zip",

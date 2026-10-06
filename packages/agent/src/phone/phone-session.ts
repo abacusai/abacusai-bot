@@ -9,7 +9,7 @@ import type { PagePublisher } from "./phone-page-tool.js";
 import { createPhoneProfile } from "./phone-profile.js";
 
 export type { PagePublisher, PhonePage } from "./phone-page-tool.js";
-export { PHONE_BUBBLE_MARKER } from "./phone-prompts.js";
+export { PHONE_BUBBLE_MARKER } from "./phone-bubbles.js";
 
 export interface PhoneSessionOptions extends ForeverEngineOptions {
   /** How `page` publishes; the hosted app wires it to its server endpoint. */
