@@ -745,3 +745,119 @@ describe("the decision envelope (§3.5.2, §7.5)", () => {
     }
   }
 });
+
+describe("operator user metadata", () => {
+  it.each(["send", "run"])(
+    "emits a tagged %s without changing model text",
+    async (wire) => {
+      const text = "operator rules\n\n[Ada] hello";
+      const userText = {
+        operator: { kind: "auto-reply-intro" as const, visibleFrom: 16 },
+      };
+      let received = "";
+      const s = await scripted(async (api) => {
+        received = api.text;
+        api.settled();
+      });
+      try {
+        s.send(
+          wire === "send"
+            ? { type: "send", message: text, userText }
+            : {
+                ...run("op", text),
+                input: {
+                  ...run("op", text).input,
+                  messages: [
+                    {
+                      id: "u-op",
+                      role: "user",
+                      content: text,
+                      metadata: { abacus: { userText } },
+                    },
+                  ],
+                },
+              }
+        );
+        await s.waitFor(
+          () => s.events().some((e) => e.type === "RUN_FINISHED"),
+          "turn finished"
+        );
+        expect(received).toBe(text);
+        const processor = new StreamProcessor();
+        for (const event of s.events()) processor.processChunk(event as never);
+        const user = processor
+          .getMessages()
+          .find((message) => message.role === "user");
+        expect(user?.metadata?.abacus?.userText).toEqual(userText);
+        expect(user?.parts).toEqual([{ type: "text", content: text }]);
+      } finally {
+        await s.close();
+      }
+    }
+  );
+});
+
+it.each([false, true])(
+  "preserves operator tags when a busy send is drained or steered (%s)",
+  async (landed) => {
+    let api: Parameters<Parameters<typeof scripted>[0]>[0] | undefined;
+    const s = await scripted(async (turn) => {
+      if (turn.index === 1) {
+        api = turn;
+        await turn.gate("release");
+      }
+      turn.settled();
+    });
+    const text = "rules\n\n[Ada] hello";
+    const userText = {
+      operator: { kind: "auto-reply-reminder" as const, visibleFrom: 7 },
+    };
+    try {
+      s.send({ type: "send", message: "first" });
+      await s.waitFor(() => api != null, "first turn held");
+      s.send({ type: "send", message: text, userText });
+      await s.waitFor(
+        () =>
+          s
+            .custom<{ messages: Array<{ userText?: unknown }> }>(
+              "queue.updated"
+            )
+            .at(-1)?.messages.length === 1,
+        "operator queued"
+      );
+      expect(
+        s
+          .custom<{ messages: Array<{ userText?: unknown }> }>("queue.updated")
+          .at(-1)?.messages[0]?.userText
+      ).toEqual(userText);
+      if (landed) api!.agent({ type: "user_message_steered", content: text });
+      s.session.open("release");
+      await s.waitFor(
+        () =>
+          s
+            .events()
+            .some(
+              (event) =>
+                event.type === "TEXT_MESSAGE_CONTENT" &&
+                (event as { delta?: string }).delta === text
+            ),
+        "operator echoed"
+      );
+      const start = s
+        .events()
+        .filter(
+          (event) =>
+            event.type === "TEXT_MESSAGE_START" &&
+            (event as { role?: string }).role === "user"
+        )
+        .at(-1);
+      expect(
+        (start as { metadata?: { abacus?: { userText?: unknown } } })?.metadata
+          ?.abacus?.userText
+      ).toEqual(userText);
+    } finally {
+      s.session.open("release");
+      await s.close();
+    }
+  }
+);

@@ -1,6 +1,11 @@
 import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 
-import type { AgentMode, AgentStatus, SkillMetadata } from "./agent-types";
+import type {
+  AgentMode,
+  AgentStatus,
+  SkillMetadata,
+  UserTextTags,
+} from "./agent-types";
 import type {
   ConversationKey,
   ConversationRef,
@@ -399,6 +404,7 @@ export interface SendAgentMessageRequest {
   workspaceId: string;
   sessionId: string;
   message: string;
+  userText?: UserTextTags;
   attachments?: Array<{
     id: string;
     name: string;

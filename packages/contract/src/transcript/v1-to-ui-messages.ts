@@ -46,11 +46,12 @@ import type {
   VideoPart,
 } from "@tanstack/ai";
 
+import type { UserTextTags } from "../agent-types";
 import {
   attachmentRefs,
   hasSystemReminder,
   isRoutineFire,
-  type AttachmentRef,
+  legacyOperator,
 } from "./user-text";
 
 /** One v1 segment's trace in a v2 message (`metadata.abacus.segments[]`). */
@@ -84,15 +85,7 @@ export interface SegmentProvenance {
   extra?: Record<string, unknown>;
 }
 
-/** Tags on a migrated user message (spec 02 §5, `user-text.ts`). */
-export interface UserTextTags {
-  /** A routine firing: the old UI hides the whole message. */
-  routineFire?: true;
-  /** Holds `<system_reminder>` blocks, which the old UI strips. */
-  systemReminder?: true;
-  /** The `@/abs/path` mentions the old UI shows as pills and thumbnails. */
-  attachments?: AttachmentRef[];
-}
+export type { UserTextTags } from "../agent-types";
 
 export interface AbacusMessageMetadata {
   segments: SegmentProvenance[];
@@ -1032,6 +1025,7 @@ export function v1ToUiMessages(segments: readonly unknown[]): UIMessage[] {
   const userTags = (content: string): UserTextTags | undefined => {
     const attachments = attachmentRefs(content);
     const tags = defined<UserTextTags>({
+      operator: legacyOperator(content),
       routineFire: isRoutineFire(content) ? true : undefined,
       systemReminder: hasSystemReminder(content) ? true : undefined,
       attachments: attachments.length === 0 ? undefined : attachments,

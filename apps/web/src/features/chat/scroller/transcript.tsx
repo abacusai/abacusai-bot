@@ -538,7 +538,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     total: visible.length,
     first: visible[0]?.id,
   });
-  const marker = useNewMarker(messages);
+  const marker = useNewMarker(visible);
 
   // Follow list changes (a page mounts above; the end follows new rows).
   if (

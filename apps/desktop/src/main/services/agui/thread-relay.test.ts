@@ -1056,3 +1056,24 @@ describe("applyJsonPatch", () => {
     ).toEqual({});
   });
 });
+
+it("persists user operator metadata in the thread and hydration", () => {
+  const h = make();
+  const turn = run("op", "rules\n\n[Ada] hello");
+  const userText = { operator: { kind: "auto-reply-intro", visibleFrom: 7 } };
+  turn.start[1]!.metadata = { abacus: { userText } };
+  for (const event of [
+    ...turn.start,
+    ...turn.reply("a-op", "hello"),
+    turn.finished,
+  ])
+    h.relay.ingest(event);
+  const user = h.persisted
+    .at(-1)
+    ?.messages.find((message) => message.role === "user");
+  expect(user?.metadata?.abacus?.userText).toEqual(userText);
+  expect(
+    h.relay.checkpoint().messages.find((message) => message.role === "user")
+      ?.metadata?.abacus?.userText
+  ).toEqual(userText);
+});

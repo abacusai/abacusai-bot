@@ -11,6 +11,7 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 
+import { hiddenUserMessage, userMessageText } from "../user-message";
 import { turnDeliverables, type TurnDeliverable } from "./deliverables";
 import { gapStamp, messageTime } from "./gap-stamp";
 import { isEmojiOnly, turnReaction } from "./reactions";
@@ -116,7 +117,7 @@ export function botThreadView(
 ): BotMessageView[] {
   const views: BotMessageView[] = messages.map((message) => ({
     ...HIDDEN,
-    hidden: message.role !== "user",
+    hidden: message.role !== "user" || hiddenUserMessage(message),
   }));
   const turns = turnsOf(messages);
   turns.forEach((turn, turnIndex) => {
@@ -180,6 +181,38 @@ export function botVisibleMessage(
   messages: readonly UIMessage[],
   runActive: boolean
 ): UIMessage {
+  if (message.role === "user") {
+    if (hiddenUserMessage(message))
+      return message.parts.length === 0 ? message : { ...message, parts: [] };
+    const raw = message.parts
+      .filter((part) => part.type === "text")
+      .map((part) => part.content)
+      .join("");
+    const content = userMessageText(message);
+    if (content === raw) return message;
+    const tags = message.metadata?.abacus?.userText as
+      | import("@abacus-ai/contract/agent-types").UserTextTags
+      | undefined;
+    return {
+      ...message,
+      parts: [
+        { type: "text", content },
+        ...message.parts.filter((part) => part.type !== "text"),
+      ],
+      metadata: {
+        ...message.metadata,
+        abacus: {
+          ...message.metadata?.abacus,
+          ...(tags?.operator != null && {
+            userText: {
+              ...tags,
+              operator: { ...tags.operator, visibleFrom: 0 },
+            },
+          }),
+        },
+      },
+    };
+  }
   if (message.role !== "assistant") return message;
   const index = messages.findIndex((row) => row.id === message.id);
   const turn = turnsOf(messages).find((row) =>

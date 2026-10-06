@@ -357,6 +357,7 @@ import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
   environmentNoticeService,
   messageWithEnvironmentNotice,
+  tagEnvironmentNotice,
 } from "./services/providers/environment-notice-service";
 import {
   backendStatuses,
@@ -1239,8 +1240,8 @@ export class ServiceHost {
     },
     startSession: (workspaceId, sessionId, mode) =>
       this.startAgentSession({ workspaceId, sessionId, mode }),
-    sendMessage: (workspaceId, sessionId, message) => {
-      void this.sendAgentMessage({ workspaceId, sessionId, message });
+    sendMessage: (workspaceId, sessionId, message, userText) => {
+      void this.sendAgentMessage({ workspaceId, sessionId, message, userText });
     },
     emitUserMessage: (workspaceId, sessionId, content) => {
       this.emitEvent({
@@ -1321,8 +1322,8 @@ export class ServiceHost {
     },
     startSession: (workspaceId, sessionId) =>
       this.startAgentSession({ workspaceId, sessionId }),
-    sendMessage: (workspaceId, sessionId, message) => {
-      void this.sendAgentMessage({ workspaceId, sessionId, message });
+    sendMessage: (workspaceId, sessionId, message, userText) => {
+      void this.sendAgentMessage({ workspaceId, sessionId, message, userText });
     },
     removeSession: (workspaceId, sessionId) => {
       this.removeAgentSession(workspaceId, sessionId);
@@ -2879,7 +2880,7 @@ export class ServiceHost {
         request.message,
         await this.describeEnvironment(request.workspaceId)
       );
-      return message === request.message ? request : { ...request, message };
+      return tagEnvironmentNotice(request, message);
     } catch (err) {
       // A note is a nicety; it must never cost the user their message.
       console.error(
@@ -3978,6 +3979,12 @@ export class ServiceHost {
       workspaceId,
       sessionId: editor.id,
       message: prompt,
+      userText: {
+        operator: {
+          kind: "routine-editor",
+          visibleFrom: prompt.length - text.length,
+        },
+      },
     });
     if (!delivered) {
       this.turnWaiters.delete(editor.id);
@@ -4243,6 +4250,7 @@ export class ServiceHost {
       workspaceId: target,
       sessionId: session.id,
       message: prompt,
+      userText: { routineFire: true },
     });
     recordRun(jobId, startedResult(session.id), trigger, {
       kind: "started",

@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { Spinner } from "#renderer/components/spinner";
 import { useAppHotkey } from "#renderer/lib/hotkeys";
 import { useMotionPreference } from "#renderer/lib/motion";
+import { hiddenUserMessage } from "#renderer/lib/user-message";
 import { Button } from "#renderer/ui/button";
 import {
   MessageScrollerProvider,
@@ -109,13 +110,16 @@ const Announcer = () => {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awayFromEnd = scrollable.end;
   useEffect(() => {
-    const last = messages.at(-1)?.id ?? null;
+    const visibleMessages = messages.filter(
+      (message) => !hiddenUserMessage(message)
+    );
+    const last = visibleMessages.at(-1)?.id ?? null;
     if (seen.current == null) {
       seen.current = {
         outcomes: new Set(outcomes.map((o) => o.runId)),
         permissions: new Set(items.map((i) => i.id)),
         lastMessageId: last,
-        count: messages.length,
+        count: visibleMessages.length,
         unread: 0,
       };
       return;
@@ -150,10 +154,10 @@ const Announcer = () => {
     }
     // Appended at the end (a page prepends and keeps the last id).
     if (last !== state.lastMessageId) {
-      const added = Math.max(0, messages.length - state.count);
+      const added = Math.max(0, visibleMessages.length - state.count);
       const fromOthers =
-        messages.at(-1)?.role !== "user" &&
-        messages.at(-1)?.metadata?.abacus?.pending !== true;
+        visibleMessages.at(-1)?.role !== "user" &&
+        visibleMessages.at(-1)?.metadata?.abacus?.pending !== true;
       if (added > 0 && fromOthers && awayFromEnd) {
         state.unread += added;
         const next = {
@@ -169,7 +173,7 @@ const Announcer = () => {
     state.outcomes = new Set(outcomes.map((o) => o.runId));
     state.permissions = new Set(items.map((i) => i.id));
     state.lastMessageId = last;
-    state.count = messages.length;
+    state.count = visibleMessages.length;
     const flush = () => {
       const next = queue.current.shift();
       if (next == null) {

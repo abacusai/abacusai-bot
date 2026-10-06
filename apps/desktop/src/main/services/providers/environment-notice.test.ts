@@ -37,6 +37,7 @@ const {
   environmentNoticeService,
   formatEnvironmentNotice,
   messageWithEnvironmentNotice,
+  tagEnvironmentNotice,
 } = await import("./environment-notice-service");
 const { McpConfigService } = await import("../mcp/mcp-config-service");
 const messagingConfig = await import("../messaging/messaging-config-service");
@@ -382,4 +383,48 @@ describe("every way the environment changes raises the flag", () => {
     expect(environmentNoticeService.isPending(SESSION)).toBe(true);
     fs.rmSync(source, { recursive: true, force: true });
   });
+});
+
+it("tags the trailing environment notice without replacing an operator prefix", () => {
+  const request = { workspaceId: "w", sessionId: "s", message: "hello" };
+  expect(tagEnvironmentNotice(request, "hello")).toBe(request);
+  expect(
+    tagEnvironmentNotice(
+      request,
+      "hello\n\n<system_reminder>tools</system_reminder>"
+    ).userText
+  ).toEqual({
+    systemReminder: true,
+    operator: { kind: "environment-notice", visibleFrom: 0 },
+  });
+  const tagged = {
+    ...request,
+    userText: { operator: { kind: "kickstart" as const } },
+  };
+  expect(
+    tagEnvironmentNotice(tagged, "hello plus notice").userText?.operator
+  ).toBe(tagged.userText.operator);
+  const prefixed = {
+    ...request,
+    userText: {
+      operator: { kind: "auto-reply-intro" as const, visibleFrom: 12 },
+    },
+  };
+  expect(
+    tagEnvironmentNotice(prefixed, "hello plus notice").userText?.operator
+  ).toBe(prefixed.userText.operator);
+});
+
+it("keeps a legacy operator hidden when an environment notice is appended", () => {
+  const request = {
+    workspaceId: "w",
+    sessionId: "s",
+    message: "[first run] Introduce yourself",
+  };
+  expect(
+    tagEnvironmentNotice(
+      request,
+      `${request.message}\n\n<system_reminder>tools</system_reminder>`
+    ).userText
+  ).toEqual({ systemReminder: true, operator: { kind: "kickstart" } });
 });
