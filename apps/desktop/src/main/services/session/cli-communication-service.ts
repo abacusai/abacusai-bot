@@ -56,6 +56,7 @@ export class AgentCommunicationService {
       message: request.message,
       conversationId: request.conversationId,
       activeSkills: request.activeSkills,
+      ...(request.userText != null && { userText: request.userText }),
     });
   }
 

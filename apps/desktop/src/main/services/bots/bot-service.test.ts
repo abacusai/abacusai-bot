@@ -99,14 +99,16 @@ describe("opening the forever chat", () => {
     expect(callbacks.sendMessage).toHaveBeenCalledWith(
       "ws-default",
       "session-1",
-      expect.stringContaining("[first run]")
+      expect.stringContaining("[first run]"),
+      { operator: { kind: "kickstart" } }
     );
     // The kickstart is the user message every tool round keeps answering, so
     // it has to say the greeting is a one-off itself.
     expect(callbacks.sendMessage).toHaveBeenCalledWith(
       "ws-default",
       "session-1",
-      expect.stringContaining("No second greeting")
+      expect.stringContaining("No second greeting"),
+      { operator: { kind: "kickstart" } }
     );
   });
 
@@ -392,6 +394,9 @@ describe("an edit the bot should hear about", () => {
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
     const text = String(sendMessage.mock.calls[0]?.[2]);
+    expect(sendMessage.mock.calls[0]?.[3]).toEqual({
+      operator: { kind: "mission-updated" },
+    });
     expect(text).toContain("[mission updated]");
     expect(text).toContain("your mission");
     expect(text).toContain("weekdays at 09:00");

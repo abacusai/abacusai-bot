@@ -1,3 +1,4 @@
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentMode, AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { DesktopEvent } from "@abacus-ai/contract/agent-types";
 import type {
@@ -160,7 +161,8 @@ type GatewayOptions = {
   sendMessage: (
     workspaceId: string,
     sessionId: string,
-    message: string
+    message: string,
+    userText?: UserTextTags
   ) => void;
   /**
    * Show the incoming message in the session's transcript. The composer echoes
@@ -1136,13 +1138,30 @@ export class MessagingGatewayService {
         : route.viaBot
           ? `${REPLY_REMINDER}\n\n${framed}`
           : framed;
+    const userText: UserTextTags | undefined =
+      prompt === framed
+        ? undefined
+        : {
+            operator: {
+              kind:
+                route.pendingIntro != null
+                  ? "auto-reply-intro"
+                  : "auto-reply-reminder",
+              visibleFrom: prompt.length - framed.length,
+            },
+          };
     route.pendingIntro = null;
     // Echoed at dispatch, not arrival, so a queued message lands in the
     // transcript next to the turn it started. The rules ride along to the
     // model but never into the transcript: they are the same paragraph every
     // turn, and reading them is not reading the conversation.
     this.options.emitUserMessage(route.workspaceId, route.sessionId, framed);
-    this.options.sendMessage(route.workspaceId, route.sessionId, prompt);
+    this.options.sendMessage(
+      route.workspaceId,
+      route.sessionId,
+      prompt,
+      userText
+    );
   }
 
   /**

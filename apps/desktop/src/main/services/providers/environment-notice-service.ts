@@ -1,3 +1,5 @@
+import type { SendAgentMessageRequest } from "@abacus-ai/contract/contracts";
+import { legacyOperator } from "@abacus-ai/contract/transcript/user-text";
 /**
  * Tells a running conversation that its tools and resources changed.
  *
@@ -124,3 +126,24 @@ export class EnvironmentNoticeService {
 
 /** One instance for the process, so config services need no dependency. */
 export const environmentNoticeService = new EnvironmentNoticeService();
+
+/** The notice is a trailing system_reminder. Preserve an existing prefix's offset. */
+export const tagEnvironmentNotice = (
+  request: SendAgentMessageRequest,
+  message: string
+): SendAgentMessageRequest =>
+  message === request.message
+    ? request
+    : {
+        ...request,
+        message,
+        userText: {
+          ...request.userText,
+          systemReminder: true,
+          operator: request.userText?.operator ??
+            legacyOperator(request.message) ?? {
+              kind: "environment-notice",
+              visibleFrom: 0,
+            },
+        },
+      };

@@ -1269,3 +1269,31 @@ it("run-finished cursors older than retention require resync, including a cursor
     expect.objectContaining({ code: "RESYNC_REQUIRED" })
   );
 });
+
+it("passes operator display tags through ai.send without rewriting the wire prompt", async () => {
+  const { agent, client } = setup();
+  agent.answer = (command) =>
+    command.type === "run"
+      ? started((command.input as { runId: string }).runId)
+      : [];
+  const content = "rules\n\n[Ada] hello";
+  const userText = { operator: { kind: "auto-reply-intro", visibleFrom: 7 } };
+  await client.ai.send({
+    threadId: "s1",
+    runId: "op-run",
+    messages: [
+      {
+        ...userMessage("op-user", content),
+        metadata: { abacus: { userText } },
+      },
+    ],
+  });
+  expect(
+    (agent.commands[0]?.input as { messages: unknown[] }).messages[0]
+  ).toMatchObject({
+    id: "op-user",
+    role: "user",
+    content,
+    metadata: { abacus: { userText } },
+  });
+});
