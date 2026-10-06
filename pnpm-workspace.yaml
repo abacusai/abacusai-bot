@@ -46,6 +46,12 @@ allowBuilds:
 # high SSRF / host-confusion advisories (GHSA-5jgf-p345-68v8, GHSA-qw65-cvwx-89v3
 # and siblings).
 overrides:
+  # Patched releases for the October 2026 dependency audit.
+  seroval: ^1.6.1
+  source-map-js: ^1.2.2
+  proxy-addr: ^2.0.8
+  tinypool: ^2.1.2
+  "@modelcontextprotocol/sdk": ^1.31.0
   # Keep each dependency on its existing major while fixing the October 2026
   # HTTP-parser and brace-expansion denial-of-service advisories.
   "undici@^6": ^6.28.1

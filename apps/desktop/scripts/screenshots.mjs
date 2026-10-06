@@ -458,7 +458,7 @@ const waitFor = async (cdp, expression, timeoutMs = 5_000) => {
  * ms apart (springs run on frames, not the Animations API). `stable: false`
  * on timeout.
  */
-const waitStable = async (cdp, expression, timeoutMs = 4_000) => {
+export const waitStable = async (cdp, expression, timeoutMs = 4_000) => {
   const deadline = Date.now() + timeoutMs;
   let last = "";
   let same = 0;
@@ -611,7 +611,10 @@ const main = async () => {
             await animationsDone(cdp);
             await sleep(180);
           }
-          const geometry = await cdp.evaluate(`(() => {
+          await animationsDone(cdp);
+          const settledGeometry = await waitStable(
+            cdp,
+            `(() => {
             const pane = document.querySelector('[data-slot="pane"]')?.getBoundingClientRect();
             const identity = document.querySelector('[data-slot="topbar-identity"]')?.getBoundingClientRect();
             const leading = document.querySelector('[data-slot="topbar-leading"]')?.getBoundingClientRect();
@@ -629,8 +632,12 @@ const main = async () => {
               supports: CSS.supports('width', 'calc(var(--rail-w) + var(--sidebar-occupied-w) - var(--titlebar-x))'),
               dark: document.documentElement.classList.contains('dark'),
             };
-          })()`);
+          })()`
+          );
+          const geometry = settledGeometry.value;
           const name = `${slug(route)}@${width}-${theme}.png`;
+          if (!settledGeometry.stable)
+            failures.push(`${name}: geometry did not settle`);
 
           if (geometry.dark !== (theme === "dark"))
             failures.push(`${name}: wrong theme`);

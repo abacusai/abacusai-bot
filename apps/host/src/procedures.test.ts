@@ -99,6 +99,10 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "NOT_FOUND",
     message: "No session fixture",
   },
+  "ai.react": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
   "ai.respondPermission": {
     code: "UNAVAILABLE",
     message: "The agent is not running",
@@ -264,10 +268,23 @@ it("calls every retained procedure under the shim through a memory transport", a
         expectedFailures[name]?.code === "20" ? 1000 : 30_000
       );
       try {
+        const listeners = host.deps.bus.listenerCount();
         const value = await client(input, { signal: abort.signal });
         if (value && typeof value.next === "function") {
           try {
-            await value.next();
+            const first = value.next();
+            if (name === "files.events") {
+              await vi.waitFor(() =>
+                expect(host.deps.bus.listenerCount()).toBeGreaterThan(listeners)
+              );
+              host.deps.bus.dispatch({
+                type: "file-tree-root-updated",
+                emittedAt: new Date().toISOString(),
+              });
+              await expect(first).resolves.toMatchObject({
+                value: { type: "tree-root-changed" },
+              });
+            } else await first;
           } finally {
             abort.abort();
             await value.return?.();

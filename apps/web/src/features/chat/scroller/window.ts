@@ -13,7 +13,8 @@
  * back to the newest rows with default tool ranges.
  */
 export const MAX_ROWS = 100;
-const STEP = 50;
+// Keep history and tool expansion inside the 50 ms interaction budget.
+const STEP = 25;
 const TOOL_PAGE = 50;
 /** Placeholder height per row never measured (§10). */
 export const ROW_FALLBACK_PX = 64;
@@ -128,7 +129,7 @@ export const newestWindow = (
   return fit(items, { start, end, ranges }, "top");
 };
 
-/** "Show earlier": at least `STEP` more rows above, evicting from below. */
+/** "Show earlier": a history page above, evicting from below. */
 export const showEarlier = (
   items: readonly RowItem[],
   state: WindowState
@@ -142,7 +143,7 @@ export const showEarlier = (
   return fit(items, { ...state, start }, "bottom");
 };
 
-/** "Show later": at least `STEP` more rows below, evicting from above. */
+/** "Show later": a history page below, evicting from above. */
 export const showLater = (
   items: readonly RowItem[],
   state: WindowState

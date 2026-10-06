@@ -133,6 +133,8 @@ export function runSnapshotFixtures(
       stdout = execFileSync(command, args, {
         encoding: "utf8",
         timeout: 120_000,
+        // Electron can ignore SIGTERM while a renderer is stuck.
+        killSignal: "SIGKILL",
         maxBuffer: 32 * 1024 * 1024,
         env: {
           ...process.env,

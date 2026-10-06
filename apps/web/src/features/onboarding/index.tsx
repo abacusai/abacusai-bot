@@ -304,5 +304,3 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     </section>
   );
 };
-
-export { type OnboardingExit } from "./actions";

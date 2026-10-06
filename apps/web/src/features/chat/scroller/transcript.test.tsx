@@ -59,7 +59,7 @@ describe("R2-T16 window (pure)", () => {
       window = showEarlier(items, window);
       expect(window.end - window.start).toBeLessThanOrEqual(MAX_ROWS);
     }
-    expect(window.start).toBe(3000 - MAX_ROWS - 500);
+    expect(window.start).toBe(3000 - MAX_ROWS - 250);
     for (let i = 0; i < 10; i += 1) window = showLater(items, window);
     expect(window).toEqual({ start: 3000 - MAX_ROWS, end: 3000, ranges: {} });
     expect(
@@ -173,7 +173,7 @@ describe("R2-T16 transcript", () => {
       window = moreSteps(items, window, "huge");
       expect(mountedRows(items, window)).toBeLessThanOrEqual(MAX_ROWS);
     }
-    expect(window.ranges.huge!.end).toBe(550);
+    expect(window.ranges.huge!.end).toBe(300);
     expect(window.ranges.huge!.start).toBeGreaterThan(0);
   });
 
@@ -283,6 +283,7 @@ describe("r2 pageable message units", () => {
     fireEvent.click(await screen.findByRole("button", { name: /step-0\b/ }));
     expect(await screen.findByText("result-0")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+    fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
     fireEvent.click(await screen.findByRole("button", { name: /step-70\b/ }));
     expect(await screen.findByText("result-70")).toBeTruthy();
     expect(screen.queryByText("result-0")).toBeNull();
@@ -340,10 +341,11 @@ describe("r2 pageable message units", () => {
     fireEvent.click(header);
     expect(header.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+    fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
     await waitFor(() =>
       expect(document.querySelectorAll("[data-tool]").length).toBeGreaterThan(0)
     );
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 7; i++) {
       const more = screen.queryByRole("button", { name: /more steps/i });
       if (more) fireEvent.click(more);
       expect(
@@ -379,9 +381,10 @@ describe("r2 pageable message units", () => {
           '[data-slot="subagent-row"], [data-slot="message-scroller-item"]'
         ).length;
       expect(count()).toBeLessThanOrEqual(MAX_ROWS);
-      fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
-      expect(count()).toBeLessThanOrEqual(MAX_ROWS);
-      fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+      for (let i = 0; i < 4; i++) {
+        fireEvent.click(screen.getByRole("button", { name: /more steps/i }));
+        expect(count()).toBeLessThanOrEqual(MAX_ROWS);
+      }
       await screen.findByText("Child 149");
       expect(count()).toBeLessThanOrEqual(MAX_ROWS);
       expect(screen.queryByText("Child 0")).toBeNull();

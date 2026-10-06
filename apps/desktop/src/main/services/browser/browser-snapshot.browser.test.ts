@@ -679,7 +679,7 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
         <input id="to" placeholder="Where to?" autofocus>
       `),
     }) as unknown as Loose;
-  });
+  }, 180_000);
 
   it("keeps a ref on the same element across snapshots, and gives a newcomer a new one", () => {
     const { first, second } = stable.page;
