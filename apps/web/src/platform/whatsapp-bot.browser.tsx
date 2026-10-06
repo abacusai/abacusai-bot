@@ -2,7 +2,6 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import {
   loadWhatsAppOffered as loadOffered,
-  WhatsAppClaim as Claim,
   WhatsAppConnect,
   WhatsAppLinkedBanner as LinkedBanner,
 } from "#renderer/features/onboarding/whatsapp";
@@ -21,5 +20,3 @@ export const OnboardingWhatsApp = ({ onDone }: { onDone(): void }) => (
 );
 
 export const WhatsAppLinkedBanner = () => <LinkedBanner callApps={callApps} />;
-
-export const WhatsAppClaim = () => <Claim callApps={callApps} />;

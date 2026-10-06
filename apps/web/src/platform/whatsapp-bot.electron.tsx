@@ -4,4 +4,3 @@ import type { QueryClient } from "@tanstack/react-query";
 export const loadWhatsAppOffered = async (_queryClient: QueryClient) => false;
 export const OnboardingWhatsApp = (_props: { onDone(): void }) => null;
 export const WhatsAppLinkedBanner = () => null;
-export const WhatsAppClaim = () => null;
