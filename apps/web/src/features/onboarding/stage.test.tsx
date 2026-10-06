@@ -201,6 +201,32 @@ describe("OnboardingStage", () => {
     ).toBe(false);
   });
 
+  it("bursts confetti on done only, and not under reduced motion", () => {
+    const { container, rerender } = render(
+      <OnboardingStage step="welcome" bot={null} phase="none" reduced={false} />
+    );
+    const confetti = () => container.querySelector("[data-slot=confetti]");
+    expect(confetti()).toBeNull();
+    rerender(
+      <OnboardingStage
+        step="first-bot"
+        bot={bot}
+        phase="ready"
+        reduced={false}
+      />
+    );
+    // Not before the hatch has landed.
+    expect(confetti()).toBeNull();
+    rerender(
+      <OnboardingStage step="done" bot={bot} phase="ready" reduced={false} />
+    );
+    expect(confetti()).not.toBeNull();
+    rerender(
+      <OnboardingStage step="done" bot={bot} phase="ready" reduced={true} />
+    );
+    expect(confetti()).toBeNull();
+  });
+
   it("hides the stage when a step has no avatar", () => {
     const { container } = render(
       <OnboardingStage step="models" bot={bot} phase="ready" reduced={false} />

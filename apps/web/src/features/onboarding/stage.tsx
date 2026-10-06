@@ -35,6 +35,8 @@ import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
+import { Confetti } from "./confetti";
+
 export type StageAvatarId =
   | "parade-bunny"
   | "parade-blob"
@@ -278,18 +280,18 @@ export const OnboardingStage = ({
   bot,
   phase,
   reduced,
-  children,
 }: {
   step: OnboardingStepId;
   bot: BotRow | null;
   phase: FirstBotPhase;
   reduced: boolean;
-  /** Overlays (confetti) drawn over the stage once the hatch has landed. */
-  children?: (hatched: boolean) => React.ReactNode;
 }) => {
   const { slots, height } = stageFor(step, bot, phase);
   const [hatched, setHatched] = useState<string | null>(null);
-  const hatchedBot = bot != null && hatched === bot.id;
+  // One burst per slide: when the hatch lands on first-bot, on arriving at done.
+  const burst =
+    step === "done" ||
+    (step === "first-bot" && bot != null && hatched === bot.id);
   return (
     <LayoutGroup id="onboarding-stage">
       <div
@@ -309,7 +311,13 @@ export const OnboardingStage = ({
             />
           ))}
         </AnimatePresence>
-        {children?.(hatchedBot)}
+        {burst && (
+          <Confetti
+            key={step}
+            spread={step === "done" ? 360 : 140}
+            reduced={reduced}
+          />
+        )}
       </div>
     </LayoutGroup>
   );
