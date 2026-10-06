@@ -19,7 +19,7 @@ import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
 import { ModeChip, ModelChip } from "./chips";
-import { useComposerExpanded } from "./composer";
+import { SURFACE_RADIUS, useComposerExpanded } from "./composer";
 import {
   clearDraft,
   updateDraft,
@@ -70,13 +70,12 @@ describe("R2-T25 composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Choose model" }));
     await screen.findByRole("option", { name: "Catalog model" });
     expect(reads).toHaveBeenCalled();
-    fireEvent.change(screen.getByRole("textbox"), {
-      target: { value: "absent" },
-    });
+    // The panel (Pickers): a search field over the grouped rows.
+    const search = screen.getByRole("combobox", { name: "Models" });
+    fireEvent.change(search, { target: { value: "absent" } });
     expect(screen.queryByRole("option", { name: "Catalog model" })).toBeNull();
-    fireEvent.change(screen.getByRole("textbox"), {
-      target: { value: "Catalog" },
-    });
+    expect(screen.getByText("No models match")).toBeTruthy();
+    fireEvent.change(search, { target: { value: "Catalog" } });
     fireEvent.click(
       await screen.findByRole("option", { name: "Catalog model" })
     );
@@ -120,6 +119,73 @@ describe("R2-T25 composer", () => {
         .getByRole("button", { name: "Send" })
         .hasAttribute("disabled")
     ).toBe(false);
+  });
+
+  it("morphs only the surface: its children keep their size and its radius is a style", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(relay, "bot");
+    await waitFor(() => expect(composer()).toBeTruthy());
+    const surface = () =>
+      document.querySelector<HTMLElement>('[data-slot="composer-surface"]')!;
+    const check = (radius: number) => {
+      // Only the surface carries `layout`; motion's projection scales it,
+      // and the radius lives in `style` so the projection corrects it
+      // mid-morph (a class would stretch with the surface).
+      expect(surface().dataset.layout).toBe("layout");
+      expect(surface().dataset.radius).toBe(String(radius));
+      // The live value is motion's tween of that target, mid-morph.
+      expect(surface().style.borderRadius).toMatch(/^\d+(\.\d+)?px$/);
+      expect(surface().className).not.toMatch(/rounded/);
+      // Every direct child is a `layout="position"` child: it slides, it
+      // never stretches (icons, chips, buttons, the text area).
+      const children = [...surface().children] as HTMLElement[];
+      expect(children.length).toBeGreaterThan(1);
+      for (const child of children)
+        expect(child.dataset.layout, child.outerHTML).toBe("position");
+    };
+    check(SURFACE_RADIUS.pill);
+    fireEvent.change(field(), { target: { value: "hello" } });
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    check(SURFACE_RADIUS.bot);
+    expect(field().dataset.layout).toBe("position");
+  });
+
+  it("session: the box holds the text area and the toolbar; the context bar hangs under it", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(
+      relay,
+      "session",
+      {},
+      { slots: { composerContext: <span>abacusai-bot · main</span> } }
+    );
+    await waitFor(() =>
+      expect(composer().hasAttribute("data-expanded")).toBe(true)
+    );
+    const surface = document.querySelector<HTMLElement>(
+      '[data-slot="composer-surface"]'
+    )!;
+    // ComposerStates "Session, resting": a 100 px box, 8 px under the
+    // toolbar row, the text area taking the spare height (no void below
+    // the toolbar), corners 20 px.
+    expect(surface.className).toContain("min-h-[100px]");
+    expect(surface.className).toContain("pb-2");
+    expect(surface.className).toContain("[&>textarea]:flex-1");
+    expect(surface.dataset.radius).toBe(String(SURFACE_RADIUS.session));
+    const toolbar = within(surface).getByRole("button", {
+      name: "Send",
+    }).parentElement!;
+    expect(surface.lastElementChild).toBe(toolbar);
+    // The context bar: its own 48 px strip inset 12 px, bottom corners
+    // 14 px, tucked 16 px under the box with 16 px of top padding.
+    const context = document.querySelector<HTMLElement>(
+      '[data-slot="composer-context"]'
+    )!;
+    expect(surface.nextElementSibling).toBe(context);
+    expect(within(context).getByText("abacusai-bot · main")).toBeTruthy();
+    for (const cls of ["mx-3", "-mt-4", "min-h-12", "pt-4", "rounded-b-[14px]"])
+      expect(context.className.split(" ")).toContain(cls);
   });
 
   it("session: two rows at rest with the mode chip; Enter sends; Stop while busy; busy submit enqueues", async () => {
@@ -192,9 +258,86 @@ describe("R2-T25 composer", () => {
     current = await renderRelay(relay, "session");
     const trigger = await screen.findByRole("button", { name: /Supervised/ });
     fireEvent.click(trigger);
-    expect(await screen.findByRole("menu")).toBeTruthy();
+    expect(await screen.findByRole("listbox")).toBeTruthy();
     expect(composer().hasAttribute("data-expanded")).toBe(true);
     expect(trigger.isConnected).toBe(true);
+    // Escape closes the list and leaves the composer expanded (focus stays).
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  });
+
+  it("the model picker: 340 px panel above the chip with sections, the chosen row marked, keyboard navigable", async () => {
+    const onChange = vi.fn();
+    const connect = vi.fn();
+    const useLocal = vi.fn();
+    current = await renderWithDb(
+      <ModelChip
+        onUseLocalModel={useLocal}
+        binding={{
+          value: "route-llm",
+          label: "RouteLLM",
+          onChange,
+          groups: [
+            {
+              id: "favourites",
+              label: "Favourites",
+              items: [
+                {
+                  id: "route-llm",
+                  label: "RouteLLM",
+                  description: "Abacus.AI",
+                },
+              ],
+            },
+            {
+              id: "abacus",
+              label: "Abacus.AI",
+              items: [
+                { id: "route-llm", label: "RouteLLM" },
+                { id: "route-llm-open", label: "RouteLLM Open" },
+              ],
+            },
+            {
+              id: "openrouter",
+              label: "OpenRouter",
+              items: [],
+              connect: { label: "Connect OpenRouter", onSelect: connect },
+            },
+          ],
+        }}
+      />
+    );
+    // The chip: the model's name, its provider in muted text.
+    const chip = screen.getByRole("button", { name: /RouteLLM/ });
+    expect(chip.textContent).toContain("Abacus.AI");
+    fireEvent.click(chip);
+    const panel = await screen.findByRole("listbox");
+    expect(
+      (panel.closest('[data-slot="popover-content"]') as HTMLElement).className
+    ).toContain("w-[min(340px");
+    expect(
+      [...panel.querySelectorAll("[cmdk-group-heading]")].map(
+        (heading) => heading.textContent
+      )
+    ).toEqual(["Favourites", "Abacus.AI", "OpenRouter", "On this machine"]);
+    expect(within(panel).getByText("Connect OpenRouter")).toBeTruthy();
+    expect(within(panel).getByText("Use a local model")).toBeTruthy();
+    const chosen = within(panel)
+      .getAllByRole("option")
+      .filter((option) => option.dataset.checked === "true");
+    expect(chosen.map((option) => option.textContent)).toEqual([
+      "RouteLLMAbacus.AI",
+      "RouteLLM",
+    ]);
+    // Keyboard: the arrow keys move the cursor, Enter picks.
+    const search = screen.getByRole("combobox", { name: "Models" });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("route-llm-open")
+    );
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
   it("the mode menu: five modes with descriptions; choosing sets the mode, a silent agent reverts", async () => {
@@ -416,7 +559,8 @@ describe("R2-T25 composer", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /Remove.*attachment|Remove x.png/ })
     );
-    expect(screen.queryByText("disk full")).toBeNull();
+    // The strip exits through its reveal animation before it unmounts.
+    await waitFor(() => expect(screen.queryByText("disk full")).toBeNull());
   });
 
   it("reveals the reply preview and the attachment strip in their own rows, in the surface's column", async () => {
@@ -449,16 +593,26 @@ describe("R2-T25 composer", () => {
     const strip = document.querySelector<HTMLElement>(
       '[data-slot="composer-attachments"]'
     )!;
-    // Each is a clipped row that grows from nothing, never a jump.
-    expect(reply.className).toContain("overflow-hidden");
-    expect(strip.className).toContain("overflow-hidden");
     expect(within(reply).getByText("quoted")).toBeTruthy();
     expect(within(strip).getByText("x.png")).toBeTruthy();
     // Both live inside the surface: the quote first, like a messaging app.
-    const surface = document.querySelector('[data-slot="composer-surface"]')!;
+    const surface = document.querySelector<HTMLElement>(
+      '[data-slot="composer-surface"]'
+    )!;
     expect(surface.contains(strip)).toBe(true);
     expect(surface.contains(reply)).toBe(true);
     expect(composer().contains(reply)).toBe(true);
+    // One coordinated motion (motion.ts `composerReveal`): the row mounts at
+    // full size and the surface's `layout` spring grows around it while the
+    // row only fades; it slides as a `layout="position"` child, never a
+    // height tween or a clipped box of its own, so the surface never moves
+    // first and the quote second.
+    expect(surface.dataset.layout).toBe("layout");
+    for (const row of [reply, strip]) {
+      expect(row.dataset.layout).toBe("position");
+      expect(row.className).not.toContain("overflow-hidden");
+      expect(row.style.height).toBe("");
+    }
     act(() => {
       updateDraft("t-1", (draft) => ({
         ...draft,

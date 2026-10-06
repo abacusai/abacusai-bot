@@ -196,12 +196,27 @@
  * "system" follows the OS. Dots stop, fresh rows and the last streamed
  * block only fade, and the shimmer becomes plain text (`shimmer-none`).
  */
+/*
+ * The dictation waveform (ComposerStates "Dictating"): live bars follow the
+ * recorder's level through a short transform transition (GPU, retargets on
+ * every level); the preview (no level source) sways on a keyframe, each bar
+ * offset by the row. Reduced motion holds every bar still.
+ */
+@keyframes composer-wave {
+  from { transform: scaleY(0.3); }
+  to { transform: scaleY(0.95); }
+}
+[data-slot="composer-wave"][data-live] > span { transition: transform 80ms linear; }
+[data-slot="composer-wave"]:not([data-live]) > span { animation: composer-wave 700ms ease-in-out infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) [data-slot="composer-wave"] > span { animation: none; transition: none; }
   html:not([data-reduce-motion="off"]) .chat-typing-dot { animation: none; opacity: 0.7; }
   html:not([data-reduce-motion="off"]) .chat-prose-streaming > :last-child { animation: none; }
   html:not([data-reduce-motion="off"]) [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }
   html:not([data-reduce-motion="off"]) .shimmer { --shimmer-image: none; --shimmer-text-fill: currentColor; animation: none; }
 }
+html[data-reduce-motion="on"] [data-slot="composer-wave"] > span { animation: none; transition: none; }
 html[data-reduce-motion="on"] .chat-typing-dot { animation: none; opacity: 0.7; }
 html[data-reduce-motion="on"] .chat-prose-streaming > :last-child { animation: none; }
 html[data-reduce-motion="on"] [data-slot="message-scroller-item"][data-fresh] { transition: opacity 120ms linear; translate: none; }

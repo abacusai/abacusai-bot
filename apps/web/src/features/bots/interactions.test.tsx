@@ -130,7 +130,8 @@ describe("bots interactions", () => {
     );
     const chip = await screen.findByRole("button", { name: "App default" });
     fireEvent.click(chip);
-    await screen.findByRole("textbox", { name: "Search models" });
+    // The picker's search field (a Command input, labelled by its list).
+    await screen.findByRole("combobox", { name: "Models" });
     expect(chip.isConnected).toBe(true);
     expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull();
   });
