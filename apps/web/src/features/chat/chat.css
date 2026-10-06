@@ -213,7 +213,64 @@ html[data-reduce-motion="on"] .shimmer { --shimmer-image: none; --shimmer-text-f
 
 /* ─── message actions, pills and reply jump ─────────────────────── */
 
-/* The hover bar is glass over the transcript; opaque when transparency is
+/*
+ * The hover affordance (WhatsApp Web): one smiley beside the hovered
+ * bubble, positioned by Base UI's popover positioner. Its popup fades in
+ * with a 2 px slide (140 ms, the app's standard curve); re-anchoring to a
+ * neighbouring message transitions the positioner's transform (180 ms,
+ * `data-moving`, set once the affordance has moved while shown) instead of
+ * remounting it. While the transcript scrolls it is hidden until the
+ * pointer moves (`data-scrolling`).
+ */
+/* The positioner is the popup's parent (the registry names only the popup). */
+:has(> [data-slot="message-actions-popup"][data-moving]) {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-slot="message-actions-popup"] {
+  transition: opacity 140ms cubic-bezier(0.2, 0.8, 0.2, 1), translate 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-slot="message-actions-popup"][data-starting-style],
+[data-slot="message-actions-popup"][data-ending-style] { opacity: 0; translate: 2px 0; }
+[data-slot="message-actions-popup"][data-side="inline-start"][data-starting-style],
+[data-slot="message-actions-popup"][data-side="inline-start"][data-ending-style],
+[data-slot="message-actions-popup"][data-side="left"][data-starting-style],
+[data-slot="message-actions-popup"][data-side="left"][data-ending-style] { translate: -2px 0; }
+[data-slot="message-actions-popup"][data-scrolling] { opacity: 0; pointer-events: none; }
+
+/* The chevron in the bubble's corner: a disc of the bubble's own colour so
+   it never sits on text, shown while its message holds the affordance. */
+[data-slot="message-menu"] {
+  background-color: inherit;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--popover) 0%, transparent);
+  opacity: 0;
+  scale: 0.9;
+  transition: opacity 140ms cubic-bezier(0.2, 0.8, 0.2, 1), scale 140ms cubic-bezier(0.2, 0.8, 0.2, 1), color 140ms ease;
+}
+[data-slot="message-menu"][data-shown],
+[data-slot="message-menu"]:focus-visible { opacity: 1; scale: 1; }
+
+/*
+ * The reaction tray: a pill of quick reactions above the bubble (scaled in
+ * from the bubble's side, 160 ms), the whole grid in place from "+".
+ * Hovering a quick reaction lifts it 1.35× and eases its neighbours 3 px
+ * aside on a lightly damped spring (ζ 0.72, settles in ~300 ms); the chosen
+ * ones keep a ring (the button's border), never a fill.
+ */
+[data-slot="reaction-tray"] {
+  transition: opacity 160ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+[data-slot="reaction-tray"][data-starting-style],
+[data-slot="reaction-tray"][data-ending-style] { opacity: 0; transform: scale(0.94); }
+[data-slot="quick-reaction"] {
+  transition: transform 320ms linear(0, 0.058, 0.192, 0.357, 0.522, 0.669, 0.79, 0.883, 0.95, 0.995, 1.021, 1.034, 1.038, 1.037, 1.032, 1.026, 1.019, 1.013, 1.009, 1.005, 1.002, 1, 0.999, 0.999, 1), border-color 140ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-slot="quick-reaction"][data-lift="up"] { transform: translateY(-3px) scale(1.35); z-index: 1; }
+  [data-slot="quick-reaction"][data-lift="left"] { transform: translateX(-3px); }
+  [data-slot="quick-reaction"][data-lift="right"] { transform: translateX(3px); }
+}
+
+/* The tray and menu are glass over the transcript; opaque when transparency is
    reduced or translucency is off in Appearance. */
 @media (prefers-reduced-transparency: reduce) {
   [data-slot="message-actions"] { background-color: var(--popover); }
@@ -221,6 +278,21 @@ html[data-reduce-motion="on"] .shimmer { --shimmer-image: none; --shimmer-text-f
 }
 html[data-translucency="off"] [data-slot="message-actions"] { background-color: var(--popover); }
 html[data-translucency="off"] [data-slot="message-actions"]::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* Reduced motion (as above): the affordance and tray only fade, the
+   smiley cuts to its new message, and a hovered reaction keeps its place. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) :has(> [data-slot="message-actions-popup"][data-moving]) { transition: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="message-actions-popup"] { transition: opacity 120ms linear; translate: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="message-menu"] { transition: opacity 120ms linear; scale: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="reaction-tray"] { transition: opacity 120ms linear; transform: none; }
+  html:not([data-reduce-motion="off"]) [data-slot="quick-reaction"] { transition: border-color 140ms ease; transform: none; }
+}
+html[data-reduce-motion="on"] :has(> [data-slot="message-actions-popup"][data-moving]) { transition: none; }
+html[data-reduce-motion="on"] [data-slot="message-actions-popup"] { transition: opacity 120ms linear; translate: none; }
+html[data-reduce-motion="on"] [data-slot="message-menu"] { transition: opacity 120ms linear; scale: none; }
+html[data-reduce-motion="on"] [data-slot="reaction-tray"] { transition: opacity 120ms linear; transform: none; }
+html[data-reduce-motion="on"] [data-slot="quick-reaction"] { transition: border-color 140ms ease; transform: none; }
 
 /* Jumping to a quoted original: a 1.2 s soft pulse of the bubble's ground. */
 @keyframes chat-highlight {
