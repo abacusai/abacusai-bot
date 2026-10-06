@@ -38,7 +38,7 @@ it("R6-T2 fresh account reaches onboarding before shell; signed-out onboarded ac
     expect(harness!.router.state.location.pathname).toBe("/onboarding/welcome")
   );
   expect(
-    await screen.findByRole("button", { name: "Sign Up For Free" })
+    await screen.findByRole("button", { name: "Sign up for free" })
   ).toBeTruthy();
 });
 it("R6-T7 real router preserves failed attempts and ignores cancellation's late success", async () => {
@@ -51,7 +51,7 @@ it("R6-T7 real router preserves failed attempts and ignores cancellation's late 
       }),
   });
   fireEvent.click(
-    await screen.findByRole("button", { name: "Sign Up For Free" })
+    await screen.findByRole("button", { name: "Sign up for free" })
   );
   await waitFor(() =>
     expect(harness!.router.state.location.pathname).toBe("/onboarding/connect")
@@ -109,7 +109,7 @@ it.each([false, true])(
       )
     );
     await screen.findByRole("heading", {
-      name: "Connect your tools and services",
+      name: "Connect with your tools & services.",
     });
     const continueConnectors = await screen.findByRole("button", {
       name: "Continue",

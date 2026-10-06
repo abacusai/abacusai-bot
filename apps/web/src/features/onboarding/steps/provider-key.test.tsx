@@ -18,7 +18,7 @@ it.each(["save", "refresh"])(
       client: { settings: { keys: { save } } },
     } as unknown as Transport;
     render(<OnboardingProviderKey transport={transport} saved={saved} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add API key" }));
+    fireEvent.click(screen.getByRole("button", { name: "Paste a key" }));
     fireEvent.click(
       await screen.findByRole("menuitem", { name: /Google Gemini/ })
     );

@@ -5,7 +5,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/frame.tsx#OnboardingFrame",
     owner: "phase-6",
   },
   {
@@ -45,7 +45,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/frame.tsx#OnboardingProgress",
     owner: "phase-6",
   },
   {
@@ -53,7 +53,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/steps/welcome.tsx#WelcomeStep",
     owner: "phase-6",
   },
   {
@@ -69,7 +69,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/steps/welcome.tsx#WelcomeStep",
     owner: "phase-6",
   },
   {
@@ -77,7 +77,8 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer:
+      "apps/web/src/features/onboarding/steps/connected.tsx#ConnectedStep",
     owner: "phase-6",
   },
   {
@@ -85,7 +86,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/steps/models.tsx#ModelsStep",
     owner: "phase-6",
   },
   {
@@ -93,7 +94,8 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer:
+      "apps/web/src/features/onboarding/steps/connectors.tsx#ConnectorsStep",
     owner: "phase-6",
   },
   {
@@ -135,7 +137,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer: "apps/web/src/features/onboarding/stage.tsx#OnboardingStage",
     owner: "phase-6",
   },
   {
@@ -175,7 +177,7 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/hatch.tsx#FirstBotHatch",
+    consumer: "apps/web/src/features/onboarding/stage.tsx#OnboardingStage",
     owner: "phase-6",
   },
   {
@@ -183,7 +185,8 @@ export const PHASE6_ONBOARDING_PARITY = [
     status: "green",
     evidence: "R6-T40 located consumer; packaged acceptance remains open.",
     visible: false,
-    consumer: "apps/web/src/features/onboarding/index.tsx#OnboardingFrame",
+    consumer:
+      "apps/web/src/features/onboarding/steps/first-bot.tsx#FirstBotStep",
     owner: "phase-6",
   },
   {

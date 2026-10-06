@@ -1222,26 +1222,16 @@
     "values": [
       "connectedLabel",
       "connectLabel",
-      "more",
       "newSession",
       "newBot",
-      "skip",
       "keyPrivate",
       "retry",
       "connect.title",
       "connect.body",
       "connect.waiting",
-      "connected.body",
-      "connected.promise1",
-      "connected.promise2",
-      "connected.promise3",
-      "connected.promise4",
-      "models.title",
-      "models.body",
       "models.abacus",
       "models.openrouter",
       "models.gemini",
-      "connectors.title",
       "connectors.body",
       "first-bot.title",
       "first-bot.body",
@@ -1255,18 +1245,9 @@
       "scratch",
       "message",
       "addKey",
-      "keyTitle",
-      "openGemini",
       "pairing",
-      "finishPairing",
-      "localModels",
-      "localDetails"
+      "finishPairing"
     ],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
-    "prefix": "onboarding.pages.connected.promise",
-    "values": ["1", "2", "3", "4"],
     "sources": ["features/onboarding/index.tsx"]
   },
   {
@@ -1337,15 +1318,9 @@
       "welcomeConnectors",
       "welcomeMemory",
       "pages.connect.body",
-      "pages.connected.body",
-      "pages.models.body",
       "pages.connectors.body",
       "pages.first-bot.body",
       "pages.done.body",
-      "pages.connected.promise1",
-      "pages.connected.promise2",
-      "pages.connected.promise3",
-      "pages.connected.promise4",
       "pages.models.abacus",
       "pages.models.openrouter",
       "pages.models.gemini"
@@ -1354,7 +1329,7 @@
   },
   {
     "prefix": "onboarding.pages.models.",
-    "values": ["body", "abacus", "openrouter", "gemini"],
+    "values": ["abacus", "openrouter", "gemini"],
     "sources": ["runtime template with finite families"]
   },
   {
