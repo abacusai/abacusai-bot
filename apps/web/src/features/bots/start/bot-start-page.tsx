@@ -289,7 +289,7 @@ export const BotStartPage = ({
                   <span className="text-muted-foreground flex items-center gap-1 text-xs">
                     {t("bots.start.uses")}
                     {template.connectors.map((id) => (
-                      <ConnectorMark key={id} id={id} size={12} />
+                      <ConnectorMark key={id} id={id} size={14} />
                     ))}
                   </span>
                 )}

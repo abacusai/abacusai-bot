@@ -90,7 +90,7 @@ const DesktopMessagingPage = () => {
               title={t(`messaging.platforms.${p.nameKey}`)}
               detail={p.errorMessage ?? undefined}
             >
-              <ConnectorMark id={p.id} size={28} />
+              <ConnectorMark id={p.id} size={36} />
               <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>
               <Button
                 size="sm"

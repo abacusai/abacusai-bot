@@ -501,7 +501,7 @@ export const ConnectorMark = ({
       } as Record<string, string>
     )[alias] ?? alias;
   const mark = isMarkId(markId) ? MARKS[markId] : null;
-  const glyph = Math.round(size * 0.68);
+  const glyph = Math.round(size * 0.78);
   return (
     <span
       data-slot="connector-mark"
