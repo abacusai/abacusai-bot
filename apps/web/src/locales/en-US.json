@@ -2750,7 +2750,15 @@
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
       "botPlaceholder": "Message {{name}}",
-      "dictateSoon": "Dictation arrives soon"
+      "dictateSoon": "Dictation arrives soon",
+      "modes": "Permission modes",
+      "noModels": "No models match",
+      "onThisMachine": "On this machine",
+      "listening": "Listening",
+      "dictationStarting": "Getting dictation ready",
+      "transcribing": "Writing it down",
+      "stopDictation": "Stop dictating",
+      "recordingTime": "Recording time"
     },
     "day": {
       "today": "Today",

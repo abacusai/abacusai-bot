@@ -1,11 +1,14 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 /**
- * The composer's chips (spec 02 §8.2): the permission-mode chip (sessions)
- * with the canvas's five modes, and the model chip with its picker shell
- * (groups come from the route; `value: null` is the app default, 03-bots
- * §24.2).
+ * The composer's chips (spec 02 §8.2, canvas ComposerStates and Pickers):
+ * the permission-mode chip (sessions) opening a 340 px list of name +
+ * description rows, and the model chip (name, provider in muted text)
+ * opening a 340 px searchable panel above it: "Favourites", the provider
+ * groups with their "Connect …" rows, "On this machine". Both are a Popover
+ * around a Command list (keyboard navigable, Escape closes). Groups come
+ * from the route; `value: null` is the app default (03-bots §24.2).
  */
-import { Check, ChevronDown, Cpu, Shield } from "lucide-react";
+import { ChevronDown, Cpu, Shield } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,18 +22,26 @@ import {
 } from "#renderer/lib/motion";
 import { Button } from "#renderer/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "#renderer/ui/dropdown-menu";
-import { Input } from "#renderer/ui/input";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "#renderer/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 
 import type { ModelChipBinding } from "../kit/context";
 import { MODE_DESCRIPTION_KEYS, MODE_LABEL_KEYS, MODE_ORDER } from "./modes";
 
 const MODE_CONFIRM_MS = 5000;
+
+/** Pickers (canvas): a 340 px panel, 14 px corners, 6 px inset. */
+const PANEL_CLASS =
+  "w-[min(340px,calc(100vw-32px))] gap-0 rounded-[14px] p-1.5 text-[13px]";
+/** A 32 px row, 8 px corners; the chosen row is tinted, the cursor row muted. */
+const ROW_CLASS =
+  "min-h-8 rounded-lg px-2.5 py-1.5 text-[13px] data-[checked=true]:bg-foreground/[0.06]";
 
 export interface ModeChipProps {
   /** The live mode (`store.agent.mode`), or null before the runtime exists. */
@@ -59,6 +70,8 @@ export const ModeChip = ({
   availableModes,
 }: ModeChipProps) => {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(defaultOpen);
+  const list = useRef<HTMLDivElement>(null);
   const [optimistic, setOptimistic] = useState<AgentMode | null>(null);
   // Confirmed once the agent's state shows it (a STATE_DELTA /mode).
   const pending =
@@ -91,20 +104,22 @@ export const ModeChip = ({
       onRevert?.();
     });
   };
+  const change = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
   return (
-    <DropdownMenu
-      defaultOpen={defaultOpen}
-      {...(onOpenChange != null ? { onOpenChange } : {})}
-    >
-      <DropdownMenuTrigger
+    <Popover open={open} onOpenChange={change}>
+      <PopoverTrigger
         render={
           <Button
             variant="ghost"
             size="sm"
             data-slot="chat-mode-picker"
-            aria-haspopup="menu"
+            aria-haspopup="listbox"
             className={cn(
               "h-[30px] rounded-full px-2.5 text-[13px]",
+              open && "bg-secondary",
               shown === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
             )}
           />
@@ -118,32 +133,68 @@ export const ModeChip = ({
             className="size-1.5 rounded-full bg-[var(--chat-status-running)]"
           />
         ) : null}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[340px]" align="start" side="top">
-        {MODE_ORDER.filter(
-          (mode) => availableModes == null || availableModes.includes(mode)
-        ).map((mode) => (
-          <DropdownMenuItem
-            key={mode}
-            onClick={() => choose(mode)}
-            className="flex flex-col items-start gap-0.5 py-2"
-          >
-            <span
-              className={cn(
-                "font-medium",
-                mode === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
-              )}
-            >
-              {t(MODE_LABEL_KEYS[mode]!)}
-            </span>
-            <span className="text-muted-foreground">
-              {t(MODE_DESCRIPTION_KEYS[mode]!)}
-            </span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverTrigger>
+      <PopoverContent
+        className={PANEL_CLASS}
+        align="start"
+        side="top"
+        sideOffset={8}
+        initialFocus={list}
+      >
+        <Command
+          ref={list}
+          shouldFilter={false}
+          label={t("chat.composer.modes")}
+          className="bg-transparent p-0"
+        >
+          <CommandList className="max-h-none">
+            {MODE_ORDER.filter(
+              (mode) => availableModes == null || availableModes.includes(mode)
+            ).map((mode) => (
+              <CommandItem
+                key={mode}
+                value={mode}
+                data-checked={mode === shown}
+                onSelect={() => {
+                  choose(mode);
+                  change(false);
+                }}
+                className={cn(ROW_CLASS, "py-2")}
+              >
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span
+                    className={cn(
+                      "font-medium",
+                      mode === AgentMode.Yolo &&
+                        "text-[var(--chat-status-attention)]"
+                    )}
+                  >
+                    {t(MODE_LABEL_KEYS[mode]!)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {t(MODE_DESCRIPTION_KEYS[mode]!)}
+                  </span>
+                </span>
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
+};
+
+/** Groups whose label names a collection, not the model's provider. */
+const COLLECTION_GROUPS = new Set(["default", "favorites", "favourites"]);
+
+/** The provider of the chosen model: the label of the group listing it. */
+const providerOf = (binding: ModelChipBinding): string | null => {
+  const id = binding.value ?? "";
+  for (const group of binding.groups) {
+    if (COLLECTION_GROUPS.has(group.id)) continue;
+    if (group.items.some((item) => item.id === id)) return group.label;
+  }
+  return null;
 };
 
 export const ModelChip = ({
@@ -159,11 +210,12 @@ export const ModelChip = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const search = useRef<HTMLInputElement>(null);
   const [offset, setOffset] = useState(12);
   const pref = useMotionPreference();
   const label = binding.label;
+  const provider = compact ? null : providerOf(binding);
   const trigger = (
     <Button
       variant="ghost"
@@ -186,6 +238,7 @@ export const ModelChip = ({
       open={open}
       onOpenChange={(next) => {
         if (next && triggerRef.current) {
+          // The panel sits above the whole surface, not just the chip.
           const button = triggerRef.current;
           const composer = button.closest('[data-slot="composer"]');
           setOffset(
@@ -201,7 +254,6 @@ export const ModelChip = ({
         }
         setOpen(next);
         onOpenChange?.(next);
-        if (!next) setQuery("");
       }}
     >
       <PopoverTrigger render={trigger}>
@@ -221,20 +273,29 @@ export const ModelChip = ({
         ) : (
           label
         )}
+        {provider != null ? (
+          <span className="text-muted-foreground font-normal">{provider}</span>
+        ) : null}
         {compact ? null : <ChevronDown aria-hidden className="opacity-60" />}
       </PopoverTrigger>
       <PopoverContent
-        className="max-h-[min(420px,var(--available-height))] w-[min(340px,calc(100vw-32px))] overflow-y-auto p-1.5"
+        className={cn(
+          PANEL_CLASS,
+          "max-h-[min(420px,var(--available-height))]"
+        )}
         side="top"
         sideOffset={offset}
         align="end"
+        initialFocus={search}
       >
         <ModelOptions
           binding={binding}
-          query={query}
-          setQuery={setQuery}
+          search={search}
           onUseLocalModel={onUseLocalModel}
-          close={() => setOpen(false)}
+          close={() => {
+            setOpen(false);
+            onOpenChange?.(false);
+          }}
         />
       </PopoverContent>
     </Popover>
@@ -244,84 +305,46 @@ export const ModelChip = ({
 /** The portal mounts this only while the picker is shown, including its exit. */
 const ModelOptions = ({
   binding,
-  query,
-  setQuery,
+  search,
   onUseLocalModel,
   close,
 }: {
   binding: ModelChipBinding;
-  query: string;
-  setQuery(value: string): void;
+  search: React.RefObject<HTMLInputElement | null>;
   onUseLocalModel?: (() => void) | undefined;
   close(): void;
 }) => {
   const { t } = useTranslation();
-  const q = query.trim().toLowerCase();
-  const groups = binding.groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) =>
-          q === "" ||
-          item.label.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q)
-      ),
-    }))
-    .filter(
-      (group) => group.items.length > 0 || (q === "" && group.connect != null)
-    );
+  const [query, setQuery] = useState("");
+  const q = query.trim();
   return (
-    <>
-      <Input
-        autoFocus
+    <Command label={t("chat.composer.models")} className="bg-transparent p-0">
+      <CommandInput
+        ref={search}
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onValueChange={setQuery}
         placeholder={t("chat.composer.searchModels")}
         aria-label={t("chat.composer.searchModels")}
-        className="mb-1 h-8"
       />
-      <div
-        role="listbox"
-        aria-label={t("chat.composer.models")}
-        className="flex max-h-80 flex-col overflow-y-auto"
-      >
-        {onUseLocalModel != null && q === "" ? (
-          <button
-            type="button"
-            role="option"
-            aria-selected={false}
-            className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
-            onClick={() => {
-              onUseLocalModel();
-              close();
-            }}
-          >
-            {t("localModels.useLocal")}
-          </button>
-        ) : null}
-        {groups.map((group) => (
-          <div
-            key={group.id}
-            role="group"
-            aria-label={group.label}
-            className="flex flex-col"
-          >
-            <div className="text-muted-foreground px-2.5 pt-1.5 pb-1 text-xs">
-              {group.label}
-            </div>
+      <CommandList className="max-h-[min(360px,calc(var(--available-height)-56px))]">
+        <CommandEmpty>{t("chat.composer.noModels")}</CommandEmpty>
+        {binding.groups.map((group) => (
+          <CommandGroup key={group.id} heading={group.label} className="px-0">
             {group.items.map((item) => {
               const selected = (binding.value ?? "") === item.id;
               return (
-                <button
+                <CommandItem
                   key={item.id}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  className="hover:bg-secondary focus-visible:bg-secondary flex h-8 items-center gap-2 rounded-md px-2.5 text-start text-[13px] outline-none"
-                  onClick={() => {
+                  // cmdk keys its cursor by value: a favourite listed again
+                  // under its provider needs a value of its own.
+                  value={`${group.id}:${item.id === "" ? "default" : item.id}`}
+                  keywords={[item.label]}
+                  data-checked={selected}
+                  onSelect={() => {
                     binding.onChange(item.id === "" ? null : item.id);
                     close();
                   }}
+                  className={ROW_CLASS}
                 >
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.description != null ? (
@@ -329,25 +352,41 @@ const ModelOptions = ({
                       {item.description}
                     </span>
                   ) : null}
-                  {selected ? <Check aria-hidden className="size-3.5" /> : null}
-                </button>
+                </CommandItem>
               );
             })}
             {group.connect != null && q === "" ? (
-              <button
-                type="button"
-                className="hover:bg-secondary flex h-8 items-center rounded-md px-2.5 text-start text-[13px]"
-                onClick={() => {
+              <CommandItem
+                value={`${group.id}:connect`}
+                onSelect={() => {
                   group.connect!.onSelect();
                   close();
                 }}
+                className={ROW_CLASS}
               >
                 {group.connect.label}
-              </button>
+              </CommandItem>
             ) : null}
-          </div>
+          </CommandGroup>
         ))}
-      </div>
-    </>
+        {onUseLocalModel != null && q === "" ? (
+          <CommandGroup
+            heading={t("chat.composer.onThisMachine")}
+            className="px-0"
+          >
+            <CommandItem
+              value="local:download"
+              onSelect={() => {
+                onUseLocalModel();
+                close();
+              }}
+              className={ROW_CLASS}
+            >
+              {t("localModels.useLocal")}
+            </CommandItem>
+          </CommandGroup>
+        ) : null}
+      </CommandList>
+    </Command>
   );
 };

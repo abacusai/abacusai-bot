@@ -2750,7 +2750,15 @@
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
       "botPlaceholder": "{{name}} को संदेश",
-      "dictateSoon": "Dictation arrives soon"
+      "dictateSoon": "Dictation arrives soon",
+      "modes": "अनुमति मोड",
+      "noModels": "कोई मॉडल मेल नहीं खाता",
+      "onThisMachine": "इस मशीन पर",
+      "listening": "सुन रहा है",
+      "dictationStarting": "डिक्टेशन तैयार हो रहा है",
+      "transcribing": "लिखा जा रहा है",
+      "stopDictation": "डिक्टेशन रोकें",
+      "recordingTime": "रिकॉर्डिंग समय"
     },
     "day": {
       "today": "Today",

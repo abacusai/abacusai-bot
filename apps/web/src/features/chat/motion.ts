@@ -51,18 +51,26 @@ export const composerChildren = (pref: MotionPreference): Transition =>
   );
 
 /**
- * A row revealed inside or above the surface (the reply preview, the
- * attachment strip): height rides the surface spring, opacity follows, so
- * the surface never jumps.
+ * A row revealed inside the surface (the reply preview, the attachment
+ * strip): the row mounts at its full size and the surface's own `layout`
+ * spring grows around it while the row fades in over the same visual
+ * duration, one motion, no height tween of its own. The row is a
+ * `layout="position"` child, so it slides into place without scaling.
+ * Exit (`AnimatePresence mode="popLayout"`) pops the row out of flow, so the
+ * surface shrinks with the same spring while the row fades. Reduced motion
+ * is a cut.
  */
 export const composerReveal = (pref: MotionPreference): Transition =>
   motionFor<Transition>(
     pref,
     {
-      height: { ...springs.surface },
-      opacity: { duration: durations.childFade / 1000 },
+      layout: { ...springs.surface },
+      opacity: {
+        duration: durations.surface / 1000,
+        ease: [...easings.standard],
+      },
     },
-    { height: { duration: 0 }, opacity: { ...reducedTransition } }
+    { layout: { duration: 0 }, opacity: { duration: 0 } }
   );
 
 /** The permission card taking over the composer slot (§9.1). */

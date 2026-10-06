@@ -19,6 +19,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,7 @@ import { cn } from "#renderer/lib/cn";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
+import type { VoiceState } from "#renderer/lib/voice/operation";
 import { useConnectedDictation } from "#renderer/lib/voice/use-dictation";
 import {
   Attachment,
@@ -85,6 +87,34 @@ import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
 
+/**
+ * The surface's corner radius per shape (ComposerStates): the 48 px pill,
+ * the bot's typing box and the session box. A `style`, never a class, so
+ * motion's layout projection corrects it mid-morph instead of stretching it
+ * with the surface's scale.
+ */
+export const SURFACE_RADIUS = { pill: 24, bot: 22, session: 20 } as const;
+
+/**
+ * A child of the surface that must keep its size while the surface morphs
+ * (icons, chips, buttons, text): `layout="position"` lets motion counter the
+ * surface's scale and slide the child into place, so only the surface
+ * itself animates its shape.
+ */
+const Still = ({
+  layout,
+  className,
+  children,
+}: {
+  layout: "position" | false;
+  className?: string;
+  children: ReactNode;
+}) => (
+  <motion.div layout={layout} data-layout="position" className={className}>
+    {children}
+  </motion.div>
+);
+
 type ComposerState =
   | "resting"
   | "focused"
@@ -92,6 +122,15 @@ type ComposerState =
   | "busy"
   | "blocked"
   | "dictating";
+
+/** The dictation plumbing (`useConnectedDictation`), as the composer sees it. */
+interface ComposerVoice {
+  state: VoiceState;
+  level: number;
+  start(): Promise<void>;
+  end(): Promise<void>;
+  cancel(): void;
+}
 
 interface ComposerContextValue {
   threadId: string;
@@ -103,6 +142,9 @@ interface ComposerContextValue {
   stop(): void;
   cancelling: boolean;
   error: string | null;
+  voice: ComposerVoice;
+  /** `layout` for the surface's children while it morphs (`Still`). */
+  still: "position" | false;
 }
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -152,62 +194,70 @@ const Attachments = () => {
   const { t } = useTranslation();
   const { threadId, draft } = useComposer();
   const pref = useMotionPreference();
-  if (draft.attachments.length === 0) return null;
+  const morph = composerMorph(pref, threadId);
   return (
-    <motion.div
-      data-slot="composer-attachments"
-      className="overflow-hidden"
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      transition={composerReveal(pref)}
-    >
-      <AttachmentGroup className="scroll-fade-x">
-        {draft.attachments.map((attachment) => (
-          <Attachment
-            key={attachment.id}
-            className="w-56"
-            data-state={attachment.state}
-          >
-            <AttachmentMedia>
-              {attachment.state === "uploading" ? (
-                <Spinner aria-hidden />
-              ) : attachment.preview != null ? (
-                <img
-                  src={attachment.preview}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              ) : (
-                <FileText aria-hidden />
-              )}
-            </AttachmentMedia>
-            <AttachmentContent>
-              <AttachmentTitle>{attachment.name}</AttachmentTitle>
-              <AttachmentDescription
-                className={cn(
-                  attachment.state === "error" && "text-destructive"
-                )}
+    <AnimatePresence mode="popLayout" initial={false}>
+      {draft.attachments.length === 0 ? null : (
+        <motion.div
+          key="attachments"
+          data-slot="composer-attachments"
+          data-layout="position"
+          className="w-full"
+          layout={morph.layout ? "position" : false}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={composerReveal(pref)}
+        >
+          <AttachmentGroup className="scroll-fade-x">
+            {draft.attachments.map((attachment) => (
+              <Attachment
+                key={attachment.id}
+                className="w-56"
+                data-state={attachment.state}
               >
-                {attachment.state === "error"
-                  ? (attachment.error ?? t("chat.composer.attachFailed"))
-                  : [
-                      attachment.name.split(".").at(-1)?.toUpperCase(),
-                      formatSize(attachment.size),
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-              </AttachmentDescription>
-            </AttachmentContent>
-            <AttachmentAction
-              aria-label={t("chat.composer.removeAttachment")}
-              onClick={() => removeAttachment(threadId, attachment.id)}
-            >
-              <X aria-hidden />
-            </AttachmentAction>
-          </Attachment>
-        ))}
-      </AttachmentGroup>
-    </motion.div>
+                <AttachmentMedia>
+                  {attachment.state === "uploading" ? (
+                    <Spinner aria-hidden />
+                  ) : attachment.preview != null ? (
+                    <img
+                      src={attachment.preview}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <FileText aria-hidden />
+                  )}
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{attachment.name}</AttachmentTitle>
+                  <AttachmentDescription
+                    className={cn(
+                      attachment.state === "error" && "text-destructive"
+                    )}
+                  >
+                    {attachment.state === "error"
+                      ? (attachment.error ?? t("chat.composer.attachFailed"))
+                      : [
+                          attachment.name.split(".").at(-1)?.toUpperCase(),
+                          formatSize(attachment.size),
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                  </AttachmentDescription>
+                </AttachmentContent>
+                <AttachmentAction
+                  aria-label={t("chat.composer.removeAttachment")}
+                  onClick={() => removeAttachment(threadId, attachment.id)}
+                >
+                  <X aria-hidden />
+                </AttachmentAction>
+              </Attachment>
+            ))}
+          </AttachmentGroup>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -266,13 +316,7 @@ const Attach = () => {
 
 const Dictate = () => {
   const { t } = useTranslation();
-  const { threadId } = useComposer();
-  const voice = useConnectedDictation(threadId, (text) => {
-    updateDraft(threadId, (draft) => ({
-      ...draft,
-      text: `${draft.text}${draft.text ? " " : ""}${text}`,
-    }));
-  });
+  const { voice } = useComposer();
   return (
     <Tooltip>
       <TooltipTrigger
@@ -280,19 +324,11 @@ const Dictate = () => {
           <Button
             variant="ghost"
             size="icon-lg"
-            aria-label={t(
-              voice.state === "recording"
-                ? "notch.listening.end"
-                : "chat.composer.dictate"
-            )}
-            aria-pressed={voice.state === "recording"}
+            aria-label={t("chat.composer.dictate")}
             disabled={
               voice.state === "starting" || voice.state === "transcribing"
             }
-            onClick={() => {
-              if (voice.state === "recording") void voice.end();
-              else void voice.start();
-            }}
+            onClick={() => void voice.start()}
             className="size-9 rounded-full"
           />
         }
@@ -307,6 +343,131 @@ const Dictate = () => {
         )}
       </TooltipContent>
     </Tooltip>
+  );
+};
+
+/** `m:ss` for the dictation timer. */
+export const formatElapsed = (seconds: number): string =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+
+const ELAPSED_TICK_MS = 1000;
+
+/** Seconds since the row mounted (recording started), ticking once a second. */
+const Elapsed = () => {
+  const { t } = useTranslation();
+  const [started] = useState(() => Date.now());
+  const [now, setNow] = useState(started);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), ELAPSED_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span
+      role="timer"
+      aria-label={t("chat.composer.recordingTime")}
+      data-slot="composer-elapsed"
+      className="text-muted-foreground shrink-0 text-[13px] tabular-nums"
+    >
+      {formatElapsed(Math.max(0, Math.floor((now - started) / 1000)))}
+    </span>
+  );
+};
+
+/**
+ * The waveform (ComposerStates "Dictating"): seven 3 px bars. Live, each bar
+ * scales with the recorder's level through its own weight, so the shape
+ * breathes with the voice; without a level source (the gallery preview) a
+ * CSS keyframe sways them. Reduced motion holds them still (chat.css).
+ */
+const WAVE_WEIGHTS = [0.4, 0.7, 1, 0.55, 0.85, 0.3, 0.65] as const;
+const WAVE_REST = 0.3;
+const Waveform = ({ level, live }: { level: number; live: boolean }) => {
+  const pref = useMotionPreference();
+  const quiet = pref === "reduced";
+  return (
+    <span
+      aria-hidden
+      data-slot="composer-wave"
+      data-live={live ? "" : undefined}
+      data-motion={pref}
+      className="flex h-[26px] min-w-0 flex-1 items-center gap-[3px]"
+    >
+      {WAVE_WEIGHTS.map((weight, index) => (
+        <span
+          key={index}
+          className="bg-foreground block h-full w-[3px] origin-center rounded-[2px]"
+          style={{
+            transform: `scaleY(${(quiet || !live
+              ? WAVE_REST + weight * 0.5
+              : WAVE_REST +
+                Math.min(1, Math.max(0, level)) * weight * (1 - WAVE_REST)
+            ).toFixed(2)})`,
+            ...(live || quiet ? {} : { animationDelay: `${index * -140}ms` }),
+          }}
+        />
+      ))}
+    </span>
+  );
+};
+
+/**
+ * The pill's content while dictating: a red dot, the live waveform, the
+ * elapsed time and Stop in the send slot. Starting and transcribing show a
+ * spinner with their line instead. Escape (the composer root) cancels.
+ */
+const DictationRow = ({ preview }: { preview: boolean }) => {
+  const { t } = useTranslation();
+  const { voice, still } = useComposer();
+  const state: VoiceState = preview ? "recording" : voice.state;
+  if (state === "starting" || state === "transcribing")
+    return (
+      <Still
+        layout={still}
+        className="text-muted-foreground flex min-h-9 min-w-0 flex-1 items-center gap-3 ps-2 text-sm"
+      >
+        <Spinner aria-hidden />
+        <span role="status" data-slot="composer-dictation" data-state={state}>
+          {t(
+            state === "starting"
+              ? "chat.composer.dictationStarting"
+              : "chat.composer.transcribing"
+          )}
+        </span>
+      </Still>
+    );
+  return (
+    <>
+      <Still
+        layout={still}
+        className="flex min-h-9 min-w-0 flex-1 items-center gap-3 ps-2"
+      >
+        <span
+          aria-hidden
+          className="bg-destructive size-2 shrink-0 rounded-full"
+        />
+        <span
+          role="status"
+          className="sr-only"
+          data-slot="composer-dictation"
+          data-state="recording"
+        >
+          {t("chat.composer.listening")}
+        </span>
+        <Waveform level={voice.level} live={!preview} />
+        <Elapsed />
+      </Still>
+      <Still layout={still} className="flex shrink-0">
+        <Button
+          size="icon-lg"
+          autoFocus
+          aria-label={t("chat.composer.stopDictation")}
+          className="bg-foreground text-background hover:bg-foreground/90 size-9 rounded-full"
+          onClick={() => void voice.end()}
+        >
+          <span aria-hidden className="size-2.5 rounded-[2px] bg-current" />
+        </Button>
+      </Still>
+    </>
   );
 };
 
@@ -395,20 +556,32 @@ export const ThreadComposer = () => {
   const pref = useMotionPreference();
   const fieldId = useId();
 
+  const voice: ComposerVoice = useConnectedDictation(threadId, (text) => {
+    updateDraft(threadId, (current) => ({
+      ...current,
+      text: `${current.text}${current.text ? " " : ""}${text}`,
+    }));
+  });
+  // Dictation (ComposerStates "Dictating"): the host's preview flag or a
+  // live recording swaps the surface's content for the dictation row, in
+  // the pill shape whatever the skin; the text area returns on stop.
+  const listening =
+    config.dictating === true ||
+    voice.state === "starting" ||
+    voice.state === "recording" ||
+    voice.state === "transcribing";
+
   const hasDraft =
     draft.text !== "" || draft.attachments.length > 0 || draft.replyTo != null;
-  const expanded =
-    config.mode === "full" && skin === "session"
+  const expanded = listening
+    ? false
+    : config.mode === "full" && skin === "session"
       ? true
-      : focused ||
-        hasDraft ||
-        menuOpen ||
-        modelMenuOpen ||
-        config.dictating === true;
+      : focused || hasDraft || menuOpen || modelMenuOpen;
   const state: ComposerState =
     config.readOnly != null
       ? "blocked"
-      : config.dictating === true
+      : listening
         ? "dictating"
         : busy
           ? "busy"
@@ -651,6 +824,12 @@ export const ThreadComposer = () => {
   const childFade = composerChildren(pref);
   const morph = composerMorph(pref, threadId);
   const reveal = composerReveal(pref);
+  const still = morph.layout ? ("position" as const) : false;
+  const radius = expanded
+    ? skin === "session"
+      ? SURFACE_RADIUS.session
+      : SURFACE_RADIUS.bot
+    : SURFACE_RADIUS.pill;
 
   const value: ComposerContextValue = {
     threadId,
@@ -662,6 +841,8 @@ export const ThreadComposer = () => {
     stop,
     cancelling,
     error,
+    voice,
+    still,
   };
   const mode = config.showModeChip ? (
     <ModeChip
@@ -696,11 +877,16 @@ export const ThreadComposer = () => {
         data-state={state}
         data-expanded={expanded ? "" : undefined}
         onKeyDown={(event) => {
-          // Escape cancels the reply from anywhere in the composer, but not
-          // from a portaled popover (a chip menu, a tooltip) closing itself.
+          if (event.key !== "Escape" || event.defaultPrevented) return;
+          // Escape cancels a dictation, then the reply, from anywhere in the
+          // composer, but not from a portaled popover (a chip menu, a
+          // tooltip) closing itself.
+          if (listening && config.dictating !== true) {
+            event.preventDefault();
+            voice.cancel();
+            return;
+          }
           if (
-            event.key === "Escape" &&
-            !event.defaultPrevented &&
             draft.replyTo &&
             event.currentTarget.contains(event.target as Node)
           ) {
@@ -734,6 +920,9 @@ export const ThreadComposer = () => {
             onClose={() => setTrigger(null)}
           />
         ) : null}
+        <label htmlFor={fieldId} className="sr-only">
+          {config.placeholder}
+        </label>
         <motion.div
           {...morph}
           transition={surfaceTransition}
@@ -741,27 +930,35 @@ export const ThreadComposer = () => {
             event.preventDefault()
           }
           onDrop={onDrop}
-          style={sharedStyle}
+          style={{ ...sharedStyle, borderRadius: radius }}
           data-slot="composer-surface"
+          data-layout={morph.layout ? "layout" : undefined}
+          data-radius={radius}
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
+            // ComposerStates: the pill is 48 px; the typing box is the text
+            // area over the toolbar row with 8 px under it, nothing else.
             expanded
-              ? "gap-2.5 rounded-[22px] ps-3 pe-2 pt-3 pb-2"
-              : "min-h-13 flex-row items-center gap-2 rounded-full px-2",
+              ? "gap-2 ps-3 pe-2 pt-3 pb-2"
+              : "min-h-12 flex-row items-center gap-2 px-2",
+            // The session box (100 px, 14/8/8/16): the text area takes the
+            // spare height, so the toolbar sits on the box's bottom edge.
             skin === "session" &&
               expanded &&
-              "phone:rounded-[26px] phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] rounded-[20px] ps-4"
+              "phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4 pt-3.5 [&>textarea]:flex-1"
           )}
         >
-          <AnimatePresence initial={false}>
+          <AnimatePresence mode="popLayout" initial={false}>
             {draft.replyTo ? (
               <motion.div
                 key="reply"
                 data-slot="reply-preview"
-                className="w-full overflow-hidden"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
+                data-layout="position"
+                className="w-full"
+                layout={morph.layout ? "position" : false}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={reveal}
               >
                 <ReplyQuote
@@ -777,59 +974,72 @@ export const ThreadComposer = () => {
               </motion.div>
             ) : null}
           </AnimatePresence>
-          {expanded ? <Attachments /> : null}
-          {expanded ? null : <Attach />}
-          <label htmlFor={fieldId} className="sr-only">
-            {config.placeholder}
-          </label>
-          <textarea
-            ref={field}
-            data-continuity-id={`composer:${threadId}`}
-            id={fieldId}
-            aria-label={config.placeholder}
-            title={
-              config.attachmentsBase == null
-                ? t("chat.composer.pasteUnavailable")
-                : undefined
-            }
-            value={draft.text}
-            placeholder={placeholder}
-            rows={1}
-            onChange={(event) =>
-              setText(event.target.value, event.target.selectionStart)
-            }
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-            style={
-              {
-                maxHeight: COMPOSER_MAX_HEIGHT,
-                fieldSizing: "content",
-              } as React.CSSProperties
-            }
-            className={cn(
-              "placeholder:text-muted-foreground min-w-0 resize-none bg-transparent text-sm leading-5 outline-none",
-              expanded ? "w-full px-1" : "flex-1 py-2"
-            )}
-          />
-          {expanded ? (
-            <motion.div
-              className="flex items-center gap-1.5"
-              layout={morph.layout ? "position" : false}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={childFade}
-            >
-              <Attach />
-              {mode}
-              <span className="flex-1" />
-              {model}
-              <Dictate />
-              <SendOrStop />
-            </motion.div>
+          {listening ? (
+            <DictationRow preview={config.dictating === true} />
           ) : (
             <>
-              <Dictate />
-              <SendOrStop />
+              {expanded ? <Attachments /> : null}
+              {expanded ? null : (
+                <Still layout={still} className="flex shrink-0">
+                  <Attach />
+                </Still>
+              )}
+              <motion.textarea
+                layout={still}
+                data-layout="position"
+                ref={field}
+                data-continuity-id={`composer:${threadId}`}
+                id={fieldId}
+                aria-label={config.placeholder}
+                title={
+                  config.attachmentsBase == null
+                    ? t("chat.composer.pasteUnavailable")
+                    : undefined
+                }
+                value={draft.text}
+                placeholder={placeholder}
+                rows={1}
+                onChange={(event) =>
+                  setText(event.target.value, event.target.selectionStart)
+                }
+                onKeyDown={onKeyDown}
+                onPaste={onPaste}
+                style={
+                  {
+                    maxHeight: COMPOSER_MAX_HEIGHT,
+                    fieldSizing: "content",
+                  } as React.CSSProperties
+                }
+                className={cn(
+                  "placeholder:text-muted-foreground min-w-0 resize-none bg-transparent text-sm leading-5 outline-none",
+                  expanded ? "w-full px-1" : "flex-1 py-2"
+                )}
+              />
+              {expanded ? (
+                <motion.div
+                  className="flex items-center gap-1.5"
+                  layout={still}
+                  data-layout="position"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={childFade}
+                >
+                  <Attach />
+                  {mode}
+                  <span className="flex-1" />
+                  {model}
+                  <Dictate />
+                  <SendOrStop />
+                </motion.div>
+              ) : (
+                <Still
+                  layout={still}
+                  className="flex shrink-0 items-center gap-2"
+                >
+                  <Dictate />
+                  <SendOrStop />
+                </Still>
+              )}
             </>
           )}
         </motion.div>
@@ -839,8 +1049,12 @@ export const ThreadComposer = () => {
           </p>
         ) : null}
         {view.slots.composerContext != null ? (
+          // The context bar (repo · branch · worktree) hangs under the box
+          // as its own 48 px strip: inset 12 px, bottom corners 14 px, tucked
+          // 16 px under the box with the same 16 px of top padding, so it
+          // reads as attached. Phones stack it plainly below.
           <div
-            className="phone:mx-0 phone:mt-2 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 phone:pb-0 mx-3 -mt-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]"
+            className="phone:mx-0 phone:mt-2 phone:min-h-0 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 mx-3 -mt-4 flex min-h-12 flex-col justify-center rounded-b-[14px] bg-[var(--chat-surface-2)] px-3.5 pt-4 text-[13px]"
             data-slot="composer-context"
           >
             {view.slots.composerContext}
