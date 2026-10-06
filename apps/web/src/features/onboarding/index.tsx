@@ -37,6 +37,7 @@ import {
   firstBotStore,
   type FirstBotResult,
 } from "./first-bot";
+import { websiteSignInStarted } from "./first-run";
 import { FirstBotHatch } from "./hatch";
 import { next, connectedProviders, type FlowFacts } from "./machine";
 import { onboardingStore } from "./store";
@@ -242,15 +243,19 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       {label}
     </Button>
   );
-  const title =
-    step === "welcome"
+  // The browser arrives signed in to the website: its welcome is the account
+  // hand-off starting (first-run.ts), never the desktop's sign-up wall.
+  const webWelcome = step === "welcome" && !IS_ELECTRON;
+  const title = webWelcome
+    ? t("onboarding.pages.connect.title")
+    : step === "welcome"
       ? t("onboarding.welcomeTitle")
       : step === "connected"
         ? t("onboarding.connectedTitleName")
         : t(`onboarding.pages.${step}.title`);
   return (
     <section className="onboarding-step" data-onboarding-step={step}>
-      {step === "welcome" || (step === "done" && !bot) ? (
+      {(step === "welcome" && !webWelcome) || (step === "done" && !bot) ? (
         <Parade />
       ) : (
         <div
@@ -273,7 +278,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
                 avatarColor: bot?.avatarColor ?? "blue",
               })}
               size={96}
-              mood={step === "connect" ? "waiting" : "idle"}
+              mood={step === "connect" || webWelcome ? "waiting" : "idle"}
             />
           )}
         </div>
@@ -282,13 +287,27 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
         {title}
       </h1>
       <p>
-        {step === "welcome"
-          ? t("onboarding.welcomeTagline")
-          : step === "connect" && !IS_ELECTRON
-            ? t("onboarding.webSignIn.body")
-            : t(`onboarding.pages.${step}.body`)}
+        {webWelcome
+          ? t("onboarding.webSignIn.body")
+          : step === "welcome"
+            ? t("onboarding.welcomeTagline")
+            : step === "connect" && !IS_ELECTRON
+              ? t("onboarding.webSignIn.body")
+              : t(`onboarding.pages.${step}.body`)}
       </p>
-      {step === "welcome" && (
+      {webWelcome &&
+        (websiteSignInStarted() ? (
+          button(t("onboarding.pages.retry"), () => props.signIn("signin"))
+        ) : (
+          <p
+            role="status"
+            className="text-muted-foreground flex items-center gap-2 text-sm"
+          >
+            <Spinner aria-hidden />
+            {t("onboarding.webSignIn.waiting")}
+          </p>
+        ))}
+      {step === "welcome" && !webWelcome && (
         <>
           <div className="flex flex-wrap justify-center gap-2">
             {[

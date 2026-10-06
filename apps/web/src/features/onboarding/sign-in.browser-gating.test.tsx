@@ -1,5 +1,5 @@
 import { act, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
 
@@ -66,6 +66,34 @@ it.each([
       if (error.startsWith("host-complete"))
         expect(screen.getByRole("alert").textContent).toContain("UNAUTHORIZED");
     }
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("signs a new account in automatically even after another account used this browser", async () => {
+  // What an earlier account's automatic sign-in left behind in this browser.
+  localStorage.setItem("abacusai-bot:onboarding.autoSignIn", "started");
+  vi.resetModules();
+  const { startWebsiteSignIn } = await import("./first-run");
+  const start = vi.fn();
+  const transport = {} as Parameters<typeof startWebsiteSignIn>[0];
+  await startWebsiteSignIn(transport, start);
+  // A remount on the same page load does not start it again.
+  await startWebsiteSignIn(transport, start);
+  expect(start).toHaveBeenCalledOnce();
+  localStorage.removeItem("abacusai-bot:onboarding.autoSignIn");
+});
+
+it("never shows a signed-in browser the sign-up wall: its welcome is the account connection", async () => {
+  const app = await renderApp("/onboarding/welcome", { onboarded: false });
+  try {
+    expect(
+      await screen.findByRole("heading", { name: "Connecting your account" })
+    ).toBeTruthy();
+    expect(screen.queryByText("Sign Up For Free")).toBeNull();
+    expect(screen.queryByText("I already have an account")).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();
