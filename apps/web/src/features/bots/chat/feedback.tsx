@@ -4,9 +4,14 @@ import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
  * A second click on the chosen rating sends `clear`,
  * sent as `agent.feedback`. Offered only with an Abacus account (the route
  * decides) and never on the live run (the decorations decide).
+ *
+ * The same controls appear in a reply's hover menu and in its right-click
+ * menu, so the rating, the comment and the send status live in a small
+ * store keyed by `id` (the reply's feedback segment): whichever menu rated
+ * the reply, the other shows it pressed and its outcome.
  */
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-import { useState } from "react";
+import { useId, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
@@ -18,6 +23,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 type Rating = "up" | "down";
 
 export interface MessageFeedbackProps {
+  /** The reply's feedback segment; absent, the controls keep their own state. */
+  id?: string;
   send(
     rating: Rating | "clear",
     comment?: string
@@ -26,34 +33,68 @@ export interface MessageFeedbackProps {
 
 type Status = "idle" | "sending" | "sent" | "not-synced" | "failed";
 
-export const MessageFeedback = ({ send }: MessageFeedbackProps) => {
+interface FeedbackState {
+  rating: Rating | null;
+  comment: string;
+  status: Status;
+}
+
+const IDLE: FeedbackState = { rating: null, comment: "", status: "idle" };
+const states = new Map<string, FeedbackState>();
+const listeners = new Map<string, Set<() => void>>();
+
+const readState = (id: string): FeedbackState => states.get(id) ?? IDLE;
+const writeState = (id: string, patch: Partial<FeedbackState>): void => {
+  states.set(id, { ...readState(id), ...patch });
+  for (const listener of listeners.get(id) ?? []) listener();
+};
+const subscribeState = (id: string, listener: () => void): (() => void) => {
+  const set = listeners.get(id) ?? new Set();
+  set.add(listener);
+  listeners.set(id, set);
+  return () => {
+    set.delete(listener);
+    if (set.size === 0) listeners.delete(id);
+  };
+};
+
+/** Tests: forget every reply's feedback state. */
+export const clearFeedbackStates = (): void => {
+  states.clear();
+};
+
+export const MessageFeedback = ({ id, send }: MessageFeedbackProps) => {
   const { t } = useTranslation();
-  const [rating, setRating] = useState<Rating | null>(null);
-  const [comment, setComment] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const own = useId();
+  const key = id ?? own;
+  const { rating, comment, status } = useSyncExternalStore(
+    (listener) => subscribeState(key, listener),
+    () => readState(key),
+    () => readState(key)
+  );
 
   const submit = (next: Rating | "clear", text?: string): void => {
-    setStatus("sending");
+    writeState(key, { status: "sending" });
     send(next, text)
       .then((outcome) =>
-        setStatus(
-          outcome.ok
+        writeState(key, {
+          status: outcome.ok
             ? "sent"
             : outcome.reason === "not-synced"
               ? "not-synced"
-              : "failed"
-        )
+              : "failed",
+        })
       )
-      .catch(() => setStatus("failed"));
+      .catch(() => writeState(key, { status: "failed" }));
   };
 
   const rate = (next: Rating): void => {
     if (rating === next) {
-      setRating(null);
+      writeState(key, { rating: null });
       submit("clear");
       return;
     }
-    setRating(next);
+    writeState(key, { rating: next });
     submit(next);
   };
 
@@ -102,7 +143,9 @@ export const MessageFeedback = ({ send }: MessageFeedbackProps) => {
                 aria-label={t("bots.chat.feedback.tellUsMore")}
                 placeholder={t("bots.chat.feedback.placeholder")}
                 value={comment}
-                onChange={(event) => setComment(event.target.value)}
+                onChange={(event) =>
+                  writeState(key, { comment: event.target.value })
+                }
                 className="min-h-16 text-xs"
               />
               <Button
