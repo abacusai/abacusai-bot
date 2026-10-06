@@ -198,7 +198,9 @@ const Identity = ({
         <>
           <div
             ref={setIdentityTarget}
-            className="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden empty:hidden [&:not(:empty)+span]:hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
+            // No overflow clip: the bot identity's parts travel out of the
+            // slot into the transcript header (bots.css).
+            className="flex max-w-full min-w-0 flex-1 items-center gap-2 empty:hidden [&:not(:empty)+span]:hidden [&>*]:max-w-full [&>*]:min-w-0 [&>button]:shrink"
           />
           <span className="text-sidebar-foreground phone:font-semibold min-w-0 truncate font-medium">
             {fallback}

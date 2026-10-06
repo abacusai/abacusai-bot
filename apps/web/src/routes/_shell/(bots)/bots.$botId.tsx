@@ -1,6 +1,5 @@
 import { BotId } from "@abacus-ai/contract/contract/ids";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -65,15 +64,12 @@ const ReadyChat = ({
   const search = Route.useSearch();
   const navigate = useAppNavigate();
   const expanded = useComposerExpanded(sessionId);
-  const [docked, setDocked] = useState(false);
   if (!bot) return <BotGone />;
   return (
     <ComposedChat
       bot={bot}
       sessionId={sessionId}
       expanded={expanded}
-      docked={docked}
-      onDock={setDocked}
       detailsOpen={search.tab === "details"}
       preview={search.preview}
       toggle={() =>
@@ -94,8 +90,6 @@ const ComposedChat = ({
   bot,
   sessionId,
   expanded,
-  docked,
-  onDock,
   detailsOpen,
   preview,
   toggle,
@@ -103,8 +97,6 @@ const ComposedChat = ({
   bot: NonNullable<ReturnType<typeof useBot>>;
   sessionId: string;
   expanded: boolean;
-  docked: boolean;
-  onDock(value: boolean): void;
   detailsOpen: boolean;
   preview?: string;
   toggle(): void;
@@ -132,7 +124,7 @@ const ComposedChat = ({
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
-          docked={docked}
+          travels
           detailsOpen={detailsOpen}
           onToggle={toggle}
         />
@@ -148,14 +140,7 @@ const ComposedChat = ({
         slots={{
           ...slots.chat,
           wallpaper: bot.wallpaper ?? null,
-          header: (
-            <BotTranscriptIdentity
-              bot={bot}
-              onDock={onDock}
-              onToggle={toggle}
-              detailsOpen={detailsOpen}
-            />
-          ),
+          header: <BotTranscriptIdentity bot={bot} />,
         }}
       />
       <SidePanelContent tab="details">
