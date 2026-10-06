@@ -1309,10 +1309,8 @@ it("routes reactions through the agent and persists the acknowledgement across r
     finished("r"),
   ])
     first.agent.emit("s1", event);
-  first.agent.answer = (command) =>
-    command.type === "message.react"
-      ? [{ type: "CUSTOM", name: "message.reactions", value: command }]
-      : [];
+  // The agent answers nothing: main applies and persists the reaction.
+  first.agent.answer = () => [];
   await first.client.ai.react({
     threadId: "s1",
     messageId: "a",
@@ -1359,4 +1357,75 @@ it("routes reactions through the agent and persists the acknowledgement across r
       selected: true,
     })
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+});
+
+it("applies a reaction without starting a stopped agent and delivers the note on its next start", async () => {
+  const { agent, client, store } = setup();
+  agent.boot();
+  for (const event of [
+    ...started("r"),
+    { type: "TEXT_MESSAGE_START", messageId: "a", role: "assistant" },
+    { type: "TEXT_MESSAGE_CONTENT", messageId: "a", delta: "Hello" },
+    { type: "TEXT_MESSAGE_END", messageId: "a" },
+    finished("r"),
+  ])
+    agent.emit("s1", event);
+  // The agent process stops; the user reacts while it is down.
+  agent.runtimeState = null;
+  const stream = await client.ai.subscribe({ threadId: "s1" });
+  await client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "👍",
+    selected: true,
+  });
+  await client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "🔥",
+    selected: true,
+  });
+  await client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "🔥",
+    selected: false,
+  });
+  expect(agent.starts).toBe(0);
+  expect(agent.commands.some((c) => c.type === "message.react")).toBe(false);
+  expect(
+    store.readCurrentFile("s1")?.messages.find((m) => m.id === "a")?.reactions
+  ).toEqual(["👍"]);
+  expect(
+    (await client.ai.hydrate({ threadId: "s1" })).messages.find(
+      (message) => message.id === "a"
+    )?.metadata?.abacus?.reactions
+  ).toEqual(["👍"]);
+  // Every window hears it at once, after the replayed history.
+  const seen: unknown[] = [];
+  for (let guard = 0; guard < 20 && seen.length < 3; guard += 1)
+    for (const chunk of await take(stream, 1))
+      if (chunk.event.name === "message.reactions")
+        seen.push(chunk.event.value);
+  expect(seen).toEqual([
+    { messageId: "a", emoji: "👍", selected: true },
+    { messageId: "a", emoji: "🔥", selected: true },
+    { messageId: "a", emoji: "🔥", selected: false },
+  ]);
+  // The next start carries the one note still owed (🔥 was withdrawn).
+  agent.boot();
+  expect(agent.commands.filter((c) => c.type === "message.react")).toEqual([
+    {
+      type: "message.react",
+      messageId: "a",
+      emoji: "👍",
+      selected: true,
+      excerpt: "Hello",
+    },
+  ]);
+  // A later start owes nothing.
+  agent.boot();
+  expect(agent.commands.filter((c) => c.type === "message.react")).toHaveLength(
+    1
+  );
 });

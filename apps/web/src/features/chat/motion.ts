@@ -55,10 +55,33 @@ export const composerExit = (pref: MotionPreference): Transition =>
 export const queueRow = (pref: MotionPreference): Transition =>
   motionFor<Transition>(pref, { duration: 0.16 }, { ...reducedTransition });
 
-/** Brief discoverability feedback anchored to the message's top corner. */
+/** The hover action bar: a 140 ms fade with a 2 px rise; reduced: fade only. */
+export const ACTION_BAR_RISE_PX = 2;
 export const actionBarTransition = (pref: MotionPreference): Transition =>
   motionFor(
     pref,
-    { duration: durations.childFade / 1000, ease: [...easings.standard] },
+    { duration: 0.14, ease: [...easings.standard] },
     { ...reducedTransition }
+  );
+
+/** A reaction pill popping onto the bubble edge (scale 0.6 → 1, overshoot). */
+export const reactionPillEnter = (pref: MotionPreference): Transition =>
+  motionFor<Transition>(
+    pref,
+    { type: "spring", stiffness: 520, damping: 20, mass: 0.8 },
+    { duration: 0 }
+  );
+export const reactionPillExit = (pref: MotionPreference): Transition =>
+  motionFor<Transition>(
+    pref,
+    { duration: durations.childFade / 1000, ease: [...easings.standard] },
+    { duration: 0 }
+  );
+
+/** The reply preview growing inside the composer, on the surface's curve. */
+export const replyPreviewTransition = (pref: MotionPreference): Transition =>
+  motionFor<Transition>(
+    pref,
+    { duration: durations.layout / 1000, ease: [...easings.standard] },
+    { duration: 0 }
   );

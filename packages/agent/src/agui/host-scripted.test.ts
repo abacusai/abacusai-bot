@@ -878,9 +878,8 @@ it("acknowledges a reaction change and delivers a hidden operator turn verbatim"
       () => s.events().some((event) => event.type === "RUN_FINISHED"),
       "reaction turn"
     );
-    expect(s.custom("message.reactions")).toEqual([
-      { messageId: "a", emoji: "👍", selected: true },
-    ]);
+    // Main applies the reaction; the agent only hears about the selection.
+    expect(s.custom("message.reactions")).toEqual([]);
     expect(s.session.sent).toContain(
       '[reaction] The user reacted 👍 to your message "Hello"'
     );
@@ -890,6 +889,7 @@ it("acknowledges a reaction change and delivers a hidden operator turn verbatim"
       processor.getMessages().find((message) => message.role === "user")
         ?.metadata?.abacus?.userText
     ).toEqual({ operator: { kind: "user-reaction" } });
+    const sent = s.session.sent.length;
     s.send({
       type: "message.react",
       messageId: "a",
@@ -897,15 +897,27 @@ it("acknowledges a reaction change and delivers a hidden operator turn verbatim"
       selected: false,
       excerpt: "Hello",
     });
-    await s.waitFor(
-      () => s.custom("message.reactions").length === 2,
-      "reaction removal"
-    );
-    expect(s.custom("message.reactions").at(-1)).toEqual({
+    s.send({
+      type: "message.react",
       messageId: "a",
-      emoji: "👍",
-      selected: false,
+      emoji: "💥",
+      selected: true,
+      excerpt: "Hello",
     });
+    s.send({
+      type: "message.react",
+      messageId: "b",
+      emoji: "🔥",
+      selected: true,
+      excerpt: "Again",
+    });
+    await s.waitFor(
+      () => s.session.sent.some((text) => text.includes("🔥")),
+      "second reaction note"
+    );
+    // A withdrawal and an emoji off the list say nothing to the agent.
+    expect(s.session.sent.length).toBe(sent + 1);
+    expect(s.custom("message.reactions")).toEqual([]);
   } finally {
     await s.close();
   }

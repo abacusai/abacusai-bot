@@ -234,6 +234,7 @@ const UserMessage = ({
   const { workspaceRoot, threadId } = useChatView();
   const { hidden, body, paths } = userView(message);
   if (hidden) return null;
+  const reacted = (message.metadata?.abacus?.reactions?.length ?? 0) > 0;
   return (
     <MessageActions message={message} text={body}>
       <div className="flex flex-col items-end gap-1.5" data-role="user">
@@ -243,11 +244,14 @@ const UserMessage = ({
               "relative w-fit max-w-[min(520px,85%)] px-3 py-2",
               tint
                 ? "rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]"
-                : "rounded-2xl bg-[var(--chat-user-bubble)]"
+                : "rounded-2xl bg-[var(--chat-user-bubble)]",
+              // Room for the tapback pill hanging off the bottom edge.
+              reacted && badge == null && "mb-2"
             )}
           >
             {message.metadata?.abacus?.userText?.replyTo ? (
               <ReplyQuote
+                variant="bubble"
                 target={message.metadata.abacus.userText.replyTo}
                 onJump={(id) => jumpToMessage(id, threadId)}
               />
@@ -257,8 +261,15 @@ const UserMessage = ({
               role="user"
               workspaceRoot={workspaceRoot}
             />
-            {badge}
-            <MessageReactionPills message={message} />
+            {badge != null ? (
+              // The bot's badge stays where it is; the user's pill sits beside it.
+              <span className="inline-flex items-center gap-1.5">
+                {badge}
+                <MessageReactionPills message={message} inline />
+              </span>
+            ) : (
+              <MessageReactionPills message={message} />
+            )}
           </div>
         ) : null}
         {paths.length > 0 ? (

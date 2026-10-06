@@ -555,12 +555,30 @@ export class ThreadSession {
     emoji: (typeof MESSAGE_REACTION_EMOJIS)[number],
     selected: boolean
   ): Promise<void> {
-    await this.#ai.react({
-      threadId: this.threadId,
-      messageId,
-      emoji,
-      selected,
-    });
+    // Optimistic: the pill shows at once; main's `message.reactions` event
+    // confirms it (idempotent), and a rejection rolls it back.
+    const client = this.#live?.client ?? null;
+    const change: MessageReactionChange = { messageId, emoji, selected };
+    client?.setMessagesManually(
+      applyMessageReaction(client.getMessages(), change)
+    );
+    try {
+      await this.#ai.react({
+        threadId: this.threadId,
+        messageId,
+        emoji,
+        selected,
+      });
+    } catch (error) {
+      if (client != null && this.#live?.client === client)
+        client.setMessagesManually(
+          applyMessageReaction(client.getMessages(), {
+            ...change,
+            selected: !selected,
+          })
+        );
+      throw error;
+    }
   }
 
   async enqueue(text: string, userText?: UserTextTags): Promise<void> {
