@@ -148,6 +148,7 @@ const CodeBlock = (props: ComponentProps<"pre"> & { "data-lang"?: string }) => {
       </div>
       <pre
         {...props}
+        tabIndex={0}
         ref={ref}
         className={cn(
           props.className,
