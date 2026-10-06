@@ -22,25 +22,23 @@ export const isPickableWorkspace = (w: WorkspaceRow): boolean =>
   w.status !== "deleted" && (w.kind == null || w.kind === "auto");
 export const useSession = (id: string) => {
   const c = useCollections();
-  return useLiveQuery(
-    (q) =>
+  return useLiveQuery({
+    query: (q) =>
       q
         .from({ s: c.sessions })
         .where(({ s }) => eq(s.id, id))
         .findOne(),
-    [id]
-  ).data;
+  }).data;
 };
 export const useWorkspace = (id: string) => {
   const c = useCollections();
-  return useLiveQuery(
-    (q) =>
+  return useLiveQuery({
+    query: (q) =>
       q
         .from({ w: c.workspaces })
         .where(({ w }) => eq(w.id, id))
         .findOne(),
-    [id]
-  ).data;
+  }).data;
 };
 export const usePickableWorkspaces = () => {
   const c = useCollections();
@@ -50,14 +48,13 @@ export const useGitState = (checkout: CheckoutRef) => {
   const c = useCollections();
   const session = useSession(checkout.sessionId ?? "");
   const key = checkoutKey(checkout.workspaceId, session?.worktreeId);
-  return useLiveQuery(
-    (q) =>
+  return useLiveQuery({
+    query: (q) =>
       q
         .from({ g: c.gitState })
         .where(({ g }) => eq(g.checkoutKey, key))
         .findOne(),
-    [key]
-  ).data;
+  }).data;
 };
 export const effectiveCheckoutIdentity = (
   workspaceId: string,

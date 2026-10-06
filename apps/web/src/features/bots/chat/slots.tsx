@@ -45,14 +45,13 @@ export const useBotChatSlots = (
   const collections = useCollections();
   const transport = useBotsTransport();
   const routine = useCheckIn(bot.id);
-  const { data: session } = useLiveQuery(
-    (q) =>
+  const { data: session } = useLiveQuery({
+    query: (q) =>
       q
         .from({ s: collections.sessions })
         .where(({ s }) => eq(s.id, sessionId))
         .findOne(),
-    [sessionId]
-  );
+  });
   const { data: workspaces } = useLiveQuery((q) =>
     q.from({ w: collections.workspaces })
   );
