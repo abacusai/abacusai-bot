@@ -194,6 +194,63 @@ it("toggles reactions through the transport and restores them on hydration", asy
   ).toEqual([]);
 });
 
+it("shows a reaction optimistically and rolls it back when main rejects it", async () => {
+  const relay = new FakeRelay({ history: [original] });
+  let release!: () => void;
+  relay.faults.react = () => null;
+  relay.source.react = async (input) => {
+    relay.stats.react += 1;
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    if (relay.stats.react === 1) throw new Error("rejected");
+    relay.emit({
+      type: "CUSTOM",
+      name: "message.reactions",
+      value: input,
+      timestamp: Date.now(),
+    } as never);
+  };
+  await mount(relay);
+  await reveal();
+  fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
+  // The pill and the pressed quick reaction appear before main answers.
+  const pill = await screen.findByRole("button", {
+    name: "Remove 👍 reaction",
+  });
+  expect(pill).toBeTruthy();
+  expect(
+    within(bar())
+      .getByRole("button", { name: "React 👍" })
+      .getAttribute("aria-pressed")
+  ).toBe("true");
+  await act(async () => release());
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Remove 👍 reaction" })
+    ).toBeNull()
+  );
+  expect(screen.getByRole("alert").textContent).toBe(
+    "Could not complete the action"
+  );
+  expect(
+    (await relay.ai.hydrate({ threadId: relay.threadId })).messages[0]?.metadata
+      ?.abacus?.reactions ?? []
+  ).toEqual([]);
+  // The next attempt sticks.
+  fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
+  await screen.findByRole("button", { name: "Remove 👍 reaction" });
+  await act(async () => release());
+  await waitFor(() =>
+    expect((relay.log.at(-1)!.event as { name?: string }).name).toBe(
+      "message.reactions"
+    )
+  );
+  expect(
+    screen.getByRole("button", { name: "Remove 👍 reaction" })
+  ).toBeTruthy();
+});
+
 it("keeps a reply draft, sends the attributed quote and renders only the user's words with a jump card", async () => {
   const relay = await mount(
     new FakeRelay({
