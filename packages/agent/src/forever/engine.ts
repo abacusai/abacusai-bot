@@ -174,11 +174,11 @@ export class ForeverEngine {
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
   private stallFailureReported = false;
   /**
-   * Messages that arrived while a hidden housekeeping turn ran. Steered into
-   * that turn they would be answered where no one reads; they wait and run
-   * as a turn of their own once it is over.
+   * True from the end of the user's turn until this send returns: memory
+   * upkeep runs, and a message steered now would be answered inside a hidden
+   * turn. It stays in the host's queue instead, which runs it as its own turn.
    */
-  private readonly parkedSteers: string[] = [];
+  private upkeep = false;
   private session: AgentSession | undefined;
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
   private modelRuntime: ModelRuntime | undefined;
@@ -588,6 +588,9 @@ export class ForeverEngine {
       await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      // Steers pi has not delivered yet are still queued at the host.
+      this.upkeep = true;
+      this.dropSteers();
       // The user's reply is over; housekeeping below is not part of it.
       turn?.settled?.();
       await this.runMemoryMaintenance();
@@ -611,6 +614,8 @@ export class ForeverEngine {
       );
       if (this.turnRunning) this.finishTurn();
       turn?.settled?.();
+    } finally {
+      this.upkeep = false;
     }
   }
 
@@ -707,15 +712,7 @@ export class ForeverEngine {
       this.hiddenTurn = false;
       this.emitInternal({ type: "hidden_turn", phase: "end", customType });
     }
-    await this.replayParkedSteers();
     return ok;
-  }
-
-  /** Messages that waited out a hidden turn get the turn they were owed. */
-  private async replayParkedSteers(): Promise<void> {
-    if (this.parkedSteers.length === 0 || this.interrupted) return;
-    const parked = this.parkedSteers.splice(0);
-    await this.send(parked.join("\n\n"));
   }
 
   /**
@@ -1129,11 +1126,8 @@ export class ForeverEngine {
    * remembered so its arrival can be reported to the desktop.
    */
   async steer(text: string): Promise<void> {
-    if (this.hiddenTurn) {
-      // Steered into housekeeping it would be answered where no one reads.
-      this.parkedSteers.push(text);
-      return;
-    }
+    // Steered into housekeeping it would be answered where no one reads.
+    if (this.upkeep || this.hiddenTurn) return;
     this.pendingSteers.push(text);
     await this.requireSession().steer(text);
   }
@@ -1162,7 +1156,6 @@ export class ForeverEngine {
     this.stallWatch.clear();
     this.rejectAllPending("Interrupted.");
     this.pendingSteers.length = 0;
-    this.parkedSteers.length = 0;
     notifyConversationQueueCleared();
     this.session?.clearQueue();
     await this.session?.abort();

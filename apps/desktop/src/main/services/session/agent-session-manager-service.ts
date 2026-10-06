@@ -43,6 +43,8 @@ type SessionRecord = {
   runTrigger?: string | null;
   /** The routine this session edits: the editor turn behind its composer. */
   editorFor?: string | null;
+  /** The host lane that keeps this session for good. See laneSession. */
+  lane?: string;
   /** Minted by the bot service: a bot chat of some kind, never a session. */
   botOwned?: boolean;
   /** Parentage, stamped at mint. The one authoritative bot<->session link. */
@@ -208,6 +210,30 @@ export class AgentSessionManagerService {
     const record = this.sessions.get(created.id)!;
     record.editorFor = routineId;
     record.label = "Routine editor";
+    this.persist();
+    return toListItem(record);
+  }
+
+  /**
+   * The one session a host lane (the hosted phone loop) keeps, minted on
+   * first use and reused. Never listed, like a bot's chats.
+   */
+  laneSession(
+    lane: string,
+    workspaceId: string,
+    mode: AgentMode
+  ): AgentSessionListItem {
+    const existing = [...this.sessions.values()].find(
+      (record) => record.lane === lane
+    );
+    if (existing != null) return toListItem(existing);
+    const created = this.create(workspaceId, null, null, null, undefined, {
+      mode,
+    });
+    const record = this.sessions.get(created.id)!;
+    record.lane = lane;
+    record.botOwned = true;
+    record.label = lane;
     this.persist();
     return toListItem(record);
   }

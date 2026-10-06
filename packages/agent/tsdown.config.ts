@@ -40,6 +40,8 @@ export default defineConfig({
     // The renderer's tool titles, kinds and result formatting. Browser-safe:
     // no node or pi anywhere in its closure (tool-display.test.ts).
     "src/tool-display.ts",
+    // The phone reply's bubble split, for the hosted app's WhatsApp lane.
+    "src/phone/phone-bubbles.ts",
   ],
   deps: {
     // The sandbox runtime finds its vendored seccomp filters and Java agent

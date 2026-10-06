@@ -6,9 +6,7 @@
 import { timezonePrompt } from "../bot/bot-time-tool.js";
 import { isOpenLlmReference } from "../openllm.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
-
-/** A line holding only this splits a reply into separate WhatsApp bubbles. */
-export const PHONE_BUBBLE_MARKER = "---";
+import { PHONE_BUBBLE_MARKER } from "./phone-bubbles.js";
 
 /** How the model names itself when asked. */
 export function describeModel(reference: string | null): string {
