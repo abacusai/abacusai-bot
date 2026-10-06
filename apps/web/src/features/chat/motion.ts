@@ -15,9 +15,6 @@ import {
   type MotionPreference,
 } from "#renderer/lib/motion";
 
-/** Children fade in once the surface has settled (§9.1). */
-export const CHILD_FADE_DELAY_MS = durations.surface;
-
 /**
  * The composer surface: one critically damped spring for every change of
  * shape (grow on focus, attachments, the start → chat morph), a cut under
@@ -43,10 +40,16 @@ export const composerMorph = (
     ? { layout: true, layoutId: `composer:${threadId}` }
     : { layout: false };
 
+/**
+ * The toolbar row the box shows (attach, chips, send): it fades in over the
+ * surface's own visual duration, with no delay, so it is in by the time
+ * the surface settles; the surface clips it to its growing shape meanwhile.
+ * One motion, not a surface then a pop of chips.
+ */
 export const composerChildren = (pref: MotionPreference): Transition =>
   motionFor<Transition>(
     pref,
-    { duration: durations.childFade / 1000, delay: CHILD_FADE_DELAY_MS / 1000 },
+    { duration: durations.surface / 1000, ease: [...easings.standard] },
     { ...reducedTransition }
   );
 

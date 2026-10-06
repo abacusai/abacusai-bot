@@ -935,7 +935,12 @@ export const ThreadComposer = () => {
           data-layout={morph.layout ? "layout" : undefined}
           data-radius={radius}
           className={cn(
-            "relative z-10 flex flex-col bg-[var(--chat-surface)]",
+            // `overflow-clip`: while the surface morphs, motion projects it
+            // with a transform, and the clip follows that visual box, so a
+            // revealed row (reply, attachments, the toolbar) is uncovered by
+            // the surface rather than drawn ahead of it. Clip, not hidden:
+            // no scroll container, so focus never scrolls the surface.
+            "relative z-10 flex flex-col overflow-clip bg-[var(--chat-surface)]",
             // ComposerStates: the pill is 48 px; the typing box is the text
             // area over the toolbar row with 8 px under it, nothing else.
             expanded

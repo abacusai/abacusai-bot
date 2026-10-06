@@ -105,9 +105,10 @@ describe("bots interactions", () => {
       expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull()
     );
     expect(count()).toBe(1);
-    expect(screen.getAllByRole("button", { name: /App default/ })).toHaveLength(
-      1
-    );
+    // The chip is the picker's trigger, a combobox named "Model: …".
+    expect(
+      screen.getAllByRole("combobox", { name: /App default/ })
+    ).toHaveLength(1);
     await act(async () => {
       setPanelOpen(panelScopeKey("bots", "chief-of-staff")!, false);
     });
@@ -115,7 +116,7 @@ describe("bots interactions", () => {
     expect(count()).toBe(1);
     fireEvent.blur(input);
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: /App default/ })).toBeNull()
+      expect(screen.queryByRole("combobox", { name: /App default/ })).toBeNull()
     );
     expect(count()).toBe(0);
   });
@@ -125,9 +126,9 @@ describe("bots interactions", () => {
     fireEvent.focus(
       screen.getByRole("textbox", { name: /Message Chief of Staff/ })
     );
-    const chip = await screen.findByRole("button", { name: "App default" });
+    const chip = await screen.findByRole("combobox", { name: /App default/ });
     fireEvent.click(chip);
-    // The picker's search field (a Command input, labelled by its list).
+    // The picker's search field, labelled "Models".
     await screen.findByRole("combobox", { name: "Models" });
     expect(chip.isConnected).toBe(true);
     expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull();
@@ -139,7 +140,7 @@ describe("bots interactions", () => {
     });
     await screen.findByTestId("bot-chat");
     expect(screen.queryByRole("textbox", { name: /Message/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /App default/ })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: /App default/ })).toBeNull();
     expect(screen.queryByText("Edit bot")).toBeNull();
   });
   it("an externally deleted bot changes the mounted chat to BotGone", async () => {

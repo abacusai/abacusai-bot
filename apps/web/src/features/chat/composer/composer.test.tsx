@@ -67,7 +67,8 @@ describe("R2-T25 composer", () => {
       />
     );
     expect(reads).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Choose model" }));
+    // The chip is the picker's trigger (a Base UI combobox button).
+    fireEvent.click(screen.getByRole("combobox", { name: /Choose model/ }));
     await screen.findByRole("option", { name: "Catalog model" });
     expect(reads).toHaveBeenCalled();
     // The panel (Pickers): a search field over the grouped rows.
@@ -266,7 +267,7 @@ describe("R2-T25 composer", () => {
     await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
-  it("the model picker: 340 px panel above the chip with sections, the chosen row marked, keyboard navigable", async () => {
+  it("the model picker: a provider rail with marks, search on top, dense rows with the chosen one checked, keyboard navigable", async () => {
     const onChange = vi.fn();
     const connect = vi.fn();
     const useLocal = vi.fn();
@@ -307,29 +308,47 @@ describe("R2-T25 composer", () => {
         }}
       />
     );
-    // The chip: the model's name, its provider in muted text.
-    const chip = screen.getByRole("button", { name: /RouteLLM/ });
+    // The chip: the provider's mark, the model's name, its provider muted.
+    const chip = screen.getByRole("combobox", { name: /RouteLLM/ });
     expect(chip.textContent).toContain("Abacus.AI");
+    expect(
+      chip.querySelector<HTMLElement>('[data-slot="connector-mark"]')?.dataset
+        .mark
+    ).toBe("abacus");
     fireEvent.click(chip);
     const panel = await screen.findByRole("listbox");
+    const content = panel.closest(
+      '[data-slot="chat-model-panel"]'
+    ) as HTMLElement;
+    expect(content.className).toContain("w-[min(360px");
+    // The rail: favourites, each provider with its mark, this machine.
+    const rail = [
+      ...content.querySelectorAll<HTMLElement>(
+        '[data-slot="chat-model-rail-item"]'
+      ),
+    ];
+    expect(rail.map((item) => item.getAttribute("aria-label"))).toEqual([
+      "Favourites",
+      "Abacus.AI",
+      "OpenRouter",
+      "On this machine",
+    ]);
+    // It opens on the chosen model's provider, that row checked, the
+    // local-model row at the foot of every view.
+    expect(rail[1]!.getAttribute("aria-selected")).toBe("true");
     expect(
-      (panel.closest('[data-slot="popover-content"]') as HTMLElement).className
-    ).toContain("w-[min(340px");
-    expect(
-      [...panel.querySelectorAll("[cmdk-group-heading]")].map(
+      [...content.querySelectorAll('[data-slot="combobox-label"]')].map(
         (heading) => heading.textContent
       )
-    ).toEqual(["Favourites", "Abacus.AI", "OpenRouter", "On this machine"]);
-    expect(within(panel).getByText("Connect OpenRouter")).toBeTruthy();
+    ).toEqual(["Abacus.AI"]);
+    expect(
+      within(panel)
+        .getAllByRole("option")
+        .filter((option) => option.dataset.checked === "true")
+        .map((option) => option.textContent)
+    ).toEqual(["RouteLLM"]);
     expect(within(panel).getByText("Use a local model")).toBeTruthy();
-    const chosen = within(panel)
-      .getAllByRole("option")
-      .filter((option) => option.dataset.checked === "true");
-    expect(chosen.map((option) => option.textContent)).toEqual([
-      "RouteLLMAbacus.AI",
-      "RouteLLM",
-    ]);
-    // Keyboard: the arrow keys move the cursor, Enter picks.
+    // Keyboard from the search field: the arrow keys move, Enter picks.
     const search = screen.getByRole("combobox", { name: "Models" });
     fireEvent.keyDown(search, { key: "ArrowDown" });
     fireEvent.keyDown(search, { key: "ArrowDown" });
@@ -337,6 +356,14 @@ describe("R2-T25 composer", () => {
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith("route-llm-open")
     );
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    // A provider that is not connected: the card with its connect action.
+    fireEvent.click(chip);
+    await screen.findByRole("listbox");
+    fireEvent.click(screen.getByRole("tab", { name: "OpenRouter" }));
+    expect(screen.getByText("OpenRouter is not connected")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Connect OpenRouter" }));
+    expect(connect).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 

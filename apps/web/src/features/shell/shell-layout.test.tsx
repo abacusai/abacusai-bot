@@ -602,6 +602,9 @@ describe("loading", () => {
   it("the closed command menu adds no bots subscription beyond global needs-you", async () => {
     await at(1280, "/sessions/new");
     await waitFor(() => expect(harness!.collections.bots.status).toBe("ready"));
-    expect(screen.queryByRole("combobox")).toBeNull();
+    // The menu (a command dialog) is not mounted; the page's own combobox,
+    // the session composer's model chip, is.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.querySelector("[cmdk-input]")).toBeNull();
   });
 });
