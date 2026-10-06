@@ -19,7 +19,7 @@ vi.mock("#renderer/lib/use-app-context", async (original) => ({
   ...(await original<typeof import("#renderer/lib/use-app-context")>()),
   useAppContext: () => context,
 }));
-vi.mock("#renderer/data/queries/live", () => ({
+vi.mock("#renderer/data/queries/notices", () => ({
   followNotices: (
     _t: unknown,
     _open: unknown,

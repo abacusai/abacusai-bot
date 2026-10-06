@@ -15,7 +15,7 @@
  */
 import type { QueryClient } from "@tanstack/react-query";
 
-import { untilOpen } from "#renderer/data/queries/live";
+import { untilOpen } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 
 /** First path segment of the queries a lost notice would have refreshed. */
@@ -34,7 +34,6 @@ export const MISSED_NOTICE_FAMILIES: ReadonlySet<string> = new Set([
   "settings",
   "skills",
   "system",
-  "update",
 ]);
 
 /** An oRPC query key starts with its procedure path: `[["account", "state"], …]`. */

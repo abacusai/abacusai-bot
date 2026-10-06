@@ -1,4 +1,6 @@
 import { AgentMode } from "@abacus-ai/contract/agent-types";
+import { isTerminalShellId } from "@abacus-ai/contract/terminal-shells";
+import { Store } from "@tanstack/react-store";
 import * as v from "valibot";
 
 import {
@@ -119,9 +121,7 @@ const tabs = v.record(
         openedAt: v.number(),
         path: v.optional(v.string()),
         sessionId: v.optional(v.string()),
-        shell: v.optional(
-          v.picklist(["system", "cmd", "powershell", "pwsh", "busybox"])
-        ),
+        shell: v.optional(v.custom(isTerminalShellId)),
         url: v.optional(v.string()),
       })
     ),
@@ -194,6 +194,140 @@ export const bindContinuityStore = (
     if (binding.get(storage) === store) binding.delete(storage);
   };
 };
+/**
+ * What of `value` the schema accepts, as stored (unknown fields kept): the
+ * whole value, or else a record's or a list's valid entries, so one bad
+ * draft, tab set or mark never costs the others. `undefined` when nothing
+ * is usable (no valid entry either).
+ */
+const salvage = (schema: v.GenericSchema, value: unknown): unknown => {
+  const valid = (schema: v.GenericSchema, value: unknown): boolean =>
+    v.safeParse(schema, value).success;
+  if (valid(schema, value)) return value;
+  const shape = schema as {
+    type: string;
+    value?: v.GenericSchema;
+    item?: v.GenericSchema;
+  };
+  let kept: unknown[] | Record<string, unknown> | undefined;
+  if (
+    shape.type === "record" &&
+    shape.value &&
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  ) {
+    const entries = Object.entries(value).filter(([, entry]) =>
+      valid(shape.value!, entry)
+    );
+    if (entries.length > 0) kept = Object.fromEntries(entries);
+  }
+  if (shape.type === "array" && shape.item && Array.isArray(value)) {
+    const items = value.filter((entry) => valid(shape.item!, entry));
+    if (items.length > 0) kept = items;
+  }
+  if (kept !== undefined) return kept;
+  return undefined;
+};
+
+/**
+ * A store `persistedStore` made: `flush` writes a batched change now,
+ * `bind` registers it for continuity (returns the unbinding), `dispose`
+ * flushes and lets go of everything it holds.
+ */
+export type PersistedStore<T> = Store<T> & {
+  flush(): void;
+  bind(): () => void;
+  dispose(): void;
+};
+
+/**
+ * A module-level store kept in `sessionStorage` under `storage`, one of
+ * `CONTINUITY_STORES` (so its schema checks what is read back, and a
+ * document swap carries it): read once at creation, keeping what the schema
+ * accepts entry by entry (`initial` when nothing is usable; storage is left
+ * as it was until the state changes), written on every change (removed
+ * when it is `null`), and bound for `captureDrafts`/`restoreDrafts` until
+ * `dispose`. Storage that is full or blocked leaves the state in memory.
+ *
+ * A store that lives with a component passes `bind: false` and binds from
+ * an effect, so a render React discards never registers.
+ *
+ * `batchMs` writes at most once per that many ms, unless `urgent` says a
+ * change must go out at once; a pending write is flushed when the page is
+ * hidden (the last event a frozen or discarded tab is guaranteed) or
+ * unloaded, and by `flush`. `serialize` picks what is written.
+ */
+export const persistedStore = <T>(
+  storage: string,
+  initial: () => T,
+  options: {
+    serialize?(state: T): unknown;
+    batchMs?: number;
+    urgent?(previous: T, next: T): boolean;
+    bind?: boolean;
+  } = {}
+): PersistedStore<T> => {
+  const definition = definitionFor(storage);
+  if (!definition) throw new Error(`Unregistered session store: ${storage}`);
+  const read = (): T => {
+    try {
+      const raw = globalThis.sessionStorage?.getItem(storage);
+      if (raw == null) return initial();
+      return (salvage(definition.schema, JSON.parse(raw)) as T) ?? initial();
+    } catch {
+      return initial();
+    }
+  };
+  const store = new Store<T>(read());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const write = (): void => {
+    clearTimeout(timer);
+    timer = undefined;
+    try {
+      const value = options.serialize?.(store.state) ?? store.state;
+      if (value == null) globalThis.sessionStorage?.removeItem(storage);
+      else globalThis.sessionStorage?.setItem(storage, JSON.stringify(value));
+    } catch {
+      // Full or blocked: this document keeps it in memory.
+    }
+  };
+  let previous = store.state;
+  const subscription = store.subscribe((next) => {
+    const urgent = options.urgent?.(previous, next) ?? false;
+    previous = next;
+    if (options.batchMs == null || urgent) write();
+    else timer ??= setTimeout(write, options.batchMs);
+  });
+  const flush = (): void => {
+    if (timer !== undefined) write();
+  };
+  const flushHidden = (): void => {
+    if (document.visibilityState === "hidden") flush();
+  };
+  if (options.batchMs != null) {
+    globalThis.addEventListener?.("pagehide", flush);
+    globalThis.document?.addEventListener("visibilitychange", flushHidden);
+  }
+  const bind = (): (() => void) =>
+    bindContinuityStore(storage, {
+      read: () => store.state,
+      write: (value) => store.setState(() => value as T),
+    });
+  const unbind = options.bind === false ? () => undefined : bind();
+  return Object.assign(store, {
+    flush,
+    bind,
+    dispose: () => {
+      flush();
+      subscription.unsubscribe();
+      unbind();
+      globalThis.removeEventListener?.("pagehide", flush);
+      globalThis.document?.removeEventListener("visibilitychange", flushHidden);
+    },
+  });
+};
+
 export type DraftSnapshot = Record<string, { key: string; value: unknown }>;
 export const captureDrafts = (): DraftSnapshot => {
   const result: DraftSnapshot = {};
@@ -216,16 +350,16 @@ export const restoreDrafts = (snapshot: DraftSnapshot): void => {
       console.warn(`[continuity] unknown store ${storage}`);
       continue;
     }
-    const parsed = v.safeParse(definition.schema, entry.value);
-    if (!parsed.success) {
+    const value = salvage(definition.schema, entry.value);
+    if (value === undefined) {
       console.warn(`[continuity] invalid ${entry.key}`);
       continue;
     }
     try {
-      sessionStorage.setItem(storage, JSON.stringify(parsed.output));
+      sessionStorage.setItem(storage, JSON.stringify(value));
     } catch (error) {
       console.warn(`[continuity] storage ${storage}`, error);
     }
-    binding.get(storage)?.write(parsed.output);
+    binding.get(storage)?.write(value);
   }
 };

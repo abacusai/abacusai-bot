@@ -1,7 +1,7 @@
 import type { RunFinishedNotice } from "@abacus-ai/contract/contract/ai";
 import { getEventMeta } from "@orpc/client";
 
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 
 type Listener = (notice: RunFinishedNotice) => void | Promise<void>;

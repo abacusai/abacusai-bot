@@ -1,107 +1,80 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import {
-  followConnectorEvents,
-  followNotices,
-} from "#renderer/data/queries/live";
+import { followNotice } from "#renderer/data/queries/notices";
+import type { AppQueryUtils } from "#renderer/data/transport";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useAppContext } from "#renderer/lib/use-app-context";
-/** Library snapshots have separate notice streams; table resync is not a notice. */
+
+/** What a messaging change makes stale: snapshot, statuses, sender chats. */
+const messagingKeys = (orpc: AppQueryUtils) => [
+  orpc.messaging.snapshot.queryKey({ input: {} }),
+  orpc.connectors.statuses.queryKey({ input: {} }),
+  orpc.bots.senderChats.queryKey({ input: {} }),
+];
+
+/**
+ * The library snapshots' notice streams and the table changes that feed
+ * them (a table resync is not a notice).
+ */
 export const LibraryGlobals = () => {
   const { transport, db } = useAppContext();
   const cache = useQueryClient();
   useEffect(() => {
+    const { orpc } = transport;
     const abort = new AbortController();
-    const invalidate = (key: readonly unknown[]) =>
-      void cache.invalidateQueries({ queryKey: key });
-    const messaging = () => {
-      invalidate(transport.orpc.messaging.snapshot.queryKey({ input: {} }));
-      invalidate(transport.orpc.connectors.statuses.queryKey({ input: {} }));
-      invalidate(transport.orpc.bots.senderChats.queryKey());
+    const invalidate = (...keys: (readonly unknown[])[]) => {
+      for (const queryKey of keys) void cache.invalidateQueries({ queryKey });
     };
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.messaging.events({}, { signal }),
-      messaging,
-      abort.signal
-    );
-    followConnectorEvents(
+    const messaging = () => invalidate(...messagingKeys(orpc));
+    const memory = () => invalidate(orpc.memory.bots.queryKey({ input: {} }));
+    followNotice("messaging", transport, messaging, abort.signal);
+    followNotice("bots", transport, messaging, abort.signal);
+    followNotice("memory", transport, memory, abort.signal);
+    followNotice(
+      "connectors",
       transport,
       (event) => {
-        if (event.type === "status-changed") {
+        if (event.type === "status-changed")
           invalidate(
-            transport.orpc.connectors.statuses.queryKey({ input: {} })
+            orpc.connectors.statuses.queryKey({ input: {} }),
+            orpc.mcp.list.queryKey({ input: { mode: "code" } })
           );
-          invalidate(
-            transport.orpc.mcp.list.queryKey({ input: { mode: "code" } })
-          );
-        }
       },
       abort.signal
     );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.memory.events({}, { signal }),
-      () => invalidate(transport.orpc.memory.bots.queryKey({ input: {} })),
-      abort.signal
-    );
-    if (IS_ELECTRON)
-      void followNotices(
+    if (IS_ELECTRON) {
+      followNotice(
+        "browser",
         transport,
-        ({ signal }) => transport.client.browser.events({}, { signal }),
         (event) => {
           if (event.type === "status")
             cache.setQueryData(
-              transport.orpc.browser.status.queryKey({ input: {} }),
+              orpc.browser.status.queryKey({ input: {} }),
               event.status
             );
         },
         abort.signal
       );
-    if (IS_ELECTRON)
-      void followNotices(
+      followNotice(
+        "devices",
         transport,
-        ({ signal }) => transport.client.devices.events({}, { signal }),
         (event) => {
           if (event.type === "status" || event.type === "snapshot")
             cache.setQueryData(
-              transport.orpc.devices.status.queryKey({ input: {} }),
+              orpc.devices.status.queryKey({ input: {} }),
               event.status
             );
         },
         abort.signal
       );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.settings.events({}, { signal }),
-      (event) => {
-        if (event.type === "exec-backend") {
-          invalidate(transport.orpc.settings.execBackend.get.key());
-          invalidate(transport.orpc.settings.sandboxSupport.key());
-        }
-        if (event.type === "credentials-changed") {
-          invalidate(transport.orpc.connectors.statuses.key());
-          invalidate(transport.orpc.models.list.key());
-          invalidate(transport.orpc.settings.keys.listProviders.key());
-        }
-      },
-      abort.signal
-    );
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.bots.events({}, { signal }),
-      messaging,
-      abort.signal
-    );
+    }
     const sessions = db.collections.sessions.subscribeChanges(messaging);
-    const unsubscribe = db.collections.bots.subscribeChanges(() =>
-      invalidate(transport.orpc.memory.bots.queryKey({ input: {} }))
-    );
+    const bots = db.collections.bots.subscribeChanges(memory);
     return () => {
       abort.abort();
-      unsubscribe.unsubscribe();
       sessions.unsubscribe();
+      bots.unsubscribe();
     };
   }, [transport, db, cache]);
   return null;

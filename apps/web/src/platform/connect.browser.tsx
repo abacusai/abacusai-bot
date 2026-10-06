@@ -20,7 +20,7 @@ import { installLease } from "#platform/lease";
 import { rpcCode } from "#renderer/data/ai/errors";
 import { installDb } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
-import { untilOpen } from "#renderer/data/queries/live";
+import { untilOpen } from "#renderer/data/queries/notices";
 import { systemInfoQuery } from "#renderer/data/queries/system";
 import { createQueryClient } from "#renderer/data/query-client";
 import {

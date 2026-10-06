@@ -1,5 +1,6 @@
 import { contract } from "@abacus-ai/contract/contract";
 import { LOCAL_MODEL_CATALOG } from "@abacus-ai/contract/local-models";
+import type { UpdateStatus } from "@abacus-ai/contract/update";
 import { implement } from "@orpc/server";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -11,6 +12,14 @@ import {
 } from "#renderer/features/chat/composer/draft-store";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const os = implement(contract);
+/** `update.events` as main serves it: the current status first, then held open. */
+const servedStatus = (...statuses: UpdateStatus[]) =>
+  os.update.events.handler(async function* ({ signal }) {
+    for (const status of statuses) yield status;
+    await new Promise<void>((resolve) =>
+      signal?.addEventListener("abort", () => resolve(), { once: true })
+    );
+  });
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
@@ -36,7 +45,7 @@ it("the update action persists in the global end slot across route actions", asy
   app = await renderApp("/routines", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => idle),
+        events: servedStatus(idle),
         install: os.update.install.handler(install),
       },
     },

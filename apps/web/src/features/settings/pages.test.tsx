@@ -6,8 +6,17 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
+import { updateStatusQuery } from "#renderer/features/settings/updates";
 import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 const os = implement(contract);
+/** `update.events` as main serves it: the current status first, then held open. */
+const servedStatus = (...statuses: UpdateStatus[]) =>
+  os.update.events.handler(async function* ({ signal }) {
+    for (const status of statuses) yield status;
+    await new Promise<void>((resolve) =>
+      signal?.addEventListener("abort", () => resolve(), { once: true })
+    );
+  });
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
@@ -34,7 +43,7 @@ it("R5-T27 rejected install exposes Try again while downloaded and releases the 
   app = await renderApp("/settings/about", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => ({ ...idle, downloaded: true })),
+        events: servedStatus({ ...idle, downloaded: true }),
         install: os.update.install.handler(install),
       },
     },
@@ -56,13 +65,13 @@ it("R5-T27 a critical stalled update has a reachable banner and no blocking dial
   app = await renderApp("/settings/about", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => ({
+        events: servedStatus({
           ...idle,
           downloaded: true,
           criticalUpdate: true,
           installing: true,
           installStalled: true,
-        })),
+        }),
       },
     },
   });
@@ -110,25 +119,23 @@ it("R5-T27 critical countdown installs exactly at five minutes", async () => {
   app = await renderApp("/settings/about", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => idle),
+        events: servedStatus(idle),
         install: os.update.install.handler(install),
       },
     },
   });
   const { queryClient, transport } = app!.router.options.context!;
-  const key = transport.orpc.update.status.queryKey({ input: {} });
-  // Let the initial seed finish before replacing it with a critical update.
-  await waitFor(() =>
-    expect(queryClient.getQueryState(key)?.fetchStatus).toBe("idle")
-  );
+  const key = updateStatusQuery(transport).queryKey;
+  // Let the first status arrive before replacing it with a critical update.
+  await waitFor(() => expect(queryClient.getQueryData(key)).toEqual(idle));
   vi.useFakeTimers();
   try {
     await act(async () => {
-      const { queryClient, transport } = app!.router.options.context!;
-      queryClient.setQueryData(
-        transport.orpc.update.status.queryKey({ input: {} }),
-        { ...idle, downloaded: true, criticalUpdate: true }
-      );
+      queryClient.setQueryData(key, {
+        ...idle,
+        downloaded: true,
+        criticalUpdate: true,
+      });
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
@@ -227,11 +234,11 @@ it("an install retry event carrying historical failure keeps the critical dialog
   app = await renderApp("/settings/about", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => failed),
         install: os.update.install.handler(() => {
           release();
         }),
         events: os.update.events.handler(async function* ({ signal }) {
+          yield failed;
           await retried;
           yield { ...failed, installing: true };
           await new Promise<void>((resolve) =>
@@ -271,8 +278,8 @@ it("the quit watchdog event replaces the critical dialog with a stalled banner",
   app = await renderApp("/settings/about", {
     procedures: {
       update: {
-        status: os.update.status.handler(() => installing),
         events: os.update.events.handler(async function* ({ signal }) {
+          yield installing;
           await watchdog;
           yield { ...installing, installStalled: true };
           await new Promise<void>((resolve) =>

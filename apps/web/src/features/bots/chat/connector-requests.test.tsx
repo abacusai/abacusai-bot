@@ -249,12 +249,13 @@ describe("connectRequest", () => {
 });
 
 describe("usePendingConnectorAsks", () => {
-  it("counts asks per conversation from the keyless stream", async () => {
+  it("counts asks per conversation from the keyless stream's snapshot", async () => {
     const fake = makeFake();
     const t = setup(fake);
     const { result } = renderHook(() => usePendingConnectorAsks(t));
     await waitFor(() => expect(fake.opened).toBe(1));
     act(() => {
+      fake.push({ type: "snapshot", requests: [] });
       fake.push({ type: "request", request: ask("a", OTHER) });
       fake.push({ type: "request", request: ask("b", OTHER) });
       fake.push({ type: "request", request: ask("c") });

@@ -18,7 +18,10 @@ import {
 import { Store } from "@tanstack/react-store";
 
 import { isNotFound, type AiClient } from "#renderer/data/ai";
-import { untilOpen, type ConnectionSource } from "#renderer/data/queries/live";
+import {
+  untilOpen,
+  type ConnectionSource,
+} from "#renderer/data/queries/notices";
 
 import { isAllowed } from "../kit/permissions/decisions";
 import {

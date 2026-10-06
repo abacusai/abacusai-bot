@@ -5,7 +5,7 @@
 import { createCollection } from "@tanstack/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { untilOpen } from "#renderer/data/queries/live";
+import { untilOpen } from "#renderer/data/queries/notices";
 import type { TransportState } from "#renderer/data/transport/lifecycle";
 
 import { FakeTable } from "./fake-table";

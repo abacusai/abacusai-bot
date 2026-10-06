@@ -16,7 +16,7 @@ import { useEffect, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BrowserSurface } from "#renderer/components/browser-surface";
-import { followNotices } from "#renderer/data/queries/live";
+import { followNotices } from "#renderer/data/queries/notices";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {

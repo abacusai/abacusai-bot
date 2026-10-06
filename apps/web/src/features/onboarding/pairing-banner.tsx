@@ -6,17 +6,19 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
-import { followNotices } from "#renderer/data/queries/live";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
-/** The persisted queue drains on connection or dismissal, and waits for the tour. */
+/**
+ * The persisted queue drains on connection or dismissal, and waits for the
+ * tour. `messaging.events` keeps the snapshot fresh (the library's rule).
+ */
 export const PairingQueueBanner = ({
   suppressed = false,
 }: {
   suppressed?: boolean;
 }) => {
-  const { transport, queryClient } = useRouter().options.context;
+  const { transport } = useRouter().options.context;
   const db = useDb();
   const prefs = usePrefs();
   const navigate = useAppNavigate();
@@ -25,19 +27,6 @@ export const PairingQueueBanner = ({
   const platform = prefs.onboardingPairing?.[0];
   const options = transport.orpc.messaging.snapshot.queryOptions({ input: {} });
   const snapshot = useQuery({ ...options, enabled: IS_ELECTRON && !!platform });
-  useEffect(() => {
-    if (!IS_ELECTRON || !platform) return;
-    const abort = new AbortController();
-    void followNotices(
-      transport,
-      ({ signal }) => transport.client.messaging.events({}, { signal }),
-      () => {
-        void queryClient.invalidateQueries({ queryKey: options.queryKey });
-      },
-      abort.signal
-    );
-    return () => abort.abort();
-  }, [platform, transport, queryClient, options.queryKey]);
   useEffect(() => {
     if (
       platform &&

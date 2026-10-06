@@ -1,9 +1,9 @@
-import { Store, useSelector } from "@tanstack/react-store";
+import { useSelector } from "@tanstack/react-store";
 
 import { defaultLook, resolveLook } from "#renderer/lib/bots/avatar";
 import { DEFAULT_CHECK_IN } from "#renderer/lib/bots/check-in";
 import { BOT_TEMPLATES } from "#renderer/lib/bots/templates";
-import { bindContinuityStore } from "#renderer/lib/continuity/registry";
+import { persistedStore } from "#renderer/lib/continuity/registry";
 
 import { newBotId } from "../data/bot-actions";
 import type { BotFormValues } from "./schema";
@@ -14,26 +14,12 @@ export interface BotDraft {
   values: BotFormValues;
   stages: { bot: boolean; checkIn: "none" | "persisted" | "failed" };
 }
-const storageKey = "abacusai-bot:renderer:bot-draft";
-const restore = (): BotDraft | null => {
-  try {
-    return JSON.parse(
-      sessionStorage.getItem(storageKey) ?? "null"
-    ) as BotDraft | null;
-  } catch {
-    return null;
-  }
-};
-const draftStore = new Store<BotDraft | null>(restore());
-const write = (draft: BotDraft | null): void => {
+const draftStore = persistedStore<BotDraft | null>(
+  "abacusai-bot:renderer:bot-draft",
+  () => null
+);
+const write = (draft: BotDraft | null): void =>
   draftStore.setState(() => draft);
-  try {
-    if (draft) sessionStorage.setItem(storageKey, JSON.stringify(draft));
-    else sessionStorage.removeItem(storageKey);
-  } catch {
-    /* A blocked storage still permits this document's draft. */
-  }
-};
 export const getDraft = (): BotDraft => {
   if (draftStore.state) return draftStore.state;
   const draft: BotDraft = {
@@ -85,34 +71,14 @@ export const selectTemplate = (
   });
 };
 
-bindContinuityStore(storageKey, {
-  read: () => draftStore.state,
-  write: (value) => draftStore.setState(() => value as BotDraft | null),
-});
-
 interface EditDraft {
   values: BotFormValues;
   baseline: BotFormValues;
 }
-const EDIT_KEY = "abacusai-bot:abacus.bots.edits";
-const readEdits = (): Record<string, EditDraft> => {
-  try {
-    return JSON.parse(sessionStorage.getItem(EDIT_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-};
-export const editDraftStore = new Store<Record<string, EditDraft>>(readEdits());
-editDraftStore.subscribe((value) => {
-  try {
-    sessionStorage.setItem(EDIT_KEY, JSON.stringify(value));
-  } catch {}
-});
-bindContinuityStore(EDIT_KEY, {
-  read: () => editDraftStore.state,
-  write: (value) =>
-    editDraftStore.setState(() => value as Record<string, EditDraft>),
-});
+export const editDraftStore = persistedStore<Record<string, EditDraft>>(
+  "abacusai-bot:abacus.bots.edits",
+  () => ({})
+);
 export const clearEditDraft = (id: string) =>
   editDraftStore.setState((state) => {
     const { [id]: _removed, ...rest } = state;

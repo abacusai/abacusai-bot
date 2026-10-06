@@ -23,6 +23,7 @@ import {
 } from "./attention";
 import { useConnectorAsks, usePermissions } from "./live";
 import { botSessionsOf, useAllRoutines, useAllSessions } from "./queries";
+import { useBotsTransport } from "./transport";
 import { useUnreadIds } from "./unread-store";
 
 export interface AttentionSources {
@@ -35,14 +36,17 @@ export interface AttentionSources {
 }
 
 /** Every source once, for lists that compute many bots' attention. */
-export const useAttentionSources = (): AttentionSources => ({
-  activities: useAllBotActivity(),
-  sessions: useAllSessions(),
-  routines: useAllRoutines(),
-  permissions: usePermissions(),
-  asks: useConnectorAsks(),
-  unread: useUnreadIds(),
-});
+export const useAttentionSources = (): AttentionSources => {
+  const transport = useBotsTransport();
+  return {
+    activities: useAllBotActivity(),
+    sessions: useAllSessions(),
+    routines: useAllRoutines(),
+    permissions: usePermissions(transport),
+    asks: useConnectorAsks(transport),
+    unread: useUnreadIds(),
+  };
+};
 
 export const attentionOf = (
   bot: Pick<BotRow, "id">,
