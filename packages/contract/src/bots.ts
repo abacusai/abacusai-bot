@@ -21,6 +21,8 @@ export interface Bot {
   avatarShape: string;
   /** Optional for records written before accessories. */
   avatarAccessory?: AvatarAccessoryId | null;
+  /** The chat's wallpaper (BOT_WALLPAPER_IDS); null or absent is none. */
+  wallpaper?: BotWallpaperId | null;
   /** Null means the active workspace when first opened. */
   workspaceId: string | null;
   /** The forever chat. Null until first opened, or after its session died. */
@@ -60,6 +62,7 @@ export interface BotCreateInput {
   avatarColor?: string;
   avatarShape?: string;
   avatarAccessory?: AvatarAccessoryId | null;
+  wallpaper?: BotWallpaperId | null;
   workspaceId?: string | null;
   model?: string | null;
   channel?: string | null;
@@ -86,10 +89,27 @@ export type BotUpdateInput = Partial<
     | "avatarColor"
     | "avatarShape"
     | "avatarAccessory"
+    | "wallpaper"
     | "model"
     | "channel"
   >
 >;
+
+/**
+ * The chat wallpapers a bot can wear (spec 03 §24, WhatsApp-style): built-in
+ * seamless tiles tinted from the theme, a solid tint from the bot's accent,
+ * or none (the default). The renderer draws them; the id is all that is
+ * stored.
+ */
+export const BOT_WALLPAPER_IDS = [
+  "none",
+  "doodle",
+  "dots",
+  "grid",
+  "waves",
+  "solid",
+] as const;
+export type BotWallpaperId = (typeof BOT_WALLPAPER_IDS)[number];
 
 /** What opening a bot's chat resolves to. */
 export interface BotChatHandle {

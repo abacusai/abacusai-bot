@@ -626,7 +626,16 @@
     "viewBots": "Bots",
     "viewSessions": "Sesiones",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "wallpaper": {
+      "title": "Fondo del chat",
+      "none": "Ninguno",
+      "doodle": "Garabatos",
+      "dots": "Puntos",
+      "grid": "Cuadrícula",
+      "waves": "Ondas",
+      "solid": "Tono de acento"
+    }
   },
   "capabilities": {
     "toolDescriptions": {

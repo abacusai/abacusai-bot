@@ -8,7 +8,7 @@ import * as v from "valibot";
 
 import { THEME_COLOR_KEYS } from "../look";
 import { base, mutation, query, subscription } from "./base";
-import { AvatarAccessorySchema } from "./bots";
+import { AvatarAccessorySchema, BotWallpaperSchema } from "./bots";
 import {
   AgentModeSchema,
   BotId,
@@ -55,6 +55,7 @@ export const BotCreateInputSchema = v.object({
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
   avatarAccessory: AvatarAccessorySchema,
+  wallpaper: BotWallpaperSchema,
   workspaceId: v.optional(v.nullable(v.string())),
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
@@ -68,6 +69,7 @@ export const BotUpdateInputSchema = v.object({
   avatarColor: v.optional(v.string()),
   avatarShape: v.optional(v.string()),
   avatarAccessory: AvatarAccessorySchema,
+  wallpaper: BotWallpaperSchema,
   model: v.optional(v.nullable(v.string())),
   channel: v.optional(v.nullable(v.string())),
 });

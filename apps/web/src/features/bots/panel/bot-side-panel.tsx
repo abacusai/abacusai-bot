@@ -39,7 +39,12 @@ import {
 } from "#renderer/ui/context-menu";
 
 import { BotFace } from "../avatar";
-import { clearMemory, forgetMemory, setPinned } from "../data/bot-actions";
+import {
+  clearMemory,
+  forgetMemory,
+  setPinned,
+  updateBot,
+} from "../data/bot-actions";
 import {
   useBotMemories,
   useBotFiles,
@@ -50,6 +55,7 @@ import {
 import { useBotsTransport } from "../data/transport";
 import { ModelPicker, type useBotModelBinding } from "../model/picker";
 import { DeleteBotDialog } from "../sidebar/delete-dialog";
+import { WallpaperPicker } from "./wallpaper-picker";
 export const DetailsTab = ({
   bot,
   binding,
@@ -168,6 +174,14 @@ export const DetailsTab = ({
           <span className="text-muted-foreground text-xs">{files.length}</span>
         </Button>
       </div>
+      <WallpaperPicker
+        value={bot.wallpaper}
+        onChange={(wallpaper) =>
+          void updateBot(db.collections.bots, bot.id, { wallpaper }).catch(() =>
+            showError(t("bots.form.saveError"))
+          )
+        }
+      />
       {routine &&
         sessions.some((session) => session.routineId === routine.id) && (
           <section>

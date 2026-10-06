@@ -713,7 +713,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         }}
       >
         {slots.header && (
-          <div className="px-4 pt-3 [container-type:inline-size]">
+          <div className="[container-type:inline-size] px-4 pt-3">
             {slots.header}
           </div>
         )}

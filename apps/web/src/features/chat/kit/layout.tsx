@@ -266,6 +266,10 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
   const layoutRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   useComposerDockHeight(layoutRef, dockRef);
+  const wallpaper =
+    slots.wallpaper != null && slots.wallpaper !== "none"
+      ? slots.wallpaper
+      : null;
   return (
     <MessageScrollerProvider
       autoScroll
@@ -277,6 +281,7 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
         className="relative flex size-full min-h-0 min-w-0 flex-col"
         data-slot="chat-layout"
         data-skin={skin}
+        data-wallpaper={wallpaper ?? undefined}
         style={
           {
             "--composer-dock-gap": `${COMPOSER_DOCK_GAP_PX}px`,
@@ -285,6 +290,13 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
       >
         {slots.banner}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {wallpaper != null ? (
+            <div
+              aria-hidden
+              data-slot="chat-wallpaper"
+              data-wallpaper={wallpaper}
+            />
+          ) : null}
           <MessagesView>
             {(messages) =>
               messages.length === 0 && slots.empty != null ? (

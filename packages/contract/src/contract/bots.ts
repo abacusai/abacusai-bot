@@ -1,7 +1,7 @@
 import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
-import { AVATAR_ACCESSORY_IDS } from "../bots";
+import { AVATAR_ACCESSORY_IDS, BOT_WALLPAPER_IDS } from "../bots";
 import type { BotChatHandle } from "../bots";
 import type { BotChatPreview, BotSenderChat } from "../contracts";
 import { mutation, query, subscription } from "./base";
@@ -9,6 +9,10 @@ import { BotId, NoInput } from "./ids";
 
 export const AvatarAccessorySchema = v.optional(
   v.nullable(v.picklist(AVATAR_ACCESSORY_IDS))
+);
+
+export const BotWallpaperSchema = v.optional(
+  v.nullable(v.picklist(BOT_WALLPAPER_IDS))
 );
 
 export const BotChangeNoticeSchema = v.object({

@@ -34,9 +34,10 @@ describe("themed scrollbars", () => {
   });
 
   it("serves engines without the pseudo-elements through scrollbar-color", () => {
-    const block = /@supports not selector\(::-webkit-scrollbar\)\s*\{([\s\S]*?)\n\}/.exec(
-      tokensCss
-    )?.[1];
+    const block =
+      /@supports not selector\(::-webkit-scrollbar\)\s*\{([\s\S]*?)\n\}/.exec(
+        tokensCss
+      )?.[1];
     expect(block).toBeDefined();
     expect(block).toMatch(/scrollbar-width: thin;/);
     expect(block).toMatch(

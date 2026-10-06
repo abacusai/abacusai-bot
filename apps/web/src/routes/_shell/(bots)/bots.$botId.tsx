@@ -147,6 +147,7 @@ const ComposedChat = ({
         composer={slots.composer}
         slots={{
           ...slots.chat,
+          wallpaper: bot.wallpaper ?? null,
           header: (
             <BotTranscriptIdentity
               bot={bot}

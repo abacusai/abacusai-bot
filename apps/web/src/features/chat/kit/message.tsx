@@ -240,6 +240,8 @@ const UserMessage = ({
       <div className="flex flex-col items-end gap-1.5" data-role="user">
         {body !== "" || message.metadata?.abacus?.userText?.replyTo ? (
           <div
+            data-slot="user-bubble"
+            data-tint={tint ? "" : undefined}
             className={cn(
               "relative w-fit max-w-[min(640px,85%)] px-3 py-2",
               tint
