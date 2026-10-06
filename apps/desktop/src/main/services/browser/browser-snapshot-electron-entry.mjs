@@ -28,7 +28,10 @@ if (INPUT_FILE == null) {
 }
 
 // Other Electron suites must not share this process's profile or cache locks.
-app.setPath("userData", path.join(path.dirname(INPUT_FILE), "profile"));
+const profile = path.join(path.dirname(INPUT_FILE), "profile");
+fs.mkdirSync(profile, { recursive: true });
+app.setPath("userData", profile);
+app.setPath("sessionData", profile);
 
 const outputPath = (inputFile) => `${inputFile}.out.json`;
 
