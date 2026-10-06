@@ -3,10 +3,11 @@ import { useLiveQuery } from "@tanstack/react-db";
 import "./onboarding.css";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
+import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { ensureFirstBot, firstBotStore } from "./first-bot";
@@ -24,6 +25,46 @@ import { onboardingStore } from "./store";
 export { OnboardingFrame } from "./frame";
 export { onboardingStore } from "./store";
 export type { OnboardingPageProps } from "./steps/context";
+
+/** A control handles its own Enter; text fields keep theirs. */
+const isKeyboardTarget = (target: EventTarget | null): boolean => {
+  const element = target as HTMLElement | null;
+  if (element == null || typeof element.closest !== "function") return false;
+  return (
+    element.closest(
+      'button, a, input, textarea, select, [contenteditable], [role="menuitem"]'
+    ) != null
+  );
+};
+
+/** The step's primary action for Enter (null: nothing to continue with). */
+export const primaryAction = (
+  step: OnboardingStepId,
+  actions: {
+    signIn(intent: "signup"): void;
+    advance(): void;
+    continueConnectors(): void;
+    hello: (() => void) | null;
+    finish(): void;
+    retry: (() => void) | null;
+  }
+): (() => void) | null => {
+  switch (step) {
+    case "welcome":
+      return () => actions.signIn("signup");
+    case "connect":
+      return actions.retry;
+    case "connected":
+    case "models":
+      return actions.advance;
+    case "connectors":
+      return actions.continueConnectors;
+    case "first-bot":
+      return actions.hello;
+    case "done":
+      return actions.finish;
+  }
+};
 
 export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const { step, transport, facts } = props;
@@ -136,6 +177,71 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     advance: () => go("next"),
     back: () => go("back"),
   };
+  /** Enter continues with the step's primary action; Escape goes back where the flow allows. */
+  const onKey = useEffectEvent((event: KeyboardEvent) => {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      busy ||
+      isKeyboardTarget(event.target) ||
+      document.querySelector('[role="dialog"], [role="menu"]') != null
+    )
+      return;
+    if (event.key === "Enter") {
+      const primary = primaryAction(step, {
+        signIn: props.signIn,
+        advance: () => go("next"),
+        continueConnectors: () => {
+          if (!facts.ownsBot)
+            void perform(() => props.complete({ to: "new-bot" }));
+          else go("next");
+        },
+        hello: bot
+          ? () =>
+              void perform(async () => {
+                await transport.client.system.funnelStep({
+                  step: "first_bot_kept",
+                });
+                await props.navigate("done");
+              })
+          : null,
+        finish: () =>
+          void perform(() =>
+            props.complete(
+              bot ? { to: "bot", botId: bot.id } : { to: "new-bot" }
+            )
+          ),
+        retry:
+          attempt?.status === "failed"
+            ? () => props.signIn(attempt.intent, attempt.profileId)
+            : null,
+      });
+      if (primary) {
+        event.preventDefault();
+        primary();
+      }
+    } else if (event.key === "Escape") {
+      if (step === "connect") {
+        event.preventDefault();
+        void perform(async () => {
+          await props.cancelSignIn();
+          await props.navigate("welcome");
+        });
+      } else if (
+        next(step, { type: "back" }, facts, attempt?.id ?? null) !== "ignore"
+      ) {
+        event.preventDefault();
+        go("back");
+      }
+    }
+  });
+  useEffect(() => {
+    if (props.preview) return;
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [props.preview]);
   const present =
     (first.state === "ready" && first.result.preview === true) ||
     (bot != null && (bots?.some((b) => b.id === bot.id) ?? false));

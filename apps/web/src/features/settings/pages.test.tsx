@@ -335,7 +335,7 @@ it("opens model setup when the optional local runtime is unavailable", async () 
   });
   expect(
     await screen.findByRole("heading", {
-      name: enUS.onboarding["pages.models.title"],
+      name: `${enUS.onboarding.setupTitleLead} ${enUS.onboarding.setupTitleAccent}`,
     })
   ).not.toBeNull();
   expect(
