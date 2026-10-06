@@ -286,11 +286,13 @@ export const BotStartPage = ({
                   {t(`bots.templates.${template.id}.description`)}
                 </span>
                 {template.connectors && (
-                  <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                     {t("bots.start.uses")}
-                    {template.connectors.map((id) => (
-                      <ConnectorMark key={id} id={id} size={14} />
-                    ))}
+                    <span className="flex items-center gap-1">
+                      {template.connectors.map((id) => (
+                        <ConnectorMark key={id} id={id} size={22} />
+                      ))}
+                    </span>
                   </span>
                 )}
               </button>
