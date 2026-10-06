@@ -3986,7 +3986,10 @@
       "expiredBody": "Codes last 10 minutes. Get a new one, then send it from WhatsApp.",
       "newCode": "Get a new code",
       "connected": "WhatsApp connected",
-      "rowDetail": "Chat with AbacusAI Bot on WhatsApp"
+      "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
+      "doneTitle": "You're all set",
+      "doneBody": "Your bot is on WhatsApp. Message it there anytime.",
+      "useDifferentNumber": "Use a different number"
     }
   }
 }

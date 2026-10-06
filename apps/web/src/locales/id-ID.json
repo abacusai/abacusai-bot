@@ -3986,7 +3986,10 @@
       "expiredBody": "Kode berlaku 10 menit. Ambil kode baru, lalu kirim dari WhatsApp.",
       "newCode": "Ambil kode baru",
       "connected": "WhatsApp connected",
-      "rowDetail": "Chat with AbacusAI Bot on WhatsApp"
+      "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
+      "doneTitle": "Semua siap",
+      "doneBody": "Bot Anda ada di WhatsApp. Kirim pesan kapan saja.",
+      "useDifferentNumber": "Gunakan nomor lain"
     }
   }
 }

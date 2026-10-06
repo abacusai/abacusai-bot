@@ -81,7 +81,7 @@ export const WhatsAppConnect = ({
 }: {
   callApps: CallApps;
   as?: "h1" | "h2";
-  onLinked(): void;
+  onLinked?(): void;
   onSkip?(): void;
 }) => {
   const { t } = useTranslation();
@@ -100,7 +100,7 @@ export const WhatsAppConnect = ({
     refetchInterval: POLL_MS,
   });
   const linked = waiting && chat.data?.status === "linked";
-  const linkedOnce = useEffectEvent(onLinked);
+  const linkedOnce = useEffectEvent(() => onLinked?.());
 
   useEffect(() => {
     if (Heading === "h1") heading.current?.focus();
@@ -138,7 +138,7 @@ export const WhatsAppConnect = ({
       if (token) dropClaim();
       if (started.status === "linked") {
         setLinked(cache, started.phone);
-        onLinked();
+        onLinked?.();
       } else if (started.deepLink) {
         setExpired(false);
         setExpiresAt(started.expiresAt ?? null);
@@ -280,6 +280,72 @@ export const WhatsAppConnect = ({
         </form>
       )}
     </>
+  );
+};
+
+/**
+ * AbacusAI Bot on a phone is WhatsApp: connect a number, then chat there.
+ * Only these two screens draw (no Skip); the bot runs on the server. The
+ * caller has the chat in the cache already, and linking or unlinking flips it.
+ */
+export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
+  const { t } = useTranslation();
+  const cache = useQueryClient();
+  const chat = useQuery(whatsappChatQuery(callApps));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const changeNumber = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await unlinkWhatsAppChat(cache, callApps);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("phase5.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <main className="bg-background text-foreground flex min-h-dvh justify-center overflow-y-auto">
+      <div className="[&>p]:text-muted-foreground flex w-full max-w-md flex-col items-center gap-5 px-6 pt-[max(56px,env(safe-area-inset-top))] pb-10 text-center [&>h1]:text-2xl [&>h1]:font-semibold">
+        <ConnectorMark id="whatsapp" size={56} />
+        {chat.data?.status === "linked" ? (
+          <>
+            <h1>{t("web.whatsappBot.doneTitle")}</h1>
+            <p>{t("web.whatsappBot.doneBody")}</p>
+            {error && (
+              <p role="alert" className="text-destructive text-sm">
+                {error}
+              </p>
+            )}
+            <Button
+              size="lg"
+              className="h-12 w-full rounded-full text-base"
+              nativeButton={false}
+              render={
+                <a
+                  href={`https://wa.me/${(chat.data.number ?? "").replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              {t("web.whatsapp.openWhatsApp")}
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-11 w-full"
+              disabled={busy}
+              onClick={() => void changeNumber()}
+            >
+              {t("web.whatsappBot.useDifferentNumber")}
+            </Button>
+          </>
+        ) : (
+          <WhatsAppConnect callApps={callApps} as="h1" />
+        )}
+      </div>
+    </main>
   );
 };
 
