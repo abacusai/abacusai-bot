@@ -180,7 +180,7 @@ it.each([
       await screen.findByRole("button", { name: enUS.phase5.signOut })
     ).not.toBeNull();
   } else {
-    await screen.findByRole("button", { name: "Sign Up For Free" });
+    await screen.findByRole("button", { name: "Sign up for free" });
     expect(
       screen.queryByRole("button", { name: enUS.phase5.signOut })
     ).toBeNull();
