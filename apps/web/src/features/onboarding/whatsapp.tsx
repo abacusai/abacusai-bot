@@ -17,7 +17,6 @@ import * as v from "valibot";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
-import { showError, showInfo } from "#renderer/lib/toast";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
@@ -129,13 +128,21 @@ export const WhatsAppConnect = ({
     setBusy(true);
     setError(null);
     try {
+      // Signed in from the link the bot texted back: it links at once when this
+      // is the number that texted, otherwise it is the usual pre-typed code.
+      const token = stashedClaim();
       const started = v.parse(
         Started,
-        await callApps("startAbacusBotWhatsAppChat", {
-          phoneNumber: number,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        })
+        await callApps(
+          token ? "claimAbacusBotWhatsApp" : "startAbacusBotWhatsAppChat",
+          {
+            phoneNumber: number,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            ...(token ? { token } : {}),
+          }
+        )
       );
+      if (token) dropClaim();
       if (started.status === "linked") {
         setLinked(cache, started.phone);
         onLinked();
@@ -285,27 +292,21 @@ export const stashWhatsAppClaim = () => {
   history.replaceState(history.state, "", url);
 };
 
-/** Signed in: claims a stashed link once and says how it went. */
-export const WhatsAppClaim = ({ callApps }: { callApps: CallApps }) => {
-  const { t } = useTranslation();
-  const cache = useQueryClient();
-  useEffect(() => {
-    let token: unknown;
-    try {
-      token = JSON.parse(sessionStorage.getItem(CLAIM_KEY) ?? "null");
-      sessionStorage.removeItem(CLAIM_KEY);
-    } catch {
-      return;
-    }
-    if (typeof token !== "string") return;
-    callApps("claimAbacusBotWhatsApp", { token }).then(
-      () => {
-        void cache.invalidateQueries({ queryKey: CHAT_KEY });
-        showInfo(t("web.whatsappBot.connected"));
-      },
-      (e: unknown) =>
-        showError(e instanceof Error ? e.message : t("phase5.failed"))
+const stashedClaim = (): string | null => {
+  try {
+    const token: unknown = JSON.parse(
+      sessionStorage.getItem(CLAIM_KEY) ?? "null"
     );
-  }, [callApps, cache, t]);
-  return null;
+    return typeof token === "string" ? token : null;
+  } catch {
+    return null;
+  }
+};
+
+const dropClaim = () => {
+  try {
+    sessionStorage.removeItem(CLAIM_KEY);
+  } catch {
+    // Storage blocked: nothing was kept.
+  }
 };
