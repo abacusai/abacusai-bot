@@ -70,7 +70,9 @@ const CommandMenuBody = () => {
         <CommandGroup heading={t("shell.command.groups.areas")}>
           {RAIL_AREAS.map((area) => (
             <CommandItem key={area} onSelect={() => go(AREA_HOME[area])}>
-              {t(`shell.rail.${area}`)}
+              <span className="min-w-0 truncate">
+                {t(`shell.rail.${area}`)}
+              </span>
             </CommandItem>
           ))}
         </CommandGroup>
@@ -80,7 +82,9 @@ const CommandMenuBody = () => {
               key={page}
               onSelect={() => go(`/settings/${page}`, "settings-in")}
             >
-              {t(`settings.pages.${page}`)}
+              <span className="min-w-0 truncate">
+                {t(`settings.pages.${page}`)}
+              </span>
             </CommandItem>
           ))}
         </CommandGroup>
@@ -92,7 +96,7 @@ const CommandMenuBody = () => {
                 value={`bot ${bot.name}`}
                 onSelect={() => go(`/bots/${encodeURIComponent(bot.id)}`)}
               >
-                {bot.name}
+                <span className="min-w-0 truncate">{bot.name}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -107,7 +111,7 @@ const CommandMenuBody = () => {
                   go(`/sessions/${encodeURIComponent(session.id)}`)
                 }
               >
-                {session.label}
+                <span className="min-w-0 truncate">{session.label}</span>
               </CommandItem>
             ))}
           </CommandGroup>
