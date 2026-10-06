@@ -155,6 +155,9 @@ export const ArtifactsPage = ({
   const filtered = filterArtifacts(rows, sources, search);
   const selected = rows.find((a) => a.id === search.item);
   const viewport = useRef<HTMLDivElement>(null);
+  // The grid lives in the wide content column (tokens.css), so columns
+  // come from the column's width, not the viewport's.
+  const column = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
@@ -177,7 +180,11 @@ export const ArtifactsPage = ({
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
-      if (rect) setSize({ width: rect.width, height: rect.height });
+      if (rect)
+        setSize({
+          width: column.current?.clientWidth || rect.width,
+          height: rect.height,
+        });
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -263,7 +270,7 @@ export const ArtifactsPage = ({
   );
   return (
     <div className="flex size-full flex-col">
-      <header className="phone:h-auto phone:flex-wrap phone:px-4 phone:py-3 flex h-14 items-center gap-3 px-5">
+      <header className="content-col-wide phone:h-auto phone:w-[calc(100%-32px)] phone:flex-wrap phone:py-3 flex h-14 items-center gap-3">
         <h1 className="text-base font-semibold">{t("shell.rail.artifacts")}</h1>
         <span className="text-muted-foreground text-xs whitespace-nowrap">
           {t("phase5.items", { count: filtered.length })}
@@ -321,125 +328,145 @@ export const ArtifactsPage = ({
             className={
               search.item
                 ? "hidden w-[420px] shrink-0 overflow-auto p-3 lg:block"
-                : "min-w-0 flex-1 overflow-auto p-5"
+                : "min-w-0 flex-1 overflow-auto py-5"
             }
             onScroll={(e) => setTop(e.currentTarget.scrollTop)}
           >
-            <div style={{ height: window.before }} />
             <div
-              role="list"
-              className={list ? "flex flex-col gap-0" : "grid gap-2.5"}
-              style={
-                list
+              ref={column}
+              className={
+                search.item
                   ? undefined
-                  : { gridTemplateColumns: `repeat(${columns},minmax(0,1fr))` }
+                  : "content-col-wide phone:w-[calc(100%-32px)]"
               }
             >
-              {entries.slice(window.start, window.end).map((entry) => {
-                if ("day" in entry)
-                  return (
-                    <div
-                      key={entry.day}
-                      role="listitem"
-                      className="text-muted-foreground flex h-[72px] items-center px-3 text-xs font-medium"
-                    >
-                      {new Date(entry.date).toLocaleDateString(i18n.language, {
-                        dateStyle: "full",
-                      })}
-                    </div>
-                  );
-                const a = entry.artifact;
-                return (
-                  <ContextMenu key={a.id}>
-                    <ContextMenuTrigger
-                      render={
-                        <div
-                          key={a.id}
-                          role="listitem"
-                          data-artifact-card
-                          className="bg-card relative flex flex-col overflow-hidden rounded-xl"
-                        >
-                          <button
-                            className={
-                              list
-                                ? "flex h-[72px] min-w-0 items-center gap-3 px-3 pr-9 text-left"
-                                : "flex h-[180px] flex-col text-left"
-                            }
-                            aria-current={
-                              search.item === a.id ? "true" : undefined
-                            }
-                            onClick={() => set({ item: a.id })}
-                            onDoubleClick={() => void open(a)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                void open(a);
-                              }
-                              if (e.key === "Escape") set({ item: undefined });
-                            }}
-                          >
-                            {!list && <ArtifactThumbnail artifact={a} />}
-                            <div className="min-w-0 flex-1 px-3 py-2">
-                              <p className="truncate text-[13px] font-medium">
-                                {a.title}
-                              </p>
-                              <p className="text-muted-foreground truncate text-xs">
-                                {t(`phase5.formats.${formatForArtifact(a)}`)} ·{" "}
-                                {sources.get(a.id)?.label}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {new Date(a.updatedAt).toLocaleDateString(
-                                  i18n.language
-                                )}
-                              </p>
-                            </div>
-                          </button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  size="icon-sm"
-                                  variant="ghost"
-                                  className="absolute top-1 right-1"
-                                  aria-label={
-                                    t("phase5.manage") + " " + a.title
-                                  }
-                                >
-                                  <Ellipsis />
-                                </Button>
-                              }
-                            />
-                            <DropdownMenuContent>
-                              <DropdownMenuGroup>
-                                {actionItems(a).map((item) => (
-                                  <DropdownMenuItem
-                                    key={item.label}
-                                    onClick={item.run}
-                                  >
-                                    {item.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuGroup>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          {notice[a.id] && <p role="status">{notice[a.id]}</p>}
-                        </div>
+              <div style={{ height: window.before }} />
+              <div
+                role="list"
+                className={list ? "flex flex-col gap-0" : "grid gap-2.5"}
+                style={
+                  list
+                    ? undefined
+                    : {
+                        gridTemplateColumns: `repeat(${columns},minmax(0,1fr))`,
                       }
-                    />
-                    <ContextMenuContent>
-                      <ContextMenuGroup>
-                        {actionItems(a).map((item) => (
-                          <ContextMenuItem key={item.label} onClick={item.run}>
-                            {item.label}
-                          </ContextMenuItem>
-                        ))}
-                      </ContextMenuGroup>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                );
-              })}
+                }
+              >
+                {entries.slice(window.start, window.end).map((entry) => {
+                  if ("day" in entry)
+                    return (
+                      <div
+                        key={entry.day}
+                        role="listitem"
+                        className="text-muted-foreground flex h-[72px] items-center px-3 text-xs font-medium"
+                      >
+                        {new Date(entry.date).toLocaleDateString(
+                          i18n.language,
+                          {
+                            dateStyle: "full",
+                          }
+                        )}
+                      </div>
+                    );
+                  const a = entry.artifact;
+                  return (
+                    <ContextMenu key={a.id}>
+                      <ContextMenuTrigger
+                        render={
+                          <div
+                            key={a.id}
+                            role="listitem"
+                            data-artifact-card
+                            className="bg-card relative flex flex-col overflow-hidden rounded-xl"
+                          >
+                            <button
+                              className={
+                                list
+                                  ? "flex h-[72px] min-w-0 items-center gap-3 px-3 pr-9 text-left"
+                                  : "flex h-[180px] flex-col text-left"
+                              }
+                              aria-current={
+                                search.item === a.id ? "true" : undefined
+                              }
+                              onClick={() => set({ item: a.id })}
+                              onDoubleClick={() => void open(a)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  void open(a);
+                                }
+                                if (e.key === "Escape")
+                                  set({ item: undefined });
+                              }}
+                            >
+                              {!list && <ArtifactThumbnail artifact={a} />}
+                              <div className="min-w-0 flex-1 px-3 py-2">
+                                <p className="truncate text-[13px] font-medium">
+                                  {a.title}
+                                </p>
+                                <p className="text-muted-foreground truncate text-xs">
+                                  {t(`phase5.formats.${formatForArtifact(a)}`)}{" "}
+                                  · {sources.get(a.id)?.label}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {new Date(a.updatedAt).toLocaleDateString(
+                                    i18n.language
+                                  )}
+                                </p>
+                              </div>
+                            </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <Button
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    className="absolute top-1 right-1"
+                                    aria-label={
+                                      t("phase5.manage") + " " + a.title
+                                    }
+                                  >
+                                    <Ellipsis />
+                                  </Button>
+                                }
+                              />
+                              <DropdownMenuContent>
+                                <DropdownMenuGroup>
+                                  {actionItems(a).map((item) => (
+                                    <DropdownMenuItem
+                                      key={item.label}
+                                      onClick={item.run}
+                                    >
+                                      {item.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuGroup>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            {notice[a.id] && (
+                              <p role="status">{notice[a.id]}</p>
+                            )}
+                          </div>
+                        }
+                      />
+                      <ContextMenuContent>
+                        <ContextMenuGroup>
+                          {actionItems(a).map((item) => (
+                            <ContextMenuItem
+                              key={item.label}
+                              onClick={item.run}
+                            >
+                              {item.label}
+                            </ContextMenuItem>
+                          ))}
+                        </ContextMenuGroup>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
+              </div>
+              <div style={{ height: window.after }} />
             </div>
-            <div style={{ height: window.after }} />
           </div>
         )}
         {search.item && (
