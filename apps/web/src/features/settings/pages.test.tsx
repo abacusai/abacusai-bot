@@ -180,7 +180,7 @@ it.each([
       await screen.findByRole("button", { name: enUS.phase5.signOut })
     ).not.toBeNull();
   } else {
-    await screen.findByRole("button", { name: "Sign Up For Free" });
+    await screen.findByRole("button", { name: "Sign up for free" });
     expect(
       screen.queryByRole("button", { name: enUS.phase5.signOut })
     ).toBeNull();
@@ -335,7 +335,7 @@ it("opens model setup when the optional local runtime is unavailable", async () 
   });
   expect(
     await screen.findByRole("heading", {
-      name: enUS.onboarding["pages.models.title"],
+      name: `${enUS.onboarding.setupTitleLead} ${enUS.onboarding.setupTitleAccent}`,
     })
   ).not.toBeNull();
   expect(

@@ -23,7 +23,6 @@ import {
   guardStep,
   type FlowFacts,
 } from "#renderer/features/onboarding/machine";
-import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
 import {
   onboardingStore,
   startSignIn,
@@ -200,12 +199,6 @@ const OnboardingRoute = () => {
       connect={connect}
       localModel={
         <OnboardingLocalModels
-          transport={transport}
-          saved={() => queryClient.invalidateQueries()}
-        />
-      }
-      addKey={
-        <OnboardingProviderKey
           transport={transport}
           saved={() => queryClient.invalidateQueries()}
         />
