@@ -62,7 +62,6 @@ export const ONBOARDING_STEPS = [
   "welcome",
   "connect",
   "connected",
-  "whatsapp",
   "models",
   "connectors",
   "first-bot",

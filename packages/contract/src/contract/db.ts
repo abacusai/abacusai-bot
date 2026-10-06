@@ -151,7 +151,12 @@ export const PREFS_GROUP_ENTRIES = {
     favoriteModelIds: v.array(v.string()),
     perWorkspace: v.record(v.string(), v.nullable(v.string())),
   },
-  dismissals: { referralCardUntil: NullableTimestamp, upsell: v.boolean() },
+  dismissals: {
+    referralCardUntil: NullableTimestamp,
+    upsell: v.boolean(),
+    /** The browser's "Connect your WhatsApp" intro, seen (linked or skipped). */
+    whatsappIntroAt: NullableTimestamp,
+  },
   motion: { reduce: v.picklist(["system", "on", "off"]) },
   sounds: {
     enabled: v.boolean(),

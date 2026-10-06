@@ -7,10 +7,6 @@ import { useSelector } from "@tanstack/react-store";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  OnboardingWhatsApp,
-  WhatsAppLinkedBanner,
-} from "#platform/whatsapp-bot";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
@@ -21,6 +17,7 @@ import { resolveLook } from "#renderer/lib/bots/avatar";
 import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
+import { webSignInHref } from "#renderer/lib/navigation/web-sign-in";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { signInFailureCopy } from "#renderer/lib/sign-in-failure";
 import { Badge } from "#renderer/ui/badge";
@@ -60,7 +57,6 @@ export const OnboardingFrame = ({
     welcome: 1,
     connect: 2,
     connected: 2,
-    whatsapp: 3,
     models: 3,
     connectors: 4,
     "first-bot": 5,
@@ -282,22 +278,16 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           )}
         </div>
       )}
-      {step === "whatsapp" ? (
-        <OnboardingWhatsApp onDone={advance} />
-      ) : (
-        <>
-          <h1 ref={heading} tabIndex={-1}>
-            {title}
-          </h1>
-          <p>
-            {step === "welcome"
-              ? t("onboarding.welcomeTagline")
-              : step === "connect" && !IS_ELECTRON
-                ? t("onboarding.webSignIn.body")
-                : t(`onboarding.pages.${step}.body`)}
-          </p>
-        </>
-      )}
+      <h1 ref={heading} tabIndex={-1}>
+        {title}
+      </h1>
+      <p>
+        {step === "welcome"
+          ? t("onboarding.welcomeTagline")
+          : step === "connect" && !IS_ELECTRON
+            ? t("onboarding.webSignIn.body")
+            : t(`onboarding.pages.${step}.body`)}
+      </p>
       {step === "welcome" && (
         <>
           <div className="flex flex-wrap justify-center gap-2">
@@ -421,11 +411,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
             attempt.outcome &&
             !attempt.outcome.ok &&
             attempt.outcome.error === "auth-code:session:UNKNOWN" ? (
-            <a
-              href={`/chatllm/signin?redirectUrl=${encodeURIComponent("/bot/" + location.hash)}`}
-            >
-              {t("onboarding.signInAnotherWay")}
-            </a>
+            <a href={webSignInHref()}>{t("onboarding.signInAnotherWay")}</a>
           ) : null}
 
           <Button
@@ -495,7 +481,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       )}
       {step === "connectors" && (
         <>
-          <WhatsAppLinkedBanner />
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
             {CONNECTORS.filter(
               (c) => c.onboarding || (more && c.kind === "platform")

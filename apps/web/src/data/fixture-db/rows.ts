@@ -228,7 +228,7 @@ export const fixturePrefs = (overrides: Partial<PrefsRow> = {}): PrefsRow => ({
   creditsExhaustedAt: null,
   browserHomepage: null,
   onboardingStep: null,
-  dismissals: { referralCardUntil: null, upsell: false },
+  dismissals: { referralCardUntil: null, upsell: false, whatsappIntroAt: null },
   panes: {},
   motion: { reduce: "system" },
   sounds: { enabled: true, perEvent: {} },

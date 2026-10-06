@@ -50,9 +50,11 @@ it.each([
       const url = new URL(link.getAttribute("href")!, location.origin);
       expect(url.origin).toBe(location.origin);
       expect(url.pathname).toBe("/chatllm/signin");
+      // Absolute: the sign-in page ignores a relative return address.
       expect(url.searchParams.get("redirectUrl")).toBe(
-        "/bot/#/onboarding/connect"
+        `${location.origin}/bot/#/onboarding/connect`
       );
+      expect(url.searchParams.get("AbacusAIBotWeb")).toBe("1");
       expect(screen.getByRole("alert").textContent).toContain(
         "session has expired"
       );

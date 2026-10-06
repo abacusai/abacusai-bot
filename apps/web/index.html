@@ -9,12 +9,12 @@
     />
     <meta
       name="theme-color"
-      media="(prefers-color-scheme: light)"
+      media="(prefers-color-scheme: light), (max-width: 799px)"
       content="#fafafa"
     />
     <meta
       name="theme-color"
-      media="(prefers-color-scheme: dark)"
+      media="(prefers-color-scheme: dark) and (min-width: 800px)"
       content="#171717"
     />
     <title>AbacusAI Bot</title>
@@ -52,7 +52,8 @@
             opacity: 0.25;
           }
         }
-        @media (prefers-color-scheme: dark) {
+        /* Phones are light only (the browser boot keeps them light too). */
+        @media (prefers-color-scheme: dark) and (min-width: 800px) {
           #splash {
             background: #0a0a0a;
             color: #a3a3a3;

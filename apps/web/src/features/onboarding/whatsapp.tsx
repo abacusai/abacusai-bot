@@ -9,7 +9,6 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { Check } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
@@ -17,7 +16,7 @@ import * as v from "valibot";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
-import { useMediaQuery } from "#renderer/lib/use-media-query";
+import { showInfo } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
@@ -35,6 +34,8 @@ const Started = v.object({
   status: v.picklist(["pending", "linked"]),
   deepLink: v.nullish(v.string()),
   phone: v.nullish(v.string()),
+  /** Unix seconds; the code stops linking after it. */
+  expiresAt: v.nullish(v.number()),
 });
 
 const CHAT_KEY = ["whatsapp-bot", "chat"] as const;
@@ -56,19 +57,6 @@ const setLinked = (cache: QueryClient, phone: string | null | undefined) =>
     chat ? { ...chat, status: "linked", phone: phone ?? chat.phone } : chat
   );
 
-/** Onboarding's fact: offered and not linked yet. A failing call offers nothing. */
-export const loadWhatsAppOffered = async (
-  queryClient: QueryClient,
-  callApps: CallApps
-): Promise<boolean> => {
-  try {
-    const chat = await queryClient.fetchQuery(whatsappChatQuery(callApps));
-    return chat.available && chat.status !== "linked";
-  } catch {
-    return false;
-  }
-};
-
 export const unlinkWhatsAppChat = async (
   queryClient: QueryClient,
   callApps: CallApps
@@ -80,8 +68,10 @@ export const unlinkWhatsAppChat = async (
 };
 
 /**
- * Number, then waiting for the user's message. `as="h1"` is the onboarding
- * step (its heading takes focus); the settings sheet titles itself.
+ * Number, then the message to send: the user taps Open WhatsApp (a real link,
+ * so the phone hands it to the app and this tab stays to see the link land).
+ * `as="h1"` is the first-run intro (its heading takes focus); the messaging
+ * sheet titles itself.
  */
 export const WhatsAppConnect = ({
   callApps,
@@ -96,13 +86,14 @@ export const WhatsAppConnect = ({
 }) => {
   const { t } = useTranslation();
   const cache = useQueryClient();
-  const phoneLayout = useMediaQuery("(max-width: 799px)");
   const [number, setNumber] = useState("");
   const [deepLink, setDeepLink] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [expired, setExpired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const waiting = deepLink != null;
+  const waiting = deepLink != null && !expired;
   const chat = useQuery({
     ...whatsappChatQuery(callApps),
     enabled: waiting,
@@ -117,12 +108,14 @@ export const WhatsAppConnect = ({
   useEffect(() => {
     if (linked) linkedOnce();
   }, [linked]);
-
-  const open = (link: string) => {
-    // A phone hands wa.me to the WhatsApp app; a computer keeps this tab.
-    if (phoneLayout) location.href = link;
-    else window.open(link, "_blank", "noopener");
-  };
+  useEffect(() => {
+    if (!waiting || expiresAt == null) return;
+    const timer = setTimeout(
+      () => setExpired(true),
+      Math.max(0, expiresAt * 1000 - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [waiting, expiresAt]);
 
   const start = async () => {
     setBusy(true);
@@ -147,8 +140,9 @@ export const WhatsAppConnect = ({
         setLinked(cache, started.phone);
         onLinked();
       } else if (started.deepLink) {
+        setExpired(false);
+        setExpiresAt(started.expiresAt ?? null);
         setDeepLink(started.deepLink);
-        open(started.deepLink);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("phase5.failed"));
@@ -166,12 +160,51 @@ export const WhatsAppConnect = ({
   return (
     <>
       <Heading ref={heading} tabIndex={-1} className="outline-none">
-        {t(waiting ? "web.whatsappBot.waitingTitle" : "web.whatsappBot.title")}
+        {t(
+          expired
+            ? "web.whatsappBot.expiredTitle"
+            : waiting
+              ? "web.whatsappBot.waitingTitle"
+              : "web.whatsappBot.title"
+        )}
       </Heading>
       <p>
-        {t(waiting ? "web.whatsappBot.waitingBody" : "web.whatsappBot.body")}
+        {t(
+          expired
+            ? "web.whatsappBot.expiredBody"
+            : waiting
+              ? "web.whatsappBot.waitingBody"
+              : "web.whatsappBot.body"
+        )}
       </p>
-      {deepLink ? (
+      {expired ? (
+        <div className="flex w-full flex-col gap-3">
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
+          <Button
+            size="lg"
+            className="h-12 w-full rounded-full text-base"
+            disabled={busy}
+            onClick={() => void start()}
+          >
+            {t("web.whatsappBot.newCode")}
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-11 w-full"
+            onClick={() => {
+              setDeepLink(null);
+              setExpired(false);
+            }}
+          >
+            {t("web.whatsappBot.changeNumber")}
+          </Button>
+          {skip}
+        </div>
+      ) : deepLink ? (
         <div className="flex w-full flex-col gap-3">
           <p
             aria-label={t("web.whatsappBot.message")}
@@ -191,15 +224,9 @@ export const WhatsAppConnect = ({
             size="lg"
             className="h-12 w-full rounded-full text-base"
             nativeButton={false}
-            render={
-              <a
-                href={deepLink}
-                target={phoneLayout ? undefined : "_blank"}
-                rel="noreferrer"
-              />
-            }
+            render={<a href={deepLink} target="_blank" rel="noreferrer" />}
           >
-            {t("web.whatsappBot.openAgain")}
+            {t("web.whatsapp.openWhatsApp")}
           </Button>
           <Button
             variant="ghost"
@@ -256,21 +283,49 @@ export const WhatsAppConnect = ({
   );
 };
 
-/** Onboarding's connectors step, once linked. */
-export const WhatsAppLinkedBanner = ({ callApps }: { callApps: CallApps }) => {
+/**
+ * The browser's first run: "Connect your WhatsApp" over the shell, once per
+ * account (`seen` is the account's pref), while the server offers the bot's
+ * number and none is linked. Linking or skipping marks it seen; the
+ * messaging page keeps the way in.
+ */
+export const WhatsAppIntro = ({
+  callApps,
+  seen,
+  markSeen,
+}: {
+  callApps: CallApps;
+  seen: boolean;
+  markSeen(): Promise<void>;
+}) => {
   const { t } = useTranslation();
-  const chat = useQuery(whatsappChatQuery(callApps)).data;
-  if (!chat?.available || chat.status !== "linked") return null;
+  const chat = useQuery({ ...whatsappChatQuery(callApps), enabled: !seen });
+  const [closed, setClosed] = useState(false);
+  if (seen || closed || !chat.data?.available) return null;
+  if (chat.data.status === "linked") return null;
+  const close = (linked: boolean) => {
+    setClosed(true);
+    if (linked) showInfo(t("web.whatsappBot.connected"));
+    void markSeen().catch((error: unknown) =>
+      console.warn("[whatsapp] intro not marked seen", error)
+    );
+  };
   return (
-    <div className="bg-card flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm">
-      <ConnectorMark id="whatsapp" size={24} />
-      <span className="flex-1 font-medium">
-        {t("web.whatsappBot.connected")}
-      </span>
-      {chat.phone && (
-        <span className="text-muted-foreground">{maskedPhone(chat.phone)}</span>
-      )}
-      <Check aria-hidden className="size-4 text-emerald-500" />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("web.whatsappBot.title")}
+      className="bg-background fixed inset-0 z-50 flex justify-center overflow-y-auto"
+    >
+      <div className="[&>p]:text-muted-foreground flex w-full max-w-md flex-col items-center gap-5 px-6 pt-[max(56px,env(safe-area-inset-top))] pb-10 text-center [&>h1]:text-2xl [&>h1]:font-semibold">
+        <ConnectorMark id="whatsapp" size={56} />
+        <WhatsAppConnect
+          callApps={callApps}
+          as="h1"
+          onLinked={() => close(true)}
+          onSkip={() => close(false)}
+        />
+      </div>
     </div>
   );
 };
