@@ -138,7 +138,7 @@ export const ConnectorsPage = () => {
                   title={e.name}
                   detail={statuses.data?.[e.id]?.account ?? e.description}
                 >
-                  <ConnectorMark id={e.logo ?? e.id} size={28} />
+                  <ConnectorMark id={e.logo ?? e.id} size={36} />
                   {/* The section heading already says it; a phone folds the pill. */}
                   <span className="phone:hidden contents">
                     <StatePill>

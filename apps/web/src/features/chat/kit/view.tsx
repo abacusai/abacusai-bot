@@ -49,7 +49,7 @@ export interface ChatViewProps {
 
 const LoadingRows = () => (
   <div
-    className="mx-auto flex w-full max-w-(--transcript-max-w) flex-col gap-4 px-4 pt-8"
+    className="mx-auto flex w-full max-w-(--content-max-w) flex-col gap-4 px-4 pt-8"
     data-slot="chat-loading"
     aria-busy
   >

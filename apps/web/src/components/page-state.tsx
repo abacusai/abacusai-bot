@@ -156,7 +156,7 @@ export const RoutePending = () => {
   ) {
     content = (
       <div className="flex size-full min-h-0 flex-col">
-        <div className="mx-auto flex w-full max-w-(--transcript-max-w) flex-1 flex-col gap-6 px-4 pt-6">
+        <div className="mx-auto flex w-full max-w-(--content-max-w) flex-1 flex-col gap-6 px-4 pt-6">
           <div className="flex items-center gap-3">
             <Skeleton className="size-8 rounded-full" />
             <Skeleton className="h-4 w-40" />

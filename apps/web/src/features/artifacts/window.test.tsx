@@ -29,7 +29,8 @@ it("rendered grid eviction preserves full-row anchors including the 10px gap", a
   seed.artifacts = artifactStressRows;
   app = await renderApp("/artifacts", { seed });
   const grid = await screen.findByRole("list");
-  const viewport = grid.parentElement!;
+  // The grid sits in the wide content column; the viewport scrolls above it.
+  const viewport = grid.parentElement!.parentElement!;
   const columns = Number(
     grid.style.gridTemplateColumns.match(/repeat\((\d+)/)![1]
   );
@@ -75,7 +76,7 @@ it("a grid appearing after an empty snapshot observes later viewport resizes", a
   await act(async () => app!.db.artifacts.upsert(artifactStressRows[400]!));
   const grid = await screen.findByRole("list");
   const observer = observations.find(
-    (entry) => entry.element === grid.parentElement
+    (entry) => entry.element === grid.parentElement!.parentElement
   );
   expect(observer).toBeDefined();
   await act(async () => observer!.resize(450));
