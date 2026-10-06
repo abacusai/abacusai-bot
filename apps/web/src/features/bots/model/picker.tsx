@@ -3,6 +3,10 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  ConnectorMark,
+  markForProvider,
+} from "#renderer/components/connector-mark";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useMotionPreference } from "#renderer/lib/motion";
@@ -115,7 +119,13 @@ export const ModelPicker = ({
         />
         {binding.groups.map((group) => (
           <div key={group.id} className="py-2">
-            <p className="text-muted-foreground text-xs">{group.label}</p>
+            <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+              {/* A provider group carries the provider's mark. */}
+              {markForProvider(group.id) != null && (
+                <ConnectorMark id={markForProvider(group.id)!} size={16} />
+              )}
+              <span className="min-w-0 truncate">{group.label}</span>
+            </p>
             {group.items
               .filter((item) =>
                 `${item.label} ${item.id} ${item.description ?? ""} ${group.label}`

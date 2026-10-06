@@ -50,6 +50,24 @@ export const CONNECTOR_MARK_IDS = [
   "gcp",
   "canva",
   "paypal",
+  // Model providers (the picker, Settings › Models, onboarding).
+  "anthropic",
+  "openai",
+  "gemini",
+  "mistral",
+  "nvidia",
+  "cerebras",
+  "groq",
+  "deepseek",
+  "moonshot",
+  "xai",
+  "local",
+  "baseten",
+  "fireworks",
+  "minimax",
+  "opencode",
+  "together",
+  "zai",
 ] as const;
 export type ConnectorMarkId = (typeof CONNECTOR_MARK_IDS)[number];
 
@@ -58,6 +76,8 @@ interface Part {
   fill?: string;
   stroke?: string;
   w?: number;
+  /** A fill with holes (an eye, a ring). */
+  rule?: "evenodd";
 }
 
 /** The tile's own colour, for a glyph cut-out (a white shape in the brand's own mark). */
@@ -440,6 +460,145 @@ const MARKS: Record<ConnectorMarkId, { parts: Part[] }> = {
       },
     ],
   },
+  // ── Model providers. Brand colour where the brand is one, else INK. ──
+  anthropic: {
+    parts: [
+      {
+        d: "M10.4 4h3.2l6.6 16h-3.4l-1.3-3.5H8.5L7.2 20H3.8zm1.6 3.4-2.4 6.3h4.8z",
+        fill: INK,
+        rule: "evenodd",
+      },
+    ],
+  },
+  openai: {
+    parts: [
+      {
+        d: "M12 3.4 19.4 7.7v8.6L12 20.6l-7.4-4.3V7.7zM12 12l7.4-4.3M12 12 4.6 7.7M12 12v8.6M12 12V3.4M12 12l7.4 4.3M12 12l-7.4 4.3",
+        stroke: INK,
+        w: 1.6,
+      },
+    ],
+  },
+  gemini: {
+    parts: [
+      {
+        d: "M12 2c.7 5.5 4.5 9.3 10 10-5.5.7-9.3 4.5-10 10-.7-5.5-4.5-9.3-10-10 5.5-.7 9.3-4.5 10-10z",
+        fill: "#4E8EF7",
+      },
+    ],
+  },
+  mistral: {
+    parts: [
+      {
+        d: "M3.5 4h3.4v16H3.5zm13.6 0h3.4v16h-3.4zM6.9 7.4h3.4v3.3H6.9zm6.8 0h3.4v3.3h-3.4zm-3.4 3.3h3.4V14h-3.4z",
+        fill: "#FF7000",
+      },
+    ],
+  },
+  nvidia: {
+    parts: [
+      {
+        d: "M12 7.2c-4.2 0-7.5 2-9.5 4.8 2 2.8 5.3 4.8 9.5 4.8s7.5-2 9.5-4.8c-2-2.8-5.3-4.8-9.5-4.8zm0 2.3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z",
+        fill: "#76B900",
+        rule: "evenodd",
+      },
+    ],
+  },
+  cerebras: {
+    parts: [
+      { d: "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z", fill: "#F15A22" },
+      {
+        d: "M8.5 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM12 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm0 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z",
+        fill: TILE,
+      },
+    ],
+  },
+  groq: {
+    parts: [
+      {
+        d: "M12 3a8 8 0 1 1-8 8v7h3.2v-4.1A8 8 0 0 1 12 3zm0 3.2a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6z",
+        fill: "#F55036",
+        rule: "evenodd",
+      },
+    ],
+  },
+  deepseek: {
+    parts: [
+      {
+        d: "M2.5 11.2c2.2-4.3 6.4-6.2 10.6-5.6 2.2.3 4.2 1.4 6 3.3l2.4-1.6-.4 3.8c-1.1 3.4-4.3 5.9-8.5 5.9-3.8 0-7.2-1.7-10.1-5.8z",
+        fill: "#4D6BFE",
+      },
+      { d: "M15.6 10.3a1 1 0 1 1 0 2 1 1 0 0 1 0-2z", fill: TILE },
+    ],
+  },
+  moonshot: {
+    parts: [
+      {
+        d: "M14.2 3a9 9 0 1 0 6.4 15.4A8.2 8.2 0 0 1 14.2 3z",
+        fill: INK,
+      },
+    ],
+  },
+  xai: {
+    parts: [
+      {
+        d: "M4.5 4.5 19.5 19.5M19.5 4.5l-6 6M4.5 19.5l5.3-5.3",
+        stroke: INK,
+        w: 2,
+      },
+    ],
+  },
+  local: {
+    parts: [
+      {
+        d: "M8 5h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3zM9.5 9.5h5v5h-5zM12 2v3M12 19v3M2 12h3M19 12h3",
+        stroke: INK,
+        w: 1.6,
+      },
+    ],
+  },
+  baseten: {
+    parts: [
+      {
+        d: "M4 4h9a4 4 0 0 1 2.6 7 4.5 4.5 0 0 1-2.1 9H4zm3.2 3v3.6h5.4a1.8 1.8 0 0 0 0-3.6zm0 6.4V17h5.9a1.8 1.8 0 0 0 0-3.6z",
+        fill: INK,
+        rule: "evenodd",
+      },
+    ],
+  },
+  fireworks: {
+    parts: [
+      {
+        d: "M12 3v5M12 16v5M3 12h5M16 12h5M5.6 5.6l3.5 3.5M14.9 14.9l3.5 3.5M5.6 18.4l3.5-3.5M14.9 9.1l3.5-3.5",
+        stroke: INK,
+        w: 1.8,
+      },
+    ],
+  },
+  minimax: {
+    parts: [
+      {
+        d: "M3 9c2-2.6 4-2.6 6 0s4 2.6 6 0 4-2.6 6 0M3 15c2-2.6 4-2.6 6 0s4 2.6 6 0 4-2.6 6 0",
+        stroke: INK,
+        w: 1.8,
+      },
+    ],
+  },
+  opencode: {
+    parts: [{ d: "M5 7l5 5-5 5M12.5 17H19", stroke: INK, w: 2 }],
+  },
+  together: {
+    parts: [
+      {
+        d: "M9 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm6 0a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
+        stroke: INK,
+        w: 1.6,
+      },
+    ],
+  },
+  zai: {
+    parts: [{ d: "M5 5h14L5 19h14", stroke: INK, w: 2.2 }],
+  },
 };
 
 const PLATFORM_MARKS: Record<string, ConnectorMarkId> = {
@@ -455,11 +614,40 @@ const PLATFORM_MARKS: Record<string, ConnectorMarkId> = {
 export const markForPlatform = (platformId: string): ConnectorMarkId | null =>
   PLATFORM_MARKS[platformId] ?? null;
 
+/**
+ * Every provider the app names (`PROVIDER_KEY_FIELDS`, pi's catalog, the
+ * local runtime and the Abacus twins) → its mark; connector-mark.test.tsx
+ * holds the list to it.
+ */
 const PROVIDER_MARKS: Record<string, ConnectorMarkId> = {
   abacus: "abacus",
   openllm: "abacus",
   routellm: "abacus",
   openrouter: "openrouter",
+  anthropic: "anthropic",
+  openai: "openai",
+  "openai-codex": "openai",
+  gemini: "gemini",
+  google: "gemini",
+  mistral: "mistral",
+  nvidia: "nvidia",
+  cerebras: "cerebras",
+  groq: "groq",
+  deepseek: "deepseek",
+  moonshotai: "moonshot",
+  moonshot: "moonshot",
+  kimi: "moonshot",
+  xai: "xai",
+  local: "local",
+  ollama: "local",
+  baseten: "baseten",
+  fireworks: "fireworks",
+  huggingface: "huggingface",
+  minimax: "minimax",
+  opencode: "opencode",
+  together: "together",
+  "vercel-ai-gateway": "vercel",
+  zai: "zai",
 };
 
 /** A model provider → its mark; null draws a neutral tile with the initial. */
@@ -530,6 +718,7 @@ export const ConnectorMark = ({
               key={part.d}
               d={part.d}
               fill={part.fill ?? "none"}
+              fillRule={part.rule}
               stroke={part.stroke ?? "none"}
               strokeWidth={part.w ?? 0}
               strokeLinecap="round"
