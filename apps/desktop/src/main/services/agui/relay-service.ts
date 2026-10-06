@@ -1120,6 +1120,7 @@ export class AguiRelayService implements AguiSource {
         state: {},
         // The client's message ids survive: the agent echoes the newest user
         // message under its own id (spec 02 §14.2).
+        // uiMessagesToWire preserves abacus.userText display tags.
         messages: uiMessagesToWire(input.messages as unknown as UIMessage[]),
         tools: [],
         context: [],

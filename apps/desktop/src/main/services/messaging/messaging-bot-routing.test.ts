@@ -1,5 +1,7 @@
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import { AgentStatus } from "@abacus-ai/contract/agent-types";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
+import { visibleUserText } from "@abacus-ai/contract/transcript/user-text";
 /**
  * Inbound delivery to a bot's forever chat.
  *
@@ -34,9 +36,10 @@ vi.mock("./messaging-config-service", async (importOriginal) => {
 
 const { MessagingGatewayService } = await import("./messaging-gateway-service");
 
-const harness = () => {
+const harness = (intro?: string) => {
   const sent: Array<{ chatId: string; text: string }> = [];
   const prompts: string[] = [];
+  const tags: Array<UserTextTags | undefined> = [];
   let opened = 0;
 
   const gateway = new MessagingGatewayService({
@@ -46,10 +49,25 @@ const harness = () => {
     },
     updateSessionLabel: () => {},
     startSession: async () => ({ success: true }) as never,
-    sendMessage: (_w: string, _s: string, message: string) =>
-      prompts.push(message),
+    sendMessage: (
+      _w: string,
+      _s: string,
+      message: string,
+      userText?: UserTextTags
+    ) => {
+      prompts.push(message);
+      tags.push(userText);
+    },
     emitUserMessage: () => {},
     emitChanged: () => {},
+    ...(intro != null && {
+      openBotSenderChat: async () => ({
+        botId: "bot-1",
+        workspaceId: "ws-bot",
+        sessionId: "bot-chat",
+        intro,
+      }),
+    }),
     openBotChat: async () => {
       opened += 1;
       return { botId: "bot-1", workspaceId: "ws-bot", sessionId: "bot-chat" };
@@ -79,6 +97,7 @@ const harness = () => {
     gateway,
     sent,
     prompts,
+    tags,
     openedChats: () => opened,
     inbound: (chatId: string, userId: string, userName: string, text: string) =>
       internals.handleInbound("discord", { userId, userName, chatId, text }),
@@ -110,6 +129,10 @@ describe("delivering into the bot's chat", () => {
       "[Discord message from Ada] are we still on for 3pm?"
     );
     expect(h.prompts[0]).toContain("[auto-reply]");
+    expect(h.tags[0]?.operator?.kind).toBe("auto-reply-reminder");
+    expect(visibleUserText(h.prompts[0]!, h.tags[0])).toBe(
+      "[Discord message from Ada] are we still on for 3pm?"
+    );
   });
 
   it("answers the chat whose message the turn was about", async () => {
@@ -178,4 +201,25 @@ describe("delivering into the bot's chat", () => {
     expect(route.queue.length).toBe(10);
     expect(h.prompts).toHaveLength(1);
   });
+});
+
+it("tags the sender intro and later reminder at the framed message boundary", async () => {
+  const intro = "[auto-reply] rules 😀 for this sender";
+  const h = harness(intro);
+  await h.inbound("C1", "U1", "Ada", "hello\n\nnext paragraph");
+  expect(h.prompts[0]).toBe(
+    `${intro}\n\n[Discord message from Ada] hello\n\nnext paragraph`
+  );
+  expect(h.tags[0]).toEqual({
+    operator: { kind: "auto-reply-intro", visibleFrom: intro.length + 2 },
+  });
+  expect(visibleUserText(h.prompts[0]!, h.tags[0])).toBe(
+    "[Discord message from Ada] hello\n\nnext paragraph"
+  );
+  h.idle();
+  await h.inbound("C1", "U1", "Ada", "second");
+  expect(h.tags[1]?.operator?.kind).toBe("auto-reply-reminder");
+  expect(visibleUserText(h.prompts[1]!, h.tags[1])).toBe(
+    "[Discord message from Ada] second"
+  );
 });

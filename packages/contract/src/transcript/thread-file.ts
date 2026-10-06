@@ -463,6 +463,21 @@ const MessageAbacus = v.strictObject({
   ),
   userText: v.optional(
     v.strictObject({
+      operator: v.optional(
+        v.strictObject({
+          kind: v.picklist([
+            "kickstart",
+            "mission-updated",
+            "auto-reply-intro",
+            "auto-reply-reminder",
+            "environment-notice",
+            "routine-editor",
+          ]),
+          visibleFrom: v.optional(
+            v.pipe(v.number(), v.integer(), v.minValue(0))
+          ),
+        })
+      ),
       routineFire: v.optional(v.literal(true)),
       systemReminder: v.optional(v.literal(true)),
       attachments: v.optional(

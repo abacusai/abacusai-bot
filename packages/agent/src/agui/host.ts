@@ -15,7 +15,11 @@ import { parseModeStrict } from "../permissions.js";
 import { isPhoneSession } from "../phone/phone-config.js";
 import { channelsPagePublisher } from "../phone/phone-page-publisher.js";
 import { PhoneSession } from "../phone/phone-session.js";
-import type { DesktopCommand, DesktopEvent } from "../protocol.js";
+import type {
+  DesktopCommand,
+  DesktopEvent,
+  UserTextTags,
+} from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
@@ -106,14 +110,22 @@ function partText(part: unknown): string {
  */
 export function newestUserMessage(
   input: RunInput
-): { id: string | undefined; text: string } | undefined {
+):
+  | { id: string | undefined; text: string; userText?: UserTextTags }
+  | undefined {
   const messages: unknown[] = Array.isArray(input.messages)
     ? input.messages
     : [];
 
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index] as
-      | { id?: unknown; role?: unknown; content?: unknown; parts?: unknown }
+      | {
+          id?: unknown;
+          role?: unknown;
+          content?: unknown;
+          parts?: unknown;
+          metadata?: { abacus?: { userText?: UserTextTags } };
+        }
       | null
       | undefined;
 
@@ -132,6 +144,9 @@ export function newestUserMessage(
     return {
       id: typeof message.id === "string" ? message.id : undefined,
       text,
+      ...(message.metadata?.abacus?.userText != null && {
+        userText: message.metadata.abacus.userText,
+      }),
     };
   }
 
@@ -452,7 +467,7 @@ export class AguiHost {
 
     // Busy (the two-window race): today's send-while-busy, and no run opens.
     if (this.core.busy) {
-      const { entry, steered } = this.core.admitNow(text);
+      const { entry, steered } = this.core.admitNow(text, newest?.userText);
 
       this.ack(runId, "queued", {
         entryId: entry.id,
@@ -476,6 +491,7 @@ export class AguiHost {
     if (newest?.id == null || !this.echoedUserIds.has(newest.id)) {
       for (const event of this.emitter.userInput(runId, text, {
         dequeued: false,
+        userText: newest?.userText,
         ...(newest?.id != null ? { messageId: newest.id } : {}),
       })) {
         this.write(event);
@@ -665,7 +681,7 @@ export class AguiHost {
 
   private hooks(): TurnHooks {
     return {
-      beginTurn: (_source, text, { dequeued }) => {
+      beginTurn: (_source, text, { dequeued, userText }) => {
         const token = this.runs.mint();
         const runId = serverRunId();
 
@@ -680,6 +696,7 @@ export class AguiHost {
         // `hydrate` learn the run's input only from here.
         for (const event of this.emitter.userInput(runId, text, {
           dequeued,
+          userText,
         })) {
           this.write(event);
         }

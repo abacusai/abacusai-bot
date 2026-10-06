@@ -7,6 +7,7 @@
 import fs from "fs";
 import path from "path";
 
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import {
   type Bot,
   type BotChangeNotice,
@@ -61,7 +62,8 @@ export interface BotServiceCallbacks {
   sendMessage: (
     workspaceId: string,
     sessionId: string,
-    message: string
+    message: string,
+    userText?: UserTextTags
   ) => void;
   removeSession: (workspaceId: string, sessionId: string) => void;
   /**
@@ -271,7 +273,8 @@ export class BotService {
     this.callbacks.sendMessage(
       bot.workspaceId,
       bot.sessionId,
-      changeNotice(notice)
+      changeNotice(notice),
+      { operator: { kind: "mission-updated" } }
     );
   }
 
@@ -492,7 +495,8 @@ export class BotService {
           this.callbacks.sendMessage(
             workspaceId,
             bot.sessionId,
-            KICKSTART_MESSAGE
+            KICKSTART_MESSAGE,
+            { operator: { kind: "kickstart" } }
           );
           markBotKickstarted(botId);
         }
@@ -518,7 +522,9 @@ export class BotService {
     // is the same conversation to the user, and would introduce itself again.
     const started = await this.callbacks.startSession(workspaceId, session.id);
     if (started.success && bot.sessionId == null) {
-      this.callbacks.sendMessage(workspaceId, session.id, KICKSTART_MESSAGE);
+      this.callbacks.sendMessage(workspaceId, session.id, KICKSTART_MESSAGE, {
+        operator: { kind: "kickstart" },
+      });
       markBotKickstarted(botId);
     }
 

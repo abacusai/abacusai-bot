@@ -1,8 +1,7 @@
 import {
-  isRoutineFire,
   stripAttachmentRefs,
   visibleUserText,
-  type AttachmentRef,
+  isHiddenUserText,
 } from "@abacus-ai/contract/transcript/user-text";
 /**
  * Message widgets (spec 02 §5.1, §5.3, §8.6): `BotMessage` (bubbles, bot
@@ -194,10 +193,7 @@ const PendingState = ({ message }: { message: UIMessage }) => {
   );
 };
 
-interface UserTextMeta {
-  routineFire?: true;
-  attachments?: AttachmentRef[];
-}
+type UserTextMeta = import("@abacus-ai/contract/agent-types").UserTextTags;
 
 /**
  * What the bubble shows (C.3 r1 fixes, `shared/transcript/user-text.ts`):
@@ -212,9 +208,8 @@ export const userView = (
   const tags = (
     message.metadata as { abacus?: { userText?: UserTextMeta } } | undefined
   )?.abacus?.userText;
-  if (tags?.routineFire === true || isRoutineFire(raw))
-    return { hidden: true, body: "", paths: [] };
-  const visible = visibleUserText(raw);
+  if (isHiddenUserText(raw, tags)) return { hidden: true, body: "", paths: [] };
+  const visible = visibleUserText(raw, tags);
   if (tags?.attachments != null)
     return {
       hidden: false,
