@@ -394,6 +394,14 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
   const active = useThreadStore(session, (s) => s.runs.active != null);
   const outcomes = useThreadStore(session, (s) => s.runs.outcomes);
   const fresh = useThreadStore(session, (s) => s.fresh);
+  // The entry motion (`data-fresh`, chat.css) is for a message this
+  // transcript sees arrive. Rows already here when it mounted (a route
+  // entering a thread whose last reply came in live earlier) are history to
+  // it: the route's view transition brings them in as one snapshot, and no
+  // row rises a second time underneath.
+  const [settled] = useState(
+    () => new Set(messages.map((message) => message.id))
+  );
   const visible = visibleMessages(
     messages,
     skin,
@@ -675,7 +683,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         end={range.end}
         more={more}
         earlier={earlier}
-        fresh={fresh[message.id] === true}
+        fresh={fresh[message.id] === true && !settled.has(message.id)}
         virtual={measured.size > 0}
         height={measured.get(message.id)}
       />

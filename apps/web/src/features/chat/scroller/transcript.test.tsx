@@ -140,6 +140,32 @@ describe("R2-T16 transcript", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("marks only messages that arrive while it is open as fresh, never on remount", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll([...b.sessionReady(), ...turns(1)]);
+    current = await renderRelay(relay, "bot");
+    await screen.findByText("answer 0");
+    expect(document.querySelectorAll("[data-fresh]").length).toBe(0);
+    relay.emitAll([
+      b.runStarted("r-late"),
+      ...b.text("u-late", "user", "one more"),
+      ...b.text("a-late", "assistant", "late answer"),
+      b.runFinished("r-late"),
+    ]);
+    await screen.findByText("late answer");
+    await waitFor(() =>
+      expect(
+        document
+          .querySelector('[data-message-id="a-late"]')
+          ?.hasAttribute("data-fresh")
+      ).toBe(true)
+    );
+    // Back into the thread: the same rows are history to the new transcript.
+    await current.remount();
+    await screen.findByText("late answer");
+    expect(document.querySelectorAll("[data-fresh]").length).toBe(0);
+  });
+
   it("Show earlier mounts older rows without passing the budget", async () => {
     const items = [{ id: "huge", fixed: 1, units: 3000 }];
     let window = newestWindow(items);
