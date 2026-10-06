@@ -22,6 +22,7 @@ import {
 } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
+import { useMutation } from "#renderer/data/query-client";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -74,14 +75,6 @@ export const ModelsPage = ({
     })
   );
   const [q, setQ] = useState("");
-  const installGeneration = useRef(0);
-  useEffect(
-    () => () => {
-      installGeneration.current++;
-    },
-    [search.for]
-  );
-  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const now = useNow();
   const mark = creditMarkState(
@@ -131,29 +124,40 @@ export const ModelsPage = ({
     if (search.for && adoptModel)
       await adoptModel(search.for, localModelReference(id));
   };
-  const install = async (id: string) => {
-    const generation = ++installGeneration.current;
-    setBusy(id);
-    setError(null);
-    try {
-      const result = await transport.client.localModels.install({
-        modelId: id,
+  const stateKey = transport.orpc.localModels.state.queryKey({ input: {} });
+  // The `for` target the page adopts for now. An install answers once the
+  // download ends; one started for another target adopts nothing.
+  const target = useRef(search.for);
+  useEffect(() => {
+    target.current = search.for;
+  }, [search.for]);
+  const install = useMutation({
+    ...transport.orpc.localModels.install.mutationOptions(),
+    onMutate: () => {
+      setError(null);
+      return { target: target.current };
+    },
+    // Awaited by the mutation: it stays pending through the refetches
+    // and the adoption, and a failed adoption is its error.
+    onSuccess: async (result, { modelId }, started) => {
+      const current = started.target === target.current;
+      if (!result.ok) {
+        if (current && result.error !== "cancelled") setError(result.error);
+        return;
+      }
+      await cache.invalidateQueries({ queryKey: stateKey });
+      await cache.invalidateQueries({
+        queryKey: transport.orpc.models.list.queryKey(),
       });
-      if (generation !== installGeneration.current) return;
-      if (result.ok) {
-        await cache.invalidateQueries({
-          queryKey: transport.orpc.localModels.state.queryKey({ input: {} }),
-        });
-        await cache.invalidateQueries({
-          queryKey: transport.orpc.models.list.queryKey(),
-        });
-        await adopt(id);
-      } else if (result.error !== "cancelled") setError(result.error);
-    } catch (e) {
-      setError(errorText(e));
-    }
-    setBusy(null);
-  };
+      if (current && started.target === target.current) await adopt(modelId);
+    },
+    onError: (e) => setError(errorText(e)),
+  });
+  const removeModel = useMutation(
+    transport.orpc.localModels.remove.mutationOptions({
+      meta: { invalidates: [stateKey] },
+    })
+  );
   const fields = PROVIDER_KEY_FIELDS.filter((p) => p.kind === "model").toSorted(
     (a, b) => Number(!!b.featured) - Number(!!a.featured)
   );
@@ -319,17 +323,9 @@ export const ModelsPage = ({
                           })}
                           description={t("phase5.downloadAgain")}
                           label={t("phase5.remove")}
-                          onConfirm={async () => {
-                            await transport.client.localModels.remove({
-                              modelId: model.id,
-                            });
-                            await cache.invalidateQueries({
-                              queryKey:
-                                transport.orpc.localModels.state.queryKey({
-                                  input: {},
-                                }),
-                            });
-                          }}
+                          onConfirm={() =>
+                            removeModel.mutateAsync({ modelId: model.id })
+                          }
                         />
                       </>
                     ) : downloading ? (
@@ -352,12 +348,12 @@ export const ModelsPage = ({
                       <Button
                         size="sm"
                         disabled={
-                          busy !== null ||
+                          install.isPending ||
                           ["downloading", "verifying"].includes(
                             state.data!.download?.phase ?? ""
                           )
                         }
-                        onClick={() => void install(model.id)}
+                        onClick={() => install.mutate({ modelId: model.id })}
                       >
                         {t(
                           search.for ? "phase5.installUse" : "phase5.download"
@@ -420,14 +416,16 @@ export const ProviderDialog = ({
     await transport.client.models.list({ refresh: true });
     await credentialsChanged();
   };
-  const save = async (key: string) => {
-    await transport.client.settings.keys.save({
-      provider: field.provider,
-      key,
-    });
-    await refresh();
-    close();
-  };
+  const saveKey = useMutation(
+    transport.orpc.settings.keys.save.mutationOptions({
+      onSuccess: async () => {
+        await refresh();
+        close();
+      },
+    })
+  );
+  const save = (key: string) =>
+    saveKey.mutateAsync({ provider: field.provider, key });
   const schema = v.object({
     key: v.pipe(v.string(), v.trim(), v.check(isPlausibleApiKey, "api-key")),
   });

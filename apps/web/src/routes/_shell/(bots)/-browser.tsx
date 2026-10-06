@@ -33,7 +33,7 @@ export const BotBrowserRegistration = ({
     void navigate({
       search: (p: Record<string, unknown>) => ({ ...p, tab: "browser" }),
       transition: "none",
-    } as never);
+    });
   });
   useEffect(() => {
     if (!IS_ELECTRON) return;

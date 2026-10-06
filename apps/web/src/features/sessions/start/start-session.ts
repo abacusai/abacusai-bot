@@ -10,6 +10,7 @@ import type { UIMessage } from "@tanstack/ai-client";
 import { Store } from "@tanstack/react-store";
 
 import type { Db } from "#renderer/data/db";
+import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
 import { persistedStore } from "#renderer/lib/continuity/registry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -105,7 +106,7 @@ export const startSession = async (
           await deps.db.collections.sessions.insert(optimisticSession(draft))
             .isPersisted.promise;
         } catch (error) {
-          if ((error as { code?: string }).code !== "CONFLICT") throw error;
+          if (!isRpcError(error) || error.code !== "CONFLICT") throw error;
           await deps.db.collections.sessions.utils.resync();
           if (
             deps.db.collections.sessions.get(sessionId)?.workspaceId !==

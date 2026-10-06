@@ -8,6 +8,7 @@ import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 import {
   rendererConfig,
   rendererFlags,
+  rendererChunkGroups,
   webRoot,
 } from "../web/vite.renderer.ts";
 import { alias } from "../web/vite.shared.ts";
@@ -76,6 +77,7 @@ export default defineConfig(({ command, mode }) => {
           main: resolve(webRoot, "index.html"),
           notch: resolve(webRoot, "notch.html"),
         },
+        output: { codeSplitting: rendererChunkGroups },
       },
     },
     plugins: [

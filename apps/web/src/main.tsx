@@ -52,6 +52,7 @@ import {
   localLookStore,
   setLookStore,
 } from "#renderer/lib/theme";
+import { showError } from "#renderer/lib/toast";
 import { toast } from "#renderer/ui/toast";
 
 import { createAppRouter } from "./router";
@@ -125,7 +126,7 @@ const start = async (): Promise<void> => {
     await initI18n();
     if (await mountPlatformApp(root)) return;
 
-    const queryClient = createQueryClient();
+    const queryClient = createQueryClient({ showError });
     const onTransportLost = createTransportLostHandler({
       // Through the adapter, not collection.cleanup(): a mounted query or a
       // loader would restart a cleaned-up sync on the dead port.

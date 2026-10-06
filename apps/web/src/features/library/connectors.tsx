@@ -59,7 +59,7 @@ export const ConnectorsPage = () => {
     category?: string;
     q?: string;
   };
-  const navigate = useAppNavigate();
+  const navigate = useAppNavigate({ from: "/library/connectors" });
   const flow = useConnectFlow();
   const statuses = useQuery({
     ...transport.orpc.connectors.statuses.queryOptions({ input: {} }),
@@ -181,7 +181,7 @@ export const ConnectorSheet = ({ connector }: { connector: string }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const flow = useConnectFlow();
-  const navigate = useAppNavigate();
+  const navigate = useAppNavigate({ from: "/library/connectors" });
   const entry = connectorById(connector);
   const statuses = useQuery(
     transport.orpc.connectors.statuses.queryOptions({ input: {} })

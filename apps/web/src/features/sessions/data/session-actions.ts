@@ -1,6 +1,7 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 
 import type { Db } from "#renderer/data/db";
+import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
 export const renameSession = async (
   db: Db,
@@ -26,7 +27,7 @@ export const deleteSession = async (
       sessionId: row.id,
     });
   } catch (error) {
-    if ((error as { code?: string }).code !== "NOT_FOUND") throw error;
+    if (!isRpcError(error) || error.code !== "NOT_FOUND") throw error;
   }
   await db.collections.sessions.delete(row.id).isPersisted.promise;
 };

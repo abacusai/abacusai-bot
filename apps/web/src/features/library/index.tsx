@@ -59,8 +59,7 @@ export const LibrarySidebar = () => {
             key={page}
             to={`/library/${page}`}
             active={
-              matchRoute({ to: `/library/${page}`, fuzzy: true } as never) !==
-              false
+              matchRoute({ to: `/library/${page}`, fuzzy: true }) !== false
             }
             title={t(`library.pages.${page}`)}
           />

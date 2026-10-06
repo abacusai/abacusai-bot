@@ -98,7 +98,7 @@ const SessionAgents = ({
                 }),
                 replace: true,
                 transition: "none",
-              } as never)
+              })
             }
           >
             {agent.name} · {agent.status}
@@ -127,7 +127,7 @@ const SessionAgents = ({
                 search: (p: Record<string, unknown>) => ({ ...p, tab: "chat" }),
                 replace: true,
                 transition: "none",
-              } as never);
+              });
             }}
           >
             {t("sessions.agents.continue")}
@@ -258,7 +258,7 @@ const SessionRoute = () => {
       search: (p: Record<string, unknown>) => ({ ...p, tab, ...extra }),
       replace: true,
       transition: "none",
-    } as never);
+    });
   const openFile = (path: string) => {
     if (!root || !path.startsWith(`${root}/`)) {
       void platformSystem(transport.client).openPath({ path });
@@ -339,7 +339,7 @@ const SessionRoute = () => {
                   source: toolKey ? "tool" : "git",
                 }),
                 transition: "none",
-              } as never)
+              })
             }
             slots={{
               permissionActions: (descriptor) => (

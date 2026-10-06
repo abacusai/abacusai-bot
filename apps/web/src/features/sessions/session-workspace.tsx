@@ -114,7 +114,7 @@ export const SessionWorkspace = ({
       search: (p: Record<string, unknown>) => ({ ...p, tab, ...extra }),
       replace: true,
       transition: "none",
-    } as never);
+    });
   const preview = (path: string) => {
     const ref = `preview:${crypto.randomUUID()}`;
     openTab(key, { ref, title: path.split("/").at(-1) ?? path, path });
@@ -142,8 +142,9 @@ export const SessionWorkspace = ({
         scope,
         source: "git",
       }),
-      transition: "modal-open",
-    } as never);
+      // A pop-up over this pane, like the other masked sheets.
+      transition: "none",
+    });
   return (
     <div className="flex size-full min-h-0 flex-col">
       {status.data?.exists === false ? (

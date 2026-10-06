@@ -124,7 +124,7 @@ export const FilesTab = ({
         search: (p: Record<string, unknown>) => ({ ...p, file: path }),
         replace: true,
         transition: "none",
-      } as never);
+      });
       load(path.slice(0, -1));
       return;
     }
@@ -133,7 +133,7 @@ export const FilesTab = ({
       search: (p: Record<string, unknown>) => ({ ...p, file: path }),
       replace: true,
       transition: "none",
-    } as never);
+    });
   };
   const doTrash = async (path: string) => {
     await transport.client.files.trash({
@@ -146,7 +146,7 @@ export const FilesTab = ({
       search: (p: Record<string, unknown>) => ({ ...p, file: undefined }),
       replace: true,
       transition: "none",
-    } as never);
+    });
   };
   const requestTrash = (path: string) => {
     if (path.endsWith("/")) setTrash(path);

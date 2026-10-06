@@ -42,7 +42,7 @@ const Nav = ({ fixture }: { fixture: string | undefined }) => {
             void navigate({
               to: "/__ui",
               search: (p: Record<string, unknown>) => ({ ...p, fixture: id }),
-            } as never)
+            })
           }
         >
           {id}

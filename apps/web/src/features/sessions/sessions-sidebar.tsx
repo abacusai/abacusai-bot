@@ -355,7 +355,7 @@ const SessionSidebarRow = ({
             view: "split",
           }),
           transition: "none",
-        } as never);
+        });
       },
     },
     {

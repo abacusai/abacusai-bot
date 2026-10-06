@@ -3,6 +3,7 @@ import {
   SHARED_LINK_REQUIRED,
   type MessagingPlatformId,
   type MessagingPlatformInfo,
+  type MessagingSnapshot,
   type UpdateMessagingSettingsRequest,
 } from "@abacus-ai/contract/messaging";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -25,6 +26,11 @@ import {
   StatePill,
 } from "#renderer/components/form-kit/page";
 import { useCollections } from "#renderer/data/db";
+import {
+  optimistic,
+  useMutation,
+  useMutationState,
+} from "#renderer/data/query-client";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
@@ -50,7 +56,6 @@ export const MessagingPage = () =>
 const DesktopMessagingPage = () => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
   const c = useCollections();
   const bots = useLiveQuery(c.bots).data ?? [];
   const workspaces = useLiveQuery(c.workspaces).data ?? [];
@@ -59,26 +64,17 @@ const DesktopMessagingPage = () => {
   );
   const s = query.data;
   const navigate = useAppNavigate();
-  const update = async (patch: UpdateMessagingSettingsRequest) => {
-    if (!s) return;
-    cache.setQueryData(
-      transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-      { ...s, ...patch }
-    );
-    try {
-      const next = await transport.client.messaging.updateSettings(patch);
-      cache.setQueryData(
+  const settings = useMutation(
+    transport.orpc.messaging.updateSettings.mutationOptions({
+      ...optimistic(
         transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-        next
-      );
-    } catch {
-      cache.setQueryData(
-        transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-        s
-      );
-      showError(t("phase5.failed"));
-    }
-  };
+        (old, patch: UpdateMessagingSettingsRequest) => ({ ...old, ...patch })
+      ),
+      meta: { errorToast: "phase5.failed" },
+    })
+  );
+  const update = (patch: UpdateMessagingSettingsRequest) =>
+    settings.mutate(patch);
   return (
     <AreaPage
       title={t("library.pages.messaging")}
@@ -136,7 +132,7 @@ const DesktopMessagingPage = () => {
               <SettingSwitch
                 id={id}
                 checked={s[id]}
-                onCheckedChange={(value) => void update({ [id]: value })}
+                onCheckedChange={(value) => update({ [id]: value })}
               />
             </SettingRow>
           ))}
@@ -151,7 +147,7 @@ const DesktopMessagingPage = () => {
                   .map((w) => ({ value: w.id, label: w.label ?? w.path })),
               ]}
               onChange={(workspaceId) =>
-                void update({ workspaceId: workspaceId || null })
+                update({ workspaceId: workspaceId || null })
               }
             />
           </SettingRow>
@@ -163,7 +159,7 @@ const DesktopMessagingPage = () => {
                 { value: "", label: t("phase5.noBot") },
                 ...bots.map((b) => ({ value: b.id, label: b.name })),
               ]}
-              onChange={(botId) => void update({ botId: botId || null })}
+              onChange={(botId) => update({ botId: botId || null })}
             />
           </SettingRow>
         </GroupCard>
@@ -171,6 +167,18 @@ const DesktopMessagingPage = () => {
       <PlatformSheet />
     </AreaPage>
   );
+};
+/** A messaging write answers with the whole new snapshot. */
+const useWritesSnapshot = () => {
+  const { transport } = useAppContext();
+  const cache = useQueryClient();
+  return {
+    onSuccess: (next: MessagingSnapshot) =>
+      cache.setQueryData(
+        transport.orpc.messaging.snapshot.queryKey({ input: {} }),
+        next
+      ),
+  };
 };
 const PlatformSheet = () => {
   const search = useSearch({ strict: false }) as {
@@ -198,13 +206,22 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     flowRef.current = flow;
   }, [flow]);
   const [error, setError] = useState<string | null>(null);
-  const apply = async (promise: Promise<NonNullable<typeof s>>) => {
-    const next = await promise;
-    cache.setQueryData(
-      transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-      next
-    );
-  };
+  const writesSnapshot = useWritesSnapshot();
+  const decide = useMutation(
+    transport.orpc.messaging.decidePairing.mutationOptions(writesSnapshot)
+  );
+  // Per sender: deciding one leaves the others' buttons usable.
+  const deciding = useMutationState({
+    filters: {
+      mutationKey: transport.orpc.messaging.decidePairing.mutationKey(),
+      status: "pending",
+    },
+    select: (mutation) =>
+      (mutation.state.variables as { userId: string }).userId,
+  });
+  const unlinkShared = useMutation(
+    transport.orpc.messaging.unlinkShared.mutationOptions(writesSnapshot)
+  );
   const close = async () => {
     try {
       await flow.settlePairing(platform);
@@ -335,14 +352,13 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                   <Button
                     key={decision}
                     size="sm"
+                    disabled={deciding.includes(u.userId)}
                     onClick={() =>
-                      void apply(
-                        transport.client.messaging.decidePairing({
-                          platformId: platform,
-                          userId: u.userId,
-                          decision,
-                        })
-                      )
+                      decide.mutate({
+                        platformId: platform,
+                        userId: u.userId,
+                        decision,
+                      })
                     }
                   >
                     {t(
@@ -366,14 +382,13 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                 <Button
                   size="sm"
                   variant="ghost"
+                  disabled={deciding.includes(u.userId)}
                   onClick={() =>
-                    void apply(
-                      transport.client.messaging.decidePairing({
-                        platformId: platform,
-                        userId: u.userId,
-                        decision: u.status === "paused" ? "resume" : "pause",
-                      })
-                    )
+                    decide.mutate({
+                      platformId: platform,
+                      userId: u.userId,
+                      decision: u.status === "paused" ? "resume" : "pause",
+                    })
                   }
                 >
                   {t(u.status === "paused" ? "phase5.resume" : "phase5.pause")}
@@ -383,13 +398,11 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
                   description={t("phase5.revokeDescription")}
                   label={t("phase5.revoke")}
                   onConfirm={() =>
-                    apply(
-                      transport.client.messaging.decidePairing({
-                        platformId: platform,
-                        userId: u.userId,
-                        decision: "revoke",
-                      })
-                    )
+                    decide.mutateAsync({
+                      platformId: platform,
+                      userId: u.userId,
+                      decision: "revoke",
+                    })
                   }
                 />
               </SettingRow>
@@ -400,11 +413,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
             label={t("phase5.unlink")}
             onConfirm={async () => {
               if (sharedId)
-                await apply(
-                  transport.client.messaging.unlinkShared({
-                    platformId: sharedId,
-                  })
-                );
+                await unlinkShared.mutateAsync({ platformId: sharedId });
               await disablePlatform(
                 { transport, queryClient: cache },
                 platform
@@ -427,7 +436,13 @@ const PlatformCredentials = ({
 }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
-  const cache = useQueryClient();
+  const writesSnapshot = useWritesSnapshot();
+  const save = useMutation(
+    transport.orpc.messaging.updatePlatform.mutationOptions({
+      ...writesSnapshot,
+      meta: { errorToast: "phase5.saveFailed" },
+    })
+  );
   const schema = v.object(
     Object.fromEntries(
       platform.fields.map((field) => [
@@ -453,24 +468,16 @@ const PlatformCredentials = ({
     }),
     validators: { onDynamic: schema },
     onSubmit: async ({ value }) => {
-      try {
-        const values = Object.fromEntries(
-          Object.entries(v.parse(schema, value)).filter(
-            ([, value]) => value !== ""
-          )
-        );
-        const snapshot = await transport.client.messaging.updatePlatform({
-          platformId: platform.id,
-          values,
-        });
-        cache.setQueryData(
-          transport.orpc.messaging.snapshot.queryKey({ input: {} }),
-          snapshot
-        );
-        form.reset();
-      } catch {
-        showError(t("phase5.saveFailed"));
-      }
+      const values = Object.fromEntries(
+        Object.entries(v.parse(schema, value)).filter(
+          ([, value]) => value !== ""
+        )
+      );
+      // A failure is toasted by the mutation's meta; the fields keep it.
+      await save.mutateAsync({ platformId: platform.id, values }).then(
+        () => form.reset(),
+        () => undefined
+      );
     },
   });
   return (

@@ -17,12 +17,11 @@ import type { Root } from "react-dom/client";
 
 import { lookStore, readLastKnown, writeLastKnown } from "#platform/last-known";
 import { installLease } from "#platform/lease";
-import { rpcCode } from "#renderer/data/ai/errors";
 import { installDb } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { untilOpen } from "#renderer/data/queries/notices";
 import { systemInfoQuery } from "#renderer/data/queries/system";
-import { createQueryClient } from "#renderer/data/query-client";
+import { createQueryClient, isRpcError } from "#renderer/data/query-client";
 import {
   createHostTransport,
   type HostTransport,
@@ -53,6 +52,7 @@ import {
   DARK_QUERY,
   setLookStore,
 } from "#renderer/lib/theme";
+import { showError } from "#renderer/lib/toast";
 import { createAppRouter } from "#renderer/router";
 
 export { HostStatus } from "#renderer/features/shell/connect";
@@ -90,7 +90,10 @@ const loadSystem = async (
       writeLastKnown("system", facts);
       return info;
     } catch (error) {
-      if (rpcCode(error) === "FORBIDDEN" || rpcCode(error) === "NOT_FOUND") {
+      if (
+        isRpcError(error) &&
+        (error.code === "FORBIDDEN" || error.code === "NOT_FOUND")
+      ) {
         console.error("[boot] system.info refused", error);
         return null;
       }
@@ -127,7 +130,7 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
     forceRestart: takeRestartRequest(),
   });
 
-  const queryClient = createQueryClient();
+  const queryClient = createQueryClient({ showError });
   const db = installDb(async () => transport);
   // Closed is terminal on the web (sign-in, tier, contract): the banner or
   // the connect screen says why; nothing reloads.
