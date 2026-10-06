@@ -235,3 +235,24 @@ html[data-translucency="off"] [data-slot="message-actions"]::before { -webkit-ba
   html:not([data-reduce-motion="off"]) [data-message-target][data-highlighted] { animation: none; }
 }
 html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animation: none; }
+
+/* ─── the floating composer dock (§5.1) ─────────────────────────── */
+
+/*
+ * The dock floats over the transcript's end: only its children take the
+ * pointer, so the transcript still scrolls beneath its gaps. Its surface is
+ * glass where the window sits on native material (tokens.css V1 gating,
+ * the same condition as the pane), opaque everywhere else and under reduced
+ * transparency.
+ */
+[data-slot="composer-dock"] > * {
+  pointer-events: auto;
+}
+@media not (prefers-reduced-transparency: reduce) {
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
+    [data-slot="composer-surface"] {
+    background-color: color-mix(in oklab, var(--chat-surface) 72%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
+  }
+}

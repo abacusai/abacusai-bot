@@ -718,6 +718,7 @@ export const ThreadComposer = () => {
             event.preventDefault()
           }
           onDrop={onDrop}
+          data-slot="composer-surface"
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
             expanded
