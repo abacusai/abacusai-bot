@@ -79,9 +79,9 @@ app.whenReady().then(async () => {
       fs.writeFileSync(file, html);
 
       await window.loadFile(file);
-      // Load fires before layout has settled; two frames makes it final.
+      // Flush layout directly: a hidden window may never receive animation frames.
       await window.webContents.executeJavaScript(
-        "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+        "document.body.getBoundingClientRect()"
       );
 
       try {
