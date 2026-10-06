@@ -207,3 +207,4 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
     color: var(--destructive) !important;
   }
 }
+.session-dock-mini [data-slot="composer-dock"] { position: static; }

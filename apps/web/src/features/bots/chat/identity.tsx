@@ -1,3 +1,15 @@
+/**
+ * The bot's identity (spec 03 §16.2): one visual element with two homes. At
+ * the top of the transcript it is the chat header (avatar 56, name, status);
+ * as the transcript scrolls it shrinks and slides into its docked place in
+ * the title bar. The scroll-linked part is CSS (bots.css: a named scroll
+ * timeline on the transcript viewport, `timeline-scope`d at the shell so the
+ * title bar can read it); an IntersectionObserver keeps the accessible copy
+ * to one (the other is `aria-hidden`) and is the whole behaviour where
+ * scroll-driven animation is missing or motion is reduced (a cut). Across
+ * routes the showing copy carries the view-transition name, so entering or
+ * leaving the chat morphs it with the sidebar row.
+ */
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +22,11 @@ import { Button } from "#renderer/ui/button";
 import { BotFace } from "../avatar";
 import { moodFor } from "../data/attention";
 import { useBotAttention } from "../data/use-attention";
+
+/** The shared view-transition name of the bot's avatar (sidebar, header, dock). */
+export const botIdentityName = (botId: string): string =>
+  `bot-identity-${botId}`;
+
 export const BotGone = ({ chat = false }: { chat?: boolean }) => {
   const { t } = useTranslation();
   return (
@@ -31,6 +48,12 @@ export const BotGone = ({ chat = false }: { chat?: boolean }) => {
 };
 export const BotPending = RoutePending;
 
+/**
+ * The docked copy in the title bar. Clicking it opens or closes the details
+ * panel. `docked` is the transcript copy's report (scrolled out of view):
+ * only then is this copy the accessible one; a chat without a header
+ * (a sender chat) docks it permanently.
+ */
 export const BotIdentity = ({
   bot,
   docked = true,
@@ -44,9 +67,11 @@ export const BotIdentity = ({
 }) => {
   const { t } = useTranslation();
   const attention = useBotAttention(bot);
+  const shared = useSharedElementName(docked ? botIdentityName(bot.id) : null);
   return (
     <Button
       data-slot="bot-docked-identity"
+      data-docked={docked ? "" : undefined}
       className="max-w-full min-w-0 justify-start overflow-hidden"
       title={bot.name}
       variant="ghost"
@@ -61,7 +86,9 @@ export const BotIdentity = ({
         transition: "opacity 160ms, transform 160ms",
       }}
     >
-      <BotFace bot={bot} mood={moodFor(attention)} size={22} />
+      <span className="flex shrink-0" style={shared}>
+        <BotFace bot={bot} mood={moodFor(attention)} size={22} />
+      </span>
       <span className="min-w-0 truncate">{bot.name}</span>
       <span
         data-slot="bot-identity-status"
@@ -74,6 +101,8 @@ export const BotIdentity = ({
     </Button>
   );
 };
+
+/** The header copy at the top of the transcript; clicking it toggles details too. */
 export const BotTranscriptIdentity = ({
   bot,
   onDock,
@@ -88,7 +117,7 @@ export const BotTranscriptIdentity = ({
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const [docked, setDocked] = useState(false);
-  const style = useSharedElementName(`bot-identity-${bot.id}`);
+  const style = useSharedElementName(docked ? null : botIdentityName(bot.id));
   const attention = useBotAttention(bot);
   useEffect(() => {
     const element = ref.current;
@@ -106,7 +135,11 @@ export const BotTranscriptIdentity = ({
     return () => observer.disconnect();
   }, [onDock]);
   return (
-    <div className="flex flex-col items-center gap-1 pt-7 pb-2">
+    <div
+      className="flex flex-col items-center gap-1 pt-7 pb-2"
+      data-slot="bot-transcript-identity"
+      data-docked={docked ? "" : undefined}
+    >
       <Button
         variant="ghost"
         className="h-auto max-w-full flex-col whitespace-normal"

@@ -6,6 +6,12 @@
 import { describe, expect, it } from "vitest";
 
 import { GEOMETRY_VARS, SHELL_GEOMETRY } from "./geometry";
+import {
+  clampPanelWidth,
+  PANEL_DEFAULT_PX,
+  PANEL_MAX_PX,
+  PANEL_MIN_PX,
+} from "./side-panel";
 
 import tokensCss from "../../styles/tokens.css?raw";
 
@@ -29,6 +35,27 @@ describe("shell geometry", () => {
       if (key === "sidePanelDrawerW" || key === "paneRadius") continue;
       expect([key, value % 8]).toEqual([key, 0]);
     }
+  });
+
+  it("keeps the composer column narrower than the transcript, both wider than the pane minimum", () => {
+    const g = SHELL_GEOMETRY;
+    expect(g.composerMaxW).toBeLessThan(g.transcriptMaxW);
+    expect(g.composerMaxW).toBeGreaterThan(g.sidePanelMin);
+  });
+
+  it("clamps the side panel between its min and max, the drawer and default inside", () => {
+    const g = SHELL_GEOMETRY;
+    expect([PANEL_MIN_PX, PANEL_MAX_PX]).toEqual([
+      g.sidePanelMin,
+      g.sidePanelMax,
+    ]);
+    expect(g.sidePanelMin).toBeLessThan(g.sidePanelMax);
+    expect(PANEL_DEFAULT_PX).toBeGreaterThanOrEqual(PANEL_MIN_PX);
+    expect(PANEL_DEFAULT_PX).toBeLessThanOrEqual(PANEL_MAX_PX);
+    expect(g.sidePanelDrawerW).toBeLessThanOrEqual(g.sidePanelMax);
+    expect(clampPanelWidth(100)).toBe(PANEL_MIN_PX);
+    expect(clampPanelWidth(420)).toBe(420);
+    expect(clampPanelWidth(900)).toBe(PANEL_MAX_PX);
   });
 
   it("leaves the pane and the panel their 360 px each at the 1100 minimum", () => {
@@ -56,10 +83,10 @@ describe("shell surfaces", () => {
     expect(block).toMatch(
       /\.shell-surface \{\s*background-color: transparent;/
     );
-    // The layers over it: the pane and the in-layout panel keep almost all
+    // The layers over it: the pane and the in-layout panel keep nine tenths
     // of their colour; the floating sidebar is frosted.
     expect(block).toMatch(
-      /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 9\d%, transparent\);/
+      /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
       /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);[\s\S]*?backdrop-filter: blur\(/

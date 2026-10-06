@@ -125,6 +125,8 @@ export interface ChatViewSlots {
   banner?: ReactNode;
   /** 03-bots §24.2: scrolls with the transcript, above the first message. */
   header?: ReactNode;
+  /** 03-bots §24: the wallpaper id painted behind the transcript; none when unset. */
+  wallpaper?: string | null;
   composerContext?: ReactNode;
   /** The route's pieces after the last run's outcome (the Changes card, phase 4). */
   runTail?: ReactNode;

@@ -16,7 +16,9 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type CSSProperties,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -218,12 +220,56 @@ const StopHotkey = () => {
   return null;
 };
 
+/** The gap between the last message and the floating composer's top edge. */
+export const COMPOSER_DOCK_GAP_PX = 16;
+
+/**
+ * The composer dock floats over the transcript's bottom edge. Its measured
+ * height goes straight to a custom property on the layout (no React state,
+ * no layout thrash): the scroller pads its end by it, so the last message
+ * and "scroll to bottom" land above the composer, never under it.
+ */
+const useComposerDockHeight = (
+  layout: RefObject<HTMLDivElement | null>,
+  dock: RefObject<HTMLDivElement | null>
+): void => {
+  useEffect(() => {
+    const target = dock.current;
+    const host = layout.current;
+    if (target == null || host == null || typeof ResizeObserver === "undefined")
+      return;
+    const write = (height: number) =>
+      host.style.setProperty("--composer-dock-h", `${Math.round(height)}px`);
+    write(target.getBoundingClientRect().height);
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries.at(-1);
+      if (entry == null) return;
+      write(
+        entry.borderBoxSize?.[0]?.blockSize ??
+          entry.target.getBoundingClientRect().height
+      );
+    });
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+      host.style.removeProperty("--composer-dock-h");
+    };
+  }, [layout, dock]);
+};
+
 export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
   const { skin, slots, threadId } = useChatView();
   const Message = use(MessageComponentContext);
   const MessagesView = Messages as MessagesSlot;
   const InputView = Input as ComponentType;
   const editing = useSelector(queueEditing, (state) => state[threadId] ?? null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+  useComposerDockHeight(layoutRef, dockRef);
+  const wallpaper =
+    slots.wallpaper != null && slots.wallpaper !== "none"
+      ? slots.wallpaper
+      : null;
   return (
     <MessageScrollerProvider
       autoScroll
@@ -231,16 +277,30 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
       scrollPreviousItemPeek={64}
     >
       <div
-        className="flex size-full min-h-0 min-w-0 flex-col"
+        ref={layoutRef}
+        className="relative flex size-full min-h-0 min-w-0 flex-col"
         data-slot="chat-layout"
         data-skin={skin}
+        data-wallpaper={wallpaper ?? undefined}
+        style={
+          {
+            "--composer-dock-gap": `${COMPOSER_DOCK_GAP_PX}px`,
+          } as CSSProperties
+        }
       >
         {slots.banner}
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          {wallpaper != null ? (
+            <div
+              aria-hidden
+              data-slot="chat-wallpaper"
+              data-wallpaper={wallpaper}
+            />
+          ) : null}
           <MessagesView>
             {(messages) =>
               messages.length === 0 && slots.empty != null ? (
-                <div className="flex flex-1 items-center justify-center">
+                <div className="flex flex-1 items-center justify-center pb-(--composer-dock-h,0px)">
                   {slots.empty}
                 </div>
               ) : Message == null ? null : (
@@ -249,7 +309,11 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
             }
           </MessagesView>
         </div>
-        <div className="mx-auto flex w-full max-w-[720px] min-w-0 flex-col gap-1.5 pb-4">
+        <div
+          ref={dockRef}
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-(--composer-max-w) min-w-0 flex-col gap-1.5 pb-4"
+          data-slot="composer-dock"
+        >
           <Notices />
           {skin === "bot" ? (
             <div className="px-4">

@@ -516,7 +516,6 @@
       "accessoryUnavailable": "Accessories are not available yet."
     },
     "panel": {
-      "detailsTitle": "Details",
       "detailsFor": "Details for {{name}}",
       "modelValue": "Model: {{model}}",
       "memoryTitle": "Memory",
@@ -627,7 +626,16 @@
     "viewBots": "ボット",
     "viewSessions": "セッション",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "wallpaper": {
+      "title": "チャットの壁紙",
+      "none": "なし",
+      "doodle": "落書き",
+      "dots": "ドット",
+      "grid": "グリッド",
+      "waves": "波",
+      "solid": "アクセントカラー"
+    }
   },
   "capabilities": {
     "toolDescriptions": {

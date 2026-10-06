@@ -516,7 +516,6 @@
       "accessoryUnavailable": "Accessories are not available yet."
     },
     "panel": {
-      "detailsTitle": "Details",
       "detailsFor": "Details for {{name}}",
       "modelValue": "Model: {{model}}",
       "memoryTitle": "Memory",
@@ -627,7 +626,16 @@
     "viewBots": "봇",
     "viewSessions": "세션",
     "channelChatReadOnly": "This conversation lives in {{app}}. Message the Abacus AI bot there. Everything you and the bot say shows up here.",
-    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here."
+    "channelChatReadOnlyWhatsapp": "This conversation lives in WhatsApp. Message yourself there, from your “Message yourself” chat. Everything you and the bot say shows up here.",
+    "wallpaper": {
+      "title": "채팅 배경",
+      "none": "없음",
+      "doodle": "낙서",
+      "dots": "점",
+      "grid": "격자",
+      "waves": "물결",
+      "solid": "강조 색상"
+    }
   },
   "capabilities": {
     "toolDescriptions": {

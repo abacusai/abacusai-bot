@@ -231,7 +231,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
   }, [bot, form, baseline]);
   return (
     <form
-      className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
+      className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden [container:bot-form/inline-size]"
       style={accentVars(look)}
       onSubmit={(event) => {
         event.preventDefault();
@@ -240,7 +240,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
       }}
     >
       <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <aside className="bg-muted/40 flex w-[300px] shrink-0 flex-col items-center gap-3 px-6 pt-10">
+        <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10">
           <div style={shared}>
             <BotFace look={look} size={wide ? 96 : 56} mood="happy" />
           </div>
@@ -276,7 +276,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
             }
           </form.AppField>
         </aside>
-        <div className="min-w-0 flex-1 p-5 xl:px-8">
+        <div className="min-w-0 flex-1 p-5 [@container_bot-form_(min-width:900px)]:px-8">
           <FieldGroup>
             {(
               [

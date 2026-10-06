@@ -28,10 +28,15 @@
   --sidebar-occupied-w: 280px;
   --sidebar-header-h: 40px;
   --side-panel-min: 360px;
+  --side-panel-max: 480px;
   --side-panel-drawer-w: 356px;
   --pane-inset: 8px;
   --pane-radius: 12px;
   --drawer-padding: 16px;
+  /* The chat column: a clamp that only matters on ultra-wide displays; the
+     composer sits a step narrower than the transcript, both centred. */
+  --transcript-max-w: 960px;
+  --composer-max-w: 760px;
   /* density */
   --row-h: 32px;
   --bot-accent: var(--primary);
@@ -95,13 +100,14 @@ html {
   }
   /*
    * Layers over the material, each a little more solid than the one below:
-   * the pane and the in-layout panel keep almost all of their colour, so
-   * text and code stay legible while the window still reads as one piece
-   * of glass; the floating sidebar, a sheet over the pane, is frosted.
+   * the pane and the in-layout panel keep nine tenths of their colour (the
+   * material shows through as a tint, never through the text, code blocks
+   * or cards, which keep their own surfaces), so the window reads as one
+   * piece of glass; the floating sidebar, a sheet over the pane, is frosted.
    */
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     :is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"]) {
-    background-color: color-mix(in oklab, var(--background) 94%, transparent);
+    background-color: color-mix(in oklab, var(--background) 90%, transparent);
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="sidebar-floating"] {
@@ -384,6 +390,62 @@ html[data-reduce-motion="on"] .phone-rise {
 @media (prefers-reduced-motion: reduce) {
   .phone-rise {
     animation: none !important;
+  }
+}
+/*
+ * Scrollbars (V8): one thin, rounded thumb in the theme's ink everywhere,
+ * shown while the pointer is over the scroller (or focus is inside it) and
+ * invisible otherwise, with no track, so it reads the same on the pane, the
+ * sidebars, the panel and the translucent surfaces in both themes.
+ *
+ * Chromium ignores `::-webkit-scrollbar` on an element that sets the
+ * standard `scrollbar-width`/`scrollbar-color`, so the pseudo-elements carry
+ * the look there and the standard properties only serve engines without
+ * them (Firefox-style), under `@supports`.
+ */
+:root {
+  --scrollbar-size: 10px;
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 28%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  min-height: 24px;
+  min-width: 24px;
+}
+:hover::-webkit-scrollbar-thumb,
+:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-hover);
+}
+/* The registry's `scrollbar-thin` would switch Chromium to classic bars. */
+[data-slot="message-scroller-viewport"] {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover,
+  *:focus-within {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
 .no-scrollbar {

@@ -59,7 +59,7 @@ const Sender = ({
         runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}
-        slots={slots.chat}
+        slots={{ ...slots.chat, wallpaper: bot.wallpaper ?? null }}
         composer={slots.composer}
       />
       <SidePanelContent tab="browser">

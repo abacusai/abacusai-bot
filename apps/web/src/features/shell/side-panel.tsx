@@ -32,9 +32,15 @@ import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
 
 export const PANEL_MIN_PX = 360;
+/** The in-layout panel never grows past this; the pane keeps the rest. */
+export const PANEL_MAX_PX = 480;
 export const PANE_MIN_PX = 360;
 export const PANEL_DEFAULT_PX = 400;
 export const PANEL_PREF_KEY = "side-panel";
+
+/** A stored or dragged width, held within the panel's clamp. */
+export const clampPanelWidth = (px: number): number =>
+  Math.min(PANEL_MAX_PX, Math.max(PANEL_MIN_PX, px));
 
 /**
  * One tab's body: the route's `SidePanelContent` for it, portalled into the

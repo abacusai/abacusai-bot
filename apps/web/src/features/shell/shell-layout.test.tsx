@@ -22,7 +22,7 @@ import {
 import { setViewportWidth } from "#renderer/test-support/media";
 
 import { HOVER_INTENT_MS, shellStore } from "./shell-store";
-import { useTopBarStatusText } from "./top-bar-slots";
+import { useTopBarActions, useTopBarStatusText } from "./top-bar-slots";
 
 vi.mock("#renderer/ui/resizable", async (importOriginal) => {
   const actual =
@@ -93,6 +93,7 @@ describe("ShellLayout", () => {
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
     const pane = __panels.filter((p) => p.id === "pane").at(-1)!;
     expect(sidePanel.minSize).toBe(360);
+    expect(sidePanel.maxSize).toBe(480);
     expect(pane.minSize).toBe(360);
     expect(sidePanel.defaultSize).toBe(420);
     vi.useFakeTimers();
@@ -120,6 +121,37 @@ describe("ShellLayout", () => {
     expect(
       document.querySelector('[data-slot="topbar"] [role="tablist"]')
     ).not.toBeNull();
+  });
+
+  it("clamps a stored panel width outside 360–480 and never writes one outside it", async () => {
+    const seed = defaultSeed();
+    seed.prefs = fixturePrefs({ panes: { "side-panel": 900 } });
+    await at(1280, "/bots/chief-of-staff?tab=details", seed);
+    const { __panels } =
+      (await import("#renderer/ui/resizable")) as unknown as {
+        __panels: Array<Record<string, unknown>>;
+      };
+    const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
+    expect(sidePanel.defaultSize).toBe(480);
+    vi.useFakeTimers();
+    try {
+      act(() => {
+        (
+          sidePanel.onResize as (size: {
+            inPixels: number;
+            asPercentage: number;
+          }) => void
+        )({ inPixels: 120, asPercentage: 10 });
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() =>
+      expect(harness!.db.prefs.rows.get("app")?.panes["side-panel"]).toBe(360)
+    );
   });
 
   it("uses a non-modal drawer with data-side-panel below xl, and a scrim only there", async () => {
@@ -198,6 +230,8 @@ describe("ShellLayout", () => {
     await at(1280, "/bots/chief-of-staff");
     const Status = () => {
       useTopBarStatusText("Running");
+      // A route action, so the bar has something to fold.
+      useTopBarActions([{ id: "export", label: "Export", onSelect() {} }]);
       return null;
     };
     const status = render(<Status />);
