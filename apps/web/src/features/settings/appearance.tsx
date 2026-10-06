@@ -45,11 +45,11 @@ import {
   CONTRAST_QUERY,
   DARK_QUERY,
   resolveTheme,
-  useMedia,
   type ResolvedTheme,
 } from "#renderer/lib/theme";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import {
   Collapsible,
@@ -337,8 +337,8 @@ export const AppearancePage = () => {
   const update = useUpdatePrefs();
   const { transport } = useAppContext();
   const look = lookOf(prefs.appearance);
-  const systemDark = useMedia(DARK_QUERY);
-  const systemHigh = useMedia(CONTRAST_QUERY);
+  const systemDark = useMediaQuery(DARK_QUERY);
+  const systemHigh = useMediaQuery(CONTRAST_QUERY);
   const high =
     look.contrast === "high" || (look.contrast === "system" && systemHigh);
   const wanted = resolveTheme(prefs.theme, systemDark);

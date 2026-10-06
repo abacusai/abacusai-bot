@@ -10,7 +10,8 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import { NotchShell } from "#renderer/features/notch";
 import type { NotchPresentation } from "#renderer/features/notch";
 import { lookOf, notchTokens, resolveLook } from "#renderer/lib/look";
-import { applyLook, CONTRAST_QUERY, useMedia } from "#renderer/lib/theme";
+import { applyLook, CONTRAST_QUERY } from "#renderer/lib/theme";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import type { NotchRouterContext } from "#renderer/notch-context";
 
 /** Colour tokens a light-only theme must not bring into the dark notch. */
@@ -26,7 +27,7 @@ const KEEP =
  */
 const NotchLook = () => {
   const appearance = usePrefs().appearance;
-  const high = useMedia(CONTRAST_QUERY);
+  const high = useMediaQuery(CONTRAST_QUERY);
   useEffect(() => {
     const look = lookOf(appearance);
     const applied = resolveLook(look, "dark", high);

@@ -21,15 +21,15 @@ import {
   CONTRAST_QUERY,
   DARK_QUERY,
   themeOverride,
-  useMedia,
 } from "./theme";
+import { useMediaQuery } from "./use-media-query";
 
 export const ThemeEffect = (): null => {
   const { data } = useLiveQuery(useCollections().prefs);
   const row = data?.[0];
   const prefs = row ?? DEFAULT_PREFS;
-  const dark = useMedia(DARK_QUERY);
-  const high = useMedia(CONTRAST_QUERY);
+  const dark = useMediaQuery(DARK_QUERY);
+  const high = useMediaQuery(CONTRAST_QUERY);
   const override = useStore(themeOverride, (value) => value);
   const look = lookOf(prefs.appearance);
   const { theme, appearance } = prefs;
