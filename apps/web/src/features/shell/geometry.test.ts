@@ -49,9 +49,20 @@ describe("shell surfaces", () => {
     expect(block).toContain(
       'html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]'
     );
-    expect(block).toMatch(/background-color: transparent/);
+    // The whole document chain, so the body's opaque background cannot hide
+    // the material, and the chrome itself paints nothing over it.
+    expect(block).toMatch(/\[data-titlebar="overlay"\][^{]*\) body,/);
+    expect(block).toMatch(/\[data-titlebar="overlay"\][^{]*\) #root \{/);
     expect(block).toMatch(
-      /\.shell-surface[\s\S]*color-mix\(in oklab, var\(--sidebar\)/
+      /\.shell-surface \{\s*background-color: transparent;/
+    );
+    // The layers over it: the pane and the in-layout panel keep almost all
+    // of their colour; the floating sidebar is frosted.
+    expect(block).toMatch(
+      /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 9\d%, transparent\);/
+    );
+    expect(block).toMatch(
+      /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);[\s\S]*?backdrop-filter: blur\(/
     );
     // Outside that rule the chrome is opaque.
     expect(tokensCss).toMatch(
