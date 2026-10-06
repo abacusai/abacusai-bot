@@ -390,6 +390,62 @@ html[data-reduce-motion="on"] .phone-rise {
     animation: none !important;
   }
 }
+/*
+ * Scrollbars (V8): one thin, rounded thumb in the theme's ink everywhere,
+ * shown while the pointer is over the scroller (or focus is inside it) and
+ * invisible otherwise, with no track, so it reads the same on the pane, the
+ * sidebars, the panel and the translucent surfaces in both themes.
+ *
+ * Chromium ignores `::-webkit-scrollbar` on an element that sets the
+ * standard `scrollbar-width`/`scrollbar-color`, so the pseudo-elements carry
+ * the look there and the standard properties only serve engines without
+ * them (Firefox-style), under `@supports`.
+ */
+:root {
+  --scrollbar-size: 10px;
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 28%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  min-height: 24px;
+  min-width: 24px;
+}
+:hover::-webkit-scrollbar-thumb,
+:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-hover);
+}
+/* The registry's `scrollbar-thin` would switch Chromium to classic bars. */
+[data-slot="message-scroller-viewport"] {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover,
+  *:focus-within {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
 .no-scrollbar {
   scrollbar-width: none;
 }
