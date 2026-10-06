@@ -126,3 +126,78 @@ export const AppIcon = ({
     <use href={`#icon-${name}`} />
   </svg>
 );
+
+/**
+ * The AbacusAI Bot app icon (apps/desktop/build/icon.png) as a vector: the
+ * navy tile, the chat-bubble face with its antenna, and the signal bars at
+ * either side. The tile keeps its own colours in both themes, like the icon
+ * in the Dock, so the mark never inherits the chrome's text colour.
+ * Decorative: the name beside it (or the window title) names the app.
+ */
+export const AppBrandMark = ({
+  size = 20,
+  ...props
+}: { size?: number } & ComponentProps<"svg">) => (
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    data-slot="app-brand-mark"
+    {...props}
+  >
+    <rect width="24" height="24" rx="5.5" fill="#0f1a34" />
+    <rect
+      x="0.5"
+      y="0.5"
+      width="23"
+      height="23"
+      rx="5"
+      stroke="#ffffff"
+      strokeOpacity="0.08"
+    />
+    {/* Signal bars (left: white, cyan; right: magenta, violet, white). */}
+    <path
+      d="M4.6 9.4v2.6 M19.4 13.2v2.6"
+      stroke="#e8eefc"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M4.6 14.2v2.4 M2.9 11.6v1.6"
+      stroke="#22d3ee"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M19.4 7.6v3.4"
+      stroke="#e879f9"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M21.4 10.4v3.6"
+      stroke="#8b5cf6"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    {/* Antenna. */}
+    <path d="M12 8.6V6.4" stroke="#e8eefc" strokeWidth="1.3" />
+    <circle cx="12" cy="5.3" r="1.25" fill="#22d3ee" />
+    {/* The bubble and its tail. */}
+    <path
+      d="M9.2 8.6h5.6a2.4 2.4 0 0 1 2.4 2.4v3.2a2.4 2.4 0 0 1-2.4 2.4h-3.2l-2.4 2.1v-2.1a2.4 2.4 0 0 1-2.4-2.4V11a2.4 2.4 0 0 1 2.4-2.4z"
+      stroke="#e8eefc"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+    />
+    {/* Smiling eyes. */}
+    <path
+      d="M9.7 12.7a1.15 1.15 0 0 1 2.2 0 M12.9 12.7a1.15 1.15 0 0 1 2.2 0"
+      stroke="#22d3ee"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+);
