@@ -70,13 +70,12 @@ describe("R2-T25 composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Choose model" }));
     await screen.findByRole("option", { name: "Catalog model" });
     expect(reads).toHaveBeenCalled();
-    fireEvent.change(screen.getByRole("textbox"), {
-      target: { value: "absent" },
-    });
+    // The panel (Pickers): a search field over the grouped rows.
+    const search = screen.getByRole("combobox", { name: "Models" });
+    fireEvent.change(search, { target: { value: "absent" } });
     expect(screen.queryByRole("option", { name: "Catalog model" })).toBeNull();
-    fireEvent.change(screen.getByRole("textbox"), {
-      target: { value: "Catalog" },
-    });
+    expect(screen.getByText("No models match")).toBeTruthy();
+    fireEvent.change(search, { target: { value: "Catalog" } });
     fireEvent.click(
       await screen.findByRole("option", { name: "Catalog model" })
     );
@@ -259,9 +258,86 @@ describe("R2-T25 composer", () => {
     current = await renderRelay(relay, "session");
     const trigger = await screen.findByRole("button", { name: /Supervised/ });
     fireEvent.click(trigger);
-    expect(await screen.findByRole("menu")).toBeTruthy();
+    expect(await screen.findByRole("listbox")).toBeTruthy();
     expect(composer().hasAttribute("data-expanded")).toBe(true);
     expect(trigger.isConnected).toBe(true);
+    // Escape closes the list and leaves the composer expanded (focus stays).
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  });
+
+  it("the model picker: 340 px panel above the chip with sections, the chosen row marked, keyboard navigable", async () => {
+    const onChange = vi.fn();
+    const connect = vi.fn();
+    const useLocal = vi.fn();
+    current = await renderWithDb(
+      <ModelChip
+        onUseLocalModel={useLocal}
+        binding={{
+          value: "route-llm",
+          label: "RouteLLM",
+          onChange,
+          groups: [
+            {
+              id: "favourites",
+              label: "Favourites",
+              items: [
+                {
+                  id: "route-llm",
+                  label: "RouteLLM",
+                  description: "Abacus.AI",
+                },
+              ],
+            },
+            {
+              id: "abacus",
+              label: "Abacus.AI",
+              items: [
+                { id: "route-llm", label: "RouteLLM" },
+                { id: "route-llm-open", label: "RouteLLM Open" },
+              ],
+            },
+            {
+              id: "openrouter",
+              label: "OpenRouter",
+              items: [],
+              connect: { label: "Connect OpenRouter", onSelect: connect },
+            },
+          ],
+        }}
+      />
+    );
+    // The chip: the model's name, its provider in muted text.
+    const chip = screen.getByRole("button", { name: /RouteLLM/ });
+    expect(chip.textContent).toContain("Abacus.AI");
+    fireEvent.click(chip);
+    const panel = await screen.findByRole("listbox");
+    expect(
+      (panel.closest('[data-slot="popover-content"]') as HTMLElement).className
+    ).toContain("w-[min(340px");
+    expect(
+      [...panel.querySelectorAll("[cmdk-group-heading]")].map(
+        (heading) => heading.textContent
+      )
+    ).toEqual(["Favourites", "Abacus.AI", "OpenRouter", "On this machine"]);
+    expect(within(panel).getByText("Connect OpenRouter")).toBeTruthy();
+    expect(within(panel).getByText("Use a local model")).toBeTruthy();
+    const chosen = within(panel)
+      .getAllByRole("option")
+      .filter((option) => option.dataset.checked === "true");
+    expect(chosen.map((option) => option.textContent)).toEqual([
+      "RouteLLMAbacus.AI",
+      "RouteLLM",
+    ]);
+    // Keyboard: the arrow keys move the cursor, Enter picks.
+    const search = screen.getByRole("combobox", { name: "Models" });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+    await waitFor(() =>
+      expect(onChange).toHaveBeenCalledWith("route-llm-open")
+    );
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
   it("the mode menu: five modes with descriptions; choosing sets the mode, a silent agent reverts", async () => {

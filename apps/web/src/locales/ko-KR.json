@@ -2750,7 +2750,10 @@
       "uploading": "Wait for the attachments to finish saving",
       "pasteUnavailable": "Pasting files isn't available here",
       "botPlaceholder": "{{name}}에게 메시지",
-      "dictateSoon": "Dictation arrives soon"
+      "dictateSoon": "Dictation arrives soon",
+      "modes": "권한 모드",
+      "noModels": "일치하는 모델이 없습니다",
+      "onThisMachine": "이 컴퓨터에서"
     },
     "day": {
       "today": "Today",
