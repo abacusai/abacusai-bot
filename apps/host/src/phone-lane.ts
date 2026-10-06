@@ -62,6 +62,8 @@ const PHONE_LANE_TIMINGS = {
   turnTimeoutMs: 10 * 60_000,
   /** How often to look for a key while signed out. */
   keyWaitMs: 5_000,
+  /** Waits between delivery attempts: three tries over about a minute. */
+  deliveryRetryMs: [15_000, 45_000],
 };
 
 /** The server holds an inbox poll open for at most this long. */
@@ -69,6 +71,9 @@ const INBOX_WAIT_SECS = 25;
 const CALL_TIMEOUT_MS = 20_000;
 const SEEN_IDS_KEPT = 500;
 const REACT_TOOL = "react_to_message";
+/** What the user hears when a turn fails: never silence, never the raw error. */
+const FAILURE_REPLY =
+  "Sorry, something went wrong on my side. Could you send that again?";
 
 /** What the loop is told for one inbox entry. */
 function phoneTurnText(entry: PhoneInboxEntry): string {
@@ -80,7 +85,8 @@ function phoneTurnText(entry: PhoneInboxEntry): string {
 }
 
 type Turn = {
-  sessionId: string;
+  /** Null until the session opens. */
+  sessionId: string | null;
   /** The newest message: replies, typing and reactions go against it. */
   replyTo: string;
   startedAt: number;
@@ -106,8 +112,6 @@ export class PhoneLane {
   private lastArrivalAt = 0;
   private batchTimer: NodeJS.Timeout | null = null;
   private turn: Turn | null = null;
-  /** Between taking a batch and the turn existing (the session opening). */
-  private starting = false;
   private readonly seen = new Set<string>();
 
   constructor(
@@ -120,7 +124,7 @@ export class PhoneLane {
 
   /** A phone turn is running or being delivered. */
   get busy(): boolean {
-    return this.starting || this.turn != null;
+    return this.turn != null;
   }
 
   start(): void {
@@ -203,25 +207,10 @@ export class PhoneLane {
     if (!this.running || this.busy || this.pending.length === 0) return;
     const batch = this.pending.splice(0);
     const replyTo = batch.at(-1)!.id;
-    const startedAt = Date.now();
-    this.deps.activity();
-    this.starting = true;
-    let session: { workspaceId: string; sessionId: string };
-    try {
-      session = await this.deps.openSession();
-    } catch (error) {
-      this.log(
-        `[phone] dropped ${batch.length} messages: the phone session could not open: ${describe(error)}`
-      );
-      this.starting = false;
-      if (this.pending.length > 0) this.armBatch();
-      return;
-    }
-    this.starting = false;
     const turn: Turn = {
-      sessionId: session.sessionId,
+      sessionId: null,
       replyTo,
-      startedAt,
+      startedAt: Date.now(),
       messages: batch.length,
       submitted: false,
       text: "",
@@ -240,15 +229,35 @@ export class PhoneLane {
     turn.typing?.unref?.();
     turn.timeout?.unref?.();
     this.turn = turn;
+    this.deps.activity();
     this.log(
       `[phone] turn start messages=${batch.length} linked=${batch.filter((entry) => entry.kind === "linked").length}`
     );
-    const delivered = await this.deps.send(
-      session.workspaceId,
-      session.sessionId,
-      batch.map(phoneTurnText).join("\n\n")
-    );
-    if (!delivered) await this.endTurn(turn, "undeliverable");
+    const text = batch.map(phoneTurnText).join("\n\n");
+    const retries = this.timings.deliveryRetryMs;
+    for (let attempt = 0; ; attempt += 1) {
+      const failure = await this.deliver(turn, text);
+      if (failure == null || turn.ended) return;
+      this.log(`[phone] delivery failed (attempt ${attempt + 1}): ${failure}`);
+      if (attempt >= retries.length || !this.running) break;
+      await sleep(retries[attempt]!);
+      if (turn.ended) return;
+    }
+    await this.endTurn(turn, "undeliverable");
+  }
+
+  /** One attempt to hand the batch to the session; the reason it failed, or null. */
+  private async deliver(turn: Turn, text: string): Promise<string | null> {
+    try {
+      const { workspaceId, sessionId } = await this.deps.openSession();
+      // Before the send: the session's first events can beat its answer.
+      turn.sessionId = sessionId;
+      return (await this.deps.send(workspaceId, sessionId, text))
+        ? null
+        : "the session did not take the message";
+    } catch (error) {
+      return describe(error);
+    }
   }
 
   private onAgentEvent(sessionId: string, payload: DesktopEvent): void {
@@ -338,8 +347,16 @@ export class PhoneLane {
         break;
       sent += 1;
     }
+    // At most once per batch, after whatever the turn did manage to say.
+    const apologized =
+      outcome !== "ok" &&
+      this.running &&
+      (await this.channel("reply", {
+        message_id: turn.replyTo,
+        text: FAILURE_REPLY,
+      }));
     this.log(
-      `[phone] turn end outcome=${outcome} ms=${Date.now() - turn.startedAt} messages=${turn.messages} bubbles=${sent}/${bubbles.length}`
+      `[phone] turn end outcome=${outcome} ms=${Date.now() - turn.startedAt} messages=${turn.messages} bubbles=${sent}/${bubbles.length} apology=${apologized ? 1 : 0}`
     );
     this.deps.activity();
     if (this.turn === turn) this.turn = null;
