@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
-import { Button } from "#renderer/ui/button";
 
 import { OnboardingFrame, OnboardingStepPage } from "./index";
 export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
@@ -12,6 +11,9 @@ export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
   const { transport } = router.options.context;
   const db = useDb();
   const bot = db.collections.bots.toArray.find((bot) => bot.channel == null);
+  const previewBot = bot
+    ? { bot, checkInRoutineId: "fixture-weekday-check-in" }
+    : undefined;
   return (
     <OnboardingFrame step={step}>
       <OnboardingStepPage
@@ -23,18 +25,17 @@ export const OnboardingGallery = ({ step }: { step: OnboardingStepId }) => {
           ownsBot: false,
         }}
         preview={true}
-        addKey={<Button>{t("onboarding.pages.addKey")}</Button>}
         localModel={
-          <div className="bg-muted flex items-center justify-between rounded-xl border p-4">
-            <span>{t("onboarding.pages.localModels")}</span>
-            <Button>{t("localModels.useLocal")}</Button>
+          <div className="onboarding-row">
+            <span className="onboarding-row-title flex-1">
+              {t("onboarding.pages.models.local")}{" "}
+              <span className="onboarding-accent">
+                {t("onboarding.pages.models.localAccent")}
+              </span>
+            </span>
           </div>
         }
-        previewBot={
-          bot
-            ? { bot, checkInRoutineId: "fixture-weekday-check-in" }
-            : undefined
-        }
+        previewBot={previewBot}
         navigate={async () => {}}
         signIn={() => {}}
         cancelSignIn={async () => {}}

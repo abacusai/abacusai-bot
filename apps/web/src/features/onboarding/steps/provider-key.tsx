@@ -27,13 +27,16 @@ import { Input } from "#renderer/ui/input";
 export const OnboardingProviderKey = ({
   transport,
   saved,
+  provider: fixed,
 }: {
   transport: Transport;
   saved(): Promise<unknown>;
+  /** One provider: the button opens its dialog directly (no picker). */
+  provider?: string;
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [provider, setProvider] = useState("gemini");
+  const [provider, setProvider] = useState(fixed ?? "gemini");
   const [error, setError] = useState<"validation" | "save" | null>(null);
   const form = useForm({
     defaultValues: { key: "" },
@@ -58,28 +61,53 @@ export const OnboardingProviderKey = ({
   const field = PROVIDER_KEY_FIELDS.find((f) => f.provider === provider);
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button />}>
+      {fixed ? (
+        <Button
+          size="lg"
+          variant="secondary"
+          data-variant="small"
+          className="onboarding-button"
+          onClick={() => {
+            setError(null);
+            form.reset();
+            setOpen(true);
+          }}
+        >
           {t("onboarding.pages.addKey")}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {PROVIDER_KEY_FIELDS.filter((entry) => entry.kind === "model").map(
-            (entry) => (
-              <DropdownMenuItem
-                key={entry.provider}
-                onClick={() => {
-                  setProvider(entry.provider);
-                  setError(null);
-                  form.reset();
-                  setOpen(true);
-                }}
-              >
-                {entry.label}
-              </DropdownMenuItem>
-            )
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </Button>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="lg"
+                variant="secondary"
+                data-variant="small"
+                className="onboarding-button"
+              />
+            }
+          >
+            {t("onboarding.pages.pasteKey")}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {PROVIDER_KEY_FIELDS.filter((entry) => entry.kind === "model").map(
+              (entry) => (
+                <DropdownMenuItem
+                  key={entry.provider}
+                  onClick={() => {
+                    setProvider(entry.provider);
+                    setError(null);
+                    form.reset();
+                    setOpen(true);
+                  }}
+                >
+                  {entry.label}
+                </DropdownMenuItem>
+              )
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
