@@ -423,7 +423,7 @@ describe("R2-T25 composer", () => {
     const relay = new FakeRelay();
     relay.emitAll(b.sessionReady());
     current = await renderRelay(relay, "bot");
-    expect(document.querySelector('[data-slot="composer-reply"]')).toBeNull();
+    expect(document.querySelector('[data-slot="reply-preview"]')).toBeNull();
     expect(
       document.querySelector('[data-slot="composer-attachments"]')
     ).toBeNull();
@@ -444,7 +444,7 @@ describe("R2-T25 composer", () => {
       }));
     });
     const reply = document.querySelector<HTMLElement>(
-      '[data-slot="composer-reply"]'
+      '[data-slot="reply-preview"]'
     )!;
     const strip = document.querySelector<HTMLElement>(
       '[data-slot="composer-attachments"]'
@@ -454,10 +454,10 @@ describe("R2-T25 composer", () => {
     expect(strip.className).toContain("overflow-hidden");
     expect(within(reply).getByText("quoted")).toBeTruthy();
     expect(within(strip).getByText("x.png")).toBeTruthy();
-    // The reply sits above the surface, the strip inside it.
+    // Both live inside the surface: the quote first, like a messaging app.
     const surface = document.querySelector('[data-slot="composer-surface"]')!;
     expect(surface.contains(strip)).toBe(true);
-    expect(surface.contains(reply)).toBe(false);
+    expect(surface.contains(reply)).toBe(true);
     expect(composer().contains(reply)).toBe(true);
     act(() => {
       updateDraft("t-1", (draft) => ({
@@ -466,7 +466,10 @@ describe("R2-T25 composer", () => {
         attachments: [],
       }));
     });
-    expect(document.querySelector('[data-slot="composer-reply"]')).toBeNull();
+    // The preview exits through its reveal animation before it unmounts.
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="reply-preview"]')).toBeNull()
+    );
     expect(
       document.querySelector('[data-slot="composer-attachments"]')
     ).toBeNull();

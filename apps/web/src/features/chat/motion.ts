@@ -106,11 +106,3 @@ export const reactionPillExit = (pref: MotionPreference): Transition =>
     { duration: durations.childFade / 1000, ease: [...easings.standard] },
     { duration: 0 }
   );
-
-/** The reply preview growing inside the composer, on the surface's curve. */
-export const replyPreviewTransition = (pref: MotionPreference): Transition =>
-  motionFor<Transition>(
-    pref,
-    { duration: durations.layout / 1000, ease: [...easings.standard] },
-    { duration: 0 }
-  );
