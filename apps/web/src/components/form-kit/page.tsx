@@ -51,17 +51,21 @@ export const SettingRow = ({
   id,
   title,
   detail,
+  media,
   children,
 }: {
   id: string;
   title: string;
   detail?: string;
+  /** A mark before the title (a provider's). */
+  media?: ReactNode;
   children?: ReactNode;
 }) => (
   <div
     data-setting-id={id}
     className="phone:px-4 phone:flex-nowrap @container/setting flex min-h-[52px] min-w-0 flex-wrap items-center justify-between gap-3 px-3 py-3"
   >
+    {media != null && <div className="shrink-0">{media}</div>}
     <div className="min-w-0 flex-[1_1_140px]">
       <div
         id={`${id}-label`}

@@ -12,6 +12,10 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { signInAbacus } from "#platform/sign-in";
+import {
+  ConnectorMark,
+  markForProvider,
+} from "#renderer/components/connector-mark";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
@@ -165,6 +169,12 @@ export const ModelsPage = ({
     <SettingRow
       id={`provider-${field.provider}`}
       key={field.provider}
+      media={
+        <ConnectorMark
+          id={markForProvider(field.provider) ?? field.provider}
+          size={28}
+        />
+      }
       title={field.label}
       detail={
         keys.data?.includes(field.provider)

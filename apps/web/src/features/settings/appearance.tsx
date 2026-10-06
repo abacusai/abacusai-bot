@@ -506,6 +506,17 @@ export const AppearancePage = () => {
               />
             </SettingRow>
           )}
+        <SettingRow
+          id="railIconsOnly"
+          title={t(`${a}railIconsOnly`)}
+          detail={t(`${a}railIconsOnlyDetail`)}
+        >
+          <SettingSwitch
+            id="railIconsOnly"
+            checked={look.railIconsOnly}
+            onCheckedChange={(railIconsOnly) => save({ railIconsOnly })}
+          />
+        </SettingRow>
       </GroupCard>
       <GroupCard>
         <SegmentRow

@@ -2626,6 +2626,8 @@
       "fontDetail": "Una fuente de esta computadora; vacío para la predeterminada.",
       "codeSize": "Tamaño del código",
       "translucency": "Ventana translúcida",
+      "railIconsOnly": "Barra: solo íconos",
+      "railIconsOnlyDetail": "Oculta los nombres debajo de los íconos de la barra; aparecen al pasar el cursor.",
       "importTheme": "Importar un tema de VS Code",
       "openFile": "Abrir archivo",
       "pasteLabel": "JSON del tema",

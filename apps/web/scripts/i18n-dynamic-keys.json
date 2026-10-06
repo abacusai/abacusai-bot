@@ -908,7 +908,9 @@
       "previous-tab",
       "stop-run",
       "send",
-      "notch-reply"
+      "notch-reply",
+      "next-panel-tab",
+      "previous-panel-tab"
     ],
     "sources": ["lib/keyboard/actions.ts"]
   },
@@ -944,7 +946,9 @@
       "browser",
       "memory",
       "details",
-      "agent"
+      "agent",
+      "device",
+      "thread"
     ],
     "sources": ["features/shell/side-panel.tsx", "features/shell/top-bar.tsx"]
   },

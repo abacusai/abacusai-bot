@@ -2626,6 +2626,8 @@
       "fontDetail": "A font on this computer; empty for the default.",
       "codeSize": "Code size",
       "translucency": "Translucent window",
+      "railIconsOnly": "Rail: icons only",
+      "railIconsOnlyDetail": "Hide the names under the rail's icons; hovering shows them.",
       "importTheme": "Import a VS Code theme",
       "openFile": "Open file",
       "pasteLabel": "Theme JSON",

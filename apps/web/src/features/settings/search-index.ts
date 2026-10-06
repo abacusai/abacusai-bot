@@ -61,6 +61,7 @@ const labelKeys: Record<string, string> = {
       "codeFont",
       "codeSize",
       "translucency",
+      "railIconsOnly",
       "importTheme",
     ].map((id) => [id, `settings.appearance.${id}`])
   ),
@@ -91,6 +92,7 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "radius",
     "density",
     "translucency",
+    "railIconsOnly",
     "textSize",
     "uiFont",
     "codeFont",

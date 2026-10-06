@@ -34,7 +34,7 @@ const ROWS = [
   },
   {
     id: "gemini",
-    mark: null,
+    mark: "gemini",
     lead: "onboarding.setupBlurbGeminiLead",
     accent: "onboarding.setupBlurbGeminiAccent",
     tail: null,
@@ -72,16 +72,7 @@ export const ModelsStep = ({
             className="onboarding-row"
             data-connected={isConnected(row.id)}
           >
-            {row.mark ? (
-              <ConnectorMark id={row.mark} size={36} />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-[#1a73e8] font-bold text-white"
-              >
-                G
-              </span>
-            )}
+            <ConnectorMark id={row.mark} size={36} />
             <span className="onboarding-row-title min-w-0 flex-1">
               {t(row.lead)}{" "}
               <span className="onboarding-accent">{t(row.accent)}</span>

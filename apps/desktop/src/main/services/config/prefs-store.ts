@@ -85,6 +85,7 @@ const DEFAULTS: PrefsValues = {
     codeFont: "",
     codeFontSize: 12,
     translucency: true,
+    railIconsOnly: false,
     custom: null,
   },
   // Spec 06 §23.5 b (`haptics` is revisited by R6-T31).

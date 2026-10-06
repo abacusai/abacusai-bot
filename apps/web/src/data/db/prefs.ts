@@ -49,6 +49,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     codeFont: "",
     codeFontSize: 12,
     translucency: true,
+    railIconsOnly: false,
     custom: null,
   },
   notch: {

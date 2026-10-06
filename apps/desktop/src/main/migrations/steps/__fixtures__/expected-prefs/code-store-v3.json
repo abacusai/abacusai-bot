@@ -9,6 +9,7 @@
       "appearance.custom": "default",
       "appearance.palette": "default",
       "appearance.radius": "default",
+      "appearance.railIconsOnly": "default",
       "appearance.textSize": "default",
       "appearance.translucency": "default",
       "appearance.uiFont": "default",
@@ -59,6 +60,7 @@
         "custom": null,
         "palette": "default",
         "radius": "default",
+        "railIconsOnly": false,
         "textSize": 14,
         "translucency": true,
         "uiFont": ""
@@ -96,7 +98,10 @@
       "onboardingStep": null,
       "panes": {},
       "pinned": {
-        "botIds": ["bot-a", "bot-b"],
+        "botIds": [
+          "bot-a",
+          "bot-b"
+        ],
         "sessionIds": []
       },
       "recentFolders": [],
