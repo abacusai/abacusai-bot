@@ -421,6 +421,78 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     if (!away) session.retain();
   }, [away, messages, session]);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const [jump, setJump] = useState<string | null>(null);
+  const handledJump = useRef<string | null>(null);
+  const highlight = useRef<{
+    target: HTMLElement;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  useEffect(
+    () => () => {
+      if (highlight.current) {
+        globalThis.clearTimeout(highlight.current.timer);
+        delete highlight.current.target.dataset.highlighted;
+      }
+    },
+    []
+  );
+  useEffect(() => {
+    const onJump = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{ messageId: string; threadId: string }>
+      ).detail;
+      if (detail.threadId !== session.threadId) return;
+      const id = detail.messageId;
+      if (session.hostStore.state.messages.some((message) => message.id === id))
+        setJump(id);
+      else
+        void (async () => {
+          while (session.hostStore.state.hasOlderMessages) {
+            const cursor = session.hostStore.state.olderCursor;
+            await session.loadOlder();
+            if (
+              session.hostStore.state.messages.some(
+                (message) => message.id === id
+              )
+            ) {
+              setJump(id);
+              return;
+            }
+            if (cursor === session.hostStore.state.olderCursor) return;
+          }
+        })();
+    };
+    document.addEventListener("chat:jump-to-message", onJump);
+    return () => document.removeEventListener("chat:jump-to-message", onJump);
+  }, [session]);
+  const jumpIndex =
+    jump == null ? -1 : visible.findIndex((message) => message.id === jump);
+  if (jumpIndex >= 0 && (jumpIndex < window.start || jumpIndex >= window.end)) {
+    setWindow(newestWindow(items.slice(0, jumpIndex + 1)));
+  }
+  useLayoutEffect(() => {
+    if (!jump || handledJump.current === jump) return;
+    const index = visible.findIndex((message) => message.id === jump);
+    if (index < 0) return;
+    const target = viewportRef.current?.querySelector<HTMLElement>(
+      `[data-message-target="${CSS.escape(jump)}"]`
+    );
+    if (!target) return;
+    handledJump.current = jump;
+    if (highlight.current) {
+      globalThis.clearTimeout(highlight.current.timer);
+      delete highlight.current.target.dataset.highlighted;
+    }
+    target.scrollIntoView({ block: "center", behavior: "instant" });
+    target.dataset.highlighted = "";
+    const timer = globalThis.setTimeout(() => {
+      delete target.dataset.highlighted;
+      highlight.current = null;
+      handledJump.current = null;
+      setJump(null);
+    }, 1200);
+    highlight.current = { target, timer };
+  }, [jump, visible, window.start, window.end]);
   const opened = useRef(false);
   useLayoutEffect(() => {
     const viewport = viewportRef.current;

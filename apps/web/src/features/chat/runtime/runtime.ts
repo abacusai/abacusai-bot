@@ -32,7 +32,11 @@ export interface ChatRuntime {
     decision: PermissionDecision
   ): Promise<void>;
   queue: {
-    enqueue(threadId: string, text: string): Promise<void>;
+    enqueue(
+      threadId: string,
+      text: string,
+      userText?: import("@abacus-ai/contract/agent-types").UserTextTags
+    ): Promise<void>;
     update(threadId: string, entryId: string, text: string): Promise<void>;
     remove(threadId: string, entryId: string): Promise<void>;
     clear(threadId: string): Promise<void>;
@@ -118,7 +122,8 @@ export const createChatRuntime = (
     respondPermission: (threadId, descriptor, decision) =>
       session(threadId).respondPermission(descriptor, decision),
     queue: {
-      enqueue: (threadId, text) => session(threadId).enqueue(text),
+      enqueue: (threadId, text, userText) =>
+        session(threadId).enqueue(text, userText),
       update: (threadId, entryId, text) =>
         session(threadId).updateQueued(entryId, text),
       remove: (threadId, entryId) => session(threadId).removeQueued(entryId),

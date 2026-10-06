@@ -42,6 +42,7 @@ interface MessageDecoration {
   before?: ReactNode;
   after?: ReactNode;
   badge?: ReactNode;
+  actions?: ReactNode;
 }
 
 export type DecorateMessage = (
@@ -172,12 +173,10 @@ export const botMessageDecorations = (
           }
         />
       ) : null;
-    if (feedback != null || view.deliverables != null)
+    decoration.actions = feedback;
+    if (view.deliverables != null)
       decoration.after = (
-        <>
-          {view.deliverables != null && card(view.deliverables)}
-          {feedback}
-        </>
+        <>{view.deliverables != null && card(view.deliverables)}</>
       );
     return decoration;
   };

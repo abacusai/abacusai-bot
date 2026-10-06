@@ -107,6 +107,7 @@ export interface MessageDecoration {
   before?: ReactNode;
   after?: ReactNode;
   badge?: ReactNode;
+  actions?: ReactNode;
 }
 
 export interface ChatViewSlots {
@@ -135,6 +136,7 @@ export interface ChatViewSlots {
 export interface ChatViewContextValue {
   threadId: string;
   skin: "bot" | "session";
+  authorName?: string;
   session: ThreadSession;
   runtime: ChatRuntime;
   composer: ComposerConfig;

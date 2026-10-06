@@ -145,6 +145,7 @@ const ComposedChat = ({
       <ChatView
         threadId={sessionId}
         skin="bot"
+        authorName={bot.name}
         runtime={runtime}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}

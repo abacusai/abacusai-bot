@@ -420,7 +420,6 @@
         "slide": "Slide {{n}}"
       },
       "feedback": {
-        "rate": "Rate this reply",
         "helpful": "Good response",
         "notHelpful": "Bad response",
         "tellUsMore": "Tell us more",
@@ -2960,6 +2959,19 @@
       "gone": "This conversation no longer exists.",
       "retry": "पुनः प्रयास करें",
       "unavailable": "The agent isn't available yet"
+    },
+    "actions": {
+      "label": "संदेश की कार्रवाइयाँ",
+      "reply": "जवाब दें",
+      "copy": "संदेश कॉपी करें",
+      "moreReactions": "और प्रतिक्रियाएँ",
+      "react": "{{emoji}} प्रतिक्रिया दें",
+      "removeReaction": "{{emoji}} प्रतिक्रिया हटाएँ",
+      "you": "आप",
+      "assistant": "सहायक",
+      "cancelReply": "जवाब रद्द करें",
+      "jumpToOriginal": "मूल संदेश पर जाएँ",
+      "failed": "कार्रवाई पूरी नहीं हो सकी"
     }
   },
   "notch": {

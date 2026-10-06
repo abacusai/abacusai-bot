@@ -10,6 +10,10 @@ import type {
   AiNotice,
   RunOutcomeRecord,
 } from "@abacus-ai/contract/contract/ai-thread";
+import {
+  applyMessageReaction,
+  type MessageReactionChange,
+} from "@abacus-ai/contract/message-reactions";
 /**
  * A fake main relay (spec 02 §11.1, §13 "main relay fake"): an `AguiSource`
  * over an in-memory event log, answering exactly the contract the kit binds
@@ -332,6 +336,13 @@ const fold = (
     } catch {
       // As main: a chunk the processor rejects is logged and skipped.
     }
+    if (custom?.name === "message.reactions")
+      processor.setMessages(
+        applyMessageReaction(
+          processor.getMessages(),
+          custom.value as unknown as MessageReactionChange
+        )
+      );
     if (isTerminalEvent(event) && run != null) {
       const messages = processor.getMessages();
       const base = {
@@ -607,6 +618,14 @@ export class FakeRelay {
 
   /** Main's `AguiSource`, over the log. */
   readonly source: AguiSourceLike = {
+    react: async (input) => {
+      this.emit({
+        type: "CUSTOM",
+        name: "message.reactions",
+        value: input,
+        timestamp: Date.now(),
+      } as unknown as StreamChunk);
+    },
     hydrate: async () => {
       this.stats.hydrate += 1;
       const snapshot = this.#hydrate();

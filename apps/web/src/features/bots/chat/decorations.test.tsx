@@ -160,8 +160,7 @@ describe("botMessageDecorations", () => {
       }),
     ];
     const d = decorateAll(botMessageDecorations(opts), messages);
-    show(d[1]!.after);
-    fireEvent.click(screen.getByRole("button", { name: "Rate this reply" }));
+    show(d[1]!.actions);
     fireEvent.click(
       await screen.findByRole("button", { name: "Good response" })
     );
@@ -190,8 +189,7 @@ describe("botMessageDecorations", () => {
       msg("a", "assistant", [text("Hello")]),
     ];
     const d = decorateAll(botMessageDecorations(opts), messages);
-    show(d[1]!.after);
-    fireEvent.click(screen.getByRole("button", { name: "Rate this reply" }));
+    show(d[1]!.actions);
     fireEvent.click(
       await screen.findByRole("button", { name: "Bad response" })
     );

@@ -49,7 +49,9 @@ import {
   useSubagentScope,
   type MessageDecoration,
 } from "./context";
+import { MessageActions, MessageReactionPills } from "./message-actions";
 import { useKitParts, MessageScope } from "./message-scope";
+import { ReplyQuote, jumpToMessage } from "./reply";
 
 type Loose = Record<string, unknown>;
 
@@ -229,33 +231,46 @@ const UserMessage = ({
   tint: boolean;
   badge?: ReactNode;
 }) => {
-  const { workspaceRoot } = useChatView();
+  const { workspaceRoot, threadId } = useChatView();
   const { hidden, body, paths } = userView(message);
   if (hidden) return null;
   return (
-    <div className="flex flex-col items-end gap-1.5" data-role="user">
-      {body !== "" ? (
-        <div
-          className={cn(
-            "relative w-fit max-w-[min(520px,85%)] px-3 py-2",
-            tint
-              ? "rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]"
-              : "rounded-2xl bg-[var(--chat-user-bubble)]"
-          )}
-        >
-          <Markdown content={body} role="user" workspaceRoot={workspaceRoot} />
-          {badge}
-        </div>
-      ) : null}
-      {paths.length > 0 ? (
-        <AttachmentGroup className="justify-end">
-          {paths.map((path) => (
-            <AttachmentChip key={path} path={path} />
-          ))}
-        </AttachmentGroup>
-      ) : null}
-      <PendingState message={message} />
-    </div>
+    <MessageActions message={message} text={body}>
+      <div className="flex flex-col items-end gap-1.5" data-role="user">
+        {body !== "" || message.metadata?.abacus?.userText?.replyTo ? (
+          <div
+            className={cn(
+              "relative w-fit max-w-[min(520px,85%)] px-3 py-2",
+              tint
+                ? "rounded-[20px] rounded-br-md bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]"
+                : "rounded-2xl bg-[var(--chat-user-bubble)]"
+            )}
+          >
+            {message.metadata?.abacus?.userText?.replyTo ? (
+              <ReplyQuote
+                target={message.metadata.abacus.userText.replyTo}
+                onJump={(id) => jumpToMessage(id, threadId)}
+              />
+            ) : null}
+            <Markdown
+              content={body}
+              role="user"
+              workspaceRoot={workspaceRoot}
+            />
+            {badge}
+            <MessageReactionPills message={message} />
+          </div>
+        ) : null}
+        {paths.length > 0 ? (
+          <AttachmentGroup className="justify-end">
+            {paths.map((path) => (
+              <AttachmentChip key={path} path={path} />
+            ))}
+          </AttachmentGroup>
+        ) : null}
+        <PendingState message={message} />
+      </div>
+    </MessageActions>
   );
 };
 
@@ -358,18 +373,23 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
     <MessageScope
       value={{ id: message.id, role: "assistant", streaming, message }}
     >
-      <div className="flex flex-col items-start gap-1.5" data-role="assistant">
-        {decoration?.before}
-        {message.parts.some((part) => part.type === "subagent") ? (
-          <StepControls side="earlier" />
-        ) : null}
-        <PartsView />
-        {message.parts.some((part) => part.type === "subagent") ? (
-          <StepControls side="more" />
-        ) : null}
-        <Credits message={message} />
-        {decoration?.after}
-      </div>
+      <MessageActions message={message} feedback={decoration?.actions}>
+        <div
+          className="flex flex-col items-start gap-1.5"
+          data-role="assistant"
+        >
+          {decoration?.before}
+          {message.parts.some((part) => part.type === "subagent") ? (
+            <StepControls side="earlier" />
+          ) : null}
+          <PartsView />
+          {message.parts.some((part) => part.type === "subagent") ? (
+            <StepControls side="more" />
+          ) : null}
+          <Credits message={message} />
+          {decoration?.after}
+        </div>
+      </MessageActions>
     </MessageScope>
   );
 };
@@ -490,16 +510,18 @@ export const SessionMessage = ({ message }: MessageProps<unknown>) => {
     <MessageScope
       value={{ id: message.id, role: "assistant", streaming, message }}
     >
-      <div
-        className="flex flex-col gap-2"
-        data-role="assistant"
-        data-grouped={grouped ? "" : undefined}
-      >
-        <StepControls side="earlier" />
-        <GroupedParts message={message} />
-        <StepControls side="more" />
-        <Credits message={message} />
-      </div>
+      <MessageActions message={message}>
+        <div
+          className="flex flex-col gap-2"
+          data-role="assistant"
+          data-grouped={grouped ? "" : undefined}
+        >
+          <StepControls side="earlier" />
+          <GroupedParts message={message} />
+          <StepControls side="more" />
+          <Credits message={message} />
+        </div>
+      </MessageActions>
     </MessageScope>
   );
 };

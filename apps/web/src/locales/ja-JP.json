@@ -420,7 +420,6 @@
         "slide": "Slide {{n}}"
       },
       "feedback": {
-        "rate": "Rate this reply",
         "helpful": "Good response",
         "notHelpful": "Bad response",
         "tellUsMore": "Tell us more",
@@ -2960,6 +2959,19 @@
       "gone": "This conversation no longer exists.",
       "retry": "再試行",
       "unavailable": "The agent isn't available yet"
+    },
+    "actions": {
+      "label": "メッセージの操作",
+      "reply": "返信",
+      "copy": "メッセージをコピー",
+      "moreReactions": "その他のリアクション",
+      "react": "{{emoji}}でリアクション",
+      "removeReaction": "{{emoji}}のリアクションを削除",
+      "you": "あなた",
+      "assistant": "アシスタント",
+      "cancelReply": "返信をキャンセル",
+      "jumpToOriginal": "元のメッセージへ移動",
+      "failed": "操作を完了できませんでした"
     }
   },
   "notch": {

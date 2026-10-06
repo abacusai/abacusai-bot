@@ -27,6 +27,7 @@ import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
 import { Markdown } from "../markdown/markdown";
 import { useChatView } from "./context";
+import { MessageReactionPills } from "./message-actions";
 import { useMessageScope } from "./message-scope";
 import { NoticeRow } from "./status/status";
 
@@ -87,10 +88,15 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
       );
       return skin === "bot" && scope.role === "assistant" ? (
         <div
-          className="w-fit max-w-[min(520px,85%)] rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3 py-2"
+          className="relative w-fit max-w-[min(520px,85%)] rounded-[20px] rounded-bl-md bg-[var(--chat-surface)] px-3 py-2"
           data-slot="bot-bubble"
         >
           {text}
+          {scope.message &&
+          scope.message.parts.filter((part) => part.type === "text").at(-1) ===
+            part ? (
+            <MessageReactionPills message={scope.message} />
+          ) : null}
         </div>
       ) : (
         text

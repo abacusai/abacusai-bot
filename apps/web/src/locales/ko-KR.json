@@ -420,7 +420,6 @@
         "slide": "Slide {{n}}"
       },
       "feedback": {
-        "rate": "Rate this reply",
         "helpful": "Good response",
         "notHelpful": "Bad response",
         "tellUsMore": "Tell us more",
@@ -2960,6 +2959,19 @@
       "gone": "This conversation no longer exists.",
       "retry": "재시도",
       "unavailable": "The agent isn't available yet"
+    },
+    "actions": {
+      "label": "메시지 작업",
+      "reply": "답장",
+      "copy": "메시지 복사",
+      "moreReactions": "더 많은 반응",
+      "react": "{{emoji}} 반응",
+      "removeReaction": "{{emoji}} 반응 삭제",
+      "you": "나",
+      "assistant": "어시스턴트",
+      "cancelReply": "답장 취소",
+      "jumpToOriginal": "원본 메시지로 이동",
+      "failed": "작업을 완료할 수 없습니다"
     }
   },
   "notch": {

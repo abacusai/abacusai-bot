@@ -55,6 +55,7 @@ const Sender = ({
       <ChatView
         threadId={sessionId}
         skin="bot"
+        authorName={bot.name}
         runtime={chat}
         workspaceRoot={slots.workspaceRoot}
         onOpenFile={slots.openFile}

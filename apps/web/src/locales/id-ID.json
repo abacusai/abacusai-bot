@@ -420,7 +420,6 @@
         "slide": "Slide {{n}}"
       },
       "feedback": {
-        "rate": "Rate this reply",
         "helpful": "Good response",
         "notHelpful": "Bad response",
         "tellUsMore": "Tell us more",
@@ -2960,6 +2959,19 @@
       "gone": "This conversation no longer exists.",
       "retry": "Coba lagi",
       "unavailable": "The agent isn't available yet"
+    },
+    "actions": {
+      "label": "Tindakan pesan",
+      "reply": "Balas",
+      "copy": "Salin pesan",
+      "moreReactions": "Reaksi lainnya",
+      "react": "Bereaksi {{emoji}}",
+      "removeReaction": "Hapus reaksi {{emoji}}",
+      "you": "Anda",
+      "assistant": "Asisten",
+      "cancelReply": "Batalkan balasan",
+      "jumpToOriginal": "Ke pesan asli",
+      "failed": "Tindakan tidak dapat diselesaikan"
     }
   },
   "notch": {
