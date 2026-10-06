@@ -1,7 +1,8 @@
 /**
  * The shell (spec 01 §7): title bar, rail, sidebar slot, content pane and side
  * panel, laid out by the pure `shellLayout` from the width band, the area,
- * `prefs.sidebar.pinned` and `search.tab`. Mirrors the band to
+ * `prefs.sidebar.pinned` and the panel scope's open state (`panelStore`;
+ * sessions keep `search.tab` for their dock). Mirrors the band to
  * `html[data-band]` and the sidebar's in-layout width to
  * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
  *
@@ -35,10 +36,6 @@ import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
 import {
-  AREA_PANEL_TABS,
-  type SidePanelTabId,
-} from "#renderer/lib/navigation/search";
-import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -46,30 +43,42 @@ import {
 
 import { BAND_WIDTH, useShellBand } from "./breakpoints";
 import { FloatingIntentContext } from "./floating-intent";
+import { APP_HOTKEYS, useAppHotkey } from "./hotkeys";
 import { shellLayout, type ShellArea } from "./layout";
+import {
+  activatePanelTab,
+  AREA_PANEL_KINDS,
+  closePanelTab,
+  cyclePanelTab,
+  openPanelTab,
+  panelScope,
+  reorderPanelTabs,
+  setPanelOpen,
+  type PanelTabKind,
+} from "./panel-store";
 import { Rail } from "./rail";
 import {
   closeFloating,
   createFloatingIntent,
   rememberLocation,
-  rememberTab,
 } from "./shell-store";
 import {
   clampPanelWidth,
   PANE_MIN_PX,
   PANEL_DEFAULT_PX,
-  PANEL_MAX_PX,
   PANEL_MIN_PX,
   PANEL_PREF_KEY,
+  panelMaxFor,
   SidePanelBody,
   SidePanelDrawer,
   SidePanelFrame,
+  usePanelTabTitle,
 } from "./side-panel";
 import { useSidePanelOverride } from "./side-panel-slot";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
 import { useTopBarStatus } from "./top-bar-slots";
-import { usePanel } from "./use-panel";
+import { PanelScopeContext, usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
 import { useSidebarToggle } from "./use-sidebar-toggle";
 
@@ -105,6 +114,31 @@ const areaOf = (router: AnyRouter, pathname: string): ShellArea | undefined => {
 
 const FLOATING_SELECTOR = '[data-slot="sidebar-floating"]';
 
+/**
+ * ⌘W closes the active panel tab, ⌘⇧] / ⌘⇧[ cycle them: registered only
+ * while the strip shows outside sessions (the dock has its own). Keyboard
+ * actions animate nothing.
+ */
+const PanelHotkeys = ({ scopeKey }: { scopeKey: string }) => {
+  useAppHotkey(
+    APP_HOTKEYS.closeTab,
+    () => {
+      const scope = panelScope(scopeKey);
+      if (scope.active != null) closePanelTab(scopeKey, scope.active);
+    },
+    { actionId: "close-tab" }
+  );
+  useAppHotkey(APP_HOTKEYS.nextPanelTab, () => cyclePanelTab(scopeKey, 1), {
+    actionId: "next-panel-tab",
+  });
+  useAppHotkey(
+    APP_HOTKEYS.previousPanelTab,
+    () => cyclePanelTab(scopeKey, -1),
+    { actionId: "previous-panel-tab" }
+  );
+  return null;
+};
+
 const focusInsideFloating = (): boolean =>
   document.activeElement?.closest(FLOATING_SELECTOR) != null;
 
@@ -132,6 +166,7 @@ export const ShellLayout = ({
   const sidebarToggle = useSidebarToggle();
   const [intent] = useState(() => createFloatingIntent(focusInsideFloating));
 
+  const tabTitle = usePanelTabTitle();
   const layout = shellLayout({
     width: BAND_WIDTH[band],
     area,
@@ -139,16 +174,29 @@ export const ShellLayout = ({
     panelOpen:
       area === "sessions"
         ? (location.search as { tab?: string }).tab != null
-        : panel.tab != null,
+        : panel.open,
     view: (location.search as { view?: string }).view,
   });
-  const panelTabs: readonly SidePanelTabId[] =
-    area == null ? [] : AREA_PANEL_TABS[area];
-  const panelInLayout =
-    !overridden &&
-    area !== "sessions" &&
-    layout.sidePanel === "layout" &&
-    panel.tab != null;
+  const panelKinds: readonly PanelTabKind[] =
+    area == null ? [] : AREA_PANEL_KINDS[area];
+  const panelShown = !overridden && area !== "sessions" && panel.open;
+  const panelInLayout = panelShown && layout.sidePanel === "layout";
+  const scopeKey = panel.key;
+  const strip =
+    panelInLayout && scopeKey != null ? (
+      <TopBar.PanelTabs
+        tabs={panel.scope.tabs}
+        active={panel.scope.active}
+        title={tabTitle}
+        kinds={panelKinds}
+        onChange={(id) => activatePanelTab(scopeKey, id)}
+        onClose={(id) => closePanelTab(scopeKey, id)}
+        onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
+        // "+" on a multi-instance kind is a new tab (a browser's new-tab
+        // page), never a refocus of the one already open.
+        onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
+      />
+    ) : null;
 
   useEffect(() => {
     document.documentElement.dataset.band = band;
@@ -177,10 +225,6 @@ export const ShellLayout = ({
       });
   }, [pathname, searchKey, router, intent, phone]);
 
-  useEffect(() => {
-    if (area != null && panel.tab != null) rememberTab(area, panel.tab);
-  }, [area, panel.tab]);
-
   // Floating no longer applies (pinned, strip): nothing may open it later.
   const floatingEnabled = layout.sidebar === "floating";
   useEffect(() => {
@@ -191,133 +235,149 @@ export const ShellLayout = ({
   useEffect(() => intent.cancel, [intent]);
 
   const [paneWidth] = useState(() => createPaneWidthWriter(db, PANEL_PREF_KEY));
+  // The split's width bounds the panel (60 %, 960 px, the pane's minimum).
+  const group = useRef<HTMLDivElement>(null);
+  const [groupWidth, setGroupWidth] = useState(Number.POSITIVE_INFINITY);
+  useEffect(() => {
+    const element = group.current;
+    if (element == null) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? 0;
+      if (width > 0) setGroupWidth(width);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const panelMax = panelMaxFor(groupWidth);
   const storedPanel = clampPanelWidth(
-    prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX
+    prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX,
+    panelMax
   );
 
   return (
     <FloatingIntentContext value={intent}>
-      <div
-        data-slot="shell"
-        data-band={band}
-        data-sidebar={layout.sidebar}
-        className={cn(
-          "shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden",
-          // Clear the notch and the home indicator (viewport-fit=cover).
-          phone &&
-            "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
-        )}
-        style={
-          {
-            "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
-          } as CSSProperties
-        }
-      >
-        <TopBar.Root>
-          <TopBar.Leading
-            sidebarInLayout={layout.sidebar !== "floating"}
-            showAppName={layout.titleBar.appName}
-            sidebarExpanded={
-              floatingEnabled ? sidebarToggle.floatingOpen : undefined
-            }
-            onToggleSidebar={sidebarToggle.toggle}
-          />
-          <TopBar.Identity
-            status={layout.titleBar.status}
-            statusText={status ?? undefined}
-            badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
-          />
-          <TopBar.Actions
-            folded={layout.titleBar.actionsFolded}
-            tabs={panelInLayout ? panelTabs : []}
-          />
-          {panelInLayout && panel.tab != null && (
-            <TopBar.PanelTabs
-              tabs={panelTabs}
-              value={panel.tab}
-              onChange={panel.setTab}
-            />
+      <PanelScopeContext value={scopeKey}>
+        <div
+          data-slot="shell"
+          data-band={band}
+          data-sidebar={layout.sidebar}
+          className={cn(
+            "shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden",
+            // Clear the notch and the home indicator (viewport-fit=cover).
+            phone &&
+              "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
           )}
-          <TopBar.PanelToggle
-            open={panel.tab != null}
-            onToggle={panel.toggle}
-          />
-        </TopBar.Root>
-        <div className="relative flex min-h-0 min-w-0">
-          {!phone && (
-            <Rail
-              area={area}
-              floatingEnabled={floatingEnabled}
-              initials={initials}
-            />
-          )}
-          <PaneBoundary resetKey={area}>
-            <SidebarSlot
-              mode={layout.sidebar}
-              sidebarId={sidebar}
-              onEscape={() => closeFloating()}
-              rail={
-                phone ? (
-                  <Rail
-                    area={area}
-                    floatingEnabled={false}
-                    initials={initials}
-                  />
-                ) : undefined
-              }
-            />
-          </PaneBoundary>
-          <div
-            className={cn(
-              "flex min-h-0 min-w-0 flex-1",
-              // A phone's pane runs edge to edge, like a native screen.
-              !phone && "pr-(--pane-inset) pb-(--pane-inset)"
-            )}
-          >
-            <ResizablePanelGroup orientation="horizontal" className="gap-0">
-              <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
-                <Pane>
-                  <PaneBoundary resetKey={location.pathname}>
-                    {children ?? <Outlet />}
-                  </PaneBoundary>
-                </Pane>
-              </ResizablePanel>
-              {panelInLayout && panel.tab != null && (
-                <>
-                  <ResizableHandle
-                    data-pane-gutter=""
-                    className="w-(--pane-inset) bg-transparent"
-                  />
-                  <ResizablePanel
-                    id="side-panel"
-                    minSize={PANEL_MIN_PX}
-                    maxSize={PANEL_MAX_PX}
-                    defaultSize={storedPanel}
-                    onResize={(size) =>
-                      paneWidth.write(clampPanelWidth(size.inPixels))
-                    }
-                  >
-                    <SidePanelFrame>
-                      <PaneBoundary resetKey={panel.tab}>
-                        <SidePanelBody tab={panel.tab} />
-                      </PaneBoundary>
-                    </SidePanelFrame>
-                  </ResizablePanel>
-                </>
-              )}
-            </ResizablePanelGroup>
-          </div>
-        </div>
-        <SidePanelDrawer
-          open={
-            !overridden && area !== "sessions" && layout.sidePanel === "drawer"
+          style={
+            {
+              "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
+            } as CSSProperties
           }
-          tab={panel.tab}
-          tabs={panelTabs}
-          onTabChange={panel.setTab}
-          onClose={() => panel.setTab(undefined)}
-        />
-      </div>
+        >
+          <TopBar.Root>
+            <TopBar.Leading
+              sidebarInLayout={layout.sidebar !== "floating"}
+              showAppName={layout.titleBar.appName}
+              sidebarExpanded={
+                floatingEnabled ? sidebarToggle.floatingOpen : undefined
+              }
+              onToggleSidebar={sidebarToggle.toggle}
+            />
+            <TopBar.Identity
+              status={layout.titleBar.status}
+              statusText={status ?? undefined}
+              badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
+            />
+            <TopBar.Actions
+              folded={layout.titleBar.actionsFolded}
+              tabs={panelInLayout ? panelKinds : []}
+            />
+            {strip}
+            <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+          </TopBar.Root>
+          {panelInLayout && scopeKey != null && (
+            <PanelHotkeys scopeKey={scopeKey} />
+          )}
+          <div className="relative flex min-h-0 min-w-0">
+            {!phone && (
+              <Rail
+                area={area}
+                floatingEnabled={floatingEnabled}
+                initials={initials}
+              />
+            )}
+            <PaneBoundary resetKey={area}>
+              <SidebarSlot
+                mode={layout.sidebar}
+                sidebarId={sidebar}
+                onEscape={() => closeFloating()}
+                rail={
+                  phone ? (
+                    <Rail
+                      area={area}
+                      floatingEnabled={false}
+                      initials={initials}
+                    />
+                  ) : undefined
+                }
+              />
+            </PaneBoundary>
+            <div
+              ref={group}
+              className={cn(
+                "flex min-h-0 min-w-0 flex-1",
+                // A phone's pane runs edge to edge, like a native screen.
+                !phone && "pr-(--pane-inset) pb-(--pane-inset)"
+              )}
+            >
+              <ResizablePanelGroup orientation="horizontal" className="gap-0">
+                <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
+                  <Pane>
+                    <PaneBoundary resetKey={location.pathname}>
+                      {children ?? <Outlet />}
+                    </PaneBoundary>
+                  </Pane>
+                </ResizablePanel>
+                {panelInLayout && (
+                  <>
+                    <ResizableHandle
+                      data-pane-gutter=""
+                      className="w-(--pane-inset) bg-transparent"
+                    />
+                    <ResizablePanel
+                      id="side-panel"
+                      minSize={PANEL_MIN_PX}
+                      maxSize={panelMax}
+                      defaultSize={storedPanel}
+                      onResize={(size) =>
+                        paneWidth.write(
+                          clampPanelWidth(size.inPixels, panelMax)
+                        )
+                      }
+                    >
+                      <SidePanelFrame>
+                        <PaneBoundary resetKey={scopeKey ?? ""}>
+                          <SidePanelBody tab={panel.active} />
+                        </PaneBoundary>
+                      </SidePanelFrame>
+                    </ResizablePanel>
+                  </>
+                )}
+              </ResizablePanelGroup>
+            </div>
+          </div>
+          <SidePanelDrawer
+            open={panelShown && layout.sidePanel === "drawer"}
+            tabs={panel.scope.tabs}
+            active={panel.active}
+            onTabChange={(id) => {
+              if (scopeKey != null) activatePanelTab(scopeKey, id);
+            }}
+            onClose={() => {
+              if (scopeKey != null) setPanelOpen(scopeKey, false);
+            }}
+          />
+        </div>
+      </PanelScopeContext>
     </FloatingIntentContext>
   );
 };

@@ -12,10 +12,10 @@ import { useTranslation } from "react-i18next";
 import { ConnectorRequestCard } from "#renderer/components/connector-request-card";
 import { confirmFreePoolModel } from "#renderer/components/credits-card/actions";
 import { useCollections } from "#renderer/data/db";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { useVisibleThread } from "#renderer/lib/navigation/visible-thread";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem, openSharedLink } from "#renderer/lib/platform-system";
+import { openPanelTab, panelScopeKey } from "#renderer/lib/side-panel/store";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 
@@ -44,7 +44,6 @@ export const useBotChatSlots = (
   const { t } = useTranslation();
   const collections = useCollections();
   const transport = useBotsTransport();
-  const navigate = useAppNavigate();
   const routine = useCheckIn(bot.id);
   const { data: session } = useLiveQuery(
     (q) =>
@@ -77,32 +76,24 @@ export const useBotChatSlots = (
   useEffect(() => {
     botsUnreadStore.clear(bot.id);
   }, [bot.id, sessionId]);
+  // The panel's tabs live in the shell's store, scoped to this bot: a
+  // sub-route, a dialog or a route transition never resets them.
+  const panelKey = panelScopeKey("bots", bot.id)!;
   const setTab = (tab: "details" | "memory" | "files") =>
-    void navigate({
-      search: (previous) => ({ ...previous, tab, preview: undefined }),
-      transition: "none",
-    });
+    openPanelTab(panelKey, { kind: tab });
   const openTarget = (target: BotOpenTarget): void => {
     if (target.kind === "external")
       void platformSystem(transport.client).openPath({ path: target.path });
     else if (target.kind === "preview")
-      void navigate({
-        search: (previous) => ({
-          ...previous,
-          tab: "files",
-          preview: target.path,
-        }),
-        transition: "none",
+      openPanelTab(panelKey, {
+        kind: "files",
+        path: target.path,
+        title: target.path.split("/").at(-1),
       });
     else if (!IS_ELECTRON)
       void platformSystem(transport.client).openExternal({ url: target.url });
-    else {
-      onBrowser?.(target.url);
-      void navigate({
-        search: (previous) => ({ ...previous, tab: "browser" }),
-        transition: "none",
-      });
-    }
+    else if (onBrowser) onBrowser(target.url);
+    else openPanelTab(panelKey, { kind: "browser", url: target.url });
   };
   const openFile = (path: string) =>
     openTarget(openBotFile(path, workspaceRoot));

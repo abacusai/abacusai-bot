@@ -4,6 +4,7 @@ import { createElement, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
+import { panelScopeKey, setPanelOpen } from "#renderer/lib/side-panel/store";
 import { renderApp } from "#renderer/test-support/app-harness";
 // Tag the actual motion spans from both features without changing the chat kit.
 vi.mock("motion/react", async (original) => {
@@ -107,13 +108,9 @@ describe("bots interactions", () => {
     expect(screen.getAllByRole("button", { name: /App default/ })).toHaveLength(
       1
     );
-    await act(async () =>
-      app!.router.navigate({
-        to: "/bots/$botId",
-        params: { botId: "chief-of-staff" },
-        search: {},
-      })
-    );
+    await act(async () => {
+      setPanelOpen(panelScopeKey("bots", "chief-of-staff")!, false);
+    });
     expect(document.querySelector('[data-slot="bot-model-value"]')).toBeNull();
     expect(count()).toBe(1);
     fireEvent.blur(input);

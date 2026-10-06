@@ -163,7 +163,16 @@ describe("app hotkeys", () => {
     mount("darwin");
     const registrations = [...getHotkeyManager().registrations.state.values()];
     for (const binding of Object.entries(APP_HOTKEYS)
-      .filter(([id]) => !["closeTab", "nextTab", "previousTab"].includes(id))
+      .filter(
+        ([id]) =>
+          ![
+            "closeTab",
+            "nextTab",
+            "previousTab",
+            "nextPanelTab",
+            "previousPanelTab",
+          ].includes(id)
+      )
       .map(([, binding]) => binding)) {
       const count = registrations.filter((r) => r.hotkey === binding).length;
       expect(count, binding).toBe(1);

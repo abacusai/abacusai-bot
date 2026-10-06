@@ -17,11 +17,19 @@ import {
   Ellipsis,
   PanelLeft,
   PanelRight,
+  Plus,
+  X,
 } from "lucide-react";
+import { Reorder } from "motion/react";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
+import {
+  reducedTransition,
+  springs,
+  useMotionPreference,
+} from "#renderer/lib/motion";
 import { useCanGoForward } from "#renderer/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -33,8 +41,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
+import type { PanelTab, PanelTabKind } from "./panel-store";
 import { shellStore } from "./shell-store";
 import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
 
@@ -228,6 +236,7 @@ const Actions = ({
   tabs = [],
 }: {
   folded: boolean;
+  /** Kinds the strip already shows; a route action of that id is dropped. */
   tabs?: readonly SidePanelTabId[];
 }) => {
   const { t } = useTranslation();
@@ -279,42 +288,136 @@ const Actions = ({
   );
 };
 
+const TAB_CLASS =
+  "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground group/tab flex h-7 max-w-44 min-w-0 flex-none items-center gap-1 rounded-lg border-0 pr-1.5 pl-3 text-[13px] font-medium shadow-none transition-[background-color,color] duration-150 ease-out select-none data-active:pr-1";
+
+/**
+ * The panel's tab strip (canvas `BotChatPanel`, `SplitView`, `TitleMac`):
+ * pill tabs at the bar controls' height, the active one filled with a close
+ * mark, "+" after them, 8 px before the panel toggle (V7). Tabs reorder by
+ * drag (motion's Reorder, a spring so a let-go tab keeps its velocity);
+ * middle click closes. Switching tabs animates nothing: it happens tens of
+ * times a day.
+ */
 const PanelTabs = ({
   tabs,
-  value,
+  active,
+  title,
+  kinds,
   onChange,
+  onClose,
+  onReorder,
+  onAdd,
 }: {
-  tabs: readonly SidePanelTabId[];
-  value: SidePanelTabId;
-  onChange(tab: SidePanelTabId): void;
+  tabs: readonly PanelTab[];
+  active: string | null;
+  title(tab: PanelTab): string;
+  /** The kinds "+" offers; empty hides it. */
+  kinds: readonly PanelTabKind[];
+  onChange(id: string): void;
+  onClose(id: string): void;
+  onReorder(ids: string[]): void;
+  onAdd(kind: PanelTabKind): void;
 }) => {
   const { t } = useTranslation();
-  if (tabs.length === 0) return null;
-  // Canvas `SplitView`: borderless chips at the bar controls' height, the
-  // active one filled; 8 px before the panel toggle (V7).
+  const motionPref = useMotionPreference();
+  if (tabs.length === 0 && kinds.length === 0) return null;
+  const ids = tabs.map((tab) => tab.id);
   return (
-    <Tabs
-      value={value}
-      onValueChange={(next) => onChange(next as SidePanelTabId)}
-      className="titlebar-nodrag mr-2 shrink-0"
+    <div
+      data-slot="topbar-panel-tabs"
+      className="mr-2 flex min-w-0 shrink items-center gap-1"
     >
-      <TabsList
-        data-tour="topbar-panel-tabs"
+      <Reorder.Group
+        as="div"
+        axis="x"
+        values={ids}
+        onReorder={onReorder}
+        role="tablist"
         aria-label={t("shell.topBar.panelTabs")}
+        data-tour="topbar-panel-tabs"
         data-topbar-tabs=""
-        className="gap-1 bg-transparent p-0 group-data-horizontal/tabs:h-7"
+        className="flex min-w-0 items-center gap-1 overflow-x-clip"
       >
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab}
-            value={tab}
-            className="text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground dark:text-muted-foreground dark:data-active:bg-sidebar-accent dark:data-active:text-sidebar-foreground h-7 flex-none rounded-lg border-0 px-3 shadow-none after:hidden dark:data-active:border-transparent"
+        {tabs.map((tab) => {
+          const selected = tab.id === active;
+          const label = title(tab);
+          return (
+            <Reorder.Item
+              key={tab.id}
+              as="div"
+              value={tab.id}
+              layout="position"
+              transition={
+                motionPref === "reduced"
+                  ? reducedTransition
+                  : { layout: springs.panel }
+              }
+              whileDrag={{ zIndex: 1 }}
+              dragListener
+              role="tab"
+              aria-selected={selected}
+              data-active={selected ? "" : undefined}
+              data-panel-tab-id={tab.id}
+              data-panel-tab-kind={tab.kind}
+              title={label}
+              tabIndex={selected ? 0 : -1}
+              className={TAB_CLASS}
+              onClick={() => onChange(tab.id)}
+              onAuxClick={(event: React.MouseEvent) => {
+                if (event.button === 1) onClose(tab.id);
+              }}
+              onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onChange(tab.id);
+                }
+                if (event.key === "Delete" || event.key === "Backspace")
+                  onClose(tab.id);
+              }}
+            >
+              <span className="min-w-0 truncate">{label}</span>
+              {/* A glyph, not a control (a tab may hold no interactive
+                  child): the pointer closes here, the keyboard with
+                  Delete/Backspace or ⌘W on the tab. */}
+              <span
+                aria-hidden="true"
+                data-slot="panel-tab-close"
+                title={t("shell.panel.closeTab", { name: label })}
+                className={cn(
+                  "hover:bg-foreground/10 flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
+                  !selected && "hidden group-hover/tab:flex"
+                )}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose(tab.id);
+                }}
+              >
+                <X />
+              </span>
+            </Reorder.Item>
+          );
+        })}
+      </Reorder.Group>
+      {kinds.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<BarButton label={t("shell.panel.addTab")} />}
+            data-testid="panel-add-tab"
           >
-            {t(`shell.panel.tabs.${tab}`)}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+            <Plus />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {kinds.map((kind) => (
+              <DropdownMenuItem key={kind} onClick={() => onAdd(kind)}>
+                {t(`shell.panel.tabs.${kind}`)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   );
 };
 

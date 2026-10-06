@@ -17,7 +17,12 @@ import {
 import { renderApp, type AppHarness } from "#renderer/test-support/app-harness";
 
 import { isToasterMounted, toastViewportStyle } from "./app-toaster";
-import { panelToggleTarget } from "./use-panel";
+import {
+  openPanelTab,
+  panelScope,
+  resetPanelStore,
+  togglePanel,
+} from "./panel-store";
 
 let harness: AppHarness | null = null;
 afterEach(async () => {
@@ -169,17 +174,21 @@ describe("the toast viewport (§7.4, Claude impl r1 #23)", () => {
   });
 });
 
-describe("panelToggleTarget", () => {
-  it("closes an open panel, and reopens the area's last tab", () => {
-    expect(panelToggleTarget("sessions", "files", {})).toBeUndefined();
-    expect(panelToggleTarget("sessions", undefined, {})).toBe("changes");
-    expect(
-      panelToggleTarget("sessions", undefined, { sessions: "files" })
-    ).toBe("files");
-    // A tab from another area is never reused; bots open on Details.
-    expect(panelToggleTarget("bots", undefined, { sessions: "changes" })).toBe(
-      "details"
-    );
+describe("togglePanel", () => {
+  it("closes an open panel, and reopens on its tabs, else on the area's first kind", () => {
+    resetPanelStore();
+    openPanelTab("area:sessions", { kind: "files" });
+    togglePanel("area:sessions", "sessions");
+    expect(panelScope("area:sessions").open).toBe(false);
+    togglePanel("area:sessions", "sessions");
+    expect(panelScope("area:sessions")).toMatchObject({ open: true });
+    expect(panelScope("area:sessions").tabs.map((tab) => tab.kind)).toEqual([
+      "files",
+    ]);
+    // A scope with no tabs opens on the area's first kind; bots on Details.
+    togglePanel("bots:b1", "bots");
+    expect(panelScope("bots:b1").tabs[0]?.kind).toBe("details");
+    resetPanelStore();
   });
 });
 

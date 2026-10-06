@@ -157,7 +157,7 @@ it("automatic URL deliverables retain their destination through the routed sessi
       expect(app!.calls).toContainEqual([
         "browser.runtime.materialize",
         expect.objectContaining({
-          resourceId: "bot-browser",
+          resourceId: expect.stringMatching(/^browser:/),
           url: "https://example.test/report",
           conversationKey: JSON.stringify([
             "conversation",
