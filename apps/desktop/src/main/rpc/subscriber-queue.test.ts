@@ -639,12 +639,12 @@ describe("actionable streams open on what is pending (A-T9)", () => {
     // The real gate: two conversations ask before the subscriber (re)opens.
     const gate = new ConnectorGate(() => undefined);
     const other = conversationKey(draftConversationRef("w2"));
-    void gate.ask({
+    gate.show({
       connectorId: "github",
       label: "GitHub",
       conversationKey: key,
     });
-    void gate.ask({
+    gate.show({
       connectorId: "gmail",
       label: "Gmail",
       conversationKey: other,

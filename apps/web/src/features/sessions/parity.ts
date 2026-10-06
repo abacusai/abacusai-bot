@@ -950,7 +950,7 @@ export const SESSION_PARITY = [
   {
     id: "S65",
     requirement:
-      "the shared `components/connector-request-card/` of 03 r3 §11.4 in the session's `slots.banner`, fed by `connectors.events({ conversationKey })` (snapshot of pending asks first), field flows via `connectors.submitFields`, decline, `connectors.respond` releasing the suspended turn (§9.3)",
+      "the shared `components/connector-request-card/` of 03 r3 §11.4 in the session's `slots.banner`, fed by `connectors.events({ conversationKey })` (snapshot of pending asks first), field flows via `connectors.submitFields`, decline, `connectors.respond` clearing the card (the turn never waits on it)",
     decision: "Parity",
     target: "routes/_shell/(sessions)/sessions.$sessionId.tsx",
     implementation: "partial",

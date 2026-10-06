@@ -1,7 +1,8 @@
 /**
  * "Connect Slack", asked by the agent, answered in the chat (spec 03 §11.4,
- * port of the old `components/chat/connector-request-card.tsx`). The agent's
- * turn is suspended inside the tool call while this is up. Presentational:
+ * port of the old `components/chat/connector-request-card.tsx`). Nothing
+ * waits on it: the agent was answered with a link and carries on, and is
+ * told once the connector connects. Presentational:
  * the caller runs the flow and answers. A connector whose registry entry
  * takes fields (a token) shows them inline; Connect submits them.
  *

@@ -7,7 +7,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
-import { connectorById } from "@abacus-ai/connectors/registry";
+import {
+  connectorById,
+  connectorForService,
+} from "@abacus-ai/connectors/registry";
 import {
   AgentStatus,
   type AgentMode,
@@ -306,6 +309,10 @@ import {
   readSettings,
   storedKeyProviders,
 } from "./services/config/settings";
+import {
+  ConnectWatcher,
+  type ConnectedOffer,
+} from "./services/connectors/connect-watcher";
 import { ConnectorFlowService } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
@@ -349,6 +356,7 @@ import {
 } from "./services/messaging/messaging-gateway-service";
 import {
   cancelConnectorConnect,
+  createConnectLink,
   disconnectAbacusConnector,
   listAbacusConnectors,
   startConnectorConnect,
@@ -721,7 +729,20 @@ export class ServiceHost {
     },
     connectors: {
       list: () => this.listConnectorStatuses(),
-      request: (input) => this.connectorGate.ask(input),
+      link: async (connectorId) => {
+        const service = connectorById(connectorId);
+        if (service?.kind !== "platform") return null;
+        const link = await createConnectLink(service.service);
+        if (link == null) return null;
+        return {
+          url: link.url,
+          connectorIds: link.services.flatMap(
+            (key) => connectorForService(key)?.id ?? []
+          ),
+        };
+      },
+      show: (input) => this.connectorGate.show(input),
+      watch: (input) => this.connectWatcher.watch(input),
       disconnect: async (connectorId) => {
         const result = await this.disconnectConnector(connectorId);
         if (result.ok === true) return null;
@@ -859,11 +880,65 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       })
   );
-  private readonly connectorGate = new ConnectorGate(
-    (event) => this.emitEvent(event),
-    async (connectorId) =>
-      (await this.listConnectorStatuses())[connectorId]?.account ?? null
+  private readonly connectorGate = new ConnectorGate((event) =>
+    this.emitEvent(event)
   );
+
+  /** Offers (links, cards) followed until they connect; see connectorsConnected. */
+  private readonly connectWatcher = new ConnectWatcher({
+    list: () => this.listConnectorStatuses(),
+    connected: (offer) => this.connectorsConnected(offer),
+    expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
+  });
+
+  private readonly connectedListeners = new Set<
+    (sessionId: string | null, note: string) => void
+  >();
+
+  /**
+   * Told when connectors offered to a session connect, with the note for its
+   * model. The phone lane turns it into a turn: nobody is at a card there.
+   */
+  onConnectorsConnected(
+    listener: (sessionId: string | null, note: string) => void
+  ): () => void {
+    this.connectedListeners.add(listener);
+    return () => {
+      this.connectedListeners.delete(listener);
+    };
+  }
+
+  /**
+   * An offer landed: live sessions re-read the gateway's tools (it lists only
+   * connected services), its cards go, and the asking session is told.
+   */
+  private connectorsConnected(offer: ConnectedOffer): void {
+    const connectors = offer.connectorIds.flatMap(
+      (id) => connectorById(id) ?? []
+    );
+    if (connectors.some((connector) => connector.kind === "platform"))
+      this.ensureConnectorGateway();
+    this.connectorGate.clearFor(offer.connectorIds);
+    this.connectorStatusChanged();
+    const accounts = [...new Set(Object.values(offer.accounts))];
+    const names = connectors.map((connector) => connector.name).join(", ");
+    const note =
+      `[connected] ${names} ${connectors.length > 1 ? "are" : "is"} connected now` +
+      `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
+      connectors
+        .map((connector) =>
+          connector.kind === "credential"
+            ? `Use ${connector.via}: they are authenticated now. `
+            : ""
+        )
+        .join("") +
+      (connectors.some((connector) => connector.kind !== "credential")
+        ? "Its tools are in your tool list. "
+        : "") +
+      "Tell the user in one short line, then carry on with what they asked for.";
+    for (const listener of this.connectedListeners)
+      listener(offer.sessionId, note);
+  }
 
   /**
    * One answer to "is it connected?" per registry connector. The platform's
@@ -915,14 +990,7 @@ export class ServiceHost {
       connect: (service, options) =>
         startConnectorConnect(service, options, this.platform),
       disconnect: disconnectAbacusConnector,
-      // The MCP file is user-editable, so the url and headers under the
-      // app's own name are rewritten rather than assumed.
-      ensureGateway: () =>
-        this.ensureMcpServer({
-          mode: "code",
-          name: ABACUS_CONNECTORS_SERVER_NAME,
-          config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
-        }),
+      ensureGateway: () => this.ensureConnectorGateway(),
     },
     credential: {
       save: (provider, value) => {
@@ -943,6 +1011,18 @@ export class ServiceHost {
     },
     homeDir: () => os.homedir(),
   });
+
+  /**
+   * The MCP file is user-editable, so the url and headers under the app's
+   * own name are rewritten rather than assumed. Live sessions re-read it.
+   */
+  private ensureConnectorGateway(): void {
+    this.ensureMcpServer({
+      mode: "code",
+      name: ABACUS_CONNECTORS_SERVER_NAME,
+      config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
+    });
+  }
 
   listConnectorStatuses(): Promise<ConnectorStatuses> {
     return this.connectorStatuses.list();
@@ -1547,19 +1627,7 @@ export class ServiceHost {
       });
     },
     emitSessionClosed: (workspaceId, sessionId) => {
-      const wasBusy = this.sessionTurnStateService.get(
-        workspaceId,
-        sessionId
-      ).isBusy;
       this.sessionTurnStateService.markStopped(workspaceId, sessionId);
-      if (wasBusy) {
-        // A turn that dies mid-ask leaves the card with nothing behind it.
-        const ended =
-          "The session ended before the question was answered. Do not ask again unless the user brings it up.";
-        const conversation = this.conversationKeyForSession(sessionId);
-        if (conversation != null)
-          this.connectorGate.release(conversation, ended);
-      }
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
       this.emitEvent({
@@ -1836,6 +1904,7 @@ export class ServiceHost {
   /** Resolves once every agent child has exited; the quit path awaits it. */
   dispose(): Promise<void> {
     this.stop();
+    this.connectWatcher.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
     this.mcpDeviceServer.stop();
@@ -2987,14 +3056,6 @@ export class ServiceHost {
   private markTurnStopped(workspaceId: string, sessionId: string): void {
     // Idle, and in-flight CLI events suppressed until the next send.
     this.sessionTurnStateService.markStopped(workspaceId, sessionId);
-    // A Connect card is the turn, suspended inside its tool call: stopping
-    // must take it down and let the call go. This conversation's only.
-    const stopped = this.conversationKeyForSession(sessionId);
-    if (stopped != null)
-      this.connectorGate.release(
-        stopped,
-        "The user stopped this turn before answering. Do not ask again unless they bring it up."
-      );
   }
 
   getSessionTurnState(
@@ -3716,8 +3777,8 @@ export class ServiceHost {
     return this.builtinToolPermissions.listPending(conversationKey);
   }
 
-  async respondConnector(request: RespondConnectorRequest): Promise<void> {
-    await this.connectorGate.respond(request);
+  respondConnector(request: RespondConnectorRequest): void {
+    this.connectorGate.respond(request);
   }
 
   startCronScheduler(): void {
