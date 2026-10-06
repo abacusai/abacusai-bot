@@ -726,21 +726,51 @@ it("sets up the bot account through the apps server before the identity step", a
 it("a signed-out bot account setup is the sign-in refusal", async () => {
   vi.stubGlobal(
     "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json(
+        {
+          success: false,
+          error: "User not logged in",
+          errorType: "NotLoggedInError",
+        },
+        { status: 200 }
+      )
+    )
+  );
+  await expect(setUpBotAccount()).rejects.toMatchObject({
+    kind: "signin",
+    message: "User not logged in",
+  });
+});
+it("an apps server without the setup step leaves the boot to the identity step", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ success: false, error: "Not found" }, { status: 404 })
+      )
+  );
+  await expect(setUpBotAccount()).resolves.toBeUndefined();
+});
+it("any other bot account setup failure stops the boot", async () => {
+  vi.stubGlobal(
+    "fetch",
     vi
       .fn()
       .mockResolvedValue(
         Response.json(
           {
             success: false,
-            error: "User not logged in",
-            errorType: "NotLoggedInError",
+            error: "Internal error",
+            errorType: "InternalError",
           },
-          { status: 200 }
+          { status: 500 }
         )
       )
   );
   await expect(setUpBotAccount()).rejects.toMatchObject({
-    kind: "signin",
-    message: "User not logged in",
+    kind: "connection",
+    status: 500,
   });
 });

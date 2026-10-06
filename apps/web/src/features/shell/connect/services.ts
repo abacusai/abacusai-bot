@@ -38,7 +38,9 @@ export class ConnectError extends Error {
       | "reload"
       | "connection",
     message: string,
-    readonly network = false
+    readonly network = false,
+    /** The apps server's HTTP status, when it answered. */
+    readonly status?: number
   ) {
     super(message);
   }
@@ -168,7 +170,7 @@ export const callApps = async (
   )
     throw new ConnectError("signin", message);
   if (!response.ok || body?.success !== true)
-    throw new ConnectError("connection", message);
+    throw new ConnectError("connection", message, false, response.status);
   return body.result;
 };
 const delay = (ms: number) =>
@@ -273,11 +275,16 @@ const devHostUrl = (): string | undefined =>
  * Boot, before the identity step: the bot account behind this sign-in, set up
  * as the desktop's connect does (a fresh sign-up gets the bot's free tier), so
  * no gated call ever runs on an account the bot has not set up. Refusals map
- * like the identity step's: signed out is the sign-in screen.
+ * like the identity step's: signed out is the sign-in screen. An apps server
+ * that predates this step (404) has nothing to set up.
  */
 export const setUpBotAccount = async (): Promise<void> => {
   if (devHostUrl()) return;
-  await callApps("setUpAbacusaibotWebAccount", {});
+  try {
+    await callApps("setUpAbacusaibotWebAccount", {});
+  } catch (error) {
+    if (!(error instanceof ConnectError && error.status === 404)) throw error;
+  }
 };
 
 export const identifyHost = async (): Promise<HostIdentity> => {
