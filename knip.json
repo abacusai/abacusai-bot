@@ -40,7 +40,8 @@
         "src/notch-routes/**/*.tsx",
         "src/test-support/notch-fit.tsx",
         "src/**/*.test.{ts,tsx}",
-        "src/platform/*.{ts,tsx}"
+        "src/platform/*.{ts,tsx}",
+        "*.test.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs}", "*.ts"],
       "ignore": ["src/ui/**"]
