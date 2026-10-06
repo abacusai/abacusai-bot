@@ -22,7 +22,7 @@ import {
 } from "./phone-memory-tool.js";
 import {
   flagStaleLoops,
-  hasArchive,
+  latestArchiveAt,
   phoneMemoryFingerprint,
   phoneStandingPrompt,
 } from "./phone-memory.js";
@@ -57,6 +57,9 @@ const FLUSH_AT_WINDOW_SHARE = 0.55;
 
 const CONSOLIDATE_EVERY_MS = 24 * 60 * 60_000;
 
+/** Flush turns tried per compaction window before giving up on it. */
+const MAX_FLUSH_ATTEMPTS = 2;
+
 /** The phone loop's own tools, all always allowed: nobody can approve over WhatsApp. */
 const PHONE_TOOL_NAMES = [
   PHONE_MEMORY_TOOL_NAME,
@@ -80,6 +83,15 @@ export function createPhoneProfile(
 
   if (home == null)
     throw new Error("PhoneSession requires ABACUSAI_BOT_PHONE_DIR.");
+
+  // A new conversation starts the consolidation clock: the first run is a day
+  // out, never on the first message.
+  const state = readPhoneState(home);
+
+  if (state.lastConsolidatedAt == null)
+    writePhoneState(home, { ...state, lastConsolidatedAt: Date.now() });
+
+  let flushAttempts = 0;
 
   return {
     systemPrompt: () => [phoneOperatingPrompt(options.model)],
@@ -107,16 +119,23 @@ export function createPhoneProfile(
         return {
           customType: PHONE_FLUSH_TYPE,
           content: phoneFlushPrompt(localDay(now)),
-          accept: (reply) => applyFlush(home, reply, now),
+          accept: async (reply) => {
+            flushAttempts += 1;
+            const ok = await applyFlush(home, reply, now);
+
+            // One retry per compaction window, not a hidden turn every turn.
+            return ok || flushAttempts >= MAX_FLUSH_ATTEMPTS;
+          },
         };
       },
       claimConsolidation: () => {
         const now = new Date();
         const state = readPhoneState(home);
+        const last = state.lastConsolidatedAt ?? now.getTime();
+        // Due a day after the last run, and only if anything was said since.
         const due =
-          hasArchive(home) &&
-          now.getTime() - (state.lastConsolidatedAt ?? 0) >
-            CONSOLIDATE_EVERY_MS;
+          now.getTime() - last > CONSOLIDATE_EVERY_MS &&
+          (latestArchiveAt(home) ?? 0) > last;
 
         if (!due) return null;
 
@@ -147,6 +166,9 @@ export function createPhoneProfile(
     beforeTurn: (message) => recallBlock(home, message, new Date()),
     afterTurn: () => undefined,
     onMessage: (message) => archiveLive(home, message),
-    beforeCompaction: (messages) => beforePhoneCompaction(home, messages),
+    beforeCompaction: (messages) => {
+      flushAttempts = 0;
+      beforePhoneCompaction(home, messages);
+    },
   };
 }

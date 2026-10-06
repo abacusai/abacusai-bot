@@ -626,8 +626,49 @@ export function appendArchive(
   return written;
 }
 
-export const hasArchive = (dir: string): boolean =>
-  archiveMonths(dir).length > 0;
+/** Bytes read from the end of the newest archive month to find its last entry. */
+const ARCHIVE_TAIL_BYTES = 64 * 1024;
+
+/**
+ * When the last message was archived (ms), or null for an empty archive. Reads
+ * only the newest month's tail: it runs after every turn.
+ */
+export function latestArchiveAt(dir: string): number | null {
+  const month = archiveMonths(dir).at(-1);
+
+  if (month == null) return null;
+
+  let tail: string;
+
+  try {
+    const file = phonePaths(dir).archive(month);
+    const size = fs.statSync(file).size;
+    const length = Math.min(size, ARCHIVE_TAIL_BYTES);
+    const buffer = Buffer.alloc(length);
+    const handle = fs.openSync(file, "r");
+
+    try {
+      fs.readSync(handle, buffer, 0, length, size - length);
+    } finally {
+      fs.closeSync(handle);
+    }
+    tail = buffer.toString("utf8");
+  } catch {
+    return null;
+  }
+
+  for (const line of tail.split("\n").reverse()) {
+    try {
+      const ms = Date.parse((JSON.parse(line) as ArchiveEntry).ts);
+
+      if (!Number.isNaN(ms)) return ms;
+    } catch {
+      // A torn or partial line; the one before it will do.
+    }
+  }
+
+  return null;
+}
 
 // ---------------------------------------------------------- standing prompt
 
