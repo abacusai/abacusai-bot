@@ -73,7 +73,7 @@
     "@abacus-ai/test-support": "workspace:*",
     "@abacus-ai/updater": "workspace:*",
     "@abacus-ai/web": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
     "@tanstack/ai": "0.63.0",
     "@tanstack/ai-client": "0.36.0",
     "@tanstack/db": "0.9.2",
