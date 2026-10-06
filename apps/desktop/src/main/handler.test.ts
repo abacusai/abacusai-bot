@@ -33,6 +33,11 @@ vi.mock("electron", () => ({
 vi.mock("./service-host", () => ({ ServiceHost: class {} }));
 vi.mock("./services/config/settings", () => ({
   readSettings: vi.fn(),
+  // Through readSettings, so the tests below see the key they just stored.
+  credentialFor: (name: string): string => {
+    const settings = readSettings() as { apiKeys?: Record<string, string> };
+    return settings?.apiKeys?.[name] ?? "";
+  },
   saveApiKey: vi.fn(() => ({ apiKeys: {} })),
   setDefaultModel: vi.fn(),
   storedKeyProviders: vi.fn(),

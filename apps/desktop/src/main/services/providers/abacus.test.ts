@@ -4,7 +4,8 @@ const fetchMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../config/settings", () => ({
   hasCredential: () => true,
-  readSettings: () => ({ apiKeys: { ABACUS_API_KEY: "test-key" } }),
+  credentialFor: (name: string) =>
+    name === "ABACUS_API_KEY" ? "test-key" : "",
 }));
 
 vi.mock("./abacus-host", () => ({

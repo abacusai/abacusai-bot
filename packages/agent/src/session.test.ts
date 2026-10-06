@@ -619,14 +619,25 @@ describe("a provider timeout in the chat", () => {
 });
 
 it("does not diagnose a provider authorization denial as an invalid key", () => {
-  const failure = classifyProviderFailure(
-    '403 {"error":"This app is not allowed for this API"}'
-  );
+  const failure = classifyProviderFailure('403 {"error":"Forbidden"}');
   expect(failure.summary).toBe("The model provider denied access");
   expect(failure.remedy).toContain("Settings → Models");
   expect(classifyProviderFailure("401 Unauthorized").summary).toBe(
     "The model provider rejected the key"
   );
+});
+
+it("names a key of the wrong kind and sends the user back through sign-in", () => {
+  // The platform's answer to a terminal/CodeLLM key on a bot endpoint. The
+  // key is valid, so "check your model access" would send the user to the
+  // wrong page.
+  const failure = classifyProviderFailure(
+    '403 {"error":"Abacus AI Agent Desktop is not allowed for this API"}'
+  );
+  expect(failure.summary).toBe("This key isn't an AbacusAI Bot key");
+  expect(failure.remedy).toContain("Sign out");
+  expect(failure.remedy).toContain("Settings → Account");
+  expect(failure.remedy).not.toContain("Settings → Models");
 });
 
 describe("a request the provider's tier will not take", () => {

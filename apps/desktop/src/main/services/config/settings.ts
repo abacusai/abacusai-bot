@@ -271,13 +271,27 @@ export const readDockerImage = (): string | undefined => {
   return stored.length > 0 ? stored : undefined;
 };
 
-/** Credentials for the agent's environment; the environment wins. */
+/**
+ * Credentials whose stored value beats the environment. The Abacus key is
+ * written by sign-in, an explicit act, and a shell-exported `ABACUS_API_KEY`
+ * is often a terminal/CodeLLM key the platform refuses on bot endpoints
+ * (403 "not allowed for this API"). Every other key keeps the environment
+ * first: a shell profile or secrets manager outranks a key typed in Settings.
+ */
+const STORED_WINS = new Set(["ABACUS_API_KEY"]);
+
+/**
+ * Credentials for the agent's environment; the environment wins, except for
+ * the signed-in Abacus key (see `STORED_WINS`), which is always handed down so
+ * it overrides the one the child would otherwise inherit.
+ */
 export const credentialEnv = (): Record<string, string> => {
   const stored = readSettings().apiKeys ?? {};
   const env: Record<string, string> = {};
 
   for (const [name, value] of Object.entries(stored)) {
-    if ((process.env[name] ?? "").length === 0 && value.length > 0) {
+    if (value.length === 0) continue;
+    if (STORED_WINS.has(name) || (process.env[name] ?? "").length === 0) {
       env[name] = value;
     }
   }
@@ -292,10 +306,12 @@ export const credentialEnv = (): Record<string, string> => {
  */
 export const credentialFor = (envVar: string): string => {
   const fromEnv = (process.env[envVar] ?? "").trim();
+  const stored = (readSettings().apiKeys?.[envVar] ?? "").trim();
 
+  if (STORED_WINS.has(envVar) && stored.length > 0) return stored;
   if (fromEnv.length > 0) return fromEnv;
 
-  return (readSettings().apiKeys?.[envVar] ?? "").trim();
+  return stored;
 };
 
 /** Whether a provider can run: an env var, or a key stored here. */
