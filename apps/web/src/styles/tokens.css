@@ -567,6 +567,24 @@ html[data-reduce-motion="on"] .phone-rise {
   }
 }
 
+/* The new-bot template grid: `--cols` equal columns (template-columns.ts),
+   the last row centred; phones list the cards. */
+[data-slot="bot-template-grid"] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+[data-slot="bot-template-grid"] > * {
+  flex: 0 0 calc((100% - (var(--cols, 3) - 1) * 8px) / var(--cols, 3));
+}
+[data-band="xs"] [data-slot="bot-template-grid"] {
+  flex-direction: column;
+}
+[data-band="xs"] [data-slot="bot-template-grid"] > * {
+  flex-basis: auto;
+}
+
 /* Phone reading size for chat prose. */
 [data-band="xs"] .chat-prose {
   font-size: 0.9375rem;

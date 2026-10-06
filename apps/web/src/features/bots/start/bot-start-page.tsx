@@ -38,6 +38,7 @@ import { ToggleGroup, ToggleGroupItem } from "#renderer/ui/toggle-group";
 import { useBots, botsQueries } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { useBotDraft, updateDraft, selectTemplate } from "../form/draft-store";
+import { templateColumns } from "./template-columns";
 export const BotStartPage = ({
   category = "featured",
 }: {
@@ -82,98 +83,108 @@ export const BotStartPage = ({
       className="size-full overflow-auto"
       style={accentVars(look)}
     >
-      <div className="phone:w-[calc(100%-32px)] phone:pt-6 mx-auto flex w-[calc(100%-48px)] max-w-[760px] flex-col items-center gap-5 py-8">
-        {empty && (
-          <>
-            <h1 className="text-[22px] font-semibold">
-              {t("bots.start.emptyTitle")}
-            </h1>
-            <p className="text-muted-foreground max-w-[420px] text-center text-[13px]">
-              {t("bots.start.emptyBody")}
-            </p>
-          </>
-        )}
-        <motion.div layoutId="bot-draft-avatar">
-          <BotAvatar
-            look={look}
-            size={96}
-            mood={values.name ? "happy" : "asleep"}
-          />
-        </motion.div>
-        <ToggleGroup
-          value={[look.shape]}
-          aria-label={t("bots.form.shape")}
-          onValueChange={(items) => {
-            if (items[0])
-              updateDraft({
-                lookPicked: true,
-                values: {
-                  ...values,
-                  look: { ...look, shape: items[0] as Look["shape"] },
-                },
-              });
-          }}
+      <div className="content-col phone:w-[calc(100%-32px)] phone:pt-6 flex flex-col items-center gap-5 pt-8 pb-8">
+        {/* The hero (canvas BotNew): avatar, shapes and the name pill sit
+            centred in a fixed band above the templates, so the page reads
+            as a composed whole rather than content pushed to the top. */}
+        <div
+          data-slot="bot-start-hero"
+          className="phone:min-h-0 phone:py-0 flex min-h-[360px] w-full flex-col items-center justify-center gap-5 py-6"
         >
-          {START_SHAPES.map((shape) => (
-            <ToggleGroupItem
-              key={shape}
-              value={shape}
-              aria-label={t(`bots.avatar.shapes.${shape}`)}
-              className="size-8 p-1"
-            >
-              <BotAvatar look={{ ...look, shape }} size={24} />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-        <form
-          className="w-full max-w-[480px]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setup();
-          }}
-        >
-          <InputGroup
-            className="bg-muted h-[52px] rounded-full"
-            style={composerStyle}
-          >
-            <InputGroupInput
-              autoFocus={empty}
-              aria-label={t("bots.form.name")}
-              data-tour="bots-name-input"
-              placeholder={t("bots.start.namePlaceholder")}
-              value={values.name}
-              maxLength={30}
-              className="text-center"
-              onChange={(event) => {
-                const name = event.target.value;
+          {empty && (
+            <>
+              <h1 className="text-[22px] font-semibold">
+                {t("bots.start.emptyTitle")}
+              </h1>
+              <p className="text-muted-foreground max-w-[420px] text-center text-[13px]">
+                {t("bots.start.emptyBody")}
+              </p>
+            </>
+          )}
+          <motion.div layoutId="bot-draft-avatar">
+            <BotAvatar
+              look={look}
+              size={96}
+              mood={values.name ? "happy" : "asleep"}
+            />
+          </motion.div>
+          <ToggleGroup
+            value={[look.shape]}
+            aria-label={t("bots.form.shape")}
+            onValueChange={(items) => {
+              if (items[0])
                 updateDraft({
+                  lookPicked: true,
                   values: {
                     ...values,
-                    name,
-                    look: draft.lookPicked ? look : defaultLook(name),
+                    look: { ...look, shape: items[0] as Look["shape"] },
                   },
                 });
-              }}
-            />
-            <InputGroupAddon align="inline-end">
-              <Button
-                type="submit"
-                size="icon"
-                className="bot-accent-control rounded-full"
-                aria-label={t("bots.start.setup", { name: values.name })}
-                disabled={!values.name.trim()}
+            }}
+          >
+            {START_SHAPES.map((shape) => (
+              <ToggleGroupItem
+                key={shape}
+                value={shape}
+                aria-label={t(`bots.avatar.shapes.${shape}`)}
+                className="size-8 p-1"
               >
-                <ArrowRight />
-              </Button>
-            </InputGroupAddon>
-          </InputGroup>
-        </form>
+                <BotAvatar look={{ ...look, shape }} size={24} />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <form
+            className="w-full max-w-[480px]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setup();
+            }}
+          >
+            <InputGroup
+              className="bg-muted h-[52px] rounded-full border-0 pl-3"
+              style={composerStyle}
+            >
+              <InputGroupInput
+                autoFocus={empty}
+                aria-label={t("bots.form.name")}
+                data-tour="bots-name-input"
+                placeholder={t("bots.start.namePlaceholder")}
+                value={values.name}
+                maxLength={30}
+                className="h-9 text-center text-[15px] md:text-[15px]"
+                onChange={(event) => {
+                  const name = event.target.value;
+                  updateDraft({
+                    values: {
+                      ...values,
+                      name,
+                      look: draft.lookPicked ? look : defaultLook(name),
+                    },
+                  });
+                }}
+              />
+              <InputGroupAddon align="inline-end">
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="bot-accent-control rounded-full"
+                  aria-label={t("bots.start.setup", { name: values.name })}
+                  disabled={!values.name.trim()}
+                >
+                  <ArrowRight />
+                </Button>
+              </InputGroupAddon>
+            </InputGroup>
+          </form>
+        </div>
         <div className="flex w-full flex-col gap-3">
-          <p className="text-muted-foreground text-[13px]">
-            {t("bots.start.templates")}
-          </p>
-          {
-            <div className="phone:flex-nowrap flex flex-wrap items-center gap-2">
+          {/* One row (canvas BotNew): the label leads, the category tabs
+              trail; phones stack them. */}
+          <div className="phone:flex-col phone:items-stretch flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-muted-foreground text-[13px]">
+              {t("bots.start.templates")}
+            </p>
+            <div className="phone:flex-nowrap phone:ms-0 ms-auto flex flex-wrap items-center gap-2">
               <ToggleGroup
                 className="phone:min-w-0 phone:flex-nowrap phone:overflow-x-auto phone:[scrollbar-width:none] phone:pe-6 phone:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)] flex-wrap"
                 value={[category]}
@@ -233,9 +244,16 @@ export const BotStartPage = ({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          }
-          {/* Phones list templates as rows: avatar, then name and purpose. */}
-          <div className="phone:grid-cols-1 grid grid-cols-2 gap-2 xl:grid-cols-3">
+          </div>
+          {/* A symmetric grid (tokens.css): 3 or 4 equal columns, whichever
+              divides the count, else the fuller last row, centred. Phones
+              list templates as rows: avatar, then name and purpose. */}
+          <div
+            data-slot="bot-template-grid"
+            style={
+              { "--cols": templateColumns(templates.length) } as CSSProperties
+            }
+          >
             {templates.map((template, index) => (
               <button
                 key={template.id}
