@@ -97,7 +97,7 @@ const View = ({ fixture }: { fixture: string }) => {
     );
   if (fixture === "sessions-start")
     return (
-      <div className="mx-auto flex max-w-[680px] flex-col gap-4 p-8">
+      <div className="content-col flex flex-col gap-4 py-8">
         <h1 className="text-3xl font-semibold">
           {t("sessions.start.heading")}
         </h1>

@@ -37,10 +37,20 @@ describe("shell geometry", () => {
     }
   });
 
-  it("keeps the composer column narrower than the transcript, both wider than the pane minimum", () => {
+  it("steps the columns: composer < content < wide content, all wider than the pane minimum", () => {
     const g = SHELL_GEOMETRY;
-    expect(g.composerMaxW).toBeLessThan(g.transcriptMaxW);
+    expect(g.composerMaxW).toBeLessThan(g.contentMaxW);
+    expect(g.contentMaxW).toBeLessThan(g.contentMaxWWide);
     expect(g.composerMaxW).toBeGreaterThan(g.sidePanelMin);
+  });
+
+  it("declares the content column classes on the tokens", () => {
+    expect(tokensCss).toMatch(
+      /\.content-col \{\s*width: min\(var\(--content-max-w\), 100% - 48px\);/
+    );
+    expect(tokensCss).toMatch(
+      /\.content-col-wide \{\s*width: min\(var\(--content-max-w-wide\), 100% - 48px\);/
+    );
   });
 
   it("clamps the side panel between its min and max, the drawer and default inside", () => {

@@ -213,7 +213,7 @@ export const RoutinePage = ({
             : "min-w-0 flex-1 overflow-auto"
         }
       >
-        <div className="flex flex-col gap-5 p-6">
+        <div className="content-col flex flex-col gap-5 py-6">
           <header className="flex flex-wrap items-center gap-3">
             <RoutineIdentity
               bot={bots.find((b) => b.id === row.botId)}
