@@ -149,7 +149,7 @@ it("anchors through the positioner: inner side of the bubble, centred", async ()
   expect(host("u").hasAttribute("data-active")).toBe(true);
 });
 
-it("prefers the tray above the bubble on the smiley's side unless the row before is in the way", () => {
+it("places the tray above, below, or beside so it never covers a bubble", () => {
   const tray = { width: 300, height: 44 };
   const bubble = rect(300, 360);
   expect(preferTraySide(bubble, tray, "assistant")).toBe("top");
@@ -168,13 +168,74 @@ it("prefers the tray above the bubble on the smiley's side unless the row before
   expect(
     preferTraySide(bubble, tray, "user", { above: rect(250, 280, 100, 190) })
   ).toBe("bottom");
-  // Rows on both sides: above wins (below would cover the next message).
+  // A bot bubble 8 px under the previous one: below.
+  expect(
+    preferTraySide(bubble, tray, "assistant", { above: rect(200, 292) })
+  ).toBe("bottom");
+  // Rows on both sides: beside the smiley, never over either bubble.
   expect(
     preferTraySide(bubble, tray, "assistant", {
       above: pill,
       below: rect(372, 420),
     })
-  ).toBe("top");
+  ).toBe("side");
+  // The viewport (less the composer dock) counts as an obstacle too: the
+  // last message with no room below stays above; the first with no room
+  // above goes below; squeezed between both, beside.
+  const viewport = rect(0, 800, 0, 1000);
+  expect(preferTraySide(rect(740, 790), tray, "assistant", { viewport })).toBe(
+    "top"
+  );
+  expect(preferTraySide(rect(20, 80), tray, "assistant", { viewport })).toBe(
+    "bottom"
+  );
+  expect(
+    preferTraySide(rect(20, 80), tray, "assistant", {
+      viewport,
+      below: rect(92, 140),
+    })
+  ).toBe("side");
+});
+
+it("opens the tray below a bot bubble that sits 8 px under the previous one", async () => {
+  await mount(new FakeRelay({ history: [original, second] }));
+  await screen.findByText("Second message");
+  const viewport = host().closest<HTMLElement>(
+    '[data-slot="message-scroller-viewport"]'
+  )!;
+  viewport.getBoundingClientRect = () => rect(0, 800, 0, 1000);
+  Object.defineProperty(viewport, "clientWidth", { value: 1000 });
+  Object.defineProperty(viewport, "clientHeight", { value: 800 });
+  const root = document.documentElement;
+  const widths = Object.getOwnPropertyDescriptors(root);
+  Object.defineProperty(root, "clientWidth", {
+    value: 1000,
+    configurable: true,
+  });
+  Object.defineProperty(root, "clientHeight", {
+    value: 800,
+    configurable: true,
+  });
+  afterRoot = () => {
+    for (const key of ["clientWidth", "clientHeight"] as const)
+      if (widths[key]) Object.defineProperty(root, key, widths[key]);
+      else delete (root as unknown as Record<string, unknown>)[key];
+  };
+  host().getBoundingClientRect = () => rect(200, 292, 20, 400);
+  host("b").querySelector<HTMLElement>(
+    '[data-slot="message-anchor"]'
+  )!.getBoundingClientRect = () => rect(300, 400, 20, 400);
+  await reveal("b");
+  const bar = await tray();
+  expect(
+    bar.closest<HTMLElement>('[data-slot="reaction-tray"]')!.dataset.prefer
+  ).toBe("bottom");
+  await waitFor(() =>
+    expect(
+      document.querySelector<HTMLElement>('[data-slot="reaction-tray"]')
+        ?.parentElement?.dataset.side
+    ).toBe("bottom")
+  );
 });
 
 it("opens the tray below the first message of a day in the transcript", async () => {

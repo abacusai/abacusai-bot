@@ -86,12 +86,17 @@ const TABBABLE =
   'button:not([disabled]):not([tabindex="-1"]), a[href], input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const anchorId = (id: string) => `message-anchor:${id}`;
 
-export type TraySide = "top" | "bottom";
+/** Above or below the bubble, or beside the smiley as the last resort. */
+export type TraySide = "top" | "bottom" | "side";
 
-/** What the tray must not cover: the rows before and after the message. */
+/**
+ * What the tray must not cover: the rows before and after the message, and
+ * the transcript's visible area (its viewport less the composer dock).
+ */
 export interface TrayObstacles {
   above?: DOMRect | null;
   below?: DOMRect | null;
+  viewport?: DOMRect | null;
 }
 
 const intersects = (
@@ -107,12 +112,27 @@ const intersects = (
   left < rect.right &&
   right > rect.left;
 
+/** The positioner's own margin from the clipping boundary. */
+const COLLISION_PADDING_PX = 5;
+
+const outside = (
+  top: number,
+  bottom: number,
+  viewport: DOMRect | null | undefined
+): boolean =>
+  viewport != null &&
+  viewport.height > 0 &&
+  (top < viewport.top + COLLISION_PADDING_PX ||
+    bottom > viewport.bottom - COLLISION_PADDING_PX);
+
 /**
- * Which side of the bubble the tray prefers: above, on the smiley's side,
- * unless it would cover the preceding row's content (the first message of
- * a day under its date pill) and the following row leaves room below. The
- * transcript viewport's edges are the positioner's business (`collision
- * Avoidance` flips there), so this only knows about neighbouring rows.
+ * Where the tray goes, so it never covers a bubble's text: above the
+ * bubble on the smiley's side; below when above would cover the preceding
+ * row (the first message of a day under its date pill, a bot bubble a few
+ * pixels under the previous one) or leave the viewport; beside the smiley,
+ * on the same row and extending away from the bubble, when below is
+ * blocked too. The primitive still flips a side that leaves the viewport,
+ * but a side chosen here fits, so it has nothing to flip.
  */
 export const preferTraySide = (
   bubble: DOMRect,
@@ -126,22 +146,17 @@ export const preferTraySide = (
   const left = role === "user" ? bubble.left : bubble.right - tray.width;
   const right = left + tray.width;
   const aboveBottom = bubble.top - gap;
+  const aboveTop = aboveBottom - tray.height;
   const belowTop = bubble.bottom + gap;
-  const aboveBlocked = intersects(
-    aboveBottom - tray.height,
-    aboveBottom,
-    left,
-    right,
-    obstacles.above
-  );
-  const belowBlocked = intersects(
-    belowTop,
-    belowTop + tray.height,
-    left,
-    right,
-    obstacles.below
-  );
-  return aboveBlocked && !belowBlocked ? "bottom" : "top";
+  const belowBottom = belowTop + tray.height;
+  const aboveBlocked =
+    intersects(aboveTop, aboveBottom, left, right, obstacles.above) ||
+    outside(aboveTop, aboveBottom, obstacles.viewport);
+  const belowBlocked =
+    intersects(belowTop, belowBottom, left, right, obstacles.below) ||
+    outside(belowTop, belowBottom, obstacles.viewport);
+  if (!aboveBlocked) return "top";
+  return belowBlocked ? "side" : "bottom";
 };
 
 /** The visible content of a neighbouring row: its pill, its bubble, or itself. */
@@ -151,6 +166,26 @@ const rowContent = (row: Element | null): DOMRect | null => {
     ? row.firstElementChild
     : row.querySelector("[data-message-target]");
   return (inner ?? row).getBoundingClientRect();
+};
+
+/** The transcript's visible area: its viewport, less the composer dock over its end. */
+const visibleArea = (host: HTMLElement): DOMRect | null => {
+  const viewport = host.closest(VIEWPORT)?.getBoundingClientRect();
+  if (viewport == null) return null;
+  const dock = host
+    .closest('[data-slot="chat-layout"]')
+    ?.querySelector('[data-slot="composer-dock"]')
+    ?.getBoundingClientRect();
+  const bottom =
+    dock != null && dock.height > 0
+      ? Math.min(viewport.bottom, dock.top)
+      : viewport.bottom;
+  return new DOMRect(
+    viewport.left,
+    viewport.top,
+    viewport.width,
+    Math.max(0, bottom - viewport.top)
+  );
 };
 
 const measureTraySide = (
@@ -170,6 +205,7 @@ const measureTraySide = (
     {
       above: rowContent(row?.previousElementSibling ?? null),
       below: rowContent(row?.nextElementSibling ?? null),
+      viewport: visibleArea(host),
     }
   );
 };
@@ -512,8 +548,8 @@ export const MessageActionBar = ({ children }: { children: ReactNode }) => {
 /**
  * The smiley beside the bubble and the tray it opens: six quick reactions
  * and "+" for the whole grid, anchored above the bubble on the smiley's
- * side (flipped below the first message of a day, or at the viewport's
- * top). Hovering a quick reaction lifts it and eases its neighbours aside
+ * side (below when above would cover the previous row or leave the
+ * viewport; beside the smiley when below is blocked too). Hovering a quick reaction lifts it and eases its neighbours aside
  * (chat.css); the chosen ones keep a ring, not a fill.
  */
 const ReactionAffordance = ({ active }: { active: Active }) => {
@@ -635,10 +671,20 @@ const ReactionAffordance = ({ active }: { active: Active }) => {
         data-slot="reaction-tray"
         data-prefer={side}
         data-grid={grid ? "" : undefined}
-        side={side}
-        align={active.role === "user" ? "start" : "end"}
+        side={
+          side === "side"
+            ? active.role === "user"
+              ? "inline-start"
+              : "inline-end"
+            : side
+        }
+        align={
+          side === "side" ? "center" : active.role === "user" ? "start" : "end"
+        }
         sideOffset={({ anchor }) =>
-          Math.max(0, bubbleHeight / 2 - anchor.height / 2) + TRAY_GAP_PX
+          side === "side"
+            ? AFFORDANCE_GAP_PX
+            : Math.max(0, bubbleHeight / 2 - anchor.height / 2) + TRAY_GAP_PX
         }
         finalFocus={false}
         className={cn(
