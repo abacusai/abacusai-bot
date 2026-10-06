@@ -3986,7 +3986,10 @@
       "expiredBody": "コードの有効期限は10分です。新しいコードを取得して、WhatsAppから送信してください。",
       "newCode": "新しいコードを取得",
       "connected": "WhatsApp connected",
-      "rowDetail": "Chat with AbacusAI Bot on WhatsApp"
+      "rowDetail": "Chat with AbacusAI Bot on WhatsApp",
+      "doneTitle": "準備完了",
+      "doneBody": "ボットは WhatsApp にいます。いつでもメッセージを送れます。",
+      "useDifferentNumber": "別の番号を使う"
     }
   }
 }

@@ -10,6 +10,7 @@ import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
 import {
+  PhoneWhatsAppApp,
   WhatsAppConnect,
   WhatsAppIntro,
 } from "#renderer/features/onboarding/whatsapp";
@@ -314,5 +315,53 @@ it("hands the pre-typed message to WhatsApp by a tap, stays on the page, and off
       { name: enUS.web.whatsappBot.newCode },
       { timeout: 6000 }
     )
+  ).toBeDefined();
+});
+
+it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot's chat and a way to change number", async () => {
+  let status = "unlinked";
+  const callApps = vi.fn(async (service: string) => {
+    if (service === "startAbacusBotWhatsAppChat") status = "linked";
+    if (service === "unlinkAbacusBotWhatsAppChat") status = "unlinked";
+    return service === "getAbacusBotWhatsAppChat"
+      ? { available: true, status, phone: null, number: "+1 555-000-1234" }
+      : service === "startAbacusBotWhatsAppChat"
+        ? { status: "linked", deepLink: null, phone: "+15550009999" }
+        : {};
+  });
+  render(withQueries(<PhoneWhatsAppApp callApps={callApps} />));
+  expect(
+    await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
+  ).toBeDefined();
+  expect(
+    screen.queryByRole("button", { name: enUS.web.whatsappBot.skip })
+  ).toBeNull();
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText(enUS.web.whatsappBot.numberLabel), {
+      target: { value: "+1 555 000 9999" },
+    });
+  });
+  await act(async () => {
+    screen.getByRole("button", { name: enUS.web.whatsappBot.connect }).click();
+  });
+  expect(
+    await screen.findByRole("heading", {
+      name: enUS.web.whatsappBot.doneTitle,
+    })
+  ).toBeDefined();
+  expect(
+    screen
+      .getByText(enUS.web.whatsapp.openWhatsApp)
+      .closest("a")!
+      .getAttribute("href")
+  ).toBe("https://wa.me/15550001234");
+  await act(async () => {
+    screen
+      .getByRole("button", { name: enUS.web.whatsappBot.useDifferentNumber })
+      .click();
+  });
+  expect(callApps).toHaveBeenCalledWith("unlinkAbacusBotWhatsAppChat", {});
+  expect(
+    await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
   ).toBeDefined();
 });
