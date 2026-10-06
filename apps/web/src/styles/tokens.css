@@ -93,6 +93,22 @@ html {
     .shell-surface {
     background-color: transparent;
   }
+  /*
+   * Layers over the material, each a little more solid than the one below:
+   * the pane and the in-layout panel keep almost all of their colour, so
+   * text and code stay legible while the window still reads as one piece
+   * of glass; the floating sidebar, a sheet over the pane, is frosted.
+   */
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
+    :is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"]) {
+    background-color: color-mix(in oklab, var(--background) 94%, transparent);
+  }
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
+    [data-slot="sidebar-floating"] {
+    background-color: color-mix(in oklab, var(--sidebar) 78%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    backdrop-filter: blur(24px) saturate(1.4);
+  }
 }
 
 /*
