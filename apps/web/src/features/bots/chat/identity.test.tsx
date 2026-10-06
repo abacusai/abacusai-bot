@@ -1,16 +1,18 @@
 /**
- * The bot identity's two homes (spec 03 §16.2): the transcript header and
- * the title-bar dock are one element. Exactly one copy is accessible at a
- * time and carries the cross-route view-transition name; the scroll-linked
- * morph is a named scroll timeline the title bar reads through the shell's
- * `timeline-scope`, with a reduced-motion cut; clicking either copy opens or
- * closes the details panel, and the title bar has no separate Details
- * action any more.
+ * The bot identity is one element (spec 03 §16.2): it lays out in the title
+ * bar's slot and its parts travel to the transcript header's measured
+ * offsets over the transcript's scroll timeline, which the shell scopes. The
+ * header keeps its height with an invisible stand-in; reduced motion and
+ * missing support cut between the states with a fade; clicking the element
+ * toggles the details panel in both states; the avatar carries the
+ * cross-route view-transition name once.
  */
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
+
+import { measureIdentity } from "./identity";
 
 // Read from disk: the pipeline passes only tokens.css through `?raw`.
 const nodeFs = (
@@ -52,18 +54,29 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-const docked = () =>
-  document.querySelector<HTMLElement>('[data-slot="bot-docked-identity"]')!;
-const header = () =>
-  document.querySelector<HTMLElement>('[data-slot="bot-transcript-identity"]')!;
+const identity = () =>
+  document.querySelector<HTMLButtonElement>('[data-slot="bot-identity"]')!;
+const standIn = () =>
+  document.querySelector<HTMLElement>('[data-slot="bot-identity-stand-in"]')!;
 const named = () =>
   Array.from(document.querySelectorAll<HTMLElement>("[style]")).filter(
     (el) => el.style.viewTransitionName === "bot-identity-chief-of-staff"
   );
+const rect = (x: number, y: number, width: number, height: number) =>
+  ({
+    x,
+    y,
+    width,
+    height,
+    left: x,
+    top: y,
+    right: x + width,
+    bottom: y + height,
+  }) as DOMRect;
 
-/** The header's observer reports it scrolled out (ratio 0) or back (ratio 1). */
+/** The stand-in's avatar scrolls out (ratio 0) or back in (ratio 1). */
 const scrollHeader = (ratio: number) => {
-  const target = header().querySelector("[style]")!;
+  const target = standIn().querySelector('[data-part="avatar"]')!;
   const entry = observers.find((o) => o.targets.includes(target));
   expect(entry).toBeDefined();
   act(() => {
@@ -73,20 +86,30 @@ const scrollHeader = (ratio: number) => {
   });
 };
 
-describe("the bot identity's shared-element morph", () => {
-  it("keeps one accessible copy, which carries the view-transition name", async () => {
+describe("the bot identity, one element with two homes", () => {
+  it("is one button that travels, with the stand-in keeping the header's height", async () => {
     vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
     app = await renderApp("/bots/chief-of-staff");
     await screen.findByTestId("bot-chat");
-    // At the top: the header is the element; the dock is hidden.
-    expect(header().hasAttribute("data-docked")).toBe(false);
-    expect(docked().getAttribute("aria-hidden")).toBe("true");
-    expect(docked().tabIndex).toBe(-1);
+    expect(
+      document.querySelectorAll('[data-slot="bot-identity"]')
+    ).toHaveLength(1);
     expect(
       screen.getAllByRole("button", { name: "Details for Chief of Staff" })
     ).toHaveLength(1);
+    // Its home is the title bar's identity slot; the stand-in is layout only.
+    expect(identity().closest('[data-slot="topbar-identity"]')).not.toBeNull();
+    expect(identity().hasAttribute("data-travels")).toBe(true);
+    expect(identity().hasAttribute("data-docked")).toBe(false);
+    expect(identity().tabIndex).toBe(0);
+    expect(standIn().classList.contains("invisible")).toBe(true);
+    expect(standIn().getAttribute("aria-hidden")).toBe("true");
+    expect(standIn().hasAttribute("inert")).toBe(true);
+    expect(standIn().querySelector("button")).toBeNull();
+    // The avatar carries the route-transition name, once, in both states.
     expect(named()).toHaveLength(1);
-    expect(header().contains(named()[0]!)).toBe(true);
+    expect(named()[0]!.dataset.part).toBe("avatar");
+    expect(identity().contains(named()[0]!)).toBe(true);
     // The transcript's viewport names the timeline the title bar reads.
     expect(
       document
@@ -96,29 +119,92 @@ describe("the bot identity's shared-element morph", () => {
 
     scrollHeader(0);
     await waitFor(() =>
-      expect(docked().getAttribute("aria-hidden")).toBe("false")
+      expect(identity().hasAttribute("data-docked")).toBe(true)
     );
-    expect(docked().tabIndex).toBe(0);
-    expect(header().hasAttribute("data-docked")).toBe(true);
     expect(
       screen.getAllByRole("button", { name: "Details for Chief of Staff" })
     ).toHaveLength(1);
     expect(named()).toHaveLength(1);
-    expect(docked().contains(named()[0]!)).toBe(true);
-
+    expect(identity().tabIndex).toBe(0);
     scrollHeader(1);
     await waitFor(() =>
-      expect(docked().getAttribute("aria-hidden")).toBe("true")
+      expect(identity().hasAttribute("data-docked")).toBe(false)
     );
-    expect(header().contains(named()[0]!)).toBe(true);
   });
 
-  it("drives the morph from the transcript's scroll timeline, scoped at the shell, with a reduced-motion cut", () => {
+  it("writes each part's header offset and scale from the measured rects", async () => {
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+    app = await renderApp("/bots/chief-of-staff");
+    await screen.findByTestId("bot-chat");
+    const element = identity();
+    const ghost = standIn();
+    // The slot's rect (the element never transforms itself) and the
+    // stand-in's parts at scroll 0; jsdom has no layout, so stub both.
+    element.getBoundingClientRect = () => rect(300, 9, 180, 22);
+    const stub = (root: Element, part: string, r: DOMRect, extra = {}) => {
+      const el = root.querySelector<HTMLElement>(`[data-part="${part}"]`)!;
+      el.getBoundingClientRect = () => r;
+      Object.defineProperties(el, extra);
+    };
+    stub(ghost, "avatar", rect(472, 128, 56, 56));
+    stub(ghost, "name", rect(455, 188, 90, 20));
+    stub(ghost, "status", rect(440, 212, 120, 16));
+    const offsets = (left: number, width: number, height: number) => ({
+      offsetLeft: { value: left },
+      offsetTop: { value: 0 },
+      offsetWidth: { value: width },
+      offsetHeight: { value: height },
+    });
+    stub(element, "avatar", rect(0, 0, 0, 0), offsets(4, 22, 22));
+    stub(element, "name", rect(0, 0, 0, 0), offsets(34, 80, 18));
+    stub(element, "status", rect(0, 0, 0, 0), offsets(122, 100, 16));
+    const sizes = new Map<Element, string>([
+      [ghost.querySelector('[data-part="name"]')!, "15px"],
+      [element.querySelector('[data-part="name"]')!, "13px"],
+      [ghost.querySelector('[data-part="status"]')!, "12px"],
+      [element.querySelector('[data-part="status"]')!, "12px"],
+    ]);
+    const computed = window.getComputedStyle.bind(window);
+    vi.stubGlobal("getComputedStyle", (el: Element) =>
+      sizes.has(el)
+        ? ({ fontSize: sizes.get(el) } as CSSStyleDeclaration)
+        : computed(el)
+    );
+    act(() => measureIdentity(ghost, element));
+    const vars = (part: string) => {
+      const style = element.querySelector<HTMLElement>(
+        `[data-part="${part}"]`
+      )!.style;
+      return [
+        style.getPropertyValue("--bi-x"),
+        style.getPropertyValue("--bi-y"),
+        style.getPropertyValue("--bi-s"),
+      ];
+    };
+    // Avatar: 56/22 about its top-left, centres aligned: 500 - (304 + 28), 156 - (9 + 28).
+    expect(vars("avatar")).toEqual(["168px", "119px", "2.545"]);
+    // Name: 15/13, centre 500 over 334 + 80 * 1.154 / 2.
+    expect(vars("name")).toEqual(["119.85px", "178.62px", "1.154"]);
+    // Status keeps its size and moves from beneath the name.
+    expect(vars("status")).toEqual(["28px", "203px", "1"]);
+    await waitFor(() =>
+      expect(element.hasAttribute("data-measured")).toBe(true)
+    );
+  });
+
+  it("drives the parts from the transcript's scroll timeline, scoped at the shell, and cuts with a fade otherwise", () => {
     expect(botsCss).toMatch(
       /\[data-slot="shell"\] \{ timeline-scope: --chat-transcript; \}/
     );
     expect(botsCss).toMatch(
       /\[data-slot="message-scroller-viewport"\]\[data-identity-timeline\] \{ scroll-timeline-name: --chat-transcript; \}/
+    );
+    // The resting state is the measured header offset; docked is zero.
+    expect(botsCss).toMatch(
+      /\[data-slot="bot-identity"\] > \[data-part\] \{\s*transform-origin: 0 0;\s*translate: var\(--bi-x, 0px\) var\(--bi-y, 0px\);\s*scale: var\(--bi-s, 1\);\s*will-change: transform;/
+    );
+    expect(botsCss).toMatch(
+      /\[data-slot="bot-identity"\]\[data-docked\] > \[data-part\] \{ translate: 0 0; scale: 1; \}/
     );
     const supports =
       /@supports \(animation-timeline: scroll\(\)\)\s*\{([\s\S]*?)\n\}/.exec(
@@ -126,28 +212,36 @@ describe("the bot identity's shared-element morph", () => {
       )?.[1];
     expect(supports).toBeDefined();
     expect(supports).toMatch(
-      /\[data-slot="bot-transcript-identity"\] \{[^}]*animation: bot-identity-leave linear both;[^}]*animation-timeline: --chat-transcript;/
+      /\[data-slot="bot-identity"\]\[data-travels\] > \[data-part\] \{\s*animation: bot-identity-travel linear both;\s*animation-timeline: --chat-transcript;\s*animation-range: 0px 120px;/
     );
     expect(supports).toMatch(
-      /\[data-slot="bot-docked-identity"\] \{[^}]*animation: bot-identity-dock linear both;[^}]*animation-timeline: --chat-transcript;/
-    );
-    // The header shrinks towards the title bar's corner; the dock rises in.
-    expect(botsCss).toMatch(
-      /@keyframes bot-identity-leave \{\s*to \{ opacity: 0; translate: calc\(-50cqi \+ 24px\) -8px; scale: 0\.4; \}/
+      /\[data-part="status"\] \{\s*animation-name: bot-identity-status-travel;/
     );
     expect(botsCss).toMatch(
-      /@keyframes bot-identity-dock \{\s*from \{ opacity: 0;/
-    );
-    // Reduced motion, resolved the way the foundation does.
-    expect(botsCss).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?html:not\(\[data-reduce-motion="off"\]\) \[data-slot="bot-transcript-identity"\] \{ animation: none !important; \}/
+      /@keyframes bot-identity-travel \{\s*from \{ translate: var\(--bi-x, 0px\) var\(--bi-y, 0px\); scale: var\(--bi-s, 1\); \}\s*to \{ translate: 0 0; scale: 1; \}/
     );
     expect(botsCss).toMatch(
-      /html\[data-reduce-motion="on"\] \[data-slot="bot-docked-identity"\] \{ transition: none !important; animation: none !important; \}/
+      /@keyframes bot-identity-status-travel \{[\s\S]*?40% \{ opacity: 0; \}\s*60% \{ opacity: 0; \}/
+    );
+    // Reduced motion (OS and the pref) swaps the travel for a 120 ms cut.
+    expect(botsCss).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{\s*html:not\(\[data-reduce-motion="off"\]\) \[data-slot="bot-identity"\] > \[data-part\] \{ animation: none !important; \}\s*html:not\(\[data-reduce-motion="off"\]\) \[data-slot="bot-identity"\]\[data-travels\]\[data-docked\] \{ animation: bot-identity-cut-dock 120ms linear both; \}/
+    );
+    expect(botsCss).toMatch(
+      /html\[data-reduce-motion="on"\] \[data-slot="bot-identity"\] > \[data-part\] \{ animation: none !important; \}/
+    );
+    expect(botsCss).toMatch(
+      /html\[data-reduce-motion="on"\] \[data-slot="bot-identity"\]\[data-travels\]:not\(\[data-docked\]\) \{ animation: bot-identity-cut-header 120ms linear both; \}/
+    );
+    expect(botsCss).toMatch(
+      /@supports not \(animation-timeline: scroll\(\)\) \{\s*\[data-slot="bot-identity"\]\[data-travels\]\[data-docked\] \{ animation: bot-identity-cut-dock 120ms linear both; \}/
+    );
+    expect(botsCss).toMatch(
+      /@keyframes bot-identity-cut-dock \{ from \{ opacity: 0; \} \}/
     );
   });
 
-  it("opens and closes the details panel from either copy; no Details action in the bar", async () => {
+  it("opens and closes the details panel in both states; no Details action in the bar", async () => {
     vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
     app = await renderApp("/bots/chief-of-staff");
     await screen.findByTestId("bot-chat");
@@ -156,24 +250,22 @@ describe("the bot identity's shared-element morph", () => {
       document.querySelector('[data-slot="topbar-actions"]')?.textContent ?? ""
     ).not.toContain("Details");
     expect(search().tab).toBeUndefined();
+    expect(identity().getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(identity());
+    await waitFor(() => expect(search().tab).toBe("details"));
+    await waitFor(() =>
+      expect(identity().getAttribute("aria-expanded")).toBe("true")
+    );
+    // Docked, the same button is the toggle.
+    scrollHeader(0);
+    await waitFor(() =>
+      expect(identity().hasAttribute("data-docked")).toBe(true)
+    );
     fireEvent.click(
       screen.getByRole("button", { name: "Details for Chief of Staff" })
     );
-    await waitFor(() => expect(search().tab).toBe("details"));
-    await waitFor(() =>
-      expect(
-        header().querySelector("button")?.getAttribute("aria-expanded")
-      ).toBe("true")
-    );
-    expect(docked().getAttribute("aria-expanded")).toBe("true");
-    // Scrolled away, the docked copy is the toggle.
-    scrollHeader(0);
-    await waitFor(() =>
-      expect(docked().getAttribute("aria-hidden")).toBe("false")
-    );
-    fireEvent.click(docked());
     await waitFor(() => expect(search().tab).toBeUndefined());
-    expect(docked().getAttribute("aria-expanded")).toBe("false");
+    expect(identity().getAttribute("aria-expanded")).toBe("false");
     // The far-right panel toggle stays.
     expect(screen.getByTestId("panel-toggle")).toBeTruthy();
   });
