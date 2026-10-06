@@ -1,3 +1,4 @@
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { AiSendAck } from "@abacus-ai/contract/contract/ai";
 /**
  * Admission (spec 02 §3.7): `ai.send` outside `ChatClient`, with an outbox
@@ -33,6 +34,7 @@ export interface OutboxEntry {
   attempts: number;
   forwardedProps?: Record<string, unknown>;
   retry?: boolean;
+  userText?: UserTextTags;
 }
 
 type AdmissionKind =
@@ -88,6 +90,9 @@ const userMessage = (entry: OutboxEntry) => ({
   id: entry.id,
   role: "user" as const,
   parts: entry.parts ?? [{ type: "text", content: entry.text }],
+  ...(entry.userText != null && {
+    metadata: { abacus: { userText: entry.userText } },
+  }),
 });
 
 const patch = (
@@ -233,7 +238,8 @@ export const submit = (
   host: AdmissionHost,
   text: string,
   forwardedProps?: Record<string, unknown>,
-  messageId?: string
+  messageId?: string,
+  userText?: UserTextTags
 ): { entry: OutboxEntry; result: Promise<AdmissionResult> } => {
   const entry: OutboxEntry = {
     id: messageId ?? host.newId("u"),
@@ -243,6 +249,7 @@ export const submit = (
     state: "sending",
     attempts: 0,
     ...(messageId != null ? { retry: true } : {}),
+    ...(userText != null && { userText }),
     ...(forwardedProps != null ? { forwardedProps } : {}),
   };
   if (host.token().retired)
@@ -287,7 +294,13 @@ export const withOutbox = (
       role: "user",
       parts: entry.parts ?? [{ type: "text", content: entry.text }],
       createdAt: new Date(entry.createdAt),
-      metadata: { abacus: { pending: true, state: entry.state } },
+      metadata: {
+        abacus: {
+          pending: true,
+          state: entry.state,
+          ...(entry.userText != null && { userText: entry.userText }),
+        },
+      },
     }));
   return pending.length === 0
     ? (messages as UIMessage[])

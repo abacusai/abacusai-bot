@@ -1,3 +1,4 @@
+import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
 import type { AiHydration } from "@abacus-ai/contract/contract/ai";
 /**
@@ -22,6 +23,7 @@ import {
   untilOpen,
   type ConnectionSource,
 } from "#renderer/data/queries/notices";
+import { hiddenUserMessage } from "#renderer/lib/user-message";
 
 import { isAllowed } from "../kit/permissions/decisions";
 import {
@@ -403,7 +405,9 @@ export class ThreadSession {
     fallbackMessage?: string
   ): Promise<AdmissionResult> {
     const messages = this.hostStore.state.messages;
-    const last = messages.findLast((message) => message.role === "user");
+    const last = messages.findLast(
+      (message) => message.role === "user" && !hiddenUserMessage(message)
+    );
     if (last == null) {
       if (!fallbackMessage) return { kind: "rejected", reason: "empty" };
       return submitAdmission(this.#admission, fallbackMessage, forwardedProps)
@@ -415,8 +419,13 @@ export class ThreadSession {
       .join("");
     if (this.hostStore.state.outbox.length > 0)
       return { kind: "rejected", reason: "busy" };
-    return submitAdmission(this.#admission, text, forwardedProps, last.id)
-      .result;
+    return submitAdmission(
+      this.#admission,
+      text,
+      forwardedProps,
+      last.id,
+      last.metadata?.abacus?.userText as UserTextTags | undefined
+    ).result;
   }
 
   /** The Stop target (§4.5): the active run, else the newest admission. */

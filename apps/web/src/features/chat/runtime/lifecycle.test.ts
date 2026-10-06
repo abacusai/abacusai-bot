@@ -326,3 +326,54 @@ describe("r2 progress and recovery", () => {
     }
   );
 });
+
+it("retries the last visible user with its full prompt and display tags", async () => {
+  const content = "rules\n\n[Ada] hello";
+  const userText = {
+    operator: { kind: "auto-reply-intro" as const, visibleFrom: 7 },
+  };
+  const events = golden("plain-text").map((chunk) => {
+    if (
+      chunk.event.type === "TEXT_MESSAGE_START" &&
+      (chunk.event as { role?: string }).role === "user"
+    )
+      return {
+        ...chunk,
+        event: { ...chunk.event, metadata: { abacus: { userText } } },
+      };
+    if (
+      chunk.event.type === "TEXT_MESSAGE_CONTENT" &&
+      (chunk.event as { messageId?: string }).messageId === "u-1"
+    )
+      return { ...chunk, event: { ...chunk.event, delta: content } };
+    return chunk;
+  });
+  const relay = new FakeRelay({ events });
+  const session = new ThreadSession({ ai: relay.ai, threadId: relay.threadId });
+  try {
+    await session.load();
+    // A later machine-only turn must not be retried as the user's request.
+    session.hostStore.setState((state) => ({
+      ...state,
+      messages: [
+        ...state.messages,
+        {
+          id: "operator",
+          role: "user",
+          parts: [{ type: "text", content: "mission instructions" }],
+          metadata: {
+            abacus: { userText: { operator: { kind: "mission-updated" } } },
+          },
+        },
+      ],
+    }));
+    await session.retry();
+    expect(relay.stats.send[0]?.messages[0]).toMatchObject({
+      id: "u-1",
+      parts: [{ type: "text", content }],
+      metadata: { abacus: { userText } },
+    });
+  } finally {
+    session.retire();
+  }
+});

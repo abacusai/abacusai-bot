@@ -1,3 +1,7 @@
+import {
+  isHiddenUserText,
+  visibleUserText,
+} from "@abacus-ai/contract/transcript/user-text";
 /**
  * `QueueSlot` (spec 02 §8.5): the agent's host queue above the composer,
  * one 40 px row per entry, Edit and Remove by incarnation + entry id, the
@@ -52,7 +56,8 @@ const QueueRow = ({
 }) => {
   const { t } = useTranslation();
   const { session } = useChatView();
-  const [draft, setDraft] = useState(entry.message);
+  const visible = visibleUserText(entry.message, entry.userText);
+  const [draft, setDraft] = useState(visible);
   const pending = command?.state === "pending";
   const problem = problemKey(command);
   useEffect(() => {
@@ -84,14 +89,14 @@ const QueueRow = ({
             }
             if (event.key === "Escape") {
               event.preventDefault();
-              setDraft(entry.message);
+              setDraft(visible);
               onEdit(false);
             }
           }}
           className="h-7 flex-1"
         />
       ) : (
-        <div className="min-w-0 flex-1 truncate">{entry.message}</div>
+        <div className="min-w-0 flex-1 truncate">{visible}</div>
       )}
       {problem != null ? (
         <span role="status" className="text-destructive shrink-0">
@@ -103,13 +108,13 @@ const QueueRow = ({
         </span>
       )}
       {pending ? <Spinner aria-hidden /> : null}
-      {editing || ghost ? null : (
+      {editing || ghost || entry.userText?.operator != null ? null : (
         <Button
           variant="ghost"
           size="sm"
           disabled={pending}
           onClick={() => {
-            setDraft(entry.message);
+            setDraft(visible);
             onEdit(true);
           }}
         >
@@ -160,7 +165,9 @@ export const QueueSlot = ({
   const commands = useThreadStore(session, (state) => state.queueCommands);
   const [expanded, setExpanded] = useState(false);
   const pref = useMotionPreference();
-  const rows = [...queue, ...ghostRows(queue, commands)];
+  const rows = [...queue, ...ghostRows(queue, commands)].filter(
+    (entry) => !isHiddenUserText(entry.message, entry.userText)
+  );
   if (rows.length === 0) return null;
   const shown = expanded || rows.length <= 3 ? rows : rows.slice(0, 3);
   const transition = queueRow(pref);
