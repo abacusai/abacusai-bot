@@ -47,11 +47,17 @@ describe("R2-T27 motion", () => {
       duration: durations.childFade / 1000,
       delay: durations.surface / 1000,
     });
-    // Rows revealed in the surface ride the same spring for height.
-    expect(composerReveal("full")).toEqual({
-      height: springs.surface,
-      opacity: { duration: durations.childFade / 1000 },
-    });
+    // A row revealed in the surface is one motion with the surface: the
+    // surface spring moves it into place (`layout="position"`) while its
+    // opacity runs over the same visual duration. No height tween of its own.
+    const reveal = composerReveal("full") as {
+      layout: unknown;
+      opacity: { duration: number };
+      height?: unknown;
+    };
+    expect(reveal.layout).toEqual(springs.surface);
+    expect(reveal.opacity.duration).toBe(durations.surface / 1000);
+    expect(reveal.height).toBeUndefined();
   });
 
   it("morphs start → chat with a shared layoutId only under full motion", () => {
@@ -64,9 +70,10 @@ describe("R2-T27 motion", () => {
 
   it("reduced motion: layout cuts, everything else a 120 ms fade", () => {
     expect(composerSurface("reduced")).toEqual({ layout: { duration: 0 } });
+    // The reveal is a cut: no slide, no fade.
     expect(composerReveal("reduced")).toEqual({
-      height: { duration: 0 },
-      opacity: { duration: durations.reduced / 1000 },
+      layout: { duration: 0 },
+      opacity: { duration: 0 },
     });
     for (const transition of [
       composerChildren,
