@@ -93,7 +93,12 @@
     "@abacus-ai/web#build": {
       "dependsOn": ["^build", "typecheck"],
       "outputs": ["dist/**", "build-metadata/**"],
-      "env": ["VITE_CONNECT_SRC", "VITE_UI_GALLERY", "VITE_NEXT_DB_FIXTURES"],
+      "env": [
+        "ABACUS_WEB_OVERLAY",
+        "VITE_CONNECT_SRC",
+        "VITE_UI_GALLERY",
+        "VITE_NEXT_DB_FIXTURES"
+      ],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/scripts/build-provenance.mjs",
