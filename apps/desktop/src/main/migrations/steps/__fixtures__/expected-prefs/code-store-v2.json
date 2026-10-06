@@ -9,6 +9,7 @@
       "appearance.custom": "default",
       "appearance.palette": "default",
       "appearance.radius": "default",
+      "appearance.railIconsOnly": "default",
       "appearance.textSize": "default",
       "appearance.translucency": "default",
       "appearance.uiFont": "default",
@@ -59,6 +60,7 @@
         "custom": null,
         "palette": "default",
         "radius": "default",
+        "railIconsOnly": false,
         "textSize": 14,
         "translucency": true,
         "uiFont": ""
@@ -76,7 +78,10 @@
       "language": "system",
       "lastPickedWorkspaceId": "ws-1",
       "models": {
-        "favoriteModelIds": ["gpt-5", "claude-opus"],
+        "favoriteModelIds": [
+          "gpt-5",
+          "claude-opus"
+        ],
         "perWorkspace": {
           "ws-1": "claude-opus",
           "ws-2": null
@@ -100,7 +105,9 @@
       "panes": {},
       "pinned": {
         "botIds": [],
-        "sessionIds": ["s-1"]
+        "sessionIds": [
+          "s-1"
+        ]
       },
       "recentFolders": [],
       "sidebar": {

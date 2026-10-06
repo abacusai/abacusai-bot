@@ -259,6 +259,23 @@ it("offers window translucency on the desktop app on macOS", async () => {
   );
 });
 
+it("offers the icons-only rail, off by default, and writes the pref", async () => {
+  app = await renderApp("/settings/appearance");
+  const toggle = await screen.findByRole("switch", {
+    name: copy.railIconsOnly,
+  });
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  fireEvent.click(toggle);
+  await waitFor(() => expect(look()?.railIconsOnly).toBe(true));
+  await waitFor(() =>
+    expect(
+      document
+        .querySelector('[data-slot="rail"]')
+        ?.getAttribute("data-icons-only")
+    ).toBe("")
+  );
+});
+
 it("labels every option of every control with copy, never a key", async () => {
   app = await renderApp("/settings/appearance");
   await screen.findByRole("radiogroup", { name: enUS.settings.theme.label });

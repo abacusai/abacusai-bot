@@ -2626,6 +2626,8 @@
       "fontDetail": "이 컴퓨터의 글꼴. 비우면 기본값.",
       "codeSize": "코드 크기",
       "translucency": "반투명 창",
+      "railIconsOnly": "레일: 아이콘만",
+      "railIconsOnlyDetail": "레일 아이콘 아래 이름을 숨깁니다. 마우스를 올리면 표시됩니다.",
       "importTheme": "VS Code 테마 가져오기",
       "openFile": "파일 열기",
       "pasteLabel": "테마 JSON",

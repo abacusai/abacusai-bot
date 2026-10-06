@@ -2626,6 +2626,8 @@
       "fontDetail": "Font di komputer ini; kosong untuk bawaan.",
       "codeSize": "Ukuran kode",
       "translucency": "Jendela tembus pandang",
+      "railIconsOnly": "Bilah: ikon saja",
+      "railIconsOnlyDetail": "Sembunyikan nama di bawah ikon bilah; nama muncul saat kursor melewatinya.",
       "importTheme": "Impor tema VS Code",
       "openFile": "Buka file",
       "pasteLabel": "JSON tema",

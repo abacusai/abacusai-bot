@@ -233,6 +233,8 @@ export interface PrefsAppearance {
   codeFont: string;
   codeFontSize: number;
   translucency: boolean;
+  /** The rail shows icons only; names move to tooltips. */
+  railIconsOnly: boolean;
   custom: {
     name: string;
     light?: PrefsThemeColors;

@@ -2626,6 +2626,8 @@
       "fontDetail": "Eine Schrift auf diesem Computer; leer für den Standard.",
       "codeSize": "Code-Größe",
       "translucency": "Durchscheinendes Fenster",
+      "railIconsOnly": "Leiste: nur Symbole",
+      "railIconsOnlyDetail": "Blendet die Namen unter den Symbolen der Leiste aus; beim Überfahren erscheinen sie.",
       "importTheme": "VS Code-Design importieren",
       "openFile": "Datei öffnen",
       "pasteLabel": "Design-JSON",

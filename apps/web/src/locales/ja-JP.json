@@ -2626,6 +2626,8 @@
       "fontDetail": "このコンピュータのフォント。空欄で既定。",
       "codeSize": "コードのサイズ",
       "translucency": "半透明のウインドウ",
+      "railIconsOnly": "レール: アイコンのみ",
+      "railIconsOnlyDetail": "レールのアイコン下の名前を隠します。ホバーで表示されます。",
       "importTheme": "VS Code のテーマを読み込む",
       "openFile": "ファイルを開く",
       "pasteLabel": "テーマの JSON",
