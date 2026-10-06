@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { releaseBuildPlugin } from "../../web/scripts/release-build-plugin.mjs";
 import { checkReleaseBuild } from "./check-release-build.mjs";
-import { releaseBuildPlugin } from "./release-build-plugin.mjs";
 
 test("release boot graph follows static imports but permits deferred presentation", () => {
   const dist = fs.mkdtempSync(path.join(os.tmpdir(), "release-graph-"));

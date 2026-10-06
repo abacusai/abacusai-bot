@@ -14,7 +14,7 @@ import { SESSION_PARITY } from "./sessions/parity";
 import { PHASE5_PARITY as settings } from "./settings/parity";
 const desktop = path.resolve(import.meta.dirname, "../../../..");
 const ids = JSON.parse(
-  fs.readFileSync(path.join(desktop, "scripts/cutover/parity-ids.json"), "utf8")
+  fs.readFileSync(path.join(import.meta.dirname, "parity-ids.json"), "utf8")
 ) as Record<string, string[]>;
 const rows = [
   ...BOT_PARITY,

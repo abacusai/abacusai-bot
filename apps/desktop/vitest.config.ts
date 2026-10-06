@@ -1,6 +1,6 @@
 import { defaultExclude, defineConfig } from "vitest/config";
 
-import { alias } from "./vite.shared.ts";
+import { alias } from "../web/vite.shared.ts";
 
 /**
  * Three surfaces, three environments. The renderer is browser code and needs a

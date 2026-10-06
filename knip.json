@@ -8,31 +8,12 @@
         "src/main/rpc/transports/rpc-handshake.e2e-main.ts",
         "src/preload/index.ts",
         "src/**/*.test.{ts,tsx}",
-        "scripts/before-pack.cjs",
-        "scripts/build-experience.js",
-        "scripts/check-chat-bundle.mjs",
-        "scripts/check-jsx-i18n.js",
-        "scripts/check-packaged-resources.js",
-        "scripts/check-react-compiler.mjs",
-        "scripts/check-release-build.mjs",
-        "scripts/check-release-versions.mjs",
-        "scripts/download-llama-server.js",
-        "scripts/download-scrcpy.js",
-        "scripts/download-wa-js.js",
-        "scripts/generate-notices.js",
-        "scripts/generate-routes.mjs",
-        "scripts/measure-release-size.mjs",
-        "scripts/rpc-ws-smoke.mjs",
-        "scripts/screenshots.mjs",
-        "scripts/shadcn-registry-snapshot.mjs",
-        "scripts/sync-chat-fixtures.mjs",
-        "scripts/sync-locales.js"
+        "scripts/before-pack.cjs"
       ],
       "project": [
         "src/**/*.{ts,tsx}",
         "scripts/**/*.{js,mjs,cjs}",
-        "*.config.ts",
-        "vite.shared.ts"
+        "*.config.ts"
       ],
       "ignore": [],
       "ignoreExportsUsedInFile": true,
@@ -44,13 +25,11 @@
     "apps/web": {
       "ignoreExportsUsedInFile": true,
       "ignoreDependencies": [
-        "@testing-library/dom",
         "@fontsource-variable/inter",
         "@fontsource-variable/jetbrains-mono",
         "tailwindcss",
         "tw-animate-css",
-        "shadcn",
-        "@tanstack/router-generator"
+        "shadcn"
       ],
       "paths": {
         "ort-dist/*": ["../../node_modules/onnxruntime-web/dist/*"]
@@ -63,12 +42,8 @@
         "src/**/*.test.{ts,tsx}",
         "src/platform/*.{ts,tsx}"
       ],
-      "project": ["src/**/*.{ts,tsx}", "*.ts"],
-      "ignore": [
-        "src/routeTree.gen.ts",
-        "src/notchRouteTree.gen.ts",
-        "src/ui/**"
-      ]
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs}", "*.ts"],
+      "ignore": ["src/ui/**"]
     },
     "packages/contract": {
       "entry": [
@@ -81,7 +56,7 @@
       "ignoreExportsUsedInFile": true
     },
     "apps/host": {
-      "entry": ["src/index.ts", "src/**/*.test.ts", "scripts/*.mjs"],
+      "entry": ["src/**/*.test.ts", "scripts/*.mjs"],
       "project": ["src/**/*.ts", "scripts/*.mjs", "*.config.ts"],
       "ignoreExportsUsedInFile": true,
       "ignoreDependencies": [
