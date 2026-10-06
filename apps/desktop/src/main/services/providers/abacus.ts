@@ -1,7 +1,7 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import type { ModelAvailability, ModelTier } from "@abacus-ai/contract/models";
 
-import { hasCredential, readSettings } from "../config/settings";
+import { credentialFor, hasCredential } from "../config/settings";
 import { abacusRoutellmV1, abacusUserAgent } from "./abacus-host";
 
 /**
@@ -170,11 +170,11 @@ const noteFor = (model: AbacusModel): string => {
 /** What the platform says when the key itself is the problem. */
 const REJECTED_STATUSES = new Set([401, 403]);
 
+/** Through `credentialFor`, so the signed-in key wins over a shell export. */
 const resolveKey = (): string | undefined => {
-  const fromEnv = process.env[ENV_VAR];
-  if (fromEnv != null && fromEnv.length > 0) return fromEnv;
+  const key = credentialFor(ENV_VAR);
 
-  return readSettings().apiKeys?.[ENV_VAR];
+  return key.length > 0 ? key : undefined;
 };
 
 /** The Abacus key, for main-process callers outside the model provider. */

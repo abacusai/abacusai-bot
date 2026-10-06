@@ -458,6 +458,28 @@ describe("credentials for the agent's environment", () => {
 
     expect(credentialEnv()).toEqual({});
   });
+
+  it("hands down the signed-in Abacus key over a shell-exported one", async () => {
+    // The child inherits the parent's environment, so the stored key must be
+    // set outright: a terminal key left in the shell is refused by the
+    // platform on bot endpoints, and sign-in was the user's explicit choice.
+    setEnv("ABACUS_API_KEY", "s2_terminal-key");
+    setEnv("OPENAI_API_KEY", "sk-from-env");
+    writeConfig({
+      apiKeys: { ABACUS_API_KEY: "bot-key", OPENAI_API_KEY: "sk-stored" },
+    });
+    const { credentialEnv } = await load();
+
+    expect(credentialEnv()).toEqual({ ABACUS_API_KEY: "bot-key" });
+  });
+
+  it("leaves a shell-exported Abacus key alone when nobody is signed in", async () => {
+    setEnv("ABACUS_API_KEY", "s2_terminal-key");
+    writeConfig({ apiKeys: { ABACUS_API_KEY: "" } });
+    const { credentialEnv } = await load();
+
+    expect(credentialEnv()).toEqual({});
+  });
 });
 
 describe("one credential, for a tool running in this process", () => {
@@ -477,6 +499,29 @@ describe("one credential, for a tool running in this process", () => {
     const { credentialFor } = await load();
 
     expect(credentialFor("GEMINI_API_KEY")).toBe("sk-stored");
+  });
+
+  it("prefers the signed-in Abacus key over the environment", async () => {
+    // Sign-in stores a bot key; the shell often carries a terminal key of a
+    // kind the platform refuses on bot endpoints (403 "not allowed for this
+    // API"). Only the Abacus key flips the rule.
+    setEnv("ABACUS_API_KEY", "s2_terminal-key");
+    setEnv("GEMINI_API_KEY", "sk-from-env");
+    writeConfig({
+      apiKeys: { ABACUS_API_KEY: "bot-key", GEMINI_API_KEY: "sk-stored" },
+    });
+    const { credentialFor } = await load();
+
+    expect(credentialFor("ABACUS_API_KEY")).toBe("bot-key");
+    expect(credentialFor("GEMINI_API_KEY")).toBe("sk-from-env");
+  });
+
+  it("falls back to a shell-exported Abacus key when nobody is signed in", async () => {
+    setEnv("ABACUS_API_KEY", "s2_terminal-key");
+    writeConfig({ apiKeys: { ABACUS_API_KEY: "" } });
+    const { credentialFor } = await load();
+
+    expect(credentialFor("ABACUS_API_KEY")).toBe("s2_terminal-key");
   });
 
   it("trims both sources", async () => {

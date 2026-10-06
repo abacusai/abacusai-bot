@@ -26,7 +26,8 @@ import {
 /**
  * Credentials handed to the agent process: the user's own provider keys from
  * ~/.abacusai-bot/config.json. A key already in the environment is left
- * alone, so a shell-exported key wins over a stored one.
+ * alone, so a shell-exported key wins over a stored one, except the Abacus
+ * key: the one from sign-in is set outright, over whatever the shell had.
  */
 export function buildAgentAuthEnv(): Record<string, string> {
   return credentialEnv();
