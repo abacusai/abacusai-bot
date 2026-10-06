@@ -12,13 +12,16 @@ import { draftStore, updateDraft, clearDraft } from "../composer/draft-store";
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";
-import { placeActionBar } from "./message-actions";
+import { HOVER_INTENT_MS, preferTraySide } from "./message-actions";
 import { composeReply } from "./reply";
 
 let current: Awaited<ReturnType<typeof renderRelay>> | null = null;
+let afterRoot: (() => void) | null = null;
 afterEach(async () => {
   await current?.cleanup();
   current = null;
+  afterRoot?.();
+  afterRoot = null;
   clearDraft("t-1");
   vi.unstubAllGlobals();
 });
@@ -27,16 +30,35 @@ const original = {
   role: "assistant" as const,
   parts: [{ type: "text" as const, content: "**Hello** there" }],
 };
-const host = () =>
-  document.querySelector<HTMLElement>('[data-message-target="a"]')!;
-/** The bar is an overlay in the body, mounted while the message wants it. */
-const bar = () => screen.getByRole("toolbar");
-const overlay = () =>
-  bar().closest<HTMLElement>('[data-slot="message-actions-overlay"]')!;
-const reveal = async () => {
-  fireEvent.mouseEnter(host());
-  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
-  return bar();
+const second = {
+  id: "b",
+  role: "assistant" as const,
+  parts: [{ type: "text" as const, content: "Second message" }],
+};
+const host = (id = "a") =>
+  document.querySelector<HTMLElement>(`[data-message-target="${id}"]`)!;
+/** The affordance: one positioned popup in the body, open while a message holds it. */
+const popup = () =>
+  document.querySelector<HTMLElement>('[data-slot="message-actions-popup"]');
+/** Base UI's positioner wraps the popup; it carries the resolved side/align. */
+const affordance = () => popup()?.parentElement ?? null;
+const smiley = () => screen.getByRole("button", { name: "Add reaction" });
+const chevron = (id = "a") =>
+  within(host(id)).getByRole("button", { name: "Message menu" });
+const reveal = async (id = "a") => {
+  fireEvent.mouseEnter(host(id));
+  await waitFor(() => expect(popup()?.hasAttribute("data-open")).toBe(true));
+  await waitFor(() => expect(host(id).hasAttribute("data-active")).toBe(true));
+};
+/** The reaction tray, opened from the smiley. */
+const tray = async () => {
+  fireEvent.click(smiley());
+  return screen.findByRole("toolbar", { name: "Message actions" });
+};
+/** The message menu, opened from the bubble's chevron. */
+const menu = async (id = "a") => {
+  fireEvent.click(chevron(id));
+  return screen.findByRole("menu");
 };
 const mount = async (relay = new FakeRelay({ history: [original] })) => {
   relay.emitAll(b.sessionReady());
@@ -54,72 +76,108 @@ const rect = (top: number, bottom: number, left = 100, right = 500) =>
     height: bottom - top,
   }) as DOMRect;
 
-it("reveals on hover and focus, hides with Escape, and copies markdown", async () => {
+it("reveals the smiley and the corner chevron on hover and focus, copies from the menu, and hides with Escape", async () => {
   await mount();
   const writeText = vi.fn(async () => {});
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
-  expect(screen.queryByRole("toolbar")).toBeNull();
-  expect(host().parentElement!.contains(await reveal())).toBe(false);
-  fireEvent.click(within(bar()).getByRole("button", { name: "Copy message" }));
+  expect(popup()).toBeNull();
+  expect(chevron().hasAttribute("data-shown")).toBe(false);
+  await reveal();
+  // The smiley is positioned in the body, not inside the message.
+  expect(host().contains(smiley())).toBe(false);
+  expect(chevron().hasAttribute("data-shown")).toBe(true);
+  fireEvent.click(
+    within(await menu()).getByRole("menuitem", { name: "Copy message" })
+  );
   expect(writeText).toHaveBeenCalledWith("**Hello** there");
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   fireEvent.keyDown(host(), { key: "Escape" });
-  await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
+  await waitFor(() => expect(popup()).toBeNull());
+  expect(chevron().hasAttribute("data-shown")).toBe(false);
   fireEvent.focus(host());
-  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
+  await waitFor(() => expect(popup()?.hasAttribute("data-open")).toBe(true));
   vi.unstubAllGlobals();
 });
 
-it("sits above the bubble on its outer side and flips below at the viewport's top", () => {
-  const viewport = rect(40, 800, 0, 1000);
+it("waits for hover intent, then moves the same affordance to the next message at once", async () => {
+  await mount(new FakeRelay({ history: [original, second] }));
+  await screen.findByText("Second message");
+  // A quick pass: in and out before the intent delay, nothing shows.
+  fireEvent.mouseEnter(host());
+  fireEvent.mouseLeave(host());
+  await new Promise((resolve) => setTimeout(resolve, HOVER_INTENT_MS * 2));
+  expect(popup()).toBeNull();
+  await reveal();
+  const element = affordance()!;
+  expect(popup()!.hasAttribute("data-moving")).toBe(false);
+  // Shown already: the next message takes it without the delay, and the
+  // element is the same node (re-anchored, not remounted).
+  fireEvent.mouseLeave(host());
+  fireEvent.mouseEnter(host("b"));
+  expect(host("b").hasAttribute("data-active")).toBe(true);
+  expect(host().hasAttribute("data-active")).toBe(false);
+  expect(affordance()).toBe(element);
+  expect(popup()!.hasAttribute("data-moving")).toBe(true);
   expect(
-    placeActionBar(rect(300, 360), viewport, "assistant", 36, 1000)
-  ).toEqual({ side: "above", top: 258, left: 100 });
-  expect(placeActionBar(rect(300, 360), viewport, "user", 36, 1000)).toEqual({
-    side: "above",
-    top: 258,
-    right: 500,
-  });
-  expect(
-    placeActionBar(rect(60, 120), viewport, "assistant", 36, 1000)
-  ).toEqual({ side: "below", top: 126, left: 100 });
+    document.querySelectorAll('[data-slot="message-actions-popup"]')
+  ).toHaveLength(1);
+  // Leaving without entering another message hides it after the grace.
+  fireEvent.mouseLeave(host("b"));
+  await waitFor(() => expect(popup()).toBeNull());
 });
 
-it("flips below when the bar would cover the row before it, unless the row after is in the way too", () => {
-  const viewport = rect(0, 800, 0, 1000);
-  const bubble = rect(300, 360);
-  // A centred date pill at the bar's height, within the bar's span: flip.
-  const pill = rect(250, 280, 280, 420);
-  expect(
-    placeActionBar(bubble, viewport, "assistant", 36, 1000, { above: pill })
-  ).toEqual({ side: "below", top: 366, left: 100 });
-  // The same pill off to the side of the bar's span: stay above.
-  expect(
-    placeActionBar(bubble, viewport, "assistant", 36, 1000, {
-      above: rect(250, 280, 600, 700),
+it("anchors through the positioner: inner side of the bubble, centred", async () => {
+  await mount(
+    new FakeRelay({
+      history: [
+        original,
+        {
+          id: "u",
+          role: "user" as const,
+          parts: [{ type: "text" as const, content: "Hi friend" }],
+        },
+      ],
     })
-  ).toEqual({ side: "above", top: 258, left: 100 });
-  // A user bubble measures its span from its right edge.
+  );
+  await screen.findByText("Hi friend");
+  await reveal();
+  expect(affordance()!.dataset.side).toBe("inline-end");
+  expect(affordance()!.dataset.align).toBe("center");
+  fireEvent.mouseLeave(host());
+  fireEvent.mouseEnter(host("u"));
+  await waitFor(() => expect(affordance()!.dataset.side).toBe("inline-start"));
+  expect(host("u").hasAttribute("data-active")).toBe(true);
+});
+
+it("prefers the tray above the bubble on the smiley's side unless the row before is in the way", () => {
+  const tray = { width: 300, height: 44 };
+  const bubble = rect(300, 360);
+  expect(preferTraySide(bubble, tray, "assistant")).toBe("top");
+  // A centred date pill within the tray's span above: flip below.
+  const pill = rect(250, 280, 280, 420);
+  expect(preferTraySide(bubble, tray, "assistant", { above: pill })).toBe(
+    "bottom"
+  );
+  // The same pill beside the tray's span: stay above. A user bubble's tray
+  // starts at its left edge, an assistant's ends at its right edge.
   expect(
-    placeActionBar(
-      bubble,
-      viewport,
-      "user",
-      36,
-      1000,
-      { above: rect(250, 280, 110, 130) },
-      100
-    )
-  ).toEqual({ side: "above", top: 258, right: 500 });
+    preferTraySide(bubble, tray, "assistant", {
+      above: rect(250, 280, 100, 190),
+    })
+  ).toBe("top");
+  expect(
+    preferTraySide(bubble, tray, "user", { above: rect(250, 280, 100, 190) })
+  ).toBe("bottom");
   // Rows on both sides: above wins (below would cover the next message).
   expect(
-    placeActionBar(bubble, viewport, "assistant", 36, 1000, {
+    preferTraySide(bubble, tray, "assistant", {
       above: pill,
       below: rect(372, 420),
     })
-  ).toEqual({ side: "above", top: 258, left: 100 });
+  ).toBe("top");
 });
 
-it("flips below the first message of a day in the transcript", async () => {
+it("opens the tray below the first message of a day in the transcript", async () => {
   await mount(
     new FakeRelay({
       history: [
@@ -143,10 +201,43 @@ it("flips below the first message of a day in the transcript", async () => {
     '[data-slot="message-scroller-viewport"]'
   )!;
   viewport.getBoundingClientRect = () => rect(0, 800, 0, 1000);
-  host().getBoundingClientRect = () => rect(100, 160, 20, 400);
+  // The positioner clips to the viewport's client box and the window's
+  // (jsdom: 0×0, so every side would overflow and the flip picks "top").
+  Object.defineProperty(viewport, "clientWidth", { value: 1000 });
+  Object.defineProperty(viewport, "clientHeight", { value: 800 });
+  const root = document.documentElement;
+  const widths = Object.getOwnPropertyDescriptors(root);
+  Object.defineProperty(root, "clientWidth", {
+    value: 1000,
+    configurable: true,
+  });
+  Object.defineProperty(root, "clientHeight", {
+    value: 800,
+    configurable: true,
+  });
+  afterRoot = () => {
+    for (const key of ["clientWidth", "clientHeight"] as const)
+      if (widths[key]) Object.defineProperty(root, key, widths[key]);
+      else delete (root as unknown as Record<string, unknown>)[key];
+  };
+  // The affordance anchors to the hidden trigger covering the bubble.
+  const anchor = host().querySelector<HTMLElement>(
+    '[data-slot="message-anchor"]'
+  )!;
+  anchor.getBoundingClientRect = () => rect(100, 160, 20, 400);
   pill!.getBoundingClientRect = () => rect(60, 84, 180, 280);
   await reveal();
-  expect(overlay().dataset.side).toBe("below");
+  const bar = await tray();
+  // Our rule hands the primitive `side="bottom"`, and it keeps it.
+  expect(
+    bar.closest<HTMLElement>('[data-slot="reaction-tray"]')!.dataset.prefer
+  ).toBe("bottom");
+  await waitFor(() =>
+    expect(
+      document.querySelector<HTMLElement>('[data-slot="reaction-tray"]')
+        ?.parentElement?.dataset.side
+    ).toBe("bottom")
+  );
 });
 
 it("hides while the transcript scrolls and returns on the next pointer move", async () => {
@@ -156,15 +247,43 @@ it("hides while the transcript scrolls and returns on the next pointer move", as
   )!;
   await reveal();
   fireEvent.scroll(viewport);
-  await waitFor(() => expect(overlay().style.opacity).toBe("0"));
+  await waitFor(() =>
+    expect(popup()?.hasAttribute("data-scrolling")).toBe(true)
+  );
   fireEvent.pointerMove(host());
-  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
+  await waitFor(() =>
+    expect(popup()?.hasAttribute("data-scrolling")).toBe(false)
+  );
+});
+
+it("lifts the hovered quick reaction and eases its neighbours aside, then Escape closes the tray before the affordance", async () => {
+  await mount();
+  await reveal();
+  const bar = await tray();
+  const quick = within(bar).getAllByRole("button", { name: /^React / });
+  expect(quick).toHaveLength(6);
+  fireEvent.pointerEnter(quick[1]!, { pointerType: "mouse" });
+  expect(quick[1]!.dataset.lift).toBe("up");
+  expect(quick[0]!.dataset.lift).toBe("left");
+  expect(quick[2]!.dataset.lift).toBe("right");
+  expect(quick[3]!.dataset.lift).toBeUndefined();
+  fireEvent.pointerLeave(quick[1]!);
+  expect(quick[1]!.dataset.lift).toBeUndefined();
+  // Touch does not lift (no false hover on tap).
+  fireEvent.pointerEnter(quick[1]!, { pointerType: "touch" });
+  expect(quick[1]!.dataset.lift).toBeUndefined();
+  fireEvent.keyDown(bar, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
+  expect(popup()?.hasAttribute("data-open")).toBe(true);
+  fireEvent.keyDown(smiley(), { key: "Escape" });
+  await waitFor(() => expect(popup()).toBeNull());
 });
 
 it("toggles reactions through the transport and restores them on hydration", async () => {
   const relay = await mount();
   await reveal();
-  fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
+  const bar = await tray();
+  fireEvent.click(within(bar).getByRole("button", { name: "React 👍" }));
   const pill = await screen.findByRole("button", {
     name: "Remove 👍 reaction",
   });
@@ -173,7 +292,7 @@ it("toggles reactions through the transport and restores them on hydration", asy
   ).toBe("end");
   await waitFor(() =>
     expect(
-      within(bar())
+      within(bar)
         .getByRole("button", { name: "React 👍" })
         .getAttribute("aria-pressed")
     ).toBe("true")
@@ -213,14 +332,15 @@ it("shows a reaction optimistically and rolls it back when main rejects it", asy
   };
   await mount(relay);
   await reveal();
-  fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
+  const bar = await tray();
+  fireEvent.click(within(bar).getByRole("button", { name: "React 👍" }));
   // The pill and the pressed quick reaction appear before main answers.
   const pill = await screen.findByRole("button", {
     name: "Remove 👍 reaction",
   });
   expect(pill).toBeTruthy();
   expect(
-    within(bar())
+    within(bar)
       .getByRole("button", { name: "React 👍" })
       .getAttribute("aria-pressed")
   ).toBe("true");
@@ -230,7 +350,7 @@ it("shows a reaction optimistically and rolls it back when main rejects it", asy
       screen.queryByRole("button", { name: "Remove 👍 reaction" })
     ).toBeNull()
   );
-  expect(screen.getByRole("alert").textContent).toBe(
+  expect(within(host()).getByRole("alert").textContent).toBe(
     "Could not complete the action"
   );
   expect(
@@ -238,7 +358,7 @@ it("shows a reaction optimistically and rolls it back when main rejects it", asy
       ?.abacus?.reactions ?? []
   ).toEqual([]);
   // The next attempt sticks.
-  fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
+  fireEvent.click(within(bar).getByRole("button", { name: "React 👍" }));
   await screen.findByRole("button", { name: "Remove 👍 reaction" });
   await act(async () => release());
   await waitFor(() =>
@@ -270,14 +390,16 @@ it("keeps a reply draft, sends the attributed quote and renders only the user's 
     })
   );
   await reveal();
-  fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
+  fireEvent.click(
+    within(await menu()).getByRole("menuitem", { name: "Reply" })
+  );
   expect(draftStore.state[relay.threadId]?.replyTo).toEqual({
     messageId: "a",
     role: "assistant",
     excerpt: "**Hello** there",
   });
   const field = screen.getByRole("textbox", { name: "Message Chief of Staff" });
-  expect(document.activeElement).toBe(field);
+  await waitFor(() => expect(document.activeElement).toBe(field));
   // The preview lives inside the composer surface, above the text area.
   const preview = document.querySelector('[data-slot="reply-preview"]')!;
   expect(preview.parentElement).toBe(field.parentElement);
@@ -311,13 +433,17 @@ it("keeps a reply draft, sends the attributed quote and renders only the user's 
   expect(
     document.querySelector('[data-slot="reply-quote"][data-variant="bubble"]')
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull();
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull()
+  );
 });
 
 it("cancels replies with Escape from the composer only, and composes attachments after the quote", async () => {
   await mount();
   await reveal();
-  fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
+  fireEvent.click(
+    within(await menu()).getByRole("menuitem", { name: "Reply" })
+  );
   const field = screen.getByRole("textbox", { name: "Message Chief of Staff" });
   // Escape elsewhere (the message, the document) leaves the reply alone.
   fireEvent.keyDown(host(), { key: "Escape" });
@@ -348,7 +474,7 @@ it("cancels replies with Escape from the composer only, and composes attachments
   );
 });
 
-it("reveals on a phone tap and offers the complete reaction grid", async () => {
+it("reveals on a phone tap and offers the complete reaction grid from the tray", async () => {
   await mount();
   const media = window.matchMedia;
   window.matchMedia = (query) => ({
@@ -357,14 +483,20 @@ it("reveals on a phone tap and offers the complete reaction grid", async () => {
   });
   try {
     fireEvent.click(host());
-    await waitFor(() => expect(overlay().style.opacity).toBe("1"));
+    await waitFor(() => expect(popup()?.hasAttribute("data-open")).toBe(true));
+    const bar = await tray();
     fireEvent.click(
-      within(bar()).getByRole("button", { name: "More reactions" })
+      within(bar).getByRole("button", { name: "More reactions" })
     );
     const cell = await screen.findByRole("button", { name: "React 🤔" });
-    expect(cell.closest('[data-slot="reaction-grid"]')?.className).toContain(
+    expect(cell.closest('[data-slot="message-actions"]')?.className).toContain(
       "grid-cols-8"
     );
+    // A second tap puts it away.
+    fireEvent.keyDown(cell, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
+    fireEvent.click(host());
+    await waitFor(() => expect(popup()).toBeNull());
   } finally {
     window.matchMedia = media;
   }
@@ -373,7 +505,9 @@ it("reveals on a phone tap and offers the complete reaction grid", async () => {
 it("restores a reply preview after navigation and sends an attachment-only reply", async () => {
   const relay = await mount();
   await reveal();
-  fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
+  fireEvent.click(
+    within(await menu()).getByRole("menuitem", { name: "Reply" })
+  );
   await current!.cleanup();
   current = await renderRelay(relay, "bot");
   expect(
