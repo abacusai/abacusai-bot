@@ -129,7 +129,7 @@ export const SessionStartPage = ({
       <div aria-hidden className="phone-glow phone:block hidden" />
       {/* Phones read bottom-up like a native agent screen: headline, a
           swipeable row of starters, then the composer under the thumb. */}
-      <div className="phone:gap-5 flex w-full max-w-[680px] flex-col gap-6">
+      <div className="phone:gap-5 flex w-full max-w-(--composer-max-w) flex-col gap-6">
         <h1 className="phone-rise phone:px-5 phone:text-start phone:text-[32px] phone:leading-[38px] phone:tracking-tight text-center text-[28px] leading-9 font-semibold">
           {t("sessions.start.heading")}
         </h1>

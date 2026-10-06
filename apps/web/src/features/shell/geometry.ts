@@ -30,10 +30,12 @@ export const SHELL_GEOMETRY = {
   paneRadius: 12,
   /** `--drawer-padding`: the drawer's content padding. */
   drawerPadding: 16,
-  /** `--transcript-max-w`: the chat transcript's column clamp. */
-  transcriptMaxW: 960,
+  /** `--content-max-w`: the reading column (transcript, Settings, Library, Routines, start pages). */
+  contentMaxW: 1040,
+  /** `--content-max-w-wide`: the column for tables and grids (Artifacts). */
+  contentMaxWWide: 1280,
   /** `--composer-max-w`: the composer column, a step narrower than the transcript. */
-  composerMaxW: 760,
+  composerMaxW: 800,
 } as const;
 
 type ShellGeometryKey = keyof typeof SHELL_GEOMETRY;
@@ -52,6 +54,7 @@ export const GEOMETRY_VARS: Record<ShellGeometryKey, `--${string}`> = {
   paneInset: "--pane-inset",
   paneRadius: "--pane-radius",
   drawerPadding: "--drawer-padding",
-  transcriptMaxW: "--transcript-max-w",
+  contentMaxW: "--content-max-w",
+  contentMaxWWide: "--content-max-w-wide",
   composerMaxW: "--composer-max-w",
 };

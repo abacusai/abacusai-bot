@@ -33,10 +33,15 @@
   --pane-inset: 8px;
   --pane-radius: 12px;
   --drawer-padding: 16px;
-  /* The chat column: a clamp that only matters on ultra-wide displays; the
-     composer sits a step narrower than the transcript, both centred. */
-  --transcript-max-w: 960px;
-  --composer-max-w: 760px;
+  /* Content widths, one system for every page (`.content-col` below):
+     `--content-max-w` is the reading column (chat transcript, Settings,
+     Library, Routines, the start pages); `--content-max-w-wide` the column
+     for tables and grids (Artifacts); `--composer-max-w` the composer, a
+     step narrower than the transcript. All centred; the clamps only bite on
+     wide displays. */
+  --content-max-w: 1040px;
+  --content-max-w-wide: 1280px;
+  --composer-max-w: 800px;
   /* density */
   --row-h: 32px;
   --bot-accent: var(--primary);
@@ -545,6 +550,23 @@ html[data-reduce-motion="on"] .phone-rise {
   background: color-mix(in oklab, currentColor 16%, transparent);
   color: inherit;
 }
+/* The content column (`--content-max-w*` above): every page's reading column, and the
+   wider one for tables and grids, centred with 24 px gutters. Utilities
+   (phone:w-…) still win: this sits in the components layer. */
+@layer components {
+  .content-col,
+  .content-col-wide {
+    margin-inline: auto;
+    min-width: 0;
+  }
+  .content-col {
+    width: min(var(--content-max-w), 100% - 48px);
+  }
+  .content-col-wide {
+    width: min(var(--content-max-w-wide), 100% - 48px);
+  }
+}
+
 /* Phone reading size for chat prose. */
 [data-band="xs"] .chat-prose {
   font-size: 0.9375rem;

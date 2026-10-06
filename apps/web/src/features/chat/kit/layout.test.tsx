@@ -1,6 +1,6 @@
 /**
  * The chat layout's geometry: the transcript column and the composer column
- * take their clamps from the shell's tokens (`--transcript-max-w`,
+ * take their clamps from the shell's tokens (`--content-max-w`,
  * `--composer-max-w`), the composer a step narrower and both centred.
  */
 import { act, screen } from "@testing-library/react";
@@ -44,13 +44,13 @@ describe("chat layout widths", () => {
     const content = document.querySelector(
       '[data-slot="message-scroller-content"]'
     )!;
-    expect(content.className).toContain("max-w-(--transcript-max-w)");
+    expect(content.className).toContain("max-w-(--content-max-w)");
     expect(content.className).toContain("mx-auto");
     const dock = document.querySelector('[data-slot="composer-dock"]')!;
     expect(dock.className).toContain("max-w-(--composer-max-w)");
     expect(dock.className).toContain("mx-auto");
     expect(SHELL_GEOMETRY.composerMaxW).toBeLessThan(
-      SHELL_GEOMETRY.transcriptMaxW
+      SHELL_GEOMETRY.contentMaxW
     );
   });
 });

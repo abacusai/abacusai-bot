@@ -15,7 +15,7 @@ export const AreaPage = ({
   testId?: string;
 }) => (
   <div className="size-full min-w-0 overflow-auto" data-testid={testId}>
-    <main className="phone:w-[calc(100%-32px)] phone:pt-6 mx-auto flex w-[min(680px,calc(100%-48px))] min-w-0 flex-col gap-4 pt-10 pb-16">
+    <main className="content-col phone:w-[calc(100%-32px)] phone:pt-6 flex flex-col gap-4 pt-10 pb-16">
       <PageToolbar>
         <h1 className="phone:text-[30px] phone:leading-9 phone:font-bold phone:tracking-tight min-w-0 text-[22px] font-semibold break-words">
           {title}
