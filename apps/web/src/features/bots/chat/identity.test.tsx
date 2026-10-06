@@ -146,4 +146,35 @@ describe("the bot identity's shared-element morph", () => {
       /html\[data-reduce-motion="on"\] \[data-slot="bot-docked-identity"\] \{ transition: none !important; animation: none !important; \}/
     );
   });
+
+  it("opens and closes the details panel from either copy; no Details action in the bar", async () => {
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+    app = await renderApp("/bots/chief-of-staff");
+    await screen.findByTestId("bot-chat");
+    const search = () => app!.router.state.location.search as { tab?: string };
+    expect(
+      document.querySelector('[data-slot="topbar-actions"]')?.textContent ?? ""
+    ).not.toContain("Details");
+    expect(search().tab).toBeUndefined();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Details for Chief of Staff" })
+    );
+    await waitFor(() => expect(search().tab).toBe("details"));
+    await waitFor(() =>
+      expect(
+        header().querySelector("button")?.getAttribute("aria-expanded")
+      ).toBe("true")
+    );
+    expect(docked().getAttribute("aria-expanded")).toBe("true");
+    // Scrolled away, the docked copy is the toggle.
+    scrollHeader(0);
+    await waitFor(() =>
+      expect(docked().getAttribute("aria-hidden")).toBe("false")
+    );
+    fireEvent.click(docked());
+    await waitFor(() => expect(search().tab).toBeUndefined());
+    expect(docked().getAttribute("aria-expanded")).toBe("false");
+    // The far-right panel toggle stays.
+    expect(screen.getByTestId("panel-toggle")).toBeTruthy();
+  });
 });

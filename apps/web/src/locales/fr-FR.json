@@ -516,7 +516,6 @@
       "accessoryUnavailable": "Accessories are not available yet."
     },
     "panel": {
-      "detailsTitle": "Details",
       "detailsFor": "Details for {{name}}",
       "modelValue": "Model: {{model}}",
       "memoryTitle": "Memory",
