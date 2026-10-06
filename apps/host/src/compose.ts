@@ -21,7 +21,7 @@ import {
 } from "#main/services/providers/abacus-host";
 
 import { createNodeAppOperations } from "./app-operations";
-import { createWebAuth } from "./auth-web";
+import { createWebAuth, followProvisionedKey } from "./auth-web";
 import { HostLease } from "./lease";
 import { channelsTransport, PhoneLane } from "./phone-lane";
 import { shutdown } from "./shutdown";
@@ -88,6 +88,11 @@ export const composeNodeHost = async () => {
     serviceHost,
     hostPlatform: nodeHostPlatform,
   });
+  const stopProvisionedKey = followProvisionedKey(
+    process.env.ABACUSAI_BOT_HOST_KEY_FILE,
+    () => resolveAbacusApiKey() != null,
+    host.adoptAbacusCredential
+  );
   if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
     serviceHost.startBackgroundSync();
   const tables = createTables({
@@ -172,6 +177,7 @@ export const composeNodeHost = async () => {
     appOps,
     phoneLane,
     dispose: async () => {
+      stopProvisionedKey();
       phoneLane.stop();
       stopOutput();
       trackers.dispose();

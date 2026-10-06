@@ -1,8 +1,13 @@
 import { randomBytes, createHash } from "node:crypto";
+import { readFile, rm } from "node:fs/promises";
 
 import { ORPCError } from "@orpc/server";
 
-import type { HostPlatformOperations, WebAuth } from "#main/handler";
+import type {
+  HostOperations,
+  HostPlatformOperations,
+  WebAuth,
+} from "#main/handler";
 import {
   abacusAppHost,
   abacusUserAgent,
@@ -57,5 +62,57 @@ export const createWebAuth: NonNullable<HostPlatformOperations["webAuth"]> = (
         accountDetailsPending: adopted.accountDetailsPending === true,
       };
     },
+  };
+};
+
+const PROVISIONED_KEY = /^[A-Za-z0-9_]{16,128}$/;
+
+/**
+ * The server-side twin of the browser sign-in: a host nothing has signed in
+ * (a phone user never opens it in a browser) gets its owner's bot key from
+ * the server through its bootstrap, in an owner-only file. Adopted through
+ * the same path a browser sign-in takes, then deleted; a host signed in
+ * already only deletes it. True once there is nothing left to adopt.
+ */
+export const adoptProvisionedKey = async (
+  file: string,
+  signedIn: () => boolean,
+  adopt: HostOperations["adoptAbacusCredential"],
+  log: (line: string) => void = (line) => console.warn(line)
+): Promise<boolean> => {
+  let key: string;
+  try {
+    key = (await readFile(file, "utf8")).trim();
+  } catch {
+    return signedIn();
+  }
+  if (!signedIn()) {
+    if (!PROVISIONED_KEY.test(key))
+      log("[host] provisioned key unreadable; discarded");
+    else if (!(await adopt(key, "web")).ok)
+      log("[host] provisioned key refused; discarded");
+  }
+  await rm(file, { force: true });
+  return signedIn();
+};
+
+/** At start, then while the host has no key: its bootstrap may provision one into a running host. */
+export const followProvisionedKey = (
+  file: string | undefined,
+  signedIn: () => boolean,
+  adopt: HostOperations["adoptAbacusCredential"],
+  everyMs = 30_000
+): (() => void) => {
+  if (!file) return () => {};
+  let timer: NodeJS.Timeout | undefined;
+  const check = async () => {
+    timer = undefined;
+    if (await adoptProvisionedKey(file, signedIn, adopt)) return;
+    timer = setTimeout(() => void check(), everyMs);
+    timer.unref?.();
+  };
+  void check();
+  return () => {
+    if (timer) clearTimeout(timer);
   };
 };
