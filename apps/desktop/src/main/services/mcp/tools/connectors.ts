@@ -14,7 +14,7 @@ export const CONNECTORS_TOOLS: ToolDefinition[] = [
     description: [
       "The user's connectors (every entry on the Connectors page) and the way to",
       "get one connected without ending or holding the turn. They are the account connectors",
-      `(${names.platform.join(", ")}), ${names.credential.join(", ")} (a token),`,
+      `(${names.platform.join(", ")}),`,
       `the chat apps (${names.messaging.join(", ")}) and the tool servers`,
       `(${names.mcp.join(", ")}).`,
       "",

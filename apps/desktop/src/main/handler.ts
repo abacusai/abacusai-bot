@@ -514,13 +514,6 @@ export const wireHostEvents = (
 
   const ops = createHostOperations(serviceHost, emitHostEvent, platform);
 
-  // The connector flow stores agent credentials through the same path a
-  // pasted key takes, so the announcement above happens for those too.
-  serviceHost.setCredentialSaver((provider, value) => {
-    saveApiKey(provider, value);
-    ops.credentialsChanged(provider, value);
-  });
-
   // A profile relaunch bypasses the credential-save IPC; reconcile from disk.
   ops.syncAbacusGateway(
     readSettings().apiKeys?.[PROVIDER_ENV_VARS.abacus] ?? undefined

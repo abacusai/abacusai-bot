@@ -44,6 +44,7 @@ import spill from "../extensions/spill.js";
 import toolCallRepair from "../extensions/tool-call-repair.js";
 import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
+import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
@@ -1274,6 +1275,7 @@ export class ForeverEngine {
     // the account's credits, plan or keys just changed under us.
     this.router.clearCooldowns();
     applyStoredApiKeys();
+    void refreshGithubToken();
 
     for (const [provider, envVar] of Object.entries(PROVIDER_API_KEY_ENV)) {
       const key = (process.env[envVar] ?? "").trim();

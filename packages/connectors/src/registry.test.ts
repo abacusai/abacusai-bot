@@ -59,11 +59,11 @@ describe("every entry", () => {
 });
 
 describe("platform entries", () => {
-  it("name at least one gateway tool each, and no tool twice", () => {
+  it("name at least one gateway tool each (or the path they take instead), and no tool twice", () => {
     const seen = new Set<string>();
     for (const connector of CONNECTORS) {
       if (connector.kind !== "platform") continue;
-      expect(connector.tools.length).toBeGreaterThan(0);
+      expect(connector.tools.length > 0 || connector.via != null).toBe(true);
       expect(connector.credits).toBeGreaterThan(0);
       for (const tool of connector.tools) {
         expect(seen.has(tool), `${tool} listed twice`).toBe(false);
@@ -81,9 +81,13 @@ describe("platform entries", () => {
     expect(connectorForService("GMAILUSER")?.id).toBe("abacus-gmailuser");
   });
 
-  it("never include GitHub: that is a token on its own card", () => {
+  it("take GitHub through the bot's own sign-in, never DeepAgent's App", () => {
     expect(connectorForService("githubuser")).toBeUndefined();
-    expect(connectorById("github")?.kind).toBe("credential");
+    expect(connectorForService("githubbot")).toMatchObject({
+      id: "abacus-githubbot",
+      tools: [],
+      via: "`gh` and git in bash",
+    });
   });
 });
 
@@ -128,10 +132,10 @@ describe("what a model calls a connector", () => {
       match: { id: "messaging-whatsapp" },
     });
     expect(resolveConnector("github")).toMatchObject({
-      match: { id: "github" },
+      match: { id: "abacus-githubbot" },
     });
     expect(resolveConnector("GitHub")).toMatchObject({
-      match: { id: "github" },
+      match: { id: "abacus-githubbot" },
     });
   });
 
@@ -148,7 +152,7 @@ describe("what the model is told", () => {
     expect(text).toMatch(
       /pull requests, commits, issues → `gh` and git in bash/
     );
-    expect(text).toMatch(/GitHub connector card/);
+    expect(text).toMatch(/signed in as the user once GitHub is connected/);
     expect(text).toMatch(/mail → Gmail/);
     expect(text).toMatch(/events, availability → Google Calendar/);
     expect(text).not.toMatch(/GitHub connector;/);
@@ -174,12 +178,17 @@ describe("what the model is told", () => {
     expect(describeForListing(gmail, { state: "available" })).toContain(
       "not connected: ask for it with this tool"
     );
-    const github = connectorById("github")!;
-    expect(describeForListing(github, { state: "connected" })).toContain(
-      "use `gh` and git in bash"
+    const github = connectorById("abacus-githubbot")!;
+    expect(
+      describeForListing(github, {
+        state: "connected",
+        account: "GitHub - octocat",
+      })
+    ).toBe(
+      "abacus-githubbot  GitHub  connected as GitHub - octocat: use `gh` and git in bash"
     );
     expect(describeForListing(github, { state: "available" })).toContain(
-      "the user pastes a token"
+      "not connected: ask for it with this tool"
     );
   });
 });

@@ -2,7 +2,6 @@ import {
   connectorById,
   connectUi,
   type Connector,
-  type ConnectorField,
 } from "@abacus-ai/connectors/registry";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import {
@@ -27,21 +26,6 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
 export const CONNECT_WATCHDOG_MS = 180000;
-export const fieldsFor = (entry: Connector): Record<string, ConnectorField> => {
-  if (entry.kind === "credential") return entry.fields;
-  if (entry.kind !== "mcp") return {};
-  if (entry.fields) return entry.fields;
-  if (entry.auth === "token")
-    return { token: { label: entry.token?.label ?? "Token", secret: true } };
-  if (entry.auth === "oauth-client")
-    return {
-      clientId: { label: "Client ID", secret: false },
-      clientSecret: { label: "Client secret", secret: true },
-    };
-  return Object.fromEntries(
-    (entry.env ?? []).map((key) => [key, { label: key, secret: true }])
-  );
-};
 export interface FlowDeps {
   transport: Transport;
   db: Db;
