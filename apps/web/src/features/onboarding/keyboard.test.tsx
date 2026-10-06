@@ -68,6 +68,7 @@ describe("onboarding keys", () => {
       expect(app!.router.state.location.pathname).toBe("/onboarding/connect")
     );
     expect(onboardingStore.state.signIn?.intent).toBe("signup");
+    await screen.findByRole("button", { name: "Cancel" });
     await press("Escape");
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/welcome")

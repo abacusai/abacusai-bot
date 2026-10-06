@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterAll, describe, expect, test } from "vitest";
 
@@ -277,8 +278,17 @@ describe("vite build", () => {
   const build = (name: string, env: Record<string, string>) => {
     const outDir = join(temp, name);
     execFileSync(
-      resolve(webRoot, "../../node_modules/.bin/vite"),
-      ["build", "--outDir", outDir, "--logLevel", "error"],
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("bin/vite.js", import.meta.resolve("vite/package.json"))
+        ),
+        "build",
+        "--outDir",
+        outDir,
+        "--logLevel",
+        "error",
+      ],
       {
         cwd: webRoot,
         stdio: "pipe",

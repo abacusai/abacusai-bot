@@ -99,6 +99,10 @@ const expectedFailures: Record<string, { code: string; message: string }> = {
     code: "NOT_FOUND",
     message: "No session fixture",
   },
+  "ai.react": {
+    code: "NOT_FOUND",
+    message: "No session fixture",
+  },
   "ai.respondPermission": {
     code: "UNAVAILABLE",
     message: "The agent is not running",
