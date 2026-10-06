@@ -53,11 +53,15 @@ import {
   CONTRAST_QUERY,
   DARK_QUERY,
   setLookStore,
+  themeOverride,
 } from "#renderer/lib/theme";
 import { showError } from "#renderer/lib/toast";
 import { createAppRouter } from "#renderer/router";
 
 export { HostStatus } from "#renderer/features/shell/connect";
+
+/** The phone layout's width (the app's own breakpoint). */
+const PHONE_QUERY = "(max-width: 799px)";
 
 /** Until the host answers `system.info`: the browser's own view. */
 const PLACEHOLDER_SYSTEM: SystemInfo = {
@@ -156,10 +160,17 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   // it here) once they load; until then this user's last look, from the
   // same per-user store as the system facts. The language once here.
   setLookStore(lookStore);
+  // Phones get the light theme only (a product choice); wider screens follow
+  // the user's theme. Rotating or resizing across the width switches it.
+  const phone = matchMedia(PHONE_QUERY);
+  const followPhone = () =>
+    themeOverride.setState(() => (phone.matches ? "light" : null));
+  followPhone();
+  phone.addEventListener("change", followPhone);
   applyTheme(
     document,
     applyBootLook(document, {
-      dark: matchMedia(DARK_QUERY).matches,
+      dark: !phone.matches && matchMedia(DARK_QUERY).matches,
       high: matchMedia(CONTRAST_QUERY).matches,
     })
   );

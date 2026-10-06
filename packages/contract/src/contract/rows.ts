@@ -159,7 +159,11 @@ export interface PrefsRow {
   creditsExhaustedAt: number | null;
   browserHomepage: string | null;
   onboardingStep: string | null;
-  dismissals: { referralCardUntil: number | null; upsell: boolean };
+  dismissals: {
+    referralCardUntil: number | null;
+    upsell: boolean;
+    whatsappIntroAt: number | null;
+  };
   /** Panel widths. */
   panes: Record<string, number>;
   motion: { reduce: "system" | "on" | "off" };

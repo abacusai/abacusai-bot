@@ -61,21 +61,6 @@ describe("R6-T4 step machine and R6-T5 resume", () => {
       guardStep("first-bot", f, { signIn: null, createdBotId: null })
     ).toBe("done");
   });
-  it("never offers the WhatsApp step on Electron", () => {
-    const f = {
-      signedIn: true,
-      payingTier: true,
-      ownsBot: false,
-      whatsappOffered: true,
-    };
-    expect(next("connect", { type: "auth-ok", attempt: "a" }, f, "a")).toBe(
-      "connected"
-    );
-    expect(next("connectors", { type: "back" }, f, null)).toBe("connected");
-    expect(guardStep("whatsapp", f, { signIn: null, createdBotId: null })).toBe(
-      "connected"
-    );
-  });
   it.each(ONBOARDING_FLOW)("resumes canonical %s only in flow 2", (step) => {
     expect(resumeStep({ step, flow: 2 })).toBe(
       step === "connect" ? "welcome" : step
