@@ -13,6 +13,7 @@ import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Textarea } from "#renderer/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 type Rating = "up" | "down";
 
@@ -57,7 +58,7 @@ export const MessageFeedback = ({ send }: MessageFeedbackProps) => {
   };
 
   return (
-    <div data-slot="message-feedback" className="flex items-center">
+    <div data-slot="message-feedback" className="flex items-center gap-0.5">
       <Popover>
         {(
           [
@@ -65,20 +66,28 @@ export const MessageFeedback = ({ send }: MessageFeedbackProps) => {
             ["down", ThumbsDown, "bots.chat.feedback.notHelpful"],
           ] as const
         ).map(([value, Icon, label]) => (
-          <PopoverTrigger
-            key={value}
-            render={
-              <Button
-                variant={rating === value ? "secondary" : "ghost"}
-                size="icon-sm"
-                aria-label={t(label)}
-                aria-pressed={rating === value}
-                onClick={() => rate(value)}
-              />
-            }
-          >
-            <Icon aria-hidden />
-          </PopoverTrigger>
+          <Tooltip key={value}>
+            <TooltipTrigger
+              render={
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="aria-pressed:bg-foreground/10 rounded-full"
+                      aria-label={t(label)}
+                      aria-pressed={rating === value}
+                      data-status={status}
+                      onClick={() => rate(value)}
+                    />
+                  }
+                />
+              }
+            >
+              <Icon aria-hidden className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>{t(label)}</TooltipContent>
+          </Tooltip>
         ))}
         <PopoverContent align="start" className="flex w-64 flex-col gap-2">
           {rating != null && (

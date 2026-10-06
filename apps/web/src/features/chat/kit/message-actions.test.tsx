@@ -12,6 +12,7 @@ import { draftStore, updateDraft, clearDraft } from "../composer/draft-store";
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";
+import { placeActionBar } from "./message-actions";
 import { composeReply } from "./reply";
 
 let current: Awaited<ReturnType<typeof renderRelay>> | null = null;
@@ -28,36 +29,90 @@ const original = {
 };
 const host = () =>
   document.querySelector<HTMLElement>('[data-message-target="a"]')!;
-const bar = () => within(host()).getByRole("toolbar");
+/** The bar is an overlay in the body, mounted while the message wants it. */
+const bar = () => screen.getByRole("toolbar");
+const overlay = () =>
+  bar().closest<HTMLElement>('[data-slot="message-actions-overlay"]')!;
+const reveal = async () => {
+  fireEvent.mouseEnter(host());
+  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
+  return bar();
+};
 const mount = async (relay = new FakeRelay({ history: [original] })) => {
   relay.emitAll(b.sessionReady());
   current = await renderRelay(relay, "bot");
   await screen.findByText("there", { exact: false });
   return relay;
 };
+const rect = (top: number, bottom: number, left = 100, right = 500) =>
+  ({
+    top,
+    bottom,
+    left,
+    right,
+    width: right - left,
+    height: bottom - top,
+  }) as DOMRect;
 
 it("reveals on hover and focus, hides with Escape, and copies markdown", async () => {
   await mount();
   const writeText = vi.fn(async () => {});
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
-  expect(bar().style.opacity).toBe("0");
-  fireEvent.mouseEnter(host());
-  await waitFor(() => expect(bar().style.opacity).toBe("1"));
+  expect(screen.queryByRole("toolbar")).toBeNull();
+  expect(host().parentElement!.contains(await reveal())).toBe(false);
   fireEvent.click(within(bar()).getByRole("button", { name: "Copy message" }));
   expect(writeText).toHaveBeenCalledWith("**Hello** there");
   fireEvent.keyDown(host(), { key: "Escape" });
-  await waitFor(() => expect(bar().style.opacity).toBe("0"));
+  await waitFor(() => expect(screen.queryByRole("toolbar")).toBeNull());
   fireEvent.focus(host());
-  await waitFor(() => expect(bar().style.opacity).toBe("1"));
+  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
   vi.unstubAllGlobals();
+});
+
+it("sits above the bubble on its outer side and flips below at the viewport's top", () => {
+  const viewport = rect(40, 800, 0, 1000);
+  expect(
+    placeActionBar(rect(300, 360), viewport, "assistant", 36, 1000)
+  ).toEqual({ side: "above", top: 258, left: 100 });
+  expect(placeActionBar(rect(300, 360), viewport, "user", 36, 1000)).toEqual({
+    side: "above",
+    top: 258,
+    right: 500,
+  });
+  expect(
+    placeActionBar(rect(60, 120), viewport, "assistant", 36, 1000)
+  ).toEqual({ side: "below", top: 126, left: 100 });
+});
+
+it("hides while the transcript scrolls and returns on the next pointer move", async () => {
+  await mount();
+  const viewport = host().closest<HTMLElement>(
+    '[data-slot="message-scroller-viewport"]'
+  )!;
+  await reveal();
+  fireEvent.scroll(viewport);
+  await waitFor(() => expect(overlay().style.opacity).toBe("0"));
+  fireEvent.pointerMove(host());
+  await waitFor(() => expect(overlay().style.opacity).toBe("1"));
 });
 
 it("toggles reactions through the transport and restores them on hydration", async () => {
   const relay = await mount();
+  await reveal();
   fireEvent.click(within(bar()).getByRole("button", { name: "React 👍" }));
   const pill = await screen.findByRole("button", {
     name: "Remove 👍 reaction",
   });
+  expect(
+    pill.closest('[data-slot="bubble-reactions"]')?.getAttribute("data-align")
+  ).toBe("end");
+  await waitFor(() =>
+    expect(
+      within(bar())
+        .getByRole("button", { name: "React 👍" })
+        .getAttribute("aria-pressed")
+    ).toBe("true")
+  );
   expect(
     (await relay.ai.hydrate({ threadId: relay.threadId })).messages[0]?.metadata
       ?.abacus?.reactions
@@ -92,6 +147,7 @@ it("keeps a reply draft, sends the attributed quote and renders only the user's 
       },
     })
   );
+  await reveal();
   fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
   expect(draftStore.state[relay.threadId]?.replyTo).toEqual({
     messageId: "a",
@@ -99,6 +155,13 @@ it("keeps a reply draft, sends the attributed quote and renders only the user's 
     excerpt: "**Hello** there",
   });
   const field = screen.getByRole("textbox", { name: "Message Chief of Staff" });
+  expect(document.activeElement).toBe(field);
+  // The preview lives inside the composer surface, above the text area.
+  const preview = document.querySelector('[data-slot="reply-preview"]')!;
+  expect(preview.parentElement).toBe(field.parentElement);
+  expect(
+    preview.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   fireEvent.change(field, { target: { value: "Thanks" } });
   fireEvent.keyDown(field, { key: "Enter" });
   await waitFor(() => expect(relay.stats.send).toHaveLength(1));
@@ -123,17 +186,25 @@ it("keeps a reply draft, sends the attributed quote and renders only the user's 
     })
   );
   expect(host().hasAttribute("data-highlighted")).toBe(true);
+  expect(
+    document.querySelector('[data-slot="reply-quote"][data-variant="bubble"]')
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull();
 });
 
-it("cancels replies with Escape and composes attachments after the quote", async () => {
+it("cancels replies with Escape from the composer only, and composes attachments after the quote", async () => {
   await mount();
+  await reveal();
   fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
-  fireEvent.keyDown(
-    screen.getByRole("textbox", { name: "Message Chief of Staff" }),
-    { key: "Escape" }
+  const field = screen.getByRole("textbox", { name: "Message Chief of Staff" });
+  // Escape elsewhere (the message, the document) leaves the reply alone.
+  fireEvent.keyDown(host(), { key: "Escape" });
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  expect(screen.getByRole("button", { name: "Cancel reply" })).toBeTruthy();
+  fireEvent.keyDown(field, { key: "Escape" });
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull()
   );
-  expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull();
   const replyTo = {
     messageId: "a",
     role: "assistant" as const,
@@ -146,6 +217,13 @@ it("cancels replies with Escape and composes attachments after the quote", async
     updateDraft("t-1", (draft) => ({ ...draft, replyTo }));
   });
   expect(screen.getByRole("button", { name: "Cancel reply" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel reply" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Cancel reply" })).toBeNull()
+  );
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: "Message Chief of Staff" })
+  );
 });
 
 it("reveals on a phone tap and offers the complete reaction grid", async () => {
@@ -157,13 +235,14 @@ it("reveals on a phone tap and offers the complete reaction grid", async () => {
   });
   try {
     fireEvent.click(host());
-    await waitFor(() => expect(bar().style.opacity).toBe("1"));
+    await waitFor(() => expect(overlay().style.opacity).toBe("1"));
     fireEvent.click(
       within(bar()).getByRole("button", { name: "More reactions" })
     );
-    expect(
-      await screen.findByRole("button", { name: "React 🤔" })
-    ).toBeTruthy();
+    const cell = await screen.findByRole("button", { name: "React 🤔" });
+    expect(cell.closest('[data-slot="reaction-grid"]')?.className).toContain(
+      "grid-cols-8"
+    );
   } finally {
     window.matchMedia = media;
   }
@@ -171,6 +250,7 @@ it("reveals on a phone tap and offers the complete reaction grid", async () => {
 
 it("restores a reply preview after navigation and sends an attachment-only reply", async () => {
   const relay = await mount();
+  await reveal();
   fireEvent.click(within(bar()).getByRole("button", { name: "Reply" }));
   await current!.cleanup();
   current = await renderRelay(relay, "bot");
