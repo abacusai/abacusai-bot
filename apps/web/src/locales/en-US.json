@@ -1300,7 +1300,7 @@
     "pages.done.body": "Say hello, or start a session in a folder.",
     "pages.deferred": "Finish after setup",
     "pages.removed": "This bot was removed",
-    "pages.checkIn": "Weekday check-ins at 08:00",
+    "pages.checkIn": "Checks in weekdays at 8:00 · Gmail, Calendar",
     "pages.noCheckIn": "No check-ins",
     "pages.hello": "Say hello",
     "pages.scratch": "Start from scratch",
