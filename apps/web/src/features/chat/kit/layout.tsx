@@ -39,6 +39,7 @@ import { Transcript } from "../scroller/transcript";
 import { useBusy, useHost, useThreadStore } from "../store/selectors";
 import type { RunOutcomeRecord } from "../store/thread-store";
 import { useChatView } from "./context";
+import { MessageActionBar } from "./message-actions";
 import { PermissionList, PermissionTray } from "./permissions/permission-list";
 import { present } from "./permissions/presenters";
 import { QueueSlot } from "./queue-slot";
@@ -297,17 +298,19 @@ export const ChatLayout = ({ Messages, Input }: LayoutProps<unknown>) => {
               data-wallpaper={wallpaper}
             />
           ) : null}
-          <MessagesView>
-            {(messages) =>
-              messages.length === 0 && slots.empty != null ? (
-                <div className="flex flex-1 items-center justify-center pb-(--composer-dock-h,0px)">
-                  {slots.empty}
-                </div>
-              ) : Message == null ? null : (
-                <Transcript messages={messages} Message={Message} />
-              )
-            }
-          </MessagesView>
+          <MessageActionBar>
+            <MessagesView>
+              {(messages) =>
+                messages.length === 0 && slots.empty != null ? (
+                  <div className="flex flex-1 items-center justify-center pb-(--composer-dock-h,0px)">
+                    {slots.empty}
+                  </div>
+                ) : Message == null ? null : (
+                  <Transcript messages={messages} Message={Message} />
+                )
+              }
+            </MessagesView>
+          </MessageActionBar>
         </div>
         <div
           ref={dockRef}

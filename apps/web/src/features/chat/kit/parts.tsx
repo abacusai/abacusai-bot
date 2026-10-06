@@ -27,7 +27,7 @@ import { Marker, MarkerContent, MarkerIcon } from "#renderer/ui/marker";
 
 import { Markdown } from "../markdown/markdown";
 import { useChatView } from "./context";
-import { MessageReactionPills } from "./message-actions";
+import { MessageMenu, MessageReactionPills } from "./message-actions";
 import { useMessageScope } from "./message-scope";
 import { NoticeRow } from "./status/status";
 
@@ -86,10 +86,9 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           workspaceRoot={workspaceRoot}
         />
       );
-      const lastText =
-        scope.message != null &&
-        scope.message.parts.filter((part) => part.type === "text").at(-1) ===
-          part;
+      const texts = scope.message?.parts.filter((p) => p.type === "text");
+      const firstText = texts?.[0] === part;
+      const lastText = texts?.at(-1) === part;
       const reacted =
         lastText &&
         (scope.message?.metadata?.abacus?.reactions?.length ?? 0) > 0;
@@ -105,6 +104,9 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           {text}
           {lastText && scope.message ? (
             <MessageReactionPills message={scope.message} />
+          ) : null}
+          {firstText && scope.message ? (
+            <MessageMenu message={scope.message} feedback={scope.feedback} />
           ) : null}
         </div>
       ) : (

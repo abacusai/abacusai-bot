@@ -2973,6 +2973,8 @@
       "reply": "返信",
       "copy": "メッセージをコピー",
       "moreReactions": "その他のリアクション",
+      "addReaction": "リアクションを追加",
+      "menu": "メッセージメニュー",
       "react": "{{emoji}}でリアクション",
       "removeReaction": "{{emoji}}のリアクションを削除",
       "you": "あなた",

@@ -2973,6 +2973,8 @@
       "reply": "Balas",
       "copy": "Salin pesan",
       "moreReactions": "Reaksi lainnya",
+      "addReaction": "Tambahkan reaksi",
+      "menu": "Menu pesan",
       "react": "Bereaksi {{emoji}}",
       "removeReaction": "Hapus reaksi {{emoji}}",
       "you": "Anda",
