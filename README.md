@@ -1,5 +1,3 @@
-# AbacusAI Bot: 100% free, open-source personal agents for your messaging apps, tools and services
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="docs/media/banner-light.png">
@@ -146,6 +144,14 @@ The full environment and packaging commands are in [Build from source](docs/gett
 - [Contributing](CONTRIBUTING.md) explains which community submissions are accepted.
 - [Security](SECURITY.md) defines the trust model and private reporting process.
 - [Code of Conduct](CODE_OF_CONDUCT.md) applies to project spaces.
+
+## Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=abacusai/abacusai-bot&type=date&theme=dark&legend=bottom-right" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=abacusai/abacusai-bot&type=date&legend=bottom-right" />
+  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=abacusai/abacusai-bot&type=date&legend=bottom-right" />
+</picture>
 
 ## Acknowledgements
 
