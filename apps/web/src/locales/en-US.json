@@ -1374,7 +1374,10 @@
     "pages.pasteKey": "Paste a key",
     "pages.done.checkIn": "{{name}} is checking your calendar. Say hello, or start a session in a folder.",
     "pages.models.local": "Run a model",
-    "pages.models.localAccent": "on this computer"
+    "pages.models.localAccent": "on this computer",
+    "pages.models.localDetails": "{{model}}, {{size}}, no account",
+    "pages.models.downloading": "Downloading",
+    "pages.models.download": "Download"
   },
   "referralCard": {
     "cta": "Invite friends",

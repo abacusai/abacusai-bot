@@ -1,3 +1,11 @@
+/**
+ * The key dialog (canvas OnboardKeyDialog, spec 06 §7.5): "Go to {provider}
+ * and get your API key", a masked input, `isPlausibleApiKey` → "That
+ * doesn't look like an API key…", "Stored on this machine only.", Open
+ * {provider} · Cancel · Save. `OnboardingProviderKey` is its trigger: one
+ * provider ("Add API key" opens it directly) or the "Paste a key" picker
+ * over every model provider.
+ */
 import {
   isPlausibleApiKey,
   PROVIDER_KEY_FIELDS,
@@ -12,31 +20,35 @@ import { Button } from "#renderer/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "#renderer/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import { Field, FieldLabel, FieldDescription } from "#renderer/ui/field";
+import { Field, FieldDescription, FieldLabel } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-export const OnboardingProviderKey = ({
+
+import { StepButton, StepLink } from "./kit";
+
+export const ProviderKeyDialog = ({
   transport,
+  provider,
+  open,
+  onOpenChange,
   saved,
-  provider: fixed,
 }: {
   transport: Transport;
+  provider: string;
+  open: boolean;
+  onOpenChange(open: boolean): void;
   saved(): Promise<unknown>;
-  /** One provider: the button opens its dialog directly (no picker). */
-  provider?: string;
 }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [provider, setProvider] = useState(fixed ?? "gemini");
   const [error, setError] = useState<"validation" | "save" | null>(null);
   const form = useForm({
     defaultValues: { key: "" },
@@ -52,29 +64,128 @@ export const OnboardingProviderKey = ({
           key: value.key.trim(),
         });
         await saved();
-        setOpen(false);
+        onOpenChange(false);
       } catch {
         setError("save");
       }
     },
   });
   const field = PROVIDER_KEY_FIELDS.find((f) => f.provider === provider);
+  const label = field?.label ?? provider;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setError(null);
+          form.reset();
+        }
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-w-[480px] rounded-2xl p-5">
+        <DialogHeader className="text-left">
+          <DialogTitle className="text-sm font-semibold">
+            {t("onboarding.setupKeyDialogTitle", { provider: label })}
+          </DialogTitle>
+          <DialogDescription className="onboarding-quiet">
+            {t("onboarding.setupKeyDialogBody")}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.handleSubmit();
+          }}
+          className="flex flex-col gap-1.5"
+        >
+          <form.Field name="key">
+            {(f) => (
+              <Field data-invalid={error === "validation"}>
+                <FieldLabel htmlFor="onboarding-key" className="sr-only">
+                  {t("onboarding.pages.addKey")}
+                </FieldLabel>
+                <Input
+                  id="onboarding-key"
+                  type="password"
+                  autoFocus
+                  autoComplete="off"
+                  placeholder={t("onboarding.setupKeyPlaceholder", {
+                    provider: label,
+                  })}
+                  className="h-11 rounded-[10px] font-mono text-[13px]"
+                  value={f.state.value}
+                  onChange={(event) => f.handleChange(event.target.value)}
+                  aria-invalid={error === "validation"}
+                  aria-describedby={
+                    error ? "onboarding-key-error" : "onboarding-key-hint"
+                  }
+                />
+                {error && (
+                  <FieldDescription
+                    id="onboarding-key-error"
+                    role="alert"
+                    className="text-destructive text-xs"
+                  >
+                    {error === "validation"
+                      ? t("onboarding.setupKeyInvalid")
+                      : `${t("phase5.saveFailed")}. ${t("onboarding.pages.retry")}`}
+                  </FieldDescription>
+                )}
+                <FieldDescription
+                  id="onboarding-key-hint"
+                  className="onboarding-quiet text-xs"
+                >
+                  {t("onboarding.pages.keyPrivate")}
+                </FieldDescription>
+              </Field>
+            )}
+          </form.Field>
+          <div className="mt-3 flex items-center gap-2">
+            {field?.signupUrl && (
+              <StepButton
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  void platformSystem(transport.client).openExternal({
+                    url: field.signupUrl!,
+                  })
+                }
+              >
+                {t("onboarding.setupKeyDialogLink", { provider: label })}
+              </StepButton>
+            )}
+            <span className="flex-1" />
+            <StepLink type="button" onClick={() => onOpenChange(false)}>
+              {t("common.cancel")}
+            </StepLink>
+            <StepButton type="submit">{t("bots.save")}</StepButton>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const OnboardingProviderKey = ({
+  transport,
+  saved,
+  provider: fixed,
+}: {
+  transport: Transport;
+  saved(): Promise<unknown>;
+  /** One provider: the button opens its dialog directly (no picker). */
+  provider?: string;
+}) => {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [provider, setProvider] = useState(fixed ?? "gemini");
   return (
     <>
       {fixed ? (
-        <Button
-          size="lg"
-          variant="secondary"
-          data-variant="small"
-          className="onboarding-button"
-          onClick={() => {
-            setError(null);
-            form.reset();
-            setOpen(true);
-          }}
-        >
+        <StepButton variant="small" onClick={() => setOpen(true)}>
           {t("onboarding.pages.addKey")}
-        </Button>
+        </StepButton>
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -96,8 +207,6 @@ export const OnboardingProviderKey = ({
                   key={entry.provider}
                   onClick={() => {
                     setProvider(entry.provider);
-                    setError(null);
-                    form.reset();
                     setOpen(true);
                   }}
                 >
@@ -108,65 +217,13 @@ export const OnboardingProviderKey = ({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t("onboarding.setupKeyDialogTitle", { provider: field?.label })}
-            </DialogTitle>
-            <DialogDescription>
-              {t("onboarding.pages.keyPrivate")}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void form.handleSubmit();
-            }}
-            className="flex flex-col gap-4"
-          >
-            <form.Field name="key">
-              {(f) => (
-                <Field data-invalid={error === "validation"}>
-                  <FieldLabel htmlFor="onboarding-key">
-                    {t("onboarding.pages.addKey")}
-                  </FieldLabel>
-                  <Input
-                    id="onboarding-key"
-                    type="password"
-                    value={f.state.value}
-                    onChange={(event) => f.handleChange(event.target.value)}
-                    aria-invalid={error === "validation"}
-                    aria-describedby={
-                      error ? "onboarding-key-error" : undefined
-                    }
-                  />
-                  {error && (
-                    <FieldDescription id="onboarding-key-error" role="alert">
-                      {error === "validation"
-                        ? t("onboarding.setupKeyInvalid")
-                        : `${t("phase5.saveFailed")}. ${t("onboarding.pages.retry")}`}
-                    </FieldDescription>
-                  )}
-                </Field>
-              )}
-            </form.Field>
-            {field?.signupUrl && (
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  void platformSystem(transport.client).openExternal({
-                    url: field.signupUrl!,
-                  })
-                }
-              >
-                {field.label}
-              </Button>
-            )}
-            <Button type="submit">{t("bots.save")}</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ProviderKeyDialog
+        transport={transport}
+        provider={provider}
+        open={open}
+        onOpenChange={setOpen}
+        saved={saved}
+      />
     </>
   );
 };
