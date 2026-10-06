@@ -106,6 +106,8 @@ export function createPhoneProfile(
       PHONE_TOOL_NAMES.includes(name) ||
       name.endsWith(`_${PHONE_MEMORY_TOOL_NAME}`),
     alwaysAllowedTools: PHONE_TOOL_NAMES,
+    // Nobody can tap Approve in WhatsApp: waiting would freeze the chat.
+    canAskForApproval: false,
     memory: {
       // The standing prompt already carries the last days; nothing to bridge.
       sessionStartPrompt: () => null,
