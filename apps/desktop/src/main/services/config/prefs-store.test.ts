@@ -239,6 +239,7 @@ describe("PrefsStore", () => {
     expect(store.get().dismissals).toEqual({
       referralCardUntil: null,
       upsell: true,
+      whatsappIntroAt: null,
     });
     expect(store.provenance()).toMatchObject({
       "dismissals.upsell": "legacy",

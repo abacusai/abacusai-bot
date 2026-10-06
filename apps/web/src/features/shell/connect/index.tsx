@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { defaultLook } from "#renderer/lib/bots/avatar";
+import { webSignInHref } from "#renderer/lib/navigation/web-sign-in";
 import { Button } from "#renderer/ui/button";
 
 import {
@@ -36,13 +37,7 @@ const ConnectAction = ({
   const { t } = useTranslation();
   const kind = kindOf(error);
   if (kind === "signin")
-    return (
-      <a
-        href={`/chatllm/signin?redirectUrl=${encodeURIComponent("/bot/" + location.hash)}`}
-      >
-        {t("phase5.signIn")}
-      </a>
-    );
+    return <a href={webSignInHref()}>{t("phase5.signIn")}</a>;
   if (kind === "tier") return <a href="/chatllm">{t("web.connect.upgrade")}</a>;
   if (kind === "limit")
     return (

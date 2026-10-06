@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { OnboardingLocalModels } from "#platform/local-models";
-import { loadWhatsAppOffered } from "#platform/whatsapp-bot";
 import { createBotFromTemplate } from "#renderer/features/bots/data/bot-actions";
 import { OnboardingStepPage } from "#renderer/features/onboarding";
 import { completeOnboarding } from "#renderer/features/onboarding/actions";
@@ -22,7 +21,6 @@ import {
 } from "#renderer/features/onboarding/first-run";
 import {
   guardStep,
-  next,
   type FlowFacts,
 } from "#renderer/features/onboarding/machine";
 import { OnboardingProviderKey } from "#renderer/features/onboarding/steps/provider-key";
@@ -85,18 +83,7 @@ const OnboardingRoute = () => {
           });
           await startFirstRunGmail(transport, account?.email ?? "");
           await queryClient.invalidateQueries();
-          const attempt = onboardingStore.state.signIn?.id ?? "";
-          const target = next(
-            "connect",
-            { type: "auth-ok", attempt },
-            {
-              ...facts,
-              signedIn: true,
-              whatsappOffered: await loadWhatsAppOffered(queryClient),
-            },
-            attempt
-          );
-          if (target !== "ignore" && target !== "complete") void go(target);
+          void go("connected");
         } else if (outcome.cancelled) void go("welcome");
       }) &&
       step !== "models"
@@ -239,17 +226,14 @@ const factsOf = async (
     context.transport.client.settings.get({}, { signal }),
     context.transport.client.account.abacus({}, { signal }),
   ]);
-  const signedIn = canSignOutOfAbacus(settings);
   return {
-    signedIn,
+    signedIn: canSignOutOfAbacus(settings),
     payingTier: isPayingAbacusTier(account?.subscription_tier),
     webSignup: account?.web_signup === true,
     email: account?.email ?? "",
     ownsBot: context.db.collections.bots.toArray.some(
       (bot) => bot.channel == null
     ),
-    whatsappOffered:
-      signedIn && (await loadWhatsAppOffered(context.queryClient)),
   };
 };
 /**

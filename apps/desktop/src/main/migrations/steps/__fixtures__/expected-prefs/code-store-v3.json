@@ -17,6 +17,7 @@
       "defaultMode": "legacy",
       "dismissals.referralCardUntil": "default",
       "dismissals.upsell": "default",
+      "dismissals.whatsappIntroAt": "default",
       "keymap": "default",
       "language": "default",
       "lastPickedWorkspaceId": "legacy",
@@ -67,7 +68,8 @@
       "defaultMode": "ACCEPTEDITS",
       "dismissals": {
         "referralCardUntil": null,
-        "upsell": false
+        "upsell": false,
+        "whatsappIntroAt": null
       },
       "id": "app",
       "keymap": {},

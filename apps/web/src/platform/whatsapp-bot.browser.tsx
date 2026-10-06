@@ -1,22 +1,22 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "@tanstack/react-db";
 
-import {
-  loadWhatsAppOffered as loadOffered,
-  WhatsAppConnect,
-  WhatsAppLinkedBanner as LinkedBanner,
-} from "#renderer/features/onboarding/whatsapp";
+import { useCollections, useDb } from "#renderer/data/db";
+import { WhatsAppIntro as Intro } from "#renderer/features/onboarding/whatsapp";
 import { callApps } from "#renderer/features/shell/connect/services";
 
-export const loadWhatsAppOffered = (queryClient: QueryClient) =>
-  loadOffered(queryClient, callApps);
-
-export const OnboardingWhatsApp = ({ onDone }: { onDone(): void }) => (
-  <WhatsAppConnect
-    callApps={callApps}
-    as="h1"
-    onLinked={onDone}
-    onSkip={onDone}
-  />
-);
-
-export const WhatsAppLinkedBanner = () => <LinkedBanner callApps={callApps} />;
+/** The first-run WhatsApp intro, decided from this account's prefs once they load. */
+export const WhatsAppIntro = () => {
+  const db = useDb();
+  const { data } = useLiveQuery(useCollections().prefs);
+  const row = data?.[0];
+  if (row == null) return null;
+  return (
+    <Intro
+      callApps={callApps}
+      seen={row.dismissals.whatsappIntroAt != null}
+      markSeen={() =>
+        db.updatePrefs({ dismissals: { whatsappIntroAt: Date.now() } })
+      }
+    />
+  );
+};

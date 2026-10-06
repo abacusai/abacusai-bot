@@ -1,7 +1,18 @@
-import { act, screen, render, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  screen,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
+import {
+  WhatsAppConnect,
+  WhatsAppIntro,
+} from "#renderer/features/onboarding/whatsapp";
 import { settingsIndexFor } from "#renderer/features/settings/search-index";
 import { ConnectScreen } from "#renderer/features/shell/connect";
 import {
@@ -30,6 +41,23 @@ it("filters desktop messaging templates from the web catalog and every category"
   ).toBe(true);
 });
 it("serves the browser's own messaging page and hides native tool groups while retaining other tools", async () => {
+  // The apps server does not offer the bot's own number here.
+  const realFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input).endsWith("/api/_getAbacusBotWhatsAppChat")
+      ? Promise.resolve(
+          Response.json({
+            success: true,
+            result: {
+              available: false,
+              status: null,
+              phone: null,
+              number: null,
+            },
+          })
+        )
+      : realFetch(input, init)
+  );
   const app = await renderApp("/library/tools");
   try {
     await screen.findByRole("heading", { name: "Tools" });
@@ -68,6 +96,7 @@ it("serves the browser's own messaging page and hides native tool groups while r
   } finally {
     app.view.unmount();
     await app.cleanup();
+    vi.unstubAllGlobals();
   }
 });
 it("uses host account/environment copy and deliberately hides tour and window density", async () => {
@@ -201,4 +230,89 @@ it("hides WhatsApp referrals in account, invite choices and direct links", async
     app.view.unmount();
     await app.cleanup();
   }
+});
+
+const withQueries = (node: React.ReactNode) => (
+  <QueryClientProvider
+    client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+  >
+    {node}
+  </QueryClientProvider>
+);
+
+it("opens the WhatsApp intro once: offered and unlinked, closed and marked seen on skip", async () => {
+  const callApps = vi.fn(async () => ({
+    available: true,
+    status: "unlinked",
+    phone: null,
+    number: "+15550001234",
+  }));
+  const markSeen = vi.fn(async () => undefined);
+  render(
+    withQueries(
+      <WhatsAppIntro callApps={callApps} seen={false} markSeen={markSeen} />
+    )
+  );
+  expect(
+    await screen.findByRole("heading", { name: enUS.web.whatsappBot.title })
+  ).toBeDefined();
+  await act(async () => {
+    screen.getByRole("button", { name: enUS.web.whatsappBot.skip }).click();
+  });
+  expect(markSeen).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("never shows the WhatsApp intro to an account that has seen it", async () => {
+  const callApps = vi.fn();
+  render(
+    withQueries(
+      <WhatsAppIntro
+        callApps={callApps}
+        seen
+        markSeen={async () => undefined}
+      />
+    )
+  );
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(callApps).not.toHaveBeenCalled();
+});
+
+it("hands the pre-typed message to WhatsApp by a tap, stays on the page, and offers a new code once it expires", async () => {
+  const href = location.href;
+  const deepLink = `https://wa.me/15550001234?text=${encodeURIComponent("Hi AbacusAI Bot! (code c_abc)")}`;
+  const callApps = vi.fn(async (service: string) =>
+    service === "getAbacusBotWhatsAppChat"
+      ? { available: true, status: "unlinked", phone: null, number: null }
+      : {
+          status: "pending",
+          deepLink,
+          phone: null,
+          expiresAt: Math.floor(Date.now() / 1000) + 3,
+        }
+  );
+  render(
+    withQueries(<WhatsAppConnect callApps={callApps} onLinked={() => {}} />)
+  );
+  const input = screen.getByLabelText(enUS.web.whatsappBot.numberLabel);
+  await act(async () => {
+    fireEvent.change(input, { target: { value: "+1 555 000 9999" } });
+  });
+  await act(async () => {
+    screen.getByRole("button", { name: enUS.web.whatsappBot.connect }).click();
+  });
+  const open = (
+    await screen.findByText(enUS.web.whatsapp.openWhatsApp)
+  ).closest("a")!;
+  expect(open.getAttribute("href")).toBe(deepLink);
+  expect(open.getAttribute("target")).toBe("_blank");
+  expect(location.href).toBe(href);
+  expect(
+    await screen.findByRole(
+      "button",
+      { name: enUS.web.whatsappBot.newCode },
+      { timeout: 6000 }
+    )
+  ).toBeDefined();
 });
