@@ -162,6 +162,7 @@ export const botMessageDecorations = (
     const feedback =
       options.feedbackEnabled && view.spoke && !view.live ? (
         <MessageFeedback
+          id={`${options.sessionId}:${feedbackSegmentId(message)}`}
           send={(rating, comment) =>
             options.sendFeedback({
               sessionId: options.sessionId,

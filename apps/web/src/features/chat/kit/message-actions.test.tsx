@@ -8,6 +8,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import {
+  clearFeedbackStates,
+  MessageFeedback,
+} from "#renderer/features/bots/chat/feedback";
+
 import { draftStore, updateDraft, clearDraft } from "../composer/draft-store";
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
@@ -656,4 +661,50 @@ it("jumps to an unmounted original without exceeding the transcript row budget",
   } finally {
     HTMLElement.prototype.scrollIntoView = previous;
   }
+});
+
+it("right-click offers the bot's feedback, sharing its state with the hover menu", async () => {
+  clearFeedbackStates();
+  const send = vi.fn(async () => ({ ok: true as const }));
+  const relay = new FakeRelay({ history: [original] });
+  relay.emitAll(b.sessionReady());
+  current = await renderRelay(
+    relay,
+    "bot",
+    {},
+    {
+      slots: {
+        decorateMessage: (message) =>
+          message.id === "a"
+            ? { actions: <MessageFeedback id="t-1:a" send={send} /> }
+            : null,
+      },
+    }
+  );
+  await screen.findByText("there", { exact: false });
+  fireEvent.contextMenu(host());
+  const context = await screen.findByRole("menu");
+  expect(
+    within(context)
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent)
+  ).toEqual(["Reply", "Copy message"]);
+  const good = within(context).getByRole("button", { name: "Good response" });
+  within(context).getByRole("button", { name: "Bad response" });
+  expect(good.getAttribute("aria-pressed")).toBe("false");
+  fireEvent.click(good);
+  expect(send).toHaveBeenLastCalledWith("up", undefined);
+  await waitFor(() => expect(good.getAttribute("aria-pressed")).toBe("true"));
+  // The comment flow opens from the same control.
+  await screen.findByRole("textbox", { name: "Tell us more" });
+  fireEvent.keyDown(context, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  // The hover menu's footer shows the rating given from the right-click menu.
+  await reveal();
+  const hover = await menu();
+  expect(
+    within(hover)
+      .getByRole("button", { name: "Good response" })
+      .getAttribute("aria-pressed")
+  ).toBe("true");
 });

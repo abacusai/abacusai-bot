@@ -511,6 +511,19 @@ describe("motion constants", () => {
     expect(tokensCss).toContain(`translate: ${offsets.drill}px 0`);
     expect(tokensCss).toContain(`translate: -${offsets.drill}px 0`);
   });
+  it("time every group and snapshot by the route duration, one choreography", () => {
+    // The UA's 250 ms defaults would otherwise outlast the 120 ms fades.
+    expect(tokensCss).toMatch(
+      new RegExp(
+        `::view-transition-group\\(\\*\\) \\{\\s*animation-duration: ${durations.route}ms;\\s*animation-timing-function: cubic-bezier\\(0\\.2, 0\\.8, 0\\.2, 1\\);`
+      )
+    );
+    expect(tokensCss).toMatch(
+      new RegExp(
+        `::view-transition-old\\(\\*\\),\\s*::view-transition-new\\(\\*\\) \\{\\s*animation-duration: ${durations.route}ms;`
+      )
+    );
+  });
   it("time the composer morph's group and cross-fade", () => {
     expect(tokensCss).toMatch(
       new RegExp(

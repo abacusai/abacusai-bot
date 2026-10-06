@@ -23,6 +23,7 @@ import {
   ContextMenuContent,
   ContextMenuGroup,
   ContextMenuItem,
+  ContextMenuSeparator,
 } from "#renderer/ui/context-menu";
 import {
   DropdownMenu,
@@ -1003,6 +1004,16 @@ export const MessageActions = ({
             {t("chat.actions.copy")}
           </ContextMenuItem>
         </ContextMenuGroup>
+        {/* The bot's feedback (Good / Bad response, the comment popover),
+            the same controls and state as the hover menu's footer. */}
+        {feedback != null ? (
+          <>
+            <ContextMenuSeparator />
+            <div data-slot="message-menu-feedback" className="px-1 py-0.5">
+              {feedback}
+            </div>
+          </>
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   );
