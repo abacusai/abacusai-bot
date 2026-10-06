@@ -1,6 +1,7 @@
 /**
- * Filters and aliases shared by vite.config.ts and vitest.config.ts (spec 01
- * §3.3, §3.7). Listed in tsconfig.vite.json because that project is composite.
+ * Filters and aliases shared by the web and desktop Vite and Vitest configs
+ * (spec 01 §3.3, §3.7). Listed in apps/desktop/tsconfig.vite.json because
+ * that project is composite.
  */
 import { resolve } from "node:path";
 
@@ -26,10 +27,10 @@ const root = import.meta.dirname;
  * `components/ui/index.tsx` on its own.
  */
 export const alias = {
-  "#main": resolve(root, "src/main"),
-  "#preload": resolve(root, "src/preload"),
-  "#renderer": resolve(root, "../web/src"),
+  "#main": resolve(root, "../desktop/src/main"),
+  "#preload": resolve(root, "../desktop/src/preload"),
+  "#renderer": resolve(root, "src"),
   // The one sanctioned path from renderer into the old tree (§9.1).
-  "#locales": resolve(root, "../web/src/locales"),
+  "#locales": resolve(root, "src/locales"),
   "@abacus-ai/contract": resolve(root, "../../packages/contract/src"),
 };

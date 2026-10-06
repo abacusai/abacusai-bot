@@ -6,12 +6,11 @@ import { defineConfig, type ViteDevServer } from "vite";
 import electron, { simpleOptions } from "vite-plugin-electron/multi-env";
 
 import {
-  rendererPlugins,
-  rendererAlias,
-  platformAlias,
+  rendererConfig,
+  rendererFlags,
   webRoot,
-} from "../web/vite.renderer";
-import { alias } from "./vite.shared.ts";
+} from "../web/vite.renderer.ts";
+import { alias } from "../web/vite.shared.ts";
 
 /** Loaded against Electron's own ABI, so never bundled. */
 const ELECTRON_NATIVE = ["electron-store", "electron-updater"];
@@ -60,13 +59,10 @@ const RELAUNCH_GRACE_MS = 8000;
 const sourcemap = "hidden";
 
 export default defineConfig(({ command, mode }) => {
-  const flags = {
-    gallery: process.env.VITE_UI_GALLERY === "1",
-    fixtures: process.env.VITE_NEXT_DB_FIXTURES === "1",
-  };
-  const release = command === "build" && !flags.gallery && !flags.fixtures;
+  const { release } = rendererFlags(command);
+  const renderer = rendererConfig("electron", command, mode);
   return {
-    root: webRoot,
+    ...renderer,
     envDir: root,
     build: {
       outDir: resolve(root, "dist/renderer"),
@@ -83,7 +79,7 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     plugins: [
-      ...rendererPlugins("electron", command, mode),
+      ...renderer.plugins,
       {
         name: "abacus:dev-server-handle",
         configureServer(server) {
@@ -204,11 +200,5 @@ export default defineConfig(({ command, mode }) => {
         })
       ),
     ],
-    resolve: {
-      // See vite.shared.ts.
-      alias: { ...rendererAlias, ...platformAlias("electron") },
-      dedupe: ["react", "react-dom"],
-    },
-    worker: { format: "es" },
   };
 });

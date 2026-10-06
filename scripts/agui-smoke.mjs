@@ -15,7 +15,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const root = path.resolve(import.meta.dirname, "../..");
+  const root = path.resolve(import.meta.dirname, "..");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "agui-smoke-"));
   try {
     const output = path.join(tmp, "results.json");

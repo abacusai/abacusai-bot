@@ -83,7 +83,7 @@ jobs:
       # later.
       - run: pnpm run typecheck
       - run: pnpm run check:knip
-      - run: pnpm run check:web-split
+      - run: pnpm run check:scripts
       # The guard compares the browser graph with the Electron renderer's, so
       # both builds have to exist; turbo builds the desktop's dependencies too.
       - name: Browser bundle platform guard
@@ -93,8 +93,8 @@ jobs:
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |
-          pnpm --filter @abacus-ai/desktop run check:i18n
-          pnpm --filter @abacus-ai/desktop run check:locales
+          pnpm --filter @abacus-ai/web run check:i18n
+          pnpm --filter @abacus-ai/web run check:locales
 
       # Fails on any high/critical advisory that is not on the documented
       # exception list in the script: each entry names why it is accepted, and
@@ -232,7 +232,7 @@ jobs:
       - name: The agent speaks AG-UI with a compat stream
         shell: bash
         run: |
-          node scripts/cutover/agui-smoke.mjs
+          node scripts/agui-smoke.mjs
 
   # renderer's screenshot gate (spec 01 §10.2) in the real Electron
   # window: every route and band, the collapsed, floating, split, compact and

@@ -1,17 +1,12 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { releaseBuildPlugin } from "../desktop/scripts/release-build-plugin.mjs";
-import {
-  RENDERER_MODULES,
-  RENDERER_REGISTRY_SRC,
-} from "../desktop/vite.shared";
+import { releaseBuildPlugin } from "./scripts/release-build-plugin.mjs";
 import {
   browserBoundaryPlugin,
-  platformAlias,
-  rendererAlias,
+  compilerReact,
+  rendererAliases,
   webRoot,
-} from "./vite.renderer";
+} from "./vite.renderer.ts";
 export default defineConfig({
   test: {
     maxWorkers: process.env.CI ? 2 : 4,
@@ -42,17 +37,10 @@ export default defineConfig({
               ),
             ]
           : []),
-        react({
-          include: RENDERER_MODULES,
-          exclude: RENDERER_REGISTRY_SRC,
-          compiler: true,
-        }),
+        compilerReact(true),
       ],
       resolve: {
-        alias: {
-          ...rendererAlias,
-          ...platformAlias(platform as "electron" | "browser"),
-        },
+        alias: rendererAliases(platform as "electron" | "browser"),
       },
       test: {
         ...(process.env.CI ? { hookTimeout: 30_000, testTimeout: 30_000 } : {}),
