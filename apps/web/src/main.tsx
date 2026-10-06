@@ -39,16 +39,34 @@ import {
   resolveLanguage,
 } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
+import { resolvePrefsLook } from "#renderer/lib/look";
 import { guardSingleViewTransition } from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
-import { applyTheme, DARK_QUERY, resolveTheme } from "#renderer/lib/theme";
+import { IS_ELECTRON } from "#renderer/lib/platform";
+import {
+  applyBootLook,
+  applyLook,
+  applyTheme,
+  CONTRAST_QUERY,
+  DARK_QUERY,
+  localLookStore,
+  setLookStore,
+} from "#renderer/lib/theme";
 import { toast } from "#renderer/ui/toast";
 
 import { createAppRouter } from "./router";
 
 // 1–2. The stored theme: main set nativeTheme from prefs before the window
-// existed, so the media query already is the user's choice (§7.7).
-applyTheme(document, resolveTheme("system", matchMedia(DARK_QUERY).matches));
+// existed, so the media query already is the user's choice (§7.7). On the
+// desktop app the last look (theme colours, fonts) paints with it before
+// prefs arrive; the browser applies its user's once the host is identified
+// (platform/connect.browser.tsx, with the other last-known facts).
+const media = () => ({
+  dark: matchMedia(DARK_QUERY).matches,
+  high: matchMedia(CONTRAST_QUERY).matches,
+});
+if (IS_ELECTRON) setLookStore(localLookStore);
+applyTheme(document, applyBootLook(document, media()));
 
 // 3. Surface what would otherwise vanish.
 window.addEventListener("error", (event) => {
@@ -159,13 +177,12 @@ const start = async (): Promise<void> => {
     installUiContinuity();
     installLogRing(boot.transport);
 
-    // 6. Theme and language from prefs. A locale chunk that fails to load
+    // 6. Theme, the whole look and language from prefs. A locale chunk that fails to load
     // keeps the bundled English.
     const prefs = boot.db.collections.prefs.get("app") ?? DEFAULT_PREFS;
-    applyTheme(
-      document,
-      resolveTheme(prefs.theme, matchMedia(DARK_QUERY).matches)
-    );
+    const look = resolvePrefsLook(prefs, null, media());
+    applyTheme(document, look.mode);
+    applyLook(document, look, prefs.appearance?.translucency !== false, prefs);
     await changeLanguage(resolveLanguage(prefs.language)).catch(
       (error: unknown) => {
         console.error("[renderer] locale failed; keeping English", error);

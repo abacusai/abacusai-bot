@@ -43,8 +43,11 @@ export type SystemEvent =
 export interface PickedFile {
   path: string;
   name: string;
+  /** Empty when the file is over the kind's size cap (`theme`). */
   data: Uint8Array;
   mimeType: string;
+  /** Bytes on disk. */
+  size?: number;
 }
 
 export const system = {
@@ -57,10 +60,15 @@ export const system = {
   dialog: {
     /** Null when cancelled. */
     openFolder: mutation.input(NoInput).output(type<string | null>()),
-    /** `kind: "image"` narrows the picker. Null when cancelled. */
+    /**
+     * `kind: "image"` narrows the picker; `"theme"` picks one .json/.jsonc
+     * and leaves `data` empty over THEME_FILE_MAX_BYTES. Null when cancelled.
+     */
     openFiles: mutation
       .input(
-        v.optional(v.object({ kind: v.optional(v.picklist(["all", "image"])) }))
+        v.optional(
+          v.object({ kind: v.optional(v.picklist(["all", "image", "theme"])) })
+        )
       )
       .output(type<PickedFile[] | null>()),
   },

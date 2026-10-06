@@ -7,7 +7,7 @@ set -euo pipefail
 # source commit's renderer, built against a fresh frozen-lockfile install of
 # the deps commit, whose pnpm-lock.yaml must hash to lock-sha256.
 export PATH="$(npm prefix -g)/bin:$PATH"
-source_commit=${1:-d1aeab42}
+source_commit=${1:-389b450a}
 deps_commit=${2:-$source_commit}
 lock_sha=${3:-a1e15b3de8f94fffeb0fae7c46fbe72b8e0fada1a4c04bca561c73082e56360c}
 repo=$(git rev-parse --show-toplevel)

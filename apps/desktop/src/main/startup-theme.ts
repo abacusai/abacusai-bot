@@ -1,4 +1,5 @@
 import type { PrefsRow } from "@abacus-ai/contract/contract/rows";
+import { nativeThemeSource } from "@abacus-ai/contract/look";
 /**
  * The theme main applies from `prefs.theme` (spec 00 B.2 side effect; spec 01
  * §7.7 startup theme). Electron-free: `nativeTheme` is passed in.
@@ -34,12 +35,16 @@ const TRANSPARENT = "#00000000";
 /** The legacy Linux backdrop (and the wco overlay's, before the theme). */
 const LEGACY_LINUX_BACKGROUND = "#2a2a28";
 
-/** Sets `themeSource` from prefs; true when the resolved scheme is dark. */
+/**
+ * Sets `themeSource` from prefs (the stored mode, or the only scheme a
+ * one-scheme theme has, as the renderer resolves it); true when the
+ * resolved scheme is dark.
+ */
 export const applyStartupTheme = (
   prefs: Pick<PrefsStore, "get">,
   nativeTheme: ThemeTarget
 ): boolean => {
-  nativeTheme.themeSource = prefs.get().theme;
+  nativeTheme.themeSource = nativeThemeSource(prefs.get());
   return nativeTheme.shouldUseDarkColors;
 };
 
@@ -97,14 +102,29 @@ export function applyThemedBackground(
   host?.setBackgroundColor(background);
 }
 
-/** Keeps `themeSource` on `prefs.theme`; returns the unsubscribe. */
+/**
+ * The user turned window translucency off (Appearance): main treats it as
+ * reduced transparency, so vibrancy (macOS) and mica (Windows) go and the
+ * window takes the opaque themed background.
+ */
+export const translucencyOff = (row: PrefsRow): boolean =>
+  row.appearance?.translucency === false;
+
+/**
+ * Keeps `themeSource` on the effective scheme (the mode, or a one-scheme
+ * theme's own: a palette or imported-theme change can flip it), and
+ * re-applies the chrome when it or the translucency choice changes;
+ * returns the unsubscribe.
+ */
 export const followPrefsTheme = (
   prefs: Pick<PrefsStore, "onChanged">,
   nativeTheme: ThemeTarget,
   refreshChrome: () => void
 ): (() => void) =>
   prefs.onChanged((row, previous) => {
-    if (row.theme === previous.theme) return;
-    nativeTheme.themeSource = row.theme;
+    const source = nativeThemeSource(row);
+    const theme = source !== nativeThemeSource(previous);
+    if (!theme && translucencyOff(row) === translucencyOff(previous)) return;
+    if (theme) nativeTheme.themeSource = source;
     refreshChrome();
   });

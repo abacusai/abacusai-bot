@@ -7,7 +7,11 @@ export interface TerminalView {
   generation: number | null;
   received: number;
   reconnect?: () => void;
+  /** Set by the tab while mounted: fit cols/rows to the box and resize the PTY. */
+  refit?: () => void;
   disposeTheme(): void;
+  /** The colours the terminal paints with now. */
+  theme(): Record<string, string>;
 }
 const views = new Map<string, Promise<TerminalView>>();
 export const getTerminalView = (key: string): Promise<TerminalView> => {
@@ -19,18 +23,18 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
         Terminal,
         FitAddon,
         terminalTheme,
+        terminalFont,
         installTerminalTheme,
       } = await import("#renderer/components/terminal/ghostty");
       const ghostty = await ghosttyReady();
       await document.fonts?.load('13px "Symbols Nerd Font Mono"');
       await document.fonts?.ready;
       const element = document.createElement("div");
+      let self: TerminalView | undefined;
       element.style.cssText = "width:100%;height:100%";
       const term = new Terminal({
         ghostty,
-        fontSize: 13,
-        fontFamily:
-          '"JetBrains Mono Variable", "Symbols Nerd Font Mono", monospace',
+        ...terminalFont(),
         cursorBlink: true,
         cursorStyle: "block",
         scrollback: 10000,
@@ -39,17 +43,22 @@ export const getTerminalView = (key: string): Promise<TerminalView> => {
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
-      term.open(element);
-      const disposeTheme = installTerminalTheme(term);
-      return {
+      const theme = installTerminalTheme(
+        term,
+        () => term.open(element),
+        () => self?.refit?.()
+      );
+      self = {
         term,
         fit,
         element,
         offset: undefined,
         generation: null,
         received: 0,
-        disposeTheme,
+        theme: theme.theme,
+        disposeTheme: theme.dispose,
       };
+      return self;
     })();
     view = view.catch((error) => {
       views.delete(key);
@@ -80,7 +89,7 @@ if (import.meta.env.VITE_UI_GALLERY === "1") {
       if (!view) return null;
       const buffer = view.term.buffer.active;
       return {
-        theme: view.term.options.theme,
+        theme: view.theme(),
         offset: view.offset,
         received: view.received,
         generation: view.generation,

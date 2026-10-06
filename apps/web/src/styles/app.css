@@ -12,7 +12,7 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Inter Variable', sans-serif;
+    --font-sans: var(--ui-font-family, 'Inter Variable'), sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -149,6 +149,17 @@
 [data-slot="drawer-content"], [data-slot="sheet-content"] { box-shadow: 0 12px 36px rgb(0 0 0 / .18); }
 [data-slot="context-menu-item"][data-variant="destructive"], [data-slot="dropdown-menu-item"][data-variant="destructive"] { color: var(--destructive); }
 
+/*
+ * The look (Appearance, lib/look.ts): text set in the accent reads on the
+ * page through --accent-text (the fill stays --primary). Unlayered, so it
+ * wins over the registry's text-primary utilities.
+ */
+:root { --sidebar-muted-foreground: var(--muted-foreground); }
+.text-primary,
+:is([data-slot="item-description"], [data-slot="field-description"], [data-slot="empty-description"]) > a:hover {
+  color: var(--accent-text, var(--primary));
+}
+
 /* Destructive actions retain their meaning in either theme. */
 [data-slot="button"].text-destructive, [data-slot="alert-dialog-action"].text-destructive {
   color: white;
@@ -157,6 +168,11 @@
 .dark [data-slot="button"].text-destructive, .dark [data-slot="alert-dialog-action"].text-destructive {
   color: oklch(0.15 0 0);
   background-color: oklch(0.75 0.17 25);
+}
+/* A theme solves its own destructive fill and the text on it. */
+html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], [data-slot="alert-dialog-action"]).text-destructive {
+  color: var(--destructive-foreground);
+  background-color: var(--destructive);
 }
 
 /* This viewport starts below the title bar, so the stack grows downward. */

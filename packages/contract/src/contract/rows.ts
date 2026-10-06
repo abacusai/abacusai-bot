@@ -177,7 +177,7 @@ export interface PrefsRow {
   // that file).
   /** Binding id (`<action>` or `<action>@terminal`) → chord, null = unbound. */
   keymap?: Record<string, string | null>;
-  appearance?: { textSize: PrefsTextSize; bubbleTint: boolean };
+  appearance?: PrefsAppearance;
   notch?: {
     enabled: boolean;
     haptics: boolean;
@@ -206,6 +206,35 @@ export interface QuietHours {
 }
 
 export type PrefsTextSize = 13 | 14 | 15;
+
+/**
+ * An imported theme's variant: `bg` and the other seeds or overridable
+ * tokens of `@abacus-ai/contract/look`, each `#rrggbb`.
+ */
+export type PrefsThemeColors = { bg: string } & Record<string, string>;
+
+/**
+ * The look (Appearance settings). `palette` names a built-in theme or
+ * `"custom"` (the imported `custom`); an unknown id renders the default.
+ * Fonts are system family names, empty for the bundled default.
+ */
+export interface PrefsAppearance {
+  textSize: PrefsTextSize;
+  bubbleTint: boolean;
+  palette: string;
+  accent: string | null;
+  contrast: "system" | "standard" | "high";
+  radius: "sharp" | "default" | "round";
+  uiFont: string;
+  codeFont: string;
+  codeFontSize: number;
+  translucency: boolean;
+  custom: {
+    name: string;
+    light?: PrefsThemeColors;
+    dark?: PrefsThemeColors;
+  } | null;
+}
 
 export type PrefsMessagingPlatform = "whatsapp" | "telegram" | "discord";
 

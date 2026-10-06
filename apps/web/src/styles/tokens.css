@@ -68,17 +68,23 @@ html {
  * or mica (Windows) and a transparent background (main/startup-theme.ts
  * `themedBackground`), the document and the chrome are see-through, so the
  * rail, the sidebar column and the title bar are frosted; the pane and the
- * panel stay opaque. Reduced transparency, Linux, a native frame and the
+ * panel stay opaque. Reduced transparency, translucency turned off in
+ * Appearance (main drops vibrancy with it), Linux, a native frame and the
  * gallery keep the opaque `--sidebar`.
  */
 .shell-surface {
   background-color: var(--sidebar);
 }
+/* Muted text in the chrome is solved on the chrome's surfaces (lib/look.ts). */
+[data-slot="rail"],
+[data-slot="sidebar-slot"] {
+  --muted-foreground: var(--sidebar-muted-foreground);
+}
 @media not (prefers-reduced-transparency: reduce) {
-  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"] {
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"]) {
     background-color: transparent;
   }
-  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]
+  html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     .shell-surface {
     background-color: color-mix(in oklab, var(--sidebar) 35%, transparent);
   }

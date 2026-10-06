@@ -16,6 +16,11 @@ describe("R5-T24 settings index", () => {
       "key-close-tab@terminal",
       "key-new-in-area@terminal",
       "changelog",
+      "palette",
+      "accent",
+      "contrast",
+      "codeFont",
+      "importTheme",
     ])
       expect(ids).toContain(id);
   });

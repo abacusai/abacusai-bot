@@ -1,5 +1,5 @@
 html.notch, html.notch body, html.notch #root { background: transparent !important; overflow: hidden; }
-.notch-shape { margin: 0 auto; color: #f2f2f3; background: #000; border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 250ms cubic-bezier(.22,1,.36,1), height 250ms cubic-bezier(.22,1,.36,1); overflow: hidden; }
+.notch-shape { margin: 0 auto; color: var(--notch-fg, #f2f2f3); background: #000; /* hardware black, always */ border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 250ms cubic-bezier(.22,1,.36,1), height 250ms cubic-bezier(.22,1,.36,1); overflow: hidden; }
 .notch-shape[data-mode=capsule] { border-radius: 24px; }
 .notch-shape[data-reduced=true] { transition: none; }
 .notch-shape[data-mode=notch] { box-shadow: none; border-radius: 0; }
@@ -8,10 +8,10 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 
 .notch-wing:last-child { justify-content: flex-end; }
 .notch-body { position: relative; padding: 8px 20px 16px; min-width: 0; overflow-y: auto; box-sizing: border-box; }
-.notch-shape button { border-radius: 999px; min-height: 26px; color: #f2f2f3; background: #2a2a2e; }
-.notch-shape p { color: #b8b8bd; }
-.notch-shape h2 { color: #f2f2f3; font-size: 12px; font-weight: 600; }
-.notch-shape input { background: #2a2a2e; color: #f2f2f3; min-height: 26px; border-radius: 999px; }
+.notch-shape button { border-radius: 999px; min-height: 26px; color: var(--notch-fg, #f2f2f3); background: var(--notch-control, #2a2a2e); }
+.notch-shape p { color: var(--notch-muted, #b8b8bd); }
+.notch-shape h2 { color: var(--notch-fg, #f2f2f3); font-size: 12px; font-weight: 600; }
+.notch-shape input { background: var(--notch-control, #2a2a2e); color: var(--notch-fg, #f2f2f3); min-height: 26px; border-radius: 999px; }
 .notch-fit { position: absolute; visibility: hidden; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .notch-shape { transition: none; } }
 .notch-wave { display: flex; gap: 4px; align-items: center; height: 44px; }

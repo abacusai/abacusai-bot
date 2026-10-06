@@ -229,9 +229,12 @@ export const TerminalTab = ({
           }, 40);
         };
         const observer = new ResizeObserver(fit);
+        // A code-font change (Appearance) changes the cell size.
+        view.refit = fit;
         disposers.push(() => {
           observer.disconnect();
           if (timer) clearTimeout(timer);
+          if (view.refit === fit) view.refit = undefined;
         });
         if (container.current) observer.observe(container.current);
         fit();

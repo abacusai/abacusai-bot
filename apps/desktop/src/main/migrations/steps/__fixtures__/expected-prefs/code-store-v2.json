@@ -1,8 +1,17 @@
 {
   "prefs": {
     "provenance": {
+      "appearance.accent": "default",
       "appearance.bubbleTint": "default",
+      "appearance.codeFont": "default",
+      "appearance.codeFontSize": "default",
+      "appearance.contrast": "default",
+      "appearance.custom": "default",
+      "appearance.palette": "default",
+      "appearance.radius": "default",
       "appearance.textSize": "default",
+      "appearance.translucency": "default",
+      "appearance.uiFont": "default",
       "browserHomepage": "default",
       "creditsExhaustedAt": "default",
       "defaultMode": "legacy",
@@ -41,8 +50,17 @@
     },
     "row": {
       "appearance": {
+        "accent": null,
         "bubbleTint": true,
-        "textSize": 14
+        "codeFont": "",
+        "codeFontSize": 12,
+        "contrast": "system",
+        "custom": null,
+        "palette": "default",
+        "radius": "default",
+        "textSize": 14,
+        "translucency": true,
+        "uiFont": ""
       },
       "browserHomepage": null,
       "creditsExhaustedAt": null,

@@ -82,6 +82,7 @@ import type {
   WindowState,
 } from "@abacus-ai/contract/contract";
 import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
 import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 
 import { markQuitting, isQuitting } from "./app-quit-state";
@@ -176,6 +177,7 @@ import { startSpellcheckDictionaryServer } from "./spellcheck-dictionary";
 import {
   applyThemedBackground,
   followPrefsTheme,
+  translucencyOff,
   mainWindowOptions,
 } from "./startup-theme";
 import {
@@ -460,7 +462,9 @@ function currentChromeInput() {
   return {
     platform: process.platform,
     dark: nativeTheme.shouldUseDarkColors,
-    reducedTransparency: nativeTheme.prefersReducedTransparency,
+    reducedTransparency:
+      nativeTheme.prefersReducedTransparency ||
+      translucencyOff(prefsStore.get()),
     overlayHeight: toolbarHeight(getTitlebarDensity()),
     linuxMode: activeLinuxChromeMode,
   };
@@ -1153,12 +1157,21 @@ const appOperations: AppOperations = {
     return result?.filePaths?.[0] || null;
   },
 
-  // `kind: 'image'` narrows the picker for the composer's "Images" item.
+  // `kind: 'image'` narrows the picker for the composer's "Images" item;
+  // `'theme'` picks one colour theme file (Appearance), read only under the cap.
   async openFilesDialog(kind) {
     const imagesOnly = kind === "image";
+    const theme = kind === "theme";
     const result = await showOpenDialogFromApp({
-      properties: ["openFile", "multiSelections"],
-      title: imagesOnly ? "Select Images" : "Select Files",
+      properties: theme ? ["openFile"] : ["openFile", "multiSelections"],
+      title: imagesOnly
+        ? "Select Images"
+        : theme
+          ? "Select a Theme"
+          : "Select Files",
+      ...(theme
+        ? { filters: [{ name: "Themes", extensions: ["json", "jsonc"] }] }
+        : {}),
       ...(imagesOnly
         ? {
             filters: [
@@ -1186,7 +1199,11 @@ const appOperations: AppOperations = {
 
     const files = await Promise.all(
       result.filePaths.map(async (filePath) => {
-        const data = await fs.readFile(filePath);
+        const { size } = await fs.stat(filePath);
+        const data =
+          theme && size > THEME_FILE_MAX_BYTES
+            ? new Uint8Array(0)
+            : await fs.readFile(filePath);
         const ext = path.extname(filePath).toLowerCase();
         const mimeType = PICKED_FILE_MIME[ext] || "application/octet-stream";
         return {
@@ -1194,6 +1211,7 @@ const appOperations: AppOperations = {
           name: path.basename(filePath),
           data,
           mimeType,
+          size,
         };
       })
     );

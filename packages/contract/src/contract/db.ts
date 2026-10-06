@@ -6,6 +6,7 @@
 import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
+import { THEME_COLOR_KEYS } from "../look";
 import { base, mutation, query, subscription } from "./base";
 import { AvatarAccessorySchema } from "./bots";
 import {
@@ -23,6 +24,7 @@ import type {
   GitStateRow,
   MemoryRow,
   PrefsRow,
+  PrefsThemeColors,
   RoutineRow,
   RoutineRunRow,
   SessionRow,
@@ -102,6 +104,21 @@ export const PREFS_MESSAGING_PLATFORMS = [
   "discord",
 ] as const;
 
+const HexColor = v.pipe(v.string(), v.regex(/^#[\da-f]{6}$/i));
+const FontFamily = v.pipe(v.string(), v.regex(/^[\p{L}\p{N} ._-]{0,64}$/u));
+/**
+ * One theme variant: `bg` required, every other key one the engine knows
+ * (seeds and overridable tokens), each a `#rrggbb`. Unknown keys are refused.
+ */
+const ThemeVariant = v.strictObject(
+  Object.fromEntries(
+    THEME_COLOR_KEYS.map((key) => [
+      key,
+      key === "bg" ? HexColor : v.optional(HexColor),
+    ])
+  ) as Record<string, typeof HexColor>
+) as unknown as v.GenericSchema<PrefsThemeColors>;
+
 /** Local wall-clock `HH:MM`, 24-hour. */
 const ClockTime = v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/));
 
@@ -149,6 +166,32 @@ export const PREFS_GROUP_ENTRIES = {
   appearance: {
     textSize: v.picklist(PREFS_TEXT_SIZES),
     bubbleTint: v.boolean(),
+    palette: v.pipe(v.string(), v.regex(/^[a-z][\da-z-]{0,47}$/)),
+    accent: v.nullable(HexColor),
+    contrast: v.picklist(["system", "standard", "high"]),
+    radius: v.picklist(["sharp", "default", "round"]),
+    uiFont: FontFamily,
+    codeFont: FontFamily,
+    codeFontSize: v.pipe(
+      v.number(),
+      v.integer(),
+      v.minValue(10),
+      v.maxValue(18)
+    ),
+    translucency: v.boolean(),
+    custom: v.nullable(
+      v.pipe(
+        v.strictObject({
+          name: v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(48)),
+          light: v.optional(ThemeVariant),
+          dark: v.optional(ThemeVariant),
+        }),
+        v.check(
+          (theme) => theme.light != null || theme.dark != null,
+          "a theme needs a light or a dark variant"
+        )
+      )
+    ),
   },
   notch: {
     enabled: v.boolean(),

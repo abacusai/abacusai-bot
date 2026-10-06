@@ -13,6 +13,7 @@ import type {
   WindowChromeState,
   WindowState,
 } from "@abacus-ai/contract/contract";
+import type { PickedFile } from "@abacus-ai/contract/contract/system";
 import type {
   BrowserRuntimeLease,
   DeviceBuildPhase,
@@ -48,12 +49,9 @@ type HostFileArgs = { filePath?: string; hostRoot?: string };
 /** The top-level `window.api` handlers' bodies (main/index.ts). */
 export interface AppOperations {
   openFolderDialog(): Promise<string | null>;
-  openFilesDialog(kind?: "all" | "image"): Promise<Array<{
-    path: string;
-    name: string;
-    data: Uint8Array;
-    mimeType: string;
-  }> | null>;
+  openFilesDialog(
+    kind?: "all" | "image" | "theme"
+  ): Promise<PickedFile[] | null>;
   openExternal(url: string): Promise<void>;
   openFilePath(filePath: string): Promise<OpenFilePathResult>;
   showItemInFolder(filePath: string): void;
