@@ -420,7 +420,6 @@
         "slide": "Slide {{n}}"
       },
       "feedback": {
-        "rate": "Rate this reply",
         "helpful": "Good response",
         "notHelpful": "Bad response",
         "tellUsMore": "Tell us more",
@@ -2960,6 +2959,19 @@
       "gone": "This conversation no longer exists.",
       "retry": "Reintentar",
       "unavailable": "The agent isn't available yet"
+    },
+    "actions": {
+      "label": "Acciones del mensaje",
+      "reply": "Responder",
+      "copy": "Copiar mensaje",
+      "moreReactions": "Más reacciones",
+      "react": "Reaccionar con {{emoji}}",
+      "removeReaction": "Eliminar reacción {{emoji}}",
+      "you": "Tú",
+      "assistant": "Asistente",
+      "cancelReply": "Cancelar respuesta",
+      "jumpToOriginal": "Ir al mensaje original",
+      "failed": "No se pudo completar la acción"
     }
   },
   "notch": {

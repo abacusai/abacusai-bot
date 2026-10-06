@@ -1,6 +1,11 @@
 import type { UserTextTags } from "@abacus-ai/contract/agent-types";
 import type { PermissionDecision } from "@abacus-ai/contract/agent-types";
 import type { AiHydration } from "@abacus-ai/contract/contract/ai";
+import {
+  applyMessageReaction,
+  MESSAGE_REACTION_EMOJIS,
+  type MessageReactionChange,
+} from "@abacus-ai/contract/message-reactions";
 /**
  * `ThreadSession` (spec 02 §3.1-§3.3): one per thread per document. It owns
  * the generations (each: a hydrate snapshot, a fresh receive-only
@@ -378,9 +383,16 @@ export class ThreadSession {
   /** §3.7: `ai.send` with an outbox entry; the composer reads the result. */
   submit(
     text: string,
-    forwardedProps?: Record<string, unknown>
+    forwardedProps?: Record<string, unknown>,
+    userText?: UserTextTags
   ): Promise<AdmissionResult> {
-    return submitAdmission(this.#admission, text, forwardedProps).result;
+    return submitAdmission(
+      this.#admission,
+      text,
+      forwardedProps,
+      undefined,
+      userText
+    ).result;
   }
 
   async admitEnvelope(envelope: SubmissionEnvelope): Promise<AdmissionResult> {
@@ -538,8 +550,25 @@ export class ThreadSession {
 
   // ─── queue (§8.5) ─────────────────────────────────────────────────
 
-  async enqueue(text: string): Promise<void> {
-    await this.#ai.queue.enqueue({ threadId: this.threadId, message: text });
+  async react(
+    messageId: string,
+    emoji: (typeof MESSAGE_REACTION_EMOJIS)[number],
+    selected: boolean
+  ): Promise<void> {
+    await this.#ai.react({
+      threadId: this.threadId,
+      messageId,
+      emoji,
+      selected,
+    });
+  }
+
+  async enqueue(text: string, userText?: UserTextTags): Promise<void> {
+    await this.#ai.queue.enqueue({
+      threadId: this.threadId,
+      message: text,
+      ...(userText && { userText }),
+    });
   }
 
   async clearQueue(): Promise<void> {
@@ -957,6 +986,13 @@ export class ThreadSession {
     if (gen.g !== this.#gen || gen.abort.signal.aborted || this.#retired)
       return;
     gen.appliedSeq = seq;
+    if (customName(event) === "message.reactions" && gen.client) {
+      const change = (event as unknown as { value: MessageReactionChange })
+        .value;
+      gen.client.setMessagesManually(
+        applyMessageReaction(gen.client.getMessages(), change)
+      );
+    }
     // Reset only after accepted live progress has actually been consumed.
     if (seq > gen.positions.checkpoint) {
       this.#recoveries = 0;

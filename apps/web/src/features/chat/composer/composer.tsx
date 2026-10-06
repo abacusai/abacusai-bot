@@ -48,6 +48,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import { useChatView } from "../kit/context";
+import { composeReply, ReplyQuote } from "../kit/reply";
 import { composerChildren, composerSurface } from "../motion";
 import { routeSubmit } from "../runtime/send";
 import {
@@ -130,7 +131,12 @@ export const useComposerExpanded = (threadId: string): boolean => {
   const focused = useSelector(focusedThreads, (state) => state.has(threadId));
   const drafted = useSelector(draftStore, (state) => {
     const draft = state[threadId];
-    return draft != null && (draft.text !== "" || draft.attachments.length > 0);
+    return (
+      draft != null &&
+      (draft.text !== "" ||
+        draft.attachments.length > 0 ||
+        draft.replyTo != null)
+    );
   });
   const menu = useSelector(modelMenus, (state) => state.has(threadId));
   return focused || drafted || menu;
@@ -372,7 +378,8 @@ export const ThreadComposer = () => {
   const pref = useMotionPreference();
   const fieldId = useId();
 
-  const hasDraft = draft.text !== "" || draft.attachments.length > 0;
+  const hasDraft =
+    draft.text !== "" || draft.attachments.length > 0 || draft.replyTo != null;
   const expanded =
     config.mode === "full" && skin === "session"
       ? true
@@ -413,6 +420,10 @@ export const ThreadComposer = () => {
       ...(draft.model != null ? { model: draft.model } : {}),
       ...(config.fixedMode != null ? { fixedMode: config.fixedMode } : {}),
     });
+    const composed =
+      "text" in route
+        ? composeReply(route.text, draft.replyTo, view.authorName)
+        : null;
     setError(null);
     switch (route.kind) {
       case "noop":
@@ -425,10 +436,12 @@ export const ThreadComposer = () => {
         const saved = draft;
         clearDraft(threadId);
         const clearedRevision = draftRevision(threadId);
-        runtime.queue.enqueue(threadId, route.text).catch(() => {
-          restoreDraft(threadId, clearedRevision, saved);
-          setError(t("chat.composer.queueFailed"));
-        });
+        runtime.queue
+          .enqueue(threadId, composed!.text, composed!.userText)
+          .catch(() => {
+            restoreDraft(threadId, clearedRevision, saved);
+            setError(t("chat.composer.queueFailed"));
+          });
         return;
       }
       case "send": {
@@ -445,14 +458,19 @@ export const ThreadComposer = () => {
               .onSubmitEnvelope({
                 runId: crypto.randomUUID(),
                 messageId: crypto.randomUUID(),
-                parts: [{ type: "text", content: route.text }],
+                parts: [{ type: "text", content: composed!.text }],
+                userText: composed!.userText,
                 forwardedProps: {
                   ...route.forwardedProps,
                   model: config.model?.value ?? null,
                 },
               })
               .then(() => ({ kind: "started" as const }))
-          : session.submit(route.text, route.forwardedProps);
+          : session.submit(
+              composed!.text,
+              route.forwardedProps,
+              composed!.userText
+            );
         admission
           .then((result) => {
             if (result.kind === "rejected")
@@ -464,7 +482,7 @@ export const ThreadComposer = () => {
           .catch((thrown: unknown) => {
             if (isRpcError(thrown) && thrown.code === "CONFLICT") {
               void runtime.queue
-                .enqueue(threadId, route.text)
+                .enqueue(threadId, composed!.text, composed!.userText)
                 .catch(() => restore(t("chat.composer.queueFailed")));
               return;
             }
@@ -536,6 +554,14 @@ export const ThreadComposer = () => {
       return;
     }
     if (event.key === "Escape") {
+      if (draft.replyTo) {
+        event.preventDefault();
+        updateDraft(threadId, (current) => ({
+          ...current,
+          replyTo: undefined,
+        }));
+        return;
+      }
       if (trigger != null) {
         event.preventDefault();
         setTrigger(null);
@@ -641,12 +667,36 @@ export const ThreadComposer = () => {
         data-tour="composer"
         data-state={state}
         data-expanded={expanded ? "" : undefined}
+        onKeyDown={(event) => {
+          if (
+            event.key === "Escape" &&
+            !event.defaultPrevented &&
+            draft.replyTo
+          ) {
+            event.preventDefault();
+            updateDraft(threadId, (current) => ({
+              ...current,
+              replyTo: undefined,
+            }));
+          }
+        }}
         onFocusCapture={() => setFocused(true)}
         onBlurCapture={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null))
             setFocused(false);
         }}
       >
+        {draft.replyTo ? (
+          <ReplyQuote
+            target={draft.replyTo}
+            onCancel={() =>
+              updateDraft(threadId, (current) => ({
+                ...current,
+                replyTo: undefined,
+              }))
+            }
+          />
+        ) : null}
         {trigger != null ? (
           <TriggerMenu
             trigger={trigger}

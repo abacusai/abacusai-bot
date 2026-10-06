@@ -203,10 +203,13 @@ export function botVisibleMessage(
         ...message.metadata,
         abacus: {
           ...message.metadata?.abacus,
-          ...(tags?.operator != null && {
+          ...(tags != null && {
             userText: {
               ...tags,
-              operator: { ...tags.operator, visibleFrom: 0 },
+              ...(tags.visibleFrom != null && { visibleFrom: 0 }),
+              ...(tags.operator != null && {
+                operator: { ...tags.operator, visibleFrom: 0 },
+              }),
             },
           }),
         },

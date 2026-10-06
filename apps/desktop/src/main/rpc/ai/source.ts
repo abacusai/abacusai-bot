@@ -66,6 +66,12 @@ export interface AguiSource {
   ): AsyncIterable<SequencedNotice>;
   /** A snapshot taken with registration, then revisioned changes. */
   attention(signal: AbortSignal): AsyncIterable<AttentionEvent>;
+  react?(input: {
+    threadId: string;
+    messageId: string;
+    emoji: string;
+    selected: boolean;
+  }): Promise<void>;
   send(input: AiSendInput): Promise<AiSendAck>;
   /**
    * The whole completed transcript plus the checkpoint; the procedure pages
@@ -75,7 +81,11 @@ export interface AguiSource {
   cancel(threadId: string, runId?: string): Promise<void>;
   respondPermission(input: AiRespondPermissionInput): Promise<void>;
   queue: {
-    enqueue(threadId: string, message: string): Promise<void>;
+    enqueue(
+      threadId: string,
+      message: string,
+      userText?: import("@abacus-ai/contract/agent-types").UserTextTags
+    ): Promise<void>;
     update(input: {
       threadId: string;
       incarnation: string;
@@ -121,6 +131,10 @@ export class UnavailableAguiSource implements AguiSource {
 
   attention(): AsyncIterable<AttentionEvent> {
     return notYet();
+  }
+
+  react(): Promise<void> {
+    return rejected();
   }
 
   send(): Promise<AiSendAck> {

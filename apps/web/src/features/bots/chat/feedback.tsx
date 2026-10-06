@@ -1,12 +1,11 @@
 import type { TurnFeedbackOutcome } from "@abacus-ai/contract/contracts";
 /**
- * Per-message feedback on a bot's reply (spec 03 §11.3, parity P59): a "…"
- * shown on hover or focus of a completed assistant message opens 👍 / 👎
- * (a second click on the chosen one sends `clear`) and an optional comment,
+ * Two feedback buttons in the action bar, with an optional comment.
+ * A second click on the chosen rating sends `clear`,
  * sent as `agent.feedback`. Offered only with an Abacus account (the route
  * decides) and never on the live run (the decorations decide).
  */
-import { MoreHorizontal } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -58,43 +57,30 @@ export const MessageFeedback = ({ send }: MessageFeedbackProps) => {
   };
 
   return (
-    <div
-      data-slot="message-feedback"
-      className="opacity-0 transition-opacity focus-within:opacity-100 hover:opacity-100 has-[[aria-expanded=true]]:opacity-100 [[data-role=assistant]:hover_&]:opacity-100"
-    >
+    <div data-slot="message-feedback" className="flex items-center">
       <Popover>
-        <PopoverTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("bots.chat.feedback.rate")}
-              className="text-muted-foreground"
-            />
-          }
-        >
-          <MoreHorizontal />
-        </PopoverTrigger>
-        <PopoverContent align="start" className="flex w-64 flex-col gap-2">
-          <div className="flex gap-1">
-            {(
-              [
-                ["up", "👍", "bots.chat.feedback.helpful"],
-                ["down", "👎", "bots.chat.feedback.notHelpful"],
-              ] as const
-            ).map(([value, emoji, label]) => (
+        {(
+          [
+            ["up", ThumbsUp, "bots.chat.feedback.helpful"],
+            ["down", ThumbsDown, "bots.chat.feedback.notHelpful"],
+          ] as const
+        ).map(([value, Icon, label]) => (
+          <PopoverTrigger
+            key={value}
+            render={
               <Button
-                key={value}
                 variant={rating === value ? "secondary" : "ghost"}
-                size="icon"
+                size="icon-sm"
                 aria-label={t(label)}
                 aria-pressed={rating === value}
                 onClick={() => rate(value)}
-              >
-                <span aria-hidden>{emoji}</span>
-              </Button>
-            ))}
-          </div>
+              />
+            }
+          >
+            <Icon aria-hidden />
+          </PopoverTrigger>
+        ))}
+        <PopoverContent align="start" className="flex w-64 flex-col gap-2">
           {rating != null && (
             <form
               className="flex flex-col gap-2"

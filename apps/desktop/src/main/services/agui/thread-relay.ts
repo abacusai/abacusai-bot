@@ -11,6 +11,10 @@ import type {
   PermissionDescriptor,
   RunOutcomeRecord,
 } from "@abacus-ai/contract/contract";
+import {
+  applyMessageReaction,
+  type MessageReactionChange,
+} from "@abacus-ai/contract/message-reactions";
 /**
  * One thread's side of main's AG-UI relay (agent spec §5.2-§5.3, spec 02
  * §14). Every AG-UI line an agui runtime writes for the thread is applied
@@ -978,6 +982,21 @@ export class ThreadRelay {
     }
     if (this.#active != null && isRunScoped(event))
       this.#track(this.#active.open, event);
+    if (event.type === "CUSTOM" && event.name === "message.reactions") {
+      const change = event.value as MessageReactionChange;
+      this.#processor.setMessages(
+        applyMessageReaction(this.#processor.getMessages(), change)
+      );
+      this.#transcript = applyMessageReaction(this.#transcript, change);
+      try {
+        this.#persist({ messages: this.#transcript, runs: this.#runs });
+        this.#v1Derived = false;
+      } catch (error) {
+        this.#log(
+          `${this.threadId}: persisting reactions failed: ${String(error)}`
+        );
+      }
+    }
     this.#applySessionState(event, chunk.seq);
     this.#checkPending(event);
     this.#record(chunk, event);

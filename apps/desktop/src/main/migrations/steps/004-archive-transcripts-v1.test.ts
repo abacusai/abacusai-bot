@@ -240,7 +240,7 @@ describe("C-T9 step 4 archive-transcripts-v1", () => {
       ],
     });
     put(transcripts(), "foreign.json", v1("foreign"));
-    put(threads(), "foreign.json", { ...agui(), version: 3 });
+    put(threads(), "foreign.json", { ...agui(), version: 4 });
     put(transcripts(), "twin-dir.json", v1("twin-dir"));
     fs.mkdirSync(path.join(threads(), "twin-dir.json"));
     // Current by fingerprint: archived.

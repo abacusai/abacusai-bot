@@ -18,6 +18,7 @@ import { isHostUnavailable } from "#renderer/data/transport/lifecycle";
 export interface SubmissionEnvelope {
   runId: string;
   messageId: string;
+  userText?: UserTextTags;
   parts: UIMessage["parts"];
   forwardedProps?: Record<string, unknown>;
 }
@@ -319,6 +320,7 @@ export const admitEnvelope = (
         id: envelope.messageId,
         runId: envelope.runId,
         parts: envelope.parts,
+        ...(envelope.userText && { userText: envelope.userText }),
         text: envelope.parts
           .flatMap((p) => (p.type === "text" ? [p.content] : []))
           .join("\n"),

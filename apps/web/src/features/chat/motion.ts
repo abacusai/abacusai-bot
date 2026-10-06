@@ -54,3 +54,11 @@ export const composerExit = (pref: MotionPreference): Transition =>
 /** Queue rows in/out: height + opacity 160 ms. */
 export const queueRow = (pref: MotionPreference): Transition =>
   motionFor<Transition>(pref, { duration: 0.16 }, { ...reducedTransition });
+
+/** Brief discoverability feedback anchored to the message's top corner. */
+export const actionBarTransition = (pref: MotionPreference): Transition =>
+  motionFor(
+    pref,
+    { duration: durations.childFade / 1000, ease: [...easings.standard] },
+    { ...reducedTransition }
+  );

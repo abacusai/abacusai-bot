@@ -861,3 +861,52 @@ it.each([false, true])(
     }
   }
 );
+
+it("acknowledges a reaction change and delivers a hidden operator turn verbatim", async () => {
+  const s = await scripted(async (api) => {
+    api.settled();
+  });
+  try {
+    s.send({
+      type: "message.react",
+      messageId: "a",
+      emoji: "👍",
+      selected: true,
+      excerpt: "Hello",
+    });
+    await s.waitFor(
+      () => s.events().some((event) => event.type === "RUN_FINISHED"),
+      "reaction turn"
+    );
+    expect(s.custom("message.reactions")).toEqual([
+      { messageId: "a", emoji: "👍", selected: true },
+    ]);
+    expect(s.session.sent).toContain(
+      '[reaction] The user reacted 👍 to your message "Hello"'
+    );
+    const processor = new StreamProcessor();
+    for (const event of s.events()) processor.processChunk(event as never);
+    expect(
+      processor.getMessages().find((message) => message.role === "user")
+        ?.metadata?.abacus?.userText
+    ).toEqual({ operator: { kind: "user-reaction" } });
+    s.send({
+      type: "message.react",
+      messageId: "a",
+      emoji: "👍",
+      selected: false,
+      excerpt: "Hello",
+    });
+    await s.waitFor(
+      () => s.custom("message.reactions").length === 2,
+      "reaction removal"
+    );
+    expect(s.custom("message.reactions").at(-1)).toEqual({
+      messageId: "a",
+      emoji: "👍",
+      selected: false,
+    });
+  } finally {
+    await s.close();
+  }
+});

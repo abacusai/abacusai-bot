@@ -212,3 +212,5 @@ html[data-reduce-motion="on"] .shimmer { --shimmer-image: none; --shimmer-text-f
 .chat-code pre.tm-code::-webkit-scrollbar { height: 7px; }
 .chat-code pre.tm-code::-webkit-scrollbar-thumb { background: var(--muted-foreground); border-radius: 4px; }
 .chat-code pre.tm-code::-webkit-scrollbar-track { background: var(--chat-inset); }
+
+[data-message-target][data-highlighted] { background: color-mix(in oklch, var(--primary) 15%, transparent); }

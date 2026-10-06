@@ -2,6 +2,7 @@ import { eventIterator, type } from "@orpc/contract";
 import * as v from "valibot";
 
 import type { SessionOwner } from "../contracts";
+import { MESSAGE_REACTION_EMOJIS } from "../message-reactions";
 import type { ChatHydrationResult, StreamChunk } from "./agui";
 import type { AiThreadSnapshot } from "./ai-thread";
 import { mutation, query, subscription } from "./base";
@@ -198,6 +199,16 @@ export const ai = {
    * Idempotent by run id across agent incarnations. `BAD_REQUEST`,
    * `NOT_FOUND` and `UNAVAILABLE` are raised only before `run` is written.
    */
+  react: mutation
+    .input(
+      v.object({
+        threadId: SessionId,
+        messageId: v.pipe(v.string(), v.nonEmpty()),
+        emoji: v.picklist(MESSAGE_REACTION_EMOJIS),
+        selected: v.boolean(),
+      })
+    )
+    .output(type<void>()),
   send: mutation.input(AiSendInputSchema).output(type<AiSendAck>()),
   /**
    * The completed transcript (excluding the active run's messages), the
@@ -251,7 +262,26 @@ export const ai = {
    */
   queue: {
     enqueue: mutation
-      .input(v.object({ threadId: SessionId, message: v.string() }))
+      .input(
+        v.object({
+          threadId: SessionId,
+          message: v.string(),
+          userText: v.optional(
+            v.object({
+              replyTo: v.optional(
+                v.object({
+                  messageId: v.string(),
+                  role: v.picklist(["user", "assistant"]),
+                  excerpt: v.string(),
+                })
+              ),
+              visibleFrom: v.optional(
+                v.pipe(v.number(), v.integer(), v.minValue(0))
+              ),
+            })
+          ),
+        })
+      )
       .output(type<void>()),
     update: mutation
       .input(
