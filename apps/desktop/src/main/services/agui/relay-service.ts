@@ -252,6 +252,15 @@ const newestUserId = (messages: AiSendInput["messages"]): string | null => {
   return null;
 };
 
+/** The agent's hidden `user-reaction` note for one selected reaction. */
+interface ReactionCommand {
+  type: "message.react";
+  messageId: string;
+  emoji: string;
+  selected: true;
+  excerpt: string;
+}
+
 export class AguiRelayService implements AguiSource {
   /** This main process's relay lifetime; seqs are never reused within it. */
   readonly epoch = crypto.randomUUID();
@@ -275,6 +284,12 @@ export class AguiRelayService implements AguiSource {
   readonly #waiting = new Map<string, Map<string, Waiter>>();
   /** threadId → run ids acked `started` whose `RUN_STARTED` has not come. */
   readonly #awaitingStart = new Map<string, Map<string, object | null>>();
+  /**
+   * Reaction notes for agents that are not running: a reaction is applied
+   * and persisted by main at once (never a reason to start an agent), and
+   * the hidden `user-reaction` note goes out with the runtime's next hello.
+   */
+  readonly #pendingReactions = new Map<string, ReactionCommand[]>();
   /** threadId → the runtime start in progress (one at a time per thread). */
   readonly #starting = new Map<string, Promise<void>>();
 
@@ -326,6 +341,7 @@ export class AguiRelayService implements AguiSource {
       for (const [runId, process] of awaiting ?? [])
         if (process !== runtime) awaiting?.delete(runId);
       if (awaiting?.size === 0) this.#awaitingStart.delete(threadId);
+      this.#flushReactions(threadId);
     }
     if (chunk == null) return;
 
@@ -448,6 +464,7 @@ export class AguiRelayService implements AguiSource {
   /** The session is gone: forget everything about the thread. */
   forgetThread(threadId: string): void {
     this.#forgotten.add(threadId);
+    this.#pendingReactions.delete(threadId);
     // Admissions still in flight get a definitive answer now: nothing will
     // ack them, and one not yet written must not start the agent again.
     const waiting = this.#waiting.get(threadId);
@@ -858,10 +875,11 @@ export class AguiRelayService implements AguiSource {
     emoji: string;
     selected: boolean;
   }): Promise<void> {
-    const history = await this.hydrate(input.threadId);
-    const target = history.messages.find(
-      (message) => message.id === input.messageId
-    );
+    const { threadId } = input;
+    const thread = this.#known(threadId);
+    const target = thread
+      .checkpoint()
+      .messages.find((message) => message.id === input.messageId);
     if (!target || (target.role !== "assistant" && target.role !== "user"))
       throw badRequest("The reaction target is not a completed message");
     if (
@@ -869,19 +887,62 @@ export class AguiRelayService implements AguiSource {
       input.selected
     )
       return;
-    await this.#ensureAguiRuntime(input.threadId);
-    this.#requireAgui(input.threadId);
+    // Main owns the thread file: the change is applied, persisted and
+    // broadcast to every window now, on the path the agent's own
+    // `message.reactions` events take. The agent is never started for it.
+    thread.ingest(
+      {
+        type: "CUSTOM",
+        name: "message.reactions",
+        value: {
+          messageId: input.messageId,
+          emoji: input.emoji,
+          selected: input.selected,
+        },
+        timestamp: Date.now(),
+      } as unknown as RelayEvent,
+      null
+    );
+    const pending = this.#pendingReactions.get(threadId) ?? [];
+    const remaining = pending.filter(
+      (command) =>
+        command.messageId !== input.messageId || command.emoji !== input.emoji
+    );
+    if (!input.selected) {
+      this.#setPendingReactions(threadId, remaining);
+      return;
+    }
     const excerpt = target.parts
       .flatMap((part) => (part.type === "text" ? [part.content] : []))
       .join("")
       .slice(0, 80);
-    this.#write(input.threadId, {
+    const command: ReactionCommand = {
       type: "message.react",
       messageId: input.messageId,
       emoji: input.emoji,
-      selected: input.selected,
+      selected: true,
       excerpt,
-    });
+    };
+    this.#setPendingReactions(threadId, [...remaining, command]);
+    this.#flushReactions(threadId);
+  }
+
+  /** The queued reaction notes, to a running agui runtime only. */
+  #flushReactions(threadId: string): void {
+    const pending = this.#pendingReactions.get(threadId);
+    if (pending == null || pending.length === 0) return;
+    const runtime = this.#host.runtime(threadId);
+    if (runtime?.status !== "running" || runtime.wire !== "agui") return;
+    const unsent: ReactionCommand[] = [];
+    for (const command of pending)
+      if (unsent.length > 0 || this.#host.send(threadId, command) == null)
+        unsent.push(command);
+    this.#setPendingReactions(threadId, unsent);
+  }
+
+  #setPendingReactions(threadId: string, commands: ReactionCommand[]): void {
+    if (commands.length === 0) this.#pendingReactions.delete(threadId);
+    else this.#pendingReactions.set(threadId, commands);
   }
 
   async cancel(threadId: string, runId?: string): Promise<void> {
