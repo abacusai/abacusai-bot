@@ -6,17 +6,17 @@ set -euo pipefail
 # Defaults are the recorded baseline (web-split-desktop-baseline.md): the
 # source commit's renderer, built against a fresh frozen-lockfile install of
 # the deps commit, whose pnpm-lock.yaml must hash to lock-sha256.
-export PATH="$(npm prefix -g)/bin:$PATH"
-source_commit=${1:-389b450a}
+source_commit=${1:-0c83c457}
 deps_commit=${2:-$source_commit}
-lock_sha=${3:-a1e15b3de8f94fffeb0fae7c46fbe72b8e0fada1a4c04bca561c73082e56360c}
+lock_sha=${3:-233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328}
 repo=$(git rev-parse --show-toplevel)
+git_dir=$(git rev-parse --absolute-git-dir)
 baseline_dir=$(mktemp -d /tmp/web-split-baseline.XXXXXX)
 deps_dir=$(mktemp -d /tmp/web-split-baseline-deps.XXXXXX)
 git -C "$repo" archive "$source_commit" | tar -x -C "$baseline_dir"
 git -C "$repo" archive "$deps_commit" | tar -x -C "$deps_dir"
 printf '%s  %s\n' "$lock_sha" "$deps_dir/pnpm-lock.yaml" | sha256sum -c -
-(cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$repo/.git" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
+(cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$git_dir" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
 ln -s "$deps_dir/node_modules" "$baseline_dir/node_modules"
 for workspace in apps/desktop apps/web; do
   if [ -d "$deps_dir/$workspace/node_modules" ] && [ ! -e "$baseline_dir/$workspace/node_modules" ]; then
@@ -25,7 +25,7 @@ for workspace in apps/desktop apps/web; do
 done
 # Keep real repository provenance while all build writes go to the archive.
 (cd "$baseline_dir/apps/desktop" && env -u NO_COLOR -u NODE_ENV -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT -u VITE_UI_GALLERY -u VITE_NEXT_DB_FIXTURES -u VITE_CONNECT_SRC \
-  GIT_DIR="$repo/.git" GIT_WORK_TREE="$baseline_dir" node --input-type=module - "$deps_dir/node_modules/vite/dist/node/index.js" <<'JSBUILD'
+  GIT_DIR="$git_dir" GIT_WORK_TREE="$baseline_dir" node --input-type=module - "$deps_dir/node_modules/vite/dist/node/index.js" <<'JSBUILD'
 import { pathToFileURL } from 'node:url';
 const { createBuilder } = await import(pathToFileURL(process.argv[2]).href);
 const builder = await createBuilder();

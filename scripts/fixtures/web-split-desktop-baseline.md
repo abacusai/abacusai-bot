@@ -8,7 +8,21 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `389b450a` (Appearance)
+## Current: `0c83c457` (merged renderer features)
+
+**314 / 6397308 / 2146806.** Records the merged onboarding, composer,
+message actions, side panel and provider marks through `1837542b`, with the
+CI dependency fixes in `0c83c457`. Against the Appearance baseline below:
+unchanged chunk count, +203576 bytes (+3.29%), +72125 gzip bytes (+3.48%).
+The 1% allowance is unchanged.
+
+Measured from a source archive and a fresh frozen-lockfile install on macOS
+ARM64, Node 22.19.0, pnpm 12.6.0, Vite 8.2.1 and Rolldown 1.2.4. The clean
+worktree build produces identical totals.
+
+## History
+
+### `389b450a` (Appearance)
 
 **314 / 6193732 / 2074681.** Bumped for the Appearance settings section: the
 look's colour engine and contrast solver (`lib/look.ts`, its own chunk), the
@@ -18,8 +32,6 @@ into the General page's chunk. Against the previous tip (`d1aeab42`,
 310 / 6144302 / 2053560, measured the same way): +4 chunks, +49430 bytes
 (+0.80%), +21121 gzip bytes (+1.03%); against the old baseline below, +8
 chunks, +1.54% bytes, +1.88% gzip.
-
-## History
 
 - `d1aeab42` (faster navigation, connection manager; #160): **310 / 6144302 / 2053560**,
   +4 chunks, +0.73% bytes, +0.84% gzip over the web split.
@@ -38,8 +50,6 @@ itself; the lockfile hash is checked) and prints JSON to compare with
 `web-split-desktop-baseline.json`; it never overwrites the fixture or
 touches a worktree. Reusing an existing install can change the graph (a
 nested `@tanstack/store`), which is why the script installs fresh. With no
-arguments it reproduces the current baseline: `389b450a` against its own
+arguments it reproduces the current baseline: `0c83c457` against its own
 lockfile (sha256
-`a1e15b3de8f94fffeb0fae7c46fbe72b8e0fada1a4c04bca561c73082e56360c`).
-Verified on Linux x64, Node 24.20.0, pnpm 12.6.0, Vite 8.2.1, Rolldown 1.2.4;
-a clean forced `turbo run build` of the same tree measures the same totals.
+`233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328`).
