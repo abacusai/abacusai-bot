@@ -19,7 +19,7 @@ import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
 import { ModeChip, ModelChip } from "./chips";
-import { useComposerExpanded } from "./composer";
+import { SURFACE_RADIUS, useComposerExpanded } from "./composer";
 import {
   clearDraft,
   updateDraft,
@@ -120,6 +120,36 @@ describe("R2-T25 composer", () => {
         .getByRole("button", { name: "Send" })
         .hasAttribute("disabled")
     ).toBe(false);
+  });
+
+  it("morphs only the surface: its children keep their size and its radius is a style", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(relay, "bot");
+    await waitFor(() => expect(composer()).toBeTruthy());
+    const surface = () =>
+      document.querySelector<HTMLElement>('[data-slot="composer-surface"]')!;
+    const check = (radius: number) => {
+      // Only the surface carries `layout`; motion's projection scales it,
+      // and the radius lives in `style` so the projection corrects it
+      // mid-morph (a class would stretch with the surface).
+      expect(surface().dataset.layout).toBe("layout");
+      expect(surface().dataset.radius).toBe(String(radius));
+      // The live value is motion's tween of that target, mid-morph.
+      expect(surface().style.borderRadius).toMatch(/^\d+(\.\d+)?px$/);
+      expect(surface().className).not.toMatch(/rounded/);
+      // Every direct child is a `layout="position"` child: it slides, it
+      // never stretches (icons, chips, buttons, the text area).
+      const children = [...surface().children] as HTMLElement[];
+      expect(children.length).toBeGreaterThan(1);
+      for (const child of children)
+        expect(child.dataset.layout, child.outerHTML).toBe("position");
+    };
+    check(SURFACE_RADIUS.pill);
+    fireEvent.change(field(), { target: { value: "hello" } });
+    expect(composer().hasAttribute("data-expanded")).toBe(true);
+    check(SURFACE_RADIUS.bot);
+    expect(field().dataset.layout).toBe("position");
   });
 
   it("session: two rows at rest with the mode chip; Enter sends; Stop while busy; busy submit enqueues", async () => {

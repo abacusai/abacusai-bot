@@ -19,6 +19,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -84,6 +85,34 @@ import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
 /** The composer's max height before it scrolls (today's `COMPOSER_MAX_HEIGHT`). */
 const COMPOSER_MAX_HEIGHT = 200;
+
+/**
+ * The surface's corner radius per shape (ComposerStates): the 48 px pill,
+ * the bot's typing box and the session box. A `style`, never a class, so
+ * motion's layout projection corrects it mid-morph instead of stretching it
+ * with the surface's scale.
+ */
+export const SURFACE_RADIUS = { pill: 24, bot: 22, session: 20 } as const;
+
+/**
+ * A child of the surface that must keep its size while the surface morphs
+ * (icons, chips, buttons, text): `layout="position"` lets motion counter the
+ * surface's scale and slide the child into place, so only the surface
+ * itself animates its shape.
+ */
+const Still = ({
+  layout,
+  className,
+  children,
+}: {
+  layout: "position" | false;
+  className?: string;
+  children: ReactNode;
+}) => (
+  <motion.div layout={layout} data-layout="position" className={className}>
+    {children}
+  </motion.div>
+);
 
 type ComposerState =
   | "resting"
@@ -659,6 +688,12 @@ export const ThreadComposer = () => {
   const childFade = composerChildren(pref);
   const morph = composerMorph(pref, threadId);
   const reveal = composerReveal(pref);
+  const still = morph.layout ? ("position" as const) : false;
+  const radius = expanded
+    ? skin === "session"
+      ? SURFACE_RADIUS.session
+      : SURFACE_RADIUS.bot
+    : SURFACE_RADIUS.pill;
 
   const value: ComposerContextValue = {
     threadId,
@@ -742,6 +777,9 @@ export const ThreadComposer = () => {
             onClose={() => setTrigger(null)}
           />
         ) : null}
+        <label htmlFor={fieldId} className="sr-only">
+          {config.placeholder}
+        </label>
         <motion.div
           {...morph}
           transition={surfaceTransition}
@@ -749,17 +787,18 @@ export const ThreadComposer = () => {
             event.preventDefault()
           }
           onDrop={onDrop}
-          style={sharedStyle}
+          style={{ ...sharedStyle, borderRadius: radius }}
           data-slot="composer-surface"
           data-layout={morph.layout ? "layout" : undefined}
+          data-radius={radius}
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
             expanded
-              ? "gap-2.5 rounded-[22px] ps-3 pe-2 pt-3 pb-2"
-              : "min-h-13 flex-row items-center gap-2 rounded-full px-2",
+              ? "gap-2.5 ps-3 pe-2 pt-3 pb-2"
+              : "min-h-12 flex-row items-center gap-2 px-2",
             skin === "session" &&
               expanded &&
-              "phone:rounded-[26px] phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] rounded-[20px] ps-4"
+              "phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4"
           )}
         >
           <AnimatePresence mode="popLayout" initial={false}>
@@ -789,11 +828,14 @@ export const ThreadComposer = () => {
             ) : null}
           </AnimatePresence>
           {expanded ? <Attachments /> : null}
-          {expanded ? null : <Attach />}
-          <label htmlFor={fieldId} className="sr-only">
-            {config.placeholder}
-          </label>
-          <textarea
+          {expanded ? null : (
+            <Still layout={still} className="flex shrink-0">
+              <Attach />
+            </Still>
+          )}
+          <motion.textarea
+            layout={still}
+            data-layout="position"
             ref={field}
             data-continuity-id={`composer:${threadId}`}
             id={fieldId}
@@ -825,7 +867,8 @@ export const ThreadComposer = () => {
           {expanded ? (
             <motion.div
               className="flex items-center gap-1.5"
-              layout={morph.layout ? "position" : false}
+              layout={still}
+              data-layout="position"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={childFade}
@@ -838,10 +881,10 @@ export const ThreadComposer = () => {
               <SendOrStop />
             </motion.div>
           ) : (
-            <>
+            <Still layout={still} className="flex shrink-0 items-center gap-2">
               <Dictate />
               <SendOrStop />
-            </>
+            </Still>
           )}
         </motion.div>
         {error != null ? (
