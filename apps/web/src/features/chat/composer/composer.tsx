@@ -793,12 +793,16 @@ export const ThreadComposer = () => {
           data-radius={radius}
           className={cn(
             "relative z-10 flex flex-col bg-[var(--chat-surface)]",
+            // ComposerStates: the pill is 48 px; the typing box is the text
+            // area over the toolbar row with 8 px under it, nothing else.
             expanded
-              ? "gap-2.5 ps-3 pe-2 pt-3 pb-2"
+              ? "gap-2 ps-3 pe-2 pt-3 pb-2"
               : "min-h-12 flex-row items-center gap-2 px-2",
+            // The session box (100 px, 14/8/8/16): the text area takes the
+            // spare height, so the toolbar sits on the box's bottom edge.
             skin === "session" &&
               expanded &&
-              "phone:[&>textarea]:flex-1 phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4"
+              "phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4 pt-3.5 [&>textarea]:flex-1"
           )}
         >
           <AnimatePresence mode="popLayout" initial={false}>
@@ -893,8 +897,12 @@ export const ThreadComposer = () => {
           </p>
         ) : null}
         {view.slots.composerContext != null ? (
+          // The context bar (repo · branch · worktree) hangs under the box
+          // as its own 48 px strip: inset 12 px, bottom corners 14 px, tucked
+          // 16 px under the box with the same 16 px of top padding, so it
+          // reads as attached. Phones stack it plainly below.
           <div
-            className="phone:mx-0 phone:mt-2 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 phone:pb-0 mx-3 -mt-3 rounded-b-xl bg-[var(--chat-surface-2)] px-2 pt-4 pb-1 text-[13px]"
+            className="phone:mx-0 phone:mt-2 phone:min-h-0 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 mx-3 -mt-4 flex min-h-12 flex-col justify-center rounded-b-[14px] bg-[var(--chat-surface-2)] px-3.5 pt-4 text-[13px]"
             data-slot="composer-context"
           >
             {view.slots.composerContext}

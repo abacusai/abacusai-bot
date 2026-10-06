@@ -152,6 +152,43 @@ describe("R2-T25 composer", () => {
     expect(field().dataset.layout).toBe("position");
   });
 
+  it("session: the box holds the text area and the toolbar; the context bar hangs under it", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(
+      relay,
+      "session",
+      {},
+      { slots: { composerContext: <span>abacusai-bot · main</span> } }
+    );
+    await waitFor(() =>
+      expect(composer().hasAttribute("data-expanded")).toBe(true)
+    );
+    const surface = document.querySelector<HTMLElement>(
+      '[data-slot="composer-surface"]'
+    )!;
+    // ComposerStates "Session, resting": a 100 px box, 8 px under the
+    // toolbar row, the text area taking the spare height (no void below
+    // the toolbar), corners 20 px.
+    expect(surface.className).toContain("min-h-[100px]");
+    expect(surface.className).toContain("pb-2");
+    expect(surface.className).toContain("[&>textarea]:flex-1");
+    expect(surface.dataset.radius).toBe(String(SURFACE_RADIUS.session));
+    const toolbar = within(surface).getByRole("button", {
+      name: "Send",
+    }).parentElement!;
+    expect(surface.lastElementChild).toBe(toolbar);
+    // The context bar: its own 48 px strip inset 12 px, bottom corners
+    // 14 px, tucked 16 px under the box with 16 px of top padding.
+    const context = document.querySelector<HTMLElement>(
+      '[data-slot="composer-context"]'
+    )!;
+    expect(surface.nextElementSibling).toBe(context);
+    expect(within(context).getByText("abacusai-bot · main")).toBeTruthy();
+    for (const cls of ["mx-3", "-mt-4", "min-h-12", "pt-4", "rounded-b-[14px]"])
+      expect(context.className.split(" ")).toContain(cls);
+  });
+
   it("session: two rows at rest with the mode chip; Enter sends; Stop while busy; busy submit enqueues", async () => {
     let started: (() => void) | null = null;
     const relay = new FakeRelay({
