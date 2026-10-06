@@ -1,12 +1,13 @@
+import type { UIMessage } from "@tanstack/ai";
+import * as v from "valibot";
+
 /**
- * `threads/<sessionId>.json`, the v2 thread file (spec 00 C.3), and the rules
+ * `threads/<sessionId>.json`, the v3 thread file (spec 00 C.3), and the rules
  * that decide when a v1 transcript is converted into it. Pure: step 1, the
  * thread store and step 4 share these. Hashing and file access stay with the
  * callers (main), which pass the v1 file's fingerprint in.
  */
-import type { UIMessage } from "@tanstack/ai";
-import * as v from "valibot";
-
+import { MESSAGE_REACTION_EMOJIS } from "../message-reactions";
 import { v1ToUiMessages } from "./v1-to-ui-messages";
 import type { TranscriptFileV1 } from "./v1-types";
 
@@ -33,14 +34,15 @@ export type ThreadSource =
       afterClear?: string;
     };
 
+/** Historical API name retained for callers; v2 files upgrade to v3 on read. */
 export interface ThreadFileV2 {
-  version: 2;
+  version: 3;
   /** The session id. */
   threadId: string;
   /** ISO. For a v1-derived file, the v1 file's `updatedAt`. */
   updatedAt: string;
   source: ThreadSource;
-  messages: UIMessage[];
+  messages: Array<UIMessage & { reactions?: string[] }>;
   /** Durable run outcomes (spec 02 §14.7): `agui` files only. */
   runs?: unknown[];
 }
@@ -138,7 +140,7 @@ export const v1ToThreadFile = (input: {
   fingerprint?: string;
   afterClear?: string;
 }): ThreadFileV2 => ({
-  version: 2,
+  version: 3,
   threadId: input.threadId,
   updatedAt: input.updatedAt,
   source: {
@@ -192,13 +194,13 @@ export const parseThreadTwin = (text: string): ThreadTwin => {
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
     return { status: "corrupt" };
   const file = parsed as Record<string, unknown>;
-  if (typeof file.version === "number" && file.version > 2)
+  if (typeof file.version === "number" && file.version > 3)
     return { status: "foreign" };
   const source = file.source as Record<string, unknown> | null | undefined;
   // Ownership before shape: a kind this build does not know belongs to a
   // newer writer, whatever its messages look like.
   if (
-    file.version === 2 &&
+    (file.version === 2 || file.version === 3) &&
     typeof source === "object" &&
     source !== null &&
     typeof source.kind === "string" &&
@@ -207,12 +209,29 @@ export const parseThreadTwin = (text: string): ThreadTwin => {
   )
     return { status: "foreign" };
   if (
-    file.version !== 2 ||
+    (file.version !== 2 && file.version !== 3) ||
     !Array.isArray(file.messages) ||
     typeof source !== "object" ||
     source === null
   )
     return { status: "corrupt" };
+  file.version = 3;
+  file.messages = (
+    file.messages as Array<UIMessage & { reactions?: string[] }>
+  ).map((message) => {
+    if (!message || typeof message !== "object") return message;
+    const reactions = message.reactions ?? message.metadata?.abacus?.reactions;
+    return reactions == null
+      ? message
+      : {
+          ...message,
+          reactions,
+          metadata: {
+            ...message.metadata,
+            abacus: { ...message.metadata?.abacus, reactions },
+          },
+        };
+  });
   if (source.kind === "agui") {
     const from = source.migratedFrom as Record<string, unknown> | undefined;
     return {
@@ -377,6 +396,7 @@ interface MessageShape {
   id: string;
   role: "system" | "user" | "assistant";
   parts: unknown[];
+  reactions?: string[];
 }
 
 const SubagentStatus = v.picklist([
@@ -411,6 +431,7 @@ export const UIMessageSchema: v.GenericSchema<MessageShape> = v.looseObject({
   id: v.string(),
   role: v.picklist(["system", "user", "assistant"]),
   parts: v.array(PartSchema),
+  reactions: v.optional(v.array(v.picklist(MESSAGE_REACTION_EMOJIS))),
   metadata: Meta,
 });
 
@@ -461,8 +482,17 @@ const MessageAbacus = v.strictObject({
   credits: v.optional(
     v.array(v.strictObject({ segmentId: Str, creditsUsed: v.number() }))
   ),
+  reactions: v.optional(v.array(Str)),
   userText: v.optional(
     v.strictObject({
+      replyTo: v.optional(
+        v.strictObject({
+          messageId: Str,
+          role: v.picklist(["user", "assistant"]),
+          excerpt: Str,
+        })
+      ),
+      visibleFrom: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
       operator: v.optional(
         v.strictObject({
           kind: v.picklist([
@@ -472,6 +502,7 @@ const MessageAbacus = v.strictObject({
             "auto-reply-reminder",
             "environment-notice",
             "routine-editor",
+            "user-reaction",
           ]),
           visibleFrom: v.optional(
             v.pipe(v.number(), v.integer(), v.minValue(0))
@@ -586,6 +617,7 @@ const MigratedPart: v.GenericSchema<unknown> = v.union([
 
 const MigratedMessage: v.GenericSchema<unknown> = v.strictObject({
   id: Str,
+  reactions: v.optional(v.array(v.picklist(MESSAGE_REACTION_EMOJIS))),
   role: v.picklist(["user", "assistant"]),
   parts: v.array(MigratedPart),
   metadata: v.strictObject({
@@ -596,7 +628,7 @@ const MigratedMessage: v.GenericSchema<unknown> = v.strictObject({
 
 /** A file the v1 mapper wrote: every part and metadata shape checked. */
 export const MigratedThreadFileV2Schema = v.strictObject({
-  version: v.literal(2),
+  version: v.literal(3),
   threadId: Str,
   updatedAt: Str,
   source: TranscriptV1Source,

@@ -60,7 +60,7 @@ describe("operator user text", () => {
     "routine-editor",
   ])("accepts migrated %s tags and rejects invalid offsets", (kind) => {
     const file = (visibleFrom?: number) => ({
-      version: 2,
+      version: 3,
       threadId: "t",
       updatedAt: "x",
       source: { kind: "transcript-v1", updatedAt: "x", segments: 1 },

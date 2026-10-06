@@ -47,6 +47,7 @@ import type {
 } from "@tanstack/ai";
 
 import type { UserTextTags } from "../agent-types";
+import { isMessageReaction } from "../message-reactions";
 import {
   attachmentRefs,
   hasSystemReminder,
@@ -96,6 +97,7 @@ export interface AbacusMessageMetadata {
   credits?: Array<{ segmentId: string; creditsUsed: number }>;
   /** User messages. */
   userText?: UserTextTags;
+  reactions?: string[];
   /**
    * The old UI's feedback row: under the turn's last top-level bot text
    * (`segmentId`), rated as backend message `index` (`2 × users − 1`,
@@ -849,6 +851,11 @@ export function v1ToUiMessages(segments: readonly unknown[]): UIMessage[] {
     type: string | undefined,
     groupId: string | undefined
   ): void => {
+    if (Array.isArray(segment.reactions)) {
+      target.abacus.reactions = segment.reactions.filter(isMessageReaction);
+      (target.message as UIMessage & { reactions?: string[] }).reactions =
+        target.abacus.reactions;
+    }
     const known = type === undefined ? undefined : KNOWN_KEYS[type];
     const trace: Omit<SegmentProvenance, "partIndex"> = {
       id,

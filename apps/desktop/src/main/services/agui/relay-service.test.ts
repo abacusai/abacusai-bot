@@ -641,7 +641,7 @@ describe("ai.subscribe, ai.hydrate, ai.joinRun", () => {
       first.agent.emit("s1", event);
     const file = first.store.readCurrentFile("s1");
     expect(file).toMatchObject({
-      version: 2,
+      version: 3,
       source: { kind: "agui" },
       runs: [expect.objectContaining({ runId: "run-1", kind: "success" })],
     });
@@ -1296,4 +1296,67 @@ it("passes operator display tags through ai.send without rewriting the wire prom
     content,
     metadata: { abacus: { userText } },
   });
+});
+
+it("routes reactions through the agent and persists the acknowledgement across restart", async () => {
+  const first = setup();
+  first.agent.boot();
+  for (const event of [
+    ...started("r"),
+    { type: "TEXT_MESSAGE_START", messageId: "a", role: "assistant" },
+    { type: "TEXT_MESSAGE_CONTENT", messageId: "a", delta: "Hello" },
+    { type: "TEXT_MESSAGE_END", messageId: "a" },
+    finished("r"),
+  ])
+    first.agent.emit("s1", event);
+  first.agent.answer = (command) =>
+    command.type === "message.react"
+      ? [{ type: "CUSTOM", name: "message.reactions", value: command }]
+      : [];
+  await first.client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "👍",
+    selected: true,
+  });
+  expect(first.agent.commands.at(-1)).toEqual({
+    type: "message.react",
+    messageId: "a",
+    emoji: "👍",
+    selected: true,
+    excerpt: "Hello",
+  });
+  await vi.waitFor(() =>
+    expect(
+      first.store
+        .readCurrentFile("s1")
+        ?.messages.find((message) => message.id === "a")?.reactions
+    ).toEqual(["👍"])
+  );
+  expect(
+    (await setup().client.ai.hydrate({ threadId: "s1" })).messages.find(
+      (message) => message.id === "a"
+    )?.metadata?.abacus?.reactions
+  ).toEqual(["👍"]);
+  await first.client.ai.react({
+    threadId: "s1",
+    messageId: "a",
+    emoji: "👍",
+    selected: false,
+  });
+  await vi.waitFor(() =>
+    expect(
+      first.store
+        .readCurrentFile("s1")
+        ?.messages.find((message) => message.id === "a")?.reactions
+    ).toEqual([])
+  );
+  await expect(
+    first.client.ai.react({
+      threadId: "s1",
+      messageId: "missing",
+      emoji: "👍",
+      selected: true,
+    })
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });

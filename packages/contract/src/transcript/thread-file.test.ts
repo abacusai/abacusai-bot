@@ -17,7 +17,7 @@ describe("parseThreadTwin", () => {
   it("classifies a newer version as foreign whatever its source says (r2 #4)", () => {
     expect(
       status({
-        version: 3,
+        version: 4,
         source: { kind: "transcript-v1", updatedAt: "x", segments: 1 },
         messages: [],
       })

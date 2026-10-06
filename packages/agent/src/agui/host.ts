@@ -9,6 +9,7 @@ import { writeSync } from "node:fs";
 import type { Readable } from "node:stream";
 
 import { isBotSession } from "../bot/bot-config.js";
+import { BOT_REACTION_EMOJIS } from "../bot/bot-reaction-tool.js";
 import { BotSession } from "../bot/bot-session.js";
 import { tagEvent } from "../event-meta.js";
 import { parseModeStrict } from "../permissions.js";
@@ -347,6 +348,28 @@ export class AguiHost {
 
   private async dispatch(command: AgentCommand): Promise<void> {
     switch (command.type) {
+      case "message.react":
+        if (
+          !BOT_REACTION_EMOJIS.some((emoji) => emoji === command.emoji) ||
+          typeof command.messageId !== "string" ||
+          typeof command.selected !== "boolean" ||
+          typeof command.excerpt !== "string"
+        )
+          return;
+        this.write(
+          custom("message.reactions", {
+            messageId: command.messageId,
+            emoji: command.emoji,
+            selected: command.selected,
+          })
+        );
+        if (command.selected)
+          await this.core.handle({
+            type: "send",
+            message: `[reaction] The user reacted ${command.emoji} to your message "${command.excerpt.slice(0, 80)}"`,
+            userText: { operator: { kind: "user-reaction" } },
+          });
+        return;
       case "run":
         await this.onRun(command.input);
 

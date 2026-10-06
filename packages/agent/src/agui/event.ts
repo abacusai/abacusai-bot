@@ -53,6 +53,7 @@ export function custom<N extends CustomName>(
 
 /** Custom names that may appear outside an open run (*S* in §2.3). */
 export const SESSION_SCOPED_CUSTOM: ReadonlySet<string> = new Set<CustomName>([
+  "message.reactions",
   "session.ready",
   "session.cleared",
   "wire.hello",

@@ -79,6 +79,7 @@ export const WEB_HOST_ALLOWED = [
   "ai.attention",
   "ai.subscribe",
   "ai.send",
+  "ai.react",
   "ai.hydrate",
   "ai.joinRun",
   "ai.cancel",

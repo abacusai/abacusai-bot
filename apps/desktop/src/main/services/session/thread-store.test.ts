@@ -243,7 +243,7 @@ describe("C-T7 thread store", () => {
 
     fs.writeFileSync(v2File("s1"), "{half");
     expect((await threads.readCurrent("s1")).length).toBe(2);
-    expect(readJson(v2File("s1")).version).toBe(2);
+    expect(readJson(v2File("s1")).version).toBe(3);
 
     // The v1 file is gone (cleared) but its v1-derived twin survived.
     fs.rmSync(v1File("s1"));
@@ -287,7 +287,7 @@ describe("C-T7 thread store", () => {
   });
 
   it.each([
-    ["a newer version", { ...aguiThread("s1"), version: 3 }],
+    ["a newer version", { ...aguiThread("s1"), version: 4 }],
     [
       "an unknown source kind",
       { ...aguiThread("s1"), source: { kind: "sqlite-v3" } },
@@ -445,7 +445,7 @@ describe("C-T7 r2: ownership, clears, held writes", () => {
   it("#4: never takes the fast path over a newer version that says transcript-v1", async () => {
     const { threads, transcripts } = make();
     const newer = {
-      version: 3,
+      version: 4,
       threadId: "s1",
       updatedAt: "2030-01-01T00:00:00.000Z",
       source: { kind: "transcript-v1", updatedAt: "x", segments: 9 },
@@ -462,7 +462,7 @@ describe("C-T7 r2: ownership, clears, held writes", () => {
   it("#5: a clear marker never lets a repair replace a protected twin", async () => {
     const { threads, transcripts } = make();
     transcripts.write("s1", SEGMENTS);
-    put(v2File("s1"), { ...aguiThread("s1"), version: 3 });
+    put(v2File("s1"), { ...aguiThread("s1"), version: 4 });
     const bytes = fs.readFileSync(v2File("s1"), "utf8");
     threads.markCleared("s1");
     // New history after the clear.

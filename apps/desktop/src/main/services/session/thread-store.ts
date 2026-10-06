@@ -135,11 +135,11 @@ export const readThreadTwin = (file: string): ThreadTwin =>
  */
 const JSON_STRING = String.raw`"(?:[^"\\]|\\.)*"`;
 const DERIVED_HEADER = new RegExp(
-  String.raw`^\{"version":2,"threadId":${JSON_STRING},"updatedAt":${JSON_STRING},"source":\{"kind":"transcript-v1","updatedAt":${JSON_STRING},"segments":\d+[,}]`
+  String.raw`^\{"version":3,"threadId":${JSON_STRING},"updatedAt":${JSON_STRING},"source":\{"kind":"transcript-v1","updatedAt":${JSON_STRING},"segments":\d+[,}]`
 );
 
 /**
- * True when a thread file's first 4 KB say it is a version-2 v1-derived
+ * True when a thread file's first 4 KB say it is a version-3 v1-derived
  * file, as this build writes it (`JSON.stringify` keeps `version` first and
  * `source` before `messages`), so the dual-write can replace it without
  * parsing a large file. Anything else takes the full parse.
@@ -531,7 +531,7 @@ export class ThreadStore {
     if (owner === "foreign" || owner === "unreadable")
       throw new ThreadFileProtectedError(sessionId, owner);
     const file: ThreadFileV2 = {
-      version: 2,
+      version: 3,
       threadId: sessionId,
       updatedAt: new Date().toISOString(),
       source: {

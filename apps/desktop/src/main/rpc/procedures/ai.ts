@@ -115,6 +115,10 @@ export const aiRouter = impl.ai.router({
       yield* events;
     })();
   }),
+  react: impl.ai.react.handler(({ input, context }) => {
+    if (!context.deps.ai.react) throw new ORPCError("UNAVAILABLE");
+    return context.deps.ai.react(input);
+  }),
   send: impl.ai.send.handler(async ({ input, context }) => {
     const result = await context.deps.ai.send(input);
     if (result.status === "started" || result.status === "queued")
@@ -149,7 +153,11 @@ export const aiRouter = impl.ai.router({
   ),
   queue: {
     enqueue: impl.ai.queue.enqueue.handler(({ input, context }) =>
-      context.deps.ai.queue.enqueue(input.threadId, input.message)
+      context.deps.ai.queue.enqueue(
+        input.threadId,
+        input.message,
+        input.userText
+      )
     ),
     update: impl.ai.queue.update.handler(({ input, context }) =>
       context.deps.ai.queue.update(input)

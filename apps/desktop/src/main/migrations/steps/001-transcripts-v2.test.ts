@@ -106,7 +106,7 @@ const layOut = () => {
   fs.mkdirSync(path.join(transcripts(), "folder.json"));
   // A newer build's twin, and one that cannot be read: never replaced.
   put(transcripts(), "foreign.json", v1("foreign"));
-  put(threads(), "foreign.json", { ...AGUI, version: 3 });
+  put(threads(), "foreign.json", { ...AGUI, version: 4 });
   put(transcripts(), "twin-dir.json", v1("twin-dir"));
   fs.mkdirSync(path.join(threads(), "twin-dir.json"));
   // Cleared, but the v1 removal failed: its marker holds these bytes.
@@ -263,7 +263,7 @@ describe("C-T4 step 1 transcripts-v2", () => {
       ),
     });
     // Never replaced, never converted.
-    expect(readJson(path.join(threads(), "foreign.json")).version).toBe(3);
+    expect(readJson(path.join(threads(), "foreign.json")).version).toBe(4);
     expect(
       fs.statSync(path.join(threads(), "twin-dir.json")).isDirectory()
     ).toBe(true);

@@ -34,6 +34,7 @@ import { BotUI, SessionUI } from "./ui";
 export interface ChatViewProps {
   threadId: string;
   skin: "bot" | "session";
+  authorName?: string;
   runtime: ChatRuntime;
   slots?: ChatViewSlots;
   composer: ComposerConfig;
@@ -160,6 +161,7 @@ export const ChatView = (props: ChatViewProps) => {
     skin,
     session,
     runtime,
+    authorName: props.authorName,
     composer: props.composer,
     slots: props.slots ?? {},
     workspaceRoot: props.workspaceRoot,

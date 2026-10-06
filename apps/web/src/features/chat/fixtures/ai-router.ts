@@ -41,6 +41,12 @@ export interface AguiSourceLike {
     signal: AbortSignal
   ): AsyncIterable<{ seq: number; notice: RunFinishedNotice }>;
   attention(signal: AbortSignal): AsyncIterable<AttentionEvent>;
+  react?(input: {
+    threadId: string;
+    messageId: string;
+    emoji: string;
+    selected: boolean;
+  }): Promise<void>;
   send(input: AiSendInput): Promise<AiSendAck>;
   hydrate(threadId: string): Promise<AiHydration>;
   cancel(threadId: string, runId?: string): Promise<void>;
@@ -158,6 +164,10 @@ export const fixtureAiRouter = impl.ai.router({
     return (async function* () {
       yield* events;
     })();
+  }),
+  react: impl.ai.react.handler(({ input, context }) => {
+    if (!context.deps.ai.react) throw new ORPCError("UNAVAILABLE");
+    return context.deps.ai.react(input);
   }),
   send: impl.ai.send.handler(({ input, context }) =>
     context.deps.ai.send(input)
