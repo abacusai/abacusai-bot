@@ -56,21 +56,58 @@ interface Placement {
   right?: number;
 }
 
+/** What the bar must not cover: the rows before and after the message. */
+export interface BarObstacles {
+  above?: DOMRect | null;
+  below?: DOMRect | null;
+}
+
+const BAR_WIDTH_FALLBACK_PX = 320;
+
+const intersects = (
+  top: number,
+  bottom: number,
+  left: number,
+  right: number,
+  rect: DOMRect | null | undefined
+): boolean =>
+  rect != null &&
+  top < rect.bottom &&
+  bottom > rect.top &&
+  left < rect.right &&
+  right > rect.left;
+
 /**
  * Where the bar sits, from the message's rect: above the bubble, aligned
  * to its outer side, flipped below when the transcript viewport leaves no
- * room above (the first message, or the row behind the day pill).
+ * room above or the bar would cover the preceding row (the first message
+ * of a day under its date pill, or the sticky pill at the very top). If
+ * below would cover the following row too, above wins.
  */
 export const placeActionBar = (
   host: DOMRect,
   viewport: DOMRect,
   role: "user" | "assistant",
   barHeight: number,
-  windowWidth: number
+  windowWidth: number,
+  obstacles: BarObstacles = {},
+  barWidth = BAR_WIDTH_FALLBACK_PX
 ): Placement => {
-  const above = host.top - BAR_GAP_PX - barHeight;
-  const side = above < viewport.top ? "below" : "above";
-  const top = side === "above" ? above : host.bottom + BAR_GAP_PX;
+  const left = role === "user" ? host.right - barWidth : host.left;
+  const right = left + barWidth;
+  const aboveTop = host.top - BAR_GAP_PX - barHeight;
+  const belowTop = host.bottom + BAR_GAP_PX;
+  const aboveBlocked =
+    aboveTop < viewport.top ||
+    intersects(aboveTop, aboveTop + barHeight, left, right, obstacles.above);
+  const belowBlocked =
+    belowTop + barHeight > viewport.bottom ||
+    intersects(belowTop, belowTop + barHeight, left, right, obstacles.below);
+  const side =
+    aboveBlocked && (!belowBlocked || aboveTop < viewport.top)
+      ? "below"
+      : "above";
+  const top = side === "above" ? aboveTop : belowTop;
   return role === "user"
     ? { side, top, right: Math.max(0, windowWidth - host.right) }
     : { side, top, left: Math.max(0, host.left) };
@@ -96,6 +133,17 @@ const tabbableAfter = (host: HTMLElement | null): HTMLElement | null => {
 
 const MotionBubbleReactions = motion.create(BubbleReactions);
 
+const ROW = '[data-slot="message-scroller-item"]';
+
+/** The visible content of a neighbouring row: its pill, its bubble, or itself. */
+const rowContent = (row: Element | null): DOMRect | null => {
+  if (row == null) return null;
+  const inner = row.matches('[data-slot="day-separator"]')
+    ? row.firstElementChild
+    : row.querySelector("[data-message-target]");
+  return (inner ?? row).getBoundingClientRect();
+};
+
 const measureBar = (
   host: HTMLElement | null,
   bar: HTMLElement | null,
@@ -105,12 +153,18 @@ const measureBar = (
   const viewport =
     host.closest(VIEWPORT)?.getBoundingClientRect() ??
     new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+  const row = host.closest(ROW);
   return placeActionBar(
     host.getBoundingClientRect(),
     viewport,
     role,
     bar?.offsetHeight || BAR_HEIGHT_FALLBACK_PX,
-    window.innerWidth
+    window.innerWidth,
+    {
+      above: rowContent(row?.previousElementSibling ?? null),
+      below: rowContent(row?.nextElementSibling ?? null),
+    },
+    bar?.offsetWidth || BAR_WIDTH_FALLBACK_PX
   );
 };
 

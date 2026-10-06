@@ -84,6 +84,71 @@ it("sits above the bubble on its outer side and flips below at the viewport's to
   ).toEqual({ side: "below", top: 126, left: 100 });
 });
 
+it("flips below when the bar would cover the row before it, unless the row after is in the way too", () => {
+  const viewport = rect(0, 800, 0, 1000);
+  const bubble = rect(300, 360);
+  // A centred date pill at the bar's height, within the bar's span: flip.
+  const pill = rect(250, 280, 280, 420);
+  expect(
+    placeActionBar(bubble, viewport, "assistant", 36, 1000, { above: pill })
+  ).toEqual({ side: "below", top: 366, left: 100 });
+  // The same pill off to the side of the bar's span: stay above.
+  expect(
+    placeActionBar(bubble, viewport, "assistant", 36, 1000, {
+      above: rect(250, 280, 600, 700),
+    })
+  ).toEqual({ side: "above", top: 258, left: 100 });
+  // A user bubble measures its span from its right edge.
+  expect(
+    placeActionBar(
+      bubble,
+      viewport,
+      "user",
+      36,
+      1000,
+      { above: rect(250, 280, 110, 130) },
+      100
+    )
+  ).toEqual({ side: "above", top: 258, right: 500 });
+  // Rows on both sides: above wins (below would cover the next message).
+  expect(
+    placeActionBar(bubble, viewport, "assistant", 36, 1000, {
+      above: pill,
+      below: rect(372, 420),
+    })
+  ).toEqual({ side: "above", top: 258, left: 100 });
+});
+
+it("flips below the first message of a day in the transcript", async () => {
+  await mount(
+    new FakeRelay({
+      history: [
+        {
+          ...original,
+          metadata: { tanstack: { createdAt: "2026-10-01T10:00:00Z" } },
+        },
+      ],
+    })
+  );
+  const row = host().closest<HTMLElement>(
+    '[data-slot="message-scroller-item"]'
+  )!;
+  const pill = row.previousElementSibling?.matches(
+    '[data-slot="day-separator"]'
+  )
+    ? (row.previousElementSibling.firstElementChild as HTMLElement)
+    : null;
+  expect(pill).toBeTruthy();
+  const viewport = host().closest<HTMLElement>(
+    '[data-slot="message-scroller-viewport"]'
+  )!;
+  viewport.getBoundingClientRect = () => rect(0, 800, 0, 1000);
+  host().getBoundingClientRect = () => rect(100, 160, 20, 400);
+  pill!.getBoundingClientRect = () => rect(60, 84, 180, 280);
+  await reveal();
+  expect(overlay().dataset.side).toBe("below");
+});
+
 it("hides while the transcript scrolls and returns on the next pointer move", async () => {
   await mount();
   const viewport = host().closest<HTMLElement>(
