@@ -23,6 +23,9 @@ export const APP_HOTKEYS = {
   closeTab: "Mod+W",
   nextTab: "Control+Tab",
   previousTab: "Control+Shift+Tab",
+  /** The side panel's strip (the sessions dock keeps Control+Tab). */
+  nextPanelTab: "Mod+Shift+]",
+  previousPanelTab: "Mod+Shift+[",
 } as const;
 
 export const AppHotkeysProvider = ({
@@ -57,6 +60,8 @@ export const dispatchAppHotkey = (
       closeTab: "close-tab",
       nextTab: "next-tab",
       previousTab: "previous-tab",
+      nextPanelTab: "next-panel-tab",
+      previousPanelTab: "previous-panel-tab",
       newTerminalTab: "new-terminal-tab",
     }[id]
   );

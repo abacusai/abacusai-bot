@@ -16,6 +16,11 @@ import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { requestBrowserOpen } from "#renderer/features/shell/browser-open";
+import {
+  openPanelTab,
+  panelScopeKey,
+  updatePanelTab,
+} from "#renderer/features/shell/panel-store";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
@@ -40,11 +45,11 @@ const Sender = ({
   const slots = useBotChatSlots(bot, sessionId, false, true, (url) =>
     requestBrowserOpen({ sessionId, url })
   );
-  const search = Route.useSearch();
+  const panelKey = panelScopeKey("bots", bot.id)!;
   if (!slots.session) return <BotGone chat />;
   return (
     <div className="size-full" style={accentVars(resolveLook(bot))}>
-      <BotBrowserRegistration sessionId={sessionId} />
+      <BotBrowserRegistration botId={bot.id} sessionId={sessionId} />
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
@@ -62,17 +67,37 @@ const Sender = ({
         slots={{ ...slots.chat, wallpaper: bot.wallpaper ?? null }}
         composer={slots.composer}
       />
-      <SidePanelContent tab="browser">
-        <BotBrowser sessionId={sessionId} />
+      <SidePanelContent kind="browser">
+        {(tab, active) => (
+          <BotBrowser
+            botId={bot.id}
+            sessionId={sessionId}
+            tab={tab}
+            active={active}
+          />
+        )}
       </SidePanelContent>
-      <SidePanelContent tab="files">
-        <FilesTab
-          sessionId={sessionId}
-          bot={bot}
-          preview={search.preview}
-          workspaceRoot={slots.workspaceRoot}
-          onClosePreview={() => slots.setTab("files")}
-        />
+      <SidePanelContent kind="files">
+        {(tab) => (
+          <FilesTab
+            sessionId={sessionId}
+            bot={bot}
+            tab={tab}
+            workspaceRoot={slots.workspaceRoot}
+            onOpen={(path, where) =>
+              where === "tab" && path != null
+                ? openPanelTab(
+                    panelKey,
+                    { kind: "files", path, title: path.split("/").at(-1) },
+                    { fresh: true }
+                  )
+                : updatePanelTab(panelKey, tab.id, {
+                    path,
+                    title: path?.split("/").at(-1),
+                  })
+            }
+          />
+        )}
       </SidePanelContent>
     </div>
   );

@@ -164,6 +164,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "browser-open",
     "hotkeys",
     "native-presenter",
+    "panel-store",
     "platform-presenter",
     "preview-consumers",
     "rail",
@@ -174,6 +175,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "side-panel-slot",
     "top-bar",
     "top-bar-slots",
+    "use-panel",
   ],
   tour: ["gallery", "store"],
 };

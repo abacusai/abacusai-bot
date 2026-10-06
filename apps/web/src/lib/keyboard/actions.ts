@@ -39,6 +39,8 @@ export const APP_ACTIONS: readonly AppAction[] = [
   },
   action("next-tab", "Ctrl+Tab", "sessions"),
   action("previous-tab", "Ctrl+Shift+Tab", "sessions"),
+  action("next-panel-tab", "Mod+Shift+]"),
+  action("previous-panel-tab", "Mod+Shift+["),
   action("stop-run", "Mod+.", "chat"),
   action("send", "Enter", "chat", false),
   {

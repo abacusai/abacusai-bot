@@ -531,6 +531,7 @@
       "filesIntro": "Files this bot made or was given. Also in Artifacts.",
       "filesEmpty": "Nothing here yet",
       "backFiles": "Back to files",
+      "openInNewTab": "Open in new tab",
       "memory": {
         "empty": "Nothing remembered yet",
         "forget": "Forget",
@@ -2510,8 +2511,12 @@
         "browser": "Browser",
         "memory": "Memory",
         "details": "Details",
-        "agent": "Agent"
+        "agent": "Agent",
+        "device": "Device",
+        "thread": "Thread"
       },
+      "addTab": "Add a tab",
+      "closeTab": "Close {{name}}",
       "openExternalBrowser": "Open in external browser"
     },
     "sidebar": {
@@ -2663,6 +2668,8 @@
         "close-tab": "Close tab",
         "next-tab": "Next tab",
         "previous-tab": "Previous tab",
+        "next-panel-tab": "Next panel tab",
+        "previous-panel-tab": "Previous panel tab",
         "stop-run": "Stop run",
         "send": "Send",
         "notch-reply": "Reply in the notch"

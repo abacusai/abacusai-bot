@@ -8,9 +8,11 @@ import { describe, expect, it } from "vitest";
 import { GEOMETRY_VARS, SHELL_GEOMETRY } from "./geometry";
 import {
   clampPanelWidth,
+  PANE_MIN_PX,
   PANEL_DEFAULT_PX,
   PANEL_MAX_PX,
   PANEL_MIN_PX,
+  panelMaxFor,
 } from "./side-panel";
 
 import tokensCss from "../../styles/tokens.css?raw";
@@ -65,7 +67,26 @@ describe("shell geometry", () => {
     expect(g.sidePanelDrawerW).toBeLessThanOrEqual(g.sidePanelMax);
     expect(clampPanelWidth(100)).toBe(PANEL_MIN_PX);
     expect(clampPanelWidth(420)).toBe(420);
-    expect(clampPanelWidth(900)).toBe(PANEL_MAX_PX);
+    expect(clampPanelWidth(1200)).toBe(PANEL_MAX_PX);
+    expect(clampPanelWidth(900, 480)).toBe(480);
+  });
+
+  it("lets the panel take up to 60 % of the split or 960 px, the pane keeping its minimum", () => {
+    const g = SHELL_GEOMETRY;
+    expect(g.sidePanelMax).toBe(960);
+    // Unmeasured: the absolute cap.
+    expect(panelMaxFor(Number.POSITIVE_INFINITY)).toBe(PANEL_MAX_PX);
+    // 1100 window: 748 px split → 60 % would be 448, but the pane keeps its
+    // 360 and the gutter, so 380.
+    expect(panelMaxFor(748)).toBe(380);
+    expect(748 - panelMaxFor(748) - g.paneInset).toBeGreaterThanOrEqual(
+      PANE_MIN_PX
+    );
+    // 1600 wide split: 60 % is 960, the cap.
+    expect(panelMaxFor(1600)).toBe(960);
+    expect(panelMaxFor(2400)).toBe(960);
+    // Too narrow for both: never under the panel's own minimum.
+    expect(panelMaxFor(500)).toBe(PANEL_MIN_PX);
   });
 
   it("leaves the pane and the panel their 360 px each at the 1100 minimum", () => {

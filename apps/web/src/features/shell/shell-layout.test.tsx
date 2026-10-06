@@ -21,6 +21,12 @@ import {
 } from "#renderer/test-support/app-harness";
 import { setViewportWidth } from "#renderer/test-support/media";
 
+import {
+  openPanelTab,
+  panelScope,
+  panelScopeKey,
+  setPanelOpen,
+} from "./panel-store";
 import { HOVER_INTENT_MS, shellStore } from "./shell-store";
 import { useTopBarActions, useTopBarStatusText } from "./top-bar-slots";
 
@@ -93,7 +99,8 @@ describe("ShellLayout", () => {
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
     const pane = __panels.filter((p) => p.id === "pane").at(-1)!;
     expect(sidePanel.minSize).toBe(360);
-    expect(sidePanel.maxSize).toBe(480);
+    // jsdom measures nothing: the absolute cap applies.
+    expect(sidePanel.maxSize).toBe(960);
     expect(pane.minSize).toBe(360);
     expect(sidePanel.defaultSize).toBe(420);
     vi.useFakeTimers();
@@ -123,16 +130,16 @@ describe("ShellLayout", () => {
     ).not.toBeNull();
   });
 
-  it("clamps a stored panel width outside 360–480 and never writes one outside it", async () => {
+  it("clamps a stored panel width outside 360–960 and never writes one outside it", async () => {
     const seed = defaultSeed();
-    seed.prefs = fixturePrefs({ panes: { "side-panel": 900 } });
+    seed.prefs = fixturePrefs({ panes: { "side-panel": 1400 } });
     await at(1280, "/bots/chief-of-staff?tab=details", seed);
     const { __panels } =
       (await import("#renderer/ui/resizable")) as unknown as {
         __panels: Array<Record<string, unknown>>;
       };
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
-    expect(sidePanel.defaultSize).toBe(480);
+    expect(sidePanel.defaultSize).toBe(960);
     vi.useFakeTimers();
     try {
       act(() => {
@@ -176,8 +183,56 @@ describe("ShellLayout", () => {
     ).not.toBeNull();
     fireEvent.click(document.querySelector('[data-slot="side-panel-scrim"]')!);
     await waitFor(() =>
+      expect(document.querySelector('[data-slot="drawer-popup"]')).toBeNull()
+    );
+    // Closing keeps the tabs; only `open` flips.
+    const scope = panelScope(panelScopeKey("bots", "chief-of-staff"));
+    expect(scope.open).toBe(false);
+    expect(scope.tabs.map((tab) => tab.kind)).toEqual(["details"]);
+  });
+
+  it("consumes ?tab= as a deep link: the panel opens from the store and the URL loses it", async () => {
+    await at(1280, "/bots/chief-of-staff?tab=memory");
+    await waitFor(() =>
       expect(harness!.router.state.location.search).not.toHaveProperty("tab")
     );
+    const scope = panelScope(panelScopeKey("bots", "chief-of-staff"));
+    expect(scope.open).toBe(true);
+    expect(scope.tabs.map((tab) => tab.kind)).toEqual(["memory"]);
+    expect(
+      document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
+    ).not.toBeNull();
+  });
+
+  it("keeps the panel across the check-in pop-up and the editor (the owner's two complaints)", async () => {
+    await at(1280, "/bots/chief-of-staff?tab=details");
+    const panel = () =>
+      document.querySelector('[data-slot="side-panel"][data-mode="layout"]');
+    await waitFor(() => expect(panel()).not.toBeNull());
+    // The check-in editor is a masked pop-up over the chat: the panel stays.
+    await navigate({
+      to: "/bots/$botId/check-in",
+      params: { botId: "chief-of-staff" },
+    });
+    await waitFor(() =>
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    );
+    expect(panel()).not.toBeNull();
+    // The editor takes the pane; the panel hides but its state is untouched.
+    await navigate({
+      to: "/bots/$botId/edit",
+      params: { botId: "chief-of-staff" },
+    });
+    await waitFor(() => expect(panel()).toBeNull());
+    expect(panelScope(panelScopeKey("bots", "chief-of-staff")).open).toBe(true);
+    // Cancel: back to the chat with the panel as it was, on the same tab.
+    await navigate({ to: "/bots/$botId", params: { botId: "chief-of-staff" } });
+    await waitFor(() => expect(panel()).not.toBeNull());
+    expect(
+      document.querySelector(
+        '[data-slot="topbar"] [role="tab"][aria-selected="true"]'
+      )?.textContent
+    ).toBe("Details");
   });
 
   it("has no scrim at xl", async () => {
@@ -290,10 +345,15 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       expect(paneScroll().firstElementChild).toBe(content);
       expect(paneScroll().scrollTop).toBe(120);
     };
-    await navigate({ to: ".", search: { tab: "details" } });
-    expect(
-      document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
-    ).not.toBeNull();
+    const key = panelScopeKey("library")!;
+    act(() => {
+      openPanelTab(key, { kind: "details" });
+    });
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="side-panel"][data-mode="layout"]')
+      ).not.toBeNull()
+    );
     check();
     act(() => setViewportWidth(1000));
     await waitFor(() =>
@@ -309,7 +369,9 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       ).not.toBeNull()
     );
     check();
-    await navigate({ to: ".", search: {} });
+    act(() => {
+      setPanelOpen(key, false);
+    });
     await waitFor(() =>
       expect(document.querySelector('[data-slot="side-panel"]')).toBeNull()
     );
@@ -441,7 +503,7 @@ describe("the title bar", () => {
     await waitFor(() => expect(forward()).toHaveProperty("disabled", true));
   });
 
-  it("the panel toggle (and ⌘⌥B) reopens the area's last tab (Claude #19)", async () => {
+  it("the panel toggle (and ⌘⌥B) reopens the sessions dock's last tab (Claude #19)", async () => {
     await at(1280, "/sessions/review-prs");
     await navigate({ to: ".", search: { tab: "files" } });
     const toggle = screen.getByTestId("panel-toggle");
@@ -457,6 +519,58 @@ describe("the title bar", () => {
     fireEvent.click(screen.getByTestId("panel-toggle"));
     await waitFor(() =>
       expect(harness!.router.state.location.search).toEqual({ tab: "files" })
+    );
+  });
+
+  it("the panel toggle reopens a bot's strip as it was, and the strip adds, closes and switches tabs", async () => {
+    await at(1280, "/bots/chief-of-staff?tab=details");
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    const toggle = () => screen.getByTestId("panel-toggle");
+    await waitFor(() =>
+      expect(toggle().getAttribute("aria-expanded")).toBe("true")
+    );
+    act(() => {
+      openPanelTab(key, { kind: "memory" });
+    });
+    const tabs = () =>
+      within(document.querySelector<HTMLElement>('[data-slot="topbar"]')!)
+        .getAllByRole("tab")
+        .map((tab) => [tab.textContent, tab.getAttribute("aria-selected")]);
+    await waitFor(() =>
+      expect(tabs()).toEqual([
+        ["Details", "false"],
+        ["Memory", "true"],
+      ])
+    );
+    fireEvent.click(toggle());
+    await waitFor(() =>
+      expect(toggle().getAttribute("aria-expanded")).toBe("false")
+    );
+    expect(panelScope(key).tabs).toHaveLength(2);
+    fireEvent.click(toggle());
+    await waitFor(() =>
+      expect(tabs()).toEqual([
+        ["Details", "false"],
+        ["Memory", "true"],
+      ])
+    );
+    // Switch, then close the active one: its neighbour takes over.
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
+    await waitFor(() => expect(tabs()[0]?.[1]).toBe("true"));
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Details" }), {
+      key: "Backspace",
+    });
+    await waitFor(() => expect(tabs()).toEqual([["Memory", "true"]]));
+    // "+" adds a second browser tab even with one open: a new-tab page.
+    act(() => {
+      openPanelTab(key, { kind: "browser" });
+    });
+    fireEvent.click(screen.getByTestId("panel-add-tab"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Browser" }));
+    await waitFor(() =>
+      expect(
+        panelScope(key).tabs.filter((tab) => tab.kind === "browser")
+      ).toHaveLength(2)
     );
   });
 

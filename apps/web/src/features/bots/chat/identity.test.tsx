@@ -10,6 +10,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { panelScope, panelScopeKey } from "#renderer/lib/side-panel/store";
 import { renderApp } from "#renderer/test-support/app-harness";
 
 import { measureIdentity } from "./identity";
@@ -245,14 +246,18 @@ describe("the bot identity, one element with two homes", () => {
     vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
     app = await renderApp("/bots/chief-of-staff");
     await screen.findByTestId("bot-chat");
-    const search = () => app!.router.state.location.search as { tab?: string };
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    const details = () =>
+      panelScope(key).open &&
+      panelScope(key).tabs.find((tab) => tab.id === panelScope(key).active)
+        ?.kind === "details";
     expect(
       document.querySelector('[data-slot="topbar-actions"]')?.textContent ?? ""
     ).not.toContain("Details");
-    expect(search().tab).toBeUndefined();
+    expect(details()).toBe(false);
     expect(identity().getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(identity());
-    await waitFor(() => expect(search().tab).toBe("details"));
+    await waitFor(() => expect(details()).toBe(true));
     await waitFor(() =>
       expect(identity().getAttribute("aria-expanded")).toBe("true")
     );
@@ -264,7 +269,7 @@ describe("the bot identity, one element with two homes", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Details for Chief of Staff" })
     );
-    await waitFor(() => expect(search().tab).toBeUndefined());
+    await waitFor(() => expect(details()).toBe(false));
     expect(identity().getAttribute("aria-expanded")).toBe("false");
     // The far-right panel toggle stays.
     expect(screen.getByTestId("panel-toggle")).toBeTruthy();
