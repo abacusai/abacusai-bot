@@ -28,11 +28,18 @@ import {
 } from "#renderer/data/transport/websocket";
 import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { followWriteAuthorization } from "#renderer/features/onboarding/gate";
-import { stashWhatsAppClaim } from "#renderer/features/onboarding/whatsapp";
+import {
+  PhoneWhatsAppApp,
+  stashWhatsAppClaim,
+  whatsappChatQuery,
+} from "#renderer/features/onboarding/whatsapp";
 import { ConnectScreen } from "#renderer/features/shell/connect";
 import { followReconnects } from "#renderer/features/shell/connect/recovery";
 import {
+  callApps,
+  ConnectError,
   identifyHost,
+  readyHost,
   runHostConnection,
   setPageTransport,
   setUpBotAccount,
@@ -110,25 +117,78 @@ const loadSystem = async (
   return null;
 };
 
+/** A phone: touch first, and a screen whose shorter side is phone-sized. */
+const isPhone = (): boolean =>
+  matchMedia("(pointer: coarse)").matches &&
+  Math.min(screen.width, screen.height) < 600;
+
+/**
+ * A phone where the server offers the bot's WhatsApp number: the bot is
+ * WhatsApp there, so only its two screens mount and the host is started and
+ * warmed in the background (the server signs it in and wakes it for each
+ * message). `false` leaves the boot to the full app.
+ */
+const mountPhoneApp = async (root: Root): Promise<boolean> => {
+  const queryClient = createQueryClient({ showError });
+  let chat;
+  try {
+    chat = await queryClient.fetchQuery(whatsappChatQuery(callApps));
+  } catch (error) {
+    // Signed out, tier, limit: the connect screen says so. Anything else
+    // (an apps server without the number) is the full app's to handle.
+    if (error instanceof ConnectError && error.kind !== "connection")
+      throw error;
+    console.warn("[phone] WhatsApp chat unavailable", error);
+    return false;
+  }
+  if (!chat.available) return false;
+  themeOverride.setState(() => "light");
+  applyTheme(
+    document,
+    applyBootLook(document, {
+      dark: false,
+      high: matchMedia(CONTRAST_QUERY).matches,
+    })
+  );
+  await changeLanguage(resolveLanguage("system")).catch((error: unknown) => {
+    console.error("[renderer] locale failed; keeping English", error);
+  });
+  void identifyHost()
+    .then((identity) => readyHost(identity, () => {}))
+    .catch((error: unknown) =>
+      console.warn("[phone] host warm-up failed", error)
+    );
+  root.render(
+    <QueryClientProvider client={queryClient}>
+      <PhoneWhatsAppApp callApps={callApps} />
+    </QueryClientProvider>
+  );
+  return true;
+};
+
+const renderConnectError = (root: Root, error: unknown): void =>
+  root.render(
+    <ConnectScreen
+      stage="starting"
+      error={error instanceof Error ? error : new Error(String(error))}
+    />
+  );
+
 export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   stashWhatsAppClaim();
+  let identity;
+  try {
+    await setUpBotAccount();
+    if (isPhone() && (await mountPhoneApp(root))) return true;
+    identity = await identifyHost();
+  } catch (error) {
+    renderConnectError(root, error);
+    return true;
+  }
   installBrowserAttention();
   window.addEventListener("pointerdown", requestNotificationPermission, {
     once: true,
   });
-  let identity;
-  try {
-    await setUpBotAccount();
-    identity = await identifyHost();
-  } catch (error) {
-    root.render(
-      <ConnectScreen
-        stage="starting"
-        error={error instanceof Error ? error : new Error(String(error))}
-      />
-    );
-    return true;
-  }
 
   const transport = createHostTransport();
   setPageTransport(transport);
