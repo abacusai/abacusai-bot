@@ -7,7 +7,7 @@
  * of intent; the shell cancels that timer on navigation and unmount.
  */
 import { useStore } from "@tanstack/react-store";
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
@@ -19,7 +19,11 @@ import { Avatar, AvatarFallback } from "#renderer/ui/avatar";
 
 import { useFloatingIntent } from "./floating-intent";
 import type { ShellArea } from "./layout";
-import { shellStore, type AreaLocation } from "./shell-store";
+import {
+  previewFloatingArea,
+  shellStore,
+  type AreaLocation,
+} from "./shell-store";
 import { preloadSidebar } from "./sidebars";
 
 /** Where the rail sends an area: its last location, else its home. */
@@ -32,11 +36,13 @@ const RailLink = ({
   area,
   target,
   transition,
+  onPointerEnter,
   ...props
 }: {
   area: ShellArea;
   target: AreaLocation;
   transition: NavType;
+  onPointerEnter?: (event: PointerEvent<HTMLAnchorElement>) => void;
   className?: string;
   children?: ReactNode;
   "aria-current"?: "page";
@@ -47,7 +53,10 @@ const RailLink = ({
 }) => (
   <AppLink
     {...(props as object)}
-    onPointerEnter={() => preloadSidebar(area)}
+    onPointerEnter={(event) => {
+      preloadSidebar(area);
+      onPointerEnter?.(event);
+    }}
     onFocus={() => preloadSidebar(area)}
     to={target.pathname as never}
     search={target.search as never}
@@ -61,16 +70,22 @@ const RailItem = ({
   icon,
   label,
   target,
+  onPreview,
 }: {
   area: ShellArea;
   active: boolean;
   icon: AppIconName;
   label: string;
   target: AreaLocation;
+  /** A mouse over the item: the floating sidebar switches to this area. */
+  onPreview?: (area: ShellArea) => void;
 }) => (
   <RailLink
     area={area}
     target={target}
+    onPointerEnter={(event) => {
+      if (event.pointerType === "mouse") onPreview?.(area);
+    }}
     transition={area === "settings" ? "settings-in" : "nav-lateral"}
     aria-current={active ? "page" : undefined}
     data-area={area}
@@ -144,6 +159,7 @@ export const Rail = ({
           icon={item}
           label={t(`shell.rail.${item}`)}
           target={railTarget(item, last)}
+          onPreview={floatingEnabled ? previewFloatingArea : undefined}
         />
       ))}
       <div className="flex-1" />

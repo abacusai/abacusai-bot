@@ -216,9 +216,25 @@ export const SidebarSlot = ({
             onKeyDown={onKeyDown}
           >
             {rail}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <SidebarContent sidebarId={sidebarId} />
-            </div>
+            {/* The rail item under the pointer picks the area; a short
+                crossfade with a nudge keeps the switch quiet. */}
+            <AnimatePresence initial={false} mode="popLayout">
+              <motion.div
+                key={floating.area ?? sidebarId ?? "none"}
+                data-area={floating.area ?? sidebarId}
+                className="flex min-w-0 flex-1 flex-col"
+                initial={{ opacity: 0, x: motionPref === "reduced" ? 0 : 6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: motionPref === "reduced" ? 0 : -6 }}
+                transition={
+                  motionPref === "reduced"
+                    ? reducedTransition
+                    : { duration: 0.14, ease: [0.2, 0, 0, 1] }
+                }
+              >
+                <SidebarContent sidebarId={floating.area ?? sidebarId} />
+              </motion.div>
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

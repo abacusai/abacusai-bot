@@ -25,7 +25,12 @@ export interface AreaLocation {
 }
 
 export interface ShellState {
-  floating: { open: boolean; reason: null | "hover" | "peek" };
+  floating: {
+    open: boolean;
+    reason: null | "hover" | "peek";
+    /** The area the floating sidebar previews: the rail item under the pointer, else the current area. */
+    area: ShellArea | null;
+  };
   commandOpen: boolean;
   lastLocationOutsideSettings: AreaLocation;
   lastLocationByArea: Partial<Record<ShellArea, AreaLocation>>;
@@ -35,7 +40,7 @@ export interface ShellState {
 }
 
 const initialShellState = (): ShellState => ({
-  floating: { open: false, reason: null },
+  floating: { open: false, reason: null, area: null },
   commandOpen: false,
   lastLocationOutsideSettings: { pathname: "/bots/new", search: {} },
   lastLocationByArea: {},
@@ -49,13 +54,25 @@ export const openFloating = (reason: "hover" | "peek" = "hover"): void =>
   shellStore.setState((state) =>
     state.floating.open && state.floating.reason === reason
       ? state
-      : { ...state, floating: { open: true, reason } }
+      : { ...state, floating: { ...state.floating, open: true, reason } }
+  );
+
+/**
+ * The pointer is over a rail item: the floating sidebar shows that area's
+ * sidebar, so the rail reads as one menu rather than five destinations. A
+ * closed sidebar remembers nothing; `null` goes back to the current area.
+ */
+export const previewFloatingArea = (area: ShellArea | null): void =>
+  shellStore.setState((state) =>
+    state.floating.area === area
+      ? state
+      : { ...state, floating: { ...state.floating, area } }
   );
 
 export const closeFloating = (): void =>
   shellStore.setState((state) =>
     state.floating.open
-      ? { ...state, floating: { open: false, reason: null } }
+      ? { ...state, floating: { open: false, reason: null, area: null } }
       : state
   );
 
