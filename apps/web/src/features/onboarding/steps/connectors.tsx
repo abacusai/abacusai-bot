@@ -1,9 +1,15 @@
 /**
- * `connectors` (canvas OnboardConnectors): the card grid of the registry's
- * onboarding entries with Connected/Connect, "Many more" and the two
- * continues. Connect goes through the route's `connectOnboarding`.
+ * `connectors` (canvas OnboardConnectors): a 4 × 3 grid of connector cards,
+ * Connected / Connect from the live statuses, a dashed "Many more…" tile
+ * that expands the rest of the catalogue inside the slide, and the two
+ * continues. The curated set is the canvas's, in its order, limited to the
+ * entries the inline flow (`connectOnboarding`) can attach without a form:
+ * platform and messaging connectors. GitHub (a pasted token), Notion and
+ * Stripe (MCP OAuth) wait in "Many more…" / Library; Linear does not exist.
+ * Messaging tiles are Electron-only (the browser has no pairing), and a
+ * tile whose status says `not-offered` is hidden (parity).
  */
-import { CONNECTORS } from "@abacus-ai/connectors/registry";
+import { CONNECTORS, type Connector } from "@abacus-ai/connectors/registry";
 import type { Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
@@ -24,6 +30,49 @@ export type ConnectorStatuses = Record<
   { state?: string; reason?: string } | undefined
 >;
 
+/** Canvas order first; the old step's Discord and the rest of the flagged set after. */
+export const CURATED_IDS = [
+  "abacus-gmailuser",
+  "abacus-googlecalendar",
+  "abacus-googledriveuser",
+  "abacus-slack",
+  "messaging-whatsapp",
+  "messaging-telegram",
+  "messaging-discord",
+  "abacus-jira",
+  "abacus-figmauser",
+  "abacus-outlook",
+  "abacus-dropbox",
+] as const;
+
+const offered = (
+  entry: Connector,
+  statuses: ConnectorStatuses | undefined
+): boolean =>
+  (IS_ELECTRON || entry.kind !== "messaging") &&
+  statuses?.[entry.id]?.reason !== "not-offered";
+
+/**
+ * The tiles in grid order: the curated set, then (when expanded) every other
+ * onboarding-flagged entry and every other platform entry, registry order.
+ */
+export const connectorTiles = (
+  statuses: ConnectorStatuses | undefined,
+  more: boolean
+): Connector[] => {
+  const curated = CURATED_IDS.flatMap((id) =>
+    CONNECTORS.filter((entry) => entry.id === id)
+  );
+  const rest = more
+    ? CONNECTORS.filter(
+        (entry) =>
+          !(CURATED_IDS as readonly string[]).includes(entry.id) &&
+          (entry.onboarding || entry.kind === "platform")
+      )
+    : [];
+  return [...curated, ...rest].filter((entry) => offered(entry, statuses));
+};
+
 export const ConnectorsStep = ({
   ctx,
   statuses,
@@ -41,11 +90,11 @@ export const ConnectorsStep = ({
 }) => {
   const { t, busy, props, perform, advance } = ctx;
   const prefs = usePrefs();
-  const entries = CONNECTORS.filter(
-    (c) => c.onboarding || (more && c.kind === "platform")
-  )
-    .filter((c) => IS_ELECTRON || c.kind !== "messaging")
-    .filter((c) => statuses?.[c.id]?.reason !== "not-offered");
+  const tiles = connectorTiles(statuses, more);
+  const connectedAny = tiles.some(
+    (entry) => statuses?.[entry.id]?.state === "connected"
+  );
+  const queuedAny = (prefs.onboardingPairing?.length ?? 0) > 0;
   const finish = () => {
     if (!props.facts.ownsBot)
       void perform(() => props.complete({ to: "new-bot" }));
@@ -62,25 +111,29 @@ export const ConnectorsStep = ({
       <StepBody className="mt-1.5 max-w-[640px]">
         {t("onboarding.pages.connectors.body")}
       </StepBody>
-      <div className="mt-7 grid w-full max-w-[760px] grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-        {entries.map((c) => {
-          const connected = statuses?.[c.id]?.state === "connected";
+      <ul
+        className="mt-7 grid w-full max-w-[760px] grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4"
+        data-slot="connector-grid"
+      >
+        {tiles.map((entry) => {
+          const connected = statuses?.[entry.id]?.state === "connected";
           const deferred = prefs.onboardingPairing?.includes(
-            c.id.replace("messaging-", "") as never
+            entry.id.replace("messaging-", "") as never
           );
           return (
-            <div
-              key={c.id}
+            <li
+              key={entry.id}
               className="onboarding-tile onboarding-card flex items-center gap-2.5 border border-transparent py-2.5 pr-2.5 pl-3"
+              data-connector={entry.id}
               data-connected={connected}
             >
               <ConnectorMark
-                id={c.logo ?? c.id}
-                initial={c.name.slice(0, 1)}
+                id={entry.logo ?? entry.id}
+                initial={entry.name.slice(0, 1)}
                 size={28}
               />
               <span className="min-w-0 flex-1 truncate text-[13px]">
-                {c.name}
+                {entry.name}
               </span>
               {connected ? (
                 <ConnectedMark>
@@ -92,7 +145,7 @@ export const ConnectorsStep = ({
                   disabled={busy}
                   onClick={() =>
                     void perform(async () => {
-                      await props.connect?.(c.id);
+                      await props.connect?.(entry.id);
                       await refresh();
                     })
                   }
@@ -102,26 +155,30 @@ export const ConnectorsStep = ({
                     : t("onboarding.pages.connectLabel")}
                 </StepLink>
               )}
-            </div>
+            </li>
           );
         })}
         {!more && (
-          <button
-            type="button"
-            className="onboarding-quiet flex min-h-12 items-center justify-center rounded-xl border border-dashed p-2.5"
-            onClick={() => setMore(true)}
-          >
-            {t("onboarding.connectorsMore")}
-          </button>
+          <li className="contents">
+            <button
+              type="button"
+              className="onboarding-quiet hover:text-foreground flex min-h-12 items-center justify-center rounded-xl border border-dashed p-2.5 transition-colors"
+              onClick={() => setMore(true)}
+            >
+              {t("onboarding.connectorsMore")}
+            </button>
+          </li>
         )}
-      </div>
+      </ul>
       <div className="mt-8 flex flex-wrap justify-center gap-2.5">
         <StepButton disabled={busy} onClick={finish}>
           {t("onboarding.connectorsContinue")}
         </StepButton>
-        <StepButton variant="secondary" disabled={busy} onClick={finish}>
-          {t("onboarding.connectorsSkipCta")}
-        </StepButton>
+        {!connectedAny && !queuedAny && (
+          <StepButton variant="secondary" disabled={busy} onClick={finish}>
+            {t("onboarding.connectorsSkipCta")}
+          </StepButton>
+        )}
       </div>
     </>
   );
