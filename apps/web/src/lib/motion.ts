@@ -13,6 +13,8 @@ export const durations = {
   route: 120,
   sharedElement: 420,
   layout: 240,
+  /** The composer surface's spring, as a perceptual duration (`springs.surface`). */
+  surface: 320,
   childFade: 120,
   reduced: 120,
 } as const;
@@ -25,6 +27,16 @@ export const easings = {
 export const springs = {
   sidebar: { type: "spring", stiffness: 500, damping: 40 },
   panel: { type: "spring", stiffness: 500, damping: 40 },
+  /**
+   * A soft, critically damped spring for a surface that changes shape (the
+   * composer growing, morphing between pages): no overshoot, settles in
+   * about `durations.surface`.
+   */
+  surface: {
+    type: "spring",
+    visualDuration: durations.surface / 1000,
+    bounce: 0,
+  },
 } as const;
 
 export const offsets = { drill: 12 } as const;

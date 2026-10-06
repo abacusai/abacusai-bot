@@ -418,6 +418,59 @@ describe("R2-T25 composer", () => {
     );
     expect(screen.queryByText("disk full")).toBeNull();
   });
+
+  it("reveals the reply preview and the attachment strip in their own rows, in the surface's column", async () => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    current = await renderRelay(relay, "bot");
+    expect(document.querySelector('[data-slot="composer-reply"]')).toBeNull();
+    expect(
+      document.querySelector('[data-slot="composer-attachments"]')
+    ).toBeNull();
+    act(() => {
+      updateDraft("t-1", (draft) => ({
+        ...draft,
+        replyTo: { messageId: "a", role: "assistant", excerpt: "quoted" },
+        attachments: [
+          {
+            id: "f1",
+            name: "x.png",
+            size: 12,
+            state: "done",
+            kind: "path",
+            path: "/tmp/x.png",
+          } as never,
+        ],
+      }));
+    });
+    const reply = document.querySelector<HTMLElement>(
+      '[data-slot="composer-reply"]'
+    )!;
+    const strip = document.querySelector<HTMLElement>(
+      '[data-slot="composer-attachments"]'
+    )!;
+    // Each is a clipped row that grows from nothing, never a jump.
+    expect(reply.className).toContain("overflow-hidden");
+    expect(strip.className).toContain("overflow-hidden");
+    expect(within(reply).getByText("quoted")).toBeTruthy();
+    expect(within(strip).getByText("x.png")).toBeTruthy();
+    // The reply sits above the surface, the strip inside it.
+    const surface = document.querySelector('[data-slot="composer-surface"]')!;
+    expect(surface.contains(strip)).toBe(true);
+    expect(surface.contains(reply)).toBe(false);
+    expect(composer().contains(reply)).toBe(true);
+    act(() => {
+      updateDraft("t-1", (draft) => ({
+        ...draft,
+        replyTo: undefined,
+        attachments: [],
+      }));
+    });
+    expect(document.querySelector('[data-slot="composer-reply"]')).toBeNull();
+    expect(
+      document.querySelector('[data-slot="composer-attachments"]')
+    ).toBeNull();
+  });
 });
 
 describe("r2 draft revisions", () => {
