@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { prepareEditContent } from "./edit-content.js";
 import { resolveEdit, spliceRanges } from "./edit-resolve.js";
 import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
 import {
@@ -623,18 +624,19 @@ function applyEdits(
     replaceAll?: boolean;
   }>
 ): string {
+  const source = prepareEditContent(original);
   const patches: Array<{ start: number; end: number; text: string }> = [];
 
   for (const edit of edits) {
-    const oldText = edit.oldText ?? "";
-    const newText = edit.newText ?? "";
+    const oldText = source.normalize(edit.oldText ?? "");
+    const newText = source.normalize(edit.newText ?? "");
 
     if (!oldText) {
       continue;
     }
 
     const resolved = resolveEdit(
-      original,
+      source.content,
       oldText,
       newText,
       edit.replaceAll === true
@@ -651,7 +653,8 @@ function applyEdits(
 
   // Index splicing, never String.replace: `$&` and friends in a replacement
   // string are pattern syntax to replace() and would corrupt the preview.
-  return spliceRanges(original, patches);
+  if (patches.length === 0) return original;
+  return source.restore(spliceRanges(source.content, patches));
 }
 
 function readFileSafe(absolutePath: string): string {
