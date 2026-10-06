@@ -1289,7 +1289,7 @@ it("passes operator display tags through ai.send without rewriting the wire prom
     ],
   });
   expect(
-    (agent.commands[0]?.input as { messages: unknown[] }).messages[0]
+    (agent.commands[0]!.input as { messages: unknown[] }).messages[0]
   ).toMatchObject({
     id: "op-user",
     role: "user",
