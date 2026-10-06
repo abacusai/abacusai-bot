@@ -7,6 +7,10 @@ import { useSelector } from "@tanstack/react-store";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  OnboardingWhatsApp,
+  WhatsAppLinkedBanner,
+} from "#platform/whatsapp-bot";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { Spinner } from "#renderer/components/spinner";
@@ -56,6 +60,7 @@ export const OnboardingFrame = ({
     welcome: 1,
     connect: 2,
     connected: 2,
+    whatsapp: 3,
     models: 3,
     connectors: 4,
     "first-bot": 5,
@@ -277,16 +282,22 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           )}
         </div>
       )}
-      <h1 ref={heading} tabIndex={-1}>
-        {title}
-      </h1>
-      <p>
-        {step === "welcome"
-          ? t("onboarding.welcomeTagline")
-          : step === "connect" && !IS_ELECTRON
-            ? t("onboarding.webSignIn.body")
-            : t(`onboarding.pages.${step}.body`)}
-      </p>
+      {step === "whatsapp" ? (
+        <OnboardingWhatsApp onDone={advance} />
+      ) : (
+        <>
+          <h1 ref={heading} tabIndex={-1}>
+            {title}
+          </h1>
+          <p>
+            {step === "welcome"
+              ? t("onboarding.welcomeTagline")
+              : step === "connect" && !IS_ELECTRON
+                ? t("onboarding.webSignIn.body")
+                : t(`onboarding.pages.${step}.body`)}
+          </p>
+        </>
+      )}
       {step === "welcome" && (
         <>
           <div className="flex flex-wrap justify-center gap-2">
@@ -484,6 +495,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       )}
       {step === "connectors" && (
         <>
+          <WhatsAppLinkedBanner />
           <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
             {CONNECTORS.filter(
               (c) => c.onboarding || (more && c.kind === "platform")

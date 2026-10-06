@@ -13,6 +13,8 @@ export interface FlowFacts {
   ownsBot: boolean;
   webSignup?: boolean;
   email?: string;
+  /** Browser: AbacusAI Bot's WhatsApp number is offered and not linked yet. */
+  whatsappOffered?: boolean;
   /** Not from the host yet (spec 09 D12): render, but act on nothing. */
   provisional?: boolean;
 }
@@ -38,7 +40,8 @@ export const next = (
         ? "connect"
         : "ignore";
     case "connect":
-      if (event.type === "auth-ok") return "connected";
+      if (event.type === "auth-ok")
+        return !IS_ELECTRON && facts.whatsappOffered ? "whatsapp" : "connected";
       if (event.type === "auth-cancelled" || event.type === "back")
         return "welcome";
       if (event.type === "auth-failed" || event.type === "retry")
@@ -49,6 +52,13 @@ export const next = (
         ? facts.payingTier || !IS_ELECTRON
           ? "connectors"
           : "models"
+        : "ignore";
+    case "whatsapp":
+      // A website signup finishes on `connected`, as without this step.
+      return event.type === "next" || event.type === "skip"
+        ? facts.webSignup
+          ? "connected"
+          : "connectors"
         : "ignore";
     case "models":
       return event.type === "next"
@@ -64,9 +74,11 @@ export const next = (
           ? "done"
           : "first-bot"
         : event.type === "back"
-          ? facts.payingTier || !IS_ELECTRON
-            ? "connected"
-            : "models"
+          ? !IS_ELECTRON && facts.whatsappOffered
+            ? "whatsapp"
+            : facts.payingTier || !IS_ELECTRON
+              ? "connected"
+              : "models"
           : "ignore";
     case "first-bot":
       return event.type === "next"
@@ -100,6 +112,8 @@ export const guardStep = (
     return "welcome";
   if (!facts.signedIn && step !== "welcome" && step !== "connect")
     return "welcome";
+  if (step === "whatsapp" && (IS_ELECTRON || !facts.whatsappOffered))
+    return "connected";
   if (step === "first-bot" && facts.ownsBot && !doc.createdBotId) return "done";
   return step;
 };

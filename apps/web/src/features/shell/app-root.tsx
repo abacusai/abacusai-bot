@@ -8,6 +8,7 @@ import { useStore } from "@tanstack/react-store";
 import { useEffect, type ReactNode } from "react";
 
 import { HostStatus } from "#platform/connect";
+import { WhatsAppClaim } from "#platform/whatsapp-bot";
 import { AppIconSprite } from "#renderer/components/app-icon";
 import { DbProvider, type Db } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -129,6 +130,7 @@ export const AppRoot = ({
           <AppToaster toolbarHeight={chrome.toolbarHeight}>
             <AppIconSprite />
             <HostStatus />
+            <WhatsAppClaim />
             <ThemeEffect />
             <PlatformEffect platform={system.platform} />
             <ChromeEffect transport={transport} />
