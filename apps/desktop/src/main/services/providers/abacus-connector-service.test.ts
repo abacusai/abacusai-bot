@@ -30,6 +30,7 @@ const {
   cancelAllConnectorConnects,
   buildConnectorsSnapshot,
   cancelConnectorConnect,
+  createConnectLink,
   disconnectAbacusConnector,
   listAbacusConnectors,
   startConnectorConnect,
@@ -512,5 +513,50 @@ describe("the app window closed after the provider answered", () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe("a one-tap connect link", () => {
+  it("is the server's own link, whose preview card names the service, and covers Google in one consent", async () => {
+    answer("_createAbacusbotConnectLink", {
+      success: true,
+      result: {
+        requestId: "req_0123456789abcdef",
+        services: ["gmailuser", "googledriveuser", "googlecalendar"],
+        url: "https://abacus.ai/app/connect/google?r=req_0123456789abcdef",
+      },
+    });
+
+    expect(await createConnectLink("googlecalendar")).toEqual({
+      url: "https://abacus.ai/app/connect/google?r=req_0123456789abcdef",
+      services: ["gmailuser", "googledriveuser", "googlecalendar"],
+    });
+  });
+
+  it("falls back to the connect page itself for a server that names no link", async () => {
+    answer("_createAbacusbotConnectLink", {
+      success: true,
+      result: { requestId: "req_0123456789abcdef", services: ["slack"] },
+    });
+
+    const link = await createConnectLink("slack");
+    expect(link?.url).toContain(
+      "/chatllm/connect-connector?service=slack&r=req_0123456789abcdef&autostart=1"
+    );
+  });
+
+  it("never sends a link that is not https", async () => {
+    answer("_createAbacusbotConnectLink", {
+      success: true,
+      result: {
+        requestId: "req_0123456789abcdef",
+        services: ["slack"],
+        url: "javascript:alert(1)",
+      },
+    });
+
+    expect((await createConnectLink("slack"))?.url).toContain(
+      "/chatllm/connect-connector?"
+    );
   });
 });
