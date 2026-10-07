@@ -11,7 +11,6 @@ import { ConnectorFlowService, mcpEntryFor } from "./connector-flow-service";
 const platformConnect = vi.fn(async () => ({ ok: true }) as const);
 const platformDisconnect = vi.fn(async () => ({ ok: true }) as const);
 const ensureGateway = vi.fn();
-const saveCredential = vi.fn();
 const addServer = vi.fn(() => ({ success: true }));
 const removeServer = vi.fn(() => ({ success: true }));
 const signIn = vi.fn(async () => ({ success: true }));
@@ -23,7 +22,6 @@ const flow = (): ConnectorFlowService =>
       disconnect: platformDisconnect,
       ensureGateway,
     },
-    credential: { save: saveCredential },
     mcp: { add: addServer, remove: removeServer, signIn },
     homeDir: () => "/home/ada",
   });
@@ -69,32 +67,6 @@ describe("a platform connector", () => {
     await flow().disconnect("abacus-slack");
 
     expect(platformDisconnect).toHaveBeenCalledWith("slack");
-  });
-});
-
-describe("a credential connector", () => {
-  it("needs its fields, then stores the token under its provider", async () => {
-    expect(await flow().connect("github")).toMatchObject({ ok: false });
-    expect(saveCredential).not.toHaveBeenCalled();
-
-    expect(
-      await flow().submitFields("github", { GH_TOKEN: " ghp_secret " })
-    ).toEqual({ ok: true });
-
-    expect(saveCredential).toHaveBeenCalledWith("github", "ghp_secret");
-  });
-
-  it("refuses an empty token", async () => {
-    expect(
-      await flow().submitFields("github", { GH_TOKEN: "  " })
-    ).toMatchObject({ ok: false });
-    expect(saveCredential).not.toHaveBeenCalled();
-  });
-
-  it("clears the token to disconnect", async () => {
-    expect(await flow().disconnect("github")).toEqual({ ok: true });
-
-    expect(saveCredential).toHaveBeenCalledWith("github", "");
   });
 });
 

@@ -31,7 +31,6 @@ export interface StatusInputs {
     reason?: string;
   } | null;
   /** Credential providers with a key stored, or exported in the shell. */
-  storedProviders: ReadonlySet<string>;
   messaging: MessagingSnapshot | null;
   mcpServers: readonly McpServerInfo[];
   /** MCP servers the running agent reports waiting on a sign-in. */
@@ -63,10 +62,6 @@ const statusOf = (
         ? { state: "available" }
         : { state: "unavailable", reason: "not-offered" };
     }
-    case "credential":
-      return inputs.storedProviders.has(connector.provider)
-        ? { state: "connected" }
-        : { state: "available" };
     case "messaging":
       if (isMessagingPlatformConnected(inputs.messaging, connector.platform))
         return { state: "connected" };
@@ -106,7 +101,6 @@ export const connectorsInState = (
 
 export interface StatusSources {
   platform: () => Promise<StatusInputs["platform"]>;
-  storedProviders: () => ReadonlySet<string>;
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
   mcpAuthRequired?: () => ReadonlySet<string>;
@@ -130,7 +124,6 @@ export class ConnectorStatusService {
     }
     return buildConnectorStatuses({
       platform,
-      storedProviders: this.sources.storedProviders(),
       messaging: this.sources.messaging(),
       mcpServers: this.sources.mcpServers(),
       ...(this.sources.mcpAuthRequired != null

@@ -9,7 +9,11 @@
  * Decline is never disabled: mid browser hop it becomes "Stop connecting",
  * which cancels the hop (its cancelled result answers "declined").
  */
-import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
+import {
+  connectFields,
+  connectorById,
+  connectUi,
+} from "@abacus-ai/connectors/registry";
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import { Link2, Plug } from "lucide-react";
 import { useId, useState } from "react";
@@ -43,8 +47,8 @@ export const ConnectorRequestCard = ({
   const connector = connectorById(request.connectorId);
   const ui = connector == null ? "none" : connectUi(connector);
   const fields =
-    ui === "fields" && connector != null && "fields" in connector
-      ? Object.entries(connector.fields ?? {})
+    ui === "fields" && connector != null
+      ? Object.entries(connectFields(connector))
       : [];
   const [values, setValues] = useState<Record<string, string>>({});
   const hopsToBrowser = ui === "browser-hop";

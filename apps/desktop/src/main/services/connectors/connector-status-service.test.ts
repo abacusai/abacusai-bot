@@ -36,7 +36,6 @@ const inputs = (overrides: Partial<StatusInputs> = {}): StatusInputs => ({
     connected: new Set(["gmailuser"]),
     accounts: { gmailuser: "Gmail - ada@example.com" },
   },
-  storedProviders: new Set(),
   messaging: null,
   mcpServers: [],
   ...overrides,
@@ -78,18 +77,6 @@ describe("platform connectors", () => {
         })
       )["abacus-gmailuser"]
     ).toEqual({ state: "unavailable", reason: "not-signed-in" });
-  });
-});
-
-describe("credential connectors", () => {
-  it("are connected exactly when the provider's key is stored", () => {
-    expect(buildConnectorStatuses(inputs()).github).toEqual({
-      state: "available",
-    });
-    expect(
-      buildConnectorStatuses(inputs({ storedProviders: new Set(["github"]) }))
-        .github
-    ).toEqual({ state: "connected" });
   });
 });
 
@@ -172,16 +159,22 @@ describe("the service", () => {
       platform: async () => {
         throw new Error("network");
       },
-      storedProviders: () => new Set(["github"]),
       messaging: () => null,
-      mcpServers: () => [],
+      mcpServers: () => [
+        {
+          id: "notion",
+          name: "notion",
+          config: { url: "https://mcp.notion.com/mcp" },
+          isBuiltin: false,
+        },
+      ],
     });
     const statuses = await service.list();
 
-    expect(statuses.github).toEqual({ state: "connected" });
+    expect(statuses.notion).toEqual({ state: "connected" });
     expect(statuses["abacus-gmailuser"]?.state).toBe("unavailable");
     expect(connectorsInState(statuses, "connected").map((c) => c.id)).toEqual([
-      "github",
+      "notion",
     ]);
   });
 });

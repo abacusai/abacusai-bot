@@ -4,7 +4,11 @@
  * The data half (snapshot, request/cleared, refresh before answering) is
  * `features/bots/chat/connector-requests.test.tsx`.
  */
-import { CONNECTORS, connectUi } from "@abacus-ai/connectors/registry";
+import {
+  CONNECTORS,
+  connectUi,
+  type McpConnector,
+} from "@abacus-ai/connectors/registry";
 import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -12,6 +16,36 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n, initI18n } from "#renderer/lib/i18n";
 
 import { ConnectorRequestCard } from ".";
+
+/**
+ * A tool server that takes a pasted token: the one kind whose card still asks
+ * for fields, though none ships in the registry today.
+ */
+const { TOKEN_SERVER } = vi.hoisted(() => ({
+  TOKEN_SERVER: {
+    kind: "mcp",
+    id: "token-server",
+    name: "Token Server",
+    description: "A tool server behind an API token.",
+    category: "featured",
+    docsUrl: "https://example.com/docs",
+    auth: "token",
+    entry: { url: "https://example.com/mcp" },
+    token: { header: "Authorization", scheme: "Bearer", label: "API token" },
+  } satisfies McpConnector,
+}));
+
+vi.mock("@abacus-ai/connectors/registry", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@abacus-ai/connectors/registry")>();
+  const connectors = [...actual.CONNECTORS, TOKEN_SERVER];
+  return {
+    ...actual,
+    CONNECTORS: connectors,
+    connectorById: (id: string) =>
+      connectors.find((connector) => connector.id === id),
+  };
+});
 
 beforeAll(async () => {
   await initI18n();

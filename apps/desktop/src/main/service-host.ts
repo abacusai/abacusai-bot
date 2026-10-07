@@ -307,7 +307,6 @@ import {
   setExecBackend,
   setToolsetEnabled,
   readSettings,
-  storedKeyProviders,
 } from "./services/config/settings";
 import {
   ConnectWatcher,
@@ -918,6 +917,14 @@ export class ServiceHost {
     );
     if (connectors.some((connector) => connector.kind === "platform"))
       this.ensureConnectorGateway();
+    // A token-backed one (GitHub) reaches the agent as an environment key:
+    // running sessions re-read theirs now rather than on their next timer.
+    if (
+      connectors.some(
+        (connector) => connector.kind === "platform" && connector.via != null
+      )
+    )
+      this.refreshAgentProviders();
     this.connectorGate.clearFor(offer.connectorIds);
     this.connectorStatusChanged();
     const accounts = [...new Set(Object.values(offer.accounts))];
@@ -927,12 +934,14 @@ export class ServiceHost {
       `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
       connectors
         .map((connector) =>
-          connector.kind === "credential"
+          connector.kind === "platform" && connector.via != null
             ? `Use ${connector.via}: they are authenticated now. `
             : ""
         )
         .join("") +
-      (connectors.some((connector) => connector.kind !== "credential")
+      (connectors.some(
+        (connector) => !(connector.kind === "platform" && connector.via != null)
+      )
         ? "Its tools are in your tool list. "
         : "") +
       "Tell the user in one short line, then carry on with what they asked for.";
@@ -961,7 +970,6 @@ export class ServiceHost {
         accounts: snapshot.accounts,
       };
     },
-    storedProviders: () => new Set(storedKeyProviders()),
     messaging: () => this.messagingGatewayService.getSnapshot(),
     mcpServers: () => this.mcpConfigService.listUserServers("code"),
     mcpAuthRequired: () => {
@@ -973,17 +981,6 @@ export class ServiceHost {
     },
   });
 
-  /**
-   * Stores an agent credential and announces it (the gateway, running agents,
-   * the renderer). Set by the IPC layer, which owns that announcement.
-   */
-  private credentialSaver: ((provider: string, value: string) => void) | null =
-    null;
-
-  setCredentialSaver(save: (provider: string, value: string) => void): void {
-    this.credentialSaver = save;
-  }
-
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
@@ -991,15 +988,6 @@ export class ServiceHost {
         startConnectorConnect(service, options, this.platform),
       disconnect: disconnectAbacusConnector,
       ensureGateway: () => this.ensureConnectorGateway(),
-    },
-    credential: {
-      save: (provider, value) => {
-        if (this.credentialSaver == null)
-          throw new Error(
-            "credentials cannot be stored before the IPC layer is up"
-          );
-        this.credentialSaver(provider, value);
-      },
     },
     mcp: {
       // Restore rather than refuse when the name is taken: the earlier Add

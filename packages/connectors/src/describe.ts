@@ -3,7 +3,7 @@
  * connector added or changed there is described correctly everywhere on the
  * same day.
  */
-import { CONNECTORS, type Connector, connectUi } from "./registry.js";
+import { CONNECTORS, type Connector } from "./registry.js";
 
 /** The words a connector answers to, joined the way the routing line reads them. */
 const routesOf = (connector: Connector): string | null =>
@@ -11,10 +11,10 @@ const routesOf = (connector: Connector): string | null =>
     ? connector.routes.join(", ")
     : null;
 
-/** Where a task goes for this connector: a credential's own path, else the connector by name. */
+/** Where a task goes for this connector: its own path when it brings no tools (GitHub's `gh`), else the connector by name. */
 const destinationOf = (connector: Connector): string =>
-  connector.kind === "credential"
-    ? `${connector.via} (a token on the ${connector.name} connector card authenticates them; without one, ask the user to add it there)`
+  connector.kind === "platform" && connector.via != null
+    ? `${connector.via} (signed in as the user once ${connector.name} is connected; until then, connect it with connect_connector)`
     : connector.name;
 
 /**
@@ -40,7 +40,6 @@ export const routingPrompt = (): string => {
 export const catalogByKind = (): Record<Connector["kind"], string[]> => {
   const names: Record<Connector["kind"], string[]> = {
     platform: [],
-    credential: [],
     messaging: [],
     mcp: [],
   };
@@ -58,7 +57,7 @@ export const catalogPrompt = (): string => {
   const names = catalogByKind();
   return (
     `The connectors this app can attach are exactly: ${names.platform.join(", ")}; ` +
-    `${names.credential.join(", ")} (a token); the chat apps ${names.messaging.join(", ")}; ` +
+    `the chat apps ${names.messaging.join(", ")}; ` +
     `and the tool servers ${names.mcp.join(", ")}. ` +
     "When the user asks to connect or use one of these, call connect_connector " +
     "with its name: that puts the Connect button in the chat. Never say a name " +
@@ -81,12 +80,8 @@ export const describeForListing = (
       ? connected
         ? "connected: send with its send_<platform>_message tool"
         : "not connected: ask for it with this tool"
-      : connector.kind === "credential"
-        ? connected
-          ? `connected: use ${connector.via}`
-          : `not connected: ask for it with this tool (${connectUi(connector) === "fields" ? "the user pastes a token" : "the user signs in"})`
-        : connected
-          ? `connected${account}`
-          : "not connected: ask for it with this tool";
+      : connected
+        ? `connected${account}${connector.kind === "platform" && connector.via != null ? `: use ${connector.via}` : ""}`
+        : "not connected: ask for it with this tool";
   return `${connector.id}  ${connector.name}  ${how}`;
 };
