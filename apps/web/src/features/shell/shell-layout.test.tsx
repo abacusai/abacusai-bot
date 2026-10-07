@@ -35,6 +35,15 @@ vi.mock("#renderer/ui/resizable", async (importOriginal) => {
     await importOriginal<typeof import("#renderer/ui/resizable")>();
   // Record the props the shell passes to the panel (sizes are pixels, v4).
   const panels: Array<Record<string, unknown>> = [];
+  const groups: Array<Record<string, unknown>> = [];
+  const ResizablePanelGroup = (props: Record<string, unknown>) => {
+    groups.push(props);
+    return (
+      <actual.ResizablePanelGroup
+        {...(props as Parameters<typeof actual.ResizablePanelGroup>[0])}
+      />
+    );
+  };
   const ResizablePanel = (props: Record<string, unknown>) => {
     panels.push(props);
     return (
@@ -43,7 +52,13 @@ vi.mock("#renderer/ui/resizable", async (importOriginal) => {
       />
     );
   };
-  return { ...(actual as object), ResizablePanel, __panels: panels };
+  return {
+    ...(actual as object),
+    ResizablePanel,
+    ResizablePanelGroup,
+    __panels: panels,
+    __groups: groups,
+  };
 });
 
 let harness: AppHarness | null = null;
@@ -71,6 +86,104 @@ const at = async (width: number, path: string, seed = defaultSeed()) => {
 };
 
 describe("ShellLayout", () => {
+  it.each([
+    "/bots/new",
+    "/bots/missing-bot",
+    "/bots/chief-of-staff/edit",
+    "/sessions/new",
+    "/routines",
+    "/artifacts",
+    "/library/connectors",
+    "/settings/general",
+  ])("has no panel toggle on %s", async (path) => {
+    setViewportWidth(1280);
+    harness = await renderApp(path);
+    await waitFor(() => expect(shell()).toBeTruthy());
+    expect(screen.queryByTestId("panel-toggle")).toBeNull();
+  });
+
+  it("keeps session tools in the title bar, remembers each session and reflects toggling", async () => {
+    const seed = defaultSeed();
+    const second = seed.sessions!.find(
+      (row) =>
+        row.id !== "review-prs" && !row.editorFor && row.owner?.kind !== "bot"
+    )!;
+    await at(1280, "/sessions/review-prs?tab=files", seed);
+    const top = () =>
+      within(document.querySelector<HTMLElement>('[data-slot="topbar"]')!);
+    await waitFor(() =>
+      expect(
+        top().getByRole("tab", { name: "Files" }).getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    expect(
+      top()
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent)
+    ).toEqual(["Changes", "Terminal", "Files", "Browser"]);
+    expect(
+      screen.getByTestId("panel-toggle").getAttribute("aria-pressed")
+    ).toBe("true");
+    fireEvent.click(top().getByRole("tab", { name: "Changes" }));
+    await waitFor(() =>
+      expect(
+        top()
+          .getByRole("tab", { name: "Changes" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    await navigate({
+      to: "/sessions/$sessionId",
+      params: { sessionId: second.id },
+      search: {},
+    });
+    expect(
+      screen.getByTestId("panel-toggle").getAttribute("aria-pressed")
+    ).toBe("false");
+    await navigate({
+      to: "/sessions/$sessionId",
+      params: { sessionId: "review-prs" },
+      search: {},
+    });
+    await waitFor(() =>
+      expect(
+        top()
+          .getByRole("tab", { name: "Changes" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    const content = document.querySelector('[data-dock-pane="changes"]');
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("panel-toggle").getAttribute("aria-pressed")
+      ).toBe("false")
+    );
+    expect(document.querySelector('[data-dock-pane="changes"]')).toBe(content);
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    await waitFor(() =>
+      expect(
+        top()
+          .getByRole("tab", { name: "Changes" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    expect(document.querySelector('[data-dock-pane="changes"]')).toBe(content);
+    fireEvent.keyDown(top().getByRole("tab", { name: "Changes" }), {
+      key: "End",
+    });
+    await waitFor(() =>
+      expect(
+        top()
+          .getByRole("tab", { name: "Browser" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    expect(document.activeElement).toBe(
+      top().getByRole("tab", { name: "Browser" })
+    );
+  });
+
   it("mirrors the band to html[data-band] and follows resizes", async () => {
     await at(1280, "/bots/new");
     expect(document.documentElement.dataset.band).toBe("xl");
@@ -92,9 +205,10 @@ describe("ShellLayout", () => {
       '[data-slot="side-panel"][data-mode="layout"]'
     );
     expect(panel).not.toBeNull();
-    const { __panels } =
+    const { __panels, __groups } =
       (await import("#renderer/ui/resizable")) as unknown as {
         __panels: Array<Record<string, unknown>>;
+        __groups: Array<Record<string, unknown>>;
       };
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
     const pane = __panels.filter((p) => p.id === "pane").at(-1)!;
@@ -117,6 +231,13 @@ describe("ShellLayout", () => {
           inPixels: 380.4,
           asPercentage: 40,
         });
+        (
+          __groups.findLast((group) => group.className === "gap-0")!
+            .onLayoutChanged as (
+            layout: unknown,
+            meta: { isUserInteraction: boolean }
+          ) => void
+        )({}, { isUserInteraction: true });
       });
       await act(async () => {
         vi.advanceTimersByTime(350);
@@ -132,13 +253,40 @@ describe("ShellLayout", () => {
     ).not.toBeNull();
   });
 
+  it("does not save automatic panel constraint changes as a user resize", async () => {
+    const seed = defaultSeed();
+    seed.prefs = fixturePrefs({ panes: { "side-panel": 600 } });
+    await at(1280, "/bots/chief-of-staff?tab=details", seed);
+    const { __panels, __groups } =
+      (await import("#renderer/ui/resizable")) as unknown as {
+        __panels: Array<Record<string, unknown>>;
+        __groups: Array<Record<string, unknown>>;
+      };
+    const panel = __panels.findLast((item) => item.id === "side-panel")!;
+    const group = __groups.findLast((item) => item.className === "gap-0")!;
+    act(() => {
+      (panel.onResize as (size: { inPixels: number }) => void)({
+        inPixels: 360,
+      });
+      (
+        group.onLayoutChanged as (
+          layout: unknown,
+          meta: { isUserInteraction: boolean }
+        ) => void
+      )({}, { isUserInteraction: false });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(harness!.db.prefs.rows.get("app")?.panes["side-panel"]).toBe(600);
+  });
+
   it("clamps a stored panel width outside 360–960 and never writes one outside it", async () => {
     const seed = defaultSeed();
     seed.prefs = fixturePrefs({ panes: { "side-panel": 1400 } });
     await at(1280, "/bots/chief-of-staff?tab=details", seed);
-    const { __panels } =
+    const { __panels, __groups } =
       (await import("#renderer/ui/resizable")) as unknown as {
         __panels: Array<Record<string, unknown>>;
+        __groups: Array<Record<string, unknown>>;
       };
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
     expect(sidePanel.defaultSize).toBe(960);
@@ -152,6 +300,13 @@ describe("ShellLayout", () => {
             asPercentage: number;
           }) => void
         )({ inPixels: 120, asPercentage: 10 });
+        (
+          __groups.findLast((group) => group.className === "gap-0")!
+            .onLayoutChanged as (
+            layout: unknown,
+            meta: { isUserInteraction: boolean }
+          ) => void
+        )({}, { isUserInteraction: true });
       });
       await act(async () => {
         vi.advanceTimersByTime(350);
@@ -406,7 +561,7 @@ const railLink = (area: string) =>
 
 describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
   it("across panel open/close at xl and crossing 1100 with a tab open", async () => {
-    await at(1280, "/library/connectors");
+    await at(1280, "/bots/chief-of-staff");
     const node = paneScroll();
     const content = node.firstElementChild;
     node.scrollTop = 120;
@@ -415,7 +570,7 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       expect(paneScroll().firstElementChild).toBe(content);
       expect(paneScroll().scrollTop).toBe(120);
     };
-    const key = panelScopeKey("library")!;
+    const key = panelScopeKey("bots", "chief-of-staff")!;
     act(() => {
       openPanelTab(key, { kind: "details" });
     });

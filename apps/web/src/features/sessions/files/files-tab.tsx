@@ -1,7 +1,9 @@
 import type { SessionRow } from "@abacus-ai/contract/contract/rows";
 import type { FileTreeNode } from "@abacus-ai/contract/contracts";
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 // The tree adapter treats paths identity as a topology update.
 // eslint-disable-next-line no-restricted-imports
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -32,6 +34,7 @@ import {
   useCheckoutIdentity,
 } from "../data/queries";
 import { isRelativePath } from "../data/search";
+import { panelTabsStore, updateTab } from "../dock/panel-tabs-store";
 import { useLazyChildren } from "./lazy-children";
 export const flattenFiles = (nodes: FileTreeNode[]): string[] =>
   nodes.flatMap((n) => [
@@ -113,12 +116,22 @@ export const FilesTab = ({
     ...options.search(checkout, debounced),
     enabled: debounced !== "",
   });
-  const selected = (useSearch({ strict: false }) as { file?: string }).file;
+  const key = sessionConversationKey(row.workspaceId, row.id);
+  const file = (useSearch({ strict: false }) as { file?: string }).file;
+  const saved = useSelector(
+    panelTabsStore,
+    (s) => s[key]?.tabs.find((tab) => tab.ref === "files")?.path
+  );
+  const selected = file ?? saved;
+  useEffect(() => {
+    if (file != null) updateTab(key, "files", { path: file });
+  }, [key, file]);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 150);
     return () => clearTimeout(timer);
   }, [query]);
   const select = async (path: string) => {
+    updateTab(key, "files", { path });
     if (path.endsWith("/")) {
       void navigate({
         search: (p: Record<string, unknown>) => ({ ...p, file: path }),
@@ -141,6 +154,7 @@ export const FilesTab = ({
       filePath: path.replace(/\/$/, ""),
     });
     setTrash(null);
+    updateTab(key, "files", { path: undefined });
     await tree.refetch();
     void navigate({
       search: (p: Record<string, unknown>) => ({ ...p, file: undefined }),

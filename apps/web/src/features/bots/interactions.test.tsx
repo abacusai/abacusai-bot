@@ -4,8 +4,12 @@ import { createElement, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fixtureBots, fixtureSessions } from "#renderer/data/fixture-db/rows";
-import { panelScopeKey, setPanelOpen } from "#renderer/lib/side-panel/store";
-import { renderApp } from "#renderer/test-support/app-harness";
+import {
+  openPanelTab,
+  panelScopeKey,
+  setPanelOpen,
+} from "#renderer/lib/side-panel/store";
+import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 // Tag the actual motion spans from both features without changing the chat kit.
 vi.mock("motion/react", async (original) => {
   const actual = await original<typeof import("motion/react")>();
@@ -28,6 +32,45 @@ afterEach(async () => {
   app = undefined;
 });
 describe("bots interactions", () => {
+  it("fills the remembered Details and Memory tabs while switching to a sender chat", async () => {
+    const sender = {
+      ...fixtureSessions()[0]!,
+      id: "sender-panel-test",
+      botOwned: true,
+      owner: {
+        kind: "bot" as const,
+        botId: "chief-of-staff",
+        role: "sender" as const,
+        key: "sender",
+      },
+    };
+    app = await renderApp("/bots/chief-of-staff?tab=memory", {
+      seed: { ...defaultSeed(), sessions: [...fixtureSessions(), sender] },
+    });
+    const panel = (kind: string) =>
+      document.querySelector(`[data-panel-tab^="${kind}:"]`);
+    await waitFor(() => expect(panel("memory")).not.toBeNull());
+    await act(async () => {
+      await app!.router.navigate({
+        to: "/bots/$botId/chats/$sessionId",
+        params: { botId: "chief-of-staff", sessionId: sender.id },
+      });
+    });
+    await waitFor(() => {
+      expect(panel("memory")).not.toBeNull();
+      expect(panel("memory")!.getAttribute("data-active")).toBe("true");
+    });
+    act(() =>
+      openPanelTab(panelScopeKey("bots", "chief-of-staff")!, {
+        kind: "details",
+      })
+    );
+    await waitFor(() => {
+      expect(panel("details")!.textContent).toContain("Chief of Staff");
+      expect(panel("details")!.getAttribute("data-active")).toBe("true");
+      expect(panel("memory")!.getAttribute("data-active")).toBe("false");
+    });
+  });
   it("keeps the same row node while pinning and moving into Needs you", async () => {
     app = await renderApp("/bots/new");
     const row = await screen.findByRole("link", { name: /Chief of Staff,/ });

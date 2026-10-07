@@ -15,11 +15,7 @@ import { createPortal } from "react-dom";
 
 import { PaneBoundary } from "#renderer/components/page-state";
 
-import {
-  MULTI_INSTANCE_KINDS,
-  type PanelTab,
-  type PanelTabKind,
-} from "./panel-store";
+import { type PanelTab, type PanelTabKind } from "./panel-store";
 import { usePanelScope, usePanelScopeKey } from "./use-panel";
 
 interface PanelSlotState {
@@ -31,17 +27,18 @@ interface PanelSlotState {
 const panelSlot = new Store<PanelSlotState>({ target: null, filled: {} });
 
 /**
- * The latest outlet wins; an outlet leaving clears the target only while it
- * is still the target (the drawer's exit can outlive the in-layout frame's
- * mount when the window crosses 1100 px).
+ * Move one stable portal target between the layout and drawer outlets.
+ * Closing detaches it without replacing it, preserving the tabs' state.
  */
-const attachOutlet = (element: HTMLElement | null): (() => void) | void => {
+const attachOutlet = (element: HTMLElement | null): void => {
   if (element == null) return;
-  panelSlot.setState((state) => ({ ...state, target: element }));
-  return () =>
-    panelSlot.setState((state) =>
-      state.target === element ? { ...state, target: null } : state
-    );
+  let target = panelSlot.state.target;
+  if (target == null) {
+    target = document.createElement("div");
+    target.className = "flex size-full min-h-0 min-w-0 flex-col";
+    panelSlot.setState((state) => ({ ...state, target }));
+  }
+  element.append(target);
 };
 
 const count = (kind: PanelTabKind, delta: number): void =>
@@ -88,21 +85,19 @@ export const SidePanelContent = ({
     count(kind, 1);
     return () => count(kind, -1);
   }, [kind]);
-  if (target == null || !scope.open) return null;
-  const multi = MULTI_INSTANCE_KINDS.has(kind);
-  const tabs = scope.tabs.filter(
-    (tab) => tab.kind === kind && (multi || tab.id === scope.active)
-  );
+  if (target == null) return null;
+  const tabs = scope.tabs.filter((tab) => tab.kind === kind);
   if (tabs.length === 0) return null;
   return createPortal(
     tabs.map((tab) => {
-      const active = tab.id === scope.active;
+      const active = scope.open && tab.id === scope.active;
       return (
         <div
           key={tab.id}
           data-panel-tab={tab.id}
           data-active={active}
           hidden={!active}
+          style={{ display: active ? undefined : "none" }}
           className="flex min-h-0 min-w-0 flex-1 flex-col"
         >
           <PaneBoundary resetKey={tab.id}>

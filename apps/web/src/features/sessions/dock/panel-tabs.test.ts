@@ -5,6 +5,7 @@ import {
   panelTabsStore,
   openTab,
   updateTabs,
+  updateTab,
   focusTab,
   reconcileTerminals,
 } from "./panel-tabs-store";
@@ -73,4 +74,44 @@ it("focus persists leaf selection and snapshots remove stale terminals including
   expect(dockLeaves(panelTabsStore.state[key]!.tree!)[0]!.active).not.toBe(
     "terminal:gone"
   );
+});
+
+it("keeps open state and last selection independent for each session during terminal reconciliation", () => {
+  const first = "panel-session-one";
+  const second = "panel-session-two";
+  openTab(first, { ref: "files", title: "Files" });
+  openTab(second, { ref: "changes", title: "Changes" });
+  updateTabs(first, (state) => ({ ...state, open: true }));
+  updateTabs(second, (state) => ({ ...state, open: false }));
+  reconcileTerminals(first, []);
+  expect(panelTabsStore.state[first]).toMatchObject({
+    open: true,
+    last: "files",
+  });
+  expect(panelTabsStore.state[second]).toMatchObject({
+    open: false,
+    last: "changes",
+  });
+});
+
+it("browser navigation updates its saved URL without reopening or selecting a background tab", () => {
+  const key = "browser-navigation";
+  openTab(key, {
+    ref: "browser:a",
+    title: "Browser",
+    url: "https://start.test/",
+  });
+  openTab(key, { ref: "files", title: "Files" });
+  updateTabs(key, (s) => ({ ...s, open: false }));
+  updateTab(key, "browser:a", { url: "https://next.test/" });
+  expect(panelTabsStore.state[key]).toMatchObject({
+    open: false,
+    last: "files",
+    tabs: [{ ref: "browser:a", url: "https://next.test/" }, { ref: "files" }],
+  });
+  const tabs = panelTabsStore.state[key]!.tabs;
+  updateTab(key, "browser:a", { url: "https://next.test/" });
+  expect(panelTabsStore.state[key]!.tabs).toBe(tabs);
+  updateTab(key, "browser:closed", { url: "https://late.test/" });
+  expect(panelTabsStore.state[key]!.tabs).toBe(tabs);
 });
