@@ -604,14 +604,18 @@ export class ServiceHost {
         };
       },
       beforeRun: async (threadId, midRun) => {
-        await this.applyEffectiveBotModel(threadId);
+        // In line first, at the send's arrival, then the model re-pin.
         const workspaceId =
           this.agentManagerService.getRuntimeInfo(threadId)?.workspaceId;
-        if (workspaceId != null)
-          await this.connectorSync.beforeTurn(
-            { workspaceId, sessionId: threadId },
-            midRun
-          );
+        const inLine =
+          workspaceId != null
+            ? this.connectorSync.beforeTurn(
+                { workspaceId, sessionId: threadId },
+                midRun
+              )
+            : Promise.resolve();
+        await this.applyEffectiveBotModel(threadId);
+        await inLine;
       },
     },
   });
@@ -1075,9 +1079,9 @@ export class ServiceHost {
         .getRuntimeDiagnostics()
         .filter((runtime) => runtime.live)
         .map(({ workspaceId, sessionId }) => ({ workspaceId, sessionId })),
-    refresh: (session) => {
+    refresh: (session, requestId) => {
       this.healConnectorGateway();
-      return this.mcpAdminService.refreshSessionMcp(session);
+      return this.mcpAdminService.refreshSessionMcp(session, requestId);
     },
     changed: () => this.connectorStatusChanged(),
     log: (line) => console.log(line),
@@ -1851,9 +1855,10 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    emitMcpRefreshed: (_sessionId, requestId, ok) =>
+      this.connectorSync.refreshed(requestId, ok),
     emitMcpRuntimeError: (workspaceId, sessionId, event) => {
       if (event.kind === "refresh") {
-        this.connectorSync.refreshFailed(sessionId);
         this.emitEvent({
           type: "mcp-runtime-refresh-failed",
           workspaceId,
@@ -3102,18 +3107,41 @@ export class ServiceHost {
       request.workspaceId,
       request.sessionId
     );
-    // The session's tools match the account's connectors before the turn.
-    await this.connectorSync.beforeTurn(
-      { workspaceId: request.workspaceId, sessionId: request.sessionId },
-      midTurn
-    );
-
     // A session whose CLI died is restarted rather than swallowing the message.
     const session = this.agentSessionManagerService.get(request.sessionId);
     // Abandoned while this send was on its way: it must not land behind the stop.
     const epoch = this.turnAbandoner.epoch(request.sessionId);
     const current = (): boolean =>
       this.turnAbandoner.stillCurrent(request.sessionId, epoch);
+    // In arrival order per session, and with the session's tools on the
+    // account's connectors before a turn starts (never under a running one).
+    const { delivered, outcome } = await this.connectorSync.inTurnOrder(
+      { workspaceId: request.workspaceId, sessionId: request.sessionId },
+      midTurn,
+      () => this.deliverAgentMessage(request, session, current)
+    );
+
+    if (outcome === "undeliverable") {
+      this.sessionTurnStateService.markStopped(
+        request.workspaceId,
+        request.sessionId
+      );
+      return false;
+    }
+    if (delivered !== request)
+      environmentNoticeService.markAnnounced(request.sessionId);
+    return true;
+  }
+
+  /** The message, with any pending notice, onto the session's agent. */
+  private async deliverAgentMessage(
+    request: SendAgentMessageRequest,
+    session: ReturnType<AgentSessionManagerService["get"]>,
+    current: () => boolean
+  ): Promise<{
+    delivered: SendAgentMessageRequest;
+    outcome: Awaited<ReturnType<typeof deliverMessage>>;
+  }> {
     const delivered = await this.withEnvironmentNotice(request);
     const outcome = await deliverMessage({
       send: () =>
@@ -3136,17 +3164,7 @@ export class ServiceHost {
         ).status === "running",
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
-
-    if (outcome === "undeliverable") {
-      this.sessionTurnStateService.markStopped(
-        request.workspaceId,
-        request.sessionId
-      );
-      return false;
-    }
-    if (delivered !== request)
-      environmentNoticeService.markAnnounced(request.sessionId);
-    return true;
+    return { delivered, outcome };
   }
 
   /**

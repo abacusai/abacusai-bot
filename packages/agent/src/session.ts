@@ -148,7 +148,6 @@ import {
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
-import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
@@ -698,11 +697,11 @@ export class AbacusBotSession {
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
   private stallFailureReported = false;
-  /** MCP tools registered while this turn ran; pi offers them next turn. */
-  private toolsArrivedThisTurn: string[] = [];
-  /** The arrivals a continuation is about to name, once per turn. */
-  private pendingToolArrival: string[] | null = null;
-  private toolArrivalsThisTurn = 0;
+  /**
+   * The MCP servers changed while a turn ran: the tools the model sees are
+   * brought up to date at the next turn start, never under a running turn.
+   */
+  private mcpToolsStale = false;
   /** True while the session runs OpenLLM; see openllm.ts. */
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
@@ -1160,6 +1159,10 @@ export class AbacusBotSession {
     const pi = this.pi;
 
     if (pi == null) return;
+    if (this.turnRunning) {
+      this.mcpToolsStale = true;
+      return;
+    }
 
     const excluded = excludedTools();
     const listed = buildMcpToolDefinitions(() => this.mcp);
@@ -1176,9 +1179,6 @@ export class AbacusBotSession {
 
       try {
         pi.registerTool(tool as never);
-        // Registered mid-turn: pi offers it from the next turn on, so the
-        // turn is continued once it ends, naming what arrived.
-        if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
       } catch {
         // One server's bad schema must not break the refresh for the rest.
         this.registeredMcpTools.delete(tool.name);
@@ -1243,9 +1243,10 @@ export class AbacusBotSession {
       await this.refreshProviderRegistrations();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
-    this.toolsArrivedThisTurn = [];
-    this.pendingToolArrival = null;
-    this.toolArrivalsThisTurn = 0;
+    if (this.mcpToolsStale) {
+      this.mcpToolsStale = false;
+      this.registerNewMcpTools();
+    }
     this.stallRecoveriesThisTurn = 0;
     this.pendingStall = null;
     this.stallFailureReported = false;
@@ -1444,7 +1445,6 @@ export class AbacusBotSession {
       this.pendingContextCompaction != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
-      this.pendingToolArrival != null ||
       this.pendingStall != null
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
@@ -1454,7 +1454,6 @@ export class AbacusBotSession {
         this.pendingContextCompaction = null;
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
-        this.pendingToolArrival = null;
         this.pendingStall = null;
         this.finishTurn();
 
@@ -1465,23 +1464,6 @@ export class AbacusBotSession {
         const stalled = this.pendingStall.modelId;
         this.pendingStall = null;
         await this.recoverFromStall(stalled);
-
-        continue;
-      }
-
-      if (this.pendingToolArrival != null) {
-        const arrived = this.pendingToolArrival;
-        this.pendingToolArrival = null;
-        this.toolArrivalsThisTurn += 1;
-
-        await this.session?.sendCustomMessage(
-          {
-            customType: TOOLS_ARRIVED_TYPE,
-            content: toolsArrivedPrompt(arrived),
-            display: false,
-          },
-          { triggerTurn: true }
-        );
 
         continue;
       }
@@ -2576,27 +2558,12 @@ export class AbacusBotSession {
           this.languageRepairsThisTurn > 0
             ? null
             : replyLanguageMismatch(event.messages);
-        // Tools that arrived while this turn ran are offered from the next
-        // turn on; continue into it so the user's request is finished with
-        // them rather than declared impossible. Once per turn.
-        this.pendingToolArrival =
-          this.continuingPastMalformedToolCall ||
-          this.pendingContextCompaction != null ||
-          this.pendingOpenLlmRotation != null ||
-          this.pendingLanguageRepair != null ||
-          this.toolArrivalsThisTurn > 0 ||
-          this.toolsArrivedThisTurn.length === 0
-            ? null
-            : [...new Set(this.toolsArrivedThisTurn)];
-        this.toolsArrivedThisTurn = [];
-
         if (
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
           this.pendingOpenLlmRotation == null &&
-          this.pendingLanguageRepair == null &&
-          this.pendingToolArrival == null
+          this.pendingLanguageRepair == null
         ) {
           this.finishTurn();
         }

@@ -340,11 +340,10 @@ describe("refreshing", () => {
     expect(offeredTools()).toContain("docs_search");
   });
 
-  it("continues the turn with a tool that landed while the turn ran", async () => {
-    // The refresh that follows connect_connector lands inside the turn,
-    // after the tool result. pi's tool list is fixed for the turn, so the
-    // follow-up request cannot see the new tool; the turn is continued
-    // once it ends, naming the arrival, and that request can.
+  it("never changes the tools under a running turn: a refresh landing mid-turn applies at the next one", async () => {
+    // A refresh that lands inside a turn (one main gave up waiting on, or a
+    // server coming up late): the tools the model sees stay as the turn
+    // started with them, additions and removals both, until the next turn.
     let harness: Harness | null = null;
     let refreshed: Promise<void> = Promise.resolve();
     const server = await mcpServer([
@@ -364,6 +363,7 @@ describe("refreshing", () => {
           return "Slack is connected.";
         },
       },
+      { name: "search" },
     ]);
 
     fs.writeFileSync(
@@ -378,18 +378,20 @@ describe("refreshing", () => {
       if (index === 0) return { call: { name: "docs_connect", args: {} } };
       if (index === 1) {
         await refreshed;
-        return { say: "I cannot send that." };
+        return { say: "done" };
       }
       return { say: "sent" };
     });
-    await harness.session.send("connect slack and dm sreemanti hi");
+    await harness.session.send("connect slack");
 
-    expect(provider.calls).toHaveLength(3);
+    expect(provider.calls).toHaveLength(2);
+    expect(provider.calls[1]?.tools).toContain("docs_search");
     expect(provider.calls[1]?.tools).not.toContain("docs_Slack_Tool");
+
+    await harness.session.send("dm hi on slack");
+
     expect(provider.calls[2]?.tools).toContain("docs_Slack_Tool");
-    expect(provider.calls[2]?.userText.join("\n")).toMatch(
-      /became available: docs_Slack_Tool/
-    );
+    expect(provider.calls[2]?.tools).not.toContain("docs_search");
   });
 
   it("keeps routing the tools it already had", async () => {

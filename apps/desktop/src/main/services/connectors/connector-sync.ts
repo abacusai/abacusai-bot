@@ -8,6 +8,10 @@
  * account has: added from this app, a browser, another device, or removed by
  * a disconnect, a revoke or an admin.
  *
+ * A session's sends go through here in order: each waits for the ones before
+ * it (their reconcile and delivery), so a message steered in behind a turn
+ * start never overtakes it, and no refresh lands under a turn it started.
+ *
  * Every reader of connector state (the statuses, connect_connector, the
  * environment notice, the connected note) reads this snapshot, so none of
  * them can disagree with the tools.
@@ -32,11 +36,11 @@ interface ConnectorSyncDeps {
   /** Sessions with a running agent. */
   liveSessions: () => SessionRef[];
   /**
-   * Rewrites the session's MCP runtime file and asks its agent to reconnect;
-   * false when no agent is running to ask. The agent reports its servers
-   * (`serversReported`) or a failure (`refreshFailed`) when done.
+   * Rewrites the session's MCP runtime file and asks its agent to reconnect
+   * under `requestId`; false when no agent is running to ask. The agent
+   * answers through `refreshed` with the same id when it is done.
    */
-  refresh: (session: SessionRef) => Promise<boolean>;
+  refresh: (session: SessionRef, requestId: string) => Promise<boolean>;
   /** The listing moved: the renderer re-reads, once per change. */
   changed: () => void;
   log?: (line: string) => void;
@@ -66,8 +70,15 @@ export class ConnectorSync {
   private reading: Promise<PlatformSnapshot> | null = null;
   /** The connected set each live session's tools were built with. */
   private readonly built = new Map<string, string>();
-  /** Refreshes waiting on their session's report, by session id. */
+  /** A started session's set, being read because nothing was cached. */
+  private readonly seeding = new Map<string, Promise<void>>();
+  /** Each session's last send in line: the next one starts after it. */
+  private readonly lines = new Map<string, Promise<void>>();
+  /** A session's refresh in flight; a second ask joins it. */
+  private readonly refreshing = new Map<string, Promise<void>>();
+  /** Refreshes waiting on their agent's answer, by request id. */
   private readonly waiting = new Map<string, (ok: boolean) => void>();
+  private requests = 0;
   /** A change here was announced already; the read that sees it stays quiet. */
   private announced = false;
   private readonly now: () => number;
@@ -107,52 +118,70 @@ export class ConnectorSync {
   }
 
   /**
-   * At a turn's start, before its message is delivered: the session's tools
-   * are brought to the platform's connected set. A turn already running (a
-   * message steered into it) is never refreshed under it; its session is
-   * reconciled at its next turn start. A listing that cannot be read leaves
-   * the tools as they are.
+   * Delivers a message to a session after every send before it, with the
+   * session's tools brought to the platform's connected set first unless the
+   * message joins a running turn (`midTurn`): a turn is never refreshed
+   * under. Must be called synchronously at the send's arrival, so the line
+   * is the arrival order. A listing that cannot be read leaves the tools.
    */
-  async beforeTurn(session: SessionRef, midTurn: boolean): Promise<void> {
-    if (midTurn) return;
-    let snapshot: PlatformSnapshot;
-    try {
-      snapshot = await this.platform();
-    } catch {
-      return;
-    }
-    if (snapshot.reason != null) return;
-    const live = this.deps
-      .liveSessions()
-      .some((item) => item.sessionId === session.sessionId);
-    // Not running: its agent builds its tools from the platform when it starts.
-    if (!live) return;
-    const signature = signatureOf(snapshot);
-    if (this.built.get(session.sessionId) === signature) return;
-    await this.refreshSession(session, signature);
+  inTurnOrder<T>(
+    session: SessionRef,
+    midTurn: boolean,
+    deliver: () => Promise<T>
+  ): Promise<T> {
+    const before = this.lines.get(session.sessionId) ?? Promise.resolve();
+    const run = before.then(async () => {
+      if (!midTurn) await this.reconcile(session);
+      return deliver();
+    });
+    const line = run.then(
+      () => undefined,
+      () => undefined
+    );
+    this.lines.set(session.sessionId, line);
+    void line.then(() => {
+      if (this.lines.get(session.sessionId) === line)
+        this.lines.delete(session.sessionId);
+    });
+    return run;
   }
 
-  /** A session's agent reported its MCP servers: a refresh finished, or it started. */
+  /** In line like any send, for a path that delivers on its own right after. */
+  beforeTurn(session: SessionRef, midTurn: boolean): Promise<void> {
+    return this.inTurnOrder(session, midTurn, async () => undefined);
+  }
+
+  /**
+   * A session's agent reported its MCP servers. Only a start counts here: the
+   * set it was built with is recorded, read now when nothing is cached, so
+   * its first turn does not reconnect for nothing. A refresh's end is
+   * `refreshed`, never this: these reports also go out mid-refresh.
+   */
   serversReported(sessionId: string): void {
-    const waiter = this.waiting.get(sessionId);
-    if (waiter != null) {
-      waiter(true);
+    if (this.built.has(sessionId) || this.seeding.has(sessionId)) return;
+    if (this.cached != null && this.cached.snapshot.reason == null) {
+      this.built.set(sessionId, signatureOf(this.cached.snapshot));
       return;
     }
-    // A start, built from the listing as it stood; unknown without one, which
-    // the next turn start settles with a refresh.
-    if (!this.built.has(sessionId) && this.cached != null)
-      this.built.set(sessionId, signatureOf(this.cached.snapshot));
+    const seed = this.platform()
+      .then((snapshot) => {
+        if (snapshot.reason == null && !this.built.has(sessionId))
+          this.built.set(sessionId, signatureOf(snapshot));
+      })
+      .catch(() => undefined)
+      .finally(() => this.seeding.delete(sessionId));
+    this.seeding.set(sessionId, seed);
   }
 
-  refreshFailed(sessionId: string): void {
-    this.waiting.get(sessionId)?.(false);
+  /** The agent's answer to a refresh asked for under `requestId`. */
+  refreshed(requestId: string, ok: boolean): void {
+    this.waiting.get(requestId)?.(ok);
   }
 
   /** The session's agent is gone: whatever it was built with went with it. */
   forget(sessionId: string): void {
     this.built.delete(sessionId);
-    this.waiting.get(sessionId)?.(false);
+    this.seeding.delete(sessionId);
   }
 
   private async readNow(): Promise<PlatformSnapshot> {
@@ -166,40 +195,74 @@ export class ConnectorSync {
     return snapshot;
   }
 
-  private async refreshSession(
+  private async reconcile(session: SessionRef): Promise<void> {
+    let snapshot: PlatformSnapshot;
+    try {
+      snapshot = await this.platform();
+    } catch {
+      return;
+    }
+    if (snapshot.reason != null) return;
+    const live = this.deps
+      .liveSessions()
+      .some((item) => item.sessionId === session.sessionId);
+    // Not running: its agent builds its tools from the platform when it starts.
+    if (!live) return;
+    await this.seeding.get(session.sessionId);
+    const signature = signatureOf(snapshot);
+    if (this.built.get(session.sessionId) === signature) return;
+    await this.refreshSession(session, signature);
+  }
+
+  private refreshSession(
     session: SessionRef,
     signature: string
   ): Promise<void> {
-    if (this.waiting.has(session.sessionId)) return;
-    const done = new Promise<boolean>((resolve) => {
+    const inFlight = this.refreshing.get(session.sessionId);
+    if (inFlight != null) return inFlight;
+    const refresh = this.runRefresh(session, signature).finally(() =>
+      this.refreshing.delete(session.sessionId)
+    );
+    this.refreshing.set(session.sessionId, refresh);
+    return refresh;
+  }
+
+  private async runRefresh(
+    session: SessionRef,
+    signature: string
+  ): Promise<void> {
+    this.requests += 1;
+    const requestId = `connectors-${this.requests}`;
+    const answered = new Promise<boolean>((resolve) => {
       const timer = setTimeout(
         () => resolve(false),
         this.deps.refreshWaitMs ?? REFRESH_WAIT_MS
       );
       timer.unref?.();
-      this.waiting.set(session.sessionId, (ok) => {
+      this.waiting.set(requestId, (ok) => {
         clearTimeout(timer);
         resolve(ok);
       });
     });
     let asked = false;
     try {
-      asked = await this.deps.refresh(session);
+      asked = await this.deps.refresh(session, requestId);
     } catch (error) {
       this.deps.log?.(
         `[mcp] connector refresh for ${session.sessionId} failed: ${String(error)}`
       );
     }
-    if (!asked) this.waiting.get(session.sessionId)?.(false);
-    const ok = await done;
-    this.waiting.delete(session.sessionId);
+    const ok = asked && (await answered);
+    this.waiting.delete(requestId);
     if (ok) {
+      // Only a confirmed refresh moves what the session was built with.
       this.built.set(session.sessionId, signature);
       this.deps.log?.(
         `[mcp] connectors refreshed for ${session.sessionId}: ${signature || "none"}`
       );
     } else if (asked) {
-      // Still stale, so the next turn start tries again.
+      // Still stale, so the next turn start tries again; the agent applies a
+      // late refresh at its own next turn start, never under a running one.
       this.deps.log?.(
         `[mcp] connector refresh for ${session.sessionId} did not finish; retried next turn`
       );

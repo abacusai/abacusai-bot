@@ -125,16 +125,14 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     expect(offeredTools()).not.toContain("abacus-connectors_Slack_Tool");
   }, 60_000);
 
-  it("continues the turn with a tool that landed while the turn ran", async () => {
-    // A refresh landing inside a turn (a server coming up late, or Slack
-    // connected while the turn ran): the gateway gains the tool after the
-    // tool result, inside the same turn. pi's tool list is fixed
-    // for the turn, so the model's follow-up request cannot see the tool;
-    // it said "cannot send hi to sreemanti on DM". The turn is continued
-    // once it ends, with the arrival named, and that request has the tool.
+  it("never changes the tools under a running turn: a refresh landing mid-turn applies at the next one", async () => {
+    // A refresh landing inside a turn (one main gave up waiting on, or a
+    // server coming up late): the gateway gains Slack and drops Calendar
+    // after the tool result, inside the same turn. The turn keeps the tools
+    // it started with; the next turn has the new set.
     let refreshed: Promise<void> = Promise.resolve();
     // The gateway only offers registry tools, so the trigger is one of them:
-    // a Gmail call whose side effect is Slack landing on the gateway.
+    // a Gmail call whose side effect is the gateway's tools changing.
     server = await FakeMcpServer.start([
       {
         name: "Gmail_Tool",
@@ -149,6 +147,7 @@ describe("a bot chat whose connector gateway gains a tool", () => {
           return "Slack is connected.";
         },
       },
+      { name: "Google_Calendar_Tool", reply: () => "events" },
     ]);
     fs.writeFileSync(
       configPath,
@@ -157,27 +156,31 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     );
     bot = newBot();
     await bot.start();
-    // The refresh in the field landed six seconds before the turn ended;
-    // here the follow-up request waits for it, so the ordering is the same.
+    // The follow-up request waits for the refresh, so it lands mid-turn.
     provider.script(async (_call, index) => {
       if (index === 0)
         return { call: { name: "abacus-connectors_Gmail_Tool", args: {} } };
       if (index === 1) {
         await refreshed;
-        return { say: "I cannot send that: no Slack tool here." };
+        return { say: "done" };
       }
       return { say: "sent" };
     });
-    await bot.send("connect slack and dm sreemanti hi");
+    await bot.send("connect slack");
 
-    // Request 1 is pi's follow-up on the fixed list; request 2 is ours.
-    expect(provider.calls).toHaveLength(3);
+    expect(provider.calls).toHaveLength(2);
+    expect(provider.calls[1]?.tools).toContain(
+      "abacus-connectors_Google_Calendar_Tool"
+    );
     expect(provider.calls[1]?.tools).not.toContain(
       "abacus-connectors_Slack_Tool"
     );
+
+    await bot.send("dm hi on slack");
+
     expect(provider.calls[2]?.tools).toContain("abacus-connectors_Slack_Tool");
-    expect(provider.calls[2]?.userText.join("\n")).toMatch(
-      /became available: abacus-connectors_Slack_Tool/
+    expect(provider.calls[2]?.tools).not.toContain(
+      "abacus-connectors_Google_Calendar_Tool"
     );
   }, 60_000);
 });
