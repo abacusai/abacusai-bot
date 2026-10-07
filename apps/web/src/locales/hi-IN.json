@@ -960,7 +960,8 @@
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
     "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits"
+    "inviteCta": "Or invite friends for free credits",
+    "remaining": "{{count}} credits remaining"
   },
   "execBackends": {
     "daytona": {

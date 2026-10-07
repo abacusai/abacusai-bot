@@ -34,7 +34,7 @@ export const SHELL_GEOMETRY = {
   /** `--drawer-padding`: the drawer's content padding. */
   drawerPadding: 16,
   /** `--content-max-w`: the reading column (transcript, Settings, Library, Routines, start pages). */
-  contentMaxW: 1040,
+  contentMaxW: 1120,
   /** `--content-max-w-wide`: the column for tables and grids (Artifacts). */
   contentMaxWWide: 1280,
   /** `--composer-max-w`: the composer column, a step narrower than the transcript. */
@@ -57,7 +57,7 @@ export const GEOMETRY_VARS: Record<ShellGeometryKey, `--${string}`> = {
   paneInset: "--pane-inset",
   paneRadius: "--pane-radius",
   drawerPadding: "--drawer-padding",
-  contentMaxW: "--content-max-w",
+  contentMaxW: "--content-max-w-cap",
   contentMaxWWide: "--content-max-w-wide",
   composerMaxW: "--composer-max-w",
 };

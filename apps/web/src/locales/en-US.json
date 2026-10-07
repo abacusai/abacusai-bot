@@ -959,8 +959,9 @@
     "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
-    "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits"
+    "upsellTitle": "Go further with Pro",
+    "inviteCta": "Or invite friends for free credits",
+    "remaining": "{{count}} credits remaining"
   },
   "execBackends": {
     "daytona": {
