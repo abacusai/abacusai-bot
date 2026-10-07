@@ -33,6 +33,9 @@
   --side-panel-drawer-w: 356px;
   --pane-inset: 8px;
   --pane-radius: 12px;
+  --floating-surface-background: var(--popover);
+  --floating-surface-border: var(--border);
+  --floating-surface-shadow: 0 12px 36px rgb(0 0 0 / .18);
   --drawer-padding: 16px;
   /* Content widths, one system for every page (`.content-col` below):
      `--content-max-w` is the reading column (chat transcript, Settings,
@@ -56,6 +59,7 @@
 }
 
 .dark {
+  --floating-surface-shadow: 0 12px 36px rgb(0 0 0 / .45);
   color-scheme: dark;
 }
 
@@ -123,7 +127,7 @@ html {
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="sidebar-floating"] {
-    background-color: var(--sidebar);
+    background-color: var(--floating-surface-background);
   }
 }
 
@@ -698,3 +702,14 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
 [data-slot="topbar"] > button, [data-slot="topbar-panel-outlet"] > button { align-self: start; margin-block: calc((var(--titlebar-row-h) - 28px) / 2); }
 
 [data-workspace-expanded] [data-slot="bot-identity-stand-in"] { display: none; }
+
+/* Floating islands stay solid over moving content; geometry is shared with docked islands. */
+:is(.floating-surface, [data-slot="sidebar-floating"], [data-slot="drawer-popup"][data-side-panel],
+    [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"], [data-slot="context-menu-sub-content"], .panel-dock .dv-drop-target-selection) {
+  background-color: var(--floating-surface-background);
+  border: 1px solid var(--floating-surface-border);
+  border-radius: var(--pane-radius);
+  box-shadow: var(--floating-surface-shadow);
+  backdrop-filter: none;
+}

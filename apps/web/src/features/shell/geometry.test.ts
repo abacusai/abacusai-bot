@@ -124,7 +124,7 @@ describe("shell surfaces", () => {
       /\[data-slot="pane"\]:not\(:has\(\[data-slot="session-dock"\]\)\), \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
-      /\[data-slot="sidebar-floating"\] \{\s*background-color: var\(--sidebar\);/
+      /\[data-slot="sidebar-floating"\] \{\s*background-color: var\(--floating-surface-background\);/
     );
     expect(block).not.toContain("backdrop-filter");
     expect(tokensCss).toContain('data-window-focused="false"');
@@ -157,4 +157,13 @@ it("excludes the Sessions workspace wrapper from the native content surface", ()
   );
   expect(tokensCss).toContain("prefers-reduced-transparency: reduce");
   expect(tokensCss).toContain('data-window-focused="false"');
+});
+
+it("shares solid floating island geometry without a scrolling backdrop filter", () => {
+  expect(tokensCss).toContain(
+    "background-color: var(--floating-surface-background)"
+  );
+  expect(tokensCss).toContain("box-shadow: var(--floating-surface-shadow)");
+  expect(tokensCss).toContain("border-radius: var(--pane-radius)");
+  expect(tokensCss).toContain("backdrop-filter: none");
 });

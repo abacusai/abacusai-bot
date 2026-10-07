@@ -242,7 +242,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --dv-tab-font-size: 12px;
   --dv-sash-size: 8px;
   --dv-active-sash-color: transparent;
-  --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, var(--floating-surface-background));
 }
 
 /* SessionRunning / SplitView use the same radius and gutters as Bots. */
@@ -293,3 +293,4 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   align-self: flex-start;
   margin-top: 6px;
 }
+

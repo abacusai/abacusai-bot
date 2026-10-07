@@ -217,7 +217,7 @@ export const UpgradePromo = () => {
           data-presentation={host ? "sidebar" : "floating"}
           className={cn(
             "bg-background pointer-events-auto isolate overflow-hidden rounded-(--pane-radius) border p-3",
-            host ? "relative w-full" : "fixed z-30 w-80 shadow-lg"
+            host ? "relative w-full" : "floating-surface fixed z-30 w-80"
           )}
           style={host ? undefined : position}
           initial={{
