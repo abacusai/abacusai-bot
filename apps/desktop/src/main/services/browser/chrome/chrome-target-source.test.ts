@@ -20,11 +20,19 @@ import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 
 import { pickBrowserTarget } from "../browser-target";
+import {
+  HOLDS_SECRET_VALUE_SCRIPT,
+  MASK_FOR_CAPTURE_SCRIPT,
+  UNMASK_SCRIPT,
+} from "../secret-fields";
+import { SESSION_TABS_KEPT_MS, UNCLAIMED_TAB_GRACE_MS } from "./browser-tabs";
 import type { ChromeRelay, ChromeTabInfo } from "./chrome-relay";
 import { ChromeTargetSource } from "./chrome-target-source";
 
 class FakeRelay extends EventEmitter {
   connected = true;
+  /** As the hosted Chromium; the user's Chrome is `false`. */
+  ownsTabs = true;
   tabs = new Map<number, ChromeTabInfo>();
   attached = new Set<number>();
   next = 100;
@@ -58,6 +66,10 @@ class FakeRelay extends EventEmitter {
     this.attached.delete(id);
     this.tabs.delete(id);
     this.emit("tabRemoved", id);
+  });
+  detachTab = vi.fn(async (id: number) => {
+    this.attached.delete(id);
+    this.emit("tabDetached", id);
   });
   /** A page the browser opened by itself (a popup), attached as the driver does. */
   open(tab: ChromeTabInfo) {
@@ -180,7 +192,7 @@ describe("ChromeTargetSource", () => {
         null
       );
 
-      source.noteClick("s1");
+      source.noteAction("s1");
       clock.now += 2_000;
       relay.open({ id: 9, url: "https://airline.test/" });
       expect(
@@ -234,20 +246,144 @@ describe("ChromeTargetSource", () => {
       ]);
     });
 
-    it("closes every tab of a session that ended, and nobody else's", async () => {
-      const { relay, source } = setup();
-      await source.materialize("s1", "https://a.test/");
-      relay.open({ id: 7, url: "https://b.test/", openerTabId: 100 });
-      await source.materialize("s2", "https://c.test/");
+    it("keeps an ended session's tabs for it to come back to, then closes them, and nobody else's", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const { relay, source } = setup();
+        await source.materialize("s1", "https://a.test/");
+        relay.open({ id: 7, url: "https://b.test/", openerTabId: 100 });
+        await source.materialize("s2", "https://c.test/");
 
-      await source.closeSession("s1");
+        // The agent stopped, and came back within the hold: nothing closes.
+        source.releaseSession("s1");
+        await vi.advanceTimersByTimeAsync(SESSION_TABS_KEPT_MS - 1);
+        source.noteUse("s1");
+        await vi.advanceTimersByTimeAsync(SESSION_TABS_KEPT_MS);
+        expect(relay.closeTab).not.toHaveBeenCalled();
+        expect(source.sessionTabs("s1").map((tab) => tab.id)).toEqual([100, 7]);
 
-      expect(
-        relay.closeTab.mock.calls.map(([id]) => id).sort((a, b) => a - b)
-      ).toEqual([7, 100]);
-      expect(source.sessionTabs("s2").map((tab) => tab.id)).toEqual([101]);
+        // Ended for good: its tabs close once the hold runs out.
+        source.releaseSession("s1");
+        await vi.advanceTimersByTimeAsync(SESSION_TABS_KEPT_MS);
+        expect(
+          relay.closeTab.mock.calls.map(([id]) => id).sort((a, b) => a - b)
+        ).toEqual([7, 100]);
+        expect(source.sessionTabs("s2").map((tab) => tab.id)).toEqual([101]);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
+    it("in the user's own Chrome lets an ended session's tabs go without closing them", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const { relay, source } = setup();
+        relay.ownsTabs = false;
+        await source.materialize("s1", "https://a.test/");
+
+        source.releaseSession("s1");
+        await vi.advanceTimersByTimeAsync(SESSION_TABS_KEPT_MS);
+
+        expect(relay.closeTab).not.toHaveBeenCalled();
+        expect(relay.detachTab).toHaveBeenCalledWith(100);
+        expect(source.sessionTabs("s1")).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("closes a tab no session claimed after a grace in its own browser, and only detaches one in the user's", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const own = setup();
+        own.relay.open({ id: 8, url: "https://stray.test/" });
+        await vi.advanceTimersByTimeAsync(UNCLAIMED_TAB_GRACE_MS);
+        expect(own.relay.closeTab).toHaveBeenCalledWith(8);
+
+        const users = setup();
+        users.relay.ownsTabs = false;
+        // The tab the user picked comes before the handshake ends: never let go.
+        users.relay.open({ id: 7, url: "https://picked.test/" });
+        users.relay.emit("ready");
+        users.relay.open({ id: 9, url: "https://stray.test/" });
+        await vi.advanceTimersByTimeAsync(UNCLAIMED_TAB_GRACE_MS);
+        expect(users.relay.closeTab).not.toHaveBeenCalled();
+        expect(users.relay.detachTab.mock.calls).toEqual([[9]]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("leaves an opener-less tab unowned when two sessions acted within the window, and adopts it after one", async () => {
+      const { relay, source, clock } = setup();
+      await source.materialize("s1", "https://a.test/");
+      await source.materialize("s2", "https://b.test/");
+
+      source.noteAction("s1");
+      clock.now += 500;
+      source.noteAction("s2");
+      clock.now += 500;
+      relay.open({ id: 8, url: "https://whose.test/" });
+      expect(source.candidates().find((tab) => tab.id === 8)?.sessionId).toBe(
+        null
+      );
+
+      clock.now += 5_000;
+      source.noteAction("s2");
+      clock.now += 500;
+      relay.open({ id: 9, url: "https://mine.test/" });
+      expect(source.candidates().find((tab) => tab.id === 9)?.sessionId).toBe(
+        "s2"
+      );
+      // One action, one tab: the next opener-less tab is nobody's.
+      relay.open({ id: 10, url: "https://next.test/" });
+      expect(source.candidates().find((tab) => tab.id === 10)?.sessionId).toBe(
+        null
+      );
+    });
+
+    it("never gives a click a tab whose named opener nobody owns", async () => {
+      const { relay, source } = setup();
+      relay.allow({ id: 7, url: "https://picked.test/" });
+      await source.materialize("s1", "https://a.test/");
+
+      source.noteAction("s1");
+      relay.open({ id: 8, url: "https://from-picked.test/", openerTabId: 7 });
+      relay.open({ id: 9, url: "https://elsewhere.test/", hasOpener: true });
+
+      expect(source.sessionTabs("s1").map((tab) => tab.id)).toEqual([100]);
+    });
+
+    it("keeps a popup that opens while another session's tab is being made, and skips only the made tab", async () => {
+      const { relay, source } = setup();
+      await source.materialize("s2", "https://b.test/");
+      let finish: () => void = () => undefined;
+      relay.createTab = async (url: string) => {
+        const tab = { id: relay.next++, url };
+        relay.open(tab);
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+        return tab;
+      };
+
+      const making = source.materialize("s1", "https://a.test/");
+      await vi.waitFor(() => expect(relay.tabs.has(101)).toBe(true));
+      // s2's page opens a popup, and s2 clicks something that opens an opener-less tab.
+      relay.open({ id: 7, url: "https://popup.test/", openerTabId: 100 });
+      source.noteAction("s2");
+      relay.open({ id: 8, url: "https://noopener.test/" });
+      expect(source.candidates().find((tab) => tab.id === 7)?.sessionId).toBe(
+        "s2"
+      );
+
+      finish();
+      expect(await making).toBe(101);
+      expect(source.sessionTabs("s1").map((tab) => tab.id)).toEqual([101]);
+      expect(source.sessionTabs("s2").map((tab) => tab.id)).toEqual([
+        100, 7, 8,
+      ]);
+    });
     it("reads the live origin of a tab and of its frames", async () => {
       const { relay, source } = setup();
       await source.materialize("s1", "https://shop.test/cart");
@@ -273,87 +409,229 @@ describe("ChromeTargetSource", () => {
   });
 
   describe("secret fields", () => {
-    it("locks scripts on a tab holding a filled field until its main frame navigates", async () => {
+    it("refuses scripts while the page holds a secret value, and after a fill until its main frame navigates", async () => {
       const { relay, source } = setup();
       await source.materialize("s1", "https://shop.test/login");
+      const page = source.webContents(100)!;
       const secrets = source.secrets(100)!;
-      relay.cdp.mockImplementation(async (_tabId: number, method: string) =>
-        method === "Runtime.evaluate" ? { result: { value: true } } : {}
+      let holdsValue = false;
+      relay.cdp.mockImplementation(
+        async (_tabId: number, method: string, params?: unknown) =>
+          method === "Runtime.evaluate"
+            ? {
+                result: {
+                  value:
+                    (params as { expression?: string }).expression ===
+                    HOLDS_SECRET_VALUE_SCRIPT
+                      ? holdsValue
+                      : true,
+                },
+              }
+            : {}
       );
 
-      expect(secrets.executeRefusal()).toBeNull();
-      expect(
-        await secrets.markFilled(source.webContents(100)!, "#password")
-      ).toBe(true);
-      expect(secrets.executeRefusal()).toContain("cannot run");
+      expect(await secrets.executeRefusal(page)).toBeNull();
+      // A password typed into the page, by anyone: asked of the page each time.
+      holdsValue = true;
+      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      holdsValue = false;
 
+      expect(await secrets.markFilled(page, "#password")).toBe(true);
+      expect(await secrets.executeRefusal(page)).toContain("cannot run");
       // A frame inside the page navigating is not the page leaving.
       relay.emit("cdpEvent", 100, "Page.frameNavigated", {
         frame: { id: "ad", parentId: "main", url: "https://ads.test/" },
       });
-      expect(secrets.executeRefusal()).not.toBeNull();
+      expect(await secrets.executeRefusal(page)).not.toBeNull();
       relay.emit("cdpEvent", 100, "Page.frameNavigated", {
         frame: { id: "main", url: "https://shop.test/account" },
       });
-      expect(secrets.executeRefusal()).toBeNull();
+      expect(await secrets.executeRefusal(page)).toBeNull();
     });
 
-    it("captures only with the fields hidden, covers cross-origin frames once one is filled, and shows them again", async () => {
+    it("refuses scripts when the page cannot be asked", async () => {
       const { relay, source } = setup();
-      await source.materialize("s1", "https://shop.test/pay");
-      const expressions: string[] = [];
+      await source.materialize("s1", "https://shop.test/login");
+      relay.cdp.mockImplementation(async (_tabId: number, method: string) =>
+        method === "Runtime.evaluate"
+          ? { exceptionDetails: { text: "blocked" } }
+          : {}
+      );
+
+      expect(
+        await source.secrets(100)!.executeRefusal(source.webContents(100)!)
+      ).toContain("cannot run");
+    });
+
+    /** A checkout page with a same-origin frame and a payment provider's frame. */
+    const checkout = (
+      relay: FakeRelay,
+      overrides: Partial<
+        Record<string, (params: Record<string, unknown>) => unknown>
+      > = {}
+    ) => {
+      const sent: Array<{ method: string; params: Record<string, unknown> }> =
+        [];
       relay.cdp.mockImplementation(
-        async (_tabId: number, method: string, params?: unknown) => {
-          if (method === "Runtime.evaluate") {
-            expressions.push(
-              String((params as { expression?: string }).expression)
-            );
-            return { result: { value: true } };
+        async (_tabId: number, method: string, raw?: unknown) => {
+          const params = (raw ?? {}) as Record<string, unknown>;
+          sent.push({ method, params });
+          const override = overrides[method];
+          if (override != null) return override(params);
+          switch (method) {
+            case "Runtime.evaluate":
+              if (params.expression === "location.origin")
+                return { result: { value: "https://shop.test" } };
+              if (params.expression === MASK_FOR_CAPTURE_SCRIPT)
+                return { result: { value: 1 } };
+              return { result: { value: true } };
+            case "Page.getFrameTree":
+              return {
+                frameTree: {
+                  frame: { id: "main", securityOrigin: "https://shop.test" },
+                  childFrames: [
+                    {
+                      frame: {
+                        id: "same",
+                        url: "about:blank",
+                        securityOrigin: "https://shop.test",
+                      },
+                    },
+                    {
+                      frame: {
+                        id: "card",
+                        url: "https://pay.test/card",
+                        securityOrigin: "https://pay.test",
+                      },
+                      childFrames: [
+                        {
+                          frame: {
+                            id: "inner",
+                            securityOrigin: "https://shop.test",
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              };
+            case "DOM.getFrameOwner":
+              return { backendNodeId: 7 };
+            case "DOM.resolveNode":
+              return { object: { objectId: "owner-7" } };
+            case "Runtime.callFunctionOn":
+              return { result: { value: "named" } };
+            case "Page.captureScreenshot":
+              return { data: Buffer.from("jpeg").toString("base64") };
+            default:
+              return {};
           }
-          if (method === "Page.captureScreenshot")
-            return { data: Buffer.from("jpeg").toString("base64") };
-          return {};
         }
       );
+      return sent;
+    };
+
+    it("covers a cross-origin frame in every capture, before any fill, and shows the page again after", async () => {
+      const { relay, source } = setup();
+      await source.materialize("s1", "https://shop.test/pay");
+      const sent = checkout(relay);
 
       expect(await source.captureMasked(100)).toEqual({
         data: Buffer.from("jpeg").toString("base64"),
         mimeType: "image/jpeg",
       });
-      const masks = expressions.filter((e) => e.includes("data-abacusai-mask"));
-      expect(masks[0]).toContain("input[type=password]");
-      expect(masks[0]).toContain("if (!false) continue;");
-      // Shown again after.
-      expect(masks.at(-1)).toContain(".remove()");
-
-      await source.secrets(100)!.markFilled(source.webContents(100)!, "#card");
-      expressions.length = 0;
-      await source.captureMasked(100);
+      // Only the outermost frame of another origin is named; the one inside it goes with it.
       expect(
-        expressions.find((e) => e.includes("data-abacusai-mask"))
-      ).toContain("if (!true) continue;");
+        sent
+          .filter((call) => call.method === "DOM.getFrameOwner")
+          .map((call) => call.params.frameId)
+      ).toEqual(["card"]);
+      const evaluated = sent
+        .filter((call) => call.method === "Runtime.evaluate")
+        .map((call) => call.params.expression);
+      expect(evaluated).toContain(MASK_FOR_CAPTURE_SCRIPT);
+      expect(evaluated.at(-1)).toBe(UNMASK_SCRIPT);
+      const captured = sent.findIndex(
+        (call) => call.method === "Page.captureScreenshot"
+      );
+      expect(evaluated.indexOf(MASK_FOR_CAPTURE_SCRIPT)).toBeGreaterThanOrEqual(
+        0
+      );
+      expect(
+        sent.findIndex(
+          (call) => call.params.expression === MASK_FOR_CAPTURE_SCRIPT
+        )
+      ).toBeLessThan(captured);
+    });
+
+    it("covers an out-of-process frame the page's own tree does not list", async () => {
+      const { relay, source } = setup();
+      await source.materialize("s1", "https://shop.test/pay");
+      Object.assign(relay, {
+        childFrames: () => ["oopif"],
+        frameOrigin: (_tabId: number, frameId: string) =>
+          frameId === "oopif" ? "https://pay.test" : null,
+      });
+      const sent = checkout(relay, {
+        "Page.getFrameTree": () => ({
+          frameTree: {
+            frame: { id: "main", securityOrigin: "https://shop.test" },
+          },
+        }),
+      });
+
+      expect(await source.captureMasked(100)).not.toBeNull();
+      expect(
+        sent
+          .filter((call) => call.method === "DOM.getFrameOwner")
+          .map((call) => call.params.frameId)
+      ).toEqual(["oopif"]);
+    });
+
+    it("takes no screenshot when a cross-origin frame cannot be covered", async () => {
+      for (const overrides of [
+        // Its owner cannot be found,
+        { "DOM.getFrameOwner": () => Promise.reject(new Error("gone")) },
+        // or the mask did not cover it,
+        {
+          "Runtime.evaluate": (params: Record<string, unknown>) => ({
+            result: {
+              value:
+                params.expression === "location.origin"
+                  ? "https://shop.test"
+                  : params.expression === MASK_FOR_CAPTURE_SCRIPT
+                    ? 0
+                    : true,
+            },
+          }),
+        },
+        // or the frames are unknown.
+        { "Page.getFrameTree": () => Promise.reject(new Error("no tree")) },
+      ]) {
+        const { relay, source } = setup();
+        await source.materialize("s1", "https://shop.test/pay");
+        const sent = checkout(relay, overrides);
+
+        expect(await source.captureMasked(100)).toBeNull();
+        expect(sent.map((call) => call.method)).not.toContain(
+          "Page.captureScreenshot"
+        );
+      }
     });
 
     it("takes no screenshot when the fields cannot be hidden", async () => {
       const { relay, source } = setup();
       await source.materialize("s1", "https://shop.test/pay");
-      relay.cdp.mockImplementation(async (_tabId: number, method: string) => {
-        if (method === "Runtime.evaluate")
-          return { exceptionDetails: { text: "blocked" } };
-        if (method === "Page.captureScreenshot")
-          return { data: Buffer.from("jpeg").toString("base64") };
-        return {};
+      const sent = checkout(relay, {
+        "Runtime.evaluate": () => ({ exceptionDetails: { text: "blocked" } }),
       });
 
       expect(await source.captureMasked(100)).toBeNull();
-      expect(relay.cdp).not.toHaveBeenCalledWith(
-        100,
-        "Page.captureScreenshot",
-        expect.anything()
+      expect(sent.map((call) => call.method)).not.toContain(
+        "Page.captureScreenshot"
       );
     });
   });
-
   it("has nothing to make when Chrome is not connected", async () => {
     const { relay, source } = setup();
     relay.connected = false;
@@ -373,6 +651,9 @@ describe("the hosted computer's own Chromium", () => {
     const sent: Array<{ method: string; sessionId?: string }> = [];
     const raise = (message: Record<string, unknown>) =>
       fromBrowser.write(`${JSON.stringify(message)}\0`);
+    /** What the browser raises before it answers a command, by method. */
+    const before: Record<string, (targetId: string) => void> = {};
+    let created = 0;
     let buffer = "";
     toBrowser.setEncoding("utf8");
     toBrowser.on("data", (chunk: string) => {
@@ -385,9 +666,14 @@ describe("the hosted computer's own Chromium", () => {
         const message = JSON.parse(buffer.slice(0, end));
         buffer = buffer.slice(end + 1);
         sent.push(message);
+        const made = `T${created + 1}`;
+        if (message.method === "Target.createTarget") {
+          created += 1;
+          before[message.method]?.(made);
+        }
         const result =
           message.method === "Target.createTarget"
-            ? { targetId: "T1" }
+            ? { targetId: made }
             : message.method === "Target.attachToTarget"
               ? {
                   sessionId: String(message.params.targetId).replace(/^T/, "S"),
@@ -400,6 +686,7 @@ describe("the hosted computer's own Chromium", () => {
       child,
       sent,
       raise,
+      before,
       spawn: vi.fn((_command: string, _args: string[]) => child),
     };
   };
@@ -525,7 +812,7 @@ describe("the hosted computer's own Chromium", () => {
 
   it("attaches an opener-less page and gives it to the session that just clicked", async () => {
     const { chromium, source } = await launched();
-    source.noteClick("session-1");
+    source.noteAction("session-1");
 
     chromium.raise({
       method: "Target.targetCreated",
@@ -543,6 +830,100 @@ describe("the hosted computer's own Chromium", () => {
         params: expect.objectContaining({ targetId: "NOOPENER" }),
       })
     );
+  });
+
+  it("gives a noopener page to the tab whose frame the browser names as its opener, click or no click", async () => {
+    const { chromium, source, id } = await launched();
+
+    chromium.raise({
+      method: "Target.targetCreated",
+      params: {
+        targetInfo: {
+          targetId: "NOOPENER",
+          type: "page",
+          url: "https://airline.test/",
+          openerFrameId: "T1",
+        },
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(source.sessionTabs("session-1")).toEqual([
+        expect.objectContaining({ id, current: false }),
+        expect.objectContaining({ current: true, openerId: id }),
+      ])
+    );
+  });
+
+  it("leaves a page whose named opener is not one of its tabs unowned, even right after a click", async () => {
+    const { chromium, source } = await launched();
+    source.noteAction("session-1");
+
+    chromium.raise({
+      method: "Target.targetCreated",
+      params: {
+        targetInfo: {
+          targetId: "ELSEWHERE",
+          type: "page",
+          url: "https://x.test/",
+          openerId: "NOT-OURS",
+        },
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(chromium.sent).toContainEqual(
+        expect.objectContaining({
+          method: "Target.attachToTarget",
+          params: expect.objectContaining({ targetId: "ELSEWHERE" }),
+        })
+      )
+    );
+    await vi.waitFor(() => expect(source.candidates()).toHaveLength(2));
+    expect(source.sessionTabs("session-1")).toHaveLength(1);
+  });
+
+  it("attaches a page it makes once, for its session, while another session's popup still joins", async () => {
+    const { chromium, source, id } = await launched();
+    // The browser reports the made page (no opener) and a popup of session-1's
+    // tab before it answers the create.
+    chromium.before["Target.createTarget"] = (made) => {
+      chromium.raise({
+        method: "Target.targetCreated",
+        params: { targetInfo: { targetId: made, type: "page", url: "" } },
+      });
+      chromium.raise({
+        method: "Target.targetCreated",
+        params: {
+          targetInfo: {
+            targetId: "POP",
+            type: "page",
+            url: "https://airline.test/",
+            openerId: "T1",
+          },
+        },
+      });
+    };
+
+    const made = await source.materialize("session-2", "https://b.test/");
+
+    await vi.waitFor(() =>
+      expect(source.sessionTabs("session-1")).toEqual([
+        expect.objectContaining({ id }),
+        expect.objectContaining({ current: true, openerId: id }),
+      ])
+    );
+    expect(source.sessionTabs("session-2").map((tab) => tab.id)).toEqual([
+      made,
+    ]);
+    expect(
+      chromium.sent.filter(
+        (message) =>
+          message.method === "Target.attachToTarget" &&
+          (message as { params?: { targetId?: string } }).params?.targetId ===
+            "T2"
+      )
+    ).toHaveLength(1);
   });
 
   it("knows a cross-origin frame's live origin from its own attach", async () => {

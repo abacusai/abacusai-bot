@@ -90,6 +90,7 @@ export const selectScript = (
   selector: string,
   value: string
 ): string => `(function() {
+  ${SECRET_FIELD_JS}
   const el = document.querySelector(${JSON.stringify(selector)});
   if (!el || el.tagName !== 'SELECT') return { status: 'not_found' };
   const wanted = ${JSON.stringify(value)};
@@ -104,7 +105,7 @@ export const selectScript = (
   }
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  return { status: 'ok', selected: el.value };
+  return { status: 'ok', selected: __shown(el, el.value) };
 })()`;
 
 /** Set a checkbox, and report the state it actually ended in. */

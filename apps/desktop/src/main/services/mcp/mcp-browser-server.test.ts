@@ -26,7 +26,12 @@ import {
   vi,
 } from "vitest";
 
-import { SecretFields } from "../browser/secret-fields";
+import {
+  HOLDS_SECRET_VALUE_SCRIPT,
+  MASK_FOR_CAPTURE_SCRIPT,
+  SecretFields,
+  UNMASK_SCRIPT,
+} from "../browser/secret-fields";
 
 /** Expressions the page was asked to evaluate, in order, for the whole run. */
 const evaluated: string[] = [];
@@ -162,6 +167,9 @@ class FakeWebContents {
       if (method !== "Runtime.evaluate") return {};
 
       const expression = String(params?.expression ?? "");
+      // The execute lock asks first; a page holds no secret unless a case says so.
+      if (expression === HOLDS_SECRET_VALUE_SCRIPT)
+        return { result: { value: holdsSecretValue } };
       evaluated.push(expression);
       if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
@@ -246,7 +254,8 @@ const fakeTarget = {
     if (tab.current && opener != null) opener.current = true;
     return true;
   },
-  noteClick: vi.fn(),
+  noteAction: vi.fn(),
+  noteUse: vi.fn(),
   secrets: (id: number) => secretsById.get(id) ?? null,
   /** Any session gets the one fake view, the way a hidden view is created for it. */
   materialize: async (): Promise<number | null> => {
@@ -262,6 +271,8 @@ const fakeTarget = {
 let materializeEnabled = true;
 /** On for the cases about a source that keeps several tabs per session. */
 let tabbed = false;
+/** What the page answers the execute lock's question with. */
+let holdsSecretValue = false;
 const secretsById = new Map<number, SecretFields>();
 vi.mock("#main/rpc/emit", () => ({
   emitHostEvent: (payload: unknown) => {
@@ -370,9 +381,11 @@ beforeEach(() => {
   liveViews = [page];
   materializeEnabled = true;
   tabbed = false;
+  holdsSecretValue = false;
   secretsById.clear();
   gestures.length = 0;
-  fakeTarget.noteClick.mockClear();
+  fakeTarget.noteAction.mockClear();
+  fakeTarget.noteUse.mockClear();
   rendererEvents.length = 0;
   responder = () => null;
   evaluated.length = 0;
@@ -2199,8 +2212,10 @@ describe("the shapes a page can come back in", () => {
       params?: Record<string, unknown>
     ) => {
       if (method !== "Runtime.evaluate") return {};
-      attempts += 1;
       const expression = String(params?.expression ?? "");
+      if (expression === HOLDS_SECRET_VALUE_SCRIPT)
+        return { result: { value: false } };
+      attempts += 1;
       if (expression.includes("return (")) {
         return {
           exceptionDetails: { text: "Uncaught SyntaxError: Unexpected token" },
@@ -2216,8 +2231,15 @@ describe("the shapes a page can come back in", () => {
   });
 
   it("reports a page failure that carries no message at all", async () => {
-    page.debugger.sendCommand = async (method: string) =>
-      method === "Runtime.evaluate" ? { exceptionDetails: {} } : {};
+    page.debugger.sendCommand = async (
+      method: string,
+      params?: Record<string, unknown>
+    ) =>
+      params?.expression === HOLDS_SECRET_VALUE_SCRIPT
+        ? { result: { value: false } }
+        : method === "Runtime.evaluate"
+          ? { exceptionDetails: {} }
+          : {};
 
     const { text, isError } = await call("browser_execute", { code: "x" });
 
@@ -2490,7 +2512,12 @@ describe("a few last shapes", () => {
   });
 
   it("reports a page that threw something other than an Error out of execute", async () => {
-    page.debugger.sendCommand = async () => {
+    page.debugger.sendCommand = async (
+      _method: string,
+      params?: Record<string, unknown>
+    ) => {
+      if (params?.expression === HOLDS_SECRET_VALUE_SCRIPT)
+        return { result: { value: false } };
       throw "not an Error at all";
     };
     const { text, isError } = await call("browser_execute", {
@@ -3061,7 +3088,7 @@ describe("several tabs per session", () => {
     expect(
       gestures.some((expression) => expression.includes("el.click()"))
     ).toBe(true);
-    expect(fakeTarget.noteClick).toHaveBeenCalledWith("session-1");
+    expect(fakeTarget.noteAction).toHaveBeenCalledWith("session-1");
     expect((await call("browser_snapshot", { action: "url" })).text).toBe(
       popup.url
     );
@@ -3122,6 +3149,76 @@ describe("several tabs per session", () => {
     ).toBe(false);
   });
 
+  it("refuses scripts on a page holding a live password value, asked of the page each time", async () => {
+    holdsSecretValue = true;
+    respondWith(() => "hunter2-secret");
+
+    const refused = await call("browser_execute", {
+      code: "document.querySelector('input[type=password]').value",
+    });
+
+    expect(refused.isError).toBe(true);
+    expect(refused.text).toContain("cannot run");
+    expect(refused.text).not.toContain("hunter2-secret");
+    expect(evaluated).toEqual([]);
+
+    // Cleared: scripts run again.
+    holdsSecretValue = false;
+    respondWith(() => "Checkout");
+    expect(
+      (await call("browser_execute", { code: "document.title" })).text
+    ).toBe('"Checkout"');
+  });
+
+  it("refuses scripts when the page cannot say whether it holds a secret", async () => {
+    page.debugger.sendCommand = async (
+      method: string,
+      params?: Record<string, unknown>
+    ) =>
+      params?.expression === HOLDS_SECRET_VALUE_SCRIPT
+        ? { exceptionDetails: { text: "blocked" } }
+        : method === "Runtime.evaluate"
+          ? { result: { value: "ran" } }
+          : {};
+
+    const { text, isError } = await call("browser_execute", { code: "1" });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("cannot run");
+  });
+
+  it("dispatches a click as the user's own gesture, so the page may open a tab", async () => {
+    await seedRefs();
+    respondWith(() => ({ status: "ok", tag: "button", text: "Continue" }));
+
+    await call("browser_interact", { action: "click", ref: "@e1" });
+
+    expect(gestures).toHaveLength(1);
+    expect(gestures[0]).toContain("el.click()");
+  });
+
+  it("counts a click, key, pick or select as an action a new tab may come from, and nothing else", async () => {
+    await seedRefs();
+    respondWith(() => ({ status: "ok", selected: "x" }));
+    for (const args of [
+      { action: "fill", ref: "@e1", text: "x" },
+      { action: "hover", ref: "@e1" },
+    ])
+      await call("browser_interact", args);
+    expect(fakeTarget.noteAction).not.toHaveBeenCalled();
+
+    for (const args of [
+      { action: "click", ref: "@e1" },
+      { action: "press", key: "Enter" },
+      { action: "pick", ref: "@e1", text: "Mumbai" },
+      { action: "select", ref: "@e1", value: "x" },
+    ])
+      await call("browser_interact", args);
+    expect(fakeTarget.noteAction).toHaveBeenCalledTimes(4);
+    // Driving its page says the session is alive.
+    expect(fakeTarget.noteUse).toHaveBeenCalledWith("session-1");
+  });
+
   it("hides secret fields for the capture and shows them again after", async () => {
     respondWith(() => null);
     const response = await rpc({
@@ -3135,9 +3232,9 @@ describe("several tabs per session", () => {
     const masking = evaluated.filter((expression) =>
       expression.includes("data-abacusai-mask")
     );
-    expect(masking).toHaveLength(2);
-    expect(masking[0]).toContain("input[type=password]");
-    expect(masking[1]).toContain(".remove()");
+    // The built-in view takes the same masked path: fields hidden, and every
+    // frame the page cannot reach covered, filled or not.
+    expect(masking).toEqual([MASK_FOR_CAPTURE_SCRIPT, UNMASK_SCRIPT]);
   });
 
   it("takes no screenshot when the fields cannot be hidden", async () => {

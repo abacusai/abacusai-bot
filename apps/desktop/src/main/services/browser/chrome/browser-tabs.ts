@@ -5,23 +5,40 @@
  * secret fields.
  *
  * A session acts the way a person would see it:
- * - A tab one of its tabs opens (`window.open`, a `target=_blank` link) is
- *   the session's and becomes active. A new tab the browser names no opener
- *   for, opened within `ADOPT_WINDOW_MS` of the session's click, is taken as
- *   the click's.
+ * - A tab one of its tabs opens (`window.open`, a `target=_blank` link, a
+ *   `noopener` link the browser still names the opening frame for) is the
+ *   session's and becomes active. A tab opened from a tab no session owns
+ *   stays unowned.
+ * - A new tab the browser names no opener for at all is taken as an action's
+ *   (a click, key, pick or select) only when exactly one session acted within
+ *   `ADOPT_WINDOW_MS` before it; otherwise it stays unowned. The residual
+ *   risk: an unrelated opener-less tab (one the user opened by hand) that
+ *   appears right after a single session's action is taken by that session.
  * - The tab that opened it stays open as it was, no longer driven. When the
  *   active tab closes, the tab that opened it is active again.
  * - At most `MAX_TABS_PER_SESSION`: past that, the oldest tab that is neither
- *   active nor on the active tab's opener chain closes.
- * - The session's tabs close when the session ends.
+ *   active nor on the active tab's opener chain is let go.
+ * - When the session ends its tabs are kept `SESSION_TABS_KEPT_MS`, so a run
+ *   that paused (or whose agent restarted) finds its page again, then let go.
+ * - Let go means closed in a browser the app owns (`ownsTabs`) and only
+ *   detached in the user's own Chrome. A tab no session claims is let go
+ *   after `UNCLAIMED_TAB_GRACE_MS`.
  */
 import type { BrowserPage, BrowserTab } from "../browser-target";
-import { type CapturedImage, SecretFields } from "../secret-fields";
+import {
+  type CapturedImage,
+  captureMasked,
+  SecretFields,
+} from "../secret-fields";
 import type { ChromeTabDriver, ChromeTabInfo } from "./chrome-relay";
 
 export const MAX_TABS_PER_SESSION = 6;
-/** How soon after a click an opener-less new tab is taken as the click's. */
+/** How soon after an action an opener-less new tab is taken as the action's. */
 export const ADOPT_WINDOW_MS = 3_000;
+/** How long an ended session's tabs are kept for it to come back to. */
+export const SESSION_TABS_KEPT_MS = 60 * 60_000;
+/** How long a tab no session claimed stays before it is let go. */
+export const UNCLAIMED_TAB_GRACE_MS = 10_000;
 
 interface TabRecord {
   owner: string;
@@ -39,9 +56,18 @@ export interface BrowserTabsOptions {
 export class BrowserTabs {
   private readonly records = new Map<number, TabRecord>();
   private readonly active = new Map<string, number>();
-  private readonly clicks = new Map<string, number>();
-  /** Tabs being made by `create`: their attach is not a popup. */
-  private creating = 0;
+  /** When each session last acted in a way that may open a tab. */
+  private readonly actions = new Map<string, number>();
+  /** The `create` calls in flight. */
+  private readonly creating = new Set<Promise<ChromeTabInfo>>();
+  /** Opener-less tabs that attached while a `create` ran, any of which may be its own. */
+  private held: Array<{ tabId: number; at: number }> = [];
+  /** Ended sessions whose tabs are being kept, with the timer that lets them go. */
+  private readonly ended = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Unclaimed tabs, with the timer that lets each go. */
+  private readonly unclaimed = new Map<number, ReturnType<typeof setTimeout>>();
+  /** The user's Chrome has handed over its picked tab; tabs from now on are ours to let go. */
+  private live = false;
   private joined = 0;
 
   constructor(
@@ -51,8 +77,15 @@ export class BrowserTabs {
     driver.on("tabAttached", (tab) => this.onAttached(tab));
     driver.on("tabDetached", (tabId) => this.forget(tabId));
     driver.on("tabRemoved", (tabId) => this.forget(tabId));
+    driver.on("ready", () => {
+      this.live = true;
+    });
     driver.on("disconnected", () => {
+      this.live = false;
       for (const tabId of Array.from(this.records.keys())) this.forget(tabId);
+      for (const tabId of Array.from(this.unclaimed.keys())) this.forget(tabId);
+      for (const timer of this.ended.values()) clearTimeout(timer);
+      this.ended.clear();
     });
     driver.on("cdpEvent", (tabId, method, params) => {
       // A new document in the main frame: its filled fields went with the old one.
@@ -65,22 +98,38 @@ export class BrowserTabs {
     });
   }
 
-  /** A new tab of the session's own, active from the start. */
+  /**
+   * A new tab of the session's own, active from the start. Only the tab this
+   * returns is skipped by the attach logic; any other that attaches meanwhile
+   * is decided once the creates in flight are done.
+   */
   async create(sessionId: string, url: string): Promise<ChromeTabInfo> {
-    this.creating += 1;
-    let tab: ChromeTabInfo;
+    this.noteUse(sessionId);
+    const making = this.driver.createTab(url);
+    this.creating.add(making);
     try {
-      tab = await this.driver.createTab(url);
+      const tab = await making;
+      this.join(tab.id, sessionId, null);
+      return tab;
     } finally {
-      this.creating -= 1;
+      this.creating.delete(making);
+      if (this.creating.size === 0)
+        for (const { tabId, at } of this.held.splice(0)) this.adopt(tabId, at);
     }
-    this.join(tab.id, sessionId, null);
-    return tab;
   }
 
-  /** The session acted on its page; a tab opening right after is the act's. */
-  noteClick(sessionId: string): void {
-    this.clicks.set(sessionId, this.now());
+  /** The session acted on its page in a way that may open a tab. */
+  noteAction(sessionId: string): void {
+    this.noteUse(sessionId);
+    this.actions.set(sessionId, this.now());
+  }
+
+  /** The session drives its page: tabs kept since it ended are its again. */
+  noteUse(sessionId: string): void {
+    const timer = this.ended.get(sessionId);
+    if (timer == null) return;
+    clearTimeout(timer);
+    this.ended.delete(sessionId);
   }
 
   ownerOf(tabId: number): string | null {
@@ -116,27 +165,37 @@ export class BrowserTabs {
   /** Makes one of the session's tabs the one it drives; false when it has no such tab. */
   async activate(sessionId: string, tabId: number): Promise<boolean> {
     if (this.records.get(tabId)?.owner !== sessionId) return false;
+    this.noteUse(sessionId);
     this.active.set(sessionId, tabId);
     await this.driver.activateTab?.(tabId).catch(() => undefined);
     return true;
   }
 
-  /** Closes one of the session's tabs; false when it has no such tab. */
+  /** Closes one of the session's tabs, as it asked; false when it has no such tab. */
   async close(sessionId: string, tabId: number): Promise<boolean> {
     if (this.records.get(tabId)?.owner !== sessionId) return false;
+    this.noteUse(sessionId);
     await this.driver.closeTab(tabId);
     // The driver's own report may come later; the session moves on now.
     this.forget(tabId);
     return true;
   }
 
-  /** The session ended: every tab it owns closes. */
-  async closeSession(sessionId: string): Promise<void> {
-    const owned = [...this.records]
-      .filter(([, record]) => record.owner === sessionId)
-      .map(([tabId]) => tabId);
-    await Promise.all(owned.map((tabId) => this.close(sessionId, tabId)));
-    this.clicks.delete(sessionId);
+  /**
+   * The session ended (or its agent stopped): its tabs stay its own for
+   * `SESSION_TABS_KEPT_MS`, then are let go unless it came back.
+   */
+  releaseSession(sessionId: string): void {
+    this.actions.delete(sessionId);
+    if (this.ended.has(sessionId) || this.ownedBy(sessionId).length === 0)
+      return;
+    const timer = setTimeout(() => {
+      this.ended.delete(sessionId);
+      for (const tabId of this.ownedBy(sessionId))
+        void this.letGo(tabId).catch(() => undefined);
+    }, SESSION_TABS_KEPT_MS);
+    timer.unref?.();
+    this.ended.set(sessionId, timer);
   }
 
   /**
@@ -148,11 +207,11 @@ export class BrowserTabs {
     if (frameId != null) {
       const attached = this.driver.frameOrigin?.(tabId, frameId);
       if (attached != null) return attached;
-      const tree = (await this.driver
-        .cdp(tabId, "Page.getFrameTree")
-        .catch(() => null)) as { frameTree?: FrameTree } | null;
-      const url = findFrame(tree?.frameTree, frameId)?.frame.url;
-      return url == null ? null : originOf(url);
+      const frame = findFrame(
+        (await this.frameTree(tabId)) ?? undefined,
+        frameId
+      )?.frame;
+      return frame == null ? null : this.frameNodeOrigin(tabId, frame);
     }
     const evaluated = (await this.driver
       .cdp(tabId, "Runtime.evaluate", {
@@ -169,32 +228,125 @@ export class BrowserTabs {
     return this.records.get(tabId)?.secrets ?? null;
   }
 
-  /** The tab's page with its secret fields hidden: the one screenshot path. */
+  /**
+   * The tab's page as a screenshot, with its secret fields hidden and every
+   * frame whose live origin is not the tab's covered: the one screenshot
+   * path. Null, with nothing captured, when either cannot be done.
+   */
   async captureMasked(tabId: number): Promise<CapturedImage | null> {
     const page = this.options.page(tabId);
     if (page == null) return null;
-    return (this.secrets(tabId) ?? new SecretFields()).captureMasked(page);
+    const foreign = await this.foreignFrames(tabId);
+    if (foreign == null) return null;
+    return captureMasked(page, foreign);
+  }
+
+  /**
+   * The outermost frames whose live origin is not the tab's (a frame inside
+   * one is covered with it), by id; null when the tab's frames are unknown.
+   */
+  private async foreignFrames(tabId: number): Promise<string[] | null> {
+    const top = await this.origin(tabId);
+    const tree = await this.frameTree(tabId);
+    if (tree == null) return null;
+    const differs = (origin: string | null): boolean =>
+      top == null || origin == null || origin !== top;
+    const foreign: string[] = [];
+    const seen = new Set<string>([tree.frame.id]);
+    const visit = (node: FrameTree, inForeign: boolean): void => {
+      for (const child of node.childFrames ?? []) {
+        seen.add(child.frame.id);
+        const outer =
+          !inForeign && differs(this.frameNodeOrigin(tabId, child.frame));
+        if (outer) foreign.push(child.frame.id);
+        visit(child, inForeign || outer);
+      }
+    };
+    visit(tree, false);
+    // Out-of-process frames the page's own tree may not list.
+    for (const frameId of this.driver.childFrames?.(tabId) ?? [])
+      if (
+        !seen.has(frameId) &&
+        differs(this.driver.frameOrigin?.(tabId, frameId) ?? null)
+      )
+        foreign.push(frameId);
+    return foreign;
+  }
+
+  private async frameTree(tabId: number): Promise<FrameTree | null> {
+    const tree = (await this.driver
+      .cdp(tabId, "Page.getFrameTree")
+      .catch(() => null)) as { frameTree?: FrameTree } | null;
+    return tree?.frameTree ?? null;
+  }
+
+  /** A frame's live origin: the driver's for one it attached, else the frame tree's. */
+  private frameNodeOrigin(
+    tabId: number,
+    frame: FrameTree["frame"]
+  ): string | null {
+    return (
+      this.driver.frameOrigin?.(tabId, frame.id) ??
+      originOf(frame.securityOrigin || frame.url || "")
+    );
   }
 
   private onAttached(tab: ChromeTabInfo): void {
-    if (this.records.has(tab.id) || this.creating > 0) return;
-    const opener =
-      tab.openerTabId == null ? null : this.records.get(tab.openerTabId);
-    if (opener != null) {
-      this.join(tab.id, opener.owner, tab.openerTabId ?? null);
+    if (this.records.has(tab.id)) return;
+    if (tab.openerTabId != null || tab.hasOpener === true) {
+      // The browser named an opener: its owner's, or nobody's.
+      const opener =
+        tab.openerTabId == null ? null : this.records.get(tab.openerTabId);
+      if (opener != null) this.join(tab.id, opener.owner, tab.openerTabId!);
+      else this.leaveUnclaimed(tab.id);
       return;
     }
-    // No opener we know: the newest click within the window claims it.
-    const now = this.now();
-    let claimant: string | null = null;
-    let latest = -Infinity;
-    for (const [sessionId, at] of this.clicks)
-      if (now - at <= ADOPT_WINDOW_MS && at > latest) {
-        claimant = sessionId;
-        latest = at;
-      }
-    if (claimant == null) return;
-    this.join(tab.id, claimant, this.active.get(claimant) ?? null);
+    // No opener at all: it may be the tab a `create` in flight is making.
+    if (this.creating.size > 0)
+      this.held.push({ tabId: tab.id, at: this.now() });
+    else this.adopt(tab.id, this.now());
+  }
+
+  /** An opener-less tab that attached `at`: the one session that just acted takes it. */
+  private adopt(tabId: number, at: number): void {
+    if (this.records.has(tabId) || !this.driver.isAttached(tabId)) return;
+    const acted = [...this.actions]
+      .filter(([, when]) => when <= at && at - when <= ADOPT_WINDOW_MS)
+      .map(([sessionId]) => sessionId);
+    if (acted.length !== 1) {
+      this.leaveUnclaimed(tabId);
+      return;
+    }
+    const claimant = acted[0]!;
+    // One action, one tab.
+    this.actions.delete(claimant);
+    this.join(tabId, claimant, this.active.get(claimant) ?? null);
+  }
+
+  /** A tab no session owns: let go after a grace, where it is ours to let go. */
+  private leaveUnclaimed(tabId: number): void {
+    if (!this.driver.ownsTabs && !this.live) return;
+    if (this.unclaimed.has(tabId)) return;
+    const timer = setTimeout(() => {
+      this.unclaimed.delete(tabId);
+      if (!this.records.has(tabId) && this.driver.isAttached(tabId))
+        void this.letGo(tabId).catch(() => undefined);
+    }, UNCLAIMED_TAB_GRACE_MS);
+    timer.unref?.();
+    this.unclaimed.set(tabId, timer);
+  }
+
+  /** Closes the tab in a browser the app owns; elsewhere stops driving it and leaves it open. */
+  private async letGo(tabId: number): Promise<void> {
+    if (this.driver.ownsTabs) await this.driver.closeTab(tabId);
+    else await this.driver.detachTab?.(tabId);
+    this.forget(tabId);
+  }
+
+  private ownedBy(sessionId: string): number[] {
+    return [...this.records]
+      .filter(([, record]) => record.owner === sessionId)
+      .map(([tabId]) => tabId);
   }
 
   private join(tabId: number, owner: string, openerId: number | null): void {
@@ -225,11 +377,15 @@ export class BrowserTabs {
     )
       chain.add(tabId);
     const oldest = owned.find(([tabId]) => !chain.has(tabId));
-    if (oldest != null)
-      void this.close(owner, oldest[0]).catch(() => undefined);
+    if (oldest != null) void this.letGo(oldest[0]).catch(() => undefined);
   }
 
   private forget(tabId: number): void {
+    const timer = this.unclaimed.get(tabId);
+    if (timer != null) {
+      clearTimeout(timer);
+      this.unclaimed.delete(tabId);
+    }
     const record = this.records.get(tabId);
     if (record == null) return;
     this.records.delete(tabId);
@@ -266,7 +422,7 @@ export class BrowserTabs {
 }
 
 interface FrameTree {
-  frame: { id: string; url?: string };
+  frame: { id: string; url?: string; securityOrigin?: string };
   childFrames?: FrameTree[];
 }
 

@@ -22,6 +22,11 @@ export interface ChromeTabInfo {
   title?: string;
   active?: boolean;
   openerTabId?: number;
+  /**
+   * The browser named an opener for the tab, one of these tabs or not, when
+   * `openerTabId` alone cannot say so. Such a tab is never taken by a click.
+   */
+  hasOpener?: boolean;
 }
 
 type Pending = {
@@ -44,15 +49,24 @@ export interface ChromeRelayEvents {
 /** What the tab pages drive: this relay, or a Chromium the app launched itself. */
 export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
   readonly connected: boolean;
+  /**
+   * True when the browser is the app's own (the hosted Chromium): tabs no
+   * session needs are closed. In the user's Chrome they are only let go.
+   */
+  readonly ownsTabs: boolean;
   attachedTabs(): ChromeTabInfo[];
   tab(tabId: number): ChromeTabInfo | undefined;
   isAttached(tabId: number): boolean;
   createTab(url: string): Promise<ChromeTabInfo>;
   closeTab(tabId: number): Promise<void>;
+  /** Stops driving the tab and leaves it open, where the driver can. */
+  detachTab?(tabId: number): Promise<void>;
   /** Brings the tab to the front, where the driver may (never the user's own Chrome). */
   activateTab?(tabId: number): Promise<void>;
   /** The live origin of a cross-origin frame the driver attached, or null. */
   frameOrigin?(tabId: number, frameId: string): string | null;
+  /** The cross-origin frames the driver attached whose owner is in the tab's own page. */
+  childFrames?(tabId: number): string[];
   cdp(
     tabId: number,
     method: string,
@@ -63,6 +77,8 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
 const CONNECT_WAIT_MS = 5 * 60_000;
 
 export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
+  /** The user's own Chrome: its tabs are never closed for being unneeded. */
+  readonly ownsTabs = false;
   private server: http.Server | null = null;
   private wss: WebSocketServer | null = null;
   private port = 0;
@@ -178,6 +194,13 @@ export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
 
   async closeTab(tabId: number): Promise<void> {
     await this.send("chrome.tabs.remove", [tabId]);
+  }
+
+  /** Lets the tab go: the debugger leaves it, and it stays open in the user's Chrome. */
+  async detachTab(tabId: number): Promise<void> {
+    if (!this.attached.has(tabId)) return;
+    await this.send("chrome.debugger.detach", [{ tabId }]);
+    if (this.attached.delete(tabId)) this.emit("tabDetached", tabId);
   }
 
   /** A CDP command on one attached tab. */

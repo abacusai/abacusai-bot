@@ -52,7 +52,11 @@ import {
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
-import { type CapturedImage, SecretFields } from "../browser/secret-fields";
+import {
+  type CapturedImage,
+  captureMasked,
+  SecretFields,
+} from "../browser/secret-fields";
 import {
   McpHttpServer,
   type McpToolListing,
@@ -455,6 +459,7 @@ export class McpBrowserServer extends McpHttpServer {
     const wc = source.webContents(chosen);
     if (wc == null || wc.isDestroyed()) return null;
     memory.id = wc.id;
+    if (sessionId != null) source.noteUse?.(sessionId);
 
     return wc;
   }
@@ -491,12 +496,15 @@ export class McpBrowserServer extends McpHttpServer {
     return secrets;
   }
 
-  /** The page with its secret fields hidden; the one way a screenshot is taken. */
+  /**
+   * The page with its secret fields hidden and foreign frames covered; the
+   * one way a screenshot is taken. A source that knows its tabs' live origins
+   * captures; the built-in view covers what its page cannot reach.
+   */
   private async captureImage(wc: BrowserPage): Promise<CapturedImage | null> {
     const source = this.options.target?.();
-    if (source?.captureMasked != null && source.secrets?.(wc.id) != null)
-      return source.captureMasked(wc.id);
-    return this.secretsOf(wc).captureMasked(wc);
+    if (source?.captureMasked != null) return source.captureMasked(wc.id);
+    return captureMasked(wc);
   }
 
   private async executeTabs(
@@ -1642,6 +1650,14 @@ export class McpBrowserServer extends McpHttpServer {
     }
   }
 
+  /** Actions that may open a tab: the page reacts to them as to the user's own. */
+  private static readonly MAY_OPEN_TABS = new Set([
+    "click",
+    "press",
+    "pick",
+    "select",
+  ]);
+
   /** Actions after which the page is expected to have changed. */
   private static readonly REPORTS_CHANGES = new Set([
     "click",
@@ -1660,9 +1676,9 @@ export class McpBrowserServer extends McpHttpServer {
     const action = (args.action as string) ?? "";
     const wc = await this.getWC(sessionId);
     if (!wc) return this.err(NO_BROWSER);
-    // A tab that opens right after a click or a key is this action's.
-    if (sessionId != null && (action === "click" || action === "press"))
-      this.options.target?.()?.noteClick?.(sessionId);
+    // A tab that opens right after one of these may be this action's.
+    if (sessionId != null && McpBrowserServer.MAY_OPEN_TABS.has(action))
+      this.options.target?.()?.noteAction?.(sessionId);
 
     // A page-initiated navigation leaves the ref map on the old page.
     // Re-snapshot silently: refs are stable, and a missing one is reported by
@@ -2125,7 +2141,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (!wc) return this.err(NO_BROWSER);
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
-    const refusal = this.secretsOf(wc).executeRefusal();
+    const refusal = await this.secretsOf(wc).executeRefusal(wc);
     if (refusal != null) return this.err(refusal);
 
     // Models write `document.title` far more often than `return document.title`,

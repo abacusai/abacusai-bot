@@ -33,6 +33,11 @@ import {
   runSnapshotFixtures,
   type SnapshotResult,
 } from "./browser-snapshot-harness";
+import {
+  HOLDS_SECRET_VALUE_SCRIPT,
+  MASK_FOR_CAPTURE_SCRIPT,
+  UNMASK_SCRIPT,
+} from "./secret-fields";
 
 /** The harness window, so a fixture can put something below the fold on purpose. */
 const VIEWPORT_HEIGHT = 768;
@@ -144,6 +149,12 @@ const FIXTURES: Record<string, string> = {
     <input name="card" autocomplete="cc-number" value="4111111111111111">
     <input name="otp" autocomplete="one-time-code" value="123456">
     <input name="vaulted" data-abacusai-secret value="filled-on-behalf">
+    <input name="billing" autocomplete="billing cc-number" value="5555444433331111">
+    <input name="csc" autocomplete="section-pay cc-csc" value="7373">
+    <input name="exp" autocomplete="shipping CC-EXP" value="12/34">
+    <select name="month" autocomplete="cc-exp-month">
+      <option value="">MM</option><option value="07" selected>07</option>
+    </select>
   `),
   // ── Selectors ─────────────────────────────────────────────────────────────
   selectors: wrap(`
@@ -467,9 +478,16 @@ describeInBrowser("the snapshot walker, against real layout", () => {
         "4111111111111111",
         "123456",
         "filled-on-behalf",
+        "5555444433331111",
+        "7373",
+        "12/34",
       ])
         expect(text).not.toContain(secret);
-      expect(nodes.filter((node) => node.value === "(hidden)")).toHaveLength(4);
+      expect(nodes.filter((node) => node.value === "(hidden)")).toHaveLength(8);
+      // The chosen month reads as hidden; the list of months is the page's own text.
+      expect(nodes.find((node) => node.tag === "select")?.value).toBe(
+        "(hidden)"
+      );
     });
 
     it("truncates a long value", () => {
@@ -649,7 +667,13 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
   let stable: Loose;
   let overlays: Loose;
   let extracted: Loose;
-  let secretReads: { extracted: Loose; value: Loose };
+  let secretReads: {
+    extracted: Loose;
+    value: Loose;
+    toggled: Loose;
+    held: Loose;
+    masked: Loose;
+  };
   let summary: Loose;
 
   beforeAll(() => {
@@ -711,6 +735,56 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
           `<input name="pass" type="password" value="hunter2-secret">`
         ),
       }) as unknown as Loose,
+      // A "show password" toggle after the field was first seen, before it was.
+      toggled: runSnapshotFixtures(
+        `(async () => {
+          ${valueScript("[name=pass]")};
+          document.querySelector('[name=pass]').type = 'text';
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          return {
+            value: ${valueScript("[name=pass]")},
+            extracted: ${extractScript("form", { pass: "[name=pass]" }, 1)},
+            snapshot: ${SNAPSHOT_BUILD_JS},
+          };
+        })()`,
+        {
+          form: wrap(
+            `<form><input name="pass" type="password" value="hunter2-secret"></form>`
+          ),
+        }
+      ) as unknown as Loose,
+      held: runSnapshotFixtures(HOLDS_SECRET_VALUE_SCRIPT, {
+        plain: wrap(`<input name="user" value="me@example.test">`),
+        empty: wrap(`<input type="password"><input autocomplete="cc-number">`),
+        password: wrap(`<input type="password" value="hunter2-secret">`),
+        token: wrap(`<input autocomplete="section-pay cc-csc" value="7373">`),
+        month: wrap(`
+          <select autocomplete="cc-exp-month"><option value="">MM</option><option value="07" selected>07</option></select>
+        `),
+        framed: wrap(
+          `<iframe srcdoc="<input autocomplete='billing cc-number' value='4111111111111111'>"></iframe>`
+        ),
+      }) as unknown as Loose,
+      masked: runSnapshotFixtures(
+        `(async () => {
+          const covered = await ${MASK_FOR_CAPTURE_SCRIPT};
+          const boxes = document.querySelectorAll('[data-abacusai-mask]:not(style)').length;
+          const hidden = getComputedStyle(document.querySelector('[name=card]')).color;
+          const shown = getComputedStyle(document.querySelector('[name=user]')).color;
+          ${UNMASK_SCRIPT};
+          const left = document.querySelectorAll(
+            '[data-abacusai-mask], [data-abacusai-masked], [data-abacusai-cover]'
+          ).length;
+          return { covered, boxes, hidden, shown, left };
+        })()`,
+        {
+          page: wrap(`
+            <input name="user" value="me@example.test">
+            <input name="card" autocomplete="billing cc-number" value="4111111111111111">
+            <iframe data-abacusai-cover style="width:200px;height:80px" srcdoc="<p>pay</p>"></iframe>
+          `),
+        }
+      ) as unknown as Loose,
     };
 
     summary = runSnapshotFixtures(PAGE_SUMMARY_JS, {
@@ -799,6 +873,36 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
       "hunter2-secret"
     );
     expect(secretReads.value.form).toBe("(hidden)");
+  });
+
+  it("keeps a password hidden once a toggle shows it as text", () => {
+    const { value, extracted, snapshot } = secretReads.toggled.form;
+    expect(value).toBe("(hidden)");
+    expect(extracted.rows).toEqual([
+      expect.objectContaining({ pass: "(hidden)" }),
+    ]);
+    expect(JSON.stringify(snapshot)).not.toContain("hunter2-secret");
+  });
+
+  it("says a page holds a secret only when a secret field has a value, frames included", () => {
+    expect(secretReads.held).toEqual({
+      plain: false,
+      empty: false,
+      password: true,
+      token: true,
+      month: true,
+      framed: true,
+    });
+  });
+
+  it("hides secret fields and covers a named frame for a capture, and leaves no trace after", () => {
+    expect(secretReads.masked.page).toEqual({
+      covered: 1,
+      boxes: 1,
+      hidden: "rgba(0, 0, 0, 0)",
+      shown: expect.not.stringMatching(/rgba\(0, 0, 0, 0\)/),
+      left: 0,
+    });
   });
 
   it("summarises where the page is", () => {

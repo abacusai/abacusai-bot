@@ -96,13 +96,15 @@ export interface BrowserTargetSource {
   sessionTabs?(sessionId: string): BrowserTab[];
   activateTab?(sessionId: string, tabId: number): Promise<boolean>;
   closeTab?(sessionId: string, tabId: number): Promise<boolean>;
-  /** The session ended: the tabs it owns close. */
-  closeSession?(sessionId: string): Promise<void>;
-  /** The session acted on its page; a tab opening right after is the act's. */
-  noteClick?(sessionId: string): void;
+  /** The session ended: the tabs it owns are kept a while for it, then let go. */
+  releaseSession?(sessionId: string): void;
+  /** The session acted (click, key, pick, select); a tab opening right after may be the act's. */
+  noteAction?(sessionId: string): void;
+  /** The session drives its page: it is alive, and its kept tabs are its again. */
+  noteUse?(sessionId: string): void;
   /** The page's secret fields, where the source keeps them per tab. */
   secrets?(id: number): SecretFields | null;
-  /** The page with its secret fields hidden; see `SecretFields.captureMasked`. */
+  /** The page with its secret fields hidden and foreign frames covered; see `captureMasked`. */
   captureMasked?(id: number): Promise<CapturedImage | null>;
 }
 

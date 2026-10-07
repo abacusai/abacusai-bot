@@ -94,12 +94,16 @@ export class ChromeTargetSource implements BrowserTargetSource {
     return this.tabs.close(sessionId, tabId);
   }
 
-  closeSession(sessionId: string): Promise<void> {
-    return this.tabs.closeSession(sessionId);
+  releaseSession(sessionId: string): void {
+    this.tabs.releaseSession(sessionId);
   }
 
-  noteClick(sessionId: string): void {
-    this.tabs.noteClick(sessionId);
+  noteAction(sessionId: string): void {
+    this.tabs.noteAction(sessionId);
+  }
+
+  noteUse(sessionId: string): void {
+    this.tabs.noteUse(sessionId);
   }
 
   secrets(id: number): SecretFields | null {
@@ -122,8 +126,9 @@ export const tabMethodsOf = (
   | "sessionTabs"
   | "activateTab"
   | "closeTab"
-  | "closeSession"
-  | "noteClick"
+  | "releaseSession"
+  | "noteAction"
+  | "noteUse"
   | "secrets"
   | "captureMasked"
 > => ({
@@ -132,10 +137,9 @@ export const tabMethodsOf = (
     (await source()?.activateTab(sessionId, tabId)) ?? false,
   closeTab: async (sessionId, tabId) =>
     (await source()?.closeTab(sessionId, tabId)) ?? false,
-  closeSession: async (sessionId) => {
-    await source()?.closeSession(sessionId);
-  },
-  noteClick: (sessionId) => source()?.noteClick(sessionId),
+  releaseSession: (sessionId) => source()?.releaseSession(sessionId),
+  noteAction: (sessionId) => source()?.noteAction(sessionId),
+  noteUse: (sessionId) => source()?.noteUse(sessionId),
   secrets: (id) => source()?.secrets(id) ?? null,
   captureMasked: async (id) => (await source()?.captureMasked(id)) ?? null,
 });

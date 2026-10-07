@@ -312,7 +312,7 @@ export const SNAPSHOT_BUILD_JS = `(function() {
     }
     if (el.tagName === 'SELECT') {
       const opt = el.options[el.selectedIndex];
-      if (opt) node.value = opt.text.slice(0, 30);
+      if (opt) node.value = __shown(el, opt.text.slice(0, 30));
     }
     if (el.tagName === 'INPUT' && (el.type === 'checkbox' || el.type === 'radio')) {
       node.checked = !!el.checked;
