@@ -48,7 +48,7 @@ import { githubPrompt } from "../github-prompt.js";
 import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
-import { buildMcpToolDefinitions } from "../mcp/tools.js";
+import { buildMcpToolDefinitions, syncActiveMcpTools } from "../mcp/tools.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
 import { endedOnLeakedToolCall } from "../openllm-failures.js";
 import {
@@ -1474,13 +1474,19 @@ export class ForeverEngine {
     this.emitMcpServers();
   }
 
-  /** Give pi the MCP tools it has not seen: after a refresh, or a server coming up late. */
+  /**
+   * Make pi's MCP tools match what the servers list now, after a refresh or a
+   * server coming up late: new ones registered, and one its server no longer
+   * lists (a connector disconnected or revoked) out of the model's view.
+   */
   private registerNewMcpTools(): void {
     const pi = this.pi;
 
     if (pi == null) return;
 
-    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
+    const listed = buildMcpToolDefinitions(() => this.mcp);
+
+    for (const tool of listed) {
       if (this.registeredMcpTools.has(tool.name)) continue;
       if (tool.name.startsWith("browser_")) continue;
       // A same-named MCP tool would shadow the one the prompt teaches.
@@ -1497,6 +1503,12 @@ export class ForeverEngine {
         this.registeredMcpTools.delete(tool.name);
       }
     }
+    if (this.session != null)
+      syncActiveMcpTools(
+        this.session,
+        this.registeredMcpTools,
+        new Set(listed.map((tool) => tool.name))
+      );
   }
 
   emitMcpServers(): void {

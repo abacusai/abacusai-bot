@@ -117,12 +117,18 @@ describe("a bot chat whose connector gateway gains a tool", () => {
 
     expect(offeredTools()).toContain("abacus-connectors_Slack_Tool");
     expect(systemPrompt()).toMatch(/`abacus-connectors` \(1 tool/);
+
+    // Slack disconnected: the gateway drops its tool, and so does the chat.
+    server.setTools([]);
+    await bot.refreshMcp();
+    await bot.send("send hi again");
+    expect(offeredTools()).not.toContain("abacus-connectors_Slack_Tool");
   }, 60_000);
 
   it("continues the turn with a tool that landed while the turn ran", async () => {
-    // Slack connected from inside the chat: connect_connector returns, the
-    // gateway gains the tool, and every session is refreshed a moment later,
-    // after the tool result, inside the same turn. pi's tool list is fixed
+    // A refresh landing inside a turn (a server coming up late, or Slack
+    // connected while the turn ran): the gateway gains the tool after the
+    // tool result, inside the same turn. pi's tool list is fixed
     // for the turn, so the model's follow-up request cannot see the tool;
     // it said "cannot send hi to sreemanti on DM". The turn is continued
     // once it ends, with the arrival named, and that request has the tool.

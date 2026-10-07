@@ -160,6 +160,106 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   expect(store.get("nested.key", "fallback")).toBe("fallback");
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
 });
+describe("connectors connected elsewhere", () => {
+  it("reach a running phone session's tools before its next turn, and every reader agrees", async () => {
+    const host = await composeNodeHost();
+    const sh = host.serviceHost as any;
+    const order: string[] = [];
+    // The account: Gmail only, then Drive and Calendar connected from a
+    // browser, which nothing on this host hears about.
+    let active = ["gmailuser"];
+    const names: Record<string, string> = {
+      gmailuser: "Gmail",
+      googledriveuser: "Google Drive",
+      googlecalendar: "Google Calendar",
+    };
+    vi.stubGlobal("fetch", async (input: string | URL) => {
+      const method = new URL(String(input)).pathname.split("/").at(-1);
+      const result =
+        method === "_listAbacusbotConnectors"
+          ? Object.fromEntries(
+              Object.entries(names).map(([key, name]) => [
+                key.toUpperCase(),
+                { name },
+              ])
+            )
+          : method === "_listActiveUserLevelConnectors"
+            ? active.map((service) => ({
+                service: service.toUpperCase(),
+                applicationConnectorId: `id-${service}`,
+                name: `${names[service]} - ada@example.com`,
+              }))
+            : null;
+      return result == null
+        ? new Response("{}", { status: 404 })
+        : Response.json({ success: true, result });
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const session = sh.createAgentSession("legacy");
+      vi.spyOn(sh.agentManagerService, "getRuntimeDiagnostics").mockReturnValue(
+        [
+          {
+            workspaceId: "legacy",
+            sessionId: session.id,
+            live: true,
+            mcpServers: new Map(),
+          },
+        ]
+      );
+      // The agent reconnects and reports its servers, as the real one does.
+      vi.spyOn(sh.mcpAdminService, "refreshSessionMcp").mockImplementation(
+        async () => {
+          order.push("refresh");
+          queueMicrotask(() => sh.connectorSync.serversReported(session.id));
+          return true;
+        }
+      );
+      vi.spyOn(sh.agentCommunicationService, "sendMessage").mockImplementation(
+        () => {
+          order.push("message");
+          return true;
+        }
+      );
+      // The phone session's agent starts on Gmail only.
+      await sh.connectorSync.platform();
+      sh.connectorSync.serversReported(session.id);
+      const turn = () =>
+        sh.sendAgentMessage({
+          workspaceId: "legacy",
+          sessionId: session.id,
+          message: "fetch my drive docs",
+        });
+
+      await turn();
+      expect(order).toEqual(["message"]);
+      // That turn ends before the next message arrives.
+      sh.sessionTurnStateService.markStopped("legacy", session.id);
+
+      active = ["gmailuser", "googledriveuser", "googlecalendar"];
+      vi.setSystemTime(Date.now() + 21_000);
+      await turn();
+
+      // Refreshed before the message went in, so the turn has the tools.
+      expect(order).toEqual(["message", "refresh", "message"]);
+      // And nothing tells the model Drive is missing.
+      const statuses = await sh.listConnectorStatuses();
+      expect(statuses["abacus-googledriveuser"].state).toBe("connected");
+      expect(statuses["abacus-googlecalendar"].state).toBe("connected");
+      const asked = await sh.mcpAgentToolsServer.connectConnector({
+        service: "googledriveuser",
+      });
+      expect(asked.content[0].text).toContain(
+        "Google Drive is already connected"
+      );
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      await host.dispose();
+    }
+  }, 20_000);
+});
 /** A screenshot the media store holds. */
 const SHOT = "media-00112233445566778899aabb";
 const SHOT_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);

@@ -74,7 +74,7 @@ import {
   type ConnectedMcp,
   type McpServerStatus,
 } from "./mcp/index.js";
-import { buildMcpToolDefinitions } from "./mcp/tools.js";
+import { buildMcpToolDefinitions, syncActiveMcpTools } from "./mcp/tools.js";
 import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
@@ -1150,11 +1150,11 @@ export class AbacusBotSession {
   }
 
   /**
-   * Give pi the tools a refresh turned up. Startup tools survive a reconnect
-   * through their route getter, but pi takes its custom tool list once, so a
-   * server added later is otherwise "connected" with nothing callable.
-   * Additive: a tool whose server has gone answers "not connected", which
-   * beats a name that silently vanishes.
+   * Make pi's MCP tools match what the servers list now. Startup tools
+   * survive a reconnect through their route getter, but pi takes its custom
+   * tool list once, so a server added later is otherwise "connected" with
+   * nothing callable; and a tool its server no longer lists (a connector
+   * disconnected or revoked) leaves the model's view rather than lingering.
    */
   private registerNewMcpTools(): void {
     const pi = this.pi;
@@ -1162,8 +1162,9 @@ export class AbacusBotSession {
     if (pi == null) return;
 
     const excluded = excludedTools();
+    const listed = buildMcpToolDefinitions(() => this.mcp);
 
-    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
+    for (const tool of listed) {
       if (this.registeredMcpTools.has(tool.name)) continue;
       if (excluded.includes(tool.name)) continue;
       // Browser tools belong to the sub-agent, which reads them live.
@@ -1183,6 +1184,12 @@ export class AbacusBotSession {
         this.registeredMcpTools.delete(tool.name);
       }
     }
+    if (this.session != null)
+      syncActiveMcpTools(
+        this.session,
+        this.registeredMcpTools,
+        new Set(listed.map((tool) => tool.name))
+      );
   }
 
   /** Whether the browser sub-agent owns the browser tools this session. */

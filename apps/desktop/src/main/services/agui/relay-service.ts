@@ -116,7 +116,7 @@ export interface AguiRelayHost {
    * Every accepted `ai.send`, just before `run` is written (spec 03 §24.10 c):
    * the host may re-pin the running agent's model. Errors are logged.
    */
-  beforeRun?(threadId: string): Promise<void>;
+  beforeRun?(threadId: string, midRun: boolean): Promise<void>;
 }
 
 /** The thread files (`ThreadStore`). */
@@ -816,7 +816,10 @@ export class AguiRelayService implements AguiSource {
       // The running agent takes the effective model before this run.
       if (this.#host.beforeRun != null) {
         try {
-          await this.#host.beforeRun(threadId);
+          await this.#host.beforeRun(
+            threadId,
+            this.#thread(threadId).activeRunId != null
+          );
         } catch (error) {
           this.#log(
             `${threadId}: re-pinning before the run failed: ${String(error)}`

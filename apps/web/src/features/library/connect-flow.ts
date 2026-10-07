@@ -104,17 +104,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
   const finish = (id: number, result: ConnectorOutcome) => {
     if (active?.id === id) finishRecord(active, result);
   };
+  // Sessions are not refreshed here: main brings each one's tools to the
+  // account's connectors at its next turn start.
   const refresh = async () => {
-    await Promise.allSettled(
-      deps.db.collections.sessions.toArray
-        .filter((s) => s.status === "running")
-        .map((s) =>
-          deps.transport.client.mcp.refresh({
-            workspaceId: s.workspaceId,
-            sessionId: s.id,
-          })
-        )
-    );
     await deps.queryClient.invalidateQueries({
       queryKey: deps.transport.orpc.connectors.statuses.queryKey({ input: {} }),
     });

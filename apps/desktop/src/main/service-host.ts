@@ -321,6 +321,7 @@ import {
   type McpSignIn,
 } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
+import { ConnectorSync } from "./services/connectors/connector-sync";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
   DiagnosticsSyncService,
@@ -602,7 +603,16 @@ export class ServiceHost {
           routineId: session?.routineId ?? null,
         };
       },
-      beforeRun: (threadId) => this.applyEffectiveBotModel(threadId),
+      beforeRun: async (threadId, midRun) => {
+        await this.applyEffectiveBotModel(threadId);
+        const workspaceId =
+          this.agentManagerService.getRuntimeInfo(threadId)?.workspaceId;
+        if (workspaceId != null)
+          await this.connectorSync.beforeTurn(
+            { workspaceId, sessionId: threadId },
+            midRun
+          );
+      },
     },
   });
   private readonly transcriptService = new TranscriptService({
@@ -950,7 +960,8 @@ export class ServiceHost {
 
   /** Offers (links, cards) followed until they connect; see connectorsConnected. */
   private readonly connectWatcher = new ConnectWatcher({
-    list: () => this.listConnectorStatuses(),
+    // Fresh each tick: an offer is followed to see it land within seconds.
+    list: () => this.connectorStatuses.list({ fresh: true }),
     linkStatus: async (requestId) => {
       const status = await connectLinkStatus(requestId);
       return status == null
@@ -983,15 +994,15 @@ export class ServiceHost {
   }
 
   /**
-   * An offer landed: live sessions re-read the gateway's tools (it lists only
-   * connected services), its cards go, and the asking session is told.
+   * An offer landed: its cards go and the asking session is told. Sessions
+   * pick up the new tools at their next turn start (connectorSync).
    */
   private connectorsConnected(offer: ConnectedOffer): void {
     const connectors = offer.connectorIds.flatMap(
       (id) => connectorById(id) ?? []
     );
-    if (connectors.some((connector) => connector.kind === "platform"))
-      this.ensureConnectorGateway();
+    // No session is refreshed here: each one is brought to the new set at its
+    // next turn start (connectorSync), the asking chat's note included.
     // A token-backed one (GitHub) reaches the agent as an environment key:
     // running sessions re-read theirs now rather than on their next timer.
     if (
@@ -1001,7 +1012,6 @@ export class ServiceHost {
     )
       this.refreshAgentProviders();
     this.connectorGate.clearFor(offer.connectorIds);
-    this.connectorStatusChanged();
     const accounts = [...new Set(Object.values(offer.accounts))];
     const names = connectors.map((connector) => connector.name).join(", ");
     const missing = offer.notGranted
@@ -1043,8 +1053,9 @@ export class ServiceHost {
    * listing is read live (narrowed to the registry as it enters the app);
    * credentials, the messaging gateway and the MCP config are in memory.
    */
-  readonly connectorStatuses = new ConnectorStatusService({
-    platform: async () => {
+  /** The one owner of the account's connector set; see ConnectorSync. */
+  readonly connectorSync = new ConnectorSync({
+    read: async () => {
       const snapshot = await listAbacusConnectors();
       if (!snapshot.ok)
         return {
@@ -1059,6 +1070,21 @@ export class ServiceHost {
         accounts: snapshot.accounts,
       };
     },
+    liveSessions: () =>
+      this.agentManagerService
+        .getRuntimeDiagnostics()
+        .filter((runtime) => runtime.live)
+        .map(({ workspaceId, sessionId }) => ({ workspaceId, sessionId })),
+    refresh: (session) => {
+      this.healConnectorGateway();
+      return this.mcpAdminService.refreshSessionMcp(session);
+    },
+    changed: () => this.connectorStatusChanged(),
+    log: (line) => console.log(line),
+  });
+
+  readonly connectorStatuses = new ConnectorStatusService({
+    platform: (options) => this.connectorSync.platform(options),
     messaging: () => this.messagingGatewayService.getSnapshot(),
     mcpServers: () => this.mcpConfigService.listUserServers("code"),
     mcpTokens: () => this.mcpTokenStates(),
@@ -1140,14 +1166,27 @@ export class ServiceHost {
 
   /**
    * The MCP file is user-editable, so the url and headers under the app's
-   * own name are rewritten rather than assumed. Live sessions re-read it.
+   * own name are rewritten when they drifted rather than assumed. No session
+   * is told here: connectorSync refreshes each one at its turn start.
    */
-  private ensureConnectorGateway(): void {
-    this.ensureMcpServer({
-      mode: "code",
-      name: ABACUS_CONNECTORS_SERVER_NAME,
-      config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
-    });
+  private healConnectorGateway(): void {
+    const config = abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`);
+    const existing =
+      this.mcpConfigService.readUserMcp("code").mcpServers[
+        ABACUS_CONNECTORS_SERVER_NAME
+      ];
+    if (existing == null)
+      this.mcpConfigService.addUserServer(
+        "code",
+        ABACUS_CONNECTORS_SERVER_NAME,
+        config
+      );
+    else if (JSON.stringify(existing) !== JSON.stringify(config))
+      this.mcpConfigService.updateUserServer(
+        "code",
+        ABACUS_CONNECTORS_SERVER_NAME,
+        config
+      );
   }
 
   listConnectorStatuses(): Promise<ConnectorStatuses> {
@@ -1200,7 +1239,7 @@ export class ServiceHost {
     options?: ConnectorConnectOptions
   ): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.connect(connectorId, options);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1209,7 +1248,7 @@ export class ServiceHost {
     values: Record<string, string>
   ): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.submitFields(connectorId, values);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1231,7 +1270,7 @@ export class ServiceHost {
 
   async disconnectConnector(connectorId: string): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.disconnect(connectorId);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1773,8 +1812,10 @@ export class ServiceHost {
       // A tab-keeping browser keeps the session's tabs a while (a paused run,
       // a restarted agent), then lets them go.
       this.browserTargetSource()?.releaseSession?.(sessionId);
+      this.connectorSync.forget(sessionId);
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
+      this.connectorSync.serversReported(sessionId);
       this.emitEvent({
         type: "mcp-runtime-servers",
         workspaceId,
@@ -1812,6 +1853,7 @@ export class ServiceHost {
     },
     emitMcpRuntimeError: (workspaceId, sessionId, event) => {
       if (event.kind === "refresh") {
+        this.connectorSync.refreshFailed(sessionId);
         this.emitEvent({
           type: "mcp-runtime-refresh-failed",
           workspaceId,
@@ -3050,10 +3092,20 @@ export class ServiceHost {
     // goes through untouched.
     void this.rememberIfAsked(request.message);
 
+    // A message steered into a running turn: its tools stay as they are.
+    const midTurn = this.sessionTurnStateService.get(
+      request.workspaceId,
+      request.sessionId
+    ).isBusy;
     // Synchronously, so a refetch sees the busy state immediately.
     this.sessionTurnStateService.markSent(
       request.workspaceId,
       request.sessionId
+    );
+    // The session's tools match the account's connectors before the turn.
+    await this.connectorSync.beforeTurn(
+      { workspaceId: request.workspaceId, sessionId: request.sessionId },
+      midTurn
     );
 
     // A session whose CLI died is restarted rather than swallowing the message.

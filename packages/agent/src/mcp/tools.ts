@@ -174,3 +174,36 @@ export function buildMcpToolDefinitions(
     };
   });
 }
+
+/** The slice of pi's session that decides which tools the model sees. */
+interface ActiveTools {
+  getActiveToolNames(): string[];
+  setActiveToolsByName(toolNames: string[]): void;
+}
+
+/**
+ * Makes the MCP tools the model sees exactly the ones the servers list now.
+ * pi cannot unregister a tool, so a registered MCP tool its server no longer
+ * lists (a connector disconnected, revoked or disabled) is deactivated, and
+ * one that comes back is activated again. Takes effect from the next request;
+ * returns whether anything changed.
+ */
+export function syncActiveMcpTools(
+  session: ActiveTools,
+  registered: ReadonlySet<string>,
+  listed: ReadonlySet<string>
+): boolean {
+  const active = session.getActiveToolNames();
+  const next = active.filter(
+    (name) => !registered.has(name) || listed.has(name)
+  );
+  for (const name of registered)
+    if (listed.has(name) && !next.includes(name)) next.push(name);
+  if (
+    next.length === active.length &&
+    next.every((name) => active.includes(name))
+  )
+    return false;
+  session.setActiveToolsByName(next);
+  return true;
+}

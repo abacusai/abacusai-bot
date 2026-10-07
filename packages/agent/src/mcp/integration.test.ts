@@ -421,7 +421,7 @@ describe("refreshing", () => {
     expect(server.calls).toHaveLength(1);
   });
 
-  it("says so rather than failing when a server has gone away", async () => {
+  it("stops offering the tools of a server that has gone away", async () => {
     const server = await mcpServer([{ name: "lookup" }]);
 
     fs.writeFileSync(
@@ -433,27 +433,42 @@ describe("refreshing", () => {
     const harness = session();
 
     await harness.session.start();
+    await harness.session.send("hello");
+    expect(offeredTools()).toContain("docs_lookup");
 
     fs.writeFileSync(configPath, mcpConfig({}), "utf8");
     await harness.session.refreshMcp();
-
-    provider.script((call, index) =>
-      index === 0 && call.tools.includes("docs_lookup")
-        ? { call: { name: "docs_lookup", args: {} } }
-        : { say: "done" }
-    );
-
     await harness.session.send("look something up");
 
-    const results = harness.events
-      .filter(
-        (event): event is Extract<DesktopEvent, { type: "event" }> =>
-          event.type === "event"
-      )
-      .map((event) => event.event)
-      .filter((event) => event.type === "tool_execution_complete");
+    // pi cannot unregister a tool; the model must still never see one whose
+    // server is gone.
+    expect(offeredTools()).not.toContain("docs_lookup");
+  });
 
-    expect(JSON.stringify(results)).toContain("No MCP server is connected");
+  it("drops a tool its server stopped listing, and offers it again when it returns", async () => {
+    const server = await mcpServer([{ name: "lookup" }, { name: "search" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+
+    // A connector disconnected or revoked: the gateway stops listing it.
+    server.setTools([{ name: "lookup" }]);
+    await harness.session.refreshMcp();
+    await harness.session.send("hello");
+    expect(offeredTools()).toContain("docs_lookup");
+    expect(offeredTools()).not.toContain("docs_search");
+
+    server.setTools([{ name: "lookup" }, { name: "search" }]);
+    await harness.session.refreshMcp();
+    await harness.session.send("again");
+    expect(offeredTools()).toContain("docs_search");
   });
 });
 
