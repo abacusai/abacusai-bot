@@ -8,7 +8,22 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `0c83c457` (merged renderer features)
+## Current: `85fc8927` (companion controls, connect route, browser tasks)
+
+**318 / 6416113 / 2154405.** Records the renderer as merged through `85fc8927`:
+the companion controls moved out of the Electron-only notch folder into their
+own shared chunks, the single connect route for MCP connectors, and the
+built-in browser for phone tasks. Against `0c83c457`: +4 chunks (+1.27%),
++18805 bytes (+0.29%), +7599 gzip bytes (+0.35%). The bytes stayed inside the
+1% allowance; the chunk count did not, because the split moved code into new
+chunks rather than growing it. The 1% allowance is unchanged.
+
+Measured from a clean worktree build of `85fc8927` (frozen-lockfile install,
+Linux x64, Node 24); the branch that records it adds no chunks.
+
+## History
+
+### `0c83c457` (merged renderer features)
 
 **314 / 6397308 / 2146806.** Records the merged onboarding, composer,
 message actions, side panel and provider marks through `1837542b`, with the
@@ -19,8 +34,6 @@ The 1% allowance is unchanged.
 Measured from a source archive and a fresh frozen-lockfile install on macOS
 ARM64, Node 22.19.0, pnpm 12.6.0, Vite 8.2.1 and Rolldown 1.2.4. The clean
 worktree build produces identical totals.
-
-## History
 
 ### `389b450a` (Appearance)
 
