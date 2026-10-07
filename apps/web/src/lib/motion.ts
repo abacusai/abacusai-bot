@@ -25,6 +25,8 @@ export const easings = {
 } as const;
 
 export const springs = {
+  /** Small character rig, retargeted with velocity preserved. */
+  character: { type: "spring", stiffness: 260, damping: 22, mass: 1 },
   sidebar: { type: "spring", stiffness: 500, damping: 40 },
   panel: { type: "spring", stiffness: 500, damping: 40 },
   /**
