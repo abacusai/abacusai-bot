@@ -131,6 +131,7 @@ it("restores split layout for the session on remount, with an unclosable Chat ta
     localStorage.getItem("abacusai-bot:dock-layout:v1:persisted")!
   );
   delete restored.panels.chat.minimumWidth;
+  restored.panels.chat.renderer = "always";
   localStorage.setItem(
     "abacusai-bot:dock-layout:v1:persisted",
     JSON.stringify(restored)
@@ -142,6 +143,9 @@ it("restores split layout for the session on remount, with an unclosable Chat ta
     expect(apiRef.current!.getPanel("chat")!.minimumWidth).toBe(360)
   );
   expect(apiRef.current!.getPanel("files")!.minimumWidth).toBe(280);
+  expect(apiRef.current!.toJSON().panels.chat!.renderer).toBe(
+    "onlyWhenVisible"
+  );
   second.unmount();
 });
 
@@ -235,4 +239,53 @@ it("mounts a live chat-only workspace on the first expansion", async () => {
   );
   await waitFor(() => expect(apiRef.current?.panels).toHaveLength(1));
   expect(screen.getByRole("button", { name: "Draft 0" })).toBeTruthy();
+});
+
+it("keeps the dock synchronized with chrome height changes in the observer frame", async () => {
+  const callbacks = new Map<Element, ResizeObserverCallback>();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) {
+        callbacks.set(element, this.callback);
+      }
+      unobserve(element: Element) {
+        callbacks.delete(element);
+      }
+      disconnect() {}
+    }
+  );
+  const apiRef: { current: DockviewApi | null } = { current: null };
+  const view = render(
+    <PanelWorkspace
+      scope="resize-frame"
+      tabs={[{ id: "chat", title: "Chat", content: () => <Counter /> }]}
+      active="chat"
+      expanded
+      open
+      onSelect={() => {}}
+      apiRef={apiRef}
+    />
+  );
+  try {
+    await waitFor(() => expect(apiRef.current).not.toBeNull());
+    const root = view.container.querySelector('[data-slot="panel-workspace"]')!;
+    act(() =>
+      callbacks.get(root)!(
+        [
+          {
+            target: root,
+            contentRect: { width: 1200, height: 812 },
+          } as ResizeObserverEntry,
+        ],
+        {} as ResizeObserver
+      )
+    );
+    expect(apiRef.current!.width).toBe(1200);
+    expect(apiRef.current!.height).toBe(812);
+  } finally {
+    view.unmount();
+    vi.unstubAllGlobals();
+  }
 });
