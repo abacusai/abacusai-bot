@@ -24,8 +24,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
-import { waitForConnected } from "#renderer/lib/connect-page";
-import { openConnectPage } from "#renderer/lib/platform-system";
+import { ConnectAttempt } from "#renderer/lib/connect-page";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
 
@@ -88,39 +87,35 @@ const declineRequest = (
 
 /**
  * The flow, the refresh of the requesting session, then the answer. Call it
- * from the click itself: a platform connector's page opens before any await.
- * `signal` stops waiting on that page (answered as declined).
+ * from the click itself: a page opens before any await. `signal` cancels the
+ * attempt without answering.
  */
 export const connectRequest = async (
-  client: Client,
+  transport: Transport,
   request: ConnectorRequest,
   values?: Record<string, string>,
-  signal: AbortSignal = new AbortController().signal
+  signal?: AbortSignal
 ): Promise<ConnectResult> => {
-  const opened =
-    values == null ? openConnectPage(client, request.connectorId) : null;
+  const { client } = transport;
   let outcome: ConnectorOutcome;
-  try {
-    if (opened != null) {
-      outcome = await opened;
-      if (outcome.ok)
-        outcome = await waitForConnected(client, request.connectorId, signal);
-    } else
-      outcome =
-        values != null
-          ? await client.connectors.submitFields({
-              connectorId: request.connectorId,
-              values,
-            })
-          : await client.connectors.connect({
-              connectorId: request.connectorId,
-            });
-  } catch (error) {
-    return { kind: "error", message: messageOf(error) };
-  }
+  if (values == null) {
+    const attempt = new ConnectAttempt(transport, request.connectorId);
+    signal?.addEventListener("abort", () => attempt.cancel(), { once: true });
+    if (signal?.aborted) attempt.cancel();
+    outcome = await attempt.result;
+  } else
+    try {
+      outcome = await client.connectors.submitFields({
+        connectorId: request.connectorId,
+        values,
+      });
+    } catch (error) {
+      return { kind: "error", message: messageOf(error) };
+    }
   if (!outcome.ok) {
     if (outcome.cancelled === true) {
-      await respond(client, request, "declined");
+      // A cancel the caller asked for is answered by the caller, if at all.
+      if (signal?.aborted !== true) await respond(client, request, "declined");
       return { kind: "declined" };
     }
     return { kind: "error", message: outcome.error };
@@ -183,6 +178,14 @@ export const useConnectorRequests = (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const waiting = useRef<AbortController | null>(null);
+  // Unmounting cancels the attempt; its answer then sets nothing.
+  useEffect(
+    () => () => {
+      waiting.current?.abort();
+      waiting.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     if (conversationKey == null) return;
@@ -224,9 +227,10 @@ export const useConnectorRequests = (
       setError(null);
       const abort = new AbortController();
       waiting.current = abort;
-      void connectRequest(transport.client, current, values, abort.signal).then(
+      void connectRequest(transport, current, values, abort.signal).then(
         (result) => {
-          if (waiting.current === abort) waiting.current = null;
+          if (waiting.current !== abort) return;
+          waiting.current = null;
           setBusy(false);
           if (result.kind === "error") setError(result.message);
           else drop(current);
@@ -239,7 +243,11 @@ export const useConnectorRequests = (
       drop(current);
       void declineRequest(transport.client, current);
     },
-    stop: () => waiting.current?.abort(),
+    stop: () => {
+      if (current == null || waiting.current == null) return;
+      waiting.current.abort();
+      void declineRequest(transport.client, current);
+    },
   };
 };
 

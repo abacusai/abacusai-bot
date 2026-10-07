@@ -3,6 +3,7 @@ import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
 import type {
   ConnectorOutcome,
   ConnectorRequest,
+  ConnectorStatuses,
 } from "@abacus-ai/contract/contracts";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
@@ -47,6 +48,8 @@ interface Fake {
   connectOutcome: ConnectorOutcome;
   refresh: () => { success: boolean; error?: string };
   opened: number;
+  /** Whether the host reads Gmail connected. */
+  connected: boolean;
 }
 
 const makeFake = (): Fake => ({
@@ -56,6 +59,7 @@ const makeFake = (): Fake => ({
   connectOutcome: { ok: true },
   refresh: () => ({ success: true }),
   opened: 0,
+  connected: true,
 });
 
 const impl = implement(contract);
@@ -97,7 +101,10 @@ const routerFor = (fake: Fake) => ({
     }),
     statuses: impl.connectors.statuses.handler(() => {
       fake.calls.push("statuses");
-      return { "abacus-gmailuser": { state: "connected" as const } };
+      const statuses: ConnectorStatuses = fake.connected
+        ? { "abacus-gmailuser": { state: "connected" } }
+        : {};
+      return statuses;
     }),
   },
   system: {
@@ -189,6 +196,40 @@ describe("useConnectorRequests", () => {
     await waitFor(() => expect(fake.calls).toContain("respond:a:declined"));
   });
 
+  it("Stop cancels the wait and declines; unmounting cancels it and answers nothing", async () => {
+    const gmail = { ...ask("a"), connectorId: "abacus-gmailuser" };
+    const waitingFake = () => {
+      const fake = makeFake();
+      fake.snapshot = [gmail];
+      fake.connected = false;
+      fake.connectOutcome = { ok: true, url: "https://apps.example/connect" };
+      return fake;
+    };
+    const fake = waitingFake();
+    const t = setup(fake);
+    const { result } = renderHook(() => useConnectorRequests(t, MINE));
+    await waitFor(() => expect(result.current.current).not.toBeNull());
+    act(() => result.current.connect());
+    await waitFor(() => expect(fake.calls).toContain("statuses"));
+    act(() => result.current.stop());
+    await waitFor(() => expect(result.current.current).toBeNull());
+    expect(result.current.busy).toBe(false);
+    expect(fake.calls.filter((call) => call.startsWith("respond"))).toEqual([
+      "respond:a:declined",
+    ]);
+
+    transport?.close();
+    const quiet = waitingFake();
+    const t2 = setup(quiet);
+    const mounted = renderHook(() => useConnectorRequests(t2, MINE));
+    await waitFor(() => expect(mounted.result.current.current).not.toBeNull());
+    act(() => mounted.result.current.connect());
+    await waitFor(() => expect(quiet.calls).toContain("statuses"));
+    mounted.unmount();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(quiet.calls.some((call) => call.startsWith("respond"))).toBe(false);
+  });
+
   it("re-snapshots when the iterator reopens", async () => {
     const fake = makeFake();
     fake.snapshot = [ask("a")];
@@ -214,7 +255,7 @@ describe("connectRequest", () => {
       error: "CLI session is not running.",
     });
     const t = setup(fake);
-    await expect(connectRequest(t.client, ask("a"))).resolves.toEqual({
+    await expect(connectRequest(t, ask("a"))).resolves.toEqual({
       kind: "connected",
     });
     expect(fake.calls.at(-1)).toBe("respond:a:connected");
@@ -224,7 +265,7 @@ describe("connectRequest", () => {
     const fake = makeFake();
     fake.refresh = () => ({ success: false, error: "config write failed" });
     const t = setup(fake);
-    await expect(connectRequest(t.client, ask("a"))).resolves.toEqual({
+    await expect(connectRequest(t, ask("a"))).resolves.toEqual({
       kind: "error",
       message: "config write failed",
     });
@@ -233,7 +274,7 @@ describe("connectRequest", () => {
   it("a field flow uses submitFields", async () => {
     const fake = makeFake();
     const t = setup(fake);
-    await connectRequest(t.client, ask("a"), { token: "x" });
+    await connectRequest(t, ask("a"), { token: "x" });
     expect(fake.calls[0]).toBe('submitFields:{"token":"x"}');
   });
 
@@ -241,13 +282,13 @@ describe("connectRequest", () => {
     const fake = makeFake();
     fake.connectOutcome = { ok: false, error: "closed", cancelled: true };
     const t = setup(fake);
-    await expect(connectRequest(t.client, ask("a"))).resolves.toEqual({
+    await expect(connectRequest(t, ask("a"))).resolves.toEqual({
       kind: "declined",
     });
     expect(fake.calls).toEqual(["connect:github", "respond:a:declined"]);
     fake.calls.length = 0;
     fake.connectOutcome = { ok: false, error: "bad token" };
-    await expect(connectRequest(t.client, ask("b"))).resolves.toEqual({
+    await expect(connectRequest(t, ask("b"))).resolves.toEqual({
       kind: "error",
       message: "bad token",
     });
@@ -260,7 +301,7 @@ describe("a platform connector", () => {
     const fake = makeFake();
     fake.connectOutcome = { ok: true, url: "https://apps.example/connect" };
     const t = setup(fake);
-    const pending = connectRequest(t.client, {
+    const pending = connectRequest(t, {
       ...ask("a"),
       connectorId: "abacus-gmailuser",
     });

@@ -51,8 +51,6 @@ export const connectors = {
       })
     )
     .output(type<ConnectorOutcome>()),
-  /** Nothing waits in the host any more; kept for older clients. */
-  cancelConnect: mutation.input(NoInput).output(type<void>()),
   disconnect: mutation.input(ConnectorIdInput).output(type<ConnectorOutcome>()),
   /** The agent is blocked inside its tool call until this. */
   respond: mutation.input(RespondConnectorRequestSchema).output(type<void>()),

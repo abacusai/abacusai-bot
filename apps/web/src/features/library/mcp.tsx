@@ -28,9 +28,10 @@ import {
   useMutation,
   useMutationState,
 } from "#renderer/data/query-client";
+import { openTab } from "#renderer/lib/connect-target";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openConnectPage } from "#renderer/lib/platform-system";
+import { connectTarget } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -427,11 +428,12 @@ export const McpPage = () => {
                     variant="ghost"
                     disabled={signingIn.includes(server.name)}
                     onClick={() => {
-                      // A tab on the host's route, or the desktop's own sign-in.
-                      if (
-                        openConnectPage(transport.client, server.name) == null
-                      )
+                      // The host's route in a tab, or the desktop's own sign-in.
+                      const target = connectTarget(server.name);
+                      if (target.kind !== "host-route")
                         oauthSignIn.mutate({ mode: "code", name: server.name });
+                      else if (!openTab(target.url))
+                        showError(t("phase5.popupBlocked"));
                     }}
                   >
                     {t("phase5.signIn")}

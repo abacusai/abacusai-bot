@@ -3446,6 +3446,8 @@
     "closePreview": "Close preview",
     "connectName": "{{name}} verbinden",
     "connectWaiting": "Schließe die Anmeldung ab, um diesen Dienst zu verbinden.",
+    "popupBlocked": "Ihr Browser hat den neuen Tab blockiert. Erlauben Sie Pop-ups für diese Website und versuchen Sie es erneut.",
+    "connectTimedOut": "Die Verbindung hat zu lange gedauert. Bitte versuchen Sie es erneut.",
     "connectorsDescription": "Verbinde Dienste, die dein Agent für Aufgaben nutzen kann.",
     "credentialsLocal": "Zugangsdaten werden auf diesem Computer gespeichert.",
     "defaultWorkspace": "Default workspace",

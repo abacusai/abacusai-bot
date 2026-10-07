@@ -1,8 +1,4 @@
 import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
-import type {
-  ConnectorConnectOptions,
-  ConnectorOutcome,
-} from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
 import { browserConnection } from "#renderer/features/shell/connect/services";
@@ -10,8 +6,9 @@ import { pickHostFolder, viewHostFile } from "#renderer/lib/browser/files";
 import { browserNotify } from "#renderer/lib/browser/notifications";
 import {
   connectPagePath,
+  openTab,
   type ConnectTarget,
-} from "#renderer/lib/connect-page";
+} from "#renderer/lib/connect-target";
 type BrowserSystem = Pick<
   AppClient["system"],
   "openExternal" | "notify" | "openPath" | "showItemInFolder"
@@ -45,32 +42,6 @@ export const connectTarget = (name: string, hint?: string): ConnectTarget => {
   };
 };
 
-/**
- * Opens the target's tab before this returns, so call it before any await in
- * a click handler; popup blockers allow only that. Null when the connector
- * does not connect in a tab. A connect page is also told to the host, so it
- * follows the connector until it connects; the host route follows its own.
- */
-export const openConnectPage = (
-  client: Pick<AppClient, "connectors">,
-  name: string,
-  options?: ConnectorConnectOptions
-): Promise<ConnectorOutcome> | null => {
-  const target = connectTarget(name, options?.hint);
-  switch (target.kind) {
-    case "connect-page":
-      window.open(target.url, "_blank", "noopener");
-      return client.connectors
-        .connect({ connectorId: name, ...(options ? { options } : {}) })
-        .then((outcome) => (outcome.ok ? { ok: true } : outcome));
-    case "host-route":
-      window.open(target.url, "_blank", "noopener");
-      return Promise.resolve({ ok: true });
-    default:
-      return null;
-  }
-};
-
 /** The tab is taken inside the click; the link fills it once the host answers. */
 export const openSharedLink = async (
   client: AppClient,
@@ -82,7 +53,7 @@ export const openSharedLink = async (
     const url = await client.messaging.openSharedLink(input);
     if (!url || !/^https?:/i.test(url)) tab?.close();
     else if (tab) tab.location.href = url;
-    else window.open(url, "_blank", "noopener");
+    else openTab(url);
   } catch (error) {
     tab?.close();
     throw error;

@@ -1,9 +1,8 @@
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 
 import type { Transport } from "#renderer/data/transport";
-import { waitForConnected } from "#renderer/lib/connect-page";
+import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openConnectPage } from "#renderer/lib/platform-system";
 
 const claim = (key: string): boolean => {
   try {
@@ -15,23 +14,23 @@ const claim = (key: string): boolean => {
   }
 };
 
+/** The one Gmail consent this page load waits on; dismissing it cancels the wait. */
+let gmail: ConnectAttempt | null = null;
+
 /** Gmail's connect page for the signed-in address, then the wait for it to connect. */
 const connectGmail = (
   transport: Transport,
   email: string
-): Promise<ConnectorOutcome> =>
-  (
-    openConnectPage(transport.client, "abacus-gmailuser", { hint: email }) ??
-    transport.client.connectors.connect({ connectorId: "abacus-gmailuser" })
-  ).then((outcome) =>
-    outcome.ok
-      ? waitForConnected(
-          transport.client,
-          "abacus-gmailuser",
-          new AbortController().signal
-        )
-      : outcome
-  );
+): Promise<ConnectorOutcome> => {
+  gmail?.cancel();
+  const attempt = new ConnectAttempt(transport, "abacus-gmailuser", {
+    hint: email,
+  });
+  gmail = attempt;
+  return attempt.result.finally(() => {
+    if (gmail === attempt) gmail = null;
+  });
+};
 
 /** The account's Gmail consent outlives whichever onboarding page starts it. */
 export const startFirstRunGmail = async (
@@ -54,7 +53,10 @@ export const startFirstRunGmail = async (
     banner.setAttribute("role", "status");
     const dismiss = document.createElement("button");
     dismiss.textContent = "Dismiss";
-    dismiss.onclick = () => banner.remove();
+    dismiss.onclick = () => {
+      gmail?.cancel();
+      banner.remove();
+    };
     const button = document.createElement("button");
     button.id = "gmail-consent";
     button.className =

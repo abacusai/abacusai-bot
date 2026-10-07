@@ -8,7 +8,7 @@ import type { Transport } from "#renderer/data/transport";
 import { connectTarget } from "#renderer/lib/platform-system";
 
 import {
-  CONNECT_WATCHDOG_MS,
+  PAIRING_WAIT_MS,
   connectPlatform,
   createConnectFlow,
 } from "./connect-flow";
@@ -148,7 +148,7 @@ it("a two-platform route transition settles deferred setup without cancelling it
       release = resolve;
     });
     void flow.registerPairing("whatsapp", () => ready);
-    await vi.advanceTimersByTimeAsync(CONNECT_WATCHDOG_MS - 1000);
+    await vi.advanceTimersByTimeAsync(PAIRING_WAIT_MS - 1000);
     const cleanup = flow.settlePairing("whatsapp");
     await flow.registerPairing("telegram", async () => {});
     release();

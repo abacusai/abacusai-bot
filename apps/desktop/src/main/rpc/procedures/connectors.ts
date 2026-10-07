@@ -16,7 +16,6 @@ export const connectorsRouter = impl.connectors.router({
     )
   ),
   // Connecting no longer waits in the host; older clients still call this.
-  cancelConnect: impl.connectors.cancelConnect.handler(() => {}),
   disconnect: impl.connectors.disconnect.handler(({ input, context }) =>
     context.deps.serviceHost.disconnectConnector(input.connectorId)
   ),

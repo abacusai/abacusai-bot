@@ -14,19 +14,40 @@ const setup = () => {
   const funnelStep = vi.fn(async () => {});
   const openExternal = vi.fn(async () => {});
   const statuses = vi.fn(async () => ({}));
+  // The host's change stream: one status-changed per `changed()`.
+  let changed = (): void => {};
+  const events = vi.fn(async () =>
+    (async function* () {
+      for (;;) {
+        await new Promise<void>((wake) => {
+          changed = wake;
+        });
+        yield { type: "status-changed" as const };
+      }
+    })()
+  );
   const transport = {
+    state: "open",
     client: {
-      connectors: { statuses, connect },
+      connectors: { statuses, connect, events },
       auth: { abacus: { shouldAutoSignIn: async () => true } },
       system: { funnelStep, openExternal },
     },
   } as unknown as Transport;
-  return { transport, connect, funnelStep, openExternal, statuses };
+  return {
+    transport,
+    connect,
+    funnelStep,
+    openExternal,
+    statuses,
+    changed: () => changed(),
+  };
 };
 
 it("opens Gmail's connect page once, for the authenticated address, and reports once connected", async () => {
   vi.useFakeTimers();
-  const { transport, connect, funnelStep, openExternal, statuses } = setup();
+  const { transport, connect, funnelStep, openExternal, statuses, changed } =
+    setup();
   await Promise.all([
     startFirstRunGmail(transport, "ada@example.com"),
     startFirstRunGmail(transport, "ada@example.com"),
@@ -43,7 +64,11 @@ it("opens Gmail's connect page once, for the authenticated address, and reports 
   statuses.mockResolvedValue({
     "abacus-gmailuser": { state: "connected" },
   } as never);
-  await vi.advanceTimersByTimeAsync(3000);
+  // The host announces the change; no polling in between.
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(funnelStep).not.toHaveBeenCalled();
+  changed();
+  await vi.advanceTimersByTimeAsync(0);
   expect(funnelStep).toHaveBeenCalledWith({ step: "gmail_allowed" });
 });
 

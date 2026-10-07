@@ -3446,6 +3446,8 @@
     "closePreview": "Close preview",
     "connectName": "{{name}} 연결",
     "connectWaiting": "로그인을 완료하여 이 서비스를 연결하세요.",
+    "popupBlocked": "브라우저가 새 탭을 차단했습니다. 이 사이트의 팝업을 허용한 후 다시 시도하세요.",
+    "connectTimedOut": "연결 시간이 초과되었습니다. 다시 시도하세요.",
     "connectorsDescription": "에이전트가 작업을 완료하는 데 사용할 서비스를 연결하세요.",
     "credentialsLocal": "인증 정보는 이 컴퓨터에 저장됩니다.",
     "defaultWorkspace": "Default workspace",

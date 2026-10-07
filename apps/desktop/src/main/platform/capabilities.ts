@@ -130,7 +130,6 @@ export const WEB_HOST_ALLOWED = [
   "connectors.statuses",
   "connectors.connect",
   "connectors.submitFields",
-  "connectors.cancelConnect",
   "connectors.disconnect",
   "connectors.respond",
   "connectors.requests",

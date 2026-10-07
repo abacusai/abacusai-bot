@@ -3446,6 +3446,8 @@
     "closePreview": "Close preview",
     "connectName": "Connect {{name}}",
     "connectWaiting": "Waiting for you to finish in the new tab.",
+    "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this site, then try again.",
+    "connectTimedOut": "Connecting timed out. Please try again.",
     "connectorsDescription": "Connect the services your agent can use to complete tasks.",
     "credentialsLocal": "Credentials are stored on this computer.",
     "defaultWorkspace": "Default workspace",

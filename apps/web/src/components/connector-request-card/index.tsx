@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 
 import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
+import { connectErrorText } from "#renderer/lib/connect-page";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
@@ -103,7 +104,7 @@ export const ConnectorRequestCard = ({
             role="alert"
             data-slot="connector-request-error"
           >
-            {error}
+            {connectErrorText(t, error)}
           </p>
         )}
       </div>

@@ -3446,6 +3446,8 @@
     "closePreview": "Close preview",
     "connectName": "Conectar {{name}}",
     "connectWaiting": "Termina de iniciar sesión para conectar este servicio.",
+    "popupBlocked": "Tu navegador bloqueó la nueva pestaña. Permite las ventanas emergentes para este sitio e inténtalo de nuevo.",
+    "connectTimedOut": "Se agotó el tiempo de conexión. Inténtalo de nuevo.",
     "connectorsDescription": "Conecta los servicios que tu agente puede usar para completar tareas.",
     "credentialsLocal": "Las credenciales se guardan en este equipo.",
     "defaultWorkspace": "Default workspace",
