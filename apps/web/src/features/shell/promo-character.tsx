@@ -1,5 +1,6 @@
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import { useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import type { ExpressionMix } from "#renderer/components/bot-avatar/expression";
@@ -35,6 +36,56 @@ export const PromoCharacter = ({
   upgraded: boolean;
 }) => {
   const reduced = useMotionPreference() === "reduced";
+  const element = useRef<HTMLDivElement>(null);
+  const greeted = useRef(false);
+  const [reaction, setReaction] = useState<"happy" | "wink" | null>(null);
+  useEffect(() => {
+    if (reduced || excited || upgraded || remaining === 0) {
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let active = false;
+    const clear = () => {
+      clearTimeout(timer);
+      setReaction(null);
+    };
+    const wink = () => {
+      setReaction("wink");
+      timer = setTimeout(() => {
+        setReaction(null);
+        timer = setTimeout(wink, 30_000);
+      }, 600);
+    };
+    const observe = () => {
+      const admitted = Boolean(
+        element.current?.querySelector('[data-slot="bot-avatar"][data-animate]')
+      );
+      if (admitted === active) return;
+      active = admitted;
+      clear();
+      if (!active) return;
+      if (!greeted.current) {
+        greeted.current = true;
+        setReaction("happy");
+        timer = setTimeout(() => {
+          setReaction(null);
+          timer = setTimeout(wink, 30_000);
+        }, 600);
+      } else timer = setTimeout(wink, 30_000);
+    };
+    const observer = new MutationObserver(observe);
+    if (element.current)
+      observer.observe(element.current, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-animate"],
+      });
+    observe();
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [reduced, excited, upgraded, remaining]);
   const collections = useCollections();
   const botId = useRouterState({
     select: (state) =>
@@ -52,20 +103,22 @@ export const PromoCharacter = ({
         : undefined,
   });
   const bot = data;
+  const reactionMood = reduced ? null : reaction;
   const mood: AvatarMood = upgraded
     ? "happy"
     : excited
       ? "excited"
       : remaining === 0
         ? "asleep"
-        : "idle";
+        : (reactionMood ?? "idle");
   const expression = upgraded
     ? "proud"
-    : excited
+    : excited || reactionMood === "wink"
       ? undefined
       : creditExpression(remaining, total);
   return (
     <div
+      ref={element}
       className="shrink-0 self-center"
       data-promo-mood={mood}
       data-promo-expression={expression}
