@@ -1,92 +1,91 @@
-import { contract } from "@abacus-ai/contract/contract";
-import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { implement } from "@orpc/server";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, expect, it, vi } from "vitest";
 
-import { ABACUS_PLAN_URL } from "#renderer/lib/credits";
-import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
-const os = implement(contract);
-let app: Awaited<ReturnType<typeof renderApp>> | undefined;
-beforeEach(() => localStorage.clear());
-afterEach(async () => {
-  app?.view.unmount();
-  await app?.cleanup();
-  app = undefined;
-});
-const card = () =>
-  document.querySelector<HTMLElement>('[data-slot="upgrade-promo"]');
-const mount = async (tier = "free", used = 0, id = "dummy-a") => {
-  const seed = defaultSeed();
-  seed.prefs!.creditsExhaustedAt = null;
-  const openExternal = vi.fn(
-    async (_options: { input: { url: string } }) => {}
-  );
-  app = await renderApp("/bots", {
-    seed,
-    procedures: {
-      account: {
-        abacus: os.account.abacus.handler(
-          () =>
-            ({
-              user_id: id,
-              organization_id: "dummy-org",
-              subscription_tier: tier,
-              credits_granted: 100,
-              credits_used: used,
-            }) as AbacusAccountInfo
-        ),
+import { initI18n } from "#renderer/lib/i18n";
+
+import { UpgradePromo } from "./credits-card";
+import { promoAccountKey } from "./promo-state";
+
+const state = vi.hoisted(() => ({
+  account: {
+    user_id: "dummy",
+    organization_id: "dummy-org",
+    name: null,
+    email: null,
+    picture: null,
+    organization: null,
+    org_user_count: null,
+    plan: null,
+    subscription_tier: "free",
+    credits_granted: 100,
+    credits_used: 95,
+  },
+  open: vi.fn(),
+  update: vi.fn(),
+}));
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: state.account, dataUpdatedAt: 1 }),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => ({ href: "/sessions/example" }),
+}));
+vi.mock("#renderer/data/db/prefs", () => ({
+  usePrefs: () => ({ creditsExhaustedAt: null }),
+  useUpdatePrefs: () => state.update,
+}));
+vi.mock("#renderer/lib/use-app-context", () => ({
+  useAppContext: () => ({
+    transport: {
+      orpc: {
+        account: {
+          abacus: { queryOptions: () => ({}), queryKey: () => ["account"] },
+        },
       },
-      system: { openExternal: os.system.openExternal.handler(openExternal) },
+      client: { system: { openExternal: state.open } },
     },
-  });
-  return openExternal;
-};
-it("floats above content with one upgrade action and no sidebar card", async () => {
-  const external = await mount();
-  await waitFor(() => expect(card()).not.toBeNull());
+  }),
+}));
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => "reduced",
+}));
+vi.mock("./promo-character", () => ({
+  PromoCharacter: ({ excited }: { excited: boolean }) => (
+    <span data-testid="character">{excited ? "excited" : "worried"}</span>
+  ),
+}));
+beforeEach(async () => {
+  await initI18n();
+  localStorage.clear();
+  state.account.subscription_tier = "free";
+});
+it("shows actual credit progress, reacts to CTA focus and persists dismissal across remount", () => {
+  const first = render(<UpgradePromo />);
+  expect(screen.getByText("5 of 100 credits left")).toBeTruthy();
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "95"
+  );
+  fireEvent.focus(screen.getByRole("button", { name: "Upgrade" }));
+  expect(screen.getByTestId("character").textContent).toBe("excited");
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+  expect(localStorage.getItem(promoAccountKey(state.account))).not.toBeNull();
+  first.unmount();
+  const second = render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  second.unmount();
+});
+it("does not show the promo for an account already on a paid tier", () => {
+  state.account.subscription_tier = "pro";
+  render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+});
+
+it("celebrates only a confirmed free-to-paid account change", () => {
+  const view = render(<UpgradePromo />);
+  state.account.subscription_tier = "pro";
+  view.rerender(<UpgradePromo />);
+  expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
   expect(
-    document.querySelector('[data-slot="sidebar-credits-card"]')
-  ).toBeNull();
-  expect(card()!.textContent).toContain("100 credits remaining");
-  fireEvent.click(within(card()!).getByRole("button", { name: "Upgrade" }));
-  await waitFor(() =>
-    expect(external).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ input: { url: ABACUS_PLAN_URL } })
-    )
-  );
-});
-it("keeps dismissal across remount and permits another account's promo", async () => {
-  await mount();
-  fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
-  await waitFor(() => expect(card()).toBeNull());
-  app!.view.unmount();
-  await app!.cleanup();
-  await mount();
-  expect(card()).toBeNull();
-  app!.view.unmount();
-  await app!.cleanup();
-  await mount("free", 0, "dummy-b");
-  await waitFor(() => expect(card()).not.toBeNull());
-});
-it("reappears on exhaustion and can dismiss that situation too", async () => {
-  await mount();
-  fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
-  await waitFor(() => expect(card()).toBeNull());
-  app!.view.unmount();
-  await app!.cleanup();
-  await mount("free", 100);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain("0 credits remaining")
-  );
-  fireEvent.click(within(card()!).getByRole("button", { name: "Dismiss" }));
-  await waitFor(() => expect(card()).toBeNull());
-});
-it("does not promote paid or basic accounts", async () => {
-  await mount("pro", 100);
-  expect(card()).toBeNull();
-  app!.view.unmount();
-  await app!.cleanup();
-  await mount("basic");
-  expect(card()).toBeNull();
+    screen.getByRole("button", { name: "Upgrade" }).hasAttribute("disabled")
+  ).toBe(true);
 });

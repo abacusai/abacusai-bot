@@ -6,16 +6,22 @@ import {
   useEffect,
   useLayoutEffect,
   useState,
+  useRef,
   type CSSProperties,
 } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import { ABACUS_PLAN_URL, creditMarkState } from "#renderer/lib/credits";
+import {
+  ABACUS_PLAN_URL,
+  creditMarkState,
+  creditsTier,
+} from "#renderer/lib/credits";
 import {
   durations,
   easings,
   offsets,
+  springs,
   reducedTransition,
   useMotionPreference,
 } from "#renderer/lib/motion";
@@ -24,6 +30,8 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
+import { PromoCharacter } from "./promo-character";
+import { promoPlacement } from "./promo-placement";
 import {
   PROMO_DISMISS_MS,
   promoAccountKey,
@@ -71,12 +79,24 @@ export const UpgradePromo = () => {
       void update({ creditsExhaustedAt: null }).catch(() => {});
   }, [mark, update]);
   const [position, setPosition] = useState<CSSProperties>({
-    right: 24,
+    left: 72,
     bottom: 24,
     maxWidth: 320,
   });
+  const [excited, setExcited] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const tier = creditsTier(account.data);
+  const previousTier = useRef(tier);
+  useEffect(() => {
+    const upgraded = previousTier.current === "free" && tier === "paid";
+    previousTier.current = tier;
+    if (!upgraded) return;
+    setCelebrating(true);
+    const timer = window.setTimeout(() => setCelebrating(false), 1800);
+    return () => clearTimeout(timer);
+  }, [tier]);
   useLayoutEffect(() => {
-    if (!state) return;
+    if (!state && !celebrating) return;
     let frame = 0;
     const observer = new ResizeObserver(() => schedule());
     const observed = new Set<Element>();
@@ -99,28 +119,32 @@ export const UpgradePromo = () => {
         document
           .querySelector('[data-slot="upgrade-promo"]')
           ?.getBoundingClientRect().height || 128;
-      const fitsBelow =
-        !composerRect ||
-        (rect?.bottom ?? window.innerHeight) - composerRect.bottom >=
-          promoHeight + 24;
-      const fitsAbove =
-        !composerRect ||
-        composerRect.top - (rect?.top ?? 0) >= promoHeight + 32;
-      setPosition({
-        visibility: fitsBelow || fitsAbove ? "visible" : "hidden",
-        right: Math.max(
-          16,
-          window.innerWidth - (rect?.right ?? window.innerWidth) + 16
-        ),
-        bottom:
-          composerRect && !fitsBelow
-            ? window.innerHeight - composerRect.top + 16
-            : 24,
-        maxWidth: Math.min(
-          320,
-          Math.max(200, (rect?.width ?? window.innerWidth) - 32)
-        ),
-      });
+      const rail = document
+        .querySelector('[data-slot="rail"]')
+        ?.getBoundingClientRect();
+      const sidebar = document
+        .querySelector('[data-slot="sidebar-slot"]')
+        ?.getBoundingClientRect();
+      const footer = document
+        .querySelector('[data-slot="sidebar-footer"]')
+        ?.getBoundingClientRect();
+      setPosition(
+        promoPlacement({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          railRight: rail?.right ?? 56,
+          sidebarRight: sidebar?.right ?? 56,
+          paneTop: rect?.top ?? 40,
+          cardHeight: promoHeight,
+          composer: composerRect,
+          footer,
+          splitters: [
+            ...document.querySelectorAll("[data-pane-gutter], .dv-sash"),
+          ]
+            .map((element) => element.getBoundingClientRect())
+            .filter((rect) => rect.width > 0 && rect.height > 0),
+        })
+      );
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
@@ -142,14 +166,14 @@ export const UpgradePromo = () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", schedule);
     };
-  }, [state, location.href]);
+  }, [state, celebrating, location.href]);
   const remaining =
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
   return (
     <AnimatePresence>
-      {state ? (
+      {state || celebrating ? (
         <motion.aside
           key={`${key}:${state}`}
           data-slot="upgrade-promo"
@@ -177,7 +201,7 @@ export const UpgradePromo = () => {
             onClick={() => {
               const value: PromoDismissal = {
                 until: now + PROMO_DISMISS_MS,
-                situation: state,
+                situation: state ?? "upsell",
               };
               try {
                 localStorage.setItem(key, JSON.stringify(value));
@@ -189,17 +213,76 @@ export const UpgradePromo = () => {
           >
             <X />
           </Button>
-          <p className="pr-6 text-sm font-semibold">
-            {t("creditsCard.upsellTitle")}
-          </p>
-          {remaining != null ? (
-            <p className="text-muted-foreground mt-1 text-xs">
-              {t("creditsCard.remaining", { count: remaining })}
-            </p>
-          ) : null}
+          <div className="flex items-center gap-3 pr-3">
+            <PromoCharacter
+              remaining={remaining}
+              total={account.data?.credits_granted ?? null}
+              excited={excited}
+              upgraded={celebrating}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {t(
+                  celebrating
+                    ? "creditsCard.upgraded"
+                    : remaining === 0
+                      ? "creditsCard.restTitle"
+                      : "creditsCard.levelUpTitle"
+                )}
+              </p>
+              {remaining != null ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t("creditsCard.progress", {
+                    remaining,
+                    total: account.data?.credits_granted ?? 0,
+                  })}
+                </p>
+              ) : null}
+              {account.data?.credits_granted != null &&
+              account.data.credits_granted > 0 &&
+              remaining != null ? (
+                <div
+                  role="progressbar"
+                  aria-label={t("creditsCard.used")}
+                  aria-valuemin={0}
+                  aria-valuemax={account.data.credits_granted}
+                  aria-valuenow={Math.min(
+                    account.data.credits_granted,
+                    Math.max(0, account.data.credits_used ?? 0)
+                  )}
+                  className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
+                >
+                  <motion.div
+                    className="bg-primary h-full origin-left rounded-full"
+                    initial={false}
+                    animate={{
+                      scaleX: Math.min(
+                        1,
+                        Math.max(
+                          0,
+                          (account.data.credits_used ?? 0) /
+                            account.data.credits_granted
+                        )
+                      ),
+                    }}
+                    transition={
+                      preference === "reduced"
+                        ? reducedTransition
+                        : springs.panel
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
           <Button
             size="sm"
             className="mt-3 h-8 rounded-lg"
+            onMouseEnter={() => setExcited(true)}
+            onMouseLeave={() => setExcited(false)}
+            onFocus={() => setExcited(true)}
+            onBlur={() => setExcited(false)}
+            disabled={celebrating}
             onClick={() =>
               void platformSystem(transport.client).openExternal({
                 url: ABACUS_PLAN_URL,
