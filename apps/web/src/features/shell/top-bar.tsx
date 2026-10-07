@@ -86,7 +86,7 @@ const BarButton = ({
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
+    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none [&>[data-slot=topbar-panel-tabs]]:max-w-[65%]"
   >
     {children}
   </header>
@@ -386,7 +386,7 @@ const PanelTabs = ({
   return (
     <div
       data-slot="topbar-panel-tabs"
-      className="mr-2 flex min-w-0 shrink items-center gap-1"
+      className="mr-2 flex max-w-full min-w-0 shrink items-center gap-1"
     >
       <Tabs
         value={active ?? undefined}
@@ -395,11 +395,11 @@ const PanelTabs = ({
             list.current?.contains(document.activeElement) ?? false;
           onChange(String(value));
         }}
-        className="min-w-0"
+        className="w-full max-w-full min-w-0"
       >
         <TabsList
           activateOnFocus
-          className="h-auto min-w-0 bg-transparent p-0"
+          className="h-auto w-full min-w-0 bg-transparent p-0"
           aria-label={t("shell.topBar.panelTabs")}
         >
           <Reorder.Group
