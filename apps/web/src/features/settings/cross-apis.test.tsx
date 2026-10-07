@@ -129,16 +129,13 @@ it("kind-based routine notification clicks do not require a session collection j
       },
     },
   });
-  const navigate = vi.spyOn(app.router, "navigate");
   await act(async () => send());
-  await waitFor(() =>
-    expect(app!.router.state.location.pathname).toBe(`/routines/${routineId}`)
-  );
-  expect(navigate).toHaveBeenCalledWith(
-    expect.objectContaining({
-      href: `/routines/${routineId}?run=unhydrated-run`,
-    })
-  );
+  await waitFor(() => {
+    expect(app!.router.state.location.pathname).toBe(`/routines/${routineId}`);
+    expect(app!.router.state.location.search).toMatchObject({
+      run: "unhydrated-run",
+    });
+  });
 });
 it("an exec-backend event invalidates only the backend and sandbox query families", async () => {
   let send!: () => void;
