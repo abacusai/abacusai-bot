@@ -532,13 +532,14 @@ export class McpBrowserServer extends McpHttpServer {
   }
 
   /**
-   * A handle for the screenshot in the media store; null without a store, or
-   * for an image larger than a chat takes (a viewport JPEG is far below it).
+   * A handle for the screenshot in the media store, held for the calling
+   * session; null without a store or a session, or for an image larger than
+   * a chat takes (a viewport JPEG is far below it).
    */
-  private keepAsMedia(image: CapturedImage): string | null {
+  private keepAsMedia(image: CapturedImage, sessionId?: string): string | null {
     const store = this.options.media?.() ?? null;
-    if (store == null) return null;
-    const kept = store.put(Buffer.from(image.data, "base64"));
+    if (store == null || sessionId == null) return null;
+    const kept = store.put(sessionId, Buffer.from(image.data, "base64"));
     return "id" in kept ? kept.id : null;
   }
 
@@ -1650,7 +1651,7 @@ export class McpBrowserServer extends McpHttpServer {
           `screenshot-${Date.now()}.${image.mimeType === "image/png" ? "png" : "jpg"}`
         );
         fs.writeFileSync(filePath, Buffer.from(image.data, "base64"));
-        const mediaId = this.keepAsMedia(image);
+        const mediaId = this.keepAsMedia(image, sessionId);
 
         return {
           content: [

@@ -1,19 +1,24 @@
 /**
- * Media for the user's chat: an image (and its caption) a tool or the run
- * produced. A leaf module: the hosted app and the desktop's main process read
- * it (`@abacus-ai/agent/send-media`) without the agent runtime.
+ * Media for the user's chat. A leaf module: the hosted app and the desktop's
+ * main process read it (`@abacus-ai/agent/send-media`) without the agent
+ * runtime.
  *
- * Media is named by a media id (`media-…`, a handle the app's media store
- * gave a screenshot) or by the absolute path of an image file. Only JPEG and
- * PNG, by their bytes, and at most `MEDIA_MAX_BYTES`, the most a chat takes.
+ * Media is named only by a media id (`media-…`): a handle the app's media
+ * store gave, under the session it belongs to, to an image it holds (a
+ * screenshot taken with secret fields hidden). Nothing else on the computer
+ * can be named, so nothing else can reach the chat. Only JPEG and PNG, by
+ * their bytes, and at most `MEDIA_MAX_BYTES`, the most a chat takes.
+ *
+ * The tool and the app that sends read one request through `parseSendMedia`,
+ * so the app never sends what the tool refused.
  */
-import { readFileSync, statSync } from "node:fs";
-import { isAbsolute } from "node:path";
-
 export const SEND_MEDIA_TOOL_NAME = "send_media";
 
 /** WhatsApp's limit for an image. */
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+
+/** One or two lines under the picture; WhatsApp allows 1,024 characters. */
+export const MAX_MEDIA_CAPTION_CHARS = 500;
 
 /** When it goes: at once, or together with the final answer. */
 export type SendMediaWhen = "now" | "with_answer";
@@ -25,9 +30,38 @@ export type ResolvedMedia =
   | { ok: true; data: Buffer; mimeType: MediaMimeType }
   | { ok: false; reason: string };
 
+export interface SendMediaRequest {
+  media: string;
+  caption: string;
+  when: SendMediaWhen;
+}
+
 const MEDIA_ID = /^media-[0-9a-f]{16,64}$/;
 
 export const isMediaId = (ref: string): boolean => MEDIA_ID.test(ref);
+
+/** A `send_media` call's input as a request, or why it is refused. */
+export function parseSendMedia(
+  input: Record<string, unknown>
+): { ok: true; request: SendMediaRequest } | { ok: false; reason: string } {
+  const media = typeof input.media === "string" ? input.media.trim() : "";
+  const caption = typeof input.caption === "string" ? input.caption.trim() : "";
+  const when = input.when ?? "now";
+  if (!isMediaId(media))
+    return {
+      ok: false,
+      reason:
+        'media must be a media id a tool gave you (browser_snapshot action:"screenshot" gives one).',
+    };
+  if (when !== "now" && when !== "with_answer")
+    return { ok: false, reason: 'when is "now" or "with_answer".' };
+  if (caption.length > MAX_MEDIA_CAPTION_CHARS)
+    return {
+      ok: false,
+      reason: `The caption is too long (${caption.length} characters, at most ${MAX_MEDIA_CAPTION_CHARS}). Shorten it.`,
+    };
+  return { ok: true, request: { media, caption, when } };
+}
 
 const SIGNATURES: Array<{ mimeType: MediaMimeType; bytes: number[] }> = [
   { mimeType: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
@@ -35,7 +69,7 @@ const SIGNATURES: Array<{ mimeType: MediaMimeType; bytes: number[] }> = [
 ];
 
 /** JPEG or PNG by its first bytes; null for anything else. */
-export function imageMimeType(data: Uint8Array): MediaMimeType | null {
+function imageMimeType(data: Uint8Array): MediaMimeType | null {
   return (
     SIGNATURES.find(({ bytes }) =>
       bytes.every((byte, index) => data[index] === byte)
@@ -49,26 +83,6 @@ export function checkedImage(data: Buffer): ResolvedMedia {
     return { ok: false, reason: "The image is larger than 5 MB." };
   const mimeType = imageMimeType(data);
   if (mimeType == null)
-    return { ok: false, reason: "The file is not a JPEG or PNG image." };
+    return { ok: false, reason: "The data is not a JPEG or PNG image." };
   return { ok: true, data, mimeType };
-}
-
-/** The JPEG or PNG at an absolute path; nothing else on the computer goes out. */
-export function readImageFile(file: string): ResolvedMedia {
-  if (!isAbsolute(file))
-    return {
-      ok: false,
-      reason: "Give a media id or the absolute path of an image file.",
-    };
-  try {
-    const stat = statSync(file);
-    if (!stat.isFile())
-      return { ok: false, reason: "That path is not a file." };
-    // Checked before the read, so a huge file is never loaded.
-    if (stat.size > MEDIA_MAX_BYTES)
-      return { ok: false, reason: "The image is larger than 5 MB." };
-    return checkedImage(readFileSync(file));
-  } catch {
-    return { ok: false, reason: "There is no readable file at that path." };
-  }
 }

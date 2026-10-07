@@ -214,8 +214,8 @@ describe("the phone lane", () => {
           return () => {};
         },
         activity,
-        resolveMedia: (ref: string) =>
-          ref === SHOT
+        resolveMedia: (ref: string, sessionId: string) =>
+          ref === SHOT && sessionId === "s"
             ? {
                 ok: true as const,
                 data: SHOT_BYTES,
@@ -389,6 +389,46 @@ describe("the phone lane", () => {
         text: "Here it is.",
       },
       { action: "reply", message_id: "m1", text: "Here it is." },
+    ]);
+    phone.stop();
+  });
+
+  it("never sends what the tool refused, nor a call that ended in an error", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "show me" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const done = (
+      name: string,
+      input: Record<string, unknown>,
+      rejected = false
+    ) =>
+      event({
+        type: "tool_execution_complete",
+        tool: { name, input },
+        result: { rejected },
+      });
+
+    // Refused by the tool's own check, whatever the result said.
+    done("send_media", { media: SHOT, caption: "x".repeat(501) });
+    done("send_media", { media: SHOT, when: "later" });
+    done("send_media", { media: "/home/user/secret.png" });
+    done("send_progress", { text: "y".repeat(501) });
+    // Accepted input, but the call failed.
+    done("send_media", { media: SHOT, caption: "Failed call" }, true);
+    done("send_progress", { text: "Failed call" }, true);
+    // The model's corrected retry goes out, once.
+    done("send_media", { media: SHOT, caption: "The page" });
+
+    reply(["m1"], "Done.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toEqual([
+      {
+        action: "reply",
+        message_id: "m1",
+        image_b64: SHOT_BYTES.toString("base64"),
+        text: "The page",
+      },
+      { action: "reply", message_id: "m1", text: "Done." },
     ]);
     phone.stop();
   });

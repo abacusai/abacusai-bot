@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  parseProgressText,
   PHONE_PROGRESS_TOOL_NAME,
   splitPhoneBubbles,
 } from "@abacus-ai/agent/phone-bubbles";
 import {
+  parseSendMedia,
   type ResolvedMedia,
   SEND_MEDIA_TOOL_NAME,
 } from "@abacus-ai/agent/send-media";
@@ -61,8 +63,8 @@ interface PhoneLaneDeps {
   ) => () => void;
   /** Keeps the host's idle lease fresh. */
   activity: () => void;
-  /** A `send_media` media id or image path, as bytes to send. */
-  resolveMedia: (ref: string) => ResolvedMedia;
+  /** A `send_media` media id, as bytes, for the session that holds it. */
+  resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
   log?: (line: string) => void;
 }
 
@@ -381,6 +383,12 @@ export class PhoneLane {
     }
   }
 
+  /**
+   * A finished tool call that speaks to the chat. Only a call the tool
+   * accepted goes out: an error result is skipped, and the input is read
+   * through the tool's own check, so a refused call never sends (and the
+   * model's corrected retry is not a duplicate).
+   */
   private onToolDone(
     event: Extract<AgentEvent, { type: "tool_execution_complete" }>
   ): void {
@@ -396,16 +404,14 @@ export class PhoneLane {
     // A progress line or an image goes out now; neither answers the message.
     let sent: Promise<boolean> | null = null;
     if (isTool(event.tool.name, PHONE_PROGRESS_TOOL_NAME)) {
-      const text = event.tool.input.text;
-      if (typeof text !== "string" || text.trim().length === 0) return;
-      sent = this.sendInOrder(replyTo, [text.trim()]).then((n) => n > 0);
+      const progress = parseProgressText(event.tool.input);
+      if (progress.ok === false) return;
+      sent = this.sendInOrder(replyTo, [progress.text]).then((n) => n > 0);
     } else if (isTool(event.tool.name, SEND_MEDIA_TOOL_NAME)) {
-      const { media, caption, when } = event.tool.input;
-      if (typeof media !== "string") return;
-      const item = {
-        ref: media.trim(),
-        caption: typeof caption === "string" ? caption.trim() : "",
-      };
+      const parsed = parseSendMedia(event.tool.input);
+      if (parsed.ok === false) return;
+      const { media, caption, when } = parsed.request;
+      const item = { ref: media, caption };
       if (when === "with_answer") {
         this.heldMedia.push(item);
         return;
@@ -432,7 +438,12 @@ export class PhoneLane {
   ): Promise<{ image: boolean; words: boolean }> {
     const run = this.outbox.then(async () => {
       if (!this.running) return { image: false, words: false };
-      const resolved = this.deps.resolveMedia(media.ref);
+      // The phone session's own media only; its browser runs share its id.
+      const sessionId = this.session?.sessionId;
+      const resolved: ResolvedMedia =
+        sessionId == null
+          ? { ok: false, reason: "no session" }
+          : this.deps.resolveMedia(media.ref, sessionId);
       const caption = media.caption.length > 0 ? { text: media.caption } : {};
       if (resolved.ok === false)
         this.log(`[phone] media not sent: ${resolved.reason}`);

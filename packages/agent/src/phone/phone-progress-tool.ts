@@ -3,15 +3,11 @@
  * a reply to the user's message. The tool only checks the text; the hosted
  * app sees the call and sends it.
  */
-import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
-  type PhoneToolDefinition,
-  stringParam,
-  toolText,
-} from "./phone-tool.js";
-
-/** Long enough for a finding, short enough to read as a progress line. */
-const MAX_PROGRESS_CHARS = 500;
+  parseProgressText,
+  PHONE_PROGRESS_TOOL_NAME,
+} from "./phone-bubbles.js";
+import { type PhoneToolDefinition, toolText } from "./phone-tool.js";
 
 export function buildPhoneProgressTool(): PhoneToolDefinition {
   return {
@@ -36,14 +32,10 @@ export function buildPhoneProgressTool(): PhoneToolDefinition {
       additionalProperties: false,
     },
     execute: async (_toolCallId, params) => {
-      const text = stringParam(params.text).trim();
-      if (text.length === 0) return toolText("The text is empty.", true);
-      if (text.length > MAX_PROGRESS_CHARS)
-        return toolText(
-          `Too long for a progress line (${text.length} characters, at most ${MAX_PROGRESS_CHARS}). Shorten it.`,
-          true
-        );
-      return toolText("Sent.");
+      const parsed = parseProgressText(params);
+      return parsed.ok === false
+        ? toolText(parsed.reason, true)
+        : toolText("Sent.");
     },
   };
 }

@@ -3332,13 +3332,19 @@ describe("screenshots as media for the chat", () => {
     const id = /media id: (media-[0-9a-f]+)/.exec(text)?.[1];
 
     expect(id).toBeDefined();
-    expect(mediaStore.resolve(id!)).toEqual({
+    // Held for the session that took it (a browser run calls as its parent).
+    expect(mediaStore.resolve(id!, "session-1")).toEqual({
       ok: true,
       data: JPEG,
       mimeType: "image/jpeg",
     });
+    // Another session's id sends nothing: it reads as unknown.
+    expect(mediaStore.resolve(id!, "session-2")).toEqual({
+      ok: false,
+      reason: "That media id is unknown or expired; take a new one.",
+    });
     clock.now += MEDIA_TTL_MS;
-    expect(mediaStore.resolve(id!)).toMatchObject({ ok: false });
+    expect(mediaStore.resolve(id!, "session-1")).toMatchObject({ ok: false });
   });
 
   it("gives no media id where no chat takes media", async () => {
@@ -3358,15 +3364,17 @@ describe("screenshots as media for the chat", () => {
 
   it("holds only images, and only so much at once", () => {
     const store = new MediaStore();
-    expect(store.put(Buffer.from("not an image"))).toEqual({
-      reason: "The file is not a JPEG or PNG image.",
+    expect(store.put("s", Buffer.from("not an image"))).toEqual({
+      reason: "The data is not a JPEG or PNG image.",
     });
     const big = Buffer.concat([JPEG, Buffer.alloc(4 * 1024 * 1024)]);
-    const ids = Array.from({ length: 20 }, () => store.put(big));
+    const ids = Array.from({ length: 20 }, () => store.put("s", big));
     const first = ids[0] as { id: string };
     const last = ids.at(-1) as { id: string };
     // The oldest went to make room; the newest is there.
-    expect(store.resolve(first.id)).toMatchObject({ ok: false });
-    expect(store.resolve(last.id)).toMatchObject({ ok: true });
+    expect(store.resolve(first.id, "s")).toMatchObject({ ok: false });
+    expect(store.resolve(last.id, "s")).toMatchObject({ ok: true });
+    // Never a path, whatever the store holds.
+    expect(store.resolve("/etc/hosts", "s")).toMatchObject({ ok: false });
   });
 });
