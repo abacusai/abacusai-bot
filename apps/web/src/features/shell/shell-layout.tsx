@@ -37,6 +37,7 @@ import {
 import {
   PanelWorkspace,
   PANEL_DRAG_TYPE,
+  moveDockTab,
 } from "#renderer/components/panel-workspace";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
@@ -208,11 +209,11 @@ export const ShellLayout = ({
               ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
               : undefined
           }
+          workspaceApi={dockApi}
           onMove={
             expanded
               ? (id, position) => {
-                  const panel = dockApi.current?.getPanel(id);
-                  if (panel) panel.api.moveTo({ group: panel.group, position });
+                  moveDockTab(dockApi.current, id, position);
                 }
               : undefined
           }

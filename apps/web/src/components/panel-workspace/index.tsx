@@ -3,12 +3,10 @@ import {
   themeDark,
   type DockviewApi,
   type IDockviewPanelProps,
-  type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from "dockview-react";
 
 import "dockview-react/dist/styles/dockview.css";
-import { Ellipsis, X } from "lucide-react";
 import {
   createContext,
   use,
@@ -21,7 +19,6 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
 import { usePanelRef } from "react-resizable-panels";
 
 import { useDb } from "#renderer/data/db";
@@ -33,17 +30,10 @@ import {
   PANEL_MIN_PX,
   panelMaxFor,
 } from "#renderer/lib/side-panel/geometry";
-import { Button } from "#renderer/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-} from "#renderer/ui/dropdown-menu";
 import { ResizablePanelGroup, ResizablePanel } from "#renderer/ui/resizable";
 
 import { PanelResizeHandle } from "./resize-handle";
+import { enhanceDockSplitters } from "./splitters";
 
 export interface WorkspaceTab {
   id: string;
@@ -66,75 +56,28 @@ const Content = ({ api }: IDockviewPanelProps) => {
   }, [context, api.id]);
   return <div ref={container} className="size-full min-h-0 min-w-0" />;
 };
-const Tab = ({ api, containerApi }: IDockviewPanelHeaderProps) => {
-  const { t } = useTranslation();
-  const context = use(Context)!;
-  return (
-    <div className="flex h-8 min-w-0 items-center gap-1 px-2 text-xs">
-      <span className="max-w-40 truncate">{api.title}</span>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("sessions.dock.move")}
-            />
-          }
-        >
-          <Ellipsis className="size-3" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuGroup>
-            {(["left", "right", "top", "bottom"] as const).map((position) => (
-              <DropdownMenuItem
-                key={position}
-                onClick={() => api.moveTo({ group: api.group, position })}
-              >
-                {t(`sessions.dock.moveDirections.${position}`)}
-              </DropdownMenuItem>
-            ))}
-            {containerApi.groups
-              .filter((group) => group.id !== api.group.id)
-              .map((group) => (
-                <DropdownMenuItem
-                  key={group.id}
-                  onClick={() => api.moveTo({ group, position: "center" })}
-                >
-                  {t("sessions.dock.movePane", {
-                    name: group.activePanel?.title ?? group.id,
-                  })}
-                </DropdownMenuItem>
-              ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {api.id !== "chat" ? (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("sessions.dock.closeTab", { name: api.title })}
-          onClick={(event) => {
-            event.stopPropagation();
-            context.close(api.id);
-          }}
-        >
-          <X className="size-3" />
-        </Button>
-      ) : null}
-    </div>
-  );
-};
 const visiblePanels = (api: DockviewApi): string[] => {
-  const hidden = api.groups.length === 1;
   for (const group of api.groups)
-    if (group.header.hidden !== hidden) group.header.hidden = hidden;
+    if (!group.header.hidden) group.header.hidden = true;
   return api.groups.flatMap((group) =>
     group.activePanel ? [group.activePanel.id] : []
   );
 };
 const components = { content: Content };
 const LAYOUT_PREFIX = "abacusai-bot:dock-layout:v1:";
+export const moveDockTab = (
+  api: DockviewApi | null,
+  id: string,
+  position: "left" | "right" | "top" | "bottom"
+) => {
+  const panel = api?.getPanel(id);
+  if (!api || !panel) return;
+  const reference =
+    panel.group.panels.length > 1
+      ? panel.group
+      : (api.groups.find((group) => group !== panel.group) ?? panel.group);
+  panel.api.moveTo({ group: reference, position });
+};
 export const PANEL_DRAG_TYPE = "application/x-abacus-panel";
 
 /** Stable portal targets preserve chat, editor and terminal state across dock moves. */
@@ -185,7 +128,7 @@ export const PanelWorkspace = ({
   for (const tab of tabs)
     if (!targets.has(tab.id)) {
       const target = document.createElement("div");
-      target.className = "size-full min-h-0 min-w-0";
+      target.className = "workspace-island size-full min-h-0 min-w-0";
       target.dataset.dockPane = tab.id;
       targets.set(tab.id, target);
     }
@@ -278,6 +221,10 @@ export const PanelWorkspace = ({
       apiRef.current = null;
     };
   }, [api, scope, apiRef]);
+  useEffect(() => {
+    if (api && container.current)
+      return enhanceDockSplitters(container.current, api);
+  }, [api]);
   const signature = JSON.stringify(tabs.map((tab) => [tab.id, tab.title]));
   useEffect(() => {
     synchronize();
@@ -374,7 +321,6 @@ export const PanelWorkspace = ({
               className="size-full"
               theme={themeDark}
               components={components}
-              defaultTabComponent={Tab}
               disableFloatingGroups
               onReady={({ api: ready }) => setApi(ready)}
             />

@@ -11,10 +11,20 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
+import type { DockviewApi } from "dockview-react";
 import {
   ArrowLeft,
   ArrowRight,
   Ellipsis,
+  LayoutPanelLeft,
+  LayoutPanelTop,
+  Terminal,
+  Globe,
+  Folder,
+  GitCompare,
+  Bot,
+  FileText,
+  Brain,
   PanelLeft,
   PanelRight,
   Plus,
@@ -25,6 +35,7 @@ import {
   Fragment,
   useEffect,
   useRef,
+  useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -327,6 +338,7 @@ const PanelTabs = ({
   onAdd,
   onDragStart,
   onMove,
+  workspaceApi,
 }: {
   tabs: readonly PanelTab[];
   active: string | null;
@@ -338,10 +350,14 @@ const PanelTabs = ({
   onReorder(ids: string[]): void;
   onAdd(kind: PanelTabKind): void;
   onDragStart?(id: string, event: React.DragEvent): void;
+  workspaceApi?: React.RefObject<DockviewApi | null>;
   onMove?(id: string, position: "left" | "right" | "top" | "bottom"): void;
 }) => {
   const { t } = useTranslation();
   const motionPref = useMotionPreference();
+  const [moveGroups, setMoveGroups] = useState<{ id: string; title: string }[]>(
+    []
+  );
   const list = useRef<HTMLDivElement>(null);
   const restoreFocus = useRef(false);
   useEffect(() => {
@@ -465,7 +481,23 @@ const PanelTabs = ({
         </TabsList>
       </Tabs>
       {onMove && active ? (
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            if (open)
+              setMoveGroups(
+                workspaceApi?.current?.groups
+                  .filter(
+                    (group) =>
+                      group.id !==
+                      workspaceApi.current?.getPanel(active)?.group.id
+                  )
+                  .map((group) => ({
+                    id: group.id,
+                    title: group.activePanel?.title ?? group.id,
+                  })) ?? []
+              );
+          }}
+        >
           <DropdownMenuTrigger
             render={<BarButton label={t("sessions.dock.move")} />}
           >
@@ -477,7 +509,32 @@ const PanelTabs = ({
                 key={position}
                 onClick={() => onMove(active, position)}
               >
+                {position === "left" || position === "right" ? (
+                  <LayoutPanelLeft />
+                ) : (
+                  <LayoutPanelTop />
+                )}
                 {t(`sessions.dock.moveDirections.${position}`)}
+              </DropdownMenuItem>
+            ))}
+            {moveGroups.map((group) => (
+              <DropdownMenuItem
+                key={group.id}
+                onClick={() => {
+                  const api = workspaceApi?.current;
+                  const target = api?.groups.find(
+                    (pane) => pane.id === group.id
+                  );
+                  if (target)
+                    api
+                      ?.getPanel(active)
+                      ?.api.moveTo({ group: target, position: "center" });
+                }}
+              >
+                <LayoutPanelLeft />
+                <span className="min-w-0 truncate">
+                  {t("sessions.dock.movePane", { name: group.title })}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -491,10 +548,31 @@ const PanelTabs = ({
           >
             <Plus />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            collisionPadding={12}
+            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
+          >
             {kinds.map((kind) => (
               <DropdownMenuItem key={kind} onClick={() => onAdd(kind)}>
-                {t(`shell.panel.tabs.${kind}`)}
+                {kind === "browser" ? (
+                  <Globe />
+                ) : kind === "terminal" ? (
+                  <Terminal />
+                ) : kind === "files" ? (
+                  <Folder />
+                ) : kind === "changes" ? (
+                  <GitCompare />
+                ) : kind === "memory" ? (
+                  <Brain />
+                ) : kind === "agent" ? (
+                  <Bot />
+                ) : (
+                  <FileText />
+                )}
+                <span className="min-w-0 truncate">
+                  {t(`shell.panel.tabs.${kind}`)}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
