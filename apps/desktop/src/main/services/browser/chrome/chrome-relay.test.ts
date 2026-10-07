@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 import { WebSocket } from "ws";
 
-import { ChromeRelay } from "./chrome-relay";
+import {
+  BrowserTabs,
+  SESSION_TABS_KEPT_MS,
+  UNCLAIMED_TAB_GRACE_MS,
+} from "./browser-tabs";
+import { ChromeRelay, DETACH_TIMEOUT_MS } from "./chrome-relay";
 
 /** Plays the extension's background worker. */
 class FakeExtension {
@@ -16,6 +21,8 @@ class FakeExtension {
   nextTabId = 100;
   /** Refuse a method, as the extension does for anything not allow-listed. */
   refuse = new Set<string>();
+  /** Never answer a method, as a stuck extension would. */
+  ignore = new Set<string>();
 
   async connect(relayUrl: string): Promise<void> {
     this.ws = new WebSocket(relayUrl);
@@ -30,6 +37,7 @@ class FakeExtension {
         params: unknown[];
       };
       this.commands.push(message);
+      if (this.ignore.has(message.method)) return;
       if (this.refuse.has(message.method)) {
         this.send({
           id: message.id,
@@ -153,6 +161,36 @@ describe("the handshake", () => {
     expect(relay.attachedTabs().map((tab) => tab.id)).toEqual([7]);
   });
 
+  it("never lets go of the picked tab, even when the handshake ends before its attach lands", async () => {
+    const tabs = new BrowserTabs(relay, { page: () => null });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const ready = vi.fn();
+      relay.on("ready", ready);
+      const attached = vi.fn();
+      relay.on("tabAttached", attached);
+      await extension.connect(relayUrl());
+      // `allow` sends the tab and then `initialized` at once: `ready` fires
+      // while the relay is still waiting on the tab's attach.
+      extension.allow({ id: 7, url: "https://picked.test/" });
+      await vi.waitFor(() => expect(attached).toHaveBeenCalled());
+      expect(ready.mock.invocationCallOrder[0]).toBeLessThan(
+        attached.mock.invocationCallOrder[0]!
+      );
+
+      await vi.advanceTimersByTimeAsync(UNCLAIMED_TAB_GRACE_MS * 2);
+
+      expect(relay.isAttached(7)).toBe(true);
+      expect(relay.tab(7)?.preexisting).toBe(true);
+      expect(extension.commands.map((c) => c.method)).not.toContain(
+        "chrome.debugger.detach"
+      );
+      expect(tabs.ownerOf(7)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("gives up waiting after the timeout", async () => {
     await expect(relay.waitForConnection(50)).rejects.toThrow(
       /did not connect/
@@ -204,6 +242,54 @@ describe("driving tabs", () => {
   it("surfaces the extension's refusal as an error", async () => {
     extension.refuse.add("chrome.tabs.remove");
     await expect(relay.closeTab(7)).rejects.toThrow(/Unknown method/);
+  });
+
+  it("lets a tab go even when the extension never answers the detach, and says so once", async () => {
+    await vi.waitFor(() => expect(relay.isAttached(7)).toBe(true));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const detached = vi.fn();
+    relay.on("tabDetached", detached);
+    extension.ignore.add("chrome.debugger.detach");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const letGo = relay.detachTab(7);
+      await vi.advanceTimersByTimeAsync(DETACH_TIMEOUT_MS);
+      await letGo;
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      warn.mockRestore();
+    }
+
+    expect(relay.isAttached(7)).toBe(false);
+    expect(detached).toHaveBeenCalledWith(7);
+  });
+
+  it("lets a tab go even when the extension refuses the detach", async () => {
+    await vi.waitFor(() => expect(relay.isAttached(7)).toBe(true));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tabs = new BrowserTabs(relay, { page: () => null });
+    extension.refuse.add("chrome.debugger.detach");
+    // A tab a session opened, then let go when the session's hold ran out.
+    const made = await tabs.create("s1", "https://a.test/");
+    try {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      expect(tabs.ownerOf(made.id)).toBe("s1");
+      tabs.releaseSession("s1");
+      await vi.advanceTimersByTimeAsync(SESSION_TABS_KEPT_MS);
+      vi.useRealTimers();
+      await vi.waitFor(() => expect(relay.isAttached(made.id)).toBe(false));
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      warn.mockRestore();
+    }
+
+    expect(tabs.tabs("s1")).toEqual([]);
+    expect(tabs.ownerOf(made.id)).toBeNull();
+    expect(
+      extension.commands.filter((c) => c.method === "chrome.tabs.remove")
+    ).toEqual([]);
   });
 
   it("routes a tab's own CDP events by tab and drops child sessions'", async () => {

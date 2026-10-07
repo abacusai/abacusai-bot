@@ -66,7 +66,8 @@ export function buildAgentConfigEnv(
       "browser_navigate",
       "browser_snapshot",
       "browser_interact",
-      "browser_execute"
+      "browser_execute",
+      "browser_tabs"
     );
   if (excluded.length > 0) {
     envVars.ABACUSAI_BOT_EXCLUDED_TOOLS = excluded.join(",");

@@ -336,6 +336,7 @@
       "browser_interact",
       "browser_navigate",
       "browser_snapshot",
+      "browser_tabs",
       "browser_task",
       "code_map",
       "connect_connector",

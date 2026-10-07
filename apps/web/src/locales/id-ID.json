@@ -654,6 +654,7 @@
       "browser_interact": "Mengeklik, mengetik, menggulir, atau hover di halaman.",
       "browser_navigate": "Membuka URL di peramban bawaan.",
       "browser_snapshot": "Membaca halaman sebagai daftar elemen interaktif.",
+      "browser_tabs": "Menampilkan, berpindah, dan menutup tab browser.",
       "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
       "code_map": "Index the functions and classes in a file or folder.",
       "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",

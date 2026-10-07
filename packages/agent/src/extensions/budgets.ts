@@ -42,6 +42,7 @@ const RESAMPLES_LIVE_STATE = new Set([
   "browser_snapshot",
   "browser_execute",
   "browser_interact",
+  "browser_tabs",
   "read_output",
   "vision_analyze",
 ]);
