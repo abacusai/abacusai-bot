@@ -3962,7 +3962,17 @@
       "busyTitle": "We're at capacity right now",
       "busyBody": "AbacusAI Bot on the web is full at the moment. Get the free desktop app to keep going: it runs on your own computer, with no waiting.",
       "busyDownload": "Download the app",
-      "busyNote": "Free · open source · Mac, Windows and Linux"
+      "busyNote": "Free · open source · Mac, Windows and Linux",
+      "setupTitle": "Setting up your AbacusAI Bot",
+      "setupBody": "Your own private workspace. About a minute, only this once.",
+      "stepStarting": "Starting your workspace",
+      "stepInstalling": "Installing the bot",
+      "stepConnecting": "Connecting",
+      "waking": "Waking your bot",
+      "failedTitle": "Your bot didn't wake up",
+      "failedBody": "This is on our side. Trying again usually fixes it.",
+      "tryAgain": "Try again",
+      "desktopInstead": "Get the desktop app instead"
     },
     "files": {
       "open": "Open folder"
