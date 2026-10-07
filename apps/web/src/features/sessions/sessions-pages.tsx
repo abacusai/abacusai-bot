@@ -1,5 +1,4 @@
-import { Pencil } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
@@ -9,13 +8,7 @@ import { Input } from "#renderer/ui/input";
 import { useSession, useWorkspace } from "./data/queries";
 import { renameSession } from "./data/session-actions";
 
-export const SessionIdentity = ({
-  sessionId,
-  renderTitle,
-}: {
-  sessionId: string;
-  renderTitle(props: { title: string; context?: string }): ReactNode;
-}) => {
+export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
   const { t } = useTranslation();
   const db = useDb();
   const session = useSession(sessionId);
@@ -25,7 +18,10 @@ export const SessionIdentity = ({
   const [error, setError] = useState<string | null>(null);
   if (!session) return null;
   return (
-    <div className="flex max-w-full min-w-0 flex-1 items-center justify-center gap-1">
+    <div className="flex max-w-full min-w-0 flex-1 items-center gap-1">
+      <span className="text-muted-foreground hidden max-w-40 shrink-0 truncate xl:inline">
+        {workspace?.label} /
+      </span>
       {editing ? (
         <form
           onSubmit={(e) => {
@@ -49,26 +45,22 @@ export const SessionIdentity = ({
           />
         </form>
       ) : (
-        <>
-          {renderTitle({
-            title: session.label || t("sessions.untitled"),
-            context: workspace?.label,
-          })}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="titlebar-nodrag text-muted-foreground shrink-0"
-            title={session.label}
-            aria-label={t("sessions.sidebar.rename")}
-            onClick={() => {
-              setLabel(session.label);
-              setEditing(true);
-              setError(null);
-            }}
-          >
-            <Pencil className="size-3" />
-          </Button>
-        </>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-w-0 shrink justify-start overflow-hidden font-medium"
+          title={session.label}
+          aria-label={t("sessions.sidebar.rename")}
+          onClick={() => {
+            setLabel(session.label);
+            setEditing(true);
+            setError(null);
+          }}
+        >
+          <span className="truncate">
+            {session.label || t("sessions.untitled")}
+          </span>
+        </Button>
       )}
       {error ? <span role="alert">{error}</span> : null}
     </div>

@@ -23,12 +23,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 it("closes the editor before the write settles and keeps the old title on a refusal", async () => {
-  render(
-    <SessionIdentity
-      sessionId="s1"
-      renderTitle={({ title }) => <span>{title}</span>}
-    />
-  );
+  render(<SessionIdentity sessionId="s1" />);
   fireEvent.click(
     screen.getByRole("button", { name: "sessions.sidebar.rename" })
   );
@@ -42,9 +37,8 @@ it("closes the editor before the write settles and keeps the old title on a refu
   );
   await waitFor(() =>
     expect(
-      screen
-        .getByRole("button", { name: "sessions.sidebar.rename" })
-        .getAttribute("title")
+      screen.getByRole("button", { name: "sessions.sidebar.rename" })
+        .textContent
     ).toBe("Old title")
   );
 });

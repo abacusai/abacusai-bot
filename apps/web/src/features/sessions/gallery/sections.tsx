@@ -188,15 +188,7 @@ const View = ({ fixture }: { fixture: string }) => {
         <Button className="self-start">{t("sessions.agents.continue")}</Button>
       </div>
     );
-  if (row)
-    return (
-      <SessionIdentity
-        sessionId={row.id}
-        renderTitle={({ title }) => (
-          <span className="min-w-0 truncate">{title}</span>
-        )}
-      />
-    );
+  if (row) return <SessionIdentity sessionId={row.id} />;
   return <Spinner />;
 };
 export const isSessionsGalleryFixture = (id: string) =>

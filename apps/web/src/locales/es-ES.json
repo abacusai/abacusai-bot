@@ -2547,7 +2547,6 @@
         "navigation": "Navigation",
         "panels": "Panels and tabs"
       },
-      "open": "Open command palette for {{title}}",
       "newBot": "New bot",
       "newTerminal": "New terminal",
       "loading": "Loading sessions, bots and workspaces…",

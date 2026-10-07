@@ -14,6 +14,7 @@ import { Folder, Plus } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CommandPaletteAction } from "#renderer/components/command-palette-action";
 import { NavList } from "#renderer/components/nav-list";
 import { useDb } from "#renderer/data/db";
 import { useCollections } from "#renderer/data/db";
@@ -186,6 +187,7 @@ export const SessionsSidebar = () => {
     >
       <NavList.Root label={t("sessions.sidebar.label")}>
         <NavList.Header title={t("sessions.sidebar.label")}>
+          <CommandPaletteAction />
           <NavList.Action
             label={t("sessions.sidebar.new")}
             render={<AppLink to="/sessions/new" transition="nav-lateral" />}
