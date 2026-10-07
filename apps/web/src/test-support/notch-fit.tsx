@@ -232,7 +232,9 @@ window.__notchGeometryFit = async () => {
         );
         await new Promise((resolve) => setTimeout(resolve, 50));
         const surface = node.querySelector<HTMLElement>(".notch-shape")!;
-        const bounds = surface.getBoundingClientRect();
+        // The shell element spans the fixed envelope. Measure its unscaled
+        // content layout for the final painted bounds, then test the clip itself.
+        const bounds = surface.firstElementChild!.getBoundingClientRect();
         const label = node.querySelector<HTMLElement>(".notch-wing span")!;
         const wings = [
           ...node.querySelectorAll<HTMLElement>(".notch-wing"),
@@ -245,6 +247,8 @@ window.__notchGeometryFit = async () => {
           surface.contains(
             document.elementFromPoint(bounds.left + x, bounds.top + y)
           );
+        const shoulderPoint =
+          Math.min(12, bounds.width / 4, bounds.height / 3) * 0.8;
         rows.push({
           height,
           route,
@@ -267,7 +271,8 @@ window.__notchGeometryFit = async () => {
               (buttons[0]!.left + buttons.at(-1)!.right) / 2 -
                 (bounds.left + bounds.right) / 2
             ) < 1,
-          shoulder: inside(8, 0.1) && !inside(8, 8),
+          shoulder:
+            inside(shoulderPoint, 0.1) && !inside(shoulderPoint, shoulderPoint),
           bottomCurve:
             !inside(13, bounds.height - 1) &&
             inside(bounds.width / 2, bounds.height - 0.5),

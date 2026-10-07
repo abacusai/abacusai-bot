@@ -153,7 +153,11 @@ const mount = async () => {
   const transport = {
     client: {
       window: { ready: async () => {}, claimCue },
-      notch: { setShape: async () => {}, setInteractive: async () => {} },
+      notch: {
+        setShape: async () => {},
+        setInteractive: async () => {},
+        focus: async () => {},
+      },
       ai: { attention: async () => "attention" },
       routines: { events: async () => "routines" },
       connectors: { events: async () => "connectors" },

@@ -37,8 +37,6 @@ it("R6-T19 the production director bounds real relay subscriptions through chang
     retire,
     setShape: async () => {},
     navigate: async () => {},
-    settle: async () => {},
-    renderedSize: () => ({ width: 200, height: 32 }),
     audio: () => false,
     commit: () => {},
   });

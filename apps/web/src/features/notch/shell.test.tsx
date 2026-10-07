@@ -173,6 +173,7 @@ const mount = (kind = "started") => {
   };
 };
 it("pointer leave releases native click-through before the visual collapse delay", async () => {
+  f.inputs = { ...f.inputs, sessions: [] };
   const view = mount();
   await waitFor(() => expect(view.navigate).toHaveBeenCalled());
   fireEvent.pointerLeave(screen.getByRole("region"));
@@ -180,7 +181,7 @@ it("pointer leave releases native click-through before the visual collapse delay
     interactive: false,
   });
 });
-it("pointer re-entry restores native interaction during the collapse delay", async () => {
+it("reply remains interactive and mounted when the pointer leaves", async () => {
   const view = mount();
   fireEvent.click(await screen.findByRole("button", { name: "Launch reply" }));
   await screen.findByRole("textbox");
@@ -189,12 +190,11 @@ it("pointer re-entry restores native interaction during the collapse delay", asy
   try {
     fireEvent.pointerLeave(region);
     expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
-      interactive: false,
+      interactive: true,
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
-    fireEvent.pointerMove(region, { clientX: 0, clientY: 0 });
     expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
       interactive: true,
     });
@@ -410,4 +410,48 @@ it("accepted automatic reply acknowledges its run so unchanged notices cannot ex
     )
   );
   expect(view.notch.focus).toHaveBeenLastCalledWith({ focus: false });
+});
+
+it("approval keeps mouse interaction without taking typing focus", async () => {
+  const view = mount();
+  await waitFor(() => expect(view.navigate).toHaveBeenCalled());
+  fireEvent.pointerLeave(screen.getByRole("region"));
+  expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
+    interactive: true,
+  });
+  expect(view.notch.focus).not.toHaveBeenCalledWith({ focus: true });
+});
+it("the fixed surface stays the same size when a reply expands and closes", async () => {
+  f.inputs = { ...f.inputs, sessions: [] };
+  const view = mount();
+  const surface = screen.getByRole("region");
+  const size = [surface.style.width, surface.style.height];
+  act(() => f.receive({ type: "shortcut" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Launch reply" }));
+  await screen.findByRole("textbox");
+  expect([surface.style.width, surface.style.height]).toEqual(size);
+  fireEvent.keyDown(surface, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
+  expect(view.notch.focus).toHaveBeenLastCalledWith({ focus: false });
+  expect([surface.style.width, surface.style.height]).toEqual(size);
+});
+it("forwarded movement through transparent margins releases mouse routing", async () => {
+  f.inputs = { ...f.inputs, sessions: [] };
+  const view = mount();
+  await waitFor(() => expect(view.navigate).toHaveBeenCalled());
+  const shape = document.querySelector(".notch-shape")!;
+  const hit = vi.fn().mockReturnValue(shape);
+  Object.defineProperty(document, "elementFromPoint", {
+    configurable: true,
+    value: hit,
+  });
+  fireEvent.pointerMove(window, { clientX: 280, clientY: 10 });
+  expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
+    interactive: true,
+  });
+  hit.mockReturnValue(document.body);
+  fireEvent.pointerMove(window, { clientX: 10, clientY: 200 });
+  expect(view.notch.setInteractive).toHaveBeenLastCalledWith({
+    interactive: false,
+  });
 });

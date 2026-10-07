@@ -19,31 +19,31 @@ describe("R6-T23 canvas shadow geometry", () => {
       notchPlacement(display, null, { width: 296, height: 32 }).layout.mode
     ).toBe("capsule");
   });
-  it("keeps the bottom growth edge fixed for mixed shape changes", () => {
-    const a = capsulePlacement(display, { width: 500, height: 36 });
-    const b = capsulePlacement(display, { width: 440, height: 108 });
-    expect(a.bounds.y + a.bounds.height).toBe(b.bounds.y + b.bounds.height);
-    expect(b.layout.growth).toBe("up");
-  });
-  it.each(["top", "left", "right", "auto"])("places %s taskbars", (edge) => {
-    const workArea = { ...display.bounds };
-    if (edge === "top") {
-      workArea.y += 40;
-      workArea.height -= 40;
+  it.each(["top", "left", "right", "bottom", "auto"])(
+    "centers above %s taskbars",
+    (edge) => {
+      const workArea = { ...display.bounds };
+      if (edge === "top") {
+        workArea.y += 40;
+        workArea.height -= 40;
+      }
+      if (edge === "left") {
+        workArea.x += 40;
+        workArea.width -= 40;
+      }
+      if (edge === "right") workArea.width -= 40;
+      if (edge === "bottom") workArea.height -= 40;
+      const p = capsulePlacement(
+        { ...display, workArea },
+        { width: 296, height: 36 }
+      );
+      expect(p.layout.growth).toBe("down");
+      expect(p.bounds.x + p.bounds.width / 2 + (p.layout.offsetX ?? 0)).toBe(
+        -500
+      );
+      expect(p.bounds.y).toBe(edge === "top" ? -760 : -800);
     }
-    if (edge === "left") {
-      workArea.x += 40;
-      workArea.width -= 40;
-    }
-    if (edge === "right") workArea.width -= 40;
-    const p = capsulePlacement(
-      { ...display, workArea },
-      { width: 296, height: 36 }
-    );
-    expect(p.layout.growth).toBe(edge === "top" ? "down" : "up");
-    if (edge === "left") expect(p.bounds.x).toBe(workArea.x + 12);
-    if (edge === "auto") expect(p.bounds.y + p.bounds.height).toBe(-56);
-  });
+  );
 });
 
 it.each([1, 1.5, 2, 3])(
@@ -54,20 +54,20 @@ it.each([1, 1.5, 2, 3])(
     const collapsed = notchPlacement(d, notch, { width: 281, height: 32 });
     const expanded = notchPlacement(d, notch, { width: 445, height: 180 });
     expect(collapsed.bounds.y).toBe(d.bounds.y);
-    expect(collapsed.bounds.height).toBe(72);
+    expect(collapsed.bounds.height).toBe(252);
     for (const p of [collapsed, expanded]) {
-      expect(p.bounds.x + p.bounds.width / 2).toBe(
+      expect(p.bounds.x + p.bounds.width / 2 + (p.layout.offsetX ?? 0)).toBe(
         d.bounds.x + notch.x + notch.width / 2
       );
       expect(p.bounds.y).toBe(d.bounds.y);
     }
   }
 );
-it("floats below the menu bar without a hardware cutout", () => {
+it("attaches to the screen top without a hardware cutout", () => {
   const d = { ...display, workArea: { ...display.workArea, y: -766 } };
   const p = notchPlacement(d, null, { width: 296, height: 36 });
   expect(p.layout.mode).toBe("capsule");
-  expect(p.bounds.y).toBe(-758);
+  expect(p.bounds.y).toBe(-800);
 });
 it("ignores menu-bar auto-hide for hardware anchoring", () => {
   const notch = { x: 430, width: 185, height: 33 };
@@ -89,3 +89,12 @@ it("retains the half-point hardware center when the native width is even", () =>
   );
   expect(p.bounds.x + p.bounds.width / 2 + (p.layout.offsetX ?? 0)).toBe(855.5);
 });
+
+it.each([null, { x: 430, width: 185, height: 40 }])(
+  "keeps an identical envelope for compact and expanded shapes (%j)",
+  (notch) => {
+    expect(notchPlacement(display, notch, { width: 96, height: 36 })).toEqual(
+      notchPlacement(display, notch, { width: 560, height: 220 })
+    );
+  }
+);

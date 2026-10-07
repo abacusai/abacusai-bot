@@ -23,9 +23,9 @@ export interface Placement {
 export const notchPlacement = (
   display: DisplayGeometry,
   notch: NotchLayout["notch"],
-  requested: { width: number; height: number }
+  _requested: { width: number; height: number }
 ): Placement => {
-  const shape = clampShape(requested);
+  const shape = clampShape(MAX_SHAPE);
   const width = Math.max(shape.width, notch?.width ?? 0) + 48;
   const center =
     notch?.x === undefined
@@ -35,9 +35,7 @@ export const notchPlacement = (
   return {
     bounds: {
       x,
-      y: notch
-        ? display.bounds.y
-        : Math.max(display.bounds.y, display.workArea.y) + 8,
+      y: display.bounds.y,
       width,
       height: Math.max(shape.height, notch?.height ?? 0) + 32,
     },
@@ -51,32 +49,12 @@ export const notchPlacement = (
     },
   };
 };
+// Windows reserves a top taskbar, but side/bottom taskbars do not move the notch.
 export const capsulePlacement = (
   display: DisplayGeometry,
   requested: { width: number; height: number }
 ): Placement => {
-  const shape = clampShape(requested);
-  const b = display.bounds;
-  const w = display.workArea;
-  const top = w.y > b.y;
-  const left = w.x > b.x;
-  const autoHidden =
-    w.x === b.x && w.y === b.y && w.width === b.width && w.height === b.height;
-  const width = shape.width + 48;
-  const height = shape.height + 32;
-  return {
-    bounds: {
-      x: left ? w.x + 12 : w.x + w.width - width - 12,
-      y: top ? w.y + 8 : w.y + w.height - height - 8 - (autoHidden ? 48 : 0),
-      width,
-      height,
-    },
-    layout: {
-      displayId: display.id,
-      mode: "capsule",
-      notch: null,
-      growth: top ? "down" : "up",
-      maxShape: MAX_SHAPE,
-    },
-  };
+  const placement = notchPlacement(display, null, requested);
+  placement.bounds.y = Math.max(display.bounds.y, display.workArea.y);
+  return placement;
 };

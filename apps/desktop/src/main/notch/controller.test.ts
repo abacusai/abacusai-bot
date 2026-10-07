@@ -78,6 +78,7 @@ vi.mock("./window", async () => {
       close: vi.fn(function (this: any) {
         this.destroyed = true;
       }),
+      focus: vi.fn(),
       loadFile: async () => undefined,
       loadURL: async () => undefined,
     });
@@ -107,9 +108,9 @@ vi.mock("./window", async () => {
           return this.visible;
         },
         isFocused: () => false,
-        setBounds(value: any) {
+        setBounds: vi.fn(function (this: any, value: any) {
           this.bounds = value;
-        },
+        }),
         showInactive() {
           this.visible = true;
         },
@@ -128,6 +129,7 @@ vi.mock("./window", async () => {
         blur: vi.fn(),
       });
       const view = createNotchView();
+      view.setBounds(win.bounds);
       f.windows.push(win);
       return { win, view };
     },
@@ -251,14 +253,14 @@ describe("R6-T25/T28 controller lifecycle and ownership", () => {
     await flush();
     expect(f.views[1].visible).toBe(false);
     x.controller.setShape(2, { ...shape, width: 500 });
-    expect(f.windows[0].bounds.width).toBe(448);
+    expect(f.windows[0].bounds.width).toBe(608);
     expect(() => x.controller.visibility(2, true)).toThrow();
     expect(() => x.controller.focus(2, true)).toThrow();
     expect(x.controller.canPlay(2)).toBe(false);
     await x.ready(2);
     expect(f.views[0].webContents.close).toHaveBeenCalledOnce();
     expect(f.views[1].visible).toBe(true);
-    expect(f.windows[0].bounds.width).toBe(548);
+    expect(f.windows[0].bounds.width).toBe(608);
     expect(x.controller.seen(2)).toBe(false);
     x.controller.visibility(2, true);
     expect(x.controller.canPlay(2)).toBe(true);
@@ -364,3 +366,56 @@ it("reprobes a display event even when its dimensions and scale are unchanged", 
   expect(probe.mock.calls.length).toBeGreaterThan(count);
   probe.mockRestore();
 });
+
+it("keeps native bounds and view sizes fixed across presentations", async () => {
+  const x = await setup();
+  await x.ready(1);
+  const bounds = { ...f.windows[0].bounds };
+  const fitted = f.views[0].setBounds.mock.calls.length;
+  for (const [width, height] of [
+    [96, 36],
+    [560, 220],
+    [320, 180],
+    [96, 36],
+  ]) {
+    x.controller.setShape(1, { ...shape, width, height });
+  }
+  expect(f.windows[0].bounds).toEqual(bounds);
+  expect(f.windows[0].setBounds).not.toHaveBeenCalled();
+  expect(f.views[0].setBounds).toHaveBeenCalledTimes(fitted);
+  x.controller.focus(1, true);
+  expect(f.views[0].webContents.focus).toHaveBeenCalledOnce();
+});
+
+it.each(["darwin", "win32"])(
+  "follows extraDisplays on %s",
+  async (platform) => {
+    const primary = screen.getPrimaryDisplay();
+    const external = {
+      ...primary,
+      id: 2,
+      internal: false,
+      bounds: { x: -1920, y: -1080, width: 1920, height: 1080 },
+      workArea: { x: -1920, y: -1056, width: 1920, height: 1056 },
+    };
+    const spy = vi
+      .spyOn(screen, "getAllDisplays")
+      .mockReturnValue([primary, external]);
+    try {
+      const x = await setup({
+        platform,
+        prefs: () => ({
+          ...DEFAULT_PREFS,
+          notch: { ...DEFAULT_PREFS.notch, extraDisplays: true },
+        }),
+      });
+      expect(f.windows).toHaveLength(2);
+      const bounds = f.windows[1].bounds;
+      expect(bounds.x + bounds.width / 2).toBe(-960);
+      expect(bounds.y).toBe(platform === "darwin" ? -1080 : -1056);
+      expect(x.controller.layout(2).notch).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  }
+);

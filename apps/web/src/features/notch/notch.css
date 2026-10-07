@@ -1,8 +1,6 @@
 html.notch, html.notch body, html.notch #root { background: transparent !important; overflow: hidden; }
-.notch-shape { margin: 0 auto; color: var(--notch-fg, #f2f2f3); background: #000; /* hardware black, always */ border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 250ms cubic-bezier(.22,1,.36,1), height 250ms cubic-bezier(.22,1,.36,1); overflow: hidden; }
-.notch-shape[data-mode=capsule] { border-radius: 24px; }
-.notch-shape[data-reduced=true] { transition: none; }
-.notch-shape[data-mode=notch] { box-shadow: none; border-radius: 0; }
+.notch-surface { margin: 0 auto; pointer-events: none; }
+.notch-shape { pointer-events: auto; color: var(--notch-fg, #f2f2f3); background: #000; font-size: 12px; line-height: 16px; overflow: hidden; }
 .notch-wings { display: flex; justify-content: space-between; align-items: stretch; }
 .notch-wing { display: flex; align-items: center; gap: 6px; flex: 1 1 0; padding: 0 14px; min-width: 0; overflow: hidden; }
 

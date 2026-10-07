@@ -28,7 +28,7 @@ import {
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
-import { NotchDirector, shapeSettled } from "./director";
+import { NotchDirector } from "./director";
 import { notchDrafts as drafts } from "./drafts";
 import { NotchSurface, NotchHeader, NotchBody } from "./frame";
 import { followNotchEvents, useNotchInputs } from "./inputs";
@@ -146,6 +146,33 @@ export const NotchShell = ({
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
   );
+  const keepInteractive =
+    focused ||
+    (shown.expanded &&
+      ["/reply/$id", "/approval/$id", "/call"].includes(shown.route));
+  useEffect(() => {
+    let last: boolean | undefined;
+    const update = (event?: PointerEvent) => {
+      if (event) {
+        const hit = document.elementFromPoint(event.clientX, event.clientY);
+        pointerInside.current = !!hit?.closest(".notch-shape");
+      }
+      const interactive =
+        !shown.hidden && (pointerInside.current || keepInteractive);
+      if (last === interactive) return;
+      last = interactive;
+      void transport.client.notch
+        .setInteractive({ interactive })
+        .catch(() => undefined);
+    };
+    update();
+    window.addEventListener("pointermove", update);
+    return () => window.removeEventListener("pointermove", update);
+  }, [keepInteractive, shown.hidden, transport]);
+  useEffect(() => {
+    if (shown.expanded && !shown.hidden) return;
+    void transport.client.notch.focus({ focus: false }).catch(() => undefined);
+  }, [shown.expanded, shown.hidden, transport]);
   const current = useRef({ reduced, navigate, inputs, shown, layout });
   useEffect(() => {
     current.current = { reduced, navigate, inputs, shown, layout };
@@ -169,20 +196,6 @@ export const NotchShell = ({
       setShape: (s, signal) => transport.client.notch.setShape(s, { signal }),
       navigate: (p) => current.current.navigate(p),
       audio: () => audio.current,
-      renderedSize: () => {
-        const rect = node.current?.getBoundingClientRect();
-        return { width: rect?.width ?? 0, height: rect?.height ?? 0 };
-      },
-      settle: (from, to, signal) =>
-        node.current
-          ? shapeSettled(
-              node.current,
-              from,
-              to,
-              current.current.reduced,
-              signal
-            )
-          : Promise.resolve(),
       commit: (p, s) => {
         setShown(p);
         setShape(s);
@@ -520,6 +533,7 @@ export const NotchShell = ({
               aria-live="off"
               style={{ visibility: shown.hidden ? "hidden" : "visible" }}
               onPointerMove={(event) => {
+                if (event.pointerType && event.pointerType !== "mouse") return;
                 const rect = event.currentTarget.getBoundingClientRect();
                 const inside =
                   event.clientX >= rect.left &&
@@ -546,15 +560,30 @@ export const NotchShell = ({
                 clearTimeout(hoverTimer.current);
                 hoverTimer.current = undefined;
                 clearTimeout(leaveTimer.current);
+                if (keepInteractive) return;
                 void transport.client.notch.setInteractive({
                   interactive: false,
                 });
                 leaveTimer.current = setTimeout(() => {
                   setHovered(false);
-                  if (manual?.route !== "/call") setManual(null);
+                  setManual(null);
                 }, 300);
               }}
-              onPointerDown={() => {
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                setManual(null);
+                setHovered(false);
+                setFocused(false);
+                director.current?.lock(false);
+                void transport.client.notch.focus({ focus: false });
+              }}
+              onPointerDown={(event) => {
+                if (
+                  (event.target as HTMLElement).closest(
+                    "input, textarea, [contenteditable=true]"
+                  )
+                )
+                  void transport.client.notch.focus({ focus: true });
                 player.current?.unlock();
                 queueMicrotask(() => {
                   const value = player.current?.unlocked() ?? false;
