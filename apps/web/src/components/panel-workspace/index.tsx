@@ -118,10 +118,18 @@ export const PanelWorkspace = ({
   const [targets] = useState(() => new Map<string, HTMLDivElement>());
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [visible, setVisible] = useState<string[]>([]);
+  const [minimum, setMinimum] = useState({ width: 0, height: 0 });
   const publishLayout = useEffectEvent((dock: DockviewApi) => {
     setVisible((previous) => retainVisible(previous, visiblePanels(dock)));
+    setMinimum((previous) =>
+      previous.width === dock.minimumWidth &&
+      previous.height === dock.minimumHeight
+        ? previous
+        : { width: dock.minimumWidth, height: dock.minimumHeight }
+    );
   });
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
+  const [height, setHeight] = useState(Number.POSITIVE_INFINITY);
   const container = useRef<HTMLDivElement>(null);
   const sidePanel = usePanelRef();
   const prefKey = `panel.${scope}`;
@@ -132,7 +140,11 @@ export const PanelWorkspace = ({
   writers.set(prefKey, writer);
   const resized = useRef<number | null>(null);
   const save = useEffectEvent((value: SerializedDockview) => {
-    if (expanded && width >= SPLIT_MIN_PX) {
+    if (
+      expanded &&
+      width >= Math.max(SPLIT_MIN_PX, minimum.width) &&
+      height >= minimum.height
+    ) {
       try {
         localStorage.setItem(LAYOUT_PREFIX + scope, JSON.stringify(value));
       } catch {
@@ -152,8 +164,10 @@ export const PanelWorkspace = ({
     const element = container.current;
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry && entry.contentRect.width > 0)
+      if (entry && entry.contentRect.width > 0) {
         setWidth(entry.contentRect.width);
+        setHeight(entry.contentRect.height);
+      }
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -248,7 +262,10 @@ export const PanelWorkspace = ({
   useEffect(() => {
     if (expanded && active) api?.getPanel(active)?.api.setActive();
   }, [api, active, expanded]);
-  const docked = expanded && width >= SPLIT_MIN_PX;
+  const docked =
+    expanded &&
+    width >= Math.max(SPLIT_MIN_PX, minimum.width) &&
+    height >= minimum.height;
   const showTool = open && active != null && active !== "chat";
   const split = showTool && !expanded && width >= SPLIT_MIN_PX;
   const folded = showTool && !split && !docked;

@@ -144,3 +144,78 @@ it("restores split layout for the session on remount, with an unclosable Chat ta
   expect(apiRef.current!.getPanel("files")!.minimumWidth).toBe(280);
   second.unmount();
 });
+
+it("folds a three-column dock below its native minimum and restores every pane", async () => {
+  const Original = globalThis.ResizeObserver;
+  let resize: (width: number) => void = () => {};
+  globalThis.ResizeObserver = class extends Original {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      this.callback = callback;
+    }
+    callback: ResizeObserverCallback;
+    override observe(target: Element, options?: ResizeObserverOptions) {
+      super.observe(target, options);
+      if ((target as HTMLElement).dataset.slot === "panel-workspace")
+        resize = (width) =>
+          this.callback(
+            [
+              {
+                target,
+                contentRect: { width, height: 800 },
+              } as ResizeObserverEntry,
+            ],
+            this
+          );
+    }
+  };
+  const apiRef: { current: DockviewApi | null } = { current: null };
+  const view = render(
+    <PanelWorkspace
+      scope="three-columns"
+      expanded
+      open
+      active="files"
+      apiRef={apiRef}
+      onSelect={() => {}}
+      tabs={[
+        { id: "chat", title: "Chat", content: () => <Counter /> },
+        { id: "files", title: "Files", content: () => <div>Files</div> },
+        {
+          id: "terminal",
+          title: "Terminal",
+          content: () => <div>Terminal</div>,
+        },
+      ]}
+    />
+  );
+  try {
+    await waitFor(() => expect(apiRef.current?.panels).toHaveLength(3));
+    act(() => {
+      resize(1280);
+      moveDockTab(apiRef.current, "chat", "left");
+      moveDockTab(apiRef.current, "terminal", "right");
+    });
+    await waitFor(() => expect(apiRef.current?.groups).toHaveLength(3));
+    fireEvent.click(screen.getByRole("button", { name: "Draft 0" }));
+    const layout = localStorage.getItem(
+      "abacusai-bot:dock-layout:v1:three-columns"
+    );
+    act(() => resize(800));
+    await waitFor(() =>
+      expect(document.querySelector("[data-workspace-expanded]")).toBeNull()
+    );
+    expect(
+      localStorage.getItem("abacusai-bot:dock-layout:v1:three-columns")
+    ).toBe(layout);
+    act(() => resize(1280));
+    await waitFor(() =>
+      expect(document.querySelector("[data-workspace-expanded]")).not.toBeNull()
+    );
+    expect(apiRef.current?.groups).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Draft 1" })).toBeTruthy();
+  } finally {
+    view.unmount();
+    globalThis.ResizeObserver = Original;
+  }
+});
