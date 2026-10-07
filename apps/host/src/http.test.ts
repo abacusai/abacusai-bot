@@ -506,11 +506,18 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       token: /name="token" value="([^"]+)"/.exec(html)?.[1] ?? "",
     };
   };
+  // A confirmed POST answers with a same-origin page that goes on to the provider.
+  const providerUrl = async (response: Response) => {
+    const html = await response.text();
+    const href = /content="0;url=([^"]+)"/.exec(html)?.[1] ?? "";
+    expect(html).toContain(`<a href="${href}"`);
+    return new URL(href.replaceAll("&amp;", "&"));
+  };
   const stateOf = async (path: string) => {
     const { token } = await confirm(path);
-    return new URL(
-      (await post(path, token)).headers.get("location")!
-    ).searchParams.get("state")!;
+    return (await providerUrl(await post(path, token))).searchParams.get(
+      "state"
+    )!;
   };
   try {
     // The chat link and the click open the same route.
@@ -601,13 +608,14 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     ).toBe(403);
     expect(add).not.toHaveBeenCalled();
 
-    // The happy path: the POST installs and redirects, once.
+    // The happy path: the POST installs and goes on to the provider, once.
     const started = await post("/mcp/connect/notion", token);
-    expect(started.status).toBe(302);
+    expect(started.status).toBe(200);
+    expect(started.headers.get("location")).toBeNull();
     expect(add).toHaveBeenCalledExactlyOnceWith("notion", { url: serverUrl });
     expect(watch).toHaveBeenCalledWith("notion");
     expect((await post("/mcp/connect/notion", token)).status).toBe(403);
-    const authorize = new URL(started.headers.get("location")!);
+    const authorize = await providerUrl(started);
     expect(authorize.origin + authorize.pathname).toBe(
       "https://auth.provider.test/authorize"
     );
@@ -758,7 +766,7 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     // Started and never finished: the timeout answers.
     expect(await raw((sent) => sent.write("token="))).toBe(408);
     // Neither spent the token.
-    expect((await post("/mcp/connect/notion", big.token)).status).toBe(302);
+    expect((await post("/mcp/connect/notion", big.token)).status).toBe(200);
 
     // No sign-in: installed on the POST, then the connected page.
     const hf = await confirm("/mcp/connect/huggingface");

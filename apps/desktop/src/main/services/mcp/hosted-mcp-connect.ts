@@ -274,7 +274,7 @@ export class HostedMcpConnect {
       const result = await this.options.connect(name);
       switch (result.kind) {
         case "sign-in":
-          return { kind: "redirect", location: result.location };
+          return continuePage(label, result.location);
         case "connected":
           return connectedPage(result.label);
         case "failed":
@@ -371,6 +371,22 @@ const page = (status: 200 | 400 | 403, body: string): HostedResponse => ({
 <body style="font-family:system-ui;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box;background:#fff;color:#111">
 <div style="text-align:center">${body}</div>`,
 });
+
+/**
+ * Where a confirmed connect goes on to the provider. A page, not a redirect:
+ * the proxy limits form posts to this origin, and that limit covers a POST's
+ * redirects too.
+ */
+const continuePage = (label: string, location: string): HostedResponse => {
+  const url = URL.canParse(location) ? new URL(location) : null;
+  if (url == null || (url.protocol !== "https:" && url.protocol !== "http:"))
+    return failedPage(label);
+  const href = escapeHtml(url.href);
+  return page(
+    200,
+    `<meta http-equiv="refresh" content="0;url=${href}"><h2>Opening ${escapeHtml(label)}…</h2><p><a href="${href}" style="color:inherit">Continue to ${escapeHtml(label)}</a></p>`
+  );
+};
 
 const connectedPage = (label: string): HostedResponse =>
   page(
