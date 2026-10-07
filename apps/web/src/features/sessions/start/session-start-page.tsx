@@ -134,6 +134,7 @@ export const SessionStartPage = ({
       <div className="phone:gap-5 flex w-full max-w-(--composer-max-w) flex-col gap-6">
         <div className="flex justify-center">
           <BotAvatar
+            animate
             look={defaultLook("AbacusAI")}
             expression="curious"
             size={48}
