@@ -1221,6 +1221,52 @@ describe("what a vault fill guards", () => {
     ).toBe(false);
   });
 
+  it("holds the queue for a call's full time from when it starts, not from when it was queued", async () => {
+    vi.useFakeTimers();
+    try {
+      const { McpBrowserServer } = await import("./mcp-browser-server");
+      // A call may run 1 s; a stuck one holds the queue 1 s + 5 s from its start.
+      const queue = new McpBrowserServer({
+        timeouts: { callMs: 1_000 },
+      }) as unknown as {
+        inSessionOrder: <T>(key: string, work: () => Promise<T>) => Promise<T>;
+      };
+      const started: Record<string, number> = {};
+      let releaseFirst!: () => void;
+      void queue.inSessionOrder(
+        "s",
+        () =>
+          new Promise<void>((resolve) => {
+            started.first = Date.now();
+            releaseFirst = resolve;
+          })
+      );
+      // Queued now; it starts only when the first settles, and never settles itself.
+      void queue.inSessionOrder("s", () => {
+        started.second = Date.now();
+        return new Promise<void>(() => {});
+      });
+      const t0 = Date.now();
+
+      await vi.advanceTimersByTimeAsync(4_000);
+      releaseFirst();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(started.second! - t0).toBe(4_000);
+      void queue.inSessionOrder("s", async () => {
+        started.third = Date.now();
+      });
+
+      // 6 s after the second was queued, but not after it started: still held.
+      await vi.advanceTimersByTimeAsync(5_500);
+      expect(started.third).toBeUndefined();
+      // 6 s after it started: the queue moves on.
+      await vi.advanceTimersByTimeAsync(600);
+      expect(started.third! - t0).toBe(10_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps a script on another tab of the session waiting until a fill is done", async () => {
     await snapshot();
     otherTab = makeTab(8, "other");

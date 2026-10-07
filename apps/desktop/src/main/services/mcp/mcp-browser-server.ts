@@ -2560,7 +2560,11 @@ export class McpBrowserServer extends McpHttpServer {
   /** Each session's browser calls, in arrival order: the last one's settling, which the next waits for. */
   private readonly sessionQueues = new Map<string, Promise<void>>();
 
-  /** How much longer than a call may run a stuck call holds its session's queue. */
+  /**
+   * How much longer than a call may run a stuck call holds its session's
+   * queue, from its start: long enough for the calls that arrived behind it
+   * within this time to time out first.
+   */
   private static readonly QUEUE_GRACE_MS = 5_000;
 
   private callTimeout(): number {
@@ -2570,32 +2574,44 @@ export class McpBrowserServer extends McpHttpServer {
   /**
    * Runs `work` once every call the session made before it has settled. By
    * session, not by tab: a call resolves its tab when it runs, so a tab
-   * switch cannot put two of the session's calls on its tabs at once. A
-   * call that never settles holds the queue a little longer than a call may
-   * run, so the calls waiting behind it time out and never start.
+   * switch cannot put two of the session's calls on its tabs at once. A call
+   * that never settles holds the queue for a call's timeout plus a grace,
+   * counted from when it starts; the calls that arrived behind it within the
+   * grace of its start time out first, are cancelled and never start.
    */
   private async inSessionOrder<T>(
     key: string,
     work: () => Promise<T>
   ): Promise<T> {
     const before = this.sessionQueues.get(key) ?? Promise.resolve();
-    const mine = before.then(work);
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const mine = before.then(() => {
+      started();
+      return work();
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const settled = Promise.race([
-      mine.then(
-        () => undefined,
-        () => undefined
-      ),
-      new Promise<void>((resolve) => {
-        // Longer than a waiting caller's own timeout, so that caller gives up
-        // (and its call is cancelled) before a stuck call lets the queue go.
-        timer = setTimeout(
-          resolve,
-          this.callTimeout() + McpBrowserServer.QUEUE_GRACE_MS
-        );
-        timer.unref?.();
-      }),
-    ]).finally(() => clearTimeout(timer));
+    // The hold runs from the work's start, not its arrival: a call that
+    // waited in the queue still gets its full time once it runs.
+    const settled = start
+      .then(() =>
+        Promise.race([
+          mine.then(
+            () => undefined,
+            () => undefined
+          ),
+          new Promise<void>((resolve) => {
+            timer = setTimeout(
+              resolve,
+              this.callTimeout() + McpBrowserServer.QUEUE_GRACE_MS
+            );
+            timer.unref?.();
+          }),
+        ])
+      )
+      .finally(() => clearTimeout(timer));
     this.sessionQueues.set(key, settled);
     try {
       return await mine;
