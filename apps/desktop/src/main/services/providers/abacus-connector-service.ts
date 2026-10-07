@@ -318,7 +318,11 @@ export const createConnectLink = async (
     service: bundled ? "google" : serviceKey,
   });
   const request = minted.ok
-    ? (minted.result as { requestId?: unknown; services?: unknown } | null)
+    ? (minted.result as {
+        requestId?: unknown;
+        services?: unknown;
+        url?: unknown;
+      } | null)
     : null;
   const url = new URL(CONNECT_PATH, abacusAppHost());
   if (
@@ -329,7 +333,12 @@ export const createConnectLink = async (
     url.searchParams.set("r", request.requestId);
     url.searchParams.set("autostart", "1");
     return {
-      url: url.toString(),
+      // The server's own link when it gives one: a page whose preview card
+      // names the service, on its way to the same connect page.
+      url:
+        typeof request.url === "string" && request.url.startsWith("https://")
+          ? request.url
+          : url.toString(),
       services: request.services.filter(
         (item): item is string => typeof item === "string"
       ),
