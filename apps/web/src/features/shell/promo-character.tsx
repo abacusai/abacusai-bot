@@ -54,12 +54,16 @@ export const PromoCharacter = ({
         "botId" in match.params ? [match.params.botId] : []
       )[0] ?? "",
   });
-  const { data } = useLiveQuery(
-    (q) =>
-      q.from({ bot: collections.bots }).where(({ bot }) => eq(bot.id, botId)),
-    [botId]
-  );
-  const bot = data?.[0];
+  const { data } = useLiveQuery({
+    query: (q) =>
+      botId
+        ? q
+            .from({ bot: collections.bots })
+            .where(({ bot }) => eq(bot.id, botId))
+            .findOne()
+        : undefined,
+  });
+  const bot = data;
   const [gesture, setGesture] = useState<"welcome" | "idle" | null>("welcome");
   useEffect(() => {
     if (reduced) return;
