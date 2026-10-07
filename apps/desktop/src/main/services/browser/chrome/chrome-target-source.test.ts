@@ -4,6 +4,9 @@
  * stop being offered.
  */
 import { EventEmitter } from "node:events";
+import os from "node:os";
+import path from "node:path";
+import { PassThrough } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -117,5 +120,119 @@ describe("ChromeTargetSource", () => {
     const { relay, source } = setup();
     relay.connected = false;
     expect(await source.materialize("s1", "https://x.test/")).toBeNull();
+  });
+});
+
+describe("the hosted computer's own Chromium", () => {
+  /** A Chromium on the CDP pipe: answers what the driver asks, raises what a tab does. */
+  const fakeChromium = () => {
+    const toBrowser = new PassThrough();
+    const fromBrowser = new PassThrough();
+    const child = Object.assign(new EventEmitter(), {
+      stdio: [null, null, null, toBrowser, fromBrowser],
+      kill: vi.fn(),
+    });
+    const sent: Array<{ method: string; sessionId?: string }> = [];
+    const raise = (message: Record<string, unknown>) =>
+      fromBrowser.write(`${JSON.stringify(message)}\0`);
+    let buffer = "";
+    toBrowser.setEncoding("utf8");
+    toBrowser.on("data", (chunk: string) => {
+      buffer += chunk;
+      for (
+        let end = buffer.indexOf("\0");
+        end !== -1;
+        end = buffer.indexOf("\0")
+      ) {
+        const message = JSON.parse(buffer.slice(0, end));
+        buffer = buffer.slice(end + 1);
+        sent.push(message);
+        const result =
+          message.method === "Target.createTarget"
+            ? { targetId: "T1" }
+            : message.method === "Target.attachToTarget"
+              ? { sessionId: "S1" }
+              : {};
+        raise({ id: message.id, result });
+      }
+    });
+    return {
+      child,
+      sent,
+      raise,
+      spawn: vi.fn((_command: string, _args: string[]) => child),
+    };
+  };
+
+  it("launches headless without a sandbox, gives each session a tab, and drops it when it closes", async () => {
+    const { CdpBrowser, hostedChromiumArgs } =
+      await import("./hosted-chromium");
+    const chromium = fakeChromium();
+    const browser = new CdpBrowser({
+      executable: "/opt/chromium/chrome",
+      userDataDir: os.tmpdir(),
+      spawn: chromium.spawn as never,
+    });
+    const source = new ChromeTargetSource(browser);
+    await browser.launch();
+
+    expect(chromium.spawn.mock.calls[0]?.[1]).toEqual(
+      hostedChromiumArgs(os.tmpdir())
+    );
+    expect(hostedChromiumArgs("/p")).toEqual(
+      expect.arrayContaining([
+        "--no-sandbox",
+        "--headless=new",
+        "--user-data-dir=/p",
+      ])
+    );
+    const id = await source.materialize("session-1", "https://example.test/");
+    expect(id).not.toBeNull();
+    expect(source.candidates()).toEqual([
+      expect.objectContaining({ id, sessionId: "session-1" }),
+    ]);
+    // Commands for the tab go on its session; its events come back as the tab's.
+    expect(chromium.sent).toContainEqual(
+      expect.objectContaining({ method: "Page.enable", sessionId: "S1" })
+    );
+    const page = source.webContents(id!)!;
+    chromium.raise({
+      method: "Page.frameNavigated",
+      sessionId: "S1",
+      params: { frame: { id: "F", url: "https://example.test/next" } },
+    });
+    await vi.waitFor(() =>
+      expect(page.getURL()).toBe("https://example.test/next")
+    );
+
+    chromium.raise({
+      method: "Target.targetDestroyed",
+      params: { targetId: "T1" },
+    });
+    await vi.waitFor(() => expect(source.candidates()).toEqual([]));
+    expect(page.isDestroyed()).toBe(true);
+
+    chromium.child.emit("exit", 0);
+    expect(browser.connected).toBe(false);
+  });
+
+  it("finds Playwright's Chromium in its cache, the full browser ahead of the shell", async () => {
+    const { chromiumInCache } = await import("./hosted-chromium");
+    const { mkdirSync, mkdtempSync, writeFileSync } = await import("node:fs");
+    const root = mkdtempSync(path.join(os.tmpdir(), "ms-playwright-"));
+    const touch = (relative: string) => {
+      mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
+      writeFileSync(path.join(root, relative), "");
+    };
+    expect(chromiumInCache([root])).toBeNull();
+    touch(
+      "chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell"
+    );
+    expect(chromiumInCache([root])).toContain("chrome-headless-shell");
+    touch("chromium-1200/chrome-linux64/chrome");
+    touch("chromium-1243/chrome-linux64/chrome");
+    expect(chromiumInCache([root])).toBe(
+      path.join(root, "chromium-1243/chrome-linux64/chrome")
+    );
   });
 });

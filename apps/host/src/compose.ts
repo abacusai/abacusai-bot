@@ -91,6 +91,8 @@ export const composeNodeHost = async () => {
     () => resolveAbacusApiKey() != null,
     host.adoptAbacusCredential
   );
+  // The built-in browser is the computer's own Chromium: found now, launched on first use.
+  void serviceHost.prepareHostedBrowser();
   if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
     serviceHost.startBackgroundSync();
   const tables = createTables({

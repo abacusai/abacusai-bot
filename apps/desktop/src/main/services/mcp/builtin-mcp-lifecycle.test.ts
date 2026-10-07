@@ -82,3 +82,72 @@ describe("turning the browser off", () => {
     expect(body.result.content[0]?.text).toContain("denied");
   });
 });
+
+describe("the built-in browser on every platform", () => {
+  const lifecycleFor = async (
+    platform: "electron" | "web-host",
+    chromium: boolean,
+    disabledByUser = false
+  ) => {
+    const { BuiltinMcpLifecycle } = await import("./builtin-mcp-lifecycle");
+    const written: Array<Record<string, unknown>> = [];
+    const ready = vi.fn(async () => chromium);
+    const lifecycle = new BuiltinMcpLifecycle({
+      platform: () => platform,
+      hostedBrowser: { ready, available: () => chromium },
+      mcpConfigService: {
+        isBuiltinBrowserDisabled: () => disabledByUser,
+        isBuiltinDevicesDisabled: () => true,
+        readState: () => ({}),
+        writeRuntimeMcp: (_mode: string, builtins: Record<string, unknown>) => {
+          written.push(builtins);
+          return "/tmp/runtime-mcp.json";
+        },
+      },
+      browserServer: {
+        isRunning: () => true,
+        start: async () => 4100,
+        getPort: () => 4100,
+      },
+      chromeBrowser: { status: () => ({}) },
+      deviceServer: {},
+      agentToolsServer: { hasEnabledTools: () => false },
+      emitEvent: () => {},
+      flushPermissions: () => {},
+    } as never);
+    return { lifecycle, written, ready };
+  };
+
+  it("web-host always has it when the computer has a Chromium, whatever the setting", async () => {
+    const { lifecycle, written, ready } = await lifecycleFor(
+      "web-host",
+      true,
+      true
+    );
+
+    await lifecycle.getRuntimeMcpPathForSpawn("code", "s1");
+
+    expect(ready).toHaveBeenCalled();
+    expect(lifecycle.isBrowserEnabled()).toBe(true);
+    expect(Object.keys(written[0] ?? {})).toEqual(["browser"]);
+  });
+
+  it("web-host without a Chromium runs on, browserless", async () => {
+    const { lifecycle, written } = await lifecycleFor("web-host", false);
+
+    await lifecycle.getRuntimeMcpPathForSpawn("code", "s1");
+
+    expect(lifecycle.isBrowserEnabled()).toBe(false);
+    expect(written[0]).toEqual({});
+  });
+
+  it("the desktop keeps its own view and the user's switch", async () => {
+    const on = await lifecycleFor("electron", false);
+    await on.lifecycle.getRuntimeMcpPathForSpawn("code", "s1");
+    expect(on.ready).not.toHaveBeenCalled();
+    expect(Object.keys(on.written[0] ?? {})).toEqual(["browser"]);
+
+    const off = await lifecycleFor("electron", true, true);
+    expect(off.lifecycle.isBrowserEnabled()).toBe(false);
+  });
+});

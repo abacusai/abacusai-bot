@@ -26,6 +26,8 @@ import type { McpDeviceServer } from "./mcp-device-server";
 
 type BuiltinMcpLifecycleDeps = {
   platform?: () => HostPlatform;
+  /** Web-host's browser: always on when the computer has a Chromium. */
+  hostedBrowser?: { ready: () => Promise<boolean>; available: () => boolean };
   mcpConfigService: McpConfigService;
   browserServer: McpBrowserServer;
   chromeBrowser: ChromeBrowserService;
@@ -46,7 +48,9 @@ export class BuiltinMcpLifecycle {
   }
 
   isBrowserEnabled(): boolean {
-    return this.deps.platform?.() !== "web-host" && this.browserEnabled;
+    if (this.deps.platform?.() === "web-host")
+      return this.deps.hostedBrowser?.available() === true;
+    return this.browserEnabled;
   }
 
   getBrowserStatus(): McpBrowserStatus {
@@ -150,6 +154,8 @@ export class BuiltinMcpLifecycle {
         ? `${url}?session=${encodeURIComponent(sessionId)}`
         : url;
     const builtins: Record<string, { url: string }> = {};
+    if (this.deps.platform?.() === "web-host")
+      await this.deps.hostedBrowser?.ready();
     if (mode === "code" && this.isBrowserEnabled()) {
       await this.startBrowserServer();
       const port = this.deps.browserServer.getPort();

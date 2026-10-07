@@ -290,6 +290,7 @@ import { effectiveBotModel } from "./services/bots/effective-model";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
+import { HostedChromiumService } from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import {
   buildAgentAuthEnv,
@@ -692,7 +693,10 @@ export class ServiceHost {
 
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
-    if (this.platform === "web-host") return null;
+    if (this.platform === "web-host")
+      return this.hostedChromium.available()
+        ? this.hostedChromium.targetSource()
+        : null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
     // and the first browser call opens the allow page if it is not connected.
     if (this.builtinMcpLifecycle.getBrowserEngine() === "chrome")
@@ -888,8 +892,13 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       }),
   });
+  /** The hosted computer's own Chromium: web-host's built-in browser. */
+  private readonly hostedChromium = new HostedChromiumService({
+    userDataDir: () => path.join(abacusBotHome(), "browser-profile"),
+  });
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
     platform: () => this.platform,
+    hostedBrowser: this.hostedChromium,
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
     chromeBrowser: this.chromeBrowser,
@@ -1945,6 +1954,9 @@ export class ServiceHost {
     }
 
     this.initializedAt = new Date().toISOString();
+    // The browser is built in: the connector entry the app once wrote would run twice.
+    if (this.mcpConfigService.removeRetiredBrowserServer("code"))
+      console.log("[mcp] removed the retired playwright connector entry");
     this.workspaceService.initialize();
     const workspaceIds = this.workspaceService.getWorkspaces().map((w) => w.id);
     this.agentSessionManagerService.initialize(workspaceIds);
@@ -2012,6 +2024,7 @@ export class ServiceHost {
     this.connectWatcher.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
+    this.hostedChromium.dispose();
     this.mcpDeviceServer.stop();
     this.mcpAgentToolsServer.stop();
     this.deviceMirrorService.dispose();
@@ -4563,6 +4576,11 @@ export class ServiceHost {
     );
     this.laneEnv.set(session.id, env);
     return { workspaceId: session.workspaceId, sessionId: session.id };
+  }
+
+  /** Web-host: finds the computer's Chromium so the first session has a browser. */
+  prepareHostedBrowser(): Promise<boolean> {
+    return this.hostedChromium.ready();
   }
 
   /** Every session's agent events, past the post-Stop filter. */

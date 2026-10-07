@@ -107,7 +107,8 @@ const BROWSER_SYSTEM_PROMPT = [
   "- Three failed tries at one element means the approach is wrong: screenshot, read where",
   "  you actually are, and change approach.",
   "- Never enter passwords, card numbers or ID details, complete a payment or booking, or",
-  "  solve a CAPTCHA. When you reach a step only the user can do, stop there, leave the page",
+  "  solve a CAPTCHA. A purchase or booking goes as far as the payment step and no further.",
+  "  When you reach a step only the user can do, stop there, leave the page",
   '  as it is, and end your report with a line starting "NEEDS USER:" that says exactly what',
   '  they should do in the browser ("sign in to LinkedIn", "enter the card details and press',
   '  Pay"). You will be resumed on the same page once they have done it. Write that line',
@@ -120,6 +121,18 @@ const BROWSER_SYSTEM_PROMPT = [
   "not do and why. An honest partial answer beats a confident guess.",
 ].join("\n");
 
+/** For a run that can reach the user mid-task (the phone's `send_progress`). */
+const PROGRESS_PROMPT = [
+  "",
+  "You can message the user while you work with `send_progress`: a short line at each real",
+  "milestone and an early finding as soon as you have one, never more than about 90 seconds",
+  "apart, in the language the task names. A message from the user mid-run arrives marked",
+  "[user mid-task]: answer a question with `send_progress`, and fold a change into the task.",
+].join("\n");
+
+/** How a message the user sends mid-run reaches the sub-agent. */
+const userMidTask = (text: string): string => `[user mid-task] ${text}`;
+
 export interface BrowserTaskContext {
   cwd: string;
   agentDir: string;
@@ -128,6 +141,28 @@ export interface BrowserTaskContext {
   model?: unknown;
   /** The browser MCP tools, read at run time so a reconnected server is seen. */
   browserTools: () => unknown[];
+  /** Tools that reach the user mid-run; with them, the user's messages reach the run too. */
+  progressTools?: () => unknown[];
+  /** The user has no Browser pane to finish a step in (WhatsApp). */
+  paneless?: boolean;
+}
+
+/** The running sub-agent per parent context, while it takes the user's messages. */
+const liveRuns = new WeakMap<
+  BrowserTaskContext,
+  { steer: (text: string) => void; heard: string[] }
+>();
+
+/** Hands a message the user sent mid-turn to the running sub-agent; false when none is running. */
+export function steerBrowserTask(
+  context: BrowserTaskContext,
+  text: string
+): boolean {
+  const run = liveRuns.get(context);
+  if (run == null) return false;
+  run.heard.push(text);
+  run.steer(userMidTask(text));
+  return true;
 }
 
 export interface BrowserTaskOptions {
@@ -141,6 +176,8 @@ export interface BrowserTaskOptions {
 
 export interface BrowserTaskResult {
   text: string;
+  /** Messages the user sent mid-run that were handed to the sub-agent. */
+  heard?: string[];
   turns: number;
   /** `browser_execute` calls; a high share means the page tools were skipped. */
   executeCalls: number;
@@ -449,6 +486,7 @@ export async function runBrowserTask(
   const repeats = new RepeatTracker();
   const executes = new ExecuteStreakTracker();
   const steers: string[] = [];
+  const heard: string[] = [];
   const outcome: { stoppedBy: BrowserTaskResult["stoppedBy"] } = {
     stoppedBy: "completed",
   };
@@ -472,14 +510,21 @@ export async function runBrowserTask(
         cwd: context.cwd,
         agentDir: context.agentDir,
         settingsManager: context.settingsManager,
-        appendSystemPrompt: [BROWSER_SYSTEM_PROMPT],
+        appendSystemPrompt: [
+          context.progressTools != null
+            ? `${BROWSER_SYSTEM_PROMPT}\n${PROGRESS_PROMPT}`
+            : BROWSER_SYSTEM_PROMPT,
+        ],
         // No extensions: the permission gate would prompt a user not watching.
         extensionFactories: [],
       });
 
       await resourceLoader.reload();
 
-      const tools = context.browserTools();
+      const tools = [
+        ...context.browserTools(),
+        ...(context.progressTools?.() ?? []),
+      ];
       const created = await createAgentSession({
         cwd: context.cwd,
         agentDir: context.agentDir,
@@ -502,6 +547,11 @@ export async function runBrowserTask(
       trace.write({ type: "nudge", reason: kind, turns });
       void session.steer(text).catch(() => undefined);
     };
+    if (context.progressTools != null)
+      liveRuns.set(context, {
+        steer: (text) => void session.steer(text).catch(() => undefined),
+        heard,
+      });
 
     try {
       // One subscription for the whole run, re-armed because the report nudge
@@ -710,6 +760,7 @@ export async function runBrowserTask(
         unsubscribe();
       }
     } finally {
+      liveRuns.delete(context);
       // A capped run can be mid-tool; a stranded child looks cut short.
       forwardTools.settle();
       if (keepAlive) {
@@ -731,7 +782,12 @@ export async function runBrowserTask(
       report: lastText.slice(0, 8000),
       providerError,
     });
-    const tally = { turns, executeCalls: executes.total, steers };
+    const tally = {
+      turns,
+      executeCalls: executes.total,
+      steers,
+      ...(heard.length > 0 ? { heard } : {}),
+    };
 
     if (outcome.stoppedBy === "error") {
       return {

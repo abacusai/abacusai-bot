@@ -176,14 +176,14 @@ describe("asking for one", () => {
   });
 
   it("puts a card up, without waiting, for what only the app can connect (a tool server)", async () => {
-    for (const service of ["playwright", "Playwright"]) {
+    for (const service of ["huggingface", "Hugging Face"]) {
       vi.clearAllMocks();
       // The host has no link for a local tool server.
       link.mockResolvedValueOnce(null as never);
 
       const text = await call({ service });
 
-      expect(link).toHaveBeenCalledWith("playwright");
+      expect(link).toHaveBeenCalledWith("huggingface");
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({
           conversationKey: sessionConversationKey("ws-1", "session-1"),
@@ -208,6 +208,19 @@ describe("asking for one", () => {
     expect(watch).toHaveBeenCalledWith(
       expect.objectContaining({ connectorIds: ["notion"] })
     );
+  });
+
+  it("never offers a browser to connect: the browser is built in", async () => {
+    for (const service of ["playwright", "Playwright"]) {
+      vi.clearAllMocks();
+
+      const text = await call({ service });
+
+      expect(show).not.toHaveBeenCalled();
+      expect(watch).not.toHaveBeenCalled();
+      expect(text).toContain(`There is no connector called "${service}"`);
+    }
+    expect(await call({})).not.toMatch(/playwright/i);
   });
 
   it("asks for GitHub with a one-tap link, like any account connector", async () => {

@@ -25,6 +25,7 @@ import {
   browserTaskEnabled,
   buildBrowserTaskTool,
 } from "../browser-task-tool.js";
+import { steerBrowserTask, type BrowserTaskContext } from "../browser-task.js";
 import { anchorCompactions } from "../compaction-anchor.js";
 import {
   agentDir,
@@ -152,6 +153,8 @@ function approvalTimeoutMs(): number {
 export class ForeverEngine {
   /** Steers handed to pi that have not reached the model yet, oldest first. */
   private readonly pendingSteers: string[] = [];
+  /** The browser sub-agent's context, which a mid-turn message also reaches. */
+  private browserContext: BrowserTaskContext | null = null;
   /** True while the router is what the user picked. See currentModelReference. */
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
@@ -399,20 +402,25 @@ export class ForeverEngine {
     const hasBrowser = buildMcpToolDefinitions(() => this.mcp).some(
       isBrowserTool
     );
-    const browserTaskTools =
+    const browserContext: BrowserTaskContext | null =
       hasBrowser && browserTaskEnabled()
+        ? {
+            cwd: this.options.cwd,
+            agentDir: dir,
+            modelRuntime: this.modelRuntime,
+            settingsManager,
+            browserTools: () =>
+              buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
+            ...(model.model ? { model: model.model } : {}),
+            ...this.profile.browserTask,
+          }
+        : null;
+    this.browserContext = browserContext;
+    const browserTaskTools =
+      browserContext != null
         ? [
-            buildBrowserTaskTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager,
-                browserTools: () =>
-                  buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
-                ...(model.model ? { model: model.model } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
+            buildBrowserTaskTool(browserContext, (event) =>
+              this.emitAgentEvent(event)
             ),
           ]
         : [];
@@ -1129,6 +1137,9 @@ export class ForeverEngine {
   async steer(text: string): Promise<void> {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
+    // A running browser run hears it now; the turn still gets it when the run returns.
+    if (this.browserContext?.progressTools != null)
+      steerBrowserTask(this.browserContext, text);
     this.pendingSteers.push(text);
     await this.requireSession().steer(text);
   }

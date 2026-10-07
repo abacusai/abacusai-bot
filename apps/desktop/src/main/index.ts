@@ -42,10 +42,7 @@ import { wireMainNotchEvents } from "./notch/main-events";
 import { NotchNotificationPolicy } from "./notch/notifications";
 import { profileBaseDir } from "./profile-home";
 
-/**
- * Where Playwright's default `chrome` channel looks for Google Chrome (stable
- * only, which is what the MCP server launches unless told otherwise).
- */
+/** Whether Google Chrome (stable) is installed where it normally lives. */
 export function hasGoogleChrome(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env

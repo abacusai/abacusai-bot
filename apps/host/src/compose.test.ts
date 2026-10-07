@@ -1,7 +1,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterAll, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 const fixture = await vi.hoisted(async () => {
   const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
   const { join } = await import("node:path");
@@ -29,6 +29,7 @@ const fixture = await vi.hoisted(async () => {
 import { connectInProcess } from "#main/rpc/testing";
 
 import { composeNodeHost } from "./compose";
+import { PhoneLane } from "./phone-lane";
 import Store from "./store";
 import { HostUnsupportedError } from "./unsupported";
 
@@ -155,6 +156,147 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   store.delete("nested.key");
   expect(store.get("nested.key", "fallback")).toBe("fallback");
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
+});
+describe("the phone lane", () => {
+  const lane = (steerTaken = true) => {
+    const calls: Array<Record<string, unknown>> = [];
+    let listener: (sessionId: string, payload: never) => void = () => {};
+    const send = vi.fn(async () => steerTaken || send.mock.calls.length !== 2);
+    const activity = vi.fn();
+    const phone = new PhoneLane(
+      {
+        call: (async (body: Record<string, unknown>) => {
+          calls.push(body);
+          return { ok: true };
+        }) as never,
+        hasKey: () => false,
+        openSession: async () => ({ workspaceId: "w", sessionId: "s" }),
+        send,
+        onAgentEvent: (next) => {
+          listener = next as never;
+          return () => {};
+        },
+        activity,
+        log: () => {},
+      },
+      {
+        batchMs: 0,
+        keyWaitMs: 60_000,
+        bubblePauseMinMs: 0,
+        bubblePauseMaxMs: 0,
+      }
+    );
+    phone.start();
+    const event = (inner: Record<string, unknown>) =>
+      listener("s", { type: "event", event: inner } as never);
+    const status = (status: string) =>
+      event({ type: "status_changed", status });
+    const replies = () => calls.filter((body) => body.action === "reply");
+    return { phone, calls, send, activity, event, status, replies };
+  };
+
+  it("sends a progress line at once, quoting the message, and counts it as activity", async () => {
+    const { phone, send, activity, event, status, replies, calls } = lane();
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    status("submitted");
+    const before = activity.mock.calls.length;
+
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_progress", input: { text: "On it: Goa flights" } },
+      result: { rejected: false },
+    });
+
+    await vi.waitFor(() =>
+      expect(replies()).toEqual([
+        { action: "reply", message_id: "m1", text: "On it: Goa flights" },
+      ])
+    );
+    expect(activity.mock.calls.length).toBeGreaterThan(before);
+    expect(phone.busy).toBe(true);
+    event({
+      type: "text_delta",
+      content: "Cheapest is 4,200.",
+      messageId: "a",
+    });
+    status("idle");
+    await vi.waitFor(() =>
+      expect(calls.at(-1)).toEqual({ action: "ack", message_ids: ["m1"] })
+    );
+    expect(replies().map((body) => body.text)).toEqual([
+      "On it: Goa flights",
+      "Cheapest is 4,200.",
+    ]);
+    phone.stop();
+  });
+
+  it("steers a message into the running turn and answers against it", async () => {
+    const { phone, send, event, status, replies, calls } = lane();
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    status("submitted");
+
+    phone.arrive({ id: "m2", text: "only nonstop" });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop");
+    expect(calls).toContainEqual({ action: "typing", message_id: "m2" });
+    event({ type: "user_message_steered", content: "only nonstop" });
+    event({ type: "text_delta", content: "Nonstop: 5,100.", messageId: "a" });
+    status("idle");
+    await vi.waitFor(() =>
+      expect(calls.at(-1)).toEqual({
+        action: "ack",
+        message_ids: ["m1", "m2"],
+      })
+    );
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m2", text: "Nonstop: 5,100." },
+    ]);
+    expect(phone.busy).toBe(false);
+    phone.stop();
+  });
+
+  it("sends an answer already written before a queued message runs as its own turn", async () => {
+    const { phone, send, event, status, replies } = lane();
+    phone.arrive({ id: "m1", text: "what is 2+2" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    status("submitted");
+    event({ type: "text_delta", content: "4", messageId: "a" });
+    phone.arrive({ id: "m2", text: "thanks" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+
+    event({ type: "user_message_dequeued", content: "thanks" });
+
+    await vi.waitFor(() => expect(replies().map((b) => b.text)).toEqual(["4"]));
+    event({ type: "text_delta", content: "Anytime!", messageId: "b" });
+    status("idle");
+    await vi.waitFor(() =>
+      expect(replies().map((b) => b.text)).toEqual(["4", "Anytime!"])
+    );
+    phone.stop();
+  });
+
+  it("queues the message for the next turn when the steer is not taken", async () => {
+    const { phone, send, event, status, replies, calls } = lane(false);
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    status("submitted");
+
+    phone.arrive({ id: "m2", text: "only nonstop" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    event({ type: "text_delta", content: "Found 3 flights.", messageId: "a" });
+    status("idle");
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop");
+    expect(calls).toContainEqual({ action: "ack", message_ids: ["m1"] });
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m1", text: "Found 3 flights." },
+    ]);
+    phone.stop();
+  });
 });
 afterAll(() => {
   rmSync(fixture.home, { recursive: true, force: true });
