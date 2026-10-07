@@ -37,8 +37,8 @@ import {
 } from "#renderer/components/panel-workspace";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
-import { useShellWidth } from "#renderer/features/shell/breakpoints";
-import { shellLayout } from "#renderer/features/shell/layout";
+import { useShellWidth } from "#renderer/lib/shell-breakpoints";
+import { shellLayout } from "#renderer/lib/shell-layout";
 import { TopBar } from "#renderer/features/shell/top-bar";
 import { TopBarPanelSlot } from "#renderer/features/shell/top-bar-slots";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
