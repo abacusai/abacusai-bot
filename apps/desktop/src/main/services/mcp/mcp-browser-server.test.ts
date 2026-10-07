@@ -3196,6 +3196,30 @@ describe("several tabs per session", () => {
     ).toBe('"Checkout"');
   });
 
+  it("reads nothing out of a page whose secret fields cannot be checked first", async () => {
+    page.debugger.sendCommand = async (
+      method: string,
+      params?: Record<string, unknown>
+    ) => {
+      if (params?.expression === FIND_SECRET_FIELDS_SCRIPT)
+        return { exceptionDetails: { text: "blocked" } };
+      if (method !== "Runtime.evaluate") return {};
+      evaluated.push(String(params?.expression ?? ""));
+      return { result: { value: oneButton } };
+    };
+    evaluated.length = 0;
+
+    for (const args of [
+      { action: "snapshot" },
+      { action: "extract", selector: "li" },
+    ]) {
+      const { text, isError } = await call("browser_snapshot", args);
+      expect(isError).toBe(true);
+      expect(text).toContain("could not be checked");
+    }
+    expect(evaluated).toEqual([]);
+  });
+
   it("refuses scripts when the page cannot say whether it holds a secret", async () => {
     page.debugger.sendCommand = async (
       method: string,

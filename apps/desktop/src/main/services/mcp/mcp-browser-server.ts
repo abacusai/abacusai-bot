@@ -382,6 +382,15 @@ export interface McpBrowserServerOptions {
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
 }
 
+/** A read refused because the page's secret fields could not be checked first. */
+class UnreadablePageError extends Error {
+  constructor() {
+    super(
+      "The page's password, card and code fields could not be checked, so it was not read. Try again once the page has loaded."
+    );
+  }
+}
+
 export class McpBrowserServer extends McpHttpServer {
   /** The last snapshot's refs, per session. See SnapshotStore. */
   private readonly snapshots = new SnapshotStore();
@@ -508,12 +517,14 @@ export class McpBrowserServer extends McpHttpServer {
   /**
    * Runs a script that reads values out of the page, with every field known
    * secret marked again first, so a page that stripped the marks does not
-   * get a field read out.
+   * get a field read out. When the marks cannot be put back, nothing is read.
    */
   private async readPage(wc: BrowserPage, expression: string): Promise<any> {
-    await this.secretsOf(wc)
-      .reassert(wc)
-      .catch(() => undefined);
+    try {
+      await this.secretsOf(wc).reassert(wc);
+    } catch {
+      throw new UnreadablePageError();
+    }
     return this.evalJS(wc, expression);
   }
 
@@ -1578,6 +1589,8 @@ export class McpBrowserServer extends McpHttpServer {
             extractScript(selector, fields, limit)
           );
         } catch (error) {
+          if (error instanceof UnreadablePageError)
+            return this.err(error.message);
           return this.err(
             `Invalid selector "${selector}": ${error instanceof Error ? error.message : String(error)}`
           );
