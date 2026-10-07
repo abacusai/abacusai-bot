@@ -14,8 +14,7 @@
  * ResizeObserver. An IntersectionObserver on the stand-in reports `docked`,
  * which is the whole behaviour where the scroll animation does not run
  * (reduced motion, no support, an inactive timeline): a cut with a 120 ms
- * fade. The avatar carries the cross-route view-transition name, so entering
- * or leaving the chat morphs it with the sidebar row.
+ * fade. The same live rig stays interactive in both positions.
  */
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { Store, useStore } from "@tanstack/react-store";
@@ -25,15 +24,10 @@ import { useTranslation } from "react-i18next";
 import { RoutePending } from "#renderer/components/page-state";
 import { cn } from "#renderer/lib/cn";
 import { AppLink } from "#renderer/lib/navigation/app-link";
-import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 
 import { BotFace } from "../avatar";
 import { moodFor, type BotAttention } from "../data/attention";
 import { useBotAttention } from "../data/use-attention";
-
-/** The shared view-transition name of the bot's avatar (sidebar, header, dock). */
-export const botIdentityName = (botId: string): string =>
-  `bot-identity-${botId}`;
 
 export const BotGone = ({ chat = false }: { chat?: boolean }) => {
   const { t } = useTranslation();
@@ -165,7 +159,6 @@ export const BotIdentity = ({
 }) => {
   const { t } = useTranslation();
   const attention = useBotAttention(bot);
-  const shared = useSharedElementName(botIdentityName(bot.id));
   const docked = useStore(host, (state) => state.docked);
   const measured = useStore(host, (state) => state.measured);
   return (
@@ -188,9 +181,14 @@ export const BotIdentity = ({
       <span
         data-part="avatar"
         className="flex size-[22px] shrink-0 rounded-full"
-        style={shared}
       >
-        <BotFace bot={bot} mood={moodFor(attention)} size={22} />
+        <BotFace
+          bot={bot}
+          mood={moodFor(attention)}
+          size={travels ? 56 : 22}
+          interactive={travels}
+          style={{ "--bav-size": "22px" } as CSSProperties}
+        />
       </span>
       <span
         data-part="name"

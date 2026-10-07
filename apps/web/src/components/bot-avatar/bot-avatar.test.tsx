@@ -1,5 +1,5 @@
 /** R3-T27 (jsdom half): every shape, mood and accessory renders. */
-import { act, render } from "@testing-library/react";
+import { act, render, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -286,4 +286,25 @@ describe("an avatar's size in the page", () => {
     ];
     expect(Math.max(...counts)).toBeLessThanOrEqual(AVATAR_NODE_BUDGET);
   });
+});
+
+it("promotes a hovered character within the six-avatar budget", () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  const { container } = render(
+    <>
+      {Array.from({ length: 7 }, (_, i) => (
+        <BotAvatar key={i} look={look()} size={36} animate />
+      ))}
+    </>
+  );
+  const avatars = [
+    ...container.querySelectorAll<HTMLElement>('[data-slot="bot-avatar"]'),
+  ];
+  const last = avatars.at(-1)!;
+  expect(last.hasAttribute("data-animate")).toBe(false);
+  fireEvent.pointerEnter(last, { pointerType: "mouse" });
+  expect(last.hasAttribute("data-animate")).toBe(true);
+  expect(container.querySelectorAll("[data-animate]")).toHaveLength(6);
+  fireEvent.pointerLeave(last);
+  expect(container.querySelectorAll("[data-animate]")).toHaveLength(6);
 });
