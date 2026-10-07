@@ -100,7 +100,7 @@ export const AvatarGallery = () => {
         {NAMED_EXPRESSIONS.map((e) => (
           <div key={e} className="flex flex-col items-center gap-3">
             <BotAvatar
-              animate
+              animate={animate}
               look={{ shape: "mochi", color: "#60a5fa", accessory: "none" }}
               expression={e}
               size={72}
@@ -110,7 +110,7 @@ export const AvatarGallery = () => {
         ))}
         <div className="flex flex-col items-center gap-3">
           <BotAvatar
-            animate
+            animate={animate}
             look={{ shape: "mochi", color: "#60a5fa", accessory: "none" }}
             expression={{ from: "curious", to: "determined", mix: 0.5 }}
             size={72}
@@ -145,7 +145,7 @@ export const AvatarGallery = () => {
                 style={{ height: Math.max(50, size + 12) }}
               >
                 <BotAvatar
-                  animate
+                  animate={animate}
                   look={{
                     shape,
                     color: AVATAR_PALETTE[i % AVATAR_PALETTE.length]!.hex,
@@ -206,7 +206,7 @@ export const AvatarGallery = () => {
                   <span className="w-20">{shape}</span>
                   {moods.map((m) => (
                     <BotAvatar
-                      animate
+                      animate={animate}
                       key={m}
                       look={{
                         shape,

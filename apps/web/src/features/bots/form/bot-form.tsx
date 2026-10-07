@@ -15,7 +15,6 @@ import * as v from "valibot";
 import { useAppForm } from "#renderer/components/form-kit";
 import { useDb } from "#renderer/data/db";
 import { accentVars } from "#renderer/lib/bots/avatar";
-import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError } from "#renderer/lib/toast";
 import {
@@ -89,8 +88,6 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
 
   const [error, setError] = useState<string | null>(null);
   const saving = useRef(false);
-  const id = bot?.id ?? getDraft().id;
-  const shared = useSharedElementName(`bot-identity-${id}`);
   const form = useAppForm({
     defaultValues: startingValues,
     validationLogic: revalidateLogic({
@@ -241,9 +238,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
     >
       <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
         <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10">
-          <div style={shared}>
-            <BotFace morph look={look} size={wide ? 96 : 56} mood="happy" />
-          </div>
+          <BotFace morph look={look} size={wide ? 96 : 56} mood="happy" />
           <h2 className="text-base font-semibold">{name}</h2>
           <p className="text-muted-foreground text-center text-xs">
             {description}
