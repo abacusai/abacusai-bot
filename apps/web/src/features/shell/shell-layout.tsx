@@ -366,31 +366,17 @@ export const ShellLayout = ({
               )}
             >
               <PanelWorkspace
-                onReopen={() => {
-                  if (scopeKey) reopenPanelTab(scopeKey);
-                }}
-                onRename={(id, title) => {
-                  if (scopeKey) updatePanelTab(scopeKey, id, { title });
-                }}
-                onAdd={(kind) => {
-                  if (scopeKey)
-                    openPanelTab(scopeKey, { kind }, { fresh: true });
-                }}
                 scope={scopeKey ?? "shell"}
                 apiRef={dockApi}
                 active={panel.scope.active}
-                open={panelInLayout || expanded}
+                open={panelInLayout}
                 expanded={expanded}
                 onSelect={(id) => {
                   if (scopeKey) activatePanelTab(scopeKey, id);
                 }}
-                onClose={(id) => {
-                  if (scopeKey && id !== "chat") closePanelTab(scopeKey, id);
-                }}
                 tabs={[
                   {
                     id: "chat",
-                    icon: <BotTabAvatar botId={botId} />,
                     title: t("sessions.dock.chat"),
                     content: () => (
                       <Pane>

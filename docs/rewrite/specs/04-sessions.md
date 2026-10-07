@@ -63,6 +63,8 @@ Each was checked against source. The ones that change another spec are repeated 
 
 ---
 
+Current shared chrome/layout rules: [surface-rules.md](../surface-rules.md).
+
 The shared TabsRail uses the title bar's first row for every dock group. No body tab header duplicates it. Tabs scroll horizontally with edge fades and an overflow picker by default. Appearance → Allow two rows of tabs is persisted, defaults off, and permits at most one extra row for medium tab sets that fit; caption buttons stay on row one.
 
 ## 1. Scope

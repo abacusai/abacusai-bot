@@ -26,6 +26,7 @@ import {
   panelScope,
   panelScopeKey,
   setPanelOpen,
+  setPanelExpanded,
 } from "./panel-store";
 import { HOVER_INTENT_MS, shellStore } from "./shell-store";
 import { useTopBarActions, useTopBarStatusText } from "./top-bar-slots";
@@ -840,6 +841,22 @@ describe("the title bar", () => {
       )
     );
     expect(within(drawer).getByTestId("panel-add-tab")).toBeTruthy();
+  });
+
+  it("keeps Chat reachable when an expanded Bots workspace falls back to a drawer", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    act(() => setPanelExpanded(key, true));
+    fireEvent.click(await screen.findByRole("tab", { name: "Chat" }));
+    await waitFor(() =>
+      expect(document.querySelector("[data-side-panel]")).toBeNull()
+    );
+    expect(screen.getByTestId("bot-chat")).toBeTruthy();
+    expect(panelScope(key).expanded).toBe(true);
+    act(() => setViewportWidth(1280));
+    await waitFor(() =>
+      expect(document.querySelector("[data-workspace-expanded]")).not.toBeNull()
+    );
   });
 
   it("panel tabs are borderless chips at the bar's control height (V7)", async () => {

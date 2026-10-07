@@ -494,19 +494,12 @@ export const SessionDock = ({
           () => add("terminal")
         )}
         <PanelWorkspace
-          onReopen={() => {
-            const ref = reopenTab(key);
-            if (ref) select(ref);
-          }}
-          onRename={rename}
-          onAdd={add}
           scope={key}
           apiRef={dockApi}
           open={entries.open === true && active != null}
           expanded={expanded}
           active={active ?? null}
           onSelect={select}
-          onClose={close}
           tabs={[
             {
               id: "chat",

@@ -31,7 +31,6 @@ import {
   SPLIT_MIN_PX,
   panelMaxFor,
 } from "#renderer/lib/side-panel/geometry";
-import type { PanelTabKind } from "#renderer/lib/side-panel/store";
 import { ResizablePanelGroup, ResizablePanel } from "#renderer/ui/resizable";
 
 import { PanelResizeHandle } from "./resize-handle";
@@ -40,7 +39,6 @@ import { enhanceDockSplitters } from "./splitters";
 export interface WorkspaceTab {
   id: string;
   title: string;
-  icon?: ReactNode;
   content(visible: boolean): ReactNode;
 }
 interface WorkspaceContext {
@@ -106,19 +104,13 @@ export const PanelWorkspace = ({
   expanded,
   onSelect,
   apiRef,
-  onGroupCountChange,
 }: {
-  onAdd?(kind: PanelTabKind): void;
-  onGroupCountChange?(count: number): void;
-  onReopen?(): void;
-  onRename?(id: string, title: string): void;
   scope: string;
   tabs: WorkspaceTab[];
   active: string | null;
   open: boolean;
   expanded: boolean;
   onSelect(id: string): void;
-  onClose(id: string): void;
   apiRef: RefObject<DockviewApi | null>;
 }) => {
   const db = useDb();
@@ -256,9 +248,6 @@ export const PanelWorkspace = ({
   useEffect(() => {
     if (expanded && active) api?.getPanel(active)?.api.setActive();
   }, [api, active, expanded]);
-  useEffect(() => {
-    onGroupCountChange?.(api?.groups.length ?? 1);
-  }, [api, visible.length, onGroupCountChange]);
   const docked = expanded && width >= SPLIT_MIN_PX;
   const showTool = open && active != null && active !== "chat";
   const split = showTool && !expanded && width >= SPLIT_MIN_PX;
