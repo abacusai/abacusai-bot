@@ -18,7 +18,7 @@ A from-scratch front end and a protocol change underneath it: `packages/agent` e
 
 - **Chat UI** — `createChatUI()` from `@tanstack/ai-react/ui` (Messages/Message/Part/Interrupts/Queue/Subagents dispatchers) skinned with registry `message-scroller`, `message`, `bubble`, `attachment`, `marker`, `questionnaire`.
 
-- **Routing** — File-based via `@tanstack/router-plugin`; hash history in the main window, memory history in the notch window; pathless layouts and groups by file name; pop-ups are masked child routes.
+- **Routing** — File-based via `@tanstack/router-plugin`; hash history in the desktop main window, browser history under Vite's basepath on web, memory history in the notch window; pathless layouts and groups by file name; pop-ups are masked child routes.
 
 - **Motion** — Route-level view transitions are the router's document-level `startViewTransition` carrying the app's transition types; React 19.3 `<ViewTransition>` only animates in-route state changes React commits itself; cross-route shared elements take a CSS `view-transition-name`; never two transitions in one commit (amended 30 Sep 2026, see "Amendments after the phase-1 implementation review"; supersedes "React owns every view transition, router `defaultViewTransition` off"). `motion/react` for springs, drag, layout, presence.
 

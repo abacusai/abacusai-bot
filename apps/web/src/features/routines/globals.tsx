@@ -1,6 +1,7 @@
 import { conversationRefFromKey } from "@abacus-ai/contract/conversation-scope";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -28,6 +29,7 @@ const seenFor = (map: WeakMap<object, Set<string>>, key: object) => {
   return set;
 };
 export const RoutinesGlobals = () => {
+  const router = useRouter();
   const { transport, db } = useAppContext();
   const { t } = useTranslation();
   const settings = useQuery(
@@ -40,7 +42,16 @@ export const RoutinesGlobals = () => {
       db.collections.prefs.get("app")?.sounds ?? DEFAULT_PREFS.sounds;
     const player = createSoundPlayer({
       isThreadVisible: (id) =>
-        document.hasFocus() && window.location.hash.includes(id),
+        document.hasFocus() &&
+        Boolean(
+          router.matchRoute(
+            {
+              to: "/sessions/$sessionId",
+              params: { sessionId: id },
+            },
+            { fuzzy: true }
+          )
+        ),
       isWindowFocused: () => document.hasFocus(),
       prefs: sounds,
       now: () => Date.now(),
@@ -173,6 +184,6 @@ export const RoutinesGlobals = () => {
       document.removeEventListener("pointerdown", unlock);
       player.dispose();
     };
-  }, [transport, db, t, cache]);
+  }, [transport, db, t, cache, router]);
   return null;
 };

@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import type { NavType } from "#renderer/lib/motion";
 import {
   AREA_HOME,
   RAIL_AREAS,
@@ -57,9 +56,9 @@ const CommandMenuBody = () => {
   const { data: bots } = useLiveQuery(collections.bots);
   const { data: sessions } = useLiveQuery(collections.sessions);
 
-  const go = (href: string, transition: NavType = "nav-lateral"): void => {
+  const go = (action: () => Promise<void>): void => {
     setCommandOpen(false);
-    void navigate({ href, transition });
+    void action();
   };
 
   return (
@@ -69,7 +68,14 @@ const CommandMenuBody = () => {
         <CommandEmpty>{t("shell.command.empty")}</CommandEmpty>
         <CommandGroup heading={t("shell.command.groups.areas")}>
           {RAIL_AREAS.map((area) => (
-            <CommandItem key={area} onSelect={() => go(AREA_HOME[area])}>
+            <CommandItem
+              key={area}
+              onSelect={() =>
+                go(() =>
+                  navigate({ to: AREA_HOME[area], transition: "nav-lateral" })
+                )
+              }
+            >
               <span className="min-w-0 truncate">
                 {t(`shell.rail.${area}`)}
               </span>
@@ -80,7 +86,14 @@ const CommandMenuBody = () => {
           {SETTINGS_PAGES.map((page) => (
             <CommandItem
               key={page}
-              onSelect={() => go(`/settings/${page}`, "settings-in")}
+              onSelect={() =>
+                go(() =>
+                  navigate({
+                    to: `/settings/${page}`,
+                    transition: "settings-in",
+                  })
+                )
+              }
             >
               <span className="min-w-0 truncate">
                 {t(`settings.pages.${page}`)}
@@ -94,7 +107,15 @@ const CommandMenuBody = () => {
               <CommandItem
                 key={bot.id}
                 value={`bot ${bot.name}`}
-                onSelect={() => go(`/bots/${encodeURIComponent(bot.id)}`)}
+                onSelect={() =>
+                  go(() =>
+                    navigate({
+                      to: "/bots/$botId",
+                      params: { botId: bot.id },
+                      transition: "nav-lateral",
+                    })
+                  )
+                }
               >
                 <span className="min-w-0 truncate">{bot.name}</span>
               </CommandItem>
@@ -108,7 +129,13 @@ const CommandMenuBody = () => {
                 key={session.id}
                 value={`session ${session.label}`}
                 onSelect={() =>
-                  go(`/sessions/${encodeURIComponent(session.id)}`)
+                  go(() =>
+                    navigate({
+                      to: "/sessions/$sessionId",
+                      params: { sessionId: session.id },
+                      transition: "nav-lateral",
+                    })
+                  )
                 }
               >
                 <span className="min-w-0 truncate">{session.label}</span>

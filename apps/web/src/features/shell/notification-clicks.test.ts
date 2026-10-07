@@ -1,7 +1,9 @@
 import type { NotificationMetadata } from "@abacus-ai/contract/contract";
 import { expect, it } from "vitest";
 
-import { notificationHref, withOwner } from "./notification-clicks";
+import { createHarness } from "#renderer/test-support/app-harness";
+
+import { notificationOptions, withOwner } from "./notification-clicks";
 
 it.each<[NotificationMetadata, string | null]>([
   [{ kind: "session", sessionId: "s" }, "/sessions/s"],
@@ -16,8 +18,14 @@ it.each<[NotificationMetadata, string | null]>([
     { kind: "routine", routineId: "a/b", sessionId: "s&x" },
     "/routines/a%2Fb?run=s%26x",
   ],
-])("routes notification metadata %j", (metadata, href) => {
-  expect(notificationHref(metadata)).toBe(href);
+])("routes notification metadata %j", async (metadata, href) => {
+  const app = await createHarness("/bots/new");
+  try {
+    const options = notificationOptions(metadata);
+    expect(options ? app.router.buildLocation(options).href : null).toBe(href);
+  } finally {
+    await app.cleanup();
+  }
 });
 
 const owners: Record<string, unknown> = {
@@ -48,6 +56,12 @@ it.each<[NotificationMetadata, string | null]>([
   // A kind already set is kept.
   [{ kind: "session", sessionId: "forever" }, "/sessions/forever"],
   [{ kind: "bot", botId: "x", sessionId: "sender" }, "/bots/x/chats/sender"],
-])("opens a kind-less notice %j in its owner", (metadata, href) => {
-  expect(notificationHref(withOwner(metadata, db))).toBe(href);
+])("opens a kind-less notice %j in its owner", async (metadata, href) => {
+  const app = await createHarness("/bots/new");
+  try {
+    const options = notificationOptions(withOwner(metadata, db));
+    expect(options ? app.router.buildLocation(options).href : null).toBe(href);
+  } finally {
+    await app.cleanup();
+  }
 });

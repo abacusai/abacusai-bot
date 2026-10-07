@@ -26,7 +26,7 @@ it.each([true, false])(
     router.back.mockClear();
     router.navigate.mockClear();
     const current = await renderWithDb(
-      <RouteSheet title="Routine" fallbackHref="/routines">
+      <RouteSheet title="Routine" fallbackTo="/routines">
         <p>Content</p>
       </RouteSheet>
     );
@@ -36,7 +36,7 @@ it.each([true, false])(
       expect(router.navigate).not.toHaveBeenCalled();
     } else {
       expect(router.navigate).toHaveBeenCalledWith({
-        href: "/routines",
+        to: "/routines",
         replace: true,
       });
       expect(router.back).not.toHaveBeenCalled();

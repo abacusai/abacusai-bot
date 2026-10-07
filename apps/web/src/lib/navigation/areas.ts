@@ -2,6 +2,8 @@
  * The app's areas and their fixed pages, shared by routes, the shell, the
  * command menu and the features without any of them importing another.
  */
+import type { FileRoutesByTo } from "#renderer/routeTree.gen";
+
 const SHELL_AREAS = [
   "bots",
   "sessions",
@@ -21,14 +23,14 @@ export const RAIL_AREAS = [
   "library",
 ] as const satisfies readonly ShellAreaId[];
 
-export const AREA_HOME: Record<ShellAreaId, string> = {
+export const AREA_HOME = {
   bots: "/bots/new",
   sessions: "/sessions/new",
   routines: "/routines",
   artifacts: "/artifacts",
   library: "/library/connectors",
   settings: "/settings/general",
-};
+} as const satisfies Record<ShellAreaId, keyof FileRoutesByTo>;
 
 export const SETTINGS_PAGES = [
   "general",
