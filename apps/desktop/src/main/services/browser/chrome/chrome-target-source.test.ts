@@ -21,7 +21,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { pickBrowserTarget } from "../browser-target";
 import {
-  HOLDS_SECRET_VALUE_SCRIPT,
+  FIND_SECRET_FIELDS_SCRIPT,
   MASK_FOR_CAPTURE_SCRIPT,
   UNMASK_SCRIPT,
 } from "../secret-fields";
@@ -302,9 +302,12 @@ describe("ChromeTargetSource", () => {
 
         const users = setup();
         users.relay.ownsTabs = false;
-        // The tab the user picked comes before the handshake ends: never let go.
-        users.relay.open({ id: 7, url: "https://picked.test/" });
-        users.relay.emit("ready");
+        // The tab the user picked was handed over during the handshake: never let go.
+        users.relay.open({
+          id: 7,
+          url: "https://picked.test/",
+          preexisting: true,
+        });
         users.relay.open({ id: 9, url: "https://stray.test/" });
         await vi.advanceTimersByTimeAsync(UNCLAIMED_TAB_GRACE_MS);
         expect(users.relay.closeTab).not.toHaveBeenCalled();
@@ -409,82 +412,67 @@ describe("ChromeTargetSource", () => {
   });
 
   describe("secret fields", () => {
-    it("refuses scripts while the page holds a secret value, and after a fill until its main frame navigates", async () => {
-      const { relay, source } = setup();
-      await source.materialize("s1", "https://shop.test/login");
-      const page = source.webContents(100)!;
-      const secrets = source.secrets(100)!;
-      let holdsValue = false;
-      relay.cdp.mockImplementation(
-        async (_tabId: number, method: string, params?: unknown) =>
-          method === "Runtime.evaluate"
-            ? {
-                result: {
-                  value:
-                    (params as { expression?: string }).expression ===
-                    HOLDS_SECRET_VALUE_SCRIPT
-                      ? holdsValue
-                      : true,
-                },
-              }
-            : {}
-      );
-
-      expect(await secrets.executeRefusal(page)).toBeNull();
-      // A password typed into the page, by anyone: asked of the page each time.
-      holdsValue = true;
-      expect(await secrets.executeRefusal(page)).toContain("cannot run");
-      holdsValue = false;
-
-      expect(await secrets.markFilled(page, "#password")).toBe(true);
-      expect(await secrets.executeRefusal(page)).toContain("cannot run");
-      // A frame inside the page navigating is not the page leaving.
-      relay.emit("cdpEvent", 100, "Page.frameNavigated", {
-        frame: { id: "ad", parentId: "main", url: "https://ads.test/" },
-      });
-      expect(await secrets.executeRefusal(page)).not.toBeNull();
-      relay.emit("cdpEvent", 100, "Page.frameNavigated", {
-        frame: { id: "main", url: "https://shop.test/account" },
-      });
-      expect(await secrets.executeRefusal(page)).toBeNull();
-    });
-
-    it("refuses scripts when the page cannot be asked", async () => {
-      const { relay, source } = setup();
-      await source.materialize("s1", "https://shop.test/login");
-      relay.cdp.mockImplementation(async (_tabId: number, method: string) =>
-        method === "Runtime.evaluate"
-          ? { exceptionDetails: { text: "blocked" } }
-          : {}
-      );
-
-      expect(
-        await source.secrets(100)!.executeRefusal(source.webContents(100)!)
-      ).toContain("cannot run");
-    });
-
-    /** A checkout page with a same-origin frame and a payment provider's frame. */
-    const checkout = (
+    /**
+     * A page over CDP: `fields` are the secret fields the in-page classifier
+     * finds now, `connected` the nodes still in the document, `gone` nodes the
+     * renderer no longer has. Methods in `overrides` answer instead.
+     */
+    const secretPage = (
       relay: FakeRelay,
       overrides: Partial<
         Record<string, (params: Record<string, unknown>) => unknown>
       > = {}
     ) => {
-      const sent: Array<{ method: string; params: Record<string, unknown> }> =
-        [];
+      const state = {
+        fields: [] as number[],
+        connected: new Set<number>(),
+        gone: new Set<number>(),
+        sent: [] as Array<{ method: string; params: Record<string, unknown> }>,
+      };
       relay.cdp.mockImplementation(
         async (_tabId: number, method: string, raw?: unknown) => {
           const params = (raw ?? {}) as Record<string, unknown>;
-          sent.push({ method, params });
+          state.sent.push({ method, params });
           const override = overrides[method];
           if (override != null) return override(params);
           switch (method) {
             case "Runtime.evaluate":
+              if (params.expression === FIND_SECRET_FIELDS_SCRIPT)
+                return { result: { objectId: "found" } };
               if (params.expression === "location.origin")
                 return { result: { value: "https://shop.test" } };
               if (params.expression === MASK_FOR_CAPTURE_SCRIPT)
                 return { result: { value: 1 } };
               return { result: { value: true } };
+            case "Runtime.getProperties":
+              return {
+                result: [
+                  ...state.fields.map((id, index) => ({
+                    name: String(index),
+                    value: { objectId: `node-${id}` },
+                  })),
+                  { name: "length", value: { value: state.fields.length } },
+                ],
+              };
+            case "DOM.describeNode":
+              return {
+                node: {
+                  backendNodeId: Number(
+                    String(params.objectId).replace("node-", "")
+                  ),
+                },
+              };
+            case "DOM.resolveNode": {
+              const id = params.backendNodeId as number;
+              if (state.gone.has(id)) throw new Error("No node found");
+              return { object: { objectId: `node-${id}` } };
+            }
+            case "Runtime.callFunctionOn": {
+              const id = Number(String(params.objectId).replace("node-", ""));
+              return String(params.functionDeclaration).includes("isConnected")
+                ? { result: { value: state.connected.has(id) } }
+                : { result: { value: "named" } };
+            }
             case "Page.getFrameTree":
               return {
                 frameTree: {
@@ -517,10 +505,6 @@ describe("ChromeTargetSource", () => {
               };
             case "DOM.getFrameOwner":
               return { backendNodeId: 7 };
-            case "DOM.resolveNode":
-              return { object: { objectId: "owner-7" } };
-            case "Runtime.callFunctionOn":
-              return { result: { value: "named" } };
             case "Page.captureScreenshot":
               return { data: Buffer.from("jpeg").toString("base64") };
             default:
@@ -528,15 +512,95 @@ describe("ChromeTargetSource", () => {
           }
         }
       );
-      return sent;
+      return state;
     };
+
+    it("refuses scripts while the page has any secret field, empty or not, and remembers it outside the page", async () => {
+      const { relay, source } = setup();
+      await source.materialize("s1", "https://shop.test/login");
+      const page = source.webContents(100)!;
+      const secrets = source.secrets(100)!;
+      const state = secretPage(relay);
+
+      expect(await secrets.executeRefusal(page)).toBeNull();
+
+      // An empty password field appears: no script may wait in the page for it.
+      state.fields = [11];
+      state.connected.add(11);
+      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+
+      // The page strips every mark, so the classifier no longer sees it; the
+      // record is the tab's, and the mark is put back.
+      state.fields = [];
+      state.sent.length = 0;
+      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      expect(state.sent).toContainEqual({
+        method: "DOM.resolveNode",
+        params: expect.objectContaining({ backendNodeId: 11 }),
+      });
+
+      // Taken out of the document, then gone from the renderer: scripts run again.
+      state.connected.delete(11);
+      expect(await secrets.executeRefusal(page)).toBeNull();
+      state.gone.add(11);
+      expect(await secrets.executeRefusal(page)).toBeNull();
+    });
+
+    it("refuses scripts after a fill until the main frame navigates, which also forgets the known fields", async () => {
+      const { relay, source } = setup();
+      await source.materialize("s1", "https://shop.test/login");
+      const page = source.webContents(100)!;
+      const secrets = source.secrets(100)!;
+      const state = secretPage(relay);
+      state.fields = [11];
+      state.connected.add(11);
+      await secrets.executeRefusal(page);
+      state.fields = [];
+
+      expect(await secrets.markFilled(page, "#password")).toBe(true);
+      state.connected.delete(11);
+      expect(await secrets.executeRefusal(page)).toContain("cannot run");
+      // A frame inside the page navigating is not the page leaving.
+      relay.emit("cdpEvent", 100, "Page.frameNavigated", {
+        frame: { id: "ad", parentId: "main", url: "https://ads.test/" },
+      });
+      expect(await secrets.executeRefusal(page)).not.toBeNull();
+
+      relay.emit("cdpEvent", 100, "Page.frameNavigated", {
+        frame: { id: "main", url: "https://shop.test/account" },
+      });
+      state.connected.add(11);
+      state.sent.length = 0;
+      expect(await secrets.executeRefusal(page)).toBeNull();
+      expect(state.sent.map((call) => call.method)).not.toContain(
+        "DOM.resolveNode"
+      );
+    });
+
+    it("refuses scripts when the page cannot be asked", async () => {
+      for (const overrides of [
+        {
+          "Runtime.evaluate": () => ({ exceptionDetails: { text: "blocked" } }),
+        },
+        { "DOM.describeNode": () => Promise.reject(new Error("no node")) },
+      ]) {
+        const { relay, source } = setup();
+        await source.materialize("s1", "https://shop.test/login");
+        const state = secretPage(relay, overrides);
+        state.fields = [11];
+
+        expect(
+          await source.secrets(100)!.executeRefusal(source.webContents(100)!)
+        ).toContain("cannot run");
+      }
+    });
 
     it("covers a cross-origin frame in every capture, before any fill, and shows the page again after", async () => {
       const { relay, source } = setup();
       await source.materialize("s1", "https://shop.test/pay");
-      const sent = checkout(relay);
+      const { sent } = secretPage(relay);
 
-      expect(await source.captureMasked(100)).toEqual({
+      expect(await source.captureMasked(100, source.secrets(100)!)).toEqual({
         data: Buffer.from("jpeg").toString("base64"),
         mimeType: "image/jpeg",
       });
@@ -546,22 +610,20 @@ describe("ChromeTargetSource", () => {
           .filter((call) => call.method === "DOM.getFrameOwner")
           .map((call) => call.params.frameId)
       ).toEqual(["card"]);
-      const evaluated = sent
-        .filter((call) => call.method === "Runtime.evaluate")
-        .map((call) => call.params.expression);
-      expect(evaluated).toContain(MASK_FOR_CAPTURE_SCRIPT);
-      expect(evaluated.at(-1)).toBe(UNMASK_SCRIPT);
-      const captured = sent.findIndex(
-        (call) => call.method === "Page.captureScreenshot"
+      const order = sent.map((call) =>
+        call.method === "Runtime.evaluate"
+          ? String(call.params.expression)
+          : call.method
       );
-      expect(evaluated.indexOf(MASK_FOR_CAPTURE_SCRIPT)).toBeGreaterThanOrEqual(
-        0
+      expect(order.indexOf(FIND_SECRET_FIELDS_SCRIPT)).toBeLessThan(
+        order.indexOf(MASK_FOR_CAPTURE_SCRIPT)
+      );
+      expect(order.indexOf(MASK_FOR_CAPTURE_SCRIPT)).toBeLessThan(
+        order.indexOf("Page.captureScreenshot")
       );
       expect(
-        sent.findIndex(
-          (call) => call.params.expression === MASK_FOR_CAPTURE_SCRIPT
-        )
-      ).toBeLessThan(captured);
+        order.at(-1) === UNMASK_SCRIPT || order.includes(UNMASK_SCRIPT)
+      ).toBe(true);
     });
 
     it("covers an out-of-process frame the page's own tree does not list", async () => {
@@ -572,7 +634,7 @@ describe("ChromeTargetSource", () => {
         frameOrigin: (_tabId: number, frameId: string) =>
           frameId === "oopif" ? "https://pay.test" : null,
       });
-      const sent = checkout(relay, {
+      const { sent } = secretPage(relay, {
         "Page.getFrameTree": () => ({
           frameTree: {
             frame: { id: "main", securityOrigin: "https://shop.test" },
@@ -580,7 +642,9 @@ describe("ChromeTargetSource", () => {
         }),
       });
 
-      expect(await source.captureMasked(100)).not.toBeNull();
+      expect(
+        await source.captureMasked(100, source.secrets(100)!)
+      ).not.toBeNull();
       expect(
         sent
           .filter((call) => call.method === "DOM.getFrameOwner")
@@ -588,48 +652,44 @@ describe("ChromeTargetSource", () => {
       ).toEqual(["oopif"]);
     });
 
-    it("takes no screenshot when a cross-origin frame cannot be covered", async () => {
+    it("takes no screenshot when a cross-origin frame cannot be covered or the fields cannot be hidden", async () => {
       for (const overrides of [
-        // Its owner cannot be found,
+        // The frame's owner cannot be found,
         { "DOM.getFrameOwner": () => Promise.reject(new Error("gone")) },
         // or the mask did not cover it,
         {
-          "Runtime.evaluate": (params: Record<string, unknown>) => ({
-            result: {
-              value:
-                params.expression === "location.origin"
-                  ? "https://shop.test"
-                  : params.expression === MASK_FOR_CAPTURE_SCRIPT
-                    ? 0
-                    : true,
-            },
-          }),
+          "Runtime.evaluate": (params: Record<string, unknown>) =>
+            params.expression === FIND_SECRET_FIELDS_SCRIPT
+              ? { result: { objectId: "found" } }
+              : {
+                  result: {
+                    value:
+                      params.expression === "location.origin"
+                        ? "https://shop.test"
+                        : params.expression === MASK_FOR_CAPTURE_SCRIPT
+                          ? 0
+                          : true,
+                  },
+                },
         },
-        // or the frames are unknown.
+        // or the frames are unknown,
         { "Page.getFrameTree": () => Promise.reject(new Error("no tree")) },
+        // or the page cannot be searched for its fields.
+        {
+          "Runtime.evaluate": () => ({ exceptionDetails: { text: "blocked" } }),
+        },
       ]) {
         const { relay, source } = setup();
         await source.materialize("s1", "https://shop.test/pay");
-        const sent = checkout(relay, overrides);
+        const { sent } = secretPage(relay, overrides);
 
-        expect(await source.captureMasked(100)).toBeNull();
+        expect(
+          await source.captureMasked(100, source.secrets(100)!)
+        ).toBeNull();
         expect(sent.map((call) => call.method)).not.toContain(
           "Page.captureScreenshot"
         );
       }
-    });
-
-    it("takes no screenshot when the fields cannot be hidden", async () => {
-      const { relay, source } = setup();
-      await source.materialize("s1", "https://shop.test/pay");
-      const sent = checkout(relay, {
-        "Runtime.evaluate": () => ({ exceptionDetails: { text: "blocked" } }),
-      });
-
-      expect(await source.captureMasked(100)).toBeNull();
-      expect(sent.map((call) => call.method)).not.toContain(
-        "Page.captureScreenshot"
-      );
     });
   });
   it("has nothing to make when Chrome is not connected", async () => {

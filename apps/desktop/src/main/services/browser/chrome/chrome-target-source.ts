@@ -110,8 +110,11 @@ export class ChromeTargetSource implements BrowserTargetSource {
     return this.tabs.secrets(id);
   }
 
-  captureMasked(id: number): Promise<CapturedImage | null> {
-    return this.tabs.captureMasked(id);
+  captureMasked(
+    id: number,
+    secrets: SecretFields
+  ): Promise<CapturedImage | null> {
+    return this.tabs.captureMasked(id, secrets);
   }
 }
 
@@ -141,5 +144,6 @@ export const tabMethodsOf = (
   noteAction: (sessionId) => source()?.noteAction(sessionId),
   noteUse: (sessionId) => source()?.noteUse(sessionId),
   secrets: (id) => source()?.secrets(id) ?? null,
-  captureMasked: async (id) => (await source()?.captureMasked(id)) ?? null,
+  captureMasked: async (id, secrets) =>
+    (await source()?.captureMasked(id, secrets)) ?? null,
 });

@@ -25,11 +25,7 @@
  *   after `UNCLAIMED_TAB_GRACE_MS`.
  */
 import type { BrowserPage, BrowserTab } from "../browser-target";
-import {
-  type CapturedImage,
-  captureMasked,
-  SecretFields,
-} from "../secret-fields";
+import { type CapturedImage, SecretFields } from "../secret-fields";
 import type { ChromeTabDriver, ChromeTabInfo } from "./chrome-relay";
 
 export const MAX_TABS_PER_SESSION = 6;
@@ -66,8 +62,6 @@ export class BrowserTabs {
   private readonly ended = new Map<string, ReturnType<typeof setTimeout>>();
   /** Unclaimed tabs, with the timer that lets each go. */
   private readonly unclaimed = new Map<number, ReturnType<typeof setTimeout>>();
-  /** The user's Chrome has handed over its picked tab; tabs from now on are ours to let go. */
-  private live = false;
   private joined = 0;
 
   constructor(
@@ -77,11 +71,7 @@ export class BrowserTabs {
     driver.on("tabAttached", (tab) => this.onAttached(tab));
     driver.on("tabDetached", (tabId) => this.forget(tabId));
     driver.on("tabRemoved", (tabId) => this.forget(tabId));
-    driver.on("ready", () => {
-      this.live = true;
-    });
     driver.on("disconnected", () => {
-      this.live = false;
       for (const tabId of Array.from(this.records.keys())) this.forget(tabId);
       for (const tabId of Array.from(this.unclaimed.keys())) this.forget(tabId);
       for (const timer of this.ended.values()) clearTimeout(timer);
@@ -231,14 +221,18 @@ export class BrowserTabs {
   /**
    * The tab's page as a screenshot, with its secret fields hidden and every
    * frame whose live origin is not the tab's covered: the one screenshot
-   * path. Null, with nothing captured, when either cannot be done.
+   * path, through the page's `secrets`. Null, with nothing captured, when
+   * either cannot be done.
    */
-  async captureMasked(tabId: number): Promise<CapturedImage | null> {
+  async captureMasked(
+    tabId: number,
+    secrets: SecretFields
+  ): Promise<CapturedImage | null> {
     const page = this.options.page(tabId);
     if (page == null) return null;
     const foreign = await this.foreignFrames(tabId);
     if (foreign == null) return null;
-    return captureMasked(page, foreign);
+    return secrets.captureMasked(page, foreign);
   }
 
   /**
@@ -323,9 +317,9 @@ export class BrowserTabs {
     this.join(tabId, claimant, this.active.get(claimant) ?? null);
   }
 
-  /** A tab no session owns: let go after a grace, where it is ours to let go. */
+  /** A tab no session owns: let go after a grace, unless it was there before the app was. */
   private leaveUnclaimed(tabId: number): void {
-    if (!this.driver.ownsTabs && !this.live) return;
+    if (this.driver.tab(tabId)?.preexisting === true) return;
     if (this.unclaimed.has(tabId)) return;
     const timer = setTimeout(() => {
       this.unclaimed.delete(tabId);
@@ -338,9 +332,13 @@ export class BrowserTabs {
 
   /** Closes the tab in a browser the app owns; elsewhere stops driving it and leaves it open. */
   private async letGo(tabId: number): Promise<void> {
-    if (this.driver.ownsTabs) await this.driver.closeTab(tabId);
-    else await this.driver.detachTab?.(tabId);
-    this.forget(tabId);
+    try {
+      if (this.driver.ownsTabs) await this.driver.closeTab(tabId);
+      else await this.driver.detachTab?.(tabId);
+    } finally {
+      // No longer any session's, whatever the browser made of it.
+      this.forget(tabId);
+    }
   }
 
   private ownedBy(sessionId: string): number[] {

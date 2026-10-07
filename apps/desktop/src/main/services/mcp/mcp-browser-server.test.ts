@@ -27,7 +27,7 @@ import {
 } from "vitest";
 
 import {
-  HOLDS_SECRET_VALUE_SCRIPT,
+  FIND_SECRET_FIELDS_SCRIPT,
   MASK_FOR_CAPTURE_SCRIPT,
   SecretFields,
   UNMASK_SCRIPT,
@@ -164,12 +164,37 @@ class FakeWebContents {
       if (method === "Page.captureScreenshot")
         return { data: Buffer.from("png").toString("base64") };
       if (method === "Input.dispatchKeyEvent") return {};
+      // The secret-field search: the page has none unless a case says so.
+      if (method === "Runtime.getProperties")
+        return {
+          result: secretFieldIds.map((id, index) => ({
+            name: String(index),
+            value: { objectId: `node-${id}` },
+          })),
+        };
+      if (method === "DOM.describeNode")
+        return {
+          node: {
+            backendNodeId: Number(String(params?.objectId).slice(5)),
+          },
+        };
+      if (method === "DOM.resolveNode")
+        return {
+          object: { objectId: `node-${String(params?.backendNodeId)}` },
+        };
+      if (method === "Runtime.callFunctionOn")
+        return {
+          result: {
+            value: secretFieldIds.includes(
+              Number(String(params?.objectId).slice(5))
+            ),
+          },
+        };
       if (method !== "Runtime.evaluate") return {};
 
       const expression = String(params?.expression ?? "");
-      // The execute lock asks first; a page holds no secret unless a case says so.
-      if (expression === HOLDS_SECRET_VALUE_SCRIPT)
-        return { result: { value: holdsSecretValue } };
+      if (expression === FIND_SECRET_FIELDS_SCRIPT)
+        return { result: { objectId: "found" } };
       evaluated.push(expression);
       if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
@@ -271,8 +296,8 @@ const fakeTarget = {
 let materializeEnabled = true;
 /** On for the cases about a source that keeps several tabs per session. */
 let tabbed = false;
-/** What the page answers the execute lock's question with. */
-let holdsSecretValue = false;
+/** The secret fields the page has, by backend node id. */
+let secretFieldIds: number[] = [];
 const secretsById = new Map<number, SecretFields>();
 vi.mock("#main/rpc/emit", () => ({
   emitHostEvent: (payload: unknown) => {
@@ -381,7 +406,7 @@ beforeEach(() => {
   liveViews = [page];
   materializeEnabled = true;
   tabbed = false;
-  holdsSecretValue = false;
+  secretFieldIds = [];
   secretsById.clear();
   gestures.length = 0;
   fakeTarget.noteAction.mockClear();
@@ -2213,8 +2238,8 @@ describe("the shapes a page can come back in", () => {
     ) => {
       if (method !== "Runtime.evaluate") return {};
       const expression = String(params?.expression ?? "");
-      if (expression === HOLDS_SECRET_VALUE_SCRIPT)
-        return { result: { value: false } };
+      if (expression === FIND_SECRET_FIELDS_SCRIPT)
+        return { result: { objectId: "found" } };
       attempts += 1;
       if (expression.includes("return (")) {
         return {
@@ -2235,8 +2260,8 @@ describe("the shapes a page can come back in", () => {
       method: string,
       params?: Record<string, unknown>
     ) =>
-      params?.expression === HOLDS_SECRET_VALUE_SCRIPT
-        ? { result: { value: false } }
+      params?.expression === FIND_SECRET_FIELDS_SCRIPT
+        ? { result: { objectId: "found" } }
         : method === "Runtime.evaluate"
           ? { exceptionDetails: {} }
           : {};
@@ -2513,11 +2538,12 @@ describe("a few last shapes", () => {
 
   it("reports a page that threw something other than an Error out of execute", async () => {
     page.debugger.sendCommand = async (
-      _method: string,
+      method: string,
       params?: Record<string, unknown>
     ) => {
-      if (params?.expression === HOLDS_SECRET_VALUE_SCRIPT)
-        return { result: { value: false } };
+      if (params?.expression === FIND_SECRET_FIELDS_SCRIPT)
+        return { result: { objectId: "found" } };
+      if (method !== "Runtime.evaluate") return {};
       throw "not an Error at all";
     };
     const { text, isError } = await call("browser_execute", {
@@ -3149,8 +3175,8 @@ describe("several tabs per session", () => {
     ).toBe(false);
   });
 
-  it("refuses scripts on a page holding a live password value, asked of the page each time", async () => {
-    holdsSecretValue = true;
+  it("refuses scripts on a page with a password field, empty or not, asked of the page each time", async () => {
+    secretFieldIds = [11];
     respondWith(() => "hunter2-secret");
 
     const refused = await call("browser_execute", {
@@ -3162,8 +3188,8 @@ describe("several tabs per session", () => {
     expect(refused.text).not.toContain("hunter2-secret");
     expect(evaluated).toEqual([]);
 
-    // Cleared: scripts run again.
-    holdsSecretValue = false;
+    // The field left the page: scripts run again.
+    secretFieldIds = [];
     respondWith(() => "Checkout");
     expect(
       (await call("browser_execute", { code: "document.title" })).text
@@ -3175,7 +3201,7 @@ describe("several tabs per session", () => {
       method: string,
       params?: Record<string, unknown>
     ) =>
-      params?.expression === HOLDS_SECRET_VALUE_SCRIPT
+      params?.expression === FIND_SECRET_FIELDS_SCRIPT
         ? { exceptionDetails: { text: "blocked" } }
         : method === "Runtime.evaluate"
           ? { result: { value: "ran" } }

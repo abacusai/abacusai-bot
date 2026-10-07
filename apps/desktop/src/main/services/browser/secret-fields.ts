@@ -12,13 +12,16 @@
  * - was filled on the user's behalf (`SECRET_ATTRIBUTE`).
  *
  * `SecretFields` is one tab's state and the one owner of "this page holds
- * secrets": `browser_execute` is refused while the page holds a non-empty
- * secret field (asked of the page each time) or a filled one (until the main
- * frame navigates). `captureMasked` is the one way a screenshot is taken.
+ * secrets". It keeps every node ever classified secret by its backend node
+ * id, outside the page's reach: a page (or a script run on it) that strips
+ * the in-page marks does not make a field readable again, since each read
+ * puts them back first. `browser_execute` is refused while the page has any
+ * secret field, empty or not, and after a fill until the main frame
+ * navigates. `captureMasked` is the one way a screenshot is taken.
  */
 import type { BrowserPage } from "./browser-target";
 
-/** Marks a field filled on the user's behalf; set by `markFilledScript`. */
+/** Marks a field known secret: filled on the user's behalf, or classified so before. */
 export const SECRET_ATTRIBUTE = "data-abacusai-secret";
 /** Marks a field that was a password field when first seen. */
 const WAS_PASSWORD_ATTRIBUTE = "data-abacusai-password";
@@ -72,27 +75,36 @@ export const SECRET_FIELD_JS = `
 `;
 
 /**
- * True when the page, its open shadow roots or a same-origin frame (all a
- * script can reach) holds a secret field with a value in it.
+ * Every secret field the page, its open shadow roots and its same-origin
+ * frames hold, as an array of elements (evaluated without `returnByValue`,
+ * so each can be named by its backend node id).
  */
-export const HOLDS_SECRET_VALUE_SCRIPT = `(function() {
+export const FIND_SECRET_FIELDS_SCRIPT = `(function() {
   ${SECRET_FIELD_JS}
-  const filled = (el) => el.isContentEditable || !__FIELDS.has(el.tagName)
-    ? !!el.textContent : String(el.value ?? '') !== '';
-  const holds = (root) => {
+  const found = [];
+  const walk = (root) => {
     for (const el of root.querySelectorAll('*')) {
-      if (__isSecret(el) && filled(el)) return true;
-      if (el.shadowRoot && holds(el.shadowRoot)) return true;
+      if (__isSecret(el)) found.push(el);
+      if (el.shadowRoot) walk(el.shadowRoot);
       const inner = __frameDocument(el);
       if (inner) {
         __watchPasswords(inner);
-        if (holds(inner)) return true;
+        walk(inner);
       }
     }
-    return false;
   };
-  return holds(document);
+  walk(document);
+  return found;
 })()`;
+
+/** Puts the secret mark back on a node known secret; whether it is in the page now. */
+const REASSERT_FUNCTION = `function() {
+  this.setAttribute(${JSON.stringify(SECRET_ATTRIBUTE)}, '');
+  return this.isConnected;
+}`;
+
+/** The remote objects one `SecretFields` pass holds, released together. */
+const OBJECT_GROUP = "abacusai-secret-fields";
 
 const MASK_ATTRIBUTE = "data-abacusai-mask";
 const MASKED_ATTRIBUTE = "data-abacusai-masked";
@@ -288,37 +300,14 @@ async function captureUnmasked(
     : null;
 }
 
-/**
- * The one way a screenshot is taken: secret fields hidden, every frame the
- * page cannot reach covered, and each of `foreignFrames` (frames whose live
- * origin is not the tab's, by frame id) covered too; all shown again after.
- * Null, with nothing captured, when any of that could not be done.
- */
-export async function captureMasked(
-  page: BrowserPage,
-  foreignFrames: readonly string[] = []
-): Promise<CapturedImage | null> {
-  try {
-    let named = 0;
-    for (const frameId of foreignFrames)
-      if ((await nameForCover(page, frameId)) === "named") named += 1;
-    const covered = await evaluate(page, MASK_FOR_CAPTURE_SCRIPT);
-    if (named > 0 && (typeof covered !== "number" || covered < named))
-      return null;
-    return await captureUnmasked(page);
-  } catch {
-    return null;
-  } finally {
-    await evaluate(page, UNMASK_SCRIPT).catch(() => undefined);
-  }
-}
-
 const EXECUTE_REFUSAL =
-  "This page holds a password, card or one-time code, so scripts cannot run on it. Use browser_snapshot and browser_interact instead.";
+  "This page has a password, card or one-time code field, so scripts cannot run on it. Use browser_snapshot and browser_interact instead.";
 
 /** One tab's secret fields. */
 export class SecretFields {
   private filledFields = 0;
+  /** Every node ever classified secret on the current page, by backend node id. */
+  private readonly known = new Set<number>();
 
   /**
    * Marks the field `selector` names as filled on the user's behalf: from
@@ -331,21 +320,116 @@ export class SecretFields {
     return (await evaluate(page, markFilledScript(selector))) === true;
   }
 
-  /** The main frame navigated: the filled fields are gone with the document. */
+  /** The main frame navigated: the filled and known fields are gone with the document. */
   navigated(): void {
     this.filledFields = 0;
+    this.known.clear();
   }
 
   /**
    * Why `browser_execute` may not run on `page`, or null when it may: the
-   * page holds a filled field, or a secret field with a value in it now.
-   * Refused too when the page cannot be asked.
+   * page has a secret field (found now, or known from before and still in
+   * the page), or holds a filled one. Refused too when the page cannot be
+   * asked.
    */
   async executeRefusal(page: BrowserPage): Promise<string | null> {
     if (this.filledFields > 0) return EXECUTE_REFUSAL;
-    const holds = await evaluate(page, HOLDS_SECRET_VALUE_SCRIPT).catch(
-      () => null
-    );
-    return holds === false ? null : EXECUTE_REFUSAL;
+    const present = await this.reassert(page).catch(() => null);
+    return present === 0 ? null : EXECUTE_REFUSAL;
+  }
+
+  /**
+   * Before anything reads the page: records the secret fields it has now and
+   * puts the mark back on every one known from before. How many known
+   * fields are in the page; rejects when the page could not be asked.
+   */
+  async reassert(page: BrowserPage): Promise<number> {
+    try {
+      await this.discover(page);
+      let present = 0;
+      for (const backendNodeId of this.known) {
+        const resolved = (await command(page, "DOM.resolveNode", {
+          backendNodeId,
+          objectGroup: OBJECT_GROUP,
+        }).catch(() => null)) as { object?: { objectId?: string } } | null;
+        const objectId = resolved?.object?.objectId;
+        // Gone from the renderer: nothing left to read.
+        if (objectId == null) {
+          this.known.delete(backendNodeId);
+          continue;
+        }
+        const { result } = (await command(page, "Runtime.callFunctionOn", {
+          objectId,
+          functionDeclaration: REASSERT_FUNCTION,
+          returnByValue: true,
+        })) as { result?: { value?: unknown } };
+        if (result?.value !== false) present += 1;
+      }
+      return present;
+    } finally {
+      await command(page, "Runtime.releaseObjectGroup", {
+        objectGroup: OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
+  }
+
+  /** Adds the secret fields the page has now to the known ones. */
+  private async discover(page: BrowserPage): Promise<void> {
+    const { result, exceptionDetails } = (await command(
+      page,
+      "Runtime.evaluate",
+      {
+        expression: FIND_SECRET_FIELDS_SCRIPT,
+        returnByValue: false,
+        objectGroup: OBJECT_GROUP,
+      }
+    )) as { result?: { objectId?: string }; exceptionDetails?: unknown };
+    if (exceptionDetails != null || result?.objectId == null)
+      throw new Error("the page could not be searched");
+    const { result: properties } = (await command(
+      page,
+      "Runtime.getProperties",
+      { objectId: result.objectId, ownProperties: true }
+    )) as {
+      result?: Array<{ name: string; value?: { objectId?: string } }>;
+    };
+    for (const property of properties ?? []) {
+      if (!/^\d+$/.test(property.name)) continue;
+      const objectId = property.value?.objectId;
+      if (objectId == null) throw new Error("a secret field has no handle");
+      const { node } = (await command(page, "DOM.describeNode", {
+        objectId,
+      })) as { node?: { backendNodeId?: number } };
+      if (node?.backendNodeId == null)
+        throw new Error("a secret field has no node id");
+      this.known.add(node.backendNodeId);
+    }
+  }
+
+  /**
+   * The one way a screenshot is taken: every secret field (known ones
+   * included) hidden, every frame the page cannot reach covered, and each of
+   * `foreignFrames` (frames whose live origin is not the tab's, by frame id)
+   * covered too; all shown again after. Null, with nothing captured, when
+   * any of that could not be done.
+   */
+  async captureMasked(
+    page: BrowserPage,
+    foreignFrames: readonly string[] = []
+  ): Promise<CapturedImage | null> {
+    try {
+      await this.reassert(page);
+      let named = 0;
+      for (const frameId of foreignFrames)
+        if ((await nameForCover(page, frameId)) === "named") named += 1;
+      const covered = await evaluate(page, MASK_FOR_CAPTURE_SCRIPT);
+      if (named > 0 && (typeof covered !== "number" || covered < named))
+        return null;
+      return await captureUnmasked(page);
+    } catch {
+      return null;
+    } finally {
+      await evaluate(page, UNMASK_SCRIPT).catch(() => undefined);
+    }
   }
 }

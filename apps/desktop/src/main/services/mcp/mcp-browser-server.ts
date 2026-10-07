@@ -52,11 +52,7 @@ import {
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
-import {
-  type CapturedImage,
-  captureMasked,
-  SecretFields,
-} from "../browser/secret-fields";
+import { type CapturedImage, SecretFields } from "../browser/secret-fields";
 import {
   McpHttpServer,
   type McpToolListing,
@@ -503,8 +499,22 @@ export class McpBrowserServer extends McpHttpServer {
    */
   private async captureImage(wc: BrowserPage): Promise<CapturedImage | null> {
     const source = this.options.target?.();
-    if (source?.captureMasked != null) return source.captureMasked(wc.id);
-    return captureMasked(wc);
+    const secrets = this.secretsOf(wc);
+    if (source?.captureMasked != null)
+      return source.captureMasked(wc.id, secrets);
+    return secrets.captureMasked(wc);
+  }
+
+  /**
+   * Runs a script that reads values out of the page, with every field known
+   * secret marked again first, so a page that stripped the marks does not
+   * get a field read out.
+   */
+  private async readPage(wc: BrowserPage, expression: string): Promise<any> {
+    await this.secretsOf(wc)
+      .reassert(wc)
+      .catch(() => undefined);
+    return this.evalJS(wc, expression);
   }
 
   private async executeTabs(
@@ -976,7 +986,7 @@ export class McpBrowserServer extends McpHttpServer {
     offscreenCount: number;
     overlays?: SnapshotOverlay[];
   }> {
-    const result = await this.evalJS(wc, SNAPSHOT_BUILD_JS);
+    const result = await this.readPage(wc, SNAPSHOT_BUILD_JS);
     // A reply that is not a snapshot must not wipe the refs the session holds.
     if (result == null || typeof result !== "object") {
       return {
@@ -1183,7 +1193,7 @@ export class McpBrowserServer extends McpHttpServer {
 
     await this.settle(wc);
     const value = String(
-      (await this.evalJS(wc, valueScript(sel)).catch(() => "")) ?? ""
+      (await this.readPage(wc, valueScript(sel)).catch(() => "")) ?? ""
     );
     const firstWord = (text.trim().split(/[\s,]+/)[0] ?? "").toLowerCase();
     const took =
@@ -1563,7 +1573,7 @@ export class McpBrowserServer extends McpHttpServer {
         const limit = numericArg(args.limit, 25, { min: 1, max: 100 });
         let result: { status?: string; total?: number; rows?: unknown[] };
         try {
-          result = await this.evalJS(
+          result = await this.readPage(
             wc,
             extractScript(selector, fields, limit)
           );
@@ -1868,7 +1878,7 @@ export class McpBrowserServer extends McpHttpServer {
         this.animateCursorClick();
         // Assigning an unmatched value to a <select> silently clears it, so the
         // element's own state decides and a miss lists what was there.
-        const result = await this.evalJS(wc, selectScript(sel, value));
+        const result = await this.readPage(wc, selectScript(sel, value));
         if (result?.status === "not_found")
           return this.err(`No <select> found: ${this.label(args)}`);
         if (result?.status === "no_match") {

@@ -34,7 +34,7 @@ import {
   type SnapshotResult,
 } from "./browser-snapshot-harness";
 import {
-  HOLDS_SECRET_VALUE_SCRIPT,
+  FIND_SECRET_FIELDS_SCRIPT,
   MASK_FOR_CAPTURE_SCRIPT,
   UNMASK_SCRIPT,
 } from "./secret-fields";
@@ -753,7 +753,7 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
           ),
         }
       ) as unknown as Loose,
-      held: runSnapshotFixtures(HOLDS_SECRET_VALUE_SCRIPT, {
+      held: runSnapshotFixtures(`(${FIND_SECRET_FIELDS_SCRIPT}).length`, {
         plain: wrap(`<input name="user" value="me@example.test">`),
         empty: wrap(`<input type="password"><input autocomplete="cc-number">`),
         password: wrap(`<input type="password" value="hunter2-secret">`),
@@ -884,14 +884,14 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
     expect(JSON.stringify(snapshot)).not.toContain("hunter2-secret");
   });
 
-  it("says a page holds a secret only when a secret field has a value, frames included", () => {
+  it("finds every secret field, empty or filled, frames included", () => {
     expect(secretReads.held).toEqual({
-      plain: false,
-      empty: false,
-      password: true,
-      token: true,
-      month: true,
-      framed: true,
+      plain: 0,
+      empty: 2,
+      password: 1,
+      token: 1,
+      month: 1,
+      framed: 1,
     });
   });
 

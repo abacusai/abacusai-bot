@@ -104,8 +104,11 @@ export interface BrowserTargetSource {
   noteUse?(sessionId: string): void;
   /** The page's secret fields, where the source keeps them per tab. */
   secrets?(id: number): SecretFields | null;
-  /** The page with its secret fields hidden and foreign frames covered; see `captureMasked`. */
-  captureMasked?(id: number): Promise<CapturedImage | null>;
+  /** The page through its `secrets`, with foreign frames covered; see `SecretFields.captureMasked`. */
+  captureMasked?(
+    id: number,
+    secrets: SecretFields
+  ): Promise<CapturedImage | null>;
 }
 
 /**

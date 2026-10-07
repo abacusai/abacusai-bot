@@ -27,6 +27,11 @@ export interface ChromeTabInfo {
    * `openerTabId` alone cannot say so. Such a tab is never taken by a click.
    */
   hasOpener?: boolean;
+  /**
+   * The tab was handed over while the connection was being made (the tab
+   * the user picked): it is the user's, and is never let go.
+   */
+  preexisting?: boolean;
 }
 
 type Pending = {
@@ -75,6 +80,8 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
 };
 
 const CONNECT_WAIT_MS = 5 * 60_000;
+/** How long the extension gets to let a tab go before the app lets go of it anyway. */
+export const DETACH_TIMEOUT_MS = 5_000;
 
 export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
   /** The user's own Chrome: its tabs are never closed for being unneeded. */
@@ -185,9 +192,12 @@ export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
 
   async attach(tabId: number): Promise<void> {
     if (this.attached.has(tabId)) return;
+    // Decided when the attach begins, not when it lands: the handshake may end in between.
+    const duringHandshake = !this.initialized;
     await this.send("chrome.debugger.attach", [{ tabId }, "1.3"]);
     this.attached.add(tabId);
     const tab = this.tabs.get(tabId) ?? { id: tabId };
+    if (duringHandshake) tab.preexisting = true;
     this.tabs.set(tabId, tab);
     this.emit("tabAttached", tab);
   }
@@ -196,10 +206,31 @@ export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
     await this.send("chrome.tabs.remove", [tabId]);
   }
 
-  /** Lets the tab go: the debugger leaves it, and it stays open in the user's Chrome. */
+  /**
+   * Lets the tab go: the debugger leaves it, and it stays open in the user's
+   * Chrome. The app stops driving it whatever the extension answers, or if
+   * it never does.
+   */
   async detachTab(tabId: number): Promise<void> {
     if (!this.attached.has(tabId)) return;
-    await this.send("chrome.debugger.detach", [{ tabId }]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        this.send("chrome.debugger.detach", [{ tabId }]),
+        new Promise((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("no answer")),
+            DETACH_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } catch (error) {
+      console.warn(
+        `[browser] tab ${tabId} could not be detached (${error instanceof Error ? error.message : String(error)}); no longer driven`
+      );
+    } finally {
+      clearTimeout(timer);
+    }
     if (this.attached.delete(tabId)) this.emit("tabDetached", tabId);
   }
 
@@ -310,6 +341,7 @@ export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {
       case "chrome.tabs.onCreated": {
         const tab = params[0] as ChromeTabInfo | undefined;
         if (tab?.id == null) return;
+        if (!this.initialized) tab.preexisting = true;
         this.tabs.set(tab.id, tab);
         // Before the handshake ends this is the tab the user picked, and the
         // extension attaches it for us on request; after, a popup opened by
