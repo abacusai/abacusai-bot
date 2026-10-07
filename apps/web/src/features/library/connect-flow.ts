@@ -17,15 +17,13 @@ import { Store, useStore } from "@tanstack/react-store";
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import {
-  reserveAuthorization,
-  completeConnectorAuthorization,
-} from "#renderer/lib/browser/authorization";
+import { CONNECT_WAIT_MS, waitForConnected } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { openConnectPage } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
-export const CONNECT_WATCHDOG_MS = 180000;
+export const CONNECT_WATCHDOG_MS = CONNECT_WAIT_MS;
 export interface FlowDeps {
   transport: Transport;
   db: Db;
@@ -36,7 +34,8 @@ export interface FlowDeps {
 }
 export type FlowState = {
   connectorId: string | null;
-  phase: "idle" | "hop" | "fields" | "pairing" | "signing-in";
+  /** `waiting`: the connect page (or an MCP sign-in) is open elsewhere. */
+  phase: "idle" | "waiting" | "fields" | "pairing" | "signing-in";
   error?: string;
   chromeMissing?: boolean;
 };
@@ -86,6 +85,8 @@ export const createConnectFlow = (deps: FlowDeps) => {
     platform?: MessagingPlatformId;
     resolve(outcome: ConnectorOutcome): void;
     timer?: ReturnType<typeof setTimeout>;
+    /** Stops waiting on the connect page. */
+    abort?: AbortController;
     ready?: Promise<void>;
     settlement?: Promise<void>;
   };
@@ -93,6 +94,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
   let serial = 0;
   const finishRecord = (a: PairingRecord, result: ConnectorOutcome) => {
     if (a.timer) clearTimeout(a.timer);
+    a.abort?.abort();
     if (active?.id === a.id) {
       active = null;
       store.setState(() => ({
@@ -150,7 +152,6 @@ export const createConnectFlow = (deps: FlowDeps) => {
     if (!a) return;
     finish(a.id, { ok: false, cancelled: true, error: "cancelled" });
     if (a.platform) await disablePlatform(deps, a.platform);
-    else await deps.transport.client.connectors.cancelConnect({});
   };
   const settleRecord = (a: PairingRecord): Promise<void> => {
     if (a.settlement) return a.settlement;
@@ -221,27 +222,37 @@ export const createConnectFlow = (deps: FlowDeps) => {
     }
     await settleRecord(a);
   };
+  const statusesKey = () =>
+    deps.transport.orpc.connectors.statuses.queryKey({ input: {} });
   const start = async (
     connectorId: string,
     options: { pairing?: "navigate" | "defer" } = {}
   ): Promise<ConnectorOutcome> => {
-    const authorization = reserveAuthorization();
+    const entry = connectorById(connectorId);
+    // A platform connector's page opens inside the click, before any await,
+    // unless the host must sign in first.
+    const signedOut =
+      deps.queryClient.getQueryData<Record<string, { reason?: string }>>(
+        statusesKey()
+      )?.[connectorId]?.reason === "not-signed-in";
+    let opened =
+      entry?.kind === "platform" && !signedOut
+        ? openConnectPage(deps.transport.client, connectorId)
+        : null;
+    // Awaited below unless superseded first.
+    opened?.catch(() => undefined);
     const id = ++serial;
     await cancel();
-    if (id !== serial) {
-      authorization.close();
+    if (id !== serial)
       return { ok: false, cancelled: true, error: "superseded" };
-    }
-    const entry = connectorById(connectorId);
-    if (!entry) {
-      authorization.close();
-      return { ok: false, error: "unknown-connector" };
-    }
+    if (!entry) return { ok: false, error: "unknown-connector" };
+    const abort = new AbortController();
     const outcome = new Promise<ConnectorOutcome>((resolve) => {
       active = {
         id,
         connectorId,
         resolve,
+        abort,
         timer: setTimeout(() => {
           if (active?.id !== id) return;
           void cancel().catch(() => undefined);
@@ -256,7 +267,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
     const current = () => active?.id === id;
     void (async () => {
       try {
-        if (entry.kind === "platform") {
+        if (entry.kind === "platform" && opened == null) {
           const statuses = await deps.transport.client.connectors.statuses({});
           if (!current()) return;
           if (statuses[connectorId]?.reason === "not-signed-in") {
@@ -271,6 +282,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
             }
             await deps.credentialsChanged?.();
           }
+          opened = openConnectPage(deps.transport.client, connectorId);
         }
         const ui = connectUi(entry);
         if (ui === "pairing" && entry.kind === "messaging") {
@@ -298,24 +310,25 @@ export const createConnectFlow = (deps: FlowDeps) => {
           store.setState(() => ({ connectorId, phase: "fields" }));
           return;
         }
-        store.setState(() => ({ connectorId, phase: "hop" }));
-        const result = await deps.transport.client.connectors.connect({
-          connectorId,
-        });
+        store.setState(() => ({ connectorId, phase: "waiting" }));
+        let result: ConnectorOutcome;
+        if (opened != null) {
+          result = await opened;
+          if (!current()) return;
+          if (result.ok)
+            result = await waitForConnected(
+              deps.transport.client,
+              connectorId,
+              abort.signal
+            );
+        } else
+          result = await deps.transport.client.connectors.connect({
+            connectorId,
+          });
         if (!current()) return;
-        const completed = await completeConnectorAuthorization(
-          deps.transport.client,
-          connectorId,
-          result,
-          authorization,
-          current
-        );
-        if (!current()) return;
-        await complete(id, entry, completed);
+        await complete(id, entry, result);
       } catch (e) {
         finish(id, { ok: false, error: errorText(e) });
-      } finally {
-        authorization.close();
       }
     })();
     return outcome;

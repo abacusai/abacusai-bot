@@ -8,9 +8,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectorFlowService, mcpEntryFor } from "./connector-flow-service";
 
-const platformConnect = vi.fn(async () => ({ ok: true }) as const);
+const platformConnect = vi.fn(
+  () => ({ ok: true, url: "https://apps.example/connect" }) as const
+);
 const platformDisconnect = vi.fn(async () => ({ ok: true }) as const);
-const ensureGateway = vi.fn();
+const watch = vi.fn();
 const addServer = vi.fn(() => ({ success: true }));
 const removeServer = vi.fn(() => ({ success: true }));
 const signIn = vi.fn(async () => ({ success: true }));
@@ -20,7 +22,7 @@ const flow = (): ConnectorFlowService =>
     platform: {
       connect: platformConnect,
       disconnect: platformDisconnect,
-      ensureGateway,
+      watch,
     },
     mcp: { add: addServer, remove: removeServer, signIn },
     homeDir: () => "/home/ada",
@@ -31,36 +33,34 @@ beforeEach(() => {
 });
 
 describe("a platform connector", () => {
-  it("runs the browser hop by service key and rewrites the gateway entry after", async () => {
-    expect(await flow().connect("abacus-gmailuser")).toEqual({ ok: true });
+  it("answers with the connect page by service key and watches for the connection", async () => {
+    expect(await flow().connect("abacus-gmailuser")).toEqual({
+      ok: true,
+      url: "https://apps.example/connect",
+    });
 
     expect(platformConnect).toHaveBeenCalledWith("gmailuser", undefined);
-    expect(ensureGateway).toHaveBeenCalledTimes(1);
+    expect(watch).toHaveBeenCalledWith("abacus-gmailuser");
   });
 
-  it("hands the hop's start options to the platform", async () => {
-    await flow().connect("abacus-gmailuser", {
-      autostart: true,
-      hint: "me@gmail.com",
-    });
+  it("hands the account hint to the platform", async () => {
+    await flow().connect("abacus-gmailuser", { hint: "me@gmail.com" });
 
     expect(platformConnect).toHaveBeenCalledWith("gmailuser", {
-      autostart: true,
       hint: "me@gmail.com",
     });
   });
 
-  it("leaves the gateway alone when the hop did not finish", async () => {
-    platformConnect.mockResolvedValueOnce({
+  it("watches nothing when no page could be handed out", async () => {
+    platformConnect.mockReturnValueOnce({
       ok: false,
-      error: "cancelled",
-      cancelled: true,
+      error: "not-signed-in",
     } as never);
 
     const outcome = await flow().connect("abacus-gmailuser");
 
-    expect(outcome).toMatchObject({ ok: false, cancelled: true });
-    expect(ensureGateway).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ ok: false, error: "not-signed-in" });
+    expect(watch).not.toHaveBeenCalled();
   });
 
   it("detaches by service key", async () => {

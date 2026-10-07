@@ -1,1 +1,5 @@
-export { platformSystem, openSharedLink } from "#platform/system";
+export {
+  platformSystem,
+  openSharedLink,
+  openConnectPage,
+} from "#platform/system";

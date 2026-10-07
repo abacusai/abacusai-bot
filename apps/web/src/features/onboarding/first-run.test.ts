@@ -1,36 +1,50 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
 
 import { startFirstRunGmail, startWebsiteSignIn } from "./first-run";
 
 beforeEach(() => localStorage.clear());
+afterEach(() => vi.useRealTimers());
 const setup = () => {
-  const connect = vi.fn(async () => ({ ok: true }));
+  const connect = vi.fn(async () => ({
+    ok: true,
+    url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
+  }));
   const funnelStep = vi.fn(async () => {});
+  const openExternal = vi.fn(async () => {});
+  const statuses = vi.fn(async () => ({}));
   const transport = {
     client: {
-      connectors: { statuses: async () => ({}), connect },
+      connectors: { statuses, connect },
       auth: { abacus: { shouldAutoSignIn: async () => true } },
-      system: { funnelStep },
+      system: { funnelStep, openExternal },
     },
   } as unknown as Transport;
-  return { transport, connect, funnelStep };
+  return { transport, connect, funnelStep, openExternal, statuses };
 };
 
-it("starts Gmail consent once, for the authenticated address, and keeps ownership across screens", async () => {
-  const { transport, connect, funnelStep } = setup();
+it("opens Gmail's connect page once, for the authenticated address, and reports once connected", async () => {
+  vi.useFakeTimers();
+  const { transport, connect, funnelStep, openExternal, statuses } = setup();
   await Promise.all([
     startFirstRunGmail(transport, "ada@example.com"),
     startFirstRunGmail(transport, "ada@example.com"),
   ]);
   expect(connect).toHaveBeenCalledExactlyOnceWith({
     connectorId: "abacus-gmailuser",
-    options: { autostart: true, hint: "ada@example.com", owner: "first-run" },
+    options: { hint: "ada@example.com" },
   });
-  await vi.waitFor(() =>
-    expect(funnelStep).toHaveBeenCalledWith({ step: "gmail_allowed" })
-  );
+  await vi.advanceTimersByTimeAsync(0);
+  expect(openExternal).toHaveBeenCalledExactlyOnceWith({
+    url: "https://apps.example/chatllm/connect-connector?service=gmailuser",
+  });
+  expect(funnelStep).not.toHaveBeenCalled();
+  statuses.mockResolvedValue({
+    "abacus-gmailuser": { state: "connected" },
+  } as never);
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(funnelStep).toHaveBeenCalledWith({ step: "gmail_allowed" });
 });
 
 it("does not open Gmail for a missing address or a connected account", async () => {

@@ -9,10 +9,6 @@ import {
   startAbacusAuth,
 } from "../services/providers/abacus-auth-service";
 import { listBrowserSignInProfiles } from "../services/providers/abacus-browser-profiles";
-import {
-  cancelAllConnectorConnects,
-  cancelConnectorConnect,
-} from "../services/providers/abacus-connector-service";
 import { shouldAutoSignIn } from "../services/providers/abacus-signin-config";
 import {
   cancelOpenRouterAuth,
@@ -37,8 +33,6 @@ export const electronHostPlatform: HostPlatformOperations = {
   listBrowserSignInProfiles,
   shouldAutoSignIn,
   cancelOpenRouterAuth,
-  cancelConnectorConnect,
-  cancelAllConnectorConnects,
   clearSignInSession,
   rememberSessionAccount,
   registerLoginItem,

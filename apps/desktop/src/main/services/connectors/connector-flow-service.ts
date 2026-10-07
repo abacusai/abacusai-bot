@@ -2,7 +2,7 @@
  * How a connector gets connected and disconnected, by kind, in one place.
  * Every surface with a Connect button (the Connectors page, onboarding, the
  * card the agent raises in a chat) calls this rather than knowing what a
- * platform hop, a credential store or an MCP install is. The renderer's only
+ * platform connect page, a credential store or an MCP install is. The renderer's only
  * job is to collect fields when the kind needs them (registry `connectUi`).
  */
 import {
@@ -18,15 +18,15 @@ import type {
 } from "@abacus-ai/contract/contracts";
 
 export interface FlowSources {
-  /** The platform's browser hop and its inverse, by service key. */
+  /** The platform's connect page URL and its inverse, by service key. */
   platform: {
     connect: (
       service: string,
       options?: ConnectorConnectOptions
-    ) => Promise<ConnectorOutcome>;
+    ) => ConnectorOutcome;
     disconnect: (service: string) => Promise<ConnectorOutcome>;
-    /** Rewrites the gateway MCP entry after a connect: the file is user-editable. */
-    ensureGateway: () => void;
+    /** Follows a connector whose page was handed out until it connects. */
+    watch: (connectorId: string) => void;
   };
   mcp: {
     /**
@@ -106,11 +106,9 @@ export class ConnectorFlowService {
     if (ui === "pairing")
       return failure(`${connector.name} is paired from its own dialog.`);
     if (connector.kind === "platform") {
-      const outcome = await this.sources.platform.connect(
-        connector.service,
-        options
-      );
-      if (outcome.ok) this.sources.platform.ensureGateway();
+      // The caller opens the page; completion arrives through the watch.
+      const outcome = this.sources.platform.connect(connector.service, options);
+      if (outcome.ok) this.sources.platform.watch(connector.id);
       return outcome;
     }
     if (connector.kind === "mcp") return this.installMcp(connector, {});
