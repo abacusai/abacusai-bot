@@ -2526,7 +2526,9 @@
       },
       "addTab": "Add a tab",
       "closeTab": "Close {{name}}",
-      "openExternalBrowser": "Open in external browser"
+      "openExternalBrowser": "Open in external browser",
+      "renameTab": "Rename tab",
+      "saveTab": "Save"
     },
     "sidebar": {
       "loadError": "Couldn't load",

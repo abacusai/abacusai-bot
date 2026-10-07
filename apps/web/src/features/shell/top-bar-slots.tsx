@@ -101,7 +101,8 @@ const setPanelTarget = (element: HTMLElement | null): void => {
 };
 export const TopBarPanelOutlet = () => (
   <div
-    className="titlebar-nodrag flex max-w-[65%] min-w-0 items-center empty:hidden"
+    data-slot="topbar-panel-outlet"
+    className="titlebar-nodrag flex min-w-0 flex-1 items-start self-stretch empty:hidden"
     ref={setPanelTarget}
   />
 );

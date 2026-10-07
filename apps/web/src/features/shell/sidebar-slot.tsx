@@ -34,20 +34,26 @@ import { isRouteTransitionActive } from "#renderer/lib/navigation/route-transiti
 import { useFloatingIntent } from "./floating-intent";
 import { SHELL_GEOMETRY } from "./geometry";
 import type { ShellArea, SidebarMode } from "./layout";
+import { PromoOutlet } from "./promo-host";
 import { shellStore } from "./shell-store";
 import { BotsStrip, NEEDS_YOU, SIDEBARS } from "./sidebars";
 
 const SidebarContent = ({
   sidebarId,
+  floating = false,
 }: {
   sidebarId: ShellArea | undefined;
+  floating?: boolean;
 }) => {
   const Sidebar = sidebarId == null ? null : SIDEBARS[sidebarId];
   const NeedsYou = sidebarId == null ? null : NEEDS_YOU[sidebarId];
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      {NeedsYou != null && <NeedsYou />}
-      {Sidebar != null && <Sidebar />}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="scroll-fade-y flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {NeedsYou != null && <NeedsYou />}
+        {Sidebar != null && <Sidebar />}
+      </div>
+      <PromoOutlet floating={floating} />
     </div>
   );
 };

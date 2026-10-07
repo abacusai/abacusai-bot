@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { Sparkles, Minus } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, animate } from "motion/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -9,9 +9,11 @@ import {
   useRef,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { cn } from "#renderer/lib/cn";
 import {
   ABACUS_PLAN_URL,
   creditMarkState,
@@ -31,6 +33,7 @@ import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
 import { PromoCharacter } from "./promo-character";
+import { usePromoHost, consumePromoRect } from "./promo-host";
 import { promoPlacement } from "./promo-placement";
 import {
   PROMO_SNOOZE_MS,
@@ -40,9 +43,16 @@ import {
   type PromoSnooze,
 } from "./promo-state";
 
-/** Floating above the reading pane, clear of the composer and splitters. */
+/** One portal and dismissal state, shared by sidebar and floating presentations. */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
+  const host = usePromoHost();
+  const snapshot = useRef<DOMRect | null>(null);
+  const [target] = useState(() => {
+    const element = document.createElement("div");
+    element.dataset.slot = "promo-portal";
+    return element;
+  });
   const { t } = useTranslation();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
@@ -51,6 +61,33 @@ export const UpgradePromo = () => {
   const now = Math.max(minuteNow, deadlineNow);
   const preference = useMotionPreference();
   const location = useLocation();
+  useLayoutEffect(() => {
+    const previous = snapshot.current
+      ? snapshot.current
+      : (consumePromoRect() ?? snapshot.current);
+    (host?.element ?? document.body).append(target);
+    const next = target.firstElementChild?.getBoundingClientRect();
+    const controls =
+      previous && next && preference !== "reduced"
+        ? animate(
+            target,
+            {
+              x: [previous.left - next.left, 0],
+              y: [previous.top - next.top, 0],
+            },
+            {
+              ...springs.panel,
+              onComplete: () => {
+                snapshot.current =
+                  target.firstElementChild?.getBoundingClientRect() ?? null;
+              },
+            }
+          )
+        : null;
+    snapshot.current = next ?? null;
+    return () => controls?.stop();
+  }, [host, target, preference]);
+  useEffect(() => () => target.remove(), [target]);
   const account = useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
     queryKey: [
@@ -109,7 +146,7 @@ export const UpgradePromo = () => {
     return () => clearTimeout(timer);
   }, [tier]);
   useLayoutEffect(() => {
-    if (!state && !celebrating) return;
+    if (host || (!state && !celebrating)) return;
     let frame = 0;
     const observer = new ResizeObserver(() => schedule());
     const observed = new Set<Element>();
@@ -128,6 +165,8 @@ export const UpgradePromo = () => {
       }
       const rect = pane?.getBoundingClientRect();
       const composerRect = composer?.getBoundingClientRect();
+      snapshot.current =
+        target.firstElementChild?.getBoundingClientRect() ?? null;
       const promoHeight =
         document
           .querySelector('[data-slot="upgrade-promo"]')
@@ -179,20 +218,24 @@ export const UpgradePromo = () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", schedule);
     };
-  }, [state, celebrating, location.href]);
+  }, [state, celebrating, location.href, host, target]);
   const remaining =
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
-  return (
+  return createPortal(
     <AnimatePresence>
       {state || celebrating ? (
         <motion.aside
           key={key}
           data-slot="upgrade-promo"
           aria-label={t("creditsCard.upsellTitle")}
-          className="bg-background fixed isolate z-30 w-80 overflow-hidden rounded-xl border p-3 shadow-lg"
-          style={position}
+          data-presentation={host ? "sidebar" : "floating"}
+          className={cn(
+            "bg-background isolate overflow-hidden rounded-(--pane-radius) border p-3",
+            host ? "relative w-full" : "fixed z-30 w-80 shadow-lg"
+          )}
+          style={host ? undefined : position}
           initial={{
             opacity: 0,
             y: preference === "reduced" ? 0 : offsets.drill,
@@ -308,6 +351,7 @@ export const UpgradePromo = () => {
           </Button>
         </motion.aside>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    target
   );
 };

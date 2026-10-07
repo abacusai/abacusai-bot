@@ -31,11 +31,26 @@ const applyChromeState = (doc: Document, chrome: WindowChromeState): void => {
   const root = doc.documentElement;
   root.dataset.titlebar = chrome.mode;
   root.dataset.density = chrome.density;
+  root.style.setProperty("--titlebar-row-h", `${chrome.toolbarHeight}px`);
   root.style.setProperty("--toolbar-h", `${chrome.toolbarHeight}px`);
 };
 
 export const ChromeEffect = ({ transport }: { transport: Transport }): null => {
   const chrome = useChromeState(transport);
+  useEffect(() => {
+    const focus = () => {
+      document.documentElement.dataset.windowFocused = String(
+        document.hasFocus()
+      );
+    };
+    focus();
+    window.addEventListener("focus", focus);
+    window.addEventListener("blur", focus);
+    return () => {
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("blur", focus);
+    };
+  }, []);
   useEffect(() => {
     applyChromeState(document, chrome);
   }, [chrome]);

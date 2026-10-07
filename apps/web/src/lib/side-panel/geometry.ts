@@ -5,9 +5,8 @@ export const PANEL_MIN_PX = SHELL_GEOMETRY.sidePanelMin;
 export const PANEL_MAX_PX = SHELL_GEOMETRY.sidePanelMax;
 export const PANE_MIN_PX = 360;
 export const PANEL_DEFAULT_PX = 400;
-export const PANEL_PREF_KEY = "side-panel";
 /** The panel's share of the split at most (the pane keeps the rest). */
-export const PANEL_MAX_FRACTION = 0.6;
+const PANEL_MAX_FRACTION = 0.6;
 
 /**
  * The widest the in-layout panel may be inside a split `groupWidth` px wide

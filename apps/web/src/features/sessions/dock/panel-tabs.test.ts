@@ -3,6 +3,8 @@ import { expect, it } from "vitest";
 import {
   panelTabsStore,
   openTab,
+  closeTab,
+  reopenTab,
   updateTabs,
   updateTab,
   focusTab,
@@ -75,4 +77,22 @@ it("browser navigation updates its saved URL without reopening or selecting a ba
   expect(panelTabsStore.state[key]!.tabs).toBe(tabs);
   updateTab(key, "browser:closed", { url: "https://late.test/" });
   expect(panelTabsStore.state[key]!.tabs).toBe(tabs);
+});
+
+it("reopens closed browser metadata without reviving its closed native resource", () => {
+  const key = "reopen-audit";
+  openTab(key, {
+    ref: "browser:old",
+    title: "Example",
+    url: "https://example.test",
+  });
+  closeTab(key, "browser:old");
+  const ref = reopenTab(key);
+  expect(ref).toMatch(/^browser:/);
+  expect(ref).not.toBe("browser:old");
+  expect(panelTabsStore.state[key]?.tabs[0]).toMatchObject({
+    title: "Example",
+    url: "https://example.test",
+  });
+  expect(reopenTab(key)).toBeNull();
 });

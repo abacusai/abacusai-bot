@@ -18,6 +18,7 @@
   --titlebar-end: calc(
     100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)
   );
+  --titlebar-row-h: 40px;
   --toolbar-h: 40px; /* overwritten from window.chrome density */
   /* shell geometry (canvas); features/shell/geometry.ts holds the same
      numbers and geometry.test.ts keeps them equal. 8 px grid. */
@@ -123,8 +124,7 @@ html {
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="sidebar-floating"] {
     background-color: color-mix(in oklab, var(--sidebar) 78%, transparent);
-    -webkit-backdrop-filter: blur(24px) saturate(1.4);
-    backdrop-filter: blur(24px) saturate(1.4);
+
   }
 }
 
@@ -687,3 +687,13 @@ html[data-reduce-motion="on"] .phone-rise {
 .panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:hover::before {
   inset: 2px calc(50% - 12px);
 }
+
+/* Caption/traffic-light controls stay in row one as the shared rail wraps. */
+[data-slot="topbar-leading"], [data-slot="topbar-actions"], [data-slot="topbar-identity"] { align-self: start; height: var(--titlebar-row-h); }
+[data-slot="topbar"]:has([data-rail-chat]) [data-slot="topbar-identity"] { display: none; }
+[data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]):not(:has([data-rail-chat])) [data-slot="topbar-identity"] { flex: 0 1 180px; }
+/* An inactive window has an opaque, contrast-stable chrome on every OS. */
+html[data-window-focused="false"], html[data-window-focused="false"] body, html[data-window-focused="false"] #root, html[data-window-focused="false"] .shell-surface { background-color: var(--sidebar); }
+.workspace-island { background-color: var(--background); }
+
+[data-slot="topbar"] > button, [data-slot="topbar-panel-outlet"] > button { align-self: start; margin-block: calc((var(--titlebar-row-h) - 28px) / 2); }

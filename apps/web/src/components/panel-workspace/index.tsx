@@ -21,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { usePanelRef } from "react-resizable-panels";
 
+import { TabsRail } from "#renderer/components/tabs-rail";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
@@ -30,6 +31,7 @@ import {
   PANEL_MIN_PX,
   panelMaxFor,
 } from "#renderer/lib/side-panel/geometry";
+import type { PanelTabKind } from "#renderer/lib/side-panel/store";
 import { ResizablePanelGroup, ResizablePanel } from "#renderer/ui/resizable";
 
 import { PanelResizeHandle } from "./resize-handle";
@@ -38,11 +40,18 @@ import { enhanceDockSplitters } from "./splitters";
 export interface WorkspaceTab {
   id: string;
   title: string;
+  icon?: ReactNode;
   content(visible: boolean): ReactNode;
 }
 interface WorkspaceContext {
   expanded: boolean;
   targets: Map<string, HTMLDivElement>;
+  api: DockviewApi | null;
+  tabs: WorkspaceTab[];
+  select(id: string): void;
+  add?(kind: PanelTabKind): void;
+  reopen?(): void;
+  rename?(id: string, title: string): void;
   close(id: string): void;
 }
 const Context = createContext<WorkspaceContext | null>(null);
@@ -54,7 +63,67 @@ const Content = ({ api }: IDockviewPanelProps) => {
     if (context.expanded && target && container.current)
       container.current.append(target);
   }, [context, api.id]);
-  return <div ref={container} className="size-full min-h-0 min-w-0" />;
+  const group = context.api?.getPanel(api.id)?.group;
+  const grouped = context.expanded && (context.api?.groups.length ?? 0) > 1;
+  return (
+    <div
+      className={cn(
+        "flex size-full min-h-0 min-w-0 flex-col",
+        grouped && "workspace-island dock-group-island"
+      )}
+    >
+      {grouped && group?.activePanel?.id === api.id && (
+        <div className="flex min-h-(--titlebar-row-h) min-w-0 items-center px-2">
+          <TabsRail
+            tabs={group.panels
+              .map((panel) => ({
+                id: panel.id,
+                title: panel.title,
+                kind: (panel.id === "chat"
+                  ? "thread"
+                  : panel.id.startsWith("preview:")
+                    ? "files"
+                    : panel.id.split(":")[0]) as PanelTabKind,
+              }))
+              .toSorted((a, b) =>
+                a.id === "chat" ? -1 : b.id === "chat" ? 1 : 0
+              )}
+            active={group.activePanel.id}
+            title={(tab) => tab.title ?? ""}
+            renderIcon={(tab) =>
+              context.tabs.find((item) => item.id === tab.id)?.icon
+            }
+            kinds={
+              context.add ? ["terminal", "files", "browser", "changes"] : []
+            }
+            onChange={(id) => {
+              context.api?.getPanel(id)?.api.setActive();
+              context.select(id);
+            }}
+            onClose={(id) => {
+              if (id !== "chat") context.close(id);
+            }}
+            onAdd={(kind) => context.add?.(kind)}
+            onReopen={context.reopen}
+            onRename={context.rename}
+            onReorder={(ids) =>
+              ids.forEach((id, index) =>
+                context.api
+                  ?.getPanel(id)
+                  ?.api.moveTo({ group, index, position: "center" })
+              )
+            }
+            onDragStart={(id, event) =>
+              event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+            }
+            workspaceApi={{ current: context.api }}
+            onMove={(id, position) => moveDockTab(context.api, id, position)}
+          />
+        </div>
+      )}
+      <div ref={container} className="min-h-0 min-w-0 flex-1" />
+    </div>
+  );
 };
 const visiblePanels = (api: DockviewApi): string[] => {
   for (const group of api.groups)
@@ -90,7 +159,15 @@ export const PanelWorkspace = ({
   onSelect,
   onClose,
   apiRef,
+  onAdd,
+  onGroupCountChange,
+  onReopen,
+  onRename,
 }: {
+  onAdd?(kind: PanelTabKind): void;
+  onGroupCountChange?(count: number): void;
+  onReopen?(): void;
+  onRename?(id: string, title: string): void;
   scope: string;
   tabs: WorkspaceTab[];
   active: string | null;
@@ -232,6 +309,9 @@ export const PanelWorkspace = ({
   useEffect(() => {
     if (expanded && active) api?.getPanel(active)?.api.setActive();
   }, [api, active, expanded]);
+  useEffect(() => {
+    onGroupCountChange?.(api?.groups.length ?? 1);
+  }, [api, visible.length, onGroupCountChange]);
   const split = open && !expanded && width >= 728;
   const maximum = panelMaxFor(width);
   const stored = clampPanelWidth(
@@ -246,7 +326,19 @@ export const PanelWorkspace = ({
     if (!expanded && target && element) element.append(target);
   };
   return (
-    <Context value={{ expanded, targets, close: onClose }}>
+    <Context
+      value={{
+        expanded,
+        targets,
+        close: onClose,
+        api,
+        tabs,
+        select: onSelect,
+        add: onAdd,
+        reopen: onReopen,
+        rename: onRename,
+      }}
+    >
       <div
         ref={container}
         data-slot="panel-workspace"

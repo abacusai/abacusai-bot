@@ -119,13 +119,15 @@ describe("shell surfaces", () => {
       /\.shell-surface \{\s*background-color: transparent;/
     );
     // The layers over it: the pane and the in-layout panel keep nine tenths
-    // of their colour; the floating sidebar is frosted.
+    // of their colour; the floating sidebar tints the native material.
     expect(block).toMatch(
       /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
-      /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);[\s\S]*?backdrop-filter: blur\(/
+      /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);/
     );
+    expect(block).not.toContain("backdrop-filter");
+    expect(tokensCss).toContain('data-window-focused="false"');
     // Outside that rule the chrome is opaque.
     expect(tokensCss).toMatch(
       /\.shell-surface \{\s*background-color: var\(--sidebar\);/

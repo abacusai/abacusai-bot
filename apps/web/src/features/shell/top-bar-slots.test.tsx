@@ -133,3 +133,40 @@ it("portals the add menu outside a clipped title strip with icons and bounded ge
   expect(onAdd).toHaveBeenCalledWith("terminal");
   await view.cleanup();
 });
+
+it("supports numbered selection, closing/reopening and never closes Chat", async () => {
+  const change = vi.fn(),
+    close = vi.fn(),
+    reopen = vi.fn();
+  const tabs = [
+    { id: "chat", kind: "thread" as const, title: "Chat" },
+    { id: "files", kind: "files" as const, title: "Files" },
+  ];
+  const view = await renderWithDb(
+    <header data-slot="topbar">
+      <TopBar.PanelTabs
+        tabs={tabs}
+        active="files"
+        title={(t) => t.title!}
+        kinds={[]}
+        onChange={change}
+        onClose={close}
+        onReorder={vi.fn()}
+        onAdd={vi.fn()}
+        onReopen={reopen}
+      />
+    </header>
+  );
+  fireEvent.keyDown(window, { key: "1", ctrlKey: true });
+  expect(change).toHaveBeenCalledWith("chat");
+  fireEvent.keyDown(window, { key: "w", ctrlKey: true });
+  expect(close).toHaveBeenCalledWith("files");
+  fireEvent.keyDown(window, { key: "T", ctrlKey: true, shiftKey: true });
+  expect(reopen).toHaveBeenCalledOnce();
+  fireEvent(
+    screen.getByRole("tab", { name: "Chat" }),
+    new MouseEvent("auxclick", { bubbles: true, button: 1 })
+  );
+  expect(close).toHaveBeenCalledOnce();
+  await view.cleanup();
+});

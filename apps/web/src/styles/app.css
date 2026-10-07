@@ -266,3 +266,5 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 .panel-dock .workspace-island [data-slot="side-panel"] {
   outline: none;
 }
+
+.dock-group-island .workspace-island { border-radius: 0; outline: none; }

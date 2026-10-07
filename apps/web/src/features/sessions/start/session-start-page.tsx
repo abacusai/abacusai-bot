@@ -14,9 +14,11 @@ import {
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotAvatar } from "#renderer/components/bot-avatar";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
+import { defaultLook } from "#renderer/lib/bots/avatar";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -130,6 +132,13 @@ export const SessionStartPage = ({
       {/* Phones read bottom-up like a native agent screen: headline, a
           swipeable row of starters, then the composer under the thumb. */}
       <div className="phone:gap-5 flex w-full max-w-(--composer-max-w) flex-col gap-6">
+        <div className="flex justify-center">
+          <BotAvatar
+            look={defaultLook("AbacusAI")}
+            expression="curious"
+            size={48}
+          />
+        </div>
         <h1 className="phone-rise phone:px-5 phone:text-start phone:text-[32px] phone:leading-[38px] phone:tracking-tight text-center text-[28px] leading-9 font-semibold">
           {t("sessions.start.heading")}
         </h1>

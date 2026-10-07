@@ -9,7 +9,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { fixtureBots } from "#renderer/data/fixture-db/rows";
+import { fixtureBots, fixturePrefs } from "#renderer/data/fixture-db/rows";
 import { fixedT, initI18n } from "#renderer/lib/i18n";
 
 import type { StepContext } from "./context";
@@ -30,6 +30,9 @@ vi.mock("#renderer/lib/motion", async (original) => ({
 vi.mock("../first-bot", async (original) => ({
   ...(await original<typeof import("../first-bot")>()),
   discardFirstBot: (...args: unknown[]) => discard(...(args as [])),
+}));
+vi.mock("#renderer/data/db/prefs", () => ({
+  usePrefs: () => ({ ...fixturePrefs(), motion: { reduce: "on" } }),
 }));
 vi.mock("#renderer/data/db", () => ({ useDb: () => ({ db: true }) }));
 

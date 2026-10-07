@@ -71,7 +71,7 @@ export function windowChromeOptions({
       titleBarOverlay: { height: clampOverlayHeight(overlayHeight) },
       ...(reducedTransparency
         ? {}
-        : { vibrancy: "under-window", visualEffectState: "active" }),
+        : { vibrancy: "under-window", visualEffectState: "followWindow" }),
     };
   }
   if (platform === "win32") {

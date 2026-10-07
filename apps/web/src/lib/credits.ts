@@ -1,8 +1,5 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
-import { PROVIDER_KEY_FIELDS } from "@abacus-ai/contract/settings";
 
-/** The plan-selection page, for a paid tier that wants more. */
 /** Where Upgrade goes: the product page, so people see what they get before a plan picker. */
 export const ABACUS_PLAN_URL = "https://agent.abacus.ai/";
 
@@ -67,18 +64,3 @@ export const creditsCardState = (
   if (liveMark || spent) return "exhausted";
   return tier === "paid" || dismissed ? null : "upsell";
 };
-
-const POOL_PROVIDERS = new Set<string>(["abacus", ...FREE_POOL_PROVIDERS]);
-export const alternativeProviderLabels = (
-  configured: Record<string, boolean>
-) =>
-  PROVIDER_KEY_FIELDS.filter(
-    (field) =>
-      field.kind === "model" &&
-      !POOL_PROVIDERS.has(field.provider) &&
-      configured[field.provider] === true
-  ).map((field) => field.label);
-export const joinProviderLabels = (labels: string[], or: string): string =>
-  labels.length <= 1
-    ? (labels[0] ?? "")
-    : `${labels.slice(0, -1).join(", ")} ${or} ${labels[labels.length - 1]}`;

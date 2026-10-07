@@ -1,12 +1,12 @@
 import { expect, it } from "vitest";
 
-import { creditMood } from "./promo-character";
+import { creditExpression } from "./promo-character";
 import { promoPlacement } from "./promo-placement";
 
 it("uses existing moods for low, nearly exhausted and exhausted credits", () => {
-  expect(creditMood(30, 100)).toBe("waiting");
-  expect(creditMood(5, 100)).toBe("blocked");
-  expect(creditMood(0, 100)).toBe("asleep");
+  expect(creditExpression(30, 100)).toBe("hopeful");
+  expect(creditExpression(5, 100)).toBe("worried");
+  expect(creditExpression(0, 100)).toBe("tiredHappy");
 });
 it.each([1280, 1710])(
   "keeps the corner card clear of composer and sidebar footer at %ipx",
@@ -43,4 +43,18 @@ it("keeps splitters clear and hides when the available island is too small", () 
   });
   expect(result.left).toBe(320);
   expect(result.visibility).toBe("hidden");
+});
+it("leaves the floating card at the bottom when a centered composer is above it", () => {
+  expect(
+    promoPlacement({
+      width: 1280,
+      height: 900,
+      railRight: 56,
+      sidebarRight: 56,
+      paneTop: 40,
+      cardHeight: 180,
+      composer: { left: 200, right: 1100, top: 350, bottom: 500 },
+      splitters: [],
+    }).bottom
+  ).toBe(24);
 });

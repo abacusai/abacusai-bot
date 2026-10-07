@@ -15,7 +15,7 @@ import { PanelWorkspace, moveDockTab } from ".";
 const writes = vi.hoisted(() => ({ write: vi.fn(), flush: vi.fn() }));
 vi.mock("#renderer/data/db", () => ({ useDb: () => ({}) }));
 vi.mock("#renderer/data/db/prefs", () => ({
-  usePrefs: () => ({ panes: {} }),
+  usePrefs: () => ({ panes: {}, motion: { reduce: "on" } }),
   createPaneWidthWriter: () => writes,
 }));
 beforeEach(async () => {

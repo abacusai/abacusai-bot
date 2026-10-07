@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import { TabsRail } from "#renderer/components/tabs-rail";
 import { cn } from "#renderer/lib/cn";
 import {
   durations,
@@ -27,7 +28,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "#renderer/ui/drawer";
-import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
 import type { PanelTab } from "./panel-store";
 import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
@@ -37,8 +37,6 @@ export {
   PANEL_MAX_PX,
   PANE_MIN_PX,
   PANEL_DEFAULT_PX,
-  PANEL_PREF_KEY,
-  PANEL_MAX_FRACTION,
   panelMaxFor,
   clampPanelWidth,
 } from "#renderer/lib/side-panel/geometry";
@@ -139,12 +137,18 @@ export const SidePanelDrawer = ({
   tabs,
   active,
   onTabChange,
+  onTabClose,
+  onTabReorder,
+  onReopen,
   onClose,
 }: {
   open: boolean;
   tabs: readonly PanelTab[];
   active: PanelTab | undefined;
   onTabChange(id: string): void;
+  onTabClose(id: string): void;
+  onTabReorder(ids: string[]): void;
+  onReopen(): void;
   onClose(): void;
 }) => {
   const { t } = useTranslation();
@@ -174,27 +178,17 @@ export const SidePanelDrawer = ({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between gap-1 p-2">
               {tabs.length > 0 && active != null && (
-                <Tabs
-                  value={active.id}
-                  onValueChange={(next) => onTabChange(String(next))}
-                  data-side-panel-tabs=""
-                  className="min-w-0"
-                >
-                  <TabsList
-                    className="max-w-full flex-wrap"
-                    aria-label={t("shell.topBar.panelTabs")}
-                  >
-                    {tabs.map((item) => (
-                      <TabsTrigger
-                        key={item.id}
-                        value={item.id}
-                        className="max-w-40 truncate text-xs"
-                      >
-                        {title(item)}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+                <TabsRail
+                  tabs={tabs}
+                  active={active.id}
+                  title={title}
+                  kinds={[]}
+                  onChange={onTabChange}
+                  onClose={onTabClose}
+                  onReopen={onReopen}
+                  onAdd={() => {}}
+                  onReorder={onTabReorder}
+                />
               )}
               <Button
                 variant="ghost"

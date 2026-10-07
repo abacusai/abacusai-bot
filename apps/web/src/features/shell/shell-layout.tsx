@@ -29,6 +29,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotTabAvatar } from "#renderer/components/bot-tab-avatar";
 import {
   PaneBoundary,
   PaneError,
@@ -41,6 +42,7 @@ import {
 } from "#renderer/components/panel-workspace";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 
 import { BAND_WIDTH, useShellBand } from "./breakpoints";
@@ -56,6 +58,8 @@ import {
   openPanelTab,
   panelScope,
   reorderPanelTabs,
+  reopenPanelTab,
+  updatePanelTab,
   setPanelOpen,
   setPanelExpanded,
   type PanelTabKind,
@@ -185,46 +189,55 @@ export const ShellLayout = ({
   const panelInLayout = panelShown && layout.sidePanel === "layout";
   const scopeKey = panel.key;
   const expanded = panelShown && panel.scope.expanded === true;
+  const [groups, setGroups] = useState(1);
+  const botId = scopeKey?.startsWith("bots:") ? scopeKey.slice(5) : undefined;
   const dockApi = useRef<import("dockview-react").DockviewApi | null>(null);
   const strip =
     panelShown && scopeKey != null ? (
       <>
-        <TopBar.PanelTabs
-          tabs={
-            expanded
-              ? [
-                  {
-                    id: "chat",
-                    kind: "thread",
-                    title: t("sessions.dock.chat"),
-                  },
-                  ...panel.scope.tabs,
-                ]
-              : panel.scope.tabs
-          }
-          active={panel.scope.active}
-          title={tabTitle}
-          kinds={panelKinds}
-          onDragStart={
-            expanded
-              ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-              : undefined
-          }
-          workspaceApi={dockApi}
-          onMove={
-            expanded
-              ? (id, position) => {
-                  moveDockTab(dockApi.current, id, position);
-                }
-              : undefined
-          }
-          onChange={(id) => activatePanelTab(scopeKey, id)}
-          onClose={(id) => closePanelTab(scopeKey, id)}
-          onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
-          // "+" on a multi-instance kind is a new tab (a browser's new-tab
-          // page), never a refocus of the one already open.
-          onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
-        />
+        {(!expanded || groups === 1) && (
+          <TopBar.PanelTabs
+            tabs={
+              expanded
+                ? [
+                    {
+                      id: "chat",
+                      kind: "thread",
+                      title: t("sessions.dock.chat"),
+                    },
+                    ...panel.scope.tabs,
+                  ]
+                : panel.scope.tabs
+            }
+            active={panel.scope.active}
+            renderIcon={(tab) =>
+              tab.id === "chat" ? <BotTabAvatar botId={botId} /> : undefined
+            }
+            title={tabTitle}
+            kinds={panelKinds}
+            onDragStart={
+              expanded
+                ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+                : undefined
+            }
+            workspaceApi={dockApi}
+            onMove={
+              expanded
+                ? (id, position) => {
+                    moveDockTab(dockApi.current, id, position);
+                  }
+                : undefined
+            }
+            onChange={(id) => activatePanelTab(scopeKey, id)}
+            onRename={(id, title) => updatePanelTab(scopeKey, id, { title })}
+            onReopen={() => reopenPanelTab(scopeKey)}
+            onClose={(id) => closePanelTab(scopeKey, id)}
+            onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
+            // "+" on a multi-instance kind is a new tab (a browser's new-tab
+            // page), never a refocus of the one already open.
+            onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
+          />
+        )}
         <Button
           variant="ghost"
           size="icon-sm"
@@ -352,6 +365,17 @@ export const ShellLayout = ({
               )}
             >
               <PanelWorkspace
+                onReopen={() => {
+                  if (scopeKey) reopenPanelTab(scopeKey);
+                }}
+                onRename={(id, title) => {
+                  if (scopeKey) updatePanelTab(scopeKey, id, { title });
+                }}
+                onGroupCountChange={setGroups}
+                onAdd={(kind) => {
+                  if (scopeKey)
+                    openPanelTab(scopeKey, { kind }, { fresh: true });
+                }}
                 scope={scopeKey ?? "shell"}
                 apiRef={dockApi}
                 active={panel.scope.active}
@@ -366,6 +390,7 @@ export const ShellLayout = ({
                 tabs={[
                   {
                     id: "chat",
+                    icon: <BotTabAvatar botId={botId} />,
                     title: t("sessions.dock.chat"),
                     content: () => (
                       <Pane>
@@ -392,11 +417,20 @@ export const ShellLayout = ({
               />
             </div>
           </div>
-          <UpgradePromo />
+          {IS_ELECTRON && <UpgradePromo />}
           <SidePanelDrawer
             open={panelShown && layout.sidePanel === "drawer"}
             tabs={panel.scope.tabs}
             active={panel.active}
+            onTabClose={(id) => {
+              if (scopeKey) closePanelTab(scopeKey, id);
+            }}
+            onTabReorder={(ids) => {
+              if (scopeKey) reorderPanelTabs(scopeKey, ids);
+            }}
+            onReopen={() => {
+              if (scopeKey) reopenPanelTab(scopeKey);
+            }}
             onTabChange={(id) => {
               if (scopeKey != null) activatePanelTab(scopeKey, id);
             }}

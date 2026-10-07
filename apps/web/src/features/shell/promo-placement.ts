@@ -46,7 +46,12 @@ export const promoPlacement = ({
   }
   let bottom = 24;
   for (const rect of [composer, footer])
-    if (rect && overlapsX(rect))
+    if (
+      rect &&
+      overlapsX(rect) &&
+      height - bottom > rect.top &&
+      height - bottom - cardHeight < rect.bottom
+    )
       bottom = Math.max(bottom, height - rect.top + 16);
   for (const splitter of splitters)
     if (

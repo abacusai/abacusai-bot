@@ -62,6 +62,7 @@ import {
   openTab,
   openTerminalTab,
   closeTab,
+  reopenTab,
   reconcileTerminals,
   updateTabs,
   focusTab,
@@ -255,23 +256,26 @@ export const SessionDock = ({
     });
     select(ref);
   };
-  const titleTabs = ["changes", "terminal", "files", "browser"]
-    .flatMap((kind) => {
-      const tabs = entries.tabs.filter(
-        (tab) => tab.ref === kind || tab.ref.startsWith(`${kind}:`)
-      );
-      return tabs.length
-        ? tabs
-        : [{ ref: kind, title: t(`sessions.dock.${kind}`), openedAt: 0 }];
-    })
-    .concat(
-      entries.tabs.filter(
-        (tab) =>
-          !["changes", "terminal", "files", "browser"].includes(
-            tab.ref.split(":")[0]!
+  const [groups, setGroups] = useState(1);
+  const titleTabs = expanded
+    ? [...entries.tabs]
+    : ["changes", "terminal", "files", "browser"]
+        .flatMap((kind) => {
+          const tabs = entries.tabs.filter(
+            (tab) => tab.ref === kind || tab.ref.startsWith(`${kind}:`)
+          );
+          return tabs.length
+            ? tabs
+            : [{ ref: kind, title: t(`sessions.dock.${kind}`), openedAt: 0 }];
+        })
+        .concat(
+          entries.tabs.filter(
+            (tab) =>
+              !["changes", "terminal", "files", "browser"].includes(
+                tab.ref.split(":")[0]!
+              )
           )
-      )
-    );
+        );
   if (entries.order)
     titleTabs.sort((a, b) => {
       const position = (ref: string) => {
@@ -284,8 +288,15 @@ export const SessionDock = ({
     if (ref === "terminal" || ref === "browser") add(ref);
     else select(ref);
   };
+  const rename = (ref: string, title: string) =>
+    updateTabs(key, (state) => ({
+      ...state,
+      tabs: state.tabs.map((tab) =>
+        tab.ref === ref ? { ...tab, title } : tab
+      ),
+    }));
   const controls = (
-    <div className="titlebar-nodrag flex shrink-0 items-center gap-1 px-1">
+    <div className="titlebar-nodrag flex h-(--titlebar-row-h) shrink-0 items-center gap-1 self-start px-1">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -393,59 +404,66 @@ export const SessionDock = ({
         <TopBarPanelSlot>
           {entries.open && active ? (
             <>
-              <TopBar.PanelTabs
-                tabs={[
-                  ...(!split
-                    ? [
-                        {
-                          ref: "chat",
-                          title: t("sessions.dock.chat"),
-                          openedAt: 0,
-                        },
-                      ]
-                    : []),
-                  ...titleTabs,
-                ].map((tab) => ({
-                  id: tab.ref,
-                  kind: (tab.ref.startsWith("preview:")
-                    ? "files"
-                    : tab.ref === "chat"
-                      ? "thread"
-                      : tab.ref === "agents"
-                        ? "agent"
-                        : tab.ref.split(":")[0]) as PanelTabKind,
-                  title: tab.title,
-                }))}
-                active={active}
-                title={(tab) => tab.title ?? ""}
-                kinds={[]}
-                onDragStart={
-                  expanded
-                    ? (id, event) =>
-                        event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-                    : undefined
-                }
-                workspaceApi={dockApi}
-                onMove={
-                  expanded
-                    ? (id, position) => {
-                        moveDockTab(dockApi.current, id, position);
-                      }
-                    : undefined
-                }
-                onChange={choose}
-                onClose={close}
-                onReorder={(ids) =>
-                  updateTabs(key, (s) => ({
-                    ...s,
-                    order: ids,
-                    tabs: ids
-                      .map((id) => s.tabs.find((tab) => tab.ref === id))
-                      .filter((tab): tab is PanelTab => tab != null),
-                  }))
-                }
-                onAdd={add}
-              />
+              {(!expanded || groups === 1) && (
+                <TopBar.PanelTabs
+                  tabs={[
+                    ...(!split
+                      ? [
+                          {
+                            ref: "chat",
+                            title: t("sessions.dock.chat"),
+                            openedAt: 0,
+                          },
+                        ]
+                      : []),
+                    ...titleTabs,
+                  ].map((tab) => ({
+                    id: tab.ref,
+                    kind: (tab.ref.startsWith("preview:")
+                      ? "files"
+                      : tab.ref === "chat"
+                        ? "thread"
+                        : tab.ref === "agents"
+                          ? "agent"
+                          : tab.ref.split(":")[0]) as PanelTabKind,
+                    title: tab.title,
+                  }))}
+                  active={active}
+                  title={(tab) => tab.title ?? ""}
+                  kinds={[]}
+                  onDragStart={
+                    expanded
+                      ? (id, event) =>
+                          event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+                      : undefined
+                  }
+                  workspaceApi={dockApi}
+                  onMove={
+                    expanded
+                      ? (id, position) => {
+                          moveDockTab(dockApi.current, id, position);
+                        }
+                      : undefined
+                  }
+                  onRename={rename}
+                  onChange={choose}
+                  onReopen={() => {
+                    const ref = reopenTab(key);
+                    if (ref) select(ref);
+                  }}
+                  onClose={close}
+                  onReorder={(ids) =>
+                    updateTabs(key, (s) => ({
+                      ...s,
+                      order: ids,
+                      tabs: ids
+                        .map((id) => s.tabs.find((tab) => tab.ref === id))
+                        .filter((tab): tab is PanelTab => tab != null),
+                    }))
+                  }
+                  onAdd={add}
+                />
+              )}
               {controls}
             </>
           ) : null}
@@ -465,6 +483,13 @@ export const SessionDock = ({
           () => add("terminal")
         )}
         <PanelWorkspace
+          onReopen={() => {
+            const ref = reopenTab(key);
+            if (ref) select(ref);
+          }}
+          onRename={rename}
+          onGroupCountChange={setGroups}
+          onAdd={add}
           scope={key}
           apiRef={dockApi}
           open={entries.open === true && active != null}

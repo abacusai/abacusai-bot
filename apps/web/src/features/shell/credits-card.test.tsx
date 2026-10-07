@@ -1,9 +1,16 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { initI18n } from "#renderer/lib/i18n";
 
 import { UpgradePromo } from "./credits-card";
+import { PromoOutlet } from "./promo-host";
 import { promoAccountKey } from "./promo-state";
 
 const state = vi.hoisted(() => ({
@@ -78,10 +85,12 @@ it("shows actual credit progress, reacts to CTA focus and persists snooze across
   expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
   second.unmount();
 });
-it("does not show the promo for an account already on a paid tier", () => {
+it("does not show the promo for an account already on a paid tier", async () => {
   state.account.subscription_tier = "pro";
   render(<UpgradePromo />);
-  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull()
+  );
 });
 
 it("celebrates only a confirmed free-to-paid account change", () => {
@@ -152,4 +161,34 @@ it("does not apply one account's active snooze to another account", () => {
   state.account.user_id = "dummy";
   render(<UpgradePromo />);
   expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+});
+
+it("hands one mounted mascot between pinned, peek and collapsed presentations", async () => {
+  const App = ({ mode }: { mode: "pinned" | "peek" | "collapsed" }) => (
+    <>
+      <UpgradePromo />
+      {mode !== "collapsed" && <PromoOutlet floating={mode === "peek"} />}
+    </>
+  );
+  const view = render(<App mode="pinned" />);
+  const mascot = screen.getByTestId("character");
+  const card = mascot.closest('[data-slot="upgrade-promo"]')!;
+  expect(card.getAttribute("data-presentation")).toBe("sidebar");
+  fireEvent.focus(screen.getByRole("button", { name: "Upgrade" }));
+  view.rerender(<App mode="peek" />);
+  expect(screen.getByTestId("character")).toBe(mascot);
+  expect(mascot.textContent).toBe("excited");
+  view.rerender(<App mode="collapsed" />);
+  expect(screen.getByTestId("character")).toBe(mascot);
+  expect(card.getAttribute("data-presentation")).toBe("floating");
+  expect(document.querySelectorAll('[data-slot="upgrade-promo"]')).toHaveLength(
+    1
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
+  );
+  view.rerender(<App mode="pinned" />);
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull()
+  );
 });
