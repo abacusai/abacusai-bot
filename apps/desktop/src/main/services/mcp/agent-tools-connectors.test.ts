@@ -87,7 +87,7 @@ beforeEach(() => {
     "abacus-slack": { state: "available" },
     "abacus-googlecalendar": { state: "available" },
     "abacus-googledriveuser": { state: "available" },
-    github: { state: "available" },
+    "abacus-githubbot": { state: "available" },
     "messaging-whatsapp": { state: "available" },
     "messaging-telegram": { state: "available" },
     "messaging-discord": { state: "available" },
@@ -104,7 +104,7 @@ describe("listing what exists", () => {
     expect(text).toContain("connected");
     // The whole registry, every chat: no grant filters this list any more.
     expect(text).toContain("abacus-googlecalendar");
-    expect(text).toContain("github");
+    expect(text).toContain("abacus-githubbot");
   });
 
   /**
@@ -175,8 +175,8 @@ describe("asking for one", () => {
     expect(text).toContain("already in your tool list");
   });
 
-  it("puts a card up, without waiting, for what only the app can connect (a token, a tool server)", async () => {
-    for (const service of ["github", "GitHub", "playwright"]) {
+  it("puts a card up, without waiting, for what only the app can connect (a tool server)", async () => {
+    for (const service of ["playwright", "Playwright"]) {
       vi.clearAllMocks();
 
       const text = await call({ service });
@@ -191,12 +191,23 @@ describe("asking for one", () => {
     }
   });
 
-  it("tells the model gh is authenticated once the token is stored", async () => {
-    statuses.github = { state: "connected" };
+  it("asks for GitHub with a one-tap link, like any account connector", async () => {
+    const text = await call({ service: "GitHub" });
+
+    expect(link).toHaveBeenCalledWith("abacus-githubbot");
+    expect(text).toContain("service=abacus-githubbot&r=req");
+  });
+
+  it("tells the model gh and git are signed in as the user once GitHub is connected", async () => {
+    statuses["abacus-githubbot"] = {
+      state: "connected",
+      account: "GitHub - octocat",
+    };
 
     const text = await call({ service: "github" });
 
-    expect(show).not.toHaveBeenCalled();
+    expect(link).not.toHaveBeenCalled();
+    expect(text).toContain("as GitHub - octocat");
     expect(text).toContain("`gh` and git in bash");
   });
 
@@ -384,12 +395,12 @@ describe("disconnecting", () => {
     expect(text).toContain("WhatsApp is disconnected");
   });
 
-  it("clears a stored token the same way", async () => {
-    statuses.github = { state: "connected" };
+  it("detaches GitHub like any account connector", async () => {
+    statuses["abacus-githubbot"] = { state: "connected" };
 
     const text = await disconnect("github");
 
-    expect(disconnected).toEqual(["github"]);
+    expect(disconnected).toEqual(["abacus-githubbot"]);
     expect(text).toContain("GitHub is disconnected");
   });
 

@@ -1337,10 +1337,10 @@ export class McpAgentToolsServer extends McpHttpServer {
             "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages). Do not ask the user to " +
             "connect anything."
         );
-      if (match.kind === "credential")
+      if (match.kind === "platform" && match.via != null)
         return this.ok(
-          `${match.name} is already connected: a token is stored, so ${match.via} ` +
-            "are authenticated. Use them: there is nothing to ask the user for."
+          `${match.name} is already connected${accountOf()}, so ${match.via} ` +
+            "are authenticated as the user. Use them: there is nothing to ask the user for."
         );
       return this.ok(
         `${match.name} is already connected${accountOf()}. Use it: ` +

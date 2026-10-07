@@ -18,7 +18,7 @@
  * - mcp:        an MCP server the app installs, with or without a credential.
  */
 
-export type ConnectorKind = "platform" | "credential" | "messaging" | "mcp";
+export type ConnectorKind = "platform" | "messaging" | "mcp";
 
 export type ConnectorCategory =
   | "messaging"
@@ -87,17 +87,11 @@ export interface PlatformConnector extends ConnectorBase {
   tools: readonly string[];
   /** What one call to any of those tools costs the user, in credits. */
   credits: number;
-}
-
-export interface CredentialConnector extends ConnectorBase {
-  kind: "credential";
-  /** The provider id the desktop stores the credential under. */
-  provider: string;
-  /** The environment variable the agent (and the CLI it drives) reads it from. */
-  envVar: string;
-  /** How the model reaches the service once the credential is there. */
-  via: string;
-  fields: Record<string, ConnectorField>;
+  /**
+   * How the model reaches a service that brings no gateway tools: GitHub's
+   * token reaches the agent as GH_TOKEN, for `gh` and git in bash.
+   */
+  via?: string;
 }
 
 export interface MessagingConnector extends ConnectorBase {
@@ -123,11 +117,7 @@ export interface McpConnector extends ConnectorBase {
   requires?: "google-chrome";
 }
 
-export type Connector =
-  | PlatformConnector
-  | CredentialConnector
-  | MessagingConnector
-  | McpConnector;
+export type Connector = PlatformConnector | MessagingConnector | McpConnector;
 
 /**
  * What connecting needs from the user. One dialog per kind, shared by every
@@ -135,12 +125,34 @@ export type Connector =
  */
 export type ConnectUi = "browser-hop" | "fields" | "pairing" | "none";
 
+/**
+ * The fields a "fields" connector asks for, by key: a tool server's own, its
+ * token, its OAuth client, or its environment keys. Every surface that takes
+ * them (the Connectors page, the Connect card) reads this one list.
+ */
+export const connectFields = (
+  connector: Connector
+): Record<string, ConnectorField> => {
+  if (connector.kind !== "mcp") return {};
+  if (connector.fields) return connector.fields;
+  if (connector.auth === "token")
+    return {
+      token: { label: connector.token?.label ?? "Token", secret: true },
+    };
+  if (connector.auth === "oauth-client")
+    return {
+      clientId: { label: "Client ID", secret: false },
+      clientSecret: { label: "Client secret", secret: true },
+    };
+  return Object.fromEntries(
+    (connector.env ?? []).map((key) => [key, { label: key, secret: true }])
+  );
+};
+
 export const connectUi = (connector: Connector): ConnectUi => {
   switch (connector.kind) {
     case "platform":
       return "browser-hop";
-    case "credential":
-      return "fields";
     case "messaging":
       return "pairing";
     case "mcp":
@@ -176,6 +188,8 @@ const platform = (
     logo?: string;
     onboarding?: boolean;
     routes?: readonly string[];
+    category?: ConnectorCategory;
+    via?: string;
   } = {}
 ): PlatformConnector => ({
   kind: "platform",
@@ -309,28 +323,21 @@ export const CONNECTORS: readonly Connector[] = [
   ),
 
   // ── Featured ────────────────────────────────────────────────────────────
-  {
-    // A personal access token instead of the platform's GitHub App: the App
-    // install ends scoped to public repos, bills every read, and cannot
-    // authenticate `gh`. The token does all three the other way.
-    kind: "credential",
-    id: "github",
-    name: "GitHub",
-    description:
-      "Repos, issues and pull requests through the gh CLI, with your own token, private repos included.",
-    category: "featured",
-    docsUrl: "https://github.com/settings/tokens",
-    provider: "github",
-    envVar: "GH_TOKEN",
-    via: "`gh` and git in bash",
-    logo: "github",
-    routes: ["repositories", "pull requests", "commits", "issues"],
-    setup: [
-      "Create a personal access token at github.com/settings/tokens: either a fine-grained token with access to the repositories you want (Contents + Pull requests + Issues, read/write as needed), or a classic token with the `repo` scope.",
-      "Copy the token (it is shown once) and paste it below.",
-    ],
-    fields: { GH_TOKEN: { label: "Personal access token", secret: true } },
-  },
+  // One tap on GitHub's own Authorize screen, acting as the user across their
+  // repositories, private and organization ones included. No gateway tools:
+  // the token reaches the agent as GH_TOKEN, for `gh` and git.
+  platform(
+    "githubbot",
+    "GitHub",
+    "Repos, issues and pull requests through the gh CLI, as you, private repos included.",
+    [],
+    {
+      category: "featured",
+      logo: "github",
+      routes: ["repositories", "pull requests", "commits", "issues"],
+      via: "`gh` and git in bash",
+    }
+  ),
   {
     kind: "mcp",
     id: "playwright",
@@ -515,7 +522,6 @@ export const resolveConnector = (
     connector.name,
     ...(connector.kind === "platform" ? [connector.service] : []),
     ...(connector.kind === "messaging" ? [connector.platform] : []),
-    ...(connector.kind === "credential" ? [connector.provider] : []),
   ];
   const exact = CONNECTORS.filter((connector) =>
     keysOf(connector).some((key) => normalize(key) === wanted)

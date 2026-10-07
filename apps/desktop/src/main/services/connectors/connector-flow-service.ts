@@ -28,11 +28,6 @@ export interface FlowSources {
     /** Rewrites the gateway MCP entry after a connect: the file is user-editable. */
     ensureGateway: () => void;
   };
-  /**
-   * Store (or clear, with "") an agent credential by provider id. Announcing
-   * it to the gateway, running agents and the renderer is the caller's job.
-   */
-  credential: { save: (provider: string, value: string) => void };
   mcp: {
     /**
      * Add the server, or restore its entry if the name is already taken. A
@@ -129,13 +124,6 @@ export class ConnectorFlowService {
   ): Promise<ConnectorOutcome> {
     const connector = connectorById(connectorId);
     if (connector == null) return unknown(connectorId);
-    if (connector.kind === "credential") {
-      const value = (values[connector.envVar] ?? "").trim();
-      if (value.length === 0)
-        return failure(`${connector.name} needs its token.`);
-      this.sources.credential.save(connector.provider, value);
-      return { ok: true };
-    }
     if (connector.kind === "mcp") return this.installMcp(connector, values);
     return failure(`${connector.name} takes no fields.`);
   }
@@ -146,9 +134,6 @@ export class ConnectorFlowService {
     switch (connector.kind) {
       case "platform":
         return this.sources.platform.disconnect(connector.service);
-      case "credential":
-        this.sources.credential.save(connector.provider, "");
-        return { ok: true };
       case "mcp": {
         const result = this.sources.mcp.remove(connector.id);
         return result.success

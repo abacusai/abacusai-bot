@@ -20,6 +20,7 @@ import { AguiHost } from "./agui/host.js";
 import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
+import { followGithubToken } from "./github-token.js";
 import { sandboxAvailability } from "./sandbox/index.js";
 
 /** The AG-UI host, once there is one: its open run gets last words at exit. */
@@ -88,6 +89,9 @@ async function main(): Promise<void> {
   }
 
   const threadId = readFlag(argv, "--thread-id");
+
+  // The bot's GitHub connector, as GH_TOKEN for `gh` and git (github-token.ts).
+  followGithubToken();
 
   if (threadId == null || threadId.length === 0) {
     throw new Error("--wire agui needs --thread-id");

@@ -1,5 +1,6 @@
 import {
   CONNECTORS,
+  connectFields,
   connectorById,
   type Connector,
 } from "@abacus-ai/connectors/registry";
@@ -42,7 +43,7 @@ import {
   SheetDescription,
 } from "#renderer/ui/sheet";
 
-import { fieldsFor, useConnectFlow } from "./connect-flow";
+import { useConnectFlow } from "./connect-flow";
 import { CONNECTOR_CATEGORY_TABS } from "./search";
 export const visibleTabsFor = (entry: Connector): string[] =>
   entry.kind === "messaging"
@@ -212,9 +213,11 @@ export const ConnectorSheet = ({ connector }: { connector: string }) => {
           </StatePill>
           <h2>{t("phase5.whatItCanDo")}</h2>
           {entry?.kind === "platform" ? (
-            entry.tools.map((tool) => <code key={tool}>{tool}</code>)
-          ) : entry?.kind === "credential" ? (
-            <code>{entry.envVar}</code>
+            entry.via != null ? (
+              <code>{entry.via}</code>
+            ) : (
+              entry.tools.map((tool) => <code key={tool}>{tool}</code>)
+            )
           ) : entry?.kind === "mcp" ? (
             <code>{entry.entry.url ?? entry.entry.command}</code>
           ) : null}
@@ -259,7 +262,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
   const { t } = useTranslation();
   const flow = useConnectFlow();
   const entry = connectorById(connector)!;
-  const fields = fieldsFor(entry);
+  const fields = connectFields(entry);
   const [error, setError] = useState<string | null>(null);
   const schema = v.record(
     v.string(),

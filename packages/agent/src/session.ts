@@ -66,6 +66,7 @@ import toolCallRepair from "./extensions/tool-call-repair.js";
 import toolTimeouts from "./extensions/tool-timeouts.js";
 import verifyLoop from "./extensions/verify-loop.js";
 import { githubPrompt } from "./github-prompt.js";
+import { refreshGithubToken } from "./github-token.js";
 import { HostServiceClient } from "./host-services.js";
 import type { InternalAgentEvent } from "./internal-events.js";
 import {
@@ -2237,6 +2238,7 @@ export class AbacusBotSession {
     // file, then hand pi each key it owns: the same re-read on every call
     // that makes registerGeminiProvider pick a Gemini key up.
     applyStoredApiKeys();
+    void refreshGithubToken();
     await this.applyRuntimeApiKeys();
     registerCustomProviders(registry, loadConfig());
     registerGeminiProvider(registry);
