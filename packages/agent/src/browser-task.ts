@@ -16,6 +16,14 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import type { ChannelCapabilities } from "./channel.js";
+import {
+  BROWSER_PAUSE_TOOL_NAME,
+  type CheckoutPause,
+  type CheckoutRun,
+  type CheckoutState,
+  type HostCheckoutCall,
+  readCheckoutState,
+} from "./checkout-run.js";
 import { abacusBotDir } from "./config.js";
 import { excludedTools } from "./excluded-tools.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
@@ -80,7 +88,7 @@ const EXCLUDED_TOOLS = [
 ];
 
 /** Short on purpose: site advice arrives from `browser_navigate` on load. */
-const BROWSER_SYSTEM_PROMPT = [
+export const BROWSER_SYSTEM_PROMPT = [
   "You are a browser sub-agent with one task on a real website. The browser tools are the",
   "only tools you have: no files, no shell, nobody to ask. Finish in the browser and report.",
   "",
@@ -109,17 +117,26 @@ const BROWSER_SYSTEM_PROMPT = [
   "  Do not repeat a click because nothing happened yet; the same call twice books twice.",
   "- Three failed tries at one element means the approach is wrong: screenshot, read where",
   "  you actually are, and change approach.",
-  "- Never type a password, card number, CVV, one-time code or ID details yourself, complete a",
-  "  payment or booking, or solve a CAPTCHA. A purchase or booking goes as far as the payment",
-  "  step and no further. When the task gives you a vault item_id and you have",
-  "  browser_vault_fill, that tool types the saved value into the field's ref without you",
-  "  seeing it; a sign-in it cannot do is a step for the user.",
-  "  When you reach a step only the user can do, stop there, leave the page",
-  '  as it is, and end your report with a line starting "NEEDS USER:" that says exactly what',
-  '  they should do in the browser ("sign in to LinkedIn", "enter the card details and press',
-  '  Pay"). You will be resumed on the same page once they have done it. Write that line',
-  "  only when you are actually stopped at such a step; a finished or partial report does",
-  "  not get one.",
+  "- Never type a password, card number, CVV or one-time code yourself, and never solve a",
+  "  CAPTCHA. When the task gives you a vault item_id and you have browser_vault_fill, that",
+  "  tool types the saved value into the field's ref without you seeing it.",
+  "- Paying: only after the user approved this payment; the browser checks the approval and",
+  "  the total itself and refuses everything else. Without an approval, go on to the page with",
+  '  the card form and stop there with browser_pause need:"payment" and total_ref (the element',
+  "  showing the order total). Once approved: fill the card number once with browser_vault_fill,",
+  "  the CVV only if the page asks, then click Pay once. Never pick a card the site saved, UPI",
+  '  or a wallet app, and leave "save this card" unchecked. Scripts do not run during a checkout.',
+  "- Traveler details the task gives you, fill in; never invent one. A passport number is never",
+  "  in your task: when it names a saved traveler (t1), type it with browser_traveler_fill. Any",
+  '  detail the form needs that the task does not give: browser_pause need:"details".',
+  "- At a step only the user can do (their details, a sign-in with no item_id, a code, the",
+  "  payment approval, a CAPTCHA, a choice the task did not make), call browser_pause alone with",
+  "  what it needs. It ends your run, the page stays as it is, and you are resumed on it once",
+  "  they have done it. Without browser_pause, end your report with a line starting",
+  '  "NEEDS USER:" that says exactly what they should do. A finished or partial report gets',
+  "  neither.",
+  "- After a payment, report the confirmation: the booking reference or order number and the",
+  "  total.",
   "",
   "Your final message is the entire answer the caller receives. Give the concrete values:",
   "numbers, names, URLs, dates. When the task names fields to report, end with a FOUND:",
@@ -139,8 +156,9 @@ const PROGRESS_PROMPT = [
 /** For a run whose chat takes images (the phone's `send_media`). */
 const MEDIA_PROMPT = [
   'To show the user the page, take browser_snapshot action:"screenshot" and send its media id',
-  "with `send_media` and a short caption: when they ask to see it, and when a picture helps",
-  "them (a page ready for them to pay, a CAPTCHA, a choice that is theirs to make).",
+  "with `send_media` and a short caption when they ask to see it. A browser_pause for a",
+  "payment, a CAPTCHA or a choice takes its own screenshot for the user. After a payment,",
+  "send a screenshot of the confirmation page.",
 ].join("\n");
 
 export interface BrowserTaskContext {
@@ -157,6 +175,10 @@ export interface BrowserTaskContext {
   midTask?: MidTaskInbox;
   /** What the user's chat can do; an app chat with its Browser pane when absent. */
   channel?: ChannelCapabilities;
+  /** The browser's `browser_checkout`, which holds the session's checkout. */
+  checkout?: HostCheckoutCall;
+  /** The user's own recent messages, numbered: a details stop's answer is the next one. */
+  userWords?: () => ReadonlyArray<{ seq: number; text: string }>;
 }
 
 /** The sub-agent's system prompt for a run with `context`. */
@@ -179,6 +201,10 @@ export interface BrowserTaskOptions {
   resume?: boolean;
   /** The media this run asks to send; its caller names them to the loop. */
   sentMedia?: DeliveredMedia;
+  /** The checkout this run moves; with it the run can stop with `browser_pause`. */
+  checkout?: CheckoutRun;
+  /** Said to a resumed run about where its checkout stands. */
+  resumeNote?: string;
 }
 
 export interface BrowserTaskResult {
@@ -190,6 +216,8 @@ export interface BrowserTaskResult {
   executeCalls: number;
   /** Nudges the run was given, in order: "wrap-up", "final", "repeating", "execute". */
   steers: string[];
+  /** The `browser_pause` the run stopped at; its stop is "needs-user". */
+  pause?: CheckoutPause;
   stoppedBy:
     | "completed"
     | "needs-user"
@@ -223,6 +251,8 @@ export function needsUser(report: string): boolean {
 
 interface PausedRun {
   session: { prompt: (text: string) => Promise<void>; dispose: () => void };
+  /** The session's batch gate; its tools were wrapped with it. */
+  gate: BatchGate;
   pausedAt: number;
 }
 
@@ -234,6 +264,12 @@ const PAUSED_RUN_TTL_MS = 45 * 60 * 1000;
  * transcript and page so "done, continue" picks up where it stopped.
  */
 const pausedRuns = new WeakMap<BrowserTaskContext, PausedRun>();
+
+/** Whether a run is waiting on the user for this context, and still in time. */
+export function hasPausedRun(context: BrowserTaskContext): boolean {
+  const paused = pausedRuns.get(context);
+  return paused != null && Date.now() - paused.pausedAt <= PAUSED_RUN_TTL_MS;
+}
 
 function takePausedRun(context: BrowserTaskContext): PausedRun | null {
   const paused = pausedRuns.get(context);
@@ -470,6 +506,75 @@ function resultChars(result: unknown): string {
 }
 
 /**
+ * One sub-agent session's hold on `browser_pause`. A pause ends the run, so
+ * it acts alone: when the model calls it beside other tools, those are
+ * refused before they run (the batch is known at the assistant message's
+ * end, before any of its tools runs), and once it paused nothing else runs.
+ */
+export interface BatchGate {
+  /** Tool calls of the current batch refused because a pause is in it. */
+  blocked: Set<string>;
+  /** The browser's checkout state once the run paused; null while it works. */
+  pause: CheckoutState | null;
+}
+
+export const PAUSE_BATCH_REFUSAL =
+  "Not run: browser_pause ends the run, so nothing else runs beside or after it.";
+
+/** Marks the calls a pause shares its batch with, from the assistant message that holds them. */
+export function noteBatch(gate: BatchGate, message: unknown): void {
+  const content = (message as { role?: unknown; content?: unknown } | null)
+    ?.content;
+  if (
+    (message as { role?: unknown } | null)?.role !== "assistant" ||
+    !Array.isArray(content)
+  )
+    return;
+  const calls = content.filter(
+    (block): block is { type: "toolCall"; id: string; name: string } =>
+      block != null &&
+      typeof block === "object" &&
+      (block as { type?: unknown }).type === "toolCall" &&
+      typeof (block as { id?: unknown }).id === "string"
+  );
+  if (!calls.some((call) => call.name === BROWSER_PAUSE_TOOL_NAME)) return;
+  for (const call of calls)
+    if (call.name !== BROWSER_PAUSE_TOOL_NAME) gate.blocked.add(call.id);
+}
+
+/** The tools, each refusing what the gate refuses; a pause's result ends the batch. */
+export function gateTools(tools: unknown[], gate: BatchGate): unknown[] {
+  return tools.map((tool) => {
+    const original = (tool as ToolLike).execute;
+    if (typeof original !== "function") return tool;
+    const name = (tool as { name?: unknown }).name;
+    return {
+      ...(tool as object),
+      execute: async (...args: unknown[]) => {
+        const callId = typeof args[0] === "string" ? args[0] : "";
+        if (gate.pause != null || gate.blocked.has(callId))
+          return {
+            content: [{ type: "text", text: PAUSE_BATCH_REFUSAL }],
+            details: {},
+            isError: true,
+            terminate: true,
+          };
+        const result = (await original.apply(tool, args)) as {
+          isError?: boolean;
+        } & Record<string, unknown>;
+        if (name !== BROWSER_PAUSE_TOOL_NAME || result?.isError === true)
+          return result;
+        gate.pause = readCheckoutState(resultChars(result)) ?? {
+          stage: "search",
+          paused: null,
+        };
+        return { ...result, terminate: true };
+      },
+    };
+  });
+}
+
+/**
  * Run one browser task and return what the sub-agent concluded. Never throws:
  * a failure is reported to the parent as text so it can adapt.
  */
@@ -479,7 +584,14 @@ export async function runBrowserTask(
   emit: (event: AgentEvent) => void,
   options: BrowserTaskOptions = {}
 ): Promise<BrowserTaskResult> {
-  const { startUrl, signal, reportFields = [], resume = false } = options;
+  const {
+    startUrl,
+    signal,
+    reportFields = [],
+    resume = false,
+    checkout,
+    resumeNote = "",
+  } = options;
   const forwardTools = forwardChildToolEvents("web", emit);
   const trace = new RunTrace(task);
   let turns = 0;
@@ -510,10 +622,15 @@ export async function runBrowserTask(
       steer: (text: string) => Promise<void>;
       clearQueue: () => void;
     };
+    let gate: BatchGate;
 
     if (resumed != null) {
       session = resumed.session as typeof session;
+      gate = resumed.gate;
+      gate.pause = null;
+      gate.blocked.clear();
     } else {
+      gate = { blocked: new Set(), pause: null };
       const resourceLoader = new DefaultResourceLoader({
         cwd: context.cwd,
         agentDir: context.agentDir,
@@ -525,12 +642,15 @@ export async function runBrowserTask(
 
       await resourceLoader.reload();
 
-      const tools = [
-        ...context.browserTools(),
-        ...(context.progressTools?.(
-          options.sentMedia ?? new DeliveredMedia()
-        ) ?? []),
-      ];
+      const tools = gateTools(
+        [
+          ...context.browserTools(),
+          ...(context.progressTools?.(
+            options.sentMedia ?? new DeliveredMedia()
+          ) ?? []),
+        ],
+        gate
+      );
       const created = await createAgentSession({
         cwd: context.cwd,
         agentDir: context.agentDir,
@@ -577,6 +697,8 @@ export async function runBrowserTask(
         traceChildEvent("web", event);
         trace.event(event);
 
+        if (event.type === "message_end")
+          noteBatch(gate, (event as { message?: unknown }).message);
         if (event.type === "message_start") {
           childMessage += 1;
           const started = (
@@ -713,6 +835,7 @@ export async function runBrowserTask(
           ? "The user has done their part in the browser and says: " +
             `"${task}"\n\nThe page is as you left it. Take a snapshot to see where it is now, then continue ` +
             "from where you stopped and finish the task. Do not start over.\n\n" +
+            (resumeNote.length > 0 ? `${resumeNote}\n\n` : "") +
             `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budgetNote(MAX_TURNS)}`
           : resume
             ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${budgetNote(MAX_TURNS)}`
@@ -747,7 +870,12 @@ export async function runBrowserTask(
       try {
         await prompt(opening);
 
-        if (outcome.stoppedBy === "completed" && needsUser(lastText)) {
+        // A `browser_pause` is the run's stop, whatever it wrote after.
+        if (gate.pause != null && outcome.stoppedBy === "completed") {
+          checkout?.note(gate.pause);
+          outcome.stoppedBy = "needs-user";
+          keepAlive = true;
+        } else if (outcome.stoppedBy === "completed" && needsUser(lastText)) {
           outcome.stoppedBy = "needs-user";
           keepAlive = true;
         }
@@ -778,7 +906,7 @@ export async function runBrowserTask(
       forwardTools.settle();
       if (keepAlive) {
         // Waiting on the user: the transcript and the page stay put.
-        pausedRuns.set(context, { session, pausedAt: Date.now() });
+        pausedRuns.set(context, { session, gate, pausedAt: Date.now() });
       } else {
         // Releases the browser for whoever is queued behind this run.
         session.dispose();
@@ -830,6 +958,16 @@ export async function runBrowserTask(
         stoppedBy: "provider-error",
       };
     }
+
+    const pause =
+      outcome.stoppedBy === "needs-user" ? (gate.pause?.paused ?? null) : null;
+    if (pause != null)
+      return {
+        text: lastText.trim().length > 0 ? lastText : pause.summary,
+        ...tally,
+        stoppedBy: "needs-user",
+        pause,
+      };
 
     return {
       text:

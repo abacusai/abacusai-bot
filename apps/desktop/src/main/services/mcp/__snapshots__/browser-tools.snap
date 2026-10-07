@@ -134,6 +134,10 @@
         "url_pattern": {
           "type": "string",
           "description": "URL glob pattern for wait, e.g. \"**/results**\""
+        },
+        "total_ref": {
+          "type": "string",
+          "description": "For the Pay click of an approved payment: the ref of the element showing the order total. Defaults to the one the card fill named."
         }
       },
       "required": [
@@ -179,6 +183,120 @@
       },
       "required": [
         "action"
+      ]
+    }
+  },
+  {
+    "name": "browser_pause",
+    "description": "Stop at a step only the user can do, and say exactly what it needs. This ends your run;\nthe page stays as it is and you are resumed on it once the user has done their part.\n\nneed:\n- \"details\": the form wants the traveler's or buyer's details your task did not give;\n  list each field the form asks for in fields (e.g. [\"full name as on ID\", \"date of birth\"]).\n- \"login\": the site wants the user signed in and your task has no vault item_id for it.\n- \"code\": the site or the bank sent the user a one-time code.\n- \"payment\": you are on the page with the card form and the final total, before any card\n  is entered. Give total_ref (the ref of the element showing the order total with its\n  currency), merchant, and cvv_required if the page asks for a CVV. The browser reads the\n  total itself.\n- \"captcha\": a CAPTCHA blocks the page.\n- \"choose\": the user must pick (a flight, a seat, a fare) and the task did not say which.\n\nA screenshot of the page (secret fields hidden) is taken for payment, captcha and choose.\nCall it alone, never beside other tools. Never put a password, card number, CVV or code\nin any field of this call.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "need": {
+          "type": "string",
+          "enum": [
+            "details",
+            "login",
+            "code",
+            "payment",
+            "captcha",
+            "choose"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "description": "One or two sentences: where you are and what the user must do or decide."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "For details: each field the form asks for."
+        },
+        "total_ref": {
+          "type": "string",
+          "description": "For payment: the ref of the element showing the total."
+        },
+        "currency": {
+          "type": "string",
+          "description": "For payment, only when the total's sign is shared (\"$\"): its ISO code, e.g. \"USD\"."
+        },
+        "merchant": {
+          "type": "string",
+          "description": "For payment: who is paid, as the page names them."
+        },
+        "cvv_required": {
+          "type": "boolean",
+          "description": "For payment: whether the page asks for a CVV."
+        }
+      },
+      "required": [
+        "need",
+        "summary"
+      ]
+    }
+  },
+  {
+    "name": "browser_checkout",
+    "description": "The agent runtime's handle on this session's checkout. Not for models.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "start",
+            "resume",
+            "hold",
+            "finish",
+            "abandon",
+            "state"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "answered": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  {
+    "name": "browser_traveler_fill",
+    "description": "Type a saved traveler's passport number into a field, without you ever seeing it. Give\nthe traveler id your task names (e.g. t1) and the field's ref from a snapshot. Other\ntraveler details (name, date of birth, expiry) are in your task: fill those yourself.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "traveler_id": {
+          "type": "string",
+          "description": "e.g. t1"
+        },
+        "field": {
+          "type": "string",
+          "enum": [
+            "passport_number"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "description": "The field to type into"
+        }
+      },
+      "required": [
+        "traveler_id",
+        "field",
+        "ref"
       ]
     }
   }

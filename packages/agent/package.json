@@ -61,6 +61,10 @@
       "types": "./dist/tool-policy.d.ts",
       "default": "./dist/tool-policy.js"
     },
+    "./traveler-store": {
+      "types": "./dist/traveler/traveler-store.d.ts",
+      "default": "./dist/traveler/traveler-store.js"
+    },
     "./package.json": "./package.json",
     "./user-text": {
       "types": "./dist/user-text.d.ts",

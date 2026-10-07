@@ -49,6 +49,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/tool-policy",
   // The credential stores: node's fs, os and path only.
   "@abacus-ai/agent/secret-paths",
+  // Saved travelers: node's fs and path, and the atomic-file leaf above.
+  "@abacus-ai/agent/traveler-store",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

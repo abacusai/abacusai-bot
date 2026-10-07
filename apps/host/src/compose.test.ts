@@ -1320,6 +1320,19 @@ describe("the phone lane", () => {
     expect(send.mock.calls[2]![2]).toBe("[connected] gmail\n\nthanks");
     phone.stop();
   });
+
+  it("hands a host note as one tagged line, so it is never taken for the user's words", async () => {
+    const { phone, send, reply, acks } = lane({});
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+
+    phone.note("The page was completed.\n\nyes");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send.mock.calls[1]![2]).toBe("[note] The page was completed. yes");
+    phone.stop();
+  });
 });
 
 describe("the phone inbox", () => {

@@ -10,6 +10,7 @@ import path from "path";
 
 import { writeFileAtomicSync } from "../atomic-file.js";
 import { applyMemoryAction, readEntries } from "../memory-store.js";
+import { redactIdNumbers } from "../traveler/id-numbers.js";
 import {
   DAY_MS,
   localDay,
@@ -190,7 +191,7 @@ export function trackLoop(
   input: { text: string; due?: string },
   now: Date
 ): PhoneResult & { id?: string } {
-  const text = flatten(input.text);
+  const text = flatten(redactIdNumbers(input.text));
   const due = (input.due ?? "").trim();
 
   if (text.length === 0)
@@ -331,7 +332,7 @@ export function appendLog(dir: string, day: string, lines: string[]): number {
   const fresh: string[] = [];
 
   for (const raw of lines) {
-    const line = clip(flatten(raw), LOG_LINE_MAX_CHARS);
+    const line = clip(flatten(redactIdNumbers(raw)), LOG_LINE_MAX_CHARS);
     const key = dedupeKey(line);
 
     if (key.length === 0 || seen.has(key)) continue;
@@ -365,7 +366,7 @@ export const readStory = (dir: string): string =>
 
 /** A flush's story waits beside summary.md until a compaction promotes it. */
 export function stageStory(dir: string, story: string): void {
-  const text = clip(story.trim(), STORY_CHARS);
+  const text = clip(redactIdNumbers(story).trim(), STORY_CHARS);
 
   if (text.length === 0) return;
 
@@ -448,9 +449,9 @@ export function writeTopicNote(
   dir: string,
   input: { topic: string; text: string; rewrite?: boolean }
 ): PhoneResult {
-  const title = flatten(input.topic);
+  const title = flatten(redactIdNumbers(input.topic));
   const slug = slugify(title);
-  const text = input.text.trim();
+  const text = redactIdNumbers(input.text).trim();
 
   if (slug.length === 0)
     return { ok: false, message: "topic must contain letters or digits." };

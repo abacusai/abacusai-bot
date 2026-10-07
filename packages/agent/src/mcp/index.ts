@@ -190,6 +190,15 @@ const qualify = (
  */
 const DESKTOP_ONLY_SERVERS = ["browser", "device", "agent-tools"];
 
+/**
+ * Tools a desktop server serves for this agent's own runtime, not for a
+ * model: the browser's `browser_checkout`, which `browser_task` drives.
+ * Routed, so the runtime can call them; never listed among a model's tools.
+ */
+export const HOST_INTERNAL_TOOLS: ReadonlySet<string> = new Set([
+  "browser_checkout",
+]);
+
 const withoutDesktopOnlyServers = (
   servers: Record<string, McpServerConfig>
 ): Record<string, McpServerConfig> =>
@@ -465,7 +474,8 @@ export async function connectMcpServers(
         registeredToolMeta.set(alternate, meta);
       }
 
-      if (advertise)
+      // A host's internal tool is routed but never offered to a model.
+      if (advertise && !HOST_INTERNAL_TOOLS.has(tool.name))
         result.tools.push({
           name: qualified,
           description: tool.description ?? `${tool.name} (via ${name})`,

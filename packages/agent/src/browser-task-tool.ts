@@ -1,6 +1,8 @@
 import { Type } from "typebox";
 
 import {
+  hasPausedRun,
+  NEEDS_USER_PATTERN,
   runBrowserTask,
   type BrowserTaskContext,
   type BrowserTaskResult,
@@ -15,6 +17,8 @@ import {
   browserHandoffDescription,
   browserStopNote,
 } from "./channel.js";
+import { pauseReport, resumeNote } from "./checkout-report.js";
+import { CheckoutRun } from "./checkout-run.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 import { DeliveredMedia } from "./send-media-tool.js";
@@ -117,6 +121,23 @@ export function buildBrowserTaskTool(
   let counter = 0;
   const budget = new DispatchBudget();
   const channel = context.channel ?? APP_CHANNEL;
+  // The session's checkout, held by the browser: a fresh run starts it over,
+  // a resume asks it whether the user's approval is live.
+  const checkout = new CheckoutRun(context.checkout ?? null);
+  /** The details stop just reported, and the user's last message then. */
+  let detailsAsked: { afterSeq: number } | null = null;
+  const nothingPaused = (stage: string) => ({
+    content: [
+      {
+        type: "text" as const,
+        text:
+          "Nothing is paused to continue: the last browser run finished, or waited too long for " +
+          "the user and was let go. Start a new browser_task for what is left (without continue_from_last).",
+      },
+    ],
+    details: { stoppedBy: "nothing-paused", checkoutStage: stage },
+    isError: true,
+  });
 
   return {
     name: "browser_task",
@@ -159,9 +180,12 @@ export function buildBrowserTaskTool(
       "five lookups on one site, ask for all five in a single task and have it report a row",
       "for each.",
       "",
-      "It cannot read files or run commands, and it will stop rather than pay for anything,",
-      "book anything, enter card or ID details, or fill a CAPTCHA. When it stops for that, its",
-      'report ends with "NEEDS USER:" and what they must do.',
+      "It cannot read files or run commands. It never types a password, card number, CVV or",
+      "code itself, never solves a CAPTCHA, and never pays or books without the user's approval",
+      "of that exact payment (payment_approval): the browser refuses a Pay click without one.",
+      "At a step only the user can do it stops and says what it needs (traveler details, a",
+      "login, a code, the payment approval, a CAPTCHA, a choice), with a screenshot where the",
+      "page is the question; the result says what to do next.",
       browserHandoffDescription(channel),
       "",
       "When the user has a login saved in their vault (vault_items), name its item_id in the",
@@ -224,6 +248,12 @@ export function buildBrowserTaskTool(
         };
       }
 
+      // Only a run that stopped for the user, and is still waiting, continues.
+      if (resume && !hasPausedRun(context)) {
+        await checkout.abandon();
+        return nothingPaused(checkout.state.stage);
+      }
+
       if (browserBusy.running) {
         return {
           content: [{ type: "text" as const, text: BUSY_MESSAGE }],
@@ -248,90 +278,146 @@ export function buildBrowserTaskTool(
         };
       }
 
-      // Bracketed even on failure, or the card spins forever.
-      const subtaskId = `browser-${Date.now()}-${++counter}`;
-      emit(
-        tagEvent(
-          {
-            type: "subtask_start",
-            id: subtaskId,
-            description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
-            kind: "browser",
-          },
-          { parentToolCallId: toolCallId }
-        )
-      );
-      // Everything the sub-agent does is tagged as its own (AG-UI only).
-      const childEmit = scopeEmit(emit, subtaskId);
-
-      const sentMedia = new DeliveredMedia();
-      let result;
-      // Failed until proven otherwise: a throw skips straight to `finally`.
-      let status: "completed" | "failed" = "failed";
-      let outcome: BrowserRunOutcome | undefined;
+      // Held from here until the checkout has heard how the run ended: those
+      // calls wait on the browser, and a second run must not slip in between.
+      browserBusy.running = true;
       try {
-        browserBusy.running = true;
-        try {
-          result = await runBrowserTask(context, task, childEmit, {
-            startUrl,
-            signal,
-            reportFields,
-            resume,
-            sentMedia,
-          });
-        } finally {
-          browserBusy.running = false;
-        }
-        // The card's verdict is the tool result's: a run stopped by the user or
-        // at its cap still handed back what it found, and is not a failure.
-        status = failedStop(result.stoppedBy) ? "failed" : "completed";
-        outcome = runOutcome(result.stoppedBy);
-        // Not re-emitted: the last message already streamed into the card.
+        return await runHeld(
+          toolCallId,
+          task,
+          startUrl,
+          signal,
+          reportFields,
+          resume
+        );
       } finally {
-        emit({
-          type: "subtask_end",
-          id: subtaskId,
-          status,
-          ...(outcome != null ? { outcome } : {}),
-        });
+        browserBusy.running = false;
       }
-
-      const failed = failedStop(result.stoppedBy);
-
-      // A capped run's answer is partial; saying so makes the caller weigh it.
-      const note =
-        result.stoppedBy === "needs-user"
-          ? `\n\n${browserStopNote(channel)}`
-          : result.stoppedBy === "turn-limit"
-            ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
-            : result.stoppedBy === "timeout"
-              ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
-              : "";
-
-      // What the run asked to send: the chat sends each id once, so the loop
-      // sending it again adds nothing.
-      const sent = sentMedia.list();
-      const sentNote =
-        sent.length > 0
-          ? `\n\n(This run sent the user ${sent.join(", ")}. Do not send ${sent.length > 1 ? "them" : "it"} again.)`
-          : "";
-
-      return {
-        content: [
-          { type: "text" as const, text: `${result.text}${note}${sentNote}` },
-        ],
-        details: {
-          turns: result.turns,
-          executeCalls: result.executeCalls,
-          steers: result.steers,
-          stoppedBy: result.stoppedBy,
-          ...(outcome != null ? { outcome } : {}),
-          ...(result.consumedMessageIds != null
-            ? { consumedMessageIds: result.consumedMessageIds }
-            : {}),
-        },
-        isError: failed,
-      };
     },
   };
+
+  async function runHeld(
+    toolCallId: string,
+    task: string,
+    startUrl: string | undefined,
+    signal: AbortSignal | undefined,
+    reportFields: string[],
+    resume: boolean
+  ) {
+    let note = "";
+    if (resume) {
+      // A details stop is answered by the user's very next message after it
+      // was reported: that answer is what binds its site for saved travelers.
+      const waiting = detailsAsked;
+      detailsAsked = null;
+      const answered =
+        waiting != null &&
+        (context.userWords?.() ?? []).some(
+          (message) => message.seq === waiting.afterSeq + 1
+        );
+      const resumed = await checkout.resume({ answered });
+      if (resumed.ok === false) return nothingPaused(checkout.state.stage);
+      note = resumeNote(checkout.state.stage, resumed.approved);
+    } else await checkout.start();
+
+    // Bracketed even on failure, or the card spins forever.
+    const subtaskId = `browser-${Date.now()}-${++counter}`;
+    emit(
+      tagEvent(
+        {
+          type: "subtask_start",
+          id: subtaskId,
+          description: task.length > 120 ? `${task.slice(0, 117)}…` : task,
+          kind: "browser",
+        },
+        { parentToolCallId: toolCallId }
+      )
+    );
+    // Everything the sub-agent does is tagged as its own (AG-UI only).
+    const childEmit = scopeEmit(emit, subtaskId);
+
+    const sentMedia = new DeliveredMedia();
+    let result;
+    // Failed until proven otherwise: a throw skips straight to `finally`.
+    let status: "completed" | "failed" = "failed";
+    let outcome: BrowserRunOutcome | undefined;
+    try {
+      result = await runBrowserTask(context, task, childEmit, {
+        startUrl,
+        signal,
+        reportFields,
+        resume,
+        sentMedia,
+        checkout,
+        ...(note.length > 0 ? { resumeNote: note } : {}),
+      });
+      // The card's verdict is the tool result's: a run stopped by the user or
+      // at its cap still handed back what it found, and is not a failure.
+      status = failedStop(result.stoppedBy) ? "failed" : "completed";
+      outcome = runOutcome(result.stoppedBy);
+      // Not re-emitted: the last message already streamed into the card.
+    } finally {
+      emit({
+        type: "subtask_end",
+        id: subtaskId,
+        status,
+        ...(outcome != null ? { outcome } : {}),
+      });
+    }
+
+    const failed = failedStop(result.stoppedBy);
+
+    if (result.stoppedBy === "needs-user") {
+      // A "NEEDS USER:" line without browser_pause is the same stop, unstructured.
+      if (result.pause == null)
+        await checkout.hold(
+          NEEDS_USER_PATTERN.exec(result.text)?.[1]?.trim() ?? ""
+        );
+    } else await checkout.finish(result.stoppedBy);
+    const pause =
+      result.stoppedBy === "needs-user" ? checkout.state.paused : null;
+    detailsAsked =
+      pause?.need === "details" && pause.site != null
+        ? { afterSeq: context.userWords?.().at(-1)?.seq ?? 0 }
+        : null;
+
+    // A capped run's answer is partial; saying so makes the caller weigh it.
+    const tail =
+      result.stoppedBy === "needs-user"
+        ? `\n\n${pause != null ? pauseReport(pause, checkout.state.stage, channel) : browserStopNote(channel)}`
+        : result.stoppedBy === "turn-limit"
+          ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
+          : result.stoppedBy === "timeout"
+            ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
+            : "";
+
+    // What the run asked to send: the chat sends each id once, so the loop
+    // sending it again adds nothing.
+    const sent = sentMedia.list();
+    const sentNote =
+      sent.length > 0
+        ? `\n\n(This run sent the user ${sent.join(", ")}. Do not send ${sent.length > 1 ? "them" : "it"} again.)`
+        : "";
+
+    return {
+      content: [
+        { type: "text" as const, text: `${result.text}${tail}${sentNote}` },
+      ],
+      details: {
+        checkoutStage: checkout.state.stage,
+        ...(pause != null && pause.need !== "user"
+          ? { pause: { need: pause.need, mediaId: pause.mediaId } }
+          : {}),
+        turns: result.turns,
+        executeCalls: result.executeCalls,
+        steers: result.steers,
+        stoppedBy: result.stoppedBy,
+        ...(outcome != null ? { outcome } : {}),
+        ...(result.consumedMessageIds != null
+          ? { consumedMessageIds: result.consumedMessageIds }
+          : {}),
+      },
+      isError: failed,
+    };
+  }
 }

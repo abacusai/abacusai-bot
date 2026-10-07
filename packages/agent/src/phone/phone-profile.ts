@@ -11,9 +11,11 @@ import {
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "../bot/bot-time-tool.js";
 import { WHATSAPP_CHANNEL } from "../channel.js";
 import type { ForeverProfile } from "../forever/profile.js";
+import { buildOwnerTools, OWNER_TOOL_NAMES } from "../owner-tools.js";
 import { buildSendMediaTool } from "../send-media-tool.js";
 import { SEND_MEDIA_TOOL_NAME } from "../send-media.js";
 import { PHONE_MCP_TOOLS } from "../tool-policy.js";
+import { RecentUserText } from "../traveler/traveler-tool.js";
 import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
   localDay,
@@ -74,6 +76,7 @@ const PHONE_TOOL_NAMES = [
   BOT_REACTION_TOOL_NAME,
   PHONE_PROGRESS_TOOL_NAME,
   SEND_MEDIA_TOOL_NAME,
+  ...OWNER_TOOL_NAMES,
 ];
 
 export interface PhoneProfileOptions {
@@ -100,6 +103,8 @@ export function createPhoneProfile(
     writePhoneState(home, { ...state, lastConsolidatedAt: Date.now() });
 
   let flushAttempts = 0;
+  // What the user wrote lately: a saved traveler's consent must be their words.
+  const recentUserText = new RecentUserText();
 
   return {
     systemPrompt: () => [phoneOperatingPrompt(options.model)],
@@ -110,9 +115,11 @@ export function createPhoneProfile(
       buildBotReactionTool(),
       buildPhoneProgressTool(),
       buildSendMediaTool(),
+      ...buildOwnerTools({ recentUserText }),
     ],
     // A browser run keeps the user posted, and hears them, from inside.
     browserTask: {
+      userWords: recentUserText.read,
       progressTools: (sent) => [
         buildPhoneProgressTool(),
         buildSendMediaTool(sent),
@@ -185,6 +192,7 @@ export function createPhoneProfile(
       languageRepairType: PHONE_LANGUAGE_REPAIR_TYPE,
     },
     beforeTurn: (message) => recallBlock(home, message, new Date()),
+    noteUserWords: (text) => recentUserText.note(text),
     afterTurn: () => undefined,
     onMessage: (message) => archiveLive(home, message),
     beforeCompaction: (messages) => {

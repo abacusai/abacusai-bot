@@ -140,6 +140,17 @@ describe.skipIf(onWindows)("the deny-list", () => {
     ]);
   });
 
+  it("hides the saved travelers, whose passport numbers the model never sees", () => {
+    const result = resolve(
+      {
+        "/srv/bot/memories/travelers.json": null,
+        "/srv/bot/memories/USER.md": null,
+      },
+      { env: { ABACUSAI_BOT_HOME: "/srv/bot" } }
+    );
+    expect(result.denied).toEqual(["/srv/bot/memories/travelers.json"]);
+  });
+
   it("lists macOS keychain and browser stores only on macOS", () => {
     const mac = secretEntries(home, "darwin", {}).map((entry) => entry.path);
     const linux = secretEntries(home, "linux", {}).map((entry) => entry.path);

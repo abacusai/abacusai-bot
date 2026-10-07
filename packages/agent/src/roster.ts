@@ -25,6 +25,10 @@ import {
   browserTaskEnabled,
   buildBrowserTaskTool,
 } from "./browser-task-tool.js";
+import {
+  BROWSER_CHECKOUT_TOOL_NAME,
+  withCheckoutToken,
+} from "./checkout-run.js";
 import { skillDirs, skillDirsByScope } from "./config.js";
 import { buildDeckTool, deckToolEnabled } from "./deck-tool.js";
 import { buildDelegateTool, delegationEnabled } from "./delegate-tool.js";
@@ -33,7 +37,7 @@ import { buildDocumentTool, documentToolEnabled } from "./document-tool.js";
 import { buildExitPlanTool } from "./exit-plan-tool.js";
 import type { HostServiceClient } from "./host-services.js";
 import type { ConnectedMcp } from "./mcp/index.js";
-import { buildMcpToolDefinitions } from "./mcp/tools.js";
+import { buildMcpToolDefinitions, mcpToolCaller } from "./mcp/tools.js";
 import { buildMemoryTool } from "./memory-tool.js";
 import { buildPresentDeliverableTool } from "./present-deliverable-tool.js";
 import type { AgentEvent, AgentMode } from "./protocol.js";
@@ -263,6 +267,10 @@ export const SUB_AGENT_TOOLS: readonly RosterEntry[] = [
             settingsManager: ctx.subAgentSettingsManager,
             // Resolved per run so a reconnect reaches the sub-agent too.
             browserTools: () => browserTools(ctx),
+            checkout:
+              withCheckoutToken(
+                mcpToolCaller(ctx.mcp, BROWSER_CHECKOUT_TOOL_NAME)
+              ) ?? undefined,
           },
           ctx.browserModel
         ),
