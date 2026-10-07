@@ -42,6 +42,8 @@ const GROUPS = [
   "sandbox",
   "session",
   "updates",
+  // The user's vault: saved logins and approved cards, typed by the browser.
+  "vault",
   "voice",
   "workspace",
 ];
