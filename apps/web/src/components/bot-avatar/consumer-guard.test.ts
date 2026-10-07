@@ -10,7 +10,7 @@ it("keeps bot rendering behind the live rig and rejects raster morph names", () 
   for (const [name, source] of Object.entries(sources)) {
     if (name.includes(".test.")) continue;
     expect(source, name).not.toMatch(
-      /viewTransitionName:\s*["'`]bot-identity|useSharedElementName\(botIdentityName|shared:\s*`bot-identity/
+      /viewTransitionName:\s*["'`]bot-identity|useSharedElementName\((?:botIdentityName|["'`]bot-identity)|shared:\s*`bot-identity/
     );
     expect(source, name).not.toMatch(
       /<img[^>]+(?:bot-avatar|avatars\/|avatarShape)/

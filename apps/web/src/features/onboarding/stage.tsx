@@ -7,8 +7,8 @@
  * `springs.avatar`. Entering avatars rise in (12 px, staggered 60 ms),
  * leaving ones drift up and out (160 ms); the rest rearrange. The egg on
  * `first-bot` hatches into the created bot's own look, and that bot is the
- * one that stays on `done` and flies into the shell's bot identity
- * (`view-transition-name: bot-identity-<id>`, spec 06 OB17).
+ * one that stays on `done`. The shell renders its live identity rig after
+ * onboarding without a raster shared-element snapshot.
  *
  * `stageFor` is pure: which avatar ids, looks, moods and sizes a step shows.
  * Reduced motion: every change is a cut, nothing bobs.
