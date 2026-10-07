@@ -2,7 +2,10 @@ import { Check, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
-import { NotchAction, useNotchMotion } from "./controls";
+import {
+  NotchAction,
+  useNotchMotion,
+} from "#renderer/components/notch-controls";
 export const ListeningControls = ({
   state,
   level,

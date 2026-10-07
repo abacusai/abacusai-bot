@@ -3,10 +3,12 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  NotchAction,
+  useNotchMotion,
+} from "#renderer/components/notch-controls";
 import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
 import { useNotch } from "#renderer/notch-context";
-
-import { NotchAction, useNotchMotion } from "./controls";
 
 export const IdleView = () => {
   const { db, message, transport } = useNotch();
