@@ -94,7 +94,8 @@ export default defineConfig(({ command, mode }) => {
             input: resolve(root, "src/main/index.ts"),
             plugins: [electronAliases],
             onstart: async ({ startup }) => {
-              await startup();
+              // Vite serves the web root; Electron must launch the desktop package.
+              await startup(undefined, { cwd: root });
               // Mounted by the plugin's startup(); not in Node's own Process type.
               const child = (process as { electronApp?: ChildProcess })
                 .electronApp;

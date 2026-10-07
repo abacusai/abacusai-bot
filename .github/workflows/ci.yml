@@ -90,6 +90,10 @@ jobs:
         run: |
           pnpm exec turbo run build --filter=@abacus-ai/desktop --filter=@abacus-ai/web
           node scripts/check-web-bundle.mjs
+      - name: Open-source license policy and notices
+        run: |
+          pnpm run check:licenses
+          pnpm --filter @abacus-ai/desktop run generate:notices
       - run: pnpm --filter @abacus-ai/desktop run check:ui-registry
       - name: i18n and locale guards
         run: |

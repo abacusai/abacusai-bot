@@ -2573,7 +2573,6 @@
       "personal": "Personal",
       "app": "App",
       "capabilities": "Capabilities",
-      "openLibrary": "Open the Library",
       "models": "Models",
       "environment": "Environment"
     },
@@ -2677,7 +2676,26 @@
       }
     },
     "backToApp": "Back to the app",
-    "emptyDescription": "These settings arrive in a coming update."
+    "emptyDescription": "These settings arrive in a coming update.",
+    "licenses": {
+      "title": "Open-Source-Lizenzen",
+      "description": "Lizenzen und Urheberhinweise für die in AbacusAI Bot enthaltene Software.",
+      "own": "AbacusAI Bot · MIT",
+      "attribution": "Copyright © 2026 Abacus.AI, Inc.",
+      "hide": "Ausblenden",
+      "search": "Pakete oder Lizenzen suchen",
+      "notices": "Lizenzhinweise herunterladen",
+      "runtime": "Chromium- und Node.js-Lizenzhinweise",
+      "failed": "Lizenzen konnten nicht geladen werden.",
+      "count": "Pakete: {{count}}",
+      "copyLink": "Repository-Link für {{name}} kopieren",
+      "openLink": "Repository für {{name}} öffnen",
+      "copied": "Kopiert",
+      "open": "Im Browser öffnen",
+      "text": "Lizenztext für {{name}}",
+      "empty": "Keine passenden Pakete.",
+      "more": "Weitere Pakete laden"
+    }
   },
   "onboardingFlow": {
     "steps": {

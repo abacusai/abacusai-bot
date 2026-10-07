@@ -6,7 +6,7 @@ set -euo pipefail
 # Defaults are the recorded baseline (web-split-desktop-baseline.md): the
 # source commit's renderer, built against a fresh frozen-lockfile install of
 # the deps commit, whose pnpm-lock.yaml must hash to lock-sha256.
-source_commit=${1:-0c83c457}
+source_commit=${1:-7926220a}
 deps_commit=${2:-$source_commit}
 lock_sha=${3:-233e97a875f5f4a00a94b1de33b706fe28c3abbca8bcf14b4efe7f23b9729328}
 repo=$(git rev-parse --show-toplevel)
@@ -18,7 +18,7 @@ git -C "$repo" archive "$deps_commit" | tar -x -C "$deps_dir"
 printf '%s  %s\n' "$lock_sha" "$deps_dir/pnpm-lock.yaml" | sha256sum -c -
 (cd "$deps_dir" && env -u NODE_ENV -u CI pnpm install --frozen-lockfile && pnpm --filter @abacus-ai/connectors build && env -u ABACUS_RELEASE -u ABACUS_BUILD_COMMIT GIT_DIR="$git_dir" GIT_WORK_TREE="$deps_dir" pnpm --filter @abacus-ai/agent build)
 ln -s "$deps_dir/node_modules" "$baseline_dir/node_modules"
-for workspace in apps/desktop apps/web; do
+for workspace in apps/desktop apps/web apps/updater packages/agent packages/contract packages/connectors packages/config packages/test-support; do
   if [ -d "$deps_dir/$workspace/node_modules" ] && [ ! -e "$baseline_dir/$workspace/node_modules" ]; then
     ln -s "$deps_dir/$workspace/node_modules" "$baseline_dir/$workspace/node_modules"
   fi

@@ -2,41 +2,101 @@
   {
     "file": "devicon-LICENSE",
     "asset": "Playwright connector icon paths from devicon",
-    "source": "https://github.com/devicons/devicon/blob/7330accdbc47e2dc0c19789a48533c4a3c50fe58/LICENSE"
+    "source": "https://github.com/devicons/devicon/blob/7330accdbc47e2dc0c19789a48533c4a3c50fe58/LICENSE",
+    "license": "MIT",
+    "version": "7330acc",
+    "name": "devicon connector paths"
   },
   {
     "file": "lobe-icons-LICENSE",
     "asset": "Exa, Firecrawl, and Tavily connector icon paths from LobeHub Icons",
-    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/LICENSE"
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/LICENSE",
+    "license": "MIT",
+    "version": "a94750e",
+    "name": "LobeHub connector paths"
   },
   {
     "file": "ripgrep-LICENSE-MIT",
     "asset": "ripgrep 15.2.0 (MIT option)",
-    "source": "https://github.com/BurntSushi/ripgrep/blob/15.2.0/LICENSE-MIT"
+    "source": "https://github.com/BurntSushi/ripgrep/blob/15.2.0/LICENSE-MIT",
+    "license": "MIT",
+    "version": "15.2.0",
+    "name": "ripgrep",
+    "pin": {
+      "file": "packages/agent/scripts/download-tools.js",
+      "constant": "RIPGREP_VERSION"
+    }
   },
   {
     "file": "fd-LICENSE-MIT",
     "asset": "fd 10.3.0 (MIT option)",
-    "source": "https://github.com/sharkdp/fd/blob/v10.3.0/LICENSE-MIT"
+    "source": "https://github.com/sharkdp/fd/blob/v10.3.0/LICENSE-MIT",
+    "license": "MIT",
+    "version": "10.3.0",
+    "name": "fd",
+    "pin": {
+      "file": "packages/agent/scripts/download-tools.js",
+      "constant": "FD_VERSION"
+    }
   },
   {
     "file": "scrcpy-LICENSE",
     "asset": "scrcpy server 2.7",
-    "source": "https://github.com/Genymobile/scrcpy/blob/v2.7/LICENSE"
+    "source": "https://github.com/Genymobile/scrcpy/blob/v2.7/LICENSE",
+    "license": "Apache-2.0",
+    "version": "2.7",
+    "name": "scrcpy server",
+    "pin": {
+      "file": "apps/desktop/scripts/download-scrcpy.js",
+      "constant": "VERSION"
+    }
   },
   {
     "file": "llama-cpp-LICENSE",
     "asset": "llama.cpp b11102 (llama-server, the runtime local models are served by; spawned as a separate process, never linked)",
-    "source": "https://github.com/ggml-org/llama.cpp/blob/b11102/LICENSE"
+    "source": "https://github.com/ggml-org/llama.cpp/blob/b11102/LICENSE",
+    "license": "MIT",
+    "version": "b11102",
+    "name": "llama.cpp server",
+    "pin": {
+      "file": "apps/desktop/scripts/download-llama-server.js",
+      "constant": "VERSION"
+    }
   },
   {
     "file": "wa-js-LICENSE",
     "asset": "wa-js 4.6.0",
-    "source": "https://github.com/wppconnect-team/wa-js/blob/v4.6.0/LICENSE"
+    "source": "https://github.com/wppconnect-team/wa-js/blob/v4.6.0/LICENSE",
+    "license": "Apache-2.0",
+    "version": "4.6.0",
+    "name": "wa-js",
+    "pin": {
+      "file": "apps/desktop/scripts/download-wa-js.js",
+      "constant": "VERSION"
+    }
   },
   {
     "file": "busybox-w32-GPL-2.0.txt",
     "asset": "busybox-w32 FRP-6075-g169694ebd (the POSIX shell bundled for Windows; spawned as a separate process, never linked)",
-    "source": "https://frippery.org/files/busybox/busybox-w32-FRP-6075-g169694ebd.tgz"
+    "source": "https://frippery.org/files/busybox/busybox-w32-FRP-6075-g169694ebd.tgz",
+    "license": "GPL-2.0-only",
+    "version": "FRP-6075-g169694ebd",
+    "name": "busybox-w32",
+    "pin": {
+      "file": "packages/agent/scripts/download-tools.js",
+      "constant": "BUSYBOX_VERSION"
+    }
+  },
+  {
+    "name": "Microsoft MXC sandbox executables",
+    "asset": "Windows sandbox wxc-exec.exe, plm.exe and winhttp-proxy-shim.exe from @microsoft/mxc-sdk",
+    "version": "0.8.0",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/@microsoft/mxc-sdk/-/mxc-sdk-0.8.0.tgz",
+    "file": "mxc-LICENSE",
+    "pin": {
+      "file": "packages/agent/scripts/download-tools.js",
+      "constant": "MXC"
+    }
   }
 ]

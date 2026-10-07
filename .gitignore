@@ -42,3 +42,6 @@ __pycache__/
 
 # Browser build analysis, kept outside published dist.
 apps/web/build-metadata/
+
+# Regenerated before web/desktop builds and development.
+apps/web/public/licenses/

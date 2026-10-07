@@ -21,11 +21,11 @@
     ]
   },
   "scripts": {
-    "build": "vite build",
+    "build": "node scripts/generate-notices.js --graph && vite build && node scripts/generate-notices.js",
     "check:react-compiler": "node scripts/check-react-compiler.mjs",
     "check:packaged": "node scripts/check-packaged-resources.js",
     "check:ui-registry": "node --test scripts/shadcn-registry-proxy.test.mjs && node scripts/shadcn-registry-snapshot.mjs --check",
-    "dev": "vite",
+    "dev": "node scripts/generate-notices.js --graph && vite",
     "experience": "node scripts/build-experience.js",
     "package": "electron-builder --config electron-builder.yml",
     "package:dir": "electron-builder --config electron-builder.yml --dir",
@@ -39,7 +39,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "vendor": "node scripts/download-scrcpy.js && node scripts/download-wa-js.js && node scripts/download-llama-server.js",
-    "dev:fixtures": "VITE_NEXT_DB_FIXTURES=1 vite",
+    "dev:fixtures": "node scripts/generate-notices.js --graph && VITE_NEXT_DB_FIXTURES=1 vite",
     "screenshots": "node scripts/screenshots.mjs",
     "check:release": "node scripts/check-release-build.mjs",
     "check:release-versions": "node scripts/check-release-versions.mjs",
