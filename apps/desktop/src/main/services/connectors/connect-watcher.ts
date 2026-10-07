@@ -52,6 +52,19 @@ export class ConnectWatcher {
     this.arm();
   }
 
+  /**
+   * Stop following what was offered with no session (a click in the app) for
+   * this connector, or every such offer; an agent's own offers stand.
+   */
+  release(connectorId?: string): void {
+    for (const [key, offer] of this.offers)
+      if (
+        offer.sessionId == null &&
+        (connectorId == null || offer.connectorIds.includes(connectorId))
+      )
+        this.offers.delete(key);
+  }
+
   stop(): void {
     if (this.timer != null) clearTimeout(this.timer);
     this.timer = null;

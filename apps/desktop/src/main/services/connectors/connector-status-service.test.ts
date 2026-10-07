@@ -4,8 +4,9 @@ import type { MessagingSnapshot } from "@abacus-ai/contract/messaging";
  * to be four separate "is it connected?" computations across the panel, the
  * onboarding step, the environment notice and the tool is one table here.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { ConnectWatcher } from "./connect-watcher";
 import {
   buildConnectorStatuses,
   connectorsInState,
@@ -203,5 +204,29 @@ describe("the service", () => {
     expect(connectorsInState(statuses, "connected").map((c) => c.id)).toEqual([
       "notion",
     ]);
+  });
+});
+
+describe("following offers", () => {
+  it("a cancelled connect stops being followed; an agent's own offer stands", async () => {
+    vi.useFakeTimers();
+    try {
+      const connected = vi.fn();
+      const watcher = new ConnectWatcher({
+        list: async () => ({ notion: { state: "connected" } }),
+        connected,
+        expired: () => {},
+        everyMs: 1000,
+      });
+      watcher.watch({ connectorIds: ["notion"], sessionId: null });
+      watcher.watch({ connectorIds: ["notion"], sessionId: "s-1" });
+      watcher.release("notion");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(connected).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ sessionId: "s-1" })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -30,6 +30,11 @@ afterEach(() => {
 /** A client whose host announces status changes when the test says so. */
 const clientFor = () => {
   let wake: (() => void) | null = null;
+  let next:
+    | { type: "status-changed" }
+    | { type: "connect-failed"; connectorId: string } = {
+    type: "status-changed",
+  };
   const streams = { open: 0 };
   const client = {
     connectors: {
@@ -41,6 +46,7 @@ const clientFor = () => {
         .mockResolvedValueOnce({})
         .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } }),
       respond: vi.fn().mockResolvedValue(undefined),
+      cancelConnect: vi.fn().mockResolvedValue(undefined),
       events: vi.fn(
         async (_input: unknown, { signal }: { signal: AbortSignal }) => {
           streams.open += 1;
@@ -53,7 +59,8 @@ const clientFor = () => {
                 wake = resolve;
               });
               wake = null;
-              yield { type: "status-changed" as const };
+              yield next;
+              next = { type: "status-changed" };
             }
           })();
         }
@@ -70,7 +77,13 @@ const clientFor = () => {
     await vi.waitFor(() => expect(wake).not.toBeNull());
     wake!();
   };
-  return { client, changed, streams };
+  /** The host's page reports the connect for `connectorId` failed. */
+  const failed = async (connectorId: string): Promise<void> => {
+    await vi.waitFor(() => expect(wake).not.toBeNull());
+    next = { type: "connect-failed", connectorId };
+    wake!();
+  };
+  return { client, changed, failed, streams };
 };
 /** The open transport a connect follows the host's announcements on. */
 const hostOf = (client: ReturnType<typeof clientFor>["client"]): Transport =>
@@ -359,3 +372,34 @@ it.each([
     expect(client.connectors.connect).not.toHaveBeenCalled();
   }
 );
+
+it("a connect the host reports failed ends at once, and only for its connector", async () => {
+  vi.stubGlobal("open", opening());
+  const { client, failed } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  const attempt = new ConnectAttempt(hostOf(client), "notion");
+  await failed("canva");
+  await failed("notion");
+  expect(await attempt.result).toEqual({ ok: false, error: "failed" });
+});
+
+it("cancel tells the host to drop the connect, once; a finished attempt asks nothing", async () => {
+  vi.stubGlobal("open", opening());
+  const { client, changed } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  const attempt = new ConnectAttempt(hostOf(client), "notion");
+  attempt.cancel();
+  attempt.cancel();
+  expect(await attempt.result).toMatchObject({ cancelled: true });
+  expect(client.connectors.cancelConnect).toHaveBeenCalledExactlyOnceWith({
+    connectorId: "notion",
+  });
+  const done = new ConnectAttempt(hostOf(client), "notion");
+  client.connectors.statuses.mockResolvedValue({
+    notion: { state: "connected" },
+  });
+  await changed();
+  expect(await done.result).toEqual({ ok: true });
+  done.cancel();
+  expect(client.connectors.cancelConnect).toHaveBeenCalledOnce();
+});

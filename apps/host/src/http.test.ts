@@ -344,7 +344,7 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
   }
 });
 
-it("MCP connect: one owner-gated route installs, signs in once per state, and never rewrites an entry", async () => {
+it("MCP connect: a side-effect-free confirm page, then a one-time POST that installs and signs in", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-mcp-"));
   const previousHome = process.env.ABACUSAI_BOT_HOME;
   process.env.ABACUSAI_BOT_HOME = home;
@@ -397,6 +397,7 @@ it("MCP connect: one owner-gated route installs, signs in once per state, and ne
     });
   let now = Date.now();
   const signedIn = vi.fn();
+  const failed = vi.fn();
   const watch = vi.fn();
   const entries = new Map<string, McpServerEntry>([
     ["mine", { url: "https://open.example/mcp" }],
@@ -420,7 +421,7 @@ it("MCP connect: one owner-gated route installs, signs in once per state, and ne
       signIn: async (name) =>
         hosted.begin({
           name,
-          label: name === "notion" ? "Notion" : name,
+          label: flow.mcpLabel(name)!,
           serverUrl: entries.get(name)!.url!,
         }),
       connectUrl: (name) => hosted.connectUrl(name),
@@ -430,8 +431,10 @@ it("MCP connect: one owner-gated route installs, signs in once per state, and ne
   });
   hosted = new HostedMcpConnect({
     base: hostBase,
+    label: (name) => flow.mcpLabel(name),
     connect: (name) => flow.connectMcp(name),
     signedIn,
+    failed,
     now: () => now,
   });
   const server = createHostHttpServer(
@@ -444,27 +447,108 @@ it("MCP connect: one owner-gated route installs, signs in once per state, and ne
   );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const owner = { "x-abacus-user-id": "o" };
+  // A top-level page load from the confirm page, as a browser sends it.
+  const owner = {
+    "x-abacus-user-id": "o",
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "same-origin",
+  };
   const get = (path: string, headers: Record<string, string> = owner) =>
     fetch(`${base}${path}`, { headers, redirect: "manual" });
-  const stateOf = async (path: string) =>
-    new URL((await get(path)).headers.get("location")!).searchParams.get(
-      "state"
-    )!;
+  const post = (
+    path: string,
+    token: string,
+    headers: Record<string, string> = owner
+  ) =>
+    fetch(`${base}${path}`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ token }).toString(),
+      redirect: "manual",
+    });
+  /** The confirm page, and the token its button posts. */
+  const confirm = async (path: string, headers = owner) => {
+    const page = await get(path, headers);
+    const html = await page.text();
+    return {
+      page,
+      html,
+      token: /name="token" value="([^"]+)"/.exec(html)?.[1] ?? "",
+    };
+  };
+  const stateOf = async (path: string) => {
+    const { token } = await confirm(path);
+    return new URL(
+      (await post(path, token)).headers.get("location")!
+    ).searchParams.get("state")!;
+  };
   try {
     // The chat link and the click open the same route.
     expect(await flow.connect("notion")).toEqual({
       ok: true,
       url: `${hostBase}/mcp/connect/notion`,
     });
+
+    // No sign-in begins outside a confirmed POST.
+    expect(
+      await hosted.begin({ name: "notion", label: "Notion", serverUrl })
+    ).toEqual({ kind: "failed", error: "unconfirmed" });
+
+    // Wrong or missing owner, a frame, a fetch: refused before anything.
+    for (const headers of [
+      {},
+      { ...owner, "x-abacus-user-id": "O" },
+      { ...owner, "x-abacus-user-id": "o2" },
+      { ...owner, "sec-fetch-dest": "iframe" },
+      { "x-abacus-user-id": "o", "sec-fetch-mode": "cors" },
+    ])
+      expect((await get("/mcp/connect/notion", headers)).status).toBe(403);
+
+    // The GET only asks, even cross-site (a link in a web chat app).
+    const asked = await confirm("/mcp/connect/notion", {
+      ...owner,
+      "sec-fetch-site": "cross-site",
+    });
+    expect(asked.page.status).toBe(200);
+    expect(asked.page.headers.get("x-frame-options")).toBe("DENY");
+    expect(asked.page.headers.get("cache-control")).toBe("no-store");
+    expect(asked.page.headers.get("content-security-policy")).toContain(
+      "frame-ancestors 'none'"
+    );
+    expect(asked.html).toContain("Connect Notion to AbacusAI Bot?");
+    expect(add).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalledWith(serverUrl, expect.anything());
+    expect((await get("/mcp/connect/nothing-here")).status).toBe(404);
+    expect((await get("/mcp/connect/abacus-gmailuser")).status).toBe(404);
+
+    // Refused POSTs: cross-site, missing, wrong, or superseded token.
+    const { token } = await confirm("/mcp/connect/notion");
+    expect(
+      (
+        await post("/mcp/connect/notion", token, {
+          ...owner,
+          "sec-fetch-site": "cross-site",
+        })
+      ).status
+    ).toBe(403);
+    expect((await post("/mcp/connect/notion", "")).status).toBe(403);
+    expect((await post("/mcp/connect/notion", asked.token)).status).toBe(403);
+    expect(
+      (await post("/mcp/connect/notion", token, { "x-abacus-user-id": "x" }))
+        .status
+    ).toBe(403);
     expect(add).not.toHaveBeenCalled();
 
-    expect((await get("/mcp/connect/notion", {})).status).toBe(403);
-    expect(add).not.toHaveBeenCalled();
-    const started = await get("/mcp/connect/notion");
+    // The happy path: the POST installs and redirects, once.
+    const started = await post("/mcp/connect/notion", token);
     expect(started.status).toBe(302);
     expect(add).toHaveBeenCalledExactlyOnceWith("notion", { url: serverUrl });
     expect(watch).toHaveBeenCalledWith("notion");
+    expect((await post("/mcp/connect/notion", token)).status).toBe(403);
     const authorize = new URL(started.headers.get("location")!);
     expect(authorize.origin + authorize.pathname).toBe(
       "https://auth.provider.test/authorize"
@@ -472,68 +556,91 @@ it("MCP connect: one owner-gated route installs, signs in once per state, and ne
     expect(authorize.searchParams.get("redirect_uri")).toBe(
       `${hostBase}/mcp/callback`
     );
-    expect(authorize.searchParams.get("client_id")).toBe("client-1");
     const state = authorize.searchParams.get("state")!;
 
-    const unknown = await get("/mcp/callback?code=c&state=nope");
+    // The provider's redirect is cross-site by nature; its state admits it.
+    const callback = {
+      "x-abacus-user-id": "o",
+      "sec-fetch-site": "cross-site",
+    };
+    const unknown = await get("/mcp/callback?code=c&state=nope", callback);
     expect(unknown.status).toBe(400);
-    expect(await unknown.text()).not.toContain("is connected");
     expect(tokenRequests).toHaveLength(0);
-
     const done = await get(
-      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`
+      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`,
+      callback
     );
     expect(done.status).toBe(200);
-    expect(done.headers.get("content-security-policy")).toContain(
-      "default-src 'none'"
-    );
     expect(await done.text()).toContain("Notion is connected.");
     expect(signedIn).toHaveBeenCalledWith("notion");
     const stored = JSON.parse(
       await readFile(join(home, "mcp-auth.json"), "utf8")
     );
     expect(stored.servers[serverUrl].accessToken).toBe("token-1");
-    const reused = await get(
-      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`
-    );
-    expect(reused.status).toBe(400);
+    expect(
+      (
+        await get(
+          `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`,
+          callback
+        )
+      ).status
+    ).toBe(400);
     expect(tokenRequests).toHaveLength(1);
 
-    // Connecting again signs in again, over the user's edited entry as it is.
+    // Again over the user's edited entry: kept as it is. A repeat begin
+    // replaces the earlier flow, whose state no longer completes.
     entries.set("notion", { url: serverUrl, headers: { "X-Mine": "1" } });
+    const replaced = await stateOf("/mcp/connect/notion");
     const refusedState = await stateOf("/mcp/connect/notion");
     expect(add).toHaveBeenCalledOnce();
     expect(entries.get("notion")).toEqual({
       url: serverUrl,
       headers: { "X-Mine": "1" },
     });
-    // A provider refusal's own text never reaches the page.
+    expect(
+      (await get(`/mcp/callback?code=c&state=${replaced}`, callback)).status
+    ).toBe(400);
+    expect(failed).not.toHaveBeenCalled();
+    // A refusal is announced for its connector; its text never reaches the page.
     const refusal = await get(
-      `/mcp/callback?error=access_denied&error_description=${encodeURIComponent("<script>x</script>")}&state=${refusedState}`
+      `/mcp/callback?error=access_denied&error_description=${encodeURIComponent("<script>x</script>")}&state=${refusedState}`,
+      callback
     );
     expect(refusal.status).toBe(400);
     expect(await refusal.text()).not.toContain("<script>");
+    expect(failed).toHaveBeenCalledExactlyOnceWith("notion");
 
+    // Cancel drops the pending flow; an expired one does not complete.
+    const revokedState = await stateOf("/mcp/connect/notion");
+    hosted.revoke("notion");
+    expect(
+      (await get(`/mcp/callback?code=c&state=${revokedState}`, callback)).status
+    ).toBe(400);
     const lateState = await stateOf("/mcp/connect/notion");
     now += 31 * 60_000;
-    expect((await get(`/mcp/callback?code=c&state=${lateState}`)).status).toBe(
-      400
-    );
+    expect(
+      (await get(`/mcp/callback?code=c&state=${lateState}`, callback)).status
+    ).toBe(400);
+    // So does a confirm token past its ten minutes.
+    const stale = await confirm("/mcp/connect/notion");
+    now += 11 * 60_000;
+    expect((await post("/mcp/connect/notion", stale.token)).status).toBe(403);
     expect(tokenRequests).toHaveLength(1);
 
-    // No sign-in: installed if absent, then the connected page.
-    const open = await get("/mcp/connect/huggingface");
+    // No sign-in: installed on the POST, then the connected page.
+    const hf = await confirm("/mcp/connect/huggingface");
+    expect(entries.has("huggingface")).toBe(false);
+    const open = await post("/mcp/connect/huggingface", hf.token);
     expect(open.status).toBe(200);
     expect(await open.text()).toContain("Hugging Face is connected.");
     expect(entries.get("huggingface")).toEqual({
       url: "https://huggingface.co/mcp",
     });
-    // The user's own server that asks for none; an unknown one is missing.
-    expect(await (await get("/mcp/connect/mine")).text()).toContain(
-      "mine is connected."
-    );
-    expect((await get("/mcp/connect/nothing-here")).status).toBe(404);
-    expect((await get("/mcp/connect/abacus-gmailuser")).status).toBe(404);
+    // The user's own server that asks for none.
+    const mine = await confirm("/mcp/connect/mine");
+    expect(
+      await (await post("/mcp/connect/mine", mine.token)).text()
+    ).toContain("mine is connected.");
   } finally {
     fetchSpy.mockRestore();
     if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;

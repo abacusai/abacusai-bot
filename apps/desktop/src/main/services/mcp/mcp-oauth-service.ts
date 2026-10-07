@@ -466,13 +466,11 @@ const bindCallbackServer = async (
  */
 const inFlight = new Map<string, () => void>();
 
-/** Abandon the sign-in for one server, if that is the one in flight. */
-
 /**
  * Clear the field before starting a sign-in: the fixed callback port is a
  * single resource, and a stale attempt would hold it for the whole timeout.
  */
-const cancelAllMcpSignIns = (): void => {
+export const cancelAllMcpSignIns = (): void => {
   // The spread snapshots the keys: the body deletes from the collection.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const cancel of [...inFlight.values()]) cancel();

@@ -3448,6 +3448,7 @@
     "connectWaiting": "Terminez la connexion pour associer ce service.",
     "popupBlocked": "Votre navigateur a bloqué le nouvel onglet. Autorisez les fenêtres pop-up pour ce site, puis réessayez.",
     "connectTimedOut": "La connexion a expiré. Veuillez réessayer.",
+    "connectFailed": "La connexion n'a pas abouti. Veuillez réessayer.",
     "connectorsDescription": "Connectez les services que votre agent peut utiliser pour accomplir ses tâches.",
     "credentialsLocal": "Les identifiants sont enregistrés sur cet ordinateur.",
     "defaultWorkspace": "Default workspace",

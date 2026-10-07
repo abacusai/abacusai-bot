@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
-import { createServer, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { basename } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -21,6 +25,19 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
       "cache-control": "no-store",
     })
     .end(JSON.stringify(value));
+/** A form post's body, or null past 4 KiB. */
+const readSmallBody = async (
+  request: IncomingMessage
+): Promise<string | null> => {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request as AsyncIterable<Buffer>) {
+    // Drained to the end either way, so the response can still be written.
+    size += chunk.length;
+    if (size <= 4096) chunks.push(chunk);
+  }
+  return size > 4096 ? null : Buffer.concat(chunks).toString("utf8");
+};
 export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
@@ -43,19 +60,28 @@ export const createHostHttpServer = (
       });
       return;
     }
-    // MCP connects are top-level navigations, which carry no connect token:
-    // the proxy's owner identity admits them, and the callback's one-time
-    // state is the rest (spec 08, D8).
-    if (
-      request.method === "GET" &&
-      url.pathname.startsWith("/mcp/") &&
-      mcp != null
-    ) {
-      if (request.headers["x-abacus-user-id"] !== identity.owner) {
-        json(response, 403, { error: "forbidden" });
-        return;
+    // MCP connects are top-level navigations, which carry no connect token;
+    // HostedMcpConnect admits them (spec 08, D8 exception).
+    if (url.pathname.startsWith("/mcp/") && mcp != null) {
+      let form: URLSearchParams | undefined;
+      if (request.method === "POST") {
+        const body = await readSmallBody(request);
+        if (body == null) {
+          json(response, 413, { error: "too-large" });
+          return;
+        }
+        form = new URLSearchParams(body);
       }
-      const answer = await mcp.route(url.pathname, url.searchParams);
+      const answer = await mcp.route(
+        {
+          method: request.method ?? "GET",
+          pathname: url.pathname,
+          query: url.searchParams,
+          ...(form != null ? { form } : {}),
+          headers: request.headers,
+        },
+        identity.owner
+      );
       const headers = {
         "cache-control": "no-store",
         "referrer-policy": "no-referrer",
@@ -72,9 +98,13 @@ export const createHostHttpServer = (
               ...headers,
               "content-type": "text/html; charset=utf-8",
               "content-security-policy":
-                "default-src 'none'; style-src 'unsafe-inline'",
+                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+              "x-frame-options": "DENY",
             })
             .end(answer.html);
+          return;
+        case "refused":
+          json(response, 403, { error: "forbidden" });
           return;
         case "missing":
           json(response, 404, { error: "not-found" });

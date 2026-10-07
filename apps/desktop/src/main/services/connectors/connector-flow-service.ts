@@ -122,6 +122,22 @@ const signsIn = (
     connector.auth === "oauth" ||
     connector.auth === "oauth-client");
 
+/** The registry's MCP connector by this id, if it is one. */
+const mcpConnector = (name: string): McpConnector | undefined => {
+  const found = connectorById(name);
+  return found?.kind === "mcp" ? found : undefined;
+};
+
+/** A failure for the caller in the app's words; the reason goes to the log. */
+const failedConnect = (
+  label: string,
+  message: string,
+  detail: string | undefined
+): Extract<McpConnectResult, { kind: "failed" }> => {
+  if (detail != null) console.warn(`[connectors] ${label}: ${detail}`);
+  return { kind: "failed", label, error: message };
+};
+
 export class ConnectorFlowService {
   constructor(private readonly sources: FlowSources) {}
 
@@ -177,9 +193,8 @@ export class ConnectorFlowService {
    * the server itself is fine, and its card offers Sign in.
    */
   async connectMcp(name: string): Promise<McpConnectResult> {
-    const found = connectorById(name);
-    if (found != null && found.kind !== "mcp") return { kind: "missing" };
-    const connector = found != null && found.kind === "mcp" ? found : undefined;
+    const connector = mcpConnector(name);
+    if (this.mcpLabel(name) == null) return { kind: "missing" };
     let entry = this.sources.mcp.entry(name);
     if (entry == null) {
       if (connector == null) return { kind: "missing" };
@@ -192,11 +207,11 @@ export class ConnectorFlowService {
       entry = mcpEntryFor(connector, {}, this.sources.homeDir());
       const added = this.sources.mcp.add(name, entry);
       if (!added.success)
-        return {
-          kind: "failed",
-          label: connector.name,
-          error: added.error ?? `Could not add ${connector.name}.`,
-        };
+        return failedConnect(
+          connector.name,
+          `Could not add ${connector.name}.`,
+          added.error
+        );
     }
     const label = connector?.name ?? name;
     // An OAuth server without its sign-in 401s on first use, so the sign-in
@@ -213,12 +228,21 @@ export class ConnectorFlowService {
         return { kind: "sign-in", label, location: signIn.location };
       case "failed":
         return {
-          kind: "failed",
-          label,
-          error: signIn.error ?? `${label} sign-in did not finish.`,
+          ...failedConnect(
+            label,
+            `${label} sign-in did not finish.`,
+            signIn.error
+          ),
           ...(signIn.cancelled === true ? { cancelled: true } : {}),
         };
     }
+  }
+
+  /** What an MCP server connectable by this name is called; null when there is none. */
+  mcpLabel(name: string): string | null {
+    const found = connectorById(name);
+    if (found != null) return found.kind === "mcp" ? found.name : null;
+    return this.sources.mcp.entry(name) != null ? name : null;
   }
 
   async disconnect(connectorId: string): Promise<ConnectorOutcome> {

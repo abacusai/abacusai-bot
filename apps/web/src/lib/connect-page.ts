@@ -4,8 +4,9 @@
  * signs the host in first when a platform connect finds it signed out, tells
  * the host, and then waits for the host to report the connector connected.
  * The host follows every connect it is told of and announces the change
- * (`connectors.events` status-changed); the attempt re-reads on each, on
- * window focus, and once at once. One deadline; `cancel` releases it all.
+ * (`connectors.events` status-changed, or connect-failed); the attempt
+ * re-reads on each, on window focus, and once at once. One deadline;
+ * `cancel` releases it here and on the host.
  */
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import type { TFunction } from "i18next";
@@ -21,6 +22,7 @@ export const CONNECT_WAIT_MS = 180_000;
 const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   "popup-blocked": "phase5.popupBlocked",
   timeout: "phase5.connectTimedOut",
+  failed: "phase5.connectFailed",
 };
 
 /** An attempt's error for the page: the app's words for its own codes. */
@@ -89,9 +91,13 @@ export class ConnectAttempt {
     );
   }
 
-  /** Stop waiting; the host still follows a page the user may finish. */
+  /** Stop waiting, and have the host drop the connect: its sign-in and its watch. */
   cancel(): void {
+    if (this.abort.signal.aborted) return;
     this.abort.abort();
+    void this.transport.client.connectors
+      .cancelConnect({ connectorId: this.connectorId })
+      .catch(() => undefined);
   }
 
   private async run(): Promise<ConnectorOutcome> {
@@ -169,6 +175,12 @@ export class ConnectAttempt {
         transport,
         (event) => {
           if (event.type === "status-changed") void check();
+          // The host's page said it did not finish: no waiting out the deadline.
+          else if (
+            event.type === "connect-failed" &&
+            event.connectorId === connectorId
+          )
+            resolve({ ok: false, error: "failed" });
         },
         signal,
         { reopened: () => void check() }

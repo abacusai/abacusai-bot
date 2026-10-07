@@ -3448,6 +3448,7 @@
     "connectWaiting": "Termina de iniciar sesión para conectar este servicio.",
     "popupBlocked": "Tu navegador ha bloqueado la nueva pestaña. Permite las ventanas emergentes para este sitio y vuelve a intentarlo.",
     "connectTimedOut": "Se ha agotado el tiempo de conexión. Vuelve a intentarlo.",
+    "connectFailed": "No se ha completado la conexión. Vuelve a intentarlo.",
     "connectorsDescription": "Conecta los servicios que tu agente puede usar para completar tareas.",
     "credentialsLocal": "Las credenciales se guardan en este ordenador.",
     "defaultWorkspace": "Default workspace",

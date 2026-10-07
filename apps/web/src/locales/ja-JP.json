@@ -3448,6 +3448,7 @@
     "connectWaiting": "ログインを完了してこのサービスに接続してください。",
     "popupBlocked": "ブラウザーが新しいタブをブロックしました。このサイトのポップアップを許可してから、もう一度お試しください。",
     "connectTimedOut": "接続がタイムアウトしました。もう一度お試しください。",
+    "connectFailed": "接続が完了しませんでした。もう一度お試しください。",
     "connectorsDescription": "エージェントが作業に使用できるサービスを接続します。",
     "credentialsLocal": "認証情報はこのコンピューターに保存されます。",
     "defaultWorkspace": "Default workspace",

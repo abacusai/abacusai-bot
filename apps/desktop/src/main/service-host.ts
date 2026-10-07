@@ -349,6 +349,7 @@ import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
 import { McpConfigService } from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
 import {
+  cancelAllMcpSignIns,
   mcpTokenState,
   type McpTokenState,
   signInToMcpServer,
@@ -505,8 +506,15 @@ export class ServiceHost {
         ? null
         : new HostedMcpConnect({
             base,
+            label: (name) => this.connectorFlow.mcpLabel(name),
             connect: (name) => this.connectMcp(name),
             signedIn: () => void this.onMcpSignedIn("code"),
+            failed: (connectorId) =>
+              this.emitEvent({
+                type: "connector-connect-failed",
+                connectorId,
+                emittedAt: new Date().toISOString(),
+              }),
           });
   }
 
@@ -1165,6 +1173,18 @@ export class ServiceHost {
     const outcome = await this.connectorFlow.submitFields(connectorId, values);
     this.connectorStatusChanged();
     return outcome;
+  }
+
+  /**
+   * Stop a connect the user walked away from: its pending hosted sign-in and
+   * confirm token go, an in-app sign-in stops, and the host no longer
+   * follows it. Without an id, every one.
+   */
+  cancelConnect(connectorId?: string): void {
+    this.hostedMcp?.revoke(connectorId);
+    if (connectorId == null || connectorById(connectorId)?.kind === "mcp")
+      cancelAllMcpSignIns();
+    this.connectWatcher.release(connectorId);
   }
 
   async disconnectConnector(connectorId: string): Promise<ConnectorOutcome> {

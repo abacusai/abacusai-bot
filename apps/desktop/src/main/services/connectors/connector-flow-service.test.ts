@@ -171,6 +171,21 @@ describe("an MCP server connector", () => {
     });
   });
 
+  it("answers a failed sign-in in its own words and logs the server's", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    signIn.mockResolvedValueOnce({
+      kind: "failed",
+      error: "Could not reach the server: getaddrinfo ENOTFOUND 10.0.0.7",
+    });
+
+    expect(await flow().connect("notion")).toEqual({
+      ok: false,
+      error: "Notion sign-in did not finish.",
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("ENOTFOUND"));
+    warn.mockRestore();
+  });
+
   it("keeps the server but reports a sign-in that did not finish", async () => {
     signIn.mockResolvedValueOnce({ kind: "failed", cancelled: true });
 

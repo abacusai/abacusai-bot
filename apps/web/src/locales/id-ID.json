@@ -3448,6 +3448,7 @@
     "connectWaiting": "Selesaikan proses masuk untuk menghubungkan layanan ini.",
     "popupBlocked": "Browser Anda memblokir tab baru. Izinkan pop-up untuk situs ini, lalu coba lagi.",
     "connectTimedOut": "Waktu menghubungkan habis. Silakan coba lagi.",
+    "connectFailed": "Proses menghubungkan tidak selesai. Silakan coba lagi.",
     "connectorsDescription": "Hubungkan layanan yang dapat digunakan agen untuk menyelesaikan tugas.",
     "credentialsLocal": "Kredensial disimpan di komputer ini.",
     "defaultWorkspace": "Default workspace",

@@ -3448,6 +3448,7 @@
     "connectWaiting": "Conclua o login para conectar este serviço.",
     "popupBlocked": "Seu navegador bloqueou a nova aba. Permita pop-ups para este site e tente novamente.",
     "connectTimedOut": "A conexão expirou. Tente novamente.",
+    "connectFailed": "A conexão não foi concluída. Tente novamente.",
     "connectorsDescription": "Conecte os serviços que seu agente pode usar para concluir tarefas.",
     "credentialsLocal": "As credenciais são salvas neste computador.",
     "defaultWorkspace": "Default workspace",

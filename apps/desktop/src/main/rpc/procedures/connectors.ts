@@ -16,6 +16,9 @@ export const connectorsRouter = impl.connectors.router({
     )
   ),
   // Connecting no longer waits in the host; older clients still call this.
+  cancelConnect: impl.connectors.cancelConnect.handler(({ input, context }) =>
+    context.deps.serviceHost.cancelConnect(input?.connectorId)
+  ),
   disconnect: impl.connectors.disconnect.handler(({ input, context }) =>
     context.deps.serviceHost.disconnectConnector(input.connectorId)
   ),
@@ -38,7 +41,8 @@ export const connectorsRouter = impl.connectors.router({
         isType(
           "connector-request",
           "connector-cleared",
-          "connector-status-changed"
+          "connector-status-changed",
+          "connector-connect-failed"
         ),
         (event): ConnectorsEvent | null => {
           switch (event.type) {
@@ -50,6 +54,8 @@ export const connectorsRouter = impl.connectors.router({
               return { type: "cleared", requestId: event.requestId };
             case "connector-status-changed":
               return { type: "status-changed" };
+            case "connector-connect-failed":
+              return { type: "connect-failed", connectorId: event.connectorId };
             default:
               return null;
           }

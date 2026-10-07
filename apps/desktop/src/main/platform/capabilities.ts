@@ -129,6 +129,7 @@ export const WEB_HOST_ALLOWED = [
   "referrals.sendWhatsapp",
   "connectors.statuses",
   "connectors.connect",
+  "connectors.cancelConnect",
   "connectors.submitFields",
   "connectors.disconnect",
   "connectors.respond",

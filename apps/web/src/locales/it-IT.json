@@ -3448,6 +3448,7 @@
     "connectWaiting": "Completa l'accesso per collegare questo servizio.",
     "popupBlocked": "Il browser ha bloccato la nuova scheda. Consenti i pop-up per questo sito, poi riprova.",
     "connectTimedOut": "Tempo di connessione scaduto. Riprova.",
+    "connectFailed": "La connessione non è stata completata. Riprova.",
     "connectorsDescription": "Collega i servizi che il tuo agente può usare per completare le attività.",
     "credentialsLocal": "Le credenziali vengono salvate su questo computer.",
     "defaultWorkspace": "Default workspace",
