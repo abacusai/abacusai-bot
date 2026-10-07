@@ -324,10 +324,20 @@ dataEntries.push({
 const electronDir = resolvePackage("electron", desktop);
 if (!electronDir) throw new Error("Electron is not installed");
 const electronPkg = readJson(path.join(electronDir, "package.json"));
+// The package's own LICENSE is the same text as dist/LICENSE and is there
+// without the binary, which web and host builds never download.
 const electronLicense = fs.readFileSync(
-  path.join(electronDir, "dist/LICENSE"),
+  path.join(electronDir, "LICENSE"),
   "utf8"
 );
+// Chromium's notices come only with the Electron binary: the desktop app
+// ships them, a web or host build (no Chromium of its own) has none.
+const chromiumNotices = path.join(electronDir, "dist/LICENSES.chromium.html");
+const hasChromiumNotices = fs.existsSync(chromiumNotices);
+if (!hasChromiumNotices && !graphOnly)
+  throw new Error(
+    "Electron's Chromium notices are missing: install the Electron binary before packaging the desktop app"
+  );
 dataEntries.push({
   name: "Electron",
   version: electronPkg.version,
@@ -336,7 +346,10 @@ dataEntries.push({
   text: electronLicense,
 });
 sections.push(
-  `Electron ${electronPkg.version}\n${electronLicense}\nChromium and embedded Node.js notices: LICENSES.chromium.html (included alongside these notices).`
+  `Electron ${electronPkg.version}\n${electronLicense}` +
+    (hasChromiumNotices
+      ? "\nChromium and embedded Node.js notices: LICENSES.chromium.html (included alongside these notices)."
+      : "")
 );
 const reviews = readJson(path.join(desktop, "build/licenses/reviews.json"));
 const failures = policyFailures(dataEntries, reviews);
@@ -347,14 +360,17 @@ for (const entry of dataEntries) {
   if (review) entry.review = review.reason;
 }
 console.log(`Pinned policy review entries: ${Object.keys(reviews).join(", ")}`);
-const data = licenseData(dataEntries);
+const data = {
+  ...licenseData(dataEntries),
+  runtimeNotices: hasChromiumNotices,
+};
 const publicDir = path.join(root, "apps/web/public/licenses");
 fs.mkdirSync(publicDir, { recursive: true });
 writeOutput(path.join(publicDir, "licenses.json"), JSON.stringify(data));
-copyOutput(
-  path.join(electronDir, "dist/LICENSES.chromium.html"),
-  path.join(publicDir, "LICENSES.chromium.html")
-);
+if (hasChromiumNotices)
+  copyOutput(chromiumNotices, path.join(publicDir, "LICENSES.chromium.html"));
+// A notices file left from an earlier desktop build must not outlive the flag that says it is absent.
+else fs.rmSync(path.join(publicDir, "LICENSES.chromium.html"), { force: true });
 const entries = [...new Set(sections)];
 const output = path.join(desktop, "dist/THIRD_PARTY_NOTICES.txt");
 fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -367,10 +383,11 @@ console.log(
 );
 
 copyOutput(output, path.join(publicDir, "THIRD_PARTY_NOTICES.txt"));
-copyOutput(
-  path.join(electronDir, "dist/LICENSES.chromium.html"),
-  path.join(desktop, "dist/LICENSES.chromium.html")
-);
+if (hasChromiumNotices)
+  copyOutput(
+    chromiumNotices,
+    path.join(desktop, "dist/LICENSES.chromium.html")
+  );
 console.log(
   `License policy passed: ${data.packages.length} entries, ${Object.keys(data.texts).length} unique texts.`
 );
