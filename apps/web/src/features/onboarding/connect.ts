@@ -4,7 +4,11 @@ import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import type { Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
-import { CONNECT_WAIT_MS, waitForConnected } from "#renderer/lib/connect-page";
+import {
+  CONNECT_WAIT_MS,
+  opensConnectTab,
+  waitForConnected,
+} from "#renderer/lib/connect-page";
 import { openConnectPage } from "#renderer/lib/platform-system";
 
 /** The step's pending connect; leaving the step stops waiting on it. */
@@ -23,10 +27,9 @@ export const connectOnboarding = async (
 ) => {
   const connector = connectorById(id);
   // Opened inside the click, before any await.
-  const opened =
-    connector?.kind === "platform"
-      ? openConnectPage(transport.client, id)
-      : null;
+  const opened = opensConnectTab(connector)
+    ? openConnectPage(transport.client, id)
+    : null;
   if (connector?.kind === "messaging") {
     await transport.client.messaging.updatePlatform({
       platformId: connector.platform,

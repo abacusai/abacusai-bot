@@ -17,7 +17,11 @@ import { Store, useStore } from "@tanstack/react-store";
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import { CONNECT_WAIT_MS, waitForConnected } from "#renderer/lib/connect-page";
+import {
+  CONNECT_WAIT_MS,
+  opensConnectTab,
+  waitForConnected,
+} from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { openConnectPage } from "#renderer/lib/platform-system";
@@ -236,7 +240,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
         statusesKey()
       )?.[connectorId]?.reason === "not-signed-in";
     let opened =
-      entry?.kind === "platform" && !signedOut
+      opensConnectTab(entry) && !signedOut
         ? openConnectPage(deps.transport.client, connectorId)
         : null;
     // Awaited below unless superseded first.

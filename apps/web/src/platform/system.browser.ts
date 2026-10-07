@@ -30,7 +30,8 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
 /**
  * The connect page opens in a new tab before this returns, so call it before
  * any await in a click handler; popup blockers allow only that. The host is
- * still told, so it follows the connector until it connects.
+ * still told, so it follows the connector until it connects. An MCP sign-in's
+ * tab is taken now and sent to the host's start link once it answers.
  */
 export const openConnectPage = (
   client: Pick<AppClient, "connectors">,
@@ -38,15 +39,33 @@ export const openConnectPage = (
   options?: ConnectorConnectOptions
 ): Promise<ConnectorOutcome> => {
   const entry = connectorById(connectorId);
+  let tab: Window | null = null;
   if (entry?.kind === "platform")
     window.open(
       connectPagePath(entry.service, options?.hint),
       "_blank",
       "noopener"
     );
+  else if (entry?.kind === "mcp") {
+    tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+  }
   return client.connectors
     .connect({ connectorId, ...(options ? { options } : {}) })
-    .then((outcome) => (outcome.ok ? { ok: true } : outcome));
+    .then(
+      (outcome): ConnectorOutcome => {
+        const url = outcome.ok ? outcome.url : undefined;
+        if (url && /^https?:/i.test(url)) {
+          if (tab) tab.location.href = url;
+          else window.open(url, "_blank", "noopener");
+        } else tab?.close();
+        return outcome.ok ? { ok: true } : outcome;
+      },
+      (error: unknown) => {
+        tab?.close();
+        throw error;
+      }
+    );
 };
 
 /** The tab is taken inside the click; the link fills it once the host answers. */

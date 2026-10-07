@@ -39,10 +39,18 @@ export interface FlowSources {
       entry: McpServerEntry
     ) => { success: boolean; error?: string };
     remove: (name: string) => { success: boolean; error?: string };
-    /** The server's own browser sign-in, for `oauth` and `oauth-client` entries. */
-    signIn: (
-      name: string
-    ) => Promise<{ success: boolean; error?: string; cancelled?: boolean }>;
+    /**
+     * The server's own browser sign-in, for `oauth` and `oauth-client` entries.
+     * `url`: a hosted sign-in's start link, which the caller opens.
+     */
+    signIn: (name: string) => Promise<{
+      success: boolean;
+      error?: string;
+      cancelled?: boolean;
+      url?: string;
+    }>;
+    /** Follows a connector whose sign-in link was handed out until it connects. */
+    watch?: (connectorId: string) => void;
   };
   homeDir: () => string;
 }
@@ -168,6 +176,11 @@ export class ConnectorFlowService {
           error: signIn.error ?? `${connector.name} sign-in did not finish.`,
           ...(signIn.cancelled === true ? { cancelled: true } : {}),
         };
+      if (signIn.url != null) {
+        // Hosted: the caller opens the link; completion arrives through the watch.
+        this.sources.mcp.watch?.(connector.id);
+        return { ok: true, url: signIn.url };
+      }
     }
     return { ok: true };
   }

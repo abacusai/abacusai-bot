@@ -8,6 +8,7 @@ import { join } from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { HostedMcpSignIns } from "#main/services/mcp/mcp-oauth-service";
 import { WhisperModelService } from "#main/services/voice/whisper-model-service";
 
 import { createNodeAppOperations } from "./app-operations";
@@ -336,6 +337,143 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
       expect(await result.json()).toEqual({ error: "invalid-max-bytes" });
     }
   } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it("MCP sign-in: a one-time start link, and a callback that stores the token once", async () => {
+  const home = await mkdtemp(join(tmpdir(), "host-mcp-"));
+  const previousHome = process.env.ABACUSAI_BOT_HOME;
+  process.env.ABACUSAI_BOT_HOME = home;
+  const lease = new HostLease(() => false);
+  const identity = {
+    owner: "o",
+    org: "g",
+    secret: "secret",
+    origins: new Set(["https://apps.abacus.ai"]),
+  };
+  const serverUrl = "https://mcp.provider.test/mcp";
+  const realFetch = globalThis.fetch;
+  const tokenRequests: string[] = [];
+  const fetchSpy = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.startsWith("http://127.0.0.1")) return realFetch(input, init);
+      if (url === serverUrl)
+        return new Response("", {
+          status: 401,
+          headers: {
+            "www-authenticate": `Bearer resource_metadata="https://mcp.provider.test/prm"`,
+          },
+        });
+      if (url === "https://mcp.provider.test/prm")
+        return Response.json({
+          authorization_servers: ["https://auth.provider.test"],
+        });
+      if (
+        url ===
+        "https://auth.provider.test/.well-known/oauth-authorization-server"
+      )
+        return Response.json({
+          issuer: "https://auth.provider.test",
+          authorization_endpoint: "https://auth.provider.test/authorize",
+          token_endpoint: "https://auth.provider.test/token",
+          registration_endpoint: "https://auth.provider.test/register",
+          code_challenge_methods_supported: ["S256"],
+        });
+      if (url === "https://auth.provider.test/register")
+        return Response.json({ client_id: "client-1" });
+      if (url === "https://auth.provider.test/token") {
+        tokenRequests.push(String(init?.body));
+        return Response.json({ access_token: "token-1", expires_in: 3600 });
+      }
+      return new Response("", { status: 404 });
+    });
+  let now = Date.now();
+  const signedIn = vi.fn();
+  const redirectUri = "https://apps.abacus.ai/api/botHost/h1/mcp/callback";
+  const signIns = new HostedMcpSignIns({
+    redirectUri,
+    signedIn,
+    now: () => now,
+  });
+  const server = createHostHttpServer(
+    identity,
+    createNodeAppOperations(lease),
+    lease,
+    () => null,
+    { prepareFile: async () => ({ status: 404, path: null }) } as never,
+    signIns
+  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const owner = { "x-abacus-user-id": "o" };
+  const get = (path: string, headers: Record<string, string> = owner) =>
+    fetch(`${base}${path}`, { headers, redirect: "manual" });
+  const begin = () =>
+    signIns.begin({ name: "notion", label: "Notion", serverUrl });
+  try {
+    const { id } = await begin();
+    expect(id).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect((await get(`/mcp/start/${id}`, {})).status).toBe(403);
+    const started = await get(`/mcp/start/${id}`);
+    expect(started.status).toBe(302);
+    const authorize = new URL(started.headers.get("location")!);
+    expect(authorize.origin + authorize.pathname).toBe(
+      "https://auth.provider.test/authorize"
+    );
+    expect(authorize.searchParams.get("redirect_uri")).toBe(redirectUri);
+    expect(authorize.searchParams.get("client_id")).toBe("client-1");
+    const state = authorize.searchParams.get("state")!;
+    expect((await get(`/mcp/start/${id}`)).status).toBe(410);
+    expect((await get("/mcp/start/AAAAAAAAAAAAAAAAAAAAAAAA")).status).toBe(404);
+
+    const unknown = await get("/mcp/callback?code=c&state=nope");
+    expect(unknown.status).toBe(400);
+    expect(await unknown.text()).not.toContain("is connected");
+    expect(tokenRequests).toHaveLength(0);
+
+    const done = await get(
+      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`
+    );
+    expect(done.status).toBe(200);
+    expect(await done.text()).toContain("Notion is connected.");
+    expect(new URLSearchParams(tokenRequests[0]).get("redirect_uri")).toBe(
+      redirectUri
+    );
+    expect(signedIn).toHaveBeenCalledWith("notion");
+    const stored = JSON.parse(
+      await readFile(join(home, "mcp-auth.json"), "utf8")
+    );
+    expect(stored.servers[serverUrl].accessToken).toBe("token-1");
+
+    const reused = await get(
+      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`
+    );
+    expect(reused.status).toBe(400);
+    expect(tokenRequests).toHaveLength(1);
+
+    // A provider refusal's own text never reaches the page.
+    const refused = await begin();
+    const refusedState = new URL(
+      (await get(`/mcp/start/${refused.id}`)).headers.get("location")!
+    ).searchParams.get("state")!;
+    const refusal = await get(
+      `/mcp/callback?error=access_denied&error_description=${encodeURIComponent("<script>x</script>")}&state=${refusedState}`
+    );
+    expect(refusal.status).toBe(400);
+    expect(await refusal.text()).not.toContain("<script>");
+    expect(tokenRequests).toHaveLength(1);
+
+    const late = await begin();
+    now += 31 * 60_000;
+    expect((await get(`/mcp/start/${late.id}`)).status).toBe(410);
+  } finally {
+    fetchSpy.mockRestore();
+    if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
+    else process.env.ABACUSAI_BOT_HOME = previousHome;
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(home, { recursive: true, force: true });
   }

@@ -312,7 +312,10 @@ import {
   ConnectWatcher,
   type ConnectedOffer,
 } from "./services/connectors/connect-watcher";
-import { ConnectorFlowService } from "./services/connectors/connector-flow-service";
+import {
+  ConnectorFlowService,
+  mcpEntryFor,
+} from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
@@ -343,7 +346,11 @@ import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
 import { McpConfigService } from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
-import { signInToMcpServer } from "./services/mcp/mcp-oauth-service";
+import {
+  HostedMcpSignIns,
+  mcpTokenServers,
+  signInToMcpServer,
+} from "./services/mcp/mcp-oauth-service";
 import {
   listPairing,
   readGatewaySettings,
@@ -359,7 +366,10 @@ import {
   disconnectAbacusConnector,
   listAbacusConnectors,
 } from "./services/providers/abacus-connector-service";
-import { abacusRoutellmV1 } from "./services/providers/abacus-host";
+import {
+  abacusRoutellmV1,
+  hostPublicBase,
+} from "./services/providers/abacus-host";
 import {
   environmentNoticeService,
   messageWithEnvironmentNotice,
@@ -729,6 +739,7 @@ export class ServiceHost {
       list: () => this.listConnectorStatuses(),
       link: async (connectorId) => {
         const service = connectorById(connectorId);
+        if (service?.kind === "mcp") return this.mcpSignInLink(connectorId);
         if (service?.kind !== "platform") return null;
         const link = await createConnectLink(service.service);
         if (link == null) return null;
@@ -978,6 +989,7 @@ export class ServiceHost {
           if (server.status === "auth-required") waiting.add(server.id);
       return waiting;
     },
+    mcpTokens: mcpTokenServers,
   });
 
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
@@ -997,10 +1009,93 @@ export class ServiceHost {
       add: (name, entry) =>
         this.ensureMcpServer({ mode: "code", name, config: entry }),
       remove: (name) => this.removeMcpServer({ mode: "code", name }),
-      signIn: (name) => this.mcpOAuthSignIn({ mode: "code", name }),
+      signIn: (name) =>
+        this.platform === "web-host"
+          ? this.hostedMcpSignIn(name)
+          : this.mcpOAuthSignIn({ mode: "code", name }),
+      watch: (connectorId) =>
+        this.connectWatcher.watch({
+          connectorIds: [connectorId],
+          sessionId: null,
+        }),
     },
     homeDir: () => os.homedir(),
   });
+
+  /**
+   * MCP sign-in on the web host: the redirect is the host's public
+   * `<base>/mcp/callback`, served by the host's own HTTP server.
+   */
+  get hostedMcpSignIns(): HostedMcpSignIns | null {
+    if (this.hostedMcp === undefined) {
+      const base = this.platform === "web-host" ? hostPublicBase() : null;
+      this.hostedMcp =
+        base == null
+          ? null
+          : new HostedMcpSignIns({
+              redirectUri: `${base}/mcp/callback`,
+              signedIn: () => {
+                void this.notifyMcpSignedIn("code");
+                this.connectorStatusChanged();
+              },
+            });
+    }
+    return this.hostedMcp;
+  }
+
+  private hostedMcp: HostedMcpSignIns | null | undefined;
+
+  /** A one-time start link for an installed OAuth server's hosted sign-in. */
+  private async hostedMcpSignIn(
+    name: string
+  ): Promise<{ success: boolean; error?: string; url?: string }> {
+    const base = hostPublicBase();
+    if (this.hostedMcpSignIns == null || base == null)
+      return {
+        success: false,
+        error: "Sign-in is not available on this host yet.",
+      };
+    const server = this.listMcpServers({ mode: "code" }).find(
+      (entry) => entry.id === name
+    );
+    if (server?.config.url == null)
+      return { success: false, error: "No such HTTP server is configured." };
+    if (server.config.oauth === false)
+      return { success: false, error: "OAuth is disabled for this server." };
+    const begun = await this.hostedMcpSignIns.begin({
+      name,
+      label: connectorById(name)?.name ?? server.name,
+      serverUrl: server.config.url,
+      ...(server.config.oauth != null ? { oauth: server.config.oauth } : {}),
+    });
+    return begun.id != null
+      ? { success: true, url: `${base}/mcp/start/${begun.id}` }
+      : { success: false, error: begun.error ?? "Sign-in could not start." };
+  }
+
+  /** `connect_connector`'s link for an OAuth MCP connector: installs it, then mints its sign-in. */
+  private async mcpSignInLink(
+    connectorId: string
+  ): Promise<{ url: string; connectorIds: string[] } | null> {
+    const connector = connectorById(connectorId);
+    if (
+      this.platform !== "web-host" ||
+      connector?.kind !== "mcp" ||
+      connector.auth !== "oauth"
+    )
+      return null;
+    const added = this.ensureMcpServer({
+      mode: "code",
+      name: connector.id,
+      config: mcpEntryFor(connector, {}, os.homedir()),
+    });
+    if (!added.success) return null;
+    this.connectorStatusChanged();
+    const signIn = await this.hostedMcpSignIn(connector.id);
+    return signIn.url != null
+      ? { url: signIn.url, connectorIds: [connector.id] }
+      : null;
+  }
 
   /**
    * The MCP file is user-editable, so the url and headers under the app's

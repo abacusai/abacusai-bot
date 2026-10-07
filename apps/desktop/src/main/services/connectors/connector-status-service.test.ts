@@ -151,6 +151,40 @@ describe("mcp connectors", () => {
       state: "available",
     });
   });
+
+  it("are pending until a token is held for an OAuth server, and connected without one when it needs none", () => {
+    const installed = inputs({
+      mcpServers: [
+        {
+          id: "notion",
+          name: "notion",
+          config: { url: "https://mcp.notion.com/mcp" },
+          isBuiltin: false,
+        },
+        {
+          id: "huggingface",
+          name: "huggingface",
+          config: { url: "https://huggingface.co/mcp" },
+          isBuiltin: false,
+        },
+      ],
+    });
+    const unsigned = buildConnectorStatuses({
+      ...installed,
+      mcpTokens: new Set(),
+    });
+    expect(unsigned.notion).toEqual({
+      state: "pending",
+      reason: "sign-in-required",
+    });
+    expect(unsigned.huggingface).toEqual({ state: "connected" });
+    expect(
+      buildConnectorStatuses({
+        ...installed,
+        mcpTokens: new Set(["https://mcp.notion.com/mcp"]),
+      }).notion
+    ).toEqual({ state: "connected" });
+  });
 });
 
 describe("the service", () => {

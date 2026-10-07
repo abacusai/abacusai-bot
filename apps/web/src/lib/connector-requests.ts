@@ -25,7 +25,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
-import { waitForConnected } from "#renderer/lib/connect-page";
+import { opensConnectTab, waitForConnected } from "#renderer/lib/connect-page";
 import { openConnectPage } from "#renderer/lib/platform-system";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
@@ -99,7 +99,7 @@ export const connectRequest = async (
   signal: AbortSignal = new AbortController().signal
 ): Promise<ConnectResult> => {
   const opened =
-    values == null && connectorById(request.connectorId)?.kind === "platform"
+    values == null && opensConnectTab(connectorById(request.connectorId))
       ? openConnectPage(client, request.connectorId)
       : null;
   let outcome: ConnectorOutcome;
