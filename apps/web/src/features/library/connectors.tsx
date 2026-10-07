@@ -21,6 +21,7 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
+import { connectErrorText } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
@@ -193,7 +194,9 @@ export const ConnectorsPage = () => {
           </Button>
         </p>
       )}
-      {flow.state.error && <p role="alert">{flow.state.error}</p>}
+      {flow.state.error && (
+        <p role="alert">{connectErrorText(t, flow.state.error)}</p>
+      )}
     </AreaPage>
   );
 };

@@ -37,7 +37,7 @@ import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import {
   accentForeground,
   contrastRatio,
-  themeOverride,
+  holdTheme,
 } from "#renderer/lib/theme";
 import { Button } from "#renderer/ui/button";
 
@@ -514,12 +514,10 @@ export const Gallery = ({
     });
 
   // One theme for the whole document while the gallery is mounted.
-  useEffect(() => {
-    themeOverride.setState(() =>
-      search.theme === "app" ? null : search.theme
-    );
-    return () => themeOverride.setState(() => null);
-  }, [search.theme]);
+  useEffect(
+    () => (search.theme === "app" ? undefined : holdTheme(search.theme)),
+    [search.theme]
+  );
 
   const sections: readonly GallerySection[] =
     search.section == null ? GALLERY_SECTIONS : [search.section];

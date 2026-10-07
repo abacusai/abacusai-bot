@@ -152,6 +152,29 @@ Connect token: `base64url(JSON{ o: owner, g: org, e: expiry })` + `.` + HMAC-SHA
 
 `verifyClient` (upgrade handler and every HTTP route except `/healthz`): `Origin` ∈ `ABACUSAI_BOT_HOST_ORIGINS` exactly; token present, valid, unexpired, `o` = owner and `g` = org; `x-abacus-user-id` = owner. Any failure: HTTP 403 / close 1008. `/healthz` is unauthenticated and reveals only `{ ok, version, contractVersion, owner: <hashed>, uptime, busy, lastActivityAt }`.
 
+**Exception: the MCP connect routes.** `GET`/`POST /mcp/connect/<id>` and `GET /mcp/callback` are top-level browser navigations (a tab the page opens, a link sent in chat, the provider's redirect), which cannot carry a bearer token or an `Origin`. The proxy in front of the host is its only ingress; it strips any caller-supplied identity and proof headers, injects `x-abacus-user-id` from the user's own session, and signs every request it forwards to `/mcp/*`:
+
+```
+x-abacus-host-proof: <ts>.<mac>
+ts        = Unix time in whole seconds, decimal ASCII, no sign
+canonical = "mcp\n" + method + "\n" + path + "\n" + owner + "\n" + ts
+mac       = lowercase hex of HMAC-SHA256(key, canonical)   (64 characters)
+key       = the host secret as its UTF-8 bytes (the 64-hex-character string
+            in ABACUSAI_BOT_HOST_SECRET_FILE, which the server derives with
+            derive_host_secret(conversation_id)), not hex-decoded
+method    = the HTTP method, upper case ("GET", "POST")
+path      = the request target as the host receives it, up to and excluding
+            "?", without decoding (e.g. "/mcp/connect/notion")
+owner     = the hashed user id the proxy puts in x-abacus-user-id
+```
+
+The host recomputes the MAC with its own owner, compares in constant time, and refuses (403) a missing or malformed proof, a wrong MAC, or `ts` more than 120 s from its clock; it also requires `x-abacus-user-id` = owner (constant time). `/healthz` publishes the owner, so the header alone is never proof. Then, per route:
+- `GET /mcp/connect/<id>` has no side effects. For a connector the registry names or a server the user installed (anything else is 404), it answers a confirm page ("Connect Notion to AbacusAI Bot?") and mints a confirm token bound to the owner and that connector: one live per connector, single use, 10 minutes, kept on the host. It answers a cross-site navigation too (a chat link opened in a web chat app), since it changes nothing.
+- `POST /mcp/connect/<id>`, the page's button, requires `Sec-Fetch-Site: same-origin` and that token. Only after both are checked is the body read (4 KiB, 10 s, the connection dropped past either). Only then does the host install the connector (never rewriting an entry already there) and begin a sign-in, bound to the token and keyed by owner and connector, so a repeat replaces the earlier one; a cancel during discovery leaves nothing to complete.
+- `GET /mcp/callback` is admitted by its OAuth `state`, matched once against the owner's pending sign-in within 30 minutes. It is cross-site by nature (the provider's redirect).
+
+Every one requires `Sec-Fetch-Dest: document` (fail closed: a request without it is refused): no frames, images or fetches. Pages are `default-src 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Opener-Policy: same-origin`, `no-store` and `no-referrer`. A failed or refused connect is announced to the app (`connectors.events` connect-failed), and `connectors.cancelConnect` drops a connector's pending sign-in and confirm token. Every other route keeps the full check above.
+
 ### 6.4 Activity and readiness
 
 `system.activity()` is added to the contract (the renderer's input beacon; on Electron it keeps calling `window.activity`). The host records `lastActivityAt` and `busy` (live agent run, routine run or terminal output in the last minute) and reports both on `/healthz`. No `system.ready`.
@@ -162,7 +185,7 @@ Procedures `auth.web.start()` → `{ challenge }` (host generates verifier and S
 
 ### 6.6 HTTP routes
 
-Same server as the WebSocket: `GET /healthz` (unauthenticated, §6.3); `POST /upload` (token-authenticated; up to 256 MiB; saves via the `savePastedTempFiles` code path; returns paths), because the proxy in front caps WebSocket messages at 4 MiB; oRPC messages stay under 1 MiB; `GET /oauth/callback` reserved. The host emits no CORS headers (the proxy adds them). A `bufferedAmount` above 16 MiB closes the socket with 1013.
+Same server as the WebSocket: `GET /healthz` (unauthenticated, §6.3); `POST /upload` (token-authenticated; up to 256 MiB; saves via the `savePastedTempFiles` code path; returns paths), because the proxy in front caps WebSocket messages at 4 MiB; oRPC messages stay under 1 MiB; `GET`/`POST /mcp/connect/<id>` and `GET /mcp/callback` (MCP connects, §6.3 exception). The host emits no CORS headers (the proxy adds them). A `bufferedAmount` above 16 MiB closes the socket with 1013.
 
 ### 6.7 Server-side denial (D14)
 

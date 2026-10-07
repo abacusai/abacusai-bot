@@ -3446,6 +3446,9 @@
     "closePreview": "Close preview",
     "connectName": "Collega {{name}}",
     "connectWaiting": "Completa l'accesso per collegare questo servizio.",
+    "popupBlocked": "Il browser ha bloccato la nuova scheda. Consenti i pop-up per questo sito, poi riprova.",
+    "connectTimedOut": "Tempo di connessione scaduto. Riprova.",
+    "connectFailed": "La connessione non è stata completata. Riprova.",
     "connectorsDescription": "Collega i servizi che il tuo agente può usare per completare le attività.",
     "credentialsLocal": "Le credenziali vengono salvate su questo computer.",
     "defaultWorkspace": "Default workspace",
@@ -3974,7 +3977,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "Accedi per usare AbacusAI Bot sul web.",
+      "tierRequired": "AbacusAI Bot sul web richiede un piano Pro.",
+      "hostOutdated": "Il tuo bot non è aggiornato. Riavvia il computer per aggiornarlo."
     },
     "files": {
       "open": "Open folder"

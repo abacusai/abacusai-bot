@@ -9,6 +9,7 @@ import {
 import serverFixtures from "./fixtures/bootstrap-server.json";
 import {
   callApps,
+  compareHostVersions,
   hostConnection,
   hostHttpBase,
   identifyHost,
@@ -257,6 +258,48 @@ it("waits out an idle older host until it runs the bootstrap's version, saying i
     "updating",
     "connecting",
   ]);
+});
+it("orders host versions by release, then web build", () => {
+  expect(compareHostVersions("1.1-web.9", "1.2-web.3")).toBeLessThan(0);
+  expect(compareHostVersions("1.2.0-web.3.1", "1.2-web.3")).toBeGreaterThan(0);
+  expect(compareHostVersions("1.2.4-web.3.1", "1.2.4-web.3.2")).toBeLessThan(0);
+  expect(compareHostVersions("1.2.10-web.1", "1.2.9-web.7")).toBeGreaterThan(0);
+  expect(compareHostVersions("1.2-web.3", "1.2-web.3")).toBe(0);
+  expect(compareHostVersions("1.2", "1.2-web.1")).toBeLessThan(0);
+  expect(compareHostVersions("dev", "1.2-web.3")).toBe(0);
+});
+it.each(["1.3-web.1", "1.2-web.4", "1.2-web.3"])(
+  "connects at once to an idle host on %s: newer or equal is never upgraded",
+  async (version) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(envelope(host))
+      .mockResolvedValueOnce(envelope(ready))
+      .mockResolvedValueOnce(Response.json({ ...health, version }));
+    vi.stubGlobal("fetch", fetch);
+    const stage = vi.fn();
+    expect(await resolveBrowserHost(stage)).toMatchObject({ token });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(stage.mock.calls.flat()).not.toContain("updating");
+  }
+);
+it("connects anyway once an idle older host outlasts the update wait", async () => {
+  vi.useFakeTimers();
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(envelope(host))
+    .mockResolvedValueOnce(envelope(ready))
+    .mockImplementation(async () =>
+      Response.json({ ...health, version: "1.1-web.9" })
+    );
+  vi.stubGlobal("fetch", fetch);
+  const stage = vi.fn();
+  const pending = resolveBrowserHost(stage);
+  await vi.advanceTimersByTimeAsync(89_000);
+  expect(stage).toHaveBeenLastCalledWith("updating");
+  await vi.advanceTimersByTimeAsync(5_000);
+  expect(await pending).toMatchObject({ token, base });
+  expect(stage).toHaveBeenLastCalledWith("connecting");
 });
 it("connects to a busy older host as it is: it is never upgraded mid-turn", async () => {
   const fetch = vi

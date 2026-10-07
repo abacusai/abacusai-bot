@@ -94,3 +94,36 @@ export const authenticate = (
   }
   return null;
 };
+
+/** How far a proxy proof's timestamp may sit from the host's clock. */
+export const MCP_PROOF_SKEW_S = 120;
+
+/**
+ * The proxy's signature over one `/mcp/*` request (spec 08, D8):
+ * `x-abacus-host-proof: <ts>.<hex HMAC-SHA256(secret, canonical)>`, with
+ * canonical `"mcp\n" + method + "\n" + path + "\n" + owner + "\n" + ts`.
+ * `path` is the request target as the host receives it, before `?`; `ts` is
+ * Unix seconds in decimal. Null when it holds, else why not.
+ */
+export const mcpProofFailure = (
+  request: IncomingMessage,
+  identity: HostIdentity,
+  nowMs: number = Date.now()
+): string | null => {
+  const header = request.headers["x-abacus-host-proof"];
+  const match =
+    typeof header === "string"
+      ? /^(\d{1,12})\.([a-f0-9]{64})$/.exec(header)
+      : null;
+  if (match == null) return "proof";
+  const [, ts, mac] = match;
+  if (Math.abs(Number(ts) - nowMs / 1000) > MCP_PROOF_SKEW_S)
+    return "proof-expiry";
+  const path = (request.url ?? "/").split("?")[0]!;
+  const canonical = `mcp\n${request.method ?? ""}\n${path}\n${identity.owner}\n${ts}`;
+  const expected = createHmac("sha256", identity.secret)
+    .update(canonical)
+    .digest();
+  if (!timingSafeEqual(Buffer.from(mac!, "hex"), expected)) return "proof";
+  return null;
+};

@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
-import { createServer, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { basename } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -8,14 +12,11 @@ import { pipeline } from "node:stream/promises";
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 
 import type { AppOperations } from "#main/rpc/deps";
-import {
-  hostedCallbackPage,
-  type HostedMcpSignIns,
-} from "#main/services/mcp/mcp-oauth-service";
+import type { HostedMcpConnect } from "#main/services/mcp/hosted-mcp-connect";
 import type { WhisperModelService } from "#main/services/voice/whisper-model-service";
 import { openHostFile } from "#main/services/workspace/host-path";
 
-import { authenticate, type HostIdentity } from "./auth";
+import { authenticate, mcpProofFailure, type HostIdentity } from "./auth";
 import type { HostLease } from "./lease";
 const json = (response: ServerResponse, status: number, value: unknown) =>
   response
@@ -24,13 +25,51 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
       "cache-control": "no-store",
     })
     .end(JSON.stringify(value));
+/** What an `/mcp/*` form post may be: small, and sent promptly. */
+export interface McpBodyLimits {
+  bytes?: number;
+  timeoutMs?: number;
+}
+
+/**
+ * A form post's fields; 413 over the cap (declared or counted), 408 when it
+ * does not arrive in time. The caller destroys the request after answering.
+ */
+const readForm = (
+  request: IncomingMessage,
+  { bytes = 4096, timeoutMs = 10_000 }: McpBodyLimits
+): Promise<URLSearchParams | { status: 408 | 413 }> => {
+  if (Number(request.headers["content-length"]) > bytes)
+    return Promise.resolve({ status: 413 });
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    const settle = (value: URLSearchParams | { status: 408 | 413 }): void => {
+      clearTimeout(timer);
+      request.off("data", onData).off("end", onEnd).off("error", onError);
+      request.pause();
+      resolve(value);
+    };
+    const onData = (chunk: Buffer): void => {
+      size += chunk.length;
+      if (size > bytes) settle({ status: 413 });
+      else chunks.push(chunk);
+    };
+    const onEnd = (): void =>
+      settle(new URLSearchParams(Buffer.concat(chunks).toString("utf8")));
+    const onError = (): void => settle({ status: 408 });
+    const timer = setTimeout(() => settle({ status: 408 }), timeoutMs);
+    request.on("data", onData).on("end", onEnd).on("error", onError);
+  });
+};
 export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
   lease: HostLease,
   uploadFolder: (workspaceId: string, sessionId: string) => string | null,
   whisper: Pick<WhisperModelService, "prepareFile">,
-  mcpSignIns: Pick<HostedMcpSignIns, "start" | "complete"> | null = null
+  mcp: Pick<HostedMcpConnect, "route"> | null = null,
+  mcpLimits: McpBodyLimits & { now?: () => number } = {}
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -46,48 +85,68 @@ export const createHostHttpServer = (
       });
       return;
     }
-    // MCP sign-in is a top-level browser navigation: no connect token. The
-    // proxy admits only the owner's session; the one-time id or state is the rest.
-    if (
-      request.method === "GET" &&
-      url.pathname.startsWith("/mcp/") &&
-      mcpSignIns != null
-    ) {
-      if (request.headers["x-abacus-user-id"] !== identity.owner) {
-        json(response, 403, { error: "forbidden" });
-        return;
-      }
-      const start = url.pathname.match(
-        /^\/mcp\/start\/([A-Za-z0-9_-]{16,64})$/
+    // MCP connects are top-level navigations, which carry no connect token:
+    // the proxy signs each one instead (spec 08, D8 exception).
+    if (url.pathname.startsWith("/mcp/") && mcp != null) {
+      const failure = mcpProofFailure(
+        request,
+        identity,
+        (mcpLimits.now ?? Date.now)()
       );
-      if (start) {
-        const found = mcpSignIns.start(start[1]!);
-        if (found.status === 302 && found.location != null)
-          response
-            .writeHead(302, {
-              location: found.location,
-              "cache-control": "no-store",
-              "referrer-policy": "no-referrer",
-            })
-            .end();
-        else
-          json(response, found.status === 302 ? 404 : found.status, {
-            error: found.status === 410 ? "gone" : "not-found",
-          });
+      if (failure) {
+        console.warn(`[host-auth] mcp ${failure}`);
+        json(response, 403, { error: "forbidden" });
+        request.resume();
         return;
       }
-      if (url.pathname === "/mcp/callback") {
-        const result = await mcpSignIns.complete(url.searchParams);
-        response
-          .writeHead(result.ok ? 200 : 400, {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-store",
-            "referrer-policy": "no-referrer",
-            "content-security-policy":
-              "default-src 'none'; style-src 'unsafe-inline'",
-          })
-          .end(hostedCallbackPage(result));
-        return;
+      const answer = await mcp.route(
+        {
+          method: request.method ?? "GET",
+          pathname: url.pathname,
+          query: url.searchParams,
+          headers: request.headers,
+          // Read only once the route admitted the request.
+          readForm: () => readForm(request, mcpLimits),
+        },
+        identity.owner
+      );
+      const headers = {
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+      };
+      switch (answer.kind) {
+        case "redirect":
+          response
+            .writeHead(302, { ...headers, location: answer.location })
+            .end();
+          return;
+        case "page":
+          response
+            .writeHead(answer.status, {
+              ...headers,
+              "content-type": "text/html; charset=utf-8",
+              "content-security-policy":
+                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+              "x-frame-options": "DENY",
+              "cross-origin-opener-policy": "same-origin",
+            })
+            .end(answer.html);
+          return;
+        case "refused":
+          json(response, 403, { error: "forbidden" });
+          request.resume();
+          return;
+        case "missing":
+          json(response, 404, { error: "not-found" });
+          request.resume();
+          return;
+        case "bad-body":
+          // The rest of the body is not read: the connection goes.
+          response.once("finish", () => request.destroy());
+          json(response, answer.status, {
+            error: answer.status === 413 ? "too-large" : "timeout",
+          });
+          return;
       }
     }
     const failure = authenticate(request, identity);

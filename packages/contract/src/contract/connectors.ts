@@ -26,7 +26,9 @@ export type ConnectorsEvent =
   | { type: "request"; request: ConnectorRequest }
   | { type: "cleared"; requestId: string }
   /** Something changed a connector's state: re-read `statuses`. */
-  | { type: "status-changed" };
+  | { type: "status-changed" }
+  /** A connect started on the host's page failed or was refused. */
+  | { type: "connect-failed"; connectorId: string };
 
 export const connectors = {
   /** Every registry connector's state on this machine, keyed by connector id. */
@@ -51,8 +53,17 @@ export const connectors = {
       })
     )
     .output(type<ConnectorOutcome>()),
-  /** Nothing waits in the host any more; kept for older clients. */
-  cancelConnect: mutation.input(NoInput).output(type<void>()),
+  /**
+   * Stop a connect: the host drops its pending sign-in and stops following
+   * the connector. Without `connectorId` (older clients), every connect.
+   */
+  cancelConnect: mutation
+    .input(
+      v.optional(
+        v.object({ connectorId: v.optional(v.pipe(v.string(), v.nonEmpty())) })
+      )
+    )
+    .output(type<void>()),
   disconnect: mutation.input(ConnectorIdInput).output(type<ConnectorOutcome>()),
   /** The agent is blocked inside its tool call until this. */
   respond: mutation.input(RespondConnectorRequestSchema).output(type<void>()),

@@ -1,25 +1,22 @@
-import type {
-  ConnectorConnectOptions,
-  ConnectorOutcome,
-} from "@abacus-ai/contract/contracts";
+import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
 
 import type { Transport } from "#renderer/data/transport";
 import type { AppClient } from "#renderer/data/transport/types";
+import type { ConnectTarget } from "#renderer/lib/connect-target";
 export const platformSystem = (client: AppClient) => client.system;
-/** Main hands back the platform connector's connect page; it opens in the default browser. */
-export const openConnectPage = async (
-  client: Pick<AppClient, "connectors" | "system">,
-  connectorId: string,
-  options?: ConnectorConnectOptions
-): Promise<ConnectorOutcome> => {
-  const outcome = await client.connectors.connect({
-    connectorId,
-    ...(options ? { options } : {}),
-  });
-  if (!outcome.ok) return outcome;
-  if (outcome.url) await client.system.openExternal({ url: outcome.url });
-  return { ok: true };
+/**
+ * The desktop's answer: main mints platform pages, and connects MCP servers
+ * itself. The hint travels with the connect call instead.
+ */
+export const connectTarget = (name: string, _hint?: string): ConnectTarget => {
+  const entry = connectorById(name);
+  const ui = entry != null ? connectUi(entry) : "browser-hop";
+  if (ui === "pairing" || ui === "fields") return { kind: ui };
+  return entry?.kind === "platform"
+    ? { kind: "connect-link" }
+    : { kind: "in-app" };
 };
+
 export const openSharedLink = async (
   client: AppClient,
   input: Parameters<AppClient["messaging"]["openSharedLink"]>[0]

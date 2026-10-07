@@ -3446,6 +3446,9 @@
     "closePreview": "Close preview",
     "connectName": "{{name}} कनेक्ट करें",
     "connectWaiting": "इस सेवा को कनेक्ट करने के लिए साइन इन पूरा करें।",
+    "popupBlocked": "आपके ब्राउज़र ने नया टैब ब्लॉक कर दिया। इस साइट के लिए पॉप-अप की अनुमति दें, फिर दोबारा कोशिश करें।",
+    "connectTimedOut": "कनेक्ट करने का समय समाप्त हो गया। कृपया दोबारा कोशिश करें।",
+    "connectFailed": "कनेक्ट करना पूरा नहीं हुआ। कृपया दोबारा कोशिश करें।",
     "connectorsDescription": "वे सेवाएँ कनेक्ट करें जिनसे आपका एजेंट काम पूरे कर सके।",
     "credentialsLocal": "लॉगिन जानकारी इस कंप्यूटर पर सेव होती है।",
     "defaultWorkspace": "Default workspace",
@@ -3974,7 +3977,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "वेब पर AbacusAI Bot इस्तेमाल करने के लिए साइन इन करें।",
+      "tierRequired": "वेब पर AbacusAI Bot के लिए Pro प्लान चाहिए।",
+      "hostOutdated": "आपका बॉट पुराना हो गया है। इसे अपडेट करने के लिए अपना कंप्यूटर रीस्टार्ट करें।"
     },
     "files": {
       "open": "Open folder"

@@ -52,24 +52,39 @@ interface McpAuthFile {
 const authFilePath = (): string => path.join(abacusBotHome(), "mcp-auth.json");
 
 /** One line per stage, tagged, to the main log. Never a token or a code. */
-const oauthLog = (serverUrl: string, line: string): void => {
+export const oauthLog = (serverUrl: string, line: string): void => {
   console.log(`[mcp-oauth] ${serverUrl}: ${line}`);
 };
 
-const readAuthFile = (): McpAuthFile => {
-  try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(authFilePath(), "utf8"));
+/**
+ * The last read or write, for status reads. The agent writes the file too, but
+ * only to renew a token that has a refresh token, which reads valid either way.
+ */
+let cachedAuth: { path: string; file: McpAuthFile } | null = null;
 
-    return parsed != null && typeof parsed === "object"
-      ? (parsed as McpAuthFile)
-      : {};
+/** From disk, as every read-modify-write needs (the agent may have renewed a token). */
+const readAuthFile = (): McpAuthFile => {
+  const target = authFilePath();
+  let file: McpAuthFile = {};
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(target, "utf8"));
+
+    if (parsed != null && typeof parsed === "object")
+      file = parsed as McpAuthFile;
   } catch {
-    return {};
+    // Absent or unreadable reads as no tokens.
   }
+  cachedAuth = { path: target, file };
+  return file;
 };
+
+/** The cached read, unless a profile switch moved the file. */
+const cachedAuthFile = (): McpAuthFile =>
+  cachedAuth?.path === authFilePath() ? cachedAuth.file : readAuthFile();
 
 const writeAuthFile = (file: McpAuthFile): void => {
   const target = authFilePath();
+  cachedAuth = { path: target, file };
   fs.mkdirSync(path.dirname(target), { recursive: true });
   // Temp file and rename: a crash mid-write must not leave a half-flushed file.
   const temp = `${target}.tmp`;
@@ -135,6 +150,15 @@ const resourceMetadataCandidates = (
   return candidates;
 };
 
+/** The server answered without a sign-in challenge: it needs none. */
+class NoSignInAsked extends Error {
+  constructor() {
+    super(
+      "This server did not ask for a sign-in. It may already be accessible."
+    );
+  }
+}
+
 /**
  * Probe the server and find who authorizes access to it. Falls back to the
  * server's own origin, the pre-RFC-9728 arrangement some servers still ship.
@@ -168,10 +192,9 @@ const discoverAuthorizationServer = async (
 
     if (probe.ok || probe.status !== 401) {
       // Not a 401: the server is open, or failing in a way OAuth will not fix.
+      if (probe.ok || probe.status < 400) throw new NoSignInAsked();
       throw new Error(
-        probe.ok || probe.status < 400
-          ? "This server did not ask for a sign-in. It may already be accessible."
-          : `The server answered HTTP ${probe.status}, not a sign-in challenge.`
+        `The server answered HTTP ${probe.status}, not a sign-in challenge.`
       );
     }
 
@@ -443,13 +466,16 @@ const bindCallbackServer = async (
  */
 const inFlight = new Map<string, () => void>();
 
-/** Abandon the sign-in for one server, if that is the one in flight. */
-
 /**
  * Clear the field before starting a sign-in: the fixed callback port is a
  * single resource, and a stale attempt would hold it for the whole timeout.
  */
-const cancelAllMcpSignIns = (): void => {
+/** Abandon the in-app sign-in for one server URL, if one is waiting. */
+export const cancelMcpSignIn = (serverUrl: string): void => {
+  inFlight.get(serverUrl)?.();
+};
+
+export const cancelAllMcpSignIns = (): void => {
   // The spread snapshots the keys: the body deletes from the collection.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const cancel of [...inFlight.values()]) cancel();
@@ -522,7 +548,7 @@ const authorizationUrl = (input: {
 };
 
 /** Trade the code for tokens and store them under the server URL. */
-const exchangeCode = async (input: {
+export const exchangeCode = async (input: {
   serverUrl: string;
   metadata: AuthServerMetadata;
   client: { clientId: string; clientSecret?: string };
@@ -587,199 +613,84 @@ const exchangeCode = async (input: {
   return { ok: true };
 };
 
-/** The MCP server URLs a token is stored for. */
-export const mcpTokenServers = (): ReadonlySet<string> =>
-  new Set(
-    Object.entries(readAuthFile().servers ?? {})
-      .filter(
-        ([, record]) =>
-          typeof record?.accessToken === "string" && record.accessToken !== ""
-      )
-      .map(([url]) => url)
-  );
-
-/** How long a hosted sign-in link stays good. */
-const HOSTED_SIGN_IN_TTL_MS = 30 * 60_000;
-const HOSTED_SIGN_INS_KEPT = 50;
-
-interface HostedFlow {
-  name: string;
-  /** What the callback page calls it ("Notion"). */
-  label: string;
-  serverUrl: string;
-  state: string;
-  verifier: string;
-  redirectUri: string;
-  authorizeUrl: string;
-  metadata: AuthServerMetadata;
-  client: { clientId: string; clientSecret?: string };
-  expires: number;
-  started: boolean;
-}
-
-export interface HostedStart {
-  status: 302 | 404 | 410;
-  /** The provider's authorization URL, with 302. */
-  location?: string;
-}
-
-export interface HostedCallback {
-  ok: boolean;
-  /** The server's display name, once the state matched a flow. */
-  name?: string;
-}
+/** Matches the agent's refresh skew: a token this close to expiry is not sent as is. */
+const TOKEN_EXPIRY_SKEW_MS = 60_000;
 
 /**
- * MCP sign-in on a host the user reaches through a browser: the redirect is
- * the host's own public callback, and each attempt is a one-time start link
- * (`start`) whose PKCE verifier stays here until `complete`.
+ * A server's sign-in: `valid` is a token the agent will send, unexpired or
+ * renewable with its refresh token; `expired` is one past expiry with no way
+ * to renew it; `absent` is none.
  */
-export class HostedMcpSignIns {
-  private readonly byId = new Map<string, HostedFlow>();
-  private readonly now: () => number;
+export type McpTokenState = "valid" | "expired" | "absent";
 
-  constructor(
-    private readonly options: {
-      /** `<public host base>/mcp/callback`, absolute. */
+/** One cached read of the token file, re-read only after a write. */
+export const mcpTokenState = (
+  serverUrl: string,
+  now: number = Date.now()
+): McpTokenState => {
+  const record = cachedAuthFile().servers?.[serverUrl];
+  if (typeof record?.accessToken !== "string" || record.accessToken === "")
+    return "absent";
+  const expired =
+    record.expiresAt != null && now > record.expiresAt - TOKEN_EXPIRY_SKEW_MS;
+  return expired && record.refreshToken == null ? "expired" : "valid";
+};
+
+/**
+ * A sign-in made ready for a browser elsewhere: discovery, the client
+ * registered against `redirectUri`, and a fresh PKCE pair. `location` is the
+ * provider's page; the rest is kept for `exchangeCode`. `open`: the server
+ * answered without a challenge, so it needs no sign-in.
+ */
+export type PreparedSignIn =
+  | { kind: "open" }
+  | {
+      kind: "ready";
+      location: string;
+      state: string;
+      verifier: string;
       redirectUri: string;
-      /** A server named `name` now holds a token. */
-      signedIn: (name: string) => void;
-      now?: () => number;
-    }
-  ) {
-    this.now = options.now ?? Date.now;
+      metadata: AuthServerMetadata;
+      client: { clientId: string; clientSecret?: string };
+    };
+
+/** Throws with a reason when the server cannot be signed in to. */
+export const prepareSignIn = async (input: {
+  serverUrl: string;
+  redirectUri: string;
+  oauth?: McpOAuthEntry;
+}): Promise<PreparedSignIn> => {
+  const { serverUrl, redirectUri, oauth } = input;
+  let discovered: Awaited<ReturnType<typeof discoverSignIn>>;
+  try {
+    discovered = await discoverSignIn(serverUrl);
+  } catch (error) {
+    if (error instanceof NoSignInAsked) return { kind: "open" };
+    throw error;
   }
-
-  /** Discovery and client registration now, so the start link only redirects. */
-  async begin(input: {
-    name: string;
-    label: string;
-    serverUrl: string;
-    oauth?: McpOAuthEntry;
-  }): Promise<{ id?: string; error?: string }> {
-    const { name, label, serverUrl, oauth } = input;
-    try {
-      const { issuer, scopes, metadata } = await discoverSignIn(serverUrl);
-      const { redirectUri } = this.options;
-      const client = await obtainClient(issuer, metadata, redirectUri, oauth);
-      const { verifier, challenge, state } = newPkce();
-      const authorizeUrl = authorizationUrl({
-        serverUrl,
-        metadata,
-        clientId: client.clientId,
-        redirectUri,
-        state,
-        challenge,
-        ...(scopes != null ? { scopes } : {}),
-        ...(oauth != null ? { oauth } : {}),
-      }).toString();
-      this.prune();
-      const id = crypto.randomBytes(24).toString("base64url");
-      this.byId.set(id, {
-        name,
-        label,
-        serverUrl,
-        state,
-        verifier,
-        redirectUri,
-        authorizeUrl,
-        metadata,
-        client,
-        expires: this.now() + HOSTED_SIGN_IN_TTL_MS,
-        started: false,
-      });
-      oauthLog(serverUrl, "hosted sign-in link minted");
-      return { id };
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
-    }
-  }
-
-  /** The provider's authorization URL, once per link; 410 when used or expired. */
-  start(id: string): HostedStart {
-    const flow = this.byId.get(id);
-    if (flow == null) return { status: 404 };
-    if (flow.started || flow.expires <= this.now()) return { status: 410 };
-    flow.started = true;
-    return { status: 302, location: flow.authorizeUrl };
-  }
-
-  /** The provider's redirect: one exchange per state, then the flow is gone. */
-  async complete(params: URLSearchParams): Promise<HostedCallback> {
-    const state = params.get("state");
-    const entry = [...this.byId].find(
-      ([, flow]) =>
-        state != null &&
-        flow.started &&
-        flow.expires > this.now() &&
-        safeEqual(flow.state, state)
-    );
-    if (entry == null) return { ok: false };
-    const [id, flow] = entry;
-    this.byId.delete(id);
-    const code = params.get("code");
-    if (params.get("error") != null || code == null || code === "") {
-      oauthLog(flow.serverUrl, "hosted sign-in refused or returned no code");
-      return { ok: false, name: flow.label };
-    }
-    try {
-      const result = await exchangeCode({
-        serverUrl: flow.serverUrl,
-        metadata: flow.metadata,
-        client: flow.client,
-        code,
-        redirectUri: flow.redirectUri,
-        verifier: flow.verifier,
-      });
-      oauthLog(
-        flow.serverUrl,
-        result.ok ? "signed in: tokens saved" : `failed: ${result.error}`
-      );
-      if (result.ok) this.options.signedIn(flow.name);
-      return { ok: result.ok, name: flow.label };
-    } catch (error) {
-      oauthLog(
-        flow.serverUrl,
-        `failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return { ok: false, name: flow.label };
-    }
-  }
-
-  private prune(): void {
-    const now = this.now();
-    for (const [id, flow] of this.byId)
-      if (flow.expires <= now) this.byId.delete(id);
-    // Oldest first: Map keeps insertion order.
-    for (const id of this.byId.keys()) {
-      if (this.byId.size < HOSTED_SIGN_INS_KEPT) break;
-      this.byId.delete(id);
-    }
-  }
-}
-
-const safeEqual = (a: string, b: string): boolean =>
-  a.length === b.length &&
-  crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-
-const escapeHtml = (text: string): string =>
-  text.replace(
-    /[&<>"']/g,
-    (ch) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        ch
-      ] ?? ch
-  );
-
-/** The page the hosted callback answers with; `name` comes from the host, never the provider. */
-export const hostedCallbackPage = (result: HostedCallback): string =>
-  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbacusAI Bot</title>
-<body style="font-family:system-ui;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box;background:#111;color:#eee">
-<div style="text-align:center">${
-    result.ok
-      ? `<h2>${escapeHtml(result.name ?? "It")} is connected.</h2><p>You can close this tab.</p>`
-      : `<h2>Sign-in did not finish.</h2><p>Close this tab and try connecting${result.name != null ? ` ${escapeHtml(result.name)}` : ""} again from AbacusAI Bot.</p>`
-  }</div>`;
+  const { issuer, scopes, metadata } = discovered;
+  const client = await obtainClient(issuer, metadata, redirectUri, oauth);
+  const { verifier, challenge, state } = newPkce();
+  const location = authorizationUrl({
+    serverUrl,
+    metadata,
+    clientId: client.clientId,
+    redirectUri,
+    state,
+    challenge,
+    ...(scopes != null ? { scopes } : {}),
+    ...(oauth != null ? { oauth } : {}),
+  }).toString();
+  return {
+    kind: "ready",
+    location,
+    state,
+    verifier,
+    redirectUri,
+    metadata,
+    client,
+  };
+};
 
 /**
  * Run the whole sign-in for one MCP server URL. Resolves, never rejects. On
