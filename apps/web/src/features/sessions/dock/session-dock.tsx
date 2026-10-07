@@ -7,7 +7,17 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
-import { Plus, Maximize, Minimize } from "lucide-react";
+import {
+  Plus,
+  Maximize,
+  Minimize,
+  Terminal,
+  Globe,
+  Folder,
+  GitCompare,
+  Bot,
+  Monitor,
+} from "lucide-react";
 import {
   ViewTransition,
   useEffect,
@@ -23,6 +33,7 @@ import { PaneBoundary } from "#renderer/components/page-state";
 import {
   PanelWorkspace,
   PANEL_DRAG_TYPE,
+  moveDockTab,
 } from "#renderer/components/panel-workspace";
 import { followNotices } from "#renderer/data/queries/notices";
 import { TopBar } from "#renderer/features/shell/top-bar";
@@ -287,7 +298,11 @@ export const SessionDock = ({
         >
           <Plus />
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent
+          align="end"
+          collisionPadding={12}
+          className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
+        >
           <DropdownMenuGroup>
             {terminalShellsForPlatform(
               (document.documentElement.dataset.platform ??
@@ -305,9 +320,12 @@ export const SessionDock = ({
                     .then(() => add("terminal", shell.id))
                 }
               >
-                {t("sessions.terminal.newShell", {
-                  shell: t(`terminalShells.${shell.labelKey}.label`),
-                })}
+                <Terminal />
+                <span className="min-w-0 truncate">
+                  {t("sessions.terminal.newShell", {
+                    shell: t(`terminalShells.${shell.labelKey}.label`),
+                  })}
+                </span>
               </DropdownMenuItem>
             ))}
             {[
@@ -319,7 +337,22 @@ export const SessionDock = ({
               ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
             ].map((kind) => (
               <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                {t(`sessions.dock.${kind}`)}
+                {kind === "browser" ? (
+                  <Globe />
+                ) : kind === "files" ? (
+                  <Folder />
+                ) : kind === "changes" ? (
+                  <GitCompare />
+                ) : kind === "agents" ? (
+                  <Bot />
+                ) : kind === "device" ? (
+                  <Monitor />
+                ) : (
+                  <Terminal />
+                )}
+                <span className="min-w-0 truncate">
+                  {t(`sessions.dock.${kind}`)}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -392,12 +425,11 @@ export const SessionDock = ({
                         event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
                     : undefined
                 }
+                workspaceApi={dockApi}
                 onMove={
                   expanded
                     ? (id, position) => {
-                        const panel = dockApi.current?.getPanel(id);
-                        if (panel)
-                          panel.api.moveTo({ group: panel.group, position });
+                        moveDockTab(dockApi.current, id, position);
                       }
                     : undefined
                 }

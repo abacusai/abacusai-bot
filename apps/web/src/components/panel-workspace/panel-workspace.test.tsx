@@ -11,7 +11,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import { initI18n } from "#renderer/lib/i18n";
 
-import { PanelWorkspace } from ".";
+import { PanelWorkspace, moveDockTab } from ".";
 const writes = vi.hoisted(() => ({ write: vi.fn(), flush: vi.fn() }));
 vi.mock("#renderer/data/db", () => ({ useDb: () => ({}) }));
 vi.mock("#renderer/data/db/prefs", () => ({
@@ -56,7 +56,12 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
     })
   );
   await waitFor(() => expect(apiRef.current!.groups).toHaveLength(2));
-  expect(apiRef.current!.groups.every((group) => !group.header.hidden)).toBe(
+  expect(apiRef.current!.groups.every((group) => group.header.hidden)).toBe(
+    true
+  );
+  act(() => moveDockTab(apiRef.current, "chat", "top"));
+  await waitFor(() => expect(apiRef.current!.groups).toHaveLength(2));
+  expect(apiRef.current!.groups.every((group) => group.header.hidden)).toBe(
     true
   );
   expect(screen.getByRole("button", { name: "Draft 1" })).toBeTruthy();

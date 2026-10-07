@@ -226,8 +226,8 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --scroll-fade-size: min(12%, calc(var(--spacing) * 10));
 }
 .panel-dock .dockview-theme-dark {
-  --dv-background-color: var(--background);
-  --dv-group-view-background-color: var(--background);
+  --dv-background-color: transparent;
+  --dv-group-view-background-color: transparent;
   --dv-tabs-and-actions-container-background-color: var(--background);
   --dv-activegroup-visiblepanel-tab-background-color: var(--secondary);
   --dv-activegroup-visiblepanel-tab-color: var(--foreground);
@@ -243,4 +243,26 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --dv-sash-size: 8px;
   --dv-active-sash-color: var(--primary);
   --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+/* SessionRunning / SplitView use the same radius and gutters as Bots. */
+[data-slot="pane"]:has([data-slot="session-dock"]),
+.workspace-island:has([data-slot="session-dock"]),
+.panel-dock .dockview-theme-dark,
+.panel-dock .dv-groupview {
+  background: transparent;
+  outline: none;
+}
+.panel-dock .dv-render-overlay {
+  box-sizing: border-box;
+  padding: calc(var(--pane-inset) / 2);
+}
+.workspace-island {
+  background: var(--background);
+  border-radius: var(--pane-radius);
+  overflow: hidden;
+}
+.panel-dock .workspace-island [data-slot="pane"],
+.panel-dock .workspace-island [data-slot="side-panel"] {
+  outline: none;
 }
