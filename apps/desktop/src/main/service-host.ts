@@ -409,6 +409,7 @@ import {
 } from "./services/session/session-turn-state-service";
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
+import { TurnAbandoner } from "./services/session/turn-abandoner";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
 import { CheckoutService } from "./services/workspace/checkout-service";
 import {
@@ -1922,6 +1923,19 @@ export class ServiceHost {
     }
   );
 
+  private readonly turnAbandoner = new TurnAbandoner({
+    clearQueue: (workspaceId, sessionId) =>
+      this.agentCommunicationService.clearQueue({ workspaceId, sessionId }),
+    stopTurn: (workspaceId, sessionId) =>
+      this.agentCommunicationService.stopTurn({ workspaceId, sessionId }),
+    markStopped: (workspaceId, sessionId) =>
+      this.markTurnStopped(workspaceId, sessionId),
+    stopSettled: (sessionId, deadlineMs) =>
+      this.sessionTurnStateService.stopSettled(sessionId, deadlineMs),
+    closeSession: (workspaceId, sessionId) =>
+      this.agentManagerService.stopSessionAndWait(workspaceId, sessionId),
+  });
+
   private readonly workspaceRuntimeService = new WorkspaceRuntimeService({
     workspaceService: this.workspaceService,
     gitService: this.gitService,
@@ -3021,10 +3035,16 @@ export class ServiceHost {
 
     // A session whose CLI died is restarted rather than swallowing the message.
     const session = this.agentSessionManagerService.get(request.sessionId);
+    // Abandoned while this send was on its way: it must not land behind the stop.
+    const epoch = this.turnAbandoner.epoch(request.sessionId);
+    const current = (): boolean =>
+      this.turnAbandoner.stillCurrent(request.sessionId, epoch);
     const delivered = await this.withEnvironmentNotice(request);
     const outcome = await deliverMessage({
-      send: () => this.agentCommunicationService.sendMessage(delivered),
+      send: () =>
+        current() && this.agentCommunicationService.sendMessage(delivered),
       start: async () => {
+        if (!current()) return false;
         const result = await this.startAgentSession({
           workspaceId: request.workspaceId,
           sessionId: request.sessionId,
@@ -3173,16 +3193,9 @@ export class ServiceHost {
     this.agentCommunicationService.stopTurn(request);
   }
 
-  /**
-   * Abandons the turn and everything queued behind it, resolving once the
-   * agent has settled (or is gone), so the next send meets an idle session.
-   */
+  /** Gives up on the turn; resolves once the session is idle or closed (see TurnAbandoner). */
   async abandonAgentTurn(request: AgentSessionCommandRequest): Promise<void> {
-    this.agentCommunicationService.clearQueue(request);
-    this.markTurnStopped(request.workspaceId, request.sessionId);
-    const settled = this.sessionTurnStateService.stopSettled(request.sessionId);
-    if (!this.agentCommunicationService.stopTurn(request)) return;
-    await settled;
+    await this.turnAbandoner.abandon(request.workspaceId, request.sessionId);
   }
 
   /** Main's side of a Stop, for `stopAgentTurn` and the relay's `ai.cancel`. */

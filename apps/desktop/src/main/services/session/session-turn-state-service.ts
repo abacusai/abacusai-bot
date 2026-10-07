@@ -68,7 +68,10 @@ export class SessionTurnStateService {
   /** sessionId -> what the session was last seen doing, for the timeout message. */
   private readonly lastActivity = new Map<string, string>();
   /** Waiting on a stopped session: the agent's idle, its exit, or the next send. */
-  private readonly stopWaiters = new Map<string, Array<() => void>>();
+  private readonly stopWaiters = new Map<
+    string,
+    Array<(settled: boolean) => void>
+  >();
 
   constructor(
     private readonly emitChange: EmitChange,
@@ -119,14 +122,28 @@ export class SessionTurnStateService {
   }
 
   /**
-   * Resolves once a stopped session has settled: the agent confirmed idle,
-   * its process closed, or the next send went out. Call after markStopped.
+   * True once a stopped session has settled (the agent confirmed idle, its
+   * process closed, or the next send went out); false at the deadline.
+   * Call after markStopped.
    */
-  stopSettled(sessionId: string): Promise<void> {
-    if (!this.suppressedSessions.has(sessionId)) return Promise.resolve();
+  stopSettled(sessionId: string, deadlineMs: number): Promise<boolean> {
+    if (!this.suppressedSessions.has(sessionId)) return Promise.resolve(true);
     return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        const waiters = this.stopWaiters.get(sessionId) ?? [];
+        this.stopWaiters.set(
+          sessionId,
+          waiters.filter((waiter) => waiter !== settle)
+        );
+        resolve(false);
+      }, deadlineMs);
+      timer.unref?.();
+      const settle = (settled: boolean): void => {
+        clearTimeout(timer);
+        resolve(settled);
+      };
       const waiters = this.stopWaiters.get(sessionId) ?? [];
-      waiters.push(resolve);
+      waiters.push(settle);
       this.stopWaiters.set(sessionId, waiters);
     });
   }
@@ -134,7 +151,7 @@ export class SessionTurnStateService {
   private releaseStopWaiters(sessionId: string): void {
     const waiters = this.stopWaiters.get(sessionId) ?? [];
     this.stopWaiters.delete(sessionId);
-    for (const resolve of waiters) resolve();
+    for (const settle of waiters) settle(true);
   }
 
   /**

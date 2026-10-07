@@ -39,7 +39,10 @@ interface PhoneLaneDeps {
   hasKey: () => boolean;
   /** The phone loop's session, minted on first use. */
   openSession: () => Promise<{ workspaceId: string; sessionId: string }>;
-  /** Ends the session's work and drops what it queued; resolves once it is idle. */
+  /**
+   * Ends the session's work and drops what it queued; resolves once it is
+   * idle or closed, within its own deadline. A send still on its way is refused.
+   */
   stop: (workspaceId: string, sessionId: string) => Promise<void>;
   /** False when the session definitely did not take the message. */
   send: (
@@ -101,7 +104,7 @@ export class PhoneLane {
   private batchTimer: NodeJS.Timeout | null = null;
   private typing: NodeJS.Timeout | null = null;
   private session: { workspaceId: string; sessionId: string } | null = null;
-  /** A given-up session being stopped; nothing new goes to it until it is idle. */
+  /** A given-up session being stopped; nothing new goes to it until it is idle or closed. */
   private stopping: Promise<void> | null = null;
   /** Handoffs in a row the session refused; reset by one it takes. */
   private refusals = 0;
@@ -421,14 +424,14 @@ export class PhoneLane {
   /**
    * The session's work ran out of time. Everything it holds is claimed at
    * once, the session is stopped (its queue with it), and the user hears the
-   * apology; nothing new goes to the session until it is idle.
+   * apology; nothing new goes to the session until it is idle or closed.
    */
   private async giveUp(reason: string): Promise<void> {
     const messages = this.inbox.abandon();
     if (messages.length === 0) return;
     this.clock.stop();
-    // After any handoff still on its way, so the stop covers it too.
-    this.stopping = this.sending.then(() => this.stopSession());
+    // The session refuses a handoff still on its way; the stop is bounded by its owner.
+    this.stopping = this.stopSession();
     const apologized = await this.apologize(this.replyTarget(messages)!);
     this.log(
       `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`

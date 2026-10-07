@@ -27,6 +27,8 @@ const fixture = await vi.hoisted(async () => {
   return { home, config };
 });
 import { connectInProcess } from "#main/rpc/testing";
+import { SessionTurnStateService } from "#main/services/session/session-turn-state-service";
+import { TurnAbandoner } from "#main/services/session/turn-abandoner";
 
 import { composeNodeHost } from "./compose";
 import { PhoneInbox } from "./phone-inbox";
@@ -165,6 +167,7 @@ describe("the phone lane", () => {
       replyFails?: (text: string) => boolean;
       /** Holds each reply until the test lets it go. */
       holdReplies?: boolean;
+      stop?: (workspaceId: string, sessionId: string) => Promise<void>;
       timings?: Record<string, number>;
     } = {}
   ) => {
@@ -178,7 +181,8 @@ describe("the phone lane", () => {
     const activity = vi.fn();
     let settleStop: () => void = () => {};
     const stop = vi.fn(
-      () => new Promise<void>((resolve) => (settleStop = resolve))
+      options.stop ??
+        (() => new Promise<void>((resolve) => (settleStop = resolve)))
     );
     const phone = new PhoneLane(
       {
@@ -479,6 +483,72 @@ describe("the phone lane", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("is free again when the session never stops: its owner closes it at the deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const turnState = new SessionTurnStateService(() => {});
+      const closeSession = vi.fn(async () => {});
+      const abandoner = new TurnAbandoner({
+        clearQueue: () => true,
+        // Taken, but the agent never confirms idle.
+        stopTurn: () => true,
+        markStopped: (workspaceId, sessionId) =>
+          turnState.markStopped(workspaceId, sessionId),
+        stopSettled: (sessionId, deadlineMs) =>
+          turnState.stopSettled(sessionId, deadlineMs),
+        closeSession,
+        log: () => {},
+        settleMs: 5_000,
+      });
+      const { phone, send, replies } = lane({
+        stop: async (workspaceId, sessionId) => {
+          await abandoner.abandon(workspaceId, sessionId);
+        },
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(replies()).toHaveLength(1);
+      expect(phone.busy).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(closeSession).toHaveBeenCalledWith("w", "s");
+      expect(phone.busy).toBe(false);
+      phone.arrive({ id: "m2", text: "hello?" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(2);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries a refused handoff that carries a note already handed once", async () => {
+    let refusals = 0;
+    const { phone, send, reply, acks } = lane({
+      replyFails: (text) => text === "Gmail is connected.",
+      refuse: (id) => id === "m2" && refusals++ === 0,
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    phone.note("[connected] gmail");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    reply([send.mock.calls[1]![3]], "Gmail is connected.");
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+
+    phone.arrive({ id: "m2", text: "thanks" });
+    // Refused: handed again after the retry wait, note and message together.
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(4));
+    expect(send.mock.calls[3]![2]).toBe("[connected] gmail\n\nthanks");
+    reply(["m2"], "Anytime!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    phone.stop();
   });
 
   it("keeps a host note whose answer could not be sent, and sends it with the user's next message", async () => {
