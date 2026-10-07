@@ -19,12 +19,13 @@
  * secret field, empty or not, and after a fill until the main frame
  * navigates. `captureMasked` is the one way a screenshot is taken.
  */
+import type { FieldFacts } from "../vault/vault-fill";
 import type { BrowserPage } from "./browser-target";
 
 /** Marks a field known secret: filled on the user's behalf, or classified so before. */
 export const SECRET_ATTRIBUTE = "data-abacusai-secret";
 /** Marks a field that was a password field when first seen. */
-const WAS_PASSWORD_ATTRIBUTE = "data-abacusai-password";
+export const WAS_PASSWORD_ATTRIBUTE = "data-abacusai-password";
 
 /** What a secret field's value reads as. */
 export const HIDDEN_VALUE = "(hidden)";
@@ -203,6 +204,10 @@ export const markFilledScript = (selector: string): string => `(function() {
   return true;
 })()`;
 
+/** The element `selector` names, as a remote object (evaluated without `returnByValue`). */
+const elementScript = (selector: string): string =>
+  `document.querySelector(${JSON.stringify(selector)})`;
+
 export interface CapturedImage {
   data: string;
   mimeType: "image/jpeg" | "image/png";
@@ -303,27 +308,147 @@ async function captureUnmasked(
 const EXECUTE_REFUSAL =
   "This page has a password, card or one-time code field, so scripts cannot run on it. Use browser_snapshot and browser_interact instead.";
 
-/** One tab's secret fields. */
+/**
+ * One tab's secret fields. A tab's cross-origin frame is a document of its
+ * own (a `BrowserPage` with a `frameId`): its nodes are known apart from the
+ * page's, since a backend node id means nothing in another frame's process.
+ */
 export class SecretFields {
   private filledFields = 0;
-  /** Every node ever classified secret on the current page, by backend node id. */
-  private readonly known = new Set<number>();
+  /**
+   * Every node ever classified secret on the current page, by backend node
+   * id, per document: "" for the tab's own, else the frame's id.
+   */
+  private readonly knownBy = new Map<string, Set<number>>();
+
+  private known(page: BrowserPage): Set<number> {
+    const scope = page.frameId ?? "";
+    let known = this.knownBy.get(scope);
+    if (known == null) {
+      known = new Set();
+      this.knownBy.set(scope, known);
+    }
+    return known;
+  }
 
   /**
-   * Marks the field `selector` names as filled on the user's behalf: from
-   * now on its value reads as hidden and the tab is locked against scripts
-   * until it navigates. Called by whatever fills it, before the fill.
+   * Marks the field `selector` names as filled on the user's behalf and
+   * remembers its node with the known secret fields: from now on its value
+   * reads as hidden, whatever the page does to the mark, and the tab is
+   * locked against scripts until it navigates. False when the field could
+   * not be marked and remembered; the lock holds either way.
    */
   async markFilled(page: BrowserPage, selector: string): Promise<boolean> {
     // Counted first: if the mark fails, the lock still holds.
     this.filledFields += 1;
-    return (await evaluate(page, markFilledScript(selector))) === true;
+    if ((await evaluate(page, markFilledScript(selector))) !== true)
+      return false;
+    try {
+      const { result } = (await command(page, "Runtime.evaluate", {
+        expression: elementScript(selector),
+        returnByValue: false,
+        objectGroup: OBJECT_GROUP,
+      })) as { result?: { objectId?: string } };
+      if (result?.objectId == null) return false;
+      return await this.remember(page, result.objectId);
+    } catch {
+      return false;
+    } finally {
+      await command(page, "Runtime.releaseObjectGroup", {
+        objectGroup: OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
+  }
+
+  /**
+   * `markFilled` for a node the caller holds as a remote object of `page`
+   * (`objectId`), such as the element a value was typed into by mistake.
+   */
+  async markFilledNode(page: BrowserPage, objectId: string): Promise<boolean> {
+    this.filledFields += 1;
+    try {
+      const { result } = (await command(page, "Runtime.callFunctionOn", {
+        objectId,
+        functionDeclaration: REASSERT_FUNCTION,
+        returnByValue: true,
+      })) as { result?: { value?: unknown } };
+      if (result?.value == null) return false;
+      return await this.remember(page, objectId);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Adds the node behind `objectId` to the document's known secret fields. */
+  private async remember(
+    page: BrowserPage,
+    objectId: string
+  ): Promise<boolean> {
+    const { node } = (await command(page, "DOM.describeNode", {
+      objectId,
+    })) as { node?: { backendNodeId?: number } };
+    if (node?.backendNodeId == null) return false;
+    this.known(page).add(node.backendNodeId);
+    return true;
+  }
+
+  /** Each document's inputs as first seen, by backend node id: what a script did after cannot change them. */
+  private readonly firstSeen = new Map<string, Map<number, FieldFacts>>();
+
+  /** Records the inputs of `page`'s document not seen before, as they are now. */
+  recordFields(
+    page: BrowserPage,
+    facts: ReadonlyMap<number, FieldFacts>
+  ): void {
+    const scope = page.frameId ?? "";
+    let seen = this.firstSeen.get(scope);
+    if (seen == null) {
+      seen = new Map();
+      this.firstSeen.set(scope, seen);
+    }
+    for (const [id, fact] of facts) if (!seen.has(id)) seen.set(id, fact);
+  }
+
+  /** The input `backendNodeId` of `page`'s document as first seen; null when it never was. */
+  firstFacts(page: BrowserPage, backendNodeId: number): FieldFacts | null {
+    return this.firstSeen.get(page.frameId ?? "")?.get(backendNodeId) ?? null;
+  }
+
+  /** Documents (by `documentInfo` key) a page script ran on: what they show may be the script's. */
+  private readonly scripted = new Set<string>();
+
+  /** Scripts asked for on this tab that have not finished yet. */
+  private scriptsArriving = 0;
+
+  /** A script was asked for on this tab; it counts as pending until `scriptSettled`. */
+  scriptArrived(): void {
+    this.scriptsArriving += 1;
+  }
+
+  scriptSettled(): void {
+    this.scriptsArriving = Math.max(0, this.scriptsArriving - 1);
+  }
+
+  /** Whether a script asked for on this tab has not finished. */
+  scriptPending(): boolean {
+    return this.scriptsArriving > 0;
+  }
+
+  /** A script ran on the document `key`. */
+  noteScript(key: string): void {
+    this.scripted.add(key);
+  }
+
+  /** Whether a script ran on the document `key`. */
+  scriptRan(key: string): boolean {
+    return this.scripted.has(key);
   }
 
   /** The main frame navigated: the filled and known fields are gone with the document. */
   navigated(): void {
     this.filledFields = 0;
-    this.known.clear();
+    this.knownBy.clear();
+    this.firstSeen.clear();
   }
 
   /**
@@ -347,7 +472,8 @@ export class SecretFields {
     try {
       await this.discover(page);
       let present = 0;
-      for (const backendNodeId of this.known) {
+      const known = this.known(page);
+      for (const backendNodeId of known) {
         const resolved = (await command(page, "DOM.resolveNode", {
           backendNodeId,
           objectGroup: OBJECT_GROUP,
@@ -355,7 +481,7 @@ export class SecretFields {
         const objectId = resolved?.object?.objectId;
         // Gone from the renderer: nothing left to read.
         if (objectId == null) {
-          this.known.delete(backendNodeId);
+          known.delete(backendNodeId);
           continue;
         }
         const { result } = (await command(page, "Runtime.callFunctionOn", {
@@ -402,7 +528,7 @@ export class SecretFields {
       })) as { node?: { backendNodeId?: number } };
       if (node?.backendNodeId == null)
         throw new Error("a secret field has no node id");
-      this.known.add(node.backendNodeId);
+      this.known(page).add(node.backendNodeId);
     }
   }
 

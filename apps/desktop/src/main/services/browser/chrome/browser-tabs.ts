@@ -203,14 +203,60 @@ export class BrowserTabs {
       )?.frame;
       return frame == null ? null : this.frameNodeOrigin(tabId, frame);
     }
-    const evaluated = (await this.driver
-      .cdp(tabId, "Runtime.evaluate", {
+    return this.liveOrigin(tabId);
+  }
+
+  /**
+   * The origin of the tab's document, or of one of its attached cross-origin
+   * frames, evaluated in that document now: never a remembered URL, so it is
+   * the one to decide what a value may be typed into. Null when it cannot be
+   * asked (a frame the driver cannot reach, a failed evaluation) or is
+   * opaque, and the caller refuses.
+   */
+  async liveOrigin(tabId: number, frameId?: string): Promise<string | null> {
+    if (!this.driver.isAttached(tabId)) return null;
+    if (frameId == null)
+      return locationOrigin(
+        this.driver.cdp(tabId, "Runtime.evaluate", {
+          expression: "location.origin",
+          returnByValue: true,
+        })
+      );
+    if (
+      this.driver.frameCdp == null ||
+      !(this.driver.childFrames?.(tabId) ?? []).includes(frameId)
+    )
+      return null;
+    return locationOrigin(
+      this.driver.frameCdp(tabId, frameId, "Runtime.evaluate", {
         expression: "location.origin",
         returnByValue: true,
       })
-      .catch(() => null)) as { result?: { value?: unknown } } | null;
-    const origin = evaluated?.result?.value;
-    return typeof origin === "string" && origin !== "null" ? origin : null;
+    );
+  }
+
+  /**
+   * The tab's cross-origin frames the driver attached whose owner is in the
+   * tab's own page, with their origins as last reported.
+   */
+  frames(tabId: number): Array<{ frameId: string; origin: string | null }> {
+    if (!this.driver.isAttached(tabId)) return [];
+    return (this.driver.childFrames?.(tabId) ?? []).map((frameId) => ({
+      frameId,
+      origin: this.driver.frameOrigin?.(tabId, frameId) ?? null,
+    }));
+  }
+
+  /** A CDP command in one of those frames' own session. */
+  frameCdp(
+    tabId: number,
+    frameId: string,
+    method: string,
+    params?: Record<string, unknown>
+  ): Promise<unknown> {
+    if (this.driver.frameCdp == null)
+      return Promise.reject(new Error("this browser cannot reach frames"));
+    return this.driver.frameCdp(tabId, frameId, method, params);
   }
 
   /** The tab's secret fields; null for a tab this class does not hold. */
@@ -435,6 +481,17 @@ const findFrame = (
     if (found != null) return found;
   }
   return null;
+};
+
+/** What a `location.origin` evaluation answered, or null for none or an opaque origin. */
+const locationOrigin = async (
+  evaluation: Promise<unknown>
+): Promise<string | null> => {
+  const evaluated = (await evaluation.catch(() => null)) as {
+    result?: { value?: unknown };
+  } | null;
+  const origin = evaluated?.result?.value;
+  return typeof origin === "string" && origin !== "null" ? origin : null;
 };
 
 const originOf = (url: string): string | null => {

@@ -26,6 +26,8 @@ const fixture = await vi.hoisted(async () => {
   );
   return { home, config };
 });
+import { visibleUserText } from "@abacus-ai/contract/transcript/user-text";
+
 import { connectInProcess } from "#main/rpc/testing";
 import { SessionTurnStateService } from "#main/services/session/session-turn-state-service";
 import { TurnAbandoner } from "#main/services/session/turn-abandoner";
@@ -335,6 +337,85 @@ describe("connectors connected elsewhere", () => {
       expect(t.order[0]).toBe("refresh");
       expect(t.order[1]).toMatch(
         /^\[connected\] Google Drive is connected now/
+      );
+    } finally {
+      await t.dispose();
+    }
+  }, 20_000);
+
+  /** A vault page the session sent, which the platform now reports completed. */
+  const vaultPageCompleted = (t: { sh: any; session: { id: string } }) => {
+    const real = globalThis.fetch;
+    vi.stubGlobal("fetch", async (input: string | URL, init?: RequestInit) =>
+      new URL(String(input)).pathname.endsWith(
+        "_getAbacusbotVaultRequestStatus"
+      )
+        ? Response.json({
+            success: true,
+            result: { status: "completed", itemId: "login-7" },
+          })
+        : real(input, init)
+    );
+    t.sh.vault.sessions.for(t.session.id).requests.set("req-1", {
+      requestId: "req-1",
+      kind: "login",
+      site: "example.com",
+      itemId: null,
+      forPayment: false,
+      expiresAt: Date.now() + 60_000,
+    });
+  };
+
+  it("tell an idle desktop session that a vault page was completed, in a fresh hidden turn", async () => {
+    const t = await harness();
+    try {
+      vaultPageCompleted(t);
+      await t.sh.vault.waiter.tick();
+      await vi.waitFor(() =>
+        expect(t.order.some((line) => line.startsWith("[vault]"))).toBe(true)
+      );
+      const sent = (
+        t.sh.agentCommunicationService.sendMessage as any
+      ).mock.calls.at(-1)[0];
+      expect(sent.message).toContain("login-7");
+      expect(sent.userText).toMatchObject({
+        operator: { kind: "environment-notice" },
+      });
+    } finally {
+      await t.dispose();
+    }
+  }, 20_000);
+
+  it("hand a vault outcome for the phone session to the phone lane", async () => {
+    const t = await harness("phone");
+    const notes: string[] = [];
+    const stop = t.sh.onLaneNote("phone", (note: string) => notes.push(note));
+    try {
+      vaultPageCompleted(t);
+      await t.sh.vault.waiter.tick();
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatch(/^\[vault\] The user saved their login/);
+      expect(t.order).toEqual([]);
+    } finally {
+      stop();
+      await t.dispose();
+    }
+  }, 20_000);
+
+  it('put what a "done" finds ahead of the user\'s words in that message, hidden from the transcript', async () => {
+    const t = await harness();
+    try {
+      vaultPageCompleted(t);
+      await t.turn("done");
+      const sent = (t.sh.agentCommunicationService.sendMessage as any).mock
+        .calls[0][0];
+      expect(sent.message).toMatch(/^<system_reminder>\n\[vault\]/);
+      expect(sent.message).toContain("</system_reminder>\n\ndone");
+      expect(visibleUserText(sent.message, sent.userText)).toBe("done");
+      // Told once: nothing follows as a turn of its own.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(t.order.filter((line) => line.startsWith("[vault]"))).toHaveLength(
+        0
       );
     } finally {
       await t.dispose();

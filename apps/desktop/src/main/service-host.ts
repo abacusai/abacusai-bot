@@ -384,6 +384,7 @@ import {
 import {
   environmentNoticeService,
   messageWithEnvironmentNotice,
+  prependSystemReminder,
   tagEnvironmentNotice,
 } from "./services/providers/environment-notice-service";
 import {
@@ -412,6 +413,8 @@ import {
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { TurnAbandoner } from "./services/session/turn-abandoner";
+import { VaultClient } from "./services/vault/vault-client";
+import { Vault } from "./services/vault/vault-tools";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
 import { CheckoutService } from "./services/workspace/checkout-service";
 import {
@@ -684,6 +687,15 @@ export class ServiceHost {
   readonly skillsService = new SkillsService(() => this.platform);
   /** Screenshots (and other media) held for `send_media`, in memory only. */
   readonly mediaStore = new MediaStore();
+  /**
+   * The user's vault: the browser serves its tools, and what the user does
+   * on its pages comes back as a note, delivered as a turn of its own.
+   */
+  private readonly vault = new Vault({
+    client: new VaultClient(),
+    deliver: (sessionId, note) => this.deliverSessionNote(sessionId, note),
+  });
+
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
@@ -692,6 +704,7 @@ export class ServiceHost {
     media: () => (this.platform === "web-host" ? this.mediaStore : null),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+    vault: this.vault,
   });
 
   /**
@@ -988,7 +1001,7 @@ export class ServiceHost {
   /**
    * A host lane (the hosted phone loop) delivers the connected note to its
    * own session as a turn through its own queue, so the answer reaches the
-   * phone. Every other session gets it from deliverConnectedNote.
+   * phone. Every other session gets it from deliverSessionNote.
    */
   onLaneNote(lane: string, deliver: (note: string) => void): () => void {
     this.laneNotes.set(lane, deliver);
@@ -998,12 +1011,13 @@ export class ServiceHost {
   }
 
   /**
-   * The one way the asking session hears that its connectors landed: as a
-   * fresh hidden turn, on every lane. A session in a turn holds the note until
+   * The one way a session hears news that arrives between its turns (its
+   * connectors landed, a vault page it sent was completed): as a fresh hidden
+   * turn, on every lane. A session in a turn holds the note until
    * that turn ends, so it starts a turn of its own, and that turn's start
    * brings the session's tools to the new connectors first (connectorSync).
    */
-  private deliverConnectedNote(sessionId: string | null, note: string): void {
+  private deliverSessionNote(sessionId: string | null, note: string): void {
     if (sessionId == null) return;
     const lane = this.agentSessionManagerService.laneOf(sessionId);
     const laneDeliver = lane != null ? this.laneNotes.get(lane) : undefined;
@@ -1092,7 +1106,7 @@ export class ServiceHost {
           "asks only for what is missing. Otherwise carry on with what they asked for. There is nothing to flag, report " +
           "or escalate, so never offer to."
         : "Tell the user in one short line, then carry on with what they asked for.");
-    this.deliverConnectedNote(offer.sessionId, note);
+    this.deliverSessionNote(offer.sessionId, note);
   }
 
   /**
@@ -2168,6 +2182,7 @@ export class ServiceHost {
   dispose(): Promise<void> {
     this.stop();
     this.connectWatcher.stop();
+    this.vault.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
     this.hostedChromium.dispose();
@@ -3167,7 +3182,7 @@ export class ServiceHost {
       this.turnAbandoner.stillCurrent(request.sessionId, epoch);
     // In arrival order per session, and with the session's tools on the
     // account's connectors before a turn starts (never under a running one).
-    const { delivered, outcome } = await this.connectorSync.inTurnOrder(
+    const { noticed, outcome } = await this.connectorSync.inTurnOrder(
       { workspaceId: request.workspaceId, sessionId: request.sessionId },
       () => this.deliverAgentMessage(request, session, current),
       (result) => result.outcome !== "undeliverable"
@@ -3180,21 +3195,22 @@ export class ServiceHost {
       );
       return false;
     }
-    if (delivered !== request)
-      environmentNoticeService.markAnnounced(request.sessionId);
+    if (noticed) environmentNoticeService.markAnnounced(request.sessionId);
     return true;
   }
 
-  /** The message, with any pending notice, onto the session's agent. */
+  /** The message, with any vault outcome and pending notice, onto the session's agent. */
   private async deliverAgentMessage(
     request: SendAgentMessageRequest,
     session: ReturnType<AgentSessionManagerService["get"]>,
     current: () => boolean
   ): Promise<{
-    delivered: SendAgentMessageRequest;
+    /** Whether the environment notice went with it. */
+    noticed: boolean;
     outcome: Awaited<ReturnType<typeof deliverMessage>>;
   }> {
-    const delivered = await this.withEnvironmentNotice(request);
+    const noted = await this.withVaultNotes(request);
+    const delivered = await this.withEnvironmentNotice(noted);
     const outcome = await deliverMessage({
       send: () =>
         current() && this.agentCommunicationService.sendMessage(delivered),
@@ -3216,7 +3232,22 @@ export class ServiceHost {
         ).status === "running",
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
-    return { delivered, outcome };
+    return { noticed: delivered !== noted, outcome };
+  }
+
+  /**
+   * The user may be saying they are done on a vault page: what is
+   * outstanding is checked now, and its outcomes go ahead of their words in
+   * this message, hidden from the transcript, instead of as a turn of their
+   * own.
+   */
+  private async withVaultNotes(
+    request: SendAgentMessageRequest
+  ): Promise<SendAgentMessageRequest> {
+    const notes = await this.vault
+      .checkBeforeMessage(request.sessionId)
+      .catch(() => []);
+    return notes.length === 0 ? request : prependSystemReminder(request, notes);
   }
 
   /**

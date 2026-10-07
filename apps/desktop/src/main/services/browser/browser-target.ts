@@ -20,6 +20,11 @@ export type DidFailLoadListener = (
  */
 export interface BrowserPage {
   readonly id: number;
+  /**
+   * Set on a page that is one cross-origin frame of tab `id` (see
+   * `framePageOf`): commands go to that frame's own document.
+   */
+  readonly frameId?: string;
   isDestroyed(): boolean;
   getURL(): string;
   getTitle(): string;
@@ -109,6 +114,58 @@ export interface BrowserTargetSource {
     id: number,
     secrets: SecretFields
   ): Promise<CapturedImage | null>;
+  /**
+   * The origin of the tab's document, or of one of its cross-origin frames,
+   * evaluated in that document now (never a remembered URL). Null when it
+   * cannot be asked or is opaque; a vault fill then refuses.
+   */
+  liveOrigin?(id: number, frameId?: string): Promise<string | null>;
+  /** The tab's cross-origin frames this source can drive, outermost first. */
+  frames?(id: number): BrowserFrame[];
+  /** One of those frames as a page of its own, or null when it is gone. */
+  framePage?(id: number, frameId: string): BrowserPage | null;
+}
+
+/** A cross-origin frame of a tab that the tools can read and type into. */
+export interface BrowserFrame {
+  frameId: string;
+  /** Its origin as last reported; `origin()` asks for the live one. */
+  origin: string | null;
+}
+
+/**
+ * Frame `frameId` of `page` as a page of its own: its commands go to the
+ * frame's document through `send`; everything else is the tab's.
+ */
+export function framePageOf(
+  page: BrowserPage,
+  frameId: string,
+  send: (method: string, params?: Record<string, unknown>) => Promise<unknown>
+): BrowserPage {
+  return {
+    id: page.id,
+    frameId,
+    isDestroyed: () => page.isDestroyed(),
+    getURL: () => page.getURL(),
+    getTitle: () => page.getTitle(),
+    isLoading: () => page.isLoading(),
+    loadURL: (url) => page.loadURL(url),
+    canGoBack: () => page.canGoBack(),
+    canGoForward: () => page.canGoForward(),
+    goBack: () => page.goBack(),
+    goForward: () => page.goForward(),
+    reload: () => page.reload(),
+    focus: () => page.focus(),
+    on: (event, listener) => page.on(event, listener),
+    off: (event, listener) => page.off(event, listener),
+    capturePage: () =>
+      Promise.reject(new Error("a frame is captured with its tab")),
+    debugger: {
+      isAttached: () => true,
+      attach: () => undefined,
+      sendCommand: send,
+    },
+  };
 }
 
 /**

@@ -443,6 +443,9 @@ describe("ChromeTargetSource", () => {
                 return { result: { value: "https://shop.test" } };
               if (params.expression === MASK_FOR_CAPTURE_SCRIPT)
                 return { result: { value: 1 } };
+              // A handle on one field (the one markFilled marked).
+              if (params.returnByValue === false)
+                return { result: { objectId: "node-12" } };
               return { result: { value: true } };
             case "Runtime.getProperties":
               return {
@@ -558,6 +561,13 @@ describe("ChromeTargetSource", () => {
       state.fields = [];
 
       expect(await secrets.markFilled(page, "#password")).toBe(true);
+      // The filled field joins the known ones, so its mark is put back too.
+      state.sent.length = 0;
+      await secrets.reassert(page);
+      expect(state.sent).toContainEqual({
+        method: "DOM.resolveNode",
+        params: expect.objectContaining({ backendNodeId: 12 }),
+      });
       state.connected.delete(11);
       expect(await secrets.executeRefusal(page)).toContain("cannot run");
       // A frame inside the page navigating is not the page leaving.
@@ -1020,6 +1030,37 @@ describe("the hosted computer's own Chromium", () => {
         "https://other-pay.test"
       )
     );
+  });
+
+  it("fails closed on a frame's live origin when the frame does not answer, whatever it remembers", async () => {
+    const { chromium, source, id } = await launched();
+
+    chromium.raise({
+      method: "Target.attachedToTarget",
+      sessionId: "S1",
+      params: {
+        sessionId: "FRAME-SESSION",
+        targetInfo: {
+          targetId: "CARD",
+          type: "iframe",
+          url: "https://pay.test/card",
+        },
+      },
+    });
+    await vi.waitFor(async () =>
+      expect(await source.tabs.origin(id, "CARD")).toBe("https://pay.test")
+    );
+
+    // This Chromium answers no evaluation: the remembered origin is no answer.
+    expect(await source.tabs.liveOrigin(id, "CARD")).toBeNull();
+    expect(chromium.sent).toContainEqual(
+      expect.objectContaining({
+        method: "Runtime.evaluate",
+        sessionId: "FRAME-SESSION",
+      })
+    );
+    expect(await source.tabs.liveOrigin(id, "NOT-ATTACHED")).toBeNull();
+    expect(await source.tabs.liveOrigin(id)).toBeNull();
   });
 
   it("turns off saved passwords and autofill in the profile, keeping its other preferences", async () => {

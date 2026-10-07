@@ -162,6 +162,9 @@ export function buildBrowserTaskTool(
       "book anything, enter card or ID details, or fill a CAPTCHA. When it stops for that, its",
       'report ends with "NEEDS USER:" and what they must do.',
       browserHandoffDescription(channel),
+      "",
+      "When the user has a login saved in their vault (vault_items), name its item_id in the",
+      "task: the sub-agent signs in with it without seeing the password.",
     ].join("\n"),
     parameters: Type.Object({
       task: Type.String({

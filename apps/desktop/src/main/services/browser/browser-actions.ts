@@ -49,6 +49,8 @@ export function resolveTarget(
 export interface SessionSnapshot {
   /** `@eN` to the selector the walker verified for it. */
   refMap: Map<string, string>;
+  /** The refs that are in one of the tab's cross-origin frames, to that frame's id. */
+  frameOf: Map<string, string>;
   /** The URL the refs were captured on, to spot a page-initiated navigation. */
   url: string | null;
 }
@@ -67,7 +69,11 @@ export class SnapshotStore {
     let state = this.bySession.get(key);
 
     if (state == null) {
-      state = { refMap: new Map<string, string>(), url: null };
+      state = {
+        refMap: new Map<string, string>(),
+        frameOf: new Map<string, string>(),
+        url: null,
+      };
       this.bySession.set(key, state);
     }
 

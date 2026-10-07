@@ -10,6 +10,8 @@
  */
 import { app } from "electron";
 
+import type { HostFence } from "../browser/host-fence";
+
 const DEFAULT_APP_HOST = "https://apps.abacus.ai";
 
 /**
@@ -122,4 +124,28 @@ export const hostPublicBase = (): string | null => {
     .replace(/\/+$/, "");
   if (!/^(?:\/[A-Za-z0-9_-]+)+$/.test(base)) return null;
   return `${abacusAppHost()}${base}`;
+};
+
+/**
+ * Every host the app treats as Abacus.AI's own: any abacus.ai host, the app
+ * and serving hosts it is pointed at, and a configured dev pod's suffix. The
+ * agent's browser is fenced off from all of them (their pages hold the
+ * user's account, vault pages and payment approvals).
+ */
+export const abacusHostFence = (): HostFence => {
+  const exact = new Set<string>(["abacus.ai"]);
+  for (const base of [abacusAppHost(), abacusRoutellmV1()]) {
+    try {
+      const host = new URL(base).hostname.toLowerCase();
+      if (host !== "abacus.ai" && !host.endsWith(".abacus.ai")) exact.add(host);
+    } catch {
+      // A base that does not parse names no host.
+    }
+  }
+  const suffixes = [".abacus.ai"];
+  const devSuffix = (
+    process.env.ABACUSAI_BOT_DEV_ENDPOINT_SUFFIX ?? ""
+  ).toLowerCase();
+  if (DEV_ENDPOINT_SUFFIX_RE.test(devSuffix)) suffixes.push(devSuffix);
+  return { exact: [...exact], suffixes };
 };

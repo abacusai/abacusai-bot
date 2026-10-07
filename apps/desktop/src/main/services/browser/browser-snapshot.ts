@@ -482,6 +482,24 @@ export interface SnapshotNode {
   children?: SnapshotNode[];
 }
 
+/**
+ * The snapshot script for a cross-origin frame: its refs carry the frame's
+ * number (`@f2e5`), so they never collide with the page's or another frame's.
+ */
+export const frameSnapshotScript = (frameNumber: number): string => {
+  const prefix = `@f${frameNumber}e`;
+  const store = `__abacusBotRefs_f${frameNumber}`;
+  const STORE = "window.__abacusBotRefs || (window.__abacusBotRefs =";
+  const REF = "'@e' + refStore.next++";
+  // A frame whose refs read as the page's would act on the wrong document.
+  if (!SNAPSHOT_BUILD_JS.includes(STORE) || !SNAPSHOT_BUILD_JS.includes(REF))
+    throw new Error("the snapshot script no longer names its refs as expected");
+  return SNAPSHOT_BUILD_JS.replace(
+    STORE,
+    `window.${store} || (window.${store} =`
+  ).replace(REF, `${JSON.stringify(prefix)} + refStore.next++`);
+};
+
 export function formatTree(node: SnapshotNode | null, depth: number): string {
   if (!node) return "";
   const pad = "  ".repeat(depth);
@@ -530,7 +548,7 @@ export function renderTree(
 
   const kept = full.slice(0, full.lastIndexOf("\n", limit) + 1 || limit);
   const dropped = full.slice(kept.length);
-  const omittedRefs = (dropped.match(/^\s*@e\d+/gm) ?? []).length;
+  const omittedRefs = (dropped.match(/^\s*@(?:f\d+)?e\d+/gm) ?? []).length;
 
   return {
     text:
