@@ -24,6 +24,8 @@ import {
   AlertDialogFooter,
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
+
+import { LicenseSection } from "./license-section";
 export const updatePhase = (
   status: UpdateStatus | undefined,
   clicked = false
@@ -245,6 +247,7 @@ export const AboutPage = () => {
           </Button>
         </SettingRow>
       </GroupCard>
+      <LicenseSection />
     </AreaPage>
   );
 };

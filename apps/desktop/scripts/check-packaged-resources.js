@@ -28,7 +28,8 @@ const EXE = process.platform === "win32" ? ".exe" : "";
 /** Paths that must exist under the packaged app's resources directory. */
 const REQUIRED = [
   "LICENSE",
-  "THIRD-PARTY-NOTICES.txt",
+  "THIRD_PARTY_NOTICES.txt",
+  "LICENSES.chromium.html",
   "agent/main.js",
   "agent/package.json",
   // Left out of the agent bundle because it loads a native addon, so it has to

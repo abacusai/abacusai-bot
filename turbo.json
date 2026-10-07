@@ -70,7 +70,7 @@
     },
     "//#typecheck:tools": {},
     "@abacus-ai/desktop#build": {
-      "dependsOn": ["^build", "typecheck"],
+      "dependsOn": ["^build", "typecheck", "//#generate:licenses"],
       "outputs": ["dist/**"],
       "env": [
         "ABACUS_BUILD_COMMIT",
@@ -91,7 +91,7 @@
       ]
     },
     "@abacus-ai/web#build": {
-      "dependsOn": ["^build", "typecheck"],
+      "dependsOn": ["^build", "typecheck", "//#generate:licenses"],
       "outputs": ["dist/**", "build-metadata/**"],
       "env": [
         "ABACUS_WEB_OVERLAY",
@@ -139,7 +139,11 @@
       ]
     },
     "@abacus-ai/desktop#dev": {
-      "dependsOn": ["@abacus-ai/agent#build", "@abacus-ai/desktop#vendor"],
+      "dependsOn": [
+        "@abacus-ai/agent#build",
+        "@abacus-ai/desktop#vendor",
+        "//#generate:licenses"
+      ],
       "cache": false,
       "persistent": true
     },
@@ -160,6 +164,32 @@
     "@abacus-ai/host#test": {
       "dependsOn": ["^build", "build", "vendor"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/main/**"]
+    },
+    "//#generate:licenses": {
+      "cache": false,
+      "inputs": [
+        "$TURBO_ROOT$/pnpm-lock.yaml",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/apps/desktop/scripts/generate-notices.js",
+        "$TURBO_ROOT$/apps/desktop/scripts/license-data.mjs",
+        "$TURBO_ROOT$/apps/desktop/scripts/download-*.js",
+        "$TURBO_ROOT$/apps/desktop/build/licenses/**",
+        "$TURBO_ROOT$/apps/desktop/resources/decks/TEMPLATES-LICENSE",
+        "$TURBO_ROOT$/apps/desktop/resources/pdf/fonts/LICENSE-*",
+        "$TURBO_ROOT$/packages/agent/scripts/download-tools.js",
+        "$TURBO_ROOT$/apps/desktop/src/**",
+        "$TURBO_ROOT$/apps/web/src/**"
+      ]
+    },
+    "//#check:licenses": {
+      "cache": false
+    },
+    "@abacus-ai/web#dev": {
+      "dependsOn": ["//#generate:licenses"],
+      "cache": false,
+      "persistent": true
     }
   },
   "globalEnv": ["ABACUS_BUILD_COMMIT", "ABACUS_RELEASE"]

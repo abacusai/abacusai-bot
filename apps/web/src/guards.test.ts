@@ -149,6 +149,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "environment",
     "invite",
     "keyboard",
+    "license-section",
     "models",
     "personal",
     "search",

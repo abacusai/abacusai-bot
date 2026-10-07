@@ -41,9 +41,7 @@ const GROUPS: Array<{ label: string; pages: SettingsPage[] }> = [
   },
   {
     label: "settings.sidebar.app",
-    pages: IS_ELECTRON
-      ? ["language", "keyboard", "about"]
-      : ["language", "keyboard"],
+    pages: ["language", "keyboard", "about"],
   },
 ];
 
@@ -160,13 +158,6 @@ export const SettingsSidebar = () => {
           </NavList.Group>
         ))
       )}
-      <NavList.Group label="">
-        <NavList.Item
-          to="/library/connectors"
-          transition="settings-out"
-          title={t("settings.sidebar.openLibrary")}
-        />
-      </NavList.Group>
     </NavList.Root>
   );
 };

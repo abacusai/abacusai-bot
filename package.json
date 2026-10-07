@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo run build vendor",
     "changelog": "node scripts/sync-changelog.js",
-    "check": "turbo run format:check lint typecheck build vendor check:i18n check:locales check:audit check:knip check:scripts check:ui-registry && turbo run test --concurrency=1",
+    "check": "turbo run format:check lint typecheck build vendor check:i18n check:locales check:audit check:licenses check:knip check:scripts check:ui-registry && turbo run test --concurrency=1",
     "check:audit": "node scripts/check-audit.js",
     "dev": "pnpm run dev:desktop",
     "dev:desktop": "turbo run dev --filter=@abacus-ai/desktop",
@@ -27,7 +27,9 @@
     "typecheck:tools": "tsc -p tsconfig.tools.json",
     "check:knip": "knip --workspace apps/desktop --workspace apps/host --workspace apps/web --workspace packages/contract --include files,exports,types,duplicates,dependencies,unlisted",
     "smoke:rpc": "pnpm --filter @abacus-ai/desktop smoke:rpc",
-    "check:scripts": "node --test scripts/web-split.test.mjs scripts/agui-smoke.test.mjs scripts/build-provenance.test.mjs apps/desktop/scripts/check-release-build.test.mjs"
+    "check:scripts": "node --test scripts/web-split.test.mjs scripts/agui-smoke.test.mjs scripts/build-provenance.test.mjs apps/desktop/scripts/check-release-build.test.mjs",
+    "generate:licenses": "node apps/desktop/scripts/generate-notices.js --graph",
+    "check:licenses": "node --test apps/desktop/scripts/license-data.test.mjs && node apps/desktop/scripts/generate-notices.js --graph"
   },
   "devDependencies": {
     "@abacus-ai/config": "workspace:*",
