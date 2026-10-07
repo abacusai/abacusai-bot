@@ -1,10 +1,18 @@
 import "./notch.css";
 import type { OpenTarget } from "@abacus-ai/contract/contract";
-import { MotionConfig } from "motion/react";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
+import { ArrowUp, ExternalLink, Mic, Square, X, Clock } from "lucide-react";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  MotionConfig,
+} from "motion/react";
 import {
   createContext,
   use,
   useEffect,
+  useId,
   useRef,
   useState,
   type ReactNode,
@@ -25,10 +33,15 @@ import {
   useNotch,
   type NotchRouterContext,
 } from "#renderer/notch-context";
-import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
-import { NotchDirector, shapeSettled } from "./director";
+import {
+  NotchAction,
+  NotchReducedMotion,
+  notchMotion,
+  useNotchMotion,
+} from "./controls";
+import { NotchDirector } from "./director";
 import { notchDrafts as drafts } from "./drafts";
 import { NotchSurface, NotchHeader, NotchBody } from "./frame";
 import { followNotchEvents, useNotchInputs } from "./inputs";
@@ -40,6 +53,7 @@ import {
 } from "./presenter";
 import { shapeFor } from "./shape";
 import { permissionLineageKey, type Snooze } from "./snooze";
+import { headerHeight } from "./spacing";
 export { NotchDirector } from "./director";
 const ReplyAcceptedContext = createContext<
   (id: string, runId?: string) => void
@@ -75,6 +89,8 @@ export const NotchShell = ({
   const { transport, chat, db, prepareChat } = context;
   const { t } = useTranslation();
   const reduced = useMotionPreference() === "reduced";
+  const animation = notchMotion(reduced);
+  const motionId = useId();
   const [layout, setLayout] = useState(context.layout);
   const [app, setApp] = useState({ mainFocused: false });
   const [hovered, setHovered] = useState(false);
@@ -146,6 +162,33 @@ export const NotchShell = ({
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
   );
+  const keepInteractive =
+    focused ||
+    (shown.expanded &&
+      ["/reply/$id", "/approval/$id", "/call"].includes(shown.route));
+  useEffect(() => {
+    let last: boolean | undefined;
+    const update = (event?: PointerEvent) => {
+      if (event) {
+        const hit = document.elementFromPoint(event.clientX, event.clientY);
+        pointerInside.current = !!hit?.closest(".notch-shape");
+      }
+      const interactive =
+        !shown.hidden && (pointerInside.current || keepInteractive);
+      if (last === interactive) return;
+      last = interactive;
+      void transport.client.notch
+        .setInteractive({ interactive })
+        .catch(() => undefined);
+    };
+    update();
+    window.addEventListener("pointermove", update);
+    return () => window.removeEventListener("pointermove", update);
+  }, [keepInteractive, shown.hidden, transport]);
+  useEffect(() => {
+    if (shown.expanded && !shown.hidden) return;
+    void transport.client.notch.focus({ focus: false }).catch(() => undefined);
+  }, [shown.expanded, shown.hidden, transport]);
   const current = useRef({ reduced, navigate, inputs, shown, layout });
   useEffect(() => {
     current.current = { reduced, navigate, inputs, shown, layout };
@@ -169,20 +212,6 @@ export const NotchShell = ({
       setShape: (s, signal) => transport.client.notch.setShape(s, { signal }),
       navigate: (p) => current.current.navigate(p),
       audio: () => audio.current,
-      renderedSize: () => {
-        const rect = node.current?.getBoundingClientRect();
-        return { width: rect?.width ?? 0, height: rect?.height ?? 0 };
-      },
-      settle: (from, to, signal) =>
-        node.current
-          ? shapeSettled(
-              node.current,
-              from,
-              to,
-              current.current.reduced,
-              signal
-            )
-          : Promise.resolve(),
       commit: (p, s) => {
         setShown(p);
         setShape(s);
@@ -498,172 +527,259 @@ export const NotchShell = ({
       }}
     >
       <ReplyAcceptedContext value={replyAccepted}>
-        <MotionConfig reducedMotion={reduced ? "always" : "user"}>
-          <div
-            style={
-              layout.growth === "up"
-                ? { position: "absolute", bottom: 32, left: 24, right: 24 }
-                : {
-                    paddingInline: 24,
-                    transform: `translateX(${layout.offsetX ?? 0}px)`,
-                  }
-            }
-          >
-            <NotchSurface
-              ref={node}
-              layout={layout}
-              shape={shape}
-              reduced={reduced}
-              expanded={shown.expanded}
-              role="region"
-              aria-label={t("notch.a11y.region")}
-              aria-live="off"
-              style={{ visibility: shown.hidden ? "hidden" : "visible" }}
-              onPointerMove={(event) => {
-                const rect = event.currentTarget.getBoundingClientRect();
-                const inside =
-                  event.clientX >= rect.left &&
-                  event.clientX <= rect.right &&
-                  event.clientY >= rect.top &&
-                  event.clientY <= rect.bottom;
-                if (!inside) return;
-                clearTimeout(leaveTimer.current);
-                if (!pointerInside.current) {
-                  pointerInside.current = true;
-                  void transport.client.notch.setInteractive({
-                    interactive: true,
-                  });
-                }
-                if (inside && !hovered && !hoverTimer.current) {
-                  hoverTimer.current = setTimeout(() => {
-                    hoverTimer.current = undefined;
-                    setHovered(true);
-                  }, 120);
-                }
-              }}
-              onPointerLeave={() => {
-                pointerInside.current = false;
-                clearTimeout(hoverTimer.current);
-                hoverTimer.current = undefined;
-                clearTimeout(leaveTimer.current);
-                void transport.client.notch.setInteractive({
-                  interactive: false,
-                });
-                leaveTimer.current = setTimeout(() => {
-                  setHovered(false);
-                  if (manual?.route !== "/call") setManual(null);
-                }, 300);
-              }}
-              onPointerDown={() => {
-                player.current?.unlock();
-                queueMicrotask(() => {
-                  const value = player.current?.unlocked() ?? false;
-                  audio.current = value;
-                  setUnlocked(value);
-                });
-              }}
-            >
-              <NotchHeader
-                reduced={reduced}
-                layout={layout}
-                left={
-                  <div className="notch-wing" style={faceStyle}>
-                    {shown.faces.map((face, i) => {
-                      const bot = inputs.bots.find((b) => b.id === face.botId);
-                      return (
-                        <BotAvatar
-                          key={face.botId ?? i}
-                          size={20}
-                          look={resolveLook({
-                            name: bot?.name ?? "Abacus",
-                            avatarShape: bot?.avatarShape ?? "mochi",
-                            avatarColor: bot?.avatarColor ?? "blue",
-                          })}
-                          mood={
-                            reaction &&
-                            (reaction.botId
-                              ? reaction.botId === face.botId
-                              : reaction.sessionId === shown.sessionId)
-                              ? "wink"
-                              : face.mood
-                          }
-                          label={bot?.name ?? "AbacusAI Bot"}
-                        />
-                      );
-                    })}
-                    <span
-                      className="notch-label truncate"
-                      title={
-                        shown.quietUntil
-                          ? t("notch.quiet.until", { time: shown.quietUntil })
-                          : t(`notch.wings.${shown.attention?.kind ?? "idle"}`)
+        <NotchReducedMotion value={reduced}>
+          <LayoutGroup id={motionId}>
+            <MotionConfig reducedMotion={reduced ? "always" : "user"}>
+              <div
+                style={
+                  layout.growth === "up"
+                    ? {
+                        position: "absolute",
+                        bottom: spacing.envelopeBottom,
+                        left: spacing.envelopeInline,
+                        right: spacing.envelopeInline,
                       }
-                    >
-                      {shown.route === "/approval/$id" &&
-                      shown.expanded &&
-                      !shown.quietUntil
-                        ? (inputs.bots.find(
-                            (bot) => bot.id === shown.attention?.botId
-                          )?.name ?? "AbacusAI Bot")
-                        : shown.quietUntil
-                          ? t("notch.quiet.until", { time: shown.quietUntil })
-                          : t(
-                              shown.route === "/call"
-                                ? "notch.listening.title"
-                                : `notch.wings.${shown.attention?.kind ?? "idle"}`
-                            )}
-                    </span>
-                  </div>
+                    : {
+                        paddingInline: spacing.envelopeInline,
+                        transform: `translateX(${layout.offsetX ?? 0}px)`,
+                      }
                 }
-                right={
-                  <div className="notch-wing">
-                    {!shown.sessionId && !shown.expanded && (
-                      <span
-                        aria-hidden
-                        className="ml-auto size-1.5 rounded-full bg-white/40"
-                      />
-                    )}
-                    {shown.remaining > 0 && <span>{shown.remaining}</span>}
-                    {shown.sessionId && (
-                      <Button onClick={open}>{t("notch.actions.open")}</Button>
-                    )}
-                    {shown.attention?.kind === "failed" && (
-                      <Button aria-label={t("common.close")} onClick={snooze}>
-                        ×
-                      </Button>
-                    )}
-                  </div>
-                }
-              />
-              {shown.expanded && (
-                <NotchBody
-                  headerHeight={layout.notch?.height ?? 36}
+              >
+                <NotchSurface
+                  ref={node}
+                  layout={layout}
                   shape={shape}
                   reduced={reduced}
-                  onHeight={(height) =>
-                    setBodySize((previous) =>
-                      previous?.identity === shown.identity &&
-                      previous.height === height
-                        ? previous
-                        : { identity: shown.identity, height }
+                  expanded={shown.expanded}
+                  role="region"
+                  aria-label={t("notch.a11y.region")}
+                  aria-live="off"
+                  style={{ visibility: shown.hidden ? "hidden" : "visible" }}
+                  onPointerMove={(event) => {
+                    if (event.pointerType && event.pointerType !== "mouse")
+                      return;
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const inside =
+                      event.clientX >= rect.left &&
+                      event.clientX <= rect.right &&
+                      event.clientY >= rect.top &&
+                      event.clientY <= rect.bottom;
+                    if (!inside) return;
+                    clearTimeout(leaveTimer.current);
+                    if (!pointerInside.current) {
+                      pointerInside.current = true;
+                      void transport.client.notch.setInteractive({
+                        interactive: true,
+                      });
+                    }
+                    if (inside && !hovered && !hoverTimer.current) {
+                      hoverTimer.current = setTimeout(() => {
+                        hoverTimer.current = undefined;
+                        setHovered(true);
+                      }, 120);
+                    }
+                  }}
+                  onPointerLeave={() => {
+                    pointerInside.current = false;
+                    clearTimeout(hoverTimer.current);
+                    hoverTimer.current = undefined;
+                    clearTimeout(leaveTimer.current);
+                    if (keepInteractive) return;
+                    void transport.client.notch.setInteractive({
+                      interactive: false,
+                    });
+                    leaveTimer.current = setTimeout(() => {
+                      setHovered(false);
+                      setManual(null);
+                    }, 300);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Escape") return;
+                    setManual(null);
+                    setHovered(false);
+                    setFocused(false);
+                    director.current?.lock(false);
+                    void transport.client.notch.focus({ focus: false });
+                  }}
+                  onPointerDown={(event) => {
+                    if (
+                      (event.target as HTMLElement).closest(
+                        "input, textarea, [contenteditable=true]"
+                      )
                     )
-                  }
+                      void transport.client.notch.focus({ focus: true });
+                    player.current?.unlock();
+                    queueMicrotask(() => {
+                      const value = player.current?.unlocked() ?? false;
+                      audio.current = value;
+                      setUnlocked(value);
+                    });
+                  }}
                 >
-                  {children}
-                </NotchBody>
-              )}
-              <span className="sr-only" aria-live={focused ? "polite" : "off"}>
-                {focused
-                  ? t(
-                      shown.attention?.kind === "failed"
-                        ? runErrorCopy(shown.attention.errorCode)
-                        : `notch.wings.${shown.attention?.kind ?? "idle"}`
-                    )
-                  : ""}
-              </span>
-            </NotchSurface>
-          </div>
-        </MotionConfig>
+                  <NotchHeader
+                    reduced={reduced}
+                    layout={layout}
+                    left={
+                      <div className="notch-wing" style={faceStyle}>
+                        <AnimatePresence initial={false}>
+                          {(shown.expanded
+                            ? shown.faces
+                            : shown.faces.slice(0, 1)
+                          ).map((face, i) => {
+                            const bot = inputs.bots.find(
+                              (b) => b.id === face.botId
+                            );
+                            return (
+                              <motion.div
+                                {...animation}
+                                layoutId={
+                                  reduced
+                                    ? undefined
+                                    : `avatar:${face.botId ?? i}`
+                                }
+                                key={face.botId ?? i}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="notch-avatar"
+                              >
+                                <BotAvatar
+                                  size={20}
+                                  look={resolveLook({
+                                    name: bot?.name ?? "Abacus",
+                                    avatarShape: bot?.avatarShape ?? "mochi",
+                                    avatarColor: bot?.avatarColor ?? "blue",
+                                  })}
+                                  mood={
+                                    reaction &&
+                                    (reaction.botId
+                                      ? reaction.botId === face.botId
+                                      : reaction.sessionId === shown.sessionId)
+                                      ? "wink"
+                                      : face.mood
+                                  }
+                                  label={bot?.name ?? "AbacusAI Bot"}
+                                />
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                        <motion.span
+                          {...animation}
+                          className={
+                            shown.route === "/idle" && !shown.expanded
+                              ? "sr-only"
+                              : "notch-label truncate"
+                          }
+                          title={
+                            shown.quietUntil
+                              ? t("notch.quiet.until", {
+                                  time: shown.quietUntil,
+                                })
+                              : t(
+                                  `notch.wings.${shown.attention?.kind ?? "idle"}`
+                                )
+                          }
+                        >
+                          {shown.route === "/approval/$id" &&
+                          shown.expanded &&
+                          !shown.quietUntil
+                            ? (inputs.bots.find(
+                                (bot) => bot.id === shown.attention?.botId
+                              )?.name ?? "AbacusAI Bot")
+                            : shown.quietUntil
+                              ? t("notch.quiet.until", {
+                                  time: shown.quietUntil,
+                                })
+                              : t(
+                                  shown.route === "/idle"
+                                    ? "shell.status.ready"
+                                    : shown.route === "/call"
+                                      ? "notch.listening.title"
+                                      : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                                )}
+                        </motion.span>
+                      </div>
+                    }
+                    right={
+                      <div className="notch-wing">
+                        {!shown.sessionId && !shown.expanded && (
+                          <span
+                            aria-hidden
+                            className="ml-auto size-1.5 rounded-full bg-white/40"
+                          />
+                        )}
+                        <AnimatePresence initial={false}>
+                          {shown.remaining > 0 && (
+                            <motion.span
+                              {...animation}
+                              key={`counter:${shown.remaining}`}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="notch-counter"
+                            >
+                              {shown.remaining}
+                            </motion.span>
+                          )}
+                          {shown.sessionId && (
+                            <NotchAction
+                              label={t("notch.actions.open")}
+                              variant="ghost"
+                              onClick={open}
+                              key="open"
+                            >
+                              <ExternalLink aria-hidden />
+                            </NotchAction>
+                          )}
+                          {shown.attention?.kind === "failed" && (
+                            <NotchAction
+                              label={t("common.close")}
+                              variant="ghost"
+                              onClick={snooze}
+                              key="close"
+                            >
+                              <X aria-hidden />
+                            </NotchAction>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    }
+                  />
+                  {shown.expanded && (
+                    <NotchBody
+                      headerHeight={headerHeight(layout)}
+                      shape={shape}
+                      reduced={reduced}
+                      onHeight={(height) =>
+                        setBodySize((previous) =>
+                          previous?.identity === shown.identity &&
+                          previous.height === height
+                            ? previous
+                            : { identity: shown.identity, height }
+                        )
+                      }
+                    >
+                      {children}
+                    </NotchBody>
+                  )}
+                  <span
+                    className="sr-only"
+                    aria-live={focused ? "polite" : "off"}
+                  >
+                    {focused
+                      ? t(
+                          shown.attention?.kind === "failed"
+                            ? runErrorCopy(shown.attention.errorCode)
+                            : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                        )
+                      : ""}
+                  </span>
+                </NotchSurface>
+              </div>
+            </MotionConfig>
+          </LayoutGroup>
+        </NotchReducedMotion>
       </ReplyAcceptedContext>
     </NotchContext>
   );
@@ -681,6 +797,7 @@ export const ReplyView = ({
   submit(text: string): Promise<{ kind: string }>;
 }) => {
   const { presentation, transport, dictationError } = useNotch();
+  const animation = useNotchMotion();
   const id = presentation.sessionId ?? "";
   const accepted = use(ReplyAcceptedContext);
   const { t } = useTranslation();
@@ -713,7 +830,7 @@ export const ReplyView = ({
     setSending(false);
   };
   return (
-    <div className="notch-reply">
+    <motion.div {...animation} className="notch-reply">
       <p className="line-clamp-3">{text}</p>
       {dictationError && (
         <p role="alert">
@@ -724,58 +841,87 @@ export const ReplyView = ({
           )}
         </p>
       )}
-      {presentation.attention?.canReply && (
-        <Input
-          aria-label={t("notch.reply.placeholder")}
-          placeholder={t("notch.reply.placeholder")}
-          value={draft}
-          disabled={sending}
-          onFocus={() => void transport.client.notch.focus({ focus: true })}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            drafts.set(id, event.target.value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void send();
-            if (event.key === "Escape")
-              void transport.client.notch.focus({ focus: false });
-          }}
-        />
-      )}
-      {presentation.attention?.canReply && (
-        <Button
-          variant="ghost"
-          disabled={
-            voice.state === "starting" || voice.state === "transcribing"
-          }
-          onClick={() =>
-            voice.state === "recording" ? void voice.end() : void voice.start()
-          }
-        >
-          {t(
-            voice.state === "recording"
-              ? "notch.listening.end"
-              : voice.state === "transcribing"
-                ? "notch.listening.transcribing"
-                : "chat.composer.dictate"
-          )}
-        </Button>
-      )}
-      {voice.state === "recording" && (
-        <Button variant="ghost" onClick={voice.cancel}>
-          {t("common.cancel")}
-        </Button>
-      )}
+      <AnimatePresence initial={false}>
+        {presentation.attention?.canReply && (
+          <motion.div
+            {...animation}
+            layoutId={animation.layout ? "reply-composer" : undefined}
+            key="reply-composer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="notch-reply-pill"
+          >
+            <Input
+              aria-label={t("notch.reply.placeholder")}
+              placeholder={t("notch.reply.placeholder")}
+              value={draft}
+              disabled={sending}
+              onFocus={() => void transport.client.notch.focus({ focus: true })}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                drafts.set(id, event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void send();
+                if (event.key === "Escape")
+                  void transport.client.notch.focus({ focus: false });
+              }}
+            />
+            <NotchAction
+              label={t(
+                voice.state === "recording"
+                  ? "notch.listening.end"
+                  : voice.state === "transcribing"
+                    ? "notch.listening.transcribing"
+                    : "chat.composer.dictate"
+              )}
+              variant="ghost"
+              disabled={
+                sending ||
+                voice.state === "starting" ||
+                voice.state === "transcribing"
+              }
+              onClick={() =>
+                voice.state === "recording"
+                  ? void voice.end()
+                  : void voice.start()
+              }
+            >
+              {voice.state === "recording" ? (
+                <Square aria-hidden />
+              ) : (
+                <Mic aria-hidden />
+              )}
+            </NotchAction>
+            <AnimatePresence initial={false}>
+              {voice.state === "recording" && (
+                <NotchAction
+                  label={t("common.cancel")}
+                  key="cancel-voice"
+                  variant="ghost"
+                  onClick={voice.cancel}
+                >
+                  <X aria-hidden />
+                </NotchAction>
+              )}
+            </AnimatePresence>
+            <NotchAction
+              label={t("chat.composer.send")}
+              data-primary
+              disabled={sending || !draft.trim()}
+              onClick={() => void send()}
+            >
+              <ArrowUp aria-hidden />
+            </NotchAction>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {voice.state === "error" && (
         <p role="alert">{t("notch.listening.error")}</p>
       )}
       {error && <p role="alert">{t("notch.reply.failed")}</p>}
-      {presentation.attention?.canReply && (
-        <Button disabled={sending || !draft.trim()} onClick={() => void send()}>
-          {t("chat.composer.send")}
-        </Button>
-      )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -822,10 +968,20 @@ export const ConnectorAskView = () => {
     <div>
       <h2>{t("notch.wings.connector-ask")}</h2>
       <div className="mt-4 flex gap-2">
-        <Button onClick={open}>{t("notch.actions.open")}</Button>
-        <Button variant="ghost" onClick={snooze}>
-          {t("notch.approval.notNow")}
-        </Button>
+        <NotchAction
+          label={t("notch.actions.open")}
+          data-primary
+          onClick={open}
+        >
+          <ExternalLink aria-hidden />
+        </NotchAction>
+        <NotchAction
+          label={t("notch.approval.notNow")}
+          variant="ghost"
+          onClick={snooze}
+        >
+          <Clock aria-hidden />
+        </NotchAction>
       </div>
     </div>
   );

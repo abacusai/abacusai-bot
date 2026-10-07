@@ -6,49 +6,11 @@ export interface Shape {
   height: number;
   compactHeight?: number;
 }
-export const shapeSettled = (
-  element: HTMLElement,
-  from: Shape,
-  to: Shape,
-  reduced: boolean,
-  signal: AbortSignal
-): Promise<void> => {
-  if (
-    reduced ||
-    (from.width === to.width && from.height === to.height) ||
-    signal.aborted
-  )
-    return Promise.resolve();
-  return new Promise((resolve) => {
-    const remaining = new Set([
-      ...(from.width !== to.width ? ["width"] : []),
-      ...(from.height !== to.height ? ["height"] : []),
-    ]);
-    const finish = () => {
-      clearTimeout(timer);
-      element.removeEventListener("transitionend", end);
-      element.removeEventListener("transitioncancel", finish);
-      signal.removeEventListener("abort", finish);
-      resolve();
-    };
-    const end = (event: TransitionEvent) => {
-      if (event.target !== element) return;
-      remaining.delete(event.propertyName);
-      if (!remaining.size) finish();
-    };
-    const timer = setTimeout(finish, 350); // 250 ms transition plus a 100 ms deadline margin
-    element.addEventListener("transitionend", end);
-    element.addEventListener("transitioncancel", finish);
-    signal.addEventListener("abort", finish, { once: true });
-  });
-};
 export interface DirectorDeps {
   load(id: string, signal: AbortSignal): Promise<void>;
   retire(id: string): void;
   setShape(shape: NotchShape, signal?: AbortSignal): Promise<unknown>;
   navigate(presentation: NotchPresentation): Promise<void>;
-  settle(from: Shape, to: Shape, signal: AbortSignal): Promise<void>;
-  renderedSize(): Shape;
   audio(): boolean;
   commit(p: NotchPresentation, shape: Shape): void;
 }
@@ -167,37 +129,22 @@ export class NotchDirector {
         }
       }
       if (!current()) return;
-      const from = this.deps.renderedSize();
-      const target = shape;
-      await bounded(
-        this.deps.setShape(
-          {
-            phase: "envelope",
-            width: Math.max(from.width, target.width),
-            height: Math.max(from.height, target.height),
-            visible: !p.hidden,
-            audio: this.deps.audio(),
-          },
-          abort.signal
-        )
-      );
-      if (!current()) return;
-      this.deps.commit(p, target);
-      await bounded(this.deps.navigate(p));
-      if (!current()) return;
-      await bounded(this.deps.settle(from, target, abort.signal));
-      if (!current()) return;
+      // The native window already contains every presentation. One report
+      // updates visibility/audio; shell motion never waits for native resizing.
       await bounded(
         this.deps.setShape(
           {
             phase: "final",
-            ...target,
+            ...shape,
             visible: !p.hidden,
             audio: this.deps.audio(),
           },
           abort.signal
         )
       );
+      if (!current()) return;
+      this.deps.commit(p, shape);
+      await bounded(this.deps.navigate(p));
       if (!current()) return;
       this.#current = p;
       if (next && held.has(next.sessionId)) {

@@ -184,16 +184,13 @@ export class NotchController {
         this.#metricsFailed = false;
       }
     }
-    const target =
-      this.#o.platform === "win32"
-        ? [primary]
-        : this.#o.prefs().notch?.extraDisplays
-          ? displays
-          : [
-              displays.find(
-                (d) => d.internal && this.#metrics.get(metricsCacheKey(d))
-              ) ?? primary,
-            ];
+    const target = this.#o.prefs().notch?.extraDisplays
+      ? displays
+      : [
+          displays.find(
+            (d) => d.internal && this.#metrics.get(metricsCacheKey(d))
+          ) ?? primary,
+        ];
     const eligible = target.filter(
       (d) =>
         this.#o.platform === "win32" ||
@@ -262,9 +259,6 @@ export class NotchController {
       base,
     };
     this.#entries.set(d.id, e);
-    win.on("blur", () => {
-      if (!e.disposed) setInteractive(win, false);
-    });
     win.on("hide", () => {
       e.documentVisible = false;
     });
@@ -456,12 +450,18 @@ export class NotchController {
     if (!d || e.disposed) return;
     e.shape = shape;
     e.audio = shape.audio;
-    e.placement = this.#place(d, shape);
-    e.win.setBounds(e.placement.bounds);
-    fitView(e.win, e.active);
-    if (e.standby) fitView(e.win, e.standby);
-    if (e.ready && shape.visible) e.win.showInactive();
-    else e.win.hide();
+    const placement = this.#place(d, shape);
+    if (
+      JSON.stringify(placement.bounds) !== JSON.stringify(e.placement.bounds)
+    ) {
+      e.win.setBounds(placement.bounds);
+      fitView(e.win, e.active);
+      if (e.standby) fitView(e.win, e.standby);
+    }
+    e.placement = placement;
+    if (e.ready && shape.visible) {
+      if (!e.win.isVisible()) e.win.showInactive();
+    } else e.win.hide();
     this.#o.publish(e.active.webContents.id, {
       type: "layout",
       layout: e.placement.layout,
@@ -483,7 +483,9 @@ export class NotchController {
     setInteractive(e.win, interactive);
   }
   focus(id: number, focus: boolean): void {
-    setFocused(this.#entry(id).win, focus);
+    const e = this.#entry(id);
+    setFocused(e.win, focus);
+    if (focus) e.active.webContents.focus();
   }
   haptic(id: number, key: string): void {
     this.#entry(id);
@@ -538,7 +540,7 @@ export class NotchController {
       this.#o.revealMain();
       return;
     }
-    setFocused(e.win, true);
+    this.focus(e.active.webContents.id, true);
     this.#o.publish(e.active.webContents.id, { type: "shortcut" });
   }
   appChanged(): void {

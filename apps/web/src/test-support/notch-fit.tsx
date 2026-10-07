@@ -1,4 +1,5 @@
 import type { PermissionRequest } from "@abacus-ai/contract/agent-types";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
 /** Electron-only R6-T41 entry: the shipped permission component, fonts and styles. */
 import { Store } from "@tanstack/react-store";
 import { createRoot } from "react-dom/client";
@@ -7,6 +8,11 @@ import { descriptor } from "#renderer/features/chat/fixtures/builders";
 import { NotchPermissionList } from "#renderer/features/chat/kit/permissions/notch-list";
 import type { ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { emptyThreadState } from "#renderer/features/chat/store/thread-store";
+import {
+  contentInset,
+  headerHeight,
+  spacingStyle,
+} from "#renderer/features/notch/spacing";
 import { initI18n, changeLanguage, i18n } from "#renderer/lib/i18n";
 import type { SupportedLanguage } from "#renderer/lib/i18n/languages";
 
@@ -42,7 +48,14 @@ window.__phase6Fit = async (request, width, language) => {
     permissions: { ...state.permissions, items: [descriptor(request)] },
   }));
   root.render(
-    <div className="notch-shape" style={{ width, height: 220 }}>
+    <div
+      className="notch-shape"
+      style={{
+        ...spacingStyle({ mode: "capsule", notch: null } as NotchLayout),
+        width,
+        height: 220,
+      }}
+    >
       <div className="notch-wings" style={{ height: 33 }} />
       <div className="notch-body">
         <NotchPermissionList runtime={runtime} threadId="t-1" maxHeight={169} />
@@ -53,7 +66,10 @@ window.__phase6Fit = async (request, width, language) => {
   await new Promise((resolve) => setTimeout(resolve, 450));
   const buttons = [...node.querySelectorAll("button")]
     .filter((button) => getComputedStyle(button).visibility !== "hidden")
-    .map((button) => button.textContent?.trim() ?? "");
+    .map(
+      (button) =>
+        button.getAttribute("aria-label") ?? button.textContent?.trim() ?? ""
+    );
   const body = node.querySelector<HTMLElement>(".notch-body")!;
   return {
     accept: buttons.includes(i18n.t("chat.permission.action.allow")),
@@ -97,12 +113,9 @@ window.__phase6ListeningFit = async (mode, language) => {
       className="notch-shape"
       data-mode={mode}
       data-reduced="true"
-      style={shape}
+      style={{ ...spacingStyle(layout), ...shape }}
     >
-      <div
-        className="notch-wings"
-        style={{ height: mode === "capsule" ? 36 : 32 }}
-      />
+      <div className="notch-wings" style={{ height: headerHeight(layout) }} />
       <div className="notch-body">
         <ListeningControls
           state="recording"
@@ -151,128 +164,151 @@ window.__notchGeometryFit = async () => {
   await changeLanguage("en-US");
   await document.fonts.ready;
   const rows = [];
-  for (const height of [24, 33, 40]) {
-    const layout: NotchLayout = {
-      displayId: 1,
-      mode: "notch",
-      growth: "down",
-      notch: { x: 763, width: 185, height },
-      maxShape: { width: 560, height: 220 },
-    };
-    for (const route of [
-      "/idle",
-      "/working",
-      "/call",
-      "/reply/$id",
-      "/approval/$id",
-    ]) {
-      for (const expanded of [false, true]) {
-        const shape = shapeFor({ route, expanded } as never, layout);
-        root.render(
-          <NotchContext
-            value={
-              {
-                db: {
-                  collections: {
-                    bots: {
-                      toArray: [
-                        { id: "audit", name: "Notch audit", channel: null },
-                      ],
+  for (const mode of ["notch", "capsule", "plain"] as const) {
+    for (const height of [24, 33, 40]) {
+      const layout: NotchLayout = {
+        displayId: 1,
+        mode,
+        growth: "down",
+        notch: mode === "notch" ? { x: 763, width: 185, height } : null,
+        maxShape: { width: 560, height: 220 },
+      };
+      for (const route of [
+        "/idle",
+        "/working",
+        "/call",
+        "/reply/$id",
+        "/approval/$id",
+      ]) {
+        for (const expanded of [false, true]) {
+          const shape = shapeFor({ route, expanded } as never, layout);
+          root.render(
+            <NotchContext
+              value={
+                {
+                  db: {
+                    collections: {
+                      bots: {
+                        toArray: [
+                          { id: "audit", name: "Notch audit", channel: null },
+                        ],
+                      },
+                      routines: { toArray: [] },
                     },
-                    routines: { toArray: [] },
                   },
-                },
-              } as unknown as NotchViewContext
-            }
-          >
-            <NotchSurface
-              layout={layout}
-              shape={shape}
-              expanded={expanded}
-              reduced
+                } as unknown as NotchViewContext
+              }
             >
-              <NotchHeader
-                reduced
+              <NotchSurface
                 layout={layout}
-                left={
-                  <div className="notch-wing">
-                    <i style={{ width: 20, flexShrink: 0 }} />
-                    <span className="notch-label truncate">
-                      {route === "/approval/$id" && expanded
-                        ? "Notch audit"
-                        : i18n.t(
-                            route === "/call"
-                              ? "notch.listening.title"
-                              : route === "/reply/$id"
-                                ? "notch.wings.reply"
-                                : route === "/approval/$id"
-                                  ? "notch.wings.approval"
-                                  : route === "/working"
-                                    ? "notch.wings.working"
-                                    : "notch.wings.idle"
-                          )}
-                    </span>
+                shape={shape}
+                expanded={expanded}
+                reduced
+              >
+                <NotchHeader
+                  reduced
+                  layout={layout}
+                  left={
+                    <div className="notch-wing">
+                      <i style={{ width: 20, flexShrink: 0 }} />
+                      <span className="notch-label truncate">
+                        {route === "/approval/$id" && expanded
+                          ? "Notch audit"
+                          : i18n.t(
+                              route === "/idle" && mode === "notch"
+                                ? "shell.status.ready"
+                                : route === "/call"
+                                  ? "notch.listening.title"
+                                  : route === "/reply/$id"
+                                    ? "notch.wings.reply"
+                                    : route === "/approval/$id"
+                                      ? "notch.wings.approval"
+                                      : route === "/working"
+                                        ? "notch.wings.working"
+                                        : "notch.wings.idle"
+                            )}
+                      </span>
+                    </div>
+                  }
+                  right={
+                    <div className="notch-wing">
+                      {expanded && (
+                        <Button>{i18n.t("notch.actions.open")}</Button>
+                      )}
+                    </div>
+                  }
+                />
+                {expanded && (
+                  <div className="notch-body">
+                    <IdleView />
                   </div>
-                }
-                right={
-                  <div className="notch-wing">
-                    {expanded && (
-                      <Button>{i18n.t("notch.actions.open")}</Button>
-                    )}
-                  </div>
-                }
-              />
-              {expanded && (
-                <div className="notch-body">
-                  <IdleView />
-                </div>
-              )}
-            </NotchSurface>
-          </NotchContext>
-        );
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        const surface = node.querySelector<HTMLElement>(".notch-shape")!;
-        const bounds = surface.getBoundingClientRect();
-        const label = node.querySelector<HTMLElement>(".notch-wing span")!;
-        const wings = [
-          ...node.querySelectorAll<HTMLElement>(".notch-wing"),
-        ].map((wing) => wing.getBoundingClientRect());
-        const cameraLeft = bounds.left + (bounds.width - 185) / 2;
-        const buttons = [...node.querySelectorAll(".notch-body button")].map(
-          (button) => button.getBoundingClientRect()
-        );
-        const inside = (x: number, y: number) =>
-          surface.contains(
-            document.elementFromPoint(bounds.left + x, bounds.top + y)
+                )}
+              </NotchSurface>
+            </NotchContext>
           );
-        rows.push({
-          height,
-          route,
-          expanded,
-          actualHeight: bounds.height,
-          headerFits: label.scrollWidth <= label.clientWidth,
-          cameraClear:
-            wings[0]!.right <= cameraLeft &&
-            wings[1]!.left >= cameraLeft + 185 &&
-            buttons.every((r) => r.top >= bounds.top + height),
-          bodyFits: buttons.every(
-            (r) =>
-              r.left >= bounds.left + 20 &&
-              r.right <= bounds.right - 20 &&
-              r.bottom <= bounds.bottom - 12
-          ),
-          actionsCentered:
-            !buttons.length ||
-            Math.abs(
-              (buttons[0]!.left + buttons.at(-1)!.right) / 2 -
-                (bounds.left + bounds.right) / 2
-            ) < 1,
-          shoulder: inside(8, 0.1) && !inside(8, 8),
-          bottomCurve:
-            !inside(13, bounds.height - 1) &&
-            inside(bounds.width / 2, bounds.height - 0.5),
-          belowClear: !inside(bounds.width / 2, bounds.height + 0.5),
-        });
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          const surface = node.querySelector<HTMLElement>(".notch-shape")!;
+          // The shell element spans the fixed envelope. Measure its unscaled
+          // content layout for the final painted bounds, then test the clip itself.
+          const bounds = surface.firstElementChild!.getBoundingClientRect();
+          const label = node.querySelector<HTMLElement>(".notch-wing span")!;
+          const wings = [
+            ...node.querySelectorAll<HTMLElement>(".notch-wing"),
+          ].map((wing) => wing.getBoundingClientRect());
+          const cameraLeft = bounds.left + (bounds.width - 185) / 2;
+          const buttons = [...node.querySelectorAll(".notch-body button")].map(
+            (button) => button.getBoundingClientRect()
+          );
+          const inside = (x: number, y: number) =>
+            surface.contains(
+              document.elementFromPoint(bounds.left + x, bounds.top + y)
+            );
+          const shoulderPoint =
+            Math.min(12, bounds.width / 4, bounds.height / 3) * 0.8;
+          rows.push({
+            height,
+            mode,
+            compactHeight: shape.compactHeight,
+            route,
+            expanded,
+            actualHeight: bounds.height,
+            headerFits: label.scrollWidth <= label.clientWidth,
+            cameraClear:
+              mode !== "notch" ||
+              (wings[0]!.right <= cameraLeft - spacing.cameraClearance &&
+                wings[1]!.left >= cameraLeft + 185 + spacing.cameraClearance &&
+                buttons.every(
+                  (r) => r.top >= bounds.top + height + spacing.top
+                )),
+            insets:
+              getComputedStyle(surface.parentElement!)
+                .getPropertyValue("--notch-inset-inline")
+                .trim() === `${contentInset(layout)}px` &&
+              getComputedStyle(node.querySelector(".notch-wings")!)
+                .paddingTop === `${spacing.top}px`,
+            bodyFits: buttons.every(
+              (r) =>
+                r.left >= bounds.left + contentInset(layout) &&
+                r.right <= bounds.right - contentInset(layout) &&
+                r.bottom <= bounds.bottom - spacing.bottom
+            ),
+            actionsCentered:
+              !buttons.length ||
+              Math.abs(
+                (buttons[0]!.left + buttons.at(-1)!.right) / 2 -
+                  (bounds.left + bounds.right) / 2
+              ) < 1,
+            shoulder:
+              mode === "notch"
+                ? inside(shoulderPoint, 0.1) &&
+                  !inside(shoulderPoint, shoulderPoint)
+                : !inside(1, 1) && inside(bounds.width / 2, 0.5),
+            bottomCurve:
+              !inside(13, bounds.height - 1) &&
+              inside(bounds.width / 2, bounds.height - 0.5),
+            belowClear: !inside(bounds.width / 2, bounds.height + 0.5),
+          });
+        }
       }
     }
   }

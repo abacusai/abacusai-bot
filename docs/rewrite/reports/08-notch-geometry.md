@@ -1,5 +1,7 @@
 # Notch geometry
 
+Placement and resize-animation decisions below are historical. See [Notch placement and motion](09-notch-placement-motion.md) for the fixed envelope and top-edge placement update.
+
 ## Research, ideas only
 
 No third-party implementation is copied or linked into the application. Sources were inspected on 2026-10-02. Boring Notch is GPL-3.0; DynamicNotchKit and NotchDrop are MIT. Research downloads remain outside the worktree.

@@ -1,13 +1,17 @@
+import { ExternalLink, MessageCircle, Mic, Pause, Play } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { isCheckInRoutine } from "#renderer/lib/bots/check-in";
 import { useNotch } from "#renderer/notch-context";
-import { Button } from "#renderer/ui/button";
+
+import { NotchAction, useNotchMotion } from "./controls";
 
 export const IdleView = () => {
   const { db, message, transport } = useNotch();
   const { t } = useTranslation();
+  const animation = useNotchMotion();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const bot = db.collections.bots.toArray.find((bot) => bot.channel == null);
@@ -38,24 +42,40 @@ export const IdleView = () => {
     setBusy(false);
   };
   return (
-    <div className="notch-idle">
+    <motion.div {...animation} className="notch-idle">
       <h2>{bot?.name ?? t("notch.wings.idle")}</h2>
       {bot && (
         <div className="notch-idle-actions">
-          <Button disabled={busy} onClick={() => void launch(false)}>
-            {t("notch.actions.message")}
-          </Button>
-          <Button disabled={busy} onClick={() => void launch(true)}>
-            {t("notch.actions.call")}
-          </Button>
+          <NotchAction
+            label={t("notch.actions.message")}
+            disabled={busy}
+            onClick={() => void launch(false)}
+            data-primary
+          >
+            <MessageCircle aria-hidden />
+          </NotchAction>
+          <NotchAction
+            label={t("notch.actions.call")}
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void launch(true)}
+          >
+            <Mic aria-hidden />
+          </NotchAction>
           {routine && (
-            <Button variant="ghost" disabled={busy} onClick={toggle}>
-              {t(
+            <NotchAction
+              label={t(
                 routine.enabled ? "notch.actions.pause" : "notch.actions.resume"
               )}
-            </Button>
+              variant="ghost"
+              disabled={busy}
+              onClick={toggle}
+            >
+              {routine.enabled ? <Pause aria-hidden /> : <Play aria-hidden />}
+            </NotchAction>
           )}
-          <Button
+          <NotchAction
+            label={t("notch.actions.open")}
             variant="ghost"
             onClick={() =>
               void transport.client.notch.openInApp({
@@ -64,11 +84,11 @@ export const IdleView = () => {
               })
             }
           >
-            {t("notch.actions.open")}
-          </Button>
+            <ExternalLink aria-hidden />
+          </NotchAction>
         </div>
       )}
       {error && <p role="alert">{t("notch.reply.openFailed")}</p>}
-    </div>
+    </motion.div>
   );
 };
