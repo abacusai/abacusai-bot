@@ -18,6 +18,16 @@ export interface Expression {
   stretch: number;
   lidCurve: number;
   overlap: number;
+  rightEye: number;
+  eyeOffset: number;
+  gazeSplit: number;
+  browAsymmetry: number;
+  cornerTilt: number;
+  sparkle: number;
+  waveX: number;
+  waveY: number;
+  tiltX: number;
+  tiltY: number;
 }
 const rest: Expression = {
   eyes: 1,
@@ -36,6 +46,16 @@ const rest: Expression = {
   stretch: 1,
   lidCurve: 0,
   overlap: 0,
+  rightEye: 1,
+  eyeOffset: 0,
+  gazeSplit: 0,
+  browAsymmetry: 0,
+  cornerTilt: 0,
+  sparkle: 1,
+  waveX: 0,
+  waveY: 0,
+  tiltX: 0,
+  tiltY: 0,
 };
 const poses: Record<AvatarMood, Partial<Expression>> = {
   idle: {},
@@ -200,8 +220,178 @@ const poses: Record<AvatarMood, Partial<Expression>> = {
     stretch: 0.96,
   },
 };
-export const expressionFor = (mood: AvatarMood): Expression => {
-  const pose = { ...rest, ...poses[mood] };
+export const NAMED_EXPRESSIONS = [
+  "curious",
+  "skeptical",
+  "hopeful",
+  "determined",
+  "worried",
+  "proud",
+  "shy",
+  "tiredHappy",
+] as const;
+export type ExpressionName = (typeof NAMED_EXPRESSIONS)[number];
+export type ExpressionMix =
+  | ExpressionName
+  | { from: ExpressionName; to: ExpressionName; mix: number };
+const named: Record<ExpressionName, Partial<Expression>> = {
+  curious: {
+    eyes: 1.08,
+    wink: 0.86,
+    gazeX: 2,
+    gazeY: -2,
+    brow: 3,
+    browAsymmetry: 3,
+    gazeSplit: -0.2,
+    smile: 2,
+    mouthWidth: 10,
+    mouthX: 2,
+    cornerTilt: -1.5,
+    lean: -4,
+  },
+  skeptical: {
+    eyes: 0.65,
+    rightEye: 1.5,
+    brow: 1,
+    browAsymmetry: 5,
+    browTilt: 2,
+    eyeOffset: 1,
+    gazeSplit: 0.5,
+    gazeX: -2,
+    smile: 0,
+    mouthWidth: 12,
+    mouthX: 2,
+    cornerTilt: 2,
+    cheek: 0.08,
+    lean: 4,
+  },
+  hopeful: {
+    eyes: 1.12,
+    brow: 4,
+    browTilt: -2,
+    browAsymmetry: 1.5,
+    gazeY: -1.5,
+    smile: 3,
+    mouthWidth: 11,
+    cheek: 0.3,
+    sparkle: 1.2,
+    eyeOffset: -0.2,
+    lean: -2,
+  },
+  determined: {
+    eyes: 0.72,
+    wink: 0.9,
+    brow: -1,
+    browTilt: 5,
+    browAsymmetry: 0.8,
+    smile: 0.8,
+    mouthWidth: 11,
+    cornerTilt: -1,
+    gazeSplit: 0.15,
+    lean: 2,
+    sparkle: 0.8,
+  },
+  worried: {
+    eyes: 0.9,
+    rightEye: 1.08,
+    brow: 3,
+    browTilt: -6,
+    browAsymmetry: 1,
+    smile: -4,
+    mouthWidth: 11,
+    mouthOpen: 0.4,
+    gazeY: 1,
+    cornerTilt: 1,
+    gazeSplit: -0.35,
+    cheek: 0.1,
+    stretch: 0.98,
+  },
+  proud: {
+    eyes: 0.5,
+    brow: 2,
+    browAsymmetry: 1.5,
+    smile: 6,
+    mouthWidth: 19,
+    mouthX: 1,
+    cornerTilt: -2,
+    cheek: 0.45,
+    lift: -1,
+    lean: -3,
+  },
+  shy: {
+    eyes: 0.75,
+    wink: 0.85,
+    gazeX: -2,
+    gazeY: 2,
+    brow: 1,
+    browTilt: -2,
+    browAsymmetry: 2,
+    smile: 4,
+    mouthWidth: 9,
+    mouthX: -2,
+    cornerTilt: 1.5,
+    cheek: 0.75,
+    lean: 4,
+    sparkle: 0.75,
+    eyeOffset: 0.5,
+  },
+  tiredHappy: {
+    eyes: 0.38,
+    brow: 1,
+    browAsymmetry: 1,
+    smile: 5,
+    mouthWidth: 17,
+    cheek: 0.35,
+    gazeY: 1,
+    lean: -3,
+    stretch: 0.99,
+    sparkle: 0.65,
+  },
+};
+const contextual: Partial<Record<AvatarMood, ExpressionName>> = {
+  waiting: "hopeful",
+  working: "determined",
+  error: "worried",
+  thinking: "curious",
+};
+export const namedExpression = (name: ExpressionName): Expression => ({
+  ...rest,
+  ...named[name],
+});
+export const blendExpressions = (
+  a: Expression,
+  b: Expression,
+  mix: number
+): Expression => {
+  const t = Math.max(0, Math.min(1, mix));
+  if (t === 0) return { ...a };
+  if (t === 1) return { ...b };
+  return Object.fromEntries(
+    Object.keys(a).map((key) => {
+      const k = key as keyof Expression;
+      return [k, a[k] + (b[k] - a[k]) * t];
+    })
+  ) as unknown as Expression;
+};
+export const expressionFor = (
+  mood: AvatarMood,
+  expression?: ExpressionMix
+): Expression => {
+  const selection = expression ?? contextual[mood];
+  const pose = selection
+    ? typeof selection === "string"
+      ? namedExpression(selection)
+      : blendExpressions(
+          namedExpression(selection.from),
+          namedExpression(selection.to),
+          selection.mix
+        )
+    : { ...rest, ...poses[mood] };
+  if (!expression && mood === "confused") {
+    pose.browAsymmetry = 4;
+    pose.eyeOffset = 1.5;
+    pose.cornerTilt = 2;
+  }
   pose.overlap = -pose.lean * 0.6;
   return pose;
 };
@@ -222,6 +412,7 @@ export interface Personality {
   weight: number;
   bounce: number;
   sway: number;
+  softness?: number;
 }
 const soft: Personality = { period: 4.8, weight: 1, bounce: 0.7, sway: 0.7 };
 /** Weight controls spring mass; period and amplitude keep the same rig individual. */
@@ -231,13 +422,25 @@ export const personalityFor = (shape: AvatarShape): Personality => {
     case "slab":
     case "hex":
     case "gem":
-      return { period: 6.8, weight: 1.8, bounce: 0.25, sway: 0.3 };
+      return {
+        period: 6.8,
+        weight: 1.8,
+        bounce: 0.25,
+        sway: 0.3,
+        softness: 0.18,
+      };
     case "jelly":
     case "blob":
     case "mochi":
     case "pillow":
     case "bean":
-      return { period: 4.2, weight: 0.8, bounce: 1.2, sway: 0.8 };
+      return {
+        period: 4.2,
+        weight: 0.8,
+        bounce: 1.2,
+        sway: 0.8,
+        softness: shape === "jelly" ? 1.8 : 1.1,
+      };
     case "bunny":
       return { period: 3.8, weight: 0.7, bounce: 1.7, sway: 0.6 };
     case "ghost":
@@ -279,12 +482,50 @@ export const sampleExpression = (
   mood: AvatarMood,
   shape: AvatarShape,
   seconds: number,
-  seed: number
+  seed: number,
+  expression?: ExpressionMix
 ): Expression => {
-  const p = expressionFor(mood);
+  const p = expressionFor(mood, expression);
   const character = personalityFor(shape);
   const phase = ((seconds + seed) * Math.PI * 2) / character.period;
   const breath = Math.sin(phase);
+  const softness = character.softness ?? 0.65;
+  p.waveX = Math.sin(phase * 1.7) * softness;
+  p.waveY = Math.cos(phase * 1.3 + 0.7) * softness * 0.7;
+  p.tiltX = p.gazeX * 0.6;
+  p.tiltY = p.gazeY * 0.5;
+  // A small brow flick leads the work glance; the mouth keeps its intent.
+  if (["working", "waiting", "listening"].includes(mood)) {
+    const flick = (seconds + seed) % 7.3;
+    if (flick < 0.45)
+      p.browAsymmetry += Math.sin((flick / 0.45) * Math.PI) * 1.5;
+  }
+  if (["excited", "done", "surprised"].includes(mood)) {
+    const cycle = mood === "excited" ? 1.8 : mood === "done" ? 3.8 : 5.8;
+    const t = (seconds + seed) % cycle;
+    if (t < 0.18) {
+      p.stretch *= 0.94;
+      p.lift += 1;
+    } else if (t < 0.7) {
+      const arc = Math.sin(((t - 0.18) / 0.52) * Math.PI);
+      p.lift -= arc * (mood === "excited" ? 5 : 3) * character.bounce;
+      p.stretch *= 1 + arc * 0.045;
+      p.lean += Math.sin(((t - 0.18) / 0.52) * Math.PI * 2) * 2;
+    } else if (t < 1.2) {
+      const settle = Math.sin((t - 0.7) * 16) * Math.exp(-(t - 0.7) * 6);
+      p.waveX += settle * softness * 3;
+      p.waveY -= settle * softness * 2;
+      p.stretch *= 1 - settle * 0.035;
+    }
+  }
+  if (mood === "error") {
+    const shake = (seconds + seed) % 5;
+    if (shake < 0.65) {
+      p.lean += Math.sin(shake * 24) * 3 * Math.exp(-shake * 3);
+      p.waveX += Math.sin(shake * 24) * softness;
+    }
+  }
+
   p.stretch *=
     1 + breath * (mood === "asleep" ? 0.018 : 0.009) * character.bounce;
   p.lift +=
@@ -330,9 +571,43 @@ export const sampleExpression = (
     p.mouthWidth = 13 + (1 - syllable) * 6;
     p.brow += syllable;
     p.stretch += syllable * 0.009;
-    p.lift -= syllable * 0.5;
+    p.lift -= syllable * 1.2;
+    p.waveY += syllable * softness * 0.8;
   }
   p.overlap = -p.lean * 0.6;
+  return p;
+};
+
+/** A short event impulse: anticipation, action on an arc, then overlapping settle. */
+export const entryExpression = (
+  pose: Expression,
+  mood: AvatarMood,
+  shape: AvatarShape,
+  elapsed: number,
+  changingLook = false
+): Expression => {
+  const p = { ...pose };
+  const personality = personalityFor(shape);
+  const celebrating =
+    changingLook || ["done", "excited", "surprised"].includes(mood);
+  if (elapsed >= 0 && elapsed < 0.1) {
+    p.browAsymmetry += 1.2;
+    if (celebrating) {
+      p.stretch = 0.96;
+      p.lift = 1;
+    }
+  }
+  const t = elapsed - 0.1;
+  if (t >= 0 && t < 0.7 && celebrating) {
+    const arc = Math.sin(Math.min(1, t / 0.55) * Math.PI);
+    const settle = Math.sin(t * 18) * Math.exp(-t * 5);
+    p.lift -= arc * 2.5 * personality.bounce;
+    p.stretch *= 1 + arc * 0.04;
+    p.waveX += settle * (personality.softness ?? 0.65) * 2;
+    p.waveY -= settle * (personality.softness ?? 0.65);
+  }
+  if (mood === "error" && t >= 0 && t < 0.6)
+    p.lean += Math.sin(t * 24) * Math.exp(-t * 5) * 3;
   return p;
 };
 
@@ -341,7 +616,9 @@ export const mouthPath = (p: Expression, widthScale = 1): string => {
   const half = (p.mouthWidth * widthScale) / 2;
   const x = 50 + p.mouthX;
   const y = 64;
+  const leftY = y - p.cornerTilt;
+  const rightY = y + p.cornerTilt;
   const top = y + p.smile - p.mouthOpen * 0.65;
   const bottom = y + p.smile + p.mouthOpen * 1.35;
-  return `M${x - half} ${y} C${x - half} ${top} ${x + half} ${top} ${x + half} ${y} C${x + half} ${bottom} ${x - half} ${bottom} ${x - half} ${y} Z`;
+  return `M${x - half} ${leftY} C${x - half} ${top} ${x + half} ${top} ${x + half} ${rightY} C${x + half} ${bottom} ${x - half} ${bottom} ${x - half} ${leftY} Z`;
 };

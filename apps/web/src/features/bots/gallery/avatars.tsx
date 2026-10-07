@@ -3,6 +3,10 @@ import { useState } from "react";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import {
+  NAMED_EXPRESSIONS,
+  type ExpressionMix,
+} from "#renderer/components/bot-avatar/expression";
+import {
   AVATAR_SHAPES,
   AVATAR_ACCESSORIES,
   AVATAR_PALETTE,
@@ -17,6 +21,8 @@ export const AvatarGallery = () => {
   const [size, setSize] = useState(44);
   const [allSizes, setAllSizes] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const [expression, setExpression] = useState<ExpressionMix>();
+  const [morph, setMorph] = useState(false);
   const [mood, setMood] = useState<AvatarMood>("idle");
   return (
     <div className="space-y-8" data-avatar-gallery>
@@ -29,8 +35,26 @@ export const AvatarGallery = () => {
         <button onClick={() => setAnimate(!animate)} aria-pressed={animate}>
           {"Motion" /* i18n-ignore: dev gallery */}
         </button>
+        {NAMED_EXPRESSIONS.map((e) => (
+          <button
+            key={e}
+            onClick={() => {
+              setMood("idle");
+              setExpression(e);
+            }}
+          >
+            {e}
+          </button>
+        ))}
         {moods.map((m) => (
-          <button key={m} onClick={() => setMood(m)} aria-pressed={mood === m}>
+          <button
+            key={m}
+            onClick={() => {
+              setMood(m);
+              setExpression(undefined);
+            }}
+            aria-pressed={mood === m}
+          >
             {m}
           </button>
         ))}
@@ -44,11 +68,52 @@ export const AvatarGallery = () => {
               color: AVATAR_PALETTE[i % AVATAR_PALETTE.length]!.hex,
               accessory: "none",
             }}
+            expression={expression}
             mood={mood}
             size={72}
             animate={animate}
           />
         ))}
+      </div>
+      <div data-avatar-morph className="flex items-center gap-5 p-5">
+        <BotAvatar
+          look={
+            morph
+              ? { shape: "bunny", color: "#f472b6", accessory: "bow" }
+              : { shape: "jelly", color: "#60a5fa", accessory: "none" }
+          }
+          mood={mood}
+          expression={expression}
+          size={160}
+          animate={animate}
+        />
+        <button onClick={() => setMorph(!morph)}>
+          {"Morph look" /* i18n-ignore: dev gallery */}
+        </button>
+      </div>
+      <div
+        data-avatar-expressions
+        className="flex gap-5 p-5"
+        style={{ width: "max-content", background: "var(--background)" }}
+      >
+        {NAMED_EXPRESSIONS.map((e) => (
+          <div key={e} className="flex flex-col items-center gap-3">
+            <BotAvatar
+              look={{ shape: "mochi", color: "#60a5fa", accessory: "none" }}
+              expression={e}
+              size={72}
+            />
+            <span>{e}</span>
+          </div>
+        ))}
+        <div className="flex flex-col items-center gap-3">
+          <BotAvatar
+            look={{ shape: "mochi", color: "#60a5fa", accessory: "none" }}
+            expression={{ from: "curious", to: "determined", mix: 0.5 }}
+            size={72}
+          />
+          <span>{"curious + focused" /* i18n-ignore: dev gallery */}</span>
+        </div>
       </div>
       <div
         data-avatar-board
@@ -95,6 +160,7 @@ export const AvatarGallery = () => {
           <div key={s} className="flex flex-col items-center gap-3">
             <BotAvatar
               look={{ shape: "mochi", color: "#60a5fa", accessory: "none" }}
+              expression={expression}
               mood={mood}
               size={s}
               animate={animate}
@@ -108,6 +174,7 @@ export const AvatarGallery = () => {
           <div key={accessory} className="flex flex-col items-center gap-3">
             <BotAvatar
               look={{ shape: "bunny", color: "#c084fc", accessory }}
+              expression={expression}
               mood={mood}
               size={72}
               animate={animate}

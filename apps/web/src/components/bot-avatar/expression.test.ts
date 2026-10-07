@@ -8,7 +8,11 @@ import {
 
 import {
   blinkAt,
+  NAMED_EXPRESSIONS,
+  namedExpression,
+  blendExpressions,
   expressionFor,
+  entryExpression,
   mouthPath,
   opticalSize,
   personalityFor,
@@ -16,6 +20,67 @@ import {
 } from "./expression";
 const moods = [...LIFECYCLE_MOODS, ...REACTION_MOODS];
 describe("character expression", () => {
+  it("uses hopeful approval, determined work and worried errors in product moods", () => {
+    expect(expressionFor("waiting")).toEqual(expressionFor("idle", "hopeful"));
+    expect(expressionFor("working")).toEqual(
+      expressionFor("idle", "determined")
+    );
+    expect(expressionFor("error")).toEqual(expressionFor("idle", "worried"));
+    expect(expressionFor("error").mouthOpen).toBeLessThan(1);
+  });
+  it("adds distinct asymmetric poses and bounded expression mixes", () => {
+    const poses = NAMED_EXPRESSIONS.map(namedExpression);
+    expect(new Set(poses.map((p) => JSON.stringify(p))).size).toBe(
+      NAMED_EXPRESSIONS.length
+    );
+    expect(poses.every((p) => p.browAsymmetry !== 0)).toBe(true);
+    expect(namedExpression("skeptical").rightEye).toBeGreaterThan(1);
+    expect(namedExpression("shy").cheek).toBeGreaterThan(
+      namedExpression("proud").cheek
+    );
+    const a = namedExpression("curious"),
+      b = namedExpression("determined");
+    expect(blendExpressions(a, b, -1)).toEqual(a);
+    expect(blendExpressions(a, b, 2)).toEqual(b);
+    expect(blendExpressions(a, b, 0.5).eyes).toBeCloseTo((a.eyes + b.eyes) / 2);
+  });
+  it("anticipates event hops, follows an arc, and settles without changing the face", () => {
+    const base = expressionFor("done");
+    const crouch = entryExpression(base, "done", "jelly", 0.05);
+    const hop = entryExpression(base, "done", "jelly", 0.35);
+    expect(crouch.stretch).toBeLessThan(1);
+    expect(crouch.lift).toBeGreaterThan(base.lift);
+    expect(hop.lift).toBeLessThan(base.lift);
+    expect(hop.smile).toBe(base.smile);
+    expect(entryExpression(base, "done", "jelly", 1)).toEqual(base);
+    expect(base).toEqual(expressionFor("done"));
+    expect(
+      Math.abs(
+        entryExpression(expressionFor("error"), "error", "pebble", 0.25).lean
+      )
+    ).toBeGreaterThan(0);
+    for (const name of NAMED_EXPRESSIONS)
+      for (const shape of AVATAR_SHAPES)
+        expect(
+          Object.values(sampleExpression("idle", shape, 3.7, 2, name)).every(
+            Number.isFinite
+          )
+        ).toBe(true);
+  });
+  it("ties outline waves and body action to shape weight and mood", () => {
+    const samples = (mood: "excited" | "idle", shape: "jelly" | "pebble") =>
+      Array.from({ length: 80 }, (_, i) =>
+        sampleExpression(mood, shape, i * 0.05, 0)
+      );
+    expect(
+      Math.max(...samples("excited", "jelly").map((p) => -p.lift))
+    ).toBeGreaterThan(5);
+    expect(
+      Math.max(...samples("idle", "jelly").map((p) => Math.abs(p.waveX)))
+    ).toBeGreaterThan(
+      Math.max(...samples("idle", "pebble").map((p) => Math.abs(p.waveX))) * 5
+    );
+  });
   it("coordinates pleasure, attention, sleep and concern", () => {
     for (const mood of ["happy", "done", "excited", "love"] as const) {
       const p = expressionFor(mood);

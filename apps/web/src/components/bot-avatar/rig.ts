@@ -12,10 +12,12 @@ import { springs } from "#renderer/lib/motion";
 import { observeAvatar, subscribeClock } from "./clock";
 import {
   expressionFor,
+  entryExpression,
   mouthPath,
   personalityFor,
   sampleExpression,
   type Expression,
+  type ExpressionMix,
 } from "./expression";
 
 type Rig = { [K in keyof Expression]: MotionValue<number> };
@@ -30,50 +32,67 @@ export const useFaceRig = (
   shape: AvatarShape,
   animated: boolean,
   size: number,
-  ref: React.RefObject<HTMLSpanElement | null>
+  ref: React.RefObject<HTMLSpanElement | null>,
+  expression?: ExpressionMix
 ) => {
   const [visible, setVisible] = useState(false);
+  const [documentVisible, setDocumentVisible] = useState(
+    () => !document.hidden
+  );
   const id = useId();
   const seed = [...id].reduce((sum, c) => sum + c.charCodeAt(0), 0) * 0.173;
   const [rig] = useState(() => {
-    const pose = expressionFor(mood);
+    const pose = expressionFor(mood, expression);
     return Object.fromEntries(
       channels.map((key) => [key, motionValue(pose[key])])
     ) as Rig;
   });
+  const previousShape = useRef(shape);
   const pointer = useRef({ x: 0, y: 0 });
+  const pressed = useRef(false);
+  const pressUntil = useRef(0);
   const pointerBounds = useRef<DOMRect | null>(null);
-  useEffect(
-    () => (ref.current ? observeAvatar(ref.current, setVisible) : undefined),
-    [ref]
-  );
+  useEffect(() => {
+    if (!animated || size <= 24) return;
+    return ref.current ? observeAvatar(ref.current, setVisible) : undefined;
+  }, [animated, size, ref]);
   const active = animated && visible && size > 24;
   useEffect(() => {
+    const changingLook = previousShape.current !== shape;
+    previousShape.current = shape;
     const controls = new Map<keyof Expression, ReturnType<typeof animate>>();
     const personality = personalityFor(shape);
     let anticipationUntil = performance.now() / 1000 + 0.1;
     let following = 0;
     let blinkUntil = 0;
-    const restingEyes = expressionFor(mood).eyes;
-    const update = (seconds: number, documentVisible: boolean) => {
-      const moving = active && documentVisible;
-      const pose = moving
-        ? sampleExpression(mood, shape, seconds, seed)
-        : expressionFor(mood);
+    const restingEyes = expressionFor(mood, expression).eyes;
+    const update = (seconds: number, documentIsVisible: boolean) => {
+      setDocumentVisible(documentIsVisible);
+      const moving = active && documentIsVisible;
+      let pose = moving
+        ? sampleExpression(mood, shape, seconds, seed, expression)
+        : expressionFor(mood, expression);
       if (moving) {
         pose.gazeX += pointer.current.x;
         pose.gazeY += pointer.current.y;
         // Gaze reaches its target first. The heavier head follows on an arc.
         following += (pose.gazeX - following) * 0.12;
-        pose.lean += following * 0.45;
-        pose.overlap = -pose.lean * 0.6;
-        if (
-          seconds < anticipationUntil &&
-          ["done", "excited", "surprised"].includes(mood)
-        ) {
-          pose.stretch = 0.96;
-          pose.lift = 1;
+        pose.lean += following * 0.65;
+        pose.tiltX = following * 0.9;
+        pose.tiltY = pose.gazeY * 0.7;
+        if (pressed.current || seconds < pressUntil.current) {
+          pose.stretch *= 0.9;
+          pose.lift += 2;
+          pose.waveY -= 1.5;
         }
+        pose = entryExpression(
+          pose,
+          mood,
+          shape,
+          seconds - anticipationUntil + 0.1,
+          changingLook
+        );
+        pose.overlap = -pose.lean * 0.6;
       }
       if (restingEyes > 0.2 && pose.eyes < restingEyes * 0.5)
         blinkUntil = seconds + 0.3;
@@ -87,20 +106,36 @@ export const useFaceRig = (
             key,
             animate(rig[key], pose[key], {
               ...springs.character,
+              delay:
+                seconds < anticipationUntil
+                  ? key.startsWith("mouth") || key === "smile"
+                    ? 0.06
+                    : key === "eyes" || key === "wink" || key === "rightEye"
+                      ? 0.025
+                      : 0
+                  : 0,
+              damping:
+                key === "waveX" || key === "waveY"
+                  ? 18 + personality.weight * 3
+                  : springs.character.damping,
               mass:
                 key === "gazeX" ||
                 key === "gazeY" ||
-                (key === "eyes" && seconds < blinkUntil)
+                ((key === "eyes" || key === "wink" || key === "rightEye") &&
+                  seconds < blinkUntil)
                   ? 0.35
                   : key === "overlap"
                     ? personality.weight * 1.4
                     : personality.weight,
               stiffness:
-                key === "eyes" && seconds < blinkUntil
+                (key === "eyes" || key === "wink" || key === "rightEye") &&
+                seconds < blinkUntil
                   ? 700
-                  : key === "overlap"
-                    ? 160
-                    : springs.character.stiffness,
+                  : key === "waveX" || key === "waveY"
+                    ? 150 / (personality.softness ?? 0.65)
+                    : key === "overlap"
+                      ? 160
+                      : springs.character.stiffness,
             })
           );
         }
@@ -113,15 +148,18 @@ export const useFaceRig = (
       unsubscribe?.();
       for (const control of controls.values()) control.stop();
     };
-  }, [active, mood, shape, seed, rig]);
+  }, [active, mood, shape, seed, rig, expression]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
-    return `translateY(${rig.lift.get()}%) rotate(${rig.lean.get()}deg) scale(${0.98 / stretch}, ${0.98 * stretch})`;
+    const lift = Math.max(-5, Math.min(3, rig.lift.get()));
+    const margin = 0.98 - Math.max(0, -lift - 1) * 0.018;
+    return `translateY(${lift}%) rotate(${rig.lean.get()}deg) skewY(${rig.tiltX.get() * 0.35}deg) scale(${margin / stretch}, ${margin * stretch})`;
   });
   const face = useTransform(
-    () => `translate(${rig.gazeX.get() * 0.25}px, ${rig.gazeY.get() * 0.2}px)`
+    () =>
+      `translate(${rig.tiltX.get() * 0.8}px, ${rig.tiltY.get() * 0.6}px) scaleX(${1 - Math.min(0.09, Math.abs(rig.tiltX.get()) * 0.015)})`
   );
-  const secondary = useTransform(() => `rotate(${rig.overlap.get()}deg)`);
+  const secondary = rig.overlap;
   const mouth = useTransform(() => mouthPath(read(rig), size <= 24 ? 1.1 : 1));
   const cheek = useTransform(() => rig.cheek.get());
   return {
@@ -131,7 +169,28 @@ export const useFaceRig = (
     secondary,
     mouth,
     cheek,
-    active,
+    active: active && documentVisible,
+    shadow: useTransform(
+      () =>
+        `translateX(${rig.tiltX.get() * 0.5}%) scale(${1 + Math.max(0, -rig.lift.get()) * 0.045}, ${1 - Math.max(0, -rig.lift.get()) * 0.035})`
+    ),
+    shadowOpacity: useTransform(() =>
+      Math.max(0.35, 1 + rig.lift.get() * 0.045)
+    ),
+    lightX: useTransform(() => `${30 - rig.tiltX.get() * 2}%`),
+    lightY: useTransform(() => `${18 - rig.tiltY.get() * 2}%`),
+    onPointerDown: () => {
+      if (active) {
+        pressed.current = true;
+        pressUntil.current = performance.now() / 1000 + 0.18;
+      }
+    },
+    onPointerUp: () => {
+      pressed.current = false;
+    },
+    onPointerCancel: () => {
+      pressed.current = false;
+    },
     onPointerEnter: (event: React.PointerEvent<HTMLSpanElement>) => {
       if (active)
         pointerBounds.current = event.currentTarget.getBoundingClientRect();
@@ -160,6 +219,7 @@ export const useFaceRig = (
       };
     },
     onPointerLeave: () => {
+      pressed.current = false;
       pointer.current = { x: 0, y: 0 };
       pointerBounds.current = null;
     },

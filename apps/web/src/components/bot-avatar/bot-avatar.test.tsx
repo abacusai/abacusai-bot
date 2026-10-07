@@ -187,6 +187,69 @@ describe("BotAvatar", () => {
     vi.unstubAllGlobals();
   });
 
+  it("pauses the whole avatar when the document hides and resumes on return", () => {
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(false);
+    const { container, unmount } = render(
+      <BotAvatar look={look()} mood="talking" size={72} animate />
+    );
+    expect(container.querySelector(".bav")!.hasAttribute("data-animate")).toBe(
+      true
+    );
+    act(() => {
+      hidden.mockReturnValue(true);
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(container.querySelector(".bav")!.hasAttribute("data-animate")).toBe(
+      false
+    );
+    act(() => {
+      hidden.mockReturnValue(false);
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(container.querySelector(".bav")!.hasAttribute("data-animate")).toBe(
+      true
+    );
+    unmount();
+    hidden.mockRestore();
+  });
+
+  it("swaps look instantly at tiny sizes and under reduced motion without changing expression", () => {
+    for (const size of [24, 72]) {
+      preference.reduced = true;
+      const { container, rerender, unmount } = render(
+        <BotAvatar
+          look={look({ shape: "jelly" })}
+          mood="happy"
+          size={size}
+          animate
+        />
+      );
+      const before = container.querySelector(".bav-body")!.getAttribute("d");
+      const mouth = container.querySelector(".bav-mouth")!.getAttribute("d");
+      rerender(
+        <BotAvatar
+          look={look({ shape: "bunny", color: "#f472b6", accessory: "bow" })}
+          mood="happy"
+          size={size}
+          animate
+        />
+      );
+      expect(container.querySelector(".bav-body")!.getAttribute("d")).not.toBe(
+        before
+      );
+      expect(container.querySelector(".bav-body")!.getAttribute("fill")).toBe(
+        "#f472b6"
+      );
+      expect(container.querySelector(".bav-mouth")!.getAttribute("d")).toBe(
+        mouth
+      );
+      expect(
+        container.querySelector(".bav")!.hasAttribute("data-animate")
+      ).toBe(false);
+      unmount();
+    }
+  });
+
   it("exports the light-theme outline class", () => {
     expect(ACCENT_OUTLINE_CLASS).toBe("accent-outline");
     expect(css).toMatch(

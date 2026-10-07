@@ -1,6 +1,6 @@
 /** A coordinated SVG character rig. Public look, mood and hatch props stay stable. */
 import "./moods.css";
-import { motion, useTransform } from "motion/react";
+import { AnimatePresence, motion, useTransform } from "motion/react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import type {
@@ -14,8 +14,9 @@ import {
   useMotionPreference,
 } from "#renderer/lib/motion";
 
-import { opticalSize } from "./expression";
+import { opticalSize, type ExpressionMix } from "./expression";
 import { BODIES, EARS } from "./geometry";
+import { useOutline } from "./outline";
 import { useFaceRig } from "./rig";
 
 const ACCESSORIES: Record<
@@ -116,6 +117,8 @@ export interface BotAvatarProps {
   look: Look;
   /** Lifecycle or reaction; `done` wears the happy face (canvas). */
   mood?: AvatarMood;
+  /** Optional character pose or mix, independent of lifecycle and particles. */
+  expression?: ExpressionMix;
   /** Rendered size in px (22 title bar, 36 sidebar, 56 transcript, 96 setup). */
   size: number;
   /** Allow character motion, subject to visibility and motion preference. */
@@ -142,11 +145,14 @@ const Eye = ({
 }) => {
   const lidClip = useId();
   const opening = useTransform(() =>
-    Math.max(0.025, rig.eyes.get() * (left ? rig.wink.get() : 1))
+    Math.max(
+      0.025,
+      rig.eyes.get() * (left ? rig.wink.get() : rig.rightEye.get())
+    )
   );
   const pupil = useTransform(
     () =>
-      `translate(${rig.gazeX.get()}px, ${rig.gazeY.get()}px) scale(${Math.min(1.12, Math.max(1, opening.get()))})`
+      `translate(${rig.gazeX.get() + (left ? -1 : 1) * rig.gazeSplit.get()}px, ${rig.gazeY.get()}px) scale(${Math.min(1.12, Math.max(1, opening.get()))})`
   );
   const aperture = useTransform(() => {
     const height = optics.eyeRadius * 2.5 * opening.get();
@@ -162,12 +168,16 @@ const Eye = ({
   const open = useTransform(() =>
     Math.min(1, Math.max(0, (opening.get() - 0.12) * 5))
   );
+  const eyePosition = useTransform(
+    () => `translateY(${(left ? -1 : 1) * rig.eyeOffset.get()}px)`
+  );
+  const sparkle = useTransform(() => 0.95 * rig.sparkle.get());
   const brow = useTransform(
     () =>
-      `M${x - 6} ${34 - rig.brow.get() + ((left ? -1 : 1) * rig.browTilt.get()) / 2} Q${x} ${32 - rig.brow.get()} ${x + 6} ${34 - rig.brow.get() + ((left ? 1 : -1) * rig.browTilt.get()) / 2}`
+      `M${x - 6} ${34 - rig.brow.get() - (left ? 1 : -1) * rig.browAsymmetry.get() + ((left ? -1 : 1) * rig.browTilt.get()) / 2} Q${x} ${32 - rig.brow.get() - (left ? 1 : -1) * rig.browAsymmetry.get()} ${x + 6} ${34 - rig.brow.get() - (left ? 1 : -1) * rig.browAsymmetry.get() + ((left ? 1 : -1) * rig.browTilt.get()) / 2}`
   );
   return (
-    <g className="bav-eye">
+    <motion.g className="bav-eye" style={{ transform: eyePosition }}>
       <defs>
         <clipPath id={lidClip}>
           <motion.path d={aperture} />
@@ -200,13 +210,13 @@ const Eye = ({
           />
           {optics.highlights && (
             <>
-              <ellipse
+              <motion.ellipse
                 cx={x - 1.8}
                 cy={44}
                 rx={1.8}
                 ry={2.2}
                 fill="white"
-                opacity={0.95}
+                style={{ opacity: sparkle }}
               />
               <circle cx={x + 2} cy={49} r={0.8} fill="white" opacity={0.4} />
             </>
@@ -221,13 +231,14 @@ const Eye = ({
         fill="none"
         strokeLinecap="round"
       />
-    </g>
+    </motion.g>
   );
 };
 
 const AvatarBody = ({
   look,
   mood = "idle",
+  expression,
   size,
   animate = false,
   label,
@@ -244,14 +255,18 @@ const AvatarBody = ({
     look.shape,
     animate && !reduced,
     size,
-    rootRef
+    rootRef,
+    expression
   );
   const { rig } = faceRig;
+  const outline = useOutline(look, rig, faceRig.active);
+  const shadowColor = useTransform(
+    () => `color-mix(in srgb, ${outline.color.get()} 20%, transparent)`
+  );
+  const partTransition = { duration: faceRig.active ? 0.24 : 0 };
   const ears = EARS[look.shape];
-  const animal = ears != null;
   const accessory =
     look.accessory === "none" ? null : ACCESSORIES[look.accessory];
-  const faceY = animal ? 9 : look.shape === "heart" ? -3 : 0;
   const tongue = useTransform(
     () =>
       Math.min(1, rig.mouthOpen.get() / 5) *
@@ -273,6 +288,9 @@ const AvatarBody = ({
       onPointerEnter={faceRig.onPointerEnter}
       onPointerMove={faceRig.onPointerMove}
       onPointerLeave={faceRig.onPointerLeave}
+      onPointerDown={faceRig.onPointerDown}
+      onPointerUp={faceRig.onPointerUp}
+      onPointerCancel={faceRig.onPointerCancel}
       style={
         {
           "--bav-size": `${size}px`,
@@ -281,49 +299,81 @@ const AvatarBody = ({
         } as CSSProperties
       }
     >
-      <span className="bav-shadow" />
+      <motion.span
+        className="bav-shadow"
+        style={{
+          transform: faceRig.shadow,
+          opacity: faceRig.shadowOpacity,
+          background: faceRig.active ? shadowColor : undefined,
+        }}
+      />
       <motion.span
         className="bav-character"
         style={{ transform: faceRig.body }}
       >
         <svg className="bav-svg" viewBox="0 0 100 100" aria-hidden="true">
           <defs>
-            <radialGradient id={gradient} cx="30%" cy="18%" r="90%">
+            <motion.radialGradient
+              id={gradient}
+              cx={faceRig.lightX}
+              cy={faceRig.lightY}
+              r="90%"
+            >
               <stop offset="0" stopColor="white" stopOpacity=".5" />
               <stop offset=".48" stopColor="white" stopOpacity=".06" />
               <stop offset="1" stopColor="#172437" stopOpacity=".19" />
-            </radialGradient>
+            </motion.radialGradient>
             <clipPath id={`${gradient}-mouth`}>
               <motion.path d={faceRig.mouth} />
             </clipPath>
           </defs>
-          {ears && (
-            <motion.g
-              className="bav-ears"
-              style={{
-                transform: faceRig.secondary,
-                transformOrigin: "50px 40px",
-              }}
-            >
-              <path d={ears} fill={look.color} />
-              <path d={ears} fill={`url(#${gradient})`} />
-              <path
-                d={ears}
-                fill="#ffadc4"
-                opacity=".2"
-                transform="translate(10 6) scale(.8)"
-              />
-            </motion.g>
-          )}
-          <path className="bav-body" d={BODIES[look.shape]} fill={look.color} />
-          <path
-            d={BODIES[look.shape]}
+          <AnimatePresence initial={false}>
+            {ears && (
+              <motion.g
+                key={look.shape}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={partTransition}
+                className="bav-ears"
+                style={{
+                  rotate: faceRig.secondary,
+                  transformOrigin: "50px 40px",
+                }}
+              >
+                <motion.path
+                  d={ears}
+                  fill={faceRig.active ? outline.color : look.color}
+                />
+                <path d={ears} fill={`url(#${gradient})`} />
+                <path
+                  d={ears}
+                  fill="#ffadc4"
+                  opacity=".2"
+                  transform="translate(10 6) scale(.8)"
+                />
+              </motion.g>
+            )}
+          </AnimatePresence>
+          <motion.path
+            className="bav-body"
+            d={faceRig.active ? outline.path : BODIES[look.shape]}
+            fill={faceRig.active ? outline.color : look.color}
+          />
+          <motion.path
+            d={faceRig.active ? outline.path : BODIES[look.shape]}
             fill={`url(#${gradient})`}
             stroke="white"
             strokeOpacity=".25"
             strokeWidth=".8"
           />
-          <g transform={`translate(0 ${faceY})`}>
+          <motion.g
+            style={{
+              transform: faceRig.active
+                ? outline.facePosition
+                : `translateY(${ears ? 9 : look.shape === "heart" ? -3 : 0}px)`,
+            }}
+          >
             <motion.g className="bav-face" style={{ transform: faceRig.face }}>
               {optics.cheeks && (
                 <motion.g
@@ -362,40 +412,61 @@ const AvatarBody = ({
                 />
               )}
             </motion.g>
+            <AnimatePresence initial={false}>
+              {accessory &&
+                ["glasses", "monocle", "shades"].includes(look.accessory) && (
+                  <motion.g
+                    key={look.accessory}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={partTransition}
+                    className="bav-acc"
+                    data-accessory={look.accessory}
+                    style={{
+                      transform: faceRig.face,
+                      transformOrigin: "50px 47px",
+                    }}
+                  >
+                    <path
+                      d={accessory.d}
+                      fill={accessory.fill}
+                      stroke={accessory.stroke}
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </motion.g>
+                )}
+            </AnimatePresence>
+          </motion.g>
+          <AnimatePresence initial={false}>
             {accessory &&
-              ["glasses", "monocle", "shades"].includes(look.accessory) && (
-                <g className="bav-acc" data-accessory={look.accessory}>
+              !["glasses", "monocle", "shades"].includes(look.accessory) && (
+                <motion.g
+                  key={look.accessory}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  transition={partTransition}
+                  className="bav-acc"
+                  data-accessory={look.accessory}
+                  style={{
+                    rotate: faceRig.secondary,
+                    transformOrigin: "50px 30px",
+                  }}
+                >
                   <path
                     d={accessory.d}
                     fill={accessory.fill}
                     stroke={accessory.stroke}
-                    strokeWidth="2.6"
+                    strokeWidth="3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                </g>
+                </motion.g>
               )}
-          </g>
-          {accessory &&
-            !["glasses", "monocle", "shades"].includes(look.accessory) && (
-              <motion.g
-                className="bav-acc"
-                data-accessory={look.accessory}
-                style={{
-                  transform: faceRig.secondary,
-                  transformOrigin: "50px 30px",
-                }}
-              >
-                <path
-                  d={accessory.d}
-                  fill={accessory.fill}
-                  stroke={accessory.stroke}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </motion.g>
-            )}
+          </AnimatePresence>
         </svg>
         {optics.particles && <Extra mood={mood} />}
       </motion.span>
