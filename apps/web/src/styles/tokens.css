@@ -39,7 +39,8 @@
      for tables and grids (Artifacts); `--composer-max-w` the composer, a
      step narrower than the transcript. All centred; the clamps only bite on
      wide displays. */
-  --content-max-w: 1040px;
+  --content-max-w-cap: 1120px;
+  --content-max-w: clamp(1040px, 65vw, var(--content-max-w-cap));
   --content-max-w-wide: 1280px;
   --composer-max-w: 800px;
   /* density */

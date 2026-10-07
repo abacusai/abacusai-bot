@@ -44,6 +44,7 @@ import { cn } from "#renderer/lib/cn";
 import { Button } from "#renderer/ui/button";
 
 import { BAND_WIDTH, useShellBand } from "./breakpoints";
+import { UpgradePromo } from "./credits-card";
 import { FloatingIntentContext } from "./floating-intent";
 import { APP_HOTKEYS, useAppHotkey } from "./hotkeys";
 import { shellLayout, type ShellArea } from "./layout";
@@ -391,6 +392,7 @@ export const ShellLayout = ({
               />
             </div>
           </div>
+          <UpgradePromo />
           <SidePanelDrawer
             open={panelShown && layout.sidePanel === "drawer"}
             tabs={panel.scope.tabs}

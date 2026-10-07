@@ -8,6 +8,7 @@
  * round(size × 0.68). Decorative unless given a `label`. Every id in the
  * `@abacus-ai/connectors` registry has a mark (connector-mark.test.tsx).
  */
+import { AppBrandMark } from "#renderer/components/app-icon";
 import { cn } from "#renderer/lib/cn";
 
 export const CONNECTOR_MARK_IDS = [
@@ -261,16 +262,7 @@ const MARKS: Record<ConnectorMarkId, { parts: Part[] }> = {
       },
     ],
   },
-  abacus: {
-    parts: [
-      { d: "M5 6h14 M5 12h14 M5 18h14", stroke: INK, w: 1.5 },
-      {
-        d: "M8 6h.01 M12 6h.01 M7 12h.01 M11 12h.01 M15 12h.01 M9 18h.01 M16 18h.01",
-        stroke: "#e879f9",
-        w: 3.2,
-      },
-    ],
-  },
+  abacus: { parts: [] },
   openrouter: {
     parts: [{ d: "M3 12h4l3-4 4 8 3-4h4", stroke: "#6467f2", w: 2 }],
   },
@@ -702,7 +694,9 @@ export const ConnectorMark = ({
         ...(mark == null ? { fontSize: glyph * 0.7 } : null),
       }}
     >
-      {mark != null ? (
+      {markId === "abacus" ? (
+        <AppBrandMark size={glyph} />
+      ) : mark != null ? (
         <svg width={glyph} height={glyph} viewBox="0 0 24 24" fill="none">
           {mark.parts.map((part) => (
             <path
