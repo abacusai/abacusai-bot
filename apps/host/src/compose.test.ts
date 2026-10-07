@@ -160,11 +160,17 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   expect(store.get("nested.key", "fallback")).toBe("fallback");
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
 });
+/** A screenshot the media store holds. */
+const SHOT = "media-00112233445566778899aabb";
+const SHOT_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);
+
 describe("the phone lane", () => {
   const lane = (
     options: {
       refuse?: (messageId: string) => boolean;
       replyFails?: (text: string) => boolean;
+      /** The server refuses every image reply. */
+      imageFails?: boolean;
       /** Holds each reply until the test lets it go. */
       holdReplies?: boolean;
       stop?: (workspaceId: string, sessionId: string) => Promise<void>;
@@ -195,6 +201,8 @@ describe("the phone lane", () => {
             options.replyFails?.(String(body.text)) === true
           )
             return { ok: false, error: "closed" };
+          if (body.image_b64 != null && options.imageFails === true)
+            return { ok: false, error: "image refused" };
           return { ok: true };
         }) as never,
         hasKey: () => false,
@@ -206,6 +214,14 @@ describe("the phone lane", () => {
           return () => {};
         },
         activity,
+        resolveMedia: (ref: string) =>
+          ref === SHOT
+            ? {
+                ok: true as const,
+                data: SHOT_BYTES,
+                mimeType: "image/jpeg" as const,
+              }
+            : { ok: false as const, reason: "unknown" },
         log: () => {},
       },
       {
@@ -276,6 +292,120 @@ describe("the phone lane", () => {
       "Cheapest is 4,200.",
     ]);
     expect(phone.busy).toBe(false);
+    phone.stop();
+  });
+
+  it("sends an image at once with its caption, and keeps the turn open", async () => {
+    const { phone, send, event, reply, replies, acks, calls } = lane();
+    phone.arrive({ id: "m1", text: "share a screenshot?" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+
+    event({
+      type: "tool_execution_complete",
+      tool: {
+        name: "send_media",
+        input: { media: SHOT, caption: "The payment page" },
+      },
+      result: { rejected: false },
+    });
+
+    await vi.waitFor(() =>
+      expect(replies()).toEqual([
+        {
+          action: "reply",
+          message_id: "m1",
+          image_b64: SHOT_BYTES.toString("base64"),
+          text: "The payment page",
+        },
+      ])
+    );
+    // Still working: "typing…" comes back, and nothing is acknowledged yet.
+    await vi.waitFor(() =>
+      expect(calls.at(-1)).toEqual({ action: "typing", message_id: "m1" })
+    );
+    expect(acks()).toEqual([]);
+    reply(["m1"], "Ready for you to pay.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    phone.stop();
+  });
+
+  it("sends with_answer media with the final answer, its first bubble as the caption", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "take me to the payment page" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_media", input: { media: SHOT, when: "with_answer" } },
+      result: { rejected: false },
+    });
+    // Held: nothing goes out before the answer.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(replies()).toEqual([]);
+
+    reply(["m1"], "It is ready for you to pay.\n---\nTotal: 4,200.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toEqual([
+      {
+        action: "reply",
+        message_id: "m1",
+        image_b64: SHOT_BYTES.toString("base64"),
+        text: "It is ready for you to pay.",
+      },
+      { action: "reply", message_id: "m1", text: "Total: 4,200." },
+    ]);
+    phone.stop();
+  });
+
+  it("still says the words when an image cannot go, and still answers", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      imageFails: true,
+    });
+    phone.arrive({ id: "m1", text: "show me" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "tool_execution_complete",
+      tool: {
+        name: "send_media",
+        input: { media: "media-ffffffffffffffffffffffff", caption: "Gone" },
+      },
+      result: { rejected: false },
+    });
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_media", input: { media: SHOT, when: "with_answer" } },
+      result: { rejected: false },
+    });
+    reply(["m1"], "Here it is.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    // An unknown id never reaches the server; a refused image leaves its words.
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m1", text: "Gone" },
+      {
+        action: "reply",
+        message_id: "m1",
+        image_b64: SHOT_BYTES.toString("base64"),
+        text: "Here it is.",
+      },
+      { action: "reply", message_id: "m1", text: "Here it is." },
+    ]);
+    phone.stop();
+  });
+
+  it("drops media held for a turn that failed", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "book it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_media", input: { media: SHOT, when: "with_answer" } },
+      result: { rejected: false },
+    });
+    reply(["m1"], "", true);
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies().some((body) => body.image_b64 != null)).toBe(false);
     phone.stop();
   });
 

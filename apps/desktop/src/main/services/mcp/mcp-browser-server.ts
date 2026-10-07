@@ -53,6 +53,7 @@ import {
   type BrowserTargetSource,
 } from "../browser/browser-target";
 import { type CapturedImage, SecretFields } from "../browser/secret-fields";
+import type { MediaStore } from "../messaging/media-store";
 import {
   McpHttpServer,
   type McpToolListing,
@@ -380,6 +381,8 @@ export interface McpBrowserServerOptions {
   target?: () => BrowserTargetSource | null;
   /** The conversation a session's browser belongs to; picks the pane opened. */
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
+  /** Where screenshots are kept for `send_media`; without one they get no media id. */
+  media?: () => MediaStore | null;
 }
 
 /** A read refused because the page's secret fields could not be checked first. */
@@ -526,6 +529,17 @@ export class McpBrowserServer extends McpHttpServer {
       throw new UnreadablePageError();
     }
     return this.evalJS(wc, expression);
+  }
+
+  /**
+   * A handle for the screenshot in the media store; null without a store, or
+   * for an image larger than a chat takes (a viewport JPEG is far below it).
+   */
+  private keepAsMedia(image: CapturedImage): string | null {
+    const store = this.options.media?.() ?? null;
+    if (store == null) return null;
+    const kept = store.put(Buffer.from(image.data, "base64"));
+    return "id" in kept ? kept.id : null;
   }
 
   private async executeTabs(
@@ -1636,13 +1650,16 @@ export class McpBrowserServer extends McpHttpServer {
           `screenshot-${Date.now()}.${image.mimeType === "image/png" ? "png" : "jpg"}`
         );
         fs.writeFileSync(filePath, Buffer.from(image.data, "base64"));
+        const mediaId = this.keepAsMedia(image);
 
         return {
           content: [
             { type: "image", data: image.data, mimeType: image.mimeType },
             {
               type: "text",
-              text: `${summary}\n\nScreenshot saved to ${filePath}`,
+              text:
+                `${summary}\n\nScreenshot saved to ${filePath}` +
+                (mediaId != null ? `\nmedia id: ${mediaId}` : ""),
             },
           ],
         };

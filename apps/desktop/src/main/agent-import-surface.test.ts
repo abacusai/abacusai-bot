@@ -41,6 +41,8 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/sandbox-support",
   // A 4 kB bundle importing only node's `fs`, `fs/promises` and `path`.
   "@abacus-ai/agent/atomic-file",
+  // Media checks for the chat: imports only node's `fs` and `path`.
+  "@abacus-ai/agent/send-media",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

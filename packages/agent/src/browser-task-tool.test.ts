@@ -6,6 +6,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { BrowserTaskResult } from "./browser-task.js";
+import {
+  APP_CHANNEL,
+  type ChannelCapabilities,
+  WHATSAPP_CHANNEL,
+} from "./channel.js";
 import type { AgentEvent } from "./protocol.js";
 
 const stubs = vi.hoisted(() => ({ run: vi.fn() }));
@@ -23,11 +28,15 @@ const finished = (stoppedBy: BrowserTaskResult["stoppedBy"]) => ({
   stoppedBy,
 });
 
-const run = async (stoppedBy: BrowserTaskResult["stoppedBy"]) => {
+const run = async (
+  stoppedBy: BrowserTaskResult["stoppedBy"],
+  channel?: ChannelCapabilities
+) => {
   stubs.run.mockResolvedValue(finished(stoppedBy));
   const events: AgentEvent[] = [];
-  const tool = buildBrowserTaskTool({ cwd: process.cwd() } as never, (event) =>
-    events.push(event)
+  const tool = buildBrowserTaskTool(
+    { cwd: process.cwd(), ...(channel != null ? { channel } : {}) } as never,
+    (event) => events.push(event)
   );
   const result = await tool.execute("call-1", { task: "look something up" });
   const end = events.find((event) => event.type === "subtask_end") as
@@ -68,6 +77,31 @@ describe("a browser run's card", () => {
       expect(status).toBe("failed");
       expect(result.isError).toBe(true);
     }
+  });
+});
+
+describe("what the caller is told about a step only the user can do", () => {
+  it("sends an app chat's user to the Browser pane", async () => {
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: APP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).toMatch(/open the Browser pane in this chat/);
+    const { result } = await run("needs-user", APP_CHANNEL);
+    expect(result.content[0]?.text).toMatch(/open the Browser pane/);
+  });
+
+  it("never mentions a pane on WhatsApp, and never asks for secrets there", async () => {
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: WHATSAPP_CHANNEL } as never,
+      () => undefined
+    );
+    expect(tool.description).not.toMatch(/pane/i);
+    expect(tool.description).toMatch(/cannot see this browser/);
+    const { result } = await run("needs-user", WHATSAPP_CHANNEL);
+    const text = result.content[0]?.text ?? "";
+    expect(text).not.toMatch(/pane/i);
+    expect(text).toMatch(/Never ask for a password or card details/);
   });
 });
 

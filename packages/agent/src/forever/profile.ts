@@ -62,5 +62,5 @@ export interface ForeverProfile {
   /** The messages a compaction is about to summarize away, before it does. */
   beforeCompaction?(messages: readonly unknown[]): void | Promise<void>;
   /** What a `browser_task` run gets beyond the browser: a way to reach the user. */
-  browserTask?: Pick<BrowserTaskContext, "progressTools" | "paneless">;
+  browserTask?: Pick<BrowserTaskContext, "progressTools" | "channel">;
 }
