@@ -326,6 +326,7 @@ const PanelTabs = ({
   onReorder,
   onAdd,
   onDragStart,
+  onMove,
 }: {
   tabs: readonly PanelTab[];
   active: string | null;
@@ -337,6 +338,7 @@ const PanelTabs = ({
   onReorder(ids: string[]): void;
   onAdd(kind: PanelTabKind): void;
   onDragStart?(id: string, event: React.DragEvent): void;
+  onMove?(id: string, position: "left" | "right" | "top" | "bottom"): void;
 }) => {
   const { t } = useTranslation();
   const motionPref = useMotionPreference();
@@ -462,6 +464,25 @@ const PanelTabs = ({
           </Reorder.Group>
         </TabsList>
       </Tabs>
+      {onMove && active ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<BarButton label={t("sessions.dock.move")} />}
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(["left", "right", "top", "bottom"] as const).map((position) => (
+              <DropdownMenuItem
+                key={position}
+                onClick={() => onMove(active, position)}
+              >
+                {t(`sessions.dock.moveDirections.${position}`)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
       {kinds.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger

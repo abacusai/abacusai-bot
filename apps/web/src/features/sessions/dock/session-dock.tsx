@@ -392,6 +392,15 @@ export const SessionDock = ({
                         event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
                     : undefined
                 }
+                onMove={
+                  expanded
+                    ? (id, position) => {
+                        const panel = dockApi.current?.getPanel(id);
+                        if (panel)
+                          panel.api.moveTo({ group: panel.group, position });
+                      }
+                    : undefined
+                }
                 onChange={choose}
                 onClose={close}
                 onReorder={(ids) =>

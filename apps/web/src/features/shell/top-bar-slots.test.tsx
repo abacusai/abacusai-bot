@@ -85,3 +85,24 @@ it("renders the global pill expanded and its action in the folded menu", async (
   await folded.cleanup();
   registration.unmount();
 });
+
+it("offers keyboard-accessible edge moves from the title bar in expanded view", async () => {
+  const onMove = vi.fn();
+  const view = await renderWithDb(
+    <TopBar.PanelTabs
+      tabs={[{ id: "chat", kind: "thread", title: "Chat" }]}
+      active="chat"
+      title={(tab) => tab.title ?? ""}
+      kinds={[]}
+      onChange={vi.fn()}
+      onClose={vi.fn()}
+      onReorder={vi.fn()}
+      onAdd={vi.fn()}
+      onMove={onMove}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Move tab" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Split below" }));
+  expect(onMove).toHaveBeenCalledWith("chat", "bottom");
+  await view.cleanup();
+});

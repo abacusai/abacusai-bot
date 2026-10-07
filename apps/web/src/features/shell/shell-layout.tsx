@@ -208,6 +208,14 @@ export const ShellLayout = ({
               ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
               : undefined
           }
+          onMove={
+            expanded
+              ? (id, position) => {
+                  const panel = dockApi.current?.getPanel(id);
+                  if (panel) panel.api.moveTo({ group: panel.group, position });
+                }
+              : undefined
+          }
           onChange={(id) => activatePanelTab(scopeKey, id)}
           onClose={(id) => closePanelTab(scopeKey, id)}
           onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}

@@ -125,6 +125,14 @@ const Tab = ({ api, containerApi }: IDockviewPanelHeaderProps) => {
     </div>
   );
 };
+const visiblePanels = (api: DockviewApi): string[] => {
+  const hidden = api.groups.length === 1;
+  for (const group of api.groups)
+    if (group.header.hidden !== hidden) group.header.hidden = hidden;
+  return api.groups.flatMap((group) =>
+    group.activePanel ? [group.activePanel.id] : []
+  );
+};
 const components = { content: Content };
 const LAYOUT_PREFIX = "abacusai-bot:dock-layout:v1:";
 export const PANEL_DRAG_TYPE = "application/x-abacus-panel";
@@ -220,13 +228,7 @@ export const PanelWorkspace = ({
             : {}),
         });
     }
-    queueMicrotask(() =>
-      setVisible(
-        api.groups.flatMap((group) =>
-          group.activePanel ? [group.activePanel.id] : []
-        )
-      )
-    );
+    queueMicrotask(() => setVisible(visiblePanels(api)));
   });
   useEffect(() => {
     if (!api) return;
@@ -234,27 +236,26 @@ export const PanelWorkspace = ({
     api.clear();
     try {
       const raw = localStorage.getItem(LAYOUT_PREFIX + scope);
-      if (raw) api.fromJSON(JSON.parse(raw) as SerializedDockview);
+      if (raw) {
+        const layout = JSON.parse(raw) as SerializedDockview;
+        for (const panel of Object.values(layout.panels)) {
+          panel.minimumWidth = panel.id === "chat" ? 360 : 280;
+          panel.minimumHeight = 180;
+        }
+        api.fromJSON(layout);
+      }
     } catch {
       api.clear();
     }
     synchronize();
     const subscriptions = [
       api.onDidLayoutChange(() => {
-        setVisible(
-          api.groups.flatMap((group) =>
-            group.activePanel ? [group.activePanel.id] : []
-          )
-        );
+        setVisible(visiblePanels(api));
         save(api.toJSON());
       }),
       api.onDidActivePanelChange(({ panel, origin }) => {
         if (origin === "user" && panel) select(panel.id);
-        setVisible(
-          api.groups.flatMap((group) =>
-            group.activePanel ? [group.activePanel.id] : []
-          )
-        );
+        setVisible(visiblePanels(api));
       }),
       api.onUnhandledDragOver((event) => {
         if (

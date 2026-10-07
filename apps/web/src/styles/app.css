@@ -244,5 +244,3 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --dv-active-sash-color: var(--primary);
   --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, transparent);
 }
-
-.panel-dock.single-group .tabs-and-actions-container { display: none; }
