@@ -231,15 +231,27 @@ export const GOOGLE_BUNDLE_SERVICES = [
   "googlecalendar",
 ] as const;
 
+/** The string items of a server list, or none. */
+const serviceKeys = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
 /**
- * A one-tap connect link (WhatsApp, or a chat in the app) and the services it
- * attaches. The server mints a request only its owner's browser can use and
- * the page spends it once connected; a server that will not mint one gets the
- * plain page for the one service. Null when signed out.
+ * A one-tap connect link (WhatsApp, or a chat in the app), the services its
+ * consent asks for, and, for a bundle, the members already connected, which
+ * it leaves out. The server mints a request only its owner's browser can use
+ * and the page spends it once connected; a server that will not mint one
+ * gets the plain page for the one service. Null when signed out.
  */
 export const createConnectLink = async (
   service: string
-): Promise<{ url: string; services: string[] } | null> => {
+): Promise<{
+  url: string;
+  services: string[];
+  connected: string[];
+  requestId?: string;
+} | null> => {
   const serviceKey = service.toLowerCase();
   if (!SERVICE_RE.test(serviceKey) || abacusApiKey().length === 0) return null;
   const bundled = (GOOGLE_BUNDLE_SERVICES as readonly string[]).includes(
@@ -252,6 +264,7 @@ export const createConnectLink = async (
     ? (minted.result as {
         requestId?: unknown;
         services?: unknown;
+        connected?: unknown;
         url?: unknown;
       } | null)
     : null;
@@ -270,14 +283,45 @@ export const createConnectLink = async (
         typeof request.url === "string" && request.url.startsWith("https://")
           ? request.url
           : url.toString(),
-      services: request.services.filter(
-        (item): item is string => typeof item === "string"
-      ),
+      services: serviceKeys(request.services),
+      connected: serviceKeys(request.connected),
+      requestId: request.requestId,
     };
   }
   url.searchParams.set("service", serviceKey);
   url.searchParams.set("autostart", "1");
-  return { url: url.toString(), services: [serviceKey] };
+  return { url: url.toString(), services: [serviceKey], connected: [] };
+};
+
+/**
+ * What a link from createConnectLink has done: not completed until its
+ * connect lands, then the services it connected and those its consent did not
+ * grant (left unticked on the provider's screen). Null when the server cannot
+ * say, so the caller falls back to the connector statuses.
+ */
+export const connectLinkStatus = async (
+  requestId: string
+): Promise<{
+  completed: boolean;
+  connected: string[];
+  notGranted: string[];
+} | null> => {
+  const status = await abacusApiCall("_getAbacusbotConnectLinkStatus", "POST", {
+    requestId,
+  });
+  const result = status.ok
+    ? (status.result as {
+        completed?: unknown;
+        connected?: unknown;
+        notGranted?: unknown;
+      } | null)
+    : null;
+  if (typeof result?.completed !== "boolean") return null;
+  return {
+    completed: result.completed,
+    connected: serviceKeys(result.connected),
+    notGranted: serviceKeys(result.notGranted),
+  };
 };
 
 /** An account hint is forwarded to the provider only when it reads as an email. */

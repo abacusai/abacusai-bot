@@ -250,12 +250,17 @@ export interface McpAgentToolsServerOptions {
     list: () => Promise<ConnectorStatuses>;
     /**
      * A one-tap link for a platform connector, and every connector it attaches
-     * (one Google consent covers Gmail, Drive and Calendar), or the web host's
-     * connect route for an MCP server. Null signed out, or with no link to give.
+     * (one Google consent covers Gmail, Drive and Calendar, less the members
+     * already connected, which `connectedIds` names), or the web host's
+     * connect route for an MCP server. `requestId` lets the watch read the
+     * link's own outcome. Null signed out, or with no link to give.
      */
-    link: (
-      connectorId: string
-    ) => Promise<{ url: string; connectorIds: string[] } | null>;
+    link: (connectorId: string) => Promise<{
+      url: string;
+      connectorIds: string[];
+      connectedIds?: string[];
+      requestId?: string;
+    } | null>;
     /** A Connect card in the conversation that asked; nothing waits on it. */
     show: (input: {
       connectorId: string;
@@ -267,6 +272,7 @@ export interface McpAgentToolsServerOptions {
     watch: (input: {
       connectorIds: string[];
       sessionId: string | null;
+      requestId?: string;
     }) => void;
     /** Resolves to null or an error sentence. */
     disconnect?: (connectorId: string) => Promise<string | null>;
@@ -1380,10 +1386,21 @@ export class McpAgentToolsServer extends McpHttpServer {
     };
     const link =
       match.kind !== "messaging" ? await connectors.link(match.id) : null;
+    // A bundle's members already connected are no part of this link, and are
+    // never watched: one already connected would read as this link landing.
+    const already = new Set(
+      (link?.connectorIds ?? [])
+        .filter((id) => statuses[id]?.state === "connected")
+        .concat(link?.connectedIds ?? [])
+    );
+    const asking = (link?.connectorIds ?? [match.id]).filter(
+      (id) => !already.has(id)
+    );
     card();
     connectors.watch({
-      connectorIds: link?.connectorIds ?? [match.id],
+      connectorIds: asking.length > 0 ? asking : [match.id],
       sessionId: callerSession ?? null,
+      ...(link?.requestId != null ? { requestId: link.requestId } : {}),
     });
     if (link == null)
       return this.ok(
@@ -1392,17 +1409,30 @@ export class McpAgentToolsServer extends McpHttpServer {
           : `A Connect card for ${match.name} is in front of the user in the app. Say in one short line that it needs connecting there, ` +
               "then carry on with whatever does not need it: this call does not wait, and you will be told when it is connected."
       );
-    const covered = link.connectorIds
-      .map((id) => CONNECTORS.find((item) => item.id === id)?.name ?? id)
-      .join(", ");
+    const nameOf = (id: string): string =>
+      CONNECTORS.find((item) => item.id === id)?.name ?? id;
+    const covered =
+      asking.length > 0 ? asking.map(nameOf).join(", ") : match.name;
+    const connected = [...already].map(nameOf).join(", ");
     return this.ok(
       [
-        `Send the user this link to connect ${link.connectorIds.length > 1 ? `${covered}, all in one step` : match.name}:`,
+        ...(already.size > 0
+          ? [
+              `${connected} ${already.size > 1 ? "are" : "is"} already connected; ${already.size > 1 ? "their" : "its"} tools are in your tool list. ` +
+                `Still to connect: ${covered}. This link asks only for ${asking.length > 1 ? "those" : "that"}.`,
+            ]
+          : []),
+        `Send the user this link to connect ${asking.length > 1 ? `${covered}, all in one step` : covered}:`,
         link.url,
         "",
         "Put it in a message of its own with one short line in the user's language. Copy it exactly; never shorten or reword it. " +
-          "It opens the provider's own sign-in, and stays connected after that.",
-        "This call does not wait. Carry on with whatever does not need it. When it is connected you will be told, and its tools appear in your tool list then.",
+          "It opens the provider's own sign-in, and stays connected after that." +
+          (asking.length > 1
+            ? " The sign-in screen may show a checkbox for each; whatever is left unticked is not connected."
+            : ""),
+        "This call does not wait. Carry on with whatever does not need it. When it lands you will be told exactly what " +
+          "connected and anything that was not allowed, and its tools appear in your tool list then. Until then do not " +
+          "send it again unless the user asks for it, and never offer to flag or report anything: there is no such process.",
       ].join("\n")
     );
   }

@@ -369,6 +369,7 @@ import {
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
 import {
+  connectLinkStatus,
   connectPageUrl,
   createConnectLink,
   disconnectAbacusConnector,
@@ -503,6 +504,10 @@ const SELF_LANE_BOTS: Record<
  * that a run of connector reads finishes between compactions.
  */
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
+
+/** Registry connector ids for platform service keys, dropping unknown ones. */
+const connectorIdsFor = (services: string[]): string[] =>
+  services.flatMap((key) => connectorForService(key)?.id ?? []);
 
 export class ServiceHost {
   constructor(readonly platform: HostPlatform = "electron") {
@@ -782,9 +787,9 @@ export class ServiceHost {
         if (link == null) return null;
         return {
           url: link.url,
-          connectorIds: link.services.flatMap(
-            (key) => connectorForService(key)?.id ?? []
-          ),
+          connectorIds: connectorIdsFor(link.services),
+          connectedIds: connectorIdsFor(link.connected),
+          ...(link.requestId != null ? { requestId: link.requestId } : {}),
         };
       },
       show: (input) => this.connectorGate.show(input),
@@ -941,6 +946,16 @@ export class ServiceHost {
   /** Offers (links, cards) followed until they connect; see connectorsConnected. */
   private readonly connectWatcher = new ConnectWatcher({
     list: () => this.listConnectorStatuses(),
+    linkStatus: async (requestId) => {
+      const status = await connectLinkStatus(requestId);
+      return status == null
+        ? null
+        : {
+            completed: status.completed,
+            connected: connectorIdsFor(status.connected),
+            notGranted: connectorIdsFor(status.notGranted),
+          };
+    },
     connected: (offer) => this.connectorsConnected(offer),
     expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
   });
@@ -984,22 +999,36 @@ export class ServiceHost {
     this.connectorStatusChanged();
     const accounts = [...new Set(Object.values(offer.accounts))];
     const names = connectors.map((connector) => connector.name).join(", ");
+    const missing = offer.notGranted
+      .map((id) => connectorById(id)?.name ?? id)
+      .join(", ");
+    const several = offer.notGranted.length > 1;
     const note =
-      `[connected] ${names} ${connectors.length > 1 ? "are" : "is"} connected now` +
-      `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
-      connectors
-        .map((connector) =>
-          connector.kind === "platform" && connector.via != null
-            ? `Use ${connector.via}: they are authenticated now. `
-            : ""
-        )
-        .join("") +
-      (connectors.some(
-        (connector) => !(connector.kind === "platform" && connector.via != null)
-      )
-        ? "Its tools are in your tool list. "
+      "[connected] " +
+      (connectors.length > 0
+        ? `${names} ${connectors.length > 1 ? "are" : "is"} connected now` +
+          `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
+          connectors
+            .map((connector) =>
+              connector.kind === "platform" && connector.via != null
+                ? `Use ${connector.via}: they are authenticated now. `
+                : ""
+            )
+            .join("") +
+          (connectors.some(
+            (connector) =>
+              !(connector.kind === "platform" && connector.via != null)
+          )
+            ? "Its tools are in your tool list. "
+            : "")
         : "") +
-      "Tell the user in one short line, then carry on with what they asked for.";
+      (missing.length > 0
+        ? `${missing} ${several ? "were" : "was"} not allowed on the provider's sign-in screen (left unticked), so ` +
+          `${several ? "they are" : "it is"} not connected. Tell the user plainly, in one short line, what connected and ` +
+          `what was not allowed. If what they asked for needs ${missing}, call connect_connector for it: the new link ` +
+          "asks only for what is missing. Otherwise carry on with what they asked for. There is nothing to flag, report " +
+          "or escalate, so never offer to."
+        : "Tell the user in one short line, then carry on with what they asked for.");
     for (const listener of this.connectedListeners)
       listener(offer.sessionId, note);
   }
