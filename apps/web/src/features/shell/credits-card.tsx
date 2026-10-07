@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   useEffect,
@@ -33,11 +33,11 @@ import { Button } from "#renderer/ui/button";
 import { PromoCharacter } from "./promo-character";
 import { promoPlacement } from "./promo-placement";
 import {
-  PROMO_DISMISS_MS,
+  PROMO_SNOOZE_MS,
   promoAccountKey,
   promoState,
-  readPromoDismissal,
-  type PromoDismissal,
+  readPromoSnooze,
+  type PromoSnooze,
 } from "./promo-state";
 
 /** Floating above the reading pane, clear of the composer and splitters. */
@@ -46,7 +46,9 @@ export const UpgradePromo = () => {
   const { t } = useTranslation();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
-  const now = useNow();
+  const minuteNow = useNow();
+  const [deadlineNow, setDeadlineNow] = useState(() => Date.now());
+  const now = Math.max(minuteNow, deadlineNow);
   const preference = useMotionPreference();
   const location = useLocation();
   const account = useQuery({
@@ -58,14 +60,25 @@ export const UpgradePromo = () => {
     staleTime: 60_000,
   });
   const key = promoAccountKey(account.data);
-  const [dismissal, setDismissal] = useState<{
+  const [snooze, setSnooze] = useState<{
     key: string;
-    value: PromoDismissal | null;
+    value: PromoSnooze | null;
   } | null>(null);
+  const savedSnooze = snooze?.key === key ? snooze.value : readPromoSnooze(key);
+  useEffect(() => {
+    const refresh = () => setDeadlineNow(Date.now());
+    const delay = (savedSnooze?.until ?? 0) - Date.now();
+    const timer = delay > 0 ? window.setTimeout(refresh, delay) : undefined;
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [key, savedSnooze?.until]);
   const state = promoState(
     account.data,
     prefs.creditsExhaustedAt,
-    dismissal?.key === key ? dismissal.value : readPromoDismissal(key),
+    savedSnooze,
     now
   );
   const mark = creditMarkState(
@@ -194,24 +207,25 @@ export const UpgradePromo = () => {
         >
           <div className="phone-glow pointer-events-none -z-10" aria-hidden />
           <Button
-            size="icon-xs"
+            size="icon-sm"
             variant="ghost"
             className="absolute top-1 right-1"
-            aria-label={t("creditsCard.dismiss")}
+            aria-label={t("creditsCard.remindLater")}
+            title={t("creditsCard.remindLater")}
             onClick={() => {
-              const value: PromoDismissal = {
-                until: now + PROMO_DISMISS_MS,
+              const value: PromoSnooze = {
+                until: Date.now() + PROMO_SNOOZE_MS,
                 situation: state ?? "upsell",
               };
               try {
                 localStorage.setItem(key, JSON.stringify(value));
               } catch {
-                /* Dismiss for this window. */
+                /* Keep this window’s snooze. */
               }
-              setDismissal({ key, value });
+              setSnooze({ key, value });
             }}
           >
-            <X />
+            <Minus />
           </Button>
           <div className="flex items-center gap-3 pr-3">
             <PromoCharacter
