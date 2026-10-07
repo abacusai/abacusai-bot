@@ -49,6 +49,18 @@
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"
     },
+    "./channel": {
+      "types": "./dist/channel.d.ts",
+      "default": "./dist/channel.js"
+    },
+    "./secret-paths": {
+      "types": "./dist/sandbox/secrets.d.ts",
+      "default": "./dist/sandbox/secrets.js"
+    },
+    "./tool-policy": {
+      "types": "./dist/tool-policy.d.ts",
+      "default": "./dist/tool-policy.js"
+    },
     "./package.json": "./package.json",
     "./user-text": {
       "types": "./dist/user-text.d.ts",

@@ -26,6 +26,7 @@ const fixture = await vi.hoisted(async () => {
   );
   return { home, config };
 });
+import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import { visibleUserText } from "@abacus-ai/contract/transcript/user-text";
 
 import { connectInProcess } from "#main/rpc/testing";
@@ -202,7 +203,8 @@ describe("connectors connected elsewhere", () => {
       lane == null
         ? sh.createAgentSession("legacy")
         : {
-            id: (await sh.openLaneSession(lane, {}, "auto")).sessionId,
+            id: (await sh.openLaneSession(lane, {}, "auto", WHATSAPP_CHANNEL))
+              .sessionId,
           };
     const workspaceId = sh.agentSessionManagerService.get(
       session.id
@@ -440,6 +442,27 @@ describe("connectors connected elsewhere", () => {
 /** A screenshot the media store holds. */
 const SHOT = "media-00112233445566778899aabb";
 const SHOT_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);
+/** Another capture of the very same page: a new id, the same bytes. */
+const SHOT_AGAIN = "media-00112233445566778899aaff";
+const PDF = "media-aabbccddeeff00112233445566";
+const PDF_BYTES = Buffer.from("%PDF-1.7 love");
+const DOCX = "media-66554433221100ffeeddccbbaa";
+const DOCX_BYTES = Buffer.from([0x50, 0x4b, 0x03, 0x04, 9]);
+
+/** A present_deliverable result that hands these media ids to the chat. */
+const presented = (ids: string[]) => ({
+  type: "tool_execution_complete",
+  tool: { name: "present_deliverable", input: { items: [] } },
+  result: {
+    rejected: false,
+    content: [
+      "Sending 2 items to this chat with your answer:",
+      "",
+      ...ids.map((id) => `[media] ${id}`),
+      "[artifact] /work/love.pdf",
+    ].join("\n"),
+  },
+});
 
 describe("the phone lane", () => {
   const lane = (
@@ -448,6 +471,12 @@ describe("the phone lane", () => {
       replyFails?: (text: string) => boolean;
       /** The server refuses every image reply. */
       imageFails?: boolean;
+      /** The server does not take documents yet. */
+      documentFails?: boolean;
+      /** The server does not answer a document reply in time. */
+      documentTimesOut?: boolean;
+      /** The server refuses this many image replies, then takes them. */
+      imageFailsTimes?: number;
       /** Holds each reply until the test lets it go. */
       holdReplies?: boolean;
       stop?: (workspaceId: string, sessionId: string) => Promise<void>;
@@ -462,6 +491,7 @@ describe("the phone lane", () => {
         !(options.refuse?.(messageId) ?? false)
     );
     const activity = vi.fn();
+    const pinMedia = vi.fn();
     let settleStop: () => void = () => {};
     const stop = vi.fn(
       options.stop ??
@@ -480,6 +510,16 @@ describe("the phone lane", () => {
             return { ok: false, error: "closed" };
           if (body.image_b64 != null && options.imageFails === true)
             return { ok: false, error: "image refused" };
+          if (body.document_b64 != null && options.documentFails === true)
+            throw new Error("unknown field document_b64");
+          if (body.document_b64 != null && options.documentTimesOut === true)
+            throw Object.assign(new Error("timed out"), {
+              name: "TimeoutError",
+            });
+          if (body.image_b64 != null && (options.imageFailsTimes ?? 0) > 0) {
+            options.imageFailsTimes! -= 1;
+            return { ok: false, error: "try later" };
+          }
           return { ok: true };
         }) as never,
         hasKey: () => false,
@@ -492,13 +532,24 @@ describe("the phone lane", () => {
         },
         activity,
         resolveMedia: (ref: string, sessionId: string) =>
-          ref === SHOT && sessionId === "s"
-            ? {
-                ok: true as const,
-                data: SHOT_BYTES,
-                mimeType: "image/jpeg" as const,
-              }
-            : { ok: false as const, reason: "unknown" },
+          sessionId !== "s"
+            ? { ok: false as const, reason: "unknown" }
+            : ref === SHOT || ref === SHOT_AGAIN
+              ? {
+                  ok: true as const,
+                  kind: "image" as const,
+                  data: SHOT_BYTES,
+                  mimeType: "image/jpeg" as const,
+                }
+              : ref === PDF || ref === DOCX
+                ? {
+                    ok: true as const,
+                    kind: "document" as const,
+                    data: ref === PDF ? PDF_BYTES : DOCX_BYTES,
+                    filename: ref === PDF ? "love.pdf" : "notes.docx",
+                  }
+                : { ok: false as const, reason: "unknown" },
+        pinMedia,
         log: () => {},
       },
       {
@@ -533,6 +584,7 @@ describe("the phone lane", () => {
       replies,
       acks,
       release,
+      pinMedia,
     };
   };
 
@@ -723,6 +775,243 @@ describe("the phone lane", () => {
 
     await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
     expect(replies().some((body) => body.image_b64 != null)).toBe(false);
+    phone.stop();
+  });
+
+  it("sends what present_deliverable handed over with the answer: a pdf, a docx and an image", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([PDF, DOCX, SHOT]));
+    reply(["m1"], "Here's your one-pager on love.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    // The answer rides on the first file as its caption.
+    expect(replies()).toEqual([
+      {
+        action: "reply",
+        message_id: "m1",
+        document_b64: PDF_BYTES.toString("base64"),
+        filename: "love.pdf",
+        text: "Here's your one-pager on love.",
+      },
+      {
+        action: "reply",
+        message_id: "m1",
+        document_b64: DOCX_BYTES.toString("base64"),
+        filename: "notes.docx",
+      },
+      {
+        action: "reply",
+        message_id: "m1",
+        image_b64: SHOT_BYTES.toString("base64"),
+      },
+    ]);
+    expect(send).toHaveBeenCalledTimes(1);
+    phone.stop();
+  });
+
+  it("sends nothing from a present_deliverable call that ended in an error", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "send it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const failed = presented([PDF]);
+    event({ ...failed, result: { ...failed.result, rejected: true } });
+    reply(["m1"], "Done.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m1", text: "Done." },
+    ]);
+    phone.stop();
+  });
+
+  it("when the server cannot take a document, still says the words and has the session tell the user", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      documentFails: true,
+    });
+    phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([PDF]));
+    reply(["m1"], "Here's your one-pager on love.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toEqual([
+      {
+        action: "reply",
+        message_id: "m1",
+        document_b64: PDF_BYTES.toString("base64"),
+        filename: "love.pdf",
+        text: "Here's your one-pager on love.",
+      },
+      {
+        action: "reply",
+        message_id: "m1",
+        text: "Here's your one-pager on love.",
+      },
+    ]);
+    // Never dropped in silence: a turn of its own says so, in the user's language.
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    const note = String(send.mock.calls[1]![2]);
+    expect(note).toContain("love.pdf could not be attached");
+    expect(note).toContain("in their language");
+    phone.stop();
+  });
+
+  it("sends a media id once: the loop resending a browser run's screenshot is a no-op", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "open it and send me a screenshot" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const sendMedia = (id: string) =>
+      event({
+        type: "tool_execution_complete",
+        tool: { name: "send_media", input: { media: SHOT, caption: "Here" } },
+        result: { rejected: false, id },
+      });
+    sendMedia("web-1");
+    sendMedia("toolu_2");
+    event(presented([SHOT]));
+    reply(["m1"], "Done.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies().filter((body) => body.image_b64 != null)).toHaveLength(1);
+    phone.stop();
+  });
+
+  it("sends the same picture once a turn, whatever its id", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "screenshot please" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    for (const media of [SHOT, SHOT_AGAIN])
+      event({
+        type: "tool_execution_complete",
+        tool: { name: "send_media", input: { media, when: "with_answer" } },
+        result: { rejected: false },
+      });
+    reply(["m1"], "Here it is.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toEqual([
+      {
+        action: "reply",
+        message_id: "m1",
+        image_b64: SHOT_BYTES.toString("base64"),
+        text: "Here it is.",
+      },
+    ]);
+    // Nothing went wrong, so the session is told nothing.
+    expect(send).toHaveBeenCalledTimes(1);
+    phone.stop();
+  });
+
+  it("counts a media id as sent only once the server took it: a refused one goes on a retry", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      imageFailsTimes: 1,
+    });
+    phone.arrive({ id: "m1", text: "screenshot please" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const sendMedia = () =>
+      event({
+        type: "tool_execution_complete",
+        tool: { name: "send_media", input: { media: SHOT } },
+        result: { rejected: false },
+      });
+    sendMedia();
+    sendMedia();
+    sendMedia();
+    reply(["m1"], "Done.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    // Refused, then taken on the retry, then skipped: it went once.
+    expect(replies().filter((body) => body.image_b64 != null)).toHaveLength(2);
+    phone.stop();
+  });
+
+  it("raises one note per file and one per user message, however often it fails", async () => {
+    const { phone, send, event, reply, acks } = lane({ documentFails: true });
+    phone.arrive({ id: "m1", text: "send both" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([PDF, DOCX]));
+    reply(["m1"], "Here they are.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    // Two files failed under one message: one note.
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    reply(["m1"], "Sorry, they did not come through.");
+    phone.arrive({ id: "m2", text: "try the pdf again" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    event(presented([PDF]));
+    reply(["m2"], "Here it is.");
+    await vi.waitFor(() => expect(acks()).toContainEqual(["m2"]));
+    // The same file again: no second note.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(
+      send.mock.calls.filter((call) =>
+        String(call[2]).startsWith("[not attached]")
+      )
+    ).toHaveLength(1);
+    phone.stop();
+  });
+
+  it("a document WhatsApp did not confirm in time: logged unknown, the session told it is unconfirmed, nothing repeated", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      documentTimesOut: true,
+    });
+    phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([PDF]));
+    reply(["m1"], "Here's your one-pager on love.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toHaveLength(1);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    const note = String(send.mock.calls[1]![2]);
+    expect(note).toContain("[delivery unconfirmed]");
+    expect(note).toContain("Do not tell the user it failed");
+    expect(note).toContain("NO_REPLY");
+    phone.stop();
+  });
+
+  it("reads only the app's own present_deliverable, by name or under its server", async () => {
+    const { phone, send, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "send it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const named = (name: string, ids: string[]) => {
+      const done = presented(ids);
+      event({ ...done, tool: { ...done.tool, name } });
+    };
+    named("some-server_present_deliverable", [DOCX]);
+    named("agent-tools_present_deliverable", [PDF]);
+    reply(["m1"], "Here.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies().map((body) => body.filename)).toEqual(["love.pdf"]);
+    phone.stop();
+  });
+
+  it("keeps what an answer holds from eviction until the answer went", async () => {
+    const { phone, send, event, reply, acks, pinMedia } = lane();
+    phone.arrive({ id: "m1", text: "send it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([PDF]));
+    expect(pinMedia).toHaveBeenLastCalledWith(PDF, "s", true);
+    reply(["m1"], "Here.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(pinMedia).toHaveBeenLastCalledWith(PDF, "s", false);
+    phone.stop();
+  });
+
+  it("when an image handed over cannot go, the session tells the user too", async () => {
+    const { phone, send, event, reply, acks } = lane({ imageFails: true });
+    phone.arrive({ id: "m1", text: "send me the chart" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event(presented([SHOT]));
+    reply(["m1"], "Here's the chart.");
+
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(String(send.mock.calls[1]![2])).toContain(
+      "An image you handed over could not be attached"
+    );
     phone.stop();
   });
 

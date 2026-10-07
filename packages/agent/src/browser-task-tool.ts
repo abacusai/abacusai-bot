@@ -17,6 +17,7 @@ import {
 } from "./channel.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
+import { DeliveredMedia } from "./send-media-tool.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
 export function browserTaskEnabled(): boolean {
@@ -263,6 +264,7 @@ export function buildBrowserTaskTool(
       // Everything the sub-agent does is tagged as its own (AG-UI only).
       const childEmit = scopeEmit(emit, subtaskId);
 
+      const sentMedia = new DeliveredMedia();
       let result;
       // Failed until proven otherwise: a throw skips straight to `finally`.
       let status: "completed" | "failed" = "failed";
@@ -275,6 +277,7 @@ export function buildBrowserTaskTool(
             signal,
             reportFields,
             resume,
+            sentMedia,
           });
         } finally {
           browserBusy.running = false;
@@ -305,8 +308,18 @@ export function buildBrowserTaskTool(
               ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
               : "";
 
+      // What the run asked to send: the chat sends each id once, so the loop
+      // sending it again adds nothing.
+      const sent = sentMedia.list();
+      const sentNote =
+        sent.length > 0
+          ? `\n\n(This run sent the user ${sent.join(", ")}. Do not send ${sent.length > 1 ? "them" : "it"} again.)`
+          : "";
+
       return {
-        content: [{ type: "text" as const, text: `${result.text}${note}` }],
+        content: [
+          { type: "text" as const, text: `${result.text}${note}${sentNote}` },
+        ],
         details: {
           turns: result.turns,
           executeCalls: result.executeCalls,

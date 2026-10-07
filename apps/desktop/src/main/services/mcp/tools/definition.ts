@@ -1,3 +1,4 @@
+import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { MessagingPlatformId } from "@abacus-ai/contract/messaging";
 
 import type { McpAgentToolsServer } from "../mcp-agent-tools-server";
@@ -46,8 +47,15 @@ export type ToolHost = Pick<
  */
 export interface ToolDefinition {
   name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
+  /**
+   * What the model reads. A function where the words depend on the chat
+   * (a pane to open, a phone to send to), rendered for each caller's channel
+   * when the tools are listed.
+   */
+  description: string | ((channel: ChannelCapabilities) => string);
+  inputSchema:
+    | Record<string, unknown>
+    | ((channel: ChannelCapabilities) => Record<string, unknown>);
   /**
    * The Capabilities toggles that turn it on; any one on is enough, which
    * keeps `bfl_flux3_get_result` reachable beside every submitter that polls

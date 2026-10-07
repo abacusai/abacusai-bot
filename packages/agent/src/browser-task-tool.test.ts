@@ -168,3 +168,30 @@ describe("one browser run at a time", () => {
     expect(stubs.run).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("media a run sent", () => {
+  it("is named in the result, so the loop does not send it again", async () => {
+    stubs.run.mockImplementation(
+      async (
+        _context: unknown,
+        _task: string,
+        _emit: unknown,
+        options: { sentMedia: { add: (id: string) => void } }
+      ) => {
+        options.sentMedia.add("media-11111111111111111111");
+        return finished("completed");
+      }
+    );
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), channel: WHATSAPP_CHANNEL } as never,
+      () => {}
+    );
+
+    const result = await tool.execute("call-1", { task: "screenshot it" });
+
+    expect(result.content[0]?.text).toContain(
+      "This run sent the user media-11111111111111111111. Do not send it again."
+    );
+    stubs.run.mockReset();
+  });
+});

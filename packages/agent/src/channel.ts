@@ -1,13 +1,17 @@
 /**
- * What the chat a session talks through can do, so tool descriptions and
- * prompts say only what is true there: an app chat has a Browser pane the
- * user can finish a step in; WhatsApp has none, but takes images and links.
+ * What the chat a session talks through can do, so tool descriptions, tool
+ * results and prompts say only what is true there: an app chat has a Browser
+ * pane and a preview pane; WhatsApp has neither, but takes images, files and
+ * links. A leaf module: the desktop's main process reads it too
+ * (`@abacus-ai/agent/channel`).
  */
 export interface ChannelCapabilities {
   /** The user can open this session's browser in a pane and act in it. */
   pane: boolean;
   /** Images can go to the chat (`send_media`). */
   media: boolean;
+  /** Other files can go to the chat as documents. */
+  documents: boolean;
   /** The chat can carry one-time links the user opens to do a step. */
   oneTimeLinks: boolean;
 }
@@ -16,6 +20,7 @@ export interface ChannelCapabilities {
 export const APP_CHANNEL: ChannelCapabilities = {
   pane: true,
   media: false,
+  documents: false,
   oneTimeLinks: false,
 };
 
@@ -23,6 +28,7 @@ export const APP_CHANNEL: ChannelCapabilities = {
 export const WHATSAPP_CHANNEL: ChannelCapabilities = {
   pane: false,
   media: true,
+  documents: true,
   oneTimeLinks: true,
 };
 
