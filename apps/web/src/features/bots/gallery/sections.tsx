@@ -2,18 +2,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BotAvatar } from "#renderer/components/bot-avatar";
+import { AvatarGallery } from "./avatars";
 import {
   ConnectorMark,
   CONNECTOR_MARK_IDS,
 } from "#renderer/components/connector-mark";
-import {
-  AVATAR_SHAPES,
-  AVATAR_PALETTE,
-  AVATAR_ACCESSORIES,
-  LIFECYCLE_MOODS,
-  defaultLook,
-} from "#renderer/lib/bots/avatar";
 import { DEFAULT_CHECK_IN } from "#renderer/lib/bots/check-in";
 import { Button } from "#renderer/ui/button";
 
@@ -104,27 +97,7 @@ const View = ({
   play: boolean;
 }) => {
   const { t } = useTranslation();
-  const look = defaultLook("Assistant");
-  if (fixture === "bots-avatar")
-    return (
-      <div className="flex flex-wrap gap-5">
-        {AVATAR_SHAPES.map((shape) => (
-          <div key={shape} className="flex flex-col items-center gap-2">
-            <BotAvatar look={{ ...look, shape }} size={56} />
-            <span className="text-xs">{t(`bots.avatar.shapes.${shape}`)}</span>
-          </div>
-        ))}
-        {AVATAR_PALETTE.map(({ id, hex }) => (
-          <BotAvatar key={id} look={{ ...look, color: hex }} size={36} />
-        ))}
-        {AVATAR_ACCESSORIES.map((accessory) => (
-          <BotAvatar key={accessory} look={{ ...look, accessory }} size={56} />
-        ))}
-        {LIFECYCLE_MOODS.map((mood) => (
-          <BotAvatar key={mood} look={look} mood={mood} size={56} />
-        ))}
-      </div>
-    );
+  if (fixture === "bots-avatar") return <AvatarGallery />;
   if (fixture === "bots-connector-marks")
     return (
       <div className="flex flex-wrap gap-4">
