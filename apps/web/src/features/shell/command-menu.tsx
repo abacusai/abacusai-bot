@@ -24,7 +24,6 @@ import { useTranslation } from "react-i18next";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import { panelTabsStore } from "#renderer/features/sessions/dock/panel-tabs-store";
 import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
 import { ActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import {
@@ -51,6 +50,7 @@ import {
   type SearchableCommand,
 } from "./command-results";
 import { setCommandOpen, shellStore } from "./shell-store";
+import { useSessionPanelTabs } from "./use-panel";
 
 /** Query the lazy collections only while the existing dialog is open. */
 export const CommandMenu = () => {
@@ -73,7 +73,6 @@ interface Entry extends SearchableCommand {
   shortcut?: string;
   run(): void | Promise<void>;
 }
-const EMPTY_TABS: { ref: string; title: string }[] = [];
 const CommandMenuBody = () => {
   const { t } = useTranslation();
   const collections = useCollections();
@@ -111,10 +110,7 @@ const CommandMenuBody = () => {
   const key = current
     ? sessionConversationKey(current.workspaceId, current.id)
     : "";
-  const tabs = useStore(
-    panelTabsStore,
-    (state) => state[key]?.tabs ?? EMPTY_TABS
-  );
+  const tabs = useSessionPanelTabs(key || null).tabs;
   const listed = (sessions ?? [])
     .filter(isListedSession)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

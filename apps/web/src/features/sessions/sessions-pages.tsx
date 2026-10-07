@@ -1,16 +1,21 @@
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDb } from "#renderer/data/db";
-import { CommandCenter } from "#renderer/features/shell/command-center";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
 
 import { useSession, useWorkspace } from "./data/queries";
 import { renameSession } from "./data/session-actions";
 
-export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
+export const SessionIdentity = ({
+  sessionId,
+  renderTitle,
+}: {
+  sessionId: string;
+  renderTitle(props: { title: string; context?: string }): ReactNode;
+}) => {
   const { t } = useTranslation();
   const db = useDb();
   const session = useSession(sessionId);
@@ -45,10 +50,10 @@ export const SessionIdentity = ({ sessionId }: { sessionId: string }) => {
         </form>
       ) : (
         <>
-          <CommandCenter
-            title={session.label || t("sessions.untitled")}
-            context={workspace?.label}
-          />
+          {renderTitle({
+            title: session.label || t("sessions.untitled"),
+            context: workspace?.label,
+          })}
           <Button
             variant="ghost"
             size="icon-xs"

@@ -43,6 +43,11 @@ export const usePanelScope = (key: string | null): PanelScope =>
 export const activeTabOf = (scope: PanelScope): PanelTab | undefined =>
   scope.tabs.find((tab) => tab.id === scope.active);
 
+export const useSessionPanelTabs = (key: string | null) =>
+  useStore(panelTabsStore, (state) =>
+    key ? (state[key] ?? EMPTY_TABS) : EMPTY_TABS
+  );
+
 export const usePanel = (area: ShellArea | undefined) => {
   const params = useParams({ strict: false }) as {
     botId?: string;
@@ -56,9 +61,7 @@ export const usePanel = (area: ShellArea | undefined) => {
     area === "sessions" && row
       ? sessionConversationKey(row.workspaceId, row.id)
       : null;
-  const sessionTabs = useStore(panelTabsStore, (state) =>
-    sessionKey ? (state[sessionKey] ?? EMPTY_TABS) : EMPTY_TABS
-  );
+  const sessionTabs = useSessionPanelTabs(sessionKey);
   const key = panelScopeKey(area, params.botId);
   const scope = usePanelScope(key);
   const search = useSearch({ strict: false }) as {

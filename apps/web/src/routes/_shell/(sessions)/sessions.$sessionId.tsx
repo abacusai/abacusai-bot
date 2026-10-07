@@ -47,6 +47,7 @@ import { openSessionOnce } from "#renderer/features/sessions/data/unread-store";
 import { openTab } from "#renderer/features/sessions/dock/panel-tabs-store";
 import { SessionWorkspace } from "#renderer/features/sessions/session-workspace";
 import { SessionIdentity } from "#renderer/features/sessions/sessions-pages";
+import { CommandCenter } from "#renderer/features/shell/command-center";
 import {
   APP_HOTKEYS,
   useAppHotkey,
@@ -291,7 +292,10 @@ const SessionRoute = () => {
         }}
       />
       <TopBarSlot>
-        <SessionIdentity sessionId={sessionId} />
+        <SessionIdentity
+          sessionId={sessionId}
+          renderTitle={(props) => <CommandCenter {...props} />}
+        />
       </TopBarSlot>
       <SidePanelOverride />
       <SessionWorkspace

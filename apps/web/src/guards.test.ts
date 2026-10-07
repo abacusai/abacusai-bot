@@ -156,6 +156,7 @@ const FOCUSED_ENTRYPOINTS: Record<string, readonly string[]> = {
     "updates",
   ],
   shell: [
+    "command-center",
     "connect",
     "connect/recovery",
     "connect/services",
