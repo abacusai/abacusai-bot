@@ -36,3 +36,13 @@ a historical non-minute timezone offset. The original formatter tests remain.
 Follow-up: profile row subscription work and grouping with 1,000 sessions; consider
 cached sort keys and finer attention/previews subscriptions after the concurrent
 Sessions work lands. Review translated labels around midnight and after travel.
+
+Validation: all 2,286 web tests pass (270 files); all 27 repository static/build
+checks pass, including typecheck, oxlint, oxfmt, knip, i18n/locales, audit and UI
+registry checks. React Compiler reports zero diagnostics; chat/web bundle,
+release graph and size-limit gates pass. The unchanged agent suite's indexing
+check timed out during simultaneous whole-repository runs and passed on isolated
+retry (9 tests). The shared AG-UI golden fixture must not run in two worktrees at
+once. The browser draft runs the whole repository suite sequentially. The stale
+routing spy assertion already repaired in #225 is included identically here; it
+asserts resulting route/query behavior and changes no production UI.
