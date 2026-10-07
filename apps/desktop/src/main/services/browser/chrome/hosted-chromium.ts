@@ -369,6 +369,18 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     return this.send(method, params ?? {}, tab.sessionId);
   }
 
+  frameCdp(
+    tabId: number,
+    frameId: string,
+    method: string,
+    params?: Record<string, unknown>
+  ): Promise<unknown> {
+    const frame = this.frames.get(frameId);
+    if (frame?.tabId !== tabId)
+      return Promise.reject(new Error("the frame is gone"));
+    return this.send(method, params ?? {}, frame.sessionId);
+  }
+
   close(): void {
     this.child?.kill();
     this.onClose("closed");

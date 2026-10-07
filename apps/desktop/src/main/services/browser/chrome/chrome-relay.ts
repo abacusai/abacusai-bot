@@ -72,6 +72,13 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
   frameOrigin?(tabId: number, frameId: string): string | null;
   /** The cross-origin frames the driver attached whose owner is in the tab's own page. */
   childFrames?(tabId: number): string[];
+  /** A CDP command in the own session of a cross-origin frame the driver attached. */
+  frameCdp?(
+    tabId: number,
+    frameId: string,
+    method: string,
+    params?: Record<string, unknown>
+  ): Promise<unknown>;
   cdp(
     tabId: number,
     method: string,

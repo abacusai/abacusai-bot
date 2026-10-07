@@ -34,6 +34,15 @@ import {
 } from "../browser/secret-fields";
 import { MEDIA_TTL_MS, MediaStore } from "../messaging/media-store";
 
+/**
+ * What the page answers besides evaluations: the frame tree names its
+ * document (a script runs only on a page the browser can name).
+ */
+const otherCommand = (method: string): unknown =>
+  method === "Page.getFrameTree"
+    ? { frameTree: { frame: { id: "main", loaderId: "loader-1" } } }
+    : {};
+
 /** Expressions the page was asked to evaluate, in order, for the whole run. */
 const evaluated: string[] = [];
 
@@ -191,11 +200,14 @@ class FakeWebContents {
             ),
           },
         };
-      if (method !== "Runtime.evaluate") return {};
+      if (method !== "Runtime.evaluate") return otherCommand(method);
 
       const expression = String(params?.expression ?? "");
       if (expression === FIND_SECRET_FIELDS_SCRIPT)
         return { result: { objectId: "found" } };
+      // The live-origin check before an action asks this; it is not the action.
+      if (expression === "location.origin")
+        return { result: { value: new URL(this.url).origin } };
       evaluated.push(expression);
       if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
@@ -2241,10 +2253,12 @@ describe("the shapes a page can come back in", () => {
       method: string,
       params?: Record<string, unknown>
     ) => {
-      if (method !== "Runtime.evaluate") return {};
+      if (method !== "Runtime.evaluate") return otherCommand(method);
       const expression = String(params?.expression ?? "");
       if (expression === FIND_SECRET_FIELDS_SCRIPT)
         return { result: { objectId: "found" } };
+      if (expression === "location.origin")
+        return { result: { value: "https://example.test" } };
       attempts += 1;
       if (expression.includes("return (")) {
         return {
@@ -2269,7 +2283,7 @@ describe("the shapes a page can come back in", () => {
         ? { result: { objectId: "found" } }
         : method === "Runtime.evaluate"
           ? { exceptionDetails: {} }
-          : {};
+          : otherCommand(method);
 
     const { text, isError } = await call("browser_execute", { code: "x" });
 
@@ -2548,7 +2562,7 @@ describe("a few last shapes", () => {
     ) => {
       if (params?.expression === FIND_SECRET_FIELDS_SCRIPT)
         return { result: { objectId: "found" } };
-      if (method !== "Runtime.evaluate") return {};
+      if (method !== "Runtime.evaluate") return otherCommand(method);
       throw "not an Error at all";
     };
     const { text, isError } = await call("browser_execute", {
@@ -3208,7 +3222,7 @@ describe("several tabs per session", () => {
     ) => {
       if (params?.expression === FIND_SECRET_FIELDS_SCRIPT)
         return { exceptionDetails: { text: "blocked" } };
-      if (method !== "Runtime.evaluate") return {};
+      if (method !== "Runtime.evaluate") return otherCommand(method);
       evaluated.push(String(params?.expression ?? ""));
       return { result: { value: oneButton } };
     };

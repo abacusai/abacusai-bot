@@ -5,10 +5,13 @@
  * session drives. The tab the user picked when allowing the connection
  * belongs to no session and serves callers with none.
  */
-import type {
-  BrowserTab,
-  BrowserTargetSource,
-  BrowserViewCandidate,
+import {
+  framePageOf,
+  type BrowserFrame,
+  type BrowserPage,
+  type BrowserTab,
+  type BrowserTargetSource,
+  type BrowserViewCandidate,
 } from "../browser-target";
 import type { CapturedImage, SecretFields } from "../secret-fields";
 import { BrowserTabs } from "./browser-tabs";
@@ -116,6 +119,23 @@ export class ChromeTargetSource implements BrowserTargetSource {
   ): Promise<CapturedImage | null> {
     return this.tabs.captureMasked(id, secrets);
   }
+
+  liveOrigin(id: number, frameId?: string): Promise<string | null> {
+    return this.tabs.liveOrigin(id, frameId);
+  }
+
+  frames(id: number): BrowserFrame[] {
+    return this.tabs.frames(id);
+  }
+
+  framePage(id: number, frameId: string): BrowserPage | null {
+    const page = this.pageFor(id);
+    if (page == null || !this.frames(id).some((f) => f.frameId === frameId))
+      return null;
+    return framePageOf(page, frameId, (method, params) =>
+      this.tabs.frameCdp(id, frameId, method, params)
+    );
+  }
 }
 
 /**
@@ -134,6 +154,9 @@ export const tabMethodsOf = (
   | "noteUse"
   | "secrets"
   | "captureMasked"
+  | "liveOrigin"
+  | "frames"
+  | "framePage"
 > => ({
   sessionTabs: (sessionId) => source()?.sessionTabs(sessionId) ?? [],
   activateTab: async (sessionId, tabId) =>
@@ -146,4 +169,8 @@ export const tabMethodsOf = (
   secrets: (id) => source()?.secrets(id) ?? null,
   captureMasked: async (id, secrets) =>
     (await source()?.captureMasked(id, secrets)) ?? null,
+  liveOrigin: async (id, frameId) =>
+    (await source()?.liveOrigin(id, frameId)) ?? null,
+  frames: (id) => source()?.frames(id) ?? [],
+  framePage: (id, frameId) => source()?.framePage(id, frameId) ?? null,
 });

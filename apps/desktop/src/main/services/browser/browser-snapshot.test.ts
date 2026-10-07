@@ -22,7 +22,9 @@ import {
   formatOverlays,
   formatPageSummary,
   formatTree,
+  frameSnapshotScript,
   GET_ELEMENT_CENTER_JS,
+  renderTree,
   SNAPSHOT_BUILD_JS,
 } from "./browser-snapshot";
 import type { SnapshotNode } from "./browser-snapshot";
@@ -403,5 +405,29 @@ describe("describing where the page is", () => {
     expect(text).toContain('Focused: input "Where to?"');
     expect(text).toContain("Scroll: screen 2 of 4");
     expect(text).toContain("12 results found");
+  });
+});
+
+describe("a cross-origin frame's snapshot script", () => {
+  it("names its refs @fN… and keeps them apart from the page's", () => {
+    const script = frameSnapshotScript(2);
+
+    expect(script).toContain('"@f2e" + refStore.next++');
+    expect(script).toContain("window.__abacusBotRefs_f2 ||");
+    expect(script).not.toContain("'@e' + refStore.next++");
+    expect(script).not.toContain("window.__abacusBotRefs ||");
+    expect(script).not.toBe(SNAPSHOT_BUILD_JS);
+  });
+
+  it("counts frame refs among those a cut tree leaves out", () => {
+    const children = Array.from({ length: 50 }, (_, index) => ({
+      ref: `@f1e${index + 1}`,
+      tag: "input",
+      name: "x".repeat(40),
+    }));
+
+    expect(
+      renderTree({ tag: "body", children }, 400).omittedRefs
+    ).toBeGreaterThan(0);
   });
 });

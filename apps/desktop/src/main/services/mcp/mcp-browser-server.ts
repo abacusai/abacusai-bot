@@ -35,9 +35,11 @@ import {
   diffRefs,
   extractRefMap,
   filterSnapshot,
+  flattenNodes,
   formatOverlays,
   formatPageSummary,
   formatTree,
+  frameSnapshotScript,
   GET_ELEMENT_CENTER_JS,
   PAGE_SUMMARY_JS,
   renderTree,
@@ -52,8 +54,34 @@ import {
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
+import {
+  FENCE_ERROR,
+  fenceBlockPatterns,
+  fenceGuardExpression,
+  isFencedUrl,
+} from "../browser/host-fence";
 import { type CapturedImage, SecretFields } from "../browser/secret-fields";
 import type { MediaStore } from "../messaging/media-store";
+import { abacusHostFence } from "../providers/abacus-host";
+import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
+import {
+  codeFieldAllowed,
+  DOCUMENT_INPUT_FACTS_SCRIPT,
+  factsFromDocument,
+  fieldKindAllowed,
+  LIVE_FIELD_FUNCTION,
+  type DomNode,
+  type FieldFacts,
+  isPaymentFrameOrigin,
+  planFill,
+  readPageTotal,
+  type PageTotal,
+} from "../vault/vault-fill";
+import {
+  VAULT_FILL_TOOL,
+  VAULT_TOOL_NAMES,
+  type Vault,
+} from "../vault/vault-tools";
 import {
   McpHttpServer,
   type McpToolListing,
@@ -346,6 +374,8 @@ function summarizeToolCall(
       return "Run JavaScript in the page";
     case "browser_tabs":
       return `Tabs (${action ?? "list"})`;
+    case VAULT_FILL_TOOL:
+      return `Fill a saved ${typeof a.field === "string" ? a.field : "value"} into ${typeof a.ref === "string" ? a.ref : "a field"}`;
     default:
       return tool;
   }
@@ -364,9 +394,95 @@ function isReadOnlyBrowserTool(
 ): boolean {
   return (
     name === "browser_snapshot" ||
-    (name === "browser_tabs" && (args.action ?? "list") === "list")
+    (name === "browser_tabs" && (args.action ?? "list") === "list") ||
+    // The vault's own tools touch no page: they list items or mint links the user acts on.
+    (VAULT_TOOL_NAMES.includes(name) && name !== VAULT_FILL_TOOL)
   );
 }
+
+/** The link a click on `selector` would follow, resolved; null for none. */
+const linkTargetScript = (selector: string): string => `(function() {
+  const el = document.querySelector(${JSON.stringify(selector)});
+  const link = el && el.closest('a[href], area[href]');
+  if (link) return link.href;
+  const form = el && el.form;
+  return form ? form.action : null;
+})()`;
+
+/** The text of the element showing a total, for the host to read itself. */
+const totalTextScript = (selector: string): string => `(function() {
+  const el = document.querySelector(${JSON.stringify(selector)});
+  if (!el) return null;
+  return String(el.innerText || el.textContent || '').slice(0, 200);
+})()`;
+
+const ABACUS_REFUSAL =
+  "Refused: Abacus.AI's own pages and APIs (the user's account, vault pages and payment approvals) are never " +
+  "opened or acted on in this browser. Those links are for the user alone, on their own device.";
+
+/** Keys that copy, cut or paste: never on a page holding a secret field. */
+const isClipboardCombo = (key: string, mods: string[]): boolean => {
+  const command = mods.some((mod) =>
+    ["control", "ctrl", "meta", "command", "cmd"].includes(mod)
+  );
+  const main = key.toLowerCase();
+  return (
+    (command && ["c", "x", "v", "insert"].includes(main)) ||
+    (mods.includes("shift") && (main === "insert" || main === "delete"))
+  );
+};
+
+/** Remote objects one vault fill holds, released together. */
+const VAULT_OBJECT_GROUP = "abacusai-vault-fill";
+
+/**
+ * Right before typing, in one evaluation in the node's own document: focus
+ * and select the node, then report the document's live origin, the
+ * top-level page's origin as the document sees it, and whether the node has
+ * the focus now.
+ */
+const ARM_FUNCTION = `function() {
+  if (!this.isConnected) return { focused: false };
+  this.scrollIntoView({ block: 'center', behavior: 'instant' });
+  this.focus();
+  if (typeof this.select === 'function') this.select();
+  const ancestors = location.ancestorOrigins;
+  const top = ancestors && ancestors.length > 0 ? ancestors[ancestors.length - 1] : location.origin;
+  return { focused: document.hasFocus() && document.activeElement === this, origin: location.origin, top: top };
+}`;
+
+/** Whether the node still has the focus, its document included; run on the node itself. */
+const STILL_FOCUSED_FUNCTION = `function() { return document.hasFocus() && document.activeElement === this; }`;
+
+/**
+ * Empties the element that took text meant for another, and marks it
+ * filled: whatever reached it is the user's secret.
+ */
+const CLEAR_FUNCTION = `function() {
+  try {
+    if (this.isContentEditable) this.textContent = '';
+    else if ('value' in this) {
+      const proto = Object.getPrototypeOf(this);
+      const set = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (set) set.call(this, ''); else this.value = '';
+    }
+    this.dispatchEvent(new Event('input', { bubbles: true }));
+  } catch {}
+  return true;
+}`;
+
+interface FrameTreeNode {
+  frame?: { loaderId?: string; url?: string; securityOrigin?: string };
+  childFrames?: FrameTreeNode[];
+}
+
+const VAULT_FIELDS: ReadonlySet<string> = new Set([
+  "username",
+  "password",
+  "code",
+  "card_number",
+  "cvv",
+]);
 
 export interface McpBrowserServerOptions {
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
@@ -383,6 +499,8 @@ export interface McpBrowserServerOptions {
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
   /** Where screenshots are kept for `send_media`; without one they get no media id. */
   media?: () => MediaStore | null;
+  /** The user's vault: its tools are served here, beside the page they read origins from. */
+  vault?: Vault;
 }
 
 /** A read refused because the page's secret fields could not be checked first. */
@@ -406,17 +524,21 @@ export class McpBrowserServer extends McpHttpServer {
     // Refs, the remembered view and the attach verdict all describe a browser
     // that is about to stop existing.
     this.snapshots.clearAll();
+    this.frameNumbers.clear();
     this.targetMemory.clear();
     this.attachTimedOut.clear();
     super.stop();
   }
 
   protected listTools(): McpToolListing[] {
-    return Object.entries(TOOLS_SCHEMA).map(([name, s]) => ({
-      name,
-      description: s.description,
-      inputSchema: s.inputSchema,
-    }));
+    return [
+      ...Object.entries(TOOLS_SCHEMA).map(([name, s]) => ({
+        name,
+        description: s.description,
+        inputSchema: s.inputSchema,
+      })),
+      ...(this.options.vault?.listings() ?? []),
+    ];
   }
 
   /** Sessions whose full attach wait already expired; see getWC. */
@@ -1025,21 +1147,131 @@ export class McpBrowserServer extends McpHttpServer {
       };
     }
     const state = this.snapshots.for(sessionId);
+    let frameRefs = 0;
     if (result.tree != null) {
       state.refMap.clear();
+      state.frameOf.clear();
       extractRefMap(result.tree, state.refMap);
       state.url = typeof result.url === "string" ? result.url : wc.getURL();
+      await this.recordFields(wc, result.tree);
+      for (const frame of await this.frameSnapshots(wc)) {
+        const refs = new Map<string, string>();
+        extractRefMap(frame.tree, refs);
+        for (const [ref, selector] of refs) {
+          state.refMap.set(ref, selector);
+          state.frameOf.set(ref, frame.frameId);
+        }
+        frameRefs += refs.size;
+        result.tree.children = [
+          ...(result.tree.children ?? []),
+          { tag: "frame", name: frame.origin ?? "", children: [frame.tree] },
+        ];
+      }
     }
     if (typeof result.title !== "string") result.title = wc.getTitle();
     if (typeof result.url !== "string") result.url = wc.getURL();
     if (typeof result.refCount !== "number")
       result.refCount = state.refMap.size;
+    else result.refCount += frameRefs;
     if (typeof result.visibleCount !== "number")
       result.visibleCount = result.refCount;
+    else result.visibleCount += frameRefs;
     if (typeof result.offscreenCount !== "number") result.offscreenCount = 0;
     if (!Array.isArray(result.overlays)) result.overlays = [];
 
     return result;
+  }
+
+  /** Numbers for the frames' refs (`@f2e5`), kept per frame so a frame's refs stay stable. */
+  private readonly frameNumbers = new Map<string, number>();
+
+  /**
+   * The trees of the tab's cross-origin frames (a payment provider's card
+   * fields), where the source can reach them; a frame that does not answer
+   * in time is left out.
+   */
+  private async frameSnapshots(
+    wc: BrowserPage
+  ): Promise<
+    Array<{ frameId: string; origin: string | null; tree: SnapshotNode }>
+  > {
+    const source = this.options.target?.();
+    if (source?.frames == null || source.framePage == null || wc.frameId)
+      return [];
+    const snapshots: Array<{
+      frameId: string;
+      origin: string | null;
+      tree: SnapshotNode;
+    }> = [];
+    for (const frame of source
+      .frames(wc.id)
+      .slice(0, McpBrowserServer.MAX_SNAPSHOT_FRAMES)) {
+      const page = source.framePage(wc.id, frame.frameId);
+      // A frame whose live origin cannot be read, or is Abacus.AI's, is left out.
+      const origin = await this.liveOrigin(wc, frame.frameId);
+      if (page == null || origin == null || this.isAbacus(origin)) continue;
+      let number = this.frameNumbers.get(frame.frameId);
+      if (number == null) {
+        number = this.frameNumbers.size + 1;
+        this.frameNumbers.set(frame.frameId, number);
+      }
+      const read = this.readPage(page, frameSnapshotScript(number)).catch(
+        () => null
+      );
+      const result = await Promise.race([
+        read,
+        new Promise<null>((resolve) =>
+          setTimeout(
+            () => resolve(null),
+            McpBrowserServer.FRAME_SNAPSHOT_MS
+          ).unref?.()
+        ),
+      ]);
+      if (result?.tree != null && typeof result.tree === "object") {
+        await this.recordFields(page, result.tree as SnapshotNode);
+        snapshots.push({
+          frameId: frame.frameId,
+          origin,
+          tree: result.tree as SnapshotNode,
+        });
+      }
+    }
+    return snapshots;
+  }
+
+  /**
+   * Records the document's inputs as they are when first seen (by backend
+   * node id, read from the DOM, not by a script), for a vault fill to check
+   * a field against what it was before anything the agent did.
+   */
+  private async recordFields(
+    page: BrowserPage,
+    tree: SnapshotNode
+  ): Promise<void> {
+    if (!flattenNodes(tree).some((node) => node.tag === "input")) return;
+    const document = (await this.cdp(page, "DOM.getDocument", {
+      depth: -1,
+    }).catch(() => null)) as { root?: DomNode } | null;
+    if (document?.root == null) return;
+    this.secretsOf(page).recordFields(page, factsFromDocument(document.root));
+  }
+
+  private static readonly MAX_SNAPSHOT_FRAMES = 4;
+  private static readonly FRAME_SNAPSHOT_MS = 3_000;
+
+  /**
+   * The page a ref lives in: the tab's own, or the cross-origin frame its
+   * snapshot found it in. Null when that frame is gone.
+   */
+  private pageForRef(
+    wc: BrowserPage,
+    ref: unknown,
+    sessionId?: string
+  ): BrowserPage | null {
+    if (typeof ref !== "string") return wc;
+    const frameId = this.snapshots.for(sessionId).frameOf.get(ref);
+    if (frameId == null) return wc;
+    return this.options.target?.()?.framePage?.(wc.id, frameId) ?? null;
   }
 
   private captureBefore(
@@ -1307,7 +1539,9 @@ export class McpBrowserServer extends McpHttpServer {
       wc,
       "Runtime.evaluate",
       {
-        expression,
+        // The fence is checked in the same evaluation: a document a
+        // navigation brought onto an Abacus.AI host since the last check runs nothing.
+        expression: `${fenceGuardExpression(abacusHostFence())},\n(${expression}\n)`,
         returnByValue: true,
         awaitPromise: true,
         ...(options.userGesture === true ? { userGesture: true } : {}),
@@ -1390,7 +1624,7 @@ export class McpBrowserServer extends McpHttpServer {
           return this.err("Browser permission denied by user.");
         }
       }
-      const run = (): Promise<ToolResult> => {
+      const act = (): Promise<ToolResult> => {
         switch (name) {
           case "browser_navigate":
             return this.executeNavigate(args, sessionId);
@@ -1402,8 +1636,47 @@ export class McpBrowserServer extends McpHttpServer {
             return this.executeExecute(args, sessionId);
           case "browser_tabs":
             return this.executeTabs(args, sessionId);
+          case VAULT_FILL_TOOL:
+            return this.executeVaultFill(args, sessionId);
+          case "vault_items":
+          case "vault_request":
+          case "payment_approval":
+            return this.options.vault == null
+              ? Promise.resolve(this.err(VAULT_UNAVAILABLE))
+              : this.options.vault.run(name, args, sessionId, {
+                  topOrigin: async (session) => {
+                    const wc = this.findView(session);
+                    return wc == null ? null : this.liveOrigin(wc);
+                  },
+                  codePages: (session) => this.codePages(session),
+                });
           default:
             return Promise.resolve(this.err(`Unknown tool: ${name}`));
+        }
+      };
+      // Abacus.AI's own pages are the user's: the agent's browser never acts
+      // on one, however it got there (a URL, a link, a script, a redirect).
+      // Every browser call on a tab runs in arrival order, one at a time, so
+      // nothing (a script above all) runs while a vault value is typed.
+      const run = async (): Promise<ToolResult> => {
+        if (!name.startsWith("browser_")) return act();
+        const wc = this.findView(sessionId);
+        // A script is on its way to this tab from the moment it is asked for.
+        const scripting =
+          wc != null && name === "browser_execute" ? this.secretsOf(wc) : null;
+        scripting?.scriptArrived();
+        const guarded = async (): Promise<ToolResult> => {
+          const refused = await this.abacusFence(name, args, sessionId);
+          if (refused != null) return refused;
+          const result = await act();
+          return (await this.leaveAbacusPage(sessionId)) ?? result;
+        };
+        try {
+          return wc == null
+            ? await guarded()
+            : await this.inTabOrder(wc.id, guarded);
+        } finally {
+          scripting?.scriptSettled();
         }
       };
       // A call that never returns takes the whole sub-agent run with it.
@@ -1428,6 +1701,10 @@ export class McpBrowserServer extends McpHttpServer {
         if (timer != null) clearTimeout(timer);
       }
     } catch (e) {
+      if (e instanceof Error && e.message.includes(FENCE_ERROR)) {
+        await this.leaveAbacusPage(sessionId);
+        return this.err(ABACUS_REFUSAL);
+      }
       return this.err(e instanceof Error ? e.message : String(e));
     }
   }
@@ -1733,6 +2010,7 @@ export class McpBrowserServer extends McpHttpServer {
       const fresh = await this.takeSnapshot(wc, sessionId).catch(() => null);
       if (fresh?.tree == null) {
         snapshot.refMap.clear();
+        snapshot.frameOf.clear();
         snapshot.url = null;
         return this.err(
           `The page has navigated since the last snapshot (now at ${wc.getURL()}), so its refs are stale. ` +
@@ -1757,7 +2035,13 @@ export class McpBrowserServer extends McpHttpServer {
     const before = McpBrowserServer.REPORTS_CHANGES.has(action)
       ? this.captureBefore(wc, sessionId)
       : null;
-    let result = await this.interactStep(wc, args, sessionId);
+    // A ref inside a cross-origin frame acts in that frame's own document.
+    let target = this.pageForRef(wc, args.ref, sessionId);
+    if (target == null)
+      return this.err(
+        `The frame ${String(args.ref)} was in has gone. Run browser_snapshot to see the page as it is now.`
+      );
+    let result = await this.interactStep(target, args, sessionId);
     // The element was there at the snapshot and is not now: the page
     // re-rendered under a stable ref (refs key on the selector), so one fresh
     // snapshot usually brings it back. A model told only "take a snapshot"
@@ -1768,8 +2052,13 @@ export class McpBrowserServer extends McpHttpServer {
       McpBrowserServer.isVanished(result)
     ) {
       const fresh = await this.takeSnapshot(wc, sessionId).catch(() => null);
-      if (fresh?.tree != null && snapshot.refMap.has(args.ref)) {
-        const retried = await this.interactStep(wc, args, sessionId);
+      target = this.pageForRef(wc, args.ref, sessionId);
+      if (
+        fresh?.tree != null &&
+        snapshot.refMap.has(args.ref) &&
+        target != null
+      ) {
+        const retried = await this.interactStep(target, args, sessionId);
         if (retried.isError !== true) {
           const text = firstText(retried);
           result = this.ok(
@@ -1800,6 +2089,12 @@ export class McpBrowserServer extends McpHttpServer {
         if (resolved.kind !== "selector")
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.selector;
+        // A link to an Abacus.AI page is never followed.
+        const href = await this.evalJS(wc, linkTargetScript(sel)).catch(
+          () => null
+        );
+        if (typeof href === "string" && this.isAbacus(href))
+          return this.err(ABACUS_REFUSAL);
         await this.animateCursorToElement(wc, sel).catch(() => {});
         const result = await this.evalJS(wc, clickScript(sel), {
           userGesture: true,
@@ -2065,6 +2360,14 @@ export class McpBrowserServer extends McpHttpServer {
             '"key" is required for press (e.g. "Enter", "Control+a").'
           );
         const { key: mainKey, modifiers: mods } = parseKeyCombo(key);
+        // Copy, cut or paste could carry a filled value into a field that shows it.
+        if (
+          isClipboardCombo(mainKey, mods) &&
+          (await this.secretsOf(wc).executeRefusal(wc)) != null
+        )
+          return this.err(
+            "Refused: this page has a password, card or code field, so copy, cut and paste keys are not used on it."
+          );
 
         // Through the debugger, so the key event is trusted and the default
         // action runs: a `new KeyboardEvent` reaches listeners, but Enter does
@@ -2182,8 +2485,23 @@ export class McpBrowserServer extends McpHttpServer {
     if (!wc) return this.err(NO_BROWSER);
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
-    const refusal = await this.secretsOf(wc).executeRefusal(wc);
+    const secrets = this.secretsOf(wc);
+    const refusal = await secrets.executeRefusal(wc);
     if (refusal != null) return this.err(refusal);
+    // A checkout with a payment provider's frame is where a total could be
+    // forged next to card fields no script can reach: no scripts there.
+    const page = await this.documentInfo(wc);
+    if (page.frameOrigins.some((origin) => isPaymentFrameOrigin(origin)))
+      return this.err(
+        "This page has a payment provider's card form, so scripts cannot run on it. Use browser_snapshot and browser_interact instead."
+      );
+    if (page.key == null)
+      return this.err(
+        "The browser could not say which page this is, so no script runs on it. Snapshot and try again."
+      );
+    // From here the page may hold what a script put there (a listener, a
+    // changed field, a forged total): nothing is filled into it any more.
+    secrets.noteScript(page.key);
 
     // Models write `document.title` far more often than `return document.title`,
     // so an expression is tried as one first; only non-expressions fall
@@ -2204,6 +2522,8 @@ export class McpBrowserServer extends McpHttpServer {
           str.length > 20000 ? str.slice(0, 20000) + "\n...(truncated)" : str
         );
       } catch (e) {
+        // The page is on an Abacus.AI host: nothing ran, and the call is refused.
+        if (e instanceof Error && e.message.includes(FENCE_ERROR)) throw e;
         lastError = e;
 
         // Only a parse failure means the wrapping guess was wrong; retrying on
@@ -2226,6 +2546,531 @@ export class McpBrowserServer extends McpHttpServer {
 
   private label(args: Record<string, unknown>): string {
     return (args.ref as string) ?? (args.selector as string) ?? "(no target)";
+  }
+
+  /** Each tab's calls, in arrival order: the last one's settling, which the next waits for. */
+  private readonly tabQueues = new Map<number, Promise<void>>();
+
+  /**
+   * Runs `work` once every call that reached the tab before it has settled.
+   * A call that never settles holds the tab no longer than a call may run.
+   */
+  private async inTabOrder<T>(
+    tabId: number,
+    work: () => Promise<T>
+  ): Promise<T> {
+    const before = this.tabQueues.get(tabId) ?? Promise.resolve();
+    const mine = before.then(work);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settled = Promise.race([
+      mine.then(
+        () => undefined,
+        () => undefined
+      ),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, McpBrowserServer.CALL_TIMEOUT_MS);
+        timer.unref?.();
+      }),
+    ]).finally(() => clearTimeout(timer));
+    this.tabQueues.set(tabId, settled);
+    try {
+      return await mine;
+    } finally {
+      if (this.tabQueues.get(tabId) === settled) this.tabQueues.delete(tabId);
+    }
+  }
+  /** Pages already told never to load anything from Abacus.AI. */
+  private readonly abacusBlocked = new WeakSet<BrowserPage>();
+
+  /**
+   * The documents of the session's active tab (its page, then its
+   * cross-origin frames) that hold a field a one-time code goes into, by
+   * live origin; a bank's code is bound to one of them.
+   */
+  private async codePages(
+    sessionId: string
+  ): Promise<Array<{ origin: string; top: boolean }>> {
+    const wc = this.findView(sessionId);
+    if (wc == null) return [];
+    const source = this.options.target?.();
+    const documents: Array<{ page: BrowserPage; frameId: string | null }> = [
+      { page: wc, frameId: null },
+      ...(source?.frames?.(wc.id) ?? []).flatMap((frame) => {
+        const page = source?.framePage?.(wc.id, frame.frameId);
+        return page == null ? [] : [{ page, frameId: frame.frameId }];
+      }),
+    ];
+    const found: Array<{ origin: string; top: boolean }> = [];
+    for (const { page, frameId } of documents) {
+      const origin = await this.liveOrigin(wc, frameId ?? undefined);
+      if (origin == null || this.isAbacus(origin)) continue;
+      const inputs = await this.readPage(
+        page,
+        DOCUMENT_INPUT_FACTS_SCRIPT
+      ).catch(() => null);
+      if (
+        Array.isArray(inputs) &&
+        inputs.some((facts: FieldFacts) =>
+          fieldKindAllowed("code", facts, false)
+        )
+      )
+        found.push({ origin, top: frameId == null });
+    }
+    return found;
+  }
+
+  /** Whether `url` is on one of Abacus.AI's hosts (see `abacusHostFence`). */
+  private isAbacus(url: string | null): boolean {
+    return isFencedUrl(url, abacusHostFence());
+  }
+
+  /**
+   * Why a call may not run, checked before it does: it would open an
+   * Abacus.AI page, run a script naming one, or act on a tab that is on one
+   * now (a script's timer may have taken it there); such a tab is left for a
+   * blank page. The page is also told, once, never to load anything from an
+   * Abacus.AI host, so neither a script's fetch nor a navigation reaches one.
+   */
+  private async abacusFence(
+    name: string,
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult | null> {
+    if (
+      name === "browser_navigate" &&
+      typeof args.url === "string" &&
+      (args.action == null || args.action === "goto") &&
+      this.isAbacus(args.url)
+    )
+      return this.err(ABACUS_REFUSAL);
+    if (name === "browser_execute" && typeof args.code === "string") {
+      const fence = abacusHostFence();
+      const code = args.code.toLowerCase();
+      if (
+        [...fence.exact, ...fence.suffixes].some((host) =>
+          code.includes(host.replace(/^\./, ""))
+        )
+      )
+        return this.err(ABACUS_REFUSAL);
+    }
+    const wc = this.findView(sessionId);
+    if (wc == null) return null;
+    // A page that cannot be told to block them is not driven at all.
+    if (!(await this.blockAbacus(wc)))
+      return this.err(
+        "This page could not be set up safely (the browser refused a setting), so nothing was done on it. " +
+          "Navigate again, or open the page in a new tab."
+      );
+    const left = await this.leaveAbacusPage(sessionId);
+    if (left != null) return left;
+    // Acting on the page: its live origin, not the last reported URL.
+    if (name !== "browser_snapshot" && name !== "browser_tabs") {
+      const live = await this.liveOrigin(wc);
+      if (live != null && this.isAbacus(live)) {
+        await wc.loadURL("about:blank").catch(() => undefined);
+        return this.err(ABACUS_REFUSAL);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Tells the page never to load anything from an Abacus.AI host; remembered
+   * only once the browser took it. False when it would not.
+   */
+  private async blockAbacus(wc: BrowserPage): Promise<boolean> {
+    if (this.abacusBlocked.has(wc)) return true;
+    await this.cdp(wc, "Network.enable").catch(() => undefined);
+    const set = await this.cdp(wc, "Network.setBlockedURLs", {
+      urls: fenceBlockPatterns(abacusHostFence()),
+    }).then(
+      () => true,
+      () => false
+    );
+    if (set) this.abacusBlocked.add(wc);
+    return set;
+  }
+
+  /**
+   * A call that ended on an Abacus.AI page (a redirect, a script, history)
+   * leaves it for a blank page at once and is refused; null when it did not.
+   */
+  private async leaveAbacusPage(
+    sessionId?: string
+  ): Promise<ToolResult | null> {
+    const wc = this.findView(sessionId);
+    if (wc == null || !this.isAbacus(wc.getURL())) return null;
+    await wc.loadURL("about:blank").catch(() => undefined);
+    return this.err(ABACUS_REFUSAL);
+  }
+
+  /**
+   * The page's main document, as a key that changes with every new document
+   * (its loader; null when the browser cannot say), and the origins of its
+   * frames, read from the browser now.
+   */
+  private async documentInfo(
+    wc: BrowserPage
+  ): Promise<{ key: string | null; frameOrigins: string[] }> {
+    const tree = (await this.cdp(wc, "Page.getFrameTree").catch(
+      () => null
+    )) as { frameTree?: FrameTreeNode } | null;
+    const origins: string[] = [];
+    const walk = (node: FrameTreeNode | undefined): void => {
+      for (const child of node?.childFrames ?? []) {
+        const origin = child.frame?.securityOrigin ?? child.frame?.url ?? "";
+        if (origin.length > 0) origins.push(origin);
+        walk(child);
+      }
+    };
+    walk(tree?.frameTree);
+    for (const frame of this.options.target?.()?.frames?.(wc.id) ?? [])
+      if (frame.origin != null) origins.push(frame.origin);
+    const loader = tree?.frameTree?.frame?.loaderId;
+    return {
+      // Null when the browser cannot say which document it is: callers refuse.
+      key: typeof loader === "string" && loader.length > 0 ? loader : null,
+      frameOrigins: origins,
+    };
+  }
+
+  /**
+   * The live origin of the page, or of one of its frames, evaluated in that
+   * document now; null when it cannot say or the origin is opaque.
+   */
+  private async liveOrigin(
+    wc: BrowserPage,
+    frameId?: string
+  ): Promise<string | null> {
+    const source = this.options.target?.();
+    if (source?.liveOrigin != null) return source.liveOrigin(wc.id, frameId);
+    // The built-in view has no frames of its own to name; its page is asked directly.
+    if (frameId != null) return null;
+    // Asked as it is: this is what the fence checks, so it is not fenced itself.
+    const evaluated = (await this.cdp(wc, "Runtime.evaluate", {
+      expression: "location.origin",
+      returnByValue: true,
+    }).catch(() => null)) as { result?: { value?: unknown } } | null;
+    const origin = evaluated?.result?.value;
+    return typeof origin === "string" && origin !== "null" ? origin : null;
+  }
+
+  /**
+   * Types one saved vault value into the field `ref` names, if it is that
+   * value's kind of field. The origin the vault is told is the live page's
+   * (or frame's), never an argument; a card's amount is the total the page
+   * shows, read here from `total_ref`. The field is marked secret and the
+   * tab locked before the value is asked for; it is typed only if, in one
+   * evaluation right before, the field's document still has the planned
+   * origins and the field has the focus, then dropped. The model is told
+   * only that it was filled.
+   */
+  private async executeVaultFill(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult> {
+    const vault = this.options.vault;
+    if (vault == null) return this.err(VAULT_UNAVAILABLE);
+    const itemId = typeof args.item_id === "string" ? args.item_id.trim() : "";
+    const field = typeof args.field === "string" ? args.field : "";
+    const ref = typeof args.ref === "string" ? args.ref : "";
+    if (itemId.length === 0) return this.err("item_id is required.");
+    if (!VAULT_FIELDS.has(field))
+      return this.err(
+        "field is one of username, password, code, card_number or cvv."
+      );
+
+    const wc = await this.getWC(sessionId);
+    if (!wc) return this.err(NO_BROWSER);
+    const snapshot = this.snapshots.for(sessionId);
+    if (snapshot.url != null && wc.getURL() !== snapshot.url)
+      return this.err(
+        `The page has navigated since the last snapshot (now at ${wc.getURL()}). ` +
+          'Run browser_snapshot action:"snapshot" and use the field\'s fresh ref.'
+      );
+    const selector = snapshot.refMap.get(ref);
+    if (selector == null)
+      return this.err(this.refError(args, snapshot.refMap.size));
+    const frameId = snapshot.frameOf.get(ref) ?? null;
+    const page = this.pageForRef(wc, ref, sessionId);
+    if (page == null)
+      return this.err(
+        `The frame ${ref} was in has gone. Run browser_snapshot to see the page as it is now.`
+      );
+
+    // A script that ran on this document (or runs now) could be listening
+    // for the value, have changed the field, or have written the total.
+    const { key: documentKey } = await this.documentInfo(wc);
+    if (documentKey == null)
+      return this.err(
+        "The browser could not say which page this is, so nothing was filled. Snapshot and try again."
+      );
+    if (
+      this.secretsOf(wc).scriptPending() ||
+      this.secretsOf(wc).scriptRan(documentKey)
+    )
+      return this.err(
+        "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
+          "Reload the page, snapshot, and fill again without running scripts."
+      );
+    const card = field === "card_number" || field === "cvv";
+    const total = card
+      ? await this.readTotal(wc, args.total_ref, sessionId)
+      : null;
+    const topOrigin = await this.liveOrigin(wc);
+    const frameOrigin =
+      frameId != null ? await this.liveOrigin(wc, frameId) : null;
+    if (frameOrigin != null && this.isAbacus(frameOrigin))
+      return this.err(ABACUS_REFUSAL);
+    const approval = vault.approval(sessionId);
+    const plan = planFill({
+      itemId,
+      field: field as VaultField,
+      topOrigin,
+      frameOrigin,
+      inFrame: frameId != null,
+      approval,
+      pageTotal: total,
+    });
+    if (plan.ok === false) return this.err(plan.error);
+    // Taken now, before anything waits, so a second fill of this field is refused.
+    if (plan.once) approval!.used.add(field as VaultField);
+    let delivered = false;
+    const secrets = this.secretsOf(wc);
+
+    try {
+      // The node itself, held from here on: a field the page swaps out is not typed into.
+      const located = (await this.cdp(page, "Runtime.evaluate", {
+        expression: `document.querySelector(${JSON.stringify(selector)})`,
+        returnByValue: false,
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => null)) as { result?: { objectId?: string } } | null;
+      const node = located?.result?.objectId;
+      if (node == null) return this.err(this.notFoundError(args, selector));
+      const live = (await this.callOn(page, node, LIVE_FIELD_FUNCTION)) as {
+        connected?: boolean;
+        editable?: boolean;
+        facts?: FieldFacts;
+      } | null;
+      if (live?.connected !== true)
+        return this.err(this.notFoundError(args, selector));
+      if (live.editable !== true)
+        return this.err(
+          `${ref} is disabled or read-only, so nothing was filled.`
+        );
+      // The field as first seen, before anything the agent did, and as it is now: both must fit.
+      const described = (await this.cdp(page, "DOM.describeNode", {
+        objectId: node,
+      }).catch(() => null)) as { node?: { backendNodeId?: number } } | null;
+      const backendNodeId = described?.node?.backendNodeId;
+      const first =
+        backendNodeId == null ? null : secrets.firstFacts(page, backendNodeId);
+      if (first == null)
+        return this.err(
+          `${ref} was not on the page when it was last read, so it is not known what kind of field it is. Snapshot and fill again.`
+        );
+      const inPaymentFrame =
+        frameId != null && isPaymentFrameOrigin(frameOrigin);
+      if (
+        live.facts == null ||
+        !fieldKindAllowed(field as VaultField, first, inPaymentFrame) ||
+        !fieldKindAllowed(field as VaultField, live.facts, inPaymentFrame)
+      )
+        return this.err(
+          `Refused: ${ref} is not a field a ${field} goes into. ` +
+            (field === "password"
+              ? "A password goes only into a password field."
+              : field === "username"
+                ? "A username goes only into the sign-in form's username or email field."
+                : field === "code"
+                  ? "A code goes only into the one-time code field."
+                  : "A card number or CVV goes only into the checkout's card fields.") +
+            " Snapshot and pick that field."
+        );
+      // A code goes into a field marked for one, or the page's only code-like field.
+      if (field === "code") {
+        const inputs = await this.readPage(
+          page,
+          DOCUMENT_INPUT_FACTS_SCRIPT
+        ).catch(() => null);
+        if (
+          !Array.isArray(inputs) ||
+          !codeFieldAllowed(live.facts, inputs as FieldFacts[]) ||
+          !codeFieldAllowed(first, inputs as FieldFacts[])
+        )
+          return this.err(
+            `Refused: ${ref} is not clearly the one-time code field (it is not marked as one, and the page has ` +
+              "other fields like it, or it reads as a postcode or PIN). Report what the page asks for."
+          );
+      }
+      // Hidden and locked before any value exists here: from now on the
+      // field reads as hidden and the tab runs no scripts until it navigates.
+      if (!(await secrets.markFilledNode(page, node).catch(() => false)))
+        return this.err(
+          `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
+        );
+
+      const fetched = await vault.client.fill({
+        itemId,
+        field: field as VaultField,
+        ...plan.request,
+      });
+      if (fetched.ok === false)
+        return this.err(
+          fetched.unavailable
+            ? VAULT_UNAVAILABLE
+            : `The vault did not fill it: ${fetched.error}`
+        );
+      delivered = true;
+      const outcome = await this.typeVaultValue(
+        wc,
+        page,
+        node,
+        fetched.value,
+        plan.documentOrigin,
+        topOrigin!,
+        documentKey
+      );
+      if (outcome === "aborted")
+        return this.err(
+          `Stopped before typing: the page under ${ref} changed (it navigated or the field lost focus). ` +
+            "Nothing was typed. Snapshot and check where the page is before trying again."
+        );
+      if (outcome === "moved")
+        return this.err(
+          `The focus left ${ref} while typing, so the ${field} may have gone into another field; that field was cleared ` +
+            "and hidden. Snapshot and check the form before trying again."
+        );
+      if (outcome === "failed")
+        return this.err(
+          `${ref} did not take the value. Do not retry in a loop: snapshot to see the field, and report if it will not accept typing.`
+        );
+      const took = await this.callOn(
+        page,
+        node,
+        "function() { return String(this.value || '').length > 0; }"
+      );
+      return took === true
+        ? this.ok(`Filled ${field} into ${ref} (hidden).`)
+        : this.err(
+            `${ref} still looks empty after the ${field} was typed; the page may have replaced the field. Snapshot and check.`
+          );
+    } finally {
+      // Not spent unless the vault handed the value over.
+      if (plan.once && !delivered) approval!.used.delete(field as VaultField);
+      await this.cdp(page, "Runtime.releaseObjectGroup", {
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
+  }
+
+  /** A function run on a remote object of `page`; its value, or null when it failed. */
+  private async callOn(
+    page: BrowserPage,
+    objectId: string,
+    functionDeclaration: string
+  ): Promise<any> {
+    const response = (await this.cdp(page, "Runtime.callFunctionOn", {
+      objectId,
+      functionDeclaration,
+      returnByValue: true,
+    }).catch(() => null)) as {
+      result?: { value?: unknown };
+      exceptionDetails?: unknown;
+    } | null;
+    if (response == null || response.exceptionDetails != null) return null;
+    return response.result?.value ?? null;
+  }
+
+  /**
+   * The checkout total the element `totalRef` shows, read here; null when no
+   * ref was given or it does not show one total.
+   */
+  private async readTotal(
+    wc: BrowserPage,
+    totalRef: unknown,
+    sessionId?: string
+  ): Promise<PageTotal | null> {
+    if (typeof totalRef !== "string") return null;
+    const selector = this.snapshots.for(sessionId).refMap.get(totalRef);
+    const page = this.pageForRef(wc, totalRef, sessionId);
+    if (selector == null || page == null) return null;
+    const text = await this.readPage(page, totalTextScript(selector)).catch(
+      () => null
+    );
+    return typeof text === "string" ? readPageTotal(text) : null;
+  }
+
+  /**
+   * Types `value` into the node and lets go of it. "aborted": nothing was
+   * typed, since the node's document no longer had the planned origins, or
+   * the node (in a focused document) did not have the focus. "moved": the
+   * focus left the node while typing; whatever took the text, in whichever
+   * of the tab's documents has the focus, was cleared and marked filled.
+   */
+  private async typeVaultValue(
+    wc: BrowserPage,
+    page: BrowserPage,
+    node: string,
+    value: string,
+    documentOrigin: string,
+    topOrigin: string,
+    documentKey: string
+  ): Promise<"typed" | "aborted" | "moved" | "failed"> {
+    page.focus();
+    // Still the same document, and still no script on it (the tab's calls run
+    // one at a time, so none can start between this and the typing).
+    const now = await this.documentInfo(wc);
+    if (now.key !== documentKey || this.secretsOf(wc).scriptRan(documentKey))
+      return "aborted";
+    // A hidden or headless page reports no focus at all; this makes it report the real one.
+    await this.cdp(wc, "Emulation.setFocusEmulationEnabled", {
+      enabled: true,
+    }).catch(() => undefined);
+    const armed = await this.callOn(page, node, ARM_FUNCTION);
+    if (
+      armed?.focused !== true ||
+      armed.origin !== documentOrigin ||
+      armed.top !== topOrigin
+    )
+      return "aborted";
+    try {
+      await this.cdp(page, "Input.insertText", { text: value });
+    } catch {
+      // The browser's reason is not passed on: it says nothing safe to repeat.
+      return "failed";
+    }
+    if ((await this.callOn(page, node, STILL_FOCUSED_FUNCTION)) === true)
+      return "typed";
+    await this.clearFocused(wc);
+    return "moved";
+  }
+
+  /** Empties and hides whatever has the focus in any of the tab's documents. */
+  private async clearFocused(wc: BrowserPage): Promise<void> {
+    const source = this.options.target?.();
+    const documents: BrowserPage[] = [
+      wc,
+      ...(source?.frames?.(wc.id) ?? []).flatMap(
+        (frame) => source?.framePage?.(wc.id, frame.frameId) ?? []
+      ),
+    ];
+    for (const document of documents) {
+      const focused = (await this.cdp(document, "Runtime.evaluate", {
+        expression: "document.hasFocus() ? document.activeElement : null",
+        returnByValue: false,
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => null)) as { result?: { objectId?: string } } | null;
+      const other = focused?.result?.objectId;
+      if (other == null) continue;
+      await this.callOn(document, other, CLEAR_FUNCTION);
+      await this.secretsOf(wc)
+        .markFilledNode(document, other)
+        .catch(() => false);
+      await this.cdp(document, "Runtime.releaseObjectGroup", {
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
   }
 
   private refError(args: Record<string, unknown>, loaded: number): string {
