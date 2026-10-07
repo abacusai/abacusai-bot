@@ -1,6 +1,6 @@
 /** R3-T27 (jsdom half): every shape, mood and accessory renders. */
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   AVATAR_ACCESSORIES,
@@ -11,6 +11,12 @@ import {
 } from "#renderer/lib/bots/avatar";
 
 import { ACCENT_OUTLINE_CLASS, BotAvatar } from ".";
+
+const preference = vi.hoisted(() => ({ reduced: false }));
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => (preference.reduced ? "reduced" : "full"),
+}));
 /** vitest processes only tokens.css as CSS (`?raw` is empty here): read the file. */
 const { readFileSync } = (
   globalThis as unknown as {
@@ -42,7 +48,7 @@ describe("BotAvatar", () => {
       const svg = root.querySelector(".bav-svg");
       expect(body != null || svg != null).toBe(true);
       if (["bunny", "cat", "bear"].includes(shape))
-        expect(svg?.querySelectorAll("path")).toHaveLength(3);
+        expect(svg?.querySelector(".bav-ears")).not.toBeNull();
       unmount();
     }
   });
@@ -58,7 +64,9 @@ describe("BotAvatar", () => {
       if (mood === "asleep")
         expect(root.querySelectorAll(".bav-zz")).toHaveLength(2);
       if (mood === "waiting")
-        expect(root.querySelector(".bav-brows")).not.toBeNull();
+        expect(root.querySelectorAll(".bav-eye path").length).toBeGreaterThan(
+          2
+        );
       if (mood === "blocked")
         expect(root.querySelector(".bav-sweat")).not.toBeNull();
       unmount();
@@ -112,6 +120,38 @@ describe("BotAvatar", () => {
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*html:not\(\[data-reduce-motion="off"\]\) \.bav/
     );
     expect(css).toContain('html[data-reduce-motion="on"] .bav');
+  });
+
+  it("simplifies at 16/24px and keeps readable features at larger sizes", () => {
+    for (const size of [16, 24, 32, 44, 72, 160]) {
+      const { container, unmount } = render(
+        <BotAvatar look={look()} mood="happy" size={size} animate />
+      );
+      const root = container.querySelector(".bav")!;
+      expect(root.getAttribute("data-optical")).toBe(
+        size <= 24 ? "tiny" : "full"
+      );
+      expect(root.querySelector(".bav-cheeks") != null).toBe(size > 24);
+      if (size <= 24) {
+        expect(root.hasAttribute("data-animate")).toBe(false);
+        expect(root.querySelector(".bav-x")).toBeNull();
+      }
+      unmount();
+    }
+  });
+
+  it("reduced motion renders the complete static pose even when animation is requested", () => {
+    preference.reduced = true;
+    const { container } = render(
+      <BotAvatar look={look()} mood="talking" size={72} animate />
+    );
+    expect(container.querySelector(".bav")?.hasAttribute("data-animate")).toBe(
+      false
+    );
+    expect(container.querySelector(".bav-mouth")?.getAttribute("d")).toContain(
+      "Q"
+    );
+    preference.reduced = false;
   });
 
   it("exports the light-theme outline class", () => {

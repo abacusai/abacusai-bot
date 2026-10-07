@@ -1,8 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 
-import { AvatarGallery } from "./avatars";
 import {
   ConnectorMark,
   CONNECTOR_MARK_IDS,
@@ -17,6 +15,7 @@ import { useBotModelBinding } from "../model/picker";
 import { DetailsTab, MemoryTab, FilesTab } from "../panel/bot-side-panel";
 import { BotsSidebar, BotsStrip } from "../sidebar/bots-sidebar";
 import { BotStartPage } from "../start/bot-start-page";
+import { AvatarGallery } from "./avatars";
 const ids = [
   "bots-avatar",
   "bots-connector-marks",
@@ -96,7 +95,6 @@ const View = ({
   step: number | undefined;
   play: boolean;
 }) => {
-  const { t } = useTranslation();
   if (fixture === "bots-avatar") return <AvatarGallery />;
   if (fixture === "bots-connector-marks")
     return (
