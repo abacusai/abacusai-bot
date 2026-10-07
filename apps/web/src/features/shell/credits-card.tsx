@@ -1,13 +1,7 @@
 import { useLocation } from "@tanstack/react-router";
 import { Sparkles, Minus } from "lucide-react";
 import { AnimatePresence, motion, animate } from "motion/react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useRef,
-  type CSSProperties,
-} from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -112,11 +106,20 @@ export const UpgradePromo = () => {
     savedSnooze,
     now
   );
-  const [position, setPosition] = useState<CSSProperties>({
+  const [position, setPosition] = useState<ReturnType<typeof promoPlacement>>({
     left: 72,
     bottom: 24,
     maxWidth: 320,
+    compact: false,
+    visibility: "visible",
   });
+  const fullHeight = useRef(180);
+  const compact = !host && position.compact;
+  const compactRef = useRef(compact);
+  useLayoutEffect(() => {
+    compactRef.current = compact;
+  }, [compact]);
+  const { compact: _compact, ...floatingStyle } = position;
   const [excited, setExcited] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const tier = creditsTier(account.data);
@@ -135,51 +138,53 @@ export const UpgradePromo = () => {
     const observer = new ResizeObserver(() => schedule());
     const observed = new Set<Element>();
     const measure = () => {
-      const composer = [
-        ...document.querySelectorAll<HTMLElement>('[data-slot="composer"]'),
-      ].find((element) => element.getBoundingClientRect().height > 0);
-      const pane =
-        composer?.closest<HTMLElement>('[data-dock-pane="chat"]') ??
-        document.querySelector<HTMLElement>('[data-slot="pane"]');
-      for (const element of [composer, pane]) {
+      const card = target.querySelector<HTMLElement>(
+        '[data-slot="upgrade-promo"]'
+      );
+      if (card && !compactRef.current)
+        fullHeight.current = card.getBoundingClientRect().height || 180;
+      const controls = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[data-slot="composer"], [data-slot="sidebar-footer"], [data-pane-gutter], .dv-sash, [data-slot="shell"] button, [data-slot="shell"] input, [data-slot="shell"] textarea, [data-slot="shell"] [role="button"]'
+        ),
+      ].filter((element) => !element.closest('[data-slot="upgrade-promo"]'));
+      const obstacles = controls
+        .map((element) => element.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0);
+      for (const element of [
+        card,
+        ...document.querySelectorAll(
+          '[data-slot="composer"], [data-slot="sidebar-footer"], [data-workspace-group], [data-pane-gutter], .dv-sash'
+        ),
+      ]) {
         if (element && !observed.has(element)) {
           observed.add(element);
           observer.observe(element);
         }
       }
-      const rect = pane?.getBoundingClientRect();
-      const composerRect = composer?.getBoundingClientRect();
-      snapshot.current =
-        target.firstElementChild?.getBoundingClientRect() ?? null;
-      const promoHeight =
-        document
-          .querySelector('[data-slot="upgrade-promo"]')
-          ?.getBoundingClientRect().height || 128;
+      snapshot.current = card?.getBoundingClientRect() ?? null;
       const rail = document
         .querySelector('[data-slot="rail"]')
         ?.getBoundingClientRect();
       const sidebar = document
         .querySelector('[data-slot="sidebar-slot"]')
         ?.getBoundingClientRect();
-      const footer = document
-        .querySelector('[data-slot="sidebar-footer"]')
-        ?.getBoundingClientRect();
-      setPosition(
-        promoPlacement({
-          width: window.innerWidth,
-          height: window.innerHeight,
-          railRight: rail?.right ?? 56,
-          sidebarRight: sidebar?.right ?? 56,
-          paneTop: rect?.top ?? 40,
-          cardHeight: promoHeight,
-          composer: composerRect,
-          footer,
-          splitters: [
-            ...document.querySelectorAll("[data-pane-gutter], .dv-sash"),
-          ]
-            .map((element) => element.getBoundingClientRect())
-            .filter((rect) => rect.width > 0 && rect.height > 0),
-        })
+      const next = promoPlacement({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        railRight: rail?.right ?? 56,
+        sidebarRight: sidebar?.right ?? 56,
+        cardHeight: fullHeight.current,
+        obstacles,
+      });
+      setPosition((previous) =>
+        Object.keys(next).every(
+          (key) =>
+            previous[key as keyof typeof next] ===
+            next[key as keyof typeof next]
+        )
+          ? previous
+          : next
       );
     };
     const schedule = () => {
@@ -215,11 +220,13 @@ export const UpgradePromo = () => {
           data-slot="upgrade-promo"
           aria-label={t("creditsCard.upsellTitle")}
           data-presentation={host ? "sidebar" : "floating"}
+          data-compact={compact || undefined}
           className={cn(
-            "bg-background pointer-events-auto isolate overflow-hidden rounded-(--pane-radius) border p-3",
+            "bg-background pointer-events-auto isolate overflow-hidden rounded-(--pane-radius) border",
+            compact ? "flex h-11 items-center gap-2 p-2" : "p-3",
             host ? "relative w-full" : "floating-surface fixed z-30 w-80"
           )}
-          style={host ? undefined : position}
+          style={host ? undefined : floatingStyle}
           initial={{
             opacity: 0,
             y: preference === "reduced" ? 0 : offsets.drill,
@@ -236,7 +243,7 @@ export const UpgradePromo = () => {
           <Button
             size="icon-sm"
             variant="ghost"
-            className="absolute top-1 right-1"
+            className={compact ? "order-3 shrink-0" : "absolute top-1 right-1"}
             aria-label={t("creditsCard.remindLater")}
             title={t("creditsCard.remindLater")}
             onClick={() => {
@@ -255,14 +262,18 @@ export const UpgradePromo = () => {
           >
             <Minus />
           </Button>
-          <div className="flex items-center gap-3 pr-3">
+          <div
+            className={compact ? "contents" : "flex items-center gap-3 pr-3"}
+          >
             <PromoCharacter
               remaining={remaining}
               total={account.data?.credits_granted ?? null}
               excited={excited}
               upgraded={celebrating}
+              compact={compact}
+              active={!!host || position.visibility !== "hidden"}
             />
-            <div className="min-w-0 flex-1">
+            <div className={compact ? "hidden" : "min-w-0 flex-1"}>
               <p className="text-sm font-semibold">
                 {t(
                   celebrating
@@ -319,7 +330,11 @@ export const UpgradePromo = () => {
           </div>
           <Button
             size="sm"
-            className="mt-3 h-8 rounded-lg"
+            className={
+              compact
+                ? "h-7 shrink-0 rounded-lg px-2 text-xs"
+                : "mt-3 h-8 rounded-lg"
+            }
             onMouseEnter={() => setExcited(true)}
             onMouseLeave={() => setExcited(false)}
             onFocus={() => setExcited(true)}
