@@ -1766,7 +1766,6 @@
       "add": "Add workspace",
       "newWorktree": "New worktree",
       "noWorktree": "No worktree",
-      "noPr": "No PR",
       "local": "Local",
       "sandboxed": "Sandboxed",
       "restartTarget": "Stop the agent before switching target.",
