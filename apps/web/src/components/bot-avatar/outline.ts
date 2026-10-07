@@ -6,7 +6,6 @@ import { springs } from "#renderer/lib/motion";
 
 import { CONTOURS } from "./contours";
 import type { Expression } from "./expression";
-import type { useFaceRig } from "./rig";
 
 export const interpolateContour = (
   from: readonly number[],
@@ -38,11 +37,7 @@ export const outlinePath = (
 };
 
 /** One spring interpolates a whole outline, including interrupted look edits. */
-export const useOutline = (
-  look: Look,
-  rig: ReturnType<typeof useFaceRig>["rig"],
-  active: boolean
-) => {
+export const useOutline = (look: Look, active: boolean) => {
   const geometry = useRef({
     from: CONTOURS[look.shape],
     to: CONTOURS[look.shape],
@@ -112,10 +107,10 @@ export const useOutline = (
         state.progress.get()
       ),
       {
-        waveX: rig.waveX.get(),
-        waveY: rig.waveY.get(),
-        tiltX: rig.tiltX.get(),
-        tiltY: rig.tiltY.get(),
+        waveX: 0,
+        waveY: 0,
+        tiltX: 0,
+        tiltY: 0,
       }
     )
   );

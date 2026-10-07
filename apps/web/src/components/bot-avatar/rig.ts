@@ -9,7 +9,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { AvatarMood, AvatarShape } from "#renderer/lib/bots/avatar";
 import { springs } from "#renderer/lib/motion";
 
-import { observeAvatar, subscribeClock } from "./clock";
+import {
+  claimAnimation,
+  observeAvatar,
+  subscribeActivity,
+  subscribeClock,
+} from "./clock";
 import {
   expressionFor,
   entryExpression,
@@ -35,6 +40,8 @@ export const useFaceRig = (
   ref: React.RefObject<HTMLSpanElement | null>,
   expression?: ExpressionMix
 ) => {
+  const [admitted, setAdmitted] = useState(false);
+  const [interaction, setInteraction] = useState(false);
   const [visible, setVisible] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(
     () => !document.hidden
@@ -56,7 +63,25 @@ export const useFaceRig = (
     if (!animated || size <= 24) return;
     return ref.current ? observeAvatar(ref.current, setVisible) : undefined;
   }, [animated, size, ref]);
-  const active = animated && visible && size > 24;
+  const priority =
+    mood === "talking" || mood === "listening"
+      ? 2
+      : mood === "idle" || mood === "asleep"
+        ? 0
+        : 1;
+  useEffect(
+    () =>
+      animated && visible && size > 24
+        ? claimAnimation(setAdmitted, priority)
+        : undefined,
+    [animated, visible, size, priority]
+  );
+  const active = animated && visible && admitted && size > 24;
+  useEffect(
+    () => (active ? subscribeActivity(setDocumentVisible) : undefined),
+    [active]
+  );
+  const dynamic = interaction;
   useEffect(() => {
     const changingLook = previousShape.current !== shape;
     previousShape.current = shape;
@@ -67,11 +92,11 @@ export const useFaceRig = (
     let blinkUntil = 0;
     const restingEyes = expressionFor(mood, expression).eyes;
     const update = (seconds: number, documentIsVisible: boolean) => {
-      setDocumentVisible(documentIsVisible);
       const moving = active && documentIsVisible;
-      let pose = moving
-        ? sampleExpression(mood, shape, seconds, seed, expression)
-        : expressionFor(mood, expression);
+      let pose =
+        moving && dynamic
+          ? sampleExpression(mood, shape, seconds, seed, expression)
+          : expressionFor(mood, expression);
       if (moving) {
         pose.gazeX += pointer.current.x;
         pose.gazeY += pointer.current.y;
@@ -141,14 +166,24 @@ export const useFaceRig = (
         }
       }
     };
-    update(performance.now() / 1000, !document.hidden);
-    const unsubscribe = active ? subscribeClock(update) : undefined;
+    update(performance.now() / 1000, documentVisible);
+    let unsubscribe =
+      active && documentVisible ? subscribeClock(update) : undefined;
+    // Resting bodies breathe on the compositor. JS only blends entry/return poses.
+    const settle =
+      active && documentVisible && !dynamic
+        ? setTimeout(() => {
+            unsubscribe?.();
+            unsubscribe = undefined;
+          }, 1000)
+        : undefined;
     return () => {
       anticipationUntil = 0;
+      clearTimeout(settle);
       unsubscribe?.();
       for (const control of controls.values()) control.stop();
     };
-  }, [active, mood, shape, seed, rig, expression]);
+  }, [active, documentVisible, dynamic, mood, shape, seed, rig, expression]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));
@@ -166,6 +201,12 @@ export const useFaceRig = (
     rig,
     body,
     face,
+    deform: useTransform(
+      () =>
+        `skewX(${rig.waveX.get() * 0.8}deg) scale(${1 + rig.waveY.get() * 0.008}, ${1 / (1 + rig.waveY.get() * 0.008)})`
+    ),
+    steady: active && documentVisible,
+    seed,
     secondary,
     mouth,
     cheek,
@@ -181,19 +222,28 @@ export const useFaceRig = (
     lightY: useTransform(() => `${18 - rig.tiltY.get() * 2}%`),
     onPointerDown: () => {
       if (active) {
+        setInteraction(true);
         pressed.current = true;
         pressUntil.current = performance.now() / 1000 + 0.18;
       }
     },
     onPointerUp: () => {
+      setInteraction(false);
       pressed.current = false;
     },
     onPointerCancel: () => {
+      setInteraction(false);
       pressed.current = false;
     },
     onPointerEnter: (event: React.PointerEvent<HTMLSpanElement>) => {
-      if (active)
+      if (
+        active &&
+        event.pointerType === "mouse" &&
+        window.matchMedia("(hover: hover) and (pointer: fine)").matches
+      ) {
+        setInteraction(true);
         pointerBounds.current = event.currentTarget.getBoundingClientRect();
+      }
     },
     onPointerMove: (event: React.PointerEvent<HTMLSpanElement>) => {
       if (
@@ -219,6 +269,7 @@ export const useFaceRig = (
       };
     },
     onPointerLeave: () => {
+      setInteraction(false);
       pressed.current = false;
       pointer.current = { x: 0, y: 0 };
       pointerBounds.current = null;

@@ -77,6 +77,7 @@ export const AvatarGallery = () => {
       </div>
       <div data-avatar-morph className="flex items-center gap-5 p-5">
         <BotAvatar
+          morph
           look={
             morph
               ? { shape: "bunny", color: "#f472b6", accessory: "bow" }
