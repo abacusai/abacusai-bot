@@ -8,10 +8,7 @@ import { pipeline } from "node:stream/promises";
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 
 import type { AppOperations } from "#main/rpc/deps";
-import {
-  hostedCallbackPage,
-  type HostedMcpSignIns,
-} from "#main/services/mcp/mcp-oauth-service";
+import type { HostedMcpConnect } from "#main/services/mcp/hosted-mcp-connect";
 import type { WhisperModelService } from "#main/services/voice/whisper-model-service";
 import { openHostFile } from "#main/services/workspace/host-path";
 
@@ -30,7 +27,7 @@ export const createHostHttpServer = (
   lease: HostLease,
   uploadFolder: (workspaceId: string, sessionId: string) => string | null,
   whisper: Pick<WhisperModelService, "prepareFile">,
-  mcpSignIns: Pick<HostedMcpSignIns, "start" | "complete"> | null = null
+  mcp: Pick<HostedMcpConnect, "route"> | null = null
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -46,48 +43,42 @@ export const createHostHttpServer = (
       });
       return;
     }
-    // MCP sign-in is a top-level browser navigation: no connect token. The
-    // proxy admits only the owner's session; the one-time id or state is the rest.
+    // MCP connects are top-level navigations, which carry no connect token:
+    // the proxy's owner identity admits them, and the callback's one-time
+    // state is the rest (spec 08, D8).
     if (
       request.method === "GET" &&
       url.pathname.startsWith("/mcp/") &&
-      mcpSignIns != null
+      mcp != null
     ) {
       if (request.headers["x-abacus-user-id"] !== identity.owner) {
         json(response, 403, { error: "forbidden" });
         return;
       }
-      const start = url.pathname.match(
-        /^\/mcp\/start\/([A-Za-z0-9_-]{16,64})$/
-      );
-      if (start) {
-        const found = mcpSignIns.start(start[1]!);
-        if (found.status === 302 && found.location != null)
+      const answer = await mcp.route(url.pathname, url.searchParams);
+      const headers = {
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+      };
+      switch (answer.kind) {
+        case "redirect":
           response
-            .writeHead(302, {
-              location: found.location,
-              "cache-control": "no-store",
-              "referrer-policy": "no-referrer",
-            })
+            .writeHead(302, { ...headers, location: answer.location })
             .end();
-        else
-          json(response, found.status === 302 ? 404 : found.status, {
-            error: found.status === 410 ? "gone" : "not-found",
-          });
-        return;
-      }
-      if (url.pathname === "/mcp/callback") {
-        const result = await mcpSignIns.complete(url.searchParams);
-        response
-          .writeHead(result.ok ? 200 : 400, {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-store",
-            "referrer-policy": "no-referrer",
-            "content-security-policy":
-              "default-src 'none'; style-src 'unsafe-inline'",
-          })
-          .end(hostedCallbackPage(result));
-        return;
+          return;
+        case "page":
+          response
+            .writeHead(answer.status, {
+              ...headers,
+              "content-type": "text/html; charset=utf-8",
+              "content-security-policy":
+                "default-src 'none'; style-src 'unsafe-inline'",
+            })
+            .end(answer.html);
+          return;
+        case "missing":
+          json(response, 404, { error: "not-found" });
+          return;
       }
     }
     const failure = authenticate(request, identity);

@@ -8,6 +8,13 @@ import { connectOnboarding } from "#renderer/features/onboarding/connect";
 import { startFirstRunGmail } from "#renderer/features/onboarding/first-run";
 import { waitForConnected } from "#renderer/lib/connect-page";
 import { connectRequest } from "#renderer/lib/connector-requests";
+import { connectTarget } from "#renderer/lib/platform-system";
+
+const HOST = "https://apps.example/api/botHost/h1";
+vi.mock("#renderer/features/shell/connect/services", async (original) => ({
+  ...(await original<object>()),
+  browserConnection: () => ({ base: HOST }),
+}));
 
 afterEach(() => {
   vi.useRealTimers();
@@ -253,3 +260,70 @@ it("Gmail consent is dismissible and cannot survive leaving its layout slot", as
   expect(document.getElementById("gmail-consent")).toBeNull();
   expect(client.connectors.connect).not.toHaveBeenCalled();
 });
+
+it("decides in one place what each kind opens in the browser", () => {
+  expect(connectTarget("abacus-gmailuser", "me@example.com")).toEqual({
+    kind: "connect-page",
+    url: `${GMAIL_PAGE}&hint=me%40example.com`,
+  });
+  for (const id of ["notion", "huggingface"])
+    expect(connectTarget(id)).toEqual({
+      kind: "host-route",
+      url: `${HOST}/mcp/connect/${id}`,
+    });
+  // The user's own server, by its name.
+  expect(connectTarget("my server")).toEqual({
+    kind: "host-route",
+    url: `${HOST}/mcp/connect/my%20server`,
+  });
+  expect(connectTarget("messaging-whatsapp")).toEqual({ kind: "pairing" });
+});
+
+it.each([
+  ["library", "notion"],
+  ["agent request", "huggingface"],
+])(
+  "%s: an MCP connector opens the host's route inside the click and waits for its status",
+  async (surface, id) => {
+    vi.useFakeTimers();
+    const open = vi.fn().mockReturnValue(null);
+    vi.stubGlobal("open", open);
+    const client = clientFor();
+    client.connectors.statuses
+      .mockReset()
+      .mockResolvedValueOnce({})
+      .mockResolvedValue({ [id]: { state: "connected" } });
+    const queryClient = new QueryClient();
+    const pending =
+      surface === "library"
+        ? createConnectFlow({
+            transport: {
+              client,
+              orpc: createTanstackQueryUtils(client),
+            } as unknown as Transport,
+            db: { collections: { sessions: { toArray: [] } } } as never,
+            queryClient,
+            navigate: async () => {},
+          }).start(id)
+        : connectRequest(
+            client as never,
+            {
+              requestId: "request",
+              connectorId: id,
+              conversationKey: "bot:bot-id",
+            } as never
+          );
+    expect(open).toHaveBeenCalledExactlyOnceWith(
+      `${HOST}/mcp/connect/${id}`,
+      "_blank",
+      "noopener"
+    );
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(await pending).toEqual(
+      surface === "library" ? { ok: true } : { kind: "connected" }
+    );
+    // The route installs and signs in: nothing is asked over the socket.
+    expect(client.connectors.connect).not.toHaveBeenCalled();
+    queryClient.clear();
+  }
+);

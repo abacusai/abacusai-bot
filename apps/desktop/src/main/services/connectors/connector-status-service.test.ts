@@ -38,6 +38,7 @@ const inputs = (overrides: Partial<StatusInputs> = {}): StatusInputs => ({
   },
   messaging: null,
   mcpServers: [],
+  mcpTokens: new Map(),
   ...overrides,
 });
 
@@ -127,63 +128,54 @@ describe("messaging connectors", () => {
 });
 
 describe("mcp connectors", () => {
-  it("are connected when their server is in the config, pending when it awaits a sign-in", () => {
-    const withNotion = inputs({
-      mcpServers: [
-        {
-          id: "notion",
-          name: "notion",
-          config: { url: "https://mcp.notion.com/mcp" },
-          isBuiltin: false,
-        },
-      ],
-    });
-    expect(buildConnectorStatuses(withNotion).notion).toEqual({
-      state: "connected",
-    });
-    expect(
-      buildConnectorStatuses({
-        ...withNotion,
-        mcpAuthRequired: new Set(["notion"]),
-      }).notion
-    ).toEqual({ state: "pending", reason: "sign-in-required" });
+  const notion = {
+    id: "notion",
+    name: "notion",
+    config: { url: "https://mcp.notion.com/mcp" },
+    isBuiltin: false,
+  };
+  const huggingface = {
+    id: "huggingface",
+    name: "huggingface",
+    config: { url: "https://huggingface.co/mcp" },
+    isBuiltin: false,
+  };
+
+  it("are available until their server is in the config", () => {
     expect(buildConnectorStatuses(inputs()).notion).toEqual({
       state: "available",
     });
   });
 
-  it("are pending until a token is held for an OAuth server, and connected without one when it needs none", () => {
-    const installed = inputs({
-      mcpServers: [
-        {
-          id: "notion",
-          name: "notion",
-          config: { url: "https://mcp.notion.com/mcp" },
-          isBuiltin: false,
-        },
-        {
-          id: "huggingface",
-          name: "huggingface",
-          config: { url: "https://huggingface.co/mcp" },
-          isBuiltin: false,
-        },
-      ],
-    });
-    const unsigned = buildConnectorStatuses({
-      ...installed,
-      mcpTokens: new Set(),
-    });
-    expect(unsigned.notion).toEqual({
+  it("an OAuth server is connected only with a valid token, and pending when it is expired or absent", () => {
+    const statusFor = (state?: "valid" | "expired" | "absent") =>
+      buildConnectorStatuses(
+        inputs({
+          mcpServers: [notion],
+          mcpTokens: new Map(state != null ? [["notion", state]] : []),
+        })
+      ).notion;
+    expect(statusFor("valid")).toEqual({ state: "connected" });
+    for (const state of ["expired", "absent", undefined] as const)
+      expect(statusFor(state)).toEqual({
+        state: "pending",
+        reason: "sign-in-required",
+      });
+  });
+
+  it("a server that needs no sign-in is connected unless its sign-in was refused", () => {
+    const statusFor = (state: "valid" | "expired" | "absent") =>
+      buildConnectorStatuses(
+        inputs({
+          mcpServers: [huggingface],
+          mcpTokens: new Map([["huggingface", state]]),
+        })
+      ).huggingface;
+    expect(statusFor("absent")).toEqual({ state: "connected" });
+    expect(statusFor("expired")).toEqual({
       state: "pending",
       reason: "sign-in-required",
     });
-    expect(unsigned.huggingface).toEqual({ state: "connected" });
-    expect(
-      buildConnectorStatuses({
-        ...installed,
-        mcpTokens: new Set(["https://mcp.notion.com/mcp"]),
-      }).notion
-    ).toEqual({ state: "connected" });
   });
 });
 
@@ -202,6 +194,7 @@ describe("the service", () => {
           isBuiltin: false,
         },
       ],
+      mcpTokens: () => new Map([["notion", "valid"]]),
     });
     const statuses = await service.list();
 

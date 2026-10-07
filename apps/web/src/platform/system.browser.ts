@@ -1,13 +1,17 @@
-import { connectorById } from "@abacus-ai/connectors/registry";
+import { connectorById, connectUi } from "@abacus-ai/connectors/registry";
 import type {
   ConnectorConnectOptions,
   ConnectorOutcome,
 } from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
+import { browserConnection } from "#renderer/features/shell/connect/services";
 import { pickHostFolder, viewHostFile } from "#renderer/lib/browser/files";
 import { browserNotify } from "#renderer/lib/browser/notifications";
-import { connectPagePath } from "#renderer/lib/connect-page";
+import {
+  connectPagePath,
+  type ConnectTarget,
+} from "#renderer/lib/connect-page";
 type BrowserSystem = Pick<
   AppClient["system"],
   "openExternal" | "notify" | "openPath" | "showItemInFolder"
@@ -27,45 +31,44 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
   dialog: { openFolder: () => pickHostFolder(client) },
 });
 
+/** The browser's answer: a page or the host's route for everything a tab can connect. */
+export const connectTarget = (name: string, hint?: string): ConnectTarget => {
+  const entry = connectorById(name);
+  const ui = entry != null ? connectUi(entry) : "browser-hop";
+  if (ui === "pairing" || ui === "fields") return { kind: ui };
+  if (entry?.kind === "platform")
+    return { kind: "connect-page", url: connectPagePath(entry.service, hint) };
+  // A registry MCP server, or the user's own by its name.
+  return {
+    kind: "host-route",
+    url: `${browserConnection().base}/mcp/connect/${encodeURIComponent(name)}`,
+  };
+};
+
 /**
- * The connect page opens in a new tab before this returns, so call it before
- * any await in a click handler; popup blockers allow only that. The host is
- * still told, so it follows the connector until it connects. An MCP sign-in's
- * tab is taken now and sent to the host's start link once it answers.
+ * Opens the target's tab before this returns, so call it before any await in
+ * a click handler; popup blockers allow only that. Null when the connector
+ * does not connect in a tab. A connect page is also told to the host, so it
+ * follows the connector until it connects; the host route follows its own.
  */
 export const openConnectPage = (
   client: Pick<AppClient, "connectors">,
-  connectorId: string,
+  name: string,
   options?: ConnectorConnectOptions
-): Promise<ConnectorOutcome> => {
-  const entry = connectorById(connectorId);
-  let tab: Window | null = null;
-  if (entry?.kind === "platform")
-    window.open(
-      connectPagePath(entry.service, options?.hint),
-      "_blank",
-      "noopener"
-    );
-  else if (entry?.kind === "mcp") {
-    tab = window.open("about:blank", "_blank");
-    if (tab) tab.opener = null;
+): Promise<ConnectorOutcome> | null => {
+  const target = connectTarget(name, options?.hint);
+  switch (target.kind) {
+    case "connect-page":
+      window.open(target.url, "_blank", "noopener");
+      return client.connectors
+        .connect({ connectorId: name, ...(options ? { options } : {}) })
+        .then((outcome) => (outcome.ok ? { ok: true } : outcome));
+    case "host-route":
+      window.open(target.url, "_blank", "noopener");
+      return Promise.resolve({ ok: true });
+    default:
+      return null;
   }
-  return client.connectors
-    .connect({ connectorId, ...(options ? { options } : {}) })
-    .then(
-      (outcome): ConnectorOutcome => {
-        const url = outcome.ok ? outcome.url : undefined;
-        if (url && /^https?:/i.test(url)) {
-          if (tab) tab.location.href = url;
-          else window.open(url, "_blank", "noopener");
-        } else tab?.close();
-        return outcome.ok ? { ok: true } : outcome;
-      },
-      (error: unknown) => {
-        tab?.close();
-        throw error;
-      }
-    );
 };
 
 /** The tab is taken inside the click; the link fills it once the host answers. */

@@ -342,6 +342,37 @@ export const setPageTransport = (transport: HostTransport): void => {
 
 const IDENTITY_MISMATCH = "Host identity mismatch";
 
+/** How long an idle older host gets to come up on the bootstrap's version. */
+const UPDATE_WAIT_MS = 90_000;
+
+/**
+ * Orders host versions (`x.y.z-web.N.M`): the release numbers, then the web
+ * build's. Negative when `a` is older. Unparseable ones compare equal, so
+ * nothing waits on a version it cannot read.
+ */
+export const compareHostVersions = (a: string, b: string): number => {
+  const parse = (version: string): number[][] | null => {
+    const parts = version.split("-web.");
+    if (parts.length > 2) return null;
+    const numbers = parts.map((part) => part.split(".").map(Number));
+    return numbers.flat().every((n) => Number.isInteger(n) && n >= 0)
+      ? numbers
+      : null;
+  };
+  const left = parse(a);
+  const right = parse(b);
+  if (left == null || right == null) return 0;
+  for (const part of [0, 1]) {
+    const x = left[part] ?? [];
+    const y = right[part] ?? [];
+    for (let i = 0; i < Math.max(x.length, y.length); i += 1) {
+      const order = (x[i] ?? 0) - (y[i] ?? 0);
+      if (order !== 0) return order;
+    }
+  }
+  return 0;
+};
+
 /** Readiness: the host started (bootstrap), healthy, and its token. */
 export const readyHost = async (
   identity: HostIdentity,
@@ -366,8 +397,9 @@ export const readyHost = async (
   } catch {
     throw new ConnectError("connection", "Invalid host token");
   }
-  const installDeadline = Date.now() + 5 * 60_000;
+  let installDeadline = Date.now() + 5 * 60_000;
   let denialDeadline: number | undefined;
+  let updateDeadline: number | undefined;
   for (let polls = 0; ; polls += 1) {
     let response: Response | undefined;
     let body: unknown = null;
@@ -403,19 +435,21 @@ export const readyHost = async (
           "This page is out of date. Reload to update it."
         );
       // An idle older host is about to be restarted onto the new version;
-      // a busy one is never upgraded mid-turn, so it is used as it is.
+      // a busy one is never upgraded mid-turn, and a newer one (a rollback)
+      // never will be, so those are used as they are, and so is one that
+      // outlasts the wait.
       if (
         boot.version == null ||
-        health.version === boot.version ||
-        health.busy === true
+        health.version == null ||
+        health.busy === true ||
+        compareHostVersions(health.version, boot.version) >= 0
       )
         break;
+      updateDeadline ??= Date.now() + UPDATE_WAIT_MS;
+      if (Date.now() >= updateDeadline) break;
+      // Its restart may take the host down for a while: give it the room.
+      installDeadline = Math.max(installDeadline, updateDeadline);
       stage("updating");
-      if (Date.now() >= installDeadline)
-        throw new ConnectError(
-          "connection",
-          "Host did not become ready. Please retry."
-        );
       await delay(pollDelayMs(polls));
       continue;
     }

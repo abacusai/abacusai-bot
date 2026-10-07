@@ -1,4 +1,3 @@
-import { connectorById } from "@abacus-ai/connectors/registry";
 import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
 import type {
   ConnectorOutcome,
@@ -25,7 +24,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
-import { opensConnectTab, waitForConnected } from "#renderer/lib/connect-page";
+import { waitForConnected } from "#renderer/lib/connect-page";
 import { openConnectPage } from "#renderer/lib/platform-system";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
@@ -99,9 +98,7 @@ export const connectRequest = async (
   signal: AbortSignal = new AbortController().signal
 ): Promise<ConnectResult> => {
   const opened =
-    values == null && opensConnectTab(connectorById(request.connectorId))
-      ? openConnectPage(client, request.connectorId)
-      : null;
+    values == null ? openConnectPage(client, request.connectorId) : null;
   let outcome: ConnectorOutcome;
   try {
     if (opened != null) {

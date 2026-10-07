@@ -1,29 +1,33 @@
 /**
- * Every platform connector connects through the platform's connect page: the
- * page mints a link bound to the signed-in user and starts the provider's
- * consent. In the browser an MCP sign-in opens the host's start link the same
- * way. The app opens it (`openConnectPage` in platform-system) and waits here
- * for the connector to read connected.
+ * How a connector connects is decided once per platform (`connectTarget` in
+ * platform-system): a platform connector through the platform's connect page,
+ * an MCP server in the browser through the host's own connect route, a
+ * desktop MCP server in the app. A page or route opens inside the click
+ * (`openConnectPage`), and the app waits here for the connector to read
+ * connected.
  */
-import { connectUi, type Connector } from "@abacus-ai/connectors/registry";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 
 export const CONNECT_PAGE_PATH = "/chatllm/connect-connector";
 export const CONNECT_WAIT_MS = 180_000;
 const CONNECT_POLL_MS = 3_000;
 
-/**
- * Whether a click opens a consent tab and then waits for the status: every
- * platform connector, and in the browser an MCP server's hosted sign-in.
- */
-export const opensConnectTab = (connector: Connector | undefined): boolean =>
-  connector?.kind === "platform" ||
-  (!IS_ELECTRON &&
-    connector?.kind === "mcp" &&
-    connectUi(connector) === "browser-hop");
+/** What connecting a connector (or an MCP server by name) takes on this platform. */
+export type ConnectTarget =
+  /** Browser: the platform's connect page, opened in the click; the host watches. */
+  | { kind: "connect-page"; url: string }
+  /** Desktop: main mints the platform's page and opens it in the default browser. */
+  | { kind: "connect-link" }
+  /** Browser: the host's connect route, which installs, signs in, and watches. */
+  | { kind: "host-route"; url: string }
+  /** Desktop: main installs and signs in, and answers once done. */
+  | { kind: "in-app" }
+  /** The app collects the connector's fields first. */
+  | { kind: "fields" }
+  /** A chat app, paired from its own dialog. */
+  | { kind: "pairing" };
 
 /** The page for one service, same-origin relative, starting consent on load. */
 export const connectPagePath = (service: string, hint?: string): string => {

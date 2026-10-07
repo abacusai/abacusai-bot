@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
+import { connectTarget } from "#renderer/lib/platform-system";
 
 import {
   CONNECT_WATCHDOG_MS,
@@ -167,4 +168,11 @@ it("a two-platform route transition settles deferred setup without cancelling it
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("on the desktop, main mints platform pages and connects MCP servers in the app", () => {
+  expect(connectTarget("abacus-slack")).toEqual({ kind: "connect-link" });
+  for (const name of ["notion", "huggingface", "my server"])
+    expect(connectTarget(name)).toEqual({ kind: "in-app" });
+  expect(connectTarget("messaging-telegram")).toEqual({ kind: "pairing" });
 });

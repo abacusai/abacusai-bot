@@ -250,8 +250,8 @@ export interface McpAgentToolsServerOptions {
     list: () => Promise<ConnectorStatuses>;
     /**
      * A one-tap link for a platform connector, and every connector it attaches
-     * (one Google consent covers Gmail, Drive and Calendar), or a hosted MCP
-     * sign-in's start link. Null signed out, or with no link to give.
+     * (one Google consent covers Gmail, Drive and Calendar), or the web host's
+     * connect route for an MCP server. Null signed out, or with no link to give.
      */
     link: (
       connectorId: string

@@ -1,8 +1,4 @@
-import {
-  connectorById,
-  connectUi,
-  type Connector,
-} from "@abacus-ai/connectors/registry";
+import { connectorById, type Connector } from "@abacus-ai/connectors/registry";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
@@ -17,14 +13,10 @@ import { Store, useStore } from "@tanstack/react-store";
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import {
-  CONNECT_WAIT_MS,
-  opensConnectTab,
-  waitForConnected,
-} from "#renderer/lib/connect-page";
+import { CONNECT_WAIT_MS, waitForConnected } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openConnectPage } from "#renderer/lib/platform-system";
+import { connectTarget, openConnectPage } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
 export const CONNECT_WATCHDOG_MS = CONNECT_WAIT_MS;
@@ -239,10 +231,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
       deps.queryClient.getQueryData<Record<string, { reason?: string }>>(
         statusesKey()
       )?.[connectorId]?.reason === "not-signed-in";
-    let opened =
-      opensConnectTab(entry) && !signedOut
-        ? openConnectPage(deps.transport.client, connectorId)
-        : null;
+    let opened = signedOut
+      ? null
+      : openConnectPage(deps.transport.client, connectorId);
     // Awaited below unless superseded first.
     opened?.catch(() => undefined);
     const id = ++serial;
@@ -288,7 +279,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
           }
           opened = openConnectPage(deps.transport.client, connectorId);
         }
-        const ui = connectUi(entry);
+        const ui = connectTarget(connectorId).kind;
         if (ui === "pairing" && entry.kind === "messaging") {
           if (active) active.platform = entry.platform;
           await connectPlatform(deps, entry.platform);

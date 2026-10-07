@@ -20,15 +20,17 @@ const connectGmail = (
   transport: Transport,
   email: string
 ): Promise<ConnectorOutcome> =>
-  openConnectPage(transport.client, "abacus-gmailuser", { hint: email }).then(
-    (outcome) =>
-      outcome.ok
-        ? waitForConnected(
-            transport.client,
-            "abacus-gmailuser",
-            new AbortController().signal
-          )
-        : outcome
+  (
+    openConnectPage(transport.client, "abacus-gmailuser", { hint: email }) ??
+    transport.client.connectors.connect({ connectorId: "abacus-gmailuser" })
+  ).then((outcome) =>
+    outcome.ok
+      ? waitForConnected(
+          transport.client,
+          "abacus-gmailuser",
+          new AbortController().signal
+        )
+      : outcome
   );
 
 /** The account's Gmail consent outlives whichever onboarding page starts it. */

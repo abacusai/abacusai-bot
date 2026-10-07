@@ -152,6 +152,8 @@ Connect token: `base64url(JSON{ o: owner, g: org, e: expiry })` + `.` + HMAC-SHA
 
 `verifyClient` (upgrade handler and every HTTP route except `/healthz`): `Origin` ∈ `ABACUSAI_BOT_HOST_ORIGINS` exactly; token present, valid, unexpired, `o` = owner and `g` = org; `x-abacus-user-id` = owner. Any failure: HTTP 403 / close 1008. `/healthz` is unauthenticated and reveals only `{ ok, version, contractVersion, owner: <hashed>, uptime, busy, lastActivityAt }`.
 
+**Exception: the MCP connect routes.** `GET /mcp/connect/<id>` and `GET /mcp/callback` are top-level browser navigations (a tab the page opens, a link sent in chat, the provider's redirect), which cannot carry a bearer token or an `Origin`. They are admitted on `x-abacus-user-id` = owner alone, the identity the proxy derives from the user's own session, plus a one-time secret where one exists: the callback's OAuth `state`, matched once against a flow the host began, within 30 minutes. `/mcp/connect/<id>` holds no secret: it only installs a connector the registry names (never rewriting an entry already there) and begins a sign-in that ends at the user's own consent. Should a connector ever take fields there, its `POST /mcp/connect/<id>` must add a one-time form token bound to its flow; no connector takes fields on the web host today, so the route is GET only. Every other route keeps the full check above. Pages these routes answer with are `default-src 'none'`, `no-store` and `no-referrer`.
+
 ### 6.4 Activity and readiness
 
 `system.activity()` is added to the contract (the renderer's input beacon; on Electron it keeps calling `window.activity`). The host records `lastActivityAt` and `busy` (live agent run, routine run or terminal output in the last minute) and reports both on `/healthz`. No `system.ready`.
@@ -162,7 +164,7 @@ Procedures `auth.web.start()` → `{ challenge }` (host generates verifier and S
 
 ### 6.6 HTTP routes
 
-Same server as the WebSocket: `GET /healthz` (unauthenticated, §6.3); `POST /upload` (token-authenticated; up to 256 MiB; saves via the `savePastedTempFiles` code path; returns paths), because the proxy in front caps WebSocket messages at 4 MiB; oRPC messages stay under 1 MiB; `GET /oauth/callback` reserved. The host emits no CORS headers (the proxy adds them). A `bufferedAmount` above 16 MiB closes the socket with 1013.
+Same server as the WebSocket: `GET /healthz` (unauthenticated, §6.3); `POST /upload` (token-authenticated; up to 256 MiB; saves via the `savePastedTempFiles` code path; returns paths), because the proxy in front caps WebSocket messages at 4 MiB; oRPC messages stay under 1 MiB; `GET /mcp/connect/<id>` and `GET /mcp/callback` (MCP connects, §6.3 exception). The host emits no CORS headers (the proxy adds them). A `bufferedAmount` above 16 MiB closes the socket with 1013.
 
 ### 6.7 Server-side denial (D14)
 

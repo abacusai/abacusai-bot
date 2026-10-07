@@ -30,6 +30,7 @@ import {
 } from "#renderer/data/query-client";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { openConnectPage } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
@@ -421,18 +422,20 @@ export const McpPage = () => {
                   >
                     {t("phase5.logs")}
                   </Button>
-                  {IS_ELECTRON && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={signingIn.includes(server.name)}
-                      onClick={() =>
-                        oauthSignIn.mutate({ mode: "code", name: server.name })
-                      }
-                    >
-                      {t("phase5.signIn")}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={signingIn.includes(server.name)}
+                    onClick={() => {
+                      // A tab on the host's route, or the desktop's own sign-in.
+                      if (
+                        openConnectPage(transport.client, server.name) == null
+                      )
+                        oauthSignIn.mutate({ mode: "code", name: server.name });
+                    }}
+                  >
+                    {t("phase5.signIn")}
+                  </Button>
                 </div>
                 {search.logs === server.name && (
                   <pre
