@@ -115,6 +115,7 @@ import {
 } from "../stall-watch.js";
 import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
+import { mcpToolAllowed } from "../tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
 import webTools from "../web/tools.js";
@@ -211,14 +212,27 @@ export class ForeverEngine {
     pi: () => this.pi,
     session: () => this.session,
     mcp: () => this.mcp,
-    // Raw browser tools stay out, and a same-named MCP tool would shadow
-    // the one the prompt teaches.
-    accepts: (tool) =>
-      !tool.name.startsWith("browser_") &&
-      !this.profile.replacesMcpTool(tool.name),
+    accepts: (tool) => this.acceptsMcpTool(tool),
     turnRunning: () => this.turnRunning,
   });
   private unsubscribe: (() => void) | undefined;
+
+  /**
+   * Whether the model sees an MCP tool: one the profile's policy allows, not
+   * a raw browser tool (a `browser_task` sub-agent drives those), and not
+   * one a profile tool of the same name shadows.
+   */
+  private acceptsMcpTool(tool: { name: string }): boolean {
+    if (tool.name.startsWith("browser_")) return false;
+    if (this.profile.replacesMcpTool(tool.name)) return false;
+    const server = this.mcp.routes.get(tool.name)?.client.name;
+    const builtin =
+      server != null &&
+      this.mcp.statuses.some(
+        (status) => status.name === server && status.isBuiltin === true
+      );
+    return mcpToolAllowed(this.profile.mcpTools, { name: tool.name, builtin });
+  }
 
   // Approval flow.
   private readonly pending = new Map<string, PendingPermission>();
@@ -410,8 +424,8 @@ export class ForeverEngine {
     // stay out: a bot gets one `browser_task`, a sub-agent walks pages.
     const isBrowserTool = (tool: { name: string }): boolean =>
       tool.name.startsWith("browser_");
-    const mcpTools = buildMcpToolDefinitions(() => this.mcp).filter(
-      (tool) => !isBrowserTool(tool) && !this.profile.replacesMcpTool(tool.name)
+    const mcpTools = buildMcpToolDefinitions(() => this.mcp).filter((tool) =>
+      this.acceptsMcpTool(tool)
     );
 
     for (const tool of mcpTools) this.mcpTools.registered.add(tool.name);

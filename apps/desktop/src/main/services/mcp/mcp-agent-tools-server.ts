@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 
@@ -8,6 +9,16 @@ import { pathToFileURL } from "url";
  * in-process; each toolset toggles on its own, so `tools/list` filters by the
  * enabled set and a disabled toolset's tools are never advertised.
  */
+import {
+  APP_CHANNEL,
+  type ChannelCapabilities,
+} from "@abacus-ai/agent/channel";
+import { isWithin, resolveSecretPaths } from "@abacus-ai/agent/secret-paths";
+import {
+  DOCUMENT_MAX_BYTES,
+  MEDIA_MAX_BYTES,
+  mediaLine,
+} from "@abacus-ai/agent/send-media";
 import { describeForListing } from "@abacus-ai/connectors/describe";
 import {
   CONNECTORS,
@@ -28,7 +39,7 @@ import {
 
 import { emitHostEvent } from "#main/rpc/emit";
 
-import { WORKSPACE_DIR_NAME } from "../../paths";
+import { abacusBotHome, WORKSPACE_DIR_NAME } from "../../paths";
 import {
   createJob,
   describeJob,
@@ -103,6 +114,30 @@ type UnreadFetch =
 const describeUnread = (count: number): string =>
   count < 0 ? "marked unread" : `${count} unread`;
 
+type ChatMedia = NonNullable<
+  ReturnType<NonNullable<McpAgentToolsServerOptions["chatMedia"]>>
+>;
+
+/** Text for a result line: one line, whatever it held. */
+const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
+
+/** The origin of a loopback http(s) URL; null for any other. */
+const loopbackOrigin = (url: string): string | null => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+      return null;
+    return ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
+      ? parsed.origin
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Files that go to a chat as pictures. */
+const IMAGE_FILE = /\.(png|jpe?g|webp)$/i;
+
 const toolsetsFor = (definition: ToolDefinition): readonly string[] =>
   definition.toolsets === "always" ? [] : definition.toolsets;
 
@@ -142,6 +177,30 @@ export interface McpAgentToolsServerOptions {
    * renderer opens it in that pane and no other. Null for an unknown session.
    */
   conversationKeyForSession?: (sessionId: string) => ConversationKey | null;
+  /**
+   * What the session's chat can do where a host lane says (the hosted
+   * WhatsApp lane); null for every other session and bot, which are app
+   * chats. Tool descriptions and results are rendered for it.
+   */
+  channelForSession?: (sessionId: string) => ChannelCapabilities | null;
+  /**
+   * Where `present_deliverable` puts what goes to a chat that takes media,
+   * under the session's id; null where no chat does.
+   */
+  chatMedia?: () => {
+    /** A file, as an image or a document, by its bytes and name. */
+    keep: (
+      sessionId: string,
+      data: Buffer,
+      filename: string
+    ) => { id: string } | { reason: string };
+    /** A screenshot of a page served at `origin`, with secret fields hidden. */
+    screenshot: (
+      url: string,
+      origin: string,
+      sessionId: string
+    ) => Promise<{ id: string } | { reason: string }>;
+  } | null;
   /** Set for the turn behind a routine page's composer; it sees only cron. */
   routineEditorFor?: (sessionId: string) => string | null;
   /** Every conversation a bot owns, with its agent log; for my_activity. */
@@ -292,6 +351,9 @@ export class McpAgentToolsServer extends McpHttpServer {
     super({ name: SERVER_NAME, version: SERVER_VERSION, listChanged: true });
   }
 
+  /** The loopback origins `serve` returned to each session. */
+  private readonly servedOrigins = new Map<string, Set<string>>();
+
   /** The always-on tools guarantee this. */
   hasEnabledTools(): boolean {
     const enabled = this.options.enabledToolsets();
@@ -303,6 +365,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     const enabled = this.options.enabledToolsets();
     const forBot = this.isBotCaller(callerSession);
     const forEditor = this.isRoutineEditor(callerSession);
+    const channel = this.channelFor(callerSession);
 
     return AGENT_TOOLS.filter((definition) =>
       forEditor
@@ -310,9 +373,24 @@ export class McpAgentToolsServer extends McpHttpServer {
         : this.isListed(definition.name, enabled, forBot)
     ).map((definition) => ({
       name: definition.name,
-      description: definition.description,
-      inputSchema: definition.inputSchema,
+      description:
+        typeof definition.description === "string"
+          ? definition.description
+          : definition.description(channel),
+      inputSchema:
+        typeof definition.inputSchema === "function"
+          ? definition.inputSchema(channel)
+          : definition.inputSchema,
     }));
+  }
+
+  /**
+   * What the caller's chat can do: its lane's channel (the hosted phone),
+   * else an app chat's, which is what every other session and bot sees.
+   */
+  channelFor(callerSession?: string): ChannelCapabilities {
+    if (callerSession == null) return APP_CHANNEL;
+    return this.options.channelForSession?.(callerSession) ?? APP_CHANNEL;
   }
 
   /** The editor turn behind a routine page's composer. */
@@ -935,7 +1013,10 @@ export class McpAgentToolsServer extends McpHttpServer {
    * named and an empty result is an error: a success with nothing behind it
    * is worse than a failure the model can correct.
    */
-  async serve(args: Record<string, unknown>): Promise<ToolResult> {
+  async serve(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
     const action = String(args.action ?? "").trim();
     const directory = String(args.directory ?? "").trim();
 
@@ -962,6 +1043,14 @@ export class McpAgentToolsServer extends McpHttpServer {
 
       if (action === "start") {
         const served = await serveDirectory(this.resolveOutputPath(directory));
+        if (callerSession != null) {
+          const origin = loopbackOrigin(served.url);
+          if (origin != null)
+            this.servedOrigins.set(
+              callerSession,
+              (this.servedOrigins.get(callerSession) ?? new Set()).add(origin)
+            );
+        }
         // The page, not the folder, unless the folder has an index; a root
         // URL for a folder holding only `love.html` opens onto "Not found".
         const pages = await htmlPagesIn(served.directory);
@@ -972,10 +1061,20 @@ export class McpAgentToolsServer extends McpHttpServer {
               ? `${served.url}/${encodeURIComponent(pages[0]!)}`
               : null;
 
+        const channel = this.channelFor(callerSession);
         return this.ok(
           [
             `Serving ${served.directory} at ${served.url}`,
             "",
+            ...(channel.pane
+              ? []
+              : [
+                  "This URL opens on this computer only: the user cannot open it from their phone." +
+                    (channel.media
+                      ? " present_deliverable sends them a screenshot of the page instead."
+                      : ""),
+                  "",
+                ]),
             entry != null
               ? `Hand it over: present_deliverable with ${entry}`
               : `No index.html; the pages are ${pages
@@ -1043,12 +1142,22 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     }
 
+    const channel = this.channelFor(callerSession);
+    const chatMedia = this.options.chatMedia?.() ?? null;
+    if (
+      (channel.media || channel.documents) &&
+      chatMedia != null &&
+      callerSession != null
+    )
+      return this.sendToChat(valid, missing, args, chatMedia, callerSession);
+
     const first = valid[0]!;
     // Only the first item goes to the preview pane; the rest are rows of the
     // files card. A bot's turn opens nothing: a document jumping open over
     // the user's unrelated work reads as the app misbehaving.
     const forBot = this.isBotCaller(callerSession);
-    if (!forBot) this.broadcastPreviewOpen(first.target, callerSession);
+    const toPane = !forBot && channel.pane;
+    if (toPane) this.broadcastPreviewOpen(first.target, callerSession);
 
     const summary = String(args.summary ?? "").trim();
     const lines = [
@@ -1058,9 +1167,9 @@ export class McpAgentToolsServer extends McpHttpServer {
           `- [${item.label}](${item.isUrl ? item.target : fileUrl(item.target)})`
       ),
       "",
-      forBot
-        ? "Listed in the chat as a files card the user can open."
-        : `Listed in the chat as a files card; ${first.label} was sent to the preview pane.`,
+      toPane
+        ? `Listed in the chat as a files card; ${first.label} was sent to the preview pane.`
+        : "Listed in the chat as a files card the user can open.",
     ];
 
     if (missing.length > 0) {
@@ -1073,6 +1182,167 @@ export class McpAgentToolsServer extends McpHttpServer {
     lines.push("", ...valid.map((item) => artifactPathLine(item.target)));
 
     return this.ok(lines.join("\n"));
+  }
+
+  /**
+   * `present_deliverable` for a chat that takes media (WhatsApp): each item
+   * is kept as the session's media and declared with a media line, which the
+   * chat's lane sends with the turn's answer. A served URL goes as a
+   * screenshot, since the user cannot open it. The result says what goes and
+   * what cannot, never a pane.
+   */
+  private async sendToChat(
+    valid: Array<{ label: string; target: string; isUrl: boolean }>,
+    missing: string[],
+    args: Record<string, unknown>,
+    chatMedia: ChatMedia,
+    sessionId: string
+  ): Promise<ToolResult> {
+    const going: Array<{ line: string; id: string; target: string }> = [];
+    const refused: string[] = [];
+    for (const item of valid) {
+      const label = oneLine(item.label);
+      const kept = item.isUrl
+        ? await this.screenshotServed(item.target, sessionId, chatMedia)
+        : await this.keepFile(item.target, sessionId, chatMedia);
+      if ("reason" in kept) {
+        refused.push(`${label}: ${oneLine(kept.reason)}`);
+        continue;
+      }
+      going.push({
+        id: kept.id,
+        target: item.target,
+        line: item.isUrl
+          ? `- ${label}: a screenshot of the page (a live preview cannot be opened from the phone)`
+          : `- ${label}`,
+      });
+    }
+
+    const notFound =
+      missing.length > 0
+        ? [
+            oneLine(
+              `Not sent, because there is no file at these paths: ${missing.join(", ")}`
+            ),
+          ]
+        : [];
+    if (going.length === 0)
+      return this.err(
+        ["Nothing was sent to the chat.", ...refused, ...notFound].join("\n")
+      );
+
+    // One line each: a newline could pose as a media line.
+    const summary = oneLine(String(args.summary ?? ""));
+    const lines = [
+      ...(summary.length > 0 ? [summary, ""] : []),
+      `Sending ${going.length === 1 ? "1 item" : `${going.length} items`} to this chat with your answer:`,
+      ...going.map((item) => item.line),
+      "",
+      "The first text of your answer goes with the first item as its caption. Do not paste paths or links to them.",
+      ...(refused.length > 0
+        ? ["", "Not sent:", ...refused.map((line) => `- ${line}`)]
+        : []),
+      ...(notFound.length > 0 ? ["", ...notFound] : []),
+      "",
+      ...going.map((item) => mediaLine(item.id)),
+      ...going.map((item) => artifactPathLine(item.target)),
+    ];
+    return this.ok(lines.join("\n"));
+  }
+
+  /**
+   * A screenshot of a page this session served: only a loopback URL whose
+   * origin `serve` returned to it, never any other address.
+   */
+  private async screenshotServed(
+    url: string,
+    sessionId: string,
+    chatMedia: ChatMedia
+  ): Promise<{ id: string } | { reason: string }> {
+    const origin = loopbackOrigin(url);
+    if (
+      origin == null ||
+      this.servedOrigins.get(sessionId)?.has(origin) !== true
+    )
+      return {
+        reason:
+          "only a page you served with `serve` in this chat can be sent, as a screenshot.",
+      };
+    return chatMedia.screenshot(url, origin, sessionId);
+  }
+
+  /**
+   * A file on disk, kept as the session's media, or why it cannot go. Only a
+   * regular file whose real path is under the workspace or the app's own
+   * output and temp folders, outside every credential store; read no further
+   * than the most the chat takes.
+   */
+  private async keepFile(
+    filePath: string,
+    sessionId: string,
+    chatMedia: ChatMedia
+  ): Promise<{ id: string } | { reason: string }> {
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      const real = await fs.promises.realpath(filePath);
+      const workspace = this.options.workspacePath();
+      const roots = await Promise.all(
+        [
+          ...(workspace != null ? [workspace] : []),
+          os.tmpdir(),
+          path.join(abacusBotHome(), "temp"),
+          path.join(abacusBotHome(), "generated"),
+        ].map((root) => fs.promises.realpath(root).catch(() => null))
+      );
+      if (!roots.some((root) => root != null && isWithin(real, root)))
+        return {
+          reason:
+            "only files in the workspace (or ones a tool just made) can be sent; copy it into the workspace first.",
+        };
+      const denied = resolveSecretPaths({
+        workspaceRoot: workspace ?? real,
+      }).denied;
+      if (denied.some((secret) => isWithin(real, secret)))
+        return { reason: "it is in a credential store and is never sent." };
+      // Checked before opening too: opening a pipe would wait for a writer.
+      if (!(await fs.promises.stat(real)).isFile())
+        return { reason: "it is not a regular file." };
+      handle = await fs.promises.open(real, "r");
+      const stat = await handle.stat();
+      if (!stat.isFile()) return { reason: "it is not a regular file." };
+      if (IMAGE_FILE.test(real) && stat.size > MEDIA_MAX_BYTES)
+        return {
+          reason:
+            "it is an image larger than 5 MB, the most a picture may be; save a smaller copy (or a PDF) and send that.",
+        };
+      // Read no further than the limit, whatever the size said.
+      const buffer = Buffer.alloc(DOCUMENT_MAX_BYTES + 1);
+      let length = 0;
+      while (length < buffer.length) {
+        const { bytesRead } = await handle.read(
+          buffer,
+          length,
+          buffer.length - length,
+          length
+        );
+        if (bytesRead === 0) break;
+        length += bytesRead;
+      }
+      if (length > DOCUMENT_MAX_BYTES)
+        return { reason: "it is larger than 16 MB, the most the chat takes." };
+      return chatMedia.keep(
+        sessionId,
+        Buffer.from(buffer.subarray(0, length)),
+        path.basename(real)
+      );
+    } catch (error) {
+      console.error(
+        `[agent-tools] could not read a deliverable: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return { reason: "it could not be read." };
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
   }
 
   async deckExportPdf(args: Record<string, unknown>): Promise<ToolResult> {

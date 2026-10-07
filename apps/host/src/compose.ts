@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import { AgentMode } from "@abacus-ai/contract/agent-types";
 
 import { composeHost } from "#main/compose-host";
@@ -154,7 +155,8 @@ export const composeNodeHost = async () => {
     return serviceHost.openLaneSession(
       "phone",
       { ABACUSAI_BOT_PHONE_DIR: phoneDir },
-      AgentMode.Auto
+      AgentMode.Auto,
+      WHATSAPP_CHANNEL
     );
   };
   const phoneLane = new PhoneLane({
@@ -178,6 +180,10 @@ export const composeNodeHost = async () => {
     activity: () => lease.activity(),
     resolveMedia: (ref, sessionId) =>
       serviceHost.mediaStore.resolve(ref, sessionId),
+    pinMedia: (ref, sessionId, pinned) =>
+      pinned
+        ? serviceHost.mediaStore.pin(ref, sessionId)
+        : serviceHost.mediaStore.unpin(ref, sessionId),
   });
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.

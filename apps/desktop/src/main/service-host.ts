@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "path";
 
+import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import {
   connectorById,
   connectorForService,
@@ -705,6 +706,7 @@ export class ServiceHost {
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
     vault: this.vault,
+    channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
   });
 
   /**
@@ -845,6 +847,17 @@ export class ServiceHost {
       })(),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
+    channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
+    // Only the hosted computer carries a chat that takes media (WhatsApp).
+    chatMedia: () =>
+      this.platform === "web-host"
+        ? {
+            keep: (sessionId, data, filename) =>
+              this.mediaStore.putFile(sessionId, data, filename),
+            screenshot: (url, origin, sessionId) =>
+              this.mcpBrowserServer.screenshotForChat(url, origin, sessionId),
+          }
+        : null,
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
     ownActivity: (botId) => {
@@ -4766,6 +4779,8 @@ export class ServiceHost {
 
   /** Agent env for the sessions host lanes keep, by session id. */
   private readonly laneEnv = new Map<string, Record<string, string>>();
+  /** What the chat behind each host lane's session can do, by session id. */
+  private readonly laneChannels = new Map<string, ChannelCapabilities>();
   private readonly agentEventListeners = new Set<
     (sessionId: string, payload: DesktopEvent) => void
   >();
@@ -4777,7 +4792,8 @@ export class ServiceHost {
   async openLaneSession(
     lane: string,
     env: Record<string, string>,
-    mode: AgentMode
+    mode: AgentMode,
+    channel: ChannelCapabilities
   ): Promise<{ workspaceId: string; sessionId: string }> {
     const workspaceId = await this.ensureDefaultWorkspace();
     if (workspaceId == null) throw new Error("No workspace for the lane.");
@@ -4787,6 +4803,7 @@ export class ServiceHost {
       mode
     );
     this.laneEnv.set(session.id, env);
+    this.laneChannels.set(session.id, channel);
     return { workspaceId: session.workspaceId, sessionId: session.id };
   }
 

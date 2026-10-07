@@ -4,6 +4,7 @@
  * tools and memory.
  */
 import type { BrowserTaskContext } from "../browser-task.js";
+import type { McpToolPolicy } from "../tool-policy.js";
 
 /** A hidden or continuation message: its custom-message type and its text. */
 export interface HiddenTurnPrompt {
@@ -45,6 +46,8 @@ export interface ForeverProfile {
   systemPrompt(): string[];
   /** The profile's own pi tool definitions, ahead of browser_task and MCP. */
   tools(cwd: string): unknown[];
+  /** The MCP tools this chat gets, none unless named there; every one without it. */
+  mcpTools?: McpToolPolicy;
   /** Whether an MCP tool is replaced by one of the profile's own tools. */
   replacesMcpTool(name: string): boolean;
   /** Tools that never ask for approval. */

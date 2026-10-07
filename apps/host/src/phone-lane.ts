@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   parseProgressText,
@@ -6,6 +6,7 @@ import {
   splitPhoneBubbles,
 } from "@abacus-ai/agent/phone-bubbles";
 import {
+  declaredMedia,
   parseSendMedia,
   type ResolvedMedia,
   SEND_MEDIA_TOOL_NAME,
@@ -30,7 +31,8 @@ import { PHONE_TURN_LIMITS, TurnClock } from "./turn-clock";
  * by its id, and the session reports by id which ones each final answer
  * answers (`turn_reply`). PhoneInbox owns every message's state; this class
  * moves messages between the server, the session and the user: text, and
- * images (`send_media`) at once or with the final answer. Host-only:
+ * media at once or with the final answer: images and documents that
+ * `send_media` names or `present_deliverable` hands over. Host-only:
  * the desktop app never builds one.
  */
 
@@ -63,8 +65,10 @@ interface PhoneLaneDeps {
   ) => () => void;
   /** Keeps the host's idle lease fresh. */
   activity: () => void;
-  /** A `send_media` media id, as bytes, for the session that holds it. */
+  /** A media id, as bytes, for the session that holds it. */
   resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
+  /** Keeps media held for an answer from eviction, or lets it go. */
+  pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
   log?: (line: string) => void;
 }
 
@@ -85,6 +89,13 @@ const PHONE_LANE_TIMINGS = {
 /** The server holds an inbox poll open for at most this long. */
 const INBOX_WAIT_SECS = 25;
 const CALL_TIMEOUT_MS = 20_000;
+/** A reply carrying a document: up to 16 MB goes up in it. */
+const DOCUMENT_CALL_TIMEOUT_MS = 90_000;
+const PRESENT_TOOL = "present_deliverable";
+/** The app's built-in tool server: its tools may arrive under its prefix. */
+const BUILTIN_TOOLS_SERVER = "agent-tools";
+/** Media ids remembered as sent; each lives 30 minutes, so far fewer are live. */
+const MAX_DELIVERED_IDS = 1_000;
 const REACT_TOOL = "react_to_message";
 /** What the user hears when a turn fails: never silence, never the raw error. */
 const FAILURE_REPLY =
@@ -92,10 +103,12 @@ const FAILURE_REPLY =
 
 type TurnReply = Extract<AgentEvent, { type: "turn_reply" }>;
 
-/** An image for the chat and the words under it. */
+/** An image or document for the chat and the words under it. */
 interface PhoneMedia {
   ref: string;
   caption: string;
+  /** Handed over with `present_deliverable`: the answer itself, never lost in silence. */
+  deliverable?: boolean;
 }
 
 /** WhatsApp's longest caption; a longer first bubble goes as its own text. */
@@ -136,8 +149,16 @@ export class PhoneLane {
   private sending: Promise<void> = Promise.resolve();
   /** Everything said to the user goes out in order: progress, answers, apologies. */
   private outbox: Promise<unknown> = Promise.resolve();
-  /** `send_media` with_answer: goes out with the turn's final answer. */
+  /** Media for the turn's final answer: `send_media` with_answer, and `present_deliverable`'s. */
   private heldMedia: PhoneMedia[] = [];
+  /** Media ids the server took: each goes to the user once. */
+  private readonly deliveredIds = new Set<string>();
+  /** Files the session already heard did not go, by content or id. */
+  private readonly notedMedia = new Set<string>();
+  /** User messages a media note was already raised under. */
+  private readonly notedFor = new Set<string>();
+  /** This turn's media by content: two captures of the same page go once. */
+  private turnMediaHashes = new Set<string>();
 
   constructor(
     private readonly deps: PhoneLaneDeps,
@@ -401,7 +422,13 @@ export class PhoneLane {
         void this.channel("react", { message_id: replyTo, emoji });
       return;
     }
-    // A progress line or an image goes out now; neither answers the message.
+    // What present_deliverable accepted goes with the answer, as its media.
+    if (isTool(event.tool.name, PRESENT_TOOL)) {
+      for (const ref of declaredMedia(event.result.content))
+        this.hold({ ref, caption: "", deliverable: true });
+      return;
+    }
+    // A progress line or media goes out now; neither answers the message.
     let sent: Promise<boolean> | null = null;
     if (isTool(event.tool.name, PHONE_PROGRESS_TOOL_NAME)) {
       const progress = parseProgressText(event.tool.input);
@@ -413,7 +440,7 @@ export class PhoneLane {
       const { media, caption, when } = parsed.request;
       const item = { ref: media, caption };
       if (when === "with_answer") {
-        this.heldMedia.push(item);
+        this.hold(item);
         return;
       }
       sent = this.sendMedia(replyTo, item).then((went) => went.image);
@@ -427,10 +454,30 @@ export class PhoneLane {
     });
   }
 
+  /** Media for the answer, kept from eviction until the turn ends. */
+  private hold(media: PhoneMedia): void {
+    this.heldMedia.push(media);
+    const sessionId = this.session?.sessionId;
+    if (sessionId != null) this.deps.pinMedia?.(media.ref, sessionId, true);
+  }
+
+  /** The turn is over: what it held may be evicted again. */
+  private release(held: PhoneMedia[]): void {
+    const sessionId = this.session?.sessionId;
+    if (sessionId == null) return;
+    for (const media of held) this.deps.pinMedia?.(media.ref, sessionId, false);
+  }
+
   /**
-   * An image with its caption, after whatever is already on its way. One the
-   * server refuses (or that cannot be read) still leaves its caption as text;
-   * `words` says whether the caption reached the chat either way.
+   * An image or document with its caption, after whatever is already on its
+   * way. Each media id goes once, and the same bytes once a turn, counted
+   * only once the server took them: a resend of what already went is
+   * skipped, and its caption still goes as text. One the server refuses (or
+   * that cannot be read) also leaves its caption as text; for a file handed
+   * over, the session hears it did not go (see `noteNotAttached`). A
+   * document the server did not answer in time may still have gone: the
+   * session hears that it is unconfirmed and the caption is not repeated.
+   * `words` says whether the caption reached the chat.
    */
   private sendMedia(
     replyTo: string,
@@ -444,17 +491,52 @@ export class PhoneLane {
         sessionId == null
           ? { ok: false, reason: "no session" }
           : this.deps.resolveMedia(media.ref, sessionId);
-      const caption = media.caption.length > 0 ? { text: media.caption } : {};
+      const hash =
+        resolved.ok === true
+          ? createHash("sha256").update(resolved.data).digest("hex")
+          : null;
+      const duplicate =
+        this.deliveredIds.has(media.ref) ||
+        (hash != null && this.turnMediaHashes.has(hash));
+      let outcome: "sent" | "refused" | "unknown" = "refused";
       if (resolved.ok === false)
         this.log(`[phone] media not sent: ${resolved.reason}`);
-      else if (
-        await this.channel("reply", {
-          message_id: replyTo,
-          image_b64: resolved.data.toString("base64"),
-          ...caption,
-        })
-      )
+      else if (duplicate)
+        this.log(`[phone] media ${media.ref} already went; not again`);
+      else
+        outcome = await this.replyWithMedia(
+          {
+            message_id: replyTo,
+            ...(resolved.kind === "image"
+              ? { image_b64: resolved.data.toString("base64") }
+              : {
+                  document_b64: resolved.data.toString("base64"),
+                  filename: resolved.filename,
+                }),
+            ...(media.caption.length > 0 ? { text: media.caption } : {}),
+          },
+          resolved.kind === "document"
+        );
+      if (outcome === "sent") {
+        this.markDelivered(media.ref);
+        if (hash != null) this.turnMediaHashes.add(hash);
         return { image: true, words: true };
+      }
+      const named =
+        resolved.ok === true && resolved.kind === "document"
+          ? `The file ${resolved.filename}`
+          : media.deliverable === true
+            ? "An image you handed over"
+            : null;
+      if (outcome === "unknown") {
+        // It may well have gone, caption and all: nothing is repeated.
+        this.log(`[phone] media ${media.ref} delivery unknown`);
+        if (named != null)
+          this.noteOnce(media.ref, replyTo, unconfirmedNote(named));
+        return { image: false, words: true };
+      }
+      if (!duplicate && named != null)
+        this.noteOnce(hash ?? media.ref, replyTo, notAttachedNote(named));
       const words =
         media.caption.length === 0 ||
         (await this.channel("reply", {
@@ -465,6 +547,53 @@ export class PhoneLane {
     });
     this.outbox = run.catch(() => ({ image: false, words: false }));
     return run;
+  }
+
+  /**
+   * A reply carrying media: sent, refused, or (a document with no answer in
+   * time) unknown. An image's timeout counts as refused, as it always has.
+   */
+  private async replyWithMedia(
+    body: Record<string, unknown>,
+    document: boolean
+  ): Promise<"sent" | "refused" | "unknown"> {
+    try {
+      const result = await this.deps.call<{ ok?: boolean; error?: string }>(
+        { action: "reply", ...body },
+        document ? DOCUMENT_CALL_TIMEOUT_MS : CALL_TIMEOUT_MS
+      );
+      if (result.ok === true) return "sent";
+      this.log(`[phone] reply refused: ${result.error ?? "no reason"}`);
+      return "refused";
+    } catch (error) {
+      if (document && error instanceof Error && error.name === "TimeoutError")
+        return "unknown";
+      this.log(`[phone] reply failed: ${describe(error)}`);
+      return "refused";
+    }
+  }
+
+  private markDelivered(ref: string): void {
+    this.deliveredIds.add(ref);
+    // Ids outlive their media by far past this; the oldest go first.
+    if (this.deliveredIds.size > MAX_DELIVERED_IDS)
+      this.deliveredIds.delete(this.deliveredIds.values().next().value!);
+  }
+
+  /**
+   * A note to the session about media that did not go: at most one per file
+   * (by content, else id) in the conversation, and one per user message, so
+   * a model that keeps retrying cannot keep a loop of notes going.
+   */
+  private noteOnce(key: string, replyTo: string, text: string): void {
+    if (this.notedMedia.has(key) || this.notedFor.has(replyTo)) return;
+    this.notedMedia.add(key);
+    this.notedFor.add(replyTo);
+    if (this.notedMedia.size > MAX_DELIVERED_IDS)
+      this.notedMedia.delete(this.notedMedia.values().next().value!);
+    if (this.notedFor.size > MAX_DELIVERED_IDS)
+      this.notedFor.delete(this.notedFor.values().next().value!);
+    this.note(text);
   }
 
   /**
@@ -506,6 +635,7 @@ export class PhoneLane {
     const bubbles = splitPhoneBubbles(reply.text);
     // A failed turn's media is not an answer; it goes with nothing.
     const media = this.heldMedia.splice(0);
+    this.release(media);
     const delivered =
       media.length > 0 && !reply.failed
         ? await this.deliverWithMedia(replyTo, bubbles, media)
@@ -516,6 +646,7 @@ export class PhoneLane {
     this.log(
       `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}`
     );
+    this.turnMediaHashes = new Set();
     await this.close(messages, answered);
   }
 
@@ -540,7 +671,8 @@ export class PhoneLane {
     const messages = this.inbox.abandon();
     if (messages.length === 0) return;
     this.clock.stop();
-    this.heldMedia = [];
+    this.release(this.heldMedia.splice(0));
+    this.turnMediaHashes = new Set();
     // The session refuses a handoff still on its way; the stop is bounded by its owner.
     this.stopping = this.stopSession();
     const apologized = await this.apologize(this.replyTarget(messages)!);
@@ -695,12 +827,13 @@ export class PhoneLane {
   /** One fire-and-report channel call; true when the server took it. */
   private async channel(
     action: "typing" | "reply" | "react",
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
+    timeoutMs = CALL_TIMEOUT_MS
   ): Promise<boolean> {
     try {
       const result = await this.deps.call<{ ok?: boolean; error?: string }>(
         { action, ...body },
-        CALL_TIMEOUT_MS
+        timeoutMs
       );
       if (action === "typing" || result.ok === true) return true;
       this.log(`[phone] ${action} refused: ${result.error ?? "no reason"}`);
@@ -746,9 +879,31 @@ export function channelsTransport(options: {
   };
 }
 
-/** The tool by its own name or as an MCP server prefixes it. */
+/**
+ * What the session hears when a file did not reach the chat: a turn of its
+ * own, so the user is told in their language rather than left waiting.
+ */
+function notAttachedNote(what: string): string {
+  return (
+    `[not attached] ${what} could not be attached in WhatsApp. Tell the user ` +
+    "in one short text, in their language, that it did not come through, and give them " +
+    "its content another way if you can (a short summary, or a `page` link). Do not " +
+    "send it again."
+  );
+}
+
+/** When WhatsApp did not say in time whether a file went. */
+function unconfirmedNote(what: string): string {
+  return (
+    `[delivery unconfirmed] ${what} was sent to WhatsApp, which did not confirm it in ` +
+    "time; it has most likely arrived. Do not tell the user it failed, and do not send it " +
+    "again unless they say it did not arrive. Reply with exactly NO_REPLY."
+  );
+}
+
+/** The tool by its own name, or as the app's built-in tool server names it. */
 const isTool = (name: string, tool: string): boolean =>
-  name === tool || name.endsWith(`_${tool}`);
+  name === tool || name === `${BUILTIN_TOOLS_SERVER}_${tool}`;
 
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

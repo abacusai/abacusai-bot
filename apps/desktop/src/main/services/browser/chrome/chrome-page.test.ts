@@ -169,6 +169,52 @@ describe("ChromePage", () => {
     });
   });
 
+  it("clips a popup tab's screenshot to its layout viewport, from the page's 0,0", async () => {
+    // A tab a page opened: its visual viewport sits offset and at device
+    // scale, which the unclipped capture followed (the left edge cut off).
+    const { relay, calls } = fakeRelay((method) =>
+      method === "Page.getLayoutMetrics"
+        ? {
+            layoutViewport: {
+              pageX: 0,
+              pageY: 0,
+              clientWidth: 2560,
+              clientHeight: 1800,
+            },
+            visualViewport: {
+              offsetX: 14,
+              offsetY: 0,
+              pageX: 14,
+              pageY: 0,
+              clientWidth: 1266,
+              clientHeight: 900,
+              scale: 1,
+            },
+            cssLayoutViewport: {
+              pageX: 0,
+              pageY: 0,
+              clientWidth: 1280,
+              clientHeight: 900,
+            },
+          }
+        : method === "Page.captureScreenshot"
+          ? { data: Buffer.from("jpegbytes").toString("base64") }
+          : {}
+    );
+    const page = new ChromePage(relay, {
+      id: 9,
+      url: "https://the-internet.test/windows/new",
+    });
+
+    await page.capturePage();
+
+    expect(calls.find(([m]) => m === "Page.captureScreenshot")?.[1]).toEqual({
+      format: "jpeg",
+      quality: 70,
+      clip: { x: 0, y: 0, width: 1280, height: 900, scale: 1 },
+    });
+  });
+
   it("forwards debugger commands to its tab", async () => {
     const { relay } = fakeRelay(() => ({ result: { value: 42 } }));
     const page = new ChromePage(relay, { id: 7, url: "https://a.test/" });

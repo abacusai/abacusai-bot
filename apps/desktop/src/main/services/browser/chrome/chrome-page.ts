@@ -9,6 +9,21 @@ import type { ChromeTabDriver, ChromeTabInfo } from "./chrome-relay";
 
 const HISTORY_TIMEOUT_MS = 5_000;
 
+interface LayoutViewport {
+  pageX?: number;
+  pageY?: number;
+  clientWidth: number;
+  clientHeight: number;
+}
+
+/** The part of `Page.getLayoutMetrics` a capture reads. */
+interface LayoutMetrics {
+  /** CSS pixels; newer Chromium. */
+  cssLayoutViewport?: LayoutViewport;
+  /** CSS pixels too in older Chromium, which has no `css*` fields. */
+  layoutViewport?: LayoutViewport;
+}
+
 export class ChromePage implements BrowserPage {
   readonly id: number;
   private url: string;
@@ -240,15 +255,49 @@ export class ChromePage implements BrowserPage {
     toPNG: () => Buffer;
   }> {
     await this.ensureEnabled();
+    const clip = await this.viewportClip();
     const shot = (await this.relay.cdp(this.id, "Page.captureScreenshot", {
       format: "jpeg",
       quality: 70,
+      ...(clip != null ? { clip } : {}),
     })) as { data?: string };
     const jpeg = Buffer.from(shot.data ?? "", "base64");
     return {
       toJPEG: () => jpeg,
       // The tools take JPEG first; a PNG is only asked for when that is empty.
       toPNG: () => Buffer.alloc(0),
+    };
+  }
+
+  /**
+   * The layout viewport in CSS pixels, from its own scroll offset: what the
+   * page shows. Without a clip, a tab a page opened (a popup) came out
+   * shifted, its left edge cut and the rest blank; null when the metrics
+   * cannot be read, for the unclipped capture.
+   */
+  private async viewportClip(): Promise<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    scale: number;
+  } | null> {
+    const metrics = (await this.relay
+      .cdp(this.id, "Page.getLayoutMetrics")
+      .catch(() => null)) as LayoutMetrics | null;
+    const viewport = metrics?.cssLayoutViewport ?? metrics?.layoutViewport;
+    if (
+      viewport == null ||
+      !(viewport.clientWidth > 0) ||
+      !(viewport.clientHeight > 0)
+    )
+      return null;
+    return {
+      x: viewport.pageX ?? 0,
+      y: viewport.pageY ?? 0,
+      width: viewport.clientWidth,
+      height: viewport.clientHeight,
+      scale: 1,
     };
   }
 

@@ -43,6 +43,12 @@ const ALLOWED = new Set([
   "@abacus-ai/agent/atomic-file",
   // Media checks for the chat: no imports at all.
   "@abacus-ai/agent/send-media",
+  // What a chat can do: no imports at all.
+  "@abacus-ai/agent/channel",
+  // Which tools a chat gets: no imports at all.
+  "@abacus-ai/agent/tool-policy",
+  // The credential stores: node's fs, os and path only.
+  "@abacus-ai/agent/secret-paths",
 ]);
 
 const MAIN_DIR = resolve(import.meta.dirname);

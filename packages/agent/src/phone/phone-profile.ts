@@ -13,6 +13,7 @@ import { WHATSAPP_CHANNEL } from "../channel.js";
 import type { ForeverProfile } from "../forever/profile.js";
 import { buildSendMediaTool } from "../send-media-tool.js";
 import { SEND_MEDIA_TOOL_NAME } from "../send-media.js";
+import { PHONE_MCP_TOOLS } from "../tool-policy.js";
 import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
   localDay,
@@ -112,9 +113,13 @@ export function createPhoneProfile(
     ],
     // A browser run keeps the user posted, and hears them, from inside.
     browserTask: {
-      progressTools: () => [buildPhoneProgressTool(), buildSendMediaTool()],
+      progressTools: (sent) => [
+        buildPhoneProgressTool(),
+        buildSendMediaTool(sent),
+      ],
       channel: WHATSAPP_CHANNEL,
     },
+    mcpTools: PHONE_MCP_TOOLS,
     // The phone's own `memory` replaces the desktop's global one too.
     replacesMcpTool: (name) =>
       PHONE_TOOL_NAMES.includes(name) ||
