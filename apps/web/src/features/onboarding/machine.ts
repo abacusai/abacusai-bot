@@ -124,3 +124,15 @@ export const connectedProviders = (
     ...keys,
     ...models.flatMap((model) => (model.provider ? [model.provider] : [])),
   ]);
+
+/** Shared by setup completion and the route gate that resumes an unfinished exit. */
+export const onboardingExitTarget = (
+  exit: NonNullable<PrefsRow["onboardingExit"]>
+) => {
+  if (exit.to === "new-session") return { to: "/sessions/new" } as const;
+  if (exit.to === "new-bot") return { to: "/bots/new" } as const;
+  return {
+    to: exit.to === "bot" && exit.edit ? "/bots/$botId/edit" : "/bots/$botId",
+    params: { botId: exit.botId },
+  } as const;
+};

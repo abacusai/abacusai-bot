@@ -76,14 +76,14 @@ const useShellActions = (): ShellActions => {
     },
     openCommand: () => setCommandOpen(true),
     newInArea: () => {
-      const href =
+      const to =
         area === "bots"
           ? "/bots/new"
           : area === "routines"
             ? "/routines/new"
             : "/sessions/new";
       void navigate({
-        href,
+        to,
         transition: area === "routines" ? "none" : "nav-lateral",
       });
     },
@@ -92,7 +92,7 @@ const useShellActions = (): ShellActions => {
     togglePanel: panel.toggle,
     openSettings: () =>
       void navigate({
-        href: "/settings/general",
+        to: "/settings/general",
         transition: "settings-in",
       }),
     closeFloating,

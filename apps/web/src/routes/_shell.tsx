@@ -20,6 +20,7 @@ import {
 import {
   needsOnboarding,
   onboardingTarget,
+  onboardingExitTarget,
 } from "#renderer/features/onboarding/machine";
 import { PairingQueueBanner } from "#renderer/features/onboarding/pairing-banner";
 import { SessionsGlobals } from "#renderer/features/sessions/globals";
@@ -69,7 +70,10 @@ const ShellRoute = () => {
         queryClient,
         navigate: async () => undefined,
         startTour: () =>
-          startTour({ origin: router.state.location.href, onboarded: true }),
+          startTour({
+            origin: router.state.location.publicHref,
+            onboarded: true,
+          }),
       },
       exit
     ).catch((error) => console.warn("[onboarding] tail deferred", error));
@@ -98,7 +102,7 @@ const ShellRoute = () => {
 };
 
 export const Route = createFileRoute("/_shell")({
-  beforeLoad: async ({ context, location, preload }) => {
+  beforeLoad: async ({ context, location, preload, buildLocation }) => {
     // A hover preload never commits, so the gate waits for the click.
     if (preload) return { provisional: false };
     const gate = readGate(context, "shell");
@@ -109,7 +113,7 @@ export const Route = createFileRoute("/_shell")({
     const { account, signedIn } = fresh;
     const prefs = context.db.collections.prefs.get("app") ?? DEFAULT_PREFS;
     if (needsOnboarding(account, signedIn)) {
-      leave(context, location.href);
+      leave(context, location.publicHref);
       throw redirect({
         ...onboardingTarget(
           signedIn ? prefs : { ...prefs, onboardingStep: "welcome" }
@@ -120,14 +124,9 @@ export const Route = createFileRoute("/_shell")({
     keep(context, "shell", fresh);
     const exit = prefs.onboardingExit;
     if (exit) {
-      const target =
-        exit.to === "new-session"
-          ? "/sessions/new"
-          : exit.to === "new-bot"
-            ? "/bots/new"
-            : `/bots/${encodeURIComponent(exit.botId)}${exit.to === "bot" && exit.edit ? "/edit" : ""}`;
-      if (location.pathname !== target)
-        throw redirect({ href: target, replace: true });
+      const target = onboardingExitTarget(exit);
+      if (location.pathname !== buildLocation(target).pathname)
+        throw redirect({ ...target, replace: true });
     }
     return { provisional: false };
   },

@@ -6,6 +6,7 @@
 import { useCanGoBack, useRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import type { FileRoutesByTo } from "#renderer/routeTree.gen";
 import {
   Sheet,
   SheetContent,
@@ -18,21 +19,24 @@ export interface RouteSheetProps {
   title: string;
   description?: string;
   /** Where to go when there is no history entry to go back to. */
-  fallbackHref: string;
+  fallbackTo: Extract<
+    keyof FileRoutesByTo,
+    "/routines" | "/bots/new" | "/sessions/new"
+  >;
   children?: ReactNode;
 }
 
 export const RouteSheet = ({
   title,
   description,
-  fallbackHref,
+  fallbackTo,
   children,
 }: RouteSheetProps) => {
   const router = useRouter();
   const canGoBack = useCanGoBack();
   const close = (): void => {
     if (canGoBack) router.history.back();
-    else void router.navigate({ href: fallbackHref, replace: true });
+    else void router.navigate({ to: fallbackTo, replace: true });
   };
   return (
     <Sheet

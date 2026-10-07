@@ -67,19 +67,24 @@ export const TourHost = () => {
       setBusy(true);
       setRect(null);
       try {
-        let href = stop.href;
+        if (stop.to) await navigate({ to: stop.to });
         if (stop.id === "talk") {
           const bot = db.collections.bots.toArray.at(-1);
-          href = bot ? `/bots/${encodeURIComponent(bot.id)}` : "/sessions/new";
+          if (bot)
+            await navigate({ to: "/bots/$botId", params: { botId: bot.id } });
+          else await navigate({ to: "/sessions/new" });
         }
         if (stop.id === "changes" || stop.id === "preview-terminal") {
           const session = db.collections.sessions.toArray.find(
             (s) => s.owner == null && s.routineId == null
           );
           if (session)
-            href = `/sessions/${encodeURIComponent(session.id)}?tab=${stop.id === "changes" ? "changes" : "files"}`;
+            await navigate({
+              to: "/sessions/$sessionId",
+              params: { sessionId: session.id },
+              search: { tab: stop.id === "changes" ? "changes" : "files" },
+            });
         }
-        if (href) await navigate({ href });
         if (abort.signal.aborted) return;
         if (IS_ELECTRON && stop.id === "notch")
           await transport.client.notch.preview({});
@@ -200,7 +205,7 @@ export const useStartTour = () => {
   );
   return () =>
     startTour({
-      origin: router.state.location.href,
+      origin: router.state.location.publicHref,
       onboarded: account.data?.onboarded === true,
     });
 };

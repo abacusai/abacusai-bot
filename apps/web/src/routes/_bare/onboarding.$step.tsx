@@ -24,6 +24,7 @@ import {
 } from "#renderer/features/onboarding/first-run";
 import {
   guardStep,
+  onboardingExitTarget,
   type FlowFacts,
 } from "#renderer/features/onboarding/machine";
 import {
@@ -96,28 +97,11 @@ const OnboardingRoute = () => {
         transport,
         queryClient,
         navigate: async (exit) => {
-          if (exit.to === "new-session")
-            await navigate({
-              to: "/sessions/new",
-              replace: true,
-              transition: "onboarding-finish",
-            });
-          else if (exit.to === "new-bot")
-            await navigate({
-              to: "/bots/new",
-              replace: true,
-              transition: "onboarding-finish",
-            });
-          else
-            await navigate({
-              to:
-                exit.to === "bot" && exit.edit
-                  ? "/bots/$botId/edit"
-                  : "/bots/$botId",
-              params: { botId: exit.botId },
-              replace: true,
-              transition: "onboarding-finish",
-            });
+          await navigate({
+            ...onboardingExitTarget(exit),
+            replace: true,
+            transition: "onboarding-finish",
+          });
           if (router.state.isLoading)
             await new Promise<void>((resolve) => {
               const stop = router.subscribe("onResolved", () => {
@@ -158,7 +142,10 @@ const OnboardingRoute = () => {
           }
         },
         startTour: () =>
-          startTour({ origin: router.state.location.href, onboarded: true }),
+          startTour({
+            origin: router.state.location.publicHref,
+            onboarded: true,
+          }),
       },
       exit
     );
