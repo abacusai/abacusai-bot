@@ -169,6 +169,7 @@ describe("ShellLayout", () => {
       ).toBe("true")
     );
     expect(document.querySelector('[data-dock-pane="changes"]')).toBe(content);
+    top().getByRole("tab", { name: "Changes" }).focus();
     fireEvent.keyDown(top().getByRole("tab", { name: "Changes" }), {
       key: "End",
     });
@@ -246,7 +247,9 @@ describe("ShellLayout", () => {
       vi.useRealTimers();
     }
     await waitFor(() =>
-      expect(harness!.db.prefs.rows.get("app")?.panes["side-panel"]).toBe(380)
+      expect(
+        harness!.db.prefs.rows.get("app")?.panes["panel.bots:chief-of-staff"]
+      ).toBe(380)
     );
     expect(
       document.querySelector('[data-slot="topbar"] [role="tablist"]')
@@ -315,7 +318,9 @@ describe("ShellLayout", () => {
       vi.useRealTimers();
     }
     await waitFor(() =>
-      expect(harness!.db.prefs.rows.get("app")?.panes["side-panel"]).toBe(360)
+      expect(
+        harness!.db.prefs.rows.get("app")?.panes["panel.bots:chief-of-staff"]
+      ).toBe(360)
     );
   });
 

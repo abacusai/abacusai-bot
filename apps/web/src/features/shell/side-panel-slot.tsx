@@ -10,7 +10,7 @@
  * `LayoutGroup` crosses into the panel).
  */
 import { Store, useStore } from "@tanstack/react-store";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { PaneBoundary } from "#renderer/components/page-state";
@@ -20,11 +20,18 @@ import { usePanelScope, usePanelScopeKey } from "./use-panel";
 
 interface PanelSlotState {
   target: HTMLElement | null;
+  targets: Map<string, HTMLElement>;
+  visible: Record<string, boolean>;
   /** Kinds some mounted route fills, with a mount count. */
   filled: Partial<Record<PanelTabKind, number>>;
 }
 
-const panelSlot = new Store<PanelSlotState>({ target: null, filled: {} });
+const panelSlot = new Store<PanelSlotState>({
+  target: null,
+  filled: {},
+  targets: new Map(),
+  visible: {},
+});
 
 /**
  * Move one stable portal target between the layout and drawer outlets.
@@ -55,16 +62,56 @@ export const useSidePanelFilled = (kind: PanelTabKind | undefined): boolean =>
   useStore(panelSlot, (state) => kind != null && (state.filled[kind] ?? 0) > 0);
 
 /** The panel body's portal target (the shell mounts exactly one). */
-export const SidePanelOutlet = ({ className }: { className?: string }) => (
-  <div
-    ref={attachOutlet}
-    data-slot="side-panel-outlet"
-    className={
-      className ??
-      "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+export const SidePanelOutlet = ({
+  className,
+  tabId,
+  visible,
+}: {
+  className?: string;
+  tabId?: string;
+  visible?: boolean;
+}) => {
+  const container = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!tabId) {
+      attachOutlet(container.current);
+      return;
     }
-  />
-);
+    let target = panelSlot.state.targets.get(tabId);
+    if (!target) {
+      target = document.createElement("div");
+      target.className = "flex size-full min-h-0 min-w-0 flex-col";
+      panelSlot.setState((state) => ({
+        ...state,
+        targets: new Map(state.targets).set(tabId, target!),
+      }));
+    }
+    container.current?.append(target);
+    if (panelSlot.state.visible[tabId] !== visible)
+      panelSlot.setState((state) => ({
+        ...state,
+        visible: { ...state.visible, [tabId]: visible === true },
+      }));
+    const owner = container.current;
+    return () => {
+      if (target?.parentNode === owner && panelSlot.state.visible[tabId])
+        panelSlot.setState((state) => ({
+          ...state,
+          visible: { ...state.visible, [tabId]: false },
+        }));
+    };
+  }, [tabId, visible]);
+  return (
+    <div
+      ref={container}
+      data-slot="side-panel-outlet"
+      className={
+        className ??
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+      }
+    />
+  );
+};
 
 /**
  * Fill the panel's `kind` while this route is mounted. A render function
@@ -78,36 +125,35 @@ export const SidePanelContent = ({
   kind: PanelTabKind;
   children: ReactNode | ((tab: PanelTab, active: boolean) => ReactNode);
 }) => {
-  const target = useStore(panelSlot, (state) => state.target);
+  const slot = useStore(panelSlot, (state) => state);
   const key = usePanelScopeKey();
   const scope = usePanelScope(key);
   useEffect(() => {
     count(kind, 1);
     return () => count(kind, -1);
   }, [kind]);
-  if (target == null) return null;
   const tabs = scope.tabs.filter((tab) => tab.kind === kind);
-  if (tabs.length === 0) return null;
-  return createPortal(
-    tabs.map((tab) => {
-      const active = scope.open && tab.id === scope.active;
-      return (
-        <div
-          key={tab.id}
-          data-panel-tab={tab.id}
-          data-active={active}
-          hidden={!active}
-          style={{ display: active ? undefined : "none" }}
-          className="flex min-h-0 min-w-0 flex-1 flex-col"
-        >
-          <PaneBoundary resetKey={tab.id}>
-            {typeof children === "function" ? children(tab, active) : children}
-          </PaneBoundary>
-        </div>
-      );
-    }),
-    target
-  );
+  return tabs.map((tab) => {
+    const target = slot.targets.get(tab.id) ?? slot.target;
+    if (!target) return null;
+    const active =
+      slot.visible[tab.id] ?? (scope.open && tab.id === scope.active);
+    return createPortal(
+      <div
+        data-panel-tab={tab.id}
+        data-active={active}
+        hidden={!active}
+        style={{ display: active ? undefined : "none" }}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        <PaneBoundary resetKey={tab.id}>
+          {typeof children === "function" ? children(tab, active) : children}
+        </PaneBoundary>
+      </div>,
+      target,
+      tab.id
+    );
+  });
 };
 
 const overrides = new Store(0);

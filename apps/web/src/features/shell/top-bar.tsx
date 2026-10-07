@@ -48,6 +48,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
 import type { PanelTab, PanelTabKind } from "./panel-store";
 import { shellStore } from "./shell-store";
@@ -305,7 +306,7 @@ const Actions = ({
 };
 
 const TAB_CLASS =
-  "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground group/tab flex h-7 max-w-44 min-w-0 flex-none items-center gap-1 rounded-lg border-0 pr-1.5 pl-3 text-[13px] font-medium shadow-none transition-[background-color,color] duration-150 ease-out select-none data-active:pr-1";
+  "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground dark:data-active:bg-sidebar-accent dark:data-active:text-sidebar-foreground group/tab flex h-7 max-w-44 min-w-0 flex-none items-center gap-1 rounded-lg border-0 pr-1.5 pl-3 text-[13px] font-medium shadow-none transition-[background-color,color] duration-150 ease-out select-none data-active:pr-1";
 
 /**
  * The panel's tab strip (canvas `BotChatPanel`, `SplitView`, `TitleMac`):
@@ -324,6 +325,7 @@ const PanelTabs = ({
   onClose,
   onReorder,
   onAdd,
+  onDragStart,
 }: {
   tabs: readonly PanelTab[];
   active: string | null;
@@ -334,18 +336,33 @@ const PanelTabs = ({
   onClose(id: string): void;
   onReorder(ids: string[]): void;
   onAdd(kind: PanelTabKind): void;
+  onDragStart?(id: string, event: React.DragEvent): void;
 }) => {
   const { t } = useTranslation();
   const motionPref = useMotionPreference();
   const list = useRef<HTMLDivElement>(null);
-  const keyboardFocus = useRef(false);
+  const restoreFocus = useRef(false);
   useEffect(() => {
-    if (!keyboardFocus.current) return;
-    list.current
-      ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-      ?.focus();
-    keyboardFocus.current = false;
+    const selected = list.current?.querySelector<HTMLElement>(
+      '[role="tab"][aria-selected="true"]'
+    );
+    selected?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (restoreFocus.current && selected) {
+      restoreFocus.current = false;
+      selected.focus();
+    }
   }, [active]);
+  useEffect(() => {
+    const element = list.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() =>
+      element
+        .querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   if (tabs.length === 0 && kinds.length === 0) return null;
   const ids = tabs.map((tab) => tab.id);
   return (
@@ -353,102 +370,98 @@ const PanelTabs = ({
       data-slot="topbar-panel-tabs"
       className="mr-2 flex min-w-0 shrink items-center gap-1"
     >
-      <Reorder.Group
-        as="div"
-        ref={list}
-        axis="x"
-        values={ids}
-        onReorder={onReorder}
-        role="tablist"
-        aria-label={t("shell.topBar.panelTabs")}
-        data-tour="topbar-panel-tabs"
-        data-topbar-tabs=""
-        className="flex min-w-0 items-center gap-1 overflow-x-auto"
+      <Tabs
+        value={active ?? undefined}
+        onValueChange={(value) => {
+          restoreFocus.current =
+            list.current?.contains(document.activeElement) ?? false;
+          onChange(String(value));
+        }}
+        className="min-w-0"
       >
-        {tabs.map((tab) => {
-          const selected = tab.id === active;
-          const label = title(tab);
-          return (
-            <Reorder.Item
-              key={tab.id}
-              as="div"
-              value={tab.id}
-              layout="position"
-              transition={
-                motionPref === "reduced"
-                  ? reducedTransition
-                  : { layout: springs.panel }
-              }
-              whileDrag={{ zIndex: 1 }}
-              dragListener
-              role="tab"
-              aria-selected={selected}
-              data-active={selected ? "" : undefined}
-              data-panel-tab-id={tab.id}
-              data-panel-tab-kind={tab.kind}
-              title={label}
-              tabIndex={selected ? 0 : -1}
-              className={TAB_CLASS}
-              onClick={() => onChange(tab.id)}
-              onAuxClick={(event: React.MouseEvent) => {
-                if (event.button === 1) onClose(tab.id);
-              }}
-              onKeyDown={(event: React.KeyboardEvent) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onChange(tab.id);
-                }
-                if (
-                  ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
-                ) {
-                  event.preventDefault();
-                  const index = ids.indexOf(tab.id);
-                  const next =
-                    event.key === "Home"
-                      ? 0
-                      : event.key === "End"
-                        ? ids.length - 1
-                        : (index +
-                            (event.key === "ArrowRight" ? 1 : -1) +
-                            ids.length) %
-                          ids.length;
-                  keyboardFocus.current = ids[next] !== active;
-                  onChange(ids[next]!);
-                  const list = event.currentTarget.parentElement;
-                  (
-                    list?.querySelectorAll('[role="tab"]')[next] as
-                      | HTMLElement
-                      | undefined
-                  )?.focus();
-                }
-                if (event.key === "Delete" || event.key === "Backspace")
-                  onClose(tab.id);
-              }}
-            >
-              <span className="min-w-0 truncate">{label}</span>
-              {/* A glyph, not a control (a tab may hold no interactive
+        <TabsList
+          activateOnFocus
+          className="h-auto min-w-0 bg-transparent p-0"
+          aria-label={t("shell.topBar.panelTabs")}
+        >
+          <Reorder.Group
+            as="div"
+            ref={list}
+            axis="x"
+            values={ids}
+            onReorder={onReorder}
+            role="presentation"
+            data-tour="topbar-panel-tabs"
+            data-topbar-tabs=""
+            className="scroll-fade-x flex min-w-0 items-center gap-1 overflow-x-auto"
+          >
+            {tabs.map((tab) => {
+              const selected = tab.id === active;
+              const label = title(tab);
+              return (
+                <Reorder.Item
+                  key={tab.id}
+                  as="div"
+                  value={tab.id}
+                  layout="position"
+                  transition={
+                    motionPref === "reduced"
+                      ? reducedTransition
+                      : { layout: springs.panel }
+                  }
+                  whileDrag={{ zIndex: 1 }}
+                  dragListener={onDragStart == null}
+                  draggable={onDragStart != null}
+                  onDragStartCapture={(event) => onDragStart?.(tab.id, event)}
+                  className="shrink-0"
+                >
+                  <TabsTrigger
+                    value={tab.id}
+                    data-active={selected ? "" : undefined}
+                    data-panel-tab-id={tab.id}
+                    data-panel-tab-kind={tab.kind}
+                    title={label}
+                    className={TAB_CLASS}
+                    onAuxClick={(event) => {
+                      if (event.button === 1) onClose(tab.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Delete" || event.key === "Backspace") {
+                        event.preventDefault();
+                        onClose(tab.id);
+                      }
+                    }}
+                  >
+                    <span className="min-w-0 truncate">{label}</span>
+                    {/* A glyph, not a control (a tab may hold no interactive
                   child): the pointer closes here, the keyboard with
                   Delete/Backspace or ⌘W on the tab. */}
-              <span
-                aria-hidden="true"
-                data-slot="panel-tab-close"
-                title={t("shell.panel.closeTab", { name: label })}
-                className={cn(
-                  "hover:bg-foreground/10 flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
-                  !selected && "hidden group-hover/tab:flex"
-                )}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onClose(tab.id);
-                }}
-              >
-                <X />
-              </span>
-            </Reorder.Item>
-          );
-        })}
-      </Reorder.Group>
+                    <span
+                      aria-hidden="true"
+                      style={
+                        tab.id === "chat" ? { display: "none" } : undefined
+                      }
+                      data-slot="panel-tab-close"
+                      title={t("shell.panel.closeTab", { name: label })}
+                      className={cn(
+                        "hover:bg-foreground/10 flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
+                        !selected && "hidden group-hover/tab:flex"
+                      )}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onClose(tab.id);
+                      }}
+                    >
+                      <X />
+                    </span>
+                  </TabsTrigger>
+                </Reorder.Item>
+              );
+            })}
+          </Reorder.Group>
+        </TabsList>
+      </Tabs>
       {kinds.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger

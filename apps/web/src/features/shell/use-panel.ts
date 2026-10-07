@@ -64,6 +64,7 @@ export const usePanel = (area: ShellArea | undefined) => {
   const search = useSearch({ strict: false }) as {
     tab?: string;
     preview?: string;
+    view?: "full" | "split";
   };
   const navigate = useNavigate();
   const deepTab = typeof search.tab === "string" ? search.tab : undefined;
@@ -93,12 +94,19 @@ export const usePanel = (area: ShellArea | undefined) => {
     active: activeTabOf(scope),
     sessionOpen:
       sessions &&
-      (deepTab != null ? deepTab !== "chat" : sessionTabs.open === true),
+      (deepTab != null
+        ? deepTab !== "chat" ||
+          (search.view === "full" && sessionTabs.open === true)
+        : sessionTabs.open === true),
     toggle: () => {
       if (sessions) {
         if (!sessionKey) return;
         const current = panelTabsStore.state[sessionKey] ?? EMPTY_TABS;
-        const tab = (deepTab != null ? deepTab !== "chat" : current.open)
+        const tab = (
+          deepTab != null
+            ? deepTab !== "chat" || (search.view === "full" && current.open)
+            : current.open
+        )
           ? undefined
           : (current.last ?? "changes");
         updateTabs(sessionKey, (previous) => ({
@@ -107,8 +115,10 @@ export const usePanel = (area: ShellArea | undefined) => {
           last: tab ?? previous.last,
         }));
         void navigate({
-          to: ".",
-          search: (previous: Record<string, unknown>) => ({
+          from: "/sessions/$sessionId",
+          to: "/sessions/$sessionId",
+          params: { sessionId: row!.id },
+          search: (previous) => ({
             ...previous,
             tab,
           }),

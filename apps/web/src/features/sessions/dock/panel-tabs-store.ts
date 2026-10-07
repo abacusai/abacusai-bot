@@ -2,7 +2,6 @@ import type { TerminalSessionSnapshot } from "@abacus-ai/contract/contracts";
 
 import { persistedStore } from "#renderer/lib/continuity/registry";
 
-import { dockLeaves, dockReducer, type DockNode } from "./dock-store";
 export interface PanelTab {
   ref: string;
   title: string;
@@ -17,7 +16,6 @@ export interface PanelTabs {
   order?: string[];
   tabs: PanelTab[];
   last: string | null;
-  tree?: DockNode;
 }
 export const panelTabsStore = persistedStore<Record<string, PanelTabs>>(
   "abacusai-bot:abacus.sessions.tabs",
@@ -73,9 +71,6 @@ export const updateTabs = (
   });
 };
 const removeRefs = (s: PanelTabs, refs: string[]): PanelTabs => {
-  let tree = s.tree;
-  for (const ref of refs)
-    if (tree) tree = dockReducer(tree, { type: "close", tab: ref });
   const tabs = s.tabs.filter((tab) => !refs.includes(tab.ref));
   const index = s.tabs.findIndex((tab) => tab.ref === s.last);
   const next =
@@ -87,26 +82,17 @@ const removeRefs = (s: PanelTabs, refs: string[]): PanelTabs => {
   return {
     ...s,
     tabs,
-    tree,
     last: tabs.some((tab) => tab.ref === s.last)
       ? s.last
       : (next?.ref ?? tabs[0]?.ref ?? null),
   };
 };
 export const focusTab = (key: string, ref: string) =>
-  updateTabs(key, (s) => {
-    if (
-      !s.tabs.some((tab) => tab.ref === ref) ||
-      (s.last === ref &&
-        (!s.tree || dockLeaves(s.tree).some((leaf) => leaf.active === ref)))
-    )
-      return s;
-    return {
-      ...s,
-      last: ref,
-      tree: s.tree ? dockReducer(s.tree, { type: "focus", tab: ref }) : s.tree,
-    };
-  });
+  updateTabs(key, (state) =>
+    state.last === ref || !state.tabs.some((tab) => tab.ref === ref)
+      ? state
+      : { ...state, last: ref }
+  );
 export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
   updateTabs(key, (s) => {
     const exists = s.tabs.find((t) => t.ref === tab.ref);
@@ -120,17 +106,7 @@ export const openTab = (key: string, tab: Omit<PanelTab, "openedAt">): void =>
         : [];
     const repaired = removeRefs({ ...s, tabs }, evicted);
     tabs = repaired.tabs;
-    let tree = repaired.tree;
-    if (tree && !dockLeaves(tree).some((leaf) => leaf.tabs.includes(tab.ref))) {
-      const first = dockLeaves(tree)[0]!;
-      tree = dockReducer(tree, {
-        type: "move",
-        tab: tab.ref,
-        target: first.id,
-        id: tab.ref,
-      });
-    }
-    return { ...s, tabs, tree, last: tab.ref };
+    return { ...s, tabs, last: tab.ref };
   });
 export const updateTab = (
   key: string,

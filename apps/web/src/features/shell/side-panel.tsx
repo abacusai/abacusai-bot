@@ -29,37 +29,19 @@ import {
 } from "#renderer/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
-import { SHELL_GEOMETRY } from "./geometry";
 import type { PanelTab } from "./panel-store";
 import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
 
-export const PANEL_MIN_PX = SHELL_GEOMETRY.sidePanelMin;
-/** The in-layout panel never grows past this, nor past `panelMaxFor`. */
-export const PANEL_MAX_PX = SHELL_GEOMETRY.sidePanelMax;
-export const PANE_MIN_PX = 360;
-export const PANEL_DEFAULT_PX = 400;
-export const PANEL_PREF_KEY = "side-panel";
-/** The panel's share of the split at most (the pane keeps the rest). */
-export const PANEL_MAX_FRACTION = 0.6;
-
-/**
- * The widest the in-layout panel may be inside a split `groupWidth` px wide
- * (pane + gutter + panel): 60 % of the group or 960 px, whichever is less,
- * never leaving the pane under its minimum, never under the panel's own
- * minimum. `Infinity` (unmeasured) gives the absolute cap.
- */
-export const panelMaxFor = (groupWidth: number): number => {
-  if (!Number.isFinite(groupWidth)) return PANEL_MAX_PX;
-  const byFraction = Math.floor(groupWidth * PANEL_MAX_FRACTION);
-  const byPane = groupWidth - PANE_MIN_PX - SHELL_GEOMETRY.paneInset;
-  return Math.max(PANEL_MIN_PX, Math.min(PANEL_MAX_PX, byFraction, byPane));
-};
-
-/** A stored or dragged width, held within the panel's clamp. */
-export const clampPanelWidth = (
-  px: number,
-  max: number = PANEL_MAX_PX
-): number => Math.min(max, Math.max(PANEL_MIN_PX, px));
+export {
+  PANEL_MIN_PX,
+  PANEL_MAX_PX,
+  PANE_MIN_PX,
+  PANEL_DEFAULT_PX,
+  PANEL_PREF_KEY,
+  PANEL_MAX_FRACTION,
+  panelMaxFor,
+  clampPanelWidth,
+} from "#renderer/lib/side-panel/geometry";
 
 /** A tab's label: its own title, else its kind's name. */
 export const usePanelTabTitle = () => {
@@ -72,12 +54,22 @@ export const usePanelTabTitle = () => {
  * The panel's body: the routes' `SidePanelContent` portals for the open
  * tabs, or the placeholder when no mounted route fills the active kind.
  */
-export const SidePanelBody = ({ tab }: { tab: PanelTab | undefined }) => {
+export const SidePanelBody = ({
+  tab,
+  visible,
+}: {
+  tab: PanelTab | undefined;
+  visible?: boolean;
+}) => {
   const { t } = useTranslation();
   const filled = useSidePanelFilled(tab?.kind);
   return (
     <>
-      <SidePanelOutlet className={filled ? undefined : "hidden"} />
+      <SidePanelOutlet
+        tabId={tab?.id}
+        visible={visible}
+        className={filled ? undefined : "hidden"}
+      />
       {!filled && tab != null && (
         <div className="flex min-h-0 flex-1 items-center justify-center p-4">
           <EmptyState
@@ -91,13 +83,19 @@ export const SidePanelBody = ({ tab }: { tab: PanelTab | undefined }) => {
 };
 
 /** The in-layout panel's frame (the pane's sibling in the resizable group). */
-export const SidePanelFrame = ({ children }: { children: ReactNode }) => {
+export const SidePanelFrame = ({
+  children,
+  visible = true,
+}: {
+  children: ReactNode;
+  visible?: boolean;
+}) => {
   const { t } = useTranslation();
   return (
     <aside
       aria-label={t("shell.panel.label")}
-      data-slot="side-panel"
-      data-mode="layout"
+      data-slot={visible ? "side-panel" : undefined}
+      data-mode={visible ? "layout" : "hidden"}
       className="bg-background flex size-full min-w-0 flex-col overflow-hidden rounded-(--pane-radius)"
     >
       {children}
@@ -208,7 +206,7 @@ export const SidePanelDrawer = ({
                 <X />
               </Button>
             </div>
-            <SidePanelBody tab={active} />
+            <SidePanelBody tab={active} visible={open} />
           </div>
         </DrawerContent>
       </Drawer>
