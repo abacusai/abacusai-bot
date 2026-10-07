@@ -145,7 +145,8 @@ const Eye = ({
     Math.max(0.025, rig.eyes.get() * (left ? rig.wink.get() : 1))
   );
   const pupil = useTransform(
-    () => `translate(${rig.gazeX.get()}px, ${rig.gazeY.get()}px)`
+    () =>
+      `translate(${rig.gazeX.get()}px, ${rig.gazeY.get()}px) scale(${Math.min(1.12, Math.max(1, opening.get()))})`
   );
   const aperture = useTransform(() => {
     const height = optics.eyeRadius * 2.5 * opening.get();
@@ -251,7 +252,11 @@ const AvatarBody = ({
   const accessory =
     look.accessory === "none" ? null : ACCESSORIES[look.accessory];
   const faceY = animal ? 9 : look.shape === "heart" ? -3 : 0;
-  const tongue = useTransform(() => Math.min(1, rig.mouthOpen.get() / 5));
+  const tongue = useTransform(
+    () =>
+      Math.min(1, rig.mouthOpen.get() / 5) *
+      Math.max(0, Math.min(1, rig.smile.get() / 3))
+  );
   return (
     <span
       ref={rootRef}

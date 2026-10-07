@@ -341,5 +341,7 @@ export const mouthPath = (p: Expression, widthScale = 1): string => {
   const half = (p.mouthWidth * widthScale) / 2;
   const x = 50 + p.mouthX;
   const y = 64;
-  return `M${x - half} ${y} Q${x} ${y + p.smile} ${x + half} ${y} Q${x} ${y + p.smile + p.mouthOpen * 2} ${x - half} ${y} Z`;
+  const top = y + p.smile - p.mouthOpen * 0.65;
+  const bottom = y + p.smile + p.mouthOpen * 1.35;
+  return `M${x - half} ${y} C${x - half} ${top} ${x + half} ${top} ${x + half} ${y} C${x + half} ${bottom} ${x - half} ${bottom} ${x - half} ${y} Z`;
 };

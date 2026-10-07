@@ -53,6 +53,8 @@ export const useFaceRig = (
     const personality = personalityFor(shape);
     let anticipationUntil = performance.now() / 1000 + 0.1;
     let following = 0;
+    let blinkUntil = 0;
+    const restingEyes = expressionFor(mood).eyes;
     const update = (seconds: number, documentVisible: boolean) => {
       const moving = active && documentVisible;
       const pose = moving
@@ -73,6 +75,8 @@ export const useFaceRig = (
           pose.lift = 1;
         }
       }
+      if (restingEyes > 0.2 && pose.eyes < restingEyes * 0.5)
+        blinkUntil = seconds + 0.3;
       for (const key of channels) {
         if (!moving) {
           controls.get(key)?.stop();
@@ -86,14 +90,13 @@ export const useFaceRig = (
               mass:
                 key === "gazeX" ||
                 key === "gazeY" ||
-                key === "eyes" ||
-                key === "wink"
+                (key === "eyes" && seconds < blinkUntil)
                   ? 0.35
                   : key === "overlap"
                     ? personality.weight * 1.4
                     : personality.weight,
               stiffness:
-                key === "eyes" || key === "wink"
+                key === "eyes" && seconds < blinkUntil
                   ? 700
                   : key === "overlap"
                     ? 160

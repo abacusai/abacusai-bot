@@ -1,6 +1,6 @@
 /** R3-T27 (jsdom half): every shape, mood and accessory renders. */
-import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AVATAR_ACCESSORIES,
@@ -28,6 +28,11 @@ const { readFileSync } = (
   }
 ).process.getBuiltinModule("node:fs");
 const css = readFileSync("src/components/bot-avatar/moods.css", "utf8");
+
+afterEach(() => {
+  preference.reduced = false;
+  vi.unstubAllGlobals();
+});
 
 const look = (patch: Partial<Look> = {}): Look => ({
   shape: "blob",
@@ -149,9 +154,37 @@ describe("BotAvatar", () => {
       false
     );
     expect(container.querySelector(".bav-mouth")?.getAttribute("d")).toContain(
-      "Q"
+      "C"
     );
     preference.reduced = false;
+  });
+
+  it("starts springs only in view and pauses after leaving the viewport", () => {
+    let notify:
+      | ((entries: { target: Element; isIntersecting: boolean }[]) => void)
+      | undefined;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: typeof notify) {
+          notify = callback;
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    const { container, unmount } = render(
+      <BotAvatar look={look()} mood="talking" size={72} animate />
+    );
+    const root = container.querySelector(".bav")!;
+    expect(root.hasAttribute("data-animate")).toBe(false);
+    act(() => notify?.([{ target: root, isIntersecting: true }]));
+    expect(root.hasAttribute("data-animate")).toBe(true);
+    act(() => notify?.([{ target: root, isIntersecting: false }]));
+    expect(root.hasAttribute("data-animate")).toBe(false);
+    unmount();
+    vi.unstubAllGlobals();
   });
 
   it("exports the light-theme outline class", () => {
