@@ -706,7 +706,8 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
 /* Floating islands stay solid over moving content; geometry is shared with docked islands. */
 :is(.floating-surface, [data-slot="sidebar-floating"], [data-slot="drawer-popup"][data-side-panel],
     [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
-    [data-slot="context-menu-content"], [data-slot="context-menu-sub-content"], .panel-dock .dv-drop-target-selection) {
+    [data-slot="context-menu-content"], [data-slot="context-menu-sub-content"],
+    [data-slot="select-content"], [data-slot="combobox-content"], [data-slot="hover-card-content"], .panel-dock .dv-drop-target-selection) {
   background-color: var(--floating-surface-background);
   border: 1px solid var(--floating-surface-border);
   border-radius: var(--pane-radius);
