@@ -255,7 +255,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 }
 .panel-dock .dv-render-overlay {
   box-sizing: border-box;
-  padding: calc(var(--pane-inset) / 2);
+  padding: var(--dock-inset-top, 0px) var(--dock-inset-right, 0px) var(--dock-inset-bottom, 0px) var(--dock-inset-left, 0px);
 }
 .workspace-island {
   background: var(--background);

@@ -33,6 +33,7 @@ import {
 } from "#renderer/lib/side-panel/geometry";
 import { ResizablePanelGroup, ResizablePanel } from "#renderer/ui/resizable";
 
+import { useGroupInsets } from "./group-insets";
 import { PanelResizeHandle } from "./resize-handle";
 import { enhanceDockSplitters } from "./splitters";
 
@@ -50,6 +51,7 @@ const Context = createContext<WorkspaceContext | null>(null);
 const Content = ({ api }: IDockviewPanelProps) => {
   const context = use(Context)!;
   const container = useRef<HTMLDivElement>(null);
+  useGroupInsets(container);
   useLayoutEffect(() => {
     const target = context.targets.get(api.id);
     if (context.expanded && target && container.current)
