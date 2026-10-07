@@ -277,8 +277,8 @@ const respond = (
   }
 };
 
-const makeTab = (): BrowserPage => ({
-  id: 7,
+const makeTab = (id = 7, target = "tab"): BrowserPage => ({
+  id,
   isDestroyed: () => false,
   getURL: () => page.url,
   getTitle: () => SNAPSHOT.title,
@@ -299,34 +299,39 @@ const makeTab = (): BrowserPage => ({
   debugger: {
     isAttached: () => true,
     attach: () => {},
-    sendCommand: async (method, params) => respond("tab", method, params),
+    sendCommand: async (method, params) => respond(target, method, params),
   },
 });
 let tab = makeTab();
 
 let frames: Array<{ frameId: string; origin: string | null }> = [];
 let secrets = new SecretFields();
+/** A second tab of the session, when a case opens one, with its own secret fields. */
+let otherTab: BrowserPage | null = null;
+let otherSecrets = new SecretFields();
+/** The session's active tab. */
+let activeTab = 7;
 const originAsked = vi.fn();
 
 const source = {
   presentsInApp: false,
-  candidates: () => [
-    {
-      id: tab.id,
-      url: tab.getURL(),
+  candidates: () =>
+    [tab, ...(otherTab != null ? [otherTab] : [])].map((each) => ({
+      id: each.id,
+      url: each.getURL(),
       sessionId: "s1",
       presented: true,
-      current: true,
-    },
-  ],
-  webContents: (id: number) => (id === tab.id ? tab : null),
+      current: each.id === activeTab,
+    })),
+  webContents: (id: number) =>
+    id === tab.id ? tab : id === otherTab?.id ? otherTab : null,
   materialize: async () => tab.id,
-  secrets: () => secrets,
+  secrets: (id: number) => (id === tab.id ? secrets : otherSecrets),
   liveOrigin: async (_id: number, frameId?: string) => {
     originAsked(frameId);
     return frameId == null ? page.top : page.frame;
   },
-  frames: () => frames,
+  frames: (id: number) => (id === tab.id ? frames : []),
   framePage: (_id: number, frameId: string) =>
     frames.some((frame) => frame.frameId === frameId)
       ? framePageOf(tab, frameId, async (method, params) =>
@@ -480,7 +485,7 @@ beforeAll(async () => {
   server = new McpBrowserServer({
     target: () => source,
     vault,
-    timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
+    timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600, callMs: 1_000 },
   });
   port = await server.start();
 });
@@ -517,6 +522,9 @@ beforeEach(() => {
   holdScript = Promise.resolve();
   frames = [];
   secrets = new SecretFields();
+  otherSecrets = new SecretFields();
+  otherTab = null;
+  activeTab = 7;
   vault.sessions.for("s1").approval = null;
   originAsked.mockClear();
   logged = [];
@@ -1180,6 +1188,75 @@ describe("what a vault fill guards", () => {
     expect(scriptAt).toBe(-1);
     expect(scripted.isError).toBe(true);
     expect(scripted.text).toContain("cannot run");
+  });
+
+  it("never starts a queued call whose caller timed out while it waited", async () => {
+    await snapshot();
+    let release!: () => void;
+    holdFill = new Promise((resolve) => {
+      release = resolve;
+    });
+
+    const filling = call("browser_vault_fill", {
+      item_id: "login-1",
+      field: "password",
+      ref: "@e1",
+    });
+    await vi.waitFor(() => expect(timeline).toContain("fetched"));
+    // Queued behind the fill; its caller gives up after a second.
+    const clicked = await call("browser_interact", {
+      action: "click",
+      ref: "@e4",
+    });
+    expect(clicked.text).toContain("did not finish");
+    release();
+    await filling;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // The click was never made, though the queue moved on.
+    expect(
+      commands.some((entry) =>
+        String(entry.params.expression).includes("el.click()")
+      )
+    ).toBe(false);
+  });
+
+  it("keeps a script on another tab of the session waiting until a fill is done", async () => {
+    await snapshot();
+    otherTab = makeTab(8, "other");
+    let release!: () => void;
+    holdFill = new Promise((resolve) => {
+      release = resolve;
+    });
+
+    const filling = call("browser_vault_fill", {
+      item_id: "login-1",
+      field: "password",
+      ref: "@e1",
+    });
+    await vi.waitFor(() => expect(timeline).toContain("fetched"));
+    // The session switches tabs mid-fill, and runs a script there.
+    activeTab = 8;
+    const scripting = call("browser_execute", { code: "slowScript()" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const ranEarly = commands.some((entry) =>
+      String(entry.params.expression).includes("slowScript")
+    );
+    release();
+    const [filled, scripted] = await Promise.all([filling, scripting]);
+
+    expect(ranEarly).toBe(false);
+    expect(filled.isError).toBe(false);
+    expect(scripted.isError).toBe(false);
+    const typedAt = commands.findIndex(
+      (entry) => entry.method === "Input.insertText"
+    );
+    const scriptAt = commands.findIndex(
+      (entry) =>
+        entry.target === "other" &&
+        String(entry.params.expression).includes("slowScript")
+    );
+    expect(scriptAt).toBeGreaterThan(typedAt);
   });
 
   it("fills nothing, and runs no script, on a page the browser cannot name", async () => {

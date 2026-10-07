@@ -545,3 +545,7 @@ export const codeFieldAllowed = (
   (fieldKindAllowed("code", facts, false) &&
     documentFacts.filter((other) => fieldKindAllowed("code", other, false))
       .length === 1);
+
+/** Whether a code could go into one of a document's inputs, by `codeFieldAllowed`. */
+export const hasCodeField = (documentFacts: readonly FieldFacts[]): boolean =>
+  documentFacts.some((facts) => codeFieldAllowed(facts, documentFacts));
