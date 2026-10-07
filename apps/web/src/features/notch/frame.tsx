@@ -111,6 +111,7 @@ export const NotchHeader = ({
       transition={{ duration: reduced ? 0 : 0.12 }}
       style={{
         height: layout.notch?.height ?? 36,
+        visibility: ready ? "visible" : "hidden",
       }}
     >
       {left}
@@ -163,6 +164,7 @@ export const NotchBody = ({
         delay: ready && !reduced ? 0.05 : 0,
       }}
       style={{
+        visibility: ready ? "visible" : "hidden",
         pointerEvents: ready ? "auto" : "none",
         maxHeight: shape.height - headerHeight,
       }}

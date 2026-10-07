@@ -30,4 +30,13 @@ it("R6-T26 passive/interactive/focused native transitions", () => {
   });
   expect(win.setFocusable).toHaveBeenLastCalledWith(false);
   expect(win.blur).toHaveBeenCalledOnce();
+  setFocused(win as unknown as BaseWindow, false);
+  expect(win.blur).toHaveBeenCalledOnce();
+});
+
+it("passive hover collapse does not blur or change native focusability", () => {
+  const win = { blur: vi.fn(), setFocusable: vi.fn() };
+  setFocused(win as unknown as BaseWindow, false);
+  expect(win.blur).not.toHaveBeenCalled();
+  expect(win.setFocusable).not.toHaveBeenCalled();
 });

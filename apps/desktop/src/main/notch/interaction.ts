@@ -12,6 +12,7 @@ export const setFocused = (win: BaseWindow, focused: boolean): void => {
     win.setFocusable(true);
     win.focus();
   } else {
+    if (!typing.has(win)) return;
     typing.delete(win);
     // Relinquishing key status lets the non-activating macOS panel return focus
     // to the previous app. Pointer routing remains the renderer's decision.
