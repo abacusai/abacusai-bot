@@ -497,7 +497,11 @@ export type DesktopCommand =
   | { type: "mcp_list_servers" }
   /** Re-read stored API keys and provider catalogs without restarting. */
   | { type: "refresh_providers" }
-  | { type: "mcp_refresh" }
+  /**
+   * Reconnect every MCP server. With `requestId`, the agent answers
+   * `mcp_refreshed` (or `mcp_refresh_failed`) carrying it once done.
+   */
+  | { type: "mcp_refresh"; requestId?: string }
   | { type: "mcp_restart_server"; serverId: string }
   | {
       type: "host_service_response";
@@ -618,7 +622,9 @@ export type DesktopEvent =
   | ({ type: "mcp_server_status" } & CliMcpStatusEvent)
   | ({ type: "mcp_server_log" } & CliMcpLogEntry)
   | { type: "mcp_server_logs"; serverId: string; entries: CliMcpLogEntry[] }
-  | { type: "mcp_refresh_failed"; error: string }
+  /** A refresh finished: the servers are reconnected and the tools reconciled. */
+  | { type: "mcp_refreshed"; requestId: string | null }
+  | { type: "mcp_refresh_failed"; error: string; requestId?: string | null }
   | { type: "mcp_restart_failed"; serverId: string; error: string };
 
 /** Where an `error` came from; only `turn` ends a run (spec §3.2). */

@@ -954,3 +954,36 @@ it("keeps two identical messages apart by their ids: one steered in, the other r
     await s.close();
   }
 });
+
+it("answers a refresh asked for by id once it is done, or failed", async () => {
+  // Main waits on this answer, not on `mcp_servers`, which also goes out
+  // while the old clients close and the new ones connect.
+  const s = await scripted(async (api) => {
+    api.settled();
+  });
+  try {
+    s.send({ type: "mcp_refresh", requestId: "connectors-1" });
+    await s.waitFor(
+      () => s.compat().includes('"mcp_refreshed"'),
+      "refresh answer"
+    );
+    expect(s.compat()).toContain(
+      '{"type":"mcp_refreshed","requestId":"connectors-1"}'
+    );
+
+    (s.session as { refreshMcp: () => Promise<void> }).refreshMcp =
+      async () => {
+        throw new Error("gateway down");
+      };
+    s.send({ type: "mcp_refresh", requestId: "connectors-2" });
+    await s.waitFor(
+      () => s.compat().includes('"mcp_refresh_failed"'),
+      "refresh failure"
+    );
+    expect(s.compat()).toMatch(
+      /"type":"mcp_refresh_failed","error":"gateway down","requestId":"connectors-2"/
+    );
+  } finally {
+    await s.close();
+  }
+});

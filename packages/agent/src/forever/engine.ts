@@ -48,6 +48,7 @@ import { githubPrompt } from "../github-prompt.js";
 import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
+import { McpToolSync } from "../mcp/tool-sync.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
 import { endedOnLeakedToolCall } from "../openllm-failures.js";
@@ -205,7 +206,18 @@ export class ForeverEngine {
     routes: new Map(),
     tools: [],
   };
-  private readonly registeredMcpTools = new Set<string>();
+  /** Which MCP tools the model sees; see McpToolSync. */
+  private readonly mcpTools = new McpToolSync({
+    pi: () => this.pi,
+    session: () => this.session,
+    mcp: () => this.mcp,
+    // Raw browser tools stay out, and a same-named MCP tool would shadow
+    // the one the prompt teaches.
+    accepts: (tool) =>
+      !tool.name.startsWith("browser_") &&
+      !this.profile.replacesMcpTool(tool.name),
+    turnRunning: () => this.turnRunning,
+  });
   private unsubscribe: (() => void) | undefined;
 
   // Approval flow.
@@ -240,8 +252,7 @@ export class ForeverEngine {
   private languageRepairsThisTurn = 0;
   /** Whether a user turn is in flight: a refresh landing now is mid-turn. */
   private turnRunning = false;
-  /** MCP tools registered while this turn ran; pi offers them next turn. */
-  private toolsArrivedThisTurn: string[] = [];
+  /** Tools a change deferred under this turn adds; continued into once. */
   private pendingToolArrival: string[] | null = null;
   private toolArrivalsThisTurn = 0;
 
@@ -287,7 +298,7 @@ export class ForeverEngine {
     ]);
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
     this.mcp.onStatusChange = () => this.emitMcpServers();
 
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
@@ -403,7 +414,7 @@ export class ForeverEngine {
       (tool) => !isBrowserTool(tool) && !this.profile.replacesMcpTool(tool.name)
     );
 
-    for (const tool of mcpTools) this.registeredMcpTools.add(tool.name);
+    for (const tool of mcpTools) this.mcpTools.registered.add(tool.name);
 
     const hasBrowser = buildMcpToolDefinitions(() => this.mcp).some(
       isBrowserTool
@@ -583,7 +594,7 @@ export class ForeverEngine {
     this.stallFailureReported = false;
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
-    this.toolsArrivedThisTurn = [];
+    this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
     this.turnRunning = true;
@@ -803,6 +814,9 @@ export class ForeverEngine {
         const arrived = this.pendingToolArrival;
         this.pendingToolArrival = null;
         this.toolArrivalsThisTurn += 1;
+        // Between the turn's runs: the deferred tools register before the
+        // continuation's run starts, never under one.
+        this.mcpTools.applyDeferred();
 
         await this.session?.sendCustomMessage(
           {
@@ -1468,35 +1482,10 @@ export class ForeverEngine {
     for (const client of this.mcp.clients) client.close();
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
     this.mcp.onStatusChange = () => this.emitMcpServers();
-    this.registerNewMcpTools();
+    this.mcpTools.changed();
     this.emitMcpServers();
-  }
-
-  /** Give pi the MCP tools it has not seen: after a refresh, or a server coming up late. */
-  private registerNewMcpTools(): void {
-    const pi = this.pi;
-
-    if (pi == null) return;
-
-    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
-      if (this.registeredMcpTools.has(tool.name)) continue;
-      if (tool.name.startsWith("browser_")) continue;
-      // A same-named MCP tool would shadow the one the prompt teaches.
-      if (this.profile.replacesMcpTool(tool.name)) continue;
-
-      this.registeredMcpTools.add(tool.name);
-
-      try {
-        pi.registerTool(tool as never);
-        // Registered mid-turn: pi offers it from the next turn on, so the
-        // turn is continued once it ends, naming what arrived.
-        if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
-      } catch {
-        this.registeredMcpTools.delete(tool.name);
-      }
-    }
   }
 
   emitMcpServers(): void {
@@ -1775,21 +1764,19 @@ export class ForeverEngine {
           this.languageRepairsThisTurn > 0
             ? null
             : replyLanguageMismatch(event.messages);
-        // Tools that arrived while this turn ran are offered from the next
-        // turn on; continue into it so the sender's request is finished with
-        // them rather than declared impossible. Once per turn.
-        this.pendingToolArrival =
+        // Tools a change deferred under this turn adds: the turn continues
+        // once with them, so the sender's request is finished rather than
+        // declared impossible. Once per turn.
+        const arrivals =
           this.hiddenTurn ||
           this.continuingPastMalformedToolCall ||
           this.pendingContextCompaction != null ||
           this.pendingOpenLlmRotation != null ||
           this.pendingLanguageRepair != null ||
-          this.toolArrivalsThisTurn > 0 ||
-          this.toolsArrivedThisTurn.length === 0
-            ? null
-            : [...new Set(this.toolsArrivedThisTurn)];
-        this.toolsArrivedThisTurn = [];
-
+          this.toolArrivalsThisTurn > 0
+            ? []
+            : this.mcpTools.pendingArrivals();
+        this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
         if (
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&

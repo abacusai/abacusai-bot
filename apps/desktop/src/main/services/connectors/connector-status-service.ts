@@ -106,7 +106,10 @@ export const connectorsInState = (
   registry.filter((connector) => statuses[connector.id]?.state === state);
 
 export interface StatusSources {
-  platform: () => Promise<StatusInputs["platform"]>;
+  /** `fresh` skips any cache, for a caller that must see a change now. */
+  platform: (options?: {
+    fresh?: boolean;
+  }) => Promise<StatusInputs["platform"]>;
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
   mcpTokens: () => ReadonlyMap<string, McpTokenState>;
@@ -121,10 +124,10 @@ export interface StatusSources {
 export class ConnectorStatusService {
   constructor(private readonly sources: StatusSources) {}
 
-  async list(): Promise<ConnectorStatuses> {
+  async list(options: { fresh?: boolean } = {}): Promise<ConnectorStatuses> {
     let platform: StatusInputs["platform"] = null;
     try {
-      platform = await this.sources.platform();
+      platform = await this.sources.platform(options);
     } catch (error) {
       console.error("[connectors] platform listing failed:", error);
     }

@@ -160,6 +160,202 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   expect(store.get("nested.key", "fallback")).toBe("fallback");
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
 });
+describe("connectors connected elsewhere", () => {
+  /** A composed host over a fake platform, with one running session. */
+  const harness = async (lane?: string) => {
+    const host = await composeNodeHost();
+    const sh = host.serviceHost as any;
+    // What the session's agent reports to main, through main's own wiring.
+    const agent = sh.agentManagerService.options;
+    const order: string[] = [];
+    let active = ["gmailuser"];
+    const names: Record<string, string> = {
+      gmailuser: "Gmail",
+      googledriveuser: "Google Drive",
+      googlecalendar: "Google Calendar",
+    };
+    vi.stubGlobal("fetch", async (input: string | URL) => {
+      const method = new URL(String(input)).pathname.split("/").at(-1);
+      const result =
+        method === "_listAbacusbotConnectors"
+          ? Object.fromEntries(
+              Object.entries(names).map(([key, name]) => [
+                key.toUpperCase(),
+                { name },
+              ])
+            )
+          : method === "_listActiveUserLevelConnectors"
+            ? active.map((service) => ({
+                service: service.toUpperCase(),
+                applicationConnectorId: `id-${service}`,
+                name: `${names[service]} - ada@example.com`,
+              }))
+            : null;
+      return result == null
+        ? new Response("{}", { status: 404 })
+        : Response.json({ success: true, result });
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const session =
+      lane == null
+        ? sh.createAgentSession("legacy")
+        : {
+            id: (await sh.openLaneSession(lane, {}, "auto")).sessionId,
+          };
+    const workspaceId = sh.agentSessionManagerService.get(
+      session.id
+    ).workspaceId;
+    vi.spyOn(sh.agentManagerService, "getRuntimeDiagnostics").mockReturnValue([
+      { workspaceId, sessionId: session.id, live: true, mcpServers: new Map() },
+    ]);
+    // The agent reconnects: its servers are re-reported while the old
+    // clients close (which must not end the wait), then it answers.
+    vi.spyOn(sh.mcpAdminService, "refreshSessionMcp").mockImplementation(
+      async (_session: unknown, requestId: unknown) => {
+        order.push("refresh");
+        setTimeout(() => {
+          agent.emitMcpRuntimeServers(workspaceId, session.id, []);
+          setTimeout(
+            () => agent.emitMcpRefreshed(session.id, requestId, true),
+            20
+          );
+        }, 0);
+        return true;
+      }
+    );
+    vi.spyOn(sh.agentCommunicationService, "sendMessage").mockImplementation(
+      (request: any) => {
+        // The message itself; any environment notice rides below it.
+        order.push(request.message.split("\n")[0]);
+        return true;
+      }
+    );
+    // The session's agent starts, before anything read the platform; the
+    // start reads it.
+    agent.emitMcpRuntimeServers(workspaceId, session.id, []);
+    await sh.connectorSync.platform();
+    return {
+      sh,
+      order,
+      session,
+      workspaceId,
+      connect: (...services: string[]) => {
+        active = services;
+        vi.setSystemTime(Date.now() + 21_000);
+      },
+      turn: (message: string) =>
+        sh.sendAgentMessage({ workspaceId, sessionId: session.id, message }),
+      endTurn: () =>
+        sh.sessionTurnStateService.markStopped(workspaceId, session.id),
+      landed: (...connectorIds: string[]) =>
+        sh.connectorsConnected({
+          sessionId: session.id,
+          connectorIds,
+          notGranted: [],
+          accounts: {},
+        }),
+      dispose: async () => {
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+        await host.dispose();
+      },
+    };
+  };
+
+  it("reach a running phone session's tools before its next turn, in order, and every reader agrees", async () => {
+    const t = await harness();
+    try {
+      // Cold start: its first turn needs no reconnect.
+      await t.turn("hi");
+      expect(t.order).toEqual(["hi"]);
+      t.endTurn();
+
+      // Drive and Calendar connected from a browser; two messages back to
+      // back: the second must neither overtake the first nor skip the refresh.
+      t.connect("gmailuser", "googledriveuser", "googlecalendar");
+      await Promise.all([
+        t.turn("fetch my drive docs"),
+        t.turn("and calendar"),
+      ]);
+      expect(t.order).toEqual([
+        "hi",
+        "refresh",
+        "fetch my drive docs",
+        "and calendar",
+      ]);
+      // And nothing tells the model Drive is missing.
+      const statuses = await t.sh.listConnectorStatuses();
+      expect(statuses["abacus-googledriveuser"].state).toBe("connected");
+      expect(statuses["abacus-googlecalendar"].state).toBe("connected");
+      const asked = await t.sh.mcpAgentToolsServer.connectConnector({
+        service: "googledriveuser",
+      });
+      expect(asked.content[0].text).toContain(
+        "Google Drive is already connected"
+      );
+    } finally {
+      await t.dispose();
+    }
+  }, 20_000);
+
+  it("tell a desktop session that asked mid-turn in a fresh turn once that turn ends, with the tools refreshed first", async () => {
+    const t = await harness();
+    try {
+      await t.turn("connect my drive and list my docs");
+      // Connected while the asking turn still runs: the note waits.
+      t.connect("gmailuser", "googledriveuser");
+      t.landed("abacus-googledriveuser");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(t.order).toEqual(["connect my drive and list my docs"]);
+
+      t.endTurn();
+      await vi.waitFor(() => expect(t.order).toHaveLength(3));
+      expect(t.order[1]).toBe("refresh");
+      expect(t.order[2]).toMatch(
+        /^\[connected\] Google Drive is connected now/
+      );
+      // A turn of its own, hidden from the transcript.
+      const note = (t.sh.agentCommunicationService.sendMessage as any).mock
+        .calls[1][0];
+      expect(note.userText).toMatchObject({
+        operator: { kind: "environment-notice" },
+      });
+    } finally {
+      await t.dispose();
+    }
+  }, 20_000);
+
+  it("tell an idle desktop session at once", async () => {
+    const t = await harness();
+    try {
+      t.connect("gmailuser", "googledriveuser");
+      t.landed("abacus-googledriveuser");
+      await vi.waitFor(() => expect(t.order).toHaveLength(2));
+      expect(t.order[0]).toBe("refresh");
+      expect(t.order[1]).toMatch(
+        /^\[connected\] Google Drive is connected now/
+      );
+    } finally {
+      await t.dispose();
+    }
+  }, 20_000);
+
+  it("hand the phone lane's note to the lane, the one path its answer reaches the phone by", async () => {
+    const t = await harness("phone");
+    const notes: string[] = [];
+    const stop = t.sh.onLaneNote("phone", (note: string) => notes.push(note));
+    try {
+      t.landed("abacus-googledriveuser");
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatch(/^\[connected\] Google Drive/);
+      expect(t.order).toEqual([]);
+    } finally {
+      stop();
+      await t.dispose();
+    }
+  }, 20_000);
+});
 /** A screenshot the media store holds. */
 const SHOT = "media-00112233445566778899aabb";
 const SHOT_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7]);

@@ -218,6 +218,11 @@ export class AgentSessionManagerService {
    * The one session a host lane (the hosted phone loop) keeps, minted on
    * first use and reused. Never listed, like a bot's chats.
    */
+  /** The host lane that keeps this session, if one does. */
+  laneOf(sessionId: string): string | null {
+    return this.sessions.get(sessionId)?.lane ?? null;
+  }
+
   laneSession(
     lane: string,
     workspaceId: string,

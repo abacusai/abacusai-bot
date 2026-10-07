@@ -190,6 +190,15 @@ type AgentManagerServiceOptions = {
       | { kind: "restart"; serverId: string; error: string; ts: string }
   ) => void;
   /**
+   * A refresh asked for with a request id finished (`ok`) or failed. Only
+   * this says a refresh is done: `mcp_servers` also goes out mid-refresh.
+   */
+  emitMcpRefreshed?: (
+    sessionId: string,
+    requestId: string,
+    ok: boolean
+  ) => void;
+  /**
    * A service only this process can perform, asked for by an agent tool. A
    * rejection is reported to the agent as a failed service, not a dead session.
    */
@@ -1239,7 +1248,20 @@ export class AgentManagerService {
           runtime.sessionId,
           desktopEvent
         );
+      } else if (desktopEvent.type === "mcp_refreshed") {
+        if (desktopEvent.requestId != null)
+          this.options.emitMcpRefreshed?.(
+            runtime.sessionId,
+            desktopEvent.requestId,
+            true
+          );
       } else if (desktopEvent.type === "mcp_refresh_failed") {
+        if (desktopEvent.requestId != null)
+          this.options.emitMcpRefreshed?.(
+            runtime.sessionId,
+            desktopEvent.requestId,
+            false
+          );
         this.options.emitMcpRuntimeError(
           runtime.workspaceId,
           runtime.sessionId,

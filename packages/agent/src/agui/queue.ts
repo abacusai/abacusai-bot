@@ -400,10 +400,25 @@ export class HostCore {
 
         return;
 
-      case "mcp_refresh":
-        await this.session.refreshMcp();
+      case "mcp_refresh": {
+        // Its own completion, apart from the `mcp_servers` reports that also
+        // go out while the old clients close and the new ones connect.
+        const requestId = command.requestId ?? null;
+        try {
+          await this.session.refreshMcp();
+        } catch (error) {
+          this.emit({
+            type: "mcp_refresh_failed",
+            error: describe(error),
+            requestId,
+          });
+
+          return;
+        }
+        this.emit({ type: "mcp_refreshed", requestId });
 
         return;
+      }
 
       case "mcp_restart_server":
         // Reconnected as a set: an HTTP server has no process to bounce alone.

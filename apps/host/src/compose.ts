@@ -181,16 +181,9 @@ export const composeNodeHost = async () => {
   });
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.
-  const stopConnected = serviceHost.onConnectorsConnected((sessionId, note) => {
-    if (sessionId == null) return;
-    void openPhoneSession().then(
-      (phone) => {
-        if (phone.sessionId === sessionId) phoneLane.note(note);
-      },
-      (error: unknown) =>
-        console.warn("[phone] connected note not delivered", error)
-    );
-  });
+  const stopConnected = serviceHost.onLaneNote("phone", (note) =>
+    phoneLane.note(note)
+  );
   const stopOutput = mainEventBus.listen(
     (event) => event.type === "terminal-output",
     () => lease.terminalOutput()

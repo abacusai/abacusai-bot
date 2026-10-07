@@ -3,10 +3,7 @@ import type {
   ConnectorOutcome,
   ConnectorRequest,
 } from "@abacus-ai/contract/contracts";
-import {
-  conversationRefFromKey,
-  type ConversationKey,
-} from "@abacus-ai/contract/conversation-scope";
+import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * Connector asks for the bot chat's banner (spec 03 §11.4) and for other
  * bots' attention (§6.1, §6.6), over `connectors.events` (lossless-
@@ -14,11 +11,9 @@ import {
  * so a reopened iterator re-snapshots).
  *
  * Connecting runs the connector's flow (a platform connector's connect page,
- * then waiting for it to read connected), then refreshes the requesting
- * session's MCP servers and only then answers `connected`: the agent's next
- * act is a call to the new connector's tool (review r2 #5). A refresh that
- * fails is an error on the card and answers nothing; `success: false` is the
- * no-running-agent case and proceeds. A cancelled flow answers `declined`.
+ * then waiting for it to read connected), then answers `connected`. The
+ * session's tools are main's to bring up to date, at its next turn start. A
+ * cancelled flow answers `declined`.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -124,32 +119,14 @@ export const connectRequest = async (
   return answerConnected(client, request);
 };
 
-/** The requesting session's MCP servers refreshed, then the ask answered `connected`. */
+/**
+ * The ask answered `connected`. Nothing is refreshed here: main brings every
+ * session's tools to the account's connectors at that session's next turn.
+ */
 const answerConnected = async (
   client: Client,
   request: ConnectorRequest
 ): Promise<ConnectResult> => {
-  const ref = conversationRefFromKey(
-    request.conversationKey as ConversationKey
-  );
-  if (ref?.kind === "session") {
-    try {
-      // `success: false`: no agent process is running; the next start reads
-      // the connector from disk.
-      const refreshed = await client.mcp.refresh({
-        workspaceId: ref.workspaceId,
-        sessionId: ref.sessionId,
-      });
-      if (
-        !refreshed.success &&
-        refreshed.error &&
-        refreshed.error !== "CLI session is not running."
-      )
-        return { kind: "error", message: refreshed.error };
-    } catch (error) {
-      return { kind: "error", message: messageOf(error) };
-    }
-  }
   await respond(client, request, "connected");
   return { kind: "connected" };
 };

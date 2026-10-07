@@ -10,10 +10,9 @@ import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
  * R3-T32 (jsdom, memory transport): the card shows the snapshot's pending
  * asks for this conversation only; `request`/`cleared` update it; Connect →
  * `connectors.connect` (a platform connector's page opens, then waits for it
- * to read connected), then `mcp.refresh` for the requesting session, then
- * `respond {connected}` (review r2 #5); a refresh failure shows the error
- * and answers nothing; `success: false` (no agent running) proceeds; a field
- * flow uses `submitFields`; a cancelled flow answers `declined`; Decline
+ * to read connected), then `respond {connected}`, with no MCP refresh: main
+ * brings the session's tools to the account's connectors at its next turn
+ * start; a field flow uses `submitFields`; a cancelled flow answers `declined`; Decline
  * answers `declined`; asks of another conversation are counted for that
  * conversation's attention; a reopened iterator re-snapshots.
  */
@@ -183,11 +182,7 @@ describe("useConnectorRequests", () => {
       // The parameter leaves the URL; the rest of it stays.
       expect(window.location.search).toBe("?tab=files");
       await waitFor(() =>
-        expect(fake.calls).toEqual([
-          "statuses",
-          "refresh:ws-1:s-1",
-          "respond:a:connected",
-        ])
+        expect(fake.calls).toEqual(["statuses", "respond:a:connected"])
       );
       await waitFor(() => expect(result.current.current).toBeNull());
     } finally {
@@ -213,7 +208,7 @@ describe("useConnectorRequests", () => {
     }
   });
 
-  it("Connect refreshes the requesting session before answering", async () => {
+  it("Connect answers connected without refreshing the session itself", async () => {
     const fake = makeFake();
     fake.snapshot = [ask("a")];
     const t = setup(fake);
@@ -221,26 +216,7 @@ describe("useConnectorRequests", () => {
     await waitFor(() => expect(result.current.current).not.toBeNull());
     act(() => result.current.connect());
     await waitFor(() => expect(result.current.current).toBeNull());
-    expect(fake.calls).toEqual([
-      "connect:github",
-      "refresh:ws-1:s-1",
-      "respond:a:connected",
-    ]);
-  });
-
-  it("a refresh failure shows the error and answers nothing", async () => {
-    const fake = makeFake();
-    fake.snapshot = [ask("a")];
-    fake.refresh = () => ({ success: false, error: "throw" });
-    const t = setup(fake);
-    const { result } = renderHook(() => useConnectorRequests(t, MINE));
-    await waitFor(() => expect(result.current.current).not.toBeNull());
-    act(() => result.current.connect());
-    await waitFor(() => expect(result.current.error).not.toBeNull());
-    expect(result.current.current?.requestId).toBe("a");
-    expect(fake.calls.some((call) => call.startsWith("respond"))).toBe(false);
-    act(() => result.current.decline());
-    await waitFor(() => expect(fake.calls).toContain("respond:a:declined"));
+    expect(fake.calls).toEqual(["connect:github", "respond:a:connected"]);
   });
 
   it("Stop cancels the wait and declines; unmounting cancels it and answers nothing", async () => {
@@ -295,28 +271,15 @@ describe("useConnectorRequests", () => {
 });
 
 describe("connectRequest", () => {
-  it("success: false (no agent running) proceeds to answer", async () => {
-    const fake = makeFake();
-    fake.refresh = () => ({
-      success: false,
-      error: "CLI session is not running.",
-    });
-    const t = setup(fake);
-    await expect(connectRequest(t, ask("a"))).resolves.toEqual({
-      kind: "connected",
-    });
-    expect(fake.calls.at(-1)).toBe("respond:a:connected");
-  });
-
-  it("a reported refresh failure stays actionable", async () => {
+  it("answers connected without touching the session's MCP servers", async () => {
     const fake = makeFake();
     fake.refresh = () => ({ success: false, error: "config write failed" });
     const t = setup(fake);
     await expect(connectRequest(t, ask("a"))).resolves.toEqual({
-      kind: "error",
-      message: "config write failed",
+      kind: "connected",
     });
-    expect(fake.calls.some((call) => call.startsWith("respond"))).toBe(false);
+    expect(fake.calls.some((call) => call.startsWith("refresh"))).toBe(false);
+    expect(fake.calls.at(-1)).toBe("respond:a:connected");
   });
   it("a field flow uses submitFields", async () => {
     const fake = makeFake();
@@ -361,7 +324,6 @@ describe("a platform connector", () => {
       "connect:abacus-gmailuser",
       "open:https://apps.example/connect",
       "statuses",
-      "refresh:ws-1:s-1",
       "respond:a:connected",
     ]);
   });
