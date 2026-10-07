@@ -1,7 +1,13 @@
+import { connectorById } from "@abacus-ai/connectors/registry";
+import type {
+  ConnectorConnectOptions,
+  ConnectorOutcome,
+} from "@abacus-ai/contract/contracts";
+
 import type { AppClient } from "#renderer/data/transport/types";
-import { reserveAuthorization } from "#renderer/lib/browser/authorization";
 import { pickHostFolder, viewHostFile } from "#renderer/lib/browser/files";
 import { browserNotify } from "#renderer/lib/browser/notifications";
+import { connectPagePath } from "#renderer/lib/connect-page";
 type BrowserSystem = Pick<
   AppClient["system"],
   "openExternal" | "notify" | "openPath" | "showItemInFolder"
@@ -21,17 +27,42 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
   dialog: { openFolder: () => pickHostFolder(client) },
 });
 
+/**
+ * The connect page opens in a new tab before this returns, so call it before
+ * any await in a click handler; popup blockers allow only that. The host is
+ * still told, so it follows the connector until it connects.
+ */
+export const openConnectPage = (
+  client: Pick<AppClient, "connectors">,
+  connectorId: string,
+  options?: ConnectorConnectOptions
+): Promise<ConnectorOutcome> => {
+  const entry = connectorById(connectorId);
+  if (entry?.kind === "platform")
+    window.open(
+      connectPagePath(entry.service, options?.hint),
+      "_blank",
+      "noopener"
+    );
+  return client.connectors
+    .connect({ connectorId, ...(options ? { options } : {}) })
+    .then((outcome) => (outcome.ok ? { ok: true } : outcome));
+};
+
+/** The tab is taken inside the click; the link fills it once the host answers. */
 export const openSharedLink = async (
   client: AppClient,
   input: Parameters<AppClient["messaging"]["openSharedLink"]>[0]
 ): Promise<void> => {
-  const authorization = reserveAuthorization();
+  const tab = window.open("about:blank", "_blank");
+  if (tab) tab.opener = null;
   try {
     const url = await client.messaging.openSharedLink(input);
-    if (url) authorization.open(url);
-    else authorization.close();
+    if (!url || !/^https?:/i.test(url)) tab?.close();
+    else if (tab) tab.location.href = url;
+    else window.open(url, "_blank", "noopener");
   } catch (error) {
-    authorization.close();
+    tab?.close();
     throw error;
   }
 };

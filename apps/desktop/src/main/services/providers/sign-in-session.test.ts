@@ -30,12 +30,8 @@ vi.mock("./abacus-host", () => ({
   abacusAppHost: () => "https://preprod.example.abacus.ai",
 }));
 
-const {
-  clearSignInSession,
-  rememberSessionAccount,
-  sessionAccount,
-  sessionHolds,
-} = await import("./sign-in-session");
+const { clearSignInSession, rememberSessionAccount, sessionAccount } =
+  await import("./sign-in-session");
 
 beforeEach(() => {
   base = fs.mkdtempSync(path.join(os.tmpdir(), "sign-in-session-"));
@@ -49,24 +45,6 @@ afterEach(() => {
 });
 
 describe("whose session the partition holds", () => {
-  it("is nobody's until an in-app sign-in says whose, cookies or not", async () => {
-    partition.cookies = [{ domain: ".abacus.ai", path: "/", name: "__cf_bm" }];
-
-    expect(sessionAccount()).toBeNull();
-    expect(await sessionHolds("a@example.com")).toBe(false);
-  });
-
-  it("is that account's, and no other's, while its cookies are there", async () => {
-    rememberSessionAccount("A@Example.com");
-    partition.cookies = [{ domain: ".abacus.ai", path: "/", name: "sid" }];
-
-    expect(await sessionHolds("a@example.com")).toBe(true);
-    expect(await sessionHolds("b@example.com")).toBe(false);
-    // The marker alone is a session that expired.
-    partition.cookies = [];
-    expect(await sessionHolds("a@example.com")).toBe(false);
-  });
-
   it("is cleared with its cookies and storage, on the app's host too", async () => {
     rememberSessionAccount("a@example.com");
     partition.cookies = [

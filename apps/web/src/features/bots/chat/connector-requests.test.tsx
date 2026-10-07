@@ -8,7 +8,8 @@ import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 /**
  * R3-T32 (jsdom, memory transport): the card shows the snapshot's pending
  * asks for this conversation only; `request`/`cleared` update it; Connect →
- * `connectors.connect`, then `mcp.refresh` for the requesting session, then
+ * `connectors.connect` (a platform connector's page opens, then waits for it
+ * to read connected), then `mcp.refresh` for the requesting session, then
  * `respond {connected}` (review r2 #5); a refresh failure shows the error
  * and answers nothing; `success: false` (no agent running) proceeds; a field
  * flow uses `submitFields`; a cancelled flow answers `declined`; Decline
@@ -94,8 +95,14 @@ const routerFor = (fake: Fake) => ({
     respond: impl.connectors.respond.handler(({ input }) => {
       fake.calls.push(`respond:${input.requestId}:${input.outcome}`);
     }),
-    cancelConnect: impl.connectors.cancelConnect.handler(() => {
-      fake.calls.push("cancel");
+    statuses: impl.connectors.statuses.handler(() => {
+      fake.calls.push("statuses");
+      return { "abacus-gmailuser": { state: "connected" as const } };
+    }),
+  },
+  system: {
+    openExternal: impl.system.openExternal.handler(({ input }) => {
+      fake.calls.push(`open:${input.url}`);
     }),
   },
   mcp: {
@@ -245,6 +252,30 @@ describe("connectRequest", () => {
       message: "bad token",
     });
     expect(fake.calls).toEqual(["connect:github"]);
+  });
+});
+
+describe("a platform connector", () => {
+  it("opens the connect page main hands back and answers once it reads connected", async () => {
+    const fake = makeFake();
+    fake.connectOutcome = { ok: true, url: "https://apps.example/connect" };
+    const t = setup(fake);
+    const pending = connectRequest(t.client, {
+      ...ask("a"),
+      connectorId: "abacus-gmailuser",
+    });
+    await waitFor(() =>
+      expect(fake.calls).toContain("open:https://apps.example/connect")
+    );
+    window.dispatchEvent(new Event("focus"));
+    await expect(pending).resolves.toEqual({ kind: "connected" });
+    expect(fake.calls).toEqual([
+      "connect:abacus-gmailuser",
+      "open:https://apps.example/connect",
+      "statuses",
+      "refresh:ws-1:s-1",
+      "respond:a:connected",
+    ]);
   });
 });
 

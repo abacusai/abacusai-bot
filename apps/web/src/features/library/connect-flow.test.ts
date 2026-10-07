@@ -37,7 +37,7 @@ const setup = () => {
   const transport = {
     client: {
       messaging: { snapshot: snapshotCall, updateSettings, updatePlatform },
-      connectors: { cancelConnect: vi.fn(), statuses: vi.fn(async () => ({})) },
+      connectors: { statuses: vi.fn(async () => ({})) },
       mcp: { refresh: vi.fn() },
     },
     orpc: {

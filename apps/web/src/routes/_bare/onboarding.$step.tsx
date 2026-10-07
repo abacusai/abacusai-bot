@@ -13,7 +13,10 @@ import {
   enterStep,
   type OnboardingExit,
 } from "#renderer/features/onboarding/actions";
-import { connectOnboarding } from "#renderer/features/onboarding/connect";
+import {
+  cancelOnboardingConnect,
+  connectOnboarding,
+} from "#renderer/features/onboarding/connect";
 import { previewFirstBot } from "#renderer/features/onboarding/first-bot";
 import {
   startFirstRunGmail,
@@ -63,10 +66,7 @@ const OnboardingRoute = () => {
         void transport.client.auth.openRouter.cancel({}).catch(() => undefined);
         void cancelSignIn(transport).catch(() => undefined);
       }
-      if (step === "connectors")
-        void transport.client.connectors
-          .cancelConnect({})
-          .catch(() => undefined);
+      if (step === "connectors") cancelOnboardingConnect();
     };
   }, [db, transport, step]);
   const auth = (intent: "signup" | "signin", profileId?: string) => {

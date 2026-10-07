@@ -6,10 +6,7 @@
  *
  * It holds at most one Abacus.AI account, and this module is the one place
  * that knows which: the in-app sign-in records it, and a browser sign-in, a
- * pasted key or a sign-out clears it. A connector hop that wants to ride on
- * the session asks `sessionHolds(email)` for the app's current account, never
- * "are there cookies": the partition once carried account A's cookies into
- * account B's Gmail hop, and B's mailbox attached to A.
+ * pasted key or a sign-out clears it.
  */
 import fs from "fs";
 import path from "path";
@@ -84,21 +81,6 @@ export const sessionAccount = (): string | null => {
   } catch {
     return null;
   }
-};
-
-/**
- * Whether the partition holds a live session for exactly this account. Both
- * halves matter: the marker without cookies is a session that expired, and
- * cookies without the marker (a page load's Cloudflare cookie, a sign-in
- * that was handed off to the browser) are not a sign-in.
- */
-export const sessionHolds = async (
-  email: string | null | undefined
-): Promise<boolean> => {
-  const wanted = (email ?? "").trim().toLowerCase();
-  if (wanted.length === 0 || sessionAccount() !== wanted) return false;
-  const cookies = await signInSession().cookies.get({});
-  return cookies.some(({ domain }) => isAbacusHost(domain));
 };
 
 /** Sign-out, a browser sign-in, a pasted key: the partition is nobody's now. */
