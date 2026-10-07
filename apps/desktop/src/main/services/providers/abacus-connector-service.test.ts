@@ -300,6 +300,8 @@ describe("a one-tap connect link", () => {
     expect(await createConnectLink("googlecalendar")).toEqual({
       url: "https://abacus.ai/app/connect/google?r=req_0123456789abcdef",
       services: ["gmailuser", "googledriveuser", "googlecalendar"],
+      connected: [],
+      requestId: "req_0123456789abcdef",
     });
   });
 
