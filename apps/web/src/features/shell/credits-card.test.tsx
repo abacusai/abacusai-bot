@@ -82,7 +82,7 @@ it("does not show the promo for an account already on a paid tier", () => {
 
 it("celebrates only a confirmed free-to-paid account change", () => {
   const view = render(<UpgradePromo />);
-  state.account.subscription_tier = "pro";
+  state.account = { ...state.account, subscription_tier: "pro" };
   view.rerender(<UpgradePromo />);
   expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
   expect(

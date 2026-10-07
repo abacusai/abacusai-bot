@@ -175,7 +175,7 @@ export const UpgradePromo = () => {
     <AnimatePresence>
       {state || celebrating ? (
         <motion.aside
-          key={`${key}:${state}`}
+          key={key}
           data-slot="upgrade-promo"
           aria-label={t("creditsCard.upsellTitle")}
           className="bg-background fixed isolate z-30 w-80 overflow-hidden rounded-xl border p-3 shadow-lg"
