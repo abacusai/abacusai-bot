@@ -38,3 +38,18 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-body > div { display: flex; flex-direction: column; gap: var(--notch-gap); }
 .notch-body > .notch-reply { flex-direction: row; }
 .notch-reply > input { width: 100%; min-width: 0; }
+
+.notch-avatar { display: flex; align-items: center; flex-shrink: 0; }
+.notch-counter { font-variant-numeric: tabular-nums; }
+.notch-shape button[data-notch-action] { width: 28px; height: 28px; min-width: 28px; flex-shrink: 0; padding: 0; }
+.notch-shape button[data-secondary] { background: transparent; }
+.notch-shape button[data-primary] { background: #f2f2f3; color: #171719; }
+.notch-shape button:disabled { opacity: .4; }
+.notch-shape button { transition-property: background-color, color, opacity; }
+.notch-shape button svg { width: 16px; height: 16px; }
+.notch-reply-pill { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 4px; border-radius: 999px; background: var(--notch-control, #2a2a2e); }
+.notch-reply-pill:focus-within { outline: 2px solid #8a8a96; outline-offset: 2px; }
+.notch-reply-pill input { flex: 1 1 0; min-width: 0; width: 0; padding: 0 8px; border: 0; background: transparent; box-shadow: none; outline: none; height: 28px; }
+.notch-reply-pill input:focus-visible { box-shadow: none; outline: none; }
+
+@media (hover: hover) and (pointer: fine) { .notch-shape button[data-secondary]:hover { background: #2a2a2e; } }

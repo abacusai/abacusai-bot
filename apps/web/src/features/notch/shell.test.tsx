@@ -455,3 +455,15 @@ it("forwarded movement through transparent margins releases mouse routing", asyn
     interactive: false,
   });
 });
+
+it("reply keeps input, voice and send icons inside one inset pill", async () => {
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: "Launch reply" }));
+  const input = await screen.findByRole("textbox");
+  const pill = input.closest(".notch-reply-pill");
+  expect(pill).toBeTruthy();
+  const send = screen.getByRole("button", { name: "Send" });
+  expect(pill?.contains(send)).toBe(true);
+  expect(send.textContent).toBe("");
+  expect(pill?.querySelectorAll("button svg").length).toBe(3);
+});

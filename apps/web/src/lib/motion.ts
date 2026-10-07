@@ -138,6 +138,13 @@ export const hatch = {
 } as const;
 /** @public Canvas motion tokens and their CSS mirrors. */
 export const notch = {
+  // Same spring family as the composer, with a finite duration: shell completion
+  // gates the content reveal, so a long physics tail must not hold controls back.
+  surfaceSpring: {
+    type: springs.surface.type,
+    duration: durations.surface / 1000,
+    bounce: springs.surface.bounce,
+  },
   shape: 350,
   contentFade: 120,
   reaction: 600,

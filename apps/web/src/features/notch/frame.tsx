@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { notch } from "#renderer/lib/motion";
+
 import { shellClip } from "./shell-clip";
 import {
   hasCamera,
@@ -20,7 +22,6 @@ import {
 } from "./spacing";
 
 const ShellReady = createContext(true);
-const SHELL_SPRING = { type: "spring", duration: 0.3, bounce: 0.1 } as const;
 
 /** The only painted surface. Children never add a second black silhouette. */
 export const NotchSurface = ({
@@ -49,7 +50,12 @@ export const NotchSurface = ({
     shellClip(Number(w), Number(h), layout.maxShape.width, hasCamera(layout))
   );
   useLayoutEffect(() => {
-    const transition = reduced ? { duration: 0 } : SHELL_SPRING;
+    if (reduced) {
+      width.set(shape.width);
+      height.set(shape.height);
+      return;
+    }
+    const transition = notch.surfaceSpring;
     const w = animate(width, shape.width, transition);
     const h = animate(height, shape.height, transition);
     let live = true;
