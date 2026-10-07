@@ -44,7 +44,6 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { useShellWidth } from "#renderer/lib/shell-breakpoints";
 import { shellLayout } from "#renderer/lib/shell-layout";
 import type { PanelTabKind } from "#renderer/lib/side-panel/store";
-import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -306,17 +305,11 @@ export const SessionDock = ({
       ),
     }));
   const controls = (
-    <div className="titlebar-nodrag flex h-(--titlebar-row-h) shrink-0 items-center gap-1 self-start px-1">
+    <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
       {
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("sessions.dock.add")}
-              />
-            }
+            render={<TopBar.IconButton label={t("sessions.dock.add")} />}
           >
             <Plus />
           </DropdownMenuTrigger>
@@ -380,10 +373,8 @@ export const SessionDock = ({
           </DropdownMenuContent>
         </DropdownMenu>
       }
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("sessions.dock.full")}
+      <TopBar.IconButton
+        label={t("sessions.dock.full")}
         aria-pressed={expanded}
         onClick={() => {
           void navigate({
@@ -399,8 +390,8 @@ export const SessionDock = ({
         }}
       >
         {expanded ? <Minimize /> : <Maximize />}
-      </Button>
-    </div>
+      </TopBar.IconButton>
+    </TopBar.Group>
   );
   return (
     <ViewTransition

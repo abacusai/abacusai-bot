@@ -18,11 +18,16 @@ import {
   PanelLeft,
   PanelRight,
 } from "lucide-react";
-import { Fragment, type ComponentProps, type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppBrandMark } from "#renderer/components/app-icon";
 import { TabsRail } from "#renderer/components/tabs-rail";
+import {
+  TitleBarGroup,
+  TitleBarIconButton,
+  TitleBarSpacer,
+} from "#renderer/components/title-bar";
 import { cn } from "#renderer/lib/cn";
 import { useCanGoForward } from "#renderer/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
@@ -39,23 +44,7 @@ import {
 import { shellStore } from "./shell-store";
 import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
 
-const BarButton = ({
-  label,
-  className,
-  ...props
-}: { label: string } & ComponentProps<typeof Button>) => (
-  <Button
-    variant="ghost"
-    size="icon-sm"
-    aria-label={label}
-    title={label}
-    className={cn(
-      "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground phone:size-10 phone:rounded-full phone:[&_svg]:size-5 phone:active:bg-foreground/[0.08] size-7",
-      className
-    )}
-    {...props}
-  />
-);
+const BarButton = TitleBarIconButton;
 
 const Root = ({ children }: { children: ReactNode }) => (
   <header
@@ -94,10 +83,10 @@ const Leading = ({
   const navigate = useAppNavigate();
   const canGoForward = useCanGoForward();
   return (
-    <div
+    <TitleBarGroup
       data-slot="topbar-leading"
       className={cn(
-        "phone:pl-1.5 flex h-(--titlebar-row-h) items-center gap-0.5 pl-2",
+        "phone:pl-1.5 pl-(--chrome-group-gap)",
         sidebarInLayout
           ? "w-[var(--topbar-leading-width,calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x)))] min-w-min flex-none"
           : "flex-none pr-2.5"
@@ -142,7 +131,7 @@ const Leading = ({
           is pinned (icon only when it is collapsed or floating). */}
       <span
         data-slot="topbar-brand"
-        className="text-sidebar-foreground flex min-w-0 items-center gap-2 pl-2 font-semibold"
+        className="text-sidebar-foreground flex min-w-0 items-center gap-(--chrome-group-gap) pl-(--chrome-group-gap) font-semibold"
       >
         <AppBrandMark size={20} className="shrink-0" />
         {showAppName && (
@@ -154,7 +143,7 @@ const Leading = ({
           </span>
         )}
       </span>
-    </div>
+    </TitleBarGroup>
   );
 };
 
@@ -266,10 +255,7 @@ const Actions = ({
       </DropdownMenu>
     );
   return (
-    <div
-      data-slot="topbar-actions"
-      className="flex h-(--titlebar-row-h) shrink-0 items-center gap-0.5"
-    >
+    <TitleBarGroup data-slot="topbar-actions" className="shrink-0">
       {actions.map((action) =>
         action.render != null ? (
           <Fragment key={action.id}>{action.render}</Fragment>
@@ -286,7 +272,7 @@ const Actions = ({
           </Button>
         )
       )}
-    </div>
+    </TitleBarGroup>
   );
 };
 
@@ -325,6 +311,9 @@ const GeometryBadge = () => {
 
 export const TopBar = {
   Root,
+  Group: TitleBarGroup,
+  IconButton: TitleBarIconButton,
+  Spacer: TitleBarSpacer,
   Leading,
   Identity,
   Actions,

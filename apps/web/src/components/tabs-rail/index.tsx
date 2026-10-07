@@ -23,11 +23,11 @@ import {
   useRef,
   useState,
   type ReactNode,
-  type ComponentProps,
 } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import { TitleBarIconButton } from "#renderer/components/title-bar";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
@@ -60,19 +60,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "#renderer/ui/tooltip";
 
 import { railLayout } from "./layout";
 import { TabLabel } from "./tab-label";
-const BarButton = ({
-  label,
-  ...props
-}: { label: string } & ComponentProps<typeof Button>) => (
-  <Button
-    variant="ghost"
-    size="icon-sm"
-    aria-label={label}
-    title={label}
-    className="titlebar-nodrag size-7 shrink-0"
-    {...props}
-  />
-);
+const BarButton = TitleBarIconButton;
 const tabIcon = (kind: PanelTabKind) =>
   kind === "browser"
     ? Globe

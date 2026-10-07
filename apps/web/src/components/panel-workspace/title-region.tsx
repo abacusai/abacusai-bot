@@ -62,6 +62,10 @@ export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
         .querySelector('[data-slot="topbar-leading"]')
         ?.getBoundingClientRect();
       const end = Number.parseFloat(getComputedStyle(bar).paddingRight) || 0;
+      bar.style.setProperty(
+        "--workspace-context-start",
+        `${(leading?.right ?? barRect.left) - barRect.left}px`
+      );
       const next = titleRegion(
         rect ?? barRect,
         (leading?.right ?? barRect.left) + 8,
@@ -99,6 +103,7 @@ export const WorkspaceTitleRegion = ({ children }: { children: ReactNode }) => {
       mutations.disconnect();
       window.removeEventListener("resize", schedule);
       bar.style.removeProperty("--workspace-title-start");
+      bar.style.removeProperty("--workspace-context-start");
     };
   }, []);
   return (

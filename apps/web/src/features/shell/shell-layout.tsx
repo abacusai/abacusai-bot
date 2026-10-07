@@ -44,7 +44,6 @@ import { WorkspaceTitleRegion } from "#renderer/components/panel-workspace/title
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { Button } from "#renderer/ui/button";
 
 import { useShellWidth, useShellBand } from "./breakpoints";
 import { UpgradePromo } from "./credits-card";
@@ -237,15 +236,13 @@ export const ShellLayout = ({
             onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
           />
         }
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("sessions.dock.full")}
+        <TopBar.IconButton
+          label={t("sessions.dock.full")}
           aria-pressed={expanded}
           onClick={() => setPanelExpanded(scopeKey, !expanded)}
         >
           {expanded ? <Minimize /> : <Maximize />}
-        </Button>
+        </TopBar.IconButton>
       </>
     ) : null;
 

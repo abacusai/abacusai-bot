@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { TabsRail } from "#renderer/components/tabs-rail";
+import { TitleBarIconButton } from "#renderer/components/title-bar";
 import { cn } from "#renderer/lib/cn";
 import {
   durations,
@@ -20,7 +21,6 @@ import {
   reducedTransition,
   useMotionPreference,
 } from "#renderer/lib/motion";
-import { Button } from "#renderer/ui/button";
 import {
   Drawer,
   DrawerContent,
@@ -194,15 +194,13 @@ export const SidePanelDrawer = ({
                   onReorder={onTabReorder}
                 />
               )}
-              <Button
-                variant="ghost"
-                size="icon-sm"
+              <TitleBarIconButton
                 className="shrink-0"
-                aria-label={t("shell.topBar.closePanel")}
+                label={t("shell.topBar.closePanel")}
                 onClick={onClose}
               >
                 <X />
-              </Button>
+              </TitleBarIconButton>
             </div>
             <SidePanelBody tab={active} visible={open} />
           </div>
