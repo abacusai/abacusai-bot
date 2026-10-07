@@ -1,5 +1,7 @@
 import "./notch.css";
 import type { OpenTarget } from "@abacus-ai/contract/contract";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
+import { ExternalLink } from "lucide-react";
 import { MotionConfig } from "motion/react";
 import {
   createContext,
@@ -40,6 +42,7 @@ import {
 } from "./presenter";
 import { shapeFor } from "./shape";
 import { permissionLineageKey, type Snooze } from "./snooze";
+import { hasCamera, headerHeight } from "./spacing";
 export { NotchDirector } from "./director";
 const ReplyAcceptedContext = createContext<
   (id: string, runId?: string) => void
@@ -515,9 +518,14 @@ export const NotchShell = ({
           <div
             style={
               layout.growth === "up"
-                ? { position: "absolute", bottom: 32, left: 24, right: 24 }
+                ? {
+                    position: "absolute",
+                    bottom: spacing.envelopeBottom,
+                    left: spacing.envelopeInline,
+                    right: spacing.envelopeInline,
+                  }
                 : {
-                    paddingInline: 24,
+                    paddingInline: spacing.envelopeInline,
                     transform: `translateX(${layout.offsetX ?? 0}px)`,
                   }
             }
@@ -597,7 +605,10 @@ export const NotchShell = ({
                 layout={layout}
                 left={
                   <div className="notch-wing" style={faceStyle}>
-                    {shown.faces.map((face, i) => {
+                    {(shown.expanded
+                      ? shown.faces
+                      : shown.faces.slice(0, 1)
+                    ).map((face, i) => {
                       const bot = inputs.bots.find((b) => b.id === face.botId);
                       return (
                         <BotAvatar
@@ -621,7 +632,11 @@ export const NotchShell = ({
                       );
                     })}
                     <span
-                      className="notch-label truncate"
+                      className={
+                        shown.route === "/idle" && !shown.expanded
+                          ? "sr-only"
+                          : "notch-label truncate"
+                      }
                       title={
                         shown.quietUntil
                           ? t("notch.quiet.until", { time: shown.quietUntil })
@@ -637,9 +652,11 @@ export const NotchShell = ({
                         : shown.quietUntil
                           ? t("notch.quiet.until", { time: shown.quietUntil })
                           : t(
-                              shown.route === "/call"
-                                ? "notch.listening.title"
-                                : `notch.wings.${shown.attention?.kind ?? "idle"}`
+                              shown.route === "/idle" && hasCamera(layout)
+                                ? "shell.status.ready"
+                                : shown.route === "/call"
+                                  ? "notch.listening.title"
+                                  : `notch.wings.${shown.attention?.kind ?? "idle"}`
                             )}
                     </span>
                   </div>
@@ -654,7 +671,18 @@ export const NotchShell = ({
                     )}
                     {shown.remaining > 0 && <span>{shown.remaining}</span>}
                     {shown.sessionId && (
-                      <Button onClick={open}>{t("notch.actions.open")}</Button>
+                      <Button
+                        onClick={open}
+                        size={hasCamera(layout) ? "icon" : "default"}
+                        aria-label={t("notch.actions.open")}
+                        title={t("notch.actions.open")}
+                      >
+                        {hasCamera(layout) ? (
+                          <ExternalLink aria-hidden />
+                        ) : (
+                          t("notch.actions.open")
+                        )}
+                      </Button>
                     )}
                     {shown.attention?.kind === "failed" && (
                       <Button aria-label={t("common.close")} onClick={snooze}>
@@ -666,7 +694,7 @@ export const NotchShell = ({
               />
               {shown.expanded && (
                 <NotchBody
-                  headerHeight={layout.notch?.height ?? 36}
+                  headerHeight={headerHeight(layout)}
                   shape={shape}
                   reduced={reduced}
                   onHeight={(height) =>

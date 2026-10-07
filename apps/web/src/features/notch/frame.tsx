@@ -1,4 +1,5 @@
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import {
   createContext,
@@ -11,6 +12,12 @@ import {
 } from "react";
 
 import { shellClip } from "./shell-clip";
+import {
+  hasCamera,
+  headerHeight,
+  MIN_HEADER_HEIGHT,
+  spacingStyle,
+} from "./spacing";
 
 const ShellReady = createContext(true);
 const SHELL_SPRING = { type: "spring", duration: 0.3, bounce: 0.1 } as const;
@@ -39,7 +46,7 @@ export const NotchSurface = ({
     setReady(false);
   }
   const clipPath = useTransform([width, height], ([w, h]) =>
-    shellClip(Number(w), Number(h), layout.maxShape.width)
+    shellClip(Number(w), Number(h), layout.maxShape.width, hasCamera(layout))
   );
   useLayoutEffect(() => {
     const transition = reduced ? { duration: 0 } : SHELL_SPRING;
@@ -60,6 +67,7 @@ export const NotchSurface = ({
       {...props}
       className="notch-surface"
       style={{
+        ...spacingStyle(layout),
         ...style,
         width: layout.maxShape.width,
         height: layout.maxShape.height,
@@ -110,15 +118,20 @@ export const NotchHeader = ({
       animate={{ opacity: ready ? 1 : 0 }}
       transition={{ duration: reduced ? 0 : 0.12 }}
       style={{
-        height: layout.notch?.height ?? 36,
+        height: headerHeight(layout),
         visibility: ready ? "visible" : "hidden",
       }}
     >
       {left}
-      {layout.notch && (
+      {hasCamera(layout) && (
         <div
           aria-hidden="true"
-          style={{ width: layout.notch.width, flexShrink: 0 }}
+          data-slot="notch-camera-clearance"
+          style={{
+            width: layout.notch!.width + spacing.cameraClearance * 2,
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
         />
       )}
       {right}
@@ -132,7 +145,7 @@ export const NotchBody = ({
   shape,
   reduced,
   onHeight,
-  headerHeight = 36,
+  headerHeight = MIN_HEADER_HEIGHT,
 }: {
   children: ReactNode;
   shape: { width: number; height: number };
@@ -147,7 +160,9 @@ export const NotchBody = ({
     const content = body?.firstElementChild as HTMLElement | null;
     if (!body || !content) return;
     const measure = () =>
-      onHeight?.(Math.ceil(content.getBoundingClientRect().height) + 24);
+      onHeight?.(
+        Math.ceil(content.getBoundingClientRect().height) + spacing.bottom
+      );
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(content);

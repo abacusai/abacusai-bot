@@ -1,4 +1,6 @@
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
+
 export interface Rect {
   x: number;
   y: number;
@@ -19,14 +21,15 @@ export interface Placement {
   bounds: Rect;
   layout: NotchLayout;
 }
-// Canvas shadow blur 24 + downward offset 8: 24 on each side, 32 below.
+// Transparent envelope margins stay fixed across every presentation.
 export const notchPlacement = (
   display: DisplayGeometry,
   notch: NotchLayout["notch"],
   _requested: { width: number; height: number }
 ): Placement => {
   const shape = clampShape(MAX_SHAPE);
-  const width = Math.max(shape.width, notch?.width ?? 0) + 48;
+  const width =
+    Math.max(shape.width, notch?.width ?? 0) + spacing.envelopeInline * 2;
   const center =
     notch?.x === undefined
       ? display.bounds.x + display.bounds.width / 2
@@ -37,7 +40,8 @@ export const notchPlacement = (
       x,
       y: display.bounds.y,
       width,
-      height: Math.max(shape.height, notch?.height ?? 0) + 32,
+      height:
+        Math.max(shape.height, notch?.height ?? 0) + spacing.envelopeBottom,
     },
     layout: {
       displayId: display.id,

@@ -21,10 +21,10 @@ it.each([185, 200, 240])(
     } as NotchPresentation;
     const closed = shapeFor(p, layout);
     const open = shapeFor({ ...p, expanded: true }, layout);
-    expect(closed.height).toBe(40);
-    expect(closed.width - width).toBe(96);
-    expect(open.width).toBe(Math.min(layout.maxShape.width, width + 360));
-    expect(open.height).toBe(116);
+    expect(closed.height).toBe(54);
+    expect(closed.width - width).toBe(128);
+    expect(open.width).toBe(layout.maxShape.width);
+    expect(open.height).toBe(130);
   }
 );
 it.each([
@@ -56,6 +56,6 @@ it("gives a notchless capsule enough room for controls", () => {
       maxShape: { width: 560, height: 220 },
     }
   );
-  expect(shape.height).toBe(168);
-  expect(shape.compactHeight).toBe(36);
+  expect(shape.height).toBe(186);
+  expect(shape.compactHeight).toBe(54);
 });

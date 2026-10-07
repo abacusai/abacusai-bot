@@ -1,13 +1,15 @@
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
 
 import type { NotchPresentation } from "./presenter";
-// Wing and body dimensions from the Notch design canvas, spec 06 §11.5.
+import { hasCamera, headerHeight } from "./spacing";
+// Compact ear content width and expanded body budget. Insets are added once.
 export const SHAPES = {
-  idle: [48, 0],
-  quiet: [90, 0],
-  working: [150, 0],
-  done: [150, 0],
-  failed: [170, 0],
+  idle: [20, 0],
+  quiet: [64, 0],
+  working: [120, 0],
+  done: [120, 0],
+  failed: [140, 0],
   approval: [160, 132],
   reply: [160, 144],
   call: [130, 132],
@@ -25,17 +27,21 @@ export const shapeFor = (
         ? "reply"
         : (p.route.slice(1) as "idle" | "working" | "call" | "done" | "failed");
   const [compactWing, body] = SHAPES[key] ?? SHAPES.idle;
-  const wing = p.expanded
-    ? Math.max(compactWing, key === "idle" ? SHAPES.hovered[0] : 160)
-    : compactWing;
-  const gap = layout.notch?.width ?? 0;
+  const camera = hasCamera(layout);
+  const gap = camera ? layout.notch!.width + spacing.cameraClearance * 2 : 0;
+  const edge = spacing.inline + (camera ? spacing.shoulder : 0);
+  const compactWidth = Math.max(96, gap + 2 * (compactWing + edge));
+  const expandedWidth = camera ? layout.maxShape.width : 360;
+  const compactHeight = headerHeight(layout);
   return {
-    compactHeight: layout.notch?.height ?? 36,
-    width: Math.min(layout.maxShape.width, gap + wing * 2),
+    compactHeight,
+    width: Math.min(
+      layout.maxShape.width,
+      p.expanded ? expandedWidth : compactWidth
+    ),
     height: Math.min(
       layout.maxShape.height,
-      (layout.notch?.height ?? 36) +
-        (p.expanded ? body || SHAPES.hovered[1] : 0)
+      compactHeight + (p.expanded ? body || SHAPES.hovered[1] : 0)
     ),
   };
 };
