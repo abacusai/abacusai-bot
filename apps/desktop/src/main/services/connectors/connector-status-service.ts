@@ -35,6 +35,8 @@ export interface StatusInputs {
   mcpServers: readonly McpServerInfo[];
   /** MCP servers the running agent reports waiting on a sign-in. */
   mcpAuthRequired?: ReadonlySet<string>;
+  /** Server URLs the host holds an OAuth token for. */
+  mcpTokens?: ReadonlySet<string>;
 }
 
 const statusOf = (
@@ -71,11 +73,15 @@ const statusOf = (
         ? { state: "pending", reason: "not-live" }
         : { state: "available" };
     case "mcp": {
-      const installed = inputs.mcpServers.some(
-        (server) => server.id === connector.id
-      );
-      if (!installed) return { state: "available" };
-      return inputs.mcpAuthRequired?.has(connector.id) === true
+      const server = inputs.mcpServers.find((item) => item.id === connector.id);
+      if (server == null) return { state: "available" };
+      // An OAuth server is connected only once a token is held for it.
+      const unsigned =
+        (connector.auth === "oauth" || connector.auth === "oauth-client") &&
+        server.config.oauth !== false &&
+        server.config.url != null &&
+        inputs.mcpTokens?.has(server.config.url) === false;
+      return unsigned || inputs.mcpAuthRequired?.has(connector.id) === true
         ? { state: "pending", reason: "sign-in-required" }
         : { state: "connected" };
     }
@@ -104,6 +110,7 @@ export interface StatusSources {
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
   mcpAuthRequired?: () => ReadonlySet<string>;
+  mcpTokens?: () => ReadonlySet<string>;
 }
 
 /**
@@ -128,6 +135,9 @@ export class ConnectorStatusService {
       mcpServers: this.sources.mcpServers(),
       ...(this.sources.mcpAuthRequired != null
         ? { mcpAuthRequired: this.sources.mcpAuthRequired() }
+        : {}),
+      ...(this.sources.mcpTokens != null
+        ? { mcpTokens: this.sources.mcpTokens() }
         : {}),
     });
   }

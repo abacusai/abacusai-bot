@@ -132,37 +132,56 @@ export const ConnectorsPage = () => {
           <GroupCard>
             {entries
               .filter((e) => connected(e.id) === group)
-              .map((e) => (
-                <SettingRow
-                  key={e.id}
-                  id={e.id}
-                  title={e.name}
-                  detail={statuses.data?.[e.id]?.account ?? e.description}
-                >
-                  <ConnectorMark id={e.logo ?? e.id} size={36} />
-                  {/* The section heading already says it; a phone folds the pill. */}
-                  <span className="phone:hidden contents">
-                    <StatePill>
-                      {t(group ? "phase5.connected" : "phase5.available")}
-                    </StatePill>
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      if (group)
-                        void navigate({
-                          to: "/library/connectors",
-                          search: (p) => ({ ...p, connector: e.id }),
-                          transition: "none",
-                        });
-                      else void flow.start(e.id);
-                    }}
+              .map((e) => {
+                // Installed, but its sign-in never finished: offer the sign-in.
+                const signIn =
+                  statuses.data?.[e.id]?.reason === "sign-in-required";
+                return (
+                  <SettingRow
+                    key={e.id}
+                    id={e.id}
+                    title={e.name}
+                    detail={statuses.data?.[e.id]?.account ?? e.description}
                   >
-                    {t(group ? "phase5.manage" : "phase5.add")}
-                  </Button>
-                </SettingRow>
-              ))}
+                    <ConnectorMark id={e.logo ?? e.id} size={36} />
+                    {/* The section heading already says it; a phone folds the pill. */}
+                    <span
+                      className={signIn ? "contents" : "phone:hidden contents"}
+                    >
+                      <StatePill>
+                        {t(
+                          signIn
+                            ? "phase5.signInNeeded"
+                            : group
+                              ? "phase5.connected"
+                              : "phase5.available"
+                        )}
+                      </StatePill>
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (group && !signIn)
+                          void navigate({
+                            to: "/library/connectors",
+                            search: (p) => ({ ...p, connector: e.id }),
+                            transition: "none",
+                          });
+                        else void flow.start(e.id);
+                      }}
+                    >
+                      {t(
+                        signIn
+                          ? "phase5.signIn"
+                          : group
+                            ? "phase5.manage"
+                            : "phase5.add"
+                      )}
+                    </Button>
+                  </SettingRow>
+                );
+              })}
           </GroupCard>
         </section>
       ))}

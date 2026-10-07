@@ -19,6 +19,8 @@ import {
 export type ConnectStage =
   | "starting"
   | "installing"
+  /** The server is moving the host onto the version bootstrap named. */
+  | "updating"
   | "connecting"
   | "open"
   | "reconnecting";
@@ -72,6 +74,8 @@ const Health = v.object({
   ok: v.boolean(),
   owner: v.string(),
   contractVersion: v.number(),
+  version: v.nullish(v.string()),
+  busy: v.nullish(v.boolean()),
 });
 /** HTTP prefix for `/healthz`, `/rpc`, `/files` and `/upload`. */
 export const hostHttpBase = (boot: {
@@ -398,7 +402,22 @@ export const readyHost = async (
           "reload",
           "This page is out of date. Reload to update it."
         );
-      break;
+      // An idle older host is about to be restarted onto the new version;
+      // a busy one is never upgraded mid-turn, so it is used as it is.
+      if (
+        boot.version == null ||
+        health.version === boot.version ||
+        health.busy === true
+      )
+        break;
+      stage("updating");
+      if (Date.now() >= installDeadline)
+        throw new ConnectError(
+          "connection",
+          "Host did not become ready. Please retry."
+        );
+      await delay(pollDelayMs(polls));
+      continue;
     }
     if (response?.status === 403) denialDeadline ??= Date.now() + 65_000;
     else if (response && ![502, 503].includes(response.status))

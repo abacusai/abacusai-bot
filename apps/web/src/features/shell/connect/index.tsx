@@ -145,7 +145,7 @@ const useLightOnly = (): void => {
 
 const SETUP_STEPS = [
   { key: "stepStarting", stages: ["starting"] },
-  { key: "stepInstalling", stages: ["installing"] },
+  { key: "stepInstalling", stages: ["installing", "updating"] },
   { key: "stepConnecting", stages: ["connecting", "reconnecting", "open"] },
 ] as const satisfies readonly {
   key: string;
@@ -296,7 +296,9 @@ const StatusPill = ({ stage }: { stage: ConnectStage }) => {
     >
       <span className="bg-background text-muted-foreground border-border flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-xs">
         <Spinner aria-hidden className="size-3.5" />
-        {stage === "connecting" || stage === "reconnecting"
+        {stage === "connecting" ||
+        stage === "reconnecting" ||
+        stage === "updating"
           ? t(`web.connect.${stage}`)
           : t("web.connect.waking")}
       </span>

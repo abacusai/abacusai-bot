@@ -178,10 +178,12 @@ describe("asking for one", () => {
   it("puts a card up, without waiting, for what only the app can connect (a tool server)", async () => {
     for (const service of ["playwright", "Playwright"]) {
       vi.clearAllMocks();
+      // The host has no link for a local tool server.
+      link.mockResolvedValueOnce(null as never);
 
       const text = await call({ service });
 
-      expect(link).not.toHaveBeenCalled();
+      expect(link).toHaveBeenCalledWith("playwright");
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({
           conversationKey: sessionConversationKey("ws-1", "session-1"),
@@ -189,6 +191,21 @@ describe("asking for one", () => {
       );
       expect(text).toContain("this call does not wait");
     }
+  });
+
+  it("hands out a hosted MCP sign-in's start link for the model to send", async () => {
+    link.mockResolvedValueOnce({
+      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
+      connectorIds: ["notion"],
+    });
+
+    const text = await call({ service: "Notion" });
+
+    expect(link).toHaveBeenCalledWith("notion");
+    expect(text).toContain("https://apps.example/api/botHost/h1/mcp/start/abc");
+    expect(watch).toHaveBeenCalledWith(
+      expect.objectContaining({ connectorIds: ["notion"] })
+    );
   });
 
   it("asks for GitHub with a one-tap link, like any account connector", async () => {

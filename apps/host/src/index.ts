@@ -32,7 +32,8 @@ const main = async () => {
     lease,
     (workspaceId, sessionId) =>
       composition.serviceHost.hostUploadFolder(workspaceId, sessionId),
-    composition.serviceHost.whisperModelService
+    composition.serviceHost.whisperModelService,
+    composition.serviceHost.hostedMcpSignIns
   );
   const transport = await startWebSocketTransport({
     router: createRouter(),

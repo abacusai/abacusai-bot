@@ -1,16 +1,29 @@
 /**
  * Every platform connector connects through the platform's connect page: the
  * page mints a link bound to the signed-in user and starts the provider's
- * consent. The app opens it (`openConnectPage` in platform-system) and waits here for the
- * connector to read connected.
+ * consent. In the browser an MCP sign-in opens the host's start link the same
+ * way. The app opens it (`openConnectPage` in platform-system) and waits here
+ * for the connector to read connected.
  */
+import { connectUi, type Connector } from "@abacus-ai/connectors/registry";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 
 import type { AppClient } from "#renderer/data/transport/types";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
 export const CONNECT_PAGE_PATH = "/chatllm/connect-connector";
 export const CONNECT_WAIT_MS = 180_000;
 const CONNECT_POLL_MS = 3_000;
+
+/**
+ * Whether a click opens a consent tab and then waits for the status: every
+ * platform connector, and in the browser an MCP server's hosted sign-in.
+ */
+export const opensConnectTab = (connector: Connector | undefined): boolean =>
+  connector?.kind === "platform" ||
+  (!IS_ELECTRON &&
+    connector?.kind === "mcp" &&
+    connectUi(connector) === "browser-hop");
 
 /** The page for one service, same-origin relative, starting consent on load. */
 export const connectPagePath = (service: string, hint?: string): string => {

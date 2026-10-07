@@ -24,7 +24,7 @@ const flow = (): ConnectorFlowService =>
       disconnect: platformDisconnect,
       watch,
     },
-    mcp: { add: addServer, remove: removeServer, signIn },
+    mcp: { add: addServer, remove: removeServer, signIn, watch },
     homeDir: () => "/home/ada",
   });
 
@@ -87,6 +87,22 @@ describe("an MCP server connector", () => {
       url: "https://mcp.notion.com/mcp",
     });
     expect(signIn).toHaveBeenCalledWith("notion");
+  });
+
+  it("answers a hosted sign-in with its start link and watches for the connection", async () => {
+    signIn.mockResolvedValueOnce({
+      success: true,
+      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
+    } as never);
+
+    expect(await flow().connect("notion")).toEqual({
+      ok: true,
+      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
+    });
+    expect(addServer).toHaveBeenCalledWith("notion", {
+      url: "https://mcp.notion.com/mcp",
+    });
+    expect(watch).toHaveBeenCalledWith("notion");
   });
 
   it("keeps the server but reports a sign-in that did not finish", async () => {

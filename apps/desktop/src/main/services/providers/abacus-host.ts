@@ -111,3 +111,15 @@ export const abacusRoutellmV1 = (): string => {
 
   return `${serving.origin}/v1`;
 };
+
+/**
+ * A hosted bot's public URL: the apps origin plus the same-origin proxy path
+ * its bootstrap names in `ABACUSAI_BOT_HOST_BASE`. Null when not set.
+ */
+export const hostPublicBase = (): string | null => {
+  const base = (process.env.ABACUSAI_BOT_HOST_BASE ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (!/^(?:\/[A-Za-z0-9_-]+)+$/.test(base)) return null;
+  return `${abacusAppHost()}${base}`;
+};

@@ -250,7 +250,8 @@ export interface McpAgentToolsServerOptions {
     list: () => Promise<ConnectorStatuses>;
     /**
      * A one-tap link for a platform connector, and every connector it attaches
-     * (one Google consent covers Gmail, Drive and Calendar). Null signed out.
+     * (one Google consent covers Gmail, Drive and Calendar), or a hosted MCP
+     * sign-in's start link. Null signed out, or with no link to give.
      */
     link: (
       connectorId: string
@@ -1378,7 +1379,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       });
     };
     const link =
-      match.kind === "platform" ? await connectors.link(match.id) : null;
+      match.kind !== "messaging" ? await connectors.link(match.id) : null;
     card();
     connectors.watch({
       connectorIds: link?.connectorIds ?? [match.id],
