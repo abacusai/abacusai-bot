@@ -20,6 +20,7 @@ export class MidTaskRun {
   /** Handed to the run's session, not yet read by its model; oldest first. */
   private readonly unread: MidTaskMessage[] = [];
   private readonly consumed: string[] = [];
+  private closed = false;
 
   constructor(
     private readonly steer: (text: string) => Promise<void>,
@@ -39,6 +40,7 @@ export class MidTaskRun {
 
   /** A user message started in the run's session: the oldest match is the one read. */
   noteUserMessage(text: string): void {
+    if (this.closed) return;
     const index = this.unread.findIndex(
       (message) => midTaskText(message.text) === text
     );
@@ -47,6 +49,12 @@ export class MidTaskRun {
     if (message == null) return;
     if (message.messageId != null) this.consumed.push(message.messageId);
     this.onConsumed(message);
+  }
+
+  /** The run is over: what its model never read stays the host's to run. */
+  finish(): void {
+    this.closed = true;
+    this.unread.length = 0;
   }
 
   /** The ids the run's model read, in order. */
@@ -72,6 +80,7 @@ export class MidTaskInbox {
   }
 
   close(run: MidTaskRun): void {
+    run.finish();
     if (this.run === run) this.run = null;
   }
 

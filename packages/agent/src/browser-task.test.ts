@@ -234,6 +234,22 @@ describe("the user's messages while a browser run works", () => {
     expect(run.consumedIds()).toEqual(["m1"]);
   });
 
+  it("leave a run that ends with unread messages unclaimed, for the main session's queue", async () => {
+    const { box, read } = inbox();
+    const run = box.open(async () => {})!;
+    await box.deliver({ text: "also check Friday", messageId: "m1" });
+    await box.deliver({ text: "and Saturday", messageId: "m2" });
+    run.noteUserMessage(midTaskText("also check Friday"));
+    box.close(run);
+
+    expect(run.consumedIds()).toEqual(["m1"]);
+    expect(read.map((message) => message.messageId)).toEqual(["m1"]);
+    // Read too late: the run is over and claims nothing more.
+    run.noteUserMessage(midTaskText("and Saturday"));
+    expect(run.consumedIds()).toEqual(["m1"]);
+    await expect(box.deliver({ text: "x", messageId: "m3" })).rejects.toThrow();
+  });
+
   it("let one run at a time take them", () => {
     const { box } = inbox();
     const first = box.open(async () => {})!;

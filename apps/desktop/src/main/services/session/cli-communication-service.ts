@@ -76,9 +76,12 @@ export class AgentCommunicationService {
     });
   }
 
-  stopTurn(request: AgentSessionCommandRequest): void {
+  /** False when there is no agent to tell. */
+  stopTurn(request: AgentSessionCommandRequest): boolean {
     const target = toCommandRequest(request);
-    this.dispatch(target.workspaceId, target.sessionId, { type: "stop" });
+    return this.dispatch(target.workspaceId, target.sessionId, {
+      type: "stop",
+    });
   }
 
   resetConversation(request: AgentSessionCommandRequest): void {
@@ -128,9 +131,10 @@ export class AgentCommunicationService {
     this.dispatch(target.workspaceId, target.sessionId, { type: "get_queue" });
   }
 
-  clearQueue(request: AgentSessionCommandRequest): void {
+  /** False when there is no agent to tell. */
+  clearQueue(request: AgentSessionCommandRequest): boolean {
     const target = toCommandRequest(request);
-    this.dispatch(target.workspaceId, target.sessionId, {
+    return this.dispatch(target.workspaceId, target.sessionId, {
       type: "clear_queue",
     });
   }

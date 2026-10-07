@@ -39,6 +39,8 @@ interface PhoneLaneDeps {
   hasKey: () => boolean;
   /** The phone loop's session, minted on first use. */
   openSession: () => Promise<{ workspaceId: string; sessionId: string }>;
+  /** Ends the session's work and drops what it queued; resolves once it is idle. */
+  stop: (workspaceId: string, sessionId: string) => Promise<void>;
   /** False when the session definitely did not take the message. */
   send: (
     workspaceId: string,
@@ -99,6 +101,8 @@ export class PhoneLane {
   private batchTimer: NodeJS.Timeout | null = null;
   private typing: NodeJS.Timeout | null = null;
   private session: { workspaceId: string; sessionId: string } | null = null;
+  /** A given-up session being stopped; nothing new goes to it until it is idle. */
+  private stopping: Promise<void> | null = null;
   /** Handoffs in a row the session refused; reset by one it takes. */
   private refusals = 0;
   /** This start's first poll asks the server for everything still unanswered. */
@@ -123,9 +127,13 @@ export class PhoneLane {
     });
   }
 
-  /** The session holds messages the lane has not answered yet. */
+  /** The session holds messages, their answers are going out, or it is being stopped. */
   get busy(): boolean {
-    return this.inbox.handed().length > 0;
+    return (
+      this.inbox.handed().length > 0 ||
+      this.inbox.closing().length > 0 ||
+      this.stopping != null
+    );
   }
 
   start(): void {
@@ -222,10 +230,14 @@ export class PhoneLane {
     if (!this.busy && this.lastInboundId != null) this.armBatch();
   }
 
-  /** The session is working and nothing queued is ahead of the message, so order holds. */
+  /**
+   * The session is working on handed messages under a running clock, and
+   * nothing queued is ahead of the message, so order holds.
+   */
   private canSteer(message: InboundMessage): boolean {
     return (
-      this.busy &&
+      this.clock.running &&
+      this.inbox.handed().length > 0 &&
       this.session != null &&
       this.inbox
         .queued()
@@ -379,7 +391,7 @@ export class PhoneLane {
    * they are released unacknowledged, and the server hands them back.
    */
   private async finish(reply: TurnReply): Promise<void> {
-    const messages = this.inbox.handedUnder(reply.messageIds);
+    const messages = this.inbox.close(this.inbox.handedUnder(reply.messageIds));
     if (messages.length === 0) return;
     this.clock.touch();
     const replyTo = this.replyTarget(messages)!;
@@ -406,45 +418,69 @@ export class PhoneLane {
     return sent + retried === bubbles.length;
   }
 
-  /** The session's work ran out of time: what it holds gets the apology. */
+  /**
+   * The session's work ran out of time. Everything it holds is claimed at
+   * once, the session is stopped (its queue with it), and the user hears the
+   * apology; nothing new goes to the session until it is idle.
+   */
   private async giveUp(reason: string): Promise<void> {
-    const messages = this.inbox.handed();
+    const messages = this.inbox.abandon();
     if (messages.length === 0) return;
+    this.clock.stop();
+    // After any handoff still on its way, so the stop covers it too.
+    this.stopping = this.sending.then(() => this.stopSession());
     const apologized = await this.apologize(this.replyTarget(messages)!);
     this.log(
       `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`
     );
+    await this.stopping;
+    this.stopping = null;
     await this.close(messages, apologized);
   }
 
-  /** Answered and acknowledged, or released for the server to hand back. */
+  private async stopSession(): Promise<void> {
+    if (this.session == null) return;
+    const { workspaceId, sessionId } = this.session;
+    try {
+      await this.deps.stop(workspaceId, sessionId);
+    } catch (error) {
+      this.log(`[phone] stop failed: ${describe(error)}`);
+    }
+  }
+
+  /** Closing messages: answered and acknowledged, or released. */
   private async close(
     messages: InboundMessage[],
     answered: boolean
   ): Promise<void> {
-    // A timeout may have settled some while the answer was going out.
-    const open = messages.filter((message) => message.state === "handed");
     if (answered) {
-      this.inbox.answer(open);
-      if (this.running) await this.ack(open);
+      this.inbox.answer(messages);
+      if (this.running) await this.ack(messages);
     } else {
-      this.inbox.release(open);
+      this.inbox.release(messages);
     }
     this.deps.activity();
     this.settle();
   }
 
-  /** Nothing handed any more: stop the clocks, and hand over what waited. */
+  /**
+   * Nothing held any more: stop the clocks, and hand over what waited. A
+   * note that was released waits to ride along with the user's next message.
+   */
   private settle(): void {
     if (this.busy) return;
     this.idle();
     const queued = this.inbox.queued();
     if (queued.length === 0) return;
     const retries = this.timings.deliveryRetryMs;
-    if (this.refusals === 0) this.armBatch();
-    else if (this.refusals <= retries.length)
-      this.armBatch(retries[this.refusals - 1]);
-    else void this.undeliverable(queued);
+    if (this.refusals > retries.length) void this.undeliverable(queued);
+    else if (this.refusals > 0) this.armBatch(retries[this.refusals - 1]);
+    else if (
+      queued.some(
+        (message) => message.entry.kind !== "note" || message.handoffs === 0
+      )
+    )
+      this.armBatch();
   }
 
   /** The session refused every try: the user hears it once, and the messages are done. */

@@ -3,8 +3,9 @@
  * drives over CDP on a pipe. It serves the same browser tools the desktop's
  * own view does, through the tab pages the user's-Chrome engine uses.
  *
- * - `HostedChromiumLauncher` owns the executable path, the sandbox decision,
- *   the profile lock and launch failures (a typed result, never raw text).
+ * - `HostedChromiumLauncher` owns the executable path (and its background
+ *   lookup), the sandbox decision and launch failures (typed, never raw text).
+ * - `ChromiumProfileLock` decides whether the profile's owner is still live.
  * - `CdpBrowser` is one running Chromium as a tab driver.
  * - `HostedChromiumService` is what the browser tools see: launch on first use.
  */
@@ -12,8 +13,10 @@ import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   readlinkSync,
   rmSync,
 } from "node:fs";
@@ -25,7 +28,7 @@ import type { BrowserTargetSource } from "../browser-target";
 import type { ChromeRelayEvents, ChromeTabInfo } from "./chrome-relay";
 import { ChromeTargetSource } from "./chrome-target-source";
 
-/** Names the Chromium to use; without it the Playwright lookup below runs. */
+/** Names the Chromium to use, read at once; without it the Playwright lookup below runs. */
 const HOSTED_CHROMIUM_ENV = "ABACUSAI_BOT_CHROMIUM";
 
 const PYTHON_LOOKUP_TIMEOUT_MS = 20_000;
@@ -379,7 +382,24 @@ export type HostedChromiumLaunch =
   | { ok: false; error: HostedChromiumLaunchError };
 
 const LAUNCH_TIMEOUT_MS = 30_000;
+const PROFILE_RETRY_MS = 2_000;
+const LOOKUP_RETRY_FIRST_MS = 30_000;
+const LOOKUP_RETRY_MAX_MS = 10 * 60_000;
 const SINGLETON_FILES = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
+
+/** A process's argv from /proc: `undefined` where /proc is unavailable, null when the pid has none. */
+export type ProcCmdline = (pid: number) => string[] | null | undefined;
+
+const readProcCmdline: ProcCmdline = (pid) => {
+  if (!existsSync("/proc/self/cmdline")) return undefined;
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, "utf8")
+      .split("\0")
+      .filter((arg) => arg.length > 0);
+  } catch {
+    return null;
+  }
+};
 
 const isPidAlive = (pid: number): boolean => {
   try {
@@ -390,26 +410,70 @@ const isPidAlive = (pid: number): boolean => {
   }
 };
 
-/**
- * The profile lock is Chromium's own SingletonLock, a `host-pid` symlink: a
- * live owner here keeps the profile; a dead one, or another host's, is cleared.
- */
-const claimChromiumProfile = (userDataDir: string): boolean => {
-  let owner: string;
-  try {
-    owner = readlinkSync(path.join(userDataDir, "SingletonLock"));
-  } catch {
-    return true;
-  }
-  const match = /^(.+)-(\d+)$/.exec(owner);
-  if (match?.[1] === os.hostname() && isPidAlive(Number(match[2])))
-    return false;
-  for (const name of SINGLETON_FILES)
-    rmSync(path.join(userDataDir, name), { force: true });
-  return true;
+type ProfileLockOptions = {
+  readCmdline?: ProcCmdline;
+  /** When this process started, in epoch ms. */
+  processStart?: () => number;
 };
 
-type LauncherOptions = {
+/**
+ * Chromium's own SingletonLock, a `host-pid` symlink. Its owner counts as live
+ * only if it is a Chromium on this profile, so a recycled pid never holds it.
+ */
+export class ChromiumProfileLock {
+  private readonly lockPath: string;
+
+  constructor(
+    private readonly userDataDir: string,
+    private readonly options: ProfileLockOptions = {}
+  ) {
+    this.lockPath = path.join(userDataDir, "SingletonLock");
+  }
+
+  /** True when the profile is free, clearing a stale owner's files first. */
+  claim(): boolean {
+    let owner: string;
+    try {
+      owner = readlinkSync(this.lockPath);
+    } catch {
+      return true;
+    }
+    if (this.ownerIsLive(owner)) return false;
+    for (const name of SINGLETON_FILES)
+      rmSync(path.join(this.userDataDir, name), { force: true });
+    return true;
+  }
+
+  private ownerIsLive(owner: string): boolean {
+    const match = /^(.+)-(\d+)$/.exec(owner);
+    if (match?.[1] !== os.hostname()) return false;
+    const pid = Number(match[2]);
+    if (!isPidAlive(pid)) return false;
+    const argv = (this.options.readCmdline ?? readProcCmdline)(pid);
+    if (argv === undefined) return this.lockedSinceStart();
+    if (argv == null || !(argv[0] ?? "").toLowerCase().includes("chrom"))
+      return false;
+    const profile = path.resolve(this.userDataDir);
+    return argv.some(
+      (arg) =>
+        arg.startsWith("--user-data-dir=") &&
+        path.resolve(arg.slice("--user-data-dir=".length)) === profile
+    );
+  }
+
+  /** Without /proc: a lock made since this process started is a live one. */
+  private lockedSinceStart(): boolean {
+    const processStart =
+      this.options.processStart ?? (() => Date.now() - process.uptime() * 1000);
+    try {
+      return lstatSync(this.lockPath).mtimeMs >= processStart();
+    } catch {
+      return false;
+    }
+  }
+}
+
+type LauncherOptions = ProfileLockOptions & {
   userDataDir: () => string;
   /** The hosted computer, which is itself the sandbox. */
   hosted: () => boolean;
@@ -419,26 +483,35 @@ type LauncherOptions = {
   spawn?: typeof spawn;
   log?: (line: string) => void;
   launchTimeoutMs?: number;
+  /** Waits out a held profile before its one retry. */
+  delay?: (ms: number) => Promise<void>;
 };
 
-/** Finds and launches the Chromium; every failure is a typed result. */
+/**
+ * Finds and launches the Chromium; every failure is a typed result. The path
+ * comes from the env var at once, else from one lookup at start, retried in
+ * the background with backoff while it finds nothing.
+ */
 export class HostedChromiumLauncher {
-  private executable: string | null = null;
-  private resolving: Promise<string | null> | null = null;
+  private executable: string | null;
+  private lookup: Promise<boolean> | null = null;
+  private retryMs = LOOKUP_RETRY_FIRST_MS;
+  private retryTimer: NodeJS.Timeout | null = null;
+  private disposed = false;
 
-  constructor(private readonly options: LauncherOptions) {}
+  constructor(private readonly options: LauncherOptions) {
+    this.executable = this.configured();
+  }
 
   get found(): boolean {
     return this.executable != null;
   }
 
-  /** The executable: resolved once, and looked up again on each call while none was found. */
-  resolve(): Promise<string | null> {
-    if (this.executable != null) return Promise.resolve(this.executable);
-    this.resolving ??= this.lookUp().finally(() => {
-      this.resolving = null;
-    });
-    return this.resolving;
+  /** Starts the lookup once; resolves with whether the first one found a Chromium. */
+  prepare(): Promise<boolean> {
+    if (this.executable != null) return Promise.resolve(true);
+    this.lookup ??= this.lookUp();
+    return this.lookup;
   }
 
   /** Chromium refuses its sandbox as root; on the hosted computer it adds nothing. */
@@ -448,16 +521,14 @@ export class HostedChromiumLauncher {
   }
 
   async launch(): Promise<HostedChromiumLaunch> {
-    const executable = await this.resolve();
+    const executable = this.executable;
     if (executable == null) return this.failure("not-found");
     const userDataDir = this.options.userDataDir();
     let browser: CdpBrowser | null = null;
     try {
       mkdirSync(userDataDir, { recursive: true });
-      if (!claimChromiumProfile(userDataDir)) {
-        this.log(`[browser] ${userDataDir} is held by a live Chromium`);
+      if (!(await this.claimProfile(userDataDir)))
         return this.failure("profile-in-use");
-      }
       browser = new CdpBrowser({
         executable,
         args: hostedChromiumArgs(userDataDir, this.sandboxed()),
@@ -474,31 +545,60 @@ export class HostedChromiumLauncher {
     }
   }
 
-  private async lookUp(): Promise<string | null> {
-    const env = this.options.env ?? process.env;
-    const configured = env[HOSTED_CHROMIUM_ENV];
-    if (configured != null && configured.length > 0) {
-      if (existsSync(configured)) {
-        this.log(
-          `[browser] Chromium from ${HOSTED_CHROMIUM_ENV}: ${configured}`
-        );
-        this.executable = configured;
-        return configured;
-      }
-      this.log(
-        `[browser] ${HOSTED_CHROMIUM_ENV} is not a file (${configured}); looking elsewhere`
-      );
+  /** Stops the background lookup. */
+  dispose(): void {
+    this.disposed = true;
+    if (this.retryTimer != null) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  /** A held profile gets one more look after a short wait, then is reported. */
+  private async claimProfile(userDataDir: string): Promise<boolean> {
+    const lock = new ChromiumProfileLock(userDataDir, this.options);
+    if (lock.claim()) return true;
+    this.log(`[browser] ${userDataDir} is held by a live Chromium; waiting`);
+    const delay =
+      this.options.delay ??
+      ((ms: number) => new Promise<void>((done) => setTimeout(done, ms)));
+    await delay(PROFILE_RETRY_MS);
+    if (lock.claim()) return true;
+    this.log(`[browser] ${userDataDir} is still held`);
+    return false;
+  }
+
+  private configured(): string | null {
+    const configured = (this.options.env ?? process.env)[HOSTED_CHROMIUM_ENV];
+    if (configured == null || configured.length === 0) return null;
+    if (existsSync(configured)) {
+      this.log(`[browser] Chromium from ${HOSTED_CHROMIUM_ENV}: ${configured}`);
+      return configured;
     }
-    const found = await (this.options.find ?? findHostedChromium)(env).catch(
-      () => null
-    );
     this.log(
-      found == null
-        ? "[browser] no Chromium found; the built-in browser is off for now"
-        : `[browser] Chromium from the Playwright lookup: ${found}`
+      `[browser] ${HOSTED_CHROMIUM_ENV} is not a file (${configured}); looking elsewhere`
     );
-    this.executable = found;
-    return found;
+    return null;
+  }
+
+  private async lookUp(): Promise<boolean> {
+    const found = await (this.options.find ?? findHostedChromium)(
+      this.options.env ?? process.env
+    ).catch(() => null);
+    if (this.disposed) return false;
+    if (found != null) {
+      this.log(`[browser] Chromium from the Playwright lookup: ${found}`);
+      this.executable = found;
+      return true;
+    }
+    this.log(
+      `[browser] no Chromium found; looking again in ${this.retryMs / 1000} s`
+    );
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.lookUp();
+    }, this.retryMs);
+    this.retryTimer.unref();
+    this.retryMs = Math.min(this.retryMs * 2, LOOKUP_RETRY_MAX_MS);
+    return false;
   }
 
   private withinTimeout(launched: Promise<void>): Promise<void> {
@@ -532,11 +632,12 @@ export class HostedChromiumService {
 
   constructor(private readonly launcher: HostedChromiumLauncher) {}
 
-  /** True once there is a Chromium; looks again while there is none. */
-  async ready(): Promise<boolean> {
-    return (await this.launcher.resolve()) != null;
+  /** Host start: finds the Chromium, then keeps looking in the background while there is none. */
+  prepare(): Promise<boolean> {
+    return this.launcher.prepare();
   }
 
+  /** Sync and cached: never starts a lookup. */
   available(): boolean {
     return this.launcher.found;
   }
@@ -569,6 +670,7 @@ export class HostedChromiumService {
   }
 
   dispose(): void {
+    this.launcher.dispose();
     this.browser?.close();
     this.browser = null;
     this.source = null;

@@ -41,6 +41,11 @@ export class TurnReply {
     this.draft = "";
   }
 
+  /** A stopped turn answers nothing: no `turn_reply`. */
+  abandon(): void {
+    this.open = false;
+  }
+
   fail(): void {
     if (this.open) this.failed = true;
   }

@@ -1748,7 +1748,7 @@ export class ServiceHost {
       });
     },
     emitSessionClosed: (workspaceId, sessionId) => {
-      this.sessionTurnStateService.markStopped(workspaceId, sessionId);
+      this.sessionTurnStateService.markClosed(workspaceId, sessionId);
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
       this.emitEvent({
@@ -3173,6 +3173,18 @@ export class ServiceHost {
     this.agentCommunicationService.stopTurn(request);
   }
 
+  /**
+   * Abandons the turn and everything queued behind it, resolving once the
+   * agent has settled (or is gone), so the next send meets an idle session.
+   */
+  async abandonAgentTurn(request: AgentSessionCommandRequest): Promise<void> {
+    this.agentCommunicationService.clearQueue(request);
+    this.markTurnStopped(request.workspaceId, request.sessionId);
+    const settled = this.sessionTurnStateService.stopSettled(request.sessionId);
+    if (!this.agentCommunicationService.stopTurn(request)) return;
+    await settled;
+  }
+
   /** Main's side of a Stop, for `stopAgentTurn` and the relay's `ai.cancel`. */
   private markTurnStopped(workspaceId: string, sessionId: string): void {
     // Idle, and in-flight CLI events suppressed until the next send.
@@ -4583,9 +4595,9 @@ export class ServiceHost {
     return { workspaceId: session.workspaceId, sessionId: session.id };
   }
 
-  /** Web-host start: resolves the Chromium path (env var, else the lookup) and logs it. */
+  /** Web-host start: looks up the Chromium once, then in the background while there is none. */
   prepareHostedBrowser(): Promise<boolean> {
-    return this.hostedChromium.ready();
+    return this.hostedChromium.prepare();
   }
 
   /** Every session's agent events, past the post-Stop filter. */

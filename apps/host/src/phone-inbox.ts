@@ -1,9 +1,14 @@
 /**
  * Who owns each WhatsApp message the phone lane took in, keyed by its id
- * (the server's message id, or the lane's own for a note). A message moves
- * queued -> handed (given to the session under a handoff id) -> answered (its
- * final answer delivered), or from handed back to queued only when the
- * session definitely refused it. Every state change happens here.
+ * (the server's message id, or the lane's own for a note). Every state change
+ * happens here:
+ *
+ *   queued  -> handed   given to the session under a handoff id
+ *   handed  -> queued   the session definitely refused it
+ *   handed  -> closing  its answer (or the apology) is going out
+ *   closing -> answered that reached the user; acknowledged
+ *   closing -> released it did not: a server message is forgotten for the
+ *                       server to redeliver, a host note is queued again
  */
 
 export interface PhoneInboxEntry {
@@ -20,7 +25,7 @@ export interface PhoneInboxEntry {
   kind?: string;
 }
 
-export type InboundState = "queued" | "handed" | "answered";
+export type InboundState = "queued" | "handed" | "closing" | "answered";
 
 export interface InboundMessage {
   readonly entry: PhoneInboxEntry;
@@ -29,6 +34,8 @@ export interface InboundMessage {
   state: InboundState;
   /** The id the session knows it by while handed: its own, or its batch's. */
   handoff: string | null;
+  /** How many times it was handed to the session. */
+  handoffs: number;
 }
 
 /** Answered messages kept to recognise a redelivery whose ack was lost. */
@@ -50,6 +57,7 @@ export class PhoneInbox {
       seq: ++this.seq,
       state: "queued",
       handoff: null,
+      handoffs: 0,
     });
     return true;
   }
@@ -76,7 +84,24 @@ export class PhoneInbox {
       this.expect(message, "queued");
       message.state = "handed";
       message.handoff = handoff;
+      message.handoffs += 1;
     }
+  }
+
+  /** handed -> closing, at once: nothing else may claim them while their answer goes out. */
+  close(messages: readonly InboundMessage[]): InboundMessage[] {
+    const claimed = messages.filter((message) => message.state === "handed");
+    for (const message of claimed) message.state = "closing";
+    return claimed;
+  }
+
+  /** Every handed message -> closing: the lane gives up on them. */
+  abandon(): InboundMessage[] {
+    return this.close(this.handed());
+  }
+
+  closing(): InboundMessage[] {
+    return this.inState("closing");
   }
 
   /** handed -> queued: the session definitely did not take it. */
@@ -88,10 +113,10 @@ export class PhoneInbox {
     }
   }
 
-  /** queued | handed -> answered. */
+  /** closing -> answered; queued -> answered when it is given up on before it went. */
   answer(messages: readonly InboundMessage[]): void {
     for (const message of messages) {
-      if (message.state === "answered") continue;
+      if (message.state !== "closing") this.expect(message, "queued");
       message.state = "answered";
       message.handoff = null;
     }
@@ -99,13 +124,19 @@ export class PhoneInbox {
   }
 
   /**
-   * Handed, but its answer never reached the user: forgotten unacknowledged,
-   * so the server's redelivery reads as a new message.
+   * closing -> released: its answer never reached the user. The server
+   * redelivers its own messages, so those are forgotten unacknowledged; a
+   * host note exists only here, so it is queued again.
    */
   release(messages: readonly InboundMessage[]): void {
     for (const message of messages) {
-      this.expect(message, "handed");
-      this.messages.delete(message.entry.id);
+      this.expect(message, "closing");
+      if (message.entry.kind === "note") {
+        message.state = "queued";
+        message.handoff = null;
+      } else {
+        this.messages.delete(message.entry.id);
+      }
     }
   }
 

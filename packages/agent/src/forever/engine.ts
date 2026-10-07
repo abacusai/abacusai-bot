@@ -1206,6 +1206,7 @@ export class ForeverEngine {
 
   async stop(): Promise<void> {
     this.interrupted = true;
+    this.reply.abandon();
     this.stallWatch.clear();
     this.rejectAllPending("Interrupted.");
     this.pendingSteers.clear();

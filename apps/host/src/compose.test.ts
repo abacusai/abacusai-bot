@@ -29,6 +29,7 @@ const fixture = await vi.hoisted(async () => {
 import { connectInProcess } from "#main/rpc/testing";
 
 import { composeNodeHost } from "./compose";
+import { PhoneInbox } from "./phone-inbox";
 import { PhoneLane } from "./phone-lane";
 import Store from "./store";
 import { HostUnsupportedError } from "./unsupported";
@@ -162,9 +163,12 @@ describe("the phone lane", () => {
     options: {
       refuse?: (messageId: string) => boolean;
       replyFails?: (text: string) => boolean;
+      /** Holds each reply until the test lets it go. */
+      holdReplies?: boolean;
       timings?: Record<string, number>;
     } = {}
   ) => {
+    const held: Array<() => void> = [];
     const calls: Array<Record<string, unknown>> = [];
     let listener: (sessionId: string, payload: never) => void = () => {};
     const send = vi.fn(
@@ -172,10 +176,16 @@ describe("the phone lane", () => {
         !(options.refuse?.(messageId) ?? false)
     );
     const activity = vi.fn();
+    let settleStop: () => void = () => {};
+    const stop = vi.fn(
+      () => new Promise<void>((resolve) => (settleStop = resolve))
+    );
     const phone = new PhoneLane(
       {
         call: (async (body: Record<string, unknown>) => {
           calls.push(body);
+          if (body.action === "reply" && options.holdReplies === true)
+            await new Promise<void>((resolve) => held.push(resolve));
           if (
             body.action === "reply" &&
             options.replyFails?.(String(body.text)) === true
@@ -185,6 +195,7 @@ describe("the phone lane", () => {
         }) as never,
         hasKey: () => false,
         openSession: async () => ({ workspaceId: "w", sessionId: "s" }),
+        stop,
         send,
         onAgentEvent: (next) => {
           listener = next as never;
@@ -212,7 +223,20 @@ describe("the phone lane", () => {
       calls
         .filter((body) => body.action === "ack")
         .map((body) => body.message_ids);
-    return { phone, calls, send, activity, event, reply, replies, acks };
+    const release = () => held.splice(0).forEach((resolve) => resolve());
+    return {
+      phone,
+      calls,
+      send,
+      stop,
+      settleStop: () => settleStop(),
+      activity,
+      event,
+      reply,
+      replies,
+      acks,
+      release,
+    };
   };
 
   it("sends a progress line at once and acks only once the final answer is out", async () => {
@@ -359,7 +383,7 @@ describe("the phone lane", () => {
   it("restarts the idle limit on tool progress and gives up at the hard cap", async () => {
     vi.useFakeTimers();
     try {
-      const { phone, send, event, replies, acks } = lane({
+      const { phone, send, stop, settleStop, event, replies, acks } = lane({
         timings: { idleMs: 1_000, hardCapMs: 5_000 },
       });
       phone.arrive({ id: "m1", text: "research this" });
@@ -379,7 +403,13 @@ describe("the phone lane", () => {
         event({ type: "text_delta", content: "…", messageId: "a" });
       }
       await vi.advanceTimersByTimeAsync(0);
-      // Past the cap however busy: the user gets the apology, and the message is done.
+      // Past the cap however busy: the session is stopped and the user gets the apology.
+      expect(stop).toHaveBeenCalledWith("w", "s");
+      expect(replies()).toHaveLength(1);
+      // Held until the session is idle.
+      expect(phone.busy).toBe(true);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
       expect(phone.busy).toBe(false);
       expect(replies()).toHaveLength(1);
       expect(acks()).toEqual([["m1"]]);
@@ -392,19 +422,121 @@ describe("the phone lane", () => {
   it("gives up after the idle limit with no sign of work", async () => {
     vi.useFakeTimers();
     try {
-      const { phone, send, replies } = lane({
+      const { phone, send, settleStop, replies } = lane({
         timings: { idleMs: 1_000, hardCapMs: 60_000 },
       });
       phone.arrive({ id: "m1", text: "research this" });
       await vi.advanceTimersByTimeAsync(0);
       expect(send).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(1_000);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
       expect(phone.busy).toBe(false);
       expect(replies()).toHaveLength(1);
       phone.stop();
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("gives up atomically: a message arriving during the apology waits for the stopped session, then goes alone", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, stop, settleStop, reply, replies, acks, release } =
+        lane({
+          holdReplies: true,
+          timings: { idleMs: 1_000, hardCapMs: 60_000 },
+        });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(1_000);
+      // The apology is on its way; the session is being stopped.
+      expect(replies()).toHaveLength(1);
+      expect(stop).toHaveBeenCalledTimes(1);
+
+      phone.arrive({ id: "m2", text: "are you there?" });
+      await vi.advanceTimersByTimeAsync(0);
+      // Not steered into the abandoned work.
+      expect(send).toHaveBeenCalledTimes(1);
+
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"]]);
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(send).toHaveBeenLastCalledWith("w", "s", "are you there?", "m2");
+
+      // A new clock: the new message is answered normally.
+      reply(["m2"], "Yes, here.");
+      await vi.advanceTimersByTimeAsync(0);
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"], ["m2"]]);
+      expect(phone.busy).toBe(false);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a host note whose answer could not be sent, and sends it with the user's next message", async () => {
+    const { phone, send, reply, acks } = lane({
+      replyFails: (text) => text === "Gmail is connected.",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+
+    phone.note("[connected] gmail");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    const noteId = send.mock.calls[1]![3];
+    reply([noteId], "Gmail is connected.");
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+    // Not handed again on its own: it waits for the user.
+    expect(send).toHaveBeenCalledTimes(2);
+
+    phone.arrive({ id: "m2", text: "thanks" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send.mock.calls[2]![2]).toBe("[connected] gmail\n\nthanks");
+    phone.stop();
+  });
+});
+
+describe("the phone inbox", () => {
+  it("allows only its own transitions", () => {
+    const inbox = new PhoneInbox();
+    expect(inbox.add({ id: "m1", text: "hi" })).toBe(true);
+    expect(inbox.add({ id: "m1", text: "hi" })).toBe(false);
+    const m1 = inbox.get("m1")!;
+
+    expect(() => inbox.requeue([m1])).toThrow(/queued, not handed/);
+    expect(() => inbox.release([m1])).toThrow(/queued, not closing/);
+    inbox.hand([m1], "m1");
+    expect(() => inbox.hand([m1], "m1")).toThrow(/handed, not queued/);
+    expect(() => inbox.answer([m1])).toThrow(/handed, not queued/);
+    expect(inbox.handedUnder(["m1"])).toEqual([m1]);
+
+    expect(inbox.close([m1])).toEqual([m1]);
+    // Claimed once: a second close finds nothing.
+    expect(inbox.close([m1])).toEqual([]);
+    expect(inbox.abandon()).toEqual([]);
+    inbox.answer([m1]);
+    expect(m1.state).toBe("answered");
+    expect(() => inbox.release([m1])).toThrow(/answered, not closing/);
+  });
+
+  it("forgets a released server message but queues a released note again", () => {
+    const inbox = new PhoneInbox();
+    inbox.add({ id: "m1", text: "hi" });
+    inbox.add({ id: "note-1", kind: "note", text: "connected" });
+    const both = inbox.queued();
+    inbox.hand(both, "m1");
+    inbox.release(inbox.abandon());
+    expect(inbox.get("m1")).toBeUndefined();
+    expect(inbox.get("note-1")).toMatchObject({ state: "queued", handoffs: 1 });
   });
 });
 afterAll(() => {

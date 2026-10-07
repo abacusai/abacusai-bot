@@ -67,6 +67,8 @@ export class SessionTurnStateService {
   >();
   /** sessionId -> what the session was last seen doing, for the timeout message. */
   private readonly lastActivity = new Map<string, string>();
+  /** Waiting on a stopped session: the agent's idle, its exit, or the next send. */
+  private readonly stopWaiters = new Map<string, Array<() => void>>();
 
   constructor(
     private readonly emitChange: EmitChange,
@@ -98,6 +100,7 @@ export class SessionTurnStateService {
 
   markSent(workspaceId: string, sessionId: string): void {
     this.suppressedSessions.delete(sessionId);
+    this.releaseStopWaiters(sessionId);
     this.lastActivity.delete(sessionId);
     this.set(workspaceId, sessionId, "pending");
     this.startActivityTimer(workspaceId, sessionId);
@@ -107,6 +110,31 @@ export class SessionTurnStateService {
     this.suppressedSessions.add(sessionId);
     this.clearActivityTimer(sessionId);
     this.set(workspaceId, sessionId, "idle");
+  }
+
+  /** The agent process is gone: nothing more will settle its stop. */
+  markClosed(workspaceId: string, sessionId: string): void {
+    this.markStopped(workspaceId, sessionId);
+    this.releaseStopWaiters(sessionId);
+  }
+
+  /**
+   * Resolves once a stopped session has settled: the agent confirmed idle,
+   * its process closed, or the next send went out. Call after markStopped.
+   */
+  stopSettled(sessionId: string): Promise<void> {
+    if (!this.suppressedSessions.has(sessionId)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const waiters = this.stopWaiters.get(sessionId) ?? [];
+      waiters.push(resolve);
+      this.stopWaiters.set(sessionId, waiters);
+    });
+  }
+
+  private releaseStopWaiters(sessionId: string): void {
+    const waiters = this.stopWaiters.get(sessionId) ?? [];
+    this.stopWaiters.delete(sessionId);
+    for (const resolve of waiters) resolve();
   }
 
   /**
@@ -146,6 +174,7 @@ export class SessionTurnStateService {
         event.status === AgentStatus.Idle
       ) {
         this.suppressedSessions.delete(sessionId);
+        this.releaseStopWaiters(sessionId);
         // The cache is already idle from markStopped; forwarding re-renders.
         return false;
       }
@@ -186,6 +215,7 @@ export class SessionTurnStateService {
     this.clearActivityTimer(sessionId);
     this.states.delete(sessionId);
     this.suppressedSessions.delete(sessionId);
+    this.releaseStopWaiters(sessionId);
     this.lastActivity.delete(sessionId);
   }
 

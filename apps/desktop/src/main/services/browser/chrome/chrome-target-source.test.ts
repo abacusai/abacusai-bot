@@ -5,7 +5,7 @@
  */
 import { EventEmitter } from "node:events";
 import {
-  existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -263,7 +263,7 @@ describe("the hosted computer's own Chromium", () => {
       return { launcher, chromium, lines };
     };
 
-    it("takes the path from ABACUSAI_BOT_CHROMIUM over the lookup, and says so", async () => {
+    it("takes the path from ABACUSAI_BOT_CHROMIUM at once, with no lookup, and says so", async () => {
       const executable = path.join(profile(), "chrome");
       writeFileSync(executable, "");
       const find = vi.fn(async () => "/found/chrome");
@@ -272,8 +272,9 @@ describe("the hosted computer's own Chromium", () => {
         find,
       });
 
-      expect(await launcher.resolve()).toBe(executable);
+      expect(launcher.found).toBe(true);
       expect((await launcher.launch()).ok).toBe(true);
+      expect(await launcher.prepare()).toBe(true);
       expect(chromium.spawn.mock.calls[0]?.[0]).toBe(executable);
       expect(find).not.toHaveBeenCalled();
       expect(lines).toContain(
@@ -281,21 +282,50 @@ describe("the hosted computer's own Chromium", () => {
       );
     });
 
-    it("looks again on the next use when the start lookup found nothing", async () => {
-      const find = vi
-        .fn<() => Promise<string | null>>()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValue("/found/chrome");
-      const { launcher, chromium } = await launcherWith({ find });
+    it("looks up once at start, then in the background with backoff; launch never looks", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const find = vi
+          .fn<() => Promise<string | null>>()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null)
+          .mockResolvedValue("/found/chrome");
+        const { launcher, chromium } = await launcherWith({ find });
 
-      expect(await launcher.resolve()).toBeNull();
-      expect(launcher.found).toBe(false);
-      expect(find).toHaveBeenCalledTimes(1);
+        expect(await launcher.prepare()).toBe(false);
+        const missed = await launcher.launch();
+        expect("error" in missed && missed.error.code).toBe("not-found");
+        expect(find).toHaveBeenCalledTimes(1);
 
-      expect((await launcher.launch()).ok).toBe(true);
-      expect(chromium.spawn.mock.calls[0]?.[0]).toBe("/found/chrome");
-      await launcher.resolve();
-      expect(find).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(30_000);
+        expect(find).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(59_999);
+        expect(find).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(find).toHaveBeenCalledTimes(3);
+        expect(launcher.found).toBe(true);
+
+        expect((await launcher.launch()).ok).toBe(true);
+        expect(chromium.spawn.mock.calls[0]?.[0]).toBe("/found/chrome");
+        await vi.advanceTimersByTimeAsync(20 * 60_000);
+        expect(find).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stops looking once disposed", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const find = vi.fn(async () => null);
+        const { launcher } = await launcherWith({ find });
+        await launcher.prepare();
+        launcher.dispose();
+        await vi.advanceTimersByTimeAsync(20 * 60_000);
+        expect(find).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("drops the sandbox only as root or on the hosted computer", async () => {
@@ -308,6 +338,7 @@ describe("the hosted computer's own Chromium", () => {
           isRoot: () => isRoot,
           hosted: () => hosted,
         });
+        await launcher.prepare();
         await launcher.launch();
         expect(chromium.spawn.mock.calls[0]?.[1].includes("--no-sandbox")).toBe(
           noSandbox
@@ -315,22 +346,112 @@ describe("the hosted computer's own Chromium", () => {
       }
     });
 
-    it("never launches on a profile a live Chromium holds, and clears a dead one's lock", async () => {
-      const dir = profile();
-      const lock = path.join(dir, "SingletonLock");
-      symlinkSync(`${os.hostname()}-${process.pid}`, lock);
-      const live = await launcherWith({ userDataDir: () => dir });
+    describe("the profile lock", () => {
+      /** The lock is a dangling symlink, so `existsSync` cannot see it. */
+      const locked = (lock: string) => {
+        try {
+          lstatSync(lock);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      /** A profile whose SingletonLock names this host and a pid that is alive. */
+      const lockedProfile = () => {
+        const dir = profile();
+        const lock = path.join(dir, "SingletonLock");
+        symlinkSync(`${os.hostname()}-${process.pid}`, lock);
+        return { dir, lock };
+      };
+      const launchOn = async (
+        dir: string,
+        options: Parameters<typeof launcherWith>[0] = {}
+      ) => {
+        const delay = vi.fn(async () => {});
+        const made = await launcherWith({
+          userDataDir: () => dir,
+          delay,
+          ...options,
+        });
+        await made.launcher.prepare();
+        return { ...made, delay, launched: await made.launcher.launch() };
+      };
 
-      const held = await live.launcher.launch();
-      expect(held.ok).toBe(false);
-      expect("error" in held && held.error.code).toBe("profile-in-use");
-      expect(live.chromium.spawn).not.toHaveBeenCalled();
+      it("blocks on a live Chromium on this profile, after one retry", async () => {
+        const { dir, lock } = lockedProfile();
+        const readCmdline = vi.fn(() => [
+          "/opt/chromium/chrome",
+          "--headless=new",
+          `--user-data-dir=${dir}`,
+        ]);
 
-      rmSync(lock);
-      symlinkSync(`${os.hostname()}-999999999`, lock);
-      const stale = await launcherWith({ userDataDir: () => dir });
-      expect((await stale.launcher.launch()).ok).toBe(true);
-      expect(existsSync(lock)).toBe(false);
+        const { launched, chromium, delay } = await launchOn(dir, {
+          readCmdline,
+        });
+
+        expect("error" in launched && launched.error.code).toBe(
+          "profile-in-use"
+        );
+        expect(delay).toHaveBeenCalledOnce();
+        expect(delay).toHaveBeenCalledWith(2_000);
+        expect(readCmdline).toHaveBeenCalledTimes(2);
+        expect(chromium.spawn).not.toHaveBeenCalled();
+        expect(locked(lock)).toBe(true);
+      });
+
+      it("launches when the retry finds the profile free", async () => {
+        const { dir, lock } = lockedProfile();
+        const delay = vi.fn(async () => rmSync(lock));
+        const { launched } = await launchOn(dir, {
+          readCmdline: () => ["/opt/chromium/chrome", `--user-data-dir=${dir}`],
+          delay,
+        });
+        expect(launched.ok).toBe(true);
+        expect(delay).toHaveBeenCalledOnce();
+      });
+
+      it("clears a recycled pid's lock: alive, but not a Chromium on this profile", async () => {
+        for (const argv of [
+          ["/usr/bin/node", "server.js"],
+          ["/opt/chromium/chrome", "--user-data-dir=/elsewhere"],
+        ]) {
+          const { dir, lock } = lockedProfile();
+          const { launched, delay } = await launchOn(dir, {
+            readCmdline: () => argv,
+          });
+          expect(launched.ok).toBe(true);
+          expect(delay).not.toHaveBeenCalled();
+          expect(locked(lock)).toBe(false);
+        }
+      });
+
+      it("clears a dead owner's lock", async () => {
+        const dir = profile();
+        const lock = path.join(dir, "SingletonLock");
+        symlinkSync(`${os.hostname()}-999999999`, lock);
+        const { launched } = await launchOn(dir);
+        expect(launched.ok).toBe(true);
+        expect(locked(lock)).toBe(false);
+      });
+
+      it("without /proc, holds to a lock made since this process started and clears an older one", async () => {
+        const { dir, lock } = lockedProfile();
+        const held = await launchOn(dir, {
+          readCmdline: () => undefined,
+          processStart: () => Date.now() - 60_000,
+        });
+        expect("error" in held.launched && held.launched.error.code).toBe(
+          "profile-in-use"
+        );
+        expect(locked(lock)).toBe(true);
+
+        const stale = await launchOn(dir, {
+          readCmdline: () => undefined,
+          processStart: () => Date.now() + 60_000,
+        });
+        expect(stale.launched.ok).toBe(true);
+        expect(locked(lock)).toBe(false);
+      });
     });
 
     it("reports a failed launch as its typed error, the raw cause only in the log", async () => {
@@ -341,7 +462,7 @@ describe("the hosted computer's own Chromium", () => {
         throw new Error("spawn /found/chrome EACCES secret-detail");
       });
       const service = new HostedChromiumService(launcher);
-      await service.ready();
+      await service.prepare();
 
       const failure = await service
         .targetSource()

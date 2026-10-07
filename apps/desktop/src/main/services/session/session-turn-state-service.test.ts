@@ -233,6 +233,31 @@ describe("a tool that runs quietly is not a wedged agent", () => {
     expect(service.get(WS, SESSION).phase).toBe("idle");
   });
 
+  it("settles a stop once the agent confirms idle, and not before", async () => {
+    service.markSent(WS, SESSION);
+    service.markStopped(WS, SESSION);
+    let settled = false;
+    const waiting = service.stopSettled(SESSION).then(() => (settled = true));
+
+    service.filterDesktopEvent(WS, SESSION, toolStart("bash", {}));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    service.filterDesktopEvent(WS, SESSION, statusChange(AgentStatus.Idle));
+    await waiting;
+    expect(settled).toBe(true);
+  });
+
+  it("settles a stop when the agent process closes, with no idle to wait for", async () => {
+    service.markSent(WS, SESSION);
+    service.markStopped(WS, SESSION);
+    const waiting = service.stopSettled(SESSION);
+    service.markClosed(WS, SESSION);
+    await expect(waiting).resolves.toBeUndefined();
+    // Nothing stopped: nothing to wait for.
+    await expect(service.stopSettled("other")).resolves.toBeUndefined();
+  });
+
   it("does not start a clock on a session parked on an approval", () => {
     // waiting_permission deliberately runs no timer. A heartbeat arriving
     // while the prompt is up must not quietly start one.

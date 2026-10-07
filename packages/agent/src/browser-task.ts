@@ -483,6 +483,7 @@ export async function runBrowserTask(
     let session: PausedRun["session"] & {
       subscribe: (listener: (event: AgentSessionEvent) => void) => () => void;
       steer: (text: string) => Promise<void>;
+      clearQueue: () => void;
     };
 
     if (resumed != null) {
@@ -745,7 +746,11 @@ export async function runBrowserTask(
         unsubscribe();
       }
     } finally {
-      if (midTask != null) context.midTask?.close(midTask);
+      if (midTask != null) {
+        context.midTask?.close(midTask);
+        // A paused run must not read them on resume: the host runs them itself.
+        session.clearQueue();
+      }
       // A capped run can be mid-tool; a stranded child looks cut short.
       forwardTools.settle();
       if (keepAlive) {

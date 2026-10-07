@@ -91,7 +91,7 @@ export const composeNodeHost = async () => {
     () => resolveAbacusApiKey() != null,
     host.adoptAbacusCredential
   );
-  // The Chromium path (ABACUSAI_BOT_CHROMIUM, else a lookup) is resolved now; launched on first use.
+  // Chromium from ABACUSAI_BOT_CHROMIUM, else one lookup now, retried in the background while missing.
   void serviceHost.prepareHostedBrowser();
   if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
     serviceHost.startBackgroundSync();
@@ -165,6 +165,8 @@ export const composeNodeHost = async () => {
     }),
     hasKey: () => resolveAbacusApiKey() != null,
     openSession: openPhoneSession,
+    stop: (workspaceId, sessionId) =>
+      serviceHost.abandonAgentTurn({ workspaceId, sessionId }),
     send: (workspaceId, sessionId, message, messageId) =>
       serviceHost.sendAgentMessage({
         workspaceId,
