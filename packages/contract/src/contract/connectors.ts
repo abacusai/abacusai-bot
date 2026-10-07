@@ -31,18 +31,15 @@ export type ConnectorsEvent =
 export const connectors = {
   /** Every registry connector's state on this machine, keyed by connector id. */
   statuses: query.input(NoInput).output(type<ConnectorStatuses>()),
-  /** A flow with no fields: a browser hop or a plain install. */
+  /**
+   * A flow with no fields: a platform connector answers with its connect
+   * page's `url` for the caller to open; an MCP server installs.
+   */
   connect: mutation
     .input(
       v.object({
         ...ConnectorIdInput.entries,
-        options: v.optional(
-          v.object({
-            autostart: v.optional(v.boolean()),
-            hint: v.optional(v.string()),
-            owner: v.optional(v.literal("first-run")),
-          })
-        ),
+        options: v.optional(v.object({ hint: v.optional(v.string()) })),
       })
     )
     .output(type<ConnectorOutcome>()),
@@ -54,6 +51,7 @@ export const connectors = {
       })
     )
     .output(type<ConnectorOutcome>()),
+  /** Nothing waits in the host any more; kept for older clients. */
   cancelConnect: mutation.input(NoInput).output(type<void>()),
   disconnect: mutation.input(ConnectorIdInput).output(type<ConnectorOutcome>()),
   /** The agent is blocked inside its tool call until this. */

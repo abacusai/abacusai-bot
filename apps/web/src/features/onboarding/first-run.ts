@@ -1,9 +1,9 @@
+import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
+
 import type { Transport } from "#renderer/data/transport";
-import {
-  reserveAuthorization,
-  completeConnectorAuthorization,
-} from "#renderer/lib/browser/authorization";
+import { waitForConnected } from "#renderer/lib/connect-page";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { openConnectPage } from "#renderer/lib/platform-system";
 
 const claim = (key: string): boolean => {
   try {
@@ -15,7 +15,23 @@ const claim = (key: string): boolean => {
   }
 };
 
-/** The account's consent hop outlives whichever onboarding page starts it. */
+/** Gmail's connect page for the signed-in address, then the wait for it to connect. */
+const connectGmail = (
+  transport: Transport,
+  email: string
+): Promise<ConnectorOutcome> =>
+  openConnectPage(transport.client, "abacus-gmailuser", { hint: email }).then(
+    (outcome) =>
+      outcome.ok
+        ? waitForConnected(
+            transport.client,
+            "abacus-gmailuser",
+            new AbortController().signal
+          )
+        : outcome
+  );
+
+/** The account's Gmail consent outlives whichever onboarding page starts it. */
 export const startFirstRunGmail = async (
   transport: Transport,
   email: string
@@ -43,21 +59,8 @@ export const startFirstRunGmail = async (
       "rounded-lg bg-primary px-4 py-2 text-primary-foreground";
     button.textContent = "Connect Gmail";
     button.onclick = () => {
-      const authorization = reserveAuthorization();
       button.disabled = true;
-      void transport.client.connectors
-        .connect({
-          connectorId: "abacus-gmailuser",
-          options: { hint: email, owner: "first-run" },
-        })
-        .then((outcome) =>
-          completeConnectorAuthorization(
-            transport.client,
-            "abacus-gmailuser",
-            outcome,
-            authorization
-          )
-        )
+      void connectGmail(transport, email)
         .then(async (outcome) => {
           await transport.client.system.funnelStep({
             step: outcome.ok ? "gmail_allowed" : "gmail_declined",
@@ -68,7 +71,6 @@ export const startFirstRunGmail = async (
           } else button.disabled = false;
         })
         .catch(() => {
-          authorization.close();
           button.disabled = false;
         });
     };
@@ -82,11 +84,7 @@ export const startFirstRunGmail = async (
     !claim("abacusai-bot:onboarding.gmailHop")
   )
     return;
-  void transport.client.connectors
-    .connect({
-      connectorId: "abacus-gmailuser",
-      options: { autostart: true, hint: email, owner: "first-run" },
-    })
+  void connectGmail(transport, email)
     .then((outcome) =>
       transport.client.system.funnelStep({
         step: outcome.ok ? "gmail_allowed" : "gmail_declined",

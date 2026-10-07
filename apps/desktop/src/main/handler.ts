@@ -81,8 +81,6 @@ export interface HostPlatformOperations {
   listBrowserSignInProfiles: () => any;
   shouldAutoSignIn: () => Promise<boolean>;
   cancelOpenRouterAuth: () => void;
-  cancelConnectorConnect: () => void;
-  cancelAllConnectorConnects: () => void;
   clearSignInSession: () => Promise<void>;
   rememberSessionAccount: (email: string) => void;
   registerLoginItem: () => void;
@@ -116,8 +114,6 @@ export const createHostOperations = (
     listBrowserSignInProfiles,
     shouldAutoSignIn,
     cancelOpenRouterAuth,
-    cancelConnectorConnect,
-    cancelAllConnectorConnects,
     clearSignInSession,
     rememberSessionAccount,
     registerLoginItem,
@@ -319,9 +315,8 @@ export const createHostOperations = (
           )
         : 0;
 
-    // A hop or sign-in still out would attach to, or mint a key for, an
-    // account that is leaving; the partition is nobody's from here.
-    cancelAllConnectorConnects();
+    // A sign-in still out would mint a key for an account that is leaving;
+    // the partition is nobody's from here.
     cancelAbacusAuth();
     await clearSignInSession();
 
@@ -484,7 +479,6 @@ export const createHostOperations = (
     openAbacusAuthInBrowser: () => openAbacusAuthInBrowser(),
     listBrowserSignInProfiles: () => listBrowserSignInProfiles(),
     cancelOpenRouterAuth: () => cancelOpenRouterAuth(),
-    cancelConnectorConnect: () => cancelConnectorConnect(),
     fetchReferralSummary: () => fetchReferralSummary(),
     listReferralGmailContacts: () => listReferralGmailContacts(),
     sendReferralEmailInvites: (emails: unknown, message: unknown) =>

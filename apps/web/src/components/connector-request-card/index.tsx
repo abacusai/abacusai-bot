@@ -6,8 +6,8 @@
  * the caller runs the flow and answers. A connector whose registry entry
  * takes fields (a token) shows them inline; Connect submits them.
  *
- * Decline is never disabled: mid browser hop it becomes "Stop connecting",
- * which cancels the hop (its cancelled result answers "declined").
+ * Decline is never disabled: while the connect page is open it becomes
+ * "Stop connecting", which stops waiting (answered "declined").
  */
 import {
   connectFields,
@@ -30,7 +30,7 @@ export interface ConnectorRequestCardProps {
   error: string | null;
   onConnect(values?: Record<string, string>): void;
   onDecline(): void;
-  /** Mid browser hop: cancel the flow. */
+  /** While the connect page is open: stop waiting. */
   onStop?(): void;
 }
 

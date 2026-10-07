@@ -768,19 +768,9 @@ export interface AbacusConnectorsSnapshot {
 }
 
 export type AbacusConnectorOutcome =
+  /** `url`: the connect page a platform connector opens, absolute. */
   | { ok: true; url?: string }
-  | {
-      ok: false;
-      error: string;
-      cancelled?: boolean;
-      /**
-       * `wrong-account`: the provider finished but the connector attached to a
-       * different Abacus.AI account than the app's, on `surface`. The UI words
-       * the way out per surface; `error` is the plain-text fallback.
-       */
-      code?: "wrong-account";
-      surface?: "app" | "browser";
-    };
+  | { ok: false; error: string; cancelled?: boolean };
 
 /** Same contract for every connector kind. */
 export type ConnectorOutcome = AbacusConnectorOutcome;
@@ -812,20 +802,9 @@ export type ConnectorStatuses = Record<string, ConnectorStatus>;
 // env placeholder expanded at connect time, so the key is never persisted.
 export const ABACUS_CONNECTORS_SERVER_NAME = GATEWAY_SERVER_NAME;
 
-/**
- * How the browser hop should start. `autostart` sends the connect page straight to the provider's
- * consent on load, for a caller that has already asked the user in the app; `hint` is the account to
- * pre-select there. Both are only ever forwarded into the connect URL.
- */
+/** `hint` is the account to pre-select on the provider's consent; it is only forwarded into the connect URL. */
 export interface ConnectorConnectOptions {
-  autostart?: boolean;
   hint?: string;
-  /**
-   * Who started the hop. A screen cancels only the hops it started itself
-   * (owner unset) when it leaves; a hop the app started on the user's behalf
-   * names itself and outlives the screen it was started from.
-   */
-  owner?: "first-run";
 }
 
 export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({

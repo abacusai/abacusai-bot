@@ -354,11 +354,10 @@ import {
   type SelfLanePlatform,
 } from "./services/messaging/messaging-gateway-service";
 import {
-  cancelConnectorConnect,
+  connectPageUrl,
   createConnectLink,
   disconnectAbacusConnector,
   listAbacusConnectors,
-  startConnectorConnect,
 } from "./services/providers/abacus-connector-service";
 import { abacusRoutellmV1 } from "./services/providers/abacus-host";
 import {
@@ -984,10 +983,13 @@ export class ServiceHost {
   /** How each kind connects and disconnects. The one implementation every Connect button uses. */
   readonly connectorFlow = new ConnectorFlowService({
     platform: {
-      connect: (service, options) =>
-        startConnectorConnect(service, options, this.platform),
+      connect: connectPageUrl,
       disconnect: disconnectAbacusConnector,
-      ensureGateway: () => this.ensureConnectorGateway(),
+      watch: (connectorId) =>
+        this.connectWatcher.watch({
+          connectorIds: [connectorId],
+          sessionId: null,
+        }),
     },
     mcp: {
       // Restore rather than refuse when the name is taken: the earlier Add
@@ -1902,8 +1904,6 @@ export class ServiceHost {
     this.workspaceService.dispose();
     this.terminalSessionService.dispose();
     stopAllServed();
-    // A pending connector hop holds a port and a timeout that outlive the window.
-    cancelConnectorConnect();
     this.sessionArtifactsService.dispose();
     const agentsStopped = this.agentManagerService.dispose();
     this.fileSearchService.dispose();

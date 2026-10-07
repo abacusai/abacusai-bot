@@ -1,5 +1,9 @@
+import { connectorById } from "@abacus-ai/connectors/registry";
 import type { ConnectorsEvent } from "@abacus-ai/contract/contract/connectors";
-import type { ConnectorRequest } from "@abacus-ai/contract/contracts";
+import type {
+  ConnectorOutcome,
+  ConnectorRequest,
+} from "@abacus-ai/contract/contracts";
 import {
   conversationRefFromKey,
   type ConversationKey,
@@ -10,22 +14,21 @@ import {
  * actionable; with a key, the first yield is a snapshot of the pending asks,
  * so a reopened iterator re-snapshots).
  *
- * Connecting runs the connector's flow, then refreshes the requesting
+ * Connecting runs the connector's flow (a platform connector's connect page,
+ * then waiting for it to read connected), then refreshes the requesting
  * session's MCP servers and only then answers `connected`: the agent's next
  * act is a call to the new connector's tool (review r2 #5). A refresh that
  * fails is an error on the card and answers nothing; `success: false` is the
  * no-running-agent case and proceeds. A cancelled flow answers `declined`.
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
-import {
-  reserveAuthorization,
-  completeConnectorAuthorization,
-} from "#renderer/lib/browser/authorization";
+import { waitForConnected } from "#renderer/lib/connect-page";
+import { openConnectPage } from "#renderer/lib/platform-system";
 
-type Client = Pick<Transport["client"], "connectors" | "mcp">;
+type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
 
 /** The pending asks after one event (pure). */
 export const reduceRequests = (
@@ -84,32 +87,39 @@ const declineRequest = (
   request: ConnectorRequest
 ): Promise<void> => respond(client, request, "declined");
 
-/** The flow, the refresh of the requesting session, then the answer. */
+/**
+ * The flow, the refresh of the requesting session, then the answer. Call it
+ * from the click itself: a platform connector's page opens before any await.
+ * `signal` stops waiting on that page (answered as declined).
+ */
 export const connectRequest = async (
   client: Client,
   request: ConnectorRequest,
-  values?: Record<string, string>
+  values?: Record<string, string>,
+  signal: AbortSignal = new AbortController().signal
 ): Promise<ConnectResult> => {
-  const authorization = reserveAuthorization();
-  let outcome;
+  const opened =
+    values == null && connectorById(request.connectorId)?.kind === "platform"
+      ? openConnectPage(client, request.connectorId)
+      : null;
+  let outcome: ConnectorOutcome;
   try {
-    outcome =
-      values != null
-        ? await client.connectors.submitFields({
-            connectorId: request.connectorId,
-            values,
-          })
-        : await client.connectors.connect({ connectorId: request.connectorId });
-    outcome = await completeConnectorAuthorization(
-      client,
-      request.connectorId,
-      outcome,
-      authorization
-    );
+    if (opened != null) {
+      outcome = await opened;
+      if (outcome.ok)
+        outcome = await waitForConnected(client, request.connectorId, signal);
+    } else
+      outcome =
+        values != null
+          ? await client.connectors.submitFields({
+              connectorId: request.connectorId,
+              values,
+            })
+          : await client.connectors.connect({
+              connectorId: request.connectorId,
+            });
   } catch (error) {
     return { kind: "error", message: messageOf(error) };
-  } finally {
-    authorization.close();
   }
   if (!outcome.ok) {
     if (outcome.cancelled === true) {
@@ -175,6 +185,7 @@ export const useConnectorRequests = (
     }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const waiting = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (conversationKey == null) return;
@@ -214,11 +225,16 @@ export const useConnectorRequests = (
       if (current == null || busy) return;
       setBusy(true);
       setError(null);
-      void connectRequest(transport.client, current, values).then((result) => {
-        setBusy(false);
-        if (result.kind === "error") setError(result.message);
-        else drop(current);
-      });
+      const abort = new AbortController();
+      waiting.current = abort;
+      void connectRequest(transport.client, current, values, abort.signal).then(
+        (result) => {
+          if (waiting.current === abort) waiting.current = null;
+          setBusy(false);
+          if (result.kind === "error") setError(result.message);
+          else drop(current);
+        }
+      );
     },
     decline: () => {
       if (current == null) return;
@@ -226,9 +242,7 @@ export const useConnectorRequests = (
       drop(current);
       void declineRequest(transport.client, current);
     },
-    stop: () => {
-      void transport.client.connectors.cancelConnect({}).catch(() => undefined);
-    },
+    stop: () => waiting.current?.abort(),
   };
 };
 

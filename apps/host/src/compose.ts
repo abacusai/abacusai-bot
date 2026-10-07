@@ -40,8 +40,6 @@ const nodeHostPlatform: HostPlatformOperations = {
   listBrowserSignInProfiles: refuse("auth.abacus.browserProfiles"),
   shouldAutoSignIn: async () => false,
   cancelOpenRouterAuth: () => {},
-  cancelConnectorConnect: () => {},
-  cancelAllConnectorConnects: () => {},
   clearSignInSession: async () => {},
   rememberSessionAccount: () => {},
   registerLoginItem: () => {},
