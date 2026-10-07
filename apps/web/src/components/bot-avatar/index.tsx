@@ -125,6 +125,8 @@ export interface BotAvatarProps {
   size: number;
   /** Allow character motion, subject to visibility and motion preference. */
   animate?: boolean;
+  /** Pointer gaze/lean/press feedback; tiny/static contexts opt out. */
+  interactive?: boolean;
   /** An accessible name; without one the avatar is decorative. */
   label?: string;
   title?: string;
@@ -248,6 +250,7 @@ const AvatarBody = ({
   morph = false,
   size,
   animate = false,
+  interactive = true,
   label,
   title,
   className,
@@ -263,7 +266,8 @@ const AvatarBody = ({
     animate && !reduced,
     size,
     rootRef,
-    expression
+    expression,
+    interactive
   );
   const { rig } = faceRig;
   const outline = useOutline(look, faceRig.active && morph);
@@ -284,6 +288,7 @@ const AvatarBody = ({
       ref={rootRef}
       className={cn("bav", className)}
       data-slot="bot-avatar"
+      data-interactive={interactive ? "" : undefined}
       data-shape={look.shape}
       data-mood={mood}
       data-steady={faceRig.steady ? "" : undefined}

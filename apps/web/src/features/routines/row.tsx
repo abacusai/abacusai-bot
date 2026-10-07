@@ -49,6 +49,7 @@ export const RoutineIdentity = ({
 }) =>
   bot ? (
     <BotAvatar
+      animate
       look={resolveLook(bot)}
       mood={moods[state] ?? "idle"}
       size={size}

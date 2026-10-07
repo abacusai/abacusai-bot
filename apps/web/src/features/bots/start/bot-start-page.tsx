@@ -103,6 +103,7 @@ export const BotStartPage = ({
           )}
           <motion.div layoutId="bot-draft-avatar">
             <BotAvatar
+              animate
               look={look}
               size={96}
               mood={values.name ? "happy" : "asleep"}
@@ -129,7 +130,11 @@ export const BotStartPage = ({
                 aria-label={t(`bots.avatar.shapes.${shape}`)}
                 className="size-8 p-1"
               >
-                <BotAvatar look={{ ...look, shape }} size={24} />
+                <BotAvatar
+                  interactive={false}
+                  look={{ ...look, shape }}
+                  size={24}
+                />
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -267,6 +272,7 @@ export const BotStartPage = ({
                 <span className="phone:contents flex items-center gap-2">
                   <span className="phone:row-span-3 phone:self-center flex">
                     <BotAvatar
+                      animate
                       look={resolveLook({
                         name: template.name,
                         avatarShape: template.avatarShape,

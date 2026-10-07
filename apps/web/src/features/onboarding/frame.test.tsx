@@ -92,7 +92,7 @@ describe("onboarding.css", () => {
       /\[data-reduced-motion="true"\] \.onboarding-step > \* \{[^}]*onboarding-fade/
     );
     expect(css).toMatch(
-      /\[data-reduced-motion="true"\] :is\(\.onboarding-bob, \.onboarding-glow\) \{[^}]*animation: none/
+      /\[data-reduced-motion="true"\] \.onboarding-glow \{[^}]*animation: none/
     );
   });
 });

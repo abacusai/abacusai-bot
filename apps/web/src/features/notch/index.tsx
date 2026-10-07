@@ -30,7 +30,6 @@ import { cueForNotice, permissionCueKey } from "#renderer/lib/attention/cues";
 import { runErrorCopy } from "#renderer/lib/attention/error-copy";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { useMotionPreference } from "#renderer/lib/motion";
-import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { runFinishedFeed } from "#renderer/lib/run-finished";
 import { createSoundPlayer } from "#renderer/lib/sound";
 import { useDictation } from "#renderer/lib/voice/use-dictation";
@@ -337,9 +336,6 @@ export const NotchShell = ({
     }
     previousWaiting.current = next;
   }, [inputs.sessions, inputs.summaries]);
-  const faceStyle = useSharedElementName(
-    shown.faces[0]?.botId ? `bot-identity-${shown.faces[0].botId}` : null
-  );
   const open = () => {
     const p = current.current.shown;
     const session = db.collections.sessions.get(p.sessionId ?? "");
@@ -620,7 +616,7 @@ export const NotchShell = ({
                     reduced={reduced}
                     layout={layout}
                     left={
-                      <div className="notch-wing" style={faceStyle}>
+                      <div className="notch-wing">
                         <AnimatePresence initial={false}>
                           {(shown.expanded
                             ? shown.faces
@@ -644,6 +640,7 @@ export const NotchShell = ({
                                 className="notch-avatar"
                               >
                                 <BotAvatar
+                                  interactive={false}
                                   size={20}
                                   look={resolveLook({
                                     name: bot?.name ?? "Abacus",

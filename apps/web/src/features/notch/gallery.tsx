@@ -104,6 +104,7 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
             left={
               <div className="notch-wing">
                 <BotAvatar
+                  interactive={false}
                   size={20}
                   look={resolveLook({
                     name: "Chief of Staff",
@@ -124,6 +125,7 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
                   expanded &&
                   ["green", "purple"].map((color) => (
                     <BotAvatar
+                      interactive={false}
                       key={color}
                       size={20}
                       look={resolveLook({

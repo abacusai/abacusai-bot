@@ -431,7 +431,7 @@ export const MemoryPage = () => {
                     .map((row) => row.entry)
                     .join(" · ")}
                 >
-                  <BotAvatar look={resolveLook(bot)} size={28} />
+                  <BotAvatar animate look={resolveLook(bot)} size={28} />
                   <Button
                     size="sm"
                     variant="secondary"

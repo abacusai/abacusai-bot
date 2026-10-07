@@ -38,7 +38,8 @@ export const useFaceRig = (
   animated: boolean,
   size: number,
   ref: React.RefObject<HTMLSpanElement | null>,
-  expression?: ExpressionMix
+  expression?: ExpressionMix,
+  interactive = true
 ) => {
   const [admitted, setAdmitted] = useState(false);
   const [interaction, setInteraction] = useState(false);
@@ -63,8 +64,9 @@ export const useFaceRig = (
     if (!animated || size <= 24) return;
     return ref.current ? observeAvatar(ref.current, setVisible) : undefined;
   }, [animated, size, ref]);
-  const priority =
-    mood === "talking" || mood === "listening"
+  const priority = interaction
+    ? 3
+    : mood === "talking" || mood === "listening"
       ? 2
       : mood === "idle" || mood === "asleep"
         ? 0
@@ -221,7 +223,7 @@ export const useFaceRig = (
     lightX: useTransform(() => `${30 - rig.tiltX.get() * 2}%`),
     lightY: useTransform(() => `${18 - rig.tiltY.get() * 2}%`),
     onPointerDown: () => {
-      if (active) {
+      if (interactive && animated && visible && size > 24) {
         setInteraction(true);
         pressed.current = true;
         pressUntil.current = performance.now() / 1000 + 0.18;
@@ -237,7 +239,10 @@ export const useFaceRig = (
     },
     onPointerEnter: (event: React.PointerEvent<HTMLSpanElement>) => {
       if (
-        active &&
+        interactive &&
+        animated &&
+        visible &&
+        size > 24 &&
         event.pointerType === "mouse" &&
         window.matchMedia("(hover: hover) and (pointer: fine)").matches
       ) {
@@ -247,7 +252,10 @@ export const useFaceRig = (
     },
     onPointerMove: (event: React.PointerEvent<HTMLSpanElement>) => {
       if (
-        !active ||
+        !interactive ||
+        !animated ||
+        !visible ||
+        size <= 24 ||
         event.pointerType !== "mouse" ||
         !window.matchMedia("(hover: hover) and (pointer: fine)").matches
       )
