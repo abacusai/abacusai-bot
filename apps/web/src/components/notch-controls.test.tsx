@@ -4,7 +4,11 @@ import { expect, it, vi } from "vitest";
 
 import { notch, springs } from "#renderer/lib/motion";
 
-import { NotchAction, NotchReducedMotion, useNotchMotion } from "./controls";
+import {
+  NotchAction,
+  NotchReducedMotion,
+  useNotchMotion,
+} from "./notch-controls";
 
 it("icon actions retain their translated name, tooltip, and button semantics", () => {
   const click = vi.fn();
