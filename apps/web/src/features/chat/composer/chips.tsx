@@ -15,7 +15,6 @@ import {
   KeyRound,
   Shield,
   Star,
-  Check,
   FilePenLine,
   ListTodo,
   LockOpen,
@@ -210,9 +209,6 @@ export const ModeChip = ({
                     {t(MODE_DESCRIPTION_KEYS[mode]!)}
                   </span>
                 </span>
-                {mode === shown ? (
-                  <Check aria-hidden className="size-3.5 shrink-0" />
-                ) : null}
               </CommandItem>
             ))}
           </CommandList>

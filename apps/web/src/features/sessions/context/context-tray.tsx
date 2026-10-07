@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Folder, GitBranch, Laptop, Plus } from "lucide-react";
+import { Folder, GitBranch, Laptop, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -378,15 +378,13 @@ const BranchList = ({
             <CommandItem
               key={branch.name}
               value={branch.name}
+              data-checked={branch.name === branches.data?.currentBranch}
               className="h-8 rounded-lg px-2 text-[13px]"
               disabled={busy}
               onSelect={() => void switchTo(branch.name)}
             >
               <GitBranch className="size-3.5" />
               <span className="min-w-0 flex-1 truncate">{branch.name}</span>
-              {branch.name === branches.data?.currentBranch ? (
-                <Check className="size-3.5" />
-              ) : null}
             </CommandItem>
           ))}
         <CommandItem
