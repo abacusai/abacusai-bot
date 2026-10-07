@@ -18,6 +18,8 @@ export const contentInset = (layout: NotchLayout): number =>
   spacing.inline + (hasCamera(layout) ? spacing.shoulder : 0);
 
 export const spacingStyle = (layout: NotchLayout) => ({
+  "--notch-content-inline": `${spacing.inline}px`,
+  "--notch-control-inset": `${spacing.controlInset}px`,
   "--notch-inset-inline": `${contentInset(layout)}px`,
   "--notch-inset-top": `${spacing.top}px`,
   "--notch-inset-bottom": `${spacing.bottom}px`,

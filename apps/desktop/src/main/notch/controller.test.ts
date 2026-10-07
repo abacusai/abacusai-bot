@@ -412,7 +412,7 @@ it.each(["darwin", "win32"])(
       expect(f.windows).toHaveLength(2);
       const bounds = f.windows[1].bounds;
       expect(bounds.x + bounds.width / 2).toBe(-960);
-      expect(bounds.y).toBe(platform === "darwin" ? -1080 : -1056);
+      expect(bounds.y).toBe(-1072);
       expect(x.controller.layout(2).notch).toBeNull();
     } finally {
       spy.mockRestore();

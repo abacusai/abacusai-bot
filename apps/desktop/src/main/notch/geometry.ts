@@ -27,7 +27,26 @@ export const notchPlacement = (
   notch: NotchLayout["notch"],
   _requested: { width: number; height: number }
 ): Placement => {
-  const shape = clampShape(MAX_SHAPE);
+  // Every floating presentation fits within the same display-sized envelope.
+  const shape = notch
+    ? MAX_SHAPE
+    : {
+        width: Math.min(
+          MAX_SHAPE.width,
+          Math.max(
+            0,
+            display.bounds.width -
+              2 * (spacing.envelopeInline + spacing.floatingGap)
+          )
+        ),
+        height: Math.min(
+          MAX_SHAPE.height,
+          Math.max(
+            0,
+            display.bounds.height - spacing.floatingGap - spacing.envelopeBottom
+          )
+        ),
+      };
   const width =
     Math.max(shape.width, notch?.width ?? 0) + spacing.envelopeInline * 2;
   const center =
@@ -38,7 +57,7 @@ export const notchPlacement = (
   return {
     bounds: {
       x,
-      y: display.bounds.y,
+      y: display.bounds.y + (notch ? 0 : spacing.floatingGap),
       width,
       height:
         Math.max(shape.height, notch?.height ?? 0) + spacing.envelopeBottom,
@@ -49,16 +68,12 @@ export const notchPlacement = (
       mode: notch ? "notch" : "capsule",
       notch,
       growth: "down",
-      maxShape: MAX_SHAPE,
+      maxShape: shape,
     },
   };
 };
-// Windows reserves a top taskbar, but side/bottom taskbars do not move the notch.
+// Floating companions stay in the top system band, including top-taskbar layouts.
 export const capsulePlacement = (
   display: DisplayGeometry,
   requested: { width: number; height: number }
-): Placement => {
-  const placement = notchPlacement(display, null, requested);
-  placement.bounds.y = Math.max(display.bounds.y, display.workArea.y);
-  return placement;
-};
+): Placement => notchPlacement(display, null, requested);

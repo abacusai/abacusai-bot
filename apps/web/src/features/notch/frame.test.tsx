@@ -3,6 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { NotchBody, NotchHeader, NotchSurface } from "./frame";
+import { shellClip } from "./shell-clip";
 
 const springs = vi.hoisted(() => [] as (() => void)[]);
 vi.mock("motion/react", async (original) => ({
@@ -44,4 +45,22 @@ it("hides destination content throughout a shell resize, then reveals it", async
   expect(header().style.visibility).toBe("visible");
   expect(body().style.visibility).toBe("visible");
   expect(body().style.pointerEvents).toBe("auto");
+});
+
+it("reduced motion commits the clip in the same render as its content bounds", () => {
+  const layout: NotchLayout = {
+    displayId: 3,
+    mode: "capsule",
+    notch: null,
+    growth: "down",
+    maxShape: { width: 560, height: 220 },
+  };
+  const shell = (width: number, height: number) => (
+    <NotchSurface layout={layout} shape={{ width, height }} expanded reduced />
+  );
+  const { container, rerender } = render(shell(96, 46));
+  rerender(shell(360, 120));
+  expect(
+    container.querySelector<HTMLElement>(".notch-shape")!.style.clipPath
+  ).toBe(shellClip(360, 120, 560, false));
 });

@@ -1,7 +1,7 @@
 import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
 
-/** A top-attached silhouette, centered in the fixed transparent envelope.
- * Hardware shoulders meet the edge; no-notch capsules use convex corners.
+/** A silhouette centered in the fixed transparent envelope.
+ * Hardware shoulders meet the bezel; floating capsules use four convex corners.
  * CSS path clipping also makes Chromium hit-testing follow the painted shell.
  */
 export const shellClip = (

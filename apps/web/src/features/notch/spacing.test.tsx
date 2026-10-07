@@ -40,20 +40,27 @@ it.each(["notch", "capsule", "plain"] as const)(
         );
         const root = container.querySelector<HTMLElement>(".notch-surface")!;
         expect(root.style.getPropertyValue("--notch-inset-inline")).toBe(
-          `${mode === "notch" ? 28 : 16}px`
+          `${mode === "notch" ? 24 : 12}px`
         );
-        expect(root.style.getPropertyValue("--notch-inset-top")).toBe("12px");
+        expect(root.style.getPropertyValue("--notch-inset-top")).toBe("8px");
         expect(root.style.getPropertyValue("--notch-inset-bottom")).toBe(
-          "14px"
+          "10px"
         );
         expect(
           contentInset(layout) - (mode === "notch" ? spacing.shoulder : 0)
         ).toBe(spacing.inline);
         expect(shape.compactHeight).toBe(headerHeight(layout));
+        expect(root.style.getPropertyValue("--notch-content-inline")).toBe(
+          "12px"
+        );
+        expect(root.style.getPropertyValue("--notch-control-inset")).toBe(
+          "4px"
+        );
+        expect(root.dataset.floating).toBe(String(mode !== "notch"));
         const camera = container.querySelector<HTMLElement>(
           '[data-slot="notch-camera-clearance"]'
         );
-        if (mode === "notch") expect(camera!.style.width).toBe("217px");
+        if (mode === "notch") expect(camera!.style.width).toBe("209px");
         else expect(camera).toBeNull();
       }
     }
@@ -62,8 +69,8 @@ it.each(["notch", "capsule", "plain"] as const)(
 it("preserves a tall measured camera with body clearance", () => {
   const layout = layoutFor("notch");
   layout.notch!.height = 60;
-  expect(headerHeight(layout)).toBe(72);
-  expect(spacingStyle(layout)["--notch-inset-inline"]).toBe("28px");
+  expect(headerHeight(layout)).toBe(68);
+  expect(spacingStyle(layout)["--notch-inset-inline"]).toBe("24px");
 });
 it("uses different hardware shoulders and capsule corners at intermediate sizes", () => {
   for (const [width, height] of [

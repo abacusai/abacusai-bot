@@ -72,6 +72,7 @@ export const NotchSurface = ({
     <div
       {...props}
       className="notch-surface"
+      data-floating={!hasCamera(layout)}
       style={{
         ...spacingStyle(layout),
         ...style,
@@ -85,7 +86,14 @@ export const NotchSurface = ({
         data-reduced={reduced}
         data-expanded={expanded}
         style={{
-          clipPath,
+          clipPath: reduced
+            ? shellClip(
+                shape.width,
+                shape.height,
+                layout.maxShape.width,
+                hasCamera(layout)
+              )
+            : clipPath,
           width: layout.maxShape.width,
           height: layout.maxShape.height,
         }}

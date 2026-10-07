@@ -1,5 +1,6 @@
 html.notch, html.notch body, html.notch #root { background: transparent !important; overflow: hidden; }
 .notch-surface { margin: 0 auto; pointer-events: none; }
+.notch-surface[data-floating=true] { filter: drop-shadow(0 4px 6px rgb(0 0 0 / .24)); }
 .notch-shape { pointer-events: auto; color: var(--notch-fg, #f2f2f3); background: #000; font-size: 12px; line-height: 16px; overflow: hidden; }
 .notch-wings { display: flex; justify-content: space-between; align-items: stretch; box-sizing: border-box; padding: var(--notch-inset-top) var(--notch-inset-inline) var(--notch-inset-bottom); }
 .notch-shape[data-mode=capsule] .notch-wings, .notch-shape[data-mode=plain] .notch-wings { gap: var(--notch-gap); }
@@ -47,9 +48,9 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 .notch-shape button:disabled { opacity: .4; }
 .notch-shape button { transition-property: background-color, color, opacity; }
 .notch-shape button svg { width: 16px; height: 16px; }
-.notch-reply-pill { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 4px; border-radius: 999px; background: var(--notch-control, #2a2a2e); }
+.notch-reply-pill { display: flex; align-items: center; gap: var(--notch-control-inset); width: 100%; min-width: 0; padding: var(--notch-control-inset); border-radius: 999px; background: var(--notch-control, #2a2a2e); }
 .notch-reply-pill:focus-within { outline: 2px solid #8a8a96; outline-offset: 2px; }
-.notch-reply-pill input { flex: 1 1 0; min-width: 0; width: 0; padding: 0 8px; border: 0; background: transparent; box-shadow: none; outline: none; height: 28px; }
+.notch-reply-pill input { flex: 1 1 0; min-width: 0; width: 0; padding: 0 calc(var(--notch-content-inline) - var(--notch-control-inset)); border: 0; background: transparent; box-shadow: none; outline: none; height: 28px; }
 .notch-reply-pill input:focus-visible { box-shadow: none; outline: none; }
 
 @media (hover: hover) and (pointer: fine) { .notch-shape button[data-secondary]:hover { background: #2a2a2e; } }

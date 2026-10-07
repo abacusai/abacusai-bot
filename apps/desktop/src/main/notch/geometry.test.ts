@@ -1,3 +1,4 @@
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
 import { describe, expect, it } from "vitest";
 
 import { capsulePlacement, notchPlacement } from "./geometry";
@@ -41,7 +42,7 @@ describe("R6-T23 canvas shadow geometry", () => {
       expect(p.bounds.x + p.bounds.width / 2 + (p.layout.offsetX ?? 0)).toBe(
         -500
       );
-      expect(p.bounds.y).toBe(edge === "top" ? -760 : -800);
+      expect(p.bounds.y).toBe(display.bounds.y + spacing.floatingGap);
     }
   );
 });
@@ -63,11 +64,11 @@ it.each([1, 1.5, 2, 3])(
     }
   }
 );
-it("attaches to the screen top without a hardware cutout", () => {
+it("floats within the menu-bar band without a hardware cutout", () => {
   const d = { ...display, workArea: { ...display.workArea, y: -766 } };
   const p = notchPlacement(d, null, { width: 296, height: 36 });
   expect(p.layout.mode).toBe("capsule");
-  expect(p.bounds.y).toBe(-800);
+  expect(p.bounds.y).toBe(-800 + spacing.floatingGap);
 });
 it("ignores menu-bar auto-hide for hardware anchoring", () => {
   const notch = { x: 430, width: 185, height: 33 };
@@ -96,5 +97,33 @@ it.each([null, { x: 430, width: 185, height: 40 }])(
     expect(notchPlacement(display, notch, { width: 96, height: 36 })).toEqual(
       notchPlacement(display, notch, { width: 560, height: 220 })
     );
+  }
+);
+
+it.each([
+  { x: 0, y: 0, width: 2560, height: 1080 },
+  { x: -1920, y: -1080, width: 1920, height: 1080 },
+  { x: 2560, y: 140, width: 320, height: 180 },
+])(
+  "keeps every floating painted edge inside %j, with one fixed envelope",
+  (bounds) => {
+    const d = { id: 2, bounds, workArea: { ...bounds, y: bounds.y + 40 } };
+    const compact = notchPlacement(d, null, { width: 96, height: 46 });
+    const expanded = capsulePlacement(d, { width: 560, height: 220 });
+    expect(compact).toEqual(expanded);
+    expect(expanded.bounds.y).toBe(bounds.y + spacing.floatingGap);
+    const painted = {
+      x:
+        expanded.bounds.x +
+        spacing.envelopeInline +
+        (expanded.layout.offsetX ?? 0),
+      y: expanded.bounds.y,
+      ...expanded.layout.maxShape,
+    };
+    expect(painted.x).toBeGreaterThan(bounds.x);
+    expect(painted.y).toBeGreaterThan(bounds.y);
+    expect(painted.x + painted.width).toBeLessThan(bounds.x + bounds.width);
+    expect(painted.y + painted.height).toBeLessThan(bounds.y + bounds.height);
+    expect(painted.x + painted.width / 2).toBe(bounds.x + bounds.width / 2);
   }
 );
