@@ -160,13 +160,6 @@ export const SettingsSidebar = () => {
           </NavList.Group>
         ))
       )}
-      <NavList.Group label="">
-        <NavList.Item
-          to="/library/connectors"
-          transition="settings-out"
-          title={t("settings.sidebar.openLibrary")}
-        />
-      </NavList.Group>
     </NavList.Root>
   );
 };
