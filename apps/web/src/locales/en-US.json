@@ -356,7 +356,8 @@
       "appDefault": "App default",
       "localProvider": "On this machine",
       "tierFree": "Free",
-      "tierLocal": "Local"
+      "tierLocal": "Local",
+      "configureProviders": "Configure providers"
     },
     "checkIn": {
       "label": "Checks in",
@@ -1774,7 +1775,8 @@
       "stopFirst": "Stop the agent before switching branches.",
       "createBranch": "Create branch {{name}}",
       "tasks": "Tasks {{done}} of {{total}}",
-      "noBranch": "This checkout has no branch."
+      "noBranch": "This checkout has no branch.",
+      "newBranch": "New branch"
     },
     "routine": {
       "talk": "Talk to the routine"
@@ -2813,7 +2815,7 @@
       "description": {
         "ACCEPTEDITS": "Change files, ask before commands",
         "AUTO": "Sandboxed, no prompts",
-        "DEFAULT": "Approve edits and commands one by one",
+        "DEFAULT": "Ask before edits and commands",
         "PLAN": "Read and propose, change nothing",
         "YOLO": "No approvals"
       }

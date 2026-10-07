@@ -356,7 +356,8 @@
       "appDefault": "App default",
       "localProvider": "On this machine",
       "tierFree": "Free",
-      "tierLocal": "Local"
+      "tierLocal": "Local",
+      "configureProviders": "Configure providers"
     },
     "checkIn": {
       "label": "Scheduled check-ins",
@@ -1774,7 +1775,8 @@
       "stopFirst": "Stop the agent before switching branches.",
       "createBranch": "Create branch {{name}}",
       "tasks": "Tasks {{done}} of {{total}}",
-      "noBranch": "This checkout has no branch."
+      "noBranch": "This checkout has no branch.",
+      "newBranch": "New branch"
     },
     "routine": {
       "talk": "Talk to the routine"

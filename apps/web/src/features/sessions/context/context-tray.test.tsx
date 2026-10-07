@@ -79,3 +79,25 @@ it("idle running agents lock both the backend trigger and an already-open picker
   view.unmount();
   qc.clear();
 });
+
+it("renders no PR placeholder and hides the environment control with one available backend", async () => {
+  await initI18n();
+  const qc = new QueryClient();
+  qc.setQueryData(["exec"], {
+    selected: "local",
+    effective: "local",
+    statuses: [
+      { id: "local", ready: true },
+      { id: "docker", ready: false },
+    ],
+  });
+  const view = render(
+    <QueryClientProvider client={qc}>
+      <SessionContextTray workspaceId="w" sessionId="s" />
+    </QueryClientProvider>
+  );
+  expect(screen.queryByText("No PR")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Local" })).toBeNull();
+  view.unmount();
+  qc.clear();
+});

@@ -10,7 +10,18 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
  * around a Command list. Groups come from the route; `value: null` is the
  * app default (03-bots §24.2).
  */
-import { Cpu, KeyRound, Shield, Star } from "lucide-react";
+import {
+  Cpu,
+  KeyRound,
+  Shield,
+  Star,
+  Check,
+  FilePenLine,
+  ListTodo,
+  LockOpen,
+  Sparkles,
+  Settings2,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -46,6 +57,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 import type { ModelChipBinding, ModelGroup } from "../kit/context";
 import { MODE_DESCRIPTION_KEYS, MODE_LABEL_KEYS, MODE_ORDER } from "./modes";
 
+const MODE_ICONS = {
+  [AgentMode.Auto]: Sparkles,
+  [AgentMode.Normal]: Shield,
+  [AgentMode.AcceptEdits]: FilePenLine,
+  [AgentMode.PlanMode]: ListTodo,
+  [AgentMode.Yolo]: LockOpen,
+};
 const MODE_CONFIRM_MS = 5000;
 
 /** Pickers (canvas): a 340 px panel, 14 px corners, 6 px inset. */
@@ -100,6 +118,7 @@ export const ModeChip = ({
     },
     []
   );
+  const ModeIcon = MODE_ICONS[shown];
   const choose = (mode: AgentMode) => {
     if (!live || setMode == null) {
       onDraft(mode);
@@ -137,7 +156,7 @@ export const ModeChip = ({
           />
         }
       >
-        <Shield aria-hidden />
+        <ModeIcon aria-hidden />
         {t(MODE_LABEL_KEYS[shown] ?? "chat.mode.DEFAULT")}
         {pending != null ? (
           <span
@@ -173,6 +192,10 @@ export const ModeChip = ({
                 }}
                 className={cn(ROW_CLASS, "py-2")}
               >
+                {(() => {
+                  const Icon = MODE_ICONS[mode];
+                  return <Icon aria-hidden className="size-3.5 shrink-0" />;
+                })()}
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span
                     className={cn(
@@ -187,6 +210,9 @@ export const ModeChip = ({
                     {t(MODE_DESCRIPTION_KEYS[mode]!)}
                   </span>
                 </span>
+                {mode === shown ? (
+                  <Check aria-hidden className="size-3.5 shrink-0" />
+                ) : null}
               </CommandItem>
             ))}
           </CommandList>
@@ -533,7 +559,7 @@ export const ModelChip = ({
           ) : (
             <ComboboxList
               aria-label={t("chat.composer.models")}
-              className="min-h-0 flex-1 p-0 pt-1"
+              className="scroll-fade-y min-h-0 flex-1 p-0 pt-1"
             >
               {sections.map(({ group, rows: groupRows }) => (
                 <ComboboxGroup key={group.id} items={groupRows}>
@@ -618,6 +644,18 @@ export const ModelChip = ({
               <ComboboxEmpty>{t("chat.composer.noModels")}</ComboboxEmpty>
             </ComboboxList>
           )}
+          <Button
+            variant="ghost"
+            className="mt-1 h-8 shrink-0 justify-start rounded-lg border-t px-2 text-xs"
+            disabled={binding.onConfigureProviders == null}
+            onClick={() => {
+              setOpen(false);
+              binding.onConfigureProviders?.();
+            }}
+          >
+            <Settings2 aria-hidden className="size-3.5" />
+            {t("bots.model.configureProviders")}
+          </Button>
         </div>
       </ComboboxContent>
     </Combobox>

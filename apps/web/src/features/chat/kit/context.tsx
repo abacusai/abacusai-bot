@@ -35,6 +35,7 @@ export interface ModelGroup {
  * "App default"; `label` is then the resolved default's name.
  */
 export interface ModelChipBinding {
+  onConfigureProviders?(): void;
   value: string | null;
   label: string;
   onChange(id: string | null): void;
@@ -123,7 +124,7 @@ export interface ChatViewSlots {
     message: UIMessage,
     context: MessageDecorationContext
   ) => boolean;
-  /** Bot skin only: called for every message while it renders. */
+  /** Route-provided actions and decorations for each rendered message. */
   decorateMessage?: (
     message: UIMessage,
     context: MessageDecorationContext
