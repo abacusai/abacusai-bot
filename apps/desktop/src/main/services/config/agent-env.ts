@@ -35,7 +35,8 @@ export function buildAgentAuthEnv(): Record<string, string> {
 
 /** Everything besides auth and the MCP config path. See the call site. */
 export function buildAgentConfigEnv(
-  runtimeMcpPath: string | null
+  runtimeMcpPath: string | null,
+  browserAvailable: boolean
 ): Record<string, string> {
   const envVars: Record<string, string> = {};
   if (runtimeMcpPath != null) {
@@ -57,7 +58,9 @@ export function buildAgentConfigEnv(
   // this process owns both the registry and the settings file.
   const preferences = readToolsetPreferences();
   const excluded = excludedBuiltinTools(preferences);
-  if (import.meta.env.ABACUS_WEB_HOST === true)
+  // No browser to drive (a web host whose Chromium was not found): its tools
+  // would only fail, so the agent never sees them.
+  if (!browserAvailable)
     excluded.push(
       "browser_task",
       "browser_navigate",

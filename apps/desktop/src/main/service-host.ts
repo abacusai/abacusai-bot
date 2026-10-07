@@ -4511,7 +4511,13 @@ export class ServiceHost {
       console.error("[mcp] failed to write runtime mcp config:", err);
     }
     return {
-      ...buildAgentConfigEnv(runtimeMcpPath),
+      ...buildAgentConfigEnv(
+        runtimeMcpPath,
+        // The lifecycle owns whether there is a browser: on a web host, the
+        // hosted Chromium; elsewhere the desktop's own views are always there.
+        this.platform !== "web-host" ||
+          this.builtinMcpLifecycle.isBrowserEnabled()
+      ),
       // A bot's chat carries the bot's identity; this process owns the registry.
       ...(sessionId != null
         ? this.botService.personaEnvForSession(sessionId)
