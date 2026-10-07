@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { basename } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -25,43 +21,6 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
       "cache-control": "no-store",
     })
     .end(JSON.stringify(value));
-/** What an `/mcp/*` form post may be: small, and sent promptly. */
-export interface McpBodyLimits {
-  bytes?: number;
-  timeoutMs?: number;
-}
-
-/**
- * A form post's fields; 413 over the cap (declared or counted), 408 when it
- * does not arrive in time. The caller destroys the request after answering.
- */
-const readForm = (
-  request: IncomingMessage,
-  { bytes = 4096, timeoutMs = 10_000 }: McpBodyLimits
-): Promise<URLSearchParams | { status: 408 | 413 }> => {
-  if (Number(request.headers["content-length"]) > bytes)
-    return Promise.resolve({ status: 413 });
-  return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    const settle = (value: URLSearchParams | { status: 408 | 413 }): void => {
-      clearTimeout(timer);
-      request.off("data", onData).off("end", onEnd).off("error", onError);
-      request.pause();
-      resolve(value);
-    };
-    const onData = (chunk: Buffer): void => {
-      size += chunk.length;
-      if (size > bytes) settle({ status: 413 });
-      else chunks.push(chunk);
-    };
-    const onEnd = (): void =>
-      settle(new URLSearchParams(Buffer.concat(chunks).toString("utf8")));
-    const onError = (): void => settle({ status: 408 });
-    const timer = setTimeout(() => settle({ status: 408 }), timeoutMs);
-    request.on("data", onData).on("end", onEnd).on("error", onError);
-  });
-};
 export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
@@ -69,7 +28,7 @@ export const createHostHttpServer = (
   uploadFolder: (workspaceId: string, sessionId: string) => string | null,
   whisper: Pick<WhisperModelService, "prepareFile">,
   mcp: Pick<HostedMcpConnect, "route"> | null = null,
-  mcpLimits: McpBodyLimits & { now?: () => number } = {}
+  now: () => number = Date.now
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -88,11 +47,7 @@ export const createHostHttpServer = (
     // MCP connects are top-level navigations, which carry no connect token:
     // the proxy signs each one instead (spec 08, D8 exception).
     if (url.pathname.startsWith("/mcp/") && mcp != null) {
-      const failure = mcpProofFailure(
-        request,
-        identity,
-        (mcpLimits.now ?? Date.now)()
-      );
+      const failure = mcpProofFailure(request, identity, now());
       if (failure) {
         console.warn(`[host-auth] mcp ${failure}`);
         json(response, 403, { error: "forbidden" });
@@ -105,8 +60,6 @@ export const createHostHttpServer = (
           pathname: url.pathname,
           query: url.searchParams,
           headers: request.headers,
-          // Read only once the route admitted the request.
-          readForm: () => readForm(request, mcpLimits),
         },
         identity.owner
       );
@@ -126,7 +79,7 @@ export const createHostHttpServer = (
               ...headers,
               "content-type": "text/html; charset=utf-8",
               "content-security-policy":
-                "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+                "default-src 'none'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'",
               "x-frame-options": "DENY",
               "cross-origin-opener-policy": "same-origin",
             })
@@ -139,13 +92,6 @@ export const createHostHttpServer = (
         case "missing":
           json(response, 404, { error: "not-found" });
           request.resume();
-          return;
-        case "bad-body":
-          // The rest of the body is not read: the connection goes.
-          response.once("finish", () => request.destroy());
-          json(response, answer.status, {
-            error: answer.status === 413 ? "too-large" : "timeout",
-          });
           return;
       }
     }

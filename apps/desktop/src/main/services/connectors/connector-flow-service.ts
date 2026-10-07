@@ -17,13 +17,9 @@ import type {
   McpServerEntry,
 } from "@abacus-ai/contract/contracts";
 
-/**
- * How a server's sign-in went: done (desktop), the provider's page to send the
- * browser to (web host), no sign-in asked for, or why not.
- */
+/** How a server's sign-in went: done, no sign-in asked for, or why not. */
 export type McpSignIn =
   | { kind: "signed-in" }
-  | { kind: "redirect"; location: string }
   | { kind: "open" }
   | { kind: "failed"; error?: string; cancelled?: boolean };
 
@@ -47,12 +43,10 @@ export interface FlowSources {
       entry: McpServerEntry
     ) => { success: boolean; error?: string };
     remove: (name: string) => { success: boolean; error?: string };
-    /** The server's own browser sign-in: the desktop's loopback, or the web host's redirect. */
+    /** The server's own browser sign-in (the desktop's loopback). */
     signIn: (name: string) => Promise<McpSignIn>;
     /** The web host's connect route for `name`, absolute; null on the desktop. */
     connectUrl: (name: string) => string | null;
-    /** Follows a connector whose sign-in was handed out until it connects. */
-    watch: (connectorId: string) => void;
   };
   homeDir: () => string;
 }
@@ -102,13 +96,28 @@ export const mcpEntryFor = (
 
 /**
  * Connecting one MCP server, by its registry id or the user's own server name:
- * done, a provider page to send the browser to (web host), or why not.
+ * done, or why not.
  */
 export type McpConnectResult =
   | { kind: "connected"; label: string }
-  | { kind: "sign-in"; label: string; location: string }
   | { kind: "failed"; label: string; error: string; cancelled?: boolean }
   | { kind: "missing" };
+
+/**
+ * What connecting an MCP server takes, decided without changing anything: the
+ * entry it has or would be installed as, and whether that entry signs in.
+ */
+export type McpConnectPlan =
+  | { kind: "missing" }
+  /** A registry connector that needs the user's fields (keys) first. */
+  | { kind: "needs-fields"; label: string }
+  | {
+      kind: "ready";
+      label: string;
+      entry: McpServerEntry;
+      installed: boolean;
+      signsIn: boolean;
+    };
 
 /** Whether this entry signs in with OAuth: an http server that does not opt out. */
 const signsIn = (
@@ -160,7 +169,7 @@ export class ConnectorFlowService {
       return outcome;
     }
     if (connector.kind === "mcp") {
-      // Web host: the browser opens the host's route, which runs connectMcp.
+      // Web host: the browser opens the host's route, which installs only once signed in.
       const url = this.sources.mcp.connectUrl(connector.id);
       if (url != null) return { ok: true, url };
       return outcomeOf(await this.connectMcp(connector.id), connector.id);
@@ -187,45 +196,67 @@ export class ConnectorFlowService {
   }
 
   /**
+   * What connecting `name` would install and whether it signs in; reads only.
+   * An entry already there is the one used, as it is.
+   */
+  mcpConnectPlan(name: string): McpConnectPlan {
+    const connector = mcpConnector(name);
+    if (this.mcpLabel(name) == null) return { kind: "missing" };
+    const label = connector?.name ?? name;
+    // An OAuth server without its sign-in 401s on first use, so the sign-in
+    // is part of connecting.
+    const ready = (entry: McpServerEntry, installed: boolean) =>
+      ({
+        kind: "ready",
+        label,
+        entry,
+        installed,
+        signsIn: signsIn(connector, entry),
+      }) as const;
+    const installed = this.sources.mcp.entry(name);
+    if (installed != null) return ready(installed, true);
+    if (connector == null) return { kind: "missing" };
+    if (connectUi(connector) === "fields")
+      return { kind: "needs-fields", label };
+    return ready(mcpEntryFor(connector, {}, this.sources.homeDir()), false);
+  }
+
+  /** Adds `entry` under `name` unless an entry is there already, which is never touched. */
+  installMcp(
+    name: string,
+    entry: McpServerEntry
+  ): { success: boolean; error?: string } {
+    if (this.sources.mcp.entry(name) != null) return { success: true };
+    return this.sources.mcp.add(name, entry);
+  }
+
+  /**
    * The one install-and-sign-in for an MCP server: installs a registry
    * connector that is absent (never touching an entry already there), then
    * signs in when the entry needs it. Added stays added on a failed sign-in:
    * the server itself is fine, and its card offers Sign in.
    */
   async connectMcp(name: string): Promise<McpConnectResult> {
-    const connector = mcpConnector(name);
-    if (this.mcpLabel(name) == null) return { kind: "missing" };
-    let entry = this.sources.mcp.entry(name);
-    if (entry == null) {
-      if (connector == null) return { kind: "missing" };
-      if (connectUi(connector) === "fields")
-        return {
-          kind: "failed",
-          label: connector.name,
-          error: `${connector.name} needs its fields first.`,
-        };
-      entry = mcpEntryFor(connector, {}, this.sources.homeDir());
-      const added = this.sources.mcp.add(name, entry);
+    const plan = this.mcpConnectPlan(name);
+    if (plan.kind === "missing") return plan;
+    const { label } = plan;
+    if (plan.kind === "needs-fields")
+      return {
+        kind: "failed",
+        label,
+        error: `${label} needs its fields first.`,
+      };
+    if (!plan.installed) {
+      const added = this.sources.mcp.add(name, plan.entry);
       if (!added.success)
-        return failedConnect(
-          connector.name,
-          `Could not add ${connector.name}.`,
-          added.error
-        );
+        return failedConnect(label, `Could not add ${label}.`, added.error);
     }
-    const label = connector?.name ?? name;
-    // An OAuth server without its sign-in 401s on first use, so the sign-in
-    // is part of connecting.
-    if (!signsIn(connector, entry)) return { kind: "connected", label };
+    if (!plan.signsIn) return { kind: "connected", label };
     const signIn = await this.sources.mcp.signIn(name);
     switch (signIn.kind) {
       case "signed-in":
       case "open":
         return { kind: "connected", label };
-      case "redirect":
-        // Hosted: completion arrives through the callback and the watch.
-        if (connector != null) this.sources.mcp.watch(connector.id);
-        return { kind: "sign-in", label, location: signIn.location };
       case "failed":
         return {
           ...failedConnect(
@@ -274,8 +305,6 @@ const outcomeOf = (
   switch (result.kind) {
     case "connected":
       return { ok: true };
-    case "sign-in":
-      return { ok: true, url: result.location };
     case "failed":
       return {
         ok: false,

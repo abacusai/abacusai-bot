@@ -43,7 +43,6 @@ const flow = (): ConnectorFlowService =>
       remove: removeServer,
       signIn,
       connectUrl: (name) => connectUrl(name),
-      watch,
     },
     homeDir: () => "/home/ada",
   });
@@ -135,19 +134,39 @@ describe("an MCP server connector", () => {
     expect(signIn).not.toHaveBeenCalled();
   });
 
-  it("connectMcp: the provider's page for a hosted sign-in, watched until it connects", async () => {
-    signIn.mockResolvedValueOnce({
-      kind: "redirect",
-      location: "https://auth.example/authorize?state=s",
-    });
-
-    expect(await flow().connectMcp("notion")).toEqual({
-      kind: "sign-in",
+  it("mcpConnectPlan: the entry a connect would install and whether it signs in, changing nothing", () => {
+    expect(flow().mcpConnectPlan("notion")).toEqual({
+      kind: "ready",
       label: "Notion",
-      location: "https://auth.example/authorize?state=s",
+      entry: { url: "https://mcp.notion.com/mcp" },
+      installed: false,
+      signsIn: true,
     });
-    expect(addServer).toHaveBeenCalledOnce();
-    expect(watch).toHaveBeenCalledWith("notion");
+    expect(flow().mcpConnectPlan("huggingface")).toMatchObject({
+      installed: false,
+      signsIn: false,
+    });
+    installed.set("mine", { url: "https://mine.example/mcp" });
+    expect(flow().mcpConnectPlan("mine")).toEqual({
+      kind: "ready",
+      label: "mine",
+      entry: { url: "https://mine.example/mcp" },
+      installed: true,
+      signsIn: true,
+    });
+    expect(flow().mcpConnectPlan("nothing")).toEqual({ kind: "missing" });
+    expect(addServer).not.toHaveBeenCalled();
+    expect(signIn).not.toHaveBeenCalled();
+
+    // installMcp adds an absent entry and never touches one already there.
+    expect(flow().installMcp("mine", { url: "https://other.example" })).toEqual(
+      { success: true }
+    );
+    expect(installed.get("mine")).toEqual({ url: "https://mine.example/mcp" });
+    flow().installMcp("notion", { url: "https://mcp.notion.com/mcp" });
+    expect(addServer).toHaveBeenCalledExactlyOnceWith("notion", {
+      url: "https://mcp.notion.com/mcp",
+    });
   });
 
   it("connectMcp: the user's own server signs in by its name, and connects at once when it asks for none", async () => {

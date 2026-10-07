@@ -13,10 +13,6 @@ export interface DisplayGeometry {
   workArea: Rect;
 }
 export const MAX_SHAPE = { width: 560, height: 220 } as const;
-export const clampShape = (shape: { width: number; height: number }) => ({
-  width: Math.min(MAX_SHAPE.width, Math.max(0, Math.ceil(shape.width))),
-  height: Math.min(MAX_SHAPE.height, Math.max(0, Math.ceil(shape.height))),
-});
 export interface Placement {
   bounds: Rect;
   layout: NotchLayout;
