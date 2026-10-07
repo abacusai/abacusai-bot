@@ -318,20 +318,25 @@ it("Gmail consent is dismissible and cannot survive leaving its layout slot", as
   expect(client.connectors.connect).not.toHaveBeenCalled();
 });
 
+/** The Library page a host route returns to, under the app's mount path. */
+const returnTo = (page: string) =>
+  encodeURIComponent(`${import.meta.env.BASE_URL}library/${page}`);
+
 it("decides in one place what each kind opens in the browser", () => {
   expect(connectTarget("abacus-gmailuser", "me@example.com")).toEqual({
     kind: "connect-page",
     url: `${GMAIL_PAGE}&hint=me%40example.com`,
   });
+  // The route returns the tab to the page that lists the server.
   for (const id of ["notion", "huggingface"])
     expect(connectTarget(id)).toEqual({
       kind: "host-route",
-      url: `${HOST}/mcp/connect/${id}`,
+      url: `${HOST}/mcp/connect/${id}?return=${returnTo("connectors")}`,
     });
   // The user's own server, by its name.
   expect(connectTarget("my server")).toEqual({
     kind: "host-route",
-    url: `${HOST}/mcp/connect/my%20server`,
+    url: `${HOST}/mcp/connect/my%20server?return=${returnTo("mcp")}`,
   });
   expect(connectTarget("messaging-whatsapp")).toEqual({ kind: "pairing" });
 });
@@ -358,7 +363,7 @@ it.each([
             conversationKey: "bot:bot-id",
           } as never);
     expect(open).toHaveBeenCalledExactlyOnceWith(
-      `${HOST}/mcp/connect/${id}`,
+      `${HOST}/mcp/connect/${id}?return=${returnTo("connectors")}`,
       "_blank"
     );
     await vi.waitFor(() =>

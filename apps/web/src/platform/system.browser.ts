@@ -35,10 +35,12 @@ export const connectTarget = (name: string, hint?: string): ConnectTarget => {
   if (ui === "pairing" || ui === "fields") return { kind: ui };
   if (entry?.kind === "platform")
     return { kind: "connect-page", url: connectPagePath(entry.service, hint) };
-  // A registry MCP server, or the user's own by its name.
+  // A registry MCP server, or the user's own by its name. The route goes
+  // straight to the provider, and back to the page that lists it once done.
+  const back = `${import.meta.env.BASE_URL}library/${entry != null ? "connectors" : "mcp"}`;
   return {
     kind: "host-route",
-    url: `${browserConnection().base}/mcp/connect/${encodeURIComponent(name)}`,
+    url: `${browserConnection().base}/mcp/connect/${encodeURIComponent(name)}?${new URLSearchParams({ return: back })}`,
   };
 };
 

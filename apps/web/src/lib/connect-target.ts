@@ -20,7 +20,7 @@ export type ConnectTarget =
   | { kind: "connect-page"; url: string }
   /** Desktop: main mints the platform's page and opens it in the default browser. */
   | { kind: "connect-link" }
-  /** Browser: the host's connect route, which installs, signs in, and watches. */
+  /** Browser: the host's connect route: the provider's consent, then the install. */
   | { kind: "host-route"; url: string }
   /** Desktop: main installs and signs in, and answers once done. */
   | { kind: "in-app" }

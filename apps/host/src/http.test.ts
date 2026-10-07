@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { appendFileSync, truncateSync } from "node:fs";
 import fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { type ClientRequest, get, request, ServerResponse } from "node:http";
+import { get, request, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -344,7 +344,7 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
   }
 });
 
-it("MCP connect: a side-effect-free confirm page, then a one-time POST that installs and signs in", async () => {
+it("MCP connect: the link goes straight to the provider, and the connector is installed only once consent lands", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-mcp-"));
   const previousHome = process.env.ABACUSAI_BOT_HOME;
   process.env.ABACUSAI_BOT_HOME = home;
@@ -399,9 +399,8 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
   let now = Date.now();
   // Discovery can be held mid-flight, to cancel under it.
   let registering: Promise<void> = Promise.resolve();
-  const signedIn = vi.fn();
+  const connected = vi.fn();
   const failed = vi.fn();
-  const watch = vi.fn();
   const entries = new Map<string, McpServerEntry>([
     ["mine", { url: "https://open.example/mcp" }],
   ]);
@@ -410,7 +409,6 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     return { success: true };
   });
   const hostBase = "https://apps.abacus.ai/api/botHost/h1";
-  let hosted: HostedMcpConnect;
   const flow = new ConnectorFlowService({
     platform: {
       connect: () => ({ ok: true }),
@@ -421,22 +419,20 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       entry: (name) => entries.get(name),
       add,
       remove: () => ({ success: true }),
-      signIn: async (name) =>
-        hosted.begin({
-          name,
-          label: flow.mcpLabel(name)!,
-          serverUrl: entries.get(name)!.url!,
-        }),
+      signIn: async () => ({ kind: "failed" }),
       connectUrl: (name) => hosted.connectUrl(name),
-      watch,
     },
     homeDir: () => home,
   });
-  hosted = new HostedMcpConnect({
+  const hosted = new HostedMcpConnect({
     base: hostBase,
-    label: (name) => flow.mcpLabel(name),
-    connect: (name) => flow.connectMcp(name),
-    signedIn,
+    // "keyed" stands for a connector that needs the user's keys first.
+    plan: (name) =>
+      name === "keyed"
+        ? { kind: "needs-fields", label: "Keyed" }
+        : flow.mcpConnectPlan(name),
+    install: (name, entry) => flow.installMcp(name, entry).success,
+    connected,
     failed,
     now: () => now,
   });
@@ -447,16 +443,17 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     () => null,
     { prepareFile: async () => ({ status: 404, path: null }) } as never,
     hosted,
-    { bytes: 64, timeoutMs: 300, now: () => now }
+    () => now
   );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  // A top-level page load from the confirm page, as a browser sends it.
+  // A top-level navigation, as a browser sends it: a link in a chat app, a
+  // tab the app opens, or the provider's redirect.
   const owner = {
     "x-abacus-user-id": "o",
     "sec-fetch-dest": "document",
     "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "same-origin",
+    "sec-fetch-site": "cross-site",
   };
   /** The proxy's proof, as it signs it (spec 08, D8). */
   const proof = (
@@ -477,41 +474,49 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     const value = own ?? proof(method, path);
     return value === "" ? rest : { ...rest, "x-abacus-host-proof": value };
   };
-  const get = (path: string, headers: Record<string, string> = owner) =>
-    fetch(`${base}${path}`, {
-      headers: signed("GET", path, headers),
-      redirect: "manual",
-    });
-  const post = (
+  /** Sent by node:http: fetch sets its own `sec-fetch-mode`. */
+  const send = (
+    method: string,
     path: string,
-    token: string,
-    headers: Record<string, string> = owner
+    headers: Record<string, string>
   ) =>
-    fetch(`${base}${path}`, {
-      method: "POST",
-      headers: {
-        ...signed("POST", path, headers),
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ token }).toString(),
-      redirect: "manual",
+    new Promise<{
+      status: number;
+      headers: { get: (name: string) => string | null };
+      text: () => Promise<string>;
+    }>((resolve, reject) => {
+      request(
+        `${base}${path}`,
+        { method, headers: signed(method, path, headers) },
+        (answer) => {
+          const chunks: Buffer[] = [];
+          answer.on("data", (chunk: Buffer) => chunks.push(chunk));
+          answer.on("end", () =>
+            resolve({
+              status: answer.statusCode ?? 0,
+              headers: {
+                get: (name) => {
+                  const value = answer.headers[name.toLowerCase()];
+                  return value == null ? null : String(value);
+                },
+              },
+              text: async () => Buffer.concat(chunks).toString("utf8"),
+            })
+          );
+        }
+      )
+        .on("error", reject)
+        .end();
     });
-  /** The confirm page, and the token its button posts. */
-  const confirm = async (path: string, headers = owner) => {
-    const page = await get(path, headers);
-    const html = await page.text();
-    return {
-      page,
-      html,
-      token: /name="token" value="([^"]+)"/.exec(html)?.[1] ?? "",
-    };
-  };
-  const stateOf = async (path: string) => {
-    const { token } = await confirm(path);
-    return new URL(
-      (await post(path, token)).headers.get("location")!
-    ).searchParams.get("state")!;
-  };
+  const get = (path: string, headers: Record<string, string> = owner) =>
+    send("GET", path, headers);
+  /** The provider's state for a sign-in the route started. */
+  const stateOf = async (path: string) =>
+    new URL((await get(path)).headers.get("location")!).searchParams.get(
+      "state"
+    )!;
+  const callback = (state: string, code = "c") =>
+    get(`/mcp/callback?code=${code}&state=${encodeURIComponent(state)}`, owner);
   try {
     // The chat link and the click open the same route.
     expect(await flow.connect("notion")).toEqual({
@@ -519,15 +524,10 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       url: `${hostBase}/mcp/connect/notion`,
     });
 
-    // No sign-in begins outside a confirmed POST.
-    expect(
-      await hosted.begin({ name: "notion", label: "Notion", serverUrl })
-    ).toEqual({ kind: "failed", error: "unconfirmed" });
-
     // The proxy's proof: a valid one admits; none, a stale one, or one over
     // another path, method or owner does not, whatever the owner header says.
     const path = "/mcp/connect/notion";
-    expect((await get(path)).status).toBe(200);
+    expect((await get(path)).status).toBe(302);
     for (const bad of [
       "",
       proof("GET", path, { ts: Math.floor(now / 1000) - 121 }),
@@ -543,70 +543,29 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
         bad
       ).toBe(403);
 
-    // Wrong owner header, a frame, a fetch, or no fetch metadata at all.
+    // Only a top-level navigation by the owner: never a frame, an image, a
+    // fetch, or a request without fetch metadata.
     for (const headers of [
       { ...owner, "x-abacus-user-id": "O" },
       { ...owner, "x-abacus-user-id": "o2" },
       { ...owner, "sec-fetch-dest": "iframe" },
-      { "x-abacus-user-id": "o", "sec-fetch-mode": "cors" },
+      { ...owner, "sec-fetch-dest": "image" },
+      { ...owner, "sec-fetch-mode": "cors" },
+      { ...owner, "sec-fetch-mode": "no-cors" },
+      { "x-abacus-user-id": "o", "sec-fetch-dest": "document" },
+      { "x-abacus-user-id": "o", "sec-fetch-mode": "navigate" },
       { "x-abacus-user-id": "o" },
     ])
       expect((await get(path, headers)).status).toBe(403);
-
-    // The GET only asks, even cross-site (a link in a web chat app).
-    const asked = await confirm("/mcp/connect/notion", {
-      ...owner,
-      "sec-fetch-site": "cross-site",
-    });
-    expect(asked.page.status).toBe(200);
-    expect(asked.page.headers.get("x-frame-options")).toBe("DENY");
-    expect(asked.page.headers.get("cache-control")).toBe("no-store");
-    expect(asked.page.headers.get("content-security-policy")).toContain(
-      "frame-ancestors 'none'"
-    );
-    expect(asked.html).toContain("Connect Notion to AbacusAI Bot?");
-    expect(add).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalledWith(serverUrl, expect.anything());
+    // Nothing is posted to the route any more.
+    expect((await send("POST", path, owner)).status).toBe(404);
     expect((await get("/mcp/connect/nothing-here")).status).toBe(404);
     expect((await get("/mcp/connect/abacus-gmailuser")).status).toBe(404);
 
-    // Refused POSTs: cross-site, missing, wrong, or superseded token.
-    const { token } = await confirm("/mcp/connect/notion");
-    expect(
-      (
-        await post("/mcp/connect/notion", token, {
-          ...owner,
-          "sec-fetch-site": "cross-site",
-        })
-      ).status
-    ).toBe(403);
-    expect((await post("/mcp/connect/notion", "")).status).toBe(403);
-    // No fetch metadata on the POST: refused, the token left unspent.
-    expect(
-      (await post("/mcp/connect/notion", token, { "x-abacus-user-id": "o" }))
-        .status
-    ).toBe(403);
-    expect(
-      (
-        await post("/mcp/connect/notion", token, {
-          "x-abacus-user-id": "o",
-          "sec-fetch-dest": "document",
-        })
-      ).status
-    ).toBe(403);
-    expect((await post("/mcp/connect/notion", asked.token)).status).toBe(403);
-    expect(
-      (await post("/mcp/connect/notion", token, { "x-abacus-user-id": "x" }))
-        .status
-    ).toBe(403);
-    expect(add).not.toHaveBeenCalled();
-
-    // The happy path: the POST installs and redirects, once.
-    const started = await post("/mcp/connect/notion", token);
+    // The GET answers the provider's consent screen and installs nothing.
+    const started = await get(path);
     expect(started.status).toBe(302);
-    expect(add).toHaveBeenCalledExactlyOnceWith("notion", { url: serverUrl });
-    expect(watch).toHaveBeenCalledWith("notion");
-    expect((await post("/mcp/connect/notion", token)).status).toBe(403);
+    expect(started.headers.get("cache-control")).toBe("no-store");
     const authorize = new URL(started.headers.get("location")!);
     expect(authorize.origin + authorize.pathname).toBe(
       "https://auth.provider.test/authorize"
@@ -614,166 +573,163 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     expect(authorize.searchParams.get("redirect_uri")).toBe(
       `${hostBase}/mcp/callback`
     );
+    expect(add).not.toHaveBeenCalled();
+    expect(entries.has("notion")).toBe(false);
+    expect(connected).not.toHaveBeenCalled();
     const state = authorize.searchParams.get("state")!;
 
-    // The provider's redirect is cross-site by nature; its state admits it.
-    const callback = {
-      "x-abacus-user-id": "o",
-      "sec-fetch-dest": "document",
-      "sec-fetch-site": "cross-site",
-    };
-    const unknown = await get("/mcp/callback?code=c&state=nope", callback);
+    // Another owner's state: refused, and left for its owner.
+    const foreign = await hosted.route(
+      {
+        method: "GET",
+        pathname: "/mcp/callback",
+        query: new URLSearchParams({ code: "c", state }),
+        headers: { ...owner, "x-abacus-user-id": "o2" },
+      },
+      "o2"
+    );
+    expect(foreign).toMatchObject({ kind: "page", status: 400 });
+    const unknown = await get("/mcp/callback?code=c&state=nope", owner);
     expect(unknown.status).toBe(400);
     expect(tokenRequests).toHaveLength(0);
-    const done = await get(
-      `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`,
-      callback
-    );
+
+    // The provider's redirect: the code is exchanged, then the install.
+    const done = await callback(state, "the-code");
     expect(done.status).toBe(200);
-    expect(await done.text()).toContain("Notion is connected.");
-    expect(signedIn).toHaveBeenCalledWith("notion");
+    expect(done.headers.get("content-security-policy")).toContain(
+      "frame-ancestors 'none'"
+    );
+    expect(done.headers.get("x-frame-options")).toBe("DENY");
+    const page = await done.text();
+    expect(page).toContain("Notion is connected.");
+    expect(page).toContain("go back to AbacusAI Bot or WhatsApp");
+    expect(page).not.toContain("<script");
+    expect(page).not.toContain("<form");
+    expect(add).toHaveBeenCalledExactlyOnceWith("notion", { url: serverUrl });
+    expect(connected).toHaveBeenCalledExactlyOnceWith("notion");
     const stored = JSON.parse(
       await readFile(join(home, "mcp-auth.json"), "utf8")
     );
     expect(stored.servers[serverUrl].accessToken).toBe("token-1");
-    expect(
-      (
-        await get(
-          `/mcp/callback?code=the-code&state=${encodeURIComponent(state)}`,
-          callback
-        )
-      ).status
-    ).toBe(400);
+    // The state is spent.
+    expect((await callback(state, "the-code")).status).toBe(400);
     expect(tokenRequests).toHaveLength(1);
 
-    // Again over the user's edited entry: kept as it is. A repeat begin
+    // `return`: a same-origin path under /bot/ is where the tab goes after;
+    // anything else is ignored and the page answers.
+    const returning = async (target: string) =>
+      callback(
+        await stateOf(
+          `/mcp/connect/notion?return=${encodeURIComponent(target)}`
+        )
+      );
+    const back = await returning("/bot/library/connectors");
+    expect(back.status).toBe(302);
+    expect(back.headers.get("location")).toBe(
+      "/bot/library/connectors?connected=notion"
+    );
+    expect(
+      (await returning("/bot/library/connectors?category=web")).headers.get(
+        "location"
+      )
+    ).toBe("/bot/library/connectors?category=web&connected=notion");
+    for (const target of [
+      "//evil.com",
+      "https://x",
+      "/other",
+      "/bot//evil.com",
+      "/bot/../other",
+      "/bot/\\evil.com",
+      "/bot/x\r\nSet-Cookie: a=b",
+    ]) {
+      const ignored = await returning(target);
+      expect(ignored.status, target).toBe(200);
+      expect(ignored.headers.get("location")).toBeNull();
+    }
+
+    // Again over the user's edited entry: kept as it is. A repeat GET
     // replaces the earlier flow, whose state no longer completes.
     entries.set("notion", { url: serverUrl, headers: { "X-Mine": "1" } });
-    const replaced = await stateOf("/mcp/connect/notion");
-    const refusedState = await stateOf("/mcp/connect/notion");
+    const replaced = await stateOf(path);
+    const refusedState = await stateOf(path);
+    expect((await callback(replaced)).status).toBe(400);
+    expect(failed).not.toHaveBeenCalled();
+    // A refusal is announced for its connector; its text never reaches the page.
+    const refusal = await get(
+      `/mcp/callback?error=access_denied&error_description=${encodeURIComponent("<script>x</script>")}&state=${refusedState}`,
+      owner
+    );
+    expect(refusal.status).toBe(400);
+    expect(await refusal.text()).not.toContain("<script>");
+    expect(failed).toHaveBeenCalledExactlyOnceWith("notion");
+    expect((await callback(await stateOf(path))).status).toBe(200);
     expect(add).toHaveBeenCalledOnce();
     expect(entries.get("notion")).toEqual({
       url: serverUrl,
       headers: { "X-Mine": "1" },
     });
-    expect(
-      (await get(`/mcp/callback?code=c&state=${replaced}`, callback)).status
-    ).toBe(400);
-    expect(failed).not.toHaveBeenCalled();
-    // A refusal is announced for its connector; its text never reaches the page.
-    const refusal = await get(
-      `/mcp/callback?error=access_denied&error_description=${encodeURIComponent("<script>x</script>")}&state=${refusedState}`,
-      callback
-    );
-    expect(refusal.status).toBe(400);
-    expect(await refusal.text()).not.toContain("<script>");
-    expect(failed).toHaveBeenCalledExactlyOnceWith("notion");
+    entries.delete("notion");
 
-    // Cancel drops the pending flow; an expired one does not complete.
-    const revokedState = await stateOf("/mcp/connect/notion");
+    // Cancel drops the pending sign-in; an expired one does not complete.
+    const revokedState = await stateOf(path);
     hosted.revoke("notion");
-    expect(
-      (await get(`/mcp/callback?code=c&state=${revokedState}`, callback)).status
-    ).toBe(400);
-    const lateState = await stateOf("/mcp/connect/notion");
+    expect((await callback(revokedState)).status).toBe(400);
+    const lateState = await stateOf(path);
     now += 31 * 60_000;
-    expect(
-      (await get(`/mcp/callback?code=c&state=${lateState}`, callback)).status
-    ).toBe(400);
-    // So does a confirm token past its ten minutes.
-    const stale = await confirm("/mcp/connect/notion");
-    now += 11 * 60_000;
-    expect((await post("/mcp/connect/notion", stale.token)).status).toBe(403);
-    expect(tokenRequests).toHaveLength(1);
+    expect((await callback(lateState)).status).toBe(400);
 
     // Cancelled while discovery runs: the sign-in it was preparing never exists.
     let release!: () => void;
     registering = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const racing = await confirm("/mcp/connect/notion");
     const probes = () =>
       fetchSpy.mock.calls.filter(([input]) => String(input) === serverUrl)
         .length;
     const before = probes();
-    const raced = post("/mcp/connect/notion", racing.token);
+    const raced = get(path);
     await vi.waitFor(() => expect(probes()).toBe(before + 1));
     hosted.revoke("notion");
     release();
     const racedAnswer = await raced;
     expect(racedAnswer.status).toBe(400);
     expect(racedAnswer.headers.get("location")).toBeNull();
+    expect(failed).toHaveBeenLastCalledWith("notion");
     registering = Promise.resolve();
 
-    // Cancel-all drops every connector's confirm token and pending sign-in.
-    const one = await confirm("/mcp/connect/notion");
-    const pendingState = await stateOf("/mcp/connect/notion");
-    const two = await confirm("/mcp/connect/huggingface");
+    // Cancel-all drops every pending sign-in.
+    const pendingState = await stateOf(path);
     hosted.revoke();
-    expect((await post("/mcp/connect/notion", one.token)).status).toBe(403);
-    expect((await post("/mcp/connect/huggingface", two.token)).status).toBe(
-      403
-    );
-    expect(
-      (await get(`/mcp/callback?code=c&state=${pendingState}`, callback)).status
-    ).toBe(400);
+    expect((await callback(pendingState)).status).toBe(400);
+    expect(entries.has("notion")).toBe(false);
 
-    // A body over the cap, declared or streamed, and one that never ends.
-    const big = await confirm("/mcp/connect/notion");
-    const sized = await fetch(`${base}/mcp/connect/notion`, {
-      method: "POST",
-      headers: {
-        ...signed("POST", "/mcp/connect/notion", owner),
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      body: `token=${big.token}&pad=${"x".repeat(100)}`,
-    });
-    expect(sized.status).toBe(413);
-    const raw = (body: (sent: ClientRequest) => void) =>
-      new Promise<number | "closed">((resolve) => {
-        const sent = request(
-          `${base}/mcp/connect/notion`,
-          {
-            method: "POST",
-            headers: {
-              ...signed("POST", "/mcp/connect/notion", owner),
-              "content-type": "application/x-www-form-urlencoded",
-            },
-          },
-          (answer) => {
-            answer.resume();
-            resolve(answer.statusCode ?? 0);
-          }
-        );
-        sent.on("error", () => resolve("closed"));
-        body(sent);
-      });
-    // Chunked, no length: counted, and cut off past the cap.
-    expect(
-      await raw((sent) => {
-        sent.write("x".repeat(40));
-        sent.write("x".repeat(40));
-      })
-    ).toSatisfy((status) => status === 413 || status === "closed");
-    // Started and never finished: the timeout answers.
-    expect(await raw((sent) => sent.write("token="))).toBe(408);
-    // Neither spent the token.
-    expect((await post("/mcp/connect/notion", big.token)).status).toBe(302);
-
-    // No sign-in: installed on the POST, then the connected page.
-    const hf = await confirm("/mcp/connect/huggingface");
+    // No sign-in, no credentials: installed on the GET, then connected.
     expect(entries.has("huggingface")).toBe(false);
-    const open = await post("/mcp/connect/huggingface", hf.token);
+    const open = await get("/mcp/connect/huggingface");
     expect(open.status).toBe(200);
     expect(await open.text()).toContain("Hugging Face is connected.");
     expect(entries.get("huggingface")).toEqual({
       url: "https://huggingface.co/mcp",
     });
-    // The user's own server that asks for none.
-    const mine = await confirm("/mcp/connect/mine");
+    expect(connected).toHaveBeenLastCalledWith("huggingface");
     expect(
-      await (await post("/mcp/connect/mine", mine.token)).text()
-    ).toContain("mine is connected.");
+      (
+        await get(
+          `/mcp/connect/huggingface?return=${encodeURIComponent("/bot/library/connectors")}`
+        )
+      ).headers.get("location")
+    ).toBe("/bot/library/connectors?connected=huggingface");
+    // The user's own server that asks for none, signed in by its name.
+    expect(await (await get("/mcp/connect/mine")).text()).toContain(
+      "mine is connected."
+    );
+
+    // A connector that needs keys is connected from the app, never here.
+    const keyed = await get("/mcp/connect/keyed");
+    expect(keyed.status).toBe(400);
+    expect(await keyed.text()).toContain("Open AbacusAI Bot to connect it.");
+    expect(failed).toHaveBeenLastCalledWith("keyed");
+    expect(entries.has("keyed")).toBe(false);
   } finally {
     fetchSpy.mockRestore();
     if (previousHome == null) delete process.env.ABACUSAI_BOT_HOME;
