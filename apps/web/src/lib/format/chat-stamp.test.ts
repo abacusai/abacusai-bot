@@ -82,3 +82,73 @@ describe("formatChatStamp", () => {
     expect(formatChatStamp(null, NOW, "en-US", "Yesterday")).toBeNull();
   });
 });
+
+it("matches fresh local formatters after zone changes, through DST, and across locales", () => {
+  const env = (globalThis as unknown as { process: { env: { TZ?: string } } })
+    .process.env;
+  const original = env.TZ;
+  try {
+    for (const zone of [
+      "UTC",
+      "America/New_York",
+      "Asia/Kolkata",
+      "Africa/Monrovia",
+    ]) {
+      env.TZ = zone;
+      for (const language of ["en-US", "de-DE", "ar-EG", "th-TH"]) {
+        for (const instant of [
+          "2026-03-08T06:59:00Z",
+          "2026-03-08T07:01:00Z",
+          "2026-11-01T05:30:00Z",
+          "2026-11-01T06:30:00Z",
+          "1971-01-01T00:44:45Z",
+        ]) {
+          const when = new Date(instant);
+          expect(
+            formatChatStamp(
+              when.getTime(),
+              when.getTime(),
+              language,
+              "Yesterday"
+            )
+          ).toBe(
+            when.toLocaleTimeString(language, {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          );
+          const now = new Date(when);
+          now.setDate(now.getDate() + 3);
+          expect(
+            formatChatStamp(
+              when.getTime(),
+              now.getTime(),
+              language,
+              "Yesterday"
+            )
+          ).toBe(
+            new Intl.DateTimeFormat(language, { weekday: "long" }).format(when)
+          );
+          now.setFullYear(now.getFullYear() + 1);
+          expect(
+            formatChatStamp(
+              when.getTime(),
+              now.getTime(),
+              language,
+              "Yesterday"
+            )
+          ).toBe(
+            new Intl.DateTimeFormat(language, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }).format(when)
+          );
+        }
+      }
+    }
+  } finally {
+    if (original === undefined) delete env.TZ;
+    else env.TZ = original;
+  }
+});

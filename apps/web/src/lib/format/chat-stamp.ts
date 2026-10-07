@@ -37,6 +37,45 @@ export const chatStamp = (
   };
 };
 
+const formats = new Map<string, Intl.DateTimeFormat>();
+const MAX_FORMATS = 16;
+
+const formatLocal = (
+  when: Date,
+  language: string,
+  kind: "time" | "weekday" | "date" | "year"
+): string => {
+  const key = `${language}:${kind}`;
+  let format = formats.get(key);
+  if (format == null) {
+    const options: Intl.DateTimeFormatOptions =
+      kind === "time"
+        ? { hour: "numeric", minute: "2-digit" }
+        : kind === "weekday"
+          ? { weekday: "long" }
+          : {
+              month: "short",
+              day: "numeric",
+              ...(kind === "year" ? { year: "numeric" } : {}),
+            };
+    format = new Intl.DateTimeFormat(language, { ...options, timeZone: "UTC" });
+  }
+  formats.delete(key);
+  formats.set(key, format);
+  if (formats.size > MAX_FORMATS) formats.delete(formats.keys().next().value!);
+  // Read local calendar fields on every call; a cached formatter must not pin
+  // the system zone. UTC is only the carrier for these already-local fields.
+  return format.format(
+    Date.UTC(
+      when.getFullYear(),
+      when.getMonth(),
+      when.getDate(),
+      when.getHours(),
+      when.getMinutes()
+    )
+  );
+};
+
 /**
  * "1:25 PM" today, `yesterday` before that, then the weekday, then a date;
  * null when there is no time to show. `yesterday` is the caller's
@@ -51,20 +90,10 @@ export const formatChatStamp = (
   const stamp = chatStamp(at, now);
   if (stamp == null || at == null) return null;
   const when = new Date(at);
-  if (stamp.kind === "time")
-    return when.toLocaleTimeString(language, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
   if (stamp.kind === "yesterday") return yesterday;
-  return new Intl.DateTimeFormat(
+  return formatLocal(
+    when,
     language,
-    stamp.kind === "weekday"
-      ? { weekday: "long" }
-      : {
-          month: "short",
-          day: "numeric",
-          ...(stamp.sameYear ? {} : { year: "numeric" }),
-        }
-  ).format(when);
+    stamp.kind === "date" ? (stamp.sameYear ? "date" : "year") : stamp.kind
+  );
 };
