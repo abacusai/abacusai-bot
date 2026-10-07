@@ -141,19 +141,16 @@ describe("asking for one", () => {
     expect(text).toContain("This call does not wait");
   });
 
-  it("offers one Google consent for Gmail, Drive and Calendar", async () => {
+  it("offers one Google consent for what is still missing, and watches only that", async () => {
+    // Gmail is connected here: it is named as such, and never watched, since
+    // an already connected member would read as the link landing.
     const text = await call({ service: "Google Drive" });
 
-    expect(text).toContain(
-      "Gmail, Google Drive, Google Calendar, all in one step"
-    );
+    expect(text).toContain("Gmail is already connected");
+    expect(text).toContain("Google Drive, Google Calendar, all in one step");
     expect(text).toContain("service=google&r=req");
     expect(watch).toHaveBeenCalledWith({
-      connectorIds: [
-        "abacus-gmailuser",
-        "abacus-googledriveuser",
-        "abacus-googlecalendar",
-      ],
+      connectorIds: ["abacus-googledriveuser", "abacus-googlecalendar"],
       sessionId: "session-1",
     });
   });
