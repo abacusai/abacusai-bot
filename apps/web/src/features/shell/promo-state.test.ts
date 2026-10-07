@@ -1,7 +1,7 @@
 import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
 import { expect, it } from "vitest";
 
-import { PROMO_DISMISS_MS, promoAccountKey, promoState } from "./promo-state";
+import { PROMO_SNOOZE_MS, promoAccountKey, promoState } from "./promo-state";
 const free = {
   user_id: "dummy-a",
   organization_id: "dummy-org",
@@ -17,26 +17,26 @@ it("preserves free-account eligibility and hides paid or unknown accounts", () =
   expect(promoState(null, null, null, 100)).toBeNull();
   expect(promoState(free, null, null, 100)).toBe("upsell");
 });
-it("remembers dismissal for seven days and reappears when credits run out", () => {
-  const dismissal = {
-    until: 100 + PROMO_DISMISS_MS,
+it("remembers snooze for ten minutes and reappears when credits run out", () => {
+  const snooze = {
+    until: 100 + PROMO_SNOOZE_MS,
     situation: "upsell" as const,
   };
-  expect(promoState(free, null, dismissal, 101)).toBeNull();
-  expect(promoState(free, null, dismissal, dismissal.until)).toBe("upsell");
-  expect(promoState({ ...free, credits_used: 100 }, null, dismissal, 101)).toBe(
+  expect(promoState(free, null, snooze, 101)).toBeNull();
+  expect(promoState(free, null, snooze, snooze.until)).toBe("upsell");
+  expect(promoState({ ...free, credits_used: 100 }, null, snooze, 101)).toBe(
     "exhausted"
   );
   expect(
     promoState(
       { ...free, credits_used: 100 },
       null,
-      { ...dismissal, situation: "exhausted" },
+      { ...snooze, situation: "exhausted" },
       101
     )
   ).toBeNull();
 });
-it("scopes dismissal to the account and organization", () => {
+it("scopes snooze to the account and organization", () => {
   expect(promoAccountKey(free)).not.toBe(
     promoAccountKey({ ...free, user_id: "dummy-b" })
   );
