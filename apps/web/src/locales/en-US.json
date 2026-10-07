@@ -2687,7 +2687,7 @@
       "notices": "Download notices",
       "runtime": "Chromium and Node.js notices",
       "failed": "Could not load licenses.",
-      "count": "{{count}} packages",
+      "count": "Packages: {{count}}",
       "copyLink": "Copy repository link for {{name}}",
       "openLink": "Open repository for {{name}}",
       "copied": "Copied",

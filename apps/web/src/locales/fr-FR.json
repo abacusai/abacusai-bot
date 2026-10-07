@@ -2687,7 +2687,7 @@
       "notices": "Télécharger les mentions",
       "runtime": "Mentions de Chromium et Node.js",
       "failed": "Impossible de charger les licences.",
-      "count": "{{count}} paquets",
+      "count": "Paquets: {{count}}",
       "copyLink": "Copier le lien du dépôt de {{name}}",
       "openLink": "Ouvrir le dépôt de {{name}}",
       "copied": "Copié",

@@ -87,3 +87,25 @@ test("repository links normalize npm metadata and reject unsafe protocols", () =
   );
   assert.equal(repositoryUrl("file:///etc/passwd"), undefined);
 });
+
+test("multiple installed copies do not duplicate rows, but versions and original texts remain distinct", () => {
+  const entry = {
+    name: "dep",
+    version: "1",
+    license: "MIT",
+    text: "Copyright A\nMIT",
+  };
+  const input = [
+    entry,
+    { ...entry },
+    { ...entry, version: "2" },
+    { ...entry, name: "other", text: "Copyright B\nMIT" },
+  ];
+  const data = licenseData(input);
+  assert.equal(data.packages.length, 3);
+  assert.equal(Object.keys(data.texts).length, 2);
+  assert.equal(
+    JSON.stringify(licenseData(input.toReversed())),
+    JSON.stringify(data)
+  );
+});

@@ -2687,7 +2687,7 @@
       "notices": "Unduh pemberitahuan",
       "runtime": "Pemberitahuan Chromium dan Node.js",
       "failed": "Lisensi tidak dapat dimuat.",
-      "count": "{{count}} paket",
+      "count": "Paket: {{count}}",
       "copyLink": "Salin tautan repositori {{name}}",
       "openLink": "Buka repositori {{name}}",
       "copied": "Disalin",

@@ -1,13 +1,22 @@
+import { contract } from "@abacus-ai/contract/contract";
+import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
+const originalClipboard = Object.getOwnPropertyDescriptor(
+  navigator,
+  "clipboard"
+);
 let app: Awaited<ReturnType<typeof renderApp>> | undefined;
 afterEach(async () => {
   app?.view.unmount();
   await app?.cleanup();
   app = undefined;
   vi.unstubAllGlobals();
+  if (originalClipboard)
+    Object.defineProperty(navigator, "clipboard", originalClipboard);
+  else delete (navigator as { clipboard?: unknown }).clipboard;
 });
 it("About loads licenses only on request, searches grouped packages and exposes full text and notices", async () => {
   const fetch = vi.fn(async () => ({
@@ -30,7 +39,22 @@ it("About loads licenses only on request, searches grouped packages and exposes 
     }),
   }));
   vi.stubGlobal("fetch", fetch);
-  app = await renderApp("/settings/about");
+  const copy = vi.fn(async () => undefined);
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: copy },
+  });
+  const open = vi.fn(async (_input: { url: string }) => undefined);
+  const os = implement(contract);
+  app = await renderApp("/settings/about", {
+    procedures: {
+      system: {
+        openExternal: os.system.openExternal.handler(({ input }) =>
+          open(input)
+        ),
+      },
+    },
+  });
   await screen.findByRole("heading", { name: "About" });
   expect(screen.queryByText("Open the Library")).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
@@ -61,6 +85,21 @@ it("About loads licenses only on request, searches grouped packages and exposes 
   expect(
     screen.getByRole("button", { name: "Open repository for react" })
   ).not.toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Copy repository link for react" })
+  );
+  await waitFor(() =>
+    expect(copy).toHaveBeenCalledWith("https://github.com/facebook/react")
+  );
+  await screen.findByText("Copied");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open repository for react" })
+  );
+  await waitFor(() =>
+    expect(open).toHaveBeenCalledWith({
+      url: "https://github.com/facebook/react",
+    })
+  );
   fireEvent.change(
     screen.getByRole("textbox", { name: "Search packages or licenses" }),
     { target: { value: "no-match" } }

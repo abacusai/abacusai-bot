@@ -2687,7 +2687,7 @@
       "notices": "Baixar avisos",
       "runtime": "Avisos do Chromium e Node.js",
       "failed": "Não foi possível carregar as licenças.",
-      "count": "{{count}} pacotes",
+      "count": "Pacotes: {{count}}",
       "copyLink": "Copiar link do repositório de {{name}}",
       "openLink": "Abrir repositório de {{name}}",
       "copied": "Copiado",

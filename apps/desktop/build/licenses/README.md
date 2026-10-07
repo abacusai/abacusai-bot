@@ -20,10 +20,11 @@ and builds. `pnpm check:licenses` runs the transform/policy tests and generation
 it is part of `pnpm check`. Packaging repeats discovery from the final source
 maps and updates the renderer assets and installer notices. Generated files are
 ignored, matching the existing notices convention, so no inventory can become
-stale in git. Run generation first when invoking Vite directly.
+stale in git. The package build/dev scripts also generate before Vite. Run generation first
+when invoking the Vite CLI directly.
 
 Coverage includes the installed production closure of desktop, web, updater,
-and runtime workspace packages, with pnpm's removed backends excluded. Source
+and runtime workspace packages, with pnpm's removed backends and compile-only type peers excluded. Source
 maps add shipped code declared as development dependencies. Source asset
 imports, copied font/template texts, and `sources.json` cover non-code assets.
 Sounds are synthesized by the app. Electron's distribution supplies its MIT
@@ -39,3 +40,9 @@ URL. BusyBox is an existing Windows separate executable under GPL-2.0-only.
 Its pinned corresponding-source URL and license are disclosed; legal review
 must confirm the installer source-offer obligations before release. This entry
 does not authorize a new copyleft dependency or a version bump.
+
+Vendored tool entries name their downloader pin. Generation fails when the
+version changes without an updated attribution. Concurrent web/desktop builds
+publish complete generated files with atomic renames. Turbo hashes the
+generator, policy, manifests, asset licenses and source imports so cached
+renderer builds cannot restore notices from a different input graph.

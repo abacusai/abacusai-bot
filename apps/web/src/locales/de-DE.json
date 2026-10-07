@@ -2687,7 +2687,7 @@
       "notices": "Lizenzhinweise herunterladen",
       "runtime": "Chromium- und Node.js-Lizenzhinweise",
       "failed": "Lizenzen konnten nicht geladen werden.",
-      "count": "{{count}} Pakete",
+      "count": "Pakete: {{count}}",
       "copyLink": "Repository-Link für {{name}} kopieren",
       "openLink": "Repository für {{name}} öffnen",
       "copied": "Kopiert",

@@ -2687,7 +2687,7 @@
       "notices": "Scarica le attribuzioni",
       "runtime": "Attribuzioni di Chromium e Node.js",
       "failed": "Impossibile caricare le licenze.",
-      "count": "{{count}} pacchetti",
+      "count": "Pacchetti: {{count}}",
       "copyLink": "Copia il link al repository di {{name}}",
       "openLink": "Apri il repository di {{name}}",
       "copied": "Copiato",

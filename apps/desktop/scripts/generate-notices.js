@@ -18,6 +18,17 @@ const removed = new Set(
   ].map((match) => match[1])
 );
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
+// Desktop and web builds can run concurrently. Publish only complete assets.
+function writeOutput(file, text) {
+  const temporary = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, text);
+  fs.renameSync(temporary, file);
+}
+function copyOutput(source, file) {
+  const temporary = `${file}.${process.pid}.tmp`;
+  fs.copyFileSync(source, temporary);
+  fs.renameSync(temporary, file);
+}
 
 function resolvePackage(name, from) {
   for (let dir = from; ; dir = path.dirname(dir)) {
@@ -43,7 +54,11 @@ function visit(directory, bundled = false) {
     ...pkg.optionalDependencies,
     ...pkg.peerDependencies,
   })) {
-    if (removed.has(name)) continue;
+    if (
+      removed.has(name) ||
+      (name.startsWith("@types/") && !pkg.dependencies?.[name])
+    )
+      continue;
     const dependency = resolvePackage(name, dir);
     if (dependency) visit(dependency, bundled);
     else if (
@@ -335,15 +350,15 @@ console.log(`Pinned policy review entries: ${Object.keys(reviews).join(", ")}`);
 const data = licenseData(dataEntries);
 const publicDir = path.join(root, "apps/web/public/licenses");
 fs.mkdirSync(publicDir, { recursive: true });
-fs.writeFileSync(path.join(publicDir, "licenses.json"), JSON.stringify(data));
-fs.copyFileSync(
+writeOutput(path.join(publicDir, "licenses.json"), JSON.stringify(data));
+copyOutput(
   path.join(electronDir, "dist/LICENSES.chromium.html"),
   path.join(publicDir, "LICENSES.chromium.html")
 );
 const entries = [...new Set(sections)];
 const output = path.join(desktop, "dist/THIRD_PARTY_NOTICES.txt");
 fs.mkdirSync(path.dirname(output), { recursive: true });
-fs.writeFileSync(
+writeOutput(
   output,
   `Third-party software in AbacusAI Bot\nGenerated from installed desktop dependencies, desktop source imports and bundled desktop and agent source maps.\nDependencies may include code removed by tree shaking.\n\n${entries.join("\n\n" + "=".repeat(72) + "\n\n")}\n`
 );
@@ -351,8 +366,8 @@ console.log(
   `Generated desktop notices for ${entries.length} dependency and asset entries (${fallback.length} use declared SPDX terms).`
 );
 
-fs.copyFileSync(output, path.join(publicDir, "THIRD_PARTY_NOTICES.txt"));
-fs.copyFileSync(
+copyOutput(output, path.join(publicDir, "THIRD_PARTY_NOTICES.txt"));
+copyOutput(
   path.join(electronDir, "dist/LICENSES.chromium.html"),
   path.join(desktop, "dist/LICENSES.chromium.html")
 );
@@ -363,9 +378,10 @@ console.log(
 if (!graphOnly) {
   const rendererLicenses = path.join(desktop, "dist/renderer/licenses");
   fs.mkdirSync(rendererLicenses, { recursive: true });
-  for (const file of fs.readdirSync(publicDir))
-    fs.copyFileSync(
-      path.join(publicDir, file),
-      path.join(rendererLicenses, file)
-    );
+  for (const file of [
+    "licenses.json",
+    "THIRD_PARTY_NOTICES.txt",
+    "LICENSES.chromium.html",
+  ])
+    copyOutput(path.join(publicDir, file), path.join(rendererLicenses, file));
 }

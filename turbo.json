@@ -166,7 +166,22 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/main/**"]
     },
     "//#generate:licenses": {
-      "cache": false
+      "cache": false,
+      "inputs": [
+        "$TURBO_ROOT$/pnpm-lock.yaml",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/apps/desktop/scripts/generate-notices.js",
+        "$TURBO_ROOT$/apps/desktop/scripts/license-data.mjs",
+        "$TURBO_ROOT$/apps/desktop/scripts/download-*.js",
+        "$TURBO_ROOT$/apps/desktop/build/licenses/**",
+        "$TURBO_ROOT$/apps/desktop/resources/decks/TEMPLATES-LICENSE",
+        "$TURBO_ROOT$/apps/desktop/resources/pdf/fonts/LICENSE-*",
+        "$TURBO_ROOT$/packages/agent/scripts/download-tools.js",
+        "$TURBO_ROOT$/apps/desktop/src/**",
+        "$TURBO_ROOT$/apps/web/src/**"
+      ]
     },
     "//#check:licenses": {
       "cache": false

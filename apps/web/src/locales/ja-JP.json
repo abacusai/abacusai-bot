@@ -2687,7 +2687,7 @@
       "notices": "通知をダウンロード",
       "runtime": "Chromium と Node.js の通知",
       "failed": "ライセンスを読み込めませんでした。",
-      "count": "{{count}} 件のパッケージ",
+      "count": "パッケージ: {{count}}",
       "copyLink": "{{name}} のリポジトリリンクをコピー",
       "openLink": "{{name}} のリポジトリを開く",
       "copied": "コピーしました",

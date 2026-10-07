@@ -79,6 +79,7 @@ export function policyFailures(entries, reviews = {}) {
 
 export function licenseData(entries) {
   const texts = {};
+  const seen = new Set();
   const packages = entries
     .map(({ text, ...entry }) => {
       if (!text?.trim())
@@ -87,13 +88,31 @@ export function licenseData(entries) {
       texts[textHash] = text;
       return { ...entry, textHash };
     })
+    .filter((entry) => {
+      const key = JSON.stringify([
+        entry.name,
+        entry.version,
+        entry.license,
+        entry.url,
+        entry.textHash,
+        entry.review,
+      ]);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .sort((a, b) =>
       `${a.license}:${a.name}:${a.version}`.localeCompare(
         `${b.license}:${b.name}:${b.version}`,
         "en"
       )
     );
-  return { packages, texts };
+  return {
+    packages,
+    texts: Object.fromEntries(
+      Object.entries(texts).sort(([a], [b]) => a.localeCompare(b, "en"))
+    ),
+  };
 }
 
 export function repositoryUrl(repository, homepage) {
