@@ -2646,7 +2646,9 @@
       "notATheme": "Isso não é um tema de cores do VS Code.",
       "tooLarge": "O arquivo é grande demais (2 MB no máximo).",
       "includeHint": "Este tema se baseia em outro arquivo que não foi importado, então algumas cores podem faltar.",
-      "remove": "Remover"
+      "remove": "Remover",
+      "allowTwoTabRows": "Permitir duas linhas de abas",
+      "allowTwoTabRowsDetail": "Use uma segunda linha na barra de título quando houver espaço."
     },
     "general": {
       "notch": {

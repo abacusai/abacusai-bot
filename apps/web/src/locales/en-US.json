@@ -2646,7 +2646,9 @@
       "notATheme": "That isn't a VS Code colour theme.",
       "tooLarge": "That file is too large (2 MB at most).",
       "includeHint": "This theme builds on another file that wasn't imported, so some colours may be missing.",
-      "remove": "Remove"
+      "remove": "Remove",
+      "allowTwoTabRows": "Allow two rows of tabs",
+      "allowTwoTabRowsDetail": "Wrap tabs onto a second title-bar row when there is room."
     },
     "general": {
       "notch": {

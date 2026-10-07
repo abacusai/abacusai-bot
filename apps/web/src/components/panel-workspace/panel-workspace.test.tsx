@@ -64,7 +64,7 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
       document.querySelectorAll(
         ".dock-group-island [data-slot=topbar-panel-tabs]"
       )
-    ).toHaveLength(2)
+    ).toHaveLength(0)
   );
   view.rerender(
     <PanelWorkspace
@@ -81,7 +81,7 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
     />
   );
   await waitFor(() =>
-    expect(screen.getByRole("tab", { name: "New terminal" })).toBeTruthy()
+    expect(apiRef.current!.getPanel("terminal:new")?.title).toBe("New terminal")
   );
   view.rerender(<PanelWorkspace {...props} expanded />);
   act(() => moveDockTab(apiRef.current, "chat", "top"));

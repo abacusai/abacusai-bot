@@ -235,6 +235,7 @@ export interface PrefsAppearance {
   translucency: boolean;
   /** The rail shows icons only; names move to tooltips. */
   railIconsOnly: boolean;
+  allowTwoTabRows?: boolean;
   custom: {
     name: string;
     light?: PrefsThemeColors;

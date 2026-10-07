@@ -2646,7 +2646,9 @@
       "notATheme": "VS Code のカラーテーマではありません。",
       "tooLarge": "ファイルが大きすぎます（最大 2 MB）。",
       "includeHint": "このテーマは読み込まれていない別のファイルを元にしているため、一部の色が欠けている可能性があります。",
-      "remove": "削除"
+      "remove": "削除",
+      "allowTwoTabRows": "タブを2行に表示する",
+      "allowTwoTabRowsDetail": "スペースがある場合、タイトルバーの2行目にタブを表示します。"
     },
     "general": {
       "notch": {

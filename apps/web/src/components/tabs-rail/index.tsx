@@ -28,6 +28,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
 import {
@@ -138,7 +139,12 @@ export const TabsRail = ({
   const [width, setWidth] = useState(600);
   const [overflow, setOverflow] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
-  const layout = railLayout(tabs.length, width);
+  const prefs = usePrefs();
+  const layout = railLayout(
+    tabs.length,
+    width,
+    prefs.appearance?.allowTwoTabRows === true
+  );
   const restoreFocus = useRef(false);
   useEffect(() => {
     const selected = list.current?.querySelector<HTMLElement>(

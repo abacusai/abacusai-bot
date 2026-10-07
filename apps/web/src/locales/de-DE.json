@@ -2646,7 +2646,9 @@
       "notATheme": "Das ist kein VS Code-Farbdesign.",
       "tooLarge": "Die Datei ist zu groß (höchstens 2 MB).",
       "includeHint": "Dieses Design baut auf einer weiteren Datei auf, die nicht importiert wurde; manche Farben fehlen vielleicht.",
-      "remove": "Entfernen"
+      "remove": "Entfernen",
+      "allowTwoTabRows": "Zwei Tab-Zeilen erlauben",
+      "allowTwoTabRowsDetail": "Tabs bei ausreichend Platz in einer zweiten Titelleistenzeile anzeigen."
     },
     "general": {
       "notch": {

@@ -2646,7 +2646,9 @@
       "notATheme": "VS Code 색상 테마가 아닙니다.",
       "tooLarge": "파일이 너무 큽니다(최대 2MB).",
       "includeHint": "이 테마는 가져오지 않은 다른 파일을 바탕으로 하므로 일부 색상이 빠졌을 수 있습니다.",
-      "remove": "제거"
+      "remove": "제거",
+      "allowTwoTabRows": "탭을 두 줄로 표시",
+      "allowTwoTabRowsDetail": "공간이 있으면 제목 표시줄의 두 번째 줄에 탭을 표시합니다."
     },
     "general": {
       "notch": {

@@ -60,7 +60,7 @@ const BarButton = ({
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex min-h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
+    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex min-h-(--toolbar-h) min-w-0 items-start gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
   >
     {children}
   </header>
@@ -97,9 +97,9 @@ const Leading = ({
     <div
       data-slot="topbar-leading"
       className={cn(
-        "phone:pl-1.5 flex items-center gap-0.5 pl-2",
+        "phone:pl-1.5 flex h-(--titlebar-row-h) items-center gap-0.5 pl-2",
         sidebarInLayout
-          ? "w-[calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x))] min-w-min flex-none"
+          ? "w-[var(--topbar-leading-width,calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x)))] min-w-min flex-none"
           : "flex-none pr-2.5"
       )}
     >
@@ -202,7 +202,7 @@ const Identity = ({
   return (
     <div
       data-slot="topbar-identity"
-      className="flex min-w-0 flex-1 items-center gap-2 pr-2"
+      className="flex h-(--titlebar-row-h) min-w-0 flex-1 items-center gap-2 pr-2"
     >
       {children === undefined ? (
         <>
@@ -268,7 +268,7 @@ const Actions = ({
   return (
     <div
       data-slot="topbar-actions"
-      className="flex shrink-0 items-center gap-0.5"
+      className="flex h-(--titlebar-row-h) shrink-0 items-center gap-0.5"
     >
       {actions.map((action) =>
         action.render != null ? (

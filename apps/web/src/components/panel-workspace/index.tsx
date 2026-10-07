@@ -21,7 +21,6 @@ import {
 import { createPortal } from "react-dom";
 import { usePanelRef } from "react-resizable-panels";
 
-import { TabsRail } from "#renderer/components/tabs-rail";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
@@ -46,15 +45,7 @@ export interface WorkspaceTab {
 interface WorkspaceContext {
   expanded: boolean;
   visible: string[];
-  structure: string;
   targets: Map<string, HTMLDivElement>;
-  api: DockviewApi | null;
-  tabs: WorkspaceTab[];
-  select(id: string): void;
-  add?(kind: PanelTabKind): void;
-  reopen?(): void;
-  rename?(id: string, title: string): void;
-  close(id: string): void;
 }
 const Context = createContext<WorkspaceContext | null>(null);
 const Content = ({ api }: IDockviewPanelProps) => {
@@ -65,7 +56,6 @@ const Content = ({ api }: IDockviewPanelProps) => {
     if (context.expanded && target && container.current)
       container.current.append(target);
   }, [context, api.id]);
-  const group = context.api?.getPanel(api.id)?.group;
   const grouped = context.expanded && context.visible.length > 1;
   return (
     <div
@@ -74,55 +64,6 @@ const Content = ({ api }: IDockviewPanelProps) => {
         grouped && "workspace-island dock-group-island"
       )}
     >
-      {grouped && group?.activePanel?.id === api.id && (
-        <div className="flex min-h-(--titlebar-row-h) min-w-0 items-center px-2">
-          <TabsRail
-            tabs={group.panels
-              .map((panel) => ({
-                id: panel.id,
-                title: panel.title,
-                kind: (panel.id === "chat"
-                  ? "thread"
-                  : panel.id.startsWith("preview:")
-                    ? "files"
-                    : panel.id.split(":")[0]) as PanelTabKind,
-              }))
-              .toSorted((a, b) =>
-                a.id === "chat" ? -1 : b.id === "chat" ? 1 : 0
-              )}
-            active={group.activePanel.id}
-            title={(tab) => tab.title ?? ""}
-            renderIcon={(tab) =>
-              context.tabs.find((item) => item.id === tab.id)?.icon
-            }
-            kinds={
-              context.add ? ["terminal", "files", "browser", "changes"] : []
-            }
-            onChange={(id) => {
-              context.api?.getPanel(id)?.api.setActive();
-              context.select(id);
-            }}
-            onClose={(id) => {
-              if (id !== "chat") context.close(id);
-            }}
-            onAdd={(kind) => context.add?.(kind)}
-            onReopen={context.reopen}
-            onRename={context.rename}
-            onReorder={(ids) =>
-              ids.forEach((id, index) =>
-                context.api
-                  ?.getPanel(id)
-                  ?.api.moveTo({ group, index, position: "center" })
-              )
-            }
-            onDragStart={(id, event) =>
-              event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-            }
-            workspaceApi={{ current: context.api }}
-            onMove={(id, position) => moveDockTab(context.api, id, position)}
-          />
-        </div>
-      )}
       <div ref={container} className="min-h-0 min-w-0 flex-1" />
     </div>
   );
@@ -163,12 +104,8 @@ export const PanelWorkspace = ({
   open,
   expanded,
   onSelect,
-  onClose,
   apiRef,
-  onAdd,
   onGroupCountChange,
-  onReopen,
-  onRename,
 }: {
   onAdd?(kind: PanelTabKind): void;
   onGroupCountChange?(count: number): void;
@@ -188,18 +125,8 @@ export const PanelWorkspace = ({
   const [targets] = useState(() => new Map<string, HTMLDivElement>());
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [visible, setVisible] = useState<string[]>([]);
-  const [structure, setStructure] = useState("");
   const publishLayout = useEffectEvent((dock: DockviewApi) => {
     setVisible((previous) => retainVisible(previous, visiblePanels(dock)));
-    setStructure(
-      JSON.stringify(
-        dock.groups.map((group) => [
-          group.id,
-          group.activePanel?.id,
-          group.panels.map((panel) => [panel.id, panel.title]),
-        ])
-      )
-    );
   });
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
   const container = useRef<HTMLDivElement>(null);
@@ -349,15 +276,7 @@ export const PanelWorkspace = ({
       value={{
         expanded,
         visible,
-        structure,
         targets,
-        close: onClose,
-        api,
-        tabs,
-        select: onSelect,
-        add: onAdd,
-        reopen: onReopen,
-        rename: onRename,
       }}
     >
       <div

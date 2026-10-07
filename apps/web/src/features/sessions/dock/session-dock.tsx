@@ -256,7 +256,6 @@ export const SessionDock = ({
     });
     select(ref);
   };
-  const [groups, setGroups] = useState(1);
   const titleTabs = expanded
     ? [...entries.tabs]
     : ["changes", "terminal", "files", "browser"]
@@ -297,7 +296,7 @@ export const SessionDock = ({
     }));
   const controls = (
     <div className="titlebar-nodrag flex h-(--titlebar-row-h) shrink-0 items-center gap-1 self-start px-1">
-      {(!expanded || groups === 1) && (
+      {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -369,7 +368,7 @@ export const SessionDock = ({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-      )}
+      }
       <Button
         variant="ghost"
         size="icon-sm"
@@ -405,7 +404,7 @@ export const SessionDock = ({
         <TopBarPanelSlot>
           {entries.open && active ? (
             <>
-              {(!expanded || groups === 1) && (
+              {
                 <TopBar.PanelTabs
                   tabs={[
                     ...(!split
@@ -464,7 +463,7 @@ export const SessionDock = ({
                   }
                   onAdd={add}
                 />
-              )}
+              }
               {controls}
             </>
           ) : null}
@@ -489,7 +488,6 @@ export const SessionDock = ({
             if (ref) select(ref);
           }}
           onRename={rename}
-          onGroupCountChange={setGroups}
           onAdd={add}
           scope={key}
           apiRef={dockApi}

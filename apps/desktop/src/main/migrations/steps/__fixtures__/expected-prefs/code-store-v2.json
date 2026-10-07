@@ -2,6 +2,7 @@
   "prefs": {
     "provenance": {
       "appearance.accent": "default",
+      "appearance.allowTwoTabRows": "default",
       "appearance.bubbleTint": "default",
       "appearance.codeFont": "default",
       "appearance.codeFontSize": "default",
@@ -53,6 +54,7 @@
     "row": {
       "appearance": {
         "accent": null,
+        "allowTwoTabRows": false,
         "bubbleTint": true,
         "codeFont": "",
         "codeFontSize": 12,

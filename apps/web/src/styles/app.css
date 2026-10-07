@@ -281,3 +281,15 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   background-color: var(--popover);
   &::before { display: none; }
 }
+
+/* The title-bar rail owns the context when tool tabs are present. */
+[data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]) {
+  --topbar-leading-width: auto;
+}
+[data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]) :is([data-slot="topbar-identity"], [data-slot="topbar-app-name"]) {
+  display: none;
+}
+[data-slot="topbar-panel-tabs"][data-rail-rows="2"] > :not([data-slot="tabs"]) {
+  align-self: flex-start;
+  margin-top: 6px;
+}

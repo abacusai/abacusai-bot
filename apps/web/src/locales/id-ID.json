@@ -2646,7 +2646,9 @@
       "notATheme": "Itu bukan tema warna VS Code.",
       "tooLarge": "File terlalu besar (maksimal 2 MB).",
       "includeHint": "Tema ini dibangun di atas file lain yang tidak diimpor, jadi beberapa warna mungkin hilang.",
-      "remove": "Hapus"
+      "remove": "Hapus",
+      "allowTwoTabRows": "Izinkan dua baris tab",
+      "allowTwoTabRowsDetail": "Gunakan baris kedua di bilah judul jika ada ruang."
     },
     "general": {
       "notch": {

@@ -187,6 +187,7 @@ export const PREFS_GROUP_ENTRIES = {
     ),
     translucency: v.boolean(),
     railIconsOnly: v.boolean(),
+    allowTwoTabRows: v.optional(v.boolean(), false),
     custom: v.nullable(
       v.pipe(
         v.strictObject({

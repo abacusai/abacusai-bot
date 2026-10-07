@@ -507,6 +507,17 @@ export const AppearancePage = () => {
             </SettingRow>
           )}
         <SettingRow
+          id="allowTwoTabRows"
+          title={t(`${a}allowTwoTabRows`)}
+          detail={t(`${a}allowTwoTabRowsDetail`)}
+        >
+          <SettingSwitch
+            id="allowTwoTabRows"
+            checked={look.allowTwoTabRows === true}
+            onCheckedChange={(allowTwoTabRows) => save({ allowTwoTabRows })}
+          />
+        </SettingRow>
+        <SettingRow
           id="railIconsOnly"
           title={t(`${a}railIconsOnly`)}
           detail={t(`${a}railIconsOnlyDetail`)}

@@ -189,13 +189,12 @@ export const ShellLayout = ({
   const panelInLayout = panelShown && layout.sidePanel === "layout";
   const scopeKey = panel.key;
   const expanded = panelShown && panel.scope.expanded === true;
-  const [groups, setGroups] = useState(1);
   const botId = scopeKey?.startsWith("bots:") ? scopeKey.slice(5) : undefined;
   const dockApi = useRef<import("dockview-react").DockviewApi | null>(null);
   const strip =
     panelShown && scopeKey != null ? (
       <>
-        {(!expanded || groups === 1) && (
+        {
           <TopBar.PanelTabs
             tabs={
               expanded
@@ -235,7 +234,7 @@ export const ShellLayout = ({
             // page), never a refocus of the one already open.
             onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
           />
-        )}
+        }
         <Button
           variant="ghost"
           size="icon-sm"
@@ -369,7 +368,6 @@ export const ShellLayout = ({
                 onRename={(id, title) => {
                   if (scopeKey) updatePanelTab(scopeKey, id, { title });
                 }}
-                onGroupCountChange={setGroups}
                 onAdd={(kind) => {
                   if (scopeKey)
                     openPanelTab(scopeKey, { kind }, { fresh: true });
