@@ -17,8 +17,9 @@ remain the property of their respective owners.
 The dependency inventory and deduplicated JSON now regenerate with
 `pnpm generate:licenses`. Turbo runs that task before desktop/web development
 and builds. `pnpm check:licenses` runs the transform/policy tests and generation;
-it is part of `pnpm check`. Packaging repeats discovery from the final source
-maps and updates the renderer assets and installer notices. Generated files are
+it is part of `pnpm check`. Desktop builds then discover the final source maps and update the renderer
+assets and installer notices. Packaging repeats that check before copying
+resources. Generated files are
 ignored, matching the existing notices convention, so no inventory can become
 stale in git. The package build/dev scripts also generate before Vite. Run generation first
 when invoking the Vite CLI directly.
