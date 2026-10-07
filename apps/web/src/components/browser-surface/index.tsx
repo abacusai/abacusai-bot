@@ -54,12 +54,17 @@ export const BrowserSurface = ({
         !!document.activeViewTransition ||
         live.current.blocked(node.current.getBoundingClientRect()),
     });
+    return unregister;
+  }, [conversationKey, resourceId, generation, presenter, id]);
+  useEffect(() => {
+    // Inactive tabs keep their lease and capture, but have no native geometry
+    // to synchronize. Resume observation when this surface becomes visible.
+    if (!visible) return;
     const refresh = () => void presenter.refresh();
     const observer = new ResizeObserver(refresh);
     if (node.current) observer.observe(node.current);
     window.addEventListener("resize", refresh);
-    document.addEventListener("visibilitychange", refresh);
-    const interval = setInterval(refresh, 500);
+    let interval: ReturnType<typeof setInterval> | null = null;
     let frame = 0;
     let last = "";
     const watch = () => {
@@ -76,16 +81,27 @@ export const BrowserSurface = ({
       }
       frame = requestAnimationFrame(watch);
     };
-    frame = requestAnimationFrame(watch);
-    return () => {
-      unregister();
-      observer.disconnect();
-      clearInterval(interval);
+    const stop = () => {
+      if (interval != null) clearInterval(interval);
+      interval = null;
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", refresh);
-      document.removeEventListener("visibilitychange", refresh);
     };
-  }, [conversationKey, resourceId, generation, presenter, id]);
+    const onVisibilityChange = () => {
+      stop();
+      refresh();
+      if (document.visibilityState === "hidden") return;
+      interval = setInterval(refresh, 500);
+      frame = requestAnimationFrame(watch);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    onVisibilityChange();
+    return () => {
+      observer.disconnect();
+      stop();
+      window.removeEventListener("resize", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [visible, presenter]);
   useEffect(() => {
     void presenter.refresh();
   }, [visible, presenter]);
