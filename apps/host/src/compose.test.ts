@@ -492,6 +492,9 @@ describe("the phone lane", () => {
     );
     const activity = vi.fn();
     const pinMedia = vi.fn();
+    // Ticks vitest's own call counter, so server calls order against mocks.
+    const order = vi.fn(() => order.mock.invocationCallOrder.at(-1)!);
+    const callOrder: number[] = [];
     let settleStop: () => void = () => {};
     const stop = vi.fn(
       options.stop ??
@@ -501,6 +504,7 @@ describe("the phone lane", () => {
       {
         call: (async (body: Record<string, unknown>) => {
           calls.push(body);
+          callOrder.push(order());
           if (body.action === "reply" && options.holdReplies === true)
             await new Promise<void>((resolve) => held.push(resolve));
           if (
@@ -585,6 +589,7 @@ describe("the phone lane", () => {
       acks,
       release,
       pinMedia,
+      callOrder,
     };
   };
 
@@ -989,7 +994,8 @@ describe("the phone lane", () => {
   });
 
   it("keeps what an answer holds from eviction until the answer went", async () => {
-    const { phone, send, event, reply, acks, pinMedia } = lane();
+    const { phone, send, event, reply, acks, pinMedia, calls, callOrder } =
+      lane();
     phone.arrive({ id: "m1", text: "send it" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event(presented([PDF]));
@@ -997,6 +1003,11 @@ describe("the phone lane", () => {
     reply(["m1"], "Here.");
     await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
     expect(pinMedia).toHaveBeenLastCalledWith(PDF, "s", false);
+    // Let go only after the file went out, never before.
+    const unpinned = pinMedia.mock.invocationCallOrder.at(-1)!;
+    const documentSent = calls.findIndex((body) => body.document_b64 != null);
+    expect(documentSent).toBeGreaterThanOrEqual(0);
+    expect(callOrder[documentSent]!).toBeLessThan(unpinned);
     phone.stop();
   });
 

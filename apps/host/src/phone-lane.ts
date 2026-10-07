@@ -635,11 +635,16 @@ export class PhoneLane {
     const bubbles = splitPhoneBubbles(reply.text);
     // A failed turn's media is not an answer; it goes with nothing.
     const media = this.heldMedia.splice(0);
-    this.release(media);
-    const delivered =
-      media.length > 0 && !reply.failed
-        ? await this.deliverWithMedia(replyTo, bubbles, media)
-        : await this.deliverAnswer(replyTo, bubbles);
+    let delivered: boolean;
+    try {
+      delivered =
+        media.length > 0 && !reply.failed
+          ? await this.deliverWithMedia(replyTo, bubbles, media)
+          : await this.deliverAnswer(replyTo, bubbles);
+    } finally {
+      // Pinned until it went (or was dropped), never before.
+      this.release(media);
+    }
     const apologized = reply.failed && (await this.apologize(replyTo));
     const answered =
       apologized || (!reply.failed && (bubbles.length === 0 || delivered));

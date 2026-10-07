@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 
@@ -1034,10 +1033,18 @@ export class McpAgentToolsServer extends McpHttpServer {
       if (directory.length === 0) return this.err("A directory is required.");
 
       if (action === "stop") {
+        const before = listServed();
+        const stopped = stopDirectory(this.resolveOutputPath(directory));
+        // Its port is free again: no session may screenshot whatever takes it.
+        const still = new Set(listServed().map((entry) => entry.url));
+        for (const entry of before) {
+          const origin = loopbackOrigin(entry.url);
+          if (still.has(entry.url) || origin == null) continue;
+          for (const origins of this.servedOrigins.values())
+            origins.delete(origin);
+        }
         return this.ok(
-          stopDirectory(this.resolveOutputPath(directory))
-            ? "Stopped."
-            : "That directory was not being served."
+          stopped ? "Stopped." : "That directory was not being served."
         );
       }
 
@@ -1245,7 +1252,7 @@ export class McpAgentToolsServer extends McpHttpServer {
       ...(notFound.length > 0 ? ["", ...notFound] : []),
       "",
       ...going.map((item) => mediaLine(item.id)),
-      ...going.map((item) => artifactPathLine(item.target)),
+      ...going.map((item) => artifactPathLine(oneLine(item.target))),
     ];
     return this.ok(lines.join("\n"));
   }
@@ -1289,7 +1296,6 @@ export class McpAgentToolsServer extends McpHttpServer {
       const roots = await Promise.all(
         [
           ...(workspace != null ? [workspace] : []),
-          os.tmpdir(),
           path.join(abacusBotHome(), "temp"),
           path.join(abacusBotHome(), "generated"),
         ].map((root) => fs.promises.realpath(root).catch(() => null))
@@ -1305,10 +1311,16 @@ export class McpAgentToolsServer extends McpHttpServer {
       if (denied.some((secret) => isWithin(real, secret)))
         return { reason: "it is in a credential store and is never sent." };
       // Checked before opening too: opening a pipe would wait for a writer.
-      if (!(await fs.promises.stat(real)).isFile())
-        return { reason: "it is not a regular file." };
-      handle = await fs.promises.open(real, "r");
+      const checked = await fs.promises.stat(real);
+      if (!checked.isFile()) return { reason: "it is not a regular file." };
+      handle = await fs.promises.open(
+        real,
+        fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
+      );
       const stat = await handle.stat();
+      // The file opened must be the one checked, not one swapped in since.
+      if (stat.dev !== checked.dev || stat.ino !== checked.ino)
+        return { reason: "it changed while being read; send it again." };
       if (!stat.isFile()) return { reason: "it is not a regular file." };
       if (IMAGE_FILE.test(real) && stat.size > MEDIA_MAX_BYTES)
         return {
