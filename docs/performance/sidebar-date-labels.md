@@ -46,3 +46,8 @@ retry (9 tests). The shared AG-UI golden fixture must not run in two worktrees a
 once. The browser draft runs the whole repository suite sequentially. The stale
 routing spy assertion already repaired in #225 is included identically here; it
 asserts resulting route/query behavior and changes no production UI.
+
+Rebased onto `420a4a54` after the avatar/license PRs landed. All 29 static/build
+checks, including the new license policy gate, and 13 targeted date/routing tests
+pass on that base. Production comparison numbers elsewhere retain the original
+`097b0934` baseline so unrelated upstream work does not enter the comparison.
