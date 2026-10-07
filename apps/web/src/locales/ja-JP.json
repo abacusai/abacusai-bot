@@ -1657,12 +1657,9 @@
       "device": "デバイス",
       "terminal": "Terminal",
       "browser": "Browser",
-      "close": "パネルを閉じる",
       "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
-      "moveRight": "Split right",
-      "moveBelow": "Split below",
       "movePane": "Move to pane {{name}}",
       "moveDirections": {
         "left": "Split left",
