@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   budgetNote,
@@ -14,6 +14,11 @@ import {
   WRAP_UP_TURN,
   wrapUpMessage,
 } from "./browser-task.js";
+import {
+  MidTaskInbox,
+  type MidTaskMessage,
+  midTaskText,
+} from "./mid-task-inbox.js";
 
 describe("checking a browser report against what was asked for", () => {
   it("accepts a field the report names outright", () => {
@@ -190,5 +195,79 @@ describe("a run that stopped for the user", () => {
     ]) {
       expect(needsUser(report), report).toBe(true);
     }
+  });
+});
+
+describe("the user's messages while a browser run works", () => {
+  const inbox = () => {
+    const read: MidTaskMessage[] = [];
+    return { box: new MidTaskInbox((message) => read.push(message)), read };
+  };
+
+  it("go only to the open run, which reports by id each one its model read", async () => {
+    const { box, read } = inbox();
+    expect(box.live).toBe(false);
+    await expect(
+      box.deliver({ text: "ok", messageId: "m1" })
+    ).rejects.toThrow();
+
+    const steer = vi.fn(async () => {});
+    const run = box.open(steer)!;
+    expect(box.live).toBe(true);
+    await box.deliver({ text: "ok", messageId: "m1" });
+    await box.deliver({ text: "ok", messageId: "m2" });
+    expect(steer.mock.calls).toEqual([
+      [midTaskText("ok")],
+      [midTaskText("ok")],
+    ]);
+
+    // The same words twice are two messages, read oldest first.
+    run.noteUserMessage(midTaskText("ok"));
+    expect(read).toEqual([{ text: "ok", messageId: "m1" }]);
+    expect(run.consumedIds()).toEqual(["m1"]);
+    run.noteUserMessage("an unrelated nudge");
+    expect(run.consumedIds()).toEqual(["m1"]);
+
+    box.close(run);
+    expect(box.live).toBe(false);
+    // m2 was never read: the run does not claim it.
+    expect(run.consumedIds()).toEqual(["m1"]);
+  });
+
+  it("leave a run that ends with unread messages unclaimed, for the main session's queue", async () => {
+    const { box, read } = inbox();
+    const run = box.open(async () => {})!;
+    await box.deliver({ text: "also check Friday", messageId: "m1" });
+    await box.deliver({ text: "and Saturday", messageId: "m2" });
+    run.noteUserMessage(midTaskText("also check Friday"));
+    box.close(run);
+
+    expect(run.consumedIds()).toEqual(["m1"]);
+    expect(read.map((message) => message.messageId)).toEqual(["m1"]);
+    // Read too late: the run is over and claims nothing more.
+    run.noteUserMessage(midTaskText("and Saturday"));
+    expect(run.consumedIds()).toEqual(["m1"]);
+    await expect(box.deliver({ text: "x", messageId: "m3" })).rejects.toThrow();
+  });
+
+  it("let one run at a time take them", () => {
+    const { box } = inbox();
+    const first = box.open(async () => {})!;
+    expect(box.open(async () => {})).toBeNull();
+    box.close(first);
+    expect(box.open(async () => {})).not.toBeNull();
+  });
+
+  it("does not track a message the run's session refused, and says so", async () => {
+    const { box, read } = inbox();
+    const run = box.open(async () => {
+      throw new Error("session gone");
+    })!;
+    await expect(
+      box.deliver({ text: "stop", messageId: "m1" })
+    ).rejects.toThrow("session gone");
+    run.noteUserMessage(midTaskText("stop"));
+    expect(read).toEqual([]);
+    expect(run.consumedIds()).toEqual([]);
   });
 });

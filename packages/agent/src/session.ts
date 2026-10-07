@@ -87,6 +87,7 @@ import {
 } from "./openllm-router.js";
 import { OPENLLM_ID, isOutOfCredits, isOpenLlmReference } from "./openllm.js";
 import { refreshOpenRouterLive } from "./openrouter-live.js";
+import { PendingSteers } from "./pending-steers.js";
 import {
   gateToolCall,
   MODE_NAMES,
@@ -186,6 +187,8 @@ export interface SessionOptions {
 /** What a host passes with a turn: told once the user-visible turn is over. */
 export interface TurnHandle {
   settled?: () => void;
+  /** The sender's id for the message this turn answers. */
+  messageId?: string;
 }
 
 interface PendingPermission {
@@ -575,8 +578,7 @@ export function reserveContextHeadroom(
 }
 
 export class AbacusBotSession {
-  /** Steers handed to pi that have not reached the model yet, oldest first. */
-  private readonly pendingSteers: string[] = [];
+  private readonly pendingSteers = new PendingSteers();
   private session: AgentSession | undefined;
   /** Construction options for the inner pi session, minus the model; see resetConversation. */
   private sessionInit: Parameters<typeof createAgentSession>[0] | undefined;
@@ -1946,8 +1948,8 @@ export class AbacusBotSession {
    * Mid-turn input. pi keeps its own steering queue; the text is remembered
    * here so its arrival (a user message_start) can be reported to the desktop.
    */
-  async steer(text: string): Promise<void> {
-    this.pendingSteers.push(text);
+  async steer(text: string, messageId?: string): Promise<void> {
+    this.pendingSteers.add(text, messageId);
     await this.requireSession().steer(text);
   }
 
@@ -1956,18 +1958,20 @@ export class AbacusBotSession {
    * its own turn is not also injected as a steer and seen twice.
    */
   dropSteers(): void {
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     this.session?.clearQueue();
   }
 
   /** A user message pi just started is one of ours if the text matches. */
   private noteSteerLanded(message: unknown): void {
     if ((message as { role?: unknown } | undefined)?.role !== "user") return;
-    const text = messageText(message);
-    const index = this.pendingSteers.indexOf(text);
-    if (index === -1) return;
-    this.pendingSteers.splice(index, 1);
-    this.emitAgentEvent({ type: "user_message_steered", content: text });
+    const steer = this.pendingSteers.take(messageText(message));
+    if (steer == null) return;
+    this.emitAgentEvent({
+      type: "user_message_steered",
+      content: steer.text,
+      ...(steer.messageId != null ? { messageId: steer.messageId } : {}),
+    });
   }
 
   async stop(): Promise<void> {
@@ -1984,7 +1988,7 @@ export class AbacusBotSession {
     // Anything in pi's queues (a steer, an extension's `triggerTurn` follow-up)
     // is delivered as soon as the agent goes idle and starts another turn, so
     // Stop would not stop.
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     this.session?.clearQueue();
     await this.session?.abort();
     // Again after the abort: the settle hooks can queue too.
@@ -2298,7 +2302,7 @@ export class AbacusBotSession {
     this.interrupted = true;
     this.rejectAllPending("Conversation reset.");
     // As in `stop`: a queued message must not land in the fresh conversation.
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     this.session?.clearQueue();
     await this.session?.abort();
     this.session?.clearQueue();

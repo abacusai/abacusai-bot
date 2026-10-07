@@ -162,7 +162,12 @@ describe("what the model is told", () => {
   it("names every connector, tool servers included, so none is 'not a connector'", () => {
     const text = catalogPrompt();
     for (const connector of CONNECTORS) expect(text).toContain(connector.name);
-    expect(text).toMatch(/tool servers .*Playwright/);
+    expect(text).toMatch(/tool servers .*Hugging Face/);
+    // The browser is built in on every platform: nothing offers one to connect.
+    expect(text).not.toMatch(/playwright/i);
+    expect(
+      CONNECTORS.some((connector) => /playwright/i.test(connector.id))
+    ).toBe(false);
     expect(text).toContain("call connect_connector");
     expect(routingPrompt()).toContain(text);
   });

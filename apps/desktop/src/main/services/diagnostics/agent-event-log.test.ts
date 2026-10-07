@@ -41,6 +41,20 @@ describe("what gets written", () => {
     ).toBe("[abcd1234] ready model=openllm/auto mode=DEFAULT");
   });
 
+  it("records which messages a turn answered, without its words", () => {
+    expect(
+      line({
+        type: "turn_reply",
+        messageIds: ["m1", "m2"],
+        text: "Booked.",
+        failed: false,
+      })
+    ).toBe("[abcd1234] turn reply ids=m1,m2 chars=7");
+    expect(
+      line({ type: "turn_reply", messageIds: ["m3"], text: "", failed: true })
+    ).toBe("[abcd1234] turn reply ids=m3 chars=0 FAILED");
+  });
+
   it("records a model change, which is what a router does mid-turn", () => {
     expect(line({ type: "model_changed", model: "openrouter/x" })).toBe(
       "[abcd1234] model=openrouter/x"

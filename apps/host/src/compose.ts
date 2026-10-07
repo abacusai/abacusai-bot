@@ -91,6 +91,8 @@ export const composeNodeHost = async () => {
     () => resolveAbacusApiKey() != null,
     host.adoptAbacusCredential
   );
+  // Chromium from ABACUSAI_BOT_CHROMIUM, else one lookup now, retried in the background while missing.
+  void serviceHost.prepareHostedBrowser();
   if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
     serviceHost.startBackgroundSync();
   const tables = createTables({
@@ -163,8 +165,15 @@ export const composeNodeHost = async () => {
     }),
     hasKey: () => resolveAbacusApiKey() != null,
     openSession: openPhoneSession,
-    send: (workspaceId, sessionId, message) =>
-      serviceHost.sendAgentMessage({ workspaceId, sessionId, message }),
+    stop: (workspaceId, sessionId) =>
+      serviceHost.abandonAgentTurn({ workspaceId, sessionId }),
+    send: (workspaceId, sessionId, message, messageId) =>
+      serviceHost.sendAgentMessage({
+        workspaceId,
+        sessionId,
+        message,
+        messageId,
+      }),
     onAgentEvent: (listener) => serviceHost.onAgentEvent(listener),
     activity: () => lease.activity(),
   });

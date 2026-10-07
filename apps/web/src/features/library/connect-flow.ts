@@ -15,7 +15,6 @@ import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
@@ -34,7 +33,6 @@ export type FlowState = {
   /** `waiting`: the connect page or the host's route is open in another tab. */
   phase: "idle" | "waiting" | "fields" | "pairing" | "signing-in";
   error?: string;
-  chromeMissing?: boolean;
 };
 export const connectPlatform = async (
   deps: Pick<FlowDeps, "transport" | "queryClient">,
@@ -127,23 +125,9 @@ export const createConnectFlow = (deps: FlowDeps) => {
     result: ConnectorOutcome
   ) => {
     if (active?.id !== id) return;
-    let chromeMissing = false;
-    if (result.ok) {
-      await refresh();
-      if (
-        IS_ELECTRON &&
-        entry.kind === "mcp" &&
-        entry.requires === "google-chrome"
-      )
-        chromeMissing = await deps.transport.client.browser
-          .hasGoogleChrome({})
-          .then((present) => !present)
-          .catch(() => false);
-    }
+    if (result.ok) await refresh();
     if (active?.id !== id) return;
     finish(id, result);
-    if (chromeMissing)
-      store.setState((state) => ({ ...state, chromeMissing: true }));
   };
   const cancel = async () => {
     const a = active;

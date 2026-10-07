@@ -17,6 +17,7 @@ import {
   SessionTurnStateService,
   INACTIVITY_TIMEOUT_MINUTES,
 } from "./session-turn-state-service";
+import { TurnAbandoner, type TurnAbandonerPorts } from "./turn-abandoner";
 
 const WS = "ws-1";
 const SESSION = "session-1";
@@ -233,6 +234,41 @@ describe("a tool that runs quietly is not a wedged agent", () => {
     expect(service.get(WS, SESSION).phase).toBe("idle");
   });
 
+  it("settles a stop once the agent confirms idle, and not before", async () => {
+    service.markSent(WS, SESSION);
+    service.markStopped(WS, SESSION);
+    let settled = false;
+    const waiting = service
+      .stopSettled(SESSION, 60_000)
+      .then((result) => (settled = result));
+
+    service.filterDesktopEvent(WS, SESSION, toolStart("bash", {}));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    service.filterDesktopEvent(WS, SESSION, statusChange(AgentStatus.Idle));
+    await waiting;
+    expect(settled).toBe(true);
+  });
+
+  it("settles a stop when the agent process closes, with no idle to wait for", async () => {
+    service.markSent(WS, SESSION);
+    service.markStopped(WS, SESSION);
+    const waiting = service.stopSettled(SESSION, 60_000);
+    service.markClosed(WS, SESSION);
+    await expect(waiting).resolves.toBe(true);
+    // Nothing stopped: nothing to wait for.
+    await expect(service.stopSettled("other", 60_000)).resolves.toBe(true);
+  });
+
+  it("gives up waiting on a stop at its deadline", async () => {
+    service.markSent(WS, SESSION);
+    service.markStopped(WS, SESSION);
+    const waiting = service.stopSettled(SESSION, 1_000);
+    vi.advanceTimersByTime(1_000);
+    await expect(waiting).resolves.toBe(false);
+  });
+
   it("does not start a clock on a session parked on an approval", () => {
     // waiting_permission deliberately runs no timer. A heartbeat arriving
     // while the prompt is up must not quietly start one.
@@ -330,5 +366,69 @@ describe("a turn the watchdog gave up on stays given up on", () => {
     );
 
     expect(service.get(WS, SESSION).isBusy).toBe(true);
+  });
+});
+
+describe("abandoning a turn", () => {
+  const abandoner = (overrides: Partial<TurnAbandonerPorts> = {}) => {
+    const calls: string[] = [];
+    const ports: TurnAbandonerPorts = {
+      clearQueue: () => (calls.push("clear"), true),
+      stopTurn: () => (calls.push("stop"), true),
+      markStopped: (workspaceId, sessionId) => {
+        calls.push("mark");
+        service.markStopped(workspaceId, sessionId);
+      },
+      stopSettled: (sessionId, deadlineMs) =>
+        service.stopSettled(sessionId, deadlineMs),
+      closeSession: async () => {
+        calls.push("close");
+      },
+      log: () => {},
+      settleMs: 1_000,
+      ...overrides,
+    };
+    return { turns: new TurnAbandoner(ports), calls };
+  };
+
+  it("returns at once when there is no agent, and refuses sends begun before it", async () => {
+    const { turns, calls } = abandoner({ stopTurn: () => false });
+    const epoch = turns.epoch(SESSION);
+    await expect(turns.abandon(WS, SESSION)).resolves.toBe("no-agent");
+    expect(calls).toEqual(["clear", "mark"]);
+    expect(turns.stillCurrent(SESSION, epoch)).toBe(false);
+    expect(turns.stillCurrent(SESSION, turns.epoch(SESSION))).toBe(true);
+  });
+
+  it("waits for the agent to go idle, waiting only once the stop was sent", async () => {
+    const settled = vi.fn(service.stopSettled.bind(service));
+    const { turns, calls } = abandoner({
+      stopTurn: () => {
+        calls.push("stop");
+        expect(settled).not.toHaveBeenCalled();
+        return true;
+      },
+      stopSettled: settled,
+    });
+    service.markSent(WS, SESSION);
+    const done = turns.abandon(WS, SESSION);
+    await Promise.resolve();
+    service.filterDesktopEvent(WS, SESSION, statusChange(AgentStatus.Idle));
+    await expect(done).resolves.toBe("settled");
+    expect(calls).toEqual(["clear", "mark", "stop"]);
+  });
+
+  it("closes a session that never stops, and is done even if the close fails", async () => {
+    const { turns, calls } = abandoner({
+      closeSession: async () => {
+        calls.push("close");
+        throw new Error("never closed");
+      },
+    });
+    service.markSent(WS, SESSION);
+    const done = turns.abandon(WS, SESSION);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(done).resolves.toBe("closed");
+    expect(calls).toEqual(["clear", "mark", "stop", "close"]);
   });
 });

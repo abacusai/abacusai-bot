@@ -466,3 +466,52 @@ describe("what a bot says when the whole pool has failed", () => {
     provider.script(() => ({ say: "ok" }));
   });
 });
+
+describe("a turn's reply", () => {
+  const replies = (events: DesktopEvent[]) =>
+    events.flatMap((event) =>
+      event.type === "event" && event.event.type === "turn_reply"
+        ? [event.event]
+        : []
+    );
+
+  it("names the message it answers and carries the final assistant message", async () => {
+    provider.script(() => ({ say: "Hello there." }));
+    const { session, events } = botSession("openrouter/small:free");
+    await session.start();
+
+    await session.send("hi", { messageId: "m1" });
+
+    expect(replies(events)).toEqual([
+      {
+        type: "turn_reply",
+        messageIds: ["m1"],
+        text: "Hello there.",
+        failed: false,
+      },
+    ]);
+  });
+
+  it("says the turn failed, after the error, once", async () => {
+    provider.calls.length = 0;
+    provider.scriptSequence([
+      { fail: { status: 429, message: "rate limited upstream" } },
+      { fail: { status: 429, message: "rate limited upstream" } },
+    ]);
+    const { session, events } = botSession();
+    await session.start();
+
+    await session.send("hi", { messageId: "m2" });
+
+    const agent = events.flatMap((event) =>
+      event.type === "event" ? [event.event.type] : []
+    );
+    expect(replies(events)).toMatchObject([
+      { messageIds: ["m2"], failed: true },
+    ]);
+    expect(agent.lastIndexOf("error")).toBeLessThan(
+      agent.indexOf("turn_reply")
+    );
+    provider.script(() => ({ say: "ok" }));
+  });
+});

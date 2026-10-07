@@ -26,6 +26,8 @@ import type { McpDeviceServer } from "./mcp-device-server";
 
 type BuiltinMcpLifecycleDeps = {
   platform?: () => HostPlatform;
+  /** Web-host's browser: always on once the host-start lookup found a Chromium. */
+  hostedBrowser?: { available: () => boolean };
   mcpConfigService: McpConfigService;
   browserServer: McpBrowserServer;
   chromeBrowser: ChromeBrowserService;
@@ -46,7 +48,9 @@ export class BuiltinMcpLifecycle {
   }
 
   isBrowserEnabled(): boolean {
-    return this.deps.platform?.() !== "web-host" && this.browserEnabled;
+    if (this.deps.platform?.() === "web-host")
+      return this.deps.hostedBrowser?.available() === true;
+    return this.browserEnabled;
   }
 
   getBrowserStatus(): McpBrowserStatus {

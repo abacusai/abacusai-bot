@@ -10,6 +10,7 @@ import {
 } from "../bot/bot-reaction-tool.js";
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "../bot/bot-time-tool.js";
 import type { ForeverProfile } from "../forever/profile.js";
+import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
   localDay,
   phoneDir,
@@ -31,6 +32,7 @@ import {
   type PagePublisher,
   PHONE_PAGE_TOOL_NAME,
 } from "./phone-page-tool.js";
+import { buildPhoneProgressTool } from "./phone-progress-tool.js";
 import {
   PHONE_COMPACTION_CONTINUATION_PROMPT,
   PHONE_COMPACTION_CONTINUATION_TYPE,
@@ -66,6 +68,7 @@ const PHONE_TOOL_NAMES = [
   PHONE_PAGE_TOOL_NAME,
   BOT_TIME_TOOL_NAME,
   BOT_REACTION_TOOL_NAME,
+  PHONE_PROGRESS_TOOL_NAME,
 ];
 
 export interface PhoneProfileOptions {
@@ -100,7 +103,13 @@ export function createPhoneProfile(
       buildPhonePageTool(home, options.pagePublisher),
       buildBotTimeTool(),
       buildBotReactionTool(),
+      buildPhoneProgressTool(),
     ],
+    // A browser run keeps the user posted, and hears them, from inside.
+    browserTask: {
+      progressTools: () => [buildPhoneProgressTool()],
+      paneless: true,
+    },
     // The phone's own `memory` replaces the desktop's global one too.
     replacesMcpTool: (name) =>
       PHONE_TOOL_NAMES.includes(name) ||
