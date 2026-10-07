@@ -1,0 +1,51 @@
+/**
+ * What the chat a session talks through can do, so tool descriptions and
+ * prompts say only what is true there: an app chat has a Browser pane the
+ * user can finish a step in; WhatsApp has none, but takes images and links.
+ */
+export interface ChannelCapabilities {
+  /** The user can open this session's browser in a pane and act in it. */
+  pane: boolean;
+  /** Images can go to the chat (`send_media`). */
+  media: boolean;
+  /** The chat can carry one-time links the user opens to do a step. */
+  oneTimeLinks: boolean;
+}
+
+/** A chat in the app, with its Browser pane. */
+export const APP_CHANNEL: ChannelCapabilities = {
+  pane: true,
+  media: false,
+  oneTimeLinks: false,
+};
+
+/** The user's WhatsApp number. */
+export const WHATSAPP_CHANNEL: ChannelCapabilities = {
+  pane: false,
+  media: true,
+  oneTimeLinks: true,
+};
+
+/** How `browser_task`'s description ends: what to do with a run stopped for the user. */
+export function browserHandoffDescription(
+  channel: ChannelCapabilities
+): string {
+  return channel.pane
+    ? "Tell the user to open the Browser pane in this chat and do that step; when they say it is " +
+        "done, call this tool again with continue_from_last: true and their message as the task; " +
+        "the same sub-agent carries on from the same page with everything it already found."
+    : "The user cannot see this browser: tell them how far it got and what is left for them. " +
+        "If they want it carried on, call this tool again with continue_from_last: true and " +
+        "their message as the task.";
+}
+
+/** The note on a run's result when it stopped at a step only the user can do. */
+export function browserStopNote(channel: ChannelCapabilities): string {
+  return channel.pane
+    ? "(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
+        "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
+        "their reply as the task; the same sub-agent continues with everything it has found.)"
+    : "(The run stopped at a step only the user can do. They cannot see this browser: tell them " +
+        "it is ready up to that step and that they finish it themselves, with what they need to do so " +
+        "(the site, what to pick). Never ask for a password or card details in the chat.)";
+}

@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  parseProgressText,
   PHONE_PROGRESS_TOOL_NAME,
   splitPhoneBubbles,
 } from "@abacus-ai/agent/phone-bubbles";
+import {
+  parseSendMedia,
+  type ResolvedMedia,
+  SEND_MEDIA_TOOL_NAME,
+} from "@abacus-ai/agent/send-media";
 import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
@@ -23,7 +29,8 @@ import { PHONE_TURN_LIMITS, TurnClock } from "./turn-clock";
  * arrives while the session works on earlier ones is steered in. Each goes
  * by its id, and the session reports by id which ones each final answer
  * answers (`turn_reply`). PhoneInbox owns every message's state; this class
- * moves messages between the server, the session and the user. Host-only:
+ * moves messages between the server, the session and the user: text, and
+ * images (`send_media`) at once or with the final answer. Host-only:
  * the desktop app never builds one.
  */
 
@@ -56,6 +63,8 @@ interface PhoneLaneDeps {
   ) => () => void;
   /** Keeps the host's idle lease fresh. */
   activity: () => void;
+  /** A `send_media` media id, as bytes, for the session that holds it. */
+  resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
   log?: (line: string) => void;
 }
 
@@ -82,6 +91,15 @@ const FAILURE_REPLY =
   "Sorry, something went wrong on my side. Could you send that again?";
 
 type TurnReply = Extract<AgentEvent, { type: "turn_reply" }>;
+
+/** An image for the chat and the words under it. */
+interface PhoneMedia {
+  ref: string;
+  caption: string;
+}
+
+/** WhatsApp's longest caption; a longer first bubble goes as its own text. */
+const MAX_CAPTION_CHARS = 1_024;
 
 /** What the loop is told for one inbox entry. */
 function phoneTurnText(entry: PhoneInboxEntry): string {
@@ -118,6 +136,8 @@ export class PhoneLane {
   private sending: Promise<void> = Promise.resolve();
   /** Everything said to the user goes out in order: progress, answers, apologies. */
   private outbox: Promise<unknown> = Promise.resolve();
+  /** `send_media` with_answer: goes out with the turn's final answer. */
+  private heldMedia: PhoneMedia[] = [];
 
   constructor(
     private readonly deps: PhoneLaneDeps,
@@ -363,6 +383,12 @@ export class PhoneLane {
     }
   }
 
+  /**
+   * A finished tool call that speaks to the chat. Only a call the tool
+   * accepted goes out: an error result is skipped, and the input is read
+   * through the tool's own check, so a refused call never sends (and the
+   * model's corrected retry is not a duplicate).
+   */
   private onToolDone(
     event: Extract<AgentEvent, { type: "tool_execution_complete" }>
   ): void {
@@ -375,17 +401,96 @@ export class PhoneLane {
         void this.channel("react", { message_id: replyTo, emoji });
       return;
     }
-    // A progress line goes out now; it never answers the message.
+    // A progress line or an image goes out now; neither answers the message.
+    let sent: Promise<boolean> | null = null;
     if (isTool(event.tool.name, PHONE_PROGRESS_TOOL_NAME)) {
-      const text = event.tool.input.text;
-      if (typeof text !== "string" || text.trim().length === 0) return;
-      this.deps.activity();
-      void this.sendInOrder(replyTo, [text.trim()]).then((sent) => {
-        // A sent message clears WhatsApp's "typing…"; the session is still working.
-        if (sent > 0 && this.busy)
-          void this.channel("typing", { message_id: replyTo });
-      });
+      const progress = parseProgressText(event.tool.input);
+      if (progress.ok === false) return;
+      sent = this.sendInOrder(replyTo, [progress.text]).then((n) => n > 0);
+    } else if (isTool(event.tool.name, SEND_MEDIA_TOOL_NAME)) {
+      const parsed = parseSendMedia(event.tool.input);
+      if (parsed.ok === false) return;
+      const { media, caption, when } = parsed.request;
+      const item = { ref: media, caption };
+      if (when === "with_answer") {
+        this.heldMedia.push(item);
+        return;
+      }
+      sent = this.sendMedia(replyTo, item).then((went) => went.image);
     }
+    if (sent == null) return;
+    this.deps.activity();
+    void sent.then((went) => {
+      // A sent message clears WhatsApp's "typing…"; the session is still working.
+      if (went && this.busy)
+        void this.channel("typing", { message_id: replyTo });
+    });
+  }
+
+  /**
+   * An image with its caption, after whatever is already on its way. One the
+   * server refuses (or that cannot be read) still leaves its caption as text;
+   * `words` says whether the caption reached the chat either way.
+   */
+  private sendMedia(
+    replyTo: string,
+    media: PhoneMedia
+  ): Promise<{ image: boolean; words: boolean }> {
+    const run = this.outbox.then(async () => {
+      if (!this.running) return { image: false, words: false };
+      // The phone session's own media only; its browser runs share its id.
+      const sessionId = this.session?.sessionId;
+      const resolved: ResolvedMedia =
+        sessionId == null
+          ? { ok: false, reason: "no session" }
+          : this.deps.resolveMedia(media.ref, sessionId);
+      const caption = media.caption.length > 0 ? { text: media.caption } : {};
+      if (resolved.ok === false)
+        this.log(`[phone] media not sent: ${resolved.reason}`);
+      else if (
+        await this.channel("reply", {
+          message_id: replyTo,
+          image_b64: resolved.data.toString("base64"),
+          ...caption,
+        })
+      )
+        return { image: true, words: true };
+      const words =
+        media.caption.length === 0 ||
+        (await this.channel("reply", {
+          message_id: replyTo,
+          text: media.caption,
+        }));
+      return { image: false, words };
+    });
+    this.outbox = run.catch(() => ({ image: false, words: false }));
+    return run;
+  }
+
+  /**
+   * The answer's bubbles after the media held for it. The first image with
+   * no caption of its own carries the first bubble as its caption.
+   */
+  private async deliverWithMedia(
+    replyTo: string,
+    bubbles: string[],
+    media: PhoneMedia[]
+  ): Promise<boolean> {
+    let rest = bubbles;
+    for (const [index, item] of media.entries()) {
+      const first = rest[0];
+      const rides =
+        index === 0 &&
+        item.caption.length === 0 &&
+        first != null &&
+        first.length <= MAX_CAPTION_CHARS;
+      const went = await this.sendMedia(
+        replyTo,
+        rides ? { ...item, caption: first } : item
+      );
+      if (rides && went.words) rest = rest.slice(1);
+    }
+    return rest.length === 0 || (await this.deliverAnswer(replyTo, rest));
   }
 
   /**
@@ -399,12 +504,17 @@ export class PhoneLane {
     this.clock.touch();
     const replyTo = this.replyTarget(messages)!;
     const bubbles = splitPhoneBubbles(reply.text);
-    const delivered = await this.deliverAnswer(replyTo, bubbles);
+    // A failed turn's media is not an answer; it goes with nothing.
+    const media = this.heldMedia.splice(0);
+    const delivered =
+      media.length > 0 && !reply.failed
+        ? await this.deliverWithMedia(replyTo, bubbles, media)
+        : await this.deliverAnswer(replyTo, bubbles);
     const apologized = reply.failed && (await this.apologize(replyTo));
     const answered =
       apologized || (!reply.failed && (bubbles.length === 0 || delivered));
     this.log(
-      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}`
+      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}`
     );
     await this.close(messages, answered);
   }
@@ -430,6 +540,7 @@ export class PhoneLane {
     const messages = this.inbox.abandon();
     if (messages.length === 0) return;
     this.clock.stop();
+    this.heldMedia = [];
     // The session refuses a handoff still on its way; the stop is bounded by its owner.
     this.stopping = this.stopSession();
     const apologized = await this.apologize(this.replyTarget(messages)!);

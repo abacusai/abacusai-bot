@@ -32,6 +32,7 @@ import {
   SecretFields,
   UNMASK_SCRIPT,
 } from "../browser/secret-fields";
+import { MEDIA_TTL_MS, MediaStore } from "../messaging/media-store";
 
 /** Expressions the page was asked to evaluate, in order, for the whole run. */
 const evaluated: string[] = [];
@@ -294,6 +295,8 @@ const fakeTarget = {
 };
 /** Off for the cases about a runtime that cannot create a view. */
 let materializeEnabled = true;
+/** The store screenshots are kept in, for the cases about a chat that takes media. */
+let mediaStore: MediaStore | null = null;
 /** On for the cases about a source that keeps several tabs per session. */
 let tabbed = false;
 /** The secret fields the page has, by backend node id. */
@@ -394,6 +397,7 @@ beforeAll(async () => {
   // the full cold-launch timeout asleep.
   server = new McpBrowserServer({
     target: () => fakeTarget,
+    media: () => mediaStore,
     timeouts: { attachMs: 300, navigateMs: 600, historyMs: 600 },
   });
   port = await server.start();
@@ -407,6 +411,7 @@ beforeEach(() => {
   materializeEnabled = true;
   tabbed = false;
   secretFieldIds = [];
+  mediaStore = null;
   secretsById.clear();
   gestures.length = 0;
   fakeTarget.noteAction.mockClear();
@@ -3304,5 +3309,72 @@ describe("several tabs per session", () => {
 
     expect(text).toContain("No screenshot could be captured");
     expect(captured).toBe(0);
+  });
+});
+
+describe("screenshots as media for the chat", () => {
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+
+  it("keeps a screenshot under a media id that resolves to its bytes, for 30 minutes", async () => {
+    const clock = { now: 0 };
+    mediaStore = new MediaStore(() => clock.now);
+    page.capturePage = async () =>
+      ({ toJPEG: () => JPEG, toPNG: () => Buffer.alloc(0) }) as never;
+    respondWith(() => null);
+
+    const response = await rpc({
+      jsonrpc: "2.0",
+      id: ++nextId,
+      method: "tools/call",
+      params: { name: "browser_snapshot", arguments: { action: "screenshot" } },
+    });
+    const text = response.result?.content?.[1]?.text ?? "";
+    const id = /media id: (media-[0-9a-f]+)/.exec(text)?.[1];
+
+    expect(id).toBeDefined();
+    // Held for the session that took it (a browser run calls as its parent).
+    expect(mediaStore.resolve(id!, "session-1")).toEqual({
+      ok: true,
+      data: JPEG,
+      mimeType: "image/jpeg",
+    });
+    // Another session's id sends nothing: it reads as unknown.
+    expect(mediaStore.resolve(id!, "session-2")).toEqual({
+      ok: false,
+      reason: "That media id is unknown or expired; take a new one.",
+    });
+    clock.now += MEDIA_TTL_MS;
+    expect(mediaStore.resolve(id!, "session-1")).toMatchObject({ ok: false });
+  });
+
+  it("gives no media id where no chat takes media", async () => {
+    page.capturePage = async () =>
+      ({ toJPEG: () => JPEG, toPNG: () => Buffer.alloc(0) }) as never;
+    respondWith(() => null);
+
+    const response = await rpc({
+      jsonrpc: "2.0",
+      id: ++nextId,
+      method: "tools/call",
+      params: { name: "browser_snapshot", arguments: { action: "screenshot" } },
+    });
+
+    expect(response.result?.content?.[1]?.text).not.toContain("media id");
+  });
+
+  it("holds only images, and only so much at once", () => {
+    const store = new MediaStore();
+    expect(store.put("s", Buffer.from("not an image"))).toEqual({
+      reason: "The data is not a JPEG or PNG image.",
+    });
+    const big = Buffer.concat([JPEG, Buffer.alloc(4 * 1024 * 1024)]);
+    const ids = Array.from({ length: 20 }, () => store.put("s", big));
+    const first = ids[0] as { id: string };
+    const last = ids.at(-1) as { id: string };
+    // The oldest went to make room; the newest is there.
+    expect(store.resolve(first.id, "s")).toMatchObject({ ok: false });
+    expect(store.resolve(last.id, "s")).toMatchObject({ ok: true });
+    // Never a path, whatever the store holds.
+    expect(store.resolve("/etc/hosts", "s")).toMatchObject({ ok: false });
   });
 });

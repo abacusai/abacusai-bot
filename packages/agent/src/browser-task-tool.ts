@@ -1,8 +1,3 @@
-/**
- * `browser_task`, as a pi tool: the parent's entire view of the browser. Kept
- * apart from `browser-task.ts` so the schema and result phrasing stay separate
- * from the mechanics of running the sub-session.
- */
 import { Type } from "typebox";
 
 import {
@@ -10,6 +5,16 @@ import {
   type BrowserTaskContext,
   type BrowserTaskResult,
 } from "./browser-task.js";
+/**
+ * `browser_task`, as a pi tool: the parent's entire view of the browser. Kept
+ * apart from `browser-task.ts` so the schema and result phrasing stay separate
+ * from the mechanics of running the sub-session.
+ */
+import {
+  APP_CHANNEL,
+  browserHandoffDescription,
+  browserStopNote,
+} from "./channel.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
 import type { AgentEvent } from "./protocol.js";
 
@@ -110,6 +115,7 @@ export function buildBrowserTaskTool(
 ): PiToolDefinitionLike {
   let counter = 0;
   const budget = new DispatchBudget();
+  const channel = context.channel ?? APP_CHANNEL;
 
   return {
     name: "browser_task",
@@ -154,10 +160,8 @@ export function buildBrowserTaskTool(
       "",
       "It cannot read files or run commands, and it will stop rather than pay for anything,",
       "book anything, enter card or ID details, or fill a CAPTCHA. When it stops for that, its",
-      'report ends with "NEEDS USER:" and what they must do. Tell the user to open the Browser',
-      "pane in this chat and do that step; when they say it is done, call this tool again with",
-      "continue_from_last: true and their message as the task; the same sub-agent carries on",
-      "from the same page with everything it already found.",
+      'report ends with "NEEDS USER:" and what they must do.',
+      browserHandoffDescription(channel),
     ].join("\n"),
     parameters: Type.Object({
       task: Type.String({
@@ -291,13 +295,7 @@ export function buildBrowserTaskTool(
       // A capped run's answer is partial; saying so makes the caller weigh it.
       const note =
         result.stoppedBy === "needs-user"
-          ? context.paneless === true
-            ? "\n\n(The run stopped at a step only the user can do. They cannot see this browser: tell them " +
-              "it is ready up to that step and that they finish it themselves, with what they need to do so " +
-              "(the site, what to pick). Never ask for a password or card details in the chat.)"
-            : "\n\n(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
-              "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
-              "their reply as the task; the same sub-agent continues with everything it has found.)"
+          ? `\n\n${browserStopNote(channel)}`
           : result.stoppedBy === "turn-limit"
             ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
             : result.stoppedBy === "timeout"
