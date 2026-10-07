@@ -4,6 +4,8 @@
  * `WidthRules`, `BW1000/BW900/BW800`, `W900/W800`). Never writes prefs:
  * growing the window restores the user's choice.
  */
+import { SPLIT_MIN_PX } from "#renderer/lib/side-panel/geometry";
+
 import { SHELL_GEOMETRY } from "./geometry";
 
 /** `xs`: a phone browser, below the desktop window minimum. */
@@ -77,13 +79,20 @@ export const shellLayout = (input: {
   // sidebar floating (the canvas's unpinned mode) so none takes the pane's width.
   if (band === "xs") sidebar = "floating";
 
-  if (
-    input.area === "sessions" &&
-    band === "xl" &&
-    input.panelOpen &&
-    input.view !== "full"
-  )
+  const occupied = (mode: SidebarMode) =>
+    mode === "pinned"
+      ? SHELL_GEOMETRY.sidebarW
+      : mode === "strip"
+        ? SHELL_GEOMETRY.sidebarStripW
+        : 0;
+  const rail = band === "xs" ? 0 : SHELL_GEOMETRY.railW;
+
+  const available = () =>
+    input.width - rail - occupied(sidebar) - SHELL_GEOMETRY.paneInset;
+  // A full primary column yields first. The compact Bots strip stays useful.
+  if (input.panelOpen && sidebar === "pinned" && available() < SPLIT_MIN_PX)
     sidebar = "floating";
+  const panelFits = available() >= SPLIT_MIN_PX;
 
   return {
     band,
@@ -95,7 +104,7 @@ export const shellLayout = (input: {
           ? SHELL_GEOMETRY.sidebarStripW
           : 0,
     forcedFloating: sidebar === "floating" && input.pinned,
-    sidePanel: input.panelOpen ? (band === "xl" ? "layout" : "drawer") : null,
+    sidePanel: input.panelOpen ? (panelFits ? "layout" : "drawer") : null,
     titleBar: {
       status: band === "xl" || band === "lg",
       actionsFolded: band === "sm" || band === "xs",

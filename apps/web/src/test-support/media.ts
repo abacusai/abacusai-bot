@@ -47,6 +47,7 @@ export const setViewportWidth = (next: number): void => {
     value: next,
   });
   notify();
+  window.dispatchEvent(new Event("resize"));
 };
 
 /** Force the result of specific queries, e.g. `(prefers-color-scheme: dark)`. */

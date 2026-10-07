@@ -45,7 +45,7 @@ import { cn } from "#renderer/lib/cn";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 
-import { BAND_WIDTH, useShellBand } from "./breakpoints";
+import { useShellWidth, useShellBand } from "./breakpoints";
 import { UpgradePromo } from "./credits-card";
 import { FloatingIntentContext } from "./floating-intent";
 import { APP_HOTKEYS, useAppHotkey } from "./hotkeys";
@@ -159,6 +159,7 @@ export const ShellLayout = ({
 }: ShellLayoutProps) => {
   const { t } = useTranslation();
   const band = useShellBand();
+  const width = useShellWidth();
   const prefs = usePrefs();
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
@@ -167,12 +168,12 @@ export const ShellLayout = ({
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
-  const sidebarToggle = useSidebarToggle();
+  const sidebarToggle = useSidebarToggle(panel);
   const [intent] = useState(() => createFloatingIntent(focusInsideFloating));
 
   const tabTitle = usePanelTabTitle();
   const layout = shellLayout({
-    width: BAND_WIDTH[band],
+    width,
     area,
     pinned: prefs.sidebar.pinned,
     panelOpen: area === "sessions" ? panel.sessionOpen : panel.open,
@@ -267,12 +268,15 @@ export const ShellLayout = ({
     // so only a move within the area (picking an item) closes it.
     if (!(phone && owner !== lastOwner.current)) closeFloating();
     lastOwner.current = owner;
+  }, [pathname, router, intent, phone]);
+  useEffect(() => {
+    const owner = areaOf(router, pathname);
     if (owner != null)
       rememberLocation(owner, {
         pathname,
         search: JSON.parse(searchKey) as Record<string, unknown>,
       });
-  }, [pathname, searchKey, router, intent, phone]);
+  }, [pathname, searchKey, router]);
 
   // Floating no longer applies (pinned, strip): nothing may open it later.
   const floatingEnabled = layout.sidebar === "floating";
@@ -415,7 +419,11 @@ export const ShellLayout = ({
           </div>
           {IS_ELECTRON && <UpgradePromo />}
           <SidePanelDrawer
-            open={panelShown && layout.sidePanel === "drawer"}
+            open={
+              panelShown &&
+              layout.sidePanel === "drawer" &&
+              panel.scope.active !== "chat"
+            }
             tabs={panel.scope.tabs}
             kinds={panelKinds}
             onAdd={(kind) => {

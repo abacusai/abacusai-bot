@@ -4,6 +4,8 @@ export const PANEL_MIN_PX = SHELL_GEOMETRY.sidePanelMin;
 /** The in-layout panel never grows past this, nor past `panelMaxFor`. */
 export const PANEL_MAX_PX = SHELL_GEOMETRY.sidePanelMax;
 export const PANE_MIN_PX = 360;
+export const SPLIT_MIN_PX =
+  PANE_MIN_PX + PANEL_MIN_PX + SHELL_GEOMETRY.paneInset;
 export const PANEL_DEFAULT_PX = 400;
 /** The panel's share of the split at most (the pane keeps the rest). */
 const PANEL_MAX_FRACTION = 0.6;

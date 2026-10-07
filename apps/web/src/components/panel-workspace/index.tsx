@@ -28,6 +28,7 @@ import {
   clampPanelWidth,
   PANEL_DEFAULT_PX,
   PANEL_MIN_PX,
+  SPLIT_MIN_PX,
   panelMaxFor,
 } from "#renderer/lib/side-panel/geometry";
 import type { PanelTabKind } from "#renderer/lib/side-panel/store";
@@ -139,7 +140,7 @@ export const PanelWorkspace = ({
   writers.set(prefKey, writer);
   const resized = useRef<number | null>(null);
   const save = useEffectEvent((value: SerializedDockview) => {
-    if (expanded) {
+    if (expanded && width >= SPLIT_MIN_PX) {
       try {
         localStorage.setItem(LAYOUT_PREFIX + scope, JSON.stringify(value));
       } catch {
@@ -258,7 +259,10 @@ export const PanelWorkspace = ({
   useEffect(() => {
     onGroupCountChange?.(api?.groups.length ?? 1);
   }, [api, visible.length, onGroupCountChange]);
-  const split = open && !expanded && width >= 728;
+  const docked = expanded && width >= SPLIT_MIN_PX;
+  const showTool = open && active != null && active !== "chat";
+  const split = showTool && !expanded && width >= SPLIT_MIN_PX;
+  const folded = showTool && !split && !docked;
   const maximum = panelMaxFor(width);
   const stored = clampPanelWidth(
     prefs.panes[prefKey] ?? prefs.panes["side-panel"] ?? PANEL_DEFAULT_PX,
@@ -266,15 +270,16 @@ export const PanelWorkspace = ({
   );
   useLayoutEffect(() => {
     if (split) sidePanel.current?.resize(stored);
-  }, [split, stored, sidePanel]);
+    else if (folded) sidePanel.current?.resize("100%");
+  }, [split, folded, stored, sidePanel]);
   const attach = (id: string, element: HTMLDivElement | null) => {
     const target = targets.get(id);
-    if (!expanded && target && element) element.append(target);
+    if (!docked && target && element) element.append(target);
   };
   return (
     <Context
       value={{
-        expanded,
+        expanded: docked,
         visible,
         targets,
       }}
@@ -282,13 +287,10 @@ export const PanelWorkspace = ({
       <div
         ref={container}
         data-slot="panel-workspace"
-        data-workspace-expanded={expanded ? "" : undefined}
+        data-workspace-expanded={docked ? "" : undefined}
         className="relative size-full min-h-0 min-w-0"
       >
-        <div
-          hidden={expanded}
-          className={cn("size-full", expanded && "hidden")}
-        >
+        <div hidden={docked} className={cn("size-full", docked && "hidden")}>
           <ResizablePanelGroup
             orientation="horizontal"
             className="gap-0"
@@ -301,10 +303,11 @@ export const PanelWorkspace = ({
               data-workspace-pane="chat"
               id="pane"
               minSize={split ? 360 : 0}
+              maxSize={folded ? 0 : undefined}
             >
               <div
                 ref={(element) => attach("chat", element)}
-                className={cn("size-full", open && !split && "hidden")}
+                className={cn("size-full", folded && "hidden")}
               />
             </ResizablePanel>
             {split ? (
@@ -320,8 +323,8 @@ export const PanelWorkspace = ({
               data-workspace-pane="tools"
               panelRef={sidePanel}
               minSize={split ? PANEL_MIN_PX : 0}
-              maxSize={!open ? 0 : split ? maximum : undefined}
-              defaultSize={open ? stored : 0}
+              maxSize={!showTool ? 0 : split ? maximum : undefined}
+              defaultSize={showTool ? (folded ? "100%" : stored) : 0}
               onResize={(size) => {
                 resized.current = size.inPixels;
               }}
@@ -342,11 +345,11 @@ export const PanelWorkspace = ({
           </ResizablePanelGroup>
         </div>
         <div
-          hidden={!expanded}
+          hidden={!docked}
           className={cn(
             "panel-dock size-full",
             visible.length === 1 && "single-group",
-            !expanded && "hidden"
+            !docked && "hidden"
           )}
         >
           {tabs.length > 1 || api ? (
@@ -362,10 +365,10 @@ export const PanelWorkspace = ({
         {tabs.map((tab) =>
           createPortal(
             tab.content(
-              expanded
+              docked
                 ? visible.includes(tab.id)
                 : tab.id === "chat"
-                  ? !open || split
+                  ? !folded
                   : open && active === tab.id
             ),
             targets.get(tab.id)!,

@@ -324,8 +324,8 @@ describe("ShellLayout", () => {
     );
   });
 
-  it("uses a non-modal drawer with data-side-panel below xl, and a scrim only there", async () => {
-    await at(1000, "/bots/chief-of-staff?tab=details");
+  it("uses a non-modal drawer with data-side-panel below the split minimum, and a scrim only there", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -585,7 +585,7 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       ).not.toBeNull()
     );
     check();
-    act(() => setViewportWidth(1000));
+    act(() => setViewportWidth(800));
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -750,6 +750,24 @@ describe("the title bar", () => {
     await waitFor(() =>
       expect(harness!.router.state.location.search).toEqual({ tab: "files" })
     );
+  });
+
+  it("reveals a forced floating primary sidebar without closing the Session tools", async () => {
+    await at(1000, "/sessions/review-prs?tab=files");
+    fireEvent.click(screen.getByTestId("sidebar-toggle"));
+    await waitFor(() => expect(shellStore.state.floating.open).toBe(true));
+    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("tab", { name: "Changes" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    expect(shellStore.state.floating.open).toBe(true);
+    fireEvent.click(screen.getByTestId("sidebar-toggle"));
+    await waitFor(() => expect(shellStore.state.floating.open).toBe(false));
+    expect(harness!.db.prefs.rows.get("app")?.sidebar.pinned).toBe(true);
   });
 
   it("the panel toggle reopens a bot's strip as it was, and the strip adds, closes and switches tabs", async () => {

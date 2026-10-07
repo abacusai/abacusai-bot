@@ -35,7 +35,10 @@ import {
   PANEL_DRAG_TYPE,
   moveDockTab,
 } from "#renderer/components/panel-workspace";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
+import { useShellWidth } from "#renderer/features/shell/breakpoints";
+import { shellLayout } from "#renderer/features/shell/layout";
 import { TopBar } from "#renderer/features/shell/top-bar";
 import { TopBarPanelSlot } from "#renderer/features/shell/top-bar-slots";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -128,7 +131,15 @@ export const SessionDock = ({
   const active =
     search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
   const expanded = search.view === "full" && entries.open === true;
-  const split = !expanded;
+  const prefs = usePrefs();
+  const width = useShellWidth();
+  const layout = shellLayout({
+    width,
+    area: "sessions",
+    pinned: prefs.sidebar.pinned,
+    panelOpen: entries.open === true,
+  });
+  const split = !expanded && layout.sidePanel !== "drawer";
   useEffect(() => {
     if (active && active !== "chat") focusTab(key, active);
   }, [key, active, entries.tabs]);
@@ -373,7 +384,7 @@ export const SessionDock = ({
         variant="ghost"
         size="icon-sm"
         aria-label={t("sessions.dock.full")}
-        aria-pressed={!split}
+        aria-pressed={expanded}
         onClick={() => {
           void navigate({
             to: "/sessions/$sessionId",
@@ -387,7 +398,7 @@ export const SessionDock = ({
           });
         }}
       >
-        {split ? <Maximize /> : <Minimize />}
+        {expanded ? <Minimize /> : <Maximize />}
       </Button>
     </div>
   );

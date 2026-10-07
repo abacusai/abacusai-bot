@@ -36,3 +36,19 @@ export const BAND_WIDTH: Record<Band, number> = {
 
 export const useShellBand = (): Band =>
   useSyncExternalStore(subscribe, currentBand, () => "xl");
+
+const subscribeWidth = (changed: () => void) => {
+  const unsubscribe = subscribe(changed);
+  window.addEventListener("resize", changed);
+  return () => {
+    unsubscribe();
+    window.removeEventListener("resize", changed);
+  };
+};
+/** Exact available width, including changes within a band. */
+export const useShellWidth = () =>
+  useSyncExternalStore(
+    subscribeWidth,
+    () => window.innerWidth,
+    () => 1280
+  );

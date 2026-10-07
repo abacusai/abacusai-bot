@@ -43,10 +43,7 @@ describe("shellLayout", () => {
             if (band === "sm" && area === "bots" && pinned) sidebar = "strip";
             if (band === "md" || (band === "sm" && area !== "bots"))
               sidebar = "floating";
-            if (
-              area === "sessions" &&
-              (band === "sm" || (band === "xl" && panelOpen))
-            )
+            if (panelOpen && sidebar === "pinned" && width - 56 - 280 - 8 < 728)
               sidebar = "floating";
             expect(state.sidebar).toBe(sidebar);
             expect(state.sidebarOccupied).toBe(
@@ -54,7 +51,11 @@ describe("shellLayout", () => {
             );
 
             expect(state.sidePanel).toBe(
-              panelOpen ? (band === "xl" ? "layout" : "drawer") : null
+              panelOpen
+                ? width - 56 - state.sidebarOccupied - 8 >= 728
+                  ? "layout"
+                  : "drawer"
+                : null
             );
             expect(state.titleBar.status).toBe(band === "xl" || band === "lg");
             expect(state.titleBar.actionsFolded).toBe(band === "sm");
@@ -80,3 +81,30 @@ describe("shellLayout", () => {
     ).toBe("pinned");
   });
 });
+
+it.each([640, 800, 1000, 1280, 1710])(
+  "coordinates every sidebar request at %ipx",
+  (width) => {
+    for (const primary of ["pinned", "collapsed", "peek"])
+      for (const secondary of ["closed", "docked", "floating", "expanded"])
+        for (const area of ["sessions", "bots"] as const) {
+          const state = shellLayout({
+            width,
+            area,
+            pinned: primary === "pinned",
+            panelOpen: secondary !== "closed",
+            view: secondary === "expanded" ? "full" : "split",
+          });
+          const available =
+            width - (width < 800 ? 0 : 56) - state.sidebarOccupied - 8;
+          if (secondary === "closed") expect(state.sidePanel).toBeNull();
+          else if (state.sidePanel === "layout")
+            expect(available).toBeGreaterThanOrEqual(728);
+          else expect(available).toBeLessThan(728);
+          if (primary !== "pinned") expect(state.sidebar).toBe("floating");
+          expect(state.forcedFloating).toBe(
+            primary === "pinned" && state.sidebar === "floating"
+          );
+        }
+  }
+);

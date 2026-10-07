@@ -66,7 +66,7 @@ const useShellActions = (): ShellActions => {
   const navigate = useAppNavigate();
   const { area } = useShellMatch();
   const panel = usePanel(area);
-  const sidebar = useSidebarToggle();
+  const sidebar = useSidebarToggle(panel);
   const floatingOpen = useStore(shellStore, (state) => state.floating.open);
 
   return {
