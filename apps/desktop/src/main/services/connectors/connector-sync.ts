@@ -35,6 +35,8 @@ interface ConnectorSyncDeps {
   read: () => Promise<PlatformSnapshot>;
   /** Sessions with a running agent. */
   liveSessions: () => SessionRef[];
+  /** Whether the session's agent is in a turn now (streaming, or asking). */
+  turnRunning: (session: SessionRef) => boolean;
   /**
    * Rewrites the session's MCP runtime file and asks its agent to reconnect
    * under `requestId`; false when no agent is running to ask. The agent
@@ -74,6 +76,8 @@ export class ConnectorSync {
   private readonly seeding = new Map<string, Promise<void>>();
   /** Each session's last send in line: the next one starts after it. */
   private readonly lines = new Map<string, Promise<void>>();
+  /** Sessions a send was delivered to whose turn has not ended yet. */
+  private readonly open = new Set<string>();
   /** A session's refresh in flight; a second ask joins it. */
   private readonly refreshing = new Map<string, Promise<void>>();
   /** Refreshes waiting on their agent's answer, by request id. */
@@ -120,19 +124,27 @@ export class ConnectorSync {
   /**
    * Delivers a message to a session after every send before it, with the
    * session's tools brought to the platform's connected set first unless the
-   * message joins a running turn (`midTurn`): a turn is never refreshed
-   * under. Must be called synchronously at the send's arrival, so the line
-   * is the arrival order. A listing that cannot be read leaves the tools.
+   * message joins a running turn: a turn is never refreshed under. Whether
+   * it joins one is judged when it reaches the head of the line (a send
+   * before it was delivered and its turn has not ended, or the agent is in
+   * a turn), not at its arrival. Must be called synchronously at the send's
+   * arrival, so the line is the arrival order. `deliver` resolves to whether
+   * the message reached the agent. A listing that cannot be read leaves the
+   * tools.
    */
   inTurnOrder<T>(
     session: SessionRef,
-    midTurn: boolean,
-    deliver: () => Promise<T>
+    deliver: () => Promise<T>,
+    reached: (result: T) => boolean = () => true
   ): Promise<T> {
     const before = this.lines.get(session.sessionId) ?? Promise.resolve();
     const run = before.then(async () => {
+      const midTurn =
+        this.open.has(session.sessionId) || this.deps.turnRunning(session);
       if (!midTurn) await this.reconcile(session);
-      return deliver();
+      const result = await deliver();
+      if (reached(result)) this.open.add(session.sessionId);
+      return result;
     });
     const line = run.then(
       () => undefined,
@@ -147,8 +159,13 @@ export class ConnectorSync {
   }
 
   /** In line like any send, for a path that delivers on its own right after. */
-  beforeTurn(session: SessionRef, midTurn: boolean): Promise<void> {
-    return this.inTurnOrder(session, midTurn, async () => undefined);
+  beforeTurn(session: SessionRef): Promise<void> {
+    return this.inTurnOrder(session, async () => undefined);
+  }
+
+  /** The session's turn ended (it went idle): the next send starts a turn. */
+  turnEnded(sessionId: string): void {
+    this.open.delete(sessionId);
   }
 
   /**
@@ -182,6 +199,7 @@ export class ConnectorSync {
   forget(sessionId: string): void {
     this.built.delete(sessionId);
     this.seeding.delete(sessionId);
+    this.open.delete(sessionId);
   }
 
   private async readNow(): Promise<PlatformSnapshot> {

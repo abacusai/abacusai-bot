@@ -603,16 +603,16 @@ export class ServiceHost {
           routineId: session?.routineId ?? null,
         };
       },
-      beforeRun: async (threadId, midRun) => {
+      beforeRun: async (threadId) => {
         // In line first, at the send's arrival, then the model re-pin.
         const workspaceId =
           this.agentManagerService.getRuntimeInfo(threadId)?.workspaceId;
         const inLine =
           workspaceId != null
-            ? this.connectorSync.beforeTurn(
-                { workspaceId, sessionId: threadId },
-                midRun
-              )
+            ? this.connectorSync.beforeTurn({
+                workspaceId,
+                sessionId: threadId,
+              })
             : Promise.resolve();
         await this.applyEffectiveBotModel(threadId);
         await inLine;
@@ -980,21 +980,65 @@ export class ServiceHost {
     expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
   });
 
-  private readonly connectedListeners = new Set<
-    (sessionId: string | null, note: string) => void
-  >();
+  /** Lanes that deliver a note to their own session as a turn, by lane. */
+  private readonly laneNotes = new Map<string, (note: string) => void>();
+  /** Connected notes for sessions whose turn is running, sent at its end. */
+  private readonly heldNotes = new Map<string, string[]>();
 
   /**
-   * Told when connectors offered to a session connect, with the note for its
-   * model. The phone lane turns it into a turn: nobody is at a card there.
+   * A host lane (the hosted phone loop) delivers the connected note to its
+   * own session as a turn through its own queue, so the answer reaches the
+   * phone. Every other session gets it from deliverConnectedNote.
    */
-  onConnectorsConnected(
-    listener: (sessionId: string | null, note: string) => void
-  ): () => void {
-    this.connectedListeners.add(listener);
+  onLaneNote(lane: string, deliver: (note: string) => void): () => void {
+    this.laneNotes.set(lane, deliver);
     return () => {
-      this.connectedListeners.delete(listener);
+      if (this.laneNotes.get(lane) === deliver) this.laneNotes.delete(lane);
     };
+  }
+
+  /**
+   * The one way the asking session hears that its connectors landed: as a
+   * fresh hidden turn, on every lane. A session in a turn holds the note until
+   * that turn ends, so it starts a turn of its own, and that turn's start
+   * brings the session's tools to the new connectors first (connectorSync).
+   */
+  private deliverConnectedNote(sessionId: string | null, note: string): void {
+    if (sessionId == null) return;
+    const lane = this.agentSessionManagerService.laneOf(sessionId);
+    const laneDeliver = lane != null ? this.laneNotes.get(lane) : undefined;
+    if (laneDeliver != null) {
+      laneDeliver(note);
+      return;
+    }
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (session == null) return;
+    this.heldNotes.set(sessionId, [
+      ...(this.heldNotes.get(sessionId) ?? []),
+      note,
+    ]);
+    this.releaseConnectedNotes(sessionId);
+  }
+
+  /** The session is between turns: its held connected notes go in as one turn. */
+  private releaseConnectedNotes(sessionId: string): void {
+    const notes = this.heldNotes.get(sessionId);
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (notes == null || session == null) return;
+    // Another send got in first: the notes wait for its turn to end.
+    if (this.sessionTurnStateService.get(session.workspaceId, sessionId).isBusy)
+      return;
+    this.heldNotes.delete(sessionId);
+    void this.sendAgentMessage({
+      workspaceId: session.workspaceId,
+      sessionId,
+      message: notes.join("\n\n"),
+      // Hidden: the model reads it, the transcript shows its answer only.
+      userText: {
+        systemReminder: true,
+        operator: { kind: "environment-notice" },
+      },
+    });
   }
 
   /**
@@ -1048,8 +1092,7 @@ export class ServiceHost {
           "asks only for what is missing. Otherwise carry on with what they asked for. There is nothing to flag, report " +
           "or escalate, so never offer to."
         : "Tell the user in one short line, then carry on with what they asked for.");
-    for (const listener of this.connectedListeners)
-      listener(offer.sessionId, note);
+    this.deliverConnectedNote(offer.sessionId, note);
   }
 
   /**
@@ -1079,6 +1122,13 @@ export class ServiceHost {
         .getRuntimeDiagnostics()
         .filter((runtime) => runtime.live)
         .map(({ workspaceId, sessionId }) => ({ workspaceId, sessionId })),
+    turnRunning: (session) => {
+      const { phase } = this.sessionTurnStateService.get(
+        session.workspaceId,
+        session.sessionId
+      );
+      return phase === "streaming" || phase === "waiting_permission";
+    },
     refresh: (session, requestId) => {
       this.healConnectorGateway();
       return this.mcpAdminService.refreshSessionMcp(session, requestId);
@@ -1967,6 +2017,13 @@ export class ServiceHost {
 
   private readonly sessionTurnStateService = new SessionTurnStateService(
     (snapshot) => {
+      if (!snapshot.isBusy) {
+        // Between turns: the next send starts one, and notes held for the
+        // session go in now.
+        this.connectorSync.turnEnded(snapshot.sessionId);
+        // After the state change has settled, not inside it.
+        queueMicrotask(() => this.releaseConnectedNotes(snapshot.sessionId));
+      }
       this.emitEvent({
         type: "session-turn-state-updated",
         workspaceId: snapshot.workspaceId,
@@ -3097,11 +3154,6 @@ export class ServiceHost {
     // goes through untouched.
     void this.rememberIfAsked(request.message);
 
-    // A message steered into a running turn: its tools stay as they are.
-    const midTurn = this.sessionTurnStateService.get(
-      request.workspaceId,
-      request.sessionId
-    ).isBusy;
     // Synchronously, so a refetch sees the busy state immediately.
     this.sessionTurnStateService.markSent(
       request.workspaceId,
@@ -3117,8 +3169,8 @@ export class ServiceHost {
     // account's connectors before a turn starts (never under a running one).
     const { delivered, outcome } = await this.connectorSync.inTurnOrder(
       { workspaceId: request.workspaceId, sessionId: request.sessionId },
-      midTurn,
-      () => this.deliverAgentMessage(request, session, current)
+      () => this.deliverAgentMessage(request, session, current),
+      (result) => result.outcome !== "undeliverable"
     );
 
     if (outcome === "undeliverable") {

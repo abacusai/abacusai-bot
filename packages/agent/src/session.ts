@@ -74,7 +74,8 @@ import {
   type ConnectedMcp,
   type McpServerStatus,
 } from "./mcp/index.js";
-import { buildMcpToolDefinitions, syncActiveMcpTools } from "./mcp/tools.js";
+import { McpToolSync } from "./mcp/tool-sync.js";
+import { buildMcpToolDefinitions } from "./mcp/tools.js";
 import {
   memorySnapshot as readMemorySnapshot,
   rememberSnapshot,
@@ -148,6 +149,7 @@ import {
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
+import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
 import webTools from "./web/tools.js";
@@ -619,7 +621,18 @@ export class AbacusBotSession {
     tools: [],
   };
   /** MCP tool names pi already has, so `refreshMcp` registers only what is new. */
-  private readonly registeredMcpTools = new Set<string>();
+  /** Which MCP tools the model sees; see McpToolSync. */
+  private readonly mcpTools = new McpToolSync({
+    pi: () => this.pi,
+    session: () => this.session,
+    mcp: () => this.mcp,
+    accepts: (tool) =>
+      !excludedTools().includes(tool.name) &&
+      // Browser tools belong to the sub-agent, which reads them live.
+      !(tool.name.startsWith("browser_") && this.browserTaskRegistered) &&
+      !isSupersededWebTool(tool),
+    turnRunning: () => this.turnRunning,
+  });
   /**
    * Services only the desktop can perform. Long-lived: tools rebuilt on reset
    * would otherwise each capture a client with its own pending map.
@@ -697,11 +710,9 @@ export class AbacusBotSession {
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
   private stallFailureReported = false;
-  /**
-   * The MCP servers changed while a turn ran: the tools the model sees are
-   * brought up to date at the next turn start, never under a running turn.
-   */
-  private mcpToolsStale = false;
+  /** Tools a change deferred under this turn adds; continued into once. */
+  private pendingToolArrival: string[] | null = null;
+  private toolArrivalsThisTurn = 0;
   /** True while the session runs OpenLLM; see openllm.ts. */
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
@@ -763,7 +774,7 @@ export class AbacusBotSession {
     // MCP servers first: pi takes the custom tool list up front.
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
 
     const hostServices = this.options.hostServices !== false;
     const toolNames = new Set([
@@ -1043,7 +1054,7 @@ export class AbacusBotSession {
       isSupersededWebTool
     );
     for (const name of roster.mcpToolNames) {
-      this.registeredMcpTools.add(name);
+      this.mcpTools.registered.add(name);
     }
     this.browserTaskRegistered = roster.browserTaskRegistered;
     const customTools = roster.tools;
@@ -1143,53 +1154,9 @@ export class AbacusBotSession {
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
-    this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
+    this.mcpTools.changed();
     this.emitMcpServers();
-  }
-
-  /**
-   * Make pi's MCP tools match what the servers list now. Startup tools
-   * survive a reconnect through their route getter, but pi takes its custom
-   * tool list once, so a server added later is otherwise "connected" with
-   * nothing callable; and a tool its server no longer lists (a connector
-   * disconnected or revoked) leaves the model's view rather than lingering.
-   */
-  private registerNewMcpTools(): void {
-    const pi = this.pi;
-
-    if (pi == null) return;
-    if (this.turnRunning) {
-      this.mcpToolsStale = true;
-      return;
-    }
-
-    const excluded = excludedTools();
-    const listed = buildMcpToolDefinitions(() => this.mcp);
-
-    for (const tool of listed) {
-      if (this.registeredMcpTools.has(tool.name)) continue;
-      if (excluded.includes(tool.name)) continue;
-      // Browser tools belong to the sub-agent, which reads them live.
-      if (tool.name.startsWith("browser_") && this.browserTaskRegistered)
-        continue;
-      if (isSupersededWebTool(tool)) continue;
-
-      this.registeredMcpTools.add(tool.name);
-
-      try {
-        pi.registerTool(tool as never);
-      } catch {
-        // One server's bad schema must not break the refresh for the rest.
-        this.registeredMcpTools.delete(tool.name);
-      }
-    }
-    if (this.session != null)
-      syncActiveMcpTools(
-        this.session,
-        this.registeredMcpTools,
-        new Set(listed.map((tool) => tool.name))
-      );
   }
 
   /** Whether the browser sub-agent owns the browser tools this session. */
@@ -1243,10 +1210,9 @@ export class AbacusBotSession {
       await this.refreshProviderRegistrations();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
-    if (this.mcpToolsStale) {
-      this.mcpToolsStale = false;
-      this.registerNewMcpTools();
-    }
+    this.mcpTools.atTurnStart();
+    this.pendingToolArrival = null;
+    this.toolArrivalsThisTurn = 0;
     this.stallRecoveriesThisTurn = 0;
     this.pendingStall = null;
     this.stallFailureReported = false;
@@ -1445,6 +1411,7 @@ export class AbacusBotSession {
       this.pendingContextCompaction != null ||
       this.pendingOpenLlmRotation != null ||
       this.pendingLanguageRepair != null ||
+      this.pendingToolArrival != null ||
       this.pendingStall != null
     ) {
       // Stop cancels the continuation, but the withheld idle event still has
@@ -1454,6 +1421,7 @@ export class AbacusBotSession {
         this.pendingContextCompaction = null;
         this.pendingOpenLlmRotation = null;
         this.pendingLanguageRepair = null;
+        this.pendingToolArrival = null;
         this.pendingStall = null;
         this.finishTurn();
 
@@ -1464,6 +1432,26 @@ export class AbacusBotSession {
         const stalled = this.pendingStall.modelId;
         this.pendingStall = null;
         await this.recoverFromStall(stalled);
+
+        continue;
+      }
+
+      if (this.pendingToolArrival != null) {
+        const arrived = this.pendingToolArrival;
+        this.pendingToolArrival = null;
+        this.toolArrivalsThisTurn += 1;
+        // Between the turn's runs: the deferred tools register before the
+        // continuation's run starts, never under one.
+        this.mcpTools.applyDeferred();
+
+        await this.session?.sendCustomMessage(
+          {
+            customType: TOOLS_ARRIVED_TYPE,
+            content: toolsArrivedPrompt(arrived),
+            display: false,
+          },
+          { triggerTurn: true }
+        );
 
         continue;
       }
@@ -2558,12 +2546,25 @@ export class AbacusBotSession {
           this.languageRepairsThisTurn > 0
             ? null
             : replyLanguageMismatch(event.messages);
+        // Tools a change deferred under this turn adds: the turn continues
+        // once with them, so the request is finished rather than declared
+        // impossible. Once per turn.
+        const arrivals =
+          this.continuingPastMalformedToolCall ||
+          this.pendingContextCompaction != null ||
+          this.pendingOpenLlmRotation != null ||
+          this.pendingLanguageRepair != null ||
+          this.toolArrivalsThisTurn > 0
+            ? []
+            : this.mcpTools.pendingArrivals();
+        this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
         if (
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&
           this.pendingContextCompaction == null &&
           this.pendingOpenLlmRotation == null &&
-          this.pendingLanguageRepair == null
+          this.pendingLanguageRepair == null &&
+          this.pendingToolArrival == null
         ) {
           this.finishTurn();
         }

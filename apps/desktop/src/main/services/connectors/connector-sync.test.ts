@@ -47,17 +47,23 @@ const setup = (
   const sync: ConnectorSync = new ConnectorSync({
     read,
     liveSessions: () => (options.live === false ? [] : [SESSION]),
+    turnRunning: () => false,
     refresh,
     changed,
     ttlMs: 20_000,
     refreshWaitMs: options.refreshWaitMs ?? 50,
     now: () => clock.t,
   });
-  /** One send: in line, reconciled unless mid-turn, then delivered. */
-  const send = (label = "message", midTurn = false) =>
-    sync.inTurnOrder(SESSION, midTurn, async () => {
+  /** One send: in line, reconciled unless its turn is open, then delivered. */
+  const send = (label = "message") =>
+    sync.inTurnOrder(SESSION, async () => {
       order.push(label);
     });
+  /** A send's turn, delivered, then over. */
+  const turn = async (label = "message") => {
+    await send(label);
+    sync.turnEnded(SESSION.sessionId);
+  };
   /** The session's agent starts and reports its servers. */
   const spawn = async () => {
     await sync.platform();
@@ -72,6 +78,7 @@ const setup = (
     changed,
     order,
     send,
+    turn,
     spawn,
     setPlatform: (next: PlatformSnapshot | Error) => {
       platform = next;
@@ -86,14 +93,14 @@ describe("a session spawned with Gmail only", () => {
   it("sees Drive and Calendar connected from a browser on its next turn, refreshed before the message", async () => {
     const t = setup();
     await t.spawn();
-    await t.send();
+    await t.turn();
     expect(t.refresh).not.toHaveBeenCalled();
 
     // Connected elsewhere: nothing here knew. The next turn after the TTL
     // reads the platform and refreshes the session before its message.
     t.setPlatform(listing("gmailuser", "googledriveuser", "googlecalendar"));
     t.clock.t = 21_000;
-    await t.send();
+    await t.turn();
 
     expect(t.order).toEqual(["message", "refresh", "message"]);
     // The statuses, connect_connector and the notice read this same listing.
@@ -107,7 +114,7 @@ describe("a session spawned with Gmail only", () => {
 
     // Built with the new set now: the turn after needs nothing.
     t.clock.t = 50_000;
-    await t.send();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -117,39 +124,65 @@ describe("a session spawned with Gmail only", () => {
     await t.spawn();
     t.setPlatform(listing("gmailuser"));
     t.clock.t = 21_000;
-    await t.send();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("sends to one session", () => {
-  it("keep their order, and a refresh one starts happens before both", async () => {
+  it("keep their order, and a refresh the first starts happens before both", async () => {
     const t = setup();
     await t.spawn();
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
     // A arrives at an idle session and starts its reconcile; B arrives while
-    // A's turn is starting (so it reads busy) and must not overtake it.
-    const a = t.send("A");
-    const b = t.send("B", true);
-    await Promise.all([a, b]);
+    // A's turn is starting and must not overtake it, nor refresh under it.
+    await Promise.all([t.send("A"), t.send("B")]);
     expect(t.order).toEqual(["refresh", "A", "B"]);
   });
 
-  it("join one refresh rather than starting a second", async () => {
+  it("judge a running turn at the head of the line, not at arrival: one queued behind a turn that ends reconciles", async () => {
     const t = setup();
     await t.spawn();
+    await t.send("A");
+    // S is in line while A's turn runs, and never reaches the agent; B waits
+    // behind S. A's turn ends and the account changes before B's turn comes.
+    let fail: (() => void) | null = null;
+    const s = t.sync.inTurnOrder(
+      SESSION,
+      () =>
+        new Promise<boolean>((resolve) => {
+          fail = () => resolve(false);
+        }),
+      (reached) => reached
+    );
+    const b = t.send("B");
+    await vi.waitFor(() => expect(fail).not.toBeNull());
+    t.sync.turnEnded(SESSION.sessionId);
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
-    await Promise.all([t.send("A"), t.send("B"), t.send("C")]);
-    expect(t.refresh).toHaveBeenCalledTimes(1);
-    expect(t.order).toEqual(["refresh", "A", "B", "C"]);
+    fail!();
+    await Promise.all([s, b]);
+    expect(t.order).toEqual(["A", "refresh", "B"]);
+  });
+
+  it("never refresh under a running turn; the next turn start does", async () => {
+    const t = setup();
+    await t.spawn();
+    await t.send("A");
+    t.setPlatform(listing("gmailuser", "googledriveuser"));
+    t.clock.t = 21_000;
+    await t.send("steered");
+    expect(t.refresh).not.toHaveBeenCalled();
+    t.sync.turnEnded(SESSION.sessionId);
+    await t.send("B");
+    expect(t.order).toEqual(["A", "steered", "refresh", "B"]);
   });
 
   it("go on after a delivery that failed", async () => {
     const t = setup();
     await t.spawn();
-    const failed = t.sync.inTurnOrder(SESSION, false, async () => {
+    const failed = t.sync.inTurnOrder(SESSION, async () => {
       throw new Error("undeliverable");
     });
     const next = t.send("B");
@@ -165,7 +198,7 @@ describe("a refresh's end", () => {
     await t.spawn();
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
-    const turn = t.send();
+    const sent = t.turn();
     // The old clients closing re-report the servers before the refresh ends.
     await vi.waitFor(() => expect(t.refresh).toHaveBeenCalled());
     t.sync.serversReported(SESSION.sessionId);
@@ -173,10 +206,10 @@ describe("a refresh's end", () => {
     expect(t.order).toEqual(["refresh"]);
     // The real answer ends it.
     t.sync.refreshed(t.requestIds[0]!, true);
-    await turn;
+    await sent;
     expect(t.order).toEqual(["refresh", "message"]);
     t.clock.t = 50_000;
-    await t.send();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -185,12 +218,12 @@ describe("a refresh's end", () => {
     await t.spawn();
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
-    const turn = t.send();
+    const sent = t.turn();
     await vi.waitFor(() => expect(t.refresh).toHaveBeenCalled());
     t.sync.refreshed("someone-else", true);
-    await turn;
+    await sent;
     // Timed out, so not recorded as built: the next turn tries again.
-    await t.send();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(2);
   });
 });
@@ -199,9 +232,9 @@ describe("reading the platform", () => {
   it("reads once per TTL, and one read serves every caller waiting", async () => {
     const t = setup();
     await t.spawn();
-    await Promise.all([t.sync.platform(), t.sync.platform(), t.send()]);
+    await Promise.all([t.sync.platform(), t.sync.platform(), t.turn()]);
     t.clock.t = 10_000;
-    await t.send();
+    await t.turn();
     expect(t.read).toHaveBeenCalledTimes(1);
     await t.sync.platform({ fresh: true });
     expect(t.read).toHaveBeenCalledTimes(2);
@@ -221,33 +254,22 @@ describe("reading the platform", () => {
 });
 
 describe("when not to refresh", () => {
-  it("never refreshes under a running turn; the next turn start does", async () => {
-    const t = setup();
-    await t.spawn();
-    t.setPlatform(listing("gmailuser", "googledriveuser"));
-    t.clock.t = 21_000;
-    await t.send("steered", true);
-    expect(t.refresh).not.toHaveBeenCalled();
-    await t.send();
-    expect(t.refresh).toHaveBeenCalledTimes(1);
-  });
-
   it("leaves the tools alone when the platform cannot be read", async () => {
     const t = setup();
     await t.spawn();
     t.setPlatform(new Error("unreachable"));
     t.clock.t = 21_000;
-    await t.send();
+    await t.turn();
     t.setPlatform({ ...listing(), reason: "not-signed-in" });
     t.clock.t = 42_000;
-    await t.send();
+    await t.turn();
     expect(t.refresh).not.toHaveBeenCalled();
     expect(t.order).toEqual(["message", "message"]);
   });
 
   it("does not refresh a session with no running agent: it starts on the current set", async () => {
     const t = setup({ live: false });
-    await t.send();
+    await t.turn();
     expect(t.refresh).not.toHaveBeenCalled();
   });
 
@@ -255,7 +277,7 @@ describe("when not to refresh", () => {
     // Started before anything read the platform: the start reads it.
     const t = setup();
     t.sync.serversReported(SESSION.sessionId);
-    await t.send();
+    await t.turn();
     expect(t.refresh).not.toHaveBeenCalled();
     expect(t.read).toHaveBeenCalledTimes(1);
   });
@@ -267,11 +289,11 @@ describe("a refresh that does not finish", () => {
     await t.spawn();
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
-    await t.send();
+    await t.turn();
     expect(t.order).toEqual(["refresh", "message"]);
     t.setAnswer("done");
-    await t.send();
-    await t.send();
+    await t.turn();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(2);
   });
 
@@ -280,10 +302,10 @@ describe("a refresh that does not finish", () => {
     await t.spawn();
     t.setPlatform(listing("gmailuser", "googledriveuser"));
     t.clock.t = 21_000;
-    await t.send();
+    await t.turn();
     t.setAnswer("done");
-    await t.send();
-    await t.send();
+    await t.turn();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(2);
   });
 
@@ -291,7 +313,7 @@ describe("a refresh that does not finish", () => {
     const t = setup();
     await t.spawn();
     t.sync.forget(SESSION.sessionId);
-    await t.send();
+    await t.turn();
     expect(t.refresh).toHaveBeenCalledTimes(1);
   });
 });

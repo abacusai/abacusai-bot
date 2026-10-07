@@ -125,11 +125,12 @@ describe("a bot chat whose connector gateway gains a tool", () => {
     expect(offeredTools()).not.toContain("abacus-connectors_Slack_Tool");
   }, 60_000);
 
-  it("never changes the tools under a running turn: a refresh landing mid-turn applies at the next one", async () => {
+  it("never changes the tools under a running run: a refresh landing mid-turn applies at the turn's end, which continues with the new tools", async () => {
     // A refresh landing inside a turn (one main gave up waiting on, or a
     // server coming up late): the gateway gains Slack and drops Calendar
-    // after the tool result, inside the same turn. The turn keeps the tools
-    // it started with; the next turn has the new set.
+    // after the tool result. The run in flight keeps the tools it started
+    // with; at the turn's end the change applies and the turn continues
+    // once, naming Slack.
     let refreshed: Promise<void> = Promise.resolve();
     // The gateway only offers registry tools, so the trigger is one of them:
     // a Gmail call whose side effect is the gateway's tools changing.
@@ -162,25 +163,25 @@ describe("a bot chat whose connector gateway gains a tool", () => {
         return { call: { name: "abacus-connectors_Gmail_Tool", args: {} } };
       if (index === 1) {
         await refreshed;
-        return { say: "done" };
+        return { say: "I cannot send that: no Slack tool here." };
       }
       return { say: "sent" };
     });
-    await bot.send("connect slack");
+    await bot.send("connect slack and dm hi");
 
-    expect(provider.calls).toHaveLength(2);
+    expect(provider.calls).toHaveLength(3);
     expect(provider.calls[1]?.tools).toContain(
       "abacus-connectors_Google_Calendar_Tool"
     );
     expect(provider.calls[1]?.tools).not.toContain(
       "abacus-connectors_Slack_Tool"
     );
-
-    await bot.send("dm hi on slack");
-
     expect(provider.calls[2]?.tools).toContain("abacus-connectors_Slack_Tool");
     expect(provider.calls[2]?.tools).not.toContain(
       "abacus-connectors_Google_Calendar_Tool"
+    );
+    expect(provider.calls[2]?.userText.join("\n")).toMatch(
+      /became available: abacus-connectors_Slack_Tool/
     );
   }, 60_000);
 });
