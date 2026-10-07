@@ -66,6 +66,24 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
       )
     ).toHaveLength(2)
   );
+  view.rerender(
+    <PanelWorkspace
+      {...props}
+      expanded
+      tabs={[
+        ...props.tabs,
+        {
+          id: "terminal:new",
+          title: "New terminal",
+          content: () => <div>Terminal contents</div>,
+        },
+      ]}
+    />
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("tab", { name: "New terminal" })).toBeTruthy()
+  );
+  view.rerender(<PanelWorkspace {...props} expanded />);
   act(() => moveDockTab(apiRef.current, "chat", "top"));
   await waitFor(() => expect(apiRef.current!.groups).toHaveLength(2));
   expect(apiRef.current!.groups.every((group) => group.header.hidden)).toBe(

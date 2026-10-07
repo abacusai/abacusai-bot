@@ -31,6 +31,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
+import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 import {
@@ -63,15 +64,7 @@ export const ModelsPage = ({
   const keys = useQuery(
     transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })
   );
-  const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
-    queryKey: [
-      ...transport.orpc.account.abacus.queryKey({ input: { refresh: true } }),
-      prefs.creditsExhaustedAt,
-    ],
-    staleTime: 60000,
-    refetchInterval: 300000,
-  });
+  const account = useCreditsAccount();
   const state = useQuery(
     transport.orpc.localModels.state.queryOptions({
       input: {},
@@ -85,12 +78,8 @@ export const ModelsPage = ({
     account.data,
     prefs.creditsExhaustedAt,
     now,
-    account.dataUpdatedAt >= (prefs.creditsExhaustedAt ?? Infinity)
+    false
   );
-  useEffect(() => {
-    if (mark === "clear")
-      void update({ creditsExhaustedAt: null }).catch(() => undefined);
-  }, [mark, update]);
   useEffect(() => {
     if (!IS_ELECTRON) return;
     const abort = new AbortController();

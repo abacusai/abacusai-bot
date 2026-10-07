@@ -312,7 +312,6 @@ export const SessionDock = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            collisionPadding={12}
             className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
           >
             <DropdownMenuGroup>

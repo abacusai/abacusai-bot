@@ -502,12 +502,11 @@ export const TabsRail = ({
             <ArrowDownToLine />
           </PopoverTrigger>
           <PopoverContent
-            collisionPadding={12}
             align="end"
             className="titlebar-nodrag w-56 max-w-[calc(100vw-24px)] gap-0 p-0"
           >
             <Command>
-              <CommandInput placeholder={t("shell.command.placeholder")} />
+              <CommandInput placeholder={t("shell.panel.searchTabs")} />
               <CommandList className="scroll-fade-y">
                 <CommandEmpty>{t("shell.command.empty")}</CommandEmpty>
                 <CommandGroup>
@@ -606,7 +605,6 @@ export const TabsRail = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            collisionPadding={12}
             className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
           >
             {kinds.map((kind) => (

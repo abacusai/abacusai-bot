@@ -81,6 +81,7 @@ beforeEach(async () => {
   state.exhaustedAt = null;
   state.query.mockClear();
   state.refetch.mockClear();
+  state.refetch.mockResolvedValue({ data: state.account, isError: false });
   state.update.mockResolvedValue(undefined);
   state.account.subscription_tier = "free";
   state.account.user_id = "dummy";
@@ -224,7 +225,7 @@ it("keeps one account cache when an exhaustion notice is cleared", () => {
     expect(options.queryKey).toEqual(["account"]);
 });
 
-it("dismisses a confirmed upgrade celebration across presentations", async () => {
+it("snoozes a confirmed upgrade celebration across presentations", async () => {
   const view = render(<UpgradePromo />);
   state.account = { ...state.account, subscription_tier: "pro" };
   view.rerender(<UpgradePromo />);

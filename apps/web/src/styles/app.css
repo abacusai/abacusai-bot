@@ -241,7 +241,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --dv-tabs-and-actions-container-height: 32px;
   --dv-tab-font-size: 12px;
   --dv-sash-size: 8px;
-  --dv-active-sash-color: var(--primary);
+  --dv-active-sash-color: transparent;
   --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, transparent);
 }
 
@@ -268,3 +268,16 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 }
 
 .dock-group-island .workspace-island { border-radius: 0; outline: none; }
+
+/* App surface policy stays outside registry-generated primitives. */
+[data-slot="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+}
+[data-slot="tabs-trigger"] {
+  transition-property: background-color, color, opacity;
+}
+:is([data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"], [data-slot="context-menu-sub-content"]) {
+  background-color: var(--popover);
+  &::before { display: none; }
+}

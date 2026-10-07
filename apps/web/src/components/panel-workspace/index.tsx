@@ -46,6 +46,7 @@ export interface WorkspaceTab {
 interface WorkspaceContext {
   expanded: boolean;
   visible: string[];
+  structure: string;
   targets: Map<string, HTMLDivElement>;
   api: DockviewApi | null;
   tabs: WorkspaceTab[];
@@ -187,6 +188,19 @@ export const PanelWorkspace = ({
   const [targets] = useState(() => new Map<string, HTMLDivElement>());
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [visible, setVisible] = useState<string[]>([]);
+  const [structure, setStructure] = useState("");
+  const publishLayout = useEffectEvent((dock: DockviewApi) => {
+    setVisible((previous) => retainVisible(previous, visiblePanels(dock)));
+    setStructure(
+      JSON.stringify(
+        dock.groups.map((group) => [
+          group.id,
+          group.activePanel?.id,
+          group.panels.map((panel) => [panel.id, panel.title]),
+        ])
+      )
+    );
+  });
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
   const container = useRef<HTMLDivElement>(null);
   const sidePanel = usePanelRef();
@@ -253,9 +267,7 @@ export const PanelWorkspace = ({
             : {}),
         });
     }
-    queueMicrotask(() =>
-      setVisible((previous) => retainVisible(previous, visiblePanels(api)))
-    );
+    queueMicrotask(() => publishLayout(api));
   });
   useEffect(() => {
     if (!api) return;
@@ -277,12 +289,12 @@ export const PanelWorkspace = ({
     synchronize();
     const subscriptions = [
       api.onDidLayoutChange(() => {
-        setVisible((previous) => retainVisible(previous, visiblePanels(api)));
+        publishLayout(api);
         save(api.toJSON());
       }),
       api.onDidActivePanelChange(({ panel, origin }) => {
         if (origin === "user" && panel) select(panel.id);
-        setVisible((previous) => retainVisible(previous, visiblePanels(api)));
+        publishLayout(api);
       }),
       api.onUnhandledDragOver((event) => {
         if (
@@ -337,6 +349,7 @@ export const PanelWorkspace = ({
       value={{
         expanded,
         visible,
+        structure,
         targets,
         close: onClose,
         api,

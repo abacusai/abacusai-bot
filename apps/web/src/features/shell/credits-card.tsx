@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { Sparkles, Minus } from "lucide-react";
 import { AnimatePresence, motion, animate } from "motion/react";
@@ -12,13 +11,9 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
-import {
-  ABACUS_PLAN_URL,
-  creditMarkState,
-  creditsTier,
-} from "#renderer/lib/credits";
+import { ABACUS_PLAN_URL, creditsTier } from "#renderer/lib/credits";
 import {
   durations,
   easings,
@@ -29,6 +24,7 @@ import {
 } from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
@@ -43,7 +39,7 @@ import {
   type PromoSnooze,
 } from "./promo-state";
 
-/** One portal and dismissal state, shared by sidebar and floating presentations. */
+/** One portal and snooze state, shared by sidebar and floating presentations. */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
   const host = usePromoHost();
@@ -55,7 +51,6 @@ export const UpgradePromo = () => {
   });
   const { t } = useTranslation();
   const prefs = usePrefs();
-  const update = useUpdatePrefs();
   const minuteNow = useNow();
   const [deadlineNow, setDeadlineNow] = useState(() => Date.now());
   const now = Math.max(minuteNow, deadlineNow);
@@ -94,14 +89,7 @@ export const UpgradePromo = () => {
     return () => controls?.stop();
   }, [host, target, preference]);
   useEffect(() => () => target.remove(), [target]);
-  const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
-    staleTime: 60_000,
-  });
-  const { refetch } = account;
-  useEffect(() => {
-    if (prefs.creditsExhaustedAt != null) void refetch();
-  }, [prefs.creditsExhaustedAt, refetch]);
+  const account = useCreditsAccount();
   const key = promoAccountKey(account.data);
   const [snooze, setSnooze] = useState<{
     key: string;
@@ -124,16 +112,6 @@ export const UpgradePromo = () => {
     savedSnooze,
     now
   );
-  const mark = creditMarkState(
-    account.data,
-    prefs.creditsExhaustedAt,
-    now,
-    account.dataUpdatedAt >= (prefs.creditsExhaustedAt ?? Infinity)
-  );
-  useEffect(() => {
-    if (mark === "clear")
-      void update({ creditsExhaustedAt: null }).catch(() => {});
-  }, [mark, update]);
   const [position, setPosition] = useState<CSSProperties>({
     left: 72,
     bottom: 24,

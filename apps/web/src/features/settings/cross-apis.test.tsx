@@ -136,7 +136,6 @@ it("kind-based routine notification clicks do not require a session collection j
       run: "unhydrated-run",
     });
   });
-
 });
 it("an exec-backend event invalidates only the backend and sandbox query families", async () => {
   let send!: () => void;
