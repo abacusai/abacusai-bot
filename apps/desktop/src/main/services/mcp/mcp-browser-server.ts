@@ -52,6 +52,7 @@ import {
   type BrowserTargetMemory,
   type BrowserTargetSource,
 } from "../browser/browser-target";
+import { type CapturedImage, SecretFields } from "../browser/secret-fields";
 import {
   McpHttpServer,
   type McpToolListing,
@@ -278,6 +279,32 @@ const TOOLS_SCHEMA: Record<
       required: ["code"],
     },
   },
+  browser_tabs: {
+    description: [
+      "The browser's tabs. A page that opens a new tab (a booking button, a link that opens",
+      "elsewhere) moves the browser tools to it on its own; the action's result says so.",
+      "",
+      "list:   your tabs, with ids; the one marked active is the one the tools act on.",
+      "switch: act on another tab (params: tab).",
+      "close:  close a tab (params: tab; default the active one). The tools return to the",
+      "        tab that opened it.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["list", "switch", "close"],
+          description: "What to do",
+        },
+        tab: {
+          type: "number",
+          description: "A tab id from list",
+        },
+      },
+      required: ["action"],
+    },
+  },
 };
 
 /** Drop screenshots older than a day: nothing looks at yesterday's page. */
@@ -316,6 +343,8 @@ function summarizeToolCall(
     }
     case "browser_execute":
       return "Run JavaScript in the page";
+    case "browser_tabs":
+      return `Tabs (${action ?? "list"})`;
     default:
       return tool;
   }
@@ -330,9 +359,12 @@ const firstText = (result: ToolResult): string => {
 /** Pure-read tools; the permission gate skips these to avoid prompt fatigue. */
 function isReadOnlyBrowserTool(
   name: string,
-  _args: Record<string, unknown>
+  args: Record<string, unknown>
 ): boolean {
-  return name === "browser_snapshot";
+  return (
+    name === "browser_snapshot" ||
+    (name === "browser_tabs" && (args.action ?? "list") === "list")
+  );
 }
 
 export interface McpBrowserServerOptions {
@@ -425,6 +457,106 @@ export class McpBrowserServer extends McpHttpServer {
     memory.id = wc.id;
 
     return wc;
+  }
+
+  /**
+   * Where `wc` sits among the session's tabs, when it has more than one: the
+   * model must know the page it acts on was opened from another.
+   */
+  private tabLine(wc: BrowserPage, sessionId?: string): string | null {
+    if (sessionId == null) return null;
+    const tabs = this.options.target?.()?.sessionTabs?.(sessionId) ?? [];
+    if (tabs.length < 2) return null;
+    const tab = tabs.find((item) => item.id === wc.id);
+    if (tab == null) return null;
+    const opener = tabs.find((item) => item.id === tab.openerId);
+    const from =
+      opener == null
+        ? ""
+        : ` Opened from tab ${opener.id} ("${opener.title || opener.url}"), which stays open as it was.`;
+    return `Active tab ${tab.id} of ${tabs.length} open (browser_tabs lists them).${from}`;
+  }
+
+  /** Secret fields of pages whose source keeps none per tab (the built-in view). */
+  private readonly pageSecrets = new WeakMap<BrowserPage, SecretFields>();
+
+  private secretsOf(wc: BrowserPage): SecretFields {
+    const kept = this.options.target?.()?.secrets?.(wc.id);
+    if (kept != null) return kept;
+    let secrets = this.pageSecrets.get(wc);
+    if (secrets == null) {
+      secrets = new SecretFields();
+      this.pageSecrets.set(wc, secrets);
+    }
+    return secrets;
+  }
+
+  /** The page with its secret fields hidden; the one way a screenshot is taken. */
+  private async captureImage(wc: BrowserPage): Promise<CapturedImage | null> {
+    const source = this.options.target?.();
+    if (source?.captureMasked != null && source.secrets?.(wc.id) != null)
+      return source.captureMasked(wc.id);
+    return this.secretsOf(wc).captureMasked(wc);
+  }
+
+  private async executeTabs(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult> {
+    const source = this.options.target?.() ?? null;
+    if (source?.sessionTabs == null || sessionId == null)
+      return this.err(
+        "This browser has one page per conversation; there are no other tabs."
+      );
+    const action = typeof args.action === "string" ? args.action : "list";
+    const list = (): string => {
+      const tabs = source.sessionTabs?.(sessionId) ?? [];
+      if (tabs.length === 0) return "No tabs open yet.";
+      return tabs
+        .map(
+          (tab) =>
+            `tab ${tab.id}${tab.current ? " [active]" : ""}: ${tab.title || "(untitled)"} - ${tab.url}` +
+            (tab.openerId != null ? ` (opened from tab ${tab.openerId})` : "")
+        )
+        .join("\n");
+    };
+    if (action === "list") return this.ok(list());
+    const active = (source.sessionTabs(sessionId) ?? []).find(
+      (tab) => tab.current
+    );
+    const tabId =
+      typeof args.tab === "number"
+        ? args.tab
+        : action === "close"
+          ? active?.id
+          : undefined;
+    if (tabId == null) return this.err(`${action} needs a tab id from list.`);
+    if (action === "switch") {
+      if (!(await source.activateTab?.(sessionId, tabId)))
+        return this.err(`There is no tab ${tabId}. Tabs:\n${list()}`);
+      const wc = this.findView(sessionId);
+      if (wc == null) return this.err(NO_BROWSER);
+      return this.ok(
+        await this.arrival(
+          wc,
+          sessionId,
+          `Now driving tab ${tabId}: ${wc.getURL()}`
+        )
+      );
+    }
+    if (action === "close") {
+      if (!(await source.closeTab?.(sessionId, tabId)))
+        return this.err(`There is no tab ${tabId}. Tabs:\n${list()}`);
+      const wc = this.findView(sessionId);
+      return this.ok(
+        wc == null
+          ? `Closed tab ${tabId}. No tabs are open.`
+          : `Closed tab ${tabId}. Now driving tab ${wc.id}: ${wc.getURL()}`
+      );
+    }
+    return this.err(
+      `Unknown tabs action: ${action}. Use list, switch or close.`
+    );
   }
 
   /** Whether the pages are the app's own pane, which the renderer shows and animates. */
@@ -885,6 +1017,18 @@ export class McpBrowserServer extends McpHttpServer {
   ): Promise<string> {
     await this.settle(wc);
 
+    // The action opened a tab, and it is the session's active one now.
+    const now = this.findView(sessionId);
+    if (now != null && now.id !== wc.id) {
+      const tabs = this.tabLine(now, sessionId);
+      return this.arrival(
+        now,
+        sessionId,
+        `New tab opened: now driving ${now.getURL()}` +
+          (tabs != null ? `\n${tabs}` : "")
+      );
+    }
+
     let result: Awaited<ReturnType<McpBrowserServer["takeSnapshot"]>>;
     try {
       result = await this.takeSnapshot(wc, sessionId);
@@ -1106,7 +1250,15 @@ export class McpBrowserServer extends McpHttpServer {
     return this.ok(`Dismissed ${closed.join(", ")}.\n${changes}`);
   }
 
-  private async evalJS(wc: BrowserPage, expression: string): Promise<any> {
+  /**
+   * `userGesture` runs the script as if the user acted: a click that opens a
+   * tab (`window.open`, a `target=_blank` link) is otherwise popup-blocked.
+   */
+  private async evalJS(
+    wc: BrowserPage,
+    expression: string,
+    options: { userGesture?: boolean } = {}
+  ): Promise<any> {
     const { result, exceptionDetails } = await this.cdp(
       wc,
       "Runtime.evaluate",
@@ -1114,6 +1266,7 @@ export class McpBrowserServer extends McpHttpServer {
         expression,
         returnByValue: true,
         awaitPromise: true,
+        ...(options.userGesture === true ? { userGesture: true } : {}),
       }
     );
     if (exceptionDetails) {
@@ -1203,6 +1356,8 @@ export class McpBrowserServer extends McpHttpServer {
             return this.executeInteract(args, sessionId);
           case "browser_execute":
             return this.executeExecute(args, sessionId);
+          case "browser_tabs":
+            return this.executeTabs(args, sessionId);
           default:
             return Promise.resolve(this.err(`Unknown tool: ${name}`));
         }
@@ -1231,55 +1386,6 @@ export class McpBrowserServer extends McpHttpServer {
     } catch (e) {
       return this.err(e instanceof Error ? e.message : String(e));
     }
-  }
-
-  /** How long any one capture attempt gets. A hidden view can leave a CDP screenshot pending forever. */
-  private static readonly CAPTURE_TIMEOUT_MS = 5_000;
-
-  /**
-   * A picture of the page, or null. `capturePage` with `stayHidden` first,
-   * since it paints an off-screen view; the debugger's screenshot is the
-   * fallback and hangs on a hidden view.
-   */
-  private async captureImage(
-    wc: BrowserPage
-  ): Promise<{ data: string; mimeType: string } | null> {
-    const bounded = <T>(work: () => Promise<T>): Promise<T | null> =>
-      Promise.race([
-        work().catch(() => null),
-        new Promise<null>((resolve) =>
-          setTimeout(
-            () => resolve(null),
-            McpBrowserServer.CAPTURE_TIMEOUT_MS
-          ).unref?.()
-        ),
-      ]);
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const captured = await bounded(() =>
-        wc.capturePage(undefined, { stayHidden: true })
-      );
-      if (captured != null) {
-        if (typeof captured.toJPEG === "function") {
-          const jpeg = captured.toJPEG(70);
-          if (jpeg.length > 0)
-            return { data: jpeg.toString("base64"), mimeType: "image/jpeg" };
-        }
-        const png = captured.toPNG();
-        if (png.length > 0)
-          return { data: png.toString("base64"), mimeType: "image/png" };
-      }
-      await new Promise((r) => setTimeout(r, 50));
-    }
-
-    const viaDebugger = await bounded(() =>
-      this.cdp(wc, "Page.captureScreenshot", { format: "jpeg", quality: 70 })
-    );
-    const data = (viaDebugger as { data?: unknown } | null)?.data;
-
-    return typeof data === "string" && data.length > 0
-      ? { data, mimeType: "image/jpeg" }
-      : null;
   }
 
   /** Longest any one tool call may run; `wait` accepts up to two minutes itself. */
@@ -1378,8 +1484,11 @@ export class McpBrowserServer extends McpHttpServer {
         if (!result?.tree || result.refCount === 0) {
           // The walker reads the light DOM, so web components and frames have
           // nothing for it, and querySelector cannot reach into either.
+          const tabs = this.tabLine(wc, sessionId);
           return this.ok(
-            `Page: ${result?.title ?? wc.getTitle()}\nURL: ${result?.url ?? wc.getURL()}\n\n` +
+            `Page: ${result?.title ?? wc.getTitle()}\nURL: ${result?.url ?? wc.getURL()}\n` +
+              (tabs != null ? `${tabs}\n` : "") +
+              "\n" +
               "(no interactive elements found)\n" +
               'The page may still be loading. interact action:"wait" with text or url_pattern, then snapshot again.\n' +
               "If it stays empty the content is likely inside a shadow root or an iframe, which this snapshot " +
@@ -1390,6 +1499,8 @@ export class McpBrowserServer extends McpHttpServer {
         const lines: string[] = [];
         lines.push(`Page: ${result.title}`);
         lines.push(`URL: ${result.url}`);
+        const tabs = this.tabLine(wc, sessionId);
+        if (tabs != null) lines.push(tabs);
         const find = typeof args.find === "string" ? args.find.trim() : "";
         const interactiveOnly = args.interactive_only === true;
         if (find.length > 0 || interactiveOnly) {
@@ -1478,6 +1589,8 @@ export class McpBrowserServer extends McpHttpServer {
         } catch {
           summary = `Page: ${wc.getTitle()}\nURL: ${wc.getURL()}`;
         }
+        const tabs = this.tabLine(wc, sessionId);
+        if (tabs != null) summary = `${summary}\n${tabs}`;
 
         const image = await this.captureImage(wc);
         if (image == null) {
@@ -1547,6 +1660,9 @@ export class McpBrowserServer extends McpHttpServer {
     const action = (args.action as string) ?? "";
     const wc = await this.getWC(sessionId);
     if (!wc) return this.err(NO_BROWSER);
+    // A tab that opens right after a click or a key is this action's.
+    if (sessionId != null && (action === "click" || action === "press"))
+      this.options.target?.()?.noteClick?.(sessionId);
 
     // A page-initiated navigation leaves the ref map on the old page.
     // Re-snapshot silently: refs are stable, and a missing one is reported by
@@ -1628,7 +1744,9 @@ export class McpBrowserServer extends McpHttpServer {
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.selector;
         await this.animateCursorToElement(wc, sel).catch(() => {});
-        const result = await this.evalJS(wc, clickScript(sel));
+        const result = await this.evalJS(wc, clickScript(sel), {
+          userGesture: true,
+        });
         if (result?.status === "not_found")
           return this.err(this.notFoundError(args, sel));
         if (result?.status === "disabled") {
@@ -2007,6 +2125,8 @@ export class McpBrowserServer extends McpHttpServer {
     if (!wc) return this.err(NO_BROWSER);
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
+    const refusal = this.secretsOf(wc).executeRefusal();
+    if (refusal != null) return this.err(refusal);
 
     // Models write `document.title` far more often than `return document.title`,
     // so an expression is tried as one first; only non-expressions fall

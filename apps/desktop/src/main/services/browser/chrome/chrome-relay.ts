@@ -48,6 +48,11 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
   tab(tabId: number): ChromeTabInfo | undefined;
   isAttached(tabId: number): boolean;
   createTab(url: string): Promise<ChromeTabInfo>;
+  closeTab(tabId: number): Promise<void>;
+  /** Brings the tab to the front, where the driver may (never the user's own Chrome). */
+  activateTab?(tabId: number): Promise<void>;
+  /** The live origin of a cross-origin frame the driver attached, or null. */
+  frameOrigin?(tabId: number, frameId: string): string | null;
   cdp(
     tabId: number,
     method: string,

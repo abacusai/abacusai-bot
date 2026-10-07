@@ -4,6 +4,7 @@
  * run against a stand-in element rather than a scripted reply. Values are
  * interpolated as JSON literals, never as bare source.
  */
+import { SECRET_FIELD_JS } from "./secret-fields";
 
 /** Click, unless the control is disabled. */
 export const clickScript = (selector: string): string => `(function() {
@@ -128,7 +129,9 @@ export const extractScript = (
   fields: Record<string, string>,
   limit: number
 ): string => `(function() {
+  ${SECRET_FIELD_JS}
   const clean = (t) => String(t ?? '').replace(/\\s+/g, ' ').trim();
+  const read = (el) => __isSecret(el) ? __shown(el, el.value || el.textContent) : (el.innerText || el.value);
   const els = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
   if (els.length === 0) return { status: 'not_found' };
   const fields = ${JSON.stringify(fields)};
@@ -144,13 +147,13 @@ export const extractScript = (
       }
       continue;
     }
-    const row = { text: clean(el.innerText || el.value || el.getAttribute('aria-label') || '').slice(0, 300) };
+    const row = { text: clean(read(el) || el.getAttribute('aria-label') || '').slice(0, 300) };
     const link = el.matches('a[href]') ? el : el.querySelector('a[href]');
     if (link) row.href = link.href;
     for (const name of Object.keys(fields)) {
       let target = null;
       try { target = el.querySelector(fields[name]); } catch { row[name] = 'invalid selector'; continue; }
-      row[name] = target ? clean(target.innerText || target.value || target.getAttribute('aria-label') || target.getAttribute('href') || '').slice(0, 200) : null;
+      row[name] = target ? clean(read(target) || target.getAttribute('aria-label') || target.getAttribute('href') || '').slice(0, 200) : null;
     }
     rows.push(row);
   }
@@ -179,7 +182,8 @@ export const settleScript = (quietMs: number, maxMs: number): string =>
 
 /** The current value of a field, after the page has had its say. */
 export const valueScript = (selector: string): string => `(function() {
+  ${SECRET_FIELD_JS}
   const el = document.querySelector(${JSON.stringify(selector)});
   if (!el) return null;
-  return String(el.isContentEditable ? el.textContent : (el.value ?? '')).slice(0, 200);
+  return __shown(el, String(el.isContentEditable ? el.textContent : (el.value ?? '')).slice(0, 200));
 })()`;

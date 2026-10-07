@@ -156,5 +156,30 @@
         "code"
       ]
     }
+  },
+  {
+    "name": "browser_tabs",
+    "description": "The browser's tabs. A page that opens a new tab (a booking button, a link that opens\nelsewhere) moves the browser tools to it on its own; the action's result says so.\n\nlist:   your tabs, with ids; the one marked active is the one the tools act on.\nswitch: act on another tab (params: tab).\nclose:  close a tab (params: tab; default the active one). The tools return to the\n        tab that opened it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "switch",
+            "close"
+          ],
+          "description": "What to do"
+        },
+        "tab": {
+          "type": "number",
+          "description": "A tab id from list"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
   }
 ]

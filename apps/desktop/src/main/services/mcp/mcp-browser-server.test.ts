@@ -26,16 +26,24 @@ import {
   vi,
 } from "vitest";
 
+import { SecretFields } from "../browser/secret-fields";
+
 /** Expressions the page was asked to evaluate, in order, for the whole run. */
 const evaluated: string[] = [];
 
 /** What the fake page returns. Replaced per test; see `respondWith`. */
 let responder: (expression: string) => unknown = () => null;
 
+/** `Runtime.evaluate` calls the page was told to treat as the user's own gesture. */
+const gestures: string[] = [];
+
 class FakeWebContents {
   id = 41;
   /** The agent session that owns this view; the default caller's. */
   sessionId: string | null = "session-1";
+  /** For a tab-keeping source: the session's active tab, and who opened it. */
+  current = false;
+  openerId: number | null = null;
   url = "https://example.test/start";
   title = "Start";
   loading = false;
@@ -155,6 +163,7 @@ class FakeWebContents {
 
       const expression = String(params?.expression ?? "");
       evaluated.push(expression);
+      if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
 
       if (value instanceof Error) {
@@ -191,6 +200,7 @@ const fakeTarget = {
             url: view.getURL(),
             sessionId: view.sessionId,
             presented: true,
+            ...(tabbed && view.current ? { current: true } : {}),
           },
         ];
       } catch {
@@ -205,6 +215,39 @@ const fakeTarget = {
         return false;
       }
     }) as unknown as Electron.WebContents) ?? null,
+  /** A tab-keeping source's tabs: the live views, when `tabbed` is on. */
+  sessionTabs: (sessionId: string) =>
+    tabbed
+      ? liveViews
+          .filter((view) => view.sessionId === sessionId)
+          .map((view) => ({
+            id: view.id,
+            url: view.url,
+            title: view.title,
+            current: view.current,
+            openerId: view.openerId,
+          }))
+      : [],
+  activateTab: async (sessionId: string, id: number) => {
+    const tab = liveViews.find(
+      (view) => view.id === id && view.sessionId === sessionId
+    );
+    if (tab == null) return false;
+    for (const view of liveViews) view.current = view === tab;
+    return true;
+  },
+  closeTab: async (sessionId: string, id: number) => {
+    const tab = liveViews.find(
+      (view) => view.id === id && view.sessionId === sessionId
+    );
+    if (tab == null) return false;
+    liveViews = liveViews.filter((view) => view !== tab);
+    const opener = liveViews.find((view) => view.id === tab.openerId);
+    if (tab.current && opener != null) opener.current = true;
+    return true;
+  },
+  noteClick: vi.fn(),
+  secrets: (id: number) => secretsById.get(id) ?? null,
   /** Any session gets the one fake view, the way a hidden view is created for it. */
   materialize: async (): Promise<number | null> => {
     if (!materializeEnabled) return null;
@@ -217,6 +260,9 @@ const fakeTarget = {
 };
 /** Off for the cases about a runtime that cannot create a view. */
 let materializeEnabled = true;
+/** On for the cases about a source that keeps several tabs per session. */
+let tabbed = false;
+const secretsById = new Map<number, SecretFields>();
 vi.mock("#main/rpc/emit", () => ({
   emitHostEvent: (payload: unknown) => {
     rendererEvents.push(payload);
@@ -323,6 +369,10 @@ beforeEach(() => {
   page = new FakeWebContents();
   liveViews = [page];
   materializeEnabled = true;
+  tabbed = false;
+  secretsById.clear();
+  gestures.length = 0;
+  fakeTarget.noteClick.mockClear();
   rendererEvents.length = 0;
   responder = () => null;
   evaluated.length = 0;
@@ -369,7 +419,7 @@ describe("the transport", () => {
     expect(await res.json()).toMatchObject({ error: { code: -32700 } });
   });
 
-  it("advertises exactly the four browser tools", async () => {
+  it("advertises exactly the browser tools", async () => {
     const res = await rpc({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     const names = (
       res.result as unknown as { tools: Array<{ name: string }> }
@@ -380,6 +430,7 @@ describe("the transport", () => {
       "browser_snapshot",
       "browser_interact",
       "browser_execute",
+      "browser_tabs",
     ]);
   });
 
@@ -2948,5 +2999,163 @@ describe("which pane a browser event is for", () => {
       })
     );
     other.stop();
+  });
+});
+
+describe("several tabs per session", () => {
+  const airline = {
+    title: "Example Air",
+    url: "https://airline.test/book",
+    tree: {
+      tag: "main",
+      children: [
+        { ref: "@e1", selector: "#pay", tag: "button", name: "Continue" },
+      ],
+    },
+    refCount: 1,
+    visibleCount: 1,
+    offscreenCount: 0,
+  };
+
+  /** The page's "Continue to book" opens the airline in a tab of its own. */
+  const openOnClick = (): FakeWebContents => {
+    const popup = new FakeWebContents();
+    popup.id = 42;
+    popup.url = "https://airline.test/book";
+    popup.title = "Example Air";
+    popup.openerId = page.id;
+    respondWith((expression) => {
+      if (expression.includes("el.click()")) {
+        page.current = false;
+        popup.current = true;
+        liveViews.push(popup);
+        return { status: "ok", tag: "button" };
+      }
+      return liveViews.includes(popup) ? airline : oneButton;
+    });
+    return popup;
+  };
+
+  beforeEach(() => {
+    tabbed = true;
+    page.current = true;
+  });
+
+  it("follows a tab the click opened, says so, and drives it from then on", async () => {
+    await seedRefs();
+    const popup = openOnClick();
+
+    const { text, isError } = await call("browser_interact", {
+      action: "click",
+      ref: "@e1",
+    });
+
+    expect(isError).toBe(false);
+    expect(text).toContain(
+      "New tab opened: now driving https://airline.test/book"
+    );
+    expect(text).toContain("Active tab 42 of 2 open");
+    expect(text).toContain('Opened from tab 41 ("Start")');
+    expect(text).toContain('@e1 [button] "Continue"');
+    // The click ran as the user's own, so the page's popup was not blocked.
+    expect(
+      gestures.some((expression) => expression.includes("el.click()"))
+    ).toBe(true);
+    expect(fakeTarget.noteClick).toHaveBeenCalledWith("session-1");
+    expect((await call("browser_snapshot", { action: "url" })).text).toBe(
+      popup.url
+    );
+  });
+
+  it("lists, switches and closes tabs, and only the session's own", async () => {
+    await seedRefs();
+    openOnClick();
+    await call("browser_interact", { action: "click", ref: "@e1" });
+
+    const listed = await call("browser_tabs", { action: "list" });
+    expect(listed.text).toBe(
+      [
+        "tab 41: Start - https://example.test/start",
+        "tab 42 [active]: Example Air - https://airline.test/book (opened from tab 41)",
+      ].join("\n")
+    );
+
+    respondWith(() => oneButton);
+    const switched = await call("browser_tabs", { action: "switch", tab: 41 });
+    expect(switched.text).toContain(
+      "Now driving tab 41: https://example.test/start"
+    );
+    expect((await call("browser_snapshot", { action: "url" })).text).toBe(
+      "https://example.test/start"
+    );
+
+    expect(
+      (await call("browser_tabs", { action: "switch", tab: 99 })).isError
+    ).toBe(true);
+    expect(
+      (await call("browser_tabs", { action: "close", tab: 42 }, "session-2"))
+        .isError
+    ).toBe(true);
+
+    await call("browser_tabs", { action: "switch", tab: 42 });
+    const closed = await call("browser_tabs", { action: "close" });
+    expect(closed.text).toBe(
+      "Closed tab 42. Now driving tab 41: https://example.test/start"
+    );
+  });
+
+  it("refuses scripts on a page holding a filled field", async () => {
+    const secrets = new SecretFields();
+    secretsById.set(page.id, secrets);
+    respondWith(() => true);
+    await secrets.markFilled(page as never, "#password");
+
+    respondWith(() => "should not run");
+    const { text, isError } = await call("browser_execute", {
+      code: "document.querySelector('#password').value",
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain("cannot run");
+    expect(
+      evaluated.some((expression) => expression.includes("#password"))
+    ).toBe(false);
+  });
+
+  it("hides secret fields for the capture and shows them again after", async () => {
+    respondWith(() => null);
+    const response = await rpc({
+      jsonrpc: "2.0",
+      id: ++nextId,
+      method: "tools/call",
+      params: { name: "browser_snapshot", arguments: { action: "screenshot" } },
+    });
+
+    expect(response.result?.content?.[0]).toMatchObject({ type: "image" });
+    const masking = evaluated.filter((expression) =>
+      expression.includes("data-abacusai-mask")
+    );
+    expect(masking).toHaveLength(2);
+    expect(masking[0]).toContain("input[type=password]");
+    expect(masking[1]).toContain(".remove()");
+  });
+
+  it("takes no screenshot when the fields cannot be hidden", async () => {
+    let captured = 0;
+    page.capturePage = async () => {
+      captured += 1;
+      return { toPNG: () => Buffer.from("png") };
+    };
+    respondWith((expression) =>
+      expression.includes("data-abacusai-mask") &&
+      !expression.includes(".remove()")
+        ? new Error("blocked")
+        : null
+    );
+
+    const { text } = await call("browser_snapshot", { action: "screenshot" });
+
+    expect(text).toContain("No screenshot could be captured");
+    expect(captured).toBe(0);
   });
 });

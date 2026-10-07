@@ -654,6 +654,7 @@
       "browser_interact": "Click, type, scroll, or hover on the page.",
       "browser_navigate": "Open a URL in the built-in browser.",
       "browser_snapshot": "Read the page as a list of interactive elements.",
+      "browser_tabs": "List, switch and close the browser's tabs.",
       "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
       "code_map": "Index the functions and classes in a file or folder.",
       "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",

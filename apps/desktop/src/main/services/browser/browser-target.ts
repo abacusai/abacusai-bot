@@ -3,6 +3,8 @@
  * per conversation, not a `<webview>`: the only `<webview>` tags in the app
  * are previews and charts, so the tools pick by session, never by type.
  */
+import type { CapturedImage, SecretFields } from "./secret-fields";
+
 export type DidFailLoadListener = (
   event: unknown,
   errorCode: number,
@@ -51,6 +53,23 @@ export interface BrowserViewCandidate {
   /** The agent session whose conversation owns the view; null for a draft. */
   sessionId: string | null;
   presented: boolean;
+  /**
+   * The source's word that this is the session's active tab (say, one its
+   * page just opened); it wins over the remembered one. Only sources that
+   * keep several tabs per session set it.
+   */
+  current?: boolean;
+}
+
+/** One of a session's tabs, as the tools describe it to the model. */
+export interface BrowserTab {
+  id: number;
+  url: string;
+  title: string;
+  /** The session's active tab: the one its tools drive. */
+  current: boolean;
+  /** The session's tab that opened this one, or null. */
+  openerId: number | null;
 }
 
 export interface BrowserTargetMemory {
@@ -70,6 +89,21 @@ export interface BrowserTargetSource {
    * renderer then has no pane to open and no cursor to animate.
    */
   presentsInApp?: boolean;
+  /**
+   * Sources that keep several tabs per session (`BrowserTabs`) offer these;
+   * the built-in view has one page per conversation and none of them.
+   */
+  sessionTabs?(sessionId: string): BrowserTab[];
+  activateTab?(sessionId: string, tabId: number): Promise<boolean>;
+  closeTab?(sessionId: string, tabId: number): Promise<boolean>;
+  /** The session ended: the tabs it owns close. */
+  closeSession?(sessionId: string): Promise<void>;
+  /** The session acted on its page; a tab opening right after is the act's. */
+  noteClick?(sessionId: string): void;
+  /** The page's secret fields, where the source keeps them per tab. */
+  secrets?(id: number): SecretFields | null;
+  /** The page with its secret fields hidden; see `SecretFields.captureMasked`. */
+  captureMasked?(id: number): Promise<CapturedImage | null>;
 }
 
 /**
@@ -88,6 +122,9 @@ export function pickBrowserTarget(
       : candidates.filter((candidate) => candidate.sessionId === sessionId);
 
   if (own.length === 0) return null;
+
+  const current = own.find((candidate) => candidate.current === true);
+  if (current != null) return current.id;
 
   if (memory.id != null) {
     const remembered = own.find((candidate) => candidate.id === memory.id);

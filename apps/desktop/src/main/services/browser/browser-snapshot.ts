@@ -4,9 +4,12 @@
  * `mcp-browser-server.ts`, which imports `electron`, so it can be tested.
  */
 
+import { SECRET_FIELD_JS } from "./secret-fields";
+
 // Runs in page context via Runtime.evaluate: @eN refs for interactive and
 // cursor-interactive elements, content roles, landmarks, and CSS selectors.
 export const SNAPSHOT_BUILD_JS = `(function() {
+  ${SECRET_FIELD_JS}
   const INTERACTIVE_TAGS = new Set([
     'A','BUTTON','INPUT','TEXTAREA','SELECT','DETAILS','SUMMARY',
   ]);
@@ -304,7 +307,8 @@ export const SNAPSHOT_BUILD_JS = `(function() {
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       if (el.type && el.type !== 'text') node.type = el.type;
       if (el.placeholder) node.placeholder = el.placeholder;
-      if (el.value) node.value = el.value.length > 40 ? el.value.slice(0, 37) + '...' : el.value;
+      const value = __shown(el, el.value);
+      if (value) node.value = value.length > 40 ? value.slice(0, 37) + '...' : value;
     }
     if (el.tagName === 'SELECT') {
       const opt = el.options[el.selectedIndex];

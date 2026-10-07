@@ -20,7 +20,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { extractScript } from "./browser-page-scripts";
+import { extractScript, valueScript } from "./browser-page-scripts";
 import {
   PAGE_SUMMARY_JS,
   renderTree,
@@ -136,6 +136,14 @@ const FIXTURES: Record<string, string> = {
     <input name="decline" type="checkbox">
     <select name="country"><option value="us">United States</option><option value="in" selected>India</option></select>
     <button disabled>Disabled button</button>
+  `),
+  // Values that must never reach the model.
+  secrets: wrap(`
+    <input name="user" value="traveller@example.test">
+    <input name="pass" type="password" value="hunter2-secret">
+    <input name="card" autocomplete="cc-number" value="4111111111111111">
+    <input name="otp" autocomplete="one-time-code" value="123456">
+    <input name="vaulted" data-abacusai-secret value="filled-on-behalf">
   `),
   // ── Selectors ─────────────────────────────────────────────────────────────
   selectors: wrap(`
@@ -447,6 +455,23 @@ describeInBrowser("the snapshot walker, against real layout", () => {
       expect(field("already here")).toBeDefined();
     });
 
+    it("never reads out a password, card, one-time code or filled field, only that it holds one", () => {
+      const nodes = flatten(pages.secrets!.tree);
+      const text = renderTree(pages.secrets!.tree).text;
+
+      expect(
+        nodes.find((node) => node.value === "traveller@example.test")
+      ).toBeDefined();
+      for (const secret of [
+        "hunter2-secret",
+        "4111111111111111",
+        "123456",
+        "filled-on-behalf",
+      ])
+        expect(text).not.toContain(secret);
+      expect(nodes.filter((node) => node.value === "(hidden)")).toHaveLength(4);
+    });
+
     it("truncates a long value", () => {
       const long = flatten(pages.fields!.tree).find((node) =>
         node.value?.startsWith("xxx")
@@ -624,6 +649,7 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
   let stable: Loose;
   let overlays: Loose;
   let extracted: Loose;
+  let secretReads: { extracted: Loose; value: Loose };
   let summary: Loose;
 
   beforeAll(() => {
@@ -670,6 +696,22 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
         none: wrap(`<p>Nothing here</p>`),
       }
     ) as unknown as Loose;
+
+    secretReads = {
+      extracted: runSnapshotFixtures(
+        extractScript("form", { pass: "[name=pass]", user: "[name=user]" }, 5),
+        {
+          form: wrap(`
+            <form><input name="user" value="me@example.test"><input name="pass" type="password" value="hunter2-secret"></form>
+          `),
+        }
+      ) as unknown as Loose,
+      value: runSnapshotFixtures(valueScript("[name=pass]"), {
+        form: wrap(
+          `<input name="pass" type="password" value="hunter2-secret">`
+        ),
+      }) as unknown as Loose,
+    };
 
     summary = runSnapshotFixtures(PAGE_SUMMARY_JS, {
       page: wrap(`
@@ -746,6 +788,17 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
 
   it("says when the selector matched nothing", () => {
     expect(extracted.none).toEqual({ status: "not_found" });
+  });
+
+  it("hides a password from extract and from a field's read-back", () => {
+    expect(secretReads.extracted.form).toMatchObject({
+      status: "ok",
+      rows: [{ user: "me@example.test", pass: "(hidden)" }],
+    });
+    expect(JSON.stringify(secretReads.extracted.form)).not.toContain(
+      "hunter2-secret"
+    );
+    expect(secretReads.value.form).toBe("(hidden)");
   });
 
   it("summarises where the page is", () => {

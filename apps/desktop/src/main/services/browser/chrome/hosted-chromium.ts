@@ -19,6 +19,7 @@ import {
   readFileSync,
   readlinkSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,7 +27,7 @@ import type { Readable, Writable } from "node:stream";
 
 import type { BrowserTargetSource } from "../browser-target";
 import type { ChromeRelayEvents, ChromeTabInfo } from "./chrome-relay";
-import { ChromeTargetSource } from "./chrome-target-source";
+import { ChromeTargetSource, tabMethodsOf } from "./chrome-target-source";
 
 /** Names the Chromium to use, read at once; without it the Playwright lookup below runs. */
 const HOSTED_CHROMIUM_ENV = "ABACUSAI_BOT_CHROMIUM";
@@ -121,6 +122,46 @@ export const hostedChromiumArgs = (
   "about:blank",
 ];
 
+/**
+ * Profile preferences that keep what the browser fills off disk: no saved
+ * passwords, no saved addresses or cards. Chromium reads them at start.
+ */
+const PROFILE_PREFS: Record<string, Record<string, unknown> | boolean> = {
+  credentials_enable_service: false,
+  credentials_enable_autosignin: false,
+  profile: { password_manager_enabled: false },
+  autofill: {
+    enabled: false,
+    profile_enabled: false,
+    credit_card_enabled: false,
+  },
+};
+
+/** Writes `PROFILE_PREFS` into the profile's preferences, keeping the rest. */
+export function writeHostedChromiumPrefs(userDataDir: string): void {
+  const dir = path.join(userDataDir, "Default");
+  const file = path.join(dir, "Preferences");
+  let prefs: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+    if (parsed != null && typeof parsed === "object")
+      prefs = parsed as Record<string, unknown>;
+  } catch {
+    // None yet, or unreadable: Chromium writes the rest on start.
+  }
+  for (const [key, value] of Object.entries(PROFILE_PREFS)) {
+    const existing = prefs[key];
+    prefs[key] =
+      typeof value === "object" &&
+      existing != null &&
+      typeof existing === "object"
+        ? { ...(existing as Record<string, unknown>), ...value }
+        : value;
+  }
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(file, JSON.stringify(prefs));
+}
+
 type Pending = {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
@@ -137,7 +178,22 @@ type CdpMessage = {
   sessionId?: string;
 };
 
-/** One launched Chromium as the tab driver `ChromeTargetSource` reads. */
+/** A cross-origin frame inside a tab, attached on its own session. */
+type Frame = { tabId: number; sessionId: string; url: string };
+
+/** Auto-attach for a page or frame session: its cross-origin frames, flattened. */
+const AUTO_ATTACH = {
+  autoAttach: true,
+  waitForDebuggerOnStart: false,
+  flatten: true,
+};
+
+/**
+ * One launched Chromium as the tab driver `ChromeTargetSource` reads. Every
+ * page the browser opens after launch is attached (a popup with its opener),
+ * so `BrowserTabs` can decide whose it is; each tab's cross-origin frames
+ * (a payment provider's card fields) are attached too, for their origins.
+ */
 export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   private child: ChildProcess | null = null;
   private input: Writable | null = null;
@@ -145,6 +201,21 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   private nextTabId = 0;
   private readonly pending = new Map<number, Pending>();
   private readonly tabs = new Map<number, Tab>();
+  /** Cross-origin frames by target id, which is the frame's id. */
+  private readonly frames = new Map<string, Frame>();
+  /** Targets on their way to being attached, so none is attached twice. */
+  private readonly attaching = new Set<string>();
+  /** Pages `createTab` is making; their own attach follows. */
+  private creating = 0;
+  /** Pages that opened while one was being made, attached once it is. */
+  private deferred: Array<{
+    targetId: string;
+    url: string;
+    openerId?: string;
+  }> = [];
+  /** Pages from before launch (the start page) are not tabs anyone opened. */
+  private launched = false;
+  private readonly preexisting = new Set<string>();
   private buffer = "";
   private open = false;
 
@@ -177,6 +248,12 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     child.once("error", (error) => this.onClose(error.message));
     this.open = true;
     await this.send("Target.setDiscoverTargets", { discover: true });
+    const { targetInfos } = (await this.send("Target.getTargets", {})) as {
+      targetInfos?: Array<{ targetId?: string }>;
+    };
+    for (const info of targetInfos ?? [])
+      if (info.targetId != null) this.preexisting.add(info.targetId);
+    this.launched = true;
   }
 
   attachedTabs(): ChromeTabInfo[] {
@@ -192,10 +269,72 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   }
 
   async createTab(url: string): Promise<ChromeTabInfo> {
-    const { targetId } = (await this.send("Target.createTarget", {
-      url,
-    })) as { targetId: string };
+    this.creating += 1;
+    let targetId: string;
+    try {
+      ({ targetId } = (await this.send("Target.createTarget", {
+        url,
+      })) as { targetId: string });
+    } catch (error) {
+      this.creating -= 1;
+      this.attachDeferred(null);
+      throw error;
+    }
+    this.creating -= 1;
+    this.attachDeferred(targetId);
     return this.attachTarget(targetId, url);
+  }
+
+  /** The pages that opened while `createTab` ran, but for the one it made. */
+  private attachDeferred(made: string | null): void {
+    if (this.creating > 0) return;
+    for (const page of this.deferred.splice(0))
+      if (page.targetId !== made) this.attachPage(page);
+  }
+
+  /** A page opened since launch, attached with its opener if that is one of ours. */
+  private attachPage(page: {
+    targetId: string;
+    url: string;
+    openerId?: string;
+  }): void {
+    if (
+      this.attaching.has(page.targetId) ||
+      this.tabWhere((tab) => tab.targetId === page.targetId) != null
+    )
+      return;
+    const opener =
+      page.openerId == null
+        ? undefined
+        : this.tabWhere((tab) => tab.targetId === page.openerId);
+    void this.attachTarget(page.targetId, page.url, opener?.id).catch(
+      () => undefined
+    );
+  }
+
+  async closeTab(tabId: number): Promise<void> {
+    const tab = this.tabs.get(tabId);
+    if (tab == null) return;
+    await this.send("Target.closeTarget", { targetId: tab.targetId });
+  }
+
+  /** Brings the tab to the front: a background page may not paint or run its timers. */
+  async activateTab(tabId: number): Promise<void> {
+    const tab = this.tabs.get(tabId);
+    if (tab == null) return;
+    await this.send("Target.activateTarget", { targetId: tab.targetId });
+    for (const other of this.tabs.values()) other.active = other === tab;
+  }
+
+  frameOrigin(tabId: number, frameId: string): string | null {
+    const frame = this.frames.get(frameId);
+    if (frame?.tabId !== tabId) return null;
+    try {
+      const origin = new URL(frame.url).origin;
+      return origin === "null" ? null : origin;
+    } catch {
+      return null;
+    }
   }
 
   cdp(
@@ -218,10 +357,16 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     url: string,
     openerTabId?: number
   ): Promise<Tab> {
-    const { sessionId } = (await this.send("Target.attachToTarget", {
-      targetId,
-      flatten: true,
-    })) as { sessionId: string };
+    this.attaching.add(targetId);
+    let sessionId: string;
+    try {
+      ({ sessionId } = (await this.send("Target.attachToTarget", {
+        targetId,
+        flatten: true,
+      })) as { sessionId: string });
+    } finally {
+      this.attaching.delete(targetId);
+    }
     const tab: Tab = {
       id: ++this.nextTabId,
       url,
@@ -230,8 +375,40 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
       ...(openerTabId != null ? { openerTabId } : {}),
     };
     this.tabs.set(tab.id, tab);
+    void this.send("Target.setAutoAttach", AUTO_ATTACH, sessionId).catch(
+      () => undefined
+    );
     this.emit("tabAttached", tab);
     return tab;
+  }
+
+  /**
+   * A page or frame session attached a child: a cross-origin frame is kept
+   * (and its own frames attached); anything else (a worker) is left alone.
+   */
+  private onChildAttached(
+    tabId: number,
+    params: Record<string, unknown>
+  ): void {
+    const info = params.targetInfo as
+      | { targetId?: string; type?: string; url?: string }
+      | undefined;
+    const sessionId = params.sessionId;
+    if (
+      info?.type !== "iframe" ||
+      info.targetId == null ||
+      typeof sessionId !== "string"
+    )
+      return;
+    this.frames.set(info.targetId, { tabId, sessionId, url: info.url ?? "" });
+    void this.send("Target.setAutoAttach", AUTO_ATTACH, sessionId).catch(
+      () => undefined
+    );
+  }
+
+  private dropFrames(match: (frame: Frame) => boolean): void {
+    for (const [frameId, frame] of this.frames)
+      if (match(frame)) this.frames.delete(frameId);
   }
 
   private tabWhere(match: (tab: Tab) => boolean): Tab | undefined {
@@ -289,8 +466,22 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     const params = message.params ?? {};
     if (message.sessionId != null) {
       const tab = this.tabWhere((item) => item.sessionId === message.sessionId);
-      if (tab != null && message.method != null)
-        this.emit("cdpEvent", tab.id, message.method, params);
+      const tabId =
+        tab?.id ??
+        [...this.frames.values()].find(
+          (frame) => frame.sessionId === message.sessionId
+        )?.tabId;
+      if (tabId == null || message.method == null) return;
+      if (message.method === "Target.attachedToTarget") {
+        this.onChildAttached(tabId, params);
+        return;
+      }
+      if (message.method === "Target.detachedFromTarget") {
+        this.dropFrames((frame) => frame.sessionId === params.sessionId);
+        return;
+      }
+      // A frame's own events are not the page's.
+      if (tab != null) this.emit("cdpEvent", tab.id, message.method, params);
       return;
     }
     const info = params.targetInfo as
@@ -304,20 +495,25 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
       | undefined;
     switch (message.method) {
       case "Target.targetCreated": {
-        // A popup one of ours opened joins the tabs, as the relay's do.
-        const opener =
-          info?.openerId == null
-            ? undefined
-            : this.tabWhere((tab) => tab.targetId === info.openerId);
-        if (info?.type === "page" && info.targetId != null && opener != null)
-          void this.attachTarget(
-            info.targetId,
-            info.url ?? "",
-            opener.id
-          ).catch(() => undefined);
+        // A page opened since launch joins the tabs, with its opener if it is
+        // one of ours; `BrowserTabs` decides whose it is. Pages `createTab`
+        // makes are attached there.
+        if (info?.type !== "page" || info.targetId == null) return;
+        if (!this.launched) this.preexisting.add(info.targetId);
+        if (this.preexisting.has(info.targetId)) return;
+        const page = {
+          targetId: info.targetId,
+          url: info.url ?? "",
+          ...(info.openerId != null ? { openerId: info.openerId } : {}),
+        };
+        if (this.creating > 0) this.deferred.push(page);
+        else this.attachPage(page);
         return;
       }
       case "Target.targetInfoChanged": {
+        const frame =
+          info?.targetId == null ? undefined : this.frames.get(info.targetId);
+        if (frame != null && info?.url != null) frame.url = info.url;
         const tab = this.tabWhere((item) => item.targetId === info?.targetId);
         if (tab == null) return;
         if (info?.url != null) tab.url = info.url;
@@ -331,8 +527,13 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
             item.targetId === params.targetId ||
             item.sessionId === params.sessionId
         );
-        if (tab == null) return;
+        if (tab == null) {
+          if (typeof params.targetId === "string")
+            this.frames.delete(params.targetId);
+          return;
+        }
         this.tabs.delete(tab.id);
+        this.dropFrames((frame) => frame.tabId === tab.id);
         this.emit("tabDetached", tab.id);
         this.emit("tabRemoved", tab.id);
         return;
@@ -352,6 +553,7 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     this.pending.clear();
     const tabs = [...this.tabs.keys()];
     this.tabs.clear();
+    this.frames.clear();
     for (const tabId of tabs) this.emit("tabDetached", tabId);
     this.emit("disconnected", reason);
   }
@@ -529,6 +731,7 @@ export class HostedChromiumLauncher {
       mkdirSync(userDataDir, { recursive: true });
       if (!(await this.claimProfile(userDataDir)))
         return this.failure("profile-in-use");
+      writeHostedChromiumPrefs(userDataDir);
       browser = new CdpBrowser({
         executable,
         args: hostedChromiumArgs(userDataDir, this.sandboxed()),
@@ -647,6 +850,7 @@ export class HostedChromiumService {
       presentsInApp: false,
       candidates: () => this.source?.candidates() ?? [],
       webContents: (id) => this.source?.webContents(id) ?? null,
+      ...tabMethodsOf(() => this.source),
       materialize: async (sessionId, url) =>
         (await this.start()).materialize(sessionId, url),
     };

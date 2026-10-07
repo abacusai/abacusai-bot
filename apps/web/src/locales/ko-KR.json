@@ -654,6 +654,7 @@
       "browser_interact": "페이지에서 클릭, 입력, 스크롤, 호버를 수행합니다.",
       "browser_navigate": "내장 브라우저에서 URL을 엽니다.",
       "browser_snapshot": "페이지를 상호작용 요소 목록으로 읽습니다.",
+      "browser_tabs": "브라우저 탭을 나열하고 전환하고 닫습니다.",
       "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
       "code_map": "Index the functions and classes in a file or folder.",
       "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",

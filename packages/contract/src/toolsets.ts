@@ -139,7 +139,7 @@ export const TOOLSETS: Toolset[] = [
     alwaysOn: true,
   },
   {
-    // `browser_task` hands the job to a sub-agent holding the four raw tools
+    // `browser_task` hands the job to a sub-agent holding the raw tools
     // (packages/agent/src/browser-task.ts). The raw tools stay listed because
     // they are what runs; turning off `browser_task` alone puts them back in
     // the main loop, the escape hatch when a task needs steering by hand.
@@ -153,6 +153,7 @@ export const TOOLSETS: Toolset[] = [
       tool("browser_snapshot"),
       tool("browser_interact"),
       tool("browser_execute"),
+      tool("browser_tabs"),
     ],
     defaultEnabled: true,
   },
