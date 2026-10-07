@@ -80,12 +80,17 @@ const Sender = ({
         composer={slots.composer}
       />
       <SidePanelContent kind="details">
-        <DetailsTab
-          bot={bot}
-          binding={slots.binding}
-          modelInComposer={false}
-          setTab={slots.setTab}
-        />
+        {(_, active) => (
+          <DetailsTab
+            bot={bot}
+            binding={{
+              ...slots.binding,
+              layoutId: active ? slots.binding.layoutId : undefined,
+            }}
+            modelInComposer={false}
+            setTab={slots.setTab}
+          />
+        )}
       </SidePanelContent>
       <SidePanelContent kind="memory">
         <MemoryTab bot={bot} />

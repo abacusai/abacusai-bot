@@ -10,8 +10,7 @@ import { expect, it } from "vitest";
 
 import { renderApp } from "#renderer/test-support/app-harness";
 
-import { dockLeaves } from "./dock-store";
-import { openTab, panelTabsStore, updateTabs } from "./panel-tabs-store";
+import { openTab, panelTabsStore } from "./panel-tabs-store";
 it("rendered dock follows navigation after the local view toggle and saves URL focus", async () => {
   const width = window.innerWidth;
   Object.defineProperty(window, "innerWidth", {
@@ -21,15 +20,6 @@ it("rendered dock follows navigation after the local view toggle and saves URL f
   const key = sessionConversationKey("default", "spreadsheet");
   openTab(key, { ref: "files", title: "Files" });
   openTab(key, { ref: "changes", title: "Changes" });
-  updateTabs(key, (s) => ({
-    ...s,
-    tree: {
-      kind: "leaf",
-      id: "root",
-      tabs: ["files", "changes"],
-      active: "files",
-    },
-  }));
   const harness = await renderApp("/sessions/spreadsheet?tab=files&view=split");
   const dock = () => document.querySelector('[data-slot="session-dock"]')!;
   try {
@@ -49,7 +39,11 @@ it("rendered dock follows navigation after the local view toggle and saves URL f
     expect(panelTabsStore.state[key]!.last).toBe("files");
     expect(
       screen.getByTestId("panel-toggle").getAttribute("aria-pressed")
-    ).toBe("false");
+    ).toBe("true");
+    fireEvent.click(screen.getByTestId("panel-toggle"));
+    await waitFor(() =>
+      expect(harness.router.state.location.search.tab).toBeUndefined()
+    );
     fireEvent.click(screen.getByTestId("panel-toggle"));
     await waitFor(() =>
       expect(harness.router.state.location.search.tab).toBe("files")
@@ -63,9 +57,6 @@ it("rendered dock follows navigation after the local view toggle and saves URL f
     });
     await waitFor(() => expect(dock().getAttribute("data-view")).toBe("split"));
     expect(panelTabsStore.state[key]!.last).toBe("changes");
-    expect(dockLeaves(panelTabsStore.state[key]!.tree!)[0]!.active).toBe(
-      "changes"
-    );
   } finally {
     harness.view.unmount();
     await harness.cleanup();

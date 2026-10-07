@@ -87,33 +87,11 @@ const start = v.object({
   stage: v.picklist(["draft", "created", "checkout-ready", "handed-off"]),
   envelope: v.nullable(envelope),
 });
-type Dock =
-  | { kind: "leaf"; id: string; tabs: string[]; active: string | null }
-  | {
-      kind: "split";
-      id: string;
-      orientation: "horizontal" | "vertical";
-      children: Dock[];
-    };
-const dock: v.GenericSchema<Dock> = v.lazy(() =>
-  v.variant("kind", [
-    v.object({
-      kind: v.literal("leaf"),
-      id: v.string(),
-      tabs: v.array(v.string()),
-      active: nullableString,
-    }),
-    v.object({
-      kind: v.literal("split"),
-      id: v.string(),
-      orientation: v.picklist(["horizontal", "vertical"]),
-      children: v.array(dock),
-    }),
-  ])
-);
 const tabs = v.record(
   v.string(),
   v.object({
+    open: v.optional(v.boolean()),
+    order: v.optional(v.array(v.string())),
     tabs: v.array(
       v.object({
         ref: v.string(),
@@ -126,13 +104,13 @@ const tabs = v.record(
       })
     ),
     last: nullableString,
-    tree: v.optional(dock),
   })
 );
 const panel = v.record(
   v.string(),
   v.object({
     open: v.boolean(),
+    expanded: v.optional(v.boolean()),
     tabs: v.array(
       v.object({
         id: v.string(),

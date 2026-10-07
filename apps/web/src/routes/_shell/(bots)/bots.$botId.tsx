@@ -130,12 +130,17 @@ const ComposedChat = ({
         }}
       />
       <SidePanelContent kind="details">
-        <DetailsTab
-          bot={bot}
-          binding={slots.binding}
-          modelInComposer={expanded}
-          setTab={slots.setTab}
-        />
+        {(_, active) => (
+          <DetailsTab
+            bot={bot}
+            binding={{
+              ...slots.binding,
+              layoutId: active ? slots.binding.layoutId : undefined,
+            }}
+            modelInComposer={expanded}
+            setTab={slots.setTab}
+          />
+        )}
       </SidePanelContent>
       <SidePanelContent kind="memory">
         <MemoryTab bot={bot} />
