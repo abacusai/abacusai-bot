@@ -1,0 +1,354 @@
+{
+  "date": "2026-10-07",
+  "baselineCommit": "097b0934",
+  "candidateCommit": "799ee6b03a641b00a9d27831c2fefd51e2f006a9",
+  "referenceCommit": "611132c171f3a821bd2e32f22261135cef6330ac",
+  "machine": {
+    "cpu": "Apple M3",
+    "ramGiB": 16,
+    "electron": "44.4.5",
+    "node": "22.19.0"
+  },
+  "workload": {
+    "sourceMessages": 1000,
+    "retainedMessages": 300,
+    "sourceToolRows": 1500,
+    "subagents": 5,
+    "bytes": 20480,
+    "deltas": 171,
+    "requestedIntervalMs": 4
+  },
+  "stream": {
+    "before": [
+      {
+        "rowRenders": 10098,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 2299.81,
+        "frameP95Ms": 33.400000000000546,
+        "busyTaskP95Ms": 14.726,
+        "longTaskMs": [66, 61],
+        "mountedRows": 93
+      },
+      {
+        "rowRenders": 8636,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 2184.4860000000003,
+        "frameP95Ms": 33.69999999999891,
+        "busyTaskP95Ms": 14.93,
+        "longTaskMs": [102],
+        "mountedRows": 93
+      },
+      {
+        "rowRenders": 10608,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 2483.7540000000004,
+        "frameP95Ms": 34.39999999999782,
+        "busyTaskP95Ms": 14.892,
+        "longTaskMs": [97, 50],
+        "mountedRows": 93
+      }
+    ],
+    "after": [
+      {
+        "rowRenders": 232,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 1790.971,
+        "frameP95Ms": 33.099999999999454,
+        "busyTaskP95Ms": 14.547,
+        "longTaskMs": [67],
+        "mountedRows": 93
+      },
+      {
+        "rowRenders": 199,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 1725.06,
+        "frameP95Ms": 32.399999999999636,
+        "busyTaskP95Ms": 16.3,
+        "longTaskMs": [75],
+        "mountedRows": 93
+      },
+      {
+        "rowRenders": 210,
+        "markdownRenders": 175,
+        "hostUpdates": 186,
+        "scriptMs": 1746.466,
+        "frameP95Ms": 32.899999999999636,
+        "busyTaskP95Ms": 16.35,
+        "longTaskMs": [67],
+        "mountedRows": 93
+      }
+    ]
+  },
+  "production": {
+    "before": [
+      {
+        "landingPaintMs": 934.280583,
+        "transcriptPaintMs": 589.7247079999999,
+        "mainRssBytes": 202539008,
+        "mainCpuMs": 209.103,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      },
+      {
+        "landingPaintMs": 895.5614580000001,
+        "transcriptPaintMs": 541.0579999999991,
+        "mainRssBytes": 245055488,
+        "mainCpuMs": 250.305,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      },
+      {
+        "landingPaintMs": 876.9538339999999,
+        "transcriptPaintMs": 560.5538749999996,
+        "mainRssBytes": 244940800,
+        "mainCpuMs": 249.275,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      }
+    ],
+    "after": [
+      {
+        "landingPaintMs": 974.914583,
+        "transcriptPaintMs": 564.5013339999999,
+        "mainRssBytes": 247283712,
+        "mainCpuMs": 267.327,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      },
+      {
+        "landingPaintMs": 881.5566669999989,
+        "transcriptPaintMs": 555.8559999999998,
+        "mainRssBytes": 244989952,
+        "mainCpuMs": 220.033,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      },
+      {
+        "landingPaintMs": 886.7875409999997,
+        "transcriptPaintMs": 545.8002499999984,
+        "mainRssBytes": 244973568,
+        "mainCpuMs": 217.28,
+        "outgoingPortMessages": 59,
+        "views": 2,
+        "mountedMessages": 50
+      }
+    ]
+  },
+  "session": {
+    "before": {
+      "scrollP95Ms": 17.5,
+      "scrollFrames": 302,
+      "samples": [
+        {
+          "seconds": 0.061,
+          "cycles": 0,
+          "retainedHeapBytes": 77432072,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 37.699,
+          "cycles": 10,
+          "retainedHeapBytes": 75467868,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 75.337,
+          "cycles": 20,
+          "retainedHeapBytes": 76355300,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 111.223,
+          "cycles": 30,
+          "retainedHeapBytes": 76100392,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 149.424,
+          "cycles": 40,
+          "retainedHeapBytes": 80547140,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 189.826,
+          "cycles": 50,
+          "retainedHeapBytes": 80772752,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 233.446,
+          "cycles": 60,
+          "retainedHeapBytes": 80284420,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 275.439,
+          "cycles": 70,
+          "retainedHeapBytes": 76158780,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 305.119,
+          "cycles": 77,
+          "retainedHeapBytes": 76203676,
+          "domNodes": 4696,
+          "documents": 2
+        }
+      ]
+    },
+    "after": {
+      "scrollP95Ms": 17.599999999999454,
+      "scrollFrames": 302,
+      "samples": [
+        {
+          "seconds": 0.069,
+          "cycles": 0,
+          "retainedHeapBytes": 77842176,
+          "domNodes": 4699,
+          "documents": 2
+        },
+        {
+          "seconds": 28.425,
+          "cycles": 10,
+          "retainedHeapBytes": 75525356,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 59.123,
+          "cycles": 20,
+          "retainedHeapBytes": 76136620,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 90.284,
+          "cycles": 30,
+          "retainedHeapBytes": 76186964,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 123.82,
+          "cycles": 40,
+          "retainedHeapBytes": 80277576,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 157.571,
+          "cycles": 50,
+          "retainedHeapBytes": 76532468,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 193.84,
+          "cycles": 60,
+          "retainedHeapBytes": 80666216,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 230.432,
+          "cycles": 70,
+          "retainedHeapBytes": 76046808,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 267.397,
+          "cycles": 80,
+          "retainedHeapBytes": 76148952,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 302.192,
+          "cycles": 90,
+          "retainedHeapBytes": 76338036,
+          "domNodes": 4696,
+          "documents": 2
+        },
+        {
+          "seconds": 302.254,
+          "cycles": 90,
+          "retainedHeapBytes": 76335512,
+          "domNodes": 4696,
+          "documents": 2
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "before": {
+      "all": {
+        "chunks": 318,
+        "bytes": 6416930,
+        "gzipBytes": 2154756
+      },
+      "mainStatic": {
+        "chunks": 164,
+        "bytes": 1843391,
+        "gzipBytes": 639267
+      },
+      "notchStatic": {
+        "chunks": 67,
+        "bytes": 1193785,
+        "gzipBytes": 397963
+      }
+    },
+    "after": {
+      "all": {
+        "chunks": 318,
+        "bytes": 6417110,
+        "gzipBytes": 2154799
+      },
+      "mainStatic": {
+        "chunks": 164,
+        "bytes": 1843391,
+        "gzipBytes": 639248
+      },
+      "notchStatic": {
+        "chunks": 67,
+        "bytes": 1193785,
+        "gzipBytes": 397963
+      }
+    }
+  },
+  "streamRepeat": [
+    {
+      "rowRenders": 240,
+      "scriptMs": 1726.985,
+      "frameP95Ms": 17.600000000000364
+    },
+    {
+      "rowRenders": 210,
+      "scriptMs": 1640.3879999999997,
+      "frameP95Ms": 17.699999999999818
+    },
+    {
+      "rowRenders": 207,
+      "scriptMs": 1729.2369999999994,
+      "frameP95Ms": 32.80000000000109
+    }
+  ]
+}
