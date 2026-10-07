@@ -3976,7 +3976,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "वेब पर AbacusAI Bot इस्तेमाल करने के लिए साइन इन करें।",
+      "tierRequired": "वेब पर AbacusAI Bot के लिए Pro प्लान चाहिए।",
+      "hostOutdated": "आपका बॉट पुराना हो गया है। इसे अपडेट करने के लिए अपना कंप्यूटर रीस्टार्ट करें।"
     },
     "files": {
       "open": "Open folder"

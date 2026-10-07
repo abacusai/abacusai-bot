@@ -60,8 +60,9 @@ import {
   CONTRAST_QUERY,
   DARK_QUERY,
   setLookStore,
-  themeOverride,
+  holdTheme,
 } from "#renderer/lib/theme";
+import { BootThemeEffect } from "#renderer/lib/theme-effect";
 import { showError } from "#renderer/lib/toast";
 import { createAppRouter } from "#renderer/router";
 
@@ -142,7 +143,8 @@ const mountPhoneApp = async (root: Root): Promise<boolean> => {
     return false;
   }
   if (!chat.available) return false;
-  themeOverride.setState(() => "light");
+  // For the page's life: the phone app is light only.
+  holdTheme("light");
   applyTheme(
     document,
     applyBootLook(document, {
@@ -168,10 +170,14 @@ const mountPhoneApp = async (root: Root): Promise<boolean> => {
 
 const renderConnectError = (root: Root, error: unknown): void =>
   root.render(
-    <ConnectScreen
-      stage="starting"
-      error={error instanceof Error ? error : new Error(String(error))}
-    />
+    <>
+      {/* Before the app: its screens' theme scopes still reach the page. */}
+      <BootThemeEffect />
+      <ConnectScreen
+        stage="starting"
+        error={error instanceof Error ? error : new Error(String(error))}
+      />
+    </>
   );
 
 export const mountPlatformApp = async (root: Root): Promise<boolean> => {
@@ -196,6 +202,8 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   // leaves the request for the next one).
   void runHostConnection(transport, identity, {
     forceRestart: takeRestartRequest(),
+    // Written once the first socket's system facts arrive.
+    firstVisit: readLastKnown("system") == null,
   });
 
   const queryClient = createQueryClient({ showError });
@@ -223,8 +231,11 @@ export const mountPlatformApp = async (root: Root): Promise<boolean> => {
   // Phones get the light theme only (a product choice); wider screens follow
   // the user's theme. Rotating or resizing across the width switches it.
   const phone = matchMedia(PHONE_QUERY);
-  const followPhone = () =>
-    themeOverride.setState(() => (phone.matches ? "light" : null));
+  let releasePhone: (() => void) | null = null;
+  const followPhone = () => {
+    releasePhone?.();
+    releasePhone = phone.matches ? holdTheme("light") : null;
+  };
   followPhone();
   phone.addEventListener("change", followPhone);
   applyTheme(

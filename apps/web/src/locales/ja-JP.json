@@ -3976,7 +3976,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "Web で AbacusAI Bot を使うにはサインインしてください。",
+      "tierRequired": "Web 版 AbacusAI Bot には Pro プランが必要です。",
+      "hostOutdated": "ボットが古くなっています。コンピューターを再起動して更新してください。"
     },
     "files": {
       "open": "Open folder"

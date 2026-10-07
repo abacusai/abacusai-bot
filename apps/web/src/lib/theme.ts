@@ -32,10 +32,29 @@ export const applyTheme = (doc: Document, resolved: ResolvedTheme): void => {
 };
 
 /**
- * A whole-document override while something needs one theme regardless of
- * the user's (the `/__ui` gallery's `theme=light|dark`). Null: follow prefs.
+ * The theme a held scope forces on the whole document, newest first; null:
+ * follow prefs. Read by ThemeEffect, written only through `holdTheme`.
  */
 export const themeOverride = new Store<ResolvedTheme | null>(null);
+
+const held: { theme: ResolvedTheme }[] = [];
+
+/**
+ * Forces `theme` on the document until the returned release runs (a setup
+ * screen, the gallery, a phone width). Scopes nest: the newest held wins,
+ * and releasing one, in any order, leaves the rest as they were.
+ */
+export const holdTheme = (theme: ResolvedTheme): (() => void) => {
+  const scope = { theme };
+  held.push(scope);
+  themeOverride.setState(() => theme);
+  return () => {
+    const index = held.indexOf(scope);
+    if (index < 0) return;
+    held.splice(index, 1);
+    themeOverride.setState(() => held.at(-1)?.theme ?? null);
+  };
+};
 
 // WCAG 2 relative luminance and contrast ratio.
 const channel = (value: number): number => {

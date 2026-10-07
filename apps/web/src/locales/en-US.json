@@ -3976,7 +3976,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "Sign in to use AbacusAI Bot on the web.",
+      "tierRequired": "AbacusAI Bot on the web needs a Pro plan.",
+      "hostOutdated": "Your bot is out of date. Restart your computer to update it."
     },
     "files": {
       "open": "Open folder"

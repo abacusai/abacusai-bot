@@ -15,13 +15,27 @@ import {
   WhatsAppIntro,
 } from "#renderer/features/onboarding/whatsapp";
 import { settingsIndexFor } from "#renderer/features/settings/search-index";
-import { ConnectScreen } from "#renderer/features/shell/connect";
+import {
+  ConnectScreen,
+  FailedScreen,
+  failureScreen,
+  HostStatus,
+  SetupScreen,
+  StatusPill,
+} from "#renderer/features/shell/connect";
+import {
+  ConnectError,
+  hostConnection,
+  type ConnectStage,
+  type HostConnectionState,
+} from "#renderer/features/shell/connect/services";
 import {
   BOT_TEMPLATE_CATEGORIES,
   BOT_TEMPLATES,
   orderedTemplateIds,
   templateIdsInCategory,
 } from "#renderer/lib/bots/templates";
+import { themeOverride } from "#renderer/lib/theme";
 import { renderApp } from "#renderer/test-support/app-harness";
 vi.mock("#renderer/lib/voice/use-dictation", () => ({
   useConnectedDictation: () => ({ supported: false }),
@@ -173,6 +187,150 @@ it("uses workspace copy on the browser connection screen", () => {
     );
   } finally {
     view.unmount();
+  }
+});
+
+const STAGES: ConnectStage[] = [
+  "starting",
+  "installing",
+  "updating",
+  "connecting",
+  "reconnecting",
+  "open",
+];
+const RAW = "upstream said: internal detail 0xdeadbeef";
+
+it("the setup page maps every stage to a step, with a bar always measured", () => {
+  const expected: Record<ConnectStage, string[]> = {
+    starting: ["current", "pending", "pending"],
+    installing: ["done", "current", "pending"],
+    updating: ["done", "current", "pending"],
+    connecting: ["done", "done", "current"],
+    reconnecting: ["done", "done", "current"],
+    open: ["done", "done", "current"],
+  };
+  for (const stage of STAGES) {
+    const view = render(<SetupScreen stage={stage} />);
+    try {
+      const steps = [...view.container.querySelectorAll("li")].map(
+        (li) => li.dataset.state
+      );
+      expect(steps, stage).toEqual(expected[stage]);
+      const bar = view.container.querySelector<HTMLElement>("[style*='width']");
+      expect(bar?.style.width, stage).toMatch(/^\d+%$/);
+      // The setup page holds the light theme while it shows.
+      expect(themeOverride.state).toBe("light");
+    } finally {
+      view.unmount();
+    }
+    expect(themeOverride.state).toBeNull();
+  }
+});
+
+it("the pill names every stage", () => {
+  const label: Record<ConnectStage, string> = {
+    starting: "Waking your bot",
+    installing: "Waking your bot",
+    updating: "Updating your bot",
+    connecting: "Connecting",
+    reconnecting: "Reconnecting",
+    open: "Waking your bot",
+  };
+  for (const stage of STAGES) {
+    const view = render(<StatusPill stage={stage} />);
+    expect(view.container.textContent, stage).toBe(label[stage]);
+    view.unmount();
+  }
+});
+
+it("the failed page retries and keeps the error's own text off the page", () => {
+  const retry = vi.fn();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const view = render(<FailedScreen error={new Error(RAW)} retry={retry} />);
+  try {
+    expect(view.container.textContent).not.toContain(RAW);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalled();
+  } finally {
+    view.unmount();
+    warn.mockRestore();
+  }
+});
+
+it("one failure mapping: a reload without a loop, the loop's retry with one", () => {
+  const connection = new ConnectError("connection", RAW);
+  expect(failureScreen(connection, false)).toEqual({
+    kind: "failed",
+    retry: "reload",
+  });
+  expect(failureScreen(connection, true)).toEqual({
+    kind: "failed",
+    retry: "retry-now",
+  });
+  expect(failureScreen(new ConnectError("reload", RAW), true)).toEqual({
+    kind: "failed",
+    retry: "reload",
+  });
+  expect(failureScreen(new ConnectError("tier", RAW), true)).toEqual({
+    kind: "refused",
+  });
+  expect(failureScreen(null, true)).toBeNull();
+});
+
+it("the host status picks failures first, then open, then the banner, setup or pill; raw text never shows", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const show = (patch: Partial<HostConnectionState>) => {
+    act(() =>
+      hostConnection.setState(() => ({
+        stage: "connecting",
+        error: null,
+        generation: 0,
+        attempting: false,
+        firstVisit: false,
+        ...patch,
+      }))
+    );
+    return render(<HostStatus />);
+  };
+  const cases: Array<[Partial<HostConnectionState>, string | null]> = [
+    [{ error: new ConnectError("signin", RAW), stage: "open" }, "status"],
+    [{ error: new ConnectError("limit", RAW), stage: "open" }, "host-limit"],
+    [
+      { error: new ConnectError("connection", RAW), stage: "open" },
+      "host-failed",
+    ],
+    [{ error: new ConnectError("reload", RAW) }, "host-failed"],
+    [{ stage: "open", firstVisit: true }, null],
+    [{ error: new ConnectError("version", RAW) }, "host-status"],
+    [{ firstVisit: true }, "host-setup"],
+    [{}, "host-status"],
+  ];
+  try {
+    for (const [patch, slot] of cases) {
+      const view = show(patch);
+      const text = view.container.textContent ?? "";
+      expect(text, JSON.stringify(patch)).not.toContain(RAW);
+      if (slot == null) expect(view.container.firstChild).toBeNull();
+      else if (slot === "status")
+        expect(text).toContain("Sign in to use AbacusAI Bot on the web.");
+      else
+        expect(
+          view.container.querySelector(`[data-slot="${slot}"]`),
+          slot
+        ).not.toBeNull();
+      view.unmount();
+    }
+  } finally {
+    warn.mockRestore();
+    act(() =>
+      hostConnection.setState((state) => ({
+        ...state,
+        error: null,
+        firstVisit: false,
+        stage: "starting",
+      }))
+    );
   }
 });
 

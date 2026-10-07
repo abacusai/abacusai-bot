@@ -497,6 +497,11 @@ export interface HostConnectionState {
   generation: number;
   /** An attempt is in flight (Retry has nothing to hurry). */
   attempting: boolean;
+  /**
+   * This browser has never reached this host, and no socket has opened yet:
+   * the setup page, not the pill. Cleared for good by the first open.
+   */
+  firstVisit: boolean;
 }
 
 export const hostConnection = new Store<HostConnectionState>({
@@ -504,6 +509,7 @@ export const hostConnection = new Store<HostConnectionState>({
   error: null,
   generation: 0,
   attempting: false,
+  firstVisit: false,
 });
 
 /** Reconnect attempt `n` (0-based): 0.5 s doubling to 8 s, half of it jitter. */
@@ -600,6 +606,8 @@ export const takeRestartRequest = (): boolean => {
 
 export interface HostConnectionOptions {
   forceRestart?: boolean;
+  /** Whether this browser has never reached this host before. */
+  firstVisit?: boolean;
   /** For tests; the global `WebSocket` otherwise. */
   WebSocket?: new (url: string, protocols: string[]) => WebSocket;
   random?: () => number;
@@ -712,6 +720,7 @@ export const runHostConnection = async (
   let fresh = false;
   const set = (patch: Partial<HostConnectionState>): void =>
     hostConnection.setState((state) => ({ ...state, ...patch }));
+  set({ firstVisit: options.firstVisit ?? false });
   // A call: the state changes across every await below.
   const closed = (): boolean => transport.state === "closed";
   const terminal = (error: ConnectError): void => {
@@ -762,7 +771,13 @@ export const runHostConnection = async (
       const ended = transport.attach(socket);
       const generation = transport.generation;
       const openedAt = Date.now();
-      set({ stage: "open", error: null, generation, attempting: false });
+      set({
+        stage: "open",
+        error: null,
+        generation,
+        attempting: false,
+        firstVisit: false,
+      });
       const unwatch = watchLiveness(transport, generation, probe);
       const close = await ended;
       unwatch();
