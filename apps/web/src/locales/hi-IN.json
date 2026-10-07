@@ -654,6 +654,7 @@
       "browser_interact": "पेज पर क्लिक, टाइप, स्क्रॉल या होवर करें।",
       "browser_navigate": "बिल्ट-इन ब्राउज़र में कोई URL खोलें।",
       "browser_snapshot": "पेज को इंटरैक्टिव एलिमेंट की सूची के रूप में पढ़ें।",
+      "browser_tabs": "ब्राउज़र के टैब देखें, बदलें और बंद करें।",
       "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
       "code_map": "Index the functions and classes in a file or folder.",
       "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",

@@ -18,7 +18,7 @@ import {
   type ChromeInstall,
 } from "./chrome-executable";
 import { ChromeRelay } from "./chrome-relay";
-import { ChromeTargetSource } from "./chrome-target-source";
+import { ChromeTargetSource, tabMethodsOf } from "./chrome-target-source";
 
 /** The name the tab group in Chrome carries. */
 export const CLIENT_NAME = "AbacusAI Bot";
@@ -80,6 +80,7 @@ export class ChromeBrowserService {
       presentsInApp: false,
       candidates: () => this.source?.candidates() ?? [],
       webContents: (id) => this.source?.webContents(id) ?? null,
+      ...tabMethodsOf(() => this.source),
       materialize: async (sessionId, url) => {
         if (this.relay?.connected !== true) {
           const status = await this.connect();

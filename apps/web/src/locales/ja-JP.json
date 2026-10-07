@@ -654,6 +654,7 @@
       "browser_interact": "ページ上でクリック・入力・スクロール・ホバーします。",
       "browser_navigate": "内蔵ブラウザでURLを開きます。",
       "browser_snapshot": "ページを操作可能な要素の一覧として読み取ります。",
+      "browser_tabs": "ブラウザーのタブを一覧表示、切り替え、閉じます。",
       "browser_task": "Hand a whole web task to a browser sub-agent and get back the answer.",
       "code_map": "Index the functions and classes in a file or folder.",
       "connect_connector": "Ask the user to attach a service, such as Gmail or Slack, so its tools become available.",

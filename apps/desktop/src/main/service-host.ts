@@ -1765,6 +1765,9 @@ export class ServiceHost {
     },
     emitSessionClosed: (workspaceId, sessionId) => {
       this.sessionTurnStateService.markClosed(workspaceId, sessionId);
+      // A tab-keeping browser keeps the session's tabs a while (a paused run,
+      // a restarted agent), then lets them go.
+      this.browserTargetSource()?.releaseSession?.(sessionId);
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
       this.emitEvent({
