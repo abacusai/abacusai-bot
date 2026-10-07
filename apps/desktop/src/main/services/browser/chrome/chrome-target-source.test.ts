@@ -4,6 +4,14 @@
  * stop being offered.
  */
 import { EventEmitter } from "node:events";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -164,27 +172,22 @@ describe("the hosted computer's own Chromium", () => {
     };
   };
 
-  it("launches headless without a sandbox, gives each session a tab, and drops it when it closes", async () => {
+  it("launches headless, gives each session a tab, and drops it when it closes", async () => {
     const { CdpBrowser, hostedChromiumArgs } =
       await import("./hosted-chromium");
     const chromium = fakeChromium();
+    const args = hostedChromiumArgs("/p", true);
     const browser = new CdpBrowser({
       executable: "/opt/chromium/chrome",
-      userDataDir: os.tmpdir(),
+      args,
       spawn: chromium.spawn as never,
     });
     const source = new ChromeTargetSource(browser);
     await browser.launch();
 
-    expect(chromium.spawn.mock.calls[0]?.[1]).toEqual(
-      hostedChromiumArgs(os.tmpdir())
-    );
-    expect(hostedChromiumArgs("/p")).toEqual(
-      expect.arrayContaining([
-        "--no-sandbox",
-        "--headless=new",
-        "--user-data-dir=/p",
-      ])
+    expect(chromium.spawn.mock.calls[0]?.[1]).toEqual(args);
+    expect(args).toEqual(
+      expect.arrayContaining(["--headless=new", "--user-data-dir=/p"])
     );
     const id = await source.materialize("session-1", "https://example.test/");
     expect(id).not.toBeNull();
@@ -218,7 +221,6 @@ describe("the hosted computer's own Chromium", () => {
 
   it("finds Playwright's Chromium in its cache, the full browser ahead of the shell", async () => {
     const { chromiumInCache } = await import("./hosted-chromium");
-    const { mkdirSync, mkdtempSync, writeFileSync } = await import("node:fs");
     const root = mkdtempSync(path.join(os.tmpdir(), "ms-playwright-"));
     const touch = (relative: string) => {
       mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
@@ -234,5 +236,124 @@ describe("the hosted computer's own Chromium", () => {
     expect(chromiumInCache([root])).toBe(
       path.join(root, "chromium-1243/chrome-linux64/chrome")
     );
+  });
+
+  describe("the launcher", () => {
+    const profile = () => mkdtempSync(path.join(os.tmpdir(), "chromium-"));
+    const launcherWith = async (
+      options: Partial<
+        ConstructorParameters<
+          typeof import("./hosted-chromium").HostedChromiumLauncher
+        >[0]
+      > = {}
+    ) => {
+      const { HostedChromiumLauncher } = await import("./hosted-chromium");
+      const chromium = fakeChromium();
+      const lines: string[] = [];
+      const launcher = new HostedChromiumLauncher({
+        userDataDir: profile,
+        hosted: () => false,
+        isRoot: () => false,
+        env: {},
+        find: async () => "/found/chrome",
+        spawn: chromium.spawn as never,
+        log: (line) => lines.push(line),
+        ...options,
+      });
+      return { launcher, chromium, lines };
+    };
+
+    it("takes the path from ABACUSAI_BOT_CHROMIUM over the lookup, and says so", async () => {
+      const executable = path.join(profile(), "chrome");
+      writeFileSync(executable, "");
+      const find = vi.fn(async () => "/found/chrome");
+      const { launcher, chromium, lines } = await launcherWith({
+        env: { ABACUSAI_BOT_CHROMIUM: executable },
+        find,
+      });
+
+      expect(await launcher.resolve()).toBe(executable);
+      expect((await launcher.launch()).ok).toBe(true);
+      expect(chromium.spawn.mock.calls[0]?.[0]).toBe(executable);
+      expect(find).not.toHaveBeenCalled();
+      expect(lines).toContain(
+        `[browser] Chromium from ABACUSAI_BOT_CHROMIUM: ${executable}`
+      );
+    });
+
+    it("looks again on the next use when the start lookup found nothing", async () => {
+      const find = vi
+        .fn<() => Promise<string | null>>()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue("/found/chrome");
+      const { launcher, chromium } = await launcherWith({ find });
+
+      expect(await launcher.resolve()).toBeNull();
+      expect(launcher.found).toBe(false);
+      expect(find).toHaveBeenCalledTimes(1);
+
+      expect((await launcher.launch()).ok).toBe(true);
+      expect(chromium.spawn.mock.calls[0]?.[0]).toBe("/found/chrome");
+      await launcher.resolve();
+      expect(find).toHaveBeenCalledTimes(2);
+    });
+
+    it("drops the sandbox only as root or on the hosted computer", async () => {
+      for (const [isRoot, hosted, noSandbox] of [
+        [false, false, false],
+        [true, false, true],
+        [false, true, true],
+      ] as const) {
+        const { launcher, chromium } = await launcherWith({
+          isRoot: () => isRoot,
+          hosted: () => hosted,
+        });
+        await launcher.launch();
+        expect(chromium.spawn.mock.calls[0]?.[1].includes("--no-sandbox")).toBe(
+          noSandbox
+        );
+      }
+    });
+
+    it("never launches on a profile a live Chromium holds, and clears a dead one's lock", async () => {
+      const dir = profile();
+      const lock = path.join(dir, "SingletonLock");
+      symlinkSync(`${os.hostname()}-${process.pid}`, lock);
+      const live = await launcherWith({ userDataDir: () => dir });
+
+      const held = await live.launcher.launch();
+      expect(held.ok).toBe(false);
+      expect("error" in held && held.error.code).toBe("profile-in-use");
+      expect(live.chromium.spawn).not.toHaveBeenCalled();
+
+      rmSync(lock);
+      symlinkSync(`${os.hostname()}-999999999`, lock);
+      const stale = await launcherWith({ userDataDir: () => dir });
+      expect((await stale.launcher.launch()).ok).toBe(true);
+      expect(existsSync(lock)).toBe(false);
+    });
+
+    it("reports a failed launch as its typed error, the raw cause only in the log", async () => {
+      const { HostedChromiumLaunchError, HostedChromiumService } =
+        await import("./hosted-chromium");
+      const { launcher, chromium, lines } = await launcherWith();
+      chromium.spawn.mockImplementation(() => {
+        throw new Error("spawn /found/chrome EACCES secret-detail");
+      });
+      const service = new HostedChromiumService(launcher);
+      await service.ready();
+
+      const failure = await service
+        .targetSource()
+        .materialize("s1", "https://x.test/")
+        .catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(HostedChromiumLaunchError);
+      expect(
+        (failure as InstanceType<typeof HostedChromiumLaunchError>).code
+      ).toBe("launch-failed");
+      expect((failure as Error).message).not.toContain("secret-detail");
+      expect(lines.some((line) => line.includes("secret-detail"))).toBe(true);
+    });
   });
 });

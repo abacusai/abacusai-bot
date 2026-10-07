@@ -4,20 +4,27 @@ import {
   PHONE_PROGRESS_TOOL_NAME,
   splitPhoneBubbles,
 } from "@abacus-ai/agent/phone-bubbles";
-import {
-  AgentStatus,
-  type DesktopEvent,
-} from "@abacus-ai/contract/agent-types";
+import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
 import { backoffDelayMs } from "#main/services/messaging/connector";
 
+import {
+  type InboundMessage,
+  PhoneInbox,
+  type PhoneInboxEntry,
+} from "./phone-inbox";
+import { PHONE_TURN_LIMITS, TurnClock } from "./turn-clock";
+
 /**
  * The hosted bot's WhatsApp number: a long-poll of the account's phone inbox
  * (`/v1/abacusaibot_channels`, lane "phone") feeding one lifelong phone-loop
- * session. Messages close together become one turn; one that arrives while
- * a turn runs steers it. The reply goes back as WhatsApp bubbles against the
- * newest message. Host-only: the desktop app never builds one.
+ * session. Messages close together go to the session as one; one that
+ * arrives while the session works on earlier ones is steered in. Each goes
+ * by its id, and the session reports by id which ones each final answer
+ * answers (`turn_reply`). PhoneInbox owns every message's state; this class
+ * moves messages between the server, the session and the user. Host-only:
+ * the desktop app never builds one.
  */
 
 type ChannelsCall = <T>(
@@ -26,31 +33,18 @@ type ChannelsCall = <T>(
   signal?: AbortSignal
 ) => Promise<T>;
 
-interface PhoneInboxEntry {
-  id: string;
-  ts?: number;
-  channel?: string;
-  sender?: string | null;
-  text?: string;
-  /**
-   * "linked": the user just linked WhatsApp; `sender` is their name there.
-   * "note": the host's own news for the loop (a connector connected), never
-   * from the server, so never acknowledged.
-   */
-  kind?: string;
-}
-
 interface PhoneLaneDeps {
   call: ChannelsCall;
   /** Whether the user's Abacus key is configured; the lane idles without it. */
   hasKey: () => boolean;
   /** The phone loop's session, minted on first use. */
   openSession: () => Promise<{ workspaceId: string; sessionId: string }>;
-  /** False when the message could not be delivered. */
+  /** False when the session definitely did not take the message. */
   send: (
     workspaceId: string,
     sessionId: string,
-    text: string
+    text: string,
+    messageId: string
   ) => Promise<boolean>;
   onAgentEvent: (
     listener: (sessionId: string, payload: DesktopEvent) => void
@@ -61,30 +55,28 @@ interface PhoneLaneDeps {
 }
 
 const PHONE_LANE_TIMINGS = {
-  /** Messages this close together become one turn. */
+  ...PHONE_TURN_LIMITS,
+  /** Messages this close together go to the session as one. */
   batchMs: 3_000,
   /** WhatsApp's "typing…" lasts about 25 s. */
   typingRefreshMs: 20_000,
   bubblePauseMinMs: 800,
   bubblePauseMaxMs: 1_200,
-  /** A turn with no end in sight is given up, as the host forces idle. */
-  turnTimeoutMs: 10 * 60_000,
   /** How often to look for a key while signed out. */
   keyWaitMs: 5_000,
-  /** Waits between delivery attempts: three tries over about a minute. */
+  /** Waits before handing refused messages over again: three tries over about a minute. */
   deliveryRetryMs: [15_000, 45_000],
-  /** After an idle with a steer still unheard: how long to wait for it to run. */
-  steerGraceMs: 30_000,
 };
 
 /** The server holds an inbox poll open for at most this long. */
 const INBOX_WAIT_SECS = 25;
 const CALL_TIMEOUT_MS = 20_000;
-const SEEN_IDS_KEPT = 500;
 const REACT_TOOL = "react_to_message";
 /** What the user hears when a turn fails: never silence, never the raw error. */
 const FAILURE_REPLY =
   "Sorry, something went wrong on my side. Could you send that again?";
+
+type TurnReply = Extract<AgentEvent, { type: "turn_reply" }>;
 
 /** What the loop is told for one inbox entry. */
 function phoneTurnText(entry: PhoneInboxEntry): string {
@@ -95,61 +87,29 @@ function phoneTurnText(entry: PhoneInboxEntry): string {
     : "[linked] The user just connected WhatsApp.";
 }
 
-/** A message steered into the running turn; `landed` once the session took it in. */
-type Steer = { entry: PhoneInboxEntry; text: string; landed: boolean };
-
-type Turn = {
-  /** Null until the session opens. */
-  workspaceId: string | null;
-  sessionId: string | null;
-  /** The newest message: replies, typing and reactions go against it. */
-  replyTo: string;
-  /** The batch's own newest message, for when a steer falls back. */
-  batchReplyTo: string;
-  steers: Steer[];
-  /** The batch's inbox entries, acknowledged once the turn has answered them. */
-  ids: string[];
-  startedAt: number;
-  messages: number;
-  /** The session started this turn; idles before it belong to housekeeping. */
-  submitted: boolean;
-  /** The assistant message being written, and the last one with words. */
-  text: string;
-  textMessageId: string | null;
-  lastText: string;
-  /** Sub-agent runs open now; their words are working notes, never sent early. */
-  subtasks: number;
-  textInSubtask: boolean;
-  lastTextInSubtask: boolean;
-  /** Messages the user received this turn: bubbles and progress lines. */
-  sent: number;
-  typing: NodeJS.Timeout | null;
-  timeout: NodeJS.Timeout | null;
-  /** Armed by an idle with a steer unheard: the steer's own run should start. */
-  steerGrace: NodeJS.Timeout | null;
-  ended: boolean;
-};
-
 export class PhoneLane {
   private readonly timings: typeof PHONE_LANE_TIMINGS;
   private readonly log: (line: string) => void;
+  private readonly inbox = new PhoneInbox();
+  private readonly clock: TurnClock;
   private running = false;
   private pollAbort: AbortController | null = null;
   private unsubscribe: (() => void) | null = null;
-  private pending: PhoneInboxEntry[] = [];
   private lastArrivalAt = 0;
   private batchTimer: NodeJS.Timeout | null = null;
-  private turn: Turn | null = null;
-  private readonly seen = new Set<string>();
+  private typing: NodeJS.Timeout | null = null;
+  private session: { workspaceId: string; sessionId: string } | null = null;
+  /** Handoffs in a row the session refused; reset by one it takes. */
+  private refusals = 0;
   /** This start's first poll asks the server for everything still unanswered. */
   private redeliver = true;
   /** Names this start to the server, so a replaced host's open poll stops taking messages. */
   private poller = randomUUID();
   /** The newest message from the user: a turn of notes alone replies against it. */
   private lastInboundId: string | null = null;
-  /** Steers go to the session one at a time, in arrival order. */
-  private steering: Promise<void> = Promise.resolve();
-  /** Everything said to the user goes out in order: progress, early replies, the answer. */
+  /** Handoffs reach the session one at a time, in arrival order. */
+  private sending: Promise<void> = Promise.resolve();
+  /** Everything said to the user goes out in order: progress, answers, apologies. */
   private outbox: Promise<unknown> = Promise.resolve();
 
   constructor(
@@ -158,11 +118,14 @@ export class PhoneLane {
   ) {
     this.timings = { ...PHONE_LANE_TIMINGS, ...timings };
     this.log = deps.log ?? ((line) => console.log(line));
+    this.clock = new TurnClock(this.timings, (reason) => {
+      void this.giveUp(`timeout-${reason}`);
+    });
   }
 
-  /** A phone turn is running or being delivered. */
+  /** The session holds messages the lane has not answered yet. */
   get busy(): boolean {
-    return this.turn != null;
+    return this.inbox.handed().length > 0;
   }
 
   start(): void {
@@ -183,7 +146,7 @@ export class PhoneLane {
     this.unsubscribe = null;
     if (this.batchTimer != null) clearTimeout(this.batchTimer);
     this.batchTimer = null;
-    if (this.turn != null) this.clearTurnTimers(this.turn);
+    this.idle();
   }
 
   private async pollLoop(): Promise<void> {
@@ -224,411 +187,350 @@ export class PhoneLane {
   }
 
   /**
-   * One inbox entry, with "typing…" shown now: steered into the running turn
-   * when it can take it, else queued for the next.
+   * One inbox entry, with "typing…" shown now: steered in while the session
+   * works on earlier messages, else queued for the next handoff.
    */
   arrive(entry: PhoneInboxEntry): void {
     if (typeof entry.id !== "string") return;
-    if (this.seen.has(entry.id)) {
+    const known = this.inbox.get(entry.id);
+    if (known != null) {
       // Back from the server: answered, but the ack was lost (or is on its way).
-      if (!this.inFlight(entry.id)) void this.ack([entry.id]);
+      if (known.state === "answered") void this.ack([known]);
       return;
     }
     if (entry.kind !== "linked" && !entry.text?.trim()) {
-      void this.ack([entry.id]);
+      void this.acknowledge([entry.id]);
       return;
     }
-    this.seen.add(entry.id);
-    if (this.seen.size > SEEN_IDS_KEPT)
-      this.seen.delete(this.seen.values().next().value!);
+    this.inbox.add(entry);
     this.lastInboundId = entry.id;
     this.lastArrivalAt = Date.now();
     void this.channel("typing", { message_id: entry.id });
-    const turn = this.turn;
-    if (turn != null && this.canSteer(turn)) {
-      this.steer(turn, entry);
-      return;
-    }
-    this.pending.push(entry);
-    if (!this.busy) this.armBatch();
-  }
-
-  /** A submitted turn with nothing queued ahead of the message, so order holds. */
-  private canSteer(turn: Turn): boolean {
-    return (
-      !turn.ended &&
-      turn.submitted &&
-      turn.steerGrace == null &&
-      turn.workspaceId != null &&
-      turn.sessionId != null &&
-      this.pending.every((entry) => entry.kind === "note")
-    );
-  }
-
-  /** Into the running turn via the session's own steer; queued as before if it cannot go. */
-  private steer(turn: Turn, entry: PhoneInboxEntry): void {
-    const steer: Steer = { entry, text: phoneTurnText(entry), landed: false };
-    turn.steers.push(steer);
-    turn.replyTo = entry.id;
-    this.steering = this.steering.then(async () => {
-      if (
-        !turn.ended &&
-        this.pending.every((item) => item.kind === "note") &&
-        (await this.sendSteer(turn, steer.text))
-      ) {
-        this.deps.activity();
-        this.log(`[phone] steered turn steers=${turn.steers.length}`);
-        return;
-      }
-      // Ended before it went: the turn's end already queued it.
-      if (!turn.steers.includes(steer)) return;
-      this.log("[phone] steer not taken; queued for the next turn");
-      turn.steers = turn.steers.filter((item) => item !== steer);
-      turn.replyTo = turn.steers.at(-1)?.entry.id ?? turn.batchReplyTo;
-      this.pending.push(entry);
-      if (!this.busy) this.armBatch();
-    });
-  }
-
-  private async sendSteer(turn: Turn, text: string): Promise<boolean> {
-    if (turn.workspaceId == null || turn.sessionId == null) return false;
-    try {
-      return await this.deps.send(turn.workspaceId, turn.sessionId, text);
-    } catch (error) {
-      this.log(`[phone] steer failed: ${describe(error)}`);
-      return false;
-    }
+    const message = this.inbox.get(entry.id)!;
+    if (this.canSteer(message)) this.steer(message);
+    else if (!this.busy) this.armBatch();
   }
 
   /**
    * The host's news for the loop (a connector the user just connected): a
-   * turn of its own, so the user hears it without asking. It answers against
-   * the user's newest message, so with none this start, it waits for one.
+   * handoff of its own, so the user hears it without asking. It answers
+   * against the user's newest message, so with none this start, it waits.
    */
   note(text: string): void {
-    this.pending.push({ id: `note-${randomUUID()}`, kind: "note", text });
+    this.inbox.add({ id: `note-${randomUUID()}`, kind: "note", text });
     this.lastArrivalAt = Date.now();
     if (!this.busy && this.lastInboundId != null) this.armBatch();
   }
 
-  /** Start the next turn once no message has arrived for the batch window. */
-  private armBatch(): void {
-    if (this.batchTimer != null) clearTimeout(this.batchTimer);
-    const wait = Math.max(
-      0,
-      this.lastArrivalAt + this.timings.batchMs - Date.now()
+  /** The session is working and nothing queued is ahead of the message, so order holds. */
+  private canSteer(message: InboundMessage): boolean {
+    return (
+      this.busy &&
+      this.session != null &&
+      this.inbox
+        .queued()
+        .every((queued) => queued === message || queued.entry.kind === "note")
     );
+  }
+
+  /** Into the session's work under the message's own id. */
+  private steer(message: InboundMessage): void {
+    this.inbox.hand([message], message.entry.id);
+    this.clock.touch();
+    void this.handOff([message], message.entry.id);
+  }
+
+  /** Hand everything queued to the session once no message arrived for the batch window. */
+  private armBatch(delayMs?: number): void {
+    if (this.batchTimer != null) clearTimeout(this.batchTimer);
+    const wait =
+      delayMs ??
+      Math.max(0, this.lastArrivalAt + this.timings.batchMs - Date.now());
     this.batchTimer = setTimeout(() => {
       this.batchTimer = null;
-      void this.startTurn();
+      this.startBatch();
     }, wait);
     this.batchTimer.unref?.();
   }
 
-  private async startTurn(): Promise<void> {
-    if (!this.running || this.busy || this.pending.length === 0) return;
-    const replyTo =
-      this.pending.findLast((entry) => entry.kind !== "note")?.id ??
-      this.lastInboundId;
-    if (replyTo == null) return;
-    const batch = this.pending.splice(0);
-    const turn: Turn = {
-      workspaceId: null,
-      sessionId: null,
-      replyTo,
-      batchReplyTo: replyTo,
-      steers: [],
-      ids: batch.flatMap((entry) => (entry.kind === "note" ? [] : [entry.id])),
-      startedAt: Date.now(),
-      messages: batch.length,
-      submitted: false,
-      text: "",
-      textMessageId: null,
-      lastText: "",
-      subtasks: 0,
-      textInSubtask: false,
-      lastTextInSubtask: false,
-      sent: 0,
-      typing: setInterval(
-        () => void this.channel("typing", { message_id: turn.replyTo }),
-        this.timings.typingRefreshMs
-      ),
-      timeout: null,
-      steerGrace: null,
-      ended: false,
-    };
-    turn.typing?.unref?.();
-    this.armTimeout(turn);
-    this.turn = turn;
-    this.deps.activity();
+  private startBatch(): void {
+    if (!this.running || this.busy) return;
+    const batch = this.inbox.queued();
+    if (batch.length === 0) return;
+    // Notes alone answer against the user's newest message; none yet, they wait.
+    if (this.replyTarget(batch) == null) return;
+    const handoff = (
+      batch.findLast((message) => message.entry.kind !== "note") ??
+      batch.at(-1)!
+    ).entry.id;
+    this.inbox.hand(batch, handoff);
+    this.working();
     this.log(
-      `[phone] turn start messages=${batch.length} linked=${batch.filter((entry) => entry.kind === "linked").length}`
+      `[phone] handoff messages=${batch.length} linked=${batch.filter((message) => message.entry.kind === "linked").length}`
     );
-    const text = batch.map(phoneTurnText).join("\n\n");
-    const retries = this.timings.deliveryRetryMs;
-    for (let attempt = 0; ; attempt += 1) {
-      const failure = await this.deliver(turn, text);
-      if (failure == null || turn.ended) return;
-      this.log(`[phone] delivery failed (attempt ${attempt + 1}): ${failure}`);
-      if (attempt >= retries.length || !this.running) break;
-      await sleep(retries[attempt]!);
-      if (turn.ended) return;
-    }
-    await this.endTurn(turn, "undeliverable");
+    void this.handOff(
+      batch,
+      handoff,
+      batch.map((message) => phoneTurnText(message.entry)).join("\n\n")
+    );
   }
 
-  /** One attempt to hand the batch to the session; the reason it failed, or null. */
-  private async deliver(turn: Turn, text: string): Promise<string | null> {
+  /** One send to the session, after those before it; a refusal requeues the messages. */
+  private handOff(
+    messages: InboundMessage[],
+    handoff: string,
+    text = phoneTurnText(messages[0]!.entry)
+  ): Promise<void> {
+    const run = this.sending.then(async () => {
+      if (await this.trySend(text, handoff)) {
+        this.refusals = 0;
+        this.deps.activity();
+        return;
+      }
+      // An expiry may have settled some while the send was out.
+      const refused = messages.filter((message) => message.state === "handed");
+      this.inbox.requeue(refused);
+      this.refusals += 1;
+      this.log(
+        `[phone] session refused handoff (refusal ${this.refusals}); queued again`
+      );
+      this.settle();
+    });
+    this.sending = run.catch((error: unknown) =>
+      this.log(`[phone] handoff failed: ${describe(error)}`)
+    );
+    return run;
+  }
+
+  private async trySend(text: string, handoff: string): Promise<boolean> {
     try {
-      const { workspaceId, sessionId } = await this.deps.openSession();
-      // Before the send: the session's first events can beat its answer.
-      turn.workspaceId = workspaceId;
-      turn.sessionId = sessionId;
-      return (await this.deps.send(workspaceId, sessionId, text))
-        ? null
-        : "the session did not take the message";
+      this.session ??= await this.deps.openSession();
+      const { workspaceId, sessionId } = this.session;
+      return await this.deps.send(workspaceId, sessionId, text, handoff);
     } catch (error) {
-      return describe(error);
+      this.log(`[phone] send failed: ${describe(error)}`);
+      return false;
     }
   }
 
   private onAgentEvent(sessionId: string, payload: DesktopEvent): void {
-    const turn = this.turn;
     if (
-      turn == null ||
-      turn.ended ||
-      turn.sessionId !== sessionId ||
-      payload.type !== "event"
+      this.session?.sessionId !== sessionId ||
+      payload.type !== "event" ||
+      !this.busy
     )
       return;
     const event = payload.event;
+    switch (event.type) {
+      case "turn_reply":
+        void this.finish(event);
+        return;
+      case "user_message_steered":
+      case "user_message_dequeued":
+        if (event.messageId != null)
+          this.log(`[phone] ${event.type} id=${event.messageId}`);
+        this.clock.touch();
+        return;
+      case "text_delta":
+      case "thinking_delta":
+      case "tool_execution_start":
+      case "tool_output_update":
+      case "subtask_start":
+      case "subtask_end":
+        this.clock.touch();
+        return;
+      case "tool_execution_complete":
+        this.clock.touch();
+        this.onToolDone(event);
+        return;
+      default:
+        return;
+    }
+  }
 
-    if (event.type === "status_changed") {
-      if (event.status === AgentStatus.Submitted) {
-        turn.submitted = true;
-        // The run an unheard steer started after the idle: it is that steer's.
-        if (turn.steerGrace != null) {
-          clearTimeout(turn.steerGrace);
-          turn.steerGrace = null;
-          for (const steer of turn.steers) steer.landed = true;
-        }
-      } else if (event.status === AgentStatus.Idle && turn.submitted) {
-        if (turn.steers.some((steer) => !steer.landed)) this.awaitSteer(turn);
-        else void this.endTurn(turn, "ok");
-      }
-      return;
-    }
-    if (event.type === "error") {
-      // Before the turn starts only a missing model is ours; anything else is
-      // a trailing error from the turn before.
-      if (!turn.submitted && event.error?.code !== "model_unavailable") return;
-      // The reason stays in the log; the phone gets what was written so far.
-      this.log(`[phone] turn error code=${event.error?.code ?? "unknown"}`);
-      void this.endTurn(turn, "error");
-      return;
-    }
-    if (!turn.submitted) return;
-    if (event.type === "subtask_start") {
-      turn.subtasks += 1;
-      return;
-    }
-    if (event.type === "subtask_end") {
-      turn.subtasks = Math.max(0, turn.subtasks - 1);
-      return;
-    }
-    if (
-      event.type === "user_message_steered" ||
-      event.type === "user_message_dequeued"
-    ) {
-      const steer = turn.steers.find(
-        (item) => !item.landed && event.content.includes(item.text.trim())
-      );
-      if (steer != null) steer.landed = true;
-      // An answer already written goes now, before the new message gets its own.
-      this.sendEarly(turn, event.type === "user_message_dequeued");
-      return;
-    }
-    if (event.type === "text_delta") {
-      if (
-        event.messageId != null &&
-        turn.textMessageId != null &&
-        event.messageId !== turn.textMessageId
-      )
-        this.closeMessage(turn);
-      if (event.messageId != null) turn.textMessageId = event.messageId;
-      if (turn.text.length === 0) turn.textInSubtask = turn.subtasks > 0;
-      turn.text += event.content;
-      return;
-    }
-    // Words before a tool call are narration unless nothing follows them.
-    if (event.type === "tool_call_start") {
-      this.closeMessage(turn);
-      return;
-    }
-    if (
-      event.type !== "tool_execution_complete" ||
-      event.result.rejected === true
-    )
-      return;
+  private onToolDone(
+    event: Extract<AgentEvent, { type: "tool_execution_complete" }>
+  ): void {
+    if (event.result.rejected === true) return;
+    const replyTo = this.replyTarget(this.inbox.handed());
+    if (replyTo == null) return;
     if (isTool(event.tool.name, REACT_TOOL)) {
       const emoji = event.tool.input.emoji;
       if (isMessageReaction(emoji))
-        void this.channel("react", { message_id: turn.replyTo, emoji });
+        void this.channel("react", { message_id: replyTo, emoji });
       return;
     }
-    // A progress line goes out now; the turn still answers at its end.
+    // A progress line goes out now; it never answers the message.
     if (isTool(event.tool.name, PHONE_PROGRESS_TOOL_NAME)) {
       const text = event.tool.input.text;
       if (typeof text !== "string" || text.trim().length === 0) return;
       this.deps.activity();
-      this.armTimeout(turn);
-      void this.sendInOrder(turn, [text.trim()]).then((sent) => {
-        // A sent message clears WhatsApp's "typing…"; the turn is still working.
-        if (sent > 0 && !turn.ended)
-          void this.channel("typing", { message_id: turn.replyTo });
+      void this.sendInOrder(replyTo, [text.trim()]).then((sent) => {
+        // A sent message clears WhatsApp's "typing…"; the session is still working.
+        if (sent > 0 && this.busy)
+          void this.channel("typing", { message_id: replyTo });
       });
     }
   }
 
-  private closeMessage(turn: Turn): void {
-    if (turn.text.trim().length > 0) {
-      turn.lastText = turn.text;
-      turn.lastTextInSubtask = turn.textInSubtask;
-    }
-    turn.text = "";
-    turn.textInSubtask = false;
-    turn.textMessageId = null;
-  }
-
   /**
-   * A steered message is about to be answered: what the turn already wrote
-   * goes now, or the next answer replaces it. Mid-run that is only the
-   * message being written; once a queued one runs, the last turn's reply.
+   * The session's final answer to the messages it names: answered once that
+   * answer (or, for a failed turn, the apology) reached the user. Otherwise
+   * they are released unacknowledged, and the server hands them back.
    */
-  private sendEarly(turn: Turn, runEnded: boolean): void {
-    const current = turn.text.trim().length > 0 && !turn.textInSubtask;
-    const last =
-      runEnded &&
-      !current &&
-      turn.text.trim().length === 0 &&
-      turn.lastText.trim().length > 0 &&
-      !turn.lastTextInSubtask;
-    const reply = current ? turn.text : last ? turn.lastText : "";
-    turn.text = "";
-    turn.textInSubtask = false;
-    turn.textMessageId = null;
-    if (runEnded) {
-      turn.lastText = "";
-      turn.lastTextInSubtask = false;
+  private async finish(reply: TurnReply): Promise<void> {
+    const messages = this.inbox.handedUnder(reply.messageIds);
+    if (messages.length === 0) return;
+    this.clock.touch();
+    const replyTo = this.replyTarget(messages)!;
+    const bubbles = splitPhoneBubbles(reply.text);
+    const delivered = await this.deliverAnswer(replyTo, bubbles);
+    const apologized = reply.failed && (await this.apologize(replyTo));
+    const answered =
+      apologized || (!reply.failed && (bubbles.length === 0 || delivered));
+    this.log(
+      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}`
+    );
+    await this.close(messages, answered);
+  }
+
+  /** Every bubble out, with one more try for what did not go; true when all went. */
+  private async deliverAnswer(
+    replyTo: string,
+    bubbles: string[]
+  ): Promise<boolean> {
+    if (bubbles.length === 0) return false;
+    const sent = await this.sendInOrder(replyTo, bubbles);
+    if (sent === bubbles.length) return true;
+    const retried = await this.sendInOrder(replyTo, bubbles.slice(sent));
+    return sent + retried === bubbles.length;
+  }
+
+  /** The session's work ran out of time: what it holds gets the apology. */
+  private async giveUp(reason: string): Promise<void> {
+    const messages = this.inbox.handed();
+    if (messages.length === 0) return;
+    const apologized = await this.apologize(this.replyTarget(messages)!);
+    this.log(
+      `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`
+    );
+    await this.close(messages, apologized);
+  }
+
+  /** Answered and acknowledged, or released for the server to hand back. */
+  private async close(
+    messages: InboundMessage[],
+    answered: boolean
+  ): Promise<void> {
+    // A timeout may have settled some while the answer was going out.
+    const open = messages.filter((message) => message.state === "handed");
+    if (answered) {
+      this.inbox.answer(open);
+      if (this.running) await this.ack(open);
+    } else {
+      this.inbox.release(open);
     }
-    const bubbles = splitPhoneBubbles(reply);
-    if (bubbles.length > 0) void this.sendInOrder(turn, bubbles);
+    this.deps.activity();
+    this.settle();
   }
 
-  /**
-   * Idle with a steer the session never reported taking: it reached an idle
-   * session and starts a run of its own. What was written goes now; the turn
-   * waits briefly for that run.
-   */
-  private awaitSteer(turn: Turn): void {
-    this.sendEarly(turn, true);
-    turn.submitted = false;
-    turn.steerGrace = setTimeout(
-      () => void this.endTurn(turn, "ok"),
-      this.timings.steerGraceMs
-    );
-    turn.steerGrace.unref?.();
+  /** Nothing handed any more: stop the clocks, and hand over what waited. */
+  private settle(): void {
+    if (this.busy) return;
+    this.idle();
+    const queued = this.inbox.queued();
+    if (queued.length === 0) return;
+    const retries = this.timings.deliveryRetryMs;
+    if (this.refusals === 0) this.armBatch();
+    else if (this.refusals <= retries.length)
+      this.armBatch(retries[this.refusals - 1]);
+    else void this.undeliverable(queued);
   }
 
-  /** A turn that keeps reporting progress is working, not stuck: its clock restarts. */
-  private armTimeout(turn: Turn): void {
-    if (turn.timeout != null) clearTimeout(turn.timeout);
-    turn.timeout = setTimeout(
-      () => void this.endTurn(turn, "timeout"),
-      this.timings.turnTimeoutMs
+  /** The session refused every try: the user hears it once, and the messages are done. */
+  private async undeliverable(messages: InboundMessage[]): Promise<void> {
+    this.refusals = 0;
+    const replyTo = this.replyTarget(messages);
+    const apologized = replyTo != null && (await this.apologize(replyTo));
+    this.log(
+      `[phone] undeliverable messages=${messages.length} apology=${apologized ? 1 : 0}`
     );
-    turn.timeout.unref?.();
+    if (!apologized) return;
+    const waiting = messages.filter((message) => message.state === "queued");
+    this.inbox.answer(waiting);
+    await this.ack(waiting);
+  }
+
+  private async apologize(replyTo: string): Promise<boolean> {
+    if (!this.running) return false;
+    return (await this.sendInOrder(replyTo, [FAILURE_REPLY])) === 1;
+  }
+
+  /** The session took work: the clock runs and the user sees "typing…". */
+  private working(): void {
+    this.clock.start();
+    this.deps.activity();
+    if (this.typing != null) return;
+    this.typing = setInterval(() => {
+      const replyTo = this.replyTarget(this.inbox.handed());
+      if (replyTo != null) void this.channel("typing", { message_id: replyTo });
+    }, this.timings.typingRefreshMs);
+    this.typing.unref?.();
+  }
+
+  private idle(): void {
+    this.clock.stop();
+    if (this.typing != null) clearInterval(this.typing);
+    this.typing = null;
+  }
+
+  /** The newest of these from the user, else the user's newest message. */
+  private replyTarget(messages: readonly InboundMessage[]): string | null {
+    return (
+      messages.findLast((message) => message.entry.kind !== "note")?.entry.id ??
+      this.lastInboundId
+    );
   }
 
   /** Bubbles to the user after whatever is already on its way; resolves with how many went. */
-  private sendInOrder(turn: Turn, bubbles: string[]): Promise<number> {
-    const run = this.outbox.then(() => this.sendBubbles(turn, bubbles));
+  private sendInOrder(replyTo: string, bubbles: string[]): Promise<number> {
+    const run = this.outbox.then(() => this.sendBubbles(replyTo, bubbles));
     this.outbox = run.catch(() => 0);
     return run;
   }
 
-  private async sendBubbles(turn: Turn, bubbles: string[]): Promise<number> {
+  private async sendBubbles(
+    replyTo: string,
+    bubbles: string[]
+  ): Promise<number> {
     let sent = 0;
     for (const bubble of bubbles) {
       if (!this.running) break;
       if (sent > 0) {
-        void this.channel("typing", { message_id: turn.replyTo });
+        void this.channel("typing", { message_id: replyTo });
         await sleep(
           this.timings.bubblePauseMinMs +
             Math.random() *
               (this.timings.bubblePauseMaxMs - this.timings.bubblePauseMinMs)
         );
       }
-      if (
-        !(await this.channel("reply", {
-          message_id: turn.replyTo,
-          text: bubble,
-        }))
-      )
+      if (!(await this.channel("reply", { message_id: replyTo, text: bubble })))
         break;
       sent += 1;
     }
-    turn.sent += sent;
     return sent;
   }
 
-  private async endTurn(turn: Turn, outcome: string): Promise<void> {
-    if (turn.ended) return;
-    turn.ended = true;
-    this.clearTurnTimers(turn);
-    const reply = turn.text.trim().length > 0 ? turn.text : turn.lastText;
-    const bubbles = splitPhoneBubbles(reply);
-    const sent = await this.sendInOrder(turn, bubbles);
-    // At most once per batch, after whatever the turn did manage to say.
-    const apologized =
-      outcome !== "ok" &&
-      this.running &&
-      (await this.channel("reply", {
-        message_id: turn.replyTo,
-        text: FAILURE_REPLY,
-      }));
-    this.log(
-      `[phone] turn end outcome=${outcome} ms=${Date.now() - turn.startedAt} messages=${turn.messages} bubbles=${sent}/${bubbles.length} apology=${apologized ? 1 : 0}`
-    );
-    // Answered (or apologized for): never hand it over again. Otherwise the
-    // server redelivers it, to this host later or to the next one.
-    // An "ok" whose every bubble failed to send was never seen: keep it.
-    const answered =
-      turn.sent > 0 || apologized || (outcome === "ok" && bubbles.length === 0);
-    // A steer the session never took runs as the next turn, ahead of what came after.
-    const heard = turn.steers.filter((steer) => steer.landed);
-    this.pending.unshift(
-      ...turn.steers
-        .filter((steer) => !steer.landed)
-        .map((steer) => steer.entry)
-    );
-    turn.steers = heard;
-    if (this.running && answered)
-      await this.ack([...turn.ids, ...heard.map((steer) => steer.entry.id)]);
-    this.deps.activity();
-    if (this.turn === turn) this.turn = null;
-    if (this.pending.length > 0) this.armBatch();
-  }
-
-  private inFlight(id: string): boolean {
-    return (
-      this.pending.some((entry) => entry.id === id) ||
-      (this.turn?.ids.includes(id) ?? false) ||
-      (this.turn?.steers.some((steer) => steer.entry.id === id) ?? false)
+  /** The server's messages among these; the host's own notes have nothing to acknowledge. */
+  private ack(messages: readonly InboundMessage[]): Promise<void> {
+    return this.acknowledge(
+      messages
+        .filter((message) => message.entry.kind !== "note")
+        .map((message) => message.entry.id)
     );
   }
 
-  private async ack(ids: string[]): Promise<void> {
+  private async acknowledge(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     try {
       await this.deps.call(
@@ -638,15 +540,6 @@ export class PhoneLane {
     } catch (error) {
       this.log(`[phone] ack failed: ${describe(error)}`);
     }
-  }
-
-  private clearTurnTimers(turn: Turn): void {
-    if (turn.typing != null) clearInterval(turn.typing);
-    if (turn.timeout != null) clearTimeout(turn.timeout);
-    if (turn.steerGrace != null) clearTimeout(turn.steerGrace);
-    turn.typing = null;
-    turn.timeout = null;
-    turn.steerGrace = null;
   }
 
   /** One fire-and-report channel call; true when the server took it. */

@@ -1,12 +1,22 @@
 /**
- * The hosted computer's browser: the Chromium its Python Playwright install
- * brought, launched headless by the app and driven over CDP on a pipe. It
- * serves the same browser tools the desktop's own view does, through the tab
- * pages the user's-Chrome engine uses.
+ * The hosted computer's browser: a headless Chromium the app launches and
+ * drives over CDP on a pipe. It serves the same browser tools the desktop's
+ * own view does, through the tab pages the user's-Chrome engine uses.
+ *
+ * - `HostedChromiumLauncher` owns the executable path, the sandbox decision,
+ *   the profile lock and launch failures (a typed result, never raw text).
+ * - `CdpBrowser` is one running Chromium as a tab driver.
+ * - `HostedChromiumService` is what the browser tools see: launch on first use.
  */
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readlinkSync,
+  rmSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Readable, Writable } from "node:stream";
@@ -14,6 +24,9 @@ import type { Readable, Writable } from "node:stream";
 import type { BrowserTargetSource } from "../browser-target";
 import type { ChromeRelayEvents, ChromeTabInfo } from "./chrome-relay";
 import { ChromeTargetSource } from "./chrome-target-source";
+
+/** Names the Chromium to use; without it the Playwright lookup below runs. */
+const HOSTED_CHROMIUM_ENV = "ABACUSAI_BOT_CHROMIUM";
 
 const PYTHON_LOOKUP_TIMEOUT_MS = 20_000;
 const PYTHON_LOOKUP = [
@@ -87,10 +100,13 @@ export async function findHostedChromium(
   return (await pythonChromium()) ?? chromiumInCache(playwrightCacheRoots(env));
 }
 
-/** Launch flags: headless, no sandbox (the computer is the sandbox), software GL. */
-export const hostedChromiumArgs = (userDataDir: string): string[] => [
+/** Launch flags: headless, software GL, the CDP pipe, and the profile. */
+export const hostedChromiumArgs = (
+  userDataDir: string,
+  sandboxed: boolean
+): string[] => [
   "--headless=new",
-  "--no-sandbox",
+  ...(sandboxed ? [] : ["--no-sandbox"]),
   "--use-gl=swiftshader",
   "--enable-unsafe-swiftshader",
   "--remote-debugging-pipe",
@@ -132,7 +148,7 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   constructor(
     private readonly options: {
       executable: string;
-      userDataDir: string;
+      args: string[];
       spawn?: typeof spawn;
     }
   ) {
@@ -144,10 +160,9 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   }
 
   async launch(): Promise<void> {
-    mkdirSync(this.options.userDataDir, { recursive: true });
     const child = (this.options.spawn ?? spawn)(
       this.options.executable,
-      hostedChromiumArgs(this.options.userDataDir),
+      this.options.args,
       { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] }
     );
     this.child = child;
@@ -339,44 +354,191 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   }
 }
 
+export type HostedChromiumFailure =
+  | "not-found"
+  | "profile-in-use"
+  | "launch-failed";
+
+/** What the model sees for each failure: stable and generic; details go to the log. */
+const FAILURE_MESSAGES: Record<HostedChromiumFailure, string> = {
+  "not-found": "No browser is available on this computer.",
+  "profile-in-use":
+    "The browser profile is in use by another browser. Try again shortly.",
+  "launch-failed": "The browser could not start.",
+};
+
+export class HostedChromiumLaunchError extends Error {
+  constructor(readonly code: HostedChromiumFailure) {
+    super(FAILURE_MESSAGES[code]);
+    this.name = "HostedChromiumLaunchError";
+  }
+}
+
+export type HostedChromiumLaunch =
+  | { ok: true; browser: CdpBrowser }
+  | { ok: false; error: HostedChromiumLaunchError };
+
+const LAUNCH_TIMEOUT_MS = 30_000;
+const SINGLETON_FILES = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
+
+const isPidAlive = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+};
+
 /**
- * The hosted browser for the browser tools: found once, launched on first
- * use and again after it exits. Without a Chromium it is simply unavailable.
+ * The profile lock is Chromium's own SingletonLock, a `host-pid` symlink: a
+ * live owner here keeps the profile; a dead one, or another host's, is cleared.
+ */
+const claimChromiumProfile = (userDataDir: string): boolean => {
+  let owner: string;
+  try {
+    owner = readlinkSync(path.join(userDataDir, "SingletonLock"));
+  } catch {
+    return true;
+  }
+  const match = /^(.+)-(\d+)$/.exec(owner);
+  if (match?.[1] === os.hostname() && isPidAlive(Number(match[2])))
+    return false;
+  for (const name of SINGLETON_FILES)
+    rmSync(path.join(userDataDir, name), { force: true });
+  return true;
+};
+
+type LauncherOptions = {
+  userDataDir: () => string;
+  /** The hosted computer, which is itself the sandbox. */
+  hosted: () => boolean;
+  env?: NodeJS.ProcessEnv;
+  find?: (env: NodeJS.ProcessEnv) => Promise<string | null>;
+  isRoot?: () => boolean;
+  spawn?: typeof spawn;
+  log?: (line: string) => void;
+  launchTimeoutMs?: number;
+};
+
+/** Finds and launches the Chromium; every failure is a typed result. */
+export class HostedChromiumLauncher {
+  private executable: string | null = null;
+  private resolving: Promise<string | null> | null = null;
+
+  constructor(private readonly options: LauncherOptions) {}
+
+  get found(): boolean {
+    return this.executable != null;
+  }
+
+  /** The executable: resolved once, and looked up again on each call while none was found. */
+  resolve(): Promise<string | null> {
+    if (this.executable != null) return Promise.resolve(this.executable);
+    this.resolving ??= this.lookUp().finally(() => {
+      this.resolving = null;
+    });
+    return this.resolving;
+  }
+
+  /** Chromium refuses its sandbox as root; on the hosted computer it adds nothing. */
+  sandboxed(): boolean {
+    const isRoot = this.options.isRoot ?? (() => process.getuid?.() === 0);
+    return !(isRoot() || this.options.hosted());
+  }
+
+  async launch(): Promise<HostedChromiumLaunch> {
+    const executable = await this.resolve();
+    if (executable == null) return this.failure("not-found");
+    const userDataDir = this.options.userDataDir();
+    let browser: CdpBrowser | null = null;
+    try {
+      mkdirSync(userDataDir, { recursive: true });
+      if (!claimChromiumProfile(userDataDir)) {
+        this.log(`[browser] ${userDataDir} is held by a live Chromium`);
+        return this.failure("profile-in-use");
+      }
+      browser = new CdpBrowser({
+        executable,
+        args: hostedChromiumArgs(userDataDir, this.sandboxed()),
+        ...(this.options.spawn != null ? { spawn: this.options.spawn } : {}),
+      });
+      await this.withinTimeout(browser.launch());
+      return { ok: true, browser };
+    } catch (error) {
+      browser?.close();
+      this.log(
+        `[browser] launch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return this.failure("launch-failed");
+    }
+  }
+
+  private async lookUp(): Promise<string | null> {
+    const env = this.options.env ?? process.env;
+    const configured = env[HOSTED_CHROMIUM_ENV];
+    if (configured != null && configured.length > 0) {
+      if (existsSync(configured)) {
+        this.log(
+          `[browser] Chromium from ${HOSTED_CHROMIUM_ENV}: ${configured}`
+        );
+        this.executable = configured;
+        return configured;
+      }
+      this.log(
+        `[browser] ${HOSTED_CHROMIUM_ENV} is not a file (${configured}); looking elsewhere`
+      );
+    }
+    const found = await (this.options.find ?? findHostedChromium)(env).catch(
+      () => null
+    );
+    this.log(
+      found == null
+        ? "[browser] no Chromium found; the built-in browser is off for now"
+        : `[browser] Chromium from the Playwright lookup: ${found}`
+    );
+    this.executable = found;
+    return found;
+  }
+
+  private withinTimeout(launched: Promise<void>): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("no answer on the CDP pipe")),
+        this.options.launchTimeoutMs ?? LAUNCH_TIMEOUT_MS
+      );
+    });
+    return Promise.race([launched, timeout]).finally(() => clearTimeout(timer));
+  }
+
+  private failure(code: HostedChromiumFailure): HostedChromiumLaunch {
+    return { ok: false, error: new HostedChromiumLaunchError(code) };
+  }
+
+  private log(line: string): void {
+    (this.options.log ?? console.log)(line);
+  }
+}
+
+/**
+ * The hosted browser for the browser tools: launched on first use and again
+ * after it exits. Without a Chromium it is simply unavailable.
  */
 export class HostedChromiumService {
-  private lookup: Promise<string | null> | null = null;
-  private executable: string | null = null;
   private browser: CdpBrowser | null = null;
   private source: ChromeTargetSource | null = null;
   private launching: Promise<ChromeTargetSource> | null = null;
 
-  constructor(
-    private readonly options: {
-      userDataDir: () => string;
-      find?: () => Promise<string | null>;
-      spawn?: typeof spawn;
-      log?: (line: string) => void;
-    }
-  ) {}
+  constructor(private readonly launcher: HostedChromiumLauncher) {}
 
-  /** Looks for the executable once; true when there is one. */
+  /** True once there is a Chromium; looks again while there is none. */
   async ready(): Promise<boolean> {
-    this.lookup ??= (this.options.find ?? findHostedChromium)()
-      .catch(() => null)
-      .then((found) => {
-        this.executable = found;
-        (this.options.log ?? console.log)(
-          found == null
-            ? "[browser] no Chromium found; the built-in browser is off"
-            : `[browser] built-in browser: ${found}`
-        );
-        return found;
-      });
-    return (await this.lookup) != null;
+    return (await this.launcher.resolve()) != null;
   }
 
   available(): boolean {
-    return this.executable != null;
+    return this.launcher.found;
   }
 
   targetSource(): BrowserTargetSource {
@@ -399,18 +561,11 @@ export class HostedChromiumService {
   }
 
   private async launch(): Promise<ChromeTargetSource> {
-    const executable = this.executable;
-    if (executable == null) throw new Error("No browser on this computer.");
-    const browser = new CdpBrowser({
-      executable,
-      userDataDir: this.options.userDataDir(),
-      ...(this.options.spawn != null ? { spawn: this.options.spawn } : {}),
-    });
-    const source = new ChromeTargetSource(browser);
-    await browser.launch();
-    this.browser = browser;
-    this.source = source;
-    return source;
+    const launched = await this.launcher.launch();
+    if ("error" in launched) throw launched.error;
+    this.browser = launched.browser;
+    this.source = new ChromeTargetSource(launched.browser);
+    return this.source;
   }
 
   dispose(): void {

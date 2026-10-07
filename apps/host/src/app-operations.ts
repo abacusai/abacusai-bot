@@ -37,7 +37,6 @@ export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   homeDir: homedir,
   botHome: abacusBotHome,
   restartApp: () => shutdown(75),
-  hasGoogleChrome: () => false,
   reportFunnelStep: (step, detail, once) => {
     if (isFunnelStep(step))
       (once ? reportFunnelStepOnce : reportFunnelStep)(

@@ -158,15 +158,29 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
 });
 describe("the phone lane", () => {
-  const lane = (steerTaken = true) => {
+  const lane = (
+    options: {
+      refuse?: (messageId: string) => boolean;
+      replyFails?: (text: string) => boolean;
+      timings?: Record<string, number>;
+    } = {}
+  ) => {
     const calls: Array<Record<string, unknown>> = [];
     let listener: (sessionId: string, payload: never) => void = () => {};
-    const send = vi.fn(async () => steerTaken || send.mock.calls.length !== 2);
+    const send = vi.fn(
+      async (_w: string, _s: string, _text: string, messageId: string) =>
+        !(options.refuse?.(messageId) ?? false)
+    );
     const activity = vi.fn();
     const phone = new PhoneLane(
       {
         call: (async (body: Record<string, unknown>) => {
           calls.push(body);
+          if (
+            body.action === "reply" &&
+            options.replyFails?.(String(body.text)) === true
+          )
+            return { ok: false, error: "closed" };
           return { ok: true };
         }) as never,
         hasKey: () => false,
@@ -184,22 +198,33 @@ describe("the phone lane", () => {
         keyWaitMs: 60_000,
         bubblePauseMinMs: 0,
         bubblePauseMaxMs: 0,
+        deliveryRetryMs: [0, 0],
+        ...options.timings,
       }
     );
     phone.start();
     const event = (inner: Record<string, unknown>) =>
       listener("s", { type: "event", event: inner } as never);
-    const status = (status: string) =>
-      event({ type: "status_changed", status });
+    const reply = (messageIds: string[], text: string, failed = false) =>
+      event({ type: "turn_reply", messageIds, text, failed });
     const replies = () => calls.filter((body) => body.action === "reply");
-    return { phone, calls, send, activity, event, status, replies };
+    const acks = () =>
+      calls
+        .filter((body) => body.action === "ack")
+        .map((body) => body.message_ids);
+    return { phone, calls, send, activity, event, reply, replies, acks };
   };
 
-  it("sends a progress line at once, quoting the message, and counts it as activity", async () => {
-    const { phone, send, activity, event, status, replies, calls } = lane();
+  it("sends a progress line at once and acks only once the final answer is out", async () => {
+    const { phone, send, activity, event, reply, replies, acks } = lane();
     phone.arrive({ id: "m1", text: "find flights to Goa" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    status("submitted");
+    expect(send).toHaveBeenLastCalledWith(
+      "w",
+      "s",
+      "find flights to Goa",
+      "m1"
+    );
     const before = activity.mock.calls.length;
 
     event({
@@ -214,43 +239,35 @@ describe("the phone lane", () => {
       ])
     );
     expect(activity.mock.calls.length).toBeGreaterThan(before);
+    expect(acks()).toEqual([]);
     expect(phone.busy).toBe(true);
-    event({
-      type: "text_delta",
-      content: "Cheapest is 4,200.",
-      messageId: "a",
-    });
-    status("idle");
-    await vi.waitFor(() =>
-      expect(calls.at(-1)).toEqual({ action: "ack", message_ids: ["m1"] })
-    );
+    reply(["m1"], "Cheapest is 4,200.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
     expect(replies().map((body) => body.text)).toEqual([
       "On it: Goa flights",
       "Cheapest is 4,200.",
     ]);
+    expect(phone.busy).toBe(false);
     phone.stop();
   });
 
-  it("steers a message into the running turn and answers against it", async () => {
-    const { phone, send, event, status, replies, calls } = lane();
+  it("steers a message in by its id and answers against it once the session names it", async () => {
+    const { phone, send, event, reply, replies, acks, calls } = lane();
     phone.arrive({ id: "m1", text: "find flights to Goa" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    status("submitted");
 
     phone.arrive({ id: "m2", text: "only nonstop" });
 
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
-    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop");
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop", "m2");
     expect(calls).toContainEqual({ action: "typing", message_id: "m2" });
-    event({ type: "user_message_steered", content: "only nonstop" });
-    event({ type: "text_delta", content: "Nonstop: 5,100.", messageId: "a" });
-    status("idle");
-    await vi.waitFor(() =>
-      expect(calls.at(-1)).toEqual({
-        action: "ack",
-        message_ids: ["m1", "m2"],
-      })
-    );
+    event({
+      type: "user_message_steered",
+      content: "only nonstop",
+      messageId: "m2",
+    });
+    reply(["m1", "m2"], "Nonstop: 5,100.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
     expect(replies()).toEqual([
       { action: "reply", message_id: "m2", text: "Nonstop: 5,100." },
     ]);
@@ -258,44 +275,136 @@ describe("the phone lane", () => {
     phone.stop();
   });
 
-  it("sends an answer already written before a queued message runs as its own turn", async () => {
-    const { phone, send, event, status, replies } = lane();
-    phone.arrive({ id: "m1", text: "what is 2+2" });
+  it("requeues a refused steer exactly once and hands it over after the turn", async () => {
+    let refusals = 0;
+    const { phone, send, reply, replies, acks } = lane({
+      refuse: (id) => id === "m2" && refusals++ === 0,
+    });
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    status("submitted");
-    event({ type: "text_delta", content: "4", messageId: "a" });
-    phone.arrive({ id: "m2", text: "thanks" });
+    phone.arrive({ id: "m2", text: "only nonstop" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
 
-    event({ type: "user_message_dequeued", content: "thanks" });
-
-    await vi.waitFor(() => expect(replies().map((b) => b.text)).toEqual(["4"]));
-    event({ type: "text_delta", content: "Anytime!", messageId: "b" });
-    status("idle");
-    await vi.waitFor(() =>
-      expect(replies().map((b) => b.text)).toEqual(["4", "Anytime!"])
-    );
+    // The session never names a refused message: only m1 is this turn's.
+    reply(["m1", "m2"], "Found 3 flights.");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop", "m2");
+    expect(acks()).toEqual([["m1"]]);
+    reply(["m2"], "Two of them are nonstop.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    expect(replies().map((body) => [body.message_id, body.text])).toEqual([
+      ["m1", "Found 3 flights."],
+      ["m2", "Two of them are nonstop."],
+    ]);
+    expect(send).toHaveBeenCalledTimes(3);
     phone.stop();
   });
 
-  it("queues the message for the next turn when the steer is not taken", async () => {
-    const { phone, send, event, status, replies, calls } = lane(false);
-    phone.arrive({ id: "m1", text: "find flights to Goa" });
+  it("treats the same text twice as two messages, each answered by its own id", async () => {
+    const { phone, send, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "book a table" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    status("submitted");
-
-    phone.arrive({ id: "m2", text: "only nonstop" });
-    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
-    event({ type: "text_delta", content: "Found 3 flights.", messageId: "a" });
-    status("idle");
-
+    phone.arrive({ id: "m2", text: "ok" });
+    phone.arrive({ id: "m3", text: "ok" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
-    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop");
-    expect(calls).toContainEqual({ action: "ack", message_ids: ["m1"] });
-    expect(replies()).toEqual([
-      { action: "reply", message_id: "m1", text: "Found 3 flights." },
-    ]);
+    expect(send.mock.calls.map((call) => call[3])).toEqual(["m1", "m2", "m3"]);
+
+    reply(["m1", "m2"], "Booked for 8.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
+    expect(phone.busy).toBe(true);
+    reply(["m3"], "Anything else?");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"], ["m3"]]));
+    expect(replies().map((body) => body.message_id)).toEqual(["m2", "m3"]);
     phone.stop();
+  });
+
+  it("never acks on progress alone: a final answer that cannot be sent is left for redelivery", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      replyFails: (text) => text === "Here it is.",
+    });
+    phone.arrive({ id: "m1", text: "plan my trip" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_progress", input: { text: "Working on it" } },
+      result: { rejected: false },
+    });
+    reply(["m1"], "Here it is.");
+
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+    // Tried, then tried once more.
+    expect(replies().map((body) => body.text)).toEqual([
+      "Working on it",
+      "Here it is.",
+      "Here it is.",
+    ]);
+    expect(acks()).toEqual([]);
+
+    // The server hands it back: a new message, not a lost ack.
+    phone.arrive({ id: "m1", text: "plan my trip" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    phone.stop();
+  });
+
+  it("acks a failed turn once the apology is out", async () => {
+    const { phone, send, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "", true);
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toHaveLength(1);
+    phone.stop();
+  });
+
+  it("restarts the idle limit on tool progress and gives up at the hard cap", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, event, replies, acks } = lane({
+        timings: { idleMs: 1_000, hardCapMs: 5_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+
+      for (let step = 0; step < 4; step += 1) {
+        await vi.advanceTimersByTimeAsync(900);
+        event({ type: "tool_execution_start", tool: { name: "browser_task" } });
+      }
+      // 3.6 s in, never idle for 1 s: still working.
+      expect(phone.busy).toBe(true);
+      expect(replies()).toEqual([]);
+
+      for (let step = 0; step < 2; step += 1) {
+        await vi.advanceTimersByTimeAsync(900);
+        event({ type: "text_delta", content: "…", messageId: "a" });
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      // Past the cap however busy: the user gets the apology, and the message is done.
+      expect(phone.busy).toBe(false);
+      expect(replies()).toHaveLength(1);
+      expect(acks()).toEqual([["m1"]]);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up after the idle limit with no sign of work", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, replies } = lane({
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(phone.busy).toBe(false);
+      expect(replies()).toHaveLength(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 afterAll(() => {

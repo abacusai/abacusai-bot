@@ -91,7 +91,7 @@ export const composeNodeHost = async () => {
     () => resolveAbacusApiKey() != null,
     host.adoptAbacusCredential
   );
-  // The built-in browser is the computer's own Chromium: found now, launched on first use.
+  // The Chromium path (ABACUSAI_BOT_CHROMIUM, else a lookup) is resolved now; launched on first use.
   void serviceHost.prepareHostedBrowser();
   if (process.env.ABACUSAI_BOT_DEBUG_SYNC_URL)
     serviceHost.startBackgroundSync();
@@ -165,8 +165,13 @@ export const composeNodeHost = async () => {
     }),
     hasKey: () => resolveAbacusApiKey() != null,
     openSession: openPhoneSession,
-    send: (workspaceId, sessionId, message) =>
-      serviceHost.sendAgentMessage({ workspaceId, sessionId, message }),
+    send: (workspaceId, sessionId, message, messageId) =>
+      serviceHost.sendAgentMessage({
+        workspaceId,
+        sessionId,
+        message,
+        messageId,
+      }),
     onAgentEvent: (listener) => serviceHost.onAgentEvent(listener),
     activity: () => lease.activity(),
   });

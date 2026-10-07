@@ -290,7 +290,10 @@ import { effectiveBotModel } from "./services/bots/effective-model";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
-import { HostedChromiumService } from "./services/browser/chrome/hosted-chromium";
+import {
+  HostedChromiumLauncher,
+  HostedChromiumService,
+} from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import {
   buildAgentAuthEnv,
@@ -356,6 +359,7 @@ import {
   type McpTokenState,
   signInToMcpServer,
 } from "./services/mcp/mcp-oauth-service";
+import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
 import {
   listPairing,
   readGatewaySettings,
@@ -893,9 +897,12 @@ export class ServiceHost {
       }),
   });
   /** The hosted computer's own Chromium: web-host's built-in browser. */
-  private readonly hostedChromium = new HostedChromiumService({
-    userDataDir: () => path.join(abacusBotHome(), "browser-profile"),
-  });
+  private readonly hostedChromium = new HostedChromiumService(
+    new HostedChromiumLauncher({
+      userDataDir: () => path.join(abacusBotHome(), "browser-profile"),
+      hosted: () => this.platform === "web-host",
+    })
+  );
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
     platform: () => this.platform,
     hostedBrowser: this.hostedChromium,
@@ -1954,9 +1961,7 @@ export class ServiceHost {
     }
 
     this.initializedAt = new Date().toISOString();
-    // The browser is built in: the connector entry the app once wrote would run twice.
-    if (this.mcpConfigService.removeRetiredBrowserServer("code"))
-      console.log("[mcp] removed the retired playwright connector entry");
+    retirePlaywrightEntries(this.mcpConfigService);
     this.workspaceService.initialize();
     const workspaceIds = this.workspaceService.getWorkspaces().map((w) => w.id);
     this.agentSessionManagerService.initialize(workspaceIds);
@@ -4578,7 +4583,7 @@ export class ServiceHost {
     return { workspaceId: session.workspaceId, sessionId: session.id };
   }
 
-  /** Web-host: finds the computer's Chromium so the first session has a browser. */
+  /** Web-host start: resolves the Chromium path (env var, else the lookup) and logs it. */
   prepareHostedBrowser(): Promise<boolean> {
     return this.hostedChromium.ready();
   }

@@ -91,10 +91,11 @@ describe("the built-in browser on every platform", () => {
   ) => {
     const { BuiltinMcpLifecycle } = await import("./builtin-mcp-lifecycle");
     const written: Array<Record<string, unknown>> = [];
-    const ready = vi.fn(async () => chromium);
+    let found = chromium;
+    const ready = vi.fn(async () => found);
     const lifecycle = new BuiltinMcpLifecycle({
       platform: () => platform,
-      hostedBrowser: { ready, available: () => chromium },
+      hostedBrowser: { ready, available: () => found },
       mcpConfigService: {
         isBuiltinBrowserDisabled: () => disabledByUser,
         isBuiltinDevicesDisabled: () => true,
@@ -115,7 +116,10 @@ describe("the built-in browser on every platform", () => {
       emitEvent: () => {},
       flushPermissions: () => {},
     } as never);
-    return { lifecycle, written, ready };
+    const install = () => {
+      found = true;
+    };
+    return { lifecycle, written, ready, install };
   };
 
   it("web-host always has it when the computer has a Chromium, whatever the setting", async () => {
@@ -139,6 +143,23 @@ describe("the built-in browser on every platform", () => {
 
     expect(lifecycle.isBrowserEnabled()).toBe(false);
     expect(written[0]).toEqual({});
+  });
+
+  it("web-host looks for a Chromium again on the next session while it has none", async () => {
+    const { lifecycle, written, ready, install } = await lifecycleFor(
+      "web-host",
+      false
+    );
+    await lifecycle.getRuntimeMcpPathForSpawn("code", "s1");
+    install();
+
+    await lifecycle.getRuntimeMcpPathForSpawn("code", "s2");
+
+    expect(ready).toHaveBeenCalledTimes(2);
+    expect(written.map((builtins) => Object.keys(builtins))).toEqual([
+      [],
+      ["browser"],
+    ]);
   });
 
   it("the desktop keeps its own view and the user's switch", async () => {

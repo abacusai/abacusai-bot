@@ -65,6 +65,9 @@ export const toolRequest = (
 export class ScriptedSession {
   readonly sent: string[] = [];
   readonly steered: string[] = [];
+  /** The sender's id per send and per steer, in order; undefined when none. */
+  readonly sentIds: Array<string | undefined> = [];
+  readonly steeredIds: Array<string | undefined> = [];
   readonly answers: Array<{
     permissionId: string;
     decision: PermissionDecision;
@@ -130,6 +133,7 @@ export class ScriptedSession {
     this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
     this.sends += 1;
     this.sent.push(text);
+    this.sentIds.push(turn?.messageId);
 
     const generation = this.generation;
     let settled = false;
@@ -264,8 +268,9 @@ export class ScriptedSession {
     waiter(decision);
   }
 
-  async steer(message: string): Promise<void> {
+  async steer(message: string, messageId?: string): Promise<void> {
     this.steered.push(message);
+    this.steeredIds.push(messageId);
   }
 
   dropSteers(): void {}

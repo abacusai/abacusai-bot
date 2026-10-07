@@ -36,6 +36,8 @@ export interface DesktopState {
   builtinDevicesDisabled?: boolean;
   /** Permission policy for the built-in device (simulator/emulator) MCP tools. Default 'ask'. */
   builtinDevicesApproval?: BrowserApproval;
+  /** Set once the app-written Playwright connector entries were retired. */
+  playwrightEntriesRetired?: boolean;
 }
 
 /** Names that cannot be used as object keys without changing the object itself. */
@@ -59,31 +61,6 @@ const withoutPlaceholderHeaders = (entry: McpServerEntry): McpServerEntry => {
   return Object.keys(kept).length === Object.keys(headers).length
     ? entry
     : { ...entry, headers: kept };
-};
-
-/**
- * The browser connector entries the app once wrote; the browser is built in
- * now, so an untouched one would run a second browser beside it.
- */
-const RETIRED_BROWSER_SERVER = "playwright";
-const RETIRED_BROWSER_ARGS = [
-  ["-y", "@playwright/mcp@0.0.80"],
-  ["-y", "@playwright/mcp@latest"],
-];
-
-const isRetiredBrowserEntry = (entry: McpServerEntry): boolean => {
-  const { command, args, disabled, ...rest } = entry;
-  return (
-    Object.keys(rest).length === 0 &&
-    (disabled === undefined || typeof disabled === "boolean") &&
-    command === "npx" &&
-    Array.isArray(args) &&
-    RETIRED_BROWSER_ARGS.some(
-      (known) =>
-        known.length === args.length &&
-        known.every((arg, index) => arg === args[index])
-    )
-  );
 };
 
 export const BUILTIN_BROWSER_NAME = "browser";
@@ -230,16 +207,6 @@ export class McpConfigService {
     const config = this.readUserMcp(mode);
     config.mcpServers[name] = entry;
     this.writeUserMcp(mode, config);
-  }
-
-  /** Drops the app-written browser connector entry; an edited one stays. */
-  removeRetiredBrowserServer(mode: McpMode): boolean {
-    const config = this.readUserMcp(mode);
-    const entry = config.mcpServers[RETIRED_BROWSER_SERVER];
-    if (entry == null || !isRetiredBrowserEntry(entry)) return false;
-    delete config.mcpServers[RETIRED_BROWSER_SERVER];
-    this.writeUserMcp(mode, config);
-    return true;
   }
 
   removeUserServer(mode: McpMode, name: string): boolean {

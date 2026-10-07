@@ -304,26 +304,17 @@ export function buildBrowserTaskTool(
               ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
               : "";
 
-      // The parent hears these again once the run returns; they were already handled.
-      const heard =
-        result.heard != null && result.heard.length > 0
-          ? `\n\n(The run already received these messages from the user mid-task: ${result.heard
-              .map((text) => JSON.stringify(text))
-              .join(
-                ", "
-              )}. Answer them again only if the report leaves them open.)`
-          : "";
-
       return {
-        content: [
-          { type: "text" as const, text: `${result.text}${note}${heard}` },
-        ],
+        content: [{ type: "text" as const, text: `${result.text}${note}` }],
         details: {
           turns: result.turns,
           executeCalls: result.executeCalls,
           steers: result.steers,
           stoppedBy: result.stoppedBy,
           ...(outcome != null ? { outcome } : {}),
+          ...(result.consumedMessageIds != null
+            ? { consumedMessageIds: result.consumedMessageIds }
+            : {}),
         },
         isError: failed,
       };

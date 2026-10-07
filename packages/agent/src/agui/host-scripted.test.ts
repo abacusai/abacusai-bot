@@ -922,3 +922,35 @@ it("acknowledges a reaction change and delivers a hidden operator turn verbatim"
     await s.close();
   }
 });
+
+it("keeps two identical messages apart by their ids: one steered in, the other run as its own turn", async () => {
+  let api: Parameters<Parameters<typeof scripted>[0]>[0] | undefined;
+  const s = await scripted(async (turn) => {
+    if (turn.index === 1) {
+      api = turn;
+      await turn.gate("release");
+    }
+    turn.settled();
+  });
+  try {
+    s.send({ type: "send", message: "book it", messageId: "m1" });
+    await s.waitFor(() => api != null, "first turn held");
+    s.send({ type: "send", message: "ok", messageId: "m2" });
+    s.send({ type: "send", message: "ok", messageId: "m3" });
+    await s.waitFor(() => s.session.steered.length === 2, "both steered");
+    expect(s.session.steeredIds).toEqual(["m2", "m3"]);
+
+    // The second "ok" landed; the first is still on its way.
+    api!.agent({
+      type: "user_message_steered",
+      content: "ok",
+      messageId: "m3",
+    });
+    s.session.open("release");
+    await s.waitFor(() => s.session.sent.length === 2, "leftover drained");
+    expect(s.session.sentIds).toEqual(["m1", "m2"]);
+  } finally {
+    s.session.open("release");
+    await s.close();
+  }
+});

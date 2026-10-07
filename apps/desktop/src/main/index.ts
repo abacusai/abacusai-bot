@@ -11,9 +11,16 @@ import path from "path";
 import { promisify } from "util";
 
 import type {
+  WindowChromeState,
+  WindowState,
+} from "@abacus-ai/contract/contract";
+import type {
   AbacusAccountInfo,
   UsageSnapshot,
 } from "@abacus-ai/contract/contracts";
+import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
+import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
+import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
 import {
   app,
   shell,
@@ -35,55 +42,9 @@ import type { WebContents } from "electron";
 import Store from "electron-store";
 
 import { nodeFileOperations } from "./app-operations/node";
-import { composeHost } from "./compose-host";
-import { restoreLegacyFiles } from "./migrations/restore-legacy";
-import { NotchController } from "./notch/controller";
-import { wireMainNotchEvents } from "./notch/main-events";
-import { NotchNotificationPolicy } from "./notch/notifications";
-import { profileBaseDir } from "./profile-home";
-
-/** Whether Google Chrome (stable) is installed where it normally lives. */
-export function hasGoogleChrome(
-  platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env
-): boolean {
-  const candidates =
-    platform === "darwin"
-      ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
-      : platform === "win32"
-        ? [env.ProgramFiles, env["ProgramFiles(x86)"], env.LOCALAPPDATA]
-            .filter((base): base is string => base != null && base.length > 0)
-            .map((base) =>
-              path.join(base, "Google", "Chrome", "Application", "chrome.exe")
-            )
-        : [
-            "/opt/google/chrome/chrome",
-            ...(env.PATH ?? "")
-              .split(path.delimiter)
-              .filter((dir) => dir.length > 0)
-              .flatMap((dir) => [
-                path.join(dir, "google-chrome"),
-                path.join(dir, "google-chrome-stable"),
-              ]),
-          ];
-  return candidates.some((candidate) => {
-    try {
-      return existsSync(candidate);
-    } catch {
-      return false;
-    }
-  });
-}
-import type {
-  WindowChromeState,
-  WindowState,
-} from "@abacus-ai/contract/contract";
-import { funnelDetail, isFunnelStep } from "@abacus-ai/contract/funnel";
-import { THEME_FILE_MAX_BYTES } from "@abacus-ai/contract/look";
-import { PROVIDER_ENV_VARS } from "@abacus-ai/contract/settings";
-
 import { markQuitting, isQuitting } from "./app-quit-state";
 import { setBringToFront, setMainWindow } from "./bring-to-front";
+import { composeHost } from "./compose-host";
 import { installCrashGuard } from "./crash-guard";
 import { isSafeExternalUrl } from "./external-links";
 import type { HostOperations } from "./handler";
@@ -93,12 +54,17 @@ import {
 } from "./host-operations/electron";
 import { followMainAgentBusy } from "./keep-awake";
 import { decideLocalOpen } from "./local-open-guard";
+import { restoreLegacyFiles } from "./migrations/restore-legacy";
 import {
   disposeMigrationProgress,
   prefsFileAfterMigrations,
 } from "./migrations/startup";
+import { NotchController } from "./notch/controller";
 import { CueArbiter } from "./notch/cue-arbiter";
+import { wireMainNotchEvents } from "./notch/main-events";
+import { NotchNotificationPolicy } from "./notch/notifications";
 import { abacusBotHome, userTempDir, WORKSPACE_DIR_NAME } from "./paths";
+import { profileBaseDir } from "./profile-home";
 import { mainWindowLifecycle } from "./recreate-main-window";
 import { rendererCspHeaders } from "./renderer-csp";
 import {
@@ -1266,8 +1232,6 @@ const appOperations: AppOperations = {
     app.relaunch();
     app.quit();
   },
-
-  hasGoogleChrome: () => hasGoogleChrome(),
 
   // First-run milestones; see services/debug-sync/funnel-beacon.ts.
   reportFunnelStep(step, detail, once) {

@@ -33,47 +33,81 @@ describe("a rewrite with nothing new to say", () => {
   });
 });
 
-describe("the retired browser connector entry", () => {
-  it("drops the entry the app wrote, enabled or not, and keeps the rest", async () => {
-    const service = await home.loadService();
-    for (const pinned of ["@playwright/mcp@0.0.80", "@playwright/mcp@latest"])
-      for (const disabled of [undefined, true]) {
-        service.writeUserMcp("code", {
-          mcpServers: {
-            linear: { url: "http://localhost:11" },
-            playwright: {
-              command: "npx",
-              args: ["-y", pinned],
-              ...(disabled != null ? { disabled } : {}),
-            },
-          },
-        });
+describe("retiring the Playwright connector entries the app wrote", () => {
+  const retire = async () => {
+    const { retirePlaywrightEntries } = await import("./playwright-migration");
+    const { MCP_MODES } = await import("@abacus-ai/contract/contracts");
+    return { retirePlaywrightEntries, MCP_MODES };
+  };
+  const appWritten = [
+    { command: "npx", args: ["-y", "@playwright/mcp@0.0.80"] },
+    { command: "npx", args: ["-y", "@playwright/mcp@latest"] },
+    { command: "npx", args: ["@playwright/mcp"], disabled: true },
+  ];
 
-        expect(service.removeRetiredBrowserServer("code")).toBe(true);
-        expect(Object.keys(service.readUserMcp("code").mcpServers)).toEqual([
-          "linear",
-        ]);
-        expect(service.removeRetiredBrowserServer("code")).toBe(false);
-      }
+  it("drops them in every mode, keeps the rest, and logs what went", async () => {
+    const service = await home.loadService();
+    const { retirePlaywrightEntries, MCP_MODES } = await retire();
+    for (const mode of MCP_MODES)
+      service.writeUserMcp(mode, {
+        mcpServers: {
+          linear: { url: "http://localhost:11" },
+          ...Object.fromEntries(
+            appWritten.map((entry, index) => [`playwright-${index}`, entry])
+          ),
+        },
+      });
+    const log = vi.fn();
+
+    const removed = retirePlaywrightEntries(service, log);
+
+    for (const mode of MCP_MODES) {
+      expect(Object.keys(service.readUserMcp(mode).mcpServers)).toEqual([
+        "linear",
+      ]);
+      expect(log).toHaveBeenCalledWith(
+        `[mcp] retired the Playwright connector in ${mode}: playwright-0, playwright-1, playwright-2`
+      );
+    }
+    expect(removed).toHaveLength(appWritten.length * MCP_MODES.length);
   });
 
   it("leaves an entry the user edited alone", async () => {
     const service = await home.loadService();
-    for (const playwright of [
-      { command: "npx", args: ["-y", "@playwright/mcp@0.0.80", "--headless"] },
-      {
+    const { retirePlaywrightEntries } = await retire();
+    const edited = {
+      extraArg: {
+        command: "npx",
+        args: ["-y", "@playwright/mcp", "--headless"],
+      },
+      env: {
         command: "npx",
         args: ["-y", "@playwright/mcp@0.0.80"],
         env: { X: "1" },
       },
-      { command: "node", args: ["-y", "@playwright/mcp@latest"] },
-    ]) {
-      service.writeUserMcp("code", { mcpServers: { playwright } });
+      command: { command: "node", args: ["-y", "@playwright/mcp@latest"] },
+      otherPackage: { command: "npx", args: ["-y", "@playwright/mcp-extra"] },
+    };
+    service.writeUserMcp("code", { mcpServers: edited });
 
-      expect(service.removeRetiredBrowserServer("code")).toBe(false);
-      expect(service.readUserMcp("code").mcpServers.playwright).toEqual(
-        playwright
-      );
-    }
+    expect(retirePlaywrightEntries(service, vi.fn())).toEqual([]);
+    expect(service.readUserMcp("code").mcpServers).toEqual(edited);
+  });
+
+  it("runs once: an entry added after the first run stays", async () => {
+    const service = await home.loadService();
+    const { retirePlaywrightEntries } = await retire();
+    retirePlaywrightEntries(service, vi.fn());
+    service.writeUserMcp("code", {
+      mcpServers: { playwright: appWritten[0]! },
+    });
+    const log = vi.fn();
+
+    const restarted = await home.loadService();
+    expect(retirePlaywrightEntries(restarted, log)).toEqual([]);
+    expect(Object.keys(restarted.readUserMcp("code").mcpServers)).toEqual([
+      "playwright",
+    ]);
+    expect(log).not.toHaveBeenCalled();
   });
 });
