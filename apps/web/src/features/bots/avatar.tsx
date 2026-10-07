@@ -59,6 +59,7 @@ export const BotFace = ({
   className,
   style,
   title,
+  morph = false,
 }: {
   /** The bot whose look (and reactions) to show; or pass `look`. */
   bot?: LookSource & { id: string };
@@ -68,6 +69,7 @@ export const BotFace = ({
   className?: string;
   style?: CSSProperties;
   title?: string;
+  morph?: boolean;
 }) => {
   const motion = useMotionPreference();
   const reaction = useReaction(bot?.id ?? null);
@@ -77,6 +79,7 @@ export const BotFace = ({
   return (
     <BotAvatar
       look={resolved}
+      morph={morph}
       mood={
         reaction ??
         (mood === "idle" || mood === "working" ? activity.mood : null) ??
