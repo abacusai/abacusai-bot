@@ -89,6 +89,8 @@ export function secretEntries(
     { path: path.join(app, "messaging.json") },
     { path: path.join(app, "mcp-code.json") },
     { path: path.join(app, "electron") },
+    // Saved travelers: passport numbers the model is never shown.
+    { path: path.join(app, "memories", "travelers.json") },
   ];
 
   if (platform === "win32") {

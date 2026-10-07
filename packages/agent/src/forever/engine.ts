@@ -26,6 +26,10 @@ import {
   buildBrowserTaskTool,
 } from "../browser-task-tool.js";
 import type { BrowserTaskContext } from "../browser-task.js";
+import {
+  BROWSER_CHECKOUT_TOOL_NAME,
+  withCheckoutToken,
+} from "../checkout-run.js";
 import { anchorCompactions } from "../compaction-anchor.js";
 import {
   agentDir,
@@ -49,7 +53,7 @@ import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { McpToolSync } from "../mcp/tool-sync.js";
-import { buildMcpToolDefinitions } from "../mcp/tools.js";
+import { buildMcpToolDefinitions, mcpToolCaller } from "../mcp/tools.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
 import { endedOnLeakedToolCall } from "../openllm-failures.js";
 import {
@@ -442,6 +446,10 @@ export class ForeverEngine {
             settingsManager,
             browserTools: () =>
               buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
+            checkout:
+              withCheckoutToken(
+                mcpToolCaller(() => this.mcp, BROWSER_CHECKOUT_TOOL_NAME)
+              ) ?? undefined,
             ...(model.model ? { model: model.model } : {}),
             ...this.profile.browserTask,
             // A run that can answer the user owns their mid-task messages.
@@ -619,6 +627,7 @@ export class ForeverEngine {
     });
 
     try {
+      this.profile.noteUserWords?.(text);
       const context = await this.profile.beforeTurn(text);
       // Rides along with the user's message, not as a turn of its own.
       if (context.length > 0)
@@ -1178,6 +1187,7 @@ export class ForeverEngine {
   async steer(text: string, messageId?: string): Promise<void> {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
+    this.profile.noteUserWords?.(text);
     if (this.midTask.live) {
       try {
         await this.midTask.deliver({

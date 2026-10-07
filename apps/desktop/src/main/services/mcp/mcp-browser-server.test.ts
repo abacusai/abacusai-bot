@@ -33,6 +33,48 @@ import {
   UNMASK_SCRIPT,
 } from "../browser/secret-fields";
 import { MEDIA_TTL_MS, MediaStore } from "../messaging/media-store";
+import { PAY_GUARD_MARKER } from "../vault/pay-guard";
+
+/**
+ * The Pay guard's isolated-world reads on an ordinary page (no checkout on
+ * it), for a case that scripts its own CDP replies; undefined for any other
+ * command.
+ */
+const ordinaryPageGuard = (
+  method: string,
+  params?: Record<string, unknown>
+): unknown => {
+  if (method === "Page.getFrameTree")
+    return { frameTree: { frame: { id: "main", loaderId: "loader-1" } } };
+  if (method === "Page.createIsolatedWorld") return { executionContextId: 7 };
+  if (
+    method === "Runtime.evaluate" &&
+    String(params?.expression ?? "").includes(PAY_GUARD_MARKER)
+  )
+    return {
+      result: {
+        value: {
+          found: true,
+          kind: "other",
+          label: "",
+          attrs: "",
+          checked: false,
+          url: "https://example.test/start",
+          cardFields: false,
+          paymentFrame: false,
+          submitsCardForm: false,
+          savedCardSelected: false,
+          maskedCardOnPage: false,
+          priceOnPage: false,
+          commitControlOnPage: false,
+          role: "",
+          expands: false,
+          frameIsProvider: false,
+        },
+      },
+    };
+  return undefined;
+};
 
 /**
  * What the page answers besides evaluations: the frame tree names its
@@ -174,6 +216,9 @@ class FakeWebContents {
       if (method === "Page.captureScreenshot")
         return { data: Buffer.from("png").toString("base64") };
       if (method === "Input.dispatchKeyEvent") return {};
+      // The Pay guard reads controls in an isolated world of the page.
+      if (method === "Page.createIsolatedWorld")
+        return { executionContextId: 7 };
       // The secret-field search: the page has none unless a case says so.
       if (method === "Runtime.getProperties")
         return {
@@ -208,6 +253,33 @@ class FakeWebContents {
       // The live-origin check before an action asks this; it is not the action.
       if (expression === "location.origin")
         return { result: { value: new URL(this.url).origin } };
+      // The Pay guard's reads are the server's own, in an isolated world,
+      // like the secret-field search: an ordinary page, no checkout on it.
+      if (params?.contextId != null && !expression.includes(PAY_GUARD_MARKER))
+        return { result: { value: null } };
+      if (expression.includes(PAY_GUARD_MARKER))
+        return {
+          result: {
+            value: {
+              found: true,
+              kind: "other",
+              label: "",
+              attrs: "",
+              checked: false,
+              url: this.getURL(),
+              cardFields: false,
+              paymentFrame: false,
+              submitsCardForm: false,
+              savedCardSelected: false,
+              maskedCardOnPage: false,
+              priceOnPage: false,
+              commitControlOnPage: false,
+              role: "",
+              expands: false,
+              frameIsProvider: false,
+            },
+          },
+        };
       evaluated.push(expression);
       if (params?.userGesture === true) gestures.push(expression);
       const value = responder(expression);
@@ -486,6 +558,9 @@ describe("the transport", () => {
       "browser_interact",
       "browser_execute",
       "browser_tabs",
+      "browser_pause",
+      "browser_checkout",
+      "browser_traveler_fill",
     ]);
   });
 
@@ -2253,6 +2328,8 @@ describe("the shapes a page can come back in", () => {
       method: string,
       params?: Record<string, unknown>
     ) => {
+      const guard = ordinaryPageGuard(method, params);
+      if (guard !== undefined) return guard;
       if (method !== "Runtime.evaluate") return otherCommand(method);
       const expression = String(params?.expression ?? "");
       if (expression === FIND_SECRET_FIELDS_SCRIPT)
@@ -2279,11 +2356,12 @@ describe("the shapes a page can come back in", () => {
       method: string,
       params?: Record<string, unknown>
     ) =>
-      params?.expression === FIND_SECRET_FIELDS_SCRIPT
+      ordinaryPageGuard(method, params) ??
+      (params?.expression === FIND_SECRET_FIELDS_SCRIPT
         ? { result: { objectId: "found" } }
         : method === "Runtime.evaluate"
           ? { exceptionDetails: {} }
-          : otherCommand(method);
+          : otherCommand(method));
 
     const { text, isError } = await call("browser_execute", { code: "x" });
 
@@ -2560,6 +2638,8 @@ describe("a few last shapes", () => {
       method: string,
       params?: Record<string, unknown>
     ) => {
+      const guard = ordinaryPageGuard(method, params);
+      if (guard !== undefined) return guard;
       if (params?.expression === FIND_SECRET_FIELDS_SCRIPT)
         return { result: { objectId: "found" } };
       if (method !== "Runtime.evaluate") return otherCommand(method);

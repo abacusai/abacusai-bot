@@ -12,6 +12,7 @@ import os from "os";
 import path from "path";
 
 import { abacusBotDir } from "./config.js";
+import { redactIdNumbers } from "./traveler/id-numbers.js";
 
 /**
  * "remember" is the user's own list, re-read every turn so "remember I like
@@ -371,8 +372,13 @@ export const applyMemoryAction = (
 const applyMemoryActionLocked = (
   target: MemoryTarget,
   action: MemoryAction,
-  input: { content?: string; match?: string }
+  given: { content?: string; match?: string }
 ): MemoryResult => {
+  // ID numbers belong in the traveler store, saved on the user's yes, never here.
+  const input =
+    given.content != null
+      ? { ...given, content: redactIdNumbers(given.content) }
+      : given;
   const entries = readEntries(target);
 
   if (action === "add") {

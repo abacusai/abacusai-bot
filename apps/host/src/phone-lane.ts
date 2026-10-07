@@ -116,6 +116,12 @@ const MAX_CAPTION_CHARS = 1_024;
 
 /** What the loop is told for one inbox entry. */
 function phoneTurnText(entry: PhoneInboxEntry): string {
+  // The host's own news is one tagged line, so the agent never takes it for
+  // the user's words (a consent it checks reads only those).
+  if (entry.kind === "note") {
+    const line = (entry.text ?? "").replace(/\s+/g, " ").trim();
+    return /^\[[a-z][a-z -]*\]/i.test(line) ? line : `[note] ${line}`;
+  }
   if (entry.kind !== "linked") return entry.text ?? "";
   const name = entry.sender?.trim();
   return name

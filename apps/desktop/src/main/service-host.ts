@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 /**
  * Composition root for the desktop services: constructs them, wires their
@@ -697,6 +698,9 @@ export class ServiceHost {
     deliver: (sessionId, note) => this.deliverSessionNote(sessionId, note),
   });
 
+  /** The agent runtime's capability for `browser_checkout`, handed over at spawn. */
+  private readonly checkoutToken = randomBytes(32).toString("hex");
+
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
@@ -707,7 +711,24 @@ export class ServiceHost {
       this.conversationKeyForSession(sessionId),
     vault: this.vault,
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
+    isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
+    checkoutToken: this.checkoutToken,
   });
+
+  /**
+   * Whether the session is the user's own conversation: theirs directly, or a
+   * bot's forever chat with them. A bot's sender and routine chats, and any
+   * routine run, are not: they get no saved traveler details.
+   */
+  private isOwnerSession(sessionId: string): boolean {
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (
+      session == null ||
+      this.agentSessionManagerService.isRoutineSession(sessionId)
+    )
+      return false;
+    return session.owner == null || session.owner.role === "forever";
+  }
 
   /**
    * The pane a session's output belongs in. A bot's sender and routine chats
@@ -4725,6 +4746,12 @@ export class ServiceHost {
       ...(sessionId != null
         ? this.botService.personaEnvForSession(sessionId)
         : {}),
+      // The user's own conversations get the owner-only tools (saved travelers).
+      ...(sessionId != null && this.isOwnerSession(sessionId)
+        ? { ABACUSAI_BOT_AUDIENCE: "owner" }
+        : {}),
+      // Read once by the agent runtime and removed from its environment.
+      ABACUSAI_BOT_CHECKOUT_TOKEN: this.checkoutToken,
       // Routine chats compact early; see ROUTINE_CONTEXT_CAP_TOKENS.
       ...(sessionId != null &&
       this.agentSessionManagerService.isRoutineSession(sessionId)

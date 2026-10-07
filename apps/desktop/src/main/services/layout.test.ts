@@ -42,7 +42,8 @@ const GROUPS = [
   "sandbox",
   "session",
   "updates",
-  // The user's vault: saved logins and approved cards, typed by the browser.
+  // The user's vault as the agent reaches it: its client, per-session state,
+  // the waiter, its tools, the fill plan and the Pay guard.
   "vault",
   "voice",
   "workspace",

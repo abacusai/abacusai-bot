@@ -1,3 +1,4 @@
+import { CheckoutRun } from "./checkout-run";
 import type { VaultField } from "./vault-client";
 
 /**
@@ -50,6 +51,34 @@ export class VaultSession {
   readonly requests = new Map<string, PendingVaultRequest>();
   /** The session's one payment approval: a new one replaces the last. */
   approval: PaymentApproval | null = null;
+  /** The session's booking or purchase, moved by its browser run. */
+  readonly checkout = new CheckoutRun();
+  /**
+   * Origins the browser saw as a payment step, with when it last saw each:
+   * they stay guarded for the checkout's hold window, whatever the stage.
+   */
+  private readonly paymentSteps = new Map<string, number>();
+  /**
+   * What the Pay guard let through under each approval: the payment (which
+   * spends it), the one step from the review toward it, the bank's code
+   * submit. Taken synchronously the moment the guard decides, so two
+   * activations racing on one approval cannot both pass.
+   */
+  readonly committed = new Map<
+    string,
+    { paid: boolean; reviewed: boolean; bankSubmitted: boolean }
+  >();
+  /**
+   * The element showing the checkout total, as the browser chose it: at the
+   * payment pause, and again by a card fill whose total it checked against
+   * the approval. A commit re-reads this one; a model cannot name another.
+   */
+  anchoredTotal: { selector: string; frameId: string | null } | null = null;
+  /**
+   * The site saved travelers may fill on: the registrable domain of the
+   * details stop the user answered (it was named to them in the question).
+   */
+  checkoutSite: string | null = null;
 
   constructor(private readonly now: () => number) {}
 
@@ -68,7 +97,40 @@ export class VaultSession {
   outstanding(): boolean {
     return this.requests.size > 0 || this.approval?.status === "pending";
   }
+
+  /** The origin is a payment step; remembered for the hold window. */
+  notePaymentStep(origin: string): void {
+    this.paymentSteps.set(origin, this.now());
+  }
+
+  /** Whether the origin was seen as a payment step within the hold window. */
+  isPaymentStep(origin: string | null): boolean {
+    if (origin == null) return false;
+    const seen = this.paymentSteps.get(origin);
+    if (seen == null) return false;
+    if (this.now() - seen > PAYMENT_STEP_HOLD_MS) {
+      this.paymentSteps.delete(origin);
+      return false;
+    }
+    return true;
+  }
+
+  /** Whether any origin is still remembered as a payment step. */
+  rememberedPaymentSteps(): boolean {
+    for (const origin of Array.from(this.paymentSteps.keys()))
+      if (this.isPaymentStep(origin)) return true;
+    return false;
+  }
+
+  /** Forgets the remembered payment steps, unless the tab is on one now. */
+  forgetPaymentSteps(currentOrigin: string | null): void {
+    if (this.isPaymentStep(currentOrigin)) return;
+    this.paymentSteps.clear();
+  }
 }
+
+/** How long a payment step stays guarded after it was last seen: a paused run's hold. */
+export const PAYMENT_STEP_HOLD_MS = 45 * 60_000;
 
 /** The vault state of every session that has any. */
 export class VaultSessions {
@@ -97,7 +159,13 @@ export class VaultSessions {
   /** Lets go of a session that has nothing left. */
   prune(sessionId: string): void {
     const session = this.sessions.get(sessionId);
-    if (session != null && !session.outstanding() && session.approved() == null)
+    if (
+      session != null &&
+      !session.outstanding() &&
+      session.approved() == null &&
+      !session.checkout.active() &&
+      !session.rememberedPaymentSteps()
+    )
       this.sessions.delete(sessionId);
   }
 }

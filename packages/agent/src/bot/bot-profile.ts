@@ -11,6 +11,8 @@ import {
 import { backendOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
 import type { ForeverProfile } from "../forever/profile.js";
+import { buildOwnerTools } from "../owner-tools.js";
+import { RecentUserText } from "../traveler/traveler-tool.js";
 import { botDir, readBotState, writeBotState } from "./bot-config.js";
 import { BOT_MEMORY_TOOL_NAME, buildBotMemoryTool } from "./bot-memory-tool.js";
 import {
@@ -70,12 +72,16 @@ export function createBotProfile(): ForeverProfile {
   if (home == null)
     throw new Error("BotSession requires ABACUSAI_BOT_BOT_DIR.");
 
+  // What the user wrote lately: a saved traveler's consent must be their words.
+  const recentUserText = new RecentUserText();
+
   return {
     systemPrompt: () => [botOperatingPrompt()],
     tools: (cwd) => [
       buildBotMemoryTool(home),
       buildBotTimeTool(),
       buildBotReactionTool(),
+      ...buildOwnerTools({ recentUserText }),
       botBashTool(cwd),
     ],
     // The bot's own memory tool replaces the desktop's global one.
@@ -120,7 +126,10 @@ export function createBotProfile(): ForeverProfile {
       },
       languageRepairType: BOT_LANGUAGE_REPAIR_TYPE,
     },
+    // A details stop the user answered binds where saved travelers fill.
+    browserTask: { userWords: recentUserText.read },
     beforeTurn: () => "",
+    noteUserWords: (text) => recentUserText.note(text),
     afterTurn: () => undefined,
   };
 }

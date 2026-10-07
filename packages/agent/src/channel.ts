@@ -40,9 +40,10 @@ export function browserHandoffDescription(
     ? "Tell the user to open the Browser pane in this chat and do that step; when they say it is " +
         "done, call this tool again with continue_from_last: true and their message as the task; " +
         "the same sub-agent carries on from the same page with everything it already found."
-    : "The user cannot see this browser: tell them how far it got and what is left for them. " +
-        "If they want it carried on, call this tool again with continue_from_last: true and " +
-        "their message as the task.";
+    : "The user cannot see this browser: they act only through this chat, one-time links " +
+        "(vault_request) and approval pages (payment_approval). Do what the result says next " +
+        "that way; when they have done it, call this tool again with continue_from_last: true " +
+        "and their message as the task.";
 }
 
 /** The note on a run's result when it stopped at a step only the user can do. */
@@ -51,7 +52,10 @@ export function browserStopNote(channel: ChannelCapabilities): string {
     ? "(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
         "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
         "their reply as the task; the same sub-agent continues with everything it has found.)"
-    : "(The run stopped at a step only the user can do. They cannot see this browser: tell them " +
-        "it is ready up to that step and that they finish it themselves, with what they need to do so " +
-        "(the site, what to pick). Never ask for a password or card details in the chat.)";
+    : "(The run stopped at a step only the user can do. They cannot see this browser and act only " +
+        "through this chat, one-time links and approval pages: a login, card or code goes through a " +
+        "vault_request link, a payment through payment_approval, anything else as a question here. " +
+        "Never ask for a password or card details in the chat. Once it is done, call browser_task with " +
+        "continue_from_last: true and their reply as the task. If none of that can do the step, tell " +
+        "them how far it got and that they finish it on the site themselves.)";
 }

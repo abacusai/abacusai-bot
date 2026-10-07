@@ -1,7 +1,9 @@
+import { timingSafeEqual } from "crypto";
 import fs from "fs";
 import path from "path";
 
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import { readTravelers } from "@abacus-ai/agent/traveler-store";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
@@ -64,6 +66,40 @@ import {
 import { type CapturedImage, SecretFields } from "../browser/secret-fields";
 import type { MediaStore } from "../messaging/media-store";
 import { abacusHostFence } from "../providers/abacus-host";
+import type { CheckoutPause, RunEnd } from "../vault/checkout-run";
+import {
+  BROWSER_CHECKOUT_TOOL,
+  BROWSER_PAUSE_TOOL,
+  CHECKOUT_TOOL_LISTINGS,
+  type CheckoutStateLine,
+  checkoutStateLine,
+  pageText,
+  parsePause,
+  SCREENSHOT_NEEDS,
+  TRAVELER_FILL_FIELDS,
+  TRAVELER_FILL_TOOL,
+} from "../vault/checkout-tools";
+import {
+  type Activation,
+  activationVerdict,
+  activatesControl,
+  approvalCovers,
+  commitVerdict,
+  type ControlFacts,
+  controlFactsScript,
+  COMMIT_PAGE_EXECUTE_REFUSAL,
+  EXECUTE_REFUSAL,
+  type GuardState,
+  isSpaceKey,
+  looksLikePaymentStep,
+  type NavigationAction,
+  navigationVerdict,
+  originOf,
+  pageFactsScript,
+  siteOf,
+  TOTAL_NOT_ANCHORED,
+  USED_REFUSAL,
+} from "../vault/pay-guard";
 import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
   codeFieldAllowed,
@@ -79,6 +115,11 @@ import {
   readPageTotal,
   type PageTotal,
 } from "../vault/vault-fill";
+import {
+  type PaymentApproval,
+  type VaultSession,
+  VaultSessions,
+} from "../vault/vault-session";
 import {
   VAULT_FILL_TOOL,
   VAULT_TOOL_NAMES,
@@ -296,6 +337,12 @@ const TOOLS_SCHEMA: Record<
           type: "string",
           description: 'URL glob pattern for wait, e.g. "**/results**"',
         },
+        total_ref: {
+          type: "string",
+          description:
+            "For the Pay click of an approved payment: the ref of the element showing the order total. " +
+            "Defaults to the one the card fill named.",
+        },
       },
       required: ["action"],
     },
@@ -386,6 +433,8 @@ function summarizeToolCall(
       return `Tabs (${action ?? "list"})`;
     case VAULT_FILL_TOOL:
       return `Fill a saved ${typeof a.field === "string" ? a.field : "value"} into ${typeof a.ref === "string" ? a.ref : "a field"}`;
+    case TRAVELER_FILL_TOOL:
+      return `Fill a saved passport number into ${typeof a.ref === "string" ? a.ref : "a field"}`;
     default:
       return tool;
   }
@@ -406,7 +455,10 @@ function isReadOnlyBrowserTool(
     name === "browser_snapshot" ||
     (name === "browser_tabs" && (args.action ?? "list") === "list") ||
     // The vault's own tools touch no page: they list items or mint links the user acts on.
-    (VAULT_TOOL_NAMES.includes(name) && name !== VAULT_FILL_TOOL)
+    (VAULT_TOOL_NAMES.includes(name) && name !== VAULT_FILL_TOOL) ||
+    // A pause only reads the page; the checkout handle is the runtime's own.
+    name === BROWSER_PAUSE_TOOL ||
+    name === BROWSER_CHECKOUT_TOOL
   );
 }
 
@@ -482,9 +534,40 @@ const CLEAR_FUNCTION = `function() {
 }`;
 
 interface FrameTreeNode {
-  frame?: { loaderId?: string; url?: string; securityOrigin?: string };
+  frame?: {
+    id?: string;
+    loaderId?: string;
+    url?: string;
+    securityOrigin?: string;
+  };
   childFrames?: FrameTreeNode[];
 }
+
+/** Compares two tokens in constant time. */
+const tokensMatch = (given: string, expected: string): boolean => {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+
+/** The checkout stages from the traveler details on, where a passport number may be typed. */
+const TRAVELER_FILL_STAGES: ReadonlySet<string> = new Set([
+  "details",
+  "login",
+  "review",
+  "awaiting_approval",
+  "card_fill",
+  "bank_otp",
+]);
+
+/** A text field whose name, label or placeholder names a passport or ID document number. */
+const passportField = (facts: FieldFacts): boolean =>
+  !facts.wasPassword &&
+  /^(text|search|tel)$/.test(facts.type) &&
+  !facts.autocomplete.some((token) => token.startsWith("cc-")) &&
+  /passport|travel\s*doc|document\s*(?:no|num|number|id)|id\s*(?:no|num|number)|national\s*id|pasaporte|passeport|reisepass|पासपोर्ट/i.test(
+    facts.hints.join(" ")
+  );
 
 const VAULT_FIELDS: ReadonlySet<string> = new Set([
   "username",
@@ -519,6 +602,16 @@ export interface McpBrowserServerOptions {
   vault?: Vault;
   /** What a host lane's chat can do (the phone); null for every other session. */
   channelForSession?: (sessionId: string) => ChannelCapabilities | null;
+  /**
+   * Whether the session is the user's own (not a bot's sender or routine
+   * chat): only those fill saved traveler details. Absent, none do.
+   */
+  isOwnerSession?: (sessionId: string) => boolean;
+  /**
+   * The capability the agent runtime's own client presents on
+   * `browser_checkout`, handed to it at spawn. Absent, the tool refuses.
+   */
+  checkoutToken?: string;
 }
 
 /** A read refused because the page's secret fields could not be checked first. */
@@ -556,6 +649,7 @@ export class McpBrowserServer extends McpHttpServer {
         inputSchema: s.inputSchema,
       })),
       ...(this.options.vault?.listings() ?? []),
+      ...CHECKOUT_TOOL_LISTINGS,
     ];
   }
 
@@ -1524,6 +1618,10 @@ export class McpBrowserServer extends McpHttpServer {
     const sel = resolved.selector;
     const label = this.label(args);
 
+    if (await this.isSelect(wc, sel))
+      return this.err(
+        `${label} is a dropdown: choose its option with action "select".`
+      );
     const before = this.captureBefore(wc, sessionId);
     await this.animateCursorToElement(wc, sel).catch(() => {});
     this.animateCursorClick();
@@ -1536,7 +1634,7 @@ export class McpBrowserServer extends McpHttpServer {
       );
     }
     // Many sites open suggestions on a keystroke, not a value assignment.
-    await this.dispatchTrustedKey(wc, "ArrowDown", []).catch(() => {});
+    await this.guardedPress(wc, wc, "ArrowDown", sessionId).catch(() => null);
     await this.settle(wc);
 
     let result: Awaited<ReturnType<McpBrowserServer["takeSnapshot"]>>;
@@ -1554,11 +1652,15 @@ export class McpBrowserServer extends McpHttpServer {
     const choice = chooseOption(options, text);
 
     if (choice?.selector != null) {
-      await this.animateCursorToElement(wc, choice.selector).catch(() => {});
-      this.animateCursorClick();
-      const clicked = await this.evalJS(wc, clickScript(choice.selector)).catch(
-        () => null
-      );
+      const picked = await this.guardedClick(
+        wc,
+        wc,
+        choice.selector,
+        sessionId
+      ).catch(() => null);
+      if (picked != null && "refused" in picked)
+        return this.err(picked.refused);
+      const clicked = picked?.result;
       if (clicked?.status !== "ok") {
         return this.err(
           `Found suggestion "${choice.name}" but could not click it. Options seen: ${options
@@ -1569,7 +1671,18 @@ export class McpBrowserServer extends McpHttpServer {
       }
     } else {
       // No dropdown surfaced: accept the highlighted suggestion, if any.
-      await this.dispatchTrustedKey(wc, "Enter", []).catch(() => {});
+      const accepted = await this.guardedPress(
+        wc,
+        wc,
+        "Enter",
+        sessionId,
+        undefined,
+        {
+          synthetic: false,
+        }
+      ).catch(() => null);
+      if (accepted != null && "refused" in accepted)
+        return this.err(accepted.refused);
     }
 
     await this.settle(wc);
@@ -1633,11 +1746,21 @@ export class McpBrowserServer extends McpHttpServer {
       if (button == null) continue;
       const selector = this.snapshots.for(sessionId).refMap.get(button.ref);
       if (selector == null) continue;
-      const clicked = await this.evalJS(wc, clickScript(selector)).catch(
-        () => null
-      );
-      if (clicked?.status === "ok") closed.push(`"${button.name}"`);
-      await this.dispatchTrustedKey(wc, "Escape", []).catch(() => {});
+      const clicked = await this.guardedClick(
+        wc,
+        wc,
+        selector,
+        sessionId
+      ).catch(() => null);
+      if (
+        clicked != null &&
+        "result" in clicked &&
+        clicked.result?.status === "ok"
+      )
+        closed.push(`"${button.name}"`);
+      await this.guardedPress(wc, wc, "Escape", sessionId, undefined, {
+        synthetic: false,
+      }).catch(() => null);
     }
     if (closed.length === 0)
       return this.err(
@@ -1761,6 +1884,12 @@ export class McpBrowserServer extends McpHttpServer {
             return this.executeTabs(args, sessionId);
           case VAULT_FILL_TOOL:
             return this.executeVaultFill(args, sessionId);
+          case BROWSER_PAUSE_TOOL:
+            return this.executePause(args, sessionId);
+          case BROWSER_CHECKOUT_TOOL:
+            return Promise.resolve(this.executeCheckout(args, sessionId));
+          case TRAVELER_FILL_TOOL:
+            return this.executeTravelerFill(args, sessionId);
           case "vault_items":
           case "vault_request":
           case "payment_approval":
@@ -1859,7 +1988,9 @@ export class McpBrowserServer extends McpHttpServer {
       case "goto": {
         const url = args.url as string;
         if (!url) return this.err('URL is required for "goto".');
-        const refusal = navigationRefusal(url);
+        const refusal =
+          navigationRefusal(url) ??
+          (await this.guardNavigation("goto", url, sessionId));
         if (refusal != null) return this.err(refusal);
         const wc = await this.getWC(sessionId, url);
         if (!wc) return this.err(this.noBrowser(sessionId));
@@ -1882,6 +2013,8 @@ export class McpBrowserServer extends McpHttpServer {
         if (!wc) return this.err(this.noBrowser(sessionId));
         if (!wc.canGoForward())
           return this.err("There is no page to go forward to.");
+        const refusal = await this.guardNavigation("forward", null, sessionId);
+        if (refusal != null) return this.err(refusal);
         return await this.historyNavigate(
           wc,
           "forward",
@@ -1892,6 +2025,8 @@ export class McpBrowserServer extends McpHttpServer {
       case "reload": {
         const wc = await this.getWC(sessionId);
         if (!wc) return this.err(this.noBrowser(sessionId));
+        const refusal = await this.guardNavigation("reload", null, sessionId);
+        if (refusal != null) return this.err(refusal);
         return await this.historyNavigate(
           wc,
           "reload",
@@ -2166,7 +2301,7 @@ export class McpBrowserServer extends McpHttpServer {
       return this.err(
         `The frame ${String(args.ref)} was in has gone. Run browser_snapshot to see the page as it is now.`
       );
-    let result = await this.interactStep(target, args, sessionId);
+    let result = await this.interactStep(wc, target, args, sessionId);
     // The element was there at the snapshot and is not now: the page
     // re-rendered under a stable ref (refs key on the selector), so one fresh
     // snapshot usually brings it back. A model told only "take a snapshot"
@@ -2183,7 +2318,8 @@ export class McpBrowserServer extends McpHttpServer {
         snapshot.refMap.has(args.ref) &&
         target != null
       ) {
-        const retried = await this.interactStep(target, args, sessionId);
+        // The retry is an activation of its own, checked again.
+        const retried = await this.interactStep(wc, target, args, sessionId);
         if (retried.isError !== true) {
           const text = firstText(retried);
           result = this.ok(
@@ -2200,7 +2336,9 @@ export class McpBrowserServer extends McpHttpServer {
     return this.ok(changes.length > 0 ? `${text}\n${changes}` : text);
   }
 
+  /** One interact action on `wc` (the control's document); `top` is the tab's page. */
   private async interactStep(
+    top: BrowserPage,
     wc: BrowserPage,
     args: Record<string, unknown>,
     sessionId?: string
@@ -2220,10 +2358,15 @@ export class McpBrowserServer extends McpHttpServer {
         );
         if (typeof href === "string" && this.isAbacus(href))
           return this.err(ABACUS_REFUSAL);
-        await this.animateCursorToElement(wc, sel).catch(() => {});
-        const result = await this.evalJS(wc, clickScript(sel), {
-          userGesture: true,
-        });
+        const clicked = await this.guardedClick(
+          top,
+          wc,
+          sel,
+          sessionId,
+          args.total_ref
+        );
+        if ("refused" in clicked) return this.err(clicked.refused);
+        const result = clicked.result;
         if (result?.status === "not_found")
           return this.err(this.notFoundError(args, sel));
         if (result?.status === "disabled") {
@@ -2246,6 +2389,14 @@ export class McpBrowserServer extends McpHttpServer {
         if (resolved.kind !== "selector")
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.selector;
+        // A <select> is chosen through the guard, as select is.
+        if (await this.isSelect(wc, sel))
+          return this.interactStep(
+            top,
+            wc,
+            { ...args, action: "select", value: text },
+            sessionId
+          );
         await this.animateCursorToElement(wc, sel).catch(() => {});
         this.animateCursorClick();
         // The native value setter is called on the element's own prototype;
@@ -2283,6 +2434,18 @@ export class McpBrowserServer extends McpHttpServer {
         if (resolved.kind === "stale-ref")
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.kind === "selector" ? resolved.selector : null;
+        // A <select> is chosen through the guard, as select is.
+        if (await this.isSelect(wc, sel))
+          return sel != null
+            ? this.interactStep(
+                top,
+                wc,
+                { ...args, action: "select", value: text },
+                sessionId
+              )
+            : this.err(
+                'The focused element is a dropdown: choose its option with action "select" and its ref.'
+              );
         const target = sel
           ? `document.querySelector(${JSON.stringify(sel)})`
           : "document.activeElement";
@@ -2325,11 +2488,17 @@ export class McpBrowserServer extends McpHttpServer {
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.selector;
         if (value == null) return this.err('"value" is required for select.');
-        await this.animateCursorToElement(wc, sel).catch(() => {});
-        this.animateCursorClick();
         // Assigning an unmatched value to a <select> silently clears it, so the
         // element's own state decides and a miss lists what was there.
-        const result = await this.readPage(wc, selectScript(sel, value));
+        const selected = await this.guardedSelect(
+          top,
+          wc,
+          sel,
+          value,
+          sessionId
+        );
+        if ("refused" in selected) return this.err(selected.refused);
+        const result = selected.result;
         if (result?.status === "not_found")
           return this.err(`No <select> found: ${this.label(args)}`);
         if (result?.status === "no_match") {
@@ -2462,9 +2631,9 @@ export class McpBrowserServer extends McpHttpServer {
           return this.err(this.refError(args, snapshot.refMap.size));
         const sel = resolved.selector;
         const want = action === "check";
-        await this.animateCursorToElement(wc, sel).catch(() => {});
-        this.animateCursorClick();
-        const result = await this.evalJS(wc, checkScript(sel, want));
+        const checked = await this.guardedCheck(top, wc, sel, want, sessionId);
+        if ("refused" in checked) return this.err(checked.refused);
+        const result = checked.result;
         if (result === "not_found")
           return this.err(this.notFoundError(args, sel));
         if (result === "unchanged") {
@@ -2494,38 +2663,14 @@ export class McpBrowserServer extends McpHttpServer {
             "Refused: this page has a password, card or code field, so copy, cut and paste keys are not used on it."
           );
 
-        // Through the debugger, so the key event is trusted and the default
-        // action runs: a `new KeyboardEvent` reaches listeners, but Enter does
-        // not submit and arrows do not move a listbox selection.
-        try {
-          await this.dispatchTrustedKey(wc, mainKey, mods);
-
-          return this.ok(`Pressed ${key}.`);
-        } catch {
-          // Debugger unavailable: the synthetic path is worse, but not nothing.
-        }
-
-        await this.evalJS(
+        const pressed = await this.guardedPress(
+          top,
           wc,
-          `(function() {
-          const el = document.activeElement || document.body;
-          const opts = {
-            key: ${JSON.stringify(mainKey)},
-            code: ${JSON.stringify(mainKey.length === 1 ? "Key" + mainKey.toUpperCase() : mainKey)},
-            ctrlKey: ${mods.includes("control") || mods.includes("ctrl")},
-            shiftKey: ${mods.includes("shift")},
-            altKey: ${mods.includes("alt")},
-            metaKey: ${mods.includes("meta") || mods.includes("command")},
-            bubbles: true, cancelable: true,
-          };
-          el.dispatchEvent(new KeyboardEvent('keydown', opts));
-          el.dispatchEvent(new KeyboardEvent('keypress', opts));
-          el.dispatchEvent(new KeyboardEvent('keyup', { key: opts.key, code: opts.code, bubbles: true }));
-          if (${JSON.stringify(mainKey)} === 'Enter' && el.form) {
-            el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
-          }
-        })()`
+          key,
+          sessionId,
+          args.total_ref
         );
+        if ("refused" in pressed) return this.err(pressed.refused);
         return this.ok(`Pressed ${key}.`);
       }
 
@@ -2624,6 +2769,9 @@ export class McpBrowserServer extends McpHttpServer {
       return this.err(
         "The browser could not say which page this is, so no script runs on it. Snapshot and try again."
       );
+    // Refused before it is noted: a script that never ran leaves the page fillable.
+    const checkout = await this.guardExecute(wc, sessionId);
+    if (checkout != null) return this.err(checkout);
     // From here the page may hold what a script put there (a listener, a
     // changed field, a forged total): nothing is filled into it any more.
     secrets.noteScript(page.key);
@@ -2660,6 +2808,761 @@ export class McpBrowserServer extends McpHttpServer {
     return this.err(
       `JS Error: ${lastError instanceof Error ? lastError.message : String(lastError)}`
     );
+  }
+
+  // ── The Pay guard and the checkout ────────────────────────────────────
+  //
+  // Every activation (click, key that can activate, check, select, and the
+  // clicks and keys inside pick and dismiss) runs through one of the guarded
+  // primitives below, and each of them through `guardActivation` first;
+  // navigation through `guardNavigation`, scripts through `guardExecute`.
+  // The raw clickScript/checkScript/selectScript/dispatchTrustedKey are
+  // called nowhere else (mcp-browser-guard.test.ts holds the file to that).
+
+  /** Checkout state for sessions when no vault is attached; the vault keeps it otherwise. */
+  private readonly ownSessions = new VaultSessions();
+
+  private vaultSession(sessionId?: string): VaultSession {
+    return (this.options.vault?.sessions ?? this.ownSessions).for(
+      sessionId ?? ""
+    );
+  }
+
+  /**
+   * `expression` in an isolated world of `page`'s document: it shares the
+   * page's DOM but none of its JavaScript, so a page script cannot answer for
+   * it. Null when it could not run.
+   */
+  private async isolatedEval(
+    page: BrowserPage,
+    expression: string
+  ): Promise<unknown> {
+    try {
+      const frameId = page.frameId ?? (await this.documentInfo(page)).frameId;
+      if (frameId == null) return null;
+      const world = (await this.cdp(page, "Page.createIsolatedWorld", {
+        frameId,
+        worldName: "abacusai-pay-guard",
+      })) as { executionContextId?: unknown } | null;
+      const contextId = world?.executionContextId;
+      if (typeof contextId !== "number") return null;
+      const response = (await this.cdp(page, "Runtime.evaluate", {
+        expression,
+        contextId,
+        returnByValue: true,
+      })) as {
+        result?: { value?: unknown };
+        exceptionDetails?: unknown;
+      } | null;
+      if (response == null || response.exceptionDetails != null) return null;
+      return response.result?.value ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async controlFacts(
+    page: BrowserPage,
+    script: string
+  ): Promise<ControlFacts | null> {
+    const value = (await this.isolatedEval(page, script)) as Partial<
+      Record<keyof ControlFacts, unknown>
+    > | null;
+    if (
+      value == null ||
+      typeof value !== "object" ||
+      typeof value.found !== "boolean" ||
+      typeof value.kind !== "string" ||
+      typeof value.url !== "string" ||
+      typeof value.label !== "string" ||
+      typeof value.attrs !== "string"
+    )
+      return null;
+    return value as ControlFacts;
+  }
+
+  /**
+   * The checkout and approval as the guard reads them for one activation on
+   * `top`'s tab; a document the facts show is a payment step is remembered as
+   * one for the rest of the checkout.
+   */
+  private async guardState(
+    top: BrowserPage,
+    facts: ControlFacts | null,
+    sessionId?: string
+  ): Promise<{
+    session: VaultSession;
+    approval: PaymentApproval | null;
+    state: GuardState;
+  }> {
+    const session = this.vaultSession(sessionId);
+    const approval = this.options.vault?.approval(sessionId) ?? null;
+    const topOrigin = originOf(top.getURL());
+    const origins = [topOrigin, facts != null ? originOf(facts.url) : null];
+    // The browser's own frame tree: a provider's card frame makes this a
+    // payment step whatever the page's markup says.
+    const { frameOrigins } = await this.documentInfo(top);
+    if (
+      (facts != null && looksLikePaymentStep(facts)) ||
+      frameOrigins.some((origin) => isPaymentFrameOrigin(origin))
+    )
+      for (const origin of origins)
+        if (origin != null) session.notePaymentStep(origin);
+    const commit =
+      approval != null ? session.committed.get(approval.id) : undefined;
+    return {
+      session,
+      approval,
+      state: {
+        knownPaymentStep: origins.some((origin) =>
+          session.isPaymentStep(origin)
+        ),
+        pastReview: session.checkout.pastReview(),
+        bankStep: session.checkout.stage === "bank_otp",
+        approval: {
+          live: approval != null,
+          // Asked of the live page: the site the approval binds is checked as it is now.
+          coversSite:
+            approval != null &&
+            approvalCovers(approval.site, await this.liveOrigin(top)),
+          paid: commit?.paid === true,
+          reviewed: commit?.reviewed === true,
+          bankSubmitted: commit?.bankSubmitted === true,
+        },
+      },
+    };
+  }
+
+  /**
+   * The one check every activation passes: null to let it happen, else why
+   * not. A payment it lets through uses the approval up then and there.
+   */
+  private async guardActivation(
+    top: BrowserPage,
+    page: BrowserPage,
+    activation: Activation,
+    sessionId?: string,
+    totalRef?: unknown
+  ): Promise<string | null> {
+    if (activation.action === "key" && !activatesControl(activation.key))
+      return null;
+    const script =
+      activation.action === "key"
+        ? controlFactsScript(activation.selector ?? null, {
+            enter: !isSpaceKey(activation.key),
+          })
+        : controlFactsScript(activation.selector, {
+            option: activation.action === "select" ? activation.option : null,
+          });
+    const facts = await this.controlFacts(page, script);
+    const { session, approval, state } = await this.guardState(
+      top,
+      facts,
+      sessionId
+    );
+    const verdict = activationVerdict(activation, facts, state);
+    switch (verdict.kind) {
+      case "allow":
+        return null;
+      case "refuse":
+        return verdict.reason;
+      case "bank":
+      case "commit": {
+        // Reserved now, with nothing awaited since the verdict: two
+        // activations on one approval (in two tabs, say) cannot both pass.
+        const record = session.committed.get(approval!.id) ?? {
+          paid: false,
+          reviewed: false,
+          bankSubmitted: false,
+        };
+        const part =
+          verdict.kind === "bank"
+            ? "bankSubmitted"
+            : verdict.tier === "pay"
+              ? "paid"
+              : "reviewed";
+        if (record[part]) return USED_REFUSAL;
+        record[part] = true;
+        session.committed.set(approval!.id, record);
+        if (verdict.kind === "bank") return null;
+        const refusal = await this.anchoredTotalRefusal(
+          top,
+          session,
+          approval!,
+          totalRef,
+          sessionId
+        );
+        // A refused commit spends nothing.
+        if (refusal != null) record[part] = false;
+        return refusal;
+      }
+    }
+  }
+
+  /**
+   * The commit's total check: the element the browser anchored (at the
+   * payment pause, or by the card fill), read again now. Null lets it go.
+   */
+  private async anchoredTotalRefusal(
+    top: BrowserPage,
+    session: VaultSession,
+    approval: PaymentApproval,
+    totalRef: unknown,
+    sessionId?: string
+  ): Promise<string | null> {
+    const anchor = session.anchoredTotal;
+    if (anchor == null) return TOTAL_NOT_ANCHORED;
+    if (
+      typeof totalRef === "string" &&
+      !this.isAnchoredTotal(session, totalRef, sessionId)
+    )
+      return TOTAL_NOT_ANCHORED;
+    const page =
+      anchor.frameId == null
+        ? top
+        : (this.options.target?.()?.framePage?.(top.id, anchor.frameId) ??
+          null);
+    const text =
+      page == null
+        ? null
+        : await this.isolatedEval(page, totalTextScript(anchor.selector));
+    if (typeof text !== "string")
+      return "Refused: the total the browser anchored is no longer on the page, so nothing is paid. Report where the checkout is.";
+    return commitVerdict(readPageTotal(text), approval);
+  }
+
+  /** Whether `totalRef` names the element the session's total is anchored to. */
+  private isAnchoredTotal(
+    session: VaultSession,
+    totalRef: string,
+    sessionId?: string
+  ): boolean {
+    const anchor = session.anchoredTotal;
+    const snapshot = this.snapshots.for(sessionId);
+    return (
+      anchor != null &&
+      snapshot.refMap.get(totalRef) === anchor.selector &&
+      (snapshot.frameOf.get(totalRef) ?? null) === anchor.frameId
+    );
+  }
+
+  /** Anchors the total the browser read from `totalRef` for the session's next commit. */
+  private anchorTotal(
+    session: VaultSession,
+    totalRef: string,
+    sessionId?: string
+  ): void {
+    const snapshot = this.snapshots.for(sessionId);
+    const selector = snapshot.refMap.get(totalRef);
+    if (selector == null) return;
+    session.anchoredTotal = {
+      selector,
+      frameId: snapshot.frameOf.get(totalRef) ?? null,
+    };
+  }
+
+  /** The total `totalRef` shows, read in an isolated world; null when it shows none. */
+  private async readTotalIsolated(
+    top: BrowserPage,
+    totalRef: string | undefined,
+    sessionId?: string
+  ): Promise<PageTotal | null> {
+    if (totalRef == null) return null;
+    const selector = this.snapshots.for(sessionId).refMap.get(totalRef);
+    const page = this.pageForRef(top, totalRef, sessionId);
+    if (selector == null || page == null) return null;
+    const text = await this.isolatedEval(page, totalTextScript(selector));
+    return typeof text === "string" ? readPageTotal(text) : null;
+  }
+
+  /** Whether the element (or, with no selector, the focused one) is a `<select>`, read in an isolated world. */
+  private async isSelect(
+    page: BrowserPage,
+    selector: string | null
+  ): Promise<boolean> {
+    const target =
+      selector == null
+        ? "document.activeElement"
+        : `document.querySelector(${JSON.stringify(selector)})`;
+    const tag = await this.isolatedEval(
+      page,
+      `(function() { const el = ${target}; return el ? el.tagName : null; })()`
+    );
+    return tag === "SELECT";
+  }
+
+  private async guardedClick(
+    top: BrowserPage,
+    page: BrowserPage,
+    selector: string,
+    sessionId?: string,
+    totalRef?: unknown
+  ): Promise<{ refused: string } | { result: any }> {
+    const refused = await this.guardActivation(
+      top,
+      page,
+      { action: "click", selector },
+      sessionId,
+      totalRef
+    );
+    if (refused != null) return { refused };
+    await this.animateCursorToElement(page, selector).catch(() => {});
+    return {
+      result: await this.evalJS(page, clickScript(selector), {
+        userGesture: true,
+      }),
+    };
+  }
+
+  private async guardedCheck(
+    top: BrowserPage,
+    page: BrowserPage,
+    selector: string,
+    want: boolean,
+    sessionId?: string
+  ): Promise<{ refused: string } | { result: any }> {
+    const refused = await this.guardActivation(
+      top,
+      page,
+      { action: want ? "check" : "uncheck", selector },
+      sessionId
+    );
+    if (refused != null) return { refused };
+    await this.animateCursorToElement(page, selector).catch(() => {});
+    this.animateCursorClick();
+    return { result: await this.evalJS(page, checkScript(selector, want)) };
+  }
+
+  private async guardedSelect(
+    top: BrowserPage,
+    page: BrowserPage,
+    selector: string,
+    option: string,
+    sessionId?: string
+  ): Promise<{ refused: string } | { result: any }> {
+    const refused = await this.guardActivation(
+      top,
+      page,
+      { action: "select", selector, option },
+      sessionId
+    );
+    if (refused != null) return { refused };
+    await this.animateCursorToElement(page, selector).catch(() => {});
+    this.animateCursorClick();
+    return {
+      result: await this.readPage(page, selectScript(selector, option)),
+    };
+  }
+
+  /**
+   * A key into the focused element, guarded when it can activate or submit.
+   * Trusted through the debugger; with `synthetic`, page-level events when
+   * the debugger cannot deliver it (and Enter then submits the form itself).
+   */
+  private async guardedPress(
+    top: BrowserPage,
+    page: BrowserPage,
+    combo: string,
+    sessionId?: string,
+    totalRef?: unknown,
+    options: { synthetic?: boolean } = {}
+  ): Promise<{ refused: string } | { result: "trusted" | "synthetic" }> {
+    const refused = await this.guardActivation(
+      top,
+      page,
+      { action: "key", key: combo },
+      sessionId,
+      totalRef
+    );
+    if (refused != null) return { refused };
+    const { key: mainKey, modifiers: mods } = parseKeyCombo(combo);
+    // Through the debugger, so the key event is trusted and the default
+    // action runs: a `new KeyboardEvent` reaches listeners, but Enter does
+    // not submit and arrows do not move a listbox selection.
+    try {
+      await this.dispatchTrustedKey(page, mainKey, mods);
+      return { result: "trusted" };
+    } catch (error) {
+      if (options.synthetic === false) throw error;
+      // Debugger unavailable: the synthetic path is worse, but not nothing.
+    }
+    await this.evalJS(
+      page,
+      `(function() {
+      const el = document.activeElement || document.body;
+      const opts = {
+        key: ${JSON.stringify(mainKey)},
+        code: ${JSON.stringify(mainKey.length === 1 ? "Key" + mainKey.toUpperCase() : mainKey)},
+        ctrlKey: ${mods.includes("control") || mods.includes("ctrl")},
+        shiftKey: ${mods.includes("shift")},
+        altKey: ${mods.includes("alt")},
+        metaKey: ${mods.includes("meta") || mods.includes("command")},
+        bubbles: true, cancelable: true,
+      };
+      el.dispatchEvent(new KeyboardEvent('keydown', opts));
+      el.dispatchEvent(new KeyboardEvent('keypress', opts));
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: opts.key, code: opts.code, bubbles: true }));
+      if (${JSON.stringify(mainKey)} === 'Enter' && el.form) {
+        el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit();
+      }
+    })()`
+    );
+    return { result: "synthetic" };
+  }
+
+  /** Null to let a navigation from the session's page happen, else why not. */
+  private async guardNavigation(
+    action: NavigationAction,
+    to: string | null,
+    sessionId?: string
+  ): Promise<string | null> {
+    const wc = this.findView(sessionId);
+    if (wc == null) return null;
+    const from = wc.getURL();
+    if (originOf(from) == null) return null;
+    const facts = await this.controlFacts(wc, pageFactsScript());
+    const { state } = await this.guardState(wc, facts, sessionId);
+    const strict =
+      state.pastReview || state.knownPaymentStep
+        ? true
+        : facts == null
+          ? null
+          : looksLikePaymentStep(facts);
+    return navigationVerdict({
+      action,
+      from,
+      to,
+      strict,
+      approvalLive: state.approval.live && !state.approval.paid,
+    });
+  }
+
+  /** Scripts do not run once a checkout is under way, or on a payment step. */
+  private async guardExecute(
+    wc: BrowserPage,
+    sessionId?: string
+  ): Promise<string | null> {
+    if (this.vaultSession(sessionId).checkout.pastSearch())
+      return EXECUTE_REFUSAL;
+    // A live approval is a payment waiting to be made: no script makes it.
+    if (this.options.vault?.approval(sessionId) != null) return EXECUTE_REFUSAL;
+    if (originOf(wc.getURL()) == null) return null;
+    const facts = await this.controlFacts(wc, pageFactsScript());
+    if (facts == null) return EXECUTE_REFUSAL;
+    // A page with a control that commits ("Buy now") could be bought from by a script's click.
+    if (facts.commitControlOnPage) return COMMIT_PAGE_EXECUTE_REFUSAL;
+    const { state } = await this.guardState(wc, facts, sessionId);
+    return state.knownPaymentStep || looksLikePaymentStep(facts)
+      ? EXECUTE_REFUSAL
+      : null;
+  }
+
+  /** `browser_pause`: the run's stop, with what the browser itself reads of the page. */
+  private async executePause(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult> {
+    if (sessionId == null)
+      return this.err("A pause belongs to a conversation.");
+    const parsed = parsePause(args);
+    if (parsed.ok === false) return this.err(`Not paused: ${parsed.reason}`);
+    const input = parsed.input;
+    const session = this.vaultSession(sessionId);
+    const target = session.checkout.pauseTarget(input.need);
+    if (target.ok === false)
+      return this.err(
+        `Not paused: ${target.reason} Carry on with the task, or report what is in the way.`
+      );
+    const wc = this.findView(sessionId);
+    const topOrigin = wc != null ? await this.liveOrigin(wc) : null;
+    let amount: string | null = null;
+    let currency: string | null = null;
+    if (input.need === "payment") {
+      if (wc == null) return this.err(this.noBrowser(sessionId));
+      const facts = await this.controlFacts(wc, pageFactsScript());
+      const { state } = await this.guardState(wc, facts, sessionId);
+      if (
+        facts == null ||
+        !(state.knownPaymentStep || looksLikePaymentStep(facts))
+      )
+        return this.err(
+          "Not paused: a payment stop is made on the page with the card form, and this page has none. " +
+            "Go on to it (pick card as the payment method if the page asks), then pause there."
+        );
+      const total = await this.readTotalIsolated(
+        wc,
+        input.totalRef ?? undefined,
+        sessionId
+      );
+      if (total == null)
+        return this.err(
+          "Not paused: total_ref does not show one total. Name the element with the order total and its currency, " +
+            'e.g. "Total ₹1,234.00", from a fresh snapshot.'
+        );
+      const resolved =
+        input.currency != null
+          ? total.currencies.includes(input.currency)
+            ? input.currency
+            : null
+          : total.currencies.length === 1
+            ? total.currencies[0]!
+            : null;
+      if (resolved == null)
+        return this.err(
+          total.currencies.length === 0
+            ? "Not paused: the total shows no currency. Name an element that shows it with its currency."
+            : `Not paused: the total's currency could be ${total.currencies.join(", ")}; pass currency as the one the page means.`
+        );
+      amount = total.amount;
+      currency = resolved;
+      // The total the commit is checked against is this element, from now on.
+      this.anchorTotal(session, input.totalRef!, sessionId);
+    }
+    const image =
+      wc != null && SCREENSHOT_NEEDS.has(input.need)
+        ? await this.captureImage(wc).catch(() => null)
+        : null;
+    const pause: CheckoutPause = {
+      need: input.need,
+      fields: input.fields,
+      // The bare registrable domain ("akasaair.com"): what the user is told.
+      site: topOrigin != null ? siteOf(new URL(topOrigin).hostname) : null,
+      amount,
+      currency,
+      merchant: input.merchant,
+      cvvRequired: input.cvvRequired,
+      summary: input.summary,
+      mediaId: image != null ? this.keepAsMedia(image, sessionId) : null,
+    };
+    const held = session.checkout.pause(pause);
+    if (held.ok === false) return this.err(`Not paused: ${held.reason}`);
+    return this.ok(
+      "Paused for the user. Your run ends here and the page stays as it is; write nothing more.\n" +
+        checkoutStateLine({ stage: held.stage, paused: pause })
+    );
+  }
+
+  /** `browser_checkout`: the agent runtime's handle on the session's checkout. */
+  private executeCheckout(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): ToolResult {
+    if (sessionId == null)
+      return this.err("A checkout belongs to a conversation.");
+    // Only the agent runtime holds the token: no model can move a checkout.
+    const expected = this.options.checkoutToken;
+    if (
+      expected == null ||
+      typeof args.token !== "string" ||
+      !tokensMatch(args.token, expected)
+    )
+      return this.err("Refused: browser_checkout is the agent runtime's own.");
+    const session = this.vaultSession(sessionId);
+    const checkout = session.checkout;
+    const line = (extra: Partial<CheckoutStateLine> = {}): string =>
+      checkoutStateLine({
+        stage: checkout.stage,
+        paused: checkout.paused,
+        ...extra,
+      });
+    switch (args.action) {
+      case "start":
+        checkout.start();
+        // A tab still on a payment step keeps it guarded across runs.
+        session.forgetPaymentSteps(
+          originOf(this.findView(sessionId)?.getURL() ?? "")
+        );
+        session.anchoredTotal = null;
+        session.checkoutSite = null;
+        return this.ok(line());
+      case "resume": {
+        const paused = checkout.paused;
+        const resumed = checkout.resume(
+          this.options.vault?.approval(sessionId) ?? null
+        );
+        if (resumed.ok === false)
+          return this.err(`${resumed.reason}\n${line()}`);
+        // The user answered a details stop that named its site: saved
+        // travelers fill on that site, and on no other, from here.
+        if (
+          args.answered === true &&
+          paused?.need === "details" &&
+          paused.site != null
+        )
+          session.checkoutSite = paused.site;
+        return this.ok(line({ approved: resumed.approved }));
+      }
+      case "hold": {
+        const held = checkout.pause({
+          need: "user",
+          fields: [],
+          site: null,
+          amount: null,
+          currency: null,
+          merchant: null,
+          cvvRequired: false,
+          summary: pageText(args.summary, 400),
+          mediaId: null,
+        });
+        if (held.ok === false) return this.err(`${held.reason}\n${line()}`);
+        return this.ok(line());
+      }
+      case "finish": {
+        const ends: readonly RunEnd[] = [
+          "completed",
+          "turn-limit",
+          "timeout",
+          "error",
+          "provider-error",
+          "aborted",
+        ];
+        if (!ends.includes(args.end as RunEnd))
+          return this.err(`end is one of ${ends.join(", ")}.`);
+        checkout.finish(args.end as RunEnd);
+        return this.ok(line());
+      }
+      case "abandon":
+        checkout.abandon();
+        return this.ok(line());
+      case "state":
+        return this.ok(line());
+      default:
+        return this.err("Unknown checkout action.");
+    }
+  }
+
+  /**
+   * `browser_traveler_fill`: a saved traveler's passport number typed into a
+   * field of the page itself (never a frame), under the same checks as a
+   * vault fill: an https page, the field focused in its own document with the
+   * same origin right before typing, the value dropped after, the field
+   * marked secret. Only in the user's own conversations.
+   */
+  private async executeTravelerFill(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<ToolResult> {
+    if (sessionId == null || this.options.isOwnerSession?.(sessionId) !== true)
+      return this.err(
+        "Saved travelers are filled only in the user's own conversations."
+      );
+    const travelerId =
+      typeof args.traveler_id === "string" ? args.traveler_id.trim() : "";
+    const field = typeof args.field === "string" ? args.field : "";
+    const ref = typeof args.ref === "string" ? args.ref : "";
+    if (!TRAVELER_FILL_FIELDS.includes(field))
+      return this.err(`field is one of ${TRAVELER_FILL_FIELDS.join(", ")}.`);
+    const traveler = readTravelers(abacusBotHome()).find(
+      (item) => item.id === travelerId
+    );
+    const value = traveler?.passport?.number ?? "";
+    if (value.length === 0)
+      return this.err(`No passport is saved for traveler ${travelerId}.`);
+
+    const wc = await this.getWC(sessionId);
+    if (!wc) return this.err(this.noBrowser(sessionId));
+    const snapshot = this.snapshots.for(sessionId);
+    if (snapshot.url != null && wc.getURL() !== snapshot.url)
+      return this.err(
+        `The page has navigated since the last snapshot (now at ${wc.getURL()}). ` +
+          'Run browser_snapshot action:"snapshot" and use the field\'s fresh ref.'
+      );
+    const selector = snapshot.refMap.get(ref);
+    if (selector == null)
+      return this.err(this.refError(args, snapshot.refMap.size));
+    if (snapshot.frameOf.get(ref) != null)
+      return this.err(
+        "Refused: a passport number is typed only into the page itself, not into a frame inside it."
+      );
+    const topOrigin = await this.liveOrigin(wc);
+    if (topOrigin == null || !topOrigin.startsWith("https://"))
+      return this.err(
+        "Refused: a passport number is typed only into an https page."
+      );
+    // Only into the checkout under way, on its own site, once it is at the details.
+    const session = this.vaultSession(sessionId);
+    if (
+      !TRAVELER_FILL_STAGES.has(session.checkout.stage) ||
+      session.checkoutSite == null ||
+      siteOf(new URL(topOrigin).hostname) !== session.checkoutSite
+    )
+      return this.err(
+        "Refused: a passport number is typed only into the booking under way, on its own site, from its traveler " +
+          'details on. Stop with browser_pause need:"details" on that form first.'
+      );
+    // The same rules as a vault fill: a page a script ran on takes nothing.
+    const { key: documentKey } = await this.documentInfo(wc);
+    if (documentKey == null)
+      return this.err(
+        "The browser could not say which page this is, so nothing was filled. Snapshot and try again."
+      );
+    const secrets = this.secretsOf(wc);
+    if (secrets.scriptPending() || secrets.scriptRan(documentKey))
+      return this.err(
+        "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
+          "Reload the page, snapshot, and fill again without running scripts."
+      );
+    try {
+      const located = (await this.cdp(wc, "Runtime.evaluate", {
+        expression: `document.querySelector(${JSON.stringify(selector)})`,
+        returnByValue: false,
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => null)) as { result?: { objectId?: string } } | null;
+      const node = located?.result?.objectId;
+      if (node == null) return this.err(this.notFoundError(args, selector));
+      const live = (await this.callOn(wc, node, LIVE_FIELD_FUNCTION)) as {
+        connected?: boolean;
+        editable?: boolean;
+        facts?: FieldFacts;
+      } | null;
+      if (live?.connected !== true)
+        return this.err(this.notFoundError(args, selector));
+      // The field as first seen and as it is now must both name a passport or ID number.
+      const described = (await this.cdp(wc, "DOM.describeNode", {
+        objectId: node,
+      }).catch(() => null)) as { node?: { backendNodeId?: number } } | null;
+      const backendNodeId = described?.node?.backendNodeId;
+      const first =
+        backendNodeId == null ? null : secrets.firstFacts(wc, backendNodeId);
+      if (
+        live.editable !== true ||
+        first == null ||
+        live.facts == null ||
+        !passportField(first) ||
+        !passportField(live.facts)
+      )
+        return this.err(
+          `Refused: ${ref} is not clearly the passport or ID number field (its name, label or placeholder says ` +
+            "so), so nothing was filled. Snapshot and pick that field."
+        );
+      // Hidden and locked before the value is here, as a vault fill is.
+      if (!(await secrets.markFilledNode(wc, node).catch(() => false)))
+        return this.err(
+          `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
+        );
+      const outcome = await this.typeVaultValue(
+        wc,
+        wc,
+        node,
+        value,
+        topOrigin,
+        topOrigin,
+        documentKey
+      );
+      if (outcome === "aborted")
+        return this.err(
+          `Stopped before typing: the page under ${ref} changed. Nothing was typed. Snapshot and try again.`
+        );
+      return outcome === "typed"
+        ? this.ok(`Filled the passport number into ${ref} (hidden).`)
+        : this.err(
+            `${ref} did not take the passport number cleanly; it was hidden. Snapshot and check the form.`
+          );
+    } finally {
+      await this.cdp(wc, "Runtime.releaseObjectGroup", {
+        objectGroup: VAULT_OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
   }
 
   /** An element the snapshot had and the page no longer has. */
@@ -2862,9 +3765,11 @@ export class McpBrowserServer extends McpHttpServer {
    * (its loader; null when the browser cannot say), and the origins of its
    * frames, read from the browser now.
    */
-  private async documentInfo(
-    wc: BrowserPage
-  ): Promise<{ key: string | null; frameOrigins: string[] }> {
+  private async documentInfo(wc: BrowserPage): Promise<{
+    key: string | null;
+    frameId: string | null;
+    frameOrigins: string[];
+  }> {
     const tree = (await this.cdp(wc, "Page.getFrameTree").catch(
       () => null
     )) as { frameTree?: FrameTreeNode } | null;
@@ -2880,9 +3785,12 @@ export class McpBrowserServer extends McpHttpServer {
     for (const frame of this.options.target?.()?.frames?.(wc.id) ?? [])
       if (frame.origin != null) origins.push(frame.origin);
     const loader = tree?.frameTree?.frame?.loaderId;
+    const frameId = tree?.frameTree?.frame?.id;
     return {
       // Null when the browser cannot say which document it is: callers refuse.
       key: typeof loader === "string" && loader.length > 0 ? loader : null,
+      frameId:
+        typeof frameId === "string" && frameId.length > 0 ? frameId : null,
       frameOrigins: origins,
     };
   }
@@ -2934,7 +3842,7 @@ export class McpBrowserServer extends McpHttpServer {
       );
 
     const wc = await this.getWC(sessionId);
-    if (!wc) return this.err(NO_BROWSER);
+    if (!wc) return this.err(this.noBrowser(sessionId));
     const snapshot = this.snapshots.for(sessionId);
     if (snapshot.url != null && wc.getURL() !== snapshot.url)
       return this.err(
@@ -2970,6 +3878,11 @@ export class McpBrowserServer extends McpHttpServer {
     const total = card
       ? await this.readTotal(wc, args.total_ref, sessionId)
       : null;
+    // A card fill whose total the plan checked anchors that total for the Pay click.
+    const anchorAfterPlan =
+      total != null && typeof args.total_ref === "string"
+        ? args.total_ref
+        : null;
     const topOrigin = await this.liveOrigin(wc);
     const frameOrigin =
       frameId != null ? await this.liveOrigin(wc, frameId) : null;
@@ -2986,6 +3899,16 @@ export class McpBrowserServer extends McpHttpServer {
       pageTotal: total,
     });
     if (plan.ok === false) return this.err(plan.error);
+    // The plan checked this total against the approval. Anchored already (at
+    // the payment pause), it must be that same element; otherwise it becomes
+    // the one the Pay click re-reads.
+    if (anchorAfterPlan != null) {
+      const session = this.vaultSession(sessionId);
+      if (session.anchoredTotal == null)
+        this.anchorTotal(session, anchorAfterPlan, sessionId);
+      else if (!this.isAnchoredTotal(session, anchorAfterPlan, sessionId))
+        return this.err(TOTAL_NOT_ANCHORED);
+    }
     // Taken now, before anything waits, so a second fill of this field is refused.
     if (plan.once) approval!.used.add(field as VaultField);
     let delivered = false;

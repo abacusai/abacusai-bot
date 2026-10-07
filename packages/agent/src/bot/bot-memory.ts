@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 
+import { redactIdNumbers } from "../traveler/id-numbers.js";
 import {
   botDailyNoteFile,
   botDailyNotesDir,
@@ -64,7 +65,8 @@ export interface BotMemoryResult {
 const flatten = (text: string): string => text.replace(/\s+/g, " ").trim();
 
 export function addCoreEntry(dir: string, content: string): BotMemoryResult {
-  const entry = flatten(content);
+  // ID numbers belong in the traveler store, saved on the user's yes, never here.
+  const entry = flatten(redactIdNumbers(content));
 
   if (entry.length === 0)
     return { ok: false, message: "Nothing to remember: content was empty." };
@@ -130,7 +132,7 @@ export function removeCoreEntry(dir: string, match: string): BotMemoryResult {
 
 /** Append a bullet to today's daily note. Append-only by design. */
 export function appendDailyNote(dir: string, content: string): BotMemoryResult {
-  const entry = flatten(content);
+  const entry = flatten(redactIdNumbers(content));
 
   if (entry.length === 0)
     return { ok: false, message: "Nothing to note: content was empty." };
