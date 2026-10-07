@@ -176,6 +176,8 @@ export const composeNodeHost = async () => {
       }),
     onAgentEvent: (listener) => serviceHost.onAgentEvent(listener),
     activity: () => lease.activity(),
+    resolveMedia: (ref, sessionId) =>
+      serviceHost.mediaStore.resolve(ref, sessionId),
   });
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.

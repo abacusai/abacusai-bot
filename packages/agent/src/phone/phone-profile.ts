@@ -9,7 +9,10 @@ import {
   buildBotReactionTool,
 } from "../bot/bot-reaction-tool.js";
 import { BOT_TIME_TOOL_NAME, buildBotTimeTool } from "../bot/bot-time-tool.js";
+import { WHATSAPP_CHANNEL } from "../channel.js";
 import type { ForeverProfile } from "../forever/profile.js";
+import { buildSendMediaTool } from "../send-media-tool.js";
+import { SEND_MEDIA_TOOL_NAME } from "../send-media.js";
 import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
   localDay,
@@ -69,6 +72,7 @@ const PHONE_TOOL_NAMES = [
   BOT_TIME_TOOL_NAME,
   BOT_REACTION_TOOL_NAME,
   PHONE_PROGRESS_TOOL_NAME,
+  SEND_MEDIA_TOOL_NAME,
 ];
 
 export interface PhoneProfileOptions {
@@ -104,11 +108,12 @@ export function createPhoneProfile(
       buildBotTimeTool(),
       buildBotReactionTool(),
       buildPhoneProgressTool(),
+      buildSendMediaTool(),
     ],
     // A browser run keeps the user posted, and hears them, from inside.
     browserTask: {
-      progressTools: () => [buildPhoneProgressTool()],
-      paneless: true,
+      progressTools: () => [buildPhoneProgressTool(), buildSendMediaTool()],
+      channel: WHATSAPP_CHANNEL,
     },
     // The phone's own `memory` replaces the desktop's global one too.
     replacesMcpTool: (name) =>

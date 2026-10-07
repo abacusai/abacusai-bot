@@ -43,6 +43,8 @@ export default defineConfig({
     "src/user-text.ts",
     // The phone reply's bubble split, for the hosted app's WhatsApp lane.
     "src/phone/phone-bubbles.ts",
+    // Media for the chat: the hosted app's lane and main's media store read it.
+    "src/send-media.ts",
   ],
   deps: {
     // The sandbox runtime finds its vendored seccomp filters and Java agent

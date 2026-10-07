@@ -15,6 +15,7 @@ import {
   type SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 
+import type { ChannelCapabilities } from "./channel.js";
 import { abacusBotDir } from "./config.js";
 import { excludedTools } from "./excluded-tools.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
@@ -131,6 +132,13 @@ const PROGRESS_PROMPT = [
   "[user mid-task]: answer a question with `send_progress`, and fold a change into the task.",
 ].join("\n");
 
+/** For a run whose chat takes images (the phone's `send_media`). */
+const MEDIA_PROMPT = [
+  'To show the user the page, take browser_snapshot action:"screenshot" and send its media id',
+  "with `send_media` and a short caption: when they ask to see it, and when a picture helps",
+  "them (a page ready for them to pay, a CAPTCHA, a choice that is theirs to make).",
+].join("\n");
+
 export interface BrowserTaskContext {
   cwd: string;
   agentDir: string;
@@ -143,8 +151,8 @@ export interface BrowserTaskContext {
   progressTools?: () => unknown[];
   /** With it, the user's mid-task messages go to the run alone while it is live. */
   midTask?: MidTaskInbox;
-  /** The user has no Browser pane to finish a step in (WhatsApp). */
-  paneless?: boolean;
+  /** What the user's chat can do; an app chat with its Browser pane when absent. */
+  channel?: ChannelCapabilities;
 }
 
 export interface BrowserTaskOptions {
@@ -495,7 +503,8 @@ export async function runBrowserTask(
         settingsManager: context.settingsManager,
         appendSystemPrompt: [
           context.progressTools != null
-            ? `${BROWSER_SYSTEM_PROMPT}\n${PROGRESS_PROMPT}`
+            ? `${BROWSER_SYSTEM_PROMPT}\n${PROGRESS_PROMPT}` +
+              (context.channel?.media === true ? `\n${MEDIA_PROMPT}` : "")
             : BROWSER_SYSTEM_PROMPT,
         ],
         // No extensions: the permission gate would prompt a user not watching.

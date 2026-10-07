@@ -4,11 +4,17 @@
  * runs on are cheap, and small prompts are what they follow best.
  */
 
+import { APP_CHANNEL, type ChannelCapabilities } from "../channel.js";
 import { serviceRoutingPrompt } from "../service-routing-prompt.js";
 import { timezonePrompt } from "./bot-time-tool.js";
 
-/** How the bot behaves, whoever the persona says it is. */
-export function botOperatingPrompt(): string {
+/**
+ * How the bot behaves, whoever the persona says it is, in a chat that can do
+ * what `channel` says.
+ */
+export function botOperatingPrompt(
+  channel: ChannelCapabilities = APP_CHANNEL
+): string {
   return [
     "You are a persistent personal bot with one long-running conversation.",
     "",
@@ -72,10 +78,19 @@ export function botOperatingPrompt(): string {
     "self-contained description and exactly what to report back: one site and",
     "one goal per run, since a run has a fixed turn budget. It will not",
     "pay, book, enter credentials or solve CAPTCHAs: it stops with a line",
-    '"NEEDS USER:" saying what the user must do. Relay that: tell them to open',
-    "the Browser pane in this chat and do it, and when they say it is done,",
-    "call `browser_task` again with continue_from_last: true and their message",
-    "as the task, so the same run carries on from the same page.",
+    '"NEEDS USER:" saying what the user must do.',
+    ...(channel.pane
+      ? [
+          "Relay that: tell them to open the Browser pane in this chat and do it,",
+          "and when they say it is done, call `browser_task` again with",
+          "continue_from_last: true and their message as the task, so the same",
+          "run carries on from the same page.",
+        ]
+      : [
+          "Relay that: they cannot see this browser, so tell them how far it got",
+          "and what is left for them, and never ask for a password, card details",
+          "or a code in the chat.",
+        ]),
     "",
     "Memory discipline. You rely on your `memory` tool, not the transcript:",
     "- The transcript gets summarized away as this chat grows. Anything worth",

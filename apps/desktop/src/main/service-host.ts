@@ -359,6 +359,7 @@ import {
   signInToMcpServer,
 } from "./services/mcp/mcp-oauth-service";
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
+import { MediaStore } from "./services/messaging/media-store";
 import {
   listPairing,
   readGatewaySettings,
@@ -667,10 +668,14 @@ export class ServiceHost {
       })),
   });
   readonly skillsService = new SkillsService(() => this.platform);
+  /** Screenshots (and other media) held for `send_media`, in memory only. */
+  readonly mediaStore = new MediaStore();
   private readonly mcpBrowserServer = new McpBrowserServer({
     requestPermission: (tool, summary, sessionId) =>
       this.requestBrowserToolPermission(tool, summary, sessionId),
     target: () => this.browserTargetSource(),
+    // Only the hosted computer carries a chat that takes media (WhatsApp).
+    media: () => (this.platform === "web-host" ? this.mediaStore : null),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
   });
