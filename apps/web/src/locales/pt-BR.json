@@ -883,7 +883,6 @@
     "toggleSidebar": "Toggle sidebar"
   },
   "connectors": {
-    "chromeMissing": "{{name}} drives Google Chrome, and Chrome was not found on this computer. Install it from google.com/chrome and the browser tools will work.",
     "abacusConnectCancelled": "Stopped adding {{name}}.",
     "abacusConnectFailed": "Couldn't add {{name}}. Try again.",
     "abacusConnected": "{{name}} connected",
@@ -3617,7 +3616,6 @@
     "approvalTitle": "Aprovação",
     "chrome": {
       "notFound": "Google Chrome or Microsoft Edge was not found on this computer.",
-      "extensionMissing": "Install the Playwright Extension in {{browser}} to let the agent drive it.",
       "ready": "{{browser}} is ready. Connect now, or the agent's first browser task will ask in {{browser}}.",
       "connecting": "Waiting for you to allow the connection in your browser…",
       "connected": "Connected to {{browser}}: {{count}} tab(s) in the AbacusAI Bot group.",

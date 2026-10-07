@@ -184,8 +184,24 @@ export type AgentEvent =
   // an absent `status` means 'completed'.
   | { type: "subtask_start"; id: string; description?: string; kind?: string }
   | { type: "subtask_end"; id: string; status?: "completed" | "failed" }
-  | { type: "user_message_dequeued"; content: string }
-  | { type: "user_message_steered"; content: string; userText?: UserTextTags }
+  | { type: "user_message_dequeued"; content: string; messageId?: string }
+  | {
+      type: "user_message_steered";
+      content: string;
+      userText?: UserTextTags;
+      messageId?: string;
+    }
+  /**
+   * The user-visible end of one turn whose `send` or steers carried an id,
+   * after any error it reported: its final assistant message (empty when it wrote none), and
+   * the ids of the messages it answers (the send's own and those steered in).
+   */
+  | {
+      type: "turn_reply";
+      messageIds: string[];
+      text: string;
+      failed: boolean;
+    }
   | {
       type: "error";
       // Inconsistent across models: the text may be at `message`, only at
@@ -389,6 +405,8 @@ export interface QueueEntry {
   hidden?: true;
   waitingFor: "step" | "permission" | "turn";
   userText?: UserTextTags;
+  /** The sender's id, from `send`. */
+  messageId?: string;
 }
 
 /** Commands sent from main process to ndjson IPC host (stdin) */
@@ -406,6 +424,8 @@ export type DesktopCommand =
       conversationId?: string;
       activeSkills?: string[];
       userText?: UserTextTags;
+      /** The sender's id for this message; every event about it carries it back. */
+      messageId?: string;
     }
   | { type: "stop" }
   | { type: "set_mode"; mode: string }

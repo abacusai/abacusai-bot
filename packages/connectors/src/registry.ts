@@ -113,8 +113,6 @@ export interface McpConnector extends ConnectorBase {
   /** For a `token` server: the header the token goes in and its label. */
   token?: { header: string; scheme: string; label: string };
   fields?: Record<string, ConnectorField>;
-  /** Something the entry cannot install; checked on add, warned about, never blocking. */
-  requires?: "google-chrome";
 }
 
 export type Connector = PlatformConnector | MessagingConnector | McpConnector;
@@ -174,10 +172,6 @@ export const HOME_PLACEHOLDER = "{{HOME}}";
 const PLATFORM_CALL_CREDITS = 10;
 
 const remote = (url: string): McpEntry => ({ url });
-const npx = (pkg: string, ...args: string[]): McpEntry => ({
-  command: "npx",
-  args: ["-y", pkg, ...args],
-});
 
 const platform = (
   service: string,
@@ -338,19 +332,6 @@ export const CONNECTORS: readonly Connector[] = [
       via: "`gh` and git in bash",
     }
   ),
-  {
-    kind: "mcp",
-    id: "playwright",
-    name: "Playwright",
-    description:
-      "Drive a real browser: navigate, click, fill forms, and read the page back.",
-    category: "featured",
-    auth: "none",
-    docsUrl: "https://github.com/microsoft/playwright-mcp",
-    // Pinned: `@latest` re-resolves on every spawn and breaks offline machines.
-    entry: npx("@playwright/mcp@0.0.80"),
-    requires: "google-chrome",
-  },
   {
     kind: "mcp",
     id: "huggingface",

@@ -247,6 +247,7 @@ export class HostCore {
 
         await this.runTurn(command.message, "send", {
           userText: command.userText,
+          ...(command.messageId != null && { messageId: command.messageId }),
         });
 
         return;
@@ -344,7 +345,10 @@ export class HostCore {
         this.emitQueue(next?.message ?? null);
 
         if (next) {
-          await this.runTurn(next.message, "dequeue", { dequeued: true });
+          await this.runTurn(next.message, "dequeue", {
+            dequeued: true,
+            ...(next.messageId != null && { messageId: next.messageId }),
+          });
         }
 
         return;
@@ -515,10 +519,11 @@ export class HostCore {
       dequeued?: boolean;
       echoed?: boolean;
       userText?: UserTextTags;
+      messageId?: string;
     } = {}
   ): Promise<void> {
     if (this.busy) {
-      await this.admit(message, options.userText);
+      await this.admit(message, options.userText, options.messageId);
 
       return;
     }
@@ -540,6 +545,7 @@ export class HostCore {
       echoed?: boolean;
       token?: TurnToken;
       userText?: UserTextTags;
+      messageId?: string;
     } = {}
   ): Promise<void> {
     const turn = this.turn;
@@ -552,7 +558,8 @@ export class HostCore {
             dequeued: options.dequeued === true,
             echoed: options.echoed === true,
             userText: options.userText,
-          })
+          }),
+        options.messageId
       );
 
       // pi may still hold the leftovers as steers and would inject them on
@@ -570,19 +577,15 @@ export class HostCore {
 
         this.emitQueue(next.message);
         const echoed = this.echoed.delete(next.id);
-        if (!echoed) {
-          this.emit({
-            type: "event",
-            event: { type: "user_message_dequeued", content: next.message },
-          });
-        }
+        if (!echoed) this.emitDequeued(next);
         await this.sendOwned(
           next.message,
           this.hooks.beginTurn?.("drain", next.message, {
             dequeued: true,
             echoed,
             userText: next.userText,
-          })
+          }),
+          next.messageId
         );
       }
     } finally {
@@ -599,12 +602,14 @@ export class HostCore {
   /** One `session.send`, owned by `token` from start to settle. */
   private async sendOwned(
     message: string,
-    token: TurnToken | undefined
+    token: TurnToken | undefined,
+    messageId?: string
   ): Promise<void> {
     this.hooks.sending?.(token);
     try {
       await this.session.send(message, {
         settled: () => this.hooks.settle?.(token),
+        ...(messageId != null && { messageId }),
       });
     } catch (error) {
       // Recorded against this token's own run before the settle below
@@ -626,8 +631,12 @@ export class HostCore {
    * while a stop is landing (or a run is still preparing), hold it for the
    * turn after.
    */
-  async admit(message: string, userText?: UserTextTags): Promise<QueueEntry> {
-    const { entry, steered } = this.admitNow(message, userText);
+  async admit(
+    message: string,
+    userText?: UserTextTags,
+    messageId?: string
+  ): Promise<QueueEntry> {
+    const { entry, steered } = this.admitNow(message, userText, messageId);
 
     await steered;
 
@@ -637,11 +646,13 @@ export class HostCore {
   /** `admit`'s synchronous part, so a caller can acknowledge before the steer lands. */
   admitNow(
     message: string,
-    userText?: UserTextTags
+    userText?: UserTextTags,
+    messageId?: string
   ): { entry: QueueEntry; steered: Promise<void> } {
     const entry: QueueEntry = {
       id: `q-${++this.queueIds}`,
       ...(userText != null && { userText }),
+      ...(messageId != null && { messageId }),
       message,
       waitingFor:
         this.stopping || this.preparing || this.resetting
@@ -661,7 +672,7 @@ export class HostCore {
       entry,
       steered:
         entry.waitingFor === "step"
-          ? this.session.steer(message)
+          ? this.session.steer(message, messageId)
           : Promise.resolve(),
     };
   }
@@ -675,16 +686,24 @@ export class HostCore {
     this.emitQueue(next.message);
     // Sent mid-turn it needs its bubble now; sent mid-stop it already has one.
     const echoed = this.echoed.delete(next.id);
-    if (!echoed) {
-      this.emit({
-        type: "event",
-        event: { type: "user_message_dequeued", content: next.message },
-      });
-    }
+    if (!echoed) this.emitDequeued(next);
     await this.runTurn(next.message, "after_stop", {
       dequeued: true,
       echoed,
       userText: next.userText,
+      ...(next.messageId != null && { messageId: next.messageId }),
+    });
+  }
+
+  /** A queued message now runs as its own turn. */
+  private emitDequeued(entry: QueueEntry): void {
+    this.emit({
+      type: "event",
+      event: {
+        type: "user_message_dequeued",
+        content: entry.message,
+        ...(entry.messageId != null && { messageId: entry.messageId }),
+      },
     });
   }
 
@@ -693,7 +712,7 @@ export class HostCore {
     for (const entry of this.queue) {
       if (entry.waitingFor !== "permission") continue;
       entry.waitingFor = "step";
-      await this.session.steer(entry.message);
+      await this.session.steer(entry.message, entry.messageId);
     }
 
     this.emitQueue();
@@ -708,7 +727,7 @@ export class HostCore {
 
     for (const entry of this.queue) {
       if (entry.waitingFor !== "step") continue;
-      await this.session.steer(entry.message);
+      await this.session.steer(entry.message, entry.messageId);
     }
   }
 
@@ -724,9 +743,14 @@ export class HostCore {
         this.awaitingPermission =
           event.event.status === AgentStatus.WaitingForToolPermission;
       } else if (event.event.type === "user_message_steered") {
-        const content = event.event.content;
+        const { content, messageId } = event.event;
+        // By id when the sender gave one: two identical texts are two messages.
         const index = this.queue.findIndex(
-          (entry) => entry.waitingFor === "step" && entry.message === content
+          (entry) =>
+            entry.waitingFor === "step" &&
+            (messageId != null
+              ? entry.messageId === messageId
+              : entry.message === content)
         );
 
         if (index !== -1) {

@@ -41,6 +41,20 @@ export interface ChromeRelayEvents {
   disconnected: [reason: string];
 }
 
+/** What the tab pages drive: this relay, or a Chromium the app launched itself. */
+export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
+  readonly connected: boolean;
+  attachedTabs(): ChromeTabInfo[];
+  tab(tabId: number): ChromeTabInfo | undefined;
+  isAttached(tabId: number): boolean;
+  createTab(url: string): Promise<ChromeTabInfo>;
+  cdp(
+    tabId: number,
+    method: string,
+    params?: Record<string, unknown>
+  ): Promise<unknown>;
+};
+
 const CONNECT_WAIT_MS = 5 * 60_000;
 
 export class ChromeRelay extends EventEmitter<ChromeRelayEvents> {

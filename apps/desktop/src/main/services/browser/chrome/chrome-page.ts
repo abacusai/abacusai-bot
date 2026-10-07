@@ -5,7 +5,7 @@
  * state kept current by the tab's own CDP events.
  */
 import type { BrowserPage, DidFailLoadListener } from "../browser-target";
-import type { ChromeRelay, ChromeTabInfo } from "./chrome-relay";
+import type { ChromeTabDriver, ChromeTabInfo } from "./chrome-relay";
 
 const HISTORY_TIMEOUT_MS = 5_000;
 
@@ -20,7 +20,7 @@ export class ChromePage implements BrowserPage {
   private enabled: Promise<void> | null = null;
 
   constructor(
-    private readonly relay: ChromeRelay,
+    private readonly relay: ChromeTabDriver,
     tab: ChromeTabInfo
   ) {
     this.id = tab.id;

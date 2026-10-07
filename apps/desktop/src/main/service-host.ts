@@ -290,6 +290,10 @@ import { effectiveBotModel } from "./services/bots/effective-model";
 import { BrowserProfilesService } from "./services/browser/browser-profiles-service";
 import type { BrowserTargetSource } from "./services/browser/browser-target";
 import { ChromeBrowserService } from "./services/browser/chrome/chrome-browser-service";
+import {
+  HostedChromiumLauncher,
+  HostedChromiumService,
+} from "./services/browser/chrome/hosted-chromium";
 import type { ElectronBrowserRuntime } from "./services/browser/electron-browser-runtime";
 import {
   buildAgentAuthEnv,
@@ -355,6 +359,7 @@ import {
   type McpTokenState,
   signInToMcpServer,
 } from "./services/mcp/mcp-oauth-service";
+import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
 import {
   listPairing,
   readGatewaySettings,
@@ -404,6 +409,7 @@ import {
 } from "./services/session/session-turn-state-service";
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
+import { TurnAbandoner } from "./services/session/turn-abandoner";
 import { WhisperModelService } from "./services/voice/whisper-model-service";
 import { CheckoutService } from "./services/workspace/checkout-service";
 import {
@@ -692,7 +698,10 @@ export class ServiceHost {
 
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
-    if (this.platform === "web-host") return null;
+    if (this.platform === "web-host")
+      return this.hostedChromium.available()
+        ? this.hostedChromium.targetSource()
+        : null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
     // and the first browser call opens the allow page if it is not connected.
     if (this.builtinMcpLifecycle.getBrowserEngine() === "chrome")
@@ -888,8 +897,16 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       }),
   });
+  /** The hosted computer's own Chromium: web-host's built-in browser. */
+  private readonly hostedChromium = new HostedChromiumService(
+    new HostedChromiumLauncher({
+      userDataDir: () => path.join(abacusBotHome(), "browser-profile"),
+      hosted: () => this.platform === "web-host",
+    })
+  );
   private readonly builtinMcpLifecycle = new BuiltinMcpLifecycle({
     platform: () => this.platform,
+    hostedBrowser: this.hostedChromium,
     mcpConfigService: this.mcpConfigService,
     browserServer: this.mcpBrowserServer,
     chromeBrowser: this.chromeBrowser,
@@ -1732,7 +1749,7 @@ export class ServiceHost {
       });
     },
     emitSessionClosed: (workspaceId, sessionId) => {
-      this.sessionTurnStateService.markStopped(workspaceId, sessionId);
+      this.sessionTurnStateService.markClosed(workspaceId, sessionId);
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
       this.emitEvent({
@@ -1906,6 +1923,19 @@ export class ServiceHost {
     }
   );
 
+  private readonly turnAbandoner = new TurnAbandoner({
+    clearQueue: (workspaceId, sessionId) =>
+      this.agentCommunicationService.clearQueue({ workspaceId, sessionId }),
+    stopTurn: (workspaceId, sessionId) =>
+      this.agentCommunicationService.stopTurn({ workspaceId, sessionId }),
+    markStopped: (workspaceId, sessionId) =>
+      this.markTurnStopped(workspaceId, sessionId),
+    stopSettled: (sessionId, deadlineMs) =>
+      this.sessionTurnStateService.stopSettled(sessionId, deadlineMs),
+    closeSession: (workspaceId, sessionId) =>
+      this.agentManagerService.stopSessionAndWait(workspaceId, sessionId),
+  });
+
   private readonly workspaceRuntimeService = new WorkspaceRuntimeService({
     workspaceService: this.workspaceService,
     gitService: this.gitService,
@@ -1945,6 +1975,7 @@ export class ServiceHost {
     }
 
     this.initializedAt = new Date().toISOString();
+    retirePlaywrightEntries(this.mcpConfigService);
     this.workspaceService.initialize();
     const workspaceIds = this.workspaceService.getWorkspaces().map((w) => w.id);
     this.agentSessionManagerService.initialize(workspaceIds);
@@ -2012,6 +2043,7 @@ export class ServiceHost {
     this.connectWatcher.stop();
     this.builtinMcpLifecycle.stopBrowserServer();
     this.chromeBrowser.dispose();
+    this.hostedChromium.dispose();
     this.mcpDeviceServer.stop();
     this.mcpAgentToolsServer.stop();
     this.deviceMirrorService.dispose();
@@ -3003,10 +3035,16 @@ export class ServiceHost {
 
     // A session whose CLI died is restarted rather than swallowing the message.
     const session = this.agentSessionManagerService.get(request.sessionId);
+    // Abandoned while this send was on its way: it must not land behind the stop.
+    const epoch = this.turnAbandoner.epoch(request.sessionId);
+    const current = (): boolean =>
+      this.turnAbandoner.stillCurrent(request.sessionId, epoch);
     const delivered = await this.withEnvironmentNotice(request);
     const outcome = await deliverMessage({
-      send: () => this.agentCommunicationService.sendMessage(delivered),
+      send: () =>
+        current() && this.agentCommunicationService.sendMessage(delivered),
       start: async () => {
+        if (!current()) return false;
         const result = await this.startAgentSession({
           workspaceId: request.workspaceId,
           sessionId: request.sessionId,
@@ -3153,6 +3191,11 @@ export class ServiceHost {
   stopAgentTurn(request: AgentSessionCommandRequest): void {
     this.markTurnStopped(request.workspaceId, request.sessionId);
     this.agentCommunicationService.stopTurn(request);
+  }
+
+  /** Gives up on the turn; resolves once the session is idle or closed (see TurnAbandoner). */
+  async abandonAgentTurn(request: AgentSessionCommandRequest): Promise<void> {
+    await this.turnAbandoner.abandon(request.workspaceId, request.sessionId);
   }
 
   /** Main's side of a Stop, for `stopAgentTurn` and the relay's `ai.cancel`. */
@@ -4563,6 +4606,11 @@ export class ServiceHost {
     );
     this.laneEnv.set(session.id, env);
     return { workspaceId: session.workspaceId, sessionId: session.id };
+  }
+
+  /** Web-host start: looks up the Chromium once, then in the background while there is none. */
+  prepareHostedBrowser(): Promise<boolean> {
+    return this.hostedChromium.prepare();
   }
 
   /** Every session's agent events, past the post-Stop filter. */

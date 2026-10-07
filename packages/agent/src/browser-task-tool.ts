@@ -291,9 +291,13 @@ export function buildBrowserTaskTool(
       // A capped run's answer is partial; saying so makes the caller weigh it.
       const note =
         result.stoppedBy === "needs-user"
-          ? "\n\n(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
-            "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
-            "their reply as the task; the same sub-agent continues with everything it has found.)"
+          ? context.paneless === true
+            ? "\n\n(The run stopped at a step only the user can do. They cannot see this browser: tell them " +
+              "it is ready up to that step and that they finish it themselves, with what they need to do so " +
+              "(the site, what to pick). Never ask for a password or card details in the chat.)"
+            : "\n\n(The browser is left on that page. Tell the user to open the Browser pane in this chat, " +
+              "do the step above, and reply here. Then call browser_task with continue_from_last: true and " +
+              "their reply as the task; the same sub-agent continues with everything it has found.)"
           : result.stoppedBy === "turn-limit"
             ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
             : result.stoppedBy === "timeout"
@@ -308,6 +312,9 @@ export function buildBrowserTaskTool(
           steers: result.steers,
           stoppedBy: result.stoppedBy,
           ...(outcome != null ? { outcome } : {}),
+          ...(result.consumedMessageIds != null
+            ? { consumedMessageIds: result.consumedMessageIds }
+            : {}),
         },
         isError: failed,
       };

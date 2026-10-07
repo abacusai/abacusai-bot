@@ -36,6 +36,8 @@ export interface DesktopState {
   builtinDevicesDisabled?: boolean;
   /** Permission policy for the built-in device (simulator/emulator) MCP tools. Default 'ask'. */
   builtinDevicesApproval?: BrowserApproval;
+  /** Set once the app-written Playwright connector entries were retired. */
+  playwrightEntriesRetired?: boolean;
 }
 
 /** Names that cannot be used as object keys without changing the object itself. */

@@ -8,7 +8,7 @@ import type {
   BrowserViewCandidate,
 } from "../browser-target";
 import { ChromePage } from "./chrome-page";
-import type { ChromeRelay } from "./chrome-relay";
+import type { ChromeTabDriver } from "./chrome-relay";
 
 export class ChromeTargetSource implements BrowserTargetSource {
   readonly presentsInApp = false;
@@ -16,7 +16,7 @@ export class ChromeTargetSource implements BrowserTargetSource {
   /** Which session opened which tab; a tab nobody opened belongs to no session. */
   private readonly owners = new Map<number, string>();
 
-  constructor(private readonly relay: ChromeRelay) {
+  constructor(private readonly relay: ChromeTabDriver) {
     relay.on("cdpEvent", (tabId, method, params) => {
       this.pages.get(tabId)?.onCdpEvent(method, params);
     });

@@ -414,6 +414,8 @@ export interface SendAgentMessageRequest {
   docIds?: string[];
   conversationId?: string;
   activeSkills?: string[];
+  /** The sender's id; the agent's events about this message carry it back. */
+  messageId?: string;
 }
 
 export interface AgentSessionCommandRequest {
@@ -817,6 +819,7 @@ export const abacusConnectorsMcpEntry = (mcpUrl: string): McpServerEntry => ({
 
 /** MCP configs are namespaced by mode; AbacusAI Bot only has the one. */
 export type McpMode = "code";
+export const MCP_MODES: readonly McpMode[] = ["code"];
 
 export interface McpOAuthEntry {
   /** Pre-registered client id for providers without dynamic registration; omit to attempt DCR. */

@@ -41,7 +41,6 @@ export const CONNECTOR_MARK_IDS = [
   "dropbox",
   "confluence",
   "x",
-  "playwright",
   "huggingface",
   "cloudflare",
   "zapier",
@@ -366,14 +365,6 @@ const MARKS: Record<ConnectorMarkId, { parts: Part[] }> = {
   },
   x: {
     parts: [{ d: "M4 3h4.5l11.5 18h-4.5z M20 3 4 21", stroke: INK, w: 2 }],
-  },
-  playwright: {
-    parts: [
-      { d: "M4.5 6.5 14 4l2.5 9.5a5.6 5.6 0 0 1-9.4 2.5z", fill: "#2EAD33" },
-      { d: "M9 5.5 19.5 8l-2.5 9.5A5.6 5.6 0 0 1 7.5 15z", fill: "#E2574C" },
-      { d: "M11 11.5h.01 M15.5 12.5h.01", stroke: TILE, w: 2.2 },
-      { d: "M11 15.5c1.2 1.1 3.5 1.4 4.7.3", stroke: TILE, w: 1.4 },
-    ],
   },
   huggingface: {
     parts: [

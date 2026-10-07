@@ -19,6 +19,8 @@ import * as path from "node:path";
 import { SettingsManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
+import { TurnReply } from "./forever/turn-reply.js";
+import { PendingSteers } from "./pending-steers.js";
 import { AgentStatus, type AgentEvent } from "./protocol.js";
 import { replacesBash } from "./roster.js";
 import {
@@ -676,5 +678,74 @@ describe("a request the provider's tier will not take", () => {
     expect(terminalProviderMessage(groq)).toMatch(
       /^This request is too large for the model's limit \(413\)\./
     );
+  });
+});
+
+describe("steers on their way to the model", () => {
+  it("lands the oldest of two identical texts first, each with its own id", () => {
+    const steers = new PendingSteers();
+    steers.add("ok", "m1");
+    steers.add("ok", "m2");
+    steers.add("no id");
+    expect(steers.take("ok")).toEqual({ text: "ok", messageId: "m1" });
+    expect(steers.take("ok")).toEqual({ text: "ok", messageId: "m2" });
+    expect(steers.take("ok")).toBeNull();
+    expect(steers.take("no id")).toEqual({ text: "no id" });
+  });
+
+  it("forgets everything on clear", () => {
+    const steers = new PendingSteers();
+    steers.add("ok", "m1");
+    steers.clear();
+    expect(steers.take("ok")).toBeNull();
+  });
+});
+
+describe("a turn's reply", () => {
+  it("names the send and its steers, and keeps the last message with words", () => {
+    const reply = new TurnReply();
+    reply.begin("m1");
+    reply.messageStarted();
+    reply.textStreamed("Let me look.");
+    reply.messageEnded();
+    reply.answers("m2");
+    reply.messageStarted();
+    reply.messageEnded();
+    reply.messageStarted();
+    reply.textStreamed("Found ");
+    reply.textStreamed("it.");
+    reply.messageEnded();
+    expect(reply.take()).toEqual({
+      type: "turn_reply",
+      messageIds: ["m1", "m2"],
+      text: "Found it.",
+      failed: false,
+    });
+  });
+
+  it("is taken once; a steer after that belongs to no reply and runs as its own send", () => {
+    const reply = new TurnReply();
+    reply.begin("m1");
+    reply.fail();
+    expect(reply.take()).toMatchObject({ messageIds: ["m1"], failed: true });
+    reply.answers("m2");
+    reply.fail();
+    expect(reply.take()).toBeNull();
+    reply.begin("m2");
+    expect(reply.take()).toEqual({
+      type: "turn_reply",
+      messageIds: ["m2"],
+      text: "",
+      failed: false,
+    });
+  });
+
+  it("says nothing for a send without an id, or a stopped turn", () => {
+    const reply = new TurnReply();
+    reply.begin();
+    expect(reply.take()).toBeNull();
+    reply.begin("m1");
+    reply.abandon();
+    expect(reply.take()).toBeNull();
   });
 });
