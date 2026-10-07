@@ -1,5 +1,9 @@
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import {
+  createContext,
+  use,
   useLayoutEffect,
   useRef,
   useState,
@@ -7,7 +11,17 @@ import {
   type ReactNode,
 } from "react";
 
-import { notchOutline } from "./outline";
+import { notch } from "#renderer/lib/motion";
+
+import { shellClip } from "./shell-clip";
+import {
+  hasCamera,
+  headerHeight,
+  MIN_HEADER_HEIGHT,
+  spacingStyle,
+} from "./spacing";
+
+const ShellReady = createContext(true);
 
 /** The only painted surface. Children never add a second black silhouette. */
 export const NotchSurface = ({
@@ -16,27 +30,87 @@ export const NotchSurface = ({
   reduced,
   expanded,
   style,
+  children,
   ...props
 }: ComponentProps<"div"> & {
   layout: NotchLayout;
   shape: { width: number; height: number };
   reduced: boolean;
   expanded: boolean;
-}) => (
-  <div
-    {...props}
-    className="notch-shape"
-    data-mode={layout.mode}
-    data-reduced={reduced}
-    data-expanded={expanded}
-    style={{
-      ...style,
-      width: shape.width,
-      height: shape.height,
-      clipPath: layout.mode === "notch" ? notchOutline() : undefined,
-    }}
-  />
-);
+}) => {
+  const width = useMotionValue(shape.width);
+  const height = useMotionValue(shape.height);
+  const [ready, setReady] = useState(reduced);
+  const [previous, setPrevious] = useState(shape);
+  if (previous.width !== shape.width || previous.height !== shape.height) {
+    setPrevious(shape);
+    setReady(false);
+  }
+  const clipPath = useTransform([width, height], ([w, h]) =>
+    shellClip(Number(w), Number(h), layout.maxShape.width, hasCamera(layout))
+  );
+  useLayoutEffect(() => {
+    if (reduced) {
+      width.set(shape.width);
+      height.set(shape.height);
+      return;
+    }
+    const transition = notch.surfaceSpring;
+    const w = animate(width, shape.width, transition);
+    const h = animate(height, shape.height, transition);
+    let live = true;
+    void Promise.all([w, h]).then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+      w.stop();
+      h.stop();
+    };
+  }, [width, height, shape.width, shape.height, reduced]);
+  return (
+    <div
+      {...props}
+      className="notch-surface"
+      data-floating={!hasCamera(layout)}
+      style={{
+        ...spacingStyle(layout),
+        ...style,
+        width: layout.maxShape.width,
+        height: layout.maxShape.height,
+      }}
+    >
+      <motion.div
+        className="notch-shape"
+        data-mode={layout.mode}
+        data-reduced={reduced}
+        data-expanded={expanded}
+        style={{
+          clipPath: reduced
+            ? shellClip(
+                shape.width,
+                shape.height,
+                layout.maxShape.width,
+                hasCamera(layout)
+              )
+            : clipPath,
+          width: layout.maxShape.width,
+          height: layout.maxShape.height,
+        }}
+      >
+        <div
+          style={{
+            width: shape.width,
+            height: shape.height,
+            marginInline: "auto",
+          }}
+        >
+          <ShellReady value={ready || reduced}>{children}</ShellReady>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 /** Equal flexible ears keep the fixed camera exclusion centered during resizing. */
 export const NotchHeader = ({
@@ -50,42 +124,32 @@ export const NotchHeader = ({
   right: ReactNode;
   reduced?: boolean;
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [fits, setFits] = useState(reduced);
-  useLayoutEffect(() => {
-    const surface = ref.current?.parentElement;
-    if (!surface) return;
-    const measure = () =>
-      setFits(
-        reduced ||
-          Math.abs(
-            surface.getBoundingClientRect().width -
-              parseFloat(surface.style.width)
-          ) < 0.5
-      );
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(surface);
-    return () => observer.disconnect();
-  }, [layout, left, right, reduced]);
+  const ready = use(ShellReady);
   return (
-    <div
-      ref={ref}
+    <motion.div
       className="notch-wings"
+      initial={false}
+      animate={{ opacity: ready ? 1 : 0 }}
+      transition={{ duration: reduced ? 0 : 0.12 }}
       style={{
-        height: layout.notch?.height ?? 36,
-        visibility: fits ? "visible" : "hidden",
+        height: headerHeight(layout),
+        visibility: ready ? "visible" : "hidden",
       }}
     >
       {left}
-      {layout.notch && (
+      {hasCamera(layout) && (
         <div
           aria-hidden="true"
-          style={{ width: layout.notch.width, flexShrink: 0 }}
+          data-slot="notch-camera-clearance"
+          style={{
+            width: layout.notch!.width + spacing.cameraClearance * 2,
+            flexShrink: 0,
+            alignSelf: "stretch",
+          }}
         />
       )}
       {right}
-    </div>
+    </motion.div>
   );
 };
 
@@ -95,7 +159,7 @@ export const NotchBody = ({
   shape,
   reduced,
   onHeight,
-  headerHeight = 36,
+  headerHeight = MIN_HEADER_HEIGHT,
 }: {
   children: ReactNode;
   shape: { width: number; height: number };
@@ -104,44 +168,37 @@ export const NotchBody = ({
   headerHeight?: number;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(reduced);
-  useLayoutEffect(() => {
-    const surface = ref.current?.parentElement;
-    if (!surface) return;
-    const measure = () => {
-      const bounds = surface.getBoundingClientRect();
-      setReady(
-        reduced ||
-          (Math.abs(bounds.width - shape.width) < 0.5 &&
-            Math.abs(bounds.height - shape.height) < 0.5)
-      );
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(surface);
-    return () => observer.disconnect();
-  }, [shape.width, shape.height, reduced]);
+  const ready = use(ShellReady);
   useLayoutEffect(() => {
     const body = ref.current;
     const content = body?.firstElementChild as HTMLElement | null;
     if (!body || !content) return;
     const measure = () =>
-      onHeight?.(Math.ceil(content.getBoundingClientRect().height) + 24);
+      onHeight?.(
+        Math.ceil(content.getBoundingClientRect().height) + spacing.bottom
+      );
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(content);
     return () => observer.disconnect();
   }, [onHeight, children]);
   return (
-    <div
+    <motion.div
       ref={ref}
       className="notch-body"
+      initial={{ opacity: reduced ? 1 : 0 }}
+      animate={{ opacity: ready ? 1 : 0 }}
+      transition={{
+        duration: reduced ? 0 : 0.15,
+        delay: ready && !reduced ? 0.05 : 0,
+      }}
       style={{
         visibility: ready ? "visible" : "hidden",
+        pointerEvents: ready ? "auto" : "none",
         maxHeight: shape.height - headerHeight,
       }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 };

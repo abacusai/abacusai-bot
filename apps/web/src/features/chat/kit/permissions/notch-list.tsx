@@ -1,6 +1,9 @@
+import { Check, Clock, ExternalLink, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { NotchAction, useNotchMotion } from "#renderer/features/notch/controls";
 import { Button } from "#renderer/ui/button";
 
 import type { ChatRuntime } from "../../runtime/runtime";
@@ -41,6 +44,7 @@ const NotchPermissionBody = ({
   onHaptic,
 }: NotchPermissionProps) => {
   const { t } = useTranslation();
+  const animation = useNotchMotion();
   const session = runtime.session(threadId);
   const items = useThreadStore(session, (state) => state.permissions.items);
   const answering = useThreadStore(
@@ -196,15 +200,25 @@ const NotchPermissionBody = ({
             ))}
           </div>
         ) : (
-          <Button onClick={onReview}>{t("notch.approval.answerInApp")}</Button>
+          <NotchAction
+            label={t("notch.approval.answerInApp")}
+            data-primary
+            onClick={onReview}
+          >
+            <ExternalLink aria-hidden />
+          </NotchAction>
         )}
-        <Button variant="ghost" onClick={onSnooze}>
-          {t("notch.approval.notNow")}
-        </Button>
+        <NotchAction
+          label={t("notch.approval.notNow")}
+          variant="ghost"
+          onClick={onSnooze}
+        >
+          <Clock aria-hidden />
+        </NotchAction>
       </div>
     );
   return (
-    <div>
+    <motion.div {...animation}>
       <h2>{descriptor.message}</h2>
       <div className="relative">
         <div
@@ -228,12 +242,21 @@ const NotchPermissionBody = ({
               width: "100%",
             }}
           >
-            <Button>{t("chat.permission.action.allow")}</Button>
-            <Button variant="secondary">
-              {t("chat.permission.action.deny")}
-            </Button>
-            <Button variant="ghost">{t("notch.approval.review")}</Button>
-            <Button variant="ghost">{t("notch.approval.notNow")}</Button>
+            <NotchAction label={t("chat.permission.action.allow")} data-primary>
+              <Check aria-hidden />
+            </NotchAction>
+            <NotchAction
+              label={t("chat.permission.action.deny")}
+              variant="secondary"
+            >
+              <X aria-hidden />
+            </NotchAction>
+            <NotchAction label={t("notch.approval.review")} variant="ghost">
+              <ExternalLink aria-hidden />
+            </NotchAction>
+            <NotchAction label={t("notch.approval.notNow")} variant="ghost">
+              <Clock aria-hidden />
+            </NotchAction>
           </div>
           {lines.map((line, i) => (
             <p
@@ -259,32 +282,43 @@ const NotchPermissionBody = ({
         {safe?.ok &&
           fits &&
           descriptor.metadata.abacus.allowed.includes("accept") && (
-            <Button
+            <NotchAction
+              label={t("chat.permission.action.allow")}
+              data-primary
               disabled={pending?.state === "sending"}
               onClick={() => respond("accept")}
             >
-              {t("chat.permission.action.allow")}
-            </Button>
+              <Check aria-hidden />
+            </NotchAction>
           )}
         {descriptor.metadata.abacus.allowed.includes("reject") && (
-          <Button
-            variant="secondary"
+          <NotchAction
+            label={t("chat.permission.action.deny")}
+            variant="ghost"
             disabled={pending?.state === "sending"}
             onClick={() => respond("reject")}
           >
-            {t("chat.permission.action.deny")}
-          </Button>
+            <X aria-hidden />
+          </NotchAction>
         )}
-        <Button variant="ghost" onClick={onReview}>
-          {t("notch.approval.review")}
-        </Button>
-        <Button variant="ghost" onClick={onSnooze}>
-          {t("notch.approval.notNow")}
-        </Button>
+        <NotchAction
+          label={t("notch.approval.review")}
+          variant="ghost"
+          onClick={onReview}
+        >
+          <ExternalLink aria-hidden />
+        </NotchAction>
+        <NotchAction
+          label={t("notch.approval.notNow")}
+          variant="ghost"
+          onClick={onSnooze}
+        >
+          <Clock aria-hidden />
+        </NotchAction>
       </div>
       {pending?.state === "error" && (
         <p role="alert">{t("notch.approval.noResponse")}</p>
       )}
-    </div>
+    </motion.div>
   );
 };

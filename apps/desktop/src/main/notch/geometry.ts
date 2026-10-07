@@ -1,4 +1,6 @@
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { NOTCH_SPACING as spacing } from "@abacus-ai/contract/contract/notch-spacing";
+
 export interface Rect {
   x: number;
   y: number;
@@ -19,14 +21,34 @@ export interface Placement {
   bounds: Rect;
   layout: NotchLayout;
 }
-// Canvas shadow blur 24 + downward offset 8: 24 on each side, 32 below.
+// Transparent envelope margins stay fixed across every presentation.
 export const notchPlacement = (
   display: DisplayGeometry,
   notch: NotchLayout["notch"],
-  requested: { width: number; height: number }
+  _requested: { width: number; height: number }
 ): Placement => {
-  const shape = clampShape(requested);
-  const width = Math.max(shape.width, notch?.width ?? 0) + 48;
+  // Every floating presentation fits within the same display-sized envelope.
+  const shape = notch
+    ? MAX_SHAPE
+    : {
+        width: Math.min(
+          MAX_SHAPE.width,
+          Math.max(
+            0,
+            display.bounds.width -
+              2 * (spacing.envelopeInline + spacing.floatingGap)
+          )
+        ),
+        height: Math.min(
+          MAX_SHAPE.height,
+          Math.max(
+            0,
+            display.bounds.height - spacing.floatingGap - spacing.envelopeBottom
+          )
+        ),
+      };
+  const width =
+    Math.max(shape.width, notch?.width ?? 0) + spacing.envelopeInline * 2;
   const center =
     notch?.x === undefined
       ? display.bounds.x + display.bounds.width / 2
@@ -35,11 +57,10 @@ export const notchPlacement = (
   return {
     bounds: {
       x,
-      y: notch
-        ? display.bounds.y
-        : Math.max(display.bounds.y, display.workArea.y) + 8,
+      y: display.bounds.y + (notch ? 0 : spacing.floatingGap),
       width,
-      height: Math.max(shape.height, notch?.height ?? 0) + 32,
+      height:
+        Math.max(shape.height, notch?.height ?? 0) + spacing.envelopeBottom,
     },
     layout: {
       displayId: display.id,
@@ -47,36 +68,12 @@ export const notchPlacement = (
       mode: notch ? "notch" : "capsule",
       notch,
       growth: "down",
-      maxShape: MAX_SHAPE,
+      maxShape: shape,
     },
   };
 };
+// Floating companions stay in the top system band, including top-taskbar layouts.
 export const capsulePlacement = (
   display: DisplayGeometry,
   requested: { width: number; height: number }
-): Placement => {
-  const shape = clampShape(requested);
-  const b = display.bounds;
-  const w = display.workArea;
-  const top = w.y > b.y;
-  const left = w.x > b.x;
-  const autoHidden =
-    w.x === b.x && w.y === b.y && w.width === b.width && w.height === b.height;
-  const width = shape.width + 48;
-  const height = shape.height + 32;
-  return {
-    bounds: {
-      x: left ? w.x + 12 : w.x + w.width - width - 12,
-      y: top ? w.y + 8 : w.y + w.height - height - 8 - (autoHidden ? 48 : 0),
-      width,
-      height,
-    },
-    layout: {
-      displayId: display.id,
-      mode: "capsule",
-      notch: null,
-      growth: top ? "down" : "up",
-      maxShape: MAX_SHAPE,
-    },
-  };
-};
+): Placement => notchPlacement(display, null, requested);

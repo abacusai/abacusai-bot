@@ -1,13 +1,13 @@
 html.notch, html.notch body, html.notch #root { background: transparent !important; overflow: hidden; }
-.notch-shape { margin: 0 auto; color: var(--notch-fg, #f2f2f3); background: #000; /* hardware black, always */ border-radius: 0 0 22px 22px; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 16px; transition: width 250ms cubic-bezier(.22,1,.36,1), height 250ms cubic-bezier(.22,1,.36,1); overflow: hidden; }
-.notch-shape[data-mode=capsule] { border-radius: 24px; }
-.notch-shape[data-reduced=true] { transition: none; }
-.notch-shape[data-mode=notch] { box-shadow: none; border-radius: 0; }
-.notch-wings { display: flex; justify-content: space-between; align-items: stretch; }
-.notch-wing { display: flex; align-items: center; gap: 6px; flex: 1 1 0; padding: 0 14px; min-width: 0; overflow: hidden; }
+.notch-surface { margin: 0 auto; pointer-events: none; }
+.notch-surface[data-floating=true] { filter: drop-shadow(0 4px 6px rgb(0 0 0 / .24)); }
+.notch-shape { pointer-events: auto; color: var(--notch-fg, #f2f2f3); background: #000; font-size: 12px; line-height: 16px; overflow: hidden; }
+.notch-wings { display: flex; justify-content: space-between; align-items: stretch; box-sizing: border-box; padding: var(--notch-inset-top) var(--notch-inset-inline) var(--notch-inset-bottom); }
+.notch-shape[data-mode=capsule] .notch-wings, .notch-shape[data-mode=plain] .notch-wings { gap: var(--notch-gap); }
+.notch-wing { display: flex; align-items: center; gap: var(--notch-gap); flex: 1 1 0; padding: 0; min-width: 0; overflow: hidden; }
 
 .notch-wing:last-child { justify-content: flex-end; }
-.notch-body { position: relative; padding: 8px 20px 16px; min-width: 0; overflow-y: auto; box-sizing: border-box; }
+.notch-body { position: relative; padding: 0 var(--notch-inset-inline) var(--notch-inset-bottom); min-width: 0; overflow-y: auto; box-sizing: border-box; }
 .notch-shape button { border-radius: 999px; min-height: 26px; color: var(--notch-fg, #f2f2f3); background: var(--notch-control, #2a2a2e); }
 .notch-shape p { color: var(--notch-muted, #b8b8bd); }
 .notch-shape h2 { color: var(--notch-fg, #f2f2f3); font-size: 12px; font-weight: 600; }
@@ -28,14 +28,29 @@ html.notch, html.notch body, html.notch #root { background: transparent !importa
 
 .notch-wing > .notch-label { flex: 1 1 auto; min-width: 0; max-width: none; }
 .notch-wing > :not(.notch-label) { flex-shrink: 0; }
-.notch-idle { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+.notch-idle { display: flex; flex-direction: column; align-items: center; gap: var(--notch-gap); min-width: 0; }
 .notch-idle h2 { max-width: 100%; }
-.notch-idle-actions { display: flex; justify-content: center; gap: 8px; width: 100%; }
+.notch-idle-actions { display: flex; justify-content: center; gap: var(--notch-gap); width: 100%; }
 .notch-idle-actions button { min-width: 0; }
 
-.notch-reply { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; }
+.notch-reply { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--notch-gap); }
 .notch-reply > p, .notch-reply > input { flex-basis: 100%; }
 
-.notch-body > div { display: flex; flex-direction: column; gap: 8px; }
+.notch-body > div { display: flex; flex-direction: column; gap: var(--notch-gap); }
 .notch-body > .notch-reply { flex-direction: row; }
 .notch-reply > input { width: 100%; min-width: 0; }
+
+.notch-avatar { display: flex; align-items: center; flex-shrink: 0; }
+.notch-counter { font-variant-numeric: tabular-nums; }
+.notch-shape button[data-notch-action] { width: 28px; height: 28px; min-width: 28px; flex-shrink: 0; padding: 0; }
+.notch-shape button[data-secondary] { background: transparent; }
+.notch-shape button[data-primary] { background: #f2f2f3; color: #171719; }
+.notch-shape button:disabled { opacity: .4; }
+.notch-shape button { transition-property: background-color, color, opacity; }
+.notch-shape button svg { width: 16px; height: 16px; }
+.notch-reply-pill { display: flex; align-items: center; gap: var(--notch-control-inset); width: 100%; min-width: 0; padding: var(--notch-control-inset); border-radius: 999px; background: var(--notch-control, #2a2a2e); }
+.notch-reply-pill:focus-within { outline: 2px solid #8a8a96; outline-offset: 2px; }
+.notch-reply-pill input { flex: 1 1 0; min-width: 0; width: 0; padding: 0 calc(var(--notch-content-inline) - var(--notch-control-inset)); border: 0; background: transparent; box-shadow: none; outline: none; height: 28px; }
+.notch-reply-pill input:focus-visible { box-shadow: none; outline: none; }
+
+@media (hover: hover) and (pointer: fine) { .notch-shape button[data-secondary]:hover { background: #2a2a2e; } }

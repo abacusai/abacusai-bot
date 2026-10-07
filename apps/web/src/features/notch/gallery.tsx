@@ -1,5 +1,6 @@
 import "./notch.css";
 import type { NotchLayout } from "@abacus-ai/contract/contract/notch";
+import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +12,7 @@ import { Input } from "#renderer/ui/input";
 import { NotchSurface, NotchHeader, NotchBody } from "./frame";
 import type { NotchPresentation } from "./presenter";
 import { shapeFor } from "./shape";
+import { hasCamera } from "./spacing";
 /** Canvas state specimens. Native behavior is verified separately in the Electron suite. */
 export const NotchGallery = ({ state: fixture }: { state: string }) => {
   const mode = fixture.startsWith("capsule-")
@@ -102,7 +104,7 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
             left={
               <div className="notch-wing">
                 <BotAvatar
-                  size={24}
+                  size={20}
                   look={resolveLook({
                     name: "Chief of Staff",
                     avatarShape: "mochi",
@@ -119,6 +121,7 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
                   }
                 />
                 {state === "several" &&
+                  expanded &&
                   ["green", "purple"].map((color) => (
                     <BotAvatar
                       key={color}
@@ -130,20 +133,40 @@ export const NotchGallery = ({ state: fixture }: { state: string }) => {
                       })}
                     />
                   ))}
-                <span className="truncate">
+                <span
+                  className={
+                    !expanded && kind === "idle" && state !== "quiet"
+                      ? "sr-only"
+                      : "notch-label truncate"
+                  }
+                >
                   {expanded &&
                   ["approval", "truncated", "question"].includes(state)
                     ? "Chief of Staff"
                     : state === "quiet"
                       ? t("notch.quiet.until", { time: "08:00" })
-                      : t(`notch.wings.${kind}`)}
+                      : t(
+                          hasCamera(layout) && kind === "idle"
+                            ? "shell.status.ready"
+                            : `notch.wings.${kind}`
+                        )}
                 </span>
               </div>
             }
             right={
               <div className="notch-wing justify-end">
                 {expanded ? (
-                  <Button variant="ghost">{t("notch.actions.open")}</Button>
+                  <Button
+                    variant="ghost"
+                    size={hasCamera(layout) ? "icon" : "default"}
+                    aria-label={t("notch.actions.open")}
+                  >
+                    {hasCamera(layout) ? (
+                      <ExternalLink aria-hidden />
+                    ) : (
+                      t("notch.actions.open")
+                    )}
+                  </Button>
                 ) : (
                   <span
                     aria-hidden

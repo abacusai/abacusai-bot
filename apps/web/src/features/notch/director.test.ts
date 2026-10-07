@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { NotchDirector, shapeSettled, type DirectorDeps } from "./director";
+import { NotchDirector, type DirectorDeps } from "./director";
 import type { NotchPresentation } from "./presenter";
 const p = (id: string): NotchPresentation => ({
   route: "/approval/$id",
@@ -33,29 +33,24 @@ const deps = (): DirectorDeps => ({
   retire: vi.fn(),
   setShape: vi.fn(async () => {}),
   navigate: vi.fn(async () => {}),
-  settle: vi.fn(async () => {}),
-  renderedSize: () => ({ width: 300, height: 40 }),
   audio: () => false,
   commit: vi.fn(),
 });
 afterEach(() => vi.useRealTimers());
 describe("R6-T17 / T19 / T42 presentation generations", () => {
-  it("envelopes mixed dimensions before navigation, final after settling", async () => {
+  it("reports visibility once before navigation without a native animation handshake", async () => {
     const d = deps();
     const calls: string[] = [];
     d.setShape = vi.fn(async (s) => {
       calls.push(s.phase);
-      expect(s.width).toBe(s.phase === "envelope" ? 300 : 200);
+      expect(s.width).toBe(200);
     });
     d.navigate = async () => {
       calls.push("navigate");
     };
-    d.settle = async () => {
-      calls.push("settle");
-    };
     const director = new NotchDirector(d);
     await director.present(p("a"), { width: 200, height: 200 });
-    expect(calls).toEqual(["envelope", "navigate", "settle", "final"]);
+    expect(calls).toEqual(["final", "navigate"]);
     director.dispose();
   });
   it("out-of-order hydration cannot navigate the previous identity", async () => {
@@ -133,49 +128,6 @@ describe("R6-T17 / T19 / T42 presentation generations", () => {
     expect(d.navigate).toHaveBeenCalledTimes(2);
     director.dispose();
   });
-  it("unchanged and reduced sizes settle without events", async () => {
-    const node = document.createElement("div");
-    await shapeSettled(
-      node,
-      { width: 1, height: 2 },
-      { width: 1, height: 2 },
-      false,
-      new AbortController().signal
-    );
-    await shapeSettled(
-      node,
-      { width: 1, height: 2 },
-      { width: 3, height: 4 },
-      true,
-      new AbortController().signal
-    );
-  });
-  it("both axes settle, transitioncancel and missing events have bounded fallbacks", async () => {
-    vi.useFakeTimers();
-    const node = document.createElement("div");
-    let done = false;
-    const pending = shapeSettled(
-      node,
-      { width: 1, height: 2 },
-      { width: 3, height: 4 },
-      false,
-      new AbortController().signal
-    ).then(() => {
-      done = true;
-    });
-    node.dispatchEvent(new Event("transitioncancel"));
-    await pending;
-    expect(done).toBe(true);
-    const fallback = shapeSettled(
-      node,
-      { width: 1, height: 2 },
-      { width: 3, height: 4 },
-      false,
-      new AbortController().signal
-    );
-    await vi.advanceTimersByTimeAsync(450);
-    await fallback;
-  });
 });
 
 it("immediate calm clears old queued attention before unlocking", async () => {
@@ -199,7 +151,7 @@ it("immediate calm clears old queued attention before unlocking", async () => {
   );
   director.dispose();
 });
-it.each(["load", "envelope", "navigate", "settle", "final"])(
+it.each(["load", "navigate", "final"])(
   "the total deadline bounds stalled %s and retires both threads",
   async (stage) => {
     vi.useFakeTimers();
@@ -207,8 +159,7 @@ it.each(["load", "envelope", "navigate", "settle", "final"])(
     const never = () => new Promise<void>(() => {});
     if (stage === "load") d.load = vi.fn(never);
     if (stage === "navigate") d.navigate = vi.fn(never);
-    if (stage === "settle") d.settle = vi.fn(never);
-    if (stage === "envelope" || stage === "final")
+    if (stage === "final")
       d.setShape = vi.fn((s) =>
         s.phase === stage ? never() : Promise.resolve()
       );

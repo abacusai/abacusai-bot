@@ -72,7 +72,12 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
         .join("\n")
         .matchAll(/href="([^"]+\.css)"/g),
     ].map((match) => match[1]);
-    const html = `<html class="notch dark"><head>${css.map((file) => `<link rel="stylesheet" href="file://${join(renderer, file!.replace(/^\//, ""))}">`).join("")}</head><body></body></html>`;
+    // Test current notch spacing even when the font/tailwind asset is cached.
+    const notchCss = readFileSync(
+      join(desktop, "../web/src/features/notch/notch.css"),
+      "utf8"
+    );
+    const html = `<html class="notch dark"><head>${css.map((file) => `<link rel="stylesheet" href="file://${join(renderer, file!.replace(/^\//, ""))}">`).join("")}<style>${notchCss}</style></head><body></body></html>`;
     writeFileSync(join(scratch, "fit.html"), html);
     writeFileSync(
       join(scratch, "test.cjs"),
@@ -115,12 +120,13 @@ it("R6-T25/T30/T42 native child viewport and disposal cycles", async () => {
       .find((line) => line.startsWith("GEOMETRY_RESULT:"));
     expect(geometryLine, output).toBeTruthy();
     const geometry = JSON.parse(geometryLine!.slice("GEOMETRY_RESULT:".length));
-    expect(geometry).toHaveLength(30);
+    expect(geometry).toHaveLength(90);
     for (const row of geometry) {
-      if (!row.expanded) expect(row.actualHeight).toBe(row.height);
+      if (!row.expanded) expect(row.actualHeight).toBe(row.compactHeight);
       if (row.expanded) expect(row.headerFits, JSON.stringify(row)).toBe(true);
       for (const check of [
         "cameraClear",
+        "insets",
         "bodyFits",
         "actionsCentered",
         "shoulder",
