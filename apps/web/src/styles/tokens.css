@@ -714,3 +714,8 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
   box-shadow: var(--floating-surface-shadow);
   backdrop-filter: none;
 }
+
+[data-slot="topbar-identity"] { max-width: max(0px, calc(var(--workspace-title-start,100vw) - var(--titlebar-x) - 160px)); }
+[data-slot="workspace-title-region"]:has([data-slot="topbar-panel-tabs"]) { min-height: var(--titlebar-row-h); }
+[data-slot="workspace-title-region"]:not(:has([data-slot="topbar-panel-tabs"])) { justify-content: flex-end; }
+[data-slot="workspace-title-region"] > button { margin-block: calc((var(--titlebar-row-h) - 28px) / 2); }

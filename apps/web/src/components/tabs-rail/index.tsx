@@ -140,6 +140,16 @@ export const TabsRail = ({
   const list = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [overflow, setOverflow] = useState(false);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth > 0) setCompact(element.clientWidth < 240);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const [allOpen, setAllOpen] = useState(false);
   const prefs = usePrefs();
   const layout = railLayout(
@@ -268,7 +278,7 @@ export const TabsRail = ({
       ref={root}
       data-slot="topbar-panel-tabs"
       data-rail-chat={tabs.some((tab) => tab.id === "chat") ? "" : undefined}
-      data-rail-mode={layout.mode}
+      data-rail-mode={compact ? "overflow" : layout.mode}
       data-rail-rows={layout.rows}
       className="titlebar-nodrag mr-2 flex w-full max-w-full min-w-0 flex-1 items-center gap-1 self-stretch"
     >
@@ -279,7 +289,7 @@ export const TabsRail = ({
             list.current?.contains(document.activeElement) ?? false;
           onChange(String(value));
         }}
-        className="w-full max-w-full min-w-0"
+        className={cn("w-full max-w-full min-w-0", compact && "hidden")}
       >
         <TabsList
           activateOnFocus
@@ -515,7 +525,7 @@ export const TabsRail = ({
           </Reorder.Group>
         </TabsList>
       </Tabs>
-      {overflow && (
+      {(overflow || compact) && (
         <Popover open={allOpen} onOpenChange={setAllOpen}>
           <PopoverTrigger
             render={<BarButton label={t("shell.topBar.panelTabs")} />}

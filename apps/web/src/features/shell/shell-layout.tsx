@@ -1,17 +1,3 @@
-/**
- * The shell (spec 01 §7): title bar, rail, sidebar slot, content pane and side
- * panel, laid out by the pure `shellLayout` from the width band, the area,
- * `prefs.sidebar.pinned` and the panel scope's open state (`panelStore`;
- * sessions keep `search.tab` for their dock). Mirrors the band to
- * `html[data-band]` and the sidebar's in-layout width to
- * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
- *
- * The pane always sits at the same place in the tree, the first panel of one
- * resizable group, whether the side panel is in layout, a drawer or closed
- * (Codex/Claude impl r1 #3/#1): opening the panel, closing it or crossing
- * 1100 px adds or removes a sibling, never re-parents the route subtree, so
- * its state and scroll survive.
- */
 import {
   Outlet,
   useLocation,
@@ -40,6 +26,21 @@ import {
   PANEL_DRAG_TYPE,
   moveDockTab,
 } from "#renderer/components/panel-workspace";
+/**
+ * The shell (spec 01 §7): title bar, rail, sidebar slot, content pane and side
+ * panel, laid out by the pure `shellLayout` from the width band, the area,
+ * `prefs.sidebar.pinned` and the panel scope's open state (`panelStore`;
+ * sessions keep `search.tab` for their dock). Mirrors the band to
+ * `html[data-band]` and the sidebar's in-layout width to
+ * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
+ *
+ * The pane always sits at the same place in the tree, the first panel of one
+ * resizable group, whether the side panel is in layout, a drawer or closed
+ * (Codex/Claude impl r1 #3/#1): opening the panel, closing it or crossing
+ * 1100 px adds or removes a sibling, never re-parents the route subtree, so
+ * its state and scroll survive.
+ */
+import { WorkspaceTitleRegion } from "#renderer/components/panel-workspace/title-region";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
 import { IS_ELECTRON } from "#renderer/lib/platform";
@@ -324,11 +325,13 @@ export const ShellLayout = ({
               folded={layout.titleBar.actionsFolded}
               tabs={panelShown ? panelKinds : []}
             />
-            {strip}
-            <TopBarPanelOutlet />
-            {panelAvailable && (
-              <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
-            )}
+            <WorkspaceTitleRegion>
+              {strip}
+              <TopBarPanelOutlet />
+              {panelAvailable && (
+                <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+              )}
+            </WorkspaceTitleRegion>
           </TopBar.Root>
           {panelShown && scopeKey != null && (
             <PanelHotkeys scopeKey={scopeKey} />

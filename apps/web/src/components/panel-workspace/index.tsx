@@ -58,6 +58,8 @@ const Content = ({ api }: IDockviewPanelProps) => {
   const grouped = context.expanded && context.visible.length > 1;
   return (
     <div
+      data-workspace-group={api.id}
+      data-group-active={context.visible.includes(api.id) ? "" : undefined}
       className={cn(
         "flex size-full min-h-0 min-w-0 flex-col",
         grouped && "workspace-island dock-group-island"

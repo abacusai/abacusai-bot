@@ -60,7 +60,7 @@ const BarButton = ({
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex min-h-(--toolbar-h) min-w-0 items-start gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
+    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] relative flex min-h-(--toolbar-h) min-w-0 items-start gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
   >
     {children}
   </header>
