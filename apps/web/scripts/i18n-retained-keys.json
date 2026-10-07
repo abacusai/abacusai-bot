@@ -106,7 +106,6 @@
     "browserSettings.chrome.connected",
     "browserSettings.chrome.connecting",
     "browserSettings.chrome.disconnect",
-    "browserSettings.chrome.extensionMissing",
     "browserSettings.chrome.install",
     "browserSettings.chrome.notFound",
     "browserSettings.chrome.ready",

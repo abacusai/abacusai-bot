@@ -186,7 +186,6 @@ export const browser = {
   clearData: mutation
     .input(v.optional(ClearBrowserDataRequestSchema))
     .output(type<ClearBrowserDataResult>()),
-  hasGoogleChrome: query.input(NoInput).output(type<boolean>()),
   /**
    * Permission asks, previews and materialized runtimes are delivered
    * losslessly; cursor, status and runtime state are coalesced. With a

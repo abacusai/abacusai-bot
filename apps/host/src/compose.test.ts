@@ -1,7 +1,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterAll, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 const fixture = await vi.hoisted(async () => {
   const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
   const { join } = await import("node:path");
@@ -27,8 +27,12 @@ const fixture = await vi.hoisted(async () => {
   return { home, config };
 });
 import { connectInProcess } from "#main/rpc/testing";
+import { SessionTurnStateService } from "#main/services/session/session-turn-state-service";
+import { TurnAbandoner } from "#main/services/session/turn-abandoner";
 
 import { composeNodeHost } from "./compose";
+import { PhoneInbox } from "./phone-inbox";
+import { PhoneLane } from "./phone-lane";
 import Store from "./store";
 import { HostUnsupportedError } from "./unsupported";
 
@@ -155,6 +159,455 @@ it("conf preserves dotted keys, defaults, deletion and a separate userData defau
   store.delete("nested.key");
   expect(store.get("nested.key", "fallback")).toBe("fallback");
   expect(store.path).toBe(join(fixture.home, "host-userdata/store-test.json"));
+});
+describe("the phone lane", () => {
+  const lane = (
+    options: {
+      refuse?: (messageId: string) => boolean;
+      replyFails?: (text: string) => boolean;
+      /** Holds each reply until the test lets it go. */
+      holdReplies?: boolean;
+      stop?: (workspaceId: string, sessionId: string) => Promise<void>;
+      timings?: Record<string, number>;
+    } = {}
+  ) => {
+    const held: Array<() => void> = [];
+    const calls: Array<Record<string, unknown>> = [];
+    let listener: (sessionId: string, payload: never) => void = () => {};
+    const send = vi.fn(
+      async (_w: string, _s: string, _text: string, messageId: string) =>
+        !(options.refuse?.(messageId) ?? false)
+    );
+    const activity = vi.fn();
+    let settleStop: () => void = () => {};
+    const stop = vi.fn(
+      options.stop ??
+        (() => new Promise<void>((resolve) => (settleStop = resolve)))
+    );
+    const phone = new PhoneLane(
+      {
+        call: (async (body: Record<string, unknown>) => {
+          calls.push(body);
+          if (body.action === "reply" && options.holdReplies === true)
+            await new Promise<void>((resolve) => held.push(resolve));
+          if (
+            body.action === "reply" &&
+            options.replyFails?.(String(body.text)) === true
+          )
+            return { ok: false, error: "closed" };
+          return { ok: true };
+        }) as never,
+        hasKey: () => false,
+        openSession: async () => ({ workspaceId: "w", sessionId: "s" }),
+        stop,
+        send,
+        onAgentEvent: (next) => {
+          listener = next as never;
+          return () => {};
+        },
+        activity,
+        log: () => {},
+      },
+      {
+        batchMs: 0,
+        keyWaitMs: 60_000,
+        bubblePauseMinMs: 0,
+        bubblePauseMaxMs: 0,
+        deliveryRetryMs: [0, 0],
+        ...options.timings,
+      }
+    );
+    phone.start();
+    const event = (inner: Record<string, unknown>) =>
+      listener("s", { type: "event", event: inner } as never);
+    const reply = (messageIds: string[], text: string, failed = false) =>
+      event({ type: "turn_reply", messageIds, text, failed });
+    const replies = () => calls.filter((body) => body.action === "reply");
+    const acks = () =>
+      calls
+        .filter((body) => body.action === "ack")
+        .map((body) => body.message_ids);
+    const release = () => held.splice(0).forEach((resolve) => resolve());
+    return {
+      phone,
+      calls,
+      send,
+      stop,
+      settleStop: () => settleStop(),
+      activity,
+      event,
+      reply,
+      replies,
+      acks,
+      release,
+    };
+  };
+
+  it("sends a progress line at once and acks only once the final answer is out", async () => {
+    const { phone, send, activity, event, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send).toHaveBeenLastCalledWith(
+      "w",
+      "s",
+      "find flights to Goa",
+      "m1"
+    );
+    const before = activity.mock.calls.length;
+
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_progress", input: { text: "On it: Goa flights" } },
+      result: { rejected: false },
+    });
+
+    await vi.waitFor(() =>
+      expect(replies()).toEqual([
+        { action: "reply", message_id: "m1", text: "On it: Goa flights" },
+      ])
+    );
+    expect(activity.mock.calls.length).toBeGreaterThan(before);
+    expect(acks()).toEqual([]);
+    expect(phone.busy).toBe(true);
+    reply(["m1"], "Cheapest is 4,200.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies().map((body) => body.text)).toEqual([
+      "On it: Goa flights",
+      "Cheapest is 4,200.",
+    ]);
+    expect(phone.busy).toBe(false);
+    phone.stop();
+  });
+
+  it("steers a message in by its id and answers against it once the session names it", async () => {
+    const { phone, send, event, reply, replies, acks, calls } = lane();
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+
+    phone.arrive({ id: "m2", text: "only nonstop" });
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop", "m2");
+    expect(calls).toContainEqual({ action: "typing", message_id: "m2" });
+    event({
+      type: "user_message_steered",
+      content: "only nonstop",
+      messageId: "m2",
+    });
+    reply(["m1", "m2"], "Nonstop: 5,100.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
+    expect(replies()).toEqual([
+      { action: "reply", message_id: "m2", text: "Nonstop: 5,100." },
+    ]);
+    expect(phone.busy).toBe(false);
+    phone.stop();
+  });
+
+  it("requeues a refused steer exactly once and hands it over after the turn", async () => {
+    let refusals = 0;
+    const { phone, send, reply, replies, acks } = lane({
+      refuse: (id) => id === "m2" && refusals++ === 0,
+    });
+    phone.arrive({ id: "m1", text: "find flights to Goa" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    phone.arrive({ id: "m2", text: "only nonstop" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+
+    // The session never names a refused message: only m1 is this turn's.
+    reply(["m1", "m2"], "Found 3 flights.");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop", "m2");
+    expect(acks()).toEqual([["m1"]]);
+    reply(["m2"], "Two of them are nonstop.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    expect(replies().map((body) => [body.message_id, body.text])).toEqual([
+      ["m1", "Found 3 flights."],
+      ["m2", "Two of them are nonstop."],
+    ]);
+    expect(send).toHaveBeenCalledTimes(3);
+    phone.stop();
+  });
+
+  it("treats the same text twice as two messages, each answered by its own id", async () => {
+    const { phone, send, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "book a table" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    phone.arrive({ id: "m2", text: "ok" });
+    phone.arrive({ id: "m3", text: "ok" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send.mock.calls.map((call) => call[3])).toEqual(["m1", "m2", "m3"]);
+
+    reply(["m1", "m2"], "Booked for 8.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
+    expect(phone.busy).toBe(true);
+    reply(["m3"], "Anything else?");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"], ["m3"]]));
+    expect(replies().map((body) => body.message_id)).toEqual(["m2", "m3"]);
+    phone.stop();
+  });
+
+  it("never acks on progress alone: a final answer that cannot be sent is left for redelivery", async () => {
+    const { phone, send, event, reply, replies, acks } = lane({
+      replyFails: (text) => text === "Here it is.",
+    });
+    phone.arrive({ id: "m1", text: "plan my trip" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    event({
+      type: "tool_execution_complete",
+      tool: { name: "send_progress", input: { text: "Working on it" } },
+      result: { rejected: false },
+    });
+    reply(["m1"], "Here it is.");
+
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+    // Tried, then tried once more.
+    expect(replies().map((body) => body.text)).toEqual([
+      "Working on it",
+      "Here it is.",
+      "Here it is.",
+    ]);
+    expect(acks()).toEqual([]);
+
+    // The server hands it back: a new message, not a lost ack.
+    phone.arrive({ id: "m1", text: "plan my trip" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    phone.stop();
+  });
+
+  it("acks a failed turn once the apology is out", async () => {
+    const { phone, send, reply, replies, acks } = lane();
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "", true);
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    expect(replies()).toHaveLength(1);
+    phone.stop();
+  });
+
+  it("restarts the idle limit on tool progress and gives up at the hard cap", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, stop, settleStop, event, replies, acks } = lane({
+        timings: { idleMs: 1_000, hardCapMs: 5_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+
+      for (let step = 0; step < 4; step += 1) {
+        await vi.advanceTimersByTimeAsync(900);
+        event({ type: "tool_execution_start", tool: { name: "browser_task" } });
+      }
+      // 3.6 s in, never idle for 1 s: still working.
+      expect(phone.busy).toBe(true);
+      expect(replies()).toEqual([]);
+
+      for (let step = 0; step < 2; step += 1) {
+        await vi.advanceTimersByTimeAsync(900);
+        event({ type: "text_delta", content: "…", messageId: "a" });
+      }
+      await vi.advanceTimersByTimeAsync(0);
+      // Past the cap however busy: the session is stopped and the user gets the apology.
+      expect(stop).toHaveBeenCalledWith("w", "s");
+      expect(replies()).toHaveLength(1);
+      // Held until the session is idle.
+      expect(phone.busy).toBe(true);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(phone.busy).toBe(false);
+      expect(replies()).toHaveLength(1);
+      expect(acks()).toEqual([["m1"]]);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up after the idle limit with no sign of work", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, settleStop, replies } = lane({
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(phone.busy).toBe(false);
+      expect(replies()).toHaveLength(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up atomically: a message arriving during the apology waits for the stopped session, then goes alone", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, stop, settleStop, reply, replies, acks, release } =
+        lane({
+          holdReplies: true,
+          timings: { idleMs: 1_000, hardCapMs: 60_000 },
+        });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(1_000);
+      // The apology is on its way; the session is being stopped.
+      expect(replies()).toHaveLength(1);
+      expect(stop).toHaveBeenCalledTimes(1);
+
+      phone.arrive({ id: "m2", text: "are you there?" });
+      await vi.advanceTimersByTimeAsync(0);
+      // Not steered into the abandoned work.
+      expect(send).toHaveBeenCalledTimes(1);
+
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"]]);
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(send).toHaveBeenLastCalledWith("w", "s", "are you there?", "m2");
+
+      // A new clock: the new message is answered normally.
+      reply(["m2"], "Yes, here.");
+      await vi.advanceTimersByTimeAsync(0);
+      release();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"], ["m2"]]);
+      expect(phone.busy).toBe(false);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("is free again when the session never stops: its owner closes it at the deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const turnState = new SessionTurnStateService(() => {});
+      const closeSession = vi.fn(async () => {});
+      const abandoner = new TurnAbandoner({
+        clearQueue: () => true,
+        // Taken, but the agent never confirms idle.
+        stopTurn: () => true,
+        markStopped: (workspaceId, sessionId) =>
+          turnState.markStopped(workspaceId, sessionId),
+        stopSettled: (sessionId, deadlineMs) =>
+          turnState.stopSettled(sessionId, deadlineMs),
+        closeSession,
+        log: () => {},
+        settleMs: 5_000,
+      });
+      const { phone, send, replies } = lane({
+        stop: async (workspaceId, sessionId) => {
+          await abandoner.abandon(workspaceId, sessionId);
+        },
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(replies()).toHaveLength(1);
+      expect(phone.busy).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(closeSession).toHaveBeenCalledWith("w", "s");
+      expect(phone.busy).toBe(false);
+      phone.arrive({ id: "m2", text: "hello?" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(2);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries a refused handoff that carries a note already handed once", async () => {
+    let refusals = 0;
+    const { phone, send, reply, acks } = lane({
+      replyFails: (text) => text === "Gmail is connected.",
+      refuse: (id) => id === "m2" && refusals++ === 0,
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    phone.note("[connected] gmail");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    reply([send.mock.calls[1]![3]], "Gmail is connected.");
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+
+    phone.arrive({ id: "m2", text: "thanks" });
+    // Refused: handed again after the retry wait, note and message together.
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(4));
+    expect(send.mock.calls[3]![2]).toBe("[connected] gmail\n\nthanks");
+    reply(["m2"], "Anytime!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    phone.stop();
+  });
+
+  it("keeps a host note whose answer could not be sent, and sends it with the user's next message", async () => {
+    const { phone, send, reply, acks } = lane({
+      replyFails: (text) => text === "Gmail is connected.",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+
+    phone.note("[connected] gmail");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    const noteId = send.mock.calls[1]![3];
+    reply([noteId], "Gmail is connected.");
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+    // Not handed again on its own: it waits for the user.
+    expect(send).toHaveBeenCalledTimes(2);
+
+    phone.arrive({ id: "m2", text: "thanks" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send.mock.calls[2]![2]).toBe("[connected] gmail\n\nthanks");
+    phone.stop();
+  });
+});
+
+describe("the phone inbox", () => {
+  it("allows only its own transitions", () => {
+    const inbox = new PhoneInbox();
+    expect(inbox.add({ id: "m1", text: "hi" })).toBe(true);
+    expect(inbox.add({ id: "m1", text: "hi" })).toBe(false);
+    const m1 = inbox.get("m1")!;
+
+    expect(() => inbox.requeue([m1])).toThrow(/queued, not handed/);
+    expect(() => inbox.release([m1])).toThrow(/queued, not closing/);
+    inbox.hand([m1], "m1");
+    expect(() => inbox.hand([m1], "m1")).toThrow(/handed, not queued/);
+    expect(() => inbox.answer([m1])).toThrow(/handed, not queued/);
+    expect(inbox.handedUnder(["m1"])).toEqual([m1]);
+
+    expect(inbox.close([m1])).toEqual([m1]);
+    // Claimed once: a second close finds nothing.
+    expect(inbox.close([m1])).toEqual([]);
+    expect(inbox.abandon()).toEqual([]);
+    inbox.answer([m1]);
+    expect(m1.state).toBe("answered");
+    expect(() => inbox.release([m1])).toThrow(/answered, not closing/);
+  });
+
+  it("forgets a released server message but queues a released note again", () => {
+    const inbox = new PhoneInbox();
+    inbox.add({ id: "m1", text: "hi" });
+    inbox.add({ id: "note-1", kind: "note", text: "connected" });
+    const both = inbox.queued();
+    inbox.hand(both, "m1");
+    inbox.release(inbox.abandon());
+    expect(inbox.get("m1")).toBeUndefined();
+    expect(inbox.get("note-1")).toMatchObject({ state: "queued", handoffs: 1 });
+  });
 });
 afterAll(() => {
   rmSync(fixture.home, { recursive: true, force: true });

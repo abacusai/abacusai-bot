@@ -98,13 +98,6 @@ export const ConnectorsPage = () => {
           })
         }
       />
-      {flow.state.chromeMissing && (
-        <p role="status">
-          {t("connectors.chromeMissing", {
-            name: connectorById(flow.state.connectorId ?? "")?.name,
-          })}
-        </p>
-      )}
       {!search.q && (
         <Segments
           label={t("phase5.category")}

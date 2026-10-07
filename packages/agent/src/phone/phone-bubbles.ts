@@ -1,7 +1,10 @@
 /**
- * How a phone reply becomes WhatsApp bubbles. A leaf module, so the hosted
+ * How a phone reply becomes WhatsApp messages. A leaf module, so the hosted
  * app reads it (`@abacus-ai/agent/phone-bubbles`) without the agent runtime.
  */
+
+/** The tool whose text the hosted app sends to WhatsApp at once, mid-turn. */
+export const PHONE_PROGRESS_TOOL_NAME = "send_progress";
 
 /** A line holding only this splits a reply into separate WhatsApp bubbles. */
 export const PHONE_BUBBLE_MARKER = "---";

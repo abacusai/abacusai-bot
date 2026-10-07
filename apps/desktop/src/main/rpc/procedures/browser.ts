@@ -194,9 +194,6 @@ export const browserRouter = impl.browser.router({
   clearData: impl.browser.clearData.handler(({ input, context }) =>
     context.deps.serviceHost.clearBrowserData(input)
   ),
-  hasGoogleChrome: impl.browser.hasGoogleChrome.handler(({ context }) =>
-    context.deps.app.hasGoogleChrome()
-  ),
   events: impl.browser.events.handler(({ input, context, signal }) => {
     const key = input?.conversationKey;
     return stream<BrowserEvent>({

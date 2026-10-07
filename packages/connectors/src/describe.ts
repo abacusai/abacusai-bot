@@ -49,9 +49,8 @@ export const catalogByKind = (): Record<Connector["kind"], string[]> => {
 };
 
 /**
- * Every connector the app can attach, named. "Connect Playwright" was
- * answered with "Playwright isn't a connector" because nothing told the
- * model it is one: the registry is the list, so the model reads the list.
+ * Every connector the app can attach, named, so the model never calls one
+ * "not a connector": the registry is the list, so the model reads the list.
  */
 export const catalogPrompt = (): string => {
   const names = catalogByKind();

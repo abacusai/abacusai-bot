@@ -25,6 +25,7 @@ import {
   browserTaskEnabled,
   buildBrowserTaskTool,
 } from "../browser-task-tool.js";
+import type { BrowserTaskContext } from "../browser-task.js";
 import { anchorCompactions } from "../compaction-anchor.js";
 import {
   agentDir,
@@ -48,6 +49,7 @@ import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
 import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
 import { buildMcpToolDefinitions } from "../mcp/tools.js";
+import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
 import { endedOnLeakedToolCall } from "../openllm-failures.js";
 import {
   OPENLLM_CONTINUATION_PROMPT,
@@ -56,6 +58,7 @@ import {
 } from "../openllm-router.js";
 import { isOpenLlmReference, isOutOfCredits, OPENLLM_ID } from "../openllm.js";
 import { refreshOpenRouterLive } from "../openrouter-live.js";
+import { PendingSteers, type PendingSteer } from "../pending-steers.js";
 import {
   gateToolCall,
   MODE_NAMES,
@@ -115,6 +118,7 @@ import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
 import webTools from "../web/tools.js";
 import type { ForeverProfile, HiddenTurnPrompt } from "./profile.js";
+import { TurnReply } from "./turn-reply.js";
 
 export interface ForeverEngineOptions {
   cwd: string;
@@ -150,8 +154,13 @@ function approvalTimeoutMs(): number {
 }
 
 export class ForeverEngine {
-  /** Steers handed to pi that have not reached the model yet, oldest first. */
-  private readonly pendingSteers: string[] = [];
+  private readonly pendingSteers = new PendingSteers();
+  /** While a browser run takes the user's messages, the only place they go. */
+  private readonly midTask = new MidTaskInbox((message) =>
+    this.noteMidTaskRead(message)
+  );
+  /** What the user-visible part of the current send answers. */
+  private readonly reply = new TurnReply();
   /** True while the router is what the user picked. See currentModelReference. */
   private openLlmActive = false;
   /** The free pool: which model runs, and what happens when it fails. See openllm-router.ts. */
@@ -399,20 +408,28 @@ export class ForeverEngine {
     const hasBrowser = buildMcpToolDefinitions(() => this.mcp).some(
       isBrowserTool
     );
-    const browserTaskTools =
+    const browserContext: BrowserTaskContext | null =
       hasBrowser && browserTaskEnabled()
+        ? {
+            cwd: this.options.cwd,
+            agentDir: dir,
+            modelRuntime: this.modelRuntime,
+            settingsManager,
+            browserTools: () =>
+              buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
+            ...(model.model ? { model: model.model } : {}),
+            ...this.profile.browserTask,
+            // A run that can answer the user owns their mid-task messages.
+            ...(this.profile.browserTask?.progressTools != null
+              ? { midTask: this.midTask }
+              : {}),
+          }
+        : null;
+    const browserTaskTools =
+      browserContext != null
         ? [
-            buildBrowserTaskTool(
-              {
-                cwd: this.options.cwd,
-                agentDir: dir,
-                modelRuntime: this.modelRuntime,
-                settingsManager,
-                browserTools: () =>
-                  buildMcpToolDefinitions(() => this.mcp).filter(isBrowserTool),
-                ...(model.model ? { model: model.model } : {}),
-              },
-              (event) => this.emitAgentEvent(event)
+            buildBrowserTaskTool(browserContext, (event) =>
+              this.emitAgentEvent(event)
             ),
           ]
         : [];
@@ -527,6 +544,7 @@ export class ForeverEngine {
 
   async send(text: string, turn?: TurnHandle): Promise<void> {
     const session = this.requireSession();
+    this.reply.begin(turn?.messageId);
 
     // A bot spawned while the account was signed out has no model. The key
     // may have arrived since; read it and pick a model before prompting, or
@@ -539,6 +557,7 @@ export class ForeverEngine {
         },
         { origin: "turn" }
       );
+      this.emitReply();
       turn?.settled?.();
 
       return;
@@ -589,6 +608,7 @@ export class ForeverEngine {
       await session.prompt(text);
       await this.continuePastRecoverableFailures();
       this.reportTurnFailure();
+      this.emitReply();
       // Steers pi has not delivered yet are still queued at the host.
       this.upkeep = true;
       this.dropSteers();
@@ -614,6 +634,7 @@ export class ForeverEngine {
         { origin: "turn" }
       );
       if (this.turnRunning) this.finishTurn();
+      this.emitReply();
       turn?.settled?.();
     } finally {
       this.upkeep = false;
@@ -1126,10 +1147,24 @@ export class ForeverEngine {
    * Mid-turn input. pi delivers it at the next step boundary; the text is
    * remembered so its arrival can be reported to the desktop.
    */
-  async steer(text: string): Promise<void> {
+  async steer(text: string, messageId?: string): Promise<void> {
     // Steered into housekeeping it would be answered where no one reads.
     if (this.upkeep || this.hiddenTurn) return;
-    this.pendingSteers.push(text);
+    if (this.midTask.live) {
+      try {
+        await this.midTask.deliver({
+          text,
+          ...(messageId != null && { messageId }),
+        });
+      } catch (error) {
+        // Still in the host's queue, which runs it once this turn ends.
+        process.stderr.write(
+          `[abacusai-bot-agent] mid-task message not taken by the browser run: ${describe(error)}\n`
+        );
+      }
+      return;
+    }
+    this.pendingSteers.add(text, messageId);
     await this.requireSession().steer(text);
   }
 
@@ -1138,25 +1173,43 @@ export class ForeverEngine {
    * own turn, so the model does not also see it as a steer.
    */
   dropSteers(): void {
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     this.session?.clearQueue();
   }
 
   /** A user message pi just started is one of ours if the text matches. */
   private noteSteerLanded(message: unknown): void {
     if ((message as { role?: unknown } | undefined)?.role !== "user") return;
-    const text = messageText(message);
-    const index = this.pendingSteers.indexOf(text);
-    if (index === -1) return;
-    this.pendingSteers.splice(index, 1);
-    this.emitAgentEvent({ type: "user_message_steered", content: text });
+    const steer = this.pendingSteers.take(messageText(message));
+    if (steer != null) this.noteSteered(steer);
+  }
+
+  /** The browser run's model read a mid-task message: it is this turn's, like a steer. */
+  private noteMidTaskRead(message: MidTaskMessage): void {
+    this.noteSteered({ text: message.text, messageId: message.messageId });
+  }
+
+  private noteSteered(steer: PendingSteer): void {
+    this.reply.answers(steer.messageId);
+    this.emitAgentEvent({
+      type: "user_message_steered",
+      content: steer.text,
+      ...(steer.messageId != null && { messageId: steer.messageId }),
+    });
+  }
+
+  /** The send's `turn_reply`, once, after any failure it reported. */
+  private emitReply(): void {
+    const event = this.reply.take();
+    if (event != null) this.emitAgentEvent(event);
   }
 
   async stop(): Promise<void> {
     this.interrupted = true;
+    this.reply.abandon();
     this.stallWatch.clear();
     this.rejectAllPending("Interrupted.");
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     notifyConversationQueueCleared();
     this.session?.clearQueue();
     await this.session?.abort();
@@ -1366,7 +1419,7 @@ export class ForeverEngine {
   async resetConversation(): Promise<void> {
     this.interrupted = true;
     this.rejectAllPending("Conversation reset.");
-    this.pendingSteers.length = 0;
+    this.pendingSteers.clear();
     this.session?.clearQueue();
     await this.session?.abort();
     this.session?.clearQueue();
@@ -1500,6 +1553,7 @@ export class ForeverEngine {
           this.currentMessageId = `msg-${++this.messageCounter}`;
           this.toolCallStream.reset();
           if (!this.hiddenTurn) {
+            this.reply.messageStarted();
             const messageId = this.aguiMessageId(event.message);
 
             this.emitInternal({
@@ -1535,13 +1589,7 @@ export class ForeverEngine {
 
           const { text, thinking } = this.sanitizer.push(stream.delta);
 
-          if (text.length > 0) {
-            this.emitAgentEvent({
-              type: "text_delta",
-              content: text,
-              messageId: this.messageId(),
-            });
-          }
+          if (text.length > 0) this.streamText(text);
 
           if (thinking.length > 0)
             this.emitAgentEvent({ type: "thinking_delta", content: thinking });
@@ -1581,13 +1629,7 @@ export class ForeverEngine {
                 content: reasoning,
               });
 
-            if (cleaned.length > 0) {
-              this.emitAgentEvent({
-                type: "text_delta",
-                content: cleaned,
-                messageId: this.messageId(),
-              });
-            }
+            if (cleaned.length > 0) this.streamText(cleaned);
           } else if (full.startsWith(this.rawStreamed)) {
             // Streamed, with a remainder the stream never delivered.
             const { text, thinking } = this.sanitizer.push(
@@ -1597,13 +1639,7 @@ export class ForeverEngine {
             const remainder = text + tail.text;
             const reasoning = thinking + tail.thinking;
 
-            if (remainder.length > 0) {
-              this.emitAgentEvent({
-                type: "text_delta",
-                content: remainder,
-                messageId: this.messageId(),
-              });
-            }
+            if (remainder.length > 0) this.streamText(remainder);
 
             if (reasoning.length > 0)
               this.emitAgentEvent({
@@ -1628,6 +1664,7 @@ export class ForeverEngine {
           });
         }
 
+        if (!this.hiddenTurn) this.reply.messageEnded();
         this.rawStreamed = "";
         this.sanitizer.reset();
         this.currentMessageId = null;
@@ -2060,7 +2097,18 @@ export class ForeverEngine {
     return this.currentMessageId;
   }
 
+  /** The main session's words, streamed and kept as the turn's reply. */
+  private streamText(content: string): void {
+    this.reply.textStreamed(content);
+    this.emitAgentEvent({
+      type: "text_delta",
+      content,
+      messageId: this.messageId(),
+    });
+  }
+
   private emitAgentEvent(event: AgentEvent, meta?: EventMeta): void {
+    if (event.type === "error" && meta?.origin === "turn") this.reply.fail();
     if (meta != null) tagEvent(event, meta);
     this.options.emit({ type: "event", event });
   }
