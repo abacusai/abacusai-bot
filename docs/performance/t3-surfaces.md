@@ -111,3 +111,51 @@ No applicable hardware-acceleration-disable PR was found; no GPU switches change
 Review needs: switch repeatedly between local-file/browser tabs, open nested menus
 and dialogs over the native view, hide/show the app, and check translated timestamps
 around midnight. No Sessions panel, avatar or Settings About styling was changed.
+
+## Production and native verification
+
+Fresh profiles contain 200 sessions, 100 bots, a persisted 1,000-message thread
+and the companion. Three launches each use the unchanged baseline production
+build and the browser candidate production build. Spawn to the bot-start marker
+plus two rAFs (25 ms readiness polling, an interactive-paint proxy) is
+998.61 → 972.88 ms median. Opening the persisted thread (normal first 50-message
+page) is 563.28 → 573.32 ms. Main RSS is 233.78 → 233.09 MiB; GPU RSS
+115.66 → 116.52 MiB; main CPU for navigation plus five seconds is
+199.02 → 201.26 ms. Median outgoing MessagePort count is 59 → 59; the first
+baseline sample was 22, so this is not a stable IPC throughput result. None of
+these differences is claimed as a performance win. Total renderer JS is
+6,416,930 → 6,417,150 raw bytes; 2,154,756 → 2,154,820 gzip bytes; 318 chunks.
+No production startup, memory or bundle improvement is claimed.
+
+A separate dev-only probe invoked the real main browser procedures and mounted
+`BrowserSurface` with `createNativePresenter`. It passed native present → inactive
+parking → active return → occluder block with capture → restored presentation →
+close. The temporary source and local page were removed before final verification.
+
+The scroll-fade prototype used 120 rAF-driven scroll positions, alternating the
+original mask and `mask-image:none` for three pairs over 300 retained messages.
+Median frame p95 was 17.6 → 17.6 ms. Paint duration was 45.96 → 41.41 ms, raster
+14.84 → 8.96 ms and the GPU process's reported CPU was 1.00% → 0.80%. It removes
+a visible affordance and did not improve frame pacing, so it was rejected for this
+patch; a visually equivalent replacement needs separate review. Trusted-input
+INP, system power draw and a high-refresh display remain unmeasured. `Layers` was
+enabled and traces include paint/raster/compositor categories; `DrawFrame` and
+`CompositeLayers` events were absent in this runtime, so they are not reported as
+zero dropped frames. Basic GPU info and feature status were captured externally;
+they do not establish hardware utilization.
+
+## Validation
+
+The sequential full repository `pnpm check` passes on `a62e8ae5`: all 27
+static/build checks and 7,928 tests across updater, connectors, agent, contract,
+web, host and desktop, with six existing skips. This includes native browser
+snapshots, companion viewport/disposal, real-session and rich-transcript
+performance gates. Typecheck for tools, React Compiler (zero diagnostics),
+chat/web bundles, release graph and size-limit gates also pass. The unchanged
+agent golden tests share a temporary directory, so concurrent whole-repository
+runs were discarded and rerun sequentially. The stale routing spy assertion
+from #225 is repaired identically, with no production Settings UI change.
+
+Production and CDP comparisons use the original `097b0934` base. Final branch
+rebasing includes the independently landed avatar and license work; those
+changes are not part of the measured comparison.

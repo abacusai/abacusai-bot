@@ -2,2553 +2,309 @@
   "surface-before-final": [
     {
       "trial": 0,
-      "sample": {
-        "refresh": 210,
-        "reads": 6300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.002347000001464,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": -2,
-        "Frames": -3,
-        "JSEventListeners": -199,
-        "LayoutObjects": -21,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": -111,
-        "Resources": -19,
-        "ContextLifecycleStateObservers": -3,
-        "V8PerContextDatas": -2,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": -2,
-        "AdSubframes": 0,
-        "DetachedScriptStates": -8,
-        "ArrayBufferContents": -32,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00018700000000000002,
-        "ScriptDuration": 0.029133,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.094378,
-        "TaskOtherDuration": 0.065058,
-        "ThreadTime": 0.098704,
-        "ProcessTime": 0.18950400000000034,
-        "JSHeapUsedSize": -4851904,
-        "JSHeapTotalSize": -13631488,
-        "FirstMeaningfulPaint": 321114.621718,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.832344,
-              "percentCPUUsage": 0.04679325444926364,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 226000,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.695664,
-              "percentCPUUsage": 0.04950260466229748,
-              "idleWakeupsPerSecond": 29
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 92496,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623365,
-              "percentCPUUsage": 0.01776709676226647,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.240306,
-              "percentCPUUsage": 0.19311619791450294,
-              "idleWakeupsPerSecond": 13
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 339408,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.920971,
-              "percentCPUUsage": 0.00042582364939384006,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49552,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.838132,
-              "percentCPUUsage": 0.014462118145610643,
-              "idleWakeupsPerSecond": 4
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 226048,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.725212,
-              "percentCPUUsage": 0.07383144521930647,
-              "idleWakeupsPerSecond": 64
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 88256,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623657,
-              "percentCPUUsage": 0.0007296178261826455,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.429819,
-              "percentCPUUsage": 0.4735344626484647,
-              "idleWakeupsPerSecond": 26
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 325824,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.923426,
-              "percentCPUUsage": 0.006134286860542448,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 54688,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 6300,
+      "registered": 21,
+      "scriptMs": 29.133,
+      "taskMs": 94.378,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.014462118145610643,
+          "rssKiB": 226048
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.07383144521930647,
+          "rssKiB": 88256
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.4735344626484647,
+          "rssKiB": 325824
+        }
+      ]
     },
     {
       "trial": 1,
-      "sample": {
-        "refresh": 210,
-        "reads": 6300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.001677000022028,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00012399999999999998,
-        "ScriptDuration": 0.030421999999999998,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.08377399999999999,
-        "TaskOtherDuration": 0.053228,
-        "ThreadTime": 0.088598,
-        "ProcessTime": 0.12746199999999952,
-        "JSHeapUsedSize": -111360,
-        "JSHeapTotalSize": 1048576,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.069122,
-              "percentCPUUsage": 7.815756706277238,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 226480,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.727722,
-              "percentCPUUsage": 0.08492215581828418,
-              "idleWakeupsPerSecond": 60
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 88112,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623657,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.437312,
-              "percentCPUUsage": 0.25352766506873975,
-              "idleWakeupsPerSecond": 35
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 323568,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.268232,
-              "percentCPUUsage": 11.666824567577079,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 93392,
-              "peakWorkingSetSize": 101904
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.07433,
-              "percentCPUUsage": 0.01301567879464018,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 190048,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.758196,
-              "percentCPUUsage": 0.07615956270605617,
-              "idleWakeupsPerSecond": 62
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 85792,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623762,
-              "percentCPUUsage": 0.0002624122493438194,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 52608,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.564784,
-              "percentCPUUsage": 0.3185734053385737,
-              "idleWakeupsPerSecond": 27
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 308160,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.271324,
-              "percentCPUUsage": 0.007727411317208735,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 98336,
-              "peakWorkingSetSize": 101904
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 6300,
+      "registered": 21,
+      "scriptMs": 30.421999999999997,
+      "taskMs": 83.77399999999999,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.01301567879464018,
+          "rssKiB": 190048
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.07615956270605617,
+          "rssKiB": 85792
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.3185734053385737,
+          "rssKiB": 308160
+        }
+      ]
     },
     {
       "trial": 2,
-      "sample": {
-        "refresh": 210,
-        "reads": 6300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.003162000037264,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00017,
-        "ScriptDuration": 0.029944000000000005,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.08095400000000003,
-        "TaskOtherDuration": 0.05084000000000001,
-        "ThreadTime": 0.08582700000000001,
-        "ProcessTime": 0.12464299999999984,
-        "JSHeapUsedSize": -166716,
-        "JSHeapTotalSize": -786432,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.333712,
-              "percentCPUUsage": 8.466995359477295,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 181056,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.760831,
-              "percentCPUUsage": 0.08601239361882702,
-              "idleWakeupsPerSecond": 60
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 83664,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623762,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 52544,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.571944,
-              "percentCPUUsage": 0.2337174656148075,
-              "idleWakeupsPerSecond": 21
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 306400,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.610987,
-              "percentCPUUsage": 11.087286064208158,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 94816,
-              "peakWorkingSetSize": 103232
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.340402,
-              "percentCPUUsage": 0.016713163737441143,
-              "idleWakeupsPerSecond": 5
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 181280,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.788656,
-              "percentCPUUsage": 0.06951271499352164,
-              "idleWakeupsPerSecond": 61
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 83712,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.623908,
-              "percentCPUUsage": 0.0003647376806600693,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 52560,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.696649,
-              "percentCPUUsage": 0.31153756987455056,
-              "idleWakeupsPerSecond": 23
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 308880,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.614145,
-              "percentCPUUsage": 0.007889281848516196,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 99792,
-              "peakWorkingSetSize": 103232
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 6300,
+      "registered": 21,
+      "scriptMs": 29.944000000000006,
+      "taskMs": 80.95400000000002,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.016713163737441143,
+          "rssKiB": 181280
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.06951271499352164,
+          "rssKiB": 83712
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.31153756987455056,
+          "rssKiB": 308880
+        }
+      ]
     }
   ],
   "surface-after-visible": [
     {
       "trial": 0,
-      "sample": {
-        "refresh": 10,
-        "reads": 300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.002516000007745,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00016599999999999997,
-        "ScriptDuration": 0.012455,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.052779,
-        "TaskOtherDuration": 0.040158,
-        "ThreadTime": 0.058706999999999995,
-        "ProcessTime": 0.10252000000000017,
-        "JSHeapUsedSize": 44256,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 321564.496206,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.206428,
-              "percentCPUUsage": 0.013886309538667208,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 139088,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.860091,
-              "percentCPUUsage": 0.05758104706052755,
-              "idleWakeupsPerSecond": 48
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 71152,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.700055,
-              "percentCPUUsage": 0.0020032337296600183,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 44000,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.110445,
-              "percentCPUUsage": 0.2108517978564087,
-              "idleWakeupsPerSecond": 19
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 233296,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.304259,
-              "percentCPUUsage": 0.003737935140629383,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 32240,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.212483,
-              "percentCPUUsage": 0.015130688164188482,
-              "idleWakeupsPerSecond": 4
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 137744,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.894296,
-              "percentCPUUsage": 0.08547299438199664,
-              "idleWakeupsPerSecond": 64
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 65456,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.700475,
-              "percentCPUUsage": 0.0010495144945948005,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43792,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.212948,
-              "percentCPUUsage": 0.2561390612980558,
-              "idleWakeupsPerSecond": 26
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 170448,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.305965,
-              "percentCPUUsage": 0.00426302792328269,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 33856,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 10,
+      "reads": 300,
+      "registered": 21,
+      "scriptMs": 12.455,
+      "taskMs": 52.778999999999996,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.015130688164188482,
+          "rssKiB": 137744
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.08547299438199664,
+          "rssKiB": 65456
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.2561390612980558,
+          "rssKiB": 170448
+        }
+      ]
     },
     {
       "trial": 1,
-      "sample": {
-        "refresh": 10,
-        "reads": 300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.002720999997109,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00012999999999999996,
-        "ScriptDuration": 0.009016000000000001,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.042066000000000006,
-        "TaskOtherDuration": 0.03292,
-        "ThreadTime": 0.046756000000000006,
-        "ProcessTime": 0.0838239999999999,
-        "JSHeapUsedSize": 43372,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.285795,
-              "percentCPUUsage": 7.276885327912462,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 141600,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.895163,
-              "percentCPUUsage": 0.08606586669419715,
-              "idleWakeupsPerSecond": 56
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64608,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.700475,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43696,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.214994,
-              "percentCPUUsage": 0.20310998514894732,
-              "idleWakeupsPerSecond": 56
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 169184,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.41491,
-              "percentCPUUsage": 10.814730547481775,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 64592,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.290958,
-              "percentCPUUsage": 0.012900474401640867,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 140976,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.923888,
-              "percentCPUUsage": 0.07177401477327856,
-              "idleWakeupsPerSecond": 62
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64560,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.700698,
-              "percentCPUUsage": 0.0005572008945598002,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43696,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.298821,
-              "percentCPUUsage": 0.2094548551788848,
-              "idleWakeupsPerSecond": 23
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 171648,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.417122,
-              "percentCPUUsage": 0.005527029774199345,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 65552,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 10,
+      "reads": 300,
+      "registered": 21,
+      "scriptMs": 9.016000000000002,
+      "taskMs": 42.06600000000001,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.012900474401640867,
+          "rssKiB": 140976
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.07177401477327856,
+          "rssKiB": 64560
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.2094548551788848,
+          "rssKiB": 171648
+        }
+      ]
     },
     {
       "trial": 2,
-      "sample": {
-        "refresh": 10,
-        "reads": 300,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.002677999960724,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.000134,
-        "ScriptDuration": 0.008545999999999998,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.04210700000000002,
-        "TaskOtherDuration": 0.033427,
-        "ThreadTime": 0.04738500000000001,
-        "ProcessTime": 0.08806799999999981,
-        "JSHeapUsedSize": 36324,
-        "JSHeapTotalSize": 262144,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.359548,
-              "percentCPUUsage": 7.369563348805226,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 141264,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.92439,
-              "percentCPUUsage": 0.05391727243044457,
-              "idleWakeupsPerSecond": 60
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64560,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.700698,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43696,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.299918,
-              "percentCPUUsage": 0.1178313025246189,
-              "idleWakeupsPerSecond": 26
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 171648,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.522378,
-              "percentCPUUsage": 11.306372886016774,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 65344,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.366202,
-              "percentCPUUsage": 0.016625842485958733,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 141568,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.956286,
-              "percentCPUUsage": 0.07969677247061194,
-              "idleWakeupsPerSecond": 61
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64576,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.701209,
-              "percentCPUUsage": 0.0012768069491879807,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43712,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 14.387992,
-              "percentCPUUsage": 0.22006532847437563,
-              "idleWakeupsPerSecond": 19
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 173152,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.524745,
-              "percentCPUUsage": 0.005914279083611066,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 66320,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 10,
+      "reads": 300,
+      "registered": 21,
+      "scriptMs": 8.545999999999998,
+      "taskMs": 42.10700000000002,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.016625842485958733,
+          "rssKiB": 141568
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.07969677247061194,
+          "rssKiB": 64576
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.22006532847437563,
+          "rssKiB": 173152
+        }
+      ]
     }
   ],
   "surface-before": [
     {
       "trial": 0,
-      "sample": {
-        "refresh": 210,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.002915999968536,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.000205,
-        "ScriptDuration": 0.000327,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.0012389999999999999,
-        "TaskOtherDuration": 0.000707,
-        "ThreadTime": 0.001846,
-        "ProcessTime": 0.0022330000000003736,
-        "JSHeapUsedSize": 27700,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.687591,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227184,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.599408,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 91280,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.584808,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.816486,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 325936,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919069,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.693867,
-              "percentCPUUsage": 0.015681337629093687,
-              "idleWakeupsPerSecond": 5
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227264,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.602522,
-              "percentCPUUsage": 0.007780677055827782,
-              "idleWakeupsPerSecond": 9
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 91264,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.585643,
-              "percentCPUUsage": 0.0020863404119990108,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.818704,
-              "percentCPUUsage": 0.005541919800974618,
-              "idleWakeupsPerSecond": 4
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 325968,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919222,
-              "percentCPUUsage": 0.0003822872953488679,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0.32699999999999996,
+      "taskMs": 1.2389999999999999,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.015681337629093687,
+          "rssKiB": 227264
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.007780677055827782,
+          "rssKiB": 91264
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.005541919800974618,
+          "rssKiB": 325968
+        }
+      ]
     },
     {
       "trial": 1,
-      "sample": {
-        "refresh": 210,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.003299000032712,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00017899999999999996,
-        "ScriptDuration": 0.00026,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.004222999999999999,
-        "TaskOtherDuration": 0.0037840000000000005,
-        "ThreadTime": 0.004825,
-        "ProcessTime": 0.0050149999999993256,
-        "JSHeapUsedSize": 26704,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.694449,
-              "percentCPUUsage": 6.2661498708010335,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227264,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.602522,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 91264,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.585643,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.818811,
-              "percentCPUUsage": 1.2947725072604066,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 325968,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919222,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.697475,
-              "percentCPUUsage": 0.007559300287583163,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227296,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.602669,
-              "percentCPUUsage": 0.000367212105709124,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 91264,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.585714,
-              "percentCPUUsage": 0.00017736045279574032,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.823871,
-              "percentCPUUsage": 0.012640019440649663,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 326000,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919254,
-              "percentCPUUsage": 7.993672209079292e-5,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0.25999999999999995,
+      "taskMs": 4.222999999999999,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.007559300287583163,
+          "rssKiB": 227296
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.000367212105709124,
+          "rssKiB": 91264
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.012640019440649663,
+          "rssKiB": 326000
+        }
+      ]
     },
     {
       "trial": 2,
-      "sample": {
-        "refresh": 210,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.004651000024751,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00032899999999999987,
-        "ScriptDuration": 0.0004930000000000001,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.0015370000000000002,
-        "TaskOtherDuration": 0.0007149999999999995,
-        "ThreadTime": 0.0021090000000000006,
-        "ProcessTime": 0.0022860000000006764,
-        "JSHeapUsedSize": 16956,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.698428,
-              "percentCPUUsage": 5.5900985452839045,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227296,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.602669,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 91264,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.585714,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.824091,
-              "percentCPUUsage": 1.307655729909653,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 326000,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919254,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.702292,
-              "percentCPUUsage": 0.009651257890602692,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 227344,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 0.602849,
-              "percentCPUUsage": 0.00044958925525639775,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 88384,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.585816,
-              "percentCPUUsage": 0.00025476724464529207,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 55520,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 5.82638,
-              "percentCPUUsage": 0.005717278980834702,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 326016,
-              "peakWorkingSetSize": 546704
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 2.919336,
-              "percentCPUUsage": 0.00020481280109979478,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 49312,
-              "peakWorkingSetSize": 90672
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 210,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0.49300000000000005,
+      "taskMs": 1.5370000000000001,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.009651257890602692,
+          "rssKiB": 227344
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.00044958925525639775,
+          "rssKiB": 88384
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.005717278980834702,
+          "rssKiB": 326016
+        }
+      ]
     }
   ],
   "surface-after-hidden": [
     {
       "trial": 0,
-      "sample": {
-        "refresh": 0,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.003151000011712,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00018999999999999998,
-        "ScriptDuration": 0,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.0012649999999999998,
-        "TaskOtherDuration": 0.001075,
-        "ThreadTime": 0.0015589999999999998,
-        "ProcessTime": 0.0031639999999981683,
-        "JSHeapUsedSize": 756,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.893863,
-              "percentCPUUsage": 0.03370971892988518,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 139392,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.086583,
-              "percentCPUUsage": 0.008324043240167252,
-              "idleWakeupsPerSecond": 6
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64880,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.772912,
-              "percentCPUUsage": 0.0045807567111871015,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.300441,
-              "percentCPUUsage": 0.12217708341995094,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200192,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.633608,
-              "percentCPUUsage": 0.006954728568653474,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 32048,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.902087,
-              "percentCPUUsage": 0.020547449617773463,
-              "idleWakeupsPerSecond": 5
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 139632,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.090329,
-              "percentCPUUsage": 0.009359302056907754,
-              "idleWakeupsPerSecond": 5
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64944,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.773197,
-              "percentCPUUsage": 0.0007120666362451811,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.30359,
-              "percentCPUUsage": 0.007867716428411525,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200384,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.635806,
-              "percentCPUUsage": 0.0054916610700693974,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 32736,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 0,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0,
+      "taskMs": 1.265,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.020547449617773463,
+          "rssKiB": 139632
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.009359302056907754,
+          "rssKiB": 64944
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.007867716428411525,
+          "rssKiB": 200384
+        }
+      ]
     },
     {
       "trial": 1,
-      "sample": {
-        "refresh": 0,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.005308000021614,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.00023200000000000006,
-        "ScriptDuration": 0,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.0049889999999999995,
-        "TaskOtherDuration": 0.004757,
-        "ThreadTime": 0.005504,
-        "ProcessTime": 0.006769999999999499,
-        "JSHeapUsedSize": 664,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.906678,
-              "percentCPUUsage": 3.9794397059843285,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 140112,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.090621,
-              "percentCPUUsage": 0.25312066574202496,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64960,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.773197,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.304234,
-              "percentCPUUsage": 0.5583685926336963,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200384,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.644643,
-              "percentCPUUsage": 7.6619615731428174,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 48480,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.912581,
-              "percentCPUUsage": 0.014741378828113575,
-              "idleWakeupsPerSecond": 2
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 140096,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.092109,
-              "percentCPUUsage": 0.0037159451606407086,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64960,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.773434,
-              "percentCPUUsage": 0.0005918536957642255,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.311014,
-              "percentCPUUsage": 0.016931504025003086,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200640,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.64601,
-              "percentCPUUsage": 0.0034137694327638756,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 48480,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 0,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0,
+      "taskMs": 4.989,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.014741378828113575,
+          "rssKiB": 140096
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.0037159451606407086,
+          "rssKiB": 64960
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.016931504025003086,
+          "rssKiB": 200640
+        }
+      ]
     },
     {
       "trial": 2,
-      "sample": {
-        "refresh": 0,
-        "reads": 0,
-        "registered": 21
-      },
-      "metrics": {
-        "Timestamp": 5.004209999984596,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 0,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 0,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 0,
-        "RecalcStyleCount": 0,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0,
-        "DevToolsCommandDuration": 0.000169,
-        "ScriptDuration": 0,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.0012519999999999996,
-        "TaskOtherDuration": 0.0010829999999999998,
-        "ThreadTime": 0.0007959999999999998,
-        "ProcessTime": 0.0016889999999989413,
-        "JSHeapUsedSize": 664,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "processes": {
-        "begin": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.916821,
-              "percentCPUUsage": 5.077601073002491,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 140240,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.09243,
-              "percentCPUUsage": 0.385261641862698,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64960,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.773434,
-              "percentCPUUsage": 0,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.311789,
-              "percentCPUUsage": 0.9303274752712954,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200640,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.651055,
-              "percentCPUUsage": 6.056713407606607,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 48704,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ],
-        "end": [
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 6.924293,
-              "percentCPUUsage": 0.018663829657984323,
-              "idleWakeupsPerSecond": 4
-            },
-            "pid": 31261,
-            "type": "Browser",
-            "creationTime": 1791384592961.136,
-            "memory": {
-              "workingSetSize": 141200,
-              "peakWorkingSetSize": 280144
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 3.093379,
-              "percentCPUUsage": 0.0023704632979344147,
-              "idleWakeupsPerSecond": 1
-            },
-            "pid": 31481,
-            "type": "GPU",
-            "creationTime": 1791384595060.272,
-            "serviceName": "GPU",
-            "memory": {
-              "workingSetSize": 64960,
-              "peakWorkingSetSize": 118512
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 1.773529,
-              "percentCPUUsage": 0.0002372962574333677,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31482,
-            "type": "Utility",
-            "creationTime": 1791384595062.358,
-            "serviceName": "network.mojom.NetworkService",
-            "name": "Network Service",
-            "memory": {
-              "workingSetSize": 43936,
-              "peakWorkingSetSize": 62160
-            },
-            "sandboxed": true
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 16.313471,
-              "percentCPUUsage": 0.004201384288681161,
-              "idleWakeupsPerSecond": 0
-            },
-            "pid": 31513,
-            "type": "Tab",
-            "creationTime": 1791384595341.65,
-            "memory": {
-              "workingSetSize": 200672,
-              "peakWorkingSetSize": 1108736
-            },
-            "sandboxed": false
-          },
-          {
-            "cpu": {
-              "cumulativeCPUUsage": 4.652413,
-              "percentCPUUsage": 0.00339208077528479,
-              "idleWakeupsPerSecond": 3
-            },
-            "pid": 36283,
-            "type": "Utility",
-            "creationTime": 1791384642396.228,
-            "serviceName": "tracing.mojom.TracingService",
-            "name": "Tracing Service",
-            "memory": {
-              "workingSetSize": 48704,
-              "peakWorkingSetSize": 103424
-            },
-            "sandboxed": true
-          }
-        ]
-      }
+      "refresh": 0,
+      "reads": 0,
+      "registered": 21,
+      "scriptMs": 0,
+      "taskMs": 1.2519999999999996,
+      "processes": [
+        {
+          "type": "Browser",
+          "cpuPercent": 0.018663829657984323,
+          "rssKiB": 141200
+        },
+        {
+          "type": "GPU",
+          "cpuPercent": 0.0023704632979344147,
+          "rssKiB": 64960
+        },
+        {
+          "type": "Tab",
+          "cpuPercent": 0.004201384288681161,
+          "rssKiB": 200672
+        }
+      ]
     }
   ],
   "date-before": [
@@ -2662,46 +418,10 @@
   "css-before": [
     {
       "trial": 0,
-      "elapsed": 1094.800000011921,
-      "metrics": {
-        "Timestamp": 1.1582009999547154,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 16,
-        "LayoutObjects": 1571,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 408,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 207,
-        "RecalcStyleCount": 414,
-        "LayoutDuration": 0.020984,
-        "RecalcStyleDuration": 0.095238,
-        "DevToolsCommandDuration": 0.000534,
-        "ScriptDuration": 0.123877,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.286343,
-        "TaskOtherDuration": 0.04571,
-        "ThreadTime": 0.293129,
-        "ProcessTime": 0.3409979999999999,
-        "JSHeapUsedSize": 15745224,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 111,
+      "styleMs": 95.238,
+      "layoutMs": 20.983999999999998,
+      "styleCount": 414,
+      "paintCount": 111,
       "styleTraceSummary": {
         "events": 414,
         "durationMs": 95.44799999999998,
@@ -2711,46 +431,10 @@
     },
     {
       "trial": 1,
-      "elapsed": 1026.3999999761581,
-      "metrics": {
-        "Timestamp": 1.031247999984771,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.015681999999999998,
-        "RecalcStyleDuration": 0.084965,
-        "DevToolsCommandDuration": 0.00026099999999999995,
-        "ScriptDuration": 0.06456,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.205521,
-        "TaskOtherDuration": 0.040053000000000005,
-        "ThreadTime": 0.20788599999999996,
-        "ProcessTime": 0.21755199999999997,
-        "JSHeapUsedSize": 2182300,
-        "JSHeapTotalSize": 786432,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 124,
+      "styleMs": 84.965,
+      "layoutMs": 15.681999999999999,
+      "styleCount": 400,
+      "paintCount": 124,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 85.132,
@@ -2760,46 +444,10 @@
     },
     {
       "trial": 2,
-      "elapsed": 1022,
-      "metrics": {
-        "Timestamp": 1.0255120000219904,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.015645000000000006,
-        "RecalcStyleDuration": 0.086061,
-        "DevToolsCommandDuration": 0.00028300000000000005,
-        "ScriptDuration": 0.06143900000000002,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.20228999999999997,
-        "TaskOtherDuration": 0.03886200000000001,
-        "ThreadTime": 0.20488099999999998,
-        "ProcessTime": 0.21446499999999968,
-        "JSHeapUsedSize": 2177720,
-        "JSHeapTotalSize": 2097152,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 124,
+      "styleMs": 86.06099999999999,
+      "layoutMs": 15.645000000000007,
+      "styleCount": 400,
+      "paintCount": 124,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 86.23499999999997,
@@ -2809,46 +457,10 @@
     },
     {
       "trial": 3,
-      "elapsed": 1033.8999999761581,
-      "metrics": {
-        "Timestamp": 1.036846000002697,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.018230000000000003,
-        "RecalcStyleDuration": 0.09476200000000001,
-        "DevToolsCommandDuration": 0.000273,
-        "ScriptDuration": 0.06260700000000002,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.22229900000000002,
-        "TaskOtherDuration": 0.046426999999999996,
-        "ThreadTime": 0.225244,
-        "ProcessTime": 0.23375599999999963,
-        "JSHeapUsedSize": 2141432,
-        "JSHeapTotalSize": 2359296,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 126,
+      "styleMs": 94.76200000000001,
+      "layoutMs": 18.230000000000004,
+      "styleCount": 400,
+      "paintCount": 126,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 94.944,
@@ -2858,46 +470,10 @@
     },
     {
       "trial": 4,
-      "elapsed": 1031.800000011921,
-      "metrics": {
-        "Timestamp": 1.0352890000212938,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.016093999999999997,
-        "RecalcStyleDuration": 0.08815800000000001,
-        "DevToolsCommandDuration": 0.00028399999999999996,
-        "ScriptDuration": 0.06151099999999998,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.20633699999999988,
-        "TaskOtherDuration": 0.04028999999999999,
-        "ThreadTime": 0.20887999999999995,
-        "ProcessTime": 0.21648700000000032,
-        "JSHeapUsedSize": 2141396,
-        "JSHeapTotalSize": 2097152,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 126,
+      "styleMs": 88.15800000000002,
+      "layoutMs": 16.093999999999998,
+      "styleCount": 400,
+      "paintCount": 126,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 88.33200000000001,
@@ -2909,46 +485,10 @@
   "css-after": [
     {
       "trial": 0,
-      "elapsed": 1045,
-      "metrics": {
-        "Timestamp": 1.0501270000240766,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": -6,
-        "LayoutObjects": 408,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 204,
-        "Resources": 9,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 201,
-        "RecalcStyleCount": 402,
-        "LayoutDuration": 0.023516,
-        "RecalcStyleDuration": 0.099153,
-        "DevToolsCommandDuration": 0.00031099999999999997,
-        "ScriptDuration": 0.061929,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.241367,
-        "TaskOtherDuration": 0.056458,
-        "ThreadTime": 0.244203,
-        "ProcessTime": 0.34598299999999993,
-        "JSHeapUsedSize": -284288,
-        "JSHeapTotalSize": 1310720,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 126,
+      "styleMs": 99.153,
+      "layoutMs": 23.516,
+      "styleCount": 402,
+      "paintCount": 126,
       "styleTraceSummary": {
         "events": 402,
         "durationMs": 99.33599999999997,
@@ -2958,46 +498,10 @@
     },
     {
       "trial": 1,
-      "elapsed": 1030.699999988079,
-      "metrics": {
-        "Timestamp": 1.0341459999908693,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.017374000000000004,
-        "RecalcStyleDuration": 0.089079,
-        "DevToolsCommandDuration": 0.00028,
-        "ScriptDuration": 0.06150799999999999,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.205632,
-        "TaskOtherDuration": 0.037390999999999994,
-        "ThreadTime": 0.208353,
-        "ProcessTime": 0.21938000000000013,
-        "JSHeapUsedSize": 505952,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 126,
+      "styleMs": 89.07900000000001,
+      "layoutMs": 17.374000000000002,
+      "styleCount": 400,
+      "paintCount": 126,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 89.22399999999996,
@@ -3007,46 +511,10 @@
     },
     {
       "trial": 2,
-      "elapsed": 1024.8999999761581,
-      "metrics": {
-        "Timestamp": 1.027674000011757,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": -456,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": -228,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.017868999999999996,
-        "RecalcStyleDuration": 0.08794599999999997,
-        "DevToolsCommandDuration": 0.0002629999999999999,
-        "ScriptDuration": 0.061288999999999996,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.21767099999999995,
-        "TaskOtherDuration": 0.05030399999999999,
-        "ThreadTime": 0.220787,
-        "ProcessTime": 0.3169050000000002,
-        "JSHeapUsedSize": -779296,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 126,
+      "styleMs": 87.94599999999997,
+      "layoutMs": 17.868999999999996,
+      "styleCount": 400,
+      "paintCount": 126,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 88.11099999999995,
@@ -3056,46 +524,10 @@
     },
     {
       "trial": 3,
-      "elapsed": 1011.1999999880791,
-      "metrics": {
-        "Timestamp": 1.0139990000170656,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": -460,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": -230,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.015799,
-        "RecalcStyleDuration": 0.08132,
-        "DevToolsCommandDuration": 0.00027399999999999994,
-        "ScriptDuration": 0.056974,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.205982,
-        "TaskOtherDuration": 0.051614999999999994,
-        "ThreadTime": 0.20901599999999998,
-        "ProcessTime": 0.3080120000000006,
-        "JSHeapUsedSize": 537044,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 122,
+      "styleMs": 81.32000000000001,
+      "layoutMs": 15.799000000000001,
+      "styleCount": 400,
+      "paintCount": 122,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 81.47599999999997,
@@ -3105,52 +537,138 @@
     },
     {
       "trial": 4,
-      "elapsed": 1019.6000000238419,
-      "metrics": {
-        "Timestamp": 1.0227000000304542,
-        "AudioHandlers": 0,
-        "AudioWorkletProcessors": 0,
-        "Documents": 0,
-        "Frames": 0,
-        "JSEventListeners": 0,
-        "LayoutObjects": 800,
-        "MediaKeySessions": 0,
-        "MediaKeys": 0,
-        "Nodes": 400,
-        "Resources": 0,
-        "ContextLifecycleStateObservers": 0,
-        "V8PerContextDatas": 0,
-        "WorkerGlobalScopes": 0,
-        "UACSSResources": 0,
-        "RTCPeerConnections": 0,
-        "ResourceFetchers": 0,
-        "AdSubframes": 0,
-        "DetachedScriptStates": 0,
-        "ArrayBufferContents": 0,
-        "LayoutCount": 200,
-        "RecalcStyleCount": 400,
-        "LayoutDuration": 0.015305,
-        "RecalcStyleDuration": 0.08212000000000003,
-        "DevToolsCommandDuration": 0.00025599999999999993,
-        "ScriptDuration": 0.05828,
-        "V8CompileDuration": 0,
-        "TaskDuration": 0.18933100000000003,
-        "TaskOtherDuration": 0.03337000000000001,
-        "ThreadTime": 0.19184600000000007,
-        "ProcessTime": 0.20028899999999972,
-        "JSHeapUsedSize": 87352,
-        "JSHeapTotalSize": 0,
-        "FirstMeaningfulPaint": 0,
-        "DomContentLoaded": 0,
-        "NavigationStart": 0
-      },
-      "paint": 124,
+      "styleMs": 82.12000000000003,
+      "layoutMs": 15.305,
+      "styleCount": 400,
+      "paintCount": 124,
       "styleTraceSummary": {
         "events": 400,
         "durationMs": 82.285,
         "elementsMin": null,
         "elementsMax": null
       }
+    }
+  ],
+  "production": {
+    "before": [
+      {
+        "trial": 0,
+        "startupMs": 3546.492416,
+        "threadMs": 779.9710000000005,
+        "mainRssMiB": 202.625,
+        "gpuRssMiB": 114.734375,
+        "mainCpuMs": 79.371,
+        "outgoingPortMessages": 22,
+        "rows": 50
+      },
+      {
+        "trial": 1,
+        "startupMs": 998.6090419999982,
+        "threadMs": 563.2810829999999,
+        "mainRssMiB": 233.78125,
+        "gpuRssMiB": 115.65625,
+        "mainCpuMs": 199.021,
+        "outgoingPortMessages": 59,
+        "rows": 50
+      },
+      {
+        "trial": 2,
+        "startupMs": 974.598667000002,
+        "threadMs": 557.9155410000021,
+        "mainRssMiB": 233.828125,
+        "gpuRssMiB": 115.78125,
+        "mainCpuMs": 236.59,
+        "outgoingPortMessages": 59,
+        "rows": 50
+      }
+    ],
+    "after": [
+      {
+        "trial": 0,
+        "startupMs": 972.880083,
+        "threadMs": 572.5378750000001,
+        "mainRssMiB": 233.09375,
+        "gpuRssMiB": 117.21875,
+        "mainCpuMs": 201.256,
+        "outgoingPortMessages": 59,
+        "rows": 50
+      },
+      {
+        "trial": 1,
+        "startupMs": 1003.9999580000003,
+        "threadMs": 573.3231250000008,
+        "mainRssMiB": 233.5625,
+        "gpuRssMiB": 116.515625,
+        "mainCpuMs": 201.864,
+        "outgoingPortMessages": 59,
+        "rows": 50
+      },
+      {
+        "trial": 2,
+        "startupMs": 970.6872079999994,
+        "threadMs": 574.4567909999987,
+        "mainRssMiB": 232.84375,
+        "gpuRssMiB": 114.875,
+        "mainCpuMs": 197.157,
+        "outgoingPortMessages": 59,
+        "rows": 50
+      }
+    ]
+  },
+  "scrollFadeExperiment": [
+    {
+      "round": 0,
+      "mask": "original",
+      "frameP95Ms": 17.59999999999991,
+      "paintMs": 43.318,
+      "paintCount": 243,
+      "rasterMs": 13.925999999999986,
+      "gpuCpuPercent": 0.8894389663763178
+    },
+    {
+      "round": 1,
+      "mask": "none",
+      "frameP95Ms": 17.400000000000546,
+      "paintMs": 36.89900000000005,
+      "paintCount": 242,
+      "rasterMs": 8.963,
+      "gpuCpuPercent": 0.7150456235417776
+    },
+    {
+      "round": 2,
+      "mask": "original",
+      "frameP95Ms": 17.600000000000364,
+      "paintMs": 45.957,
+      "paintCount": 242,
+      "rasterMs": 14.839999999999995,
+      "gpuCpuPercent": 1.0008493429299719
+    },
+    {
+      "round": 3,
+      "mask": "none",
+      "frameP95Ms": 17.600000000000364,
+      "paintMs": 43.75200000000005,
+      "paintCount": 242,
+      "rasterMs": 13.664999999999997,
+      "gpuCpuPercent": 0.804734675363394
+    },
+    {
+      "round": 4,
+      "mask": "original",
+      "frameP95Ms": 17.5,
+      "paintMs": 49.53899999999999,
+      "paintCount": 242,
+      "rasterMs": 14.899999999999995,
+      "gpuCpuPercent": 1.024287540903288
+    },
+    {
+      "round": 5,
+      "mask": "none",
+      "frameP95Ms": 17.600000000002183,
+      "paintMs": 41.40700000000002,
+      "paintCount": 242,
+      "rasterMs": 8.913999999999994,
+      "gpuCpuPercent": 0.8126584413155256
     }
   ]
 }
