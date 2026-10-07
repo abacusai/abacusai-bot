@@ -2538,12 +2538,22 @@
       "empty": "No results",
       "toggleTheme": "Toggle theme",
       "groups": {
-        "areas": "Areas",
         "settings": "Settings",
         "bots": "Bot",
         "sessions": "Sessions",
-        "actions": "Actions"
-      }
+        "actions": "Actions",
+        "recent": "Recent sessions",
+        "workspaces": "Workspaces",
+        "navigation": "Navigation",
+        "panels": "Panels and tabs"
+      },
+      "open": "Open command palette for {{title}}",
+      "newBot": "New bot",
+      "newTerminal": "New terminal",
+      "loading": "Loading sessions, bots and workspaces…",
+      "navigate": "navigate",
+      "select": "select",
+      "close": "close"
     },
     "connectionLost": "Connection to the app was lost. Reloading…",
     "boot": {
