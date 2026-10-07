@@ -7,6 +7,8 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 import { ArrowDown } from "lucide-react";
+// oxlint-disable-next-line no-restricted-imports -- The compiler cannot cache loop-built rows or the ref-backed paging closures; measured in scripts/perf-transcript.mjs.
+import { memo, useCallback } from "react";
 import {
   useEffect,
   useEffectEvent,
@@ -15,6 +17,7 @@ import {
   useState,
   type ComponentType,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -273,7 +276,8 @@ const Placeholder = ({
   );
 };
 
-const TranscriptMessage = ({
+// The compiler cannot cache JSX created inside the transcript loop.
+const TranscriptMessage = memo(function TranscriptMessage({
   message,
   Message,
   start,
@@ -293,7 +297,7 @@ const TranscriptMessage = ({
   fresh: boolean;
   virtual: boolean;
   height: number | undefined;
-}) => {
+}) {
   const ids = toolRows(message);
   return (
     <MessageScrollerItem
@@ -321,7 +325,7 @@ const TranscriptMessage = ({
       </ToolWindowProvider>
     </MessageScrollerItem>
   );
-};
+});
 
 const visibleMessages = (
   messages: UIMessage[],
@@ -387,6 +391,58 @@ const outcomesByAnchor = (
   }
   return { byAnchor, orphans };
 };
+
+type ScrollAnchor = { el: Element; top: number; viewport: HTMLElement };
+
+function preserveScroll(
+  viewportRef: RefObject<HTMLDivElement | null>,
+  observed: RefObject<ScrollAnchor | null>,
+  anchor: RefObject<ScrollAnchor | null>,
+  change: () => void
+) {
+  const viewport = viewportRef.current;
+  if (viewport != null) {
+    const box = viewport.getBoundingClientRect();
+    const elements = Array.from(
+      viewport.querySelectorAll(
+        '[data-slot="message-scroller-item"], [data-tool], [data-slot="subagent-row"]'
+      )
+    );
+    // Start near the last visible row. Scanning from the first mounted row
+    // on each scroll forces layout of content-visibility's offscreen rows.
+    const hint = observed.current?.el;
+    let start = hint == null ? 0 : Math.max(0, elements.indexOf(hint));
+    while (start > 0) {
+      const rect = elements[start - 1]!.getBoundingClientRect();
+      if (rect.height > 0 && rect.top < box.top) break;
+      start -= 1;
+    }
+    for (let index = start; index < elements.length; index += 1) {
+      const el = elements[index]!;
+      const rect = el.getBoundingClientRect();
+      // Later rows are below this viewport; don't force their skipped layout.
+      if (rect.top >= box.bottom) break;
+      if (rect.height <= 0 || rect.top < box.top || rect.bottom > box.bottom)
+        continue;
+      // Rows are in document order. Stop after the first fully visible row.
+      anchor.current = { el, top: rect.top, viewport };
+      break;
+    }
+  }
+  change();
+}
+
+function usePreserveScroll(
+  viewportRef: RefObject<HTMLDivElement | null>,
+  observed: RefObject<ScrollAnchor | null>,
+  anchor: RefObject<ScrollAnchor | null>
+) {
+  return useCallback(
+    (change: () => void) =>
+      preserveScroll(viewportRef, observed, anchor, change),
+    [viewportRef, observed, anchor]
+  );
+}
 
 export const Transcript = ({ messages, Message }: TranscriptProps) => {
   const { t } = useTranslation();
@@ -511,44 +567,11 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     viewport.scrollTop = viewport.scrollHeight;
     opened.current = true;
   });
-  const anchor = useRef<{
-    el: Element;
-    top: number;
-    viewport: HTMLElement;
-  } | null>(null);
-  const observed = useRef<typeof anchor.current>(null);
-  const preserve = (change: () => void) => {
-    const viewport = viewportRef.current;
-    if (viewport != null) {
-      const box = viewport.getBoundingClientRect();
-      const elements = Array.from(
-        viewport.querySelectorAll(
-          '[data-slot="message-scroller-item"], [data-tool], [data-slot="subagent-row"]'
-        )
-      );
-      // Start near the last visible row. Scanning from the first mounted row
-      // on each scroll forces layout of content-visibility's offscreen rows.
-      const hint = observed.current?.el;
-      let start = hint == null ? 0 : Math.max(0, elements.indexOf(hint));
-      while (start > 0) {
-        const rect = elements[start - 1]!.getBoundingClientRect();
-        if (rect.height > 0 && rect.top < box.top) break;
-        start -= 1;
-      }
-      for (let index = start; index < elements.length; index += 1) {
-        const el = elements[index]!;
-        const rect = el.getBoundingClientRect();
-        // Later rows are below this viewport; don't force their skipped layout.
-        if (rect.top >= box.bottom) break;
-        if (rect.height <= 0 || rect.top < box.top || rect.bottom > box.bottom)
-          continue;
-        // Rows are in document order. Stop after the first fully visible row.
-        anchor.current = { el, top: rect.top, viewport };
-        break;
-      }
-    }
-    change();
-  };
+  const anchor = useRef<ScrollAnchor | null>(null);
+  const observed = useRef<ScrollAnchor | null>(null);
+  // Stable callbacks keep each row's tool context unchanged while another
+  // message streams. The helper reads current geometry only when invoked.
+  const preserve = usePreserveScroll(viewportRef, observed, anchor);
   const onPrepend = useEffectEvent(() => preserve(() => {}));
   useEffect(() => session.onPrepend(onPrepend), [session]);
   const lastMessages = useRef(messages);
@@ -602,14 +625,20 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
   useLayoutEffect(() => {
     currentItems.current = items;
   }, [items]);
-  const more = (id: string) =>
-    preserve(() =>
-      setWindow((current) => moreSteps(currentItems.current, current, id))
-    );
-  const earlier = (id: string) =>
-    preserve(() =>
-      setWindow((current) => earlierSteps(currentItems.current, current, id))
-    );
+  const more = useCallback(
+    (id: string) =>
+      preserve(() =>
+        setWindow((current) => moreSteps(currentItems.current, current, id))
+      ),
+    [preserve, setWindow]
+  );
+  const earlier = useCallback(
+    (id: string) =>
+      preserve(() =>
+        setWindow((current) => earlierSteps(currentItems.current, current, id))
+      ),
+    [preserve, setWindow]
+  );
   const signature = items
     .map((item) => `${item.id}:${item.fixed}:${item.units}`)
     .join("|");

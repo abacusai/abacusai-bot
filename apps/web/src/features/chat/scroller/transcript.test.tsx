@@ -9,12 +9,18 @@
  */
 import type { UIMessage } from "@tanstack/ai-client";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { MessageScrollerProvider } from "#renderer/ui/message-scroller";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
+import { ChatViewProvider, createInlineRegistry } from "../kit/context";
+import { createChatRuntime } from "../runtime/runtime";
 import { ThreadSession } from "../runtime/session";
-import { renderRelay } from "../testing";
+import { renderRelay, renderWithDb } from "../testing";
+import { useToolWindow } from "./row-context";
+import { Transcript } from "./transcript";
 import {
   dayKey,
   followWindow,
@@ -101,6 +107,87 @@ describe("R2-T16 window (pure)", () => {
 });
 
 describe("R2-T16 transcript", () => {
+  it("keeps completed row context stable during streaming and pages with current ranges", async () => {
+    const past: UIMessage = {
+      id: "past",
+      role: "assistant",
+      parts: Array.from({ length: 100 }, (_, i) => ({
+        type: "tool-call" as const,
+        id: `tool-${i}`,
+        name: "bash",
+        arguments: "{}",
+        state: "complete" as const,
+      })),
+    };
+    const live: UIMessage = {
+      id: "live",
+      role: "assistant",
+      parts: [{ type: "text", content: "First" }],
+    };
+    const runtime = createChatRuntime(new FakeRelay().ai);
+    const session = runtime.session("test-transcript");
+    const context = {
+      threadId: session.threadId,
+      skin: "session" as const,
+      session,
+      runtime,
+      composer: {
+        mode: "full" as const,
+        placeholder: "",
+        attachmentsBase: null,
+        showModeChip: false,
+        model: null,
+      },
+      slots: {},
+      workspaceRoot: null,
+      focused: true,
+      notchEnabled: false,
+      inline: createInlineRegistry(),
+    };
+    const rendered = vi.fn();
+    const Message = ({ message }: { message: UIMessage }) => {
+      const window = useToolWindow()!;
+      rendered(message.id, window);
+      return message.id === "past" ? (
+        <button onClick={window.more}>More {window.range.end}</button>
+      ) : (
+        <span>
+          {message.parts
+            .flatMap((part) => (part.type === "text" ? [part.content] : []))
+            .join("")}
+        </span>
+      );
+    };
+    const tree = (messages: UIMessage[]) => (
+      <ChatViewProvider value={context}>
+        <MessageScrollerProvider>
+          <Transcript messages={messages} Message={Message} />
+        </MessageScrollerProvider>
+      </ChatViewProvider>
+    );
+    const view = await renderWithDb(tree([past, live]));
+    try {
+      const previous = rendered.mock.calls.filter(([id]) => id === "past");
+      await view.rerender(
+        tree([
+          past,
+          { ...live, parts: [{ type: "text", content: "First token" }] },
+        ])
+      );
+      expect(screen.getByText("First token")).toBeTruthy();
+      expect(rendered.mock.calls.filter(([id]) => id === "past")).toEqual(
+        previous
+      );
+      fireEvent.click(screen.getByRole("button", { name: "More 50" }));
+      expect(screen.getByRole("button", { name: "More 75" })).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "More 75" }));
+      expect(screen.getByRole("button", { name: "More 100" })).toBeTruthy();
+    } finally {
+      await view.cleanup();
+      runtime.forget(session.threadId);
+    }
+  });
+
   it("filters hidden bot messages before allocating transcript rows", async () => {
     const relay = new FakeRelay();
     relay.emitAll([...b.sessionReady(), ...turns(2)]);
