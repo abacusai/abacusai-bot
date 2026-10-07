@@ -1,0 +1,7 @@
+{
+  "busybox-w32@FRP-6075-g169694ebd": {
+    "license": "GPL-2.0-only",
+    "source": "https://frippery.org/files/busybox/busybox-w32-FRP-6075-g169694ebd.tgz",
+    "reason": "Existing Windows-only separate executable. Preserve GPL text and pinned corresponding source URL. Legal review required for installer source-offer compliance; this exception does not approve new GPL dependencies."
+  }
+}

@@ -70,7 +70,7 @@
     },
     "//#typecheck:tools": {},
     "@abacus-ai/desktop#build": {
-      "dependsOn": ["^build", "typecheck"],
+      "dependsOn": ["^build", "typecheck", "//#generate:licenses"],
       "outputs": ["dist/**"],
       "env": [
         "ABACUS_BUILD_COMMIT",
@@ -91,7 +91,7 @@
       ]
     },
     "@abacus-ai/web#build": {
-      "dependsOn": ["^build", "typecheck"],
+      "dependsOn": ["^build", "typecheck", "//#generate:licenses"],
       "outputs": ["dist/**", "build-metadata/**"],
       "env": [
         "ABACUS_WEB_OVERLAY",
@@ -139,7 +139,11 @@
       ]
     },
     "@abacus-ai/desktop#dev": {
-      "dependsOn": ["@abacus-ai/agent#build", "@abacus-ai/desktop#vendor"],
+      "dependsOn": [
+        "@abacus-ai/agent#build",
+        "@abacus-ai/desktop#vendor",
+        "//#generate:licenses"
+      ],
       "cache": false,
       "persistent": true
     },
@@ -160,6 +164,17 @@
     "@abacus-ai/host#test": {
       "dependsOn": ["^build", "build", "vendor"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/main/**"]
+    },
+    "//#generate:licenses": {
+      "cache": false
+    },
+    "//#check:licenses": {
+      "cache": false
+    },
+    "@abacus-ai/web#dev": {
+      "dependsOn": ["//#generate:licenses"],
+      "cache": false,
+      "persistent": true
     }
   },
   "globalEnv": ["ABACUS_BUILD_COMMIT", "ABACUS_RELEASE"]

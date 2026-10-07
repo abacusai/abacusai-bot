@@ -41,9 +41,7 @@ const GROUPS: Array<{ label: string; pages: SettingsPage[] }> = [
   },
   {
     label: "settings.sidebar.app",
-    pages: IS_ELECTRON
-      ? ["language", "keyboard", "about"]
-      : ["language", "keyboard"],
+    pages: ["language", "keyboard", "about"],
   },
 ];
 

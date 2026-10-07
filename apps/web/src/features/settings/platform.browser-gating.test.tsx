@@ -10,10 +10,11 @@ import { settingsIndexFor } from "./search-index";
 it("browser search hides native pages, native controls and local model shortcuts", () => {
   const entries = settingsIndexFor(false, "mac");
   expect(
-    entries.some((entry) =>
-      ["browser", "devices", "about"].includes(entry.page)
-    )
+    entries.some((entry) => ["browser", "devices"].includes(entry.page))
   ).toBe(false);
+  expect(
+    entries.filter((entry) => entry.page === "about").map((entry) => entry.id)
+  ).toEqual(["openSourceLicenses", "appLicense"]);
   for (const id of [
     "launchAtLogin",
     "notchCompanion",
@@ -54,6 +55,20 @@ it("exhausted browser credits never offer the hidden local-model surface", async
   try {
     expect(await screen.findByText(enUS.phase5.creditsExhausted)).toBeDefined();
     expect(screen.queryByText("Use a local model")).toBeNull();
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("browser About exposes license attribution without native update controls", async () => {
+  const app = await renderApp("/settings/about");
+  try {
+    expect(
+      await screen.findByText(enUS.settings.licenses.title)
+    ).not.toBeNull();
+    expect(screen.getByText(enUS.settings.licenses.attribution)).not.toBeNull();
+    expect(screen.queryByText(enUS.phase5.checkUpdates)).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();

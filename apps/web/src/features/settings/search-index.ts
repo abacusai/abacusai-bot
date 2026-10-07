@@ -50,6 +50,8 @@ const labelKeys: Record<string, string> = {
   updates: "phase5.settings.updates",
   logs: "phase5.saveLogs",
   changelog: "phase5.whatsNew",
+  openSourceLicenses: "settings.licenses.title",
+  appLicense: "settings.licenses.own",
   palette: "settings.theme.label",
   theme: "settings.appearance.mode",
   ...Object.fromEntries(
@@ -134,7 +136,14 @@ const groups: Partial<Record<SettingsPageId, string[]>> = {
     "forgetAccount",
   ],
   usage: ["abacusCredits", "openrouterUsage", "weekUsage"],
-  about: ["appVersion", "updates", "logs", "changelog"],
+  about: [
+    "appVersion",
+    "updates",
+    "logs",
+    "changelog",
+    "openSourceLicenses",
+    "appLicense",
+  ],
 };
 export const SETTINGS_INDEX: readonly SettingEntry[] = [
   ...Object.entries(groups).flatMap(([page, ids]) =>
@@ -205,7 +214,9 @@ export const settingsIndexFor = (
   SETTINGS_INDEX.filter(
     (entry) =>
       (electron ||
-        (!["browser", "devices", "about"].includes(entry.page) &&
+        (!["browser", "devices"].includes(entry.page) &&
+          (entry.page !== "about" ||
+            ["openSourceLicenses", "appLicense"].includes(entry.id)) &&
           !/^(notch|local-|localModels|launchAtLogin|showInNotch|density|translucency|tour|key-notch|invite-whatsapp)/.test(
             entry.id
           ))) &&

@@ -3,9 +3,20 @@ import path from "node:path";
 
 import spdx from "spdx-license-list/full.js";
 
+import { licenseData, policyFailures, repositoryUrl } from "./license-data.mjs";
+const graphOnly = process.argv.includes("--graph");
+
 const root = path.resolve(import.meta.dirname, "../../..");
 const desktop = path.join(root, "apps/desktop");
 const packages = new Map();
+// pnpm explicitly removes these backends from the installed/shipped graph.
+const removed = new Set(
+  [
+    ...fs
+      .readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8")
+      .matchAll(/^  ([\w@/.-]+): ["']-["']$/gm),
+  ].map((match) => match[1])
+);
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 
 function resolvePackage(name, from) {
@@ -32,6 +43,7 @@ function visit(directory, bundled = false) {
     ...pkg.optionalDependencies,
     ...pkg.peerDependencies,
   })) {
+    if (removed.has(name)) continue;
     const dependency = resolvePackage(name, dir);
     if (dependency) visit(dependency, bundled);
     else if (
@@ -121,7 +133,7 @@ function visitSourceImports(directory) {
           const name = specifier.startsWith("@")
             ? parts.slice(0, 2).join("/")
             : parts[0];
-          const dependency = resolvePackage(name, desktop);
+          const dependency = resolvePackage(name, path.dirname(file));
           // The package alone: what it depends on is its build tooling, not
           // part of the files copied out of it.
           if (dependency) record(dependency);
@@ -133,17 +145,27 @@ function visitSourceImports(directory) {
 }
 
 visit(desktop);
-visit(path.join(root, "packages/agent"));
+visit(path.join(root, "apps/web"));
 visit(path.join(root, "apps/updater"));
-visitSourceMaps(path.join(root, "packages/agent/dist"));
-for (const bundle of ["main", "preload", "renderer/assets"])
-  visitSourceMaps(path.join(desktop, "dist", bundle));
-visitSourceMaps(path.join(desktop, "dist", "main/assets"), { optional: true });
+for (const entry of fs.readdirSync(path.join(root, "packages"))) {
+  if (!["config", "test-support"].includes(entry))
+    visit(path.join(root, "packages", entry));
+}
+if (!graphOnly) {
+  visit(path.join(root, "packages/agent"));
+  visitSourceMaps(path.join(root, "packages/agent/dist"));
+  for (const bundle of ["main", "preload", "renderer/assets"])
+    visitSourceMaps(path.join(desktop, "dist", bundle));
+  visitSourceMaps(path.join(desktop, "dist", "main/assets"), {
+    optional: true,
+  });
+}
 visitSourceImports(path.join(desktop, "src"));
 visitSourceImports(path.join(root, "apps/web/src"));
 
 const supplements = readJson(path.join(desktop, "build/licenses/sources.json"));
 const sections = [];
+const dataEntries = [];
 const missing = [];
 const fallback = [];
 for (const [dir, pkg] of [...packages].sort((a, b) =>
@@ -209,6 +231,22 @@ for (const [dir, pkg] of [...packages].sort((a, b) =>
     null,
     2
   );
+  dataEntries.push({
+    name: pkg.name,
+    version: pkg.version,
+    license: (typeof pkg.license === "string"
+      ? pkg.license
+      : (pkg.license?.type ?? "UNKNOWN")
+    ).replace(
+      /[A-Za-z0-9.-]+/g,
+      (id) =>
+        Object.keys(spdx).find(
+          (key) => key.toLowerCase() === id.toLowerCase()
+        ) ?? id
+    ),
+    url: repositoryUrl(pkg.repository, pkg.homepage),
+    text: texts.join("\n\n"),
+  });
   sections.push(
     `${pkg.name}@${pkg.version}\nLicense: ${pkg.license ?? "See license text"}\n${attribution}\n\n${texts.join("\n\n")}`
   );
@@ -216,6 +254,27 @@ for (const [dir, pkg] of [...packages].sort((a, b) =>
 if (missing.length)
   throw new Error(`Upstream license text missing for: ${missing.join(", ")}`);
 for (const entry of supplements) {
+  if (entry.pin) {
+    const source = fs.readFileSync(path.join(root, entry.pin.file), "utf8");
+    const pattern = new RegExp(
+      `const ${entry.pin.constant}\\s*=\\s*(?:\\{[\\s\\S]*?version:\\s*)?["']([^"']+)`
+    );
+    const version = pattern.exec(source)?.[1];
+    if (version !== entry.version)
+      throw new Error(
+        `Update license attribution for ${entry.name}: pinned ${version}, notices ${entry.version}`
+      );
+  }
+  dataEntries.push({
+    name: entry.name,
+    version: entry.version,
+    license: entry.license,
+    url: entry.source,
+    text: fs.readFileSync(
+      path.join(desktop, "build/licenses", entry.file),
+      "utf8"
+    ),
+  });
   sections.push(
     `${entry.asset}\nSource: ${entry.source}\n\n${fs.readFileSync(path.join(desktop, "build/licenses", entry.file), "utf8")}`
   );
@@ -227,6 +286,12 @@ for (const file of [
     .filter((name) => name.startsWith("LICENSE-"))
     .map((name) => `resources/pdf/fonts/${name}`),
 ]) {
+  dataEntries.push({
+    name: file,
+    version: "asset",
+    license: file.includes("TEMPLATES") ? "MIT" : "OFL-1.1",
+    text: fs.readFileSync(path.join(desktop, file), "utf8"),
+  });
   sections.push(
     `${file}\n\n${fs.readFileSync(path.join(desktop, file), "utf8")}`
   );
@@ -234,8 +299,49 @@ for (const file of [
 sections.push(
   `Connector icon paths from simple-icons\nSource: https://github.com/simple-icons/simple-icons\n\n${spdx["CC0-1.0"].licenseText}`
 );
+dataEntries.push({
+  name: "simple-icons connector paths",
+  version: "asset",
+  license: "CC0-1.0",
+  url: "https://github.com/simple-icons/simple-icons",
+  text: spdx["CC0-1.0"].licenseText,
+});
+const electronDir = resolvePackage("electron", desktop);
+if (!electronDir) throw new Error("Electron is not installed");
+const electronPkg = readJson(path.join(electronDir, "package.json"));
+const electronLicense = fs.readFileSync(
+  path.join(electronDir, "dist/LICENSE"),
+  "utf8"
+);
+dataEntries.push({
+  name: "Electron",
+  version: electronPkg.version,
+  license: "MIT",
+  url: "https://github.com/electron/electron",
+  text: electronLicense,
+});
+sections.push(
+  `Electron ${electronPkg.version}\n${electronLicense}\nChromium and embedded Node.js notices: LICENSES.chromium.html (included alongside these notices).`
+);
+const reviews = readJson(path.join(desktop, "build/licenses/reviews.json"));
+const failures = policyFailures(dataEntries, reviews);
+if (failures.length)
+  throw new Error(`License policy rejected:\n${failures.join("\n")}`);
+for (const entry of dataEntries) {
+  const review = reviews[`${entry.name}@${entry.version}`];
+  if (review) entry.review = review.reason;
+}
+console.log(`Pinned policy review entries: ${Object.keys(reviews).join(", ")}`);
+const data = licenseData(dataEntries);
+const publicDir = path.join(root, "apps/web/public/licenses");
+fs.mkdirSync(publicDir, { recursive: true });
+fs.writeFileSync(path.join(publicDir, "licenses.json"), JSON.stringify(data));
+fs.copyFileSync(
+  path.join(electronDir, "dist/LICENSES.chromium.html"),
+  path.join(publicDir, "LICENSES.chromium.html")
+);
 const entries = [...new Set(sections)];
-const output = path.join(desktop, "dist/THIRD-PARTY-NOTICES.txt");
+const output = path.join(desktop, "dist/THIRD_PARTY_NOTICES.txt");
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(
   output,
@@ -244,3 +350,22 @@ fs.writeFileSync(
 console.log(
   `Generated desktop notices for ${entries.length} dependency and asset entries (${fallback.length} use declared SPDX terms).`
 );
+
+fs.copyFileSync(output, path.join(publicDir, "THIRD_PARTY_NOTICES.txt"));
+fs.copyFileSync(
+  path.join(electronDir, "dist/LICENSES.chromium.html"),
+  path.join(desktop, "dist/LICENSES.chromium.html")
+);
+console.log(
+  `License policy passed: ${data.packages.length} entries, ${Object.keys(data.texts).length} unique texts.`
+);
+
+if (!graphOnly) {
+  const rendererLicenses = path.join(desktop, "dist/renderer/licenses");
+  fs.mkdirSync(rendererLicenses, { recursive: true });
+  for (const file of fs.readdirSync(publicDir))
+    fs.copyFileSync(
+      path.join(publicDir, file),
+      path.join(rendererLicenses, file)
+    );
+}

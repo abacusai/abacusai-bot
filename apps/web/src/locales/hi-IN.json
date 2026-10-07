@@ -2676,7 +2676,26 @@
       }
     },
     "backToApp": "Back to the app",
-    "emptyDescription": "These settings arrive in a coming update."
+    "emptyDescription": "These settings arrive in a coming update.",
+    "licenses": {
+      "title": "ओपन-सोर्स लाइसेंस",
+      "description": "AbacusAI Bot में शामिल सॉफ़्टवेयर के लाइसेंस और श्रेय।",
+      "own": "AbacusAI Bot · MIT",
+      "attribution": "Copyright © 2026 Abacus.AI, Inc.",
+      "hide": "छिपाएँ",
+      "search": "पैकेज या लाइसेंस खोजें",
+      "notices": "सूचनाएँ डाउनलोड करें",
+      "runtime": "Chromium और Node.js की सूचनाएँ",
+      "failed": "लाइसेंस लोड नहीं किए जा सके।",
+      "count": "{{count}} पैकेज",
+      "copyLink": "{{name}} का रिपॉज़िटरी लिंक कॉपी करें",
+      "openLink": "{{name}} की रिपॉज़िटरी खोलें",
+      "copied": "कॉपी किया गया",
+      "open": "ब्राउज़र में खोलें",
+      "text": "{{name}} का लाइसेंस पाठ",
+      "empty": "कोई मिलता-जुलता पैकेज नहीं।",
+      "more": "और पैकेज लोड करें"
+    }
   },
   "onboardingFlow": {
     "steps": {

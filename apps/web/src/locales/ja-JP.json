@@ -2676,7 +2676,26 @@
       }
     },
     "backToApp": "Back to the app",
-    "emptyDescription": "These settings arrive in a coming update."
+    "emptyDescription": "These settings arrive in a coming update.",
+    "licenses": {
+      "title": "オープンソースライセンス",
+      "description": "AbacusAI Bot に含まれるソフトウェアのライセンスと帰属表示。",
+      "own": "AbacusAI Bot · MIT",
+      "attribution": "Copyright © 2026 Abacus.AI, Inc.",
+      "hide": "閉じる",
+      "search": "パッケージやライセンスを検索",
+      "notices": "通知をダウンロード",
+      "runtime": "Chromium と Node.js の通知",
+      "failed": "ライセンスを読み込めませんでした。",
+      "count": "{{count}} 件のパッケージ",
+      "copyLink": "{{name}} のリポジトリリンクをコピー",
+      "openLink": "{{name}} のリポジトリを開く",
+      "copied": "コピーしました",
+      "open": "ブラウザーで開く",
+      "text": "{{name}} のライセンス本文",
+      "empty": "一致するパッケージはありません。",
+      "more": "さらにパッケージを読み込む"
+    }
   },
   "onboardingFlow": {
     "steps": {

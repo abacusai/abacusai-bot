@@ -2676,7 +2676,26 @@
       }
     },
     "backToApp": "Back to the app",
-    "emptyDescription": "These settings arrive in a coming update."
+    "emptyDescription": "These settings arrive in a coming update.",
+    "licenses": {
+      "title": "Lisensi sumber terbuka",
+      "description": "Lisensi dan atribusi perangkat lunak yang disertakan dalam AbacusAI Bot.",
+      "own": "AbacusAI Bot · MIT",
+      "attribution": "Copyright © 2026 Abacus.AI, Inc.",
+      "hide": "Sembunyikan",
+      "search": "Cari paket atau lisensi",
+      "notices": "Unduh pemberitahuan",
+      "runtime": "Pemberitahuan Chromium dan Node.js",
+      "failed": "Lisensi tidak dapat dimuat.",
+      "count": "{{count}} paket",
+      "copyLink": "Salin tautan repositori {{name}}",
+      "openLink": "Buka repositori {{name}}",
+      "copied": "Disalin",
+      "open": "Buka di browser",
+      "text": "Teks lisensi {{name}}",
+      "empty": "Tidak ada paket yang cocok.",
+      "more": "Muat lebih banyak paket"
+    }
   },
   "onboardingFlow": {
     "steps": {

@@ -7,7 +7,8 @@ directories:
 
 files:
   - dist/**
-  - "!dist/THIRD-PARTY-NOTICES.txt"
+  - "!dist/THIRD_PARTY_NOTICES.txt"
+  - "!dist/LICENSES.chromium.html"
   # Read by generate-notices.js at build time only.
   - "!**/*.map"
   - package.json
@@ -23,8 +24,10 @@ compression: maximum
 extraResources:
   - from: ../../LICENSE
     to: LICENSE
-  - from: dist/THIRD-PARTY-NOTICES.txt
-    to: THIRD-PARTY-NOTICES.txt
+  - from: dist/THIRD_PARTY_NOTICES.txt
+    to: THIRD_PARTY_NOTICES.txt
+  - from: dist/LICENSES.chromium.html
+    to: LICENSES.chromium.html
   # This app's resources directory, verbatim: deck templates, the design
   # catalog and mockup stylesheet, the PDF stylesheet and the script the PDF
   # component shells out to, the skills seeded into the user's own skills
