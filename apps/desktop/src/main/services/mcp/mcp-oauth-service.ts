@@ -470,6 +470,11 @@ const inFlight = new Map<string, () => void>();
  * Clear the field before starting a sign-in: the fixed callback port is a
  * single resource, and a stale attempt would hold it for the whole timeout.
  */
+/** Abandon the in-app sign-in for one server URL, if one is waiting. */
+export const cancelMcpSignIn = (serverUrl: string): void => {
+  inFlight.get(serverUrl)?.();
+};
+
 export const cancelAllMcpSignIns = (): void => {
   // The spread snapshots the keys: the body deletes from the collection.
   // oxlint-disable-next-line unicorn/no-useless-spread

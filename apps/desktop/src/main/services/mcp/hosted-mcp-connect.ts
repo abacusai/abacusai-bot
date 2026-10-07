@@ -4,8 +4,9 @@
  * a confirm page whose button posts back with a one-time token. The POST runs
  * the one install-and-sign-in (`ConnectorFlowService.connectMcp`) and sends
  * the tab to the provider, whose redirect lands at `<base>/mcp/callback`. The
- * PKCE verifier never leaves the host. Admission is the proxy's owner identity
- * plus that token or the OAuth state (spec 08, D8 exception).
+ * PKCE verifier never leaves the host. Admission is the proxy's signed proof
+ * (checked by the HTTP server), the owner identity, fetch metadata, and that
+ * token or the OAuth state (spec 08, D8 exception).
  */
 import crypto from "crypto";
 import type { IncomingHttpHeaders } from "http";
@@ -28,9 +29,9 @@ export interface HostedRequest {
   method: string;
   pathname: string;
   query: URLSearchParams;
-  /** A POST's form body. */
-  form?: URLSearchParams;
   headers: IncomingHttpHeaders;
+  /** A POST's form, read only once the route admitted it. */
+  readForm: () => Promise<URLSearchParams | { status: 408 | 413 }>;
 }
 
 /** What a `/mcp/*` route answers; the HTTP server only writes it out. */
@@ -38,7 +39,9 @@ export type HostedResponse =
   | { kind: "redirect"; location: string }
   | { kind: "page"; status: 200 | 400 | 403; html: string }
   | { kind: "refused" }
-  | { kind: "missing" };
+  | { kind: "missing" }
+  /** The form was too large or too slow. */
+  | { kind: "bad-body"; status: 408 | 413 };
 
 interface PendingSignIn {
   owner: string;
@@ -56,23 +59,52 @@ interface PendingSignIn {
   expires: number;
 }
 
-/** One live per owner and connector: a newer one replaces it. */
-const keyOf = (owner: string, name: string): string => `${owner}\0${name}`;
+/** One value per owner and connector: a newer one replaces it. */
+class PerConnector<T> {
+  private readonly byOwner = new Map<string, Map<string, T>>();
+
+  get(owner: string, name: string): T | undefined {
+    return this.byOwner.get(owner)?.get(name);
+  }
+
+  set(owner: string, name: string, value: T): void {
+    let names = this.byOwner.get(owner);
+    if (names == null) this.byOwner.set(owner, (names = new Map()));
+    names.set(name, value);
+  }
+
+  delete(owner: string, name: string): void {
+    this.byOwner.get(owner)?.delete(name);
+  }
+
+  /** Every owner's entry for `name`, or every entry. */
+  deleteName(name?: string): void {
+    if (name == null) this.byOwner.clear();
+    else for (const names of this.byOwner.values()) names.delete(name);
+  }
+
+  *entries(): IterableIterator<[string, string, T]> {
+    for (const [owner, names] of this.byOwner)
+      for (const [name, value] of names) yield [owner, name, value];
+  }
+}
 
 const CONNECT_ROUTE = /^\/mcp\/connect\/([^/]{1,256})$/;
 
 export class HostedMcpConnect {
   /** Confirm-page tokens, minted by the GET, spent by the POST. */
-  private readonly tokens = new Map<
-    string,
-    { token: string; expires: number }
-  >();
+  private readonly tokens = new PerConnector<{
+    token: string;
+    expires: number;
+  }>();
   /** A POST's confirmation, taken by the sign-in it starts. */
   private readonly confirmed = new Map<
     string,
     { owner: string; token: string }
   >();
-  private readonly pending = new Map<string, PendingSignIn>();
+  private readonly pending = new PerConnector<PendingSignIn>();
+  /** Bumped by every revoke, so a sign-in begun before one is dropped. */
+  private readonly generations = new PerConnector<number>();
   private readonly now: () => number;
 
   constructor(
@@ -112,6 +144,8 @@ export class HostedMcpConnect {
     const confirmation = this.confirmed.get(name);
     if (confirmation == null) return { kind: "failed", error: "unconfirmed" };
     this.confirmed.delete(name);
+    const { owner } = confirmation;
+    const generation = this.generationOf(owner, name);
     try {
       const prepared = await prepareSignIn({
         serverUrl,
@@ -119,7 +153,10 @@ export class HostedMcpConnect {
         ...(oauth != null ? { oauth } : {}),
       });
       if (prepared.kind === "open") return { kind: "open" };
-      this.pending.set(keyOf(confirmation.owner, name), {
+      // Cancelled while discovery ran: nothing may complete it.
+      if (this.generationOf(owner, name) !== generation)
+        return { kind: "failed", error: "revoked" };
+      this.pending.set(owner, name, {
         owner: confirmation.owner,
         name,
         label,
@@ -141,19 +178,37 @@ export class HostedMcpConnect {
     }
   }
 
-  /** Drops the confirm token and pending sign-in for `name`, or for every connector. */
+  /**
+   * Drops the confirm token and pending sign-in for `name`, or for every
+   * connector, including a sign-in still being prepared.
+   */
   revoke(name?: string): void {
-    // Deleting the entry being visited is safe in a Map's for…of.
-    for (const map of [this.tokens, this.pending])
-      for (const key of map.keys())
-        if (name == null || key.endsWith(`\0${name}`)) map.delete(key);
+    this.tokens.deleteName(name);
+    this.pending.deleteName(name);
     if (name == null) this.confirmed.clear();
     else this.confirmed.delete(name);
+    for (const [owner, entryName, count] of this.generations.entries())
+      if (name == null || entryName === name)
+        this.generations.set(owner, entryName, count + 1);
   }
 
-  /** Every `/mcp/*` request. `owner` is the host's; the proxy's header must match it. */
+  private generationOf(owner: string, name: string): number {
+    const current = this.generations.get(owner, name);
+    if (current != null) return current;
+    this.generations.set(owner, name, 0);
+    return 0;
+  }
+
+  /**
+   * Every `/mcp/*` request, once the HTTP server checked the proxy's proof.
+   * `owner` is the host's; the proxy's header must match it. Fetch metadata
+   * is required: every route is a top-level page load.
+   */
   async route(request: HostedRequest, owner: string): Promise<HostedResponse> {
-    if (!sameOwner(request.headers["x-abacus-user-id"], owner))
+    if (
+      !sameOwner(request.headers["x-abacus-user-id"], owner) ||
+      request.headers["sec-fetch-dest"] !== "document"
+    )
       return { kind: "refused" };
     this.prune();
     if (request.method === "GET" && request.pathname === "/mcp/callback") {
@@ -170,7 +225,6 @@ export class HostedMcpConnect {
     }
     const label = name != null ? this.options.label(name) : null;
     if (name == null || label == null) return { kind: "missing" };
-    if (!isDocumentNavigation(request.headers)) return { kind: "refused" };
     if (request.method === "GET") return this.confirmPage(owner, name, label);
     if (request.method === "POST")
       return this.confirmedConnect(request, owner, name, label);
@@ -184,7 +238,7 @@ export class HostedMcpConnect {
     label: string
   ): HostedResponse {
     const token = crypto.randomBytes(24).toString("base64url");
-    this.tokens.set(keyOf(owner, name), {
+    this.tokens.set(owner, name, {
       token,
       expires: this.now() + CONFIRM_TTL_MS,
     });
@@ -202,17 +256,19 @@ export class HostedMcpConnect {
     label: string
   ): Promise<HostedResponse> {
     // A form only ever posts from the confirm page, on this origin.
-    const site = request.headers["sec-fetch-site"];
-    if (site != null && site !== "same-origin") return { kind: "refused" };
-    const key = keyOf(owner, name);
-    const minted = this.tokens.get(key);
-    const sent = request.form?.get("token") ?? "";
+    if (request.headers["sec-fetch-site"] !== "same-origin")
+      return { kind: "refused" };
+    const form = await request.readForm();
+    if (!(form instanceof URLSearchParams))
+      return { kind: "bad-body", status: form.status };
+    const minted = this.tokens.get(owner, name);
+    const sent = form.get("token") ?? "";
     if (minted == null || !safeEqual(minted.token, sent))
       return page(
         403,
         `<h2>This link has expired.</h2><p>Start connecting ${escapeHtml(label)} again from AbacusAI Bot.</p>`
       );
-    this.tokens.delete(key);
+    this.tokens.delete(owner, name);
     this.confirmed.set(name, { owner, token: minted.token });
     try {
       const result = await this.options.connect(name);
@@ -239,14 +295,16 @@ export class HostedMcpConnect {
     owner: string
   ): Promise<{ ok: boolean; name?: string; label?: string }> {
     const state = params.get("state");
-    const flow = [...this.pending.values()].find(
-      (candidate) =>
+    let flow: PendingSignIn | undefined;
+    for (const [flowOwner, , candidate] of this.pending.entries())
+      if (
         state != null &&
-        candidate.owner === owner &&
+        flowOwner === owner &&
         safeEqual(candidate.state, state)
-    );
+      )
+        flow = candidate;
     if (flow == null) return { ok: false };
-    this.pending.delete(keyOf(flow.owner, flow.name));
+    this.pending.delete(flow.owner, flow.name);
     const failed = { ok: false, name: flow.name, label: flow.label };
     const code = params.get("code");
     if (params.get("error") != null || code == null || code === "") {
@@ -280,8 +338,9 @@ export class HostedMcpConnect {
 
   private prune(): void {
     const now = this.now();
-    for (const map of [this.tokens, this.pending])
-      for (const [key, entry] of map) if (entry.expires <= now) map.delete(key);
+    for (const store of [this.tokens, this.pending])
+      for (const [owner, name, entry] of store.entries())
+        if (entry.expires <= now) store.delete(owner, name);
   }
 }
 
@@ -294,17 +353,6 @@ const sameOwner = (header: unknown, owner: string): boolean =>
   typeof header === "string" &&
   Buffer.byteLength(header) === Buffer.byteLength(owner) &&
   crypto.timingSafeEqual(Buffer.from(header), Buffer.from(owner));
-
-/**
- * Fetch metadata, where the browser sends it: a top-level page load, never a
- * frame, an image or a fetch.
- */
-const isDocumentNavigation = (headers: IncomingHttpHeaders): boolean => {
-  const dest = headers["sec-fetch-dest"];
-  if (dest != null) return dest === "document";
-  const mode = headers["sec-fetch-mode"];
-  return mode == null || mode === "navigate";
-};
 
 const escapeHtml = (text: string): string =>
   text.replace(

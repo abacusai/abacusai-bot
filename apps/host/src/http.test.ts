@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { appendFileSync, truncateSync } from "node:fs";
 import fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { get, ServerResponse } from "node:http";
+import { type ClientRequest, get, request, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -365,6 +365,7 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       if (url.startsWith("http://127.0.0.1")) return realFetch(input, init);
       // A server of the user's own that asks for no sign-in.
       if (url === "https://open.example/mcp") return Response.json({});
+      if (url === serverUrl) await registering;
       if (url === serverUrl)
         return new Response("", {
           status: 401,
@@ -396,6 +397,8 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       return new Response("", { status: 404 });
     });
   let now = Date.now();
+  // Discovery can be held mid-flight, to cancel under it.
+  let registering: Promise<void> = Promise.resolve();
   const signedIn = vi.fn();
   const failed = vi.fn();
   const watch = vi.fn();
@@ -443,7 +446,8 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     lease,
     () => null,
     { prepareFile: async () => ({ status: 404, path: null }) } as never,
-    hosted
+    hosted,
+    { bytes: 64, timeoutMs: 300, now: () => now }
   );
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -454,8 +458,30 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     "sec-fetch-mode": "navigate",
     "sec-fetch-site": "same-origin",
   };
+  /** The proxy's proof, as it signs it (spec 08, D8). */
+  const proof = (
+    method: string,
+    path: string,
+    { who = "o", ts = Math.floor(now / 1000), secret = identity.secret } = {}
+  ) =>
+    `${ts}.${createHmac("sha256", secret)
+      .update(`mcp\n${method}\n${path.split("?")[0]}\n${who}\n${ts}`)
+      .digest("hex")}`;
+  /** Signed unless the headers bring their own proof ("" sends none). */
+  const signed = (
+    method: string,
+    path: string,
+    headers: Record<string, string>
+  ): Record<string, string> => {
+    const { "x-abacus-host-proof": own, ...rest } = headers;
+    const value = own ?? proof(method, path);
+    return value === "" ? rest : { ...rest, "x-abacus-host-proof": value };
+  };
   const get = (path: string, headers: Record<string, string> = owner) =>
-    fetch(`${base}${path}`, { headers, redirect: "manual" });
+    fetch(`${base}${path}`, {
+      headers: signed("GET", path, headers),
+      redirect: "manual",
+    });
   const post = (
     path: string,
     token: string,
@@ -464,7 +490,7 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     fetch(`${base}${path}`, {
       method: "POST",
       headers: {
-        ...headers,
+        ...signed("POST", path, headers),
         "content-type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ token }).toString(),
@@ -498,15 +524,34 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       await hosted.begin({ name: "notion", label: "Notion", serverUrl })
     ).toEqual({ kind: "failed", error: "unconfirmed" });
 
-    // Wrong or missing owner, a frame, a fetch: refused before anything.
+    // The proxy's proof: a valid one admits; none, a stale one, or one over
+    // another path, method or owner does not, whatever the owner header says.
+    const path = "/mcp/connect/notion";
+    expect((await get(path)).status).toBe(200);
+    for (const bad of [
+      "",
+      proof("GET", path, { ts: Math.floor(now / 1000) - 121 }),
+      proof("GET", path, { ts: Math.floor(now / 1000) + 121 }),
+      proof("GET", "/mcp/connect/canva"),
+      proof("POST", path),
+      proof("GET", path, { who: "o2" }),
+      proof("GET", path, { secret: "f".repeat(64) }),
+      "123.nothex",
+    ])
+      expect(
+        (await get(path, { ...owner, "x-abacus-host-proof": bad })).status,
+        bad
+      ).toBe(403);
+
+    // Wrong owner header, a frame, a fetch, or no fetch metadata at all.
     for (const headers of [
-      {},
       { ...owner, "x-abacus-user-id": "O" },
       { ...owner, "x-abacus-user-id": "o2" },
       { ...owner, "sec-fetch-dest": "iframe" },
       { "x-abacus-user-id": "o", "sec-fetch-mode": "cors" },
+      { "x-abacus-user-id": "o" },
     ])
-      expect((await get("/mcp/connect/notion", headers)).status).toBe(403);
+      expect((await get(path, headers)).status).toBe(403);
 
     // The GET only asks, even cross-site (a link in a web chat app).
     const asked = await confirm("/mcp/connect/notion", {
@@ -536,6 +581,19 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
       ).status
     ).toBe(403);
     expect((await post("/mcp/connect/notion", "")).status).toBe(403);
+    // No fetch metadata on the POST: refused, the token left unspent.
+    expect(
+      (await post("/mcp/connect/notion", token, { "x-abacus-user-id": "o" }))
+        .status
+    ).toBe(403);
+    expect(
+      (
+        await post("/mcp/connect/notion", token, {
+          "x-abacus-user-id": "o",
+          "sec-fetch-dest": "document",
+        })
+      ).status
+    ).toBe(403);
     expect((await post("/mcp/connect/notion", asked.token)).status).toBe(403);
     expect(
       (await post("/mcp/connect/notion", token, { "x-abacus-user-id": "x" }))
@@ -561,6 +619,7 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     // The provider's redirect is cross-site by nature; its state admits it.
     const callback = {
       "x-abacus-user-id": "o",
+      "sec-fetch-dest": "document",
       "sec-fetch-site": "cross-site",
     };
     const unknown = await get("/mcp/callback?code=c&state=nope", callback);
@@ -626,6 +685,80 @@ it("MCP connect: a side-effect-free confirm page, then a one-time POST that inst
     now += 11 * 60_000;
     expect((await post("/mcp/connect/notion", stale.token)).status).toBe(403);
     expect(tokenRequests).toHaveLength(1);
+
+    // Cancelled while discovery runs: the sign-in it was preparing never exists.
+    let release!: () => void;
+    registering = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const racing = await confirm("/mcp/connect/notion");
+    const probes = () =>
+      fetchSpy.mock.calls.filter(([input]) => String(input) === serverUrl)
+        .length;
+    const before = probes();
+    const raced = post("/mcp/connect/notion", racing.token);
+    await vi.waitFor(() => expect(probes()).toBe(before + 1));
+    hosted.revoke("notion");
+    release();
+    const racedAnswer = await raced;
+    expect(racedAnswer.status).toBe(400);
+    expect(racedAnswer.headers.get("location")).toBeNull();
+    registering = Promise.resolve();
+
+    // Cancel-all drops every connector's confirm token and pending sign-in.
+    const one = await confirm("/mcp/connect/notion");
+    const pendingState = await stateOf("/mcp/connect/notion");
+    const two = await confirm("/mcp/connect/huggingface");
+    hosted.revoke();
+    expect((await post("/mcp/connect/notion", one.token)).status).toBe(403);
+    expect((await post("/mcp/connect/huggingface", two.token)).status).toBe(
+      403
+    );
+    expect(
+      (await get(`/mcp/callback?code=c&state=${pendingState}`, callback)).status
+    ).toBe(400);
+
+    // A body over the cap, declared or streamed, and one that never ends.
+    const big = await confirm("/mcp/connect/notion");
+    const sized = await fetch(`${base}/mcp/connect/notion`, {
+      method: "POST",
+      headers: {
+        ...signed("POST", "/mcp/connect/notion", owner),
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: `token=${big.token}&pad=${"x".repeat(100)}`,
+    });
+    expect(sized.status).toBe(413);
+    const raw = (body: (sent: ClientRequest) => void) =>
+      new Promise<number | "closed">((resolve) => {
+        const sent = request(
+          `${base}/mcp/connect/notion`,
+          {
+            method: "POST",
+            headers: {
+              ...signed("POST", "/mcp/connect/notion", owner),
+              "content-type": "application/x-www-form-urlencoded",
+            },
+          },
+          (answer) => {
+            answer.resume();
+            resolve(answer.statusCode ?? 0);
+          }
+        );
+        sent.on("error", () => resolve("closed"));
+        body(sent);
+      });
+    // Chunked, no length: counted, and cut off past the cap.
+    expect(
+      await raw((sent) => {
+        sent.write("x".repeat(40));
+        sent.write("x".repeat(40));
+      })
+    ).toSatisfy((status) => status === 413 || status === "closed");
+    // Started and never finished: the timeout answers.
+    expect(await raw((sent) => sent.write("token="))).toBe(408);
+    // Neither spent the token.
+    expect((await post("/mcp/connect/notion", big.token)).status).toBe(302);
 
     // No sign-in: installed on the POST, then the connected page.
     const hf = await confirm("/mcp/connect/huggingface");

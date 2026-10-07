@@ -16,7 +16,7 @@ import type { HostedMcpConnect } from "#main/services/mcp/hosted-mcp-connect";
 import type { WhisperModelService } from "#main/services/voice/whisper-model-service";
 import { openHostFile } from "#main/services/workspace/host-path";
 
-import { authenticate, type HostIdentity } from "./auth";
+import { authenticate, mcpProofFailure, type HostIdentity } from "./auth";
 import type { HostLease } from "./lease";
 const json = (response: ServerResponse, status: number, value: unknown) =>
   response
@@ -25,18 +25,42 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
       "cache-control": "no-store",
     })
     .end(JSON.stringify(value));
-/** A form post's body, or null past 4 KiB. */
-const readSmallBody = async (
-  request: IncomingMessage
-): Promise<string | null> => {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request as AsyncIterable<Buffer>) {
-    // Drained to the end either way, so the response can still be written.
-    size += chunk.length;
-    if (size <= 4096) chunks.push(chunk);
-  }
-  return size > 4096 ? null : Buffer.concat(chunks).toString("utf8");
+/** What an `/mcp/*` form post may be: small, and sent promptly. */
+export interface McpBodyLimits {
+  bytes?: number;
+  timeoutMs?: number;
+}
+
+/**
+ * A form post's fields; 413 over the cap (declared or counted), 408 when it
+ * does not arrive in time. The caller destroys the request after answering.
+ */
+const readForm = (
+  request: IncomingMessage,
+  { bytes = 4096, timeoutMs = 10_000 }: McpBodyLimits
+): Promise<URLSearchParams | { status: 408 | 413 }> => {
+  if (Number(request.headers["content-length"]) > bytes)
+    return Promise.resolve({ status: 413 });
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    const settle = (value: URLSearchParams | { status: 408 | 413 }): void => {
+      clearTimeout(timer);
+      request.off("data", onData).off("end", onEnd).off("error", onError);
+      request.pause();
+      resolve(value);
+    };
+    const onData = (chunk: Buffer): void => {
+      size += chunk.length;
+      if (size > bytes) settle({ status: 413 });
+      else chunks.push(chunk);
+    };
+    const onEnd = (): void =>
+      settle(new URLSearchParams(Buffer.concat(chunks).toString("utf8")));
+    const onError = (): void => settle({ status: 408 });
+    const timer = setTimeout(() => settle({ status: 408 }), timeoutMs);
+    request.on("data", onData).on("end", onEnd).on("error", onError);
+  });
 };
 export const createHostHttpServer = (
   identity: HostIdentity,
@@ -44,7 +68,8 @@ export const createHostHttpServer = (
   lease: HostLease,
   uploadFolder: (workspaceId: string, sessionId: string) => string | null,
   whisper: Pick<WhisperModelService, "prepareFile">,
-  mcp: Pick<HostedMcpConnect, "route"> | null = null
+  mcp: Pick<HostedMcpConnect, "route"> | null = null,
+  mcpLimits: McpBodyLimits & { now?: () => number } = {}
 ) =>
   createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -60,25 +85,28 @@ export const createHostHttpServer = (
       });
       return;
     }
-    // MCP connects are top-level navigations, which carry no connect token;
-    // HostedMcpConnect admits them (spec 08, D8 exception).
+    // MCP connects are top-level navigations, which carry no connect token:
+    // the proxy signs each one instead (spec 08, D8 exception).
     if (url.pathname.startsWith("/mcp/") && mcp != null) {
-      let form: URLSearchParams | undefined;
-      if (request.method === "POST") {
-        const body = await readSmallBody(request);
-        if (body == null) {
-          json(response, 413, { error: "too-large" });
-          return;
-        }
-        form = new URLSearchParams(body);
+      const failure = mcpProofFailure(
+        request,
+        identity,
+        (mcpLimits.now ?? Date.now)()
+      );
+      if (failure) {
+        console.warn(`[host-auth] mcp ${failure}`);
+        json(response, 403, { error: "forbidden" });
+        request.resume();
+        return;
       }
       const answer = await mcp.route(
         {
           method: request.method ?? "GET",
           pathname: url.pathname,
           query: url.searchParams,
-          ...(form != null ? { form } : {}),
           headers: request.headers,
+          // Read only once the route admitted the request.
+          readForm: () => readForm(request, mcpLimits),
         },
         identity.owner
       );
@@ -100,14 +128,24 @@ export const createHostHttpServer = (
               "content-security-policy":
                 "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
               "x-frame-options": "DENY",
+              "cross-origin-opener-policy": "same-origin",
             })
             .end(answer.html);
           return;
         case "refused":
           json(response, 403, { error: "forbidden" });
+          request.resume();
           return;
         case "missing":
           json(response, 404, { error: "not-found" });
+          request.resume();
+          return;
+        case "bad-body":
+          // The rest of the body is not read: the connection goes.
+          response.once("finish", () => request.destroy());
+          json(response, answer.status, {
+            error: answer.status === 413 ? "too-large" : "timeout",
+          });
           return;
       }
     }

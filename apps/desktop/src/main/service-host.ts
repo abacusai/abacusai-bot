@@ -350,6 +350,7 @@ import { McpConfigService } from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
 import {
   cancelAllMcpSignIns,
+  cancelMcpSignIn,
   mcpTokenState,
   type McpTokenState,
   signInToMcpServer,
@@ -1182,8 +1183,12 @@ export class ServiceHost {
    */
   cancelConnect(connectorId?: string): void {
     this.hostedMcp?.revoke(connectorId);
-    if (connectorId == null || connectorById(connectorId)?.kind === "mcp")
-      cancelAllMcpSignIns();
+    if (connectorId == null) cancelAllMcpSignIns();
+    else {
+      const url =
+        this.mcpConfigService.readUserMcp("code").mcpServers[connectorId]?.url;
+      if (url != null) cancelMcpSignIn(url);
+    }
     this.connectWatcher.release(connectorId);
   }
 
