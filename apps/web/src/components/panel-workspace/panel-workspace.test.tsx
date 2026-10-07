@@ -44,6 +44,7 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
   };
   const view = render(<PanelWorkspace {...props} expanded={false} />);
   await waitFor(() => expect(apiRef.current?.panels).toHaveLength(2));
+  expect(apiRef.current!.groups[0]!.header.hidden).toBe(true);
   fireEvent.doubleClick(screen.getByRole("separator"));
   expect(writes.write).toHaveBeenCalledWith(400);
   fireEvent.click(screen.getByRole("button", { name: "Draft 0" }));
@@ -55,6 +56,9 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
     })
   );
   await waitFor(() => expect(apiRef.current!.groups).toHaveLength(2));
+  expect(apiRef.current!.groups.every((group) => !group.header.hidden)).toBe(
+    true
+  );
   expect(screen.getByRole("button", { name: "Draft 1" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Close Chat" })).toBeNull();
   view.rerender(<PanelWorkspace {...props} expanded={false} />);
@@ -93,8 +97,20 @@ it("restores split layout for the session on remount, with an unclosable Chat ta
     ).not.toBeNull()
   );
   first.unmount();
+  const restored = JSON.parse(
+    localStorage.getItem("abacusai-bot:dock-layout:v1:persisted")!
+  );
+  delete restored.panels.chat.minimumWidth;
+  localStorage.setItem(
+    "abacusai-bot:dock-layout:v1:persisted",
+    JSON.stringify(restored)
+  );
   const second = render(<PanelWorkspace {...props} />);
   await waitFor(() => expect(apiRef.current?.groups).toHaveLength(2));
   expect(screen.queryByRole("button", { name: "Close Chat" })).toBeNull();
+  await waitFor(() =>
+    expect(apiRef.current!.getPanel("chat")!.minimumWidth).toBe(360)
+  );
+  expect(apiRef.current!.getPanel("files")!.minimumWidth).toBe(280);
   second.unmount();
 });
