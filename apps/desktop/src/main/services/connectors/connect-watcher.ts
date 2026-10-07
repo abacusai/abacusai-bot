@@ -4,10 +4,14 @@
  * every offer; an offer is reported once, with whichever of its connectors
  * connected and whichever its consent did not grant (one Google consent lands
  * several together, and the user can untick some), and is given up when its
- * link expires. A link's own completion, when the server reports it, is the
- * outcome; otherwise the statuses are, and a consent that landed only some of
- * an offer's connectors is given a moment for the rest before they are
- * reported as not granted.
+ * link expires.
+ *
+ * An offer made with a link is judged by that link alone while the server
+ * reports on it: not completed means keep waiting, completed is the outcome.
+ * Only when the server cannot say does the offer fall back to the statuses,
+ * where a consent that landed some of its connectors is given a moment for the
+ * rest before they count as not granted. A reconnect (every connector already
+ * connected) is judged by its link only: the statuses would read as landed.
  */
 import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 
@@ -46,13 +50,28 @@ interface ConnectWatcherDeps {
 const WATCH_EVERY_MS = 5_000;
 const WATCH_FOR_MS = 30 * 60_000;
 // One consent saves every member it granted in one request; the rest of it
-// lands well within this, and the link's completion follows it.
+// lands well within this.
 const SETTLE_MS = 15_000;
+
+interface Landed {
+  connected: string[];
+  notGranted: string[];
+}
+
+/** What the offer's link says: its outcome, still open, or nothing to go by. */
+type LinkState =
+  | { kind: "completed"; landed: Landed }
+  | { kind: "pending" }
+  | { kind: "unavailable" };
 
 interface Offer {
   connectorIds: string[];
   sessionId: string | null;
   requestId?: string;
+  /** Judged by its link alone, never the statuses: a reconnect. */
+  byLinkOnly: boolean;
+  /** The server could not say once; the statuses judge it from then on. */
+  linkUnavailable: boolean;
   until: number;
   /** When some, not all, of its connectors were first seen connected. */
   partlySince?: number;
@@ -72,11 +91,18 @@ export class ConnectWatcher {
     connectorIds: string[];
     sessionId: string | null;
     requestId?: string;
+    byLinkOnly?: boolean;
   }): void {
     if (input.connectorIds.length === 0) return;
+    // Nothing would ever tell a link-only offer without a link that it landed.
+    if (input.byLinkOnly === true && input.requestId == null) return;
     const key = `${[...input.connectorIds].sort().join(",")}|${input.sessionId ?? ""}`;
     this.offers.set(key, {
-      ...input,
+      connectorIds: input.connectorIds,
+      sessionId: input.sessionId,
+      ...(input.requestId != null ? { requestId: input.requestId } : {}),
+      byLinkOnly: input.byLinkOnly === true,
+      linkUnavailable: false,
       until: this.now() + (this.deps.forMs ?? WATCH_FOR_MS),
     });
     this.arm();
@@ -119,8 +145,18 @@ export class ConnectWatcher {
     }
     this.timer = null;
     for (const [key, offer] of this.offers) {
+      const link = await this.linkState(offer);
+      if (link.kind === "unavailable" && offer.byLinkOnly) {
+        // Nothing is left to tell a reconnect landing; its card stays up.
+        this.offers.delete(key);
+        continue;
+      }
       const landed =
-        (await this.linkOutcome(offer)) ?? this.fromStatuses(offer, statuses);
+        link.kind === "completed"
+          ? link.landed
+          : link.kind === "unavailable"
+            ? this.fromStatuses(offer, statuses)
+            : null;
       if (landed == null) {
         if (this.now() >= offer.until) {
           this.offers.delete(key);
@@ -152,7 +188,7 @@ export class ConnectWatcher {
   private fromStatuses(
     offer: Offer,
     statuses: ConnectorStatuses | null
-  ): { connected: string[]; notGranted: string[] } | null {
+  ): Landed | null {
     const connected = offer.connectorIds.filter(
       (id) => statuses?.[id]?.state === "connected"
     );
@@ -169,28 +205,38 @@ export class ConnectWatcher {
   }
 
   /**
-   * The offer's connectors as its completed link reports them, or null: no
-   * link, not completed yet, or a server that cannot say.
+   * What the offer's link says. The first time the server cannot say (an
+   * older server, or a failed read), the offer stops asking and is judged by
+   * the statuses from then on.
    */
-  private async linkOutcome(
-    offer: Offer
-  ): Promise<{ connected: string[]; notGranted: string[] } | null> {
-    if (offer.requestId == null || this.deps.linkStatus == null) return null;
+  private async linkState(offer: Offer): Promise<LinkState> {
+    if (
+      offer.requestId == null ||
+      this.deps.linkStatus == null ||
+      offer.linkUnavailable
+    )
+      return { kind: "unavailable" };
     let outcome: LinkOutcome = null;
     try {
       outcome = await this.deps.linkStatus(offer.requestId);
     } catch (error) {
       console.warn("[connectors] link status read failed", error);
     }
-    if (outcome?.completed !== true) return null;
-    const connected = offer.connectorIds.filter((id) =>
-      outcome.connected.includes(id)
-    );
-    const notGranted = offer.connectorIds.filter((id) =>
-      outcome.notGranted.includes(id)
-    );
-    return connected.length > 0 || notGranted.length > 0
-      ? { connected, notGranted }
-      : null;
+    if (outcome == null) {
+      offer.linkUnavailable = true;
+      return { kind: "unavailable" };
+    }
+    if (!outcome.completed) return { kind: "pending" };
+    return {
+      kind: "completed",
+      landed: {
+        connected: offer.connectorIds.filter((id) =>
+          outcome.connected.includes(id)
+        ),
+        notGranted: offer.connectorIds.filter((id) =>
+          outcome.notGranted.includes(id)
+        ),
+      },
+    };
   }
 }

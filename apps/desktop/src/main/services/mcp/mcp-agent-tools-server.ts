@@ -273,6 +273,8 @@ export interface McpAgentToolsServerOptions {
       connectorIds: string[];
       sessionId: string | null;
       requestId?: string;
+      /** A reconnect: judged by the link's completion alone. */
+      byLinkOnly?: boolean;
     }) => void;
     /** Resolves to null or an error sentence. */
     disconnect?: (connectorId: string) => Promise<string | null>;
@@ -1396,11 +1398,15 @@ export class McpAgentToolsServer extends McpHttpServer {
     const asking = (link?.connectorIds ?? [match.id]).filter(
       (id) => !already.has(id)
     );
+    // Every connector the link covers is already connected: it can only
+    // reconnect them, and only the link's own completion says it landed.
+    const reconnect = link != null && asking.length === 0;
     card();
     connectors.watch({
-      connectorIds: asking.length > 0 ? asking : [match.id],
+      connectorIds: reconnect ? link.connectorIds : asking,
       sessionId: callerSession ?? null,
       ...(link?.requestId != null ? { requestId: link.requestId } : {}),
+      ...(reconnect ? { byLinkOnly: true } : {}),
     });
     if (link == null)
       return this.ok(
@@ -1411,8 +1417,20 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     const nameOf = (id: string): string =>
       CONNECTORS.find((item) => item.id === id)?.name ?? id;
-    const covered =
-      asking.length > 0 ? asking.map(nameOf).join(", ") : match.name;
+    if (reconnect)
+      return this.ok(
+        [
+          `The account reports ${link.connectorIds.map(nameOf).join(", ")} as already connected with every permission, ` +
+            "though this machine's list has not caught up yet. If their tools are in your tool list, use them and do not " +
+            "send anything. Only if they are missing or fail for lack of access, send the user this link to reconnect them:",
+          link.url,
+          "",
+          "Put it in a message of its own with one short line in the user's language, saying it reconnects the account. " +
+            "Copy it exactly; never shorten or reword it. This call does not wait: you will be told when the reconnect " +
+            "lands. Never offer to flag or report anything: there is no such process.",
+        ].join("\n")
+      );
+    const covered = asking.map(nameOf).join(", ");
     const connected = [...already].map(nameOf).join(", ");
     return this.ok(
       [
