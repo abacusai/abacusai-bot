@@ -74,6 +74,7 @@ import {
   type ConnectedMcp,
   type McpServerStatus,
 } from "./mcp/index.js";
+import { McpToolSync } from "./mcp/tool-sync.js";
 import { buildMcpToolDefinitions } from "./mcp/tools.js";
 import {
   memorySnapshot as readMemorySnapshot,
@@ -620,7 +621,18 @@ export class AbacusBotSession {
     tools: [],
   };
   /** MCP tool names pi already has, so `refreshMcp` registers only what is new. */
-  private readonly registeredMcpTools = new Set<string>();
+  /** Which MCP tools the model sees; see McpToolSync. */
+  private readonly mcpTools = new McpToolSync({
+    pi: () => this.pi,
+    session: () => this.session,
+    mcp: () => this.mcp,
+    accepts: (tool) =>
+      !excludedTools().includes(tool.name) &&
+      // Browser tools belong to the sub-agent, which reads them live.
+      !(tool.name.startsWith("browser_") && this.browserTaskRegistered) &&
+      !isSupersededWebTool(tool),
+    turnRunning: () => this.turnRunning,
+  });
   /**
    * Services only the desktop can perform. Long-lived: tools rebuilt on reset
    * would otherwise each capture a client with its own pending map.
@@ -698,9 +710,7 @@ export class AbacusBotSession {
   private stallRecoveriesThisTurn = 0;
   /** The turn already ended on the stall error; pi's aborted state is not a second one. */
   private stallFailureReported = false;
-  /** MCP tools registered while this turn ran; pi offers them next turn. */
-  private toolsArrivedThisTurn: string[] = [];
-  /** The arrivals a continuation is about to name, once per turn. */
+  /** Tools a change deferred under this turn adds; continued into once. */
   private pendingToolArrival: string[] | null = null;
   private toolArrivalsThisTurn = 0;
   /** True while the session runs OpenLLM; see openllm.ts. */
@@ -764,7 +774,7 @@ export class AbacusBotSession {
     // MCP servers first: pi takes the custom tool list up front.
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
 
     const hostServices = this.options.hostServices !== false;
     const toolNames = new Set([
@@ -1044,7 +1054,7 @@ export class AbacusBotSession {
       isSupersededWebTool
     );
     for (const name of roster.mcpToolNames) {
-      this.registeredMcpTools.add(name);
+      this.mcpTools.registered.add(name);
     }
     this.browserTaskRegistered = roster.browserTaskRegistered;
     const customTools = roster.tools;
@@ -1144,45 +1154,9 @@ export class AbacusBotSession {
 
     this.mcp = await connectMcpServers(process.env.ABACUSAI_BOT_MCP_CONFIG);
     this.mcp.onStatusChange = () => this.emitMcpServers();
-    this.mcp.onToolsAdded = () => this.registerNewMcpTools();
-    this.registerNewMcpTools();
+    this.mcp.onToolsAdded = () => this.mcpTools.changed();
+    this.mcpTools.changed();
     this.emitMcpServers();
-  }
-
-  /**
-   * Give pi the tools a refresh turned up. Startup tools survive a reconnect
-   * through their route getter, but pi takes its custom tool list once, so a
-   * server added later is otherwise "connected" with nothing callable.
-   * Additive: a tool whose server has gone answers "not connected", which
-   * beats a name that silently vanishes.
-   */
-  private registerNewMcpTools(): void {
-    const pi = this.pi;
-
-    if (pi == null) return;
-
-    const excluded = excludedTools();
-
-    for (const tool of buildMcpToolDefinitions(() => this.mcp)) {
-      if (this.registeredMcpTools.has(tool.name)) continue;
-      if (excluded.includes(tool.name)) continue;
-      // Browser tools belong to the sub-agent, which reads them live.
-      if (tool.name.startsWith("browser_") && this.browserTaskRegistered)
-        continue;
-      if (isSupersededWebTool(tool)) continue;
-
-      this.registeredMcpTools.add(tool.name);
-
-      try {
-        pi.registerTool(tool as never);
-        // Registered mid-turn: pi offers it from the next turn on, so the
-        // turn is continued once it ends, naming what arrived.
-        if (this.turnRunning) this.toolsArrivedThisTurn.push(tool.name);
-      } catch {
-        // One server's bad schema must not break the refresh for the rest.
-        this.registeredMcpTools.delete(tool.name);
-      }
-    }
   }
 
   /** Whether the browser sub-agent owns the browser tools this session. */
@@ -1236,7 +1210,7 @@ export class AbacusBotSession {
       await this.refreshProviderRegistrations();
     this.languageRepairsThisTurn = 0;
     this.pendingLanguageRepair = null;
-    this.toolsArrivedThisTurn = [];
+    this.mcpTools.atTurnStart();
     this.pendingToolArrival = null;
     this.toolArrivalsThisTurn = 0;
     this.stallRecoveriesThisTurn = 0;
@@ -1466,6 +1440,9 @@ export class AbacusBotSession {
         const arrived = this.pendingToolArrival;
         this.pendingToolArrival = null;
         this.toolArrivalsThisTurn += 1;
+        // Between the turn's runs: the deferred tools register before the
+        // continuation's run starts, never under one.
+        this.mcpTools.applyDeferred();
 
         await this.session?.sendCustomMessage(
           {
@@ -2569,20 +2546,18 @@ export class AbacusBotSession {
           this.languageRepairsThisTurn > 0
             ? null
             : replyLanguageMismatch(event.messages);
-        // Tools that arrived while this turn ran are offered from the next
-        // turn on; continue into it so the user's request is finished with
-        // them rather than declared impossible. Once per turn.
-        this.pendingToolArrival =
+        // Tools a change deferred under this turn adds: the turn continues
+        // once with them, so the request is finished rather than declared
+        // impossible. Once per turn.
+        const arrivals =
           this.continuingPastMalformedToolCall ||
           this.pendingContextCompaction != null ||
           this.pendingOpenLlmRotation != null ||
           this.pendingLanguageRepair != null ||
-          this.toolArrivalsThisTurn > 0 ||
-          this.toolsArrivedThisTurn.length === 0
-            ? null
-            : [...new Set(this.toolsArrivedThisTurn)];
-        this.toolsArrivedThisTurn = [];
-
+          this.toolArrivalsThisTurn > 0
+            ? []
+            : this.mcpTools.pendingArrivals();
+        this.pendingToolArrival = arrivals.length > 0 ? arrivals : null;
         if (
           !event.willRetry &&
           !this.continuingPastMalformedToolCall &&

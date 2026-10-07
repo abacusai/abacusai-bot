@@ -289,6 +289,22 @@ export class McpAdminService {
     }
   }
 
+  /**
+   * One session's agent reconnects its MCP servers from a freshly written
+   * runtime file, and answers `mcp_refreshed` with `requestId` once done;
+   * false when no agent is running to ask.
+   */
+  async refreshSessionMcp(
+    request: RefreshMcpServersRequest,
+    requestId: string
+  ): Promise<boolean> {
+    await this.deps.rewriteRuntimeConfig("code", request.sessionId);
+    return this.deps.sendCommand(request.workspaceId, request.sessionId, {
+      type: "mcp_refresh",
+      requestId,
+    });
+  }
+
   /** Manual refresh from the dialog, for one running session. */
   async refreshMcpServersForSession(
     request: RefreshMcpServersRequest

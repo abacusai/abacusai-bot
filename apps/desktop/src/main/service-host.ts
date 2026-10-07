@@ -321,6 +321,7 @@ import {
   type McpSignIn,
 } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
+import { ConnectorSync } from "./services/connectors/connector-sync";
 import { DebugSyncService } from "./services/debug-sync/debug-sync-service";
 import {
   DiagnosticsSyncService,
@@ -602,7 +603,20 @@ export class ServiceHost {
           routineId: session?.routineId ?? null,
         };
       },
-      beforeRun: (threadId) => this.applyEffectiveBotModel(threadId),
+      beforeRun: async (threadId) => {
+        // In line first, at the send's arrival, then the model re-pin.
+        const workspaceId =
+          this.agentManagerService.getRuntimeInfo(threadId)?.workspaceId;
+        const inLine =
+          workspaceId != null
+            ? this.connectorSync.beforeTurn({
+                workspaceId,
+                sessionId: threadId,
+              })
+            : Promise.resolve();
+        await this.applyEffectiveBotModel(threadId);
+        await inLine;
+      },
     },
   });
   private readonly transcriptService = new TranscriptService({
@@ -950,7 +964,8 @@ export class ServiceHost {
 
   /** Offers (links, cards) followed until they connect; see connectorsConnected. */
   private readonly connectWatcher = new ConnectWatcher({
-    list: () => this.listConnectorStatuses(),
+    // Fresh each tick: an offer is followed to see it land within seconds.
+    list: () => this.connectorStatuses.list({ fresh: true }),
     linkStatus: async (requestId) => {
       const status = await connectLinkStatus(requestId);
       return status == null
@@ -965,33 +980,77 @@ export class ServiceHost {
     expired: (connectorIds) => this.connectorGate.clearFor(connectorIds),
   });
 
-  private readonly connectedListeners = new Set<
-    (sessionId: string | null, note: string) => void
-  >();
+  /** Lanes that deliver a note to their own session as a turn, by lane. */
+  private readonly laneNotes = new Map<string, (note: string) => void>();
+  /** Connected notes for sessions whose turn is running, sent at its end. */
+  private readonly heldNotes = new Map<string, string[]>();
 
   /**
-   * Told when connectors offered to a session connect, with the note for its
-   * model. The phone lane turns it into a turn: nobody is at a card there.
+   * A host lane (the hosted phone loop) delivers the connected note to its
+   * own session as a turn through its own queue, so the answer reaches the
+   * phone. Every other session gets it from deliverConnectedNote.
    */
-  onConnectorsConnected(
-    listener: (sessionId: string | null, note: string) => void
-  ): () => void {
-    this.connectedListeners.add(listener);
+  onLaneNote(lane: string, deliver: (note: string) => void): () => void {
+    this.laneNotes.set(lane, deliver);
     return () => {
-      this.connectedListeners.delete(listener);
+      if (this.laneNotes.get(lane) === deliver) this.laneNotes.delete(lane);
     };
   }
 
   /**
-   * An offer landed: live sessions re-read the gateway's tools (it lists only
-   * connected services), its cards go, and the asking session is told.
+   * The one way the asking session hears that its connectors landed: as a
+   * fresh hidden turn, on every lane. A session in a turn holds the note until
+   * that turn ends, so it starts a turn of its own, and that turn's start
+   * brings the session's tools to the new connectors first (connectorSync).
+   */
+  private deliverConnectedNote(sessionId: string | null, note: string): void {
+    if (sessionId == null) return;
+    const lane = this.agentSessionManagerService.laneOf(sessionId);
+    const laneDeliver = lane != null ? this.laneNotes.get(lane) : undefined;
+    if (laneDeliver != null) {
+      laneDeliver(note);
+      return;
+    }
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (session == null) return;
+    this.heldNotes.set(sessionId, [
+      ...(this.heldNotes.get(sessionId) ?? []),
+      note,
+    ]);
+    this.releaseConnectedNotes(sessionId);
+  }
+
+  /** The session is between turns: its held connected notes go in as one turn. */
+  private releaseConnectedNotes(sessionId: string): void {
+    const notes = this.heldNotes.get(sessionId);
+    const session = this.agentSessionManagerService.get(sessionId);
+    if (notes == null || session == null) return;
+    // Another send got in first: the notes wait for its turn to end.
+    if (this.sessionTurnStateService.get(session.workspaceId, sessionId).isBusy)
+      return;
+    this.heldNotes.delete(sessionId);
+    void this.sendAgentMessage({
+      workspaceId: session.workspaceId,
+      sessionId,
+      message: notes.join("\n\n"),
+      // Hidden: the model reads it, the transcript shows its answer only.
+      userText: {
+        systemReminder: true,
+        operator: { kind: "environment-notice" },
+      },
+    });
+  }
+
+  /**
+   * An offer landed: its cards go and the asking session is told. Sessions
+   * pick up the new tools at their next turn start (connectorSync).
    */
   private connectorsConnected(offer: ConnectedOffer): void {
     const connectors = offer.connectorIds.flatMap(
       (id) => connectorById(id) ?? []
     );
-    if (connectors.some((connector) => connector.kind === "platform"))
-      this.ensureConnectorGateway();
+    // No session is refreshed here: each one is brought to the new set at its
+    // next turn start (connectorSync), the asking chat's note included.
     // A token-backed one (GitHub) reaches the agent as an environment key:
     // running sessions re-read theirs now rather than on their next timer.
     if (
@@ -1001,7 +1060,6 @@ export class ServiceHost {
     )
       this.refreshAgentProviders();
     this.connectorGate.clearFor(offer.connectorIds);
-    this.connectorStatusChanged();
     const accounts = [...new Set(Object.values(offer.accounts))];
     const names = connectors.map((connector) => connector.name).join(", ");
     const missing = offer.notGranted
@@ -1034,8 +1092,7 @@ export class ServiceHost {
           "asks only for what is missing. Otherwise carry on with what they asked for. There is nothing to flag, report " +
           "or escalate, so never offer to."
         : "Tell the user in one short line, then carry on with what they asked for.");
-    for (const listener of this.connectedListeners)
-      listener(offer.sessionId, note);
+    this.deliverConnectedNote(offer.sessionId, note);
   }
 
   /**
@@ -1043,8 +1100,9 @@ export class ServiceHost {
    * listing is read live (narrowed to the registry as it enters the app);
    * credentials, the messaging gateway and the MCP config are in memory.
    */
-  readonly connectorStatuses = new ConnectorStatusService({
-    platform: async () => {
+  /** The one owner of the account's connector set; see ConnectorSync. */
+  readonly connectorSync = new ConnectorSync({
+    read: async () => {
       const snapshot = await listAbacusConnectors();
       if (!snapshot.ok)
         return {
@@ -1059,6 +1117,28 @@ export class ServiceHost {
         accounts: snapshot.accounts,
       };
     },
+    liveSessions: () =>
+      this.agentManagerService
+        .getRuntimeDiagnostics()
+        .filter((runtime) => runtime.live)
+        .map(({ workspaceId, sessionId }) => ({ workspaceId, sessionId })),
+    turnRunning: (session) => {
+      const { phase } = this.sessionTurnStateService.get(
+        session.workspaceId,
+        session.sessionId
+      );
+      return phase === "streaming" || phase === "waiting_permission";
+    },
+    refresh: (session, requestId) => {
+      this.healConnectorGateway();
+      return this.mcpAdminService.refreshSessionMcp(session, requestId);
+    },
+    changed: () => this.connectorStatusChanged(),
+    log: (line) => console.log(line),
+  });
+
+  readonly connectorStatuses = new ConnectorStatusService({
+    platform: (options) => this.connectorSync.platform(options),
     messaging: () => this.messagingGatewayService.getSnapshot(),
     mcpServers: () => this.mcpConfigService.listUserServers("code"),
     mcpTokens: () => this.mcpTokenStates(),
@@ -1140,14 +1220,27 @@ export class ServiceHost {
 
   /**
    * The MCP file is user-editable, so the url and headers under the app's
-   * own name are rewritten rather than assumed. Live sessions re-read it.
+   * own name are rewritten when they drifted rather than assumed. No session
+   * is told here: connectorSync refreshes each one at its turn start.
    */
-  private ensureConnectorGateway(): void {
-    this.ensureMcpServer({
-      mode: "code",
-      name: ABACUS_CONNECTORS_SERVER_NAME,
-      config: abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`),
-    });
+  private healConnectorGateway(): void {
+    const config = abacusConnectorsMcpEntry(`${abacusRoutellmV1()}/mcp`);
+    const existing =
+      this.mcpConfigService.readUserMcp("code").mcpServers[
+        ABACUS_CONNECTORS_SERVER_NAME
+      ];
+    if (existing == null)
+      this.mcpConfigService.addUserServer(
+        "code",
+        ABACUS_CONNECTORS_SERVER_NAME,
+        config
+      );
+    else if (JSON.stringify(existing) !== JSON.stringify(config))
+      this.mcpConfigService.updateUserServer(
+        "code",
+        ABACUS_CONNECTORS_SERVER_NAME,
+        config
+      );
   }
 
   listConnectorStatuses(): Promise<ConnectorStatuses> {
@@ -1200,7 +1293,7 @@ export class ServiceHost {
     options?: ConnectorConnectOptions
   ): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.connect(connectorId, options);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1209,7 +1302,7 @@ export class ServiceHost {
     values: Record<string, string>
   ): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.submitFields(connectorId, values);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1231,7 +1324,7 @@ export class ServiceHost {
 
   async disconnectConnector(connectorId: string): Promise<ConnectorOutcome> {
     const outcome = await this.connectorFlow.disconnect(connectorId);
-    this.connectorStatusChanged();
+    this.connectorSync.changed();
     return outcome;
   }
 
@@ -1773,8 +1866,10 @@ export class ServiceHost {
       // A tab-keeping browser keeps the session's tabs a while (a paused run,
       // a restarted agent), then lets them go.
       this.browserTargetSource()?.releaseSession?.(sessionId);
+      this.connectorSync.forget(sessionId);
     },
     emitMcpRuntimeServers: (workspaceId, sessionId, servers) => {
+      this.connectorSync.serversReported(sessionId);
       this.emitEvent({
         type: "mcp-runtime-servers",
         workspaceId,
@@ -1810,6 +1905,8 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
+    emitMcpRefreshed: (_sessionId, requestId, ok) =>
+      this.connectorSync.refreshed(requestId, ok),
     emitMcpRuntimeError: (workspaceId, sessionId, event) => {
       if (event.kind === "refresh") {
         this.emitEvent({
@@ -1920,6 +2017,13 @@ export class ServiceHost {
 
   private readonly sessionTurnStateService = new SessionTurnStateService(
     (snapshot) => {
+      if (!snapshot.isBusy) {
+        // Between turns: the next send starts one, and notes held for the
+        // session go in now.
+        this.connectorSync.turnEnded(snapshot.sessionId);
+        // After the state change has settled, not inside it.
+        queueMicrotask(() => this.releaseConnectedNotes(snapshot.sessionId));
+      }
       this.emitEvent({
         type: "session-turn-state-updated",
         workspaceId: snapshot.workspaceId,
@@ -3055,13 +3159,41 @@ export class ServiceHost {
       request.workspaceId,
       request.sessionId
     );
-
     // A session whose CLI died is restarted rather than swallowing the message.
     const session = this.agentSessionManagerService.get(request.sessionId);
     // Abandoned while this send was on its way: it must not land behind the stop.
     const epoch = this.turnAbandoner.epoch(request.sessionId);
     const current = (): boolean =>
       this.turnAbandoner.stillCurrent(request.sessionId, epoch);
+    // In arrival order per session, and with the session's tools on the
+    // account's connectors before a turn starts (never under a running one).
+    const { delivered, outcome } = await this.connectorSync.inTurnOrder(
+      { workspaceId: request.workspaceId, sessionId: request.sessionId },
+      () => this.deliverAgentMessage(request, session, current),
+      (result) => result.outcome !== "undeliverable"
+    );
+
+    if (outcome === "undeliverable") {
+      this.sessionTurnStateService.markStopped(
+        request.workspaceId,
+        request.sessionId
+      );
+      return false;
+    }
+    if (delivered !== request)
+      environmentNoticeService.markAnnounced(request.sessionId);
+    return true;
+  }
+
+  /** The message, with any pending notice, onto the session's agent. */
+  private async deliverAgentMessage(
+    request: SendAgentMessageRequest,
+    session: ReturnType<AgentSessionManagerService["get"]>,
+    current: () => boolean
+  ): Promise<{
+    delivered: SendAgentMessageRequest;
+    outcome: Awaited<ReturnType<typeof deliverMessage>>;
+  }> {
     const delivered = await this.withEnvironmentNotice(request);
     const outcome = await deliverMessage({
       send: () =>
@@ -3084,17 +3216,7 @@ export class ServiceHost {
         ).status === "running",
       delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     });
-
-    if (outcome === "undeliverable") {
-      this.sessionTurnStateService.markStopped(
-        request.workspaceId,
-        request.sessionId
-      );
-      return false;
-    }
-    if (delivered !== request)
-      environmentNoticeService.markAnnounced(request.sessionId);
-    return true;
+    return { delivered, outcome };
   }
 
   /**

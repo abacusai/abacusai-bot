@@ -340,11 +340,11 @@ describe("refreshing", () => {
     expect(offeredTools()).toContain("docs_search");
   });
 
-  it("continues the turn with a tool that landed while the turn ran", async () => {
-    // The refresh that follows connect_connector lands inside the turn,
-    // after the tool result. pi's tool list is fixed for the turn, so the
-    // follow-up request cannot see the new tool; the turn is continued
-    // once it ends, naming the arrival, and that request can.
+  it("never changes the tools under a running run: a refresh landing mid-turn applies at the turn's end, which continues with the new tools", async () => {
+    // A refresh that lands inside a turn (one main gave up waiting on, or a
+    // server coming up late): the run in flight keeps the tools it started
+    // with. At the turn's end the change applies, additions and removals
+    // both, and since it adds a tool the turn continues once, naming it.
     let harness: Harness | null = null;
     let refreshed: Promise<void> = Promise.resolve();
     const server = await mcpServer([
@@ -364,6 +364,7 @@ describe("refreshing", () => {
           return "Slack is connected.";
         },
       },
+      { name: "search" },
     ]);
 
     fs.writeFileSync(
@@ -382,11 +383,13 @@ describe("refreshing", () => {
       }
       return { say: "sent" };
     });
-    await harness.session.send("connect slack and dm sreemanti hi");
+    await harness.session.send("connect slack and dm hi");
 
     expect(provider.calls).toHaveLength(3);
+    expect(provider.calls[1]?.tools).toContain("docs_search");
     expect(provider.calls[1]?.tools).not.toContain("docs_Slack_Tool");
     expect(provider.calls[2]?.tools).toContain("docs_Slack_Tool");
+    expect(provider.calls[2]?.tools).not.toContain("docs_search");
     expect(provider.calls[2]?.userText.join("\n")).toMatch(
       /became available: docs_Slack_Tool/
     );
@@ -421,7 +424,7 @@ describe("refreshing", () => {
     expect(server.calls).toHaveLength(1);
   });
 
-  it("says so rather than failing when a server has gone away", async () => {
+  it("stops offering the tools of a server that has gone away", async () => {
     const server = await mcpServer([{ name: "lookup" }]);
 
     fs.writeFileSync(
@@ -433,27 +436,42 @@ describe("refreshing", () => {
     const harness = session();
 
     await harness.session.start();
+    await harness.session.send("hello");
+    expect(offeredTools()).toContain("docs_lookup");
 
     fs.writeFileSync(configPath, mcpConfig({}), "utf8");
     await harness.session.refreshMcp();
-
-    provider.script((call, index) =>
-      index === 0 && call.tools.includes("docs_lookup")
-        ? { call: { name: "docs_lookup", args: {} } }
-        : { say: "done" }
-    );
-
     await harness.session.send("look something up");
 
-    const results = harness.events
-      .filter(
-        (event): event is Extract<DesktopEvent, { type: "event" }> =>
-          event.type === "event"
-      )
-      .map((event) => event.event)
-      .filter((event) => event.type === "tool_execution_complete");
+    // pi cannot unregister a tool; the model must still never see one whose
+    // server is gone.
+    expect(offeredTools()).not.toContain("docs_lookup");
+  });
 
-    expect(JSON.stringify(results)).toContain("No MCP server is connected");
+  it("drops a tool its server stopped listing, and offers it again when it returns", async () => {
+    const server = await mcpServer([{ name: "lookup" }, { name: "search" }]);
+
+    fs.writeFileSync(
+      configPath,
+      mcpConfig({ docs: { url: server.url } }),
+      "utf8"
+    );
+
+    const harness = session();
+
+    await harness.session.start();
+
+    // A connector disconnected or revoked: the gateway stops listing it.
+    server.setTools([{ name: "lookup" }]);
+    await harness.session.refreshMcp();
+    await harness.session.send("hello");
+    expect(offeredTools()).toContain("docs_lookup");
+    expect(offeredTools()).not.toContain("docs_search");
+
+    server.setTools([{ name: "lookup" }, { name: "search" }]);
+    await harness.session.refreshMcp();
+    await harness.session.send("again");
+    expect(offeredTools()).toContain("docs_search");
   });
 });
 
