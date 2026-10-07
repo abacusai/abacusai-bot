@@ -159,3 +159,8 @@ from #225 is repaired identically, with no production Settings UI change.
 Production and CDP comparisons use the original `097b0934` base. Final branch
 rebasing includes the independently landed avatar and license work; those
 changes are not part of the measured comparison.
+
+On the final `420a4a54` base, all 29 static/build checks pass, including the new
+license gate; all six targeted browser-surface/routing tests pass after the build.
+Both follow-up worktrees are clean, and only their own measurement/dev processes
+were stopped. No `.build/` files are included.
