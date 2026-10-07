@@ -1,14 +1,19 @@
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryClient } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
+import {
+  Markdown,
+  MarkdownLinksProvider,
+} from "#renderer/features/chat/markdown/markdown";
 import { createConnectFlow } from "#renderer/features/library/connect-flow";
 import { connectOnboarding } from "#renderer/features/onboarding/connect";
 import { startFirstRunGmail } from "#renderer/features/onboarding/first-run";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { connectRequest } from "#renderer/lib/connector-requests";
-import { connectTarget } from "#renderer/lib/platform-system";
+import { connectTarget, platformSystem } from "#renderer/lib/platform-system";
 
 const HOST = "https://apps.example/api/botHost/h1";
 const signIn = vi.hoisted(() => vi.fn(async () => ({ ok: true }) as const));
@@ -18,7 +23,9 @@ vi.mock("#renderer/features/shell/connect/services", async (original) => ({
   browserConnection: () => ({ base: HOST }),
 }));
 
+const START_PAGE = window.location.href;
 afterEach(() => {
+  window.history.replaceState(null, "", START_PAGE);
   vi.useRealTimers();
   vi.unstubAllGlobals();
   document
@@ -318,25 +325,34 @@ it("Gmail consent is dismissible and cannot survive leaving its layout slot", as
   expect(client.connectors.connect).not.toHaveBeenCalled();
 });
 
-/** The Library page a host route returns to, under the app's mount path. */
-const returnTo = (page: string) =>
-  encodeURIComponent(`${import.meta.env.BASE_URL}library/${page}`);
+/** This app's page at `path` (under its mount path), as the page the test is on. */
+const onPage = (path: string): string => {
+  const page = `${import.meta.env.BASE_URL}${path}`;
+  window.history.replaceState(null, "", page);
+  return page;
+};
+/** A host connect route that returns to `page`. */
+const routeBackTo = (id: string, page: string) =>
+  `${HOST}/mcp/connect/${id}?${new URLSearchParams({ return: page })}`;
 
 it("decides in one place what each kind opens in the browser", () => {
   expect(connectTarget("abacus-gmailuser", "me@example.com")).toEqual({
     kind: "connect-page",
     url: `${GMAIL_PAGE}&hint=me%40example.com`,
   });
-  // The route returns the tab to the page that lists the server.
+  // The route returns the tab to the page the click came from, without a
+  // `connected` it was itself sent back with.
+  const library = onPage("library/connectors");
   for (const id of ["notion", "huggingface"])
     expect(connectTarget(id)).toEqual({
       kind: "host-route",
-      url: `${HOST}/mcp/connect/${id}?return=${returnTo("connectors")}`,
+      url: routeBackTo(id, library),
     });
   // The user's own server, by its name.
+  const mcp = onPage("library/mcp?connected=mine");
   expect(connectTarget("my server")).toEqual({
     kind: "host-route",
-    url: `${HOST}/mcp/connect/my%20server?return=${returnTo("mcp")}`,
+    url: routeBackTo("my%20server", mcp.replace("?connected=mine", "")),
   });
   expect(connectTarget("messaging-whatsapp")).toEqual({ kind: "pairing" });
 });
@@ -350,6 +366,10 @@ it.each([
     const open = opening();
     vi.stubGlobal("open", open);
     const { client, changed } = clientFor();
+    // From the Library, back to it; from a chat session, back to that chat.
+    const page = onPage(
+      surface === "library" ? "library/connectors" : "sessions/s-1?tab=files"
+    );
     client.connectors.statuses
       .mockReset()
       .mockResolvedValueOnce({})
@@ -363,7 +383,7 @@ it.each([
             conversationKey: "bot:bot-id",
           } as never);
     expect(open).toHaveBeenCalledExactlyOnceWith(
-      `${HOST}/mcp/connect/${id}?return=${returnTo("connectors")}`,
+      routeBackTo(id, page),
       "_blank"
     );
     await vi.waitFor(() =>
@@ -377,6 +397,44 @@ it.each([
     expect(client.connectors.connect).not.toHaveBeenCalled();
   }
 );
+
+it("a host connect link in a chat message returns to that chat; any other link opens as it is", async () => {
+  const open = opening();
+  vi.stubGlobal("open", open);
+  const { client } = clientFor();
+  const system = platformSystem(client as never);
+  const chat = onPage("sessions/s-1?tab=files");
+  render(
+    <MarkdownLinksProvider
+      value={{
+        openFile: () => {},
+        openExternal: (url) => void system.openExternal({ url }),
+      }}
+    >
+      <Markdown
+        content={`[Connect Notion](${HOST}/mcp/connect/notion) and [docs](https://example.com/docs)`}
+        role="assistant"
+        streaming={false}
+        workspaceRoot="/repo"
+      />
+    </MarkdownLinksProvider>
+  );
+  fireEvent.click(screen.getByText("Connect Notion"));
+  fireEvent.click(screen.getByText("docs"));
+  await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(2));
+  expect(open).toHaveBeenNthCalledWith(
+    1,
+    routeBackTo("notion", chat),
+    "_blank",
+    "noopener,noreferrer"
+  );
+  expect(open).toHaveBeenNthCalledWith(
+    2,
+    "https://example.com/docs",
+    "_blank",
+    "noopener,noreferrer"
+  );
+});
 
 it("a connect the host reports failed ends at once, and only for its connector", async () => {
   vi.stubGlobal("open", opening());

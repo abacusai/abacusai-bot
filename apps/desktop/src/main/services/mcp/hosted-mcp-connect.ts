@@ -20,6 +20,7 @@ import type { McpServerEntry } from "@abacus-ai/contract/contracts";
 import type { McpConnectPlan } from "../connectors/connector-flow-service";
 import {
   exchangeCode,
+  forgetMcpTokens,
   oauthLog,
   prepareSignIn,
   type PreparedSignIn,
@@ -45,6 +46,12 @@ export type HostedResponse =
 
 type ReadySignIn = Extract<PreparedSignIn, { kind: "ready" }>;
 
+/** When a connect started; a revoke of its connector after that voids it. */
+interface Ticket {
+  seq: number;
+  at: number;
+}
+
 interface PendingSignIn extends Pick<
   ReadySignIn,
   "state" | "verifier" | "redirectUri" | "metadata" | "client"
@@ -57,36 +64,47 @@ interface PendingSignIn extends Pick<
   entry: McpServerEntry;
   /** The app path the tab returns to, already checked; null for the page. */
   returnTo: string | null;
-  expires: number;
+  ticket: Ticket;
 }
 
 /**
- * Sign-ins waiting for the provider's redirect, in memory only: one per owner
- * and connector (a newer one replaces it), good for 30 minutes, taken once
- * and only by its owner. A revoke drops them and voids any still being
- * prepared.
+ * Connects in flight, in memory only. A connect takes a ticket when it
+ * starts; a revoke of its connector after that voids it, through discovery,
+ * the wait for the provider and the code exchange alike, and nothing lives
+ * past 30 minutes. A sign-in waiting for the provider's redirect is one per
+ * owner and connector (a newer one replaces it), taken once and only by its
+ * owner.
  */
 class PendingSignIns {
   private readonly byOwner = new Map<string, Map<string, PendingSignIn>>();
-  /** Revokes per connector, and of every connector. */
-  private readonly revokes = new Map<string, number>();
-  private epoch = 0;
+  /** The last revoke per connector; older than any live ticket once pruned. */
+  private readonly revoked = new Map<string, Ticket>();
+  private revokedAll = 0;
+  private seq = 0;
 
   constructor(private readonly now: () => number) {}
 
-  /** Taken before preparing a sign-in; it changes when a revoke comes in. */
-  mark(name: string): string {
-    return `${this.epoch}:${this.revokes.get(name) ?? 0}`;
+  ticket(): Ticket {
+    return { seq: ++this.seq, at: this.now() };
   }
 
-  hold(owner: string, flow: Omit<PendingSignIn, "expires">): void {
+  /** Whether a connect started with `ticket` may still complete. */
+  current(name: string, ticket: Ticket): boolean {
+    return (
+      this.now() - ticket.at < PENDING_TTL_MS &&
+      ticket.seq > this.revokedAll &&
+      ticket.seq > (this.revoked.get(name)?.seq ?? 0)
+    );
+  }
+
+  hold(owner: string, flow: PendingSignIn): void {
     this.prune();
     let names = this.byOwner.get(owner);
     if (names == null) this.byOwner.set(owner, (names = new Map()));
-    names.set(flow.name, { ...flow, expires: this.now() + PENDING_TTL_MS });
+    names.set(flow.name, flow);
   }
 
-  /** The owner's sign-in with this state, removed so it completes once. */
+  /** The owner's live sign-in with this state, removed so it completes once. */
   take(owner: string, state: string | null): PendingSignIn | undefined {
     this.prune();
     const names = this.byOwner.get(owner);
@@ -99,24 +117,28 @@ class PendingSignIns {
     return undefined;
   }
 
-  /** Drops `name`'s sign-ins, or every one, including those being prepared. */
+  /** Voids `name`'s connects, or every one, wherever they are. */
   revoke(name?: string): void {
+    const ticket = this.ticket();
     if (name == null) {
-      this.epoch += 1;
+      this.revokedAll = ticket.seq;
       this.byOwner.clear();
       return;
     }
-    this.revokes.set(name, (this.revokes.get(name) ?? 0) + 1);
+    this.revoked.set(name, ticket);
     for (const names of this.byOwner.values()) names.delete(name);
   }
 
+  /** Expired sign-ins go, and revokes no live ticket can predate. */
   private prune(): void {
-    const now = this.now();
     for (const [owner, names] of this.byOwner) {
       for (const [name, flow] of names)
-        if (flow.expires <= now) names.delete(name);
+        if (!this.current(name, flow.ticket)) names.delete(name);
       if (names.size === 0) this.byOwner.delete(owner);
     }
+    const now = this.now();
+    for (const [name, revoke] of this.revoked)
+      if (now - revoke.at >= PENDING_TTL_MS) this.revoked.delete(name);
   }
 }
 
@@ -160,6 +182,12 @@ export class HostedMcpConnect {
    */
   async route(request: HostedRequest, owner: string): Promise<HostedResponse> {
     const { headers } = request;
+    // Sec-Fetch-Site is deliberately not checked: chat and WhatsApp links
+    // arrive cross-site. That is safe because the GET never installs a
+    // connector that signs in, a no-sign-in registry connector carries no
+    // credentials, an existing entry is never touched, and the worst a
+    // forged navigation does is replace an in-flight sign-in, which the
+    // user retries.
     if (
       !sameOwner(headers["x-abacus-user-id"], owner) ||
       headers["sec-fetch-dest"] !== "document" ||
@@ -190,7 +218,7 @@ export class HostedMcpConnect {
     const serverUrl = entry.url;
     if (!plan.signsIn || serverUrl == null)
       return this.finish(name, label, entry, returnTo);
-    const mark = this.pending.mark(name);
+    const ticket = this.pending.ticket();
     try {
       const prepared = await prepareSignIn({
         serverUrl,
@@ -198,7 +226,7 @@ export class HostedMcpConnect {
         ...(typeof entry.oauth === "object" ? { oauth: entry.oauth } : {}),
       });
       // Cancelled while discovery ran: nothing may complete it.
-      if (this.pending.mark(name) !== mark) {
+      if (!this.pending.current(name, ticket)) {
         oauthLog(serverUrl, "hosted sign-in cancelled before it started");
         return this.fail(name, label);
       }
@@ -216,6 +244,7 @@ export class HostedMcpConnect {
         redirectUri,
         metadata,
         client,
+        ticket,
       });
       oauthLog(serverUrl, "hosted sign-in started");
       return { kind: "redirect", location: prepared.location };
@@ -258,7 +287,19 @@ export class HostedMcpConnect {
       oauthLog(flow.serverUrl, `failed: ${errorText(error)}`);
       return this.fail(flow.name, flow.label);
     }
-    return this.finish(flow.name, flow.label, flow.entry, flow.returnTo);
+    // The tokens are saved; they stand only with the connector installed.
+    const kept =
+      this.pending.current(flow.name, flow.ticket) &&
+      this.options.install(flow.name, flow.entry);
+    if (!kept) {
+      forgetMcpTokens(flow.serverUrl);
+      oauthLog(
+        flow.serverUrl,
+        "hosted sign-in cancelled or not installed: tokens dropped"
+      );
+      return this.fail(flow.name, flow.label);
+    }
+    return this.connectedAnswer(flow.name, flow.label, flow.returnTo);
   }
 
   /** Installs `name` when absent, announces it, and sends the tab on. */
@@ -269,6 +310,15 @@ export class HostedMcpConnect {
     returnTo: string | null
   ): HostedResponse {
     if (!this.options.install(name, entry)) return this.fail(name, label);
+    return this.connectedAnswer(name, label, returnTo);
+  }
+
+  /** Announces `name` connected and sends the tab on. */
+  private connectedAnswer(
+    name: string,
+    label: string,
+    returnTo: string | null
+  ): HostedResponse {
     this.options.connected(name);
     return returnTo != null
       ? { kind: "redirect", location: withConnected(returnTo, name) }

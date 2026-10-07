@@ -7,6 +7,7 @@ import { browserNotify } from "#renderer/lib/browser/notifications";
 import {
   connectPagePath,
   openTab,
+  withConnectReturn,
   type ConnectTarget,
 } from "#renderer/lib/connect-target";
 type BrowserSystem = Pick<
@@ -15,9 +16,14 @@ type BrowserSystem = Pick<
 > & { dialog: Pick<AppClient["system"]["dialog"], "openFolder"> };
 
 export const platformSystem = (client: AppClient): BrowserSystem => ({
+  // A host connect link in a message comes back to this page, as a click
+  // does. Only such a link needs the connection, which a link may precede.
   openExternal: async ({ url }) => {
-    if (/^(https?:|mailto:)/i.test(url))
-      window.open(url, "_blank", "noopener,noreferrer");
+    if (!/^(https?:|mailto:)/i.test(url)) return;
+    const target = url.includes("/mcp/connect/")
+      ? withConnectReturn(url, browserConnection().base)
+      : url;
+    window.open(target, "_blank", "noopener,noreferrer");
   },
   notify: browserNotify,
   openPath: async ({ path }) => {
@@ -36,11 +42,14 @@ export const connectTarget = (name: string, hint?: string): ConnectTarget => {
   if (entry?.kind === "platform")
     return { kind: "connect-page", url: connectPagePath(entry.service, hint) };
   // A registry MCP server, or the user's own by its name. The route goes
-  // straight to the provider, and back to the page that lists it once done.
-  const back = `${import.meta.env.BASE_URL}library/${entry != null ? "connectors" : "mcp"}`;
+  // straight to the provider, then back to the page the click came from.
+  const { base } = browserConnection();
   return {
     kind: "host-route",
-    url: `${browserConnection().base}/mcp/connect/${encodeURIComponent(name)}?${new URLSearchParams({ return: back })}`,
+    url: withConnectReturn(
+      `${base}/mcp/connect/${encodeURIComponent(name)}`,
+      base
+    ),
   };
 };
 

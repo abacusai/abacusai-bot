@@ -391,6 +391,7 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
       if (url === "https://auth.provider.test/register")
         return Response.json({ client_id: "client-1" });
       if (url === "https://auth.provider.test/token") {
+        await exchanging;
         tokenRequests.push(String(init?.body));
         return Response.json({ access_token: "token-1", expires_in: 3600 });
       }
@@ -399,6 +400,8 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
   let now = Date.now();
   // Discovery can be held mid-flight, to cancel under it.
   let registering: Promise<void> = Promise.resolve();
+  // So can the code exchange.
+  let exchanging: Promise<void> = Promise.resolve();
   const connected = vi.fn();
   const failed = vi.fn();
   const entries = new Map<string, McpServerEntry>([
@@ -633,6 +636,10 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
         "location"
       )
     ).toBe("/bot/library/connectors?category=web&connected=notion");
+    // A chat session, with its query kept.
+    expect(
+      (await returning("/bot/sessions/s-1?tab=files")).headers.get("location")
+    ).toBe("/bot/sessions/s-1?tab=files&connected=notion");
     for (const target of [
       "//evil.com",
       "https://x",
@@ -702,6 +709,41 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
     hosted.revoke();
     expect((await callback(pendingState)).status).toBe(400);
     expect(entries.has("notion")).toBe(false);
+
+    const tokensFor = async (url: string) =>
+      JSON.parse(await readFile(join(home, "mcp-auth.json"), "utf8")).servers[
+        url
+      ];
+    // Cancelled during the code exchange: not installed, the tokens dropped.
+    let exchanged!: () => void;
+    exchanging = new Promise<void>((resolve) => {
+      exchanged = resolve;
+    });
+    const exchangeState = await stateOf(path);
+    const exchangesBefore = fetchSpy.mock.calls.filter(
+      ([input]) => String(input) === "https://auth.provider.test/token"
+    ).length;
+    const cancelledExchange = callback(exchangeState);
+    await vi.waitFor(() =>
+      expect(
+        fetchSpy.mock.calls.filter(
+          ([input]) => String(input) === "https://auth.provider.test/token"
+        ).length
+      ).toBe(exchangesBefore + 1)
+    );
+    hosted.revoke("notion");
+    exchanged();
+    expect((await cancelledExchange).status).toBe(400);
+    exchanging = Promise.resolve();
+    expect(entries.has("notion")).toBe(false);
+    expect(await tokensFor(serverUrl)).toBeUndefined();
+    expect(failed).toHaveBeenLastCalledWith("notion");
+
+    // An install that fails drops the tokens it would have used.
+    add.mockReturnValueOnce({ success: false });
+    expect((await callback(await stateOf(path))).status).toBe(400);
+    expect(entries.has("notion")).toBe(false);
+    expect(await tokensFor(serverUrl)).toBeUndefined();
 
     // No sign-in, no credentials: installed on the GET, then connected.
     expect(entries.has("huggingface")).toBe(false);
