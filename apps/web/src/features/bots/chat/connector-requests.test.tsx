@@ -166,6 +166,53 @@ describe("useConnectorRequests", () => {
     await waitFor(() => expect(result.current.current?.requestId).toBe("b"));
   });
 
+  it("a tab the host's connect route sent back answers its ask once the host reads it connected", async () => {
+    const fake = makeFake();
+    fake.snapshot = [
+      { ...ask("a"), connectorId: "abacus-gmailuser" } as ConnectorRequest,
+    ];
+    const t = setup(fake);
+    const before = window.location.href;
+    window.history.replaceState(
+      null,
+      "",
+      "/sessions/s-1?tab=files&connected=abacus-gmailuser"
+    );
+    try {
+      const { result } = renderHook(() => useConnectorRequests(t, MINE));
+      // The parameter leaves the URL; the rest of it stays.
+      expect(window.location.search).toBe("?tab=files");
+      await waitFor(() =>
+        expect(fake.calls).toEqual([
+          "statuses",
+          "refresh:ws-1:s-1",
+          "respond:a:connected",
+        ])
+      );
+      await waitFor(() => expect(result.current.current).toBeNull());
+    } finally {
+      window.history.replaceState(null, "", before);
+    }
+  });
+
+  it("a returned tab whose connector does not read connected answers nothing", async () => {
+    const fake = makeFake();
+    fake.connected = false;
+    fake.snapshot = [
+      { ...ask("a"), connectorId: "abacus-gmailuser" } as ConnectorRequest,
+    ];
+    const t = setup(fake);
+    const before = window.location.href;
+    window.history.replaceState(null, "", "/?connected=abacus-gmailuser");
+    try {
+      const { result } = renderHook(() => useConnectorRequests(t, MINE));
+      await waitFor(() => expect(fake.calls).toEqual(["statuses"]));
+      expect(result.current.current?.requestId).toBe("a");
+    } finally {
+      window.history.replaceState(null, "", before);
+    }
+  });
+
   it("Connect refreshes the requesting session before answering", async () => {
     const fake = makeFake();
     fake.snapshot = [ask("a")];

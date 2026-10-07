@@ -25,6 +25,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { followNotices, noticeSnapshot } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { ConnectAttempt } from "#renderer/lib/connect-page";
+import { CONNECTED_PARAM } from "#renderer/lib/connect-target";
 
 type Client = Pick<Transport["client"], "connectors" | "mcp" | "system">;
 
@@ -120,6 +121,14 @@ export const connectRequest = async (
     }
     return { kind: "error", message: outcome.error };
   }
+  return answerConnected(client, request);
+};
+
+/** The requesting session's MCP servers refreshed, then the ask answered `connected`. */
+const answerConnected = async (
+  client: Client,
+  request: ConnectorRequest
+): Promise<ConnectResult> => {
   const ref = conversationRefFromKey(
     request.conversationKey as ConversationKey
   );
@@ -216,6 +225,35 @@ export const useConnectorRequests = (
     setRequests((previous) =>
       previous.filter((row) => row.requestId !== request.requestId)
     );
+
+  // The host's connect route sent this tab back after consent: the ask for
+  // that connector is answered here once the host reads it connected (the
+  // parameter alone proves nothing), and the parameter leaves the URL.
+  const returned = useRef<string | null>(null);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    returned.current = url.searchParams.get(CONNECTED_PARAM);
+    if (returned.current == null) return;
+    url.searchParams.delete(CONNECTED_PARAM);
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+  useEffect(() => {
+    if (current == null || current.connectorId !== returned.current) return;
+    returned.current = null;
+    void (async () => {
+      const statuses = await transport.client.connectors.statuses({});
+      if (statuses[current.connectorId]?.state !== "connected") return;
+      const result = await answerConnected(transport.client, current);
+      if (result.kind === "error") setError(result.message);
+      else
+        setState((previous) => ({
+          ...previous,
+          requests: previous.requests.filter(
+            (row) => row.requestId !== current.requestId
+          ),
+        }));
+    })().catch((error: unknown) => setError(messageOf(error)));
+  }, [current, transport]);
 
   return {
     current,

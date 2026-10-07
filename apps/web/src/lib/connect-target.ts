@@ -14,13 +14,37 @@ export const connectPagePath = (service: string, hint?: string): string => {
   return `${CONNECT_PAGE_PATH}?${params}`;
 };
 
+/** The query key the host's connect route comes back with: the connector id. */
+export const CONNECTED_PARAM = "connected";
+
+/**
+ * The host's connect link to open from this page: the route under `hostBase`
+ * gets `return` set to the page the click came from (this app's own path,
+ * else the Library), so the tab comes back here once the provider's consent
+ * lands. Any other URL is answered as it is.
+ */
+export const withConnectReturn = (url: string, hostBase: string): string => {
+  if (!url.startsWith(`${hostBase}/mcp/connect/`)) return url;
+  const base = import.meta.env.BASE_URL;
+  const here = new URL(window.location.href);
+  here.searchParams.delete(CONNECTED_PARAM);
+  const link = new URL(url);
+  link.searchParams.set(
+    "return",
+    here.pathname.startsWith(base)
+      ? `${here.pathname}${here.search}`
+      : `${base}library/connectors`
+  );
+  return link.toString();
+};
+
 /** What connecting a connector (or an MCP server by name) takes on this platform. */
 export type ConnectTarget =
   /** Browser: the platform's connect page, opened in the click; the host watches. */
   | { kind: "connect-page"; url: string }
   /** Desktop: main mints the platform's page and opens it in the default browser. */
   | { kind: "connect-link" }
-  /** Browser: the host's connect route, which installs, signs in, and watches. */
+  /** Browser: the host's connect route: the provider's consent, then the install. */
   | { kind: "host-route"; url: string }
   /** Desktop: main installs and signs in, and answers once done. */
   | { kind: "in-app" }

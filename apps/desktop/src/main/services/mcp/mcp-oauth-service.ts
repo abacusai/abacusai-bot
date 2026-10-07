@@ -613,6 +613,14 @@ export const exchangeCode = async (input: {
   return { ok: true };
 };
 
+/** Drops the tokens stored under the server URL, as a sign-in that may not stand. */
+export const forgetMcpTokens = (serverUrl: string): void => {
+  const file = readAuthFile();
+  if (file.servers?.[serverUrl] == null) return;
+  const { [serverUrl]: _forgotten, ...servers } = file.servers;
+  writeAuthFile({ ...file, servers });
+};
+
 /** Matches the agent's refresh skew: a token this close to expiry is not sent as is. */
 const TOKEN_EXPIRY_SKEW_MS = 60_000;
 

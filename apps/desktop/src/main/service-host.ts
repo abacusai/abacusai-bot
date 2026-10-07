@@ -318,7 +318,6 @@ import {
 } from "./services/connectors/connect-watcher";
 import {
   ConnectorFlowService,
-  type McpConnectResult,
   type McpSignIn,
 } from "./services/connectors/connector-flow-service";
 import { ConnectorStatusService } from "./services/connectors/connector-status-service";
@@ -513,9 +512,10 @@ export class ServiceHost {
         ? null
         : new HostedMcpConnect({
             base,
-            label: (name) => this.connectorFlow.mcpLabel(name),
-            connect: (name) => this.connectMcp(name),
-            signedIn: () => void this.onMcpSignedIn("code"),
+            plan: (name) => this.connectorFlow.mcpConnectPlan(name),
+            install: (name, entry) =>
+              this.connectorFlow.installMcp(name, entry).success,
+            connected: (name) => this.hostedMcpConnected(name),
             failed: (connectorId) =>
               this.emitEvent({
                 type: "connector-connect-failed",
@@ -1072,29 +1072,15 @@ export class ServiceHost {
       remove: (name) => this.removeMcpServer({ mode: "code", name }),
       signIn: (name) => this.mcpSignIn(name),
       connectUrl: (name) => this.hostedMcp?.connectUrl(name) ?? null,
-      watch: (connectorId) =>
-        this.connectWatcher.watch({
-          connectorIds: [connectorId],
-          sessionId: null,
-        }),
     },
     homeDir: () => os.homedir(),
   });
 
-  /** An installed server's sign-in: the web host's redirect, or the desktop's loopback. */
+  /** An installed server's sign-in through the desktop's loopback. */
   private async mcpSignIn(name: string): Promise<McpSignIn> {
-    const server = this.listMcpServers({ mode: "code" }).find(
-      (entry) => entry.id === name
-    );
-    if (server?.config.url == null)
-      return { kind: "failed", error: "No such HTTP server is configured." };
+    // A browser signs in only by opening the host's connect route.
     if (this.hostedMcp != null)
-      return this.hostedMcp.begin({
-        name,
-        label: connectorById(name)?.name ?? server.name,
-        serverUrl: server.config.url,
-        ...(server.config.oauth ? { oauth: server.config.oauth } : {}),
-      });
+      return { kind: "failed", error: "Signs in from its connect link." };
     const result = await this.mcpOAuthSignIn({ mode: "code", name });
     return result.success
       ? { kind: "signed-in" }
@@ -1111,11 +1097,11 @@ export class ServiceHost {
     this.connectorStatusChanged();
   }
 
-  /** The host route's install-and-sign-in. */
-  private async connectMcp(name: string): Promise<McpConnectResult> {
-    const result = await this.connectorFlow.connectMcp(name);
-    this.connectorStatusChanged();
-    return result;
+  /** The host's connect route installed `name`, signed in where it must be. */
+  private hostedMcpConnected(name: string): void {
+    void this.onMcpSignedIn("code");
+    if (connectorById(name) != null)
+      this.connectWatcher.watch({ connectorIds: [name], sessionId: null });
   }
 
   /**
@@ -1194,8 +1180,8 @@ export class ServiceHost {
   }
 
   /**
-   * Stop a connect the user walked away from: its pending hosted sign-in and
-   * confirm token go, an in-app sign-in stops, and the host no longer
+   * Stop a connect the user walked away from: its pending hosted sign-in
+   * goes, an in-app sign-in stops, and the host no longer
    * follows it. Without an id, every one.
    */
   cancelConnect(connectorId?: string): void {

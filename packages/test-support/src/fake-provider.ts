@@ -139,9 +139,16 @@ export class FakeProvider {
       tools?: Array<{ function?: { name?: string }; name?: string }>;
       messages?: Array<{ role: string; content: unknown }>;
     };
+    // Only model calls are recorded; any other endpoint (account, tokens) is not served.
+    if (parsed.model == null) {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: { message: "Not found" } }));
+
+      return;
+    }
     const messages = parsed.messages ?? [];
     const call: RecordedCall = {
-      model: parsed.model ?? "",
+      model: parsed.model,
       tools: (parsed.tools ?? []).map(
         (tool) => tool.function?.name ?? tool.name ?? ""
       ),
