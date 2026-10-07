@@ -29,7 +29,7 @@ import {
   useCheckoutWatch,
   effectiveCheckoutIdentity,
 } from "./data/queries";
-import { openTab } from "./dock/panel-tabs-store";
+import { openTab, updateTab } from "./dock/panel-tabs-store";
 import { SessionDock, type SessionDockProps } from "./dock/session-dock";
 const BrowserTab = lazy(() =>
   import("#platform/browser-tab").then((m) => ({ default: m.BrowserTab }))
@@ -248,6 +248,7 @@ export const SessionWorkspace = ({
                     row={row}
                     id={tab.ref.slice(8)}
                     url={tab.url}
+                    onState={({ url }) => updateTab(key, tab.ref, { url })}
                     visible={visible}
                     root={root}
                     presenter={presenter}

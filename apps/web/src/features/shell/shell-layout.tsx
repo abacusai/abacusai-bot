@@ -74,9 +74,10 @@ import {
   SidePanelFrame,
   usePanelTabTitle,
 } from "./side-panel";
-import { useSidePanelOverride } from "./side-panel-slot";
+import { useSidePanelFilled, useSidePanelOverride } from "./side-panel-slot";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
+import { TopBarPanelOutlet } from "./top-bar-slots";
 import { useTopBarStatus } from "./top-bar-slots";
 import { PanelScopeContext, usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
@@ -160,6 +161,7 @@ export const ShellLayout = ({
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
   const overridden = useSidePanelOverride();
+  const botPanelFilled = useSidePanelFilled("details");
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
@@ -171,19 +173,21 @@ export const ShellLayout = ({
     width: BAND_WIDTH[band],
     area,
     pinned: prefs.sidebar.pinned,
-    panelOpen:
-      area === "sessions"
-        ? (location.search as { tab?: string }).tab != null
-        : panel.open,
+    panelOpen: area === "sessions" ? panel.sessionOpen : panel.open,
     view: (location.search as { view?: string }).view,
   });
   const panelKinds: readonly PanelTabKind[] =
     area == null ? [] : AREA_PANEL_KINDS[area];
-  const panelShown = !overridden && area !== "sessions" && panel.open;
+  const panelAvailable =
+    area === "bots" &&
+    /^\/bots\/[^/]+(?:\/chats\/[^/]+|\/check-in)?$/.test(location.pathname) &&
+    botPanelFilled &&
+    !overridden;
+  const panelShown = panelAvailable && panel.open;
   const panelInLayout = panelShown && layout.sidePanel === "layout";
   const scopeKey = panel.key;
   const strip =
-    panelInLayout && scopeKey != null ? (
+    panelShown && scopeKey != null ? (
       <TopBar.PanelTabs
         tabs={panel.scope.tabs}
         active={panel.scope.active}
@@ -249,6 +253,7 @@ export const ShellLayout = ({
     return () => observer.disconnect();
   }, []);
   const panelMax = panelMaxFor(groupWidth);
+  const resizedPanel = useRef<number | null>(null);
   const storedPanel = clampPanelWidth(
     prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX,
     panelMax
@@ -289,12 +294,15 @@ export const ShellLayout = ({
             />
             <TopBar.Actions
               folded={layout.titleBar.actionsFolded}
-              tabs={panelInLayout ? panelKinds : []}
+              tabs={panelShown ? panelKinds : []}
             />
             {strip}
-            <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+            <TopBarPanelOutlet />
+            {panelAvailable && (
+              <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+            )}
           </TopBar.Root>
-          {panelInLayout && scopeKey != null && (
+          {panelShown && scopeKey != null && (
             <PanelHotkeys scopeKey={scopeKey} />
           )}
           <div className="relative flex min-h-0 min-w-0">
@@ -330,7 +338,16 @@ export const ShellLayout = ({
                 !phone && "pr-(--pane-inset) pb-(--pane-inset)"
               )}
             >
-              <ResizablePanelGroup orientation="horizontal" className="gap-0">
+              <ResizablePanelGroup
+                orientation="horizontal"
+                className="gap-0"
+                onLayoutChanged={(_, meta) => {
+                  if (meta.isUserInteraction && resizedPanel.current != null)
+                    paneWidth.write(
+                      clampPanelWidth(resizedPanel.current, panelMax)
+                    );
+                }}
+              >
                 <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
                   <Pane>
                     <PaneBoundary resetKey={location.pathname}>
@@ -349,11 +366,9 @@ export const ShellLayout = ({
                       minSize={PANEL_MIN_PX}
                       maxSize={panelMax}
                       defaultSize={storedPanel}
-                      onResize={(size) =>
-                        paneWidth.write(
-                          clampPanelWidth(size.inPixels, panelMax)
-                        )
-                      }
+                      onResize={(size) => {
+                        resizedPanel.current = size.inPixels;
+                      }}
                     >
                       <SidePanelFrame>
                         <PaneBoundary resetKey={scopeKey ?? ""}>

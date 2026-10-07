@@ -21,7 +21,13 @@ import {
   X,
 } from "lucide-react";
 import { Reorder } from "motion/react";
-import { Fragment, type ComponentProps, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppBrandMark } from "#renderer/components/app-icon";
@@ -331,6 +337,15 @@ const PanelTabs = ({
 }) => {
   const { t } = useTranslation();
   const motionPref = useMotionPreference();
+  const list = useRef<HTMLDivElement>(null);
+  const keyboardFocus = useRef(false);
+  useEffect(() => {
+    if (!keyboardFocus.current) return;
+    list.current
+      ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      ?.focus();
+    keyboardFocus.current = false;
+  }, [active]);
   if (tabs.length === 0 && kinds.length === 0) return null;
   const ids = tabs.map((tab) => tab.id);
   return (
@@ -340,6 +355,7 @@ const PanelTabs = ({
     >
       <Reorder.Group
         as="div"
+        ref={list}
         axis="x"
         values={ids}
         onReorder={onReorder}
@@ -347,7 +363,7 @@ const PanelTabs = ({
         aria-label={t("shell.topBar.panelTabs")}
         data-tour="topbar-panel-tabs"
         data-topbar-tabs=""
-        className="flex min-w-0 items-center gap-1 overflow-x-clip"
+        className="flex min-w-0 items-center gap-1 overflow-x-auto"
       >
         {tabs.map((tab) => {
           const selected = tab.id === active;
@@ -381,6 +397,29 @@ const PanelTabs = ({
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   onChange(tab.id);
+                }
+                if (
+                  ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+                ) {
+                  event.preventDefault();
+                  const index = ids.indexOf(tab.id);
+                  const next =
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? ids.length - 1
+                        : (index +
+                            (event.key === "ArrowRight" ? 1 : -1) +
+                            ids.length) %
+                          ids.length;
+                  keyboardFocus.current = ids[next] !== active;
+                  onChange(ids[next]!);
+                  const list = event.currentTarget.parentElement;
+                  (
+                    list?.querySelectorAll('[role="tab"]')[next] as
+                      | HTMLElement
+                      | undefined
+                  )?.focus();
                 }
                 if (event.key === "Delete" || event.key === "Backspace")
                   onClose(tab.id);
@@ -443,6 +482,9 @@ const PanelToggle = ({
     <BarButton
       label={open ? t("shell.topBar.closePanel") : t("shell.topBar.openPanel")}
       aria-expanded={open}
+      aria-pressed={open}
+      data-active={open ? "" : undefined}
+      className="data-active:bg-sidebar-accent data-active:text-sidebar-foreground"
       data-testid="panel-toggle"
       onClick={onToggle}
     >

@@ -27,8 +27,11 @@ import { PaneBoundary } from "#renderer/components/page-state";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
+import { TopBar } from "#renderer/features/shell/top-bar";
+import { TopBarPanelSlot } from "#renderer/features/shell/top-bar-slots";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import type { PanelTabKind } from "#renderer/lib/side-panel/store";
 import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
@@ -45,7 +48,7 @@ import {
 import { Skeleton } from "#renderer/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
-import { useSessionsTransport, useGitState } from "../data/queries";
+import { useSessionsTransport } from "../data/queries";
 import {
   getTerminalView,
   disposeTerminalView,
@@ -132,7 +135,6 @@ export const SessionDock = ({
   } | null>(null);
   const [terminalSnapshot, setTerminalSnapshot] = useState<string | null>(null);
   const [drag, setDrag] = useState<string | null>(null);
-  const git = useGitState({ workspaceId: row.workspaceId, sessionId: row.id });
   const device = useQuery(
     transport.orpc.devices.status.queryOptions({
       input: {},
@@ -142,17 +144,22 @@ export const SessionDock = ({
   const shells = useQuery(
     transport.orpc.terminal.shell.get.queryOptions({ input: {} })
   );
+  const active =
+    search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
   const split =
     window.innerWidth >= 1100 &&
     size.width >= 728 &&
     (full?.key === key && full.from === search.view
       ? full.view
       : search.view) !== "full" &&
-    search.tab != null;
-  const active = search.tab;
+    active != null;
   useEffect(() => {
     if (active) focusTab(key, active);
   }, [key, active, entries.tabs]);
+  useEffect(() => {
+    if (search.tab && search.tab !== "chat")
+      updateTabs(key, (s) => ({ ...s, open: true }));
+  }, [key, search.tab]);
   const showChat = active === "chat" || active == null || split;
   const tree: DockNode = entries.tree ?? {
     kind: "leaf",
@@ -175,7 +182,7 @@ export const SessionDock = ({
         : !split
           ? "100%"
           : clampChatWidth(
-              prefs.panes["sessions.chat"] ?? 480,
+              prefs.panes["sessions.chat"] ?? Math.floor(size.width / 2),
               size.width,
               minimumDockWidth + 8
             )
@@ -205,18 +212,20 @@ export const SessionDock = ({
     },
     [chatWriter, writers]
   );
-  const select = (tab: string | undefined) =>
+  const select = (tab: string | undefined) => {
+    updateTabs(key, (s) => ({
+      ...s,
+      open: tab != null && tab !== "chat",
+      last: tab && tab !== "chat" ? tab : s.last,
+    }));
     void navigate({
       to: ".",
       search: (p: Record<string, unknown>) => ({ ...p, tab }),
       replace: true,
       transition: "none",
     });
+  };
   const close = (ref: string) => {
-    if (!/^(terminal|browser|preview):/.test(ref)) {
-      select(undefined);
-      return;
-    }
     if (ref.startsWith("terminal:")) {
       const id = ref.slice(9);
       void getTerminalView(`${key}:${id}`)
@@ -353,8 +362,37 @@ export const SessionDock = ({
     updateTabs(key, (s) => ({ ...s, tree: next }));
     setDrag(null);
   };
+  const titleTabs = ["changes", "terminal", "files", "browser"]
+    .flatMap((kind) => {
+      const tabs = entries.tabs.filter(
+        (tab) => tab.ref === kind || tab.ref.startsWith(`${kind}:`)
+      );
+      return tabs.length
+        ? tabs
+        : [{ ref: kind, title: t(`sessions.dock.${kind}`), openedAt: 0 }];
+    })
+    .concat(
+      entries.tabs.filter(
+        (tab) =>
+          !["changes", "terminal", "files", "browser"].includes(
+            tab.ref.split(":")[0]!
+          )
+      )
+    );
+  if (entries.order)
+    titleTabs.sort((a, b) => {
+      const position = (ref: string) => {
+        const index = entries.order!.indexOf(ref);
+        return index < 0 ? entries.order!.length : index;
+      };
+      return position(a.ref) - position(b.ref);
+    });
+  const choose = (ref: string) => {
+    if (ref === "terminal" || ref === "browser") add(ref);
+    else select(ref);
+  };
   const controls = (
-    <div className="flex shrink-0 items-center gap-1 px-1">
+    <div className="titlebar-nodrag flex shrink-0 items-center gap-1 px-1">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -394,7 +432,7 @@ export const SessionDock = ({
               ...(IS_ELECTRON ? ["browser"] : []),
               "terminal",
               "files",
-              ...(git?.gitChanges.length ? ["changes"] : []),
+              "changes",
               "agents",
               ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
             ].map((kind) => (
@@ -430,14 +468,6 @@ export const SessionDock = ({
         }}
       >
         {split ? <Maximize /> : <Minimize />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("sessions.dock.close")}
-        onClick={() => select(undefined)}
-      >
-        <X />
       </Button>
     </div>
   );
@@ -485,7 +515,14 @@ export const SessionDock = ({
             if (typeof value === "string") select(value);
           }}
         >
-          <div data-tab-header className="flex min-w-0 items-center">
+          <div
+            data-tab-header
+            className={
+              dockLeaves(shown).length === 1
+                ? "hidden"
+                : "flex min-w-0 items-center"
+            }
+          >
             <TabsList
               variant="line"
               className="min-w-0 flex-1 justify-start overflow-auto px-2"
@@ -547,7 +584,6 @@ export const SessionDock = ({
                 ) : null;
               })}
             </TabsList>
-            {dockLeaves(shown)[0]?.id === node.id && controls}
             <div
               className="flex min-w-0 items-center"
               role="group"
@@ -621,7 +657,7 @@ export const SessionDock = ({
           {node.tabs.map((ref) => {
             const tab = entries.tabs.find((tab) => tab.ref === ref);
             const visible =
-              active === "chat"
+              active == null || active === "chat"
                 ? false
                 : ref ===
                   (node.tabs.includes(active ?? "") ? active : node.active);
@@ -670,36 +706,88 @@ export const SessionDock = ({
         data-view={split ? "split" : "full"}
         className="relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
+        <TopBarPanelSlot>
+          {active ? (
+            <>
+              <TopBar.PanelTabs
+                tabs={[
+                  ...(!split
+                    ? [
+                        {
+                          ref: "chat",
+                          title: t("sessions.dock.chat"),
+                          openedAt: 0,
+                        },
+                      ]
+                    : []),
+                  ...titleTabs,
+                ].map((tab) => ({
+                  id: tab.ref,
+                  kind: (tab.ref.startsWith("preview:")
+                    ? "files"
+                    : tab.ref === "chat"
+                      ? "thread"
+                      : tab.ref === "agents"
+                        ? "agent"
+                        : tab.ref.split(":")[0]) as PanelTabKind,
+                  title: tab.title,
+                }))}
+                active={active}
+                title={(tab) => tab.title ?? ""}
+                kinds={[]}
+                onChange={choose}
+                onClose={close}
+                onReorder={(ids) =>
+                  updateTabs(key, (s) => ({
+                    ...s,
+                    order: ids,
+                    tabs: ids
+                      .map((id) => s.tabs.find((tab) => tab.ref === id))
+                      .filter((tab): tab is PanelTab => tab != null),
+                  }))
+                }
+                onAdd={add}
+              />
+              {controls}
+            </>
+          ) : null}
+          <TopBar.PanelToggle
+            open={active != null && active !== "chat"}
+            onToggle={() =>
+              select(
+                active && active !== "chat"
+                  ? undefined
+                  : (entries.last ?? "changes")
+              )
+            }
+          />
+        </TopBarPanelSlot>
         {registerHotkeys(
           () => cycle(1),
           () => cycle(-1),
           () => active && active !== "chat" && close(active),
           () => add("terminal")
         )}
-        {active === "chat" && !split ? (
-          <Tabs
-            value="chat"
-            onValueChange={(value) => select(String(value))}
-            className="min-w-0 shrink-0 flex-row items-center border-b"
-          >
-            <TabsList className="min-w-0 flex-1 justify-start overflow-x-auto">
-              <TabsTrigger value="chat">{t("sessions.dock.chat")}</TabsTrigger>
-              {entries.tabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.ref}
-                  value={tab.ref}
-                  className="max-w-48 truncate"
-                >
-                  {tab.title}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {controls}
-          </Tabs>
-        ) : null}
         <ResizablePanelGroup
           orientation="horizontal"
           className="min-h-0 min-w-0 flex-1"
+          onLayoutChanged={(_, meta) => {
+            if (!split || !chatPanel.current) return;
+            const width = chatPanel.current.getSize().inPixels;
+            if (meta.isUserInteraction) {
+              chatWriter.write(width);
+              return;
+            }
+            // Reopening applies panel constraints after the resize effect.
+            // Restore the saved width once that automatic layout finishes.
+            const restored = clampChatWidth(
+              prefs.panes["sessions.chat"] ?? Math.floor(size.width / 2),
+              size.width,
+              minimumDockWidth + 8
+            );
+            if (Math.abs(width - restored) > 1)
+              chatPanel.current.resize(restored);
+          }}
         >
           <ResizablePanel
             id="session-chat"
@@ -710,7 +798,7 @@ export const SessionDock = ({
             defaultSize={
               split
                 ? clampChatWidth(
-                    prefs.panes["sessions.chat"] ?? 480,
+                    prefs.panes["sessions.chat"] ?? Math.floor(size.width / 2),
                     size.width,
                     dockMinimum(shown, "width") + 8
                   )
@@ -719,14 +807,6 @@ export const SessionDock = ({
                   : 0
             }
             groupResizeBehavior="preserve-pixel-size"
-            onResize={(size) => {
-              if (
-                split &&
-                size.inPixels <=
-                  host.current!.clientWidth - minimumDockWidth + 1
-              )
-                chatWriter.write(size.inPixels);
-            }}
             style={
               !showChat
                 ? { visibility: "hidden", overflow: "hidden" }
@@ -743,11 +823,17 @@ export const SessionDock = ({
               className="w-2 shrink-0 bg-transparent"
             />
           ) : null}
-          {active && active !== "chat" ? (
+          {entries.tabs.length > 0 ? (
             <ResizablePanel
               id="session-panel"
               data-session-pane="tools"
               minSize={split ? Math.max(360, dockMinimum(shown, "width")) : 0}
+              maxSize={active == null || active === "chat" ? 0 : undefined}
+              style={
+                active == null || active === "chat"
+                  ? { visibility: "hidden", overflow: "hidden" }
+                  : undefined
+              }
             >
               {renderTree(shown)}
             </ResizablePanel>

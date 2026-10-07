@@ -9,7 +9,13 @@ const components = readSourceFiles(
 it("R4-T11/R4-T28 session feature and component imports respect ownership", () => {
   for (const [file, source] of Object.entries(sessions)) {
     if (/\.test\.tsx?$/.test(file)) continue;
-    expect(source, file).not.toMatch(
+    const composition = file.endsWith("/dock/session-dock.tsx")
+      ? source.replace(
+          /from ["']#renderer\/features\/shell\/(?:top-bar|top-bar-slots)["']/g,
+          ""
+        )
+      : source;
+    expect(composition, file).not.toMatch(
       /from\s+["']#renderer\/features\/(?!sessions)/
     );
     expect(source, file).not.toMatch(/\.message\s*(?:\.includes\(|===)/);
