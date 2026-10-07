@@ -67,6 +67,7 @@ import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
   codeFieldAllowed,
   DOCUMENT_INPUT_FACTS_SCRIPT,
+  hasCodeField,
   factsFromDocument,
   fieldKindAllowed,
   LIVE_FIELD_FUNCTION,
@@ -492,7 +493,13 @@ export interface McpBrowserServerOptions {
     sessionId?: string
   ) => Promise<"allow" | "deny">;
   /** The waits, sized for a cold first launch; tests override them. */
-  timeouts?: { attachMs?: number; navigateMs?: number; historyMs?: number };
+  timeouts?: {
+    attachMs?: number;
+    navigateMs?: number;
+    historyMs?: number;
+    /** How long one call may run, queue wait included. */
+    callMs?: number;
+  };
   /** The browser runtime's views, resolved per call so a late attach counts. */
   target?: () => BrowserTargetSource | null;
   /** The conversation a session's browser belongs to; picks the pane opened. */
@@ -1656,8 +1663,10 @@ export class McpBrowserServer extends McpHttpServer {
       };
       // Abacus.AI's own pages are the user's: the agent's browser never acts
       // on one, however it got there (a URL, a link, a script, a redirect).
-      // Every browser call on a tab runs in arrival order, one at a time, so
-      // nothing (a script above all) runs while a vault value is typed.
+      // Every browser call of a session runs in arrival order, one at a time,
+      // whichever tab it lands on, so nothing (a script above all) runs while
+      // a vault value is typed; a call its caller gave up on never starts.
+      const call = { cancelled: false };
       const run = async (): Promise<ToolResult> => {
         if (!name.startsWith("browser_")) return act();
         const wc = this.findView(sessionId);
@@ -1666,15 +1675,15 @@ export class McpBrowserServer extends McpHttpServer {
           wc != null && name === "browser_execute" ? this.secretsOf(wc) : null;
         scripting?.scriptArrived();
         const guarded = async (): Promise<ToolResult> => {
+          if (call.cancelled)
+            return this.err(`${name} was not run: it timed out while waiting.`);
           const refused = await this.abacusFence(name, args, sessionId);
           if (refused != null) return refused;
           const result = await act();
           return (await this.leaveAbacusPage(sessionId)) ?? result;
         };
         try {
-          return wc == null
-            ? await guarded()
-            : await this.inTabOrder(wc.id, guarded);
+          return await this.inSessionOrder(sessionId ?? "", guarded);
         } finally {
           scripting?.scriptSettled();
         }
@@ -1685,16 +1694,16 @@ export class McpBrowserServer extends McpHttpServer {
         return await Promise.race([
           run(),
           new Promise<ToolResult>((resolve) => {
-            timer = setTimeout(
-              () =>
-                resolve(
-                  this.err(
-                    `${name} did not finish within ${McpBrowserServer.CALL_TIMEOUT_MS / 1000}s. ` +
-                      "The page may be unresponsive; take a snapshot to see where it is, or navigate again."
-                  )
-                ),
-              McpBrowserServer.CALL_TIMEOUT_MS
-            );
+            timer = setTimeout(() => {
+              // Still queued: it must not start for a caller that has gone.
+              call.cancelled = true;
+              resolve(
+                this.err(
+                  `${name} did not finish within ${this.callTimeout() / 1000}s. ` +
+                    "The page may be unresponsive; take a snapshot to see where it is, or navigate again."
+                )
+              );
+            }, this.callTimeout());
           }),
         ]);
       } finally {
@@ -2548,35 +2557,67 @@ export class McpBrowserServer extends McpHttpServer {
     return (args.ref as string) ?? (args.selector as string) ?? "(no target)";
   }
 
-  /** Each tab's calls, in arrival order: the last one's settling, which the next waits for. */
-  private readonly tabQueues = new Map<number, Promise<void>>();
+  /** Each session's browser calls, in arrival order: the last one's settling, which the next waits for. */
+  private readonly sessionQueues = new Map<string, Promise<void>>();
 
   /**
-   * Runs `work` once every call that reached the tab before it has settled.
-   * A call that never settles holds the tab no longer than a call may run.
+   * How much longer than a call may run a stuck call holds its session's
+   * queue, from its start: long enough for the calls that arrived behind it
+   * within this time to time out first.
    */
-  private async inTabOrder<T>(
-    tabId: number,
+  private static readonly QUEUE_GRACE_MS = 5_000;
+
+  private callTimeout(): number {
+    return this.options.timeouts?.callMs ?? McpBrowserServer.CALL_TIMEOUT_MS;
+  }
+
+  /**
+   * Runs `work` once every call the session made before it has settled. By
+   * session, not by tab: a call resolves its tab when it runs, so a tab
+   * switch cannot put two of the session's calls on its tabs at once. A call
+   * that never settles holds the queue for a call's timeout plus a grace,
+   * counted from when it starts; the calls that arrived behind it within the
+   * grace of its start time out first, are cancelled and never start.
+   */
+  private async inSessionOrder<T>(
+    key: string,
     work: () => Promise<T>
   ): Promise<T> {
-    const before = this.tabQueues.get(tabId) ?? Promise.resolve();
-    const mine = before.then(work);
+    const before = this.sessionQueues.get(key) ?? Promise.resolve();
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const mine = before.then(() => {
+      started();
+      return work();
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const settled = Promise.race([
-      mine.then(
-        () => undefined,
-        () => undefined
-      ),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, McpBrowserServer.CALL_TIMEOUT_MS);
-        timer.unref?.();
-      }),
-    ]).finally(() => clearTimeout(timer));
-    this.tabQueues.set(tabId, settled);
+    // The hold runs from the work's start, not its arrival: a call that
+    // waited in the queue still gets its full time once it runs.
+    const settled = start
+      .then(() =>
+        Promise.race([
+          mine.then(
+            () => undefined,
+            () => undefined
+          ),
+          new Promise<void>((resolve) => {
+            timer = setTimeout(
+              resolve,
+              this.callTimeout() + McpBrowserServer.QUEUE_GRACE_MS
+            );
+            timer.unref?.();
+          }),
+        ])
+      )
+      .finally(() => clearTimeout(timer));
+    this.sessionQueues.set(key, settled);
     try {
       return await mine;
     } finally {
-      if (this.tabQueues.get(tabId) === settled) this.tabQueues.delete(tabId);
+      if (this.sessionQueues.get(key) === settled)
+        this.sessionQueues.delete(key);
     }
   }
   /** Pages already told never to load anything from Abacus.AI. */
@@ -2608,12 +2649,8 @@ export class McpBrowserServer extends McpHttpServer {
         page,
         DOCUMENT_INPUT_FACTS_SCRIPT
       ).catch(() => null);
-      if (
-        Array.isArray(inputs) &&
-        inputs.some((facts: FieldFacts) =>
-          fieldKindAllowed("code", facts, false)
-        )
-      )
+      // The fill's own rule: a page counts only if a code could go into one of its fields.
+      if (Array.isArray(inputs) && hasCodeField(inputs as FieldFacts[]))
         found.push({ origin, top: frameId == null });
     }
     return found;

@@ -4,6 +4,7 @@ import type { VaultField } from "./vault-client";
 import {
   codeFieldAllowed,
   factsFromDocument,
+  hasCodeField,
   fieldKindAllowed,
   LIVE_FIELD_FUNCTION,
   type FieldFacts,
@@ -385,6 +386,20 @@ describe("which fields take which value", () => {
     expect(codeFieldAllowed(otp, [otp, another])).toBe(false);
     expect(codeFieldAllowed(marked, [marked, otp, another])).toBe(true);
     expect(codeFieldAllowed(facts({}), [facts({})])).toBe(false);
+  });
+
+  it("finds a page's code field by the very rule a fill uses", () => {
+    const otp = facts({ inputmode: "numeric", maxLength: 6 });
+    const pin = facts({ inputmode: "numeric", maxLength: 4, hints: ["pin"] });
+    const marked = facts({ autocomplete: ["one-time-code"] });
+
+    expect(hasCodeField([otp, pin])).toBe(true);
+    // Two unmarked code-like fields: a fill would refuse both, so no page is found.
+    expect(hasCodeField([otp, facts({ type: "tel", maxLength: 6 })])).toBe(
+      false
+    );
+    expect(hasCodeField([otp, otp, marked])).toBe(true);
+    expect(hasCodeField([pin])).toBe(false);
   });
 });
 
