@@ -193,16 +193,18 @@ describe("asking for one", () => {
     }
   });
 
-  it("hands out a hosted MCP sign-in's start link for the model to send", async () => {
+  it("hands out the web host's connect route for an MCP connector, for the model to send", async () => {
     link.mockResolvedValueOnce({
-      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
+      url: "https://apps.example/api/botHost/h1/mcp/connect/notion",
       connectorIds: ["notion"],
     });
 
     const text = await call({ service: "Notion" });
 
     expect(link).toHaveBeenCalledWith("notion");
-    expect(text).toContain("https://apps.example/api/botHost/h1/mcp/start/abc");
+    expect(text).toContain(
+      "https://apps.example/api/botHost/h1/mcp/connect/notion"
+    );
     expect(watch).toHaveBeenCalledWith(
       expect.objectContaining({ connectorIds: ["notion"] })
     );

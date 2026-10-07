@@ -6,8 +6,17 @@ import type { Transport } from "#renderer/data/transport";
 import { createConnectFlow } from "#renderer/features/library/connect-flow";
 import { connectOnboarding } from "#renderer/features/onboarding/connect";
 import { startFirstRunGmail } from "#renderer/features/onboarding/first-run";
-import { waitForConnected } from "#renderer/lib/connect-page";
+import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { connectRequest } from "#renderer/lib/connector-requests";
+import { connectTarget } from "#renderer/lib/platform-system";
+
+const HOST = "https://apps.example/api/botHost/h1";
+const signIn = vi.hoisted(() => vi.fn(async () => ({ ok: true }) as const));
+vi.mock("#platform/sign-in", () => ({ signInAbacus: signIn }));
+vi.mock("#renderer/features/shell/connect/services", async (original) => ({
+  ...(await original<object>()),
+  browserConnection: () => ({ base: HOST }),
+}));
 
 afterEach(() => {
   vi.useRealTimers();
@@ -17,83 +26,135 @@ afterEach(() => {
     .forEach((el) => el.remove());
   localStorage.clear();
 });
-const clientFor = () => ({
-  connectors: {
-    connect: vi
-      .fn()
-      .mockResolvedValue({ ok: true, url: "https://apps.example/connect" }),
-    statuses: vi
-      .fn()
-      .mockResolvedValueOnce({})
-      .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } }),
-    respond: vi.fn().mockResolvedValue(undefined),
-  },
-  system: { funnelStep: vi.fn().mockResolvedValue(undefined) },
-  mcp: { refresh: vi.fn() },
-});
-const GMAIL_PAGE = "/chatllm/connect-connector?service=gmailuser&autostart=1";
 
-it("onboarding opens the connect page inside the click and succeeds only once connected", async () => {
-  vi.useFakeTimers();
-  const open = vi.fn().mockReturnValue(null);
+/** A client whose host announces status changes when the test says so. */
+const clientFor = () => {
+  let wake: (() => void) | null = null;
+  let next:
+    | { type: "status-changed" }
+    | { type: "connect-failed"; connectorId: string } = {
+    type: "status-changed",
+  };
+  const streams = { open: 0 };
+  const client = {
+    connectors: {
+      connect: vi
+        .fn()
+        .mockResolvedValue({ ok: true, url: "https://apps.example/connect" }),
+      statuses: vi
+        .fn()
+        .mockResolvedValueOnce({})
+        .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } }),
+      respond: vi.fn().mockResolvedValue(undefined),
+      cancelConnect: vi.fn().mockResolvedValue(undefined),
+      events: vi.fn(
+        async (_input: unknown, { signal }: { signal: AbortSignal }) => {
+          streams.open += 1;
+          signal.addEventListener("abort", () => (streams.open -= 1), {
+            once: true,
+          });
+          return (async function* () {
+            while (!signal.aborted) {
+              await new Promise<void>((resolve) => {
+                wake = resolve;
+              });
+              wake = null;
+              yield next;
+              next = { type: "status-changed" };
+            }
+          })();
+        }
+      ),
+    },
+    system: {
+      funnelStep: vi.fn().mockResolvedValue(undefined),
+      openExternal: vi.fn(),
+    },
+    mcp: { refresh: vi.fn() },
+  };
+  /** The host announces a change, once the page's stream is listening. */
+  const changed = async (): Promise<void> => {
+    await vi.waitFor(() => expect(wake).not.toBeNull());
+    wake!();
+  };
+  /** The host's page reports the connect for `connectorId` failed. */
+  const failed = async (connectorId: string): Promise<void> => {
+    await vi.waitFor(() => expect(wake).not.toBeNull());
+    next = { type: "connect-failed", connectorId };
+    wake!();
+  };
+  return { client, changed, failed, streams };
+};
+/** The open transport a connect follows the host's announcements on. */
+const hostOf = (client: ReturnType<typeof clientFor>["client"]): Transport =>
+  ({ client, state: "open" }) as unknown as Transport;
+/** `window.open` that opens: a tab whose opener the app then cuts. */
+const opening = () => vi.fn(() => ({ opener: window }) as unknown as Window);
+const GMAIL_PAGE = "/chatllm/connect-connector?service=gmailuser&autostart=1";
+const flowFor = (client: ReturnType<typeof clientFor>["client"]) =>
+  createConnectFlow({
+    transport: {
+      ...hostOf(client),
+      orpc: createTanstackQueryUtils(client as never),
+    } as unknown as Transport,
+    db: { collections: { sessions: { toArray: [] } } } as never,
+    queryClient: new QueryClient(),
+    navigate: async () => {},
+  });
+
+it("onboarding opens the connect page inside the click and succeeds only once the host says connected", async () => {
+  const open = opening();
   vi.stubGlobal("open", open);
-  const client = clientFor();
+  const { client, changed } = clientFor();
   const pending = connectOnboarding(
     {} as never,
-    { client } as unknown as Transport,
+    hostOf(client),
     "abacus-gmailuser"
   );
-  expect(open).toHaveBeenCalledExactlyOnceWith(
-    GMAIL_PAGE,
-    "_blank",
-    "noopener"
-  );
+  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  expect(open.mock.results[0]!.value.opener).toBeNull();
   let complete = false;
   void pending.then(() => {
     complete = true;
   });
-  await vi.advanceTimersByTimeAsync(3000);
+  // The first read happens at once.
+  await vi.waitFor(() =>
+    expect(client.connectors.statuses).toHaveBeenCalledOnce()
+  );
   expect(complete).toBe(false);
-  await vi.advanceTimersByTimeAsync(3000);
+  await changed();
   expect(await pending).toEqual({ ok: true });
   expect(client.connectors.statuses).toHaveBeenCalledTimes(2);
 });
 
 it("agent requests open the page synchronously and answer connected only once it is", async () => {
-  vi.useFakeTimers();
-  const open = vi.fn().mockReturnValue(null);
+  const open = opening();
   vi.stubGlobal("open", open);
-  const client = clientFor();
-  const pending = connectRequest(
-    client as never,
-    {
-      requestId: "request",
-      connectorId: "abacus-gmailuser",
-      conversationKey: "bot:bot-id",
-    } as never
+  const { client, changed } = clientFor();
+  const pending = connectRequest(hostOf(client), {
+    requestId: "request",
+    connectorId: "abacus-gmailuser",
+    conversationKey: "bot:bot-id",
+  } as never);
+  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  await vi.waitFor(() =>
+    expect(client.connectors.statuses).toHaveBeenCalledOnce()
   );
-  expect(open).toHaveBeenCalledExactlyOnceWith(
-    GMAIL_PAGE,
-    "_blank",
-    "noopener"
-  );
-  await vi.advanceTimersByTimeAsync(3000);
   expect(client.connectors.respond).not.toHaveBeenCalled();
-  await vi.advanceTimersByTimeAsync(3000);
+  await changed();
   expect(await pending).toEqual({ kind: "connected" });
   expect(client.connectors.respond).toHaveBeenCalledWith(
     expect.objectContaining({ outcome: "connected" })
   );
 });
 
-it("stopping an agent request's wait answers declined", async () => {
-  vi.useFakeTimers();
-  vi.stubGlobal("open", vi.fn().mockReturnValue(null));
-  const client = clientFor();
+it("cancelling an agent request's wait stops it, releases the stream, and leaves the answer to the caller", async () => {
+  vi.stubGlobal("open", opening());
+  const { client, streams } = clientFor();
   client.connectors.statuses.mockReset().mockResolvedValue({});
   const abort = new AbortController();
   const pending = connectRequest(
-    client as never,
+    hostOf(client),
     {
       requestId: "request",
       connectorId: "abacus-gmailuser",
@@ -102,19 +163,44 @@ it("stopping an agent request's wait answers declined", async () => {
     undefined,
     abort.signal
   );
-  await vi.advanceTimersByTimeAsync(3000);
+  await vi.waitFor(() => expect(streams.open).toBe(1));
   abort.abort();
   expect(await pending).toEqual({ kind: "declined" });
-  expect(client.connectors.respond).toHaveBeenCalledWith(
-    expect.objectContaining({ outcome: "declined" })
-  );
+  expect(streams.open).toBe(0);
+  expect(client.connectors.respond).not.toHaveBeenCalled();
 });
 
-it("first-run Gmail waits for a click, then for the connection", async () => {
+it("a blocked pop-up is reported, and nothing is asked of the host", async () => {
+  vi.stubGlobal(
+    "open",
+    vi.fn(() => null)
+  );
+  const { client } = clientFor();
+  const attempt = new ConnectAttempt(hostOf(client), "abacus-gmailuser");
+  expect(await attempt.result).toEqual({ ok: false, error: "popup-blocked" });
+  expect(client.connectors.connect).not.toHaveBeenCalled();
+});
+
+it("one deadline: a wait gives up after three minutes, and re-reads on focus before that", async () => {
   vi.useFakeTimers();
-  const open = vi.fn().mockReturnValue(null);
+  vi.stubGlobal("open", opening());
+  const { client, streams } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  const attempt = new ConnectAttempt(hostOf(client), "notion");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(client.connectors.statuses).toHaveBeenCalledOnce();
+  window.dispatchEvent(new Event("focus"));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(client.connectors.statuses).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(180_000);
+  expect(await attempt.result).toEqual({ ok: false, error: "timeout" });
+  expect(streams.open).toBe(0);
+});
+
+it("first-run Gmail waits for a click, then for the connection; dismissing cancels the wait", async () => {
+  const open = opening();
   vi.stubGlobal("open", open);
-  const client = clientFor();
+  const { client, changed, streams } = clientFor();
   client.connectors.statuses
     .mockReset()
     .mockResolvedValueOnce({})
@@ -123,133 +209,197 @@ it("first-run Gmail waits for a click, then for the connection", async () => {
   const slot = document.createElement("div");
   slot.id = "onboarding-consent";
   document.body.append(slot);
-  await startFirstRunGmail(
-    { client } as unknown as Transport,
-    "owner@example.com"
-  );
+  await startFirstRunGmail(hostOf(client), "owner@example.com");
   expect(open).not.toHaveBeenCalled();
-  expect(slot.querySelector("#gmail-consent")).not.toBeNull();
   expect(slot.querySelector("#gmail-consent")?.className).not.toContain(
     "fixed"
   );
   (document.getElementById("gmail-consent") as HTMLButtonElement).click();
   expect(open).toHaveBeenCalledExactlyOnceWith(
     `${GMAIL_PAGE}&hint=owner%40example.com`,
-    "_blank",
-    "noopener"
+    "_blank"
   );
-  await vi.advanceTimersByTimeAsync(3000);
+  await vi.waitFor(() => expect(streams.open).toBe(1));
   expect(client.system.funnelStep).not.toHaveBeenCalled();
-  await vi.advanceTimersByTimeAsync(3000);
-  expect(client.system.funnelStep).toHaveBeenCalledWith({
-    step: "gmail_allowed",
-  });
-});
+  await changed();
+  await vi.waitFor(() =>
+    expect(client.system.funnelStep).toHaveBeenCalledWith({
+      step: "gmail_allowed",
+    })
+  );
 
-it("waiting checks again on focus, stops when aborted and gives up after three minutes", async () => {
-  vi.useFakeTimers();
-  const client = clientFor();
-  client.connectors.statuses.mockReset().mockResolvedValue({});
-  const abort = new AbortController();
-  const cancelled = waitForConnected(
-    client as never,
-    "abacus-gmailuser",
-    abort.signal
-  );
-  window.dispatchEvent(new Event("focus"));
-  await vi.advanceTimersByTimeAsync(0);
-  expect(client.connectors.statuses).toHaveBeenCalledOnce();
-  abort.abort();
-  expect(await cancelled).toMatchObject({ ok: false, cancelled: true });
-  const timeout = waitForConnected(
-    client as never,
-    "abacus-gmailuser",
-    new AbortController().signal
-  );
-  await vi.advanceTimersByTimeAsync(183_000);
-  expect(await timeout).toMatchObject({
-    ok: false,
-    error: expect.stringContaining("timed out"),
-  });
+  // Again, then dismissed mid-wait: the wait and its stream go with it.
+  const second = clientFor();
+  second.client.connectors.statuses.mockReset().mockResolvedValue({});
+  await startFirstRunGmail(hostOf(second.client), "owner@example.com");
+  (document.getElementById("gmail-consent") as HTMLButtonElement).click();
+  await vi.waitFor(() => expect(second.streams.open).toBe(1));
+  (slot.querySelector("button:last-child") as HTMLButtonElement).click();
+  await vi.waitFor(() => expect(second.streams.open).toBe(0));
+  expect(slot.children).toHaveLength(0);
 });
 
 it("library opens the page inside the click and settles once connected", async () => {
-  vi.useFakeTimers();
-  const open = vi.fn().mockReturnValue(null);
+  const open = opening();
   vi.stubGlobal("open", open);
-  const client = clientFor();
+  const { client, changed } = clientFor();
+  // The sign-in check reads once, then the wait reads at once.
   client.connectors.statuses
     .mockReset()
     .mockResolvedValueOnce({})
+    .mockResolvedValueOnce({})
     .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } });
-  const queryClient = new QueryClient();
-  const flow = createConnectFlow({
-    transport: {
-      client,
-      orpc: createTanstackQueryUtils(client),
-    } as unknown as Transport,
-    db: { collections: { sessions: { toArray: [] } } } as never,
-    queryClient,
-    navigate: async () => {},
-  });
+  const flow = flowFor(client);
   const pending = flow.start("abacus-gmailuser");
-  expect(open).toHaveBeenCalledExactlyOnceWith(
-    GMAIL_PAGE,
-    "_blank",
-    "noopener"
+  expect(open).toHaveBeenCalledExactlyOnceWith(GMAIL_PAGE, "_blank");
+  await vi.waitFor(() => expect(flow.store.state.phase).toBe("waiting"));
+  await vi.waitFor(() =>
+    expect(client.connectors.statuses).toHaveBeenCalledTimes(2)
   );
-  await vi.advanceTimersByTimeAsync(0);
-  expect(flow.store.state.phase).toBe("waiting");
-  await vi.advanceTimersByTimeAsync(6000);
+  await changed();
   expect(await pending).toEqual({ ok: true });
   expect(flow.store.state.phase).toBe("idle");
-  queryClient.clear();
+});
+
+it("library signs a signed-out host in first, explicitly, after the tab opened in the click", async () => {
+  const open = opening();
+  vi.stubGlobal("open", open);
+  const { client, changed } = clientFor();
+  client.connectors.statuses
+    .mockReset()
+    .mockResolvedValueOnce({
+      "abacus-gmailuser": { state: "unavailable", reason: "not-signed-in" },
+    })
+    .mockResolvedValueOnce({})
+    .mockResolvedValue({ "abacus-gmailuser": { state: "connected" } });
+  const flow = flowFor(client);
+  const pending = flow.start("abacus-gmailuser");
+  expect(open).toHaveBeenCalledOnce();
+  expect(signIn).not.toHaveBeenCalled();
+  await vi.waitFor(() => expect(client.connectors.connect).toHaveBeenCalled());
+  // Signed in before the host was told to follow the page.
+  expect(signIn.mock.invocationCallOrder[0]).toBeLessThan(
+    client.connectors.connect.mock.invocationCallOrder[0]!
+  );
+  await vi.waitFor(() =>
+    expect(client.connectors.statuses).toHaveBeenCalledTimes(2)
+  );
+  await changed();
+  expect(await pending).toEqual({ ok: true });
 });
 
 it("library cancel stops waiting", async () => {
-  vi.stubGlobal("open", vi.fn().mockReturnValue(null));
-  const client = clientFor();
+  vi.stubGlobal("open", opening());
+  const { client, streams } = clientFor();
   client.connectors.statuses.mockReset().mockResolvedValue({});
-  const queryClient = new QueryClient();
-  const flow = createConnectFlow({
-    transport: {
-      client,
-      orpc: createTanstackQueryUtils(client),
-    } as unknown as Transport,
-    db: { collections: { sessions: { toArray: [] } } } as never,
-    queryClient,
-    navigate: async () => {},
-  });
+  const flow = flowFor(client);
   const pending = flow.start("abacus-gmailuser");
   await vi.waitFor(() => expect(flow.store.state.phase).toBe("waiting"));
   await flow.cancel();
   expect(await pending).toMatchObject({ ok: false, cancelled: true });
   expect(flow.store.state.phase).toBe("idle");
-  queryClient.clear();
+  await vi.waitFor(() => expect(streams.open).toBe(0));
 });
 
 it("Gmail consent is dismissible and cannot survive leaving its layout slot", async () => {
   const slot = document.createElement("div");
   slot.id = "onboarding-consent";
   document.body.append(slot);
-  const client = clientFor();
-  client.connectors.statuses.mockResolvedValue({});
-  await startFirstRunGmail(
-    { client } as unknown as Transport,
-    "owner@example.com"
-  );
+  const { client } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  await startFirstRunGmail(hostOf(client), "owner@example.com");
   (slot.querySelector("button:last-child") as HTMLButtonElement).click();
   expect(slot.children).toHaveLength(0);
-  await startFirstRunGmail(
-    { client } as unknown as Transport,
-    "owner@example.com"
-  );
+  await startFirstRunGmail(hostOf(client), "owner@example.com");
   slot.remove();
   expect(document.getElementById("gmail-consent")).toBeNull();
-  await startFirstRunGmail(
-    { client } as unknown as Transport,
-    "owner@example.com"
-  );
+  await startFirstRunGmail(hostOf(client), "owner@example.com");
   expect(document.getElementById("gmail-consent")).toBeNull();
   expect(client.connectors.connect).not.toHaveBeenCalled();
+});
+
+it("decides in one place what each kind opens in the browser", () => {
+  expect(connectTarget("abacus-gmailuser", "me@example.com")).toEqual({
+    kind: "connect-page",
+    url: `${GMAIL_PAGE}&hint=me%40example.com`,
+  });
+  for (const id of ["notion", "huggingface"])
+    expect(connectTarget(id)).toEqual({
+      kind: "host-route",
+      url: `${HOST}/mcp/connect/${id}`,
+    });
+  // The user's own server, by its name.
+  expect(connectTarget("my server")).toEqual({
+    kind: "host-route",
+    url: `${HOST}/mcp/connect/my%20server`,
+  });
+  expect(connectTarget("messaging-whatsapp")).toEqual({ kind: "pairing" });
+});
+
+it.each([
+  ["library", "notion"],
+  ["agent request", "huggingface"],
+])(
+  "%s: an MCP connector opens the host's route inside the click and waits for its status",
+  async (surface, id) => {
+    const open = opening();
+    vi.stubGlobal("open", open);
+    const { client, changed } = clientFor();
+    client.connectors.statuses
+      .mockReset()
+      .mockResolvedValueOnce({})
+      .mockResolvedValue({ [id]: { state: "connected" } });
+    const pending =
+      surface === "library"
+        ? flowFor(client).start(id)
+        : connectRequest(hostOf(client), {
+            requestId: "request",
+            connectorId: id,
+            conversationKey: "bot:bot-id",
+          } as never);
+    expect(open).toHaveBeenCalledExactlyOnceWith(
+      `${HOST}/mcp/connect/${id}`,
+      "_blank"
+    );
+    await vi.waitFor(() =>
+      expect(client.connectors.statuses).toHaveBeenCalledOnce()
+    );
+    await changed();
+    expect(await pending).toEqual(
+      surface === "library" ? { ok: true } : { kind: "connected" }
+    );
+    // The route installs and signs in: nothing is asked over the socket.
+    expect(client.connectors.connect).not.toHaveBeenCalled();
+  }
+);
+
+it("a connect the host reports failed ends at once, and only for its connector", async () => {
+  vi.stubGlobal("open", opening());
+  const { client, failed } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  const attempt = new ConnectAttempt(hostOf(client), "notion");
+  await failed("canva");
+  await failed("notion");
+  expect(await attempt.result).toEqual({ ok: false, error: "failed" });
+});
+
+it("cancel tells the host to drop the connect, once; a finished attempt asks nothing", async () => {
+  vi.stubGlobal("open", opening());
+  const { client, changed } = clientFor();
+  client.connectors.statuses.mockReset().mockResolvedValue({});
+  const attempt = new ConnectAttempt(hostOf(client), "notion");
+  attempt.cancel();
+  attempt.cancel();
+  expect(await attempt.result).toMatchObject({ cancelled: true });
+  expect(client.connectors.cancelConnect).toHaveBeenCalledExactlyOnceWith({
+    connectorId: "notion",
+  });
+  const done = new ConnectAttempt(hostOf(client), "notion");
+  client.connectors.statuses.mockResolvedValue({
+    notion: { state: "connected" },
+  });
+  await changed();
+  expect(await done.result).toEqual({ ok: true });
+  done.cancel();
+  expect(client.connectors.cancelConnect).toHaveBeenCalledOnce();
 });

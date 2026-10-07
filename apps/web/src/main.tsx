@@ -46,6 +46,7 @@ import {
 } from "#renderer/lib/navigation/single-transition";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { staleBuildCheck } from "#renderer/lib/stale-build";
 import {
   applyBootLook,
   applyLook,
@@ -79,24 +80,15 @@ window.addEventListener("error", (event) => {
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer] unhandled rejection", event.reason);
 });
-// A new browser build replaces every hashed file, so a tab still running the old
-// one cannot load a screen it has not opened yet. When the served shell names
-// another build, reload onto it; the same build never reloads, so no loop.
+// A tab still running an older browser build reloads onto the new one.
 if (!IS_ELECTRON) {
-  const entryOf = (html: string) =>
-    /\/assets\/index-[\w-]+\.js/.exec(html)?.[0];
-  window.addEventListener("vite:preloadError", () => {
-    const running = entryOf(
-      [...document.scripts].map((script) => script.src).join(" ")
-    );
-    void fetch(import.meta.env.BASE_URL, { cache: "no-store" })
-      .then((response) => response.text())
-      .then((html) => {
-        const served = entryOf(html);
-        if (served && running && served !== running) location.reload();
-      })
-      .catch(() => undefined);
-  });
+  const check = staleBuildCheck(
+    async () =>
+      (await fetch(import.meta.env.BASE_URL, { cache: "no-store" })).text(),
+    () => [...document.scripts].map((script) => script.src),
+    () => location.reload()
+  );
+  window.addEventListener("vite:preloadError", () => void check());
 }
 // TanStack/router#7906: a route transition the browser skips (hidden window)
 // must not surface as an unhandled rejection.

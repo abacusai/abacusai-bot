@@ -7,16 +7,15 @@
  */
 import { useSelector } from "@tanstack/react-store";
 import { CheckIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-import { readLastKnown } from "#platform/last-known";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
 import { webSignInHref } from "#renderer/lib/navigation/web-sign-in";
-import { applyTheme, themeOverride } from "#renderer/lib/theme";
+import { holdTheme } from "#renderer/lib/theme";
 import { Button } from "#renderer/ui/button";
 import { Spinner } from "#renderer/ui/spinner";
 
@@ -30,6 +29,39 @@ import {
 
 const kindOf = (error?: Error | null) =>
   error ? (error instanceof ConnectError ? error.kind : "connection") : null;
+
+/**
+ * Which full screen a failure takes, for both places that show one. Retrying
+ * a connection means the running loop's next attempt (`retry-now`) when one
+ * runs behind the page, and a reload when none does.
+ */
+export type FailureScreen =
+  | { kind: "refused" }
+  | { kind: "limit" }
+  | { kind: "failed"; retry: "reload" | "retry-now" }
+  | { kind: "banner" }
+  | null;
+
+export const failureScreen = (
+  error: Error | null | undefined,
+  loopRunning: boolean
+): FailureScreen => {
+  switch (kindOf(error)) {
+    case null:
+      return null;
+    case "signin":
+    case "tier":
+      return { kind: "refused" };
+    case "limit":
+      return { kind: "limit" };
+    case "connection":
+      return { kind: "failed", retry: loopRunning ? "retry-now" : "reload" };
+    case "reload":
+      return { kind: "failed", retry: "reload" };
+    case "version":
+      return { kind: "banner" };
+  }
+};
 
 const ConnectAction = ({
   error,
@@ -54,6 +86,13 @@ const ConnectAction = ({
   return null;
 };
 
+/** The page's own words for a refusal: an error's text is for the console. */
+const REFUSAL_TEXT: Readonly<Record<string, string>> = {
+  signin: "signedOut",
+  tier: "tierRequired",
+  version: "hostOutdated",
+};
+
 export const ConnectScreen = ({
   stage,
   error,
@@ -64,17 +103,22 @@ export const ConnectScreen = ({
   restart?(): void;
 }) => {
   const { t } = useTranslation();
-  const kind = kindOf(error);
-  if (kind === "limit") return <LimitScreen />;
-  // No connection loop runs behind this screen: a reload is the retry.
-  if (kind === "connection" || kind === "reload")
+  useEffect(() => {
+    if (error) console.warn("[connect] host refused", error);
+  }, [error]);
+  // No connection loop runs behind this screen.
+  const screen = failureScreen(error, false);
+  if (screen?.kind === "limit") return <LimitScreen />;
+  if (screen?.kind === "failed")
     return <FailedScreen error={error} retry={() => location.reload()} />;
   return (
     <main
       className="bg-background text-foreground fixed inset-0 z-50 flex h-screen flex-col items-center justify-center gap-4"
       role="status"
     >
-      <p>{error?.message ?? t(`web.connect.${stage}`)}</p>
+      <p>
+        {t(`web.connect.${REFUSAL_TEXT[kindOf(error) ?? "none"] ?? stage}`)}
+      </p>
       <ConnectAction error={error} restart={restart} />
     </main>
   );
@@ -133,34 +177,32 @@ export const LimitScreen = () => {
   );
 };
 
-/** Forces the light theme while mounted; the previous override after. */
+/** Holds the light theme while mounted; releasing it restores what was under it. */
 const useLightOnly = (): void => {
-  useEffect(() => {
-    const previous = themeOverride.state;
-    themeOverride.setState(() => "light");
-    applyTheme(document, "light");
-    return () => themeOverride.setState(() => previous);
-  }, []);
+  useEffect(() => holdTheme("light"), []);
 };
 
 const SETUP_STEPS = [
-  { key: "stepStarting", stages: ["starting"] },
-  { key: "stepInstalling", stages: ["installing", "updating"] },
-  { key: "stepConnecting", stages: ["connecting", "reconnecting", "open"] },
-] as const satisfies readonly {
-  key: string;
-  stages: readonly ConnectStage[];
-}[];
+  { key: "stepStarting", progress: "33%" },
+  { key: "stepInstalling", progress: "66%" },
+  { key: "stepConnecting", progress: "92%" },
+] as const;
 
-const SETUP_PROGRESS = ["33%", "66%", "92%"];
+/** Every stage's setup step, exhaustively. */
+const SETUP_STEP_OF = {
+  starting: 0,
+  installing: 1,
+  updating: 1,
+  connecting: 2,
+  reconnecting: 2,
+  open: 2,
+} as const satisfies Record<ConnectStage, 0 | 1 | 2>;
 
 /** A first visit: the host is being set up, a full page with its steps. */
 export const SetupScreen = ({ stage }: { stage: ConnectStage }) => {
   const { t } = useTranslation();
   useLightOnly();
-  const current = SETUP_STEPS.findIndex((step) =>
-    (step.stages as readonly ConnectStage[]).includes(stage)
-  );
+  const current = SETUP_STEP_OF[stage];
   return (
     <main
       data-slot="host-setup"
@@ -214,7 +256,7 @@ export const SetupScreen = ({ stage }: { stage: ConnectStage }) => {
           <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
             <div
               className="bg-primary h-full rounded-full transition-[width] duration-700 ease-out"
-              style={{ width: SETUP_PROGRESS[current] }}
+              style={{ width: SETUP_STEPS[current].progress }}
             />
           </div>
         </div>
@@ -285,8 +327,18 @@ export const FailedScreen = ({
   );
 };
 
+/** The pill's words for every stage, exhaustively. */
+const PILL_LABEL = {
+  starting: "waking",
+  installing: "waking",
+  updating: "updating",
+  connecting: "connecting",
+  reconnecting: "reconnecting",
+  open: "waking",
+} as const satisfies Record<ConnectStage, string>;
+
 /** A returning user's shell, while the host wakes: a pill at the top. */
-const StatusPill = ({ stage }: { stage: ConnectStage }) => {
+export const StatusPill = ({ stage }: { stage: ConnectStage }) => {
   const { t } = useTranslation();
   return (
     <div
@@ -296,11 +348,7 @@ const StatusPill = ({ stage }: { stage: ConnectStage }) => {
     >
       <span className="bg-background text-muted-foreground border-border flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-xs">
         <Spinner aria-hidden className="size-3.5" />
-        {stage === "connecting" ||
-        stage === "reconnecting" ||
-        stage === "updating"
-          ? t(`web.connect.${stage}`)
-          : t("web.connect.waking")}
+        {t(`web.connect.${PILL_LABEL[stage]}`)}
       </span>
     </div>
   );
@@ -309,25 +357,26 @@ const StatusPill = ({ stage }: { stage: ConnectStage }) => {
 /** The shell's view of `hostConnection`: nothing while a socket is open. */
 export const HostStatus = () => {
   const { t } = useTranslation();
-  const { stage, error, attempting, generation } = useSelector(
+  const { stage, error, attempting, firstVisit } = useSelector(
     hostConnection,
     (state) => state
   );
-  // Read once: the first open writes it, and later drops are not a setup.
-  const [seenBefore] = useState(() => readLastKnown("system") != null);
-  const kind = kindOf(error);
-  if (kind === "signin" || kind === "tier" || kind === "limit")
+  // The connection loop runs behind the shell.
+  const screen = failureScreen(error, true);
+  if (screen?.kind === "refused" || screen?.kind === "limit")
     return <ConnectScreen stage={stage} error={error} />;
-  if (kind === "connection" || kind === "reload")
+  if (screen?.kind === "failed")
     return (
       <FailedScreen
         error={error}
-        retry={kind === "reload" ? () => location.reload() : retryHostNow}
-        attempting={kind === "connection" && attempting}
+        retry={
+          screen.retry === "retry-now" ? retryHostNow : () => location.reload()
+        }
+        attempting={screen.retry === "retry-now" && attempting}
       />
     );
   if (stage === "open") return null;
-  if (kind === "version")
+  if (screen?.kind === "banner")
     return (
       <div
         data-slot="host-status"
@@ -335,10 +384,9 @@ export const HostStatus = () => {
         className="bg-muted text-muted-foreground fixed inset-x-0 top-0 z-40 flex items-center justify-center gap-3 px-4 py-1 text-xs"
       >
         <span>{t(`web.connect.${stage}`)}</span>
-        {error && <span className="text-foreground">{error.message}</span>}
         <ConnectAction error={error} restart={restartHost} />
       </div>
     );
-  if (!seenBefore && generation === 0) return <SetupScreen stage={stage} />;
+  if (firstVisit) return <SetupScreen stage={stage} />;
   return <StatusPill stage={stage} />;
 };

@@ -18,6 +18,8 @@ import {
   type MessagingSnapshot,
 } from "@abacus-ai/contract/messaging";
 
+import type { McpTokenState } from "../mcp/mcp-oauth-service";
+
 export interface StatusInputs {
   /**
    * The platform's listing, already narrowed to the registry, or null when
@@ -33,10 +35,8 @@ export interface StatusInputs {
   /** Credential providers with a key stored, or exported in the shell. */
   messaging: MessagingSnapshot | null;
   mcpServers: readonly McpServerInfo[];
-  /** MCP servers the running agent reports waiting on a sign-in. */
-  mcpAuthRequired?: ReadonlySet<string>;
-  /** Server URLs the host holds an OAuth token for. */
-  mcpTokens?: ReadonlySet<string>;
+  /** Each installed server's sign-in, by server id; absent when unlisted. */
+  mcpTokens: ReadonlyMap<string, McpTokenState>;
 }
 
 const statusOf = (
@@ -75,15 +75,15 @@ const statusOf = (
     case "mcp": {
       const server = inputs.mcpServers.find((item) => item.id === connector.id);
       if (server == null) return { state: "available" };
-      // An OAuth server is connected only once a token is held for it.
-      const unsigned =
+      const token = inputs.mcpTokens.get(server.id) ?? "absent";
+      // An OAuth server needs a valid token; any other, just not a refused one.
+      const signsIn =
         (connector.auth === "oauth" || connector.auth === "oauth-client") &&
         server.config.oauth !== false &&
-        server.config.url != null &&
-        inputs.mcpTokens?.has(server.config.url) === false;
-      return unsigned || inputs.mcpAuthRequired?.has(connector.id) === true
-        ? { state: "pending", reason: "sign-in-required" }
-        : { state: "connected" };
+        server.config.url != null;
+      return (signsIn ? token === "valid" : token !== "expired")
+        ? { state: "connected" }
+        : { state: "pending", reason: "sign-in-required" };
     }
   }
 };
@@ -109,8 +109,7 @@ export interface StatusSources {
   platform: () => Promise<StatusInputs["platform"]>;
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
-  mcpAuthRequired?: () => ReadonlySet<string>;
-  mcpTokens?: () => ReadonlySet<string>;
+  mcpTokens: () => ReadonlyMap<string, McpTokenState>;
 }
 
 /**
@@ -133,12 +132,7 @@ export class ConnectorStatusService {
       platform,
       messaging: this.sources.messaging(),
       mcpServers: this.sources.mcpServers(),
-      ...(this.sources.mcpAuthRequired != null
-        ? { mcpAuthRequired: this.sources.mcpAuthRequired() }
-        : {}),
-      ...(this.sources.mcpTokens != null
-        ? { mcpTokens: this.sources.mcpTokens() }
-        : {}),
+      mcpTokens: this.sources.mcpTokens(),
     });
   }
 }

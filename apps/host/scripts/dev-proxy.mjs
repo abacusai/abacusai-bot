@@ -112,6 +112,15 @@ const proxy = createServer(
         "x-abacus-user-id": owner,
         authorization: `Bearer ${token()}`,
       });
+    // The /mcp/* routes take the proxy's signature instead (spec 08, D8).
+    const forwarded = new URL(upstreamUrl(target, req.url));
+    if (isHost && forwarded.pathname.startsWith("/mcp/")) {
+      const ts = Math.floor(Date.now() / 1000);
+      const mac = createHmac("sha256", secret)
+        .update(`mcp\n${req.method}\n${forwarded.pathname}\n${owner}\n${ts}`)
+        .digest("hex");
+      headers["x-abacus-host-proof"] = `${ts}.${mac}`;
+    }
     const request = (target.protocol === "https:" ? httpsRequest : httpRequest)(
       upstreamUrl(target, req.url),
       { method: req.method, headers },

@@ -28,6 +28,7 @@ import {
   RELOAD_DELAY_MS,
   reportFailedBoot,
 } from "./bootstrap";
+import { reloadIfShellChanged, staleBuildCheck } from "./stale-build";
 
 const os = implement(contract).$context<{ ready: unknown[] }>();
 
@@ -422,5 +423,65 @@ describe("mountWhenOpen (Codex impl r2 #2)", () => {
     ).resolves.toBe(false);
     expect(prepare).not.toHaveBeenCalled();
     expect(mount).not.toHaveBeenCalled();
+  });
+});
+
+describe("reloading onto a new browser build", () => {
+  const OLD = ["https://apps.example/bot/assets/index-AAA111.js"];
+  const shell = (entry: string) =>
+    `<script type="module" src="/bot/assets/index-${entry}.js"></script>`;
+
+  it("reloads when the served shell names another entry, and only then", async () => {
+    const reload = vi.fn();
+    expect(
+      await reloadIfShellChanged(async () => shell("BBB222"), OLD, reload)
+    ).toBe(true);
+    expect(reload).toHaveBeenCalledOnce();
+    reload.mockClear();
+    expect(
+      await reloadIfShellChanged(async () => shell("AAA111"), OLD, reload)
+    ).toBe(false);
+    expect(
+      await reloadIfShellChanged(
+        async () => {
+          throw new Error("offline");
+        },
+        OLD,
+        reload
+      )
+    ).toBe(false);
+    expect(
+      await reloadIfShellChanged(async () => "<html></html>", OLD, reload)
+    ).toBe(false);
+    expect(
+      await reloadIfShellChanged(async () => shell("BBB222"), [], reload)
+    ).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("a burst of preload errors checks once and reloads at most once", async () => {
+    const reload = vi.fn();
+    let serve!: (html: string) => void;
+    const fetchShell = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          serve = resolve;
+        })
+    );
+    const check = staleBuildCheck(fetchShell, () => OLD, reload);
+    const burst = [check(), check(), check()];
+    serve(shell("BBB222"));
+    await Promise.all(burst);
+    await check();
+    expect(fetchShell).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("checks again after a check that found nothing new", async () => {
+    const fetchShell = vi.fn(async () => shell("AAA111"));
+    const check = staleBuildCheck(fetchShell, () => OLD, vi.fn());
+    await check();
+    await check();
+    expect(fetchShell).toHaveBeenCalledTimes(2);
   });
 });

@@ -3446,6 +3446,9 @@
     "closePreview": "Close preview",
     "connectName": "Hubungkan {{name}}",
     "connectWaiting": "Selesaikan proses masuk untuk menghubungkan layanan ini.",
+    "popupBlocked": "Browser Anda memblokir tab baru. Izinkan pop-up untuk situs ini, lalu coba lagi.",
+    "connectTimedOut": "Waktu menghubungkan habis. Silakan coba lagi.",
+    "connectFailed": "Proses menghubungkan tidak selesai. Silakan coba lagi.",
     "connectorsDescription": "Hubungkan layanan yang dapat digunakan agen untuk menyelesaikan tugas.",
     "credentialsLocal": "Kredensial disimpan di komputer ini.",
     "defaultWorkspace": "Default workspace",
@@ -3974,7 +3977,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "Masuk untuk menggunakan AbacusAI Bot di web.",
+      "tierRequired": "AbacusAI Bot di web memerlukan paket Pro.",
+      "hostOutdated": "Bot Anda sudah usang. Mulai ulang komputer Anda untuk memperbaruinya."
     },
     "files": {
       "open": "Open folder"

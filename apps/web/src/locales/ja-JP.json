@@ -3446,6 +3446,9 @@
     "closePreview": "Close preview",
     "connectName": "{{name}}に接続",
     "connectWaiting": "ログインを完了してこのサービスに接続してください。",
+    "popupBlocked": "ブラウザーが新しいタブをブロックしました。このサイトのポップアップを許可してから、もう一度お試しください。",
+    "connectTimedOut": "接続がタイムアウトしました。もう一度お試しください。",
+    "connectFailed": "接続が完了しませんでした。もう一度お試しください。",
     "connectorsDescription": "エージェントが作業に使用できるサービスを接続します。",
     "credentialsLocal": "認証情報はこのコンピューターに保存されます。",
     "defaultWorkspace": "Default workspace",
@@ -3974,7 +3977,10 @@
       "failedTitle": "Your bot didn't wake up",
       "failedBody": "This is on our side. Trying again usually fixes it.",
       "tryAgain": "Try again",
-      "desktopInstead": "Get the desktop app instead"
+      "desktopInstead": "Get the desktop app instead",
+      "signedOut": "Web で AbacusAI Bot を使うにはサインインしてください。",
+      "tierRequired": "Web 版 AbacusAI Bot には Pro プランが必要です。",
+      "hostOutdated": "ボットが古くなっています。コンピューターを再起動して更新してください。"
     },
     "files": {
       "open": "Open folder"

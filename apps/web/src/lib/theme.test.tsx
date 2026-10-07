@@ -29,15 +29,17 @@ import {
   LOOK_EVENT,
   resolveTheme,
   localLookStore,
+  holdTheme,
   setLookStore,
   themeOverride,
 } from "./theme";
-import { ThemeEffect } from "./theme-effect";
+import { BootThemeEffect, ThemeEffect } from "./theme-effect";
 
 const cleanups: Array<() => Promise<void>> = [];
+const releases: Array<() => void> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
-  themeOverride.setState(() => null);
+  for (const release of releases.splice(0)) release();
 });
 
 const mount = async (
@@ -129,7 +131,47 @@ describe("ThemeEffect", () => {
 
   it("lets the gallery override the whole document", async () => {
     await mount(fixturePrefs({ theme: "light" }));
-    act(() => themeOverride.setState(() => "dark"));
+    act(() => {
+      releases.push(holdTheme("dark"));
+    });
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(true));
+  });
+});
+
+describe("theme scopes", () => {
+  it("nest: the newest held wins, and releasing any one leaves the rest", () => {
+    const light = holdTheme("light");
+    const dark = holdTheme("dark");
+    expect(themeOverride.state).toBe("dark");
+    light();
+    expect(themeOverride.state).toBe("dark");
+    light();
+    dark();
+    expect(themeOverride.state).toBeNull();
+  });
+
+  it("before prefs arrive, a released scope puts the boot look back, not the forced one", async () => {
+    setMediaMatches({ "(prefers-color-scheme: dark)": true });
+    render(<BootThemeEffect />);
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(true));
+    let release = (): void => {};
+    act(() => {
+      release = holdTheme("light");
+    });
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(false));
+    act(() => release());
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(true));
+  });
+
+  it("with prefs known, a released scope puts the user's theme back", async () => {
+    await mount(fixturePrefs({ theme: "dark" }));
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(true));
+    let release = (): void => {};
+    act(() => {
+      release = holdTheme("light");
+    });
+    await waitFor(() => expect(root().classList.contains("dark")).toBe(false));
+    act(() => release());
     await waitFor(() => expect(root().classList.contains("dark")).toBe(true));
   });
 });

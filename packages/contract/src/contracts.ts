@@ -613,6 +613,8 @@ export type IpcEvent =
   // Something changed a connector's status (connected, disconnected, a key
   // stored); the renderer re-reads the statuses once.
   | ({ type: "connector-status-changed" } & IpcEventBase)
+  // A connect the user started on the host's page did not finish.
+  | ({ type: "connector-connect-failed"; connectorId: string } & IpcEventBase)
   | ({
       type: "browser-permission-cleared";
       requestId: string;

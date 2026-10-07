@@ -1,21 +1,16 @@
 import { connectorById } from "@abacus-ai/connectors/registry";
-import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 
 import type { Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
-import {
-  CONNECT_WAIT_MS,
-  opensConnectTab,
-  waitForConnected,
-} from "#renderer/lib/connect-page";
-import { openConnectPage } from "#renderer/lib/platform-system";
+import { ConnectAttempt } from "#renderer/lib/connect-page";
+import { connectTarget } from "#renderer/lib/platform-system";
 
-/** The step's pending connect; leaving the step stops waiting on it. */
-let waiting: AbortController | null = null;
+/** The step's pending connect; leaving the step cancels it. */
+let waiting: ConnectAttempt | null = null;
 
 export const cancelOnboardingConnect = (): void => {
-  waiting?.abort();
+  waiting?.cancel();
   waiting = null;
 };
 
@@ -26,11 +21,7 @@ export const connectOnboarding = async (
   id: string
 ) => {
   const connector = connectorById(id);
-  // Opened inside the click, before any await.
-  const opened = opensConnectTab(connector)
-    ? openConnectPage(transport.client, id)
-    : null;
-  if (connector?.kind === "messaging") {
+  if (connectTarget(id).kind === "pairing" && connector?.kind === "messaging") {
     await transport.client.messaging.updatePlatform({
       platformId: connector.platform,
       enabled: true,
@@ -43,26 +34,16 @@ export const connectOnboarding = async (
     });
     return { ok: false, deferred: true } as const;
   }
-  waiting?.abort();
-  const abort = new AbortController();
-  waiting = abort;
-  const timer = setTimeout(() => abort.abort(), CONNECT_WAIT_MS);
-  let outcome: ConnectorOutcome;
+  // Inside the click, before any await.
+  waiting?.cancel();
+  const attempt = new ConnectAttempt(transport, id);
+  waiting = attempt;
   try {
-    if (opened != null) {
-      outcome = await opened;
-      if (outcome.ok)
-        outcome = await waitForConnected(transport.client, id, abort.signal);
-    } else
-      outcome = await transport.client.connectors.connect(
-        { connectorId: id },
-        { signal: abort.signal }
-      );
+    const outcome = await attempt.result;
+    if (!outcome.ok && !outcome.cancelled)
+      throw new Error("connector-connect-failed");
+    return outcome;
   } finally {
-    clearTimeout(timer);
-    if (waiting === abort) waiting = null;
+    if (waiting === attempt) waiting = null;
   }
-  if (!outcome.ok && !outcome.cancelled)
-    throw new Error("connector-connect-failed");
-  return outcome;
 };

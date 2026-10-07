@@ -1,8 +1,4 @@
-import {
-  connectorById,
-  connectUi,
-  type Connector,
-} from "@abacus-ai/connectors/registry";
+import { connectorById, type Connector } from "@abacus-ai/connectors/registry";
 import type { ConnectorOutcome } from "@abacus-ai/contract/contracts";
 import {
   isMessagingPlatformConnected,
@@ -17,17 +13,14 @@ import { Store, useStore } from "@tanstack/react-store";
 import { signInAbacus } from "#platform/sign-in";
 import type { Db } from "#renderer/data/db";
 import type { Transport } from "#renderer/data/transport";
-import {
-  CONNECT_WAIT_MS,
-  opensConnectTab,
-  waitForConnected,
-} from "#renderer/lib/connect-page";
+import { ConnectAttempt } from "#renderer/lib/connect-page";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-import { openConnectPage } from "#renderer/lib/platform-system";
+import { connectTarget } from "#renderer/lib/platform-system";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 
-export const CONNECT_WATCHDOG_MS = CONNECT_WAIT_MS;
+/** How long a chat app's pairing may stay open before it is given up. */
+export const PAIRING_WAIT_MS = 180_000;
 export interface FlowDeps {
   transport: Transport;
   db: Db;
@@ -38,7 +31,7 @@ export interface FlowDeps {
 }
 export type FlowState = {
   connectorId: string | null;
-  /** `waiting`: the connect page (or an MCP sign-in) is open elsewhere. */
+  /** `waiting`: the connect page or the host's route is open in another tab. */
   phase: "idle" | "waiting" | "fields" | "pairing" | "signing-in";
   error?: string;
   chromeMissing?: boolean;
@@ -88,9 +81,10 @@ export const createConnectFlow = (deps: FlowDeps) => {
     connectorId: string;
     platform?: MessagingPlatformId;
     resolve(outcome: ConnectorOutcome): void;
+    /** The pairing's watchdog. */
     timer?: ReturnType<typeof setTimeout>;
-    /** Stops waiting on the connect page. */
-    abort?: AbortController;
+    /** The connect in flight; it owns its own deadline. */
+    attempt?: ConnectAttempt;
     ready?: Promise<void>;
     settlement?: Promise<void>;
   };
@@ -98,7 +92,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
   let serial = 0;
   const finishRecord = (a: PairingRecord, result: ConnectorOutcome) => {
     if (a.timer) clearTimeout(a.timer);
-    a.abort?.abort();
+    a.attempt?.cancel();
     if (active?.id === a.id) {
       active = null;
       store.setState(() => ({
@@ -200,7 +194,7 @@ export const createConnectFlow = (deps: FlowDeps) => {
         timer: setTimeout(() => {
           if (active?.id !== id) return;
           void cancel().catch(() => undefined);
-        }, CONNECT_WATCHDOG_MS),
+        }, PAIRING_WAIT_MS),
       };
       store.setState(() => ({ connectorId: platform, phase: "pairing" }));
     }
@@ -226,111 +220,91 @@ export const createConnectFlow = (deps: FlowDeps) => {
     }
     await settleRecord(a);
   };
-  const statusesKey = () =>
-    deps.transport.orpc.connectors.statuses.queryKey({ input: {} });
+  /** A chat app: enabled now, then paired on its page or deferred to later. */
+  const pair = async (
+    id: number,
+    entry: Extract<Connector, { kind: "messaging" }>,
+    pairing: "navigate" | "defer" | undefined
+  ) => {
+    if (active) active.platform = entry.platform;
+    await connectPlatform(deps, entry.platform);
+    if (active?.id !== id) return;
+    if (pairing === "defer") {
+      const prefs = deps.db.collections.prefs.get("app");
+      await deps.db.updatePrefs({
+        onboardingPairing: [
+          ...new Set([...(prefs?.onboardingPairing ?? []), entry.platform]),
+        ],
+      });
+      finish(id, { ok: true });
+      return;
+    }
+    store.setState(() => ({ connectorId: entry.id, phase: "pairing" }));
+    await deps.navigate(entry.platform);
+  };
+  /** The attempt's tab opened in the click; the host is signed in first when it must be. */
+  const attempt = (connectorId: string): ConnectAttempt =>
+    new ConnectAttempt(deps.transport, connectorId, {
+      signIn: async () => {
+        const result = await signInAbacus(deps.transport, { intent: "signin" });
+        if (result.ok) await deps.credentialsChanged?.();
+        return result;
+      },
+      onPhase: (phase) =>
+        store.setState((state) =>
+          state.connectorId === connectorId ? { ...state, phase } : state
+        ),
+    });
   const start = async (
     connectorId: string,
     options: { pairing?: "navigate" | "defer" } = {}
   ): Promise<ConnectorOutcome> => {
     const entry = connectorById(connectorId);
-    // A platform connector's page opens inside the click, before any await,
-    // unless the host must sign in first.
-    const signedOut =
-      deps.queryClient.getQueryData<Record<string, { reason?: string }>>(
-        statusesKey()
-      )?.[connectorId]?.reason === "not-signed-in";
-    let opened =
-      opensConnectTab(entry) && !signedOut
-        ? openConnectPage(deps.transport.client, connectorId)
-        : null;
-    // Awaited below unless superseded first.
-    opened?.catch(() => undefined);
+    if (!entry) return { ok: false, error: "unknown-connector" };
+    const target = connectTarget(connectorId);
+    // Inside the click, before any await: a tab opens now or not at all.
+    const connecting =
+      target.kind === "pairing" || target.kind === "fields"
+        ? null
+        : attempt(connectorId);
     const id = ++serial;
     await cancel();
-    if (id !== serial)
+    if (id !== serial) {
+      connecting?.cancel();
       return { ok: false, cancelled: true, error: "superseded" };
-    if (!entry) return { ok: false, error: "unknown-connector" };
-    const abort = new AbortController();
+    }
     const outcome = new Promise<ConnectorOutcome>((resolve) => {
       active = {
         id,
         connectorId,
         resolve,
-        abort,
-        timer: setTimeout(() => {
-          if (active?.id !== id) return;
-          void cancel().catch(() => undefined);
-          store.setState(() => ({
-            connectorId,
-            phase: "idle",
-            error: "timeout",
-          }));
-        }, CONNECT_WATCHDOG_MS),
+        ...(connecting ? { attempt: connecting } : {}),
+        // A connect attempt keeps its own deadline; a pairing gets this one.
+        ...(target.kind === "pairing"
+          ? {
+              timer: setTimeout(() => {
+                if (active?.id !== id) return;
+                void cancel().catch(() => undefined);
+                store.setState(() => ({
+                  connectorId,
+                  phase: "idle",
+                  error: "timeout",
+                }));
+              }, PAIRING_WAIT_MS),
+            }
+          : {}),
       };
     });
-    const current = () => active?.id === id;
     void (async () => {
       try {
-        if (entry.kind === "platform" && opened == null) {
-          const statuses = await deps.transport.client.connectors.statuses({});
-          if (!current()) return;
-          if (statuses[connectorId]?.reason === "not-signed-in") {
-            store.setState(() => ({ connectorId, phase: "signing-in" }));
-            const result = await signInAbacus(deps.transport, {
-              intent: "signin",
-            });
-            if (!current()) return;
-            if (!result.ok) {
-              finish(id, result);
-              return;
-            }
-            await deps.credentialsChanged?.();
-          }
-          opened = openConnectPage(deps.transport.client, connectorId);
-        }
-        const ui = connectUi(entry);
-        if (ui === "pairing" && entry.kind === "messaging") {
-          if (active) active.platform = entry.platform;
-          await connectPlatform(deps, entry.platform);
-          if (!current()) return;
-          if (options.pairing === "defer") {
-            const prefs = deps.db.collections.prefs.get("app");
-            await deps.db.updatePrefs({
-              onboardingPairing: [
-                ...new Set([
-                  ...(prefs?.onboardingPairing ?? []),
-                  entry.platform,
-                ]),
-              ],
-            });
-            finish(id, { ok: true });
-            return;
-          }
-          store.setState(() => ({ connectorId, phase: "pairing" }));
-          await deps.navigate(entry.platform);
-          return;
-        }
-        if (ui === "fields") {
+        if (target.kind === "pairing" && entry.kind === "messaging")
+          await pair(id, entry, options.pairing);
+        else if (target.kind === "fields")
           store.setState(() => ({ connectorId, phase: "fields" }));
-          return;
+        else if (connecting != null) {
+          store.setState(() => ({ connectorId, phase: "waiting" }));
+          await complete(id, entry, await connecting.result);
         }
-        store.setState(() => ({ connectorId, phase: "waiting" }));
-        let result: ConnectorOutcome;
-        if (opened != null) {
-          result = await opened;
-          if (!current()) return;
-          if (result.ok)
-            result = await waitForConnected(
-              deps.transport.client,
-              connectorId,
-              abort.signal
-            );
-        } else
-          result = await deps.transport.client.connectors.connect({
-            connectorId,
-          });
-        if (!current()) return;
-        await complete(id, entry, result);
       } catch (e) {
         finish(id, { ok: false, error: errorText(e) });
       }

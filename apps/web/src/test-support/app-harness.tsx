@@ -207,7 +207,6 @@ const shellRouter = (
     },
     models: { list: os.models.list.handler(() => []) },
     connectors: {
-      cancelConnect: os.connectors.cancelConnect.handler(() => {}),
       statuses: os.connectors.statuses.handler(() => ({})),
       events: os.connectors.events.handler(quiet as never),
     },

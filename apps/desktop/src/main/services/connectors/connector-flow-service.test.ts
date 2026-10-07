@@ -4,18 +4,31 @@
  * same thing for the same connector.
  */
 import { connectorById } from "@abacus-ai/connectors/registry";
+import type { McpServerEntry } from "@abacus-ai/contract/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ConnectorFlowService, mcpEntryFor } from "./connector-flow-service";
+import {
+  ConnectorFlowService,
+  type McpSignIn,
+  mcpEntryFor,
+} from "./connector-flow-service";
 
 const platformConnect = vi.fn(
   () => ({ ok: true, url: "https://apps.example/connect" }) as const
 );
 const platformDisconnect = vi.fn(async () => ({ ok: true }) as const);
 const watch = vi.fn();
-const addServer = vi.fn(() => ({ success: true }));
+const installed = new Map<string, McpServerEntry>();
+const addServer = vi.fn((name: string, entry: McpServerEntry) => {
+  installed.set(name, entry);
+  return { success: true };
+});
 const removeServer = vi.fn(() => ({ success: true }));
-const signIn = vi.fn(async () => ({ success: true }));
+const signIn = vi.fn(async (_name: string): Promise<McpSignIn> => ({
+  kind: "signed-in",
+}));
+/** The web host's route; null on the desktop. */
+let connectUrl: (name: string) => string | null = () => null;
 
 const flow = (): ConnectorFlowService =>
   new ConnectorFlowService({
@@ -24,12 +37,21 @@ const flow = (): ConnectorFlowService =>
       disconnect: platformDisconnect,
       watch,
     },
-    mcp: { add: addServer, remove: removeServer, signIn, watch },
+    mcp: {
+      entry: (name) => installed.get(name),
+      add: addServer,
+      remove: removeServer,
+      signIn,
+      connectUrl: (name) => connectUrl(name),
+      watch,
+    },
     homeDir: () => "/home/ada",
   });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  installed.clear();
+  connectUrl = () => null;
 });
 
 describe("a platform connector", () => {
@@ -89,24 +111,83 @@ describe("an MCP server connector", () => {
     expect(signIn).toHaveBeenCalledWith("notion");
   });
 
-  it("answers a hosted sign-in with its start link and watches for the connection", async () => {
-    signIn.mockResolvedValueOnce({
-      success: true,
-      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
-    } as never);
+  it("leaves an entry already there as it is, and signs in to it again", async () => {
+    installed.set("notion", { url: "https://mcp.notion.com/mcp", env: {} });
+
+    expect(await flow().connect("notion")).toEqual({ ok: true });
+    expect(addServer).not.toHaveBeenCalled();
+    expect(installed.get("notion")).toEqual({
+      url: "https://mcp.notion.com/mcp",
+      env: {},
+    });
+    expect(signIn).toHaveBeenCalledWith("notion");
+  });
+
+  it("on the web host, hands out the host's route and installs nothing until it is opened", async () => {
+    connectUrl = (name) =>
+      `https://apps.example/api/botHost/h1/mcp/connect/${name}`;
 
     expect(await flow().connect("notion")).toEqual({
       ok: true,
-      url: "https://apps.example/api/botHost/h1/mcp/start/abc",
+      url: "https://apps.example/api/botHost/h1/mcp/connect/notion",
     });
-    expect(addServer).toHaveBeenCalledWith("notion", {
-      url: "https://mcp.notion.com/mcp",
+    expect(addServer).not.toHaveBeenCalled();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it("connectMcp: the provider's page for a hosted sign-in, watched until it connects", async () => {
+    signIn.mockResolvedValueOnce({
+      kind: "redirect",
+      location: "https://auth.example/authorize?state=s",
     });
+
+    expect(await flow().connectMcp("notion")).toEqual({
+      kind: "sign-in",
+      label: "Notion",
+      location: "https://auth.example/authorize?state=s",
+    });
+    expect(addServer).toHaveBeenCalledOnce();
     expect(watch).toHaveBeenCalledWith("notion");
   });
 
+  it("connectMcp: the user's own server signs in by its name, and connects at once when it asks for none", async () => {
+    installed.set("mine", { url: "https://mine.example/mcp" });
+    signIn.mockResolvedValueOnce({ kind: "open" });
+
+    expect(await flow().connectMcp("mine")).toEqual({
+      kind: "connected",
+      label: "mine",
+    });
+    expect(signIn).toHaveBeenCalledWith("mine");
+    expect(watch).not.toHaveBeenCalled();
+    installed.set("local", { command: "npx" });
+    expect(await flow().connectMcp("local")).toEqual({
+      kind: "connected",
+      label: "local",
+    });
+    expect(await flow().connectMcp("nothing")).toEqual({ kind: "missing" });
+    expect(await flow().connectMcp("abacus-slack")).toEqual({
+      kind: "missing",
+    });
+  });
+
+  it("answers a failed sign-in in its own words and logs the server's", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    signIn.mockResolvedValueOnce({
+      kind: "failed",
+      error: "Could not reach the server: getaddrinfo ENOTFOUND 10.0.0.7",
+    });
+
+    expect(await flow().connect("notion")).toEqual({
+      ok: false,
+      error: "Notion sign-in did not finish.",
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("ENOTFOUND"));
+    warn.mockRestore();
+  });
+
   it("keeps the server but reports a sign-in that did not finish", async () => {
-    signIn.mockResolvedValueOnce({ success: false, cancelled: true } as never);
+    signIn.mockResolvedValueOnce({ kind: "failed", cancelled: true });
 
     const outcome = await flow().connect("notion");
 
