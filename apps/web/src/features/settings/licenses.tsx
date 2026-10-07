@@ -23,6 +23,8 @@ interface LicensePackage {
 interface LicenseData {
   packages: LicensePackage[];
   texts: Record<string, string>;
+  /** False when the build ships no Chromium of its own (web), so there are no runtime notices to link. */
+  runtimeNotices?: boolean;
 }
 const asset = (name: string) =>
   IS_ELECTRON
@@ -87,13 +89,15 @@ export function Licenses() {
           >
             {t("settings.licenses.notices")}
           </a>
-          <a
-            className="text-muted-foreground text-xs underline underline-offset-4"
-            href={asset("LICENSES.chromium.html")}
-            download="LICENSES.chromium.html"
-          >
-            {t("settings.licenses.runtime")}
-          </a>
+          {data.data?.runtimeNotices !== false && (
+            <a
+              className="text-muted-foreground text-xs underline underline-offset-4"
+              href={asset("LICENSES.chromium.html")}
+              download="LICENSES.chromium.html"
+            >
+              {t("settings.licenses.runtime")}
+            </a>
+          )}
         </div>
       </div>
       <Input
