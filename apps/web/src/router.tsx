@@ -1,12 +1,11 @@
 import type { SystemInfo } from "@abacus-ai/contract/contract";
 /**
- * The router (spec 01 §6): file routes, hash history, route masks for the
+ * The router (spec 01 §6): file routes, platform history, route masks for the
  * pop-ups, and the context every loader gets. `bootstrap()` resolves the
  * transport, system facts and prefs before this exists (§8.6).
  */
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  createHashHistory,
   createRouteMask,
   createRouter,
   type RouterHistory,
@@ -21,6 +20,7 @@ import type { Transport } from "#renderer/data/transport";
 import { lazyChatRuntimeFor } from "#renderer/features/chat/runtime/lazy-runtime";
 import type { ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import type { NavType } from "#renderer/lib/motion";
+import { rendererHistory } from "#renderer/lib/navigation/renderer-history";
 
 import { routeTree } from "./routeTree.gen";
 
@@ -147,7 +147,7 @@ export const createAppRouter = ({ context, history }: AppRouterOptions) => {
       : lazyChatRuntimeFor(context.transport, credentialsChanged);
   return createRouter({
     routeTree,
-    history: history ?? createHashHistory(),
+    ...(history ? { history } : rendererHistory()),
     context: {
       ...context,
       credentialsChanged,

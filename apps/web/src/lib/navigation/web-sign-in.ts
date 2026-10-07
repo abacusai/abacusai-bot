@@ -5,5 +5,5 @@
  */
 export const webSignInHref = (): string =>
   `/chatllm/signin?AbacusAIBotWeb=1&redirectUrl=${encodeURIComponent(
-    `${location.origin}/bot/${location.hash}`
+    location.href
   )}`;

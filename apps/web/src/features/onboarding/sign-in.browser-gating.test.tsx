@@ -7,7 +7,7 @@ import { onboardingStore } from "./store";
 
 afterEach(() => {
   onboardingStore.setState(() => ({ signIn: null, createdBotId: null }));
-  location.hash = "";
+  window.history.replaceState(null, "", "/");
 });
 it.each([
   "auth-code:session:UNKNOWN",
@@ -31,7 +31,11 @@ it.each([
     expect(
       screen.getByText(/Connecting the account signed in on this site/)
     ).toBeTruthy();
-    location.hash = "#/onboarding/connect";
+    window.history.replaceState(
+      null,
+      "",
+      "/bot/onboarding/connect?from=signin"
+    );
     await act(async () =>
       onboardingStore.setState((state) => ({
         ...state,
@@ -52,7 +56,7 @@ it.each([
       expect(url.pathname).toBe("/chatllm/signin");
       // Absolute: the sign-in page ignores a relative return address.
       expect(url.searchParams.get("redirectUrl")).toBe(
-        `${location.origin}/bot/#/onboarding/connect`
+        `${location.origin}/bot/onboarding/connect?from=signin`
       );
       expect(url.searchParams.get("AbacusAIBotWeb")).toBe("1");
       expect(screen.getByRole("alert").textContent).toContain(

@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import { CreditsCard } from "#renderer/components/credits-card";
 import { cn } from "#renderer/lib/cn";
+import { AppLink } from "#renderer/lib/navigation/app-link";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
@@ -457,7 +458,7 @@ export const ErrorCard = ({
           <Button
             nativeButton={false}
             variant="secondary"
-            render={<a href="#/settings/models" />}
+            render={<AppLink to="/settings/models" />}
           >
             {t("settings.pages.models")}
           </Button>

@@ -1,19 +1,13 @@
-import type { OpenCommand, OpenTarget } from "@abacus-ai/contract/contract";
+import type { OpenCommand } from "@abacus-ai/contract/contract";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { followNotices } from "#renderer/data/queries/notices";
+import { openTargetOptions } from "#renderer/lib/navigation/open-target-options";
 import { IS_ELECTRON } from "#renderer/lib/platform";
-export const openTargetHref = (target: OpenTarget): string => {
-  if (target.kind === "bot")
-    return `/bots/${encodeURIComponent(target.botId)}${target.sessionId ? `/chats/${encodeURIComponent(target.sessionId)}` : ""}`;
-  if (target.kind === "routine-run")
-    return `/routines/${encodeURIComponent(target.routineId)}?run=${encodeURIComponent(target.sessionId)}`;
-  return `/sessions/${encodeURIComponent(target.sessionId)}`;
-};
 /** Navigation and acknowledgement have separate retry boundaries. */
 export const openCommandReceiver = (deps: {
-  navigate(href: string): Promise<unknown>;
+  navigate(options: ReturnType<typeof openTargetOptions>): Promise<unknown>;
   ack(id: string): Promise<unknown>;
   signal: AbortSignal;
 }) => {
@@ -29,7 +23,7 @@ export const openCommandReceiver = (deps: {
     const token = committed.has(command.id) ? generation : ++generation;
     const work = (async () => {
       if (!committed.has(command.id)) {
-        await deps.navigate(openTargetHref(command.target));
+        await deps.navigate(openTargetOptions(command.target));
         if (deps.signal.aborted || token !== generation) return;
         committed.add(command.id);
       }
@@ -54,7 +48,7 @@ export const OpenTargetBridge = () => {
     const abort = new AbortController();
     const receive = openCommandReceiver({
       signal: abort.signal,
-      navigate: (href) => router.navigate({ href }),
+      navigate: (options) => router.navigate(options),
       ack: (id) => transport.client.notch.ackOpen({ id }),
     });
     void followNotices(

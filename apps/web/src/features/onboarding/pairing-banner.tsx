@@ -48,7 +48,8 @@ export const PairingQueueBanner = ({
     try {
       if (open)
         await navigate({
-          href: `/library/messaging?platform=${encodeURIComponent(platform)}`,
+          to: "/library/messaging",
+          search: { platform },
         });
       else
         await db.updatePrefs({

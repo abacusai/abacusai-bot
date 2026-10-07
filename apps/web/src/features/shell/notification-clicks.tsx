@@ -4,26 +4,30 @@ import { useEffect } from "react";
 import type { Db } from "#renderer/data/db";
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
+import { openTargetOptions } from "#renderer/lib/navigation/open-target-options";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 
 /** Missing kind retains the session-only behavior of older producers. */
-export const notificationHref = (
-  metadata: NotificationMetadata
-): string | null => {
-  const session =
-    metadata.sessionId == null ? null : encodeURIComponent(metadata.sessionId);
+export const notificationOptions = (metadata: NotificationMetadata) => {
+  const sessionId = metadata.sessionId;
   switch (metadata.kind) {
     case "bot":
       return metadata.botId == null
         ? null
-        : `/bots/${encodeURIComponent(metadata.botId)}${session == null ? "" : `/chats/${session}`}`;
+        : openTargetOptions({ kind: "bot", botId: metadata.botId, sessionId });
     case "routine":
-      return metadata.routineId == null || session == null
+      return metadata.routineId == null || sessionId == null
         ? null
-        : `/routines/${encodeURIComponent(metadata.routineId)}?run=${session}`;
+        : openTargetOptions({
+            kind: "routine-run",
+            routineId: metadata.routineId,
+            sessionId,
+          });
     default:
-      return session == null ? null : `/sessions/${session}`;
+      return sessionId == null
+        ? null
+        : openTargetOptions({ kind: "session", sessionId });
   }
 };
 
@@ -56,8 +60,10 @@ export const NotificationClicks = ({
   useEffect(() => {
     const clicked = (event: Event) => {
       const metadata = (event as CustomEvent<NotificationMetadata>).detail;
-      const href = metadata ? notificationHref(withOwner(metadata, db)) : null;
-      if (href) void navigate({ href, transition: "nav-lateral" });
+      const options = metadata
+        ? notificationOptions(withOwner(metadata, db))
+        : null;
+      if (options) void navigate({ ...options, transition: "nav-lateral" });
     };
     window.addEventListener("abacusai-bot:notification-clicked", clicked);
     const abort = new AbortController();
@@ -73,8 +79,9 @@ export const NotificationClicks = ({
           });
           return;
         }
-        const href = notificationHref(withOwner(event.metadata, db));
-        if (href != null) void navigate({ href, transition: "nav-lateral" });
+        const options = notificationOptions(withOwner(event.metadata, db));
+        if (options != null)
+          void navigate({ ...options, transition: "nav-lateral" });
       },
       abort.signal
     );
