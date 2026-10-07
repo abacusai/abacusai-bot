@@ -12,6 +12,7 @@ import { initI18n } from "#renderer/lib/i18n";
 import { UpgradePromo } from "./credits-card";
 import { PromoOutlet } from "./promo-host";
 import { promoAccountKey } from "./promo-state";
+import { openFloating, closeFloating } from "./shell-store";
 
 const state = vi.hoisted(() => ({
   account: {
@@ -27,17 +28,27 @@ const state = vi.hoisted(() => ({
     credits_granted: 100,
     credits_used: 95,
   },
+  exhaustedAt: null as number | null,
+  refetch: vi.fn(),
+  query: vi.fn(),
   open: vi.fn(),
   update: vi.fn(),
 }));
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: state.account, dataUpdatedAt: 1 }),
+  useQuery: (options: { queryKey?: unknown }) => {
+    state.query(options);
+    return {
+      data: state.account,
+      dataUpdatedAt: Date.now(),
+      refetch: state.refetch,
+    };
+  },
 }));
 vi.mock("@tanstack/react-router", () => ({
   useLocation: () => ({ href: "/sessions/example" }),
 }));
 vi.mock("#renderer/data/db/prefs", () => ({
-  usePrefs: () => ({ creditsExhaustedAt: null }),
+  usePrefs: () => ({ creditsExhaustedAt: state.exhaustedAt }),
   useUpdatePrefs: () => state.update,
 }));
 vi.mock("#renderer/lib/use-app-context", () => ({
@@ -45,7 +56,10 @@ vi.mock("#renderer/lib/use-app-context", () => ({
     transport: {
       orpc: {
         account: {
-          abacus: { queryOptions: () => ({}), queryKey: () => ["account"] },
+          abacus: {
+            queryOptions: () => ({ queryKey: ["account"] }),
+            queryKey: () => ["account"],
+          },
         },
       },
       client: { system: { openExternal: state.open } },
@@ -64,6 +78,10 @@ vi.mock("./promo-character", () => ({
 beforeEach(async () => {
   await initI18n();
   localStorage.clear();
+  state.exhaustedAt = null;
+  state.query.mockClear();
+  state.refetch.mockClear();
+  state.update.mockResolvedValue(undefined);
   state.account.subscription_tier = "free";
   state.account.user_id = "dummy";
   state.account.credits_used = 95;
@@ -175,9 +193,11 @@ it("hands one mounted mascot between pinned, peek and collapsed presentations", 
   const card = mascot.closest('[data-slot="upgrade-promo"]')!;
   expect(card.getAttribute("data-presentation")).toBe("sidebar");
   fireEvent.focus(screen.getByRole("button", { name: "Upgrade" }));
+  openFloating("peek");
   view.rerender(<App mode="peek" />);
   expect(screen.getByTestId("character")).toBe(mascot);
   expect(mascot.textContent).toBe("excited");
+  closeFloating();
   view.rerender(<App mode="collapsed" />);
   expect(screen.getByTestId("character")).toBe(mascot);
   expect(card.getAttribute("data-presentation")).toBe("floating");
@@ -190,5 +210,29 @@ it("hands one mounted mascot between pinned, peek and collapsed presentations", 
   view.rerender(<App mode="pinned" />);
   await waitFor(() =>
     expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull()
+  );
+});
+
+it("keeps one account cache when an exhaustion notice is cleared", () => {
+  const view = render(<UpgradePromo />);
+  state.exhaustedAt = Date.now();
+  view.rerender(<UpgradePromo />);
+  expect(state.refetch).toHaveBeenCalledOnce();
+  state.exhaustedAt = null;
+  view.rerender(<UpgradePromo />);
+  for (const [options] of state.query.mock.calls)
+    expect(options.queryKey).toEqual(["account"]);
+});
+
+it("dismisses a confirmed upgrade celebration across presentations", async () => {
+  const view = render(<UpgradePromo />);
+  state.account = { ...state.account, subscription_tier: "pro" };
+  view.rerender(<UpgradePromo />);
+  expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
+  );
+  await waitFor(() =>
+    expect(screen.queryByText("Level unlocked. Let’s build!")).toBeNull()
   );
 });

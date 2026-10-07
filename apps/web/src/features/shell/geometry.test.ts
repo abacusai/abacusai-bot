@@ -119,12 +119,12 @@ describe("shell surfaces", () => {
       /\.shell-surface \{\s*background-color: transparent;/
     );
     // The layers over it: the pane and the in-layout panel keep nine tenths
-    // of their colour; the floating sidebar tints the native material.
+    // of their colour inside solid islands; the floating sidebar stays solid.
     expect(block).toMatch(
       /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
-      /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);/
+      /\[data-slot="sidebar-floating"\] \{\s*background-color: var\(--sidebar\);/
     );
     expect(block).not.toContain("backdrop-filter");
     expect(tokensCss).toContain('data-window-focused="false"');

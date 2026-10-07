@@ -89,11 +89,8 @@ const TAB_CLASS =
 
 /**
  * The panel's tab strip (canvas `BotChatPanel`, `SplitView`, `TitleMac`):
- * pill tabs at the bar controls' height, the active one filled with a close
- * mark, "+" after them, 8 px before the panel toggle (V7). Tabs reorder by
- * drag (motion's Reorder, a spring so a let-go tab keeps its velocity);
- * middle click closes. Switching tabs animates nothing: it happens tens of
- * times a day.
+ * compact tabs with a reachable add button and overflow list. Dockview owns
+ * expanded tab dragging; Motion animates rail geometry and the active marker.
  */
 export const TabsRail = ({
   tabs,
@@ -505,6 +502,7 @@ export const TabsRail = ({
             <ArrowDownToLine />
           </PopoverTrigger>
           <PopoverContent
+            collisionPadding={12}
             align="end"
             className="titlebar-nodrag w-56 max-w-[calc(100vw-24px)] gap-0 p-0"
           >

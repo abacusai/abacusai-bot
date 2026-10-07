@@ -20,7 +20,9 @@ export const promoState = (
   if (creditsTier(account) !== "free") return null;
   const state = creditsCardState(account, mark, false, now);
   if (!state) return null;
-  return snooze && snooze.until > now && snooze.situation === state
+  return snooze &&
+    snooze.until > now &&
+    (snooze.situation === "exhausted" || state === "upsell")
     ? null
     : state;
 };

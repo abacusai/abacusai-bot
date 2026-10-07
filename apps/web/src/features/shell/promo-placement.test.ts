@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { creditExpression } from "./promo-character";
 import { promoPlacement } from "./promo-placement";
 
-it("uses existing moods for low, nearly exhausted and exhausted credits", () => {
+it("uses the character rig expressions for low, nearly exhausted and exhausted credits", () => {
   expect(creditExpression(30, 100)).toBe("hopeful");
   expect(creditExpression(5, 100)).toBe("worried");
   expect(creditExpression(0, 100)).toBe("tiredHappy");
@@ -24,7 +24,7 @@ it.each([1280, 1710])(
       footer,
       splitters: [],
     });
-    expect(result.left).toBe(232);
+    expect(result.left).toBe(312);
     expect(result.visibility).toBe("visible");
     expect(900 - result.bottom).toBeLessThan(composer.top);
     expect(900 - result.bottom).toBeLessThan(footer.top);
@@ -57,4 +57,17 @@ it("leaves the floating card at the bottom when a centered composer is above it"
       splitters: [],
     }).bottom
   ).toBe(24);
+});
+
+it("keeps a collapsed Bots strip clear", () => {
+  const result = promoPlacement({
+    width: 820,
+    height: 900,
+    railRight: 56,
+    sidebarRight: 144,
+    paneTop: 40,
+    cardHeight: 180,
+    splitters: [],
+  });
+  expect(result.left).toBe(160);
 });

@@ -297,78 +297,80 @@ export const SessionDock = ({
     }));
   const controls = (
     <div className="titlebar-nodrag flex h-(--titlebar-row-h) shrink-0 items-center gap-1 self-start px-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("sessions.dock.add")}
-            />
-          }
-        >
-          <Plus />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          collisionPadding={12}
-          className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
-        >
-          <DropdownMenuGroup>
-            {terminalShellsForPlatform(
-              (document.documentElement.dataset.platform ??
-                "darwin") as NodeJS.Platform
-            ).map((shell) => (
-              <DropdownMenuItem
-                key={shell.id}
-                disabled={
-                  shells.data?.statuses.find((s) => s.id === shell.id)
-                    ?.available === false
-                }
-                onClick={() =>
-                  void transport.client.terminal.shell
-                    .set({ shell: shell.id as TerminalShellId })
-                    .then(() => add("terminal", shell.id))
-                }
-              >
-                <Terminal />
-                <span className="min-w-0 truncate">
-                  {t("sessions.terminal.newShell", {
-                    shell: t(`terminalShells.${shell.labelKey}.label`),
-                  })}
-                </span>
-              </DropdownMenuItem>
-            ))}
-            {[
-              ...(IS_ELECTRON ? ["browser"] : []),
-              "terminal",
-              "files",
-              "changes",
-              "agents",
-              ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
-            ].map((kind) => (
-              <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                {kind === "browser" ? (
-                  <Globe />
-                ) : kind === "files" ? (
-                  <Folder />
-                ) : kind === "changes" ? (
-                  <GitCompare />
-                ) : kind === "agents" ? (
-                  <Bot />
-                ) : kind === "device" ? (
-                  <Monitor />
-                ) : (
+      {(!expanded || groups === 1) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("sessions.dock.add")}
+              />
+            }
+          >
+            <Plus />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            collisionPadding={12}
+            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
+          >
+            <DropdownMenuGroup>
+              {terminalShellsForPlatform(
+                (document.documentElement.dataset.platform ??
+                  "darwin") as NodeJS.Platform
+              ).map((shell) => (
+                <DropdownMenuItem
+                  key={shell.id}
+                  disabled={
+                    shells.data?.statuses.find((s) => s.id === shell.id)
+                      ?.available === false
+                  }
+                  onClick={() =>
+                    void transport.client.terminal.shell
+                      .set({ shell: shell.id as TerminalShellId })
+                      .then(() => add("terminal", shell.id))
+                  }
+                >
                   <Terminal />
-                )}
-                <span className="min-w-0 truncate">
-                  {t(`sessions.dock.${kind}`)}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+                  <span className="min-w-0 truncate">
+                    {t("sessions.terminal.newShell", {
+                      shell: t(`terminalShells.${shell.labelKey}.label`),
+                    })}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              {[
+                ...(IS_ELECTRON ? ["browser"] : []),
+                "terminal",
+                "files",
+                "changes",
+                "agents",
+                ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
+              ].map((kind) => (
+                <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+                  {kind === "browser" ? (
+                    <Globe />
+                  ) : kind === "files" ? (
+                    <Folder />
+                  ) : kind === "changes" ? (
+                    <GitCompare />
+                  ) : kind === "agents" ? (
+                    <Bot />
+                  ) : kind === "device" ? (
+                    <Monitor />
+                  ) : (
+                    <Terminal />
+                  )}
+                  <span className="min-w-0 truncate">
+                    {t(`sessions.dock.${kind}`)}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       <Button
         variant="ghost"
         size="icon-sm"

@@ -25,10 +25,7 @@ export const promoPlacement = ({
   footer?: Rect;
   splitters: Rect[];
 }) => {
-  let left = Math.max(
-    railRight + 16,
-    sidebarRight > railRight ? sidebarRight - 64 : 0
-  );
+  let left = Math.max(railRight + 16, sidebarRight + 16);
   let maxWidth = Math.min(320, width - left - 16);
   const overlapsX = (rect: Rect) =>
     left < rect.right && left + maxWidth > rect.left;

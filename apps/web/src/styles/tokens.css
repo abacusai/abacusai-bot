@@ -115,7 +115,7 @@ html {
    * the pane and the in-layout panel keep nine tenths of their colour (the
    * material shows through as a tint, never through the text, code blocks
    * or cards, which keep their own surfaces), so the window reads as one
-   * piece of glass; the floating sidebar, a sheet over the pane, is frosted.
+   * piece of glass. The floating sidebar stays solid over scrolling content.
    */
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     :is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"]) {
@@ -123,8 +123,7 @@ html {
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="sidebar-floating"] {
-    background-color: color-mix(in oklab, var(--sidebar) 78%, transparent);
-
+    background-color: var(--sidebar);
   }
 }
 
@@ -693,7 +692,9 @@ html[data-reduce-motion="on"] .phone-rise {
 [data-slot="topbar"]:has([data-rail-chat]) [data-slot="topbar-identity"] { display: none; }
 [data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]):not(:has([data-rail-chat])) [data-slot="topbar-identity"] { flex: 0 1 180px; }
 /* An inactive window has an opaque, contrast-stable chrome on every OS. */
-html[data-window-focused="false"], html[data-window-focused="false"] body, html[data-window-focused="false"] #root, html[data-window-focused="false"] .shell-surface { background-color: var(--sidebar); }
+html[data-window-focused="false"][data-platform][data-titlebar], html[data-window-focused="false"][data-platform][data-titlebar] body, html[data-window-focused="false"][data-platform][data-titlebar] #root, html[data-window-focused="false"][data-platform][data-titlebar] .shell-surface { background-color: var(--sidebar); }
 .workspace-island { background-color: var(--background); }
 
 [data-slot="topbar"] > button, [data-slot="topbar-panel-outlet"] > button { align-self: start; margin-block: calc((var(--titlebar-row-h) - 28px) / 2); }
+
+[data-workspace-expanded] [data-slot="bot-identity-stand-in"] { display: none; }

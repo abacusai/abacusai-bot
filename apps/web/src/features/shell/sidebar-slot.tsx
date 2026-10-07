@@ -264,7 +264,10 @@ export const SidebarSlot = ({
                     : { duration: 0.14, ease: [0.2, 0, 0, 1] }
                 }
               >
-                <SidebarContent sidebarId={floating.area ?? sidebarId} />
+                <SidebarContent
+                  sidebarId={floating.area ?? sidebarId}
+                  floating
+                />
               </motion.div>
             </AnimatePresence>
           </motion.div>

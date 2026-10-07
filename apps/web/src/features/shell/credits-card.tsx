@@ -65,6 +65,12 @@ export const UpgradePromo = () => {
     const previous = snapshot.current
       ? snapshot.current
       : (consumePromoRect() ?? snapshot.current);
+    target.setAttribute(
+      "style",
+      host
+        ? "pointer-events:none"
+        : "position:fixed;inset:0;pointer-events:none;z-index:30"
+    );
     (host?.element ?? document.body).append(target);
     const next = target.firstElementChild?.getBoundingClientRect();
     const controls =
@@ -90,12 +96,12 @@ export const UpgradePromo = () => {
   useEffect(() => () => target.remove(), [target]);
   const account = useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
-    queryKey: [
-      ...transport.orpc.account.abacus.queryKey({ input: { refresh: true } }),
-      prefs.creditsExhaustedAt,
-    ],
     staleTime: 60_000,
   });
+  const { refetch } = account;
+  useEffect(() => {
+    if (prefs.creditsExhaustedAt != null) void refetch();
+  }, [prefs.creditsExhaustedAt, refetch]);
   const key = promoAccountKey(account.data);
   const [snooze, setSnooze] = useState<{
     key: string;
@@ -232,7 +238,7 @@ export const UpgradePromo = () => {
           aria-label={t("creditsCard.upsellTitle")}
           data-presentation={host ? "sidebar" : "floating"}
           className={cn(
-            "bg-background isolate overflow-hidden rounded-(--pane-radius) border p-3",
+            "bg-background pointer-events-auto isolate overflow-hidden rounded-(--pane-radius) border p-3",
             host ? "relative w-full" : "fixed z-30 w-80 shadow-lg"
           )}
           style={host ? undefined : position}
@@ -265,6 +271,7 @@ export const UpgradePromo = () => {
               } catch {
                 /* Keep this window’s snooze. */
               }
+              setCelebrating(false);
               setSnooze({ key, value });
             }}
           >

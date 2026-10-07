@@ -59,6 +59,13 @@ it("preserves content through expansion, edge splits, collapse and reopening", a
   expect(apiRef.current!.groups.every((group) => group.header.hidden)).toBe(
     true
   );
+  await waitFor(() =>
+    expect(
+      document.querySelectorAll(
+        ".dock-group-island [data-slot=topbar-panel-tabs]"
+      )
+    ).toHaveLength(2)
+  );
   act(() => moveDockTab(apiRef.current, "chat", "top"));
   await waitFor(() => expect(apiRef.current!.groups).toHaveLength(2));
   expect(apiRef.current!.groups.every((group) => group.header.hidden)).toBe(

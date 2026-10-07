@@ -215,10 +215,8 @@ export const ShellLayout = ({
             }
             title={tabTitle}
             kinds={panelKinds}
-            onDragStart={
-              expanded
-                ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-                : undefined
+            onDragStart={(id, event) =>
+              event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
             }
             workspaceApi={dockApi}
             onMove={

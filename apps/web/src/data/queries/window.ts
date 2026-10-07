@@ -13,6 +13,9 @@ import { followNotice } from "./notices";
 export const windowChromeQuery = (orpc: AppQueryUtils) =>
   orpc.window.chrome.queryOptions({ input: {}, enabled: IS_ELECTRON });
 
+export const windowStateQuery = (orpc: AppQueryUtils) =>
+  orpc.window.state.queryOptions({ input: {}, enabled: IS_ELECTRON });
+
 /**
  * Until `signal` aborts: a `chrome` notice carries the whole state, written
  * straight into the query; invalidating it too would refetch `window.chrome`
@@ -33,6 +36,11 @@ export const followWindowNotices = (
         queryClient.setQueryData(
           windowChromeQuery(transport.orpc).queryKey,
           event.chrome
+        );
+      else if (event.type === "state")
+        queryClient.setQueryData(
+          windowStateQuery(transport.orpc).queryKey,
+          event.state
         );
     },
     signal

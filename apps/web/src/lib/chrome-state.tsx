@@ -8,7 +8,10 @@ import type { WindowChromeState } from "@abacus-ai/contract/contract";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { windowChromeQuery } from "#renderer/data/queries/window";
+import {
+  windowChromeQuery,
+  windowStateQuery,
+} from "#renderer/data/queries/window";
 import type { Transport } from "#renderer/data/transport";
 
 export const DEFAULT_CHROME: WindowChromeState = {
@@ -37,10 +40,14 @@ const applyChromeState = (doc: Document, chrome: WindowChromeState): void => {
 
 export const ChromeEffect = ({ transport }: { transport: Transport }): null => {
   const chrome = useChromeState(transport);
+  const { data: windowState } = useQuery({
+    ...windowStateQuery(transport.orpc),
+    retry: false,
+  });
   useEffect(() => {
     const focus = () => {
       document.documentElement.dataset.windowFocused = String(
-        document.hasFocus()
+        windowState?.focused ?? document.hasFocus()
       );
     };
     focus();
@@ -50,7 +57,7 @@ export const ChromeEffect = ({ transport }: { transport: Transport }): null => {
       window.removeEventListener("focus", focus);
       window.removeEventListener("blur", focus);
     };
-  }, []);
+  }, [windowState?.focused]);
   useEffect(() => {
     applyChromeState(document, chrome);
   }, [chrome]);

@@ -45,6 +45,7 @@ export interface WorkspaceTab {
 }
 interface WorkspaceContext {
   expanded: boolean;
+  visible: string[];
   targets: Map<string, HTMLDivElement>;
   api: DockviewApi | null;
   tabs: WorkspaceTab[];
@@ -64,7 +65,7 @@ const Content = ({ api }: IDockviewPanelProps) => {
       container.current.append(target);
   }, [context, api.id]);
   const group = context.api?.getPanel(api.id)?.group;
-  const grouped = context.expanded && (context.api?.groups.length ?? 0) > 1;
+  const grouped = context.expanded && context.visible.length > 1;
   return (
     <div
       className={cn(
@@ -132,6 +133,10 @@ const visiblePanels = (api: DockviewApi): string[] => {
     group.activePanel ? [group.activePanel.id] : []
   );
 };
+const retainVisible = (previous: string[], next: string[]) =>
+  previous.length === next.length && previous.every((id, i) => id === next[i])
+    ? previous
+    : next;
 const components = { content: Content };
 const LAYOUT_PREFIX = "abacusai-bot:dock-layout:v1:";
 export const moveDockTab = (
@@ -248,7 +253,9 @@ export const PanelWorkspace = ({
             : {}),
         });
     }
-    queueMicrotask(() => setVisible(visiblePanels(api)));
+    queueMicrotask(() =>
+      setVisible((previous) => retainVisible(previous, visiblePanels(api)))
+    );
   });
   useEffect(() => {
     if (!api) return;
@@ -270,12 +277,12 @@ export const PanelWorkspace = ({
     synchronize();
     const subscriptions = [
       api.onDidLayoutChange(() => {
-        setVisible(visiblePanels(api));
+        setVisible((previous) => retainVisible(previous, visiblePanels(api)));
         save(api.toJSON());
       }),
       api.onDidActivePanelChange(({ panel, origin }) => {
         if (origin === "user" && panel) select(panel.id);
-        setVisible(visiblePanels(api));
+        setVisible((previous) => retainVisible(previous, visiblePanels(api)));
       }),
       api.onUnhandledDragOver((event) => {
         if (
@@ -329,6 +336,7 @@ export const PanelWorkspace = ({
     <Context
       value={{
         expanded,
+        visible,
         targets,
         close: onClose,
         api,
@@ -342,6 +350,7 @@ export const PanelWorkspace = ({
       <div
         ref={container}
         data-slot="panel-workspace"
+        data-workspace-expanded={expanded ? "" : undefined}
         className="relative size-full min-h-0 min-w-0"
       >
         <div
