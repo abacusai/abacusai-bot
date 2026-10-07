@@ -118,7 +118,7 @@ html {
    * piece of glass. The floating sidebar stays solid over scrolling content.
    */
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
-    :is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"]) {
+    :is([data-slot="pane"]:not(:has([data-slot="session-dock"])), [data-slot="side-panel"][data-mode="layout"]) {
     background-color: color-mix(in oklab, var(--background) 90%, transparent);
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])

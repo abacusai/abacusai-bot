@@ -121,7 +121,7 @@ describe("shell surfaces", () => {
     // The layers over it: the pane and the in-layout panel keep nine tenths
     // of their colour inside solid islands; the floating sidebar stays solid.
     expect(block).toMatch(
-      /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
+      /\[data-slot="pane"\]:not\(:has\(\[data-slot="session-dock"\]\)\), \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
       /\[data-slot="sidebar-floating"\] \{\s*background-color: var\(--sidebar\);/
@@ -145,4 +145,16 @@ describe("shell surfaces", () => {
       /\[data-pane-gutter\] \{[^}]*width: max\(8px, var\(--pane-inset\)\);/
     );
   });
+});
+
+// Sessions nests the workspace inside the route pane; it is chrome, not an island.
+it("excludes the Sessions workspace wrapper from the native content surface", () => {
+  expect(tokensCss).toContain(
+    '[data-slot="pane"]:not(:has([data-slot="session-dock"]))'
+  );
+  expect(tokensCss).not.toContain(
+    ':is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"])'
+  );
+  expect(tokensCss).toContain("prefers-reduced-transparency: reduce");
+  expect(tokensCss).toContain('data-window-focused="false"');
 });
