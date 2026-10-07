@@ -58,6 +58,8 @@ export interface ForeverProfile {
   continuations: ForeverContinuations;
   /** Extra context sent with the user's message; "" for none. */
   beforeTurn(message: string): string | Promise<string>;
+  /** The user's words as they reach the chat: each turn's text, and each message steered in mid-turn. */
+  noteUserWords?(text: string): void;
   /** Housekeeping once the turn and its memory maintenance are over. */
   afterTurn(): void | Promise<void>;
   /** Each user and assistant message of a visible turn, as it ends. */
@@ -65,5 +67,8 @@ export interface ForeverProfile {
   /** The messages a compaction is about to summarize away, before it does. */
   beforeCompaction?(messages: readonly unknown[]): void | Promise<void>;
   /** What a `browser_task` run gets beyond the browser: a way to reach the user. */
-  browserTask?: Pick<BrowserTaskContext, "progressTools" | "channel">;
+  browserTask?: Pick<
+    BrowserTaskContext,
+    "progressTools" | "channel" | "userWords"
+  >;
 }

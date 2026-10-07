@@ -207,3 +207,26 @@ export function syncActiveMcpTools(
   session.setActiveToolsByName(next);
   return true;
 }
+
+/**
+ * Calls one routed MCP tool from this process's own code (a host's internal
+ * tool), with its text and error flag; null when no server routes it or the
+ * call failed.
+ */
+export function mcpToolCaller(
+  getMcp: () => ConnectedMcp,
+  name: string
+): (
+  args: Record<string, unknown>
+) => Promise<{ text: string; isError: boolean } | null> {
+  return async (args) => {
+    const route = getMcp().routes.get(name);
+    if (route == null) return null;
+    try {
+      const result = await route.client.callTool(route.toolName, args);
+      return { text: result.text, isError: result.isError === true };
+    } catch {
+      return null;
+    }
+  };
+}

@@ -50,6 +50,8 @@ export default defineConfig({
     "src/tool-policy.ts",
     // The credential stores no deliverable may be read from.
     "src/sandbox/secrets.ts",
+    // Saved travelers: main's browser types a passport number from it.
+    "src/traveler/traveler-store.ts",
   ],
   deps: {
     // The sandbox runtime finds its vendored seccomp filters and Java agent

@@ -1,19 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  type BatchGate,
   budgetNote,
   EXECUTE_STREAK_LIMIT,
   ExecuteStreakTracker,
   FINAL_WARNING_TURN,
   finalWarningMessage,
+  gateTools,
   MAX_TURNS,
   missingReportFields,
   needsUser,
+  noteBatch,
   REPEAT_HOST_LIMIT,
   RepeatTracker,
   WRAP_UP_TURN,
   wrapUpMessage,
 } from "./browser-task.js";
+import { CHECKOUT_STATE_PREFIX } from "./checkout-run.js";
 import {
   MidTaskInbox,
   type MidTaskMessage,
@@ -269,5 +273,75 @@ describe("the user's messages while a browser run works", () => {
     run.noteUserMessage(midTaskText("stop"));
     expect(read).toEqual([]);
     expect(run.consumedIds()).toEqual([]);
+  });
+});
+
+describe("browser_pause in a batch", () => {
+  const PAUSED = `Paused for the user.\n${CHECKOUT_STATE_PREFIX}${JSON.stringify(
+    {
+      stage: "details",
+      paused: { need: "details", summary: "form" },
+    }
+  )}`;
+  const tools = () => {
+    const ran: string[] = [];
+    const make = (name: string, text: string) => ({
+      name,
+      execute: async () => {
+        ran.push(name);
+        return { content: [{ type: "text", text }] };
+      },
+    });
+    return {
+      ran,
+      list: [
+        make("browser_interact", "Clicked."),
+        make("browser_pause", PAUSED),
+      ],
+    };
+  };
+  const exec = (tool: unknown, id: string) =>
+    (
+      tool as { execute: (id: string) => Promise<Record<string, unknown>> }
+    ).execute(id);
+
+  it("ends the run when it is called alone, with the browser's checkout state", async () => {
+    const gate: BatchGate = { blocked: new Set(), pause: null };
+    const { list } = tools();
+    const [, pause] = gateTools(list, gate);
+    const result = await exec(pause, "c1");
+    expect(result.terminate).toBe(true);
+    expect(gate.pause?.stage).toBe("details");
+  });
+
+  it("refuses the other calls of its batch before they run, and everything after it", async () => {
+    const gate: BatchGate = { blocked: new Set(), pause: null };
+    const { list, ran } = tools();
+    const [click, pause] = gateTools(list, gate);
+    noteBatch(gate, {
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: "c1", name: "browser_interact" },
+        { type: "toolCall", id: "c2", name: "browser_pause" },
+      ],
+    });
+    const refused = await exec(click, "c1");
+    expect(refused).toMatchObject({ isError: true, terminate: true });
+    await exec(pause, "c2");
+    expect(ran).toEqual(["browser_pause"]);
+    expect((await exec(click, "c3")).isError).toBe(true);
+    expect(ran).toEqual(["browser_pause"]);
+  });
+
+  it("leaves a batch without a pause alone", async () => {
+    const gate: BatchGate = { blocked: new Set(), pause: null };
+    const { list, ran } = tools();
+    const [click] = gateTools(list, gate);
+    noteBatch(gate, {
+      role: "assistant",
+      content: [{ type: "toolCall", id: "c1", name: "browser_interact" }],
+    });
+    expect((await exec(click, "c1")).isError).toBeUndefined();
+    expect(ran).toEqual(["browser_interact"]);
   });
 });

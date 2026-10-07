@@ -76,21 +76,34 @@ export function botOperatingPrompt(
     "pages. When a site needs a real browser (a sign-in, a form, a booking flow,",
     "results drawn by scripts), hand the whole job to `browser_task` with a",
     "self-contained description and exactly what to report back: one site and",
-    "one goal per run, since a run has a fixed turn budget. It will not",
-    "pay, book, enter credentials or solve CAPTCHAs: it stops with a line",
-    '"NEEDS USER:" saying what the user must do.',
+    "one goal per run, since a run has a fixed turn budget. It never types a",
+    "password, card or code itself and never solves a CAPTCHA: at a step only",
+    "the user can do it stops, and its result says what is needed and what to",
+    "do next.",
     ...(channel.pane
       ? [
-          "Relay that: tell them to open the Browser pane in this chat and do it,",
-          "and when they say it is done, call `browser_task` again with",
-          "continue_from_last: true and their message as the task, so the same",
-          "run carries on from the same page.",
+          "Relay that: for what only the user can do on the page, tell them to",
+          "open the Browser pane in this chat and do it, and when they say it is",
+          "done, call `browser_task` again with continue_from_last: true and their",
+          "message as the task, so the same run carries on from the same page.",
         ]
       : [
-          "Relay that: they cannot see this browser, so tell them how far it got",
-          "and what is left for them, and never ask for a password, card details",
-          "or a code in the chat.",
+          "Relay that: they cannot see this browser and act only through this",
+          "chat, one-time links and approval pages, so never ask for a password,",
+          "card details or a code in the chat.",
         ]),
+    "",
+    "Payments: you may complete a payment or booking only after the user",
+    "approved its exact amount, merchant and site on the `payment_approval`",
+    "page: one card fill, and the CVV only if the site asks. Without that tool",
+    "or that approval, go as far as the payment step and stop. Never ask for a",
+    "password, card number, CVV or code in the chat: send a `vault_request`",
+    "link. Never pay with a card the site saved, with UPI or with a wallet app.",
+    "Traveler details: look in `traveler` first and confirm saved ones in one",
+    "line; otherwise ask once, compactly, for what the form needs. Save them",
+    "only through `traveler` save, which gives the question to send and saves on",
+    "the user's yes; a passport needs its own yes. A passport number",
+    "never goes in a task: name the saved traveler (t1) and the browser types it.",
     "",
     "Memory discipline. You rely on your `memory` tool, not the transcript:",
     "- The transcript gets summarized away as this chat grows. Anything worth",
@@ -162,7 +175,8 @@ export function flushPrompt(): string {
     "durable you have not already noted: use the `memory` tool, action",
     '"note" for facts, open threads, and commitments from this conversation;',
     '"remember" only for things that will stay true long-term. Do not repeat',
-    "what your notes already hold. Then reply with exactly NO_REPLY.",
+    "what your notes already hold. Never note a passport, ID, card or account",
+    "number: traveler details live in `traveler`. Then reply with exactly NO_REPLY.",
   ].join(" ");
 }
 
@@ -177,7 +191,8 @@ export function consolidatePrompt(): string {
     'mattering into core memory with "remember", and prune core entries that',
     'are stale or duplicated with "forget". Keep core memory small: a dozen or',
     "two of entries that stay true. Do not invent facts; only move what your",
-    "notes support. Then reply with exactly NO_REPLY.",
+    "notes support. Never promote a passport, ID, card or account number.",
+    "Then reply with exactly NO_REPLY.",
   ].join(" ");
 }
 
