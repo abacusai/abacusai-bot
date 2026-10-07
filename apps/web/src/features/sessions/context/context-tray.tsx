@@ -147,11 +147,13 @@ export const SessionContextTray = ({
                 workspaceId={workspaceId}
                 sessionId={sessionId}
                 busy={busy}
+                onWorktree={onWorktree}
+                worktrees={trees.data?.worktrees}
               />
             </PopoverContent>
           </Popover>
         ) : null}
-        {onWorktree ? (
+        {onWorktree && worktree && worktree.kind !== "current" ? (
           <Popover>
             <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
               {worktree?.kind === "new" ? (
@@ -320,10 +322,14 @@ const BranchList = ({
   workspaceId,
   sessionId,
   busy,
+  onWorktree,
+  worktrees,
 }: {
   workspaceId: string;
   sessionId?: string;
   busy: boolean;
+  onWorktree?: (choice: StartDraft["worktree"]) => void;
+  worktrees?: { id: string; name: string }[];
 }) => {
   const { t } = useTranslation();
   const transport = useSessionsTransport();
@@ -347,12 +353,14 @@ const BranchList = ({
   };
   return (
     <Command
+      tabIndex={0}
       shouldFilter={false}
       className="bg-transparent p-0"
       label={t("sessions.tray.branchSearch")}
     >
       {creating || (branches.data?.branches.length ?? 0) > 8 ? (
         <CommandInput
+          autoFocus={creating}
           aria-label={t("sessions.tray.branchSearch")}
           value={query}
           onValueChange={setQuery}
@@ -394,6 +402,36 @@ const BranchList = ({
             ? t("sessions.tray.createBranch", { name: query })
             : t("sessions.tray.newBranch")}
         </CommandItem>
+        {onWorktree ? (
+          <>
+            <CommandItem
+              value="new-worktree"
+              disabled={busy || !branches.data?.currentBranch}
+              className="h-8 rounded-lg px-2 text-[13px]"
+              onSelect={() =>
+                onWorktree({
+                  kind: "new",
+                  baseRef: branches.data!.currentBranch!,
+                })
+              }
+            >
+              <GitBranch className="size-3.5" />
+              {t("sessions.tray.newWorktree")}
+            </CommandItem>
+            {worktrees?.map((tree) => (
+              <CommandItem
+                key={tree.id}
+                value={tree.id}
+                disabled={busy}
+                className="h-8 rounded-lg px-2 text-[13px]"
+                onSelect={() => onWorktree({ kind: "existing", id: tree.id })}
+              >
+                <GitBranch className="size-3.5" />
+                <span className="min-w-0 truncate">{tree.name}</span>
+              </CommandItem>
+            ))}
+          </>
+        ) : null}
       </CommandList>
       {error ? (
         <p role="alert" className="px-2 text-xs">

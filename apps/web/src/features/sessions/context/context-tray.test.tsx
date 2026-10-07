@@ -93,10 +93,12 @@ it("renders no PR placeholder and hides the environment control with one availab
   });
   const view = render(
     <QueryClientProvider client={qc}>
-      <SessionContextTray workspaceId="w" sessionId="s" />
+      <SessionContextTray workspaceId="w" sessionId="s" worktree={{ kind: "current" }} onWorktree={vi.fn()} />
     </QueryClientProvider>
   );
   expect(screen.queryByText("No PR")).toBeNull();
+  expect(screen.queryByText("No worktree")).toBeNull();
+  expect(screen.queryByRole("button", { name: "New worktree" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Local" })).toBeNull();
   view.unmount();
   qc.clear();
