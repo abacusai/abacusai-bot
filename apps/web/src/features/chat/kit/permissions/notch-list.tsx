@@ -3,7 +3,10 @@ import { motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { NotchAction, useNotchMotion } from "#renderer/features/notch/controls";
+import {
+  NotchAction,
+  useNotchMotion,
+} from "#renderer/components/notch-controls";
 import { Button } from "#renderer/ui/button";
 
 import type { ChatRuntime } from "../../runtime/runtime";

@@ -20,6 +20,12 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import {
+  NotchAction,
+  NotchReducedMotion,
+  notchMotion,
+  useNotchMotion,
+} from "#renderer/components/notch-controls";
 import { cueForNotice, permissionCueKey } from "#renderer/lib/attention/cues";
 import { runErrorCopy } from "#renderer/lib/attention/error-copy";
 import { resolveLook } from "#renderer/lib/bots/avatar";
@@ -35,12 +41,6 @@ import {
 } from "#renderer/notch-context";
 import { Input } from "#renderer/ui/input";
 
-import {
-  NotchAction,
-  NotchReducedMotion,
-  notchMotion,
-  useNotchMotion,
-} from "./controls";
 import { NotchDirector } from "./director";
 import { notchDrafts as drafts } from "./drafts";
 import { NotchSurface, NotchHeader, NotchBody } from "./frame";
