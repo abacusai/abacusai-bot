@@ -103,6 +103,9 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
         ok: true,
         owner: "owner",
         contractVersion: CONTRACT_VERSION,
+        version: serverFixtures.find(
+          (fixture) => fixture.result.status === "ready"
+        )!.result.version,
       })
     );
   vi.stubGlobal("fetch", fetch);

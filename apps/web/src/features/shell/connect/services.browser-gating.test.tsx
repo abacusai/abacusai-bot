@@ -32,7 +32,13 @@ const host = {
   computerLifecycle: "STOPPED",
   filesystemLifecycle: "AVAILABLE",
 };
-const health = { ok: true, owner: "owner", contractVersion: CONTRACT_VERSION };
+const health = {
+  ok: true,
+  owner: "owner",
+  contractVersion: CONTRACT_VERSION,
+  version: ready.version,
+  busy: false,
+};
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -230,6 +236,42 @@ it.each(
     expect(await pending).toMatchObject({ token });
   }
 );
+it("waits out an idle older host until it runs the bootstrap's version, saying it is updating", async () => {
+  vi.useFakeTimers();
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(envelope(host))
+    .mockResolvedValueOnce(envelope(ready))
+    .mockResolvedValueOnce(Response.json({ ...health, version: "1.1-web.9" }))
+    .mockResolvedValueOnce(Response.json({ ...health, version: "1.1-web.9" }))
+    .mockResolvedValueOnce(Response.json(health));
+  vi.stubGlobal("fetch", fetch);
+  const stage = vi.fn();
+  const pending = resolveBrowserHost(stage);
+  await vi.runAllTimersAsync();
+  expect(await pending).toMatchObject({ token, base });
+  expect(fetch).toHaveBeenCalledTimes(5);
+  expect([...new Set(stage.mock.calls.flat())]).toEqual([
+    "starting",
+    "installing",
+    "updating",
+    "connecting",
+  ]);
+});
+it("connects to a busy older host as it is: it is never upgraded mid-turn", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(envelope(host))
+    .mockResolvedValueOnce(envelope(ready))
+    .mockResolvedValueOnce(
+      Response.json({ ...health, version: "1.1-web.9", busy: true })
+    );
+  vi.stubGlobal("fetch", fetch);
+  const stage = vi.fn();
+  expect(await resolveBrowserHost(stage)).toMatchObject({ token });
+  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(stage.mock.calls.flat()).not.toContain("updating");
+});
 it("accepts a ready response with a nullable version", async () => {
   vi.stubGlobal(
     "fetch",

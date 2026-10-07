@@ -455,6 +455,332 @@ const cancelAllMcpSignIns = (): void => {
   for (const cancel of [...inFlight.values()]) cancel();
 };
 
+/** Who authorizes this server, and its endpoints; throws without S256 PKCE. */
+const discoverSignIn = async (
+  serverUrl: string
+): Promise<{
+  issuer: string;
+  scopes?: string[];
+  metadata: AuthServerMetadata;
+}> => {
+  const { issuer, scopes } = await discoverAuthorizationServer(serverUrl);
+  const metadata = await discoverAuthServerMetadata(issuer);
+  // Each stage to the main log, so "did the callback arrive?" has an answer.
+  oauthLog(serverUrl, `authorization server ${issuer}`);
+  // PKCE stands in for a client secret; without S256 the code is
+  // interceptable, and the MCP spec makes it mandatory.
+  if (
+    metadata.code_challenge_methods_supported != null &&
+    !metadata.code_challenge_methods_supported.includes("S256")
+  )
+    throw new Error(
+      "This authorization server does not support PKCE (S256), which MCP requires."
+    );
+  return { issuer, ...(scopes != null ? { scopes } : {}), metadata };
+};
+
+const newPkce = (): { verifier: string; challenge: string; state: string } => {
+  const verifier = crypto.randomBytes(32).toString("base64url");
+  return {
+    verifier,
+    challenge: crypto.createHash("sha256").update(verifier).digest("base64url"),
+    state: crypto.randomBytes(16).toString("hex"),
+  };
+};
+
+const authorizationUrl = (input: {
+  serverUrl: string;
+  metadata: AuthServerMetadata;
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  challenge: string;
+  scopes?: string[];
+  oauth?: McpOAuthEntry;
+}): URL => {
+  const endpoint = input.metadata.authorization_endpoint as string;
+  if (!isHttpAuthorizationEndpoint(endpoint))
+    throw new Error(
+      `Authorization endpoint is not an http(s) URL: ${endpoint}`
+    );
+  const authorize = new URL(endpoint);
+  authorize.searchParams.set("response_type", "code");
+  authorize.searchParams.set("client_id", input.clientId);
+  authorize.searchParams.set("redirect_uri", input.redirectUri);
+  authorize.searchParams.set("state", input.state);
+  authorize.searchParams.set("code_challenge", input.challenge);
+  authorize.searchParams.set("code_challenge_method", "S256");
+  // RFC 8707: mint the token for this resource only; old servers ignore it.
+  authorize.searchParams.set("resource", input.serverUrl);
+  const scope =
+    input.oauth?.scope ??
+    (input.scopes != null && input.scopes.length > 0
+      ? input.scopes.join(" ")
+      : undefined);
+  if (scope != null) authorize.searchParams.set("scope", scope);
+  return authorize;
+};
+
+/** Trade the code for tokens and store them under the server URL. */
+const exchangeCode = async (input: {
+  serverUrl: string;
+  metadata: AuthServerMetadata;
+  client: { clientId: string; clientSecret?: string };
+  code: string;
+  redirectUri: string;
+  verifier: string;
+}): Promise<McpOAuthResult> => {
+  const { client, metadata, serverUrl } = input;
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: input.code,
+    redirect_uri: input.redirectUri,
+    client_id: client.clientId,
+    code_verifier: input.verifier,
+  });
+  if (client.clientSecret != null)
+    body.set("client_secret", client.clientSecret);
+  const exchanged = await fetch(metadata.token_endpoint as string, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: body.toString(),
+    signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+  });
+  if (!exchanged.ok)
+    return {
+      ok: false,
+      error: `The token exchange failed (HTTP ${exchanged.status}).`,
+    };
+  const token = (await exchanged.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
+  if (typeof token.access_token !== "string" || token.access_token.length === 0)
+    return { ok: false, error: "The token exchange returned no access token." };
+  const file = readAuthFile();
+  writeAuthFile({
+    ...file,
+    servers: {
+      ...file.servers,
+      [serverUrl]: {
+        tokenEndpoint: metadata.token_endpoint as string,
+        clientId: client.clientId,
+        ...(client.clientSecret != null
+          ? { clientSecret: client.clientSecret }
+          : {}),
+        accessToken: token.access_token,
+        ...(typeof token.refresh_token === "string"
+          ? { refreshToken: token.refresh_token }
+          : {}),
+        ...(typeof token.expires_in === "number"
+          ? { expiresAt: Date.now() + token.expires_in * 1000 }
+          : {}),
+        ...(typeof token.scope === "string" ? { scope: token.scope } : {}),
+      },
+    },
+  });
+  return { ok: true };
+};
+
+/** The MCP server URLs a token is stored for. */
+export const mcpTokenServers = (): ReadonlySet<string> =>
+  new Set(
+    Object.entries(readAuthFile().servers ?? {})
+      .filter(
+        ([, record]) =>
+          typeof record?.accessToken === "string" && record.accessToken !== ""
+      )
+      .map(([url]) => url)
+  );
+
+/** How long a hosted sign-in link stays good. */
+const HOSTED_SIGN_IN_TTL_MS = 30 * 60_000;
+const HOSTED_SIGN_INS_KEPT = 50;
+
+interface HostedFlow {
+  name: string;
+  /** What the callback page calls it ("Notion"). */
+  label: string;
+  serverUrl: string;
+  state: string;
+  verifier: string;
+  redirectUri: string;
+  authorizeUrl: string;
+  metadata: AuthServerMetadata;
+  client: { clientId: string; clientSecret?: string };
+  expires: number;
+  started: boolean;
+}
+
+export interface HostedStart {
+  status: 302 | 404 | 410;
+  /** The provider's authorization URL, with 302. */
+  location?: string;
+}
+
+export interface HostedCallback {
+  ok: boolean;
+  /** The server's display name, once the state matched a flow. */
+  name?: string;
+}
+
+/**
+ * MCP sign-in on a host the user reaches through a browser: the redirect is
+ * the host's own public callback, and each attempt is a one-time start link
+ * (`start`) whose PKCE verifier stays here until `complete`.
+ */
+export class HostedMcpSignIns {
+  private readonly byId = new Map<string, HostedFlow>();
+  private readonly now: () => number;
+
+  constructor(
+    private readonly options: {
+      /** `<public host base>/mcp/callback`, absolute. */
+      redirectUri: string;
+      /** A server named `name` now holds a token. */
+      signedIn: (name: string) => void;
+      now?: () => number;
+    }
+  ) {
+    this.now = options.now ?? Date.now;
+  }
+
+  /** Discovery and client registration now, so the start link only redirects. */
+  async begin(input: {
+    name: string;
+    label: string;
+    serverUrl: string;
+    oauth?: McpOAuthEntry;
+  }): Promise<{ id?: string; error?: string }> {
+    const { name, label, serverUrl, oauth } = input;
+    try {
+      const { issuer, scopes, metadata } = await discoverSignIn(serverUrl);
+      const { redirectUri } = this.options;
+      const client = await obtainClient(issuer, metadata, redirectUri, oauth);
+      const { verifier, challenge, state } = newPkce();
+      const authorizeUrl = authorizationUrl({
+        serverUrl,
+        metadata,
+        clientId: client.clientId,
+        redirectUri,
+        state,
+        challenge,
+        ...(scopes != null ? { scopes } : {}),
+        ...(oauth != null ? { oauth } : {}),
+      }).toString();
+      this.prune();
+      const id = crypto.randomBytes(24).toString("base64url");
+      this.byId.set(id, {
+        name,
+        label,
+        serverUrl,
+        state,
+        verifier,
+        redirectUri,
+        authorizeUrl,
+        metadata,
+        client,
+        expires: this.now() + HOSTED_SIGN_IN_TTL_MS,
+        started: false,
+      });
+      oauthLog(serverUrl, "hosted sign-in link minted");
+      return { id };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /** The provider's authorization URL, once per link; 410 when used or expired. */
+  start(id: string): HostedStart {
+    const flow = this.byId.get(id);
+    if (flow == null) return { status: 404 };
+    if (flow.started || flow.expires <= this.now()) return { status: 410 };
+    flow.started = true;
+    return { status: 302, location: flow.authorizeUrl };
+  }
+
+  /** The provider's redirect: one exchange per state, then the flow is gone. */
+  async complete(params: URLSearchParams): Promise<HostedCallback> {
+    const state = params.get("state");
+    const entry = [...this.byId].find(
+      ([, flow]) =>
+        state != null &&
+        flow.started &&
+        flow.expires > this.now() &&
+        safeEqual(flow.state, state)
+    );
+    if (entry == null) return { ok: false };
+    const [id, flow] = entry;
+    this.byId.delete(id);
+    const code = params.get("code");
+    if (params.get("error") != null || code == null || code === "") {
+      oauthLog(flow.serverUrl, "hosted sign-in refused or returned no code");
+      return { ok: false, name: flow.label };
+    }
+    try {
+      const result = await exchangeCode({
+        serverUrl: flow.serverUrl,
+        metadata: flow.metadata,
+        client: flow.client,
+        code,
+        redirectUri: flow.redirectUri,
+        verifier: flow.verifier,
+      });
+      oauthLog(
+        flow.serverUrl,
+        result.ok ? "signed in: tokens saved" : `failed: ${result.error}`
+      );
+      if (result.ok) this.options.signedIn(flow.name);
+      return { ok: result.ok, name: flow.label };
+    } catch (error) {
+      oauthLog(
+        flow.serverUrl,
+        `failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return { ok: false, name: flow.label };
+    }
+  }
+
+  private prune(): void {
+    const now = this.now();
+    for (const [id, flow] of this.byId)
+      if (flow.expires <= now) this.byId.delete(id);
+    // Oldest first: Map keeps insertion order.
+    for (const id of this.byId.keys()) {
+      if (this.byId.size < HOSTED_SIGN_INS_KEPT) break;
+      this.byId.delete(id);
+    }
+  }
+}
+
+const safeEqual = (a: string, b: string): boolean =>
+  a.length === b.length &&
+  crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+const escapeHtml = (text: string): string =>
+  text.replace(
+    /[&<>"']/g,
+    (ch) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        ch
+      ] ?? ch
+  );
+
+/** The page the hosted callback answers with; `name` comes from the host, never the provider. */
+export const hostedCallbackPage = (result: HostedCallback): string =>
+  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbacusAI Bot</title>
+<body style="font-family:system-ui;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box;background:#111;color:#eee">
+<div style="text-align:center">${
+    result.ok
+      ? `<h2>${escapeHtml(result.name ?? "It")} is connected.</h2><p>You can close this tab.</p>`
+      : `<h2>Sign-in did not finish.</h2><p>Close this tab and try connecting${result.name != null ? ` ${escapeHtml(result.name)}` : ""} again from AbacusAI Bot.</p>`
+  }</div>`;
+
 /**
  * Run the whole sign-in for one MCP server URL. Resolves, never rejects. On
  * success the tokens are on disk; the caller reconnects the session.
@@ -466,30 +792,8 @@ export const signInToMcpServer = async (
   cancelAllMcpSignIns();
 
   try {
-    const { issuer, scopes } = await discoverAuthorizationServer(serverUrl);
-    const metadata = await discoverAuthServerMetadata(issuer);
-    // Each stage to the main log, so "did the callback arrive?" has an answer.
-    oauthLog(serverUrl, `authorization server ${issuer}`);
-
-    if (
-      metadata.code_challenge_methods_supported != null &&
-      !metadata.code_challenge_methods_supported.includes("S256")
-    ) {
-      // PKCE stands in for a client secret; without S256 the code is
-      // interceptable, and the MCP spec makes it mandatory.
-      return {
-        ok: false,
-        error:
-          "This authorization server does not support PKCE (S256), which MCP requires.",
-      };
-    }
-
-    const verifier = crypto.randomBytes(32).toString("base64url");
-    const challenge = crypto
-      .createHash("sha256")
-      .update(verifier)
-      .digest("base64url");
-    const state = crypto.randomBytes(16).toString("hex");
+    const { issuer, scopes, metadata } = await discoverSignIn(serverUrl);
+    const { verifier, challenge, state } = newPkce();
 
     return await new Promise<McpOAuthResult>((resolve) => {
       let settled = false;
@@ -588,81 +892,16 @@ export const signInToMcpServer = async (
           try {
             const redirectUri = `http://127.0.0.1:${(server.address() as AddressInfo).port}/callback`;
             const client = await clientPromise;
-            const body = new URLSearchParams({
-              grant_type: "authorization_code",
-              code,
-              redirect_uri: redirectUri,
-              client_id: client.clientId,
-              code_verifier: verifier,
-            });
-
-            if (client.clientSecret != null)
-              body.set("client_secret", client.clientSecret);
-
-            const exchanged = await fetch(metadata.token_endpoint as string, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                Accept: "application/json",
-              },
-              body: body.toString(),
-              signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
-            });
-
-            if (!exchanged.ok) {
-              finish({
-                ok: false,
-                error: `The token exchange failed (HTTP ${exchanged.status}).`,
-              });
-
-              return;
-            }
-
-            const token = (await exchanged.json()) as {
-              access_token?: string;
-              refresh_token?: string;
-              expires_in?: number;
-              scope?: string;
-            };
-
-            if (
-              typeof token.access_token !== "string" ||
-              token.access_token.length === 0
-            ) {
-              finish({
-                ok: false,
-                error: "The token exchange returned no access token.",
-              });
-
-              return;
-            }
-
-            const file = readAuthFile();
-            writeAuthFile({
-              ...file,
-              servers: {
-                ...file.servers,
-                [serverUrl]: {
-                  tokenEndpoint: metadata.token_endpoint as string,
-                  clientId: client.clientId,
-                  ...(client.clientSecret != null
-                    ? { clientSecret: client.clientSecret }
-                    : {}),
-                  accessToken: token.access_token,
-                  ...(typeof token.refresh_token === "string"
-                    ? { refreshToken: token.refresh_token }
-                    : {}),
-                  ...(typeof token.expires_in === "number"
-                    ? { expiresAt: Date.now() + token.expires_in * 1000 }
-                    : {}),
-                  ...(typeof token.scope === "string"
-                    ? { scope: token.scope }
-                    : {}),
-                },
-              },
-            });
-
-            finish({ ok: true });
+            finish(
+              await exchangeCode({
+                serverUrl,
+                metadata,
+                client,
+                code,
+                redirectUri,
+                verifier,
+              })
+            );
           } catch (error) {
             finish({
               ok: false,
@@ -696,33 +935,16 @@ export const signInToMcpServer = async (
 
           void clientPromise
             .then(async (client) => {
-              const endpoint = metadata.authorization_endpoint as string;
-
-              // Thrown so the catch below routes it through finish().
-              if (!isHttpAuthorizationEndpoint(endpoint)) {
-                throw new Error(
-                  `Authorization endpoint is not an http(s) URL: ${endpoint}`
-                );
-              }
-              const authorize = new URL(endpoint);
-
-              authorize.searchParams.set("response_type", "code");
-              authorize.searchParams.set("client_id", client.clientId);
-              authorize.searchParams.set("redirect_uri", redirectUri);
-              authorize.searchParams.set("state", state);
-              authorize.searchParams.set("code_challenge", challenge);
-              authorize.searchParams.set("code_challenge_method", "S256");
-              // RFC 8707: mint the token for this resource only; old servers
-              // ignore the parameter.
-              authorize.searchParams.set("resource", serverUrl);
-
-              const scope =
-                options.oauth?.scope ??
-                (scopes != null && scopes.length > 0
-                  ? scopes.join(" ")
-                  : undefined);
-
-              if (scope != null) authorize.searchParams.set("scope", scope);
+              const authorize = authorizationUrl({
+                serverUrl,
+                metadata,
+                clientId: client.clientId,
+                redirectUri,
+                state,
+                challenge,
+                ...(scopes != null ? { scopes } : {}),
+                ...(options.oauth != null ? { oauth: options.oauth } : {}),
+              });
 
               oauthLog(
                 serverUrl,
