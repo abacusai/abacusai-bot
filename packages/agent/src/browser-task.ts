@@ -20,6 +20,7 @@ import { abacusBotDir } from "./config.js";
 import { excludedTools } from "./excluded-tools.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
 import type { AgentEvent } from "./protocol.js";
+import { DeliveredMedia } from "./send-media-tool.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 
@@ -150,12 +151,23 @@ export interface BrowserTaskContext {
   model?: unknown;
   /** The browser MCP tools, read at run time so a reconnected server is seen. */
   browserTools: () => unknown[];
-  /** Tools that reach the user mid-run (the phone's `send_progress`). */
-  progressTools?: () => unknown[];
+  /** Tools that reach the user mid-run (the phone's `send_progress`); `sent` is the run's media ledger. */
+  progressTools?: (sent: DeliveredMedia) => unknown[];
   /** With it, the user's mid-task messages go to the run alone while it is live. */
   midTask?: MidTaskInbox;
   /** What the user's chat can do; an app chat with its Browser pane when absent. */
   channel?: ChannelCapabilities;
+}
+
+/** The sub-agent's system prompt for a run with `context`. */
+export function browserSubAgentPrompt(
+  context: Pick<BrowserTaskContext, "progressTools" | "channel">
+): string {
+  if (context.progressTools == null) return BROWSER_SYSTEM_PROMPT;
+  return (
+    `${BROWSER_SYSTEM_PROMPT}\n${PROGRESS_PROMPT}` +
+    (context.channel?.media === true ? `\n${MEDIA_PROMPT}` : "")
+  );
 }
 
 export interface BrowserTaskOptions {
@@ -165,6 +177,8 @@ export interface BrowserTaskOptions {
   reportFields?: string[];
   /** Continue the run that stopped for the user; `task` is then their reply. */
   resume?: boolean;
+  /** The media this run asks to send; its caller names them to the loop. */
+  sentMedia?: DeliveredMedia;
 }
 
 export interface BrowserTaskResult {
@@ -504,12 +518,7 @@ export async function runBrowserTask(
         cwd: context.cwd,
         agentDir: context.agentDir,
         settingsManager: context.settingsManager,
-        appendSystemPrompt: [
-          context.progressTools != null
-            ? `${BROWSER_SYSTEM_PROMPT}\n${PROGRESS_PROMPT}` +
-              (context.channel?.media === true ? `\n${MEDIA_PROMPT}` : "")
-            : BROWSER_SYSTEM_PROMPT,
-        ],
+        appendSystemPrompt: [browserSubAgentPrompt(context)],
         // No extensions: the permission gate would prompt a user not watching.
         extensionFactories: [],
       });
@@ -518,7 +527,9 @@ export async function runBrowserTask(
 
       const tools = [
         ...context.browserTools(),
-        ...(context.progressTools?.() ?? []),
+        ...(context.progressTools?.(
+          options.sentMedia ?? new DeliveredMedia()
+        ) ?? []),
       ];
       const created = await createAgentSession({
         cwd: context.cwd,

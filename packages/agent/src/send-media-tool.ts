@@ -1,5 +1,5 @@
 /**
- * `send_media`: an image the app holds for this session, to the user's chat,
+ * `send_media`: an image or file the app holds for this session, to the user's chat,
  * with a caption, at once or with the final answer. The tool only checks the
  * request; the app that carries the chat sees the call, checks it the same
  * way (`parseSendMedia`) and sends the media it names. Offered only where
@@ -8,12 +8,41 @@
 import { type PhoneToolDefinition, toolText } from "./phone/phone-tool.js";
 import { parseSendMedia, SEND_MEDIA_TOOL_NAME } from "./send-media.js";
 
-export function buildSendMediaTool(): PhoneToolDefinition {
+/** Ids a ledger remembers; each media id lives 30 minutes anyway. */
+const MAX_LEDGER_IDS = 1_000;
+
+/**
+ * The media ids one browser run asked to send, so the run sends each once and
+ * its result can name them to the loop. Only the app that carries the chat
+ * knows what reached the user: it sends an id once, after the server took it.
+ */
+export class DeliveredMedia {
+  private readonly ids = new Set<string>();
+
+  has(id: string): boolean {
+    return this.ids.has(id);
+  }
+
+  add(id: string): void {
+    this.ids.delete(id);
+    this.ids.add(id);
+    if (this.ids.size > MAX_LEDGER_IDS)
+      this.ids.delete(this.ids.values().next().value!);
+  }
+
+  /** Every id, oldest first. */
+  list(): string[] {
+    return [...this.ids];
+  }
+}
+
+/** `sent`: a browser run's ledger; the loop's own tool has none. */
+export function buildSendMediaTool(sent?: DeliveredMedia): PhoneToolDefinition {
   return {
     name: SEND_MEDIA_TOOL_NAME,
     label: SEND_MEDIA_TOOL_NAME,
     description: [
-      "Send the user an image in this chat, with a short caption in their language.",
+      "Send the user an image or file in this chat, with a short caption in their language.",
       'media: a media id a tool gave you; browser_snapshot action:"screenshot" gives one, with',
       "secret fields already hidden.",
       'when: "now" (default) sends it at once while you keep working; "with_answer" sends it',
@@ -25,7 +54,7 @@ export function buildSendMediaTool(): PhoneToolDefinition {
         media: { type: "string", description: "A media id." },
         caption: {
           type: "string",
-          description: "One or two lines shown under the image.",
+          description: "One or two lines shown under it.",
         },
         when: {
           type: "string",
@@ -40,6 +69,9 @@ export function buildSendMediaTool(): PhoneToolDefinition {
       const parsed = parseSendMedia(params);
       if (parsed.ok === false)
         return toolText(`Not sent: ${parsed.reason}`, true);
+      if (sent?.has(parsed.request.media) === true)
+        return toolText("This run already sent it; not sent again.");
+      sent?.add(parsed.request.media);
       return toolText(
         parsed.request.when === "now" ? "Sent." : "It goes with your answer."
       );

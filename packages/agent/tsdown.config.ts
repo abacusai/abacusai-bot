@@ -45,6 +45,11 @@ export default defineConfig({
     "src/phone/phone-bubbles.ts",
     // Media for the chat: the hosted app's lane and main's media store read it.
     "src/send-media.ts",
+    // What a chat can do, and which tools it gets: main and its tests read them.
+    "src/channel.ts",
+    "src/tool-policy.ts",
+    // The credential stores no deliverable may be read from.
+    "src/sandbox/secrets.ts",
   ],
   deps: {
     // The sandbox runtime finds its vendored seccomp filters and Java agent

@@ -3349,6 +3349,7 @@ describe("screenshots as media for the chat", () => {
     // Held for the session that took it (a browser run calls as its parent).
     expect(mediaStore.resolve(id!, "session-1")).toEqual({
       ok: true,
+      kind: "image",
       data: JPEG,
       mimeType: "image/jpeg",
     });

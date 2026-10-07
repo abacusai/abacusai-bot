@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 
+import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 
@@ -109,6 +110,14 @@ const NO_BROWSER =
   "To read a public page use `web_fetch` with the URL, or `web_search` to find one; " +
   "neither needs a browser. Only if the task truly requires a browser (a signed-in app, " +
   "a form to fill) tell the user the browser pane did not open and ask them to try again.";
+/** The same, for a chat with no pane (the phone). */
+const NO_BROWSER_PANELESS =
+  "The browser is not available right now. Do not retry in a loop. " +
+  "To read a public page use `web_fetch` with the URL, or `web_search` to find one; " +
+  "neither needs a browser. Only if the task truly requires a browser (a signed-in app, " +
+  "a form to fill) tell the user the browser could not start and ask them to try again later.";
+/** Owns the tab a chat screenshot is taken in, after the session's id. */
+const CHAT_SCREENSHOT_OWNER = ":chat-screenshot";
 const SERVER_NAME = "browser";
 const SERVER_VERSION = "2.1.0";
 const TEMP_DIR = path.join(abacusBotHome(), "temp");
@@ -508,6 +517,8 @@ export interface McpBrowserServerOptions {
   media?: () => MediaStore | null;
   /** The user's vault: its tools are served here, beside the page they read origins from. */
   vault?: Vault;
+  /** What a host lane's chat can do (the phone); null for every other session. */
+  channelForSession?: (sessionId: string) => ChannelCapabilities | null;
 }
 
 /** A read refused because the page's secret fields could not be checked first. */
@@ -672,6 +683,111 @@ export class McpBrowserServer extends McpHttpServer {
     return "id" in kept ? kept.id : null;
   }
 
+  /**
+   * A screenshot of a page the agent served at `origin` (loopback), with
+   * secret fields hidden, kept as `sessionId`'s media: how a served page
+   * reaches a chat whose user cannot open it. Taken in a tab of its own
+   * under a separate owner, opened blank, told to block Abacus.AI's hosts
+   * (or nothing is loaded), and captured only while its live origin is
+   * still `origin`. Every tab that owner has, a popup included, is closed
+   * after, so the session's own tabs stay as they were.
+   */
+  async screenshotForChat(
+    url: string,
+    origin: string,
+    sessionId: string
+  ): Promise<{ id: string } | { reason: string }> {
+    const failed = { reason: "the page could not be captured." };
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return failed;
+    }
+    if (
+      parsed.origin !== origin ||
+      !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
+    )
+      return failed;
+    // In the session's own queue, like any of its browser calls; a call that
+    // timed out while waiting never starts.
+    const call = { cancelled: false };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        this.inSessionOrder(sessionId, () =>
+          call.cancelled
+            ? Promise.resolve(failed)
+            : this.captureServed(url, origin, sessionId)
+        ),
+        new Promise<{ reason: string }>((resolve) => {
+          timer = setTimeout(() => {
+            call.cancelled = true;
+            resolve(failed);
+          }, this.callTimeout());
+        }),
+      ]);
+    } finally {
+      if (timer != null) clearTimeout(timer);
+    }
+  }
+
+  /** `screenshotForChat`'s work, run in the session's queue. */
+  private async captureServed(
+    url: string,
+    origin: string,
+    sessionId: string
+  ): Promise<{ id: string } | { reason: string }> {
+    const unavailable = {
+      reason: "no browser is available here to take a screenshot of it.",
+    };
+    const failed = { reason: "the page could not be captured." };
+    const source = this.options.target?.() ?? null;
+    if (source == null || this.options.media?.() == null) return unavailable;
+    const owner = `${sessionId}${CHAT_SCREENSHOT_OWNER}`;
+    let tabId: number | null = null;
+    try {
+      tabId = await source.materialize(owner, "about:blank");
+      const wc = tabId == null ? null : source.webContents(tabId);
+      if (wc == null || wc.isDestroyed()) return unavailable;
+      if (!(await this.blockAbacus(wc))) return failed;
+      await Promise.race([
+        wc.loadURL(url),
+        new Promise((resolve) => setTimeout(resolve, NAVIGATE_TIMEOUT_MS)),
+      ]).catch(() => undefined);
+      await this.settle(wc, NAVIGATE_TIMEOUT_MS);
+      // The fence's own check, on the live document: still the served page.
+      const live = await this.liveOrigin(wc);
+      if (live !== origin || this.isAbacus(live)) return failed;
+      const image = await this.captureImage(wc);
+      if (image == null) return failed;
+      const id = this.keepAsMedia(image, sessionId);
+      return id != null ? { id } : { reason: "the screenshot is too large." };
+    } catch (error) {
+      console.error(
+        `[mcp-browser] chat screenshot failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return failed;
+    } finally {
+      const tabs = new Set(
+        (source.sessionTabs?.(owner) ?? []).map((tab) => tab.id)
+      );
+      if (tabId != null) tabs.add(tabId);
+      for (const tab of tabs)
+        await source.closeTab?.(owner, tab).catch(() => false);
+      source.releaseSession?.(owner);
+    }
+  }
+
+  /** Why there is no browser, worded for the caller's chat. */
+  private noBrowser(sessionId?: string): string {
+    const channel =
+      sessionId == null
+        ? null
+        : (this.options.channelForSession?.(sessionId) ?? null);
+    return channel?.pane === false ? NO_BROWSER_PANELESS : NO_BROWSER;
+  }
+
   private async executeTabs(
     args: Record<string, unknown>,
     sessionId?: string
@@ -708,7 +824,7 @@ export class McpBrowserServer extends McpHttpServer {
       if (!(await source.activateTab?.(sessionId, tabId)))
         return this.err(`There is no tab ${tabId}. Tabs:\n${list()}`);
       const wc = this.findView(sessionId);
-      if (wc == null) return this.err(NO_BROWSER);
+      if (wc == null) return this.err(this.noBrowser(sessionId));
       return this.ok(
         await this.arrival(
           wc,
@@ -1746,12 +1862,12 @@ export class McpBrowserServer extends McpHttpServer {
         const refusal = navigationRefusal(url);
         if (refusal != null) return this.err(refusal);
         const wc = await this.getWC(sessionId, url);
-        if (!wc) return this.err(NO_BROWSER);
+        if (!wc) return this.err(this.noBrowser(sessionId));
         return await this.navigateTo(wc, url, sessionId);
       }
       case "back": {
         const wc = await this.getWC(sessionId);
-        if (!wc) return this.err(NO_BROWSER);
+        if (!wc) return this.err(this.noBrowser(sessionId));
         // Otherwise goBack() silently does nothing and a move is reported.
         if (!wc.canGoBack()) return this.err("There is no page to go back to.");
         return await this.historyNavigate(
@@ -1763,7 +1879,7 @@ export class McpBrowserServer extends McpHttpServer {
       }
       case "forward": {
         const wc = await this.getWC(sessionId);
-        if (!wc) return this.err(NO_BROWSER);
+        if (!wc) return this.err(this.noBrowser(sessionId));
         if (!wc.canGoForward())
           return this.err("There is no page to go forward to.");
         return await this.historyNavigate(
@@ -1775,7 +1891,7 @@ export class McpBrowserServer extends McpHttpServer {
       }
       case "reload": {
         const wc = await this.getWC(sessionId);
-        if (!wc) return this.err(NO_BROWSER);
+        if (!wc) return this.err(this.noBrowser(sessionId));
         return await this.historyNavigate(
           wc,
           "reload",
@@ -1806,7 +1922,7 @@ export class McpBrowserServer extends McpHttpServer {
         : rawArgs;
     const action = (args.action as string) ?? "";
     const wc = await this.getWC(sessionId);
-    if (!wc) return this.err(NO_BROWSER);
+    if (!wc) return this.err(this.noBrowser(sessionId));
 
     switch (action) {
       case "snapshot": {
@@ -2002,7 +2118,7 @@ export class McpBrowserServer extends McpHttpServer {
   ): Promise<ToolResult> {
     const action = (args.action as string) ?? "";
     const wc = await this.getWC(sessionId);
-    if (!wc) return this.err(NO_BROWSER);
+    if (!wc) return this.err(this.noBrowser(sessionId));
     // A tab that opens right after one of these may be this action's.
     if (sessionId != null && McpBrowserServer.MAY_OPEN_TABS.has(action))
       this.options.target?.()?.noteAction?.(sessionId);
@@ -2491,7 +2607,7 @@ export class McpBrowserServer extends McpHttpServer {
     sessionId?: string
   ): Promise<ToolResult> {
     const wc = await this.getWC(sessionId);
-    if (!wc) return this.err(NO_BROWSER);
+    if (!wc) return this.err(this.noBrowser(sessionId));
     const code = args.code as string;
     if (!code) return this.err('"code" is required.');
     const secrets = this.secretsOf(wc);
