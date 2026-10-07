@@ -130,13 +130,13 @@ describe("shell surfaces", () => {
 
   it("gives the pane and the in-layout panel a visible edge in light (V2)", () => {
     expect(tokensCss).toMatch(
-      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\] \{\s*\/\*[^*]*\*\/\s*outline: 1px solid var\(--border\);\s*outline-offset: -1px;/
+      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\],\s*\.workspace-island \{\s*\/\*[^*]*\*\/\s*outline: 1px solid var\(--border\);\s*outline-offset: -1px;/
     );
   });
 
   it("separates pane and panel with an 8 px gutter (V3)", () => {
     expect(tokensCss).toMatch(
-      /\[data-pane-gutter\] \{[^}]*width: var\(--pane-inset\);/
+      /\[data-pane-gutter\] \{[^}]*width: max\(8px, var\(--pane-inset\)\);/
     );
   });
 });
