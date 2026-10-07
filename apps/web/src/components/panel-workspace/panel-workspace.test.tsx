@@ -219,3 +219,20 @@ it("folds a three-column dock below its native minimum and restores every pane",
     globalThis.ResizeObserver = Original;
   }
 });
+
+it("mounts a live chat-only workspace on the first expansion", async () => {
+  const apiRef: { current: DockviewApi | null } = { current: null };
+  render(
+    <PanelWorkspace
+      scope="chat-only"
+      tabs={[{ id: "chat", title: "Chat", content: () => <Counter /> }]}
+      active="chat"
+      open
+      expanded
+      onSelect={() => {}}
+      apiRef={apiRef}
+    />
+  );
+  await waitFor(() => expect(apiRef.current?.panels).toHaveLength(1));
+  expect(screen.getByRole("button", { name: "Draft 0" })).toBeTruthy();
+});

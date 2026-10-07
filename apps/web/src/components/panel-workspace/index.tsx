@@ -362,7 +362,7 @@ export const PanelWorkspace = ({
             !docked && "hidden"
           )}
         >
-          {tabs.length > 1 || api ? (
+          {tabs.length > 1 || api || docked ? (
             <DockviewReact
               className="size-full"
               theme={themeDark}
