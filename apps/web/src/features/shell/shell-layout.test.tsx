@@ -804,6 +804,26 @@ describe("the title bar", () => {
     );
   });
 
+  it("offers every bot tool from the floating rail at narrow widths", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    const drawer = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>("[data-side-panel]");
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.click(within(drawer).getByTestId("panel-add-tab"));
+    for (const name of ["Details", "Memory", "Files", "Browser"])
+      expect(await screen.findByRole("menuitem", { name })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Browser" }));
+    await waitFor(() =>
+      expect(panelScope(key).tabs.some((tab) => tab.kind === "browser")).toBe(
+        true
+      )
+    );
+    expect(within(drawer).getByTestId("panel-add-tab")).toBeTruthy();
+  });
+
   it("panel tabs are borderless chips at the bar's control height (V7)", async () => {
     await at(1280, "/bots/chief-of-staff?tab=details");
     const tabs = within(

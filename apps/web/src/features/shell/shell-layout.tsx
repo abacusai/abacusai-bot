@@ -417,6 +417,10 @@ export const ShellLayout = ({
           <SidePanelDrawer
             open={panelShown && layout.sidePanel === "drawer"}
             tabs={panel.scope.tabs}
+            kinds={panelKinds}
+            onAdd={(kind) => {
+              if (scopeKey) openPanelTab(scopeKey, { kind }, { fresh: true });
+            }}
             active={panel.active}
             onTabClose={(id) => {
               if (scopeKey) closePanelTab(scopeKey, id);

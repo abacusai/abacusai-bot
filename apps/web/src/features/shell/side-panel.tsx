@@ -29,7 +29,7 @@ import {
   DrawerTitle,
 } from "#renderer/ui/drawer";
 
-import type { PanelTab } from "./panel-store";
+import type { PanelTab, PanelTabKind } from "./panel-store";
 import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
 
 export {
@@ -140,6 +140,8 @@ export const SidePanelDrawer = ({
   onTabClose,
   onTabReorder,
   onReopen,
+  kinds,
+  onAdd,
   onClose,
 }: {
   open: boolean;
@@ -149,6 +151,8 @@ export const SidePanelDrawer = ({
   onTabClose(id: string): void;
   onTabReorder(ids: string[]): void;
   onReopen(): void;
+  kinds: readonly PanelTabKind[];
+  onAdd(kind: PanelTabKind): void;
   onClose(): void;
 }) => {
   const { t } = useTranslation();
@@ -182,11 +186,11 @@ export const SidePanelDrawer = ({
                   tabs={tabs}
                   active={active.id}
                   title={title}
-                  kinds={[]}
+                  kinds={kinds}
                   onChange={onTabChange}
                   onClose={onTabClose}
                   onReopen={onReopen}
-                  onAdd={() => {}}
+                  onAdd={onAdd}
                   onReorder={onTabReorder}
                 />
               )}
