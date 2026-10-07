@@ -147,3 +147,38 @@ export const tagEnvironmentNotice = (
             },
         },
       };
+
+/**
+ * `notes` as a system reminder ahead of the user's words, with every offset
+ * that marks where their words start moved past it, so the transcript still
+ * shows only what they wrote.
+ */
+export const prependSystemReminder = (
+  request: SendAgentMessageRequest,
+  notes: readonly string[]
+): SendAgentMessageRequest => {
+  const block = `<system_reminder>\n${notes.join("\n")}\n</system_reminder>\n\n`;
+  const shift = (offset: number | undefined): number | undefined =>
+    offset == null ? undefined : offset + block.length;
+  const tags = request.userText;
+  const operator = tags?.operator ?? legacyOperator(request.message);
+  const visibleFrom = shift(tags?.visibleFrom);
+  const operatorFrom = shift(operator?.visibleFrom);
+  return {
+    ...request,
+    message: `${block}${request.message}`,
+    userText: {
+      ...tags,
+      systemReminder: true,
+      ...(visibleFrom != null ? { visibleFrom } : {}),
+      ...(operator != null
+        ? {
+            operator: {
+              ...operator,
+              ...(operatorFrom != null ? { visibleFrom: operatorFrom } : {}),
+            },
+          }
+        : {}),
+    },
+  };
+};
