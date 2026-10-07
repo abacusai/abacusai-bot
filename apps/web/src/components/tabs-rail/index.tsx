@@ -56,8 +56,10 @@ import {
 import { Input } from "#renderer/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
+import { Tooltip, TooltipTrigger, TooltipContent } from "#renderer/ui/tooltip";
 
 import { railLayout } from "./layout";
+import { TabLabel } from "./tab-label";
 const BarButton = ({
   label,
   ...props
@@ -316,6 +318,7 @@ export const TabsRail = ({
             {tabs.map((tab) => {
               const selected = tab.id === active;
               const label = title(tab);
+              const tooltipId = `${indicator}-${encodeURIComponent(tab.id)}`;
               return (
                 <Reorder.Item
                   key={tab.id}
@@ -393,107 +396,119 @@ export const TabsRail = ({
                     layout.mode === "single" ? { minWidth: 56 } : undefined
                   }
                 >
-                  <TabsTrigger
-                    value={tab.id}
-                    data-active={selected ? "" : undefined}
-                    data-panel-tab-id={tab.id}
-                    data-panel-tab-kind={tab.kind}
-                    title={label}
-                    className={cn(
-                      TAB_CLASS,
-                      "w-full",
-                      width / tabs.length < 84 &&
-                        layout.mode === "single" &&
-                        "px-1"
-                    )}
-                    onDoubleClick={() => {
-                      if (tab.kind === "terminal" && onRename)
-                        setRename({ id: tab.id, title: label });
-                    }}
-                    onAuxClick={(event) => {
-                      if (event.button === 1 && tab.id !== "chat")
-                        onClose(tab.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "F2" &&
-                        tab.kind === "terminal" &&
-                        onRename
-                      ) {
-                        event.preventDefault();
-                        setRename({ id: tab.id, title: label });
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <TabsTrigger
+                          value={tab.id}
+                          data-active={selected ? "" : undefined}
+                          data-panel-tab-id={tab.id}
+                          data-panel-tab-kind={tab.kind}
+                          aria-label={label}
+                          aria-describedby={tooltipId}
+                          className={cn(
+                            TAB_CLASS,
+                            "w-full",
+                            width / tabs.length < 84 &&
+                              layout.mode === "single" &&
+                              "px-1"
+                          )}
+                          onDoubleClick={() => {
+                            if (tab.kind === "terminal" && onRename)
+                              setRename({ id: tab.id, title: label });
+                          }}
+                          onAuxClick={(event) => {
+                            if (event.button === 1 && tab.id !== "chat")
+                              onClose(tab.id);
+                          }}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "F2" &&
+                              tab.kind === "terminal" &&
+                              onRename
+                            ) {
+                              event.preventDefault();
+                              setRename({ id: tab.id, title: label });
+                            }
+                            if (
+                              tab.id !== "chat" &&
+                              (event.key === "Delete" ||
+                                event.key === "Backspace")
+                            ) {
+                              event.preventDefault();
+                              onClose(tab.id);
+                            }
+                          }}
+                        />
                       }
-                      if (
-                        tab.id !== "chat" &&
-                        (event.key === "Delete" || event.key === "Backspace")
-                      ) {
-                        event.preventDefault();
-                        onClose(tab.id);
-                      }
-                    }}
-                  >
-                    {selected && (
-                      <motion.span
-                        aria-hidden
-                        className="bg-sidebar-accent pointer-events-none absolute inset-0 rounded-lg"
-                        layoutId={indicator}
-                        transition={
-                          motionPref === "reduced"
-                            ? reducedTransition
-                            : springs.panel
+                    >
+                      {selected && (
+                        <motion.span
+                          aria-hidden
+                          className="bg-sidebar-accent pointer-events-none absolute inset-0 rounded-lg"
+                          layoutId={indicator}
+                          transition={
+                            motionPref === "reduced"
+                              ? reducedTransition
+                              : springs.panel
+                          }
+                        />
+                      )}
+                      {renderIcon?.(tab) ??
+                        (tab.id === "chat" ? (
+                          <BotAvatar
+                            look={defaultLook("AbacusAI")}
+                            size={18}
+                            animate={false}
+                          />
+                        ) : (
+                          (() => {
+                            const Icon =
+                              tab.id === "chat" ? Bot : tabIcon(tab.kind);
+                            return (
+                              <Icon className="size-3.5 shrink-0" aria-hidden />
+                            );
+                          })()
+                        ))}
+                      <TabLabel
+                        label={label}
+                        iconOnly={
+                          width / tabs.length < 84 && layout.mode === "single"
                         }
                       />
-                    )}
-                    {renderIcon?.(tab) ??
-                      (tab.id === "chat" ? (
-                        <BotAvatar
-                          look={defaultLook("AbacusAI")}
-                          size={18}
-                          animate={false}
-                        />
-                      ) : (
-                        (() => {
-                          const Icon =
-                            tab.id === "chat" ? Bot : tabIcon(tab.kind);
-                          return (
-                            <Icon className="size-3.5 shrink-0" aria-hidden />
-                          );
-                        })()
-                      ))}
-                    <span
-                      className={cn(
-                        "min-w-0 truncate",
-                        width / tabs.length < 84 &&
-                          layout.mode === "single" &&
-                          "sr-only"
-                      )}
-                    >
-                      {label}
-                    </span>
-                    {/* A glyph, not a control (a tab may hold no interactive
+                      {/* A glyph, not a control (a tab may hold no interactive
                   child): the pointer closes here, the keyboard with
                   Delete/Backspace or ⌘W on the tab. */}
-                    <span
-                      aria-hidden="true"
-                      style={
-                        tab.id === "chat" ? { display: "none" } : undefined
-                      }
-                      data-slot="panel-tab-close"
-                      title={t("shell.panel.closeTab", { name: label })}
-                      className={cn(
-                        "hover:bg-foreground/10 relative flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
-                        !selected &&
-                          "opacity-0 group-focus-within/tab:opacity-100 group-hover/tab:opacity-100"
-                      )}
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onClose(tab.id);
-                      }}
+                      <span
+                        aria-hidden="true"
+                        style={
+                          tab.id === "chat" ? { display: "none" } : undefined
+                        }
+                        data-slot="panel-tab-close"
+                        title={t("shell.panel.closeTab", { name: label })}
+                        className={cn(
+                          "hover:bg-foreground/10 relative flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
+                          !selected &&
+                            "opacity-0 group-focus-within/tab:opacity-100 group-hover/tab:opacity-100"
+                        )}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onClose(tab.id);
+                        }}
+                      >
+                        <X />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      role="tooltip"
+                      id={tooltipId}
+                      side="bottom"
+                      className="titlebar-nodrag max-w-80 break-all"
                     >
-                      <X />
-                    </span>
-                  </TabsTrigger>
+                      {label}
+                    </TooltipContent>
+                  </Tooltip>
                 </Reorder.Item>
               );
             })}

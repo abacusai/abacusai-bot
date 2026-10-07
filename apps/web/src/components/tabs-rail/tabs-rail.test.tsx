@@ -1,8 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { fixturePrefs } from "#renderer/data/fixture-db/rows";
 import { initI18n } from "#renderer/lib/i18n";
+import { TooltipProvider } from "#renderer/ui/tooltip";
 
 import { TabsRail } from ".";
 vi.mock("#renderer/data/db/prefs", () => ({
@@ -46,4 +53,29 @@ it("selects by shortcut, protects Chat, reopens and renames terminals", async ()
   await waitFor(() =>
     expect(rename).toHaveBeenCalledWith("terminal:one", "Build")
   );
+});
+
+it("keeps the full title discoverable on keyboard focus with reduced motion", async () => {
+  await initI18n();
+  const label = "src/features/sessions/workspace/a-very-long-filename.test.ts";
+  render(
+    <TooltipProvider>
+      <TabsRail
+        tabs={[{ id: "files:long", kind: "files", title: label }]}
+        active="files:long"
+        title={(tab) => tab.title!}
+        kinds={[]}
+        onChange={() => {}}
+        onClose={() => {}}
+        onReorder={() => {}}
+        onAdd={() => {}}
+      />
+    </TooltipProvider>
+  );
+  fireEvent.keyDown(document, { key: "Tab" });
+  act(() => screen.getByRole("tab", { name: label }).focus());
+  expect(
+    (await screen.findByRole("tooltip", { hidden: true })).textContent
+  ).toContain(label);
+  expect(document.querySelector("[data-marquee-active]")).toBeNull();
 });

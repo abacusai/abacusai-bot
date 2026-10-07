@@ -294,3 +294,5 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   margin-top: 6px;
 }
 
+
+[data-slot="tab-label-reveal"]::before { content: attr(data-label); }
