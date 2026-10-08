@@ -753,7 +753,10 @@ export class PhoneLane {
     this.turnMediaHashes = new Set();
     // The session refuses a handoff still on its way; the stop is bounded by its owner.
     this.stopping = this.stopSession();
-    // A message whose handoff is still out goes to the next turn: the user is
+    // A handoff still on its way settles first (the stopping session refuses
+    // it), so the wording knows what the session took.
+    await this.sending;
+    // A message the session never took goes to the next turn: the user is
     // not asked to send again what will run anyway.
     const continuing = messages.some(
       (message) => !message.taken && message.entry.kind !== "note"
@@ -766,8 +769,6 @@ export class PhoneLane {
       `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`
     );
     await this.stopping;
-    // A handoff still on its way settles (refused) before it is judged.
-    await this.sending;
     this.stopping = null;
     const taken = messages.filter((message) => message.taken);
     // One the session never took was never run: it goes to the next turn.
