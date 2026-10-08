@@ -189,6 +189,7 @@ export const defaultLook = (name: string): Look => {
   if (name.trim() === "") return NEUTRAL_LOOK;
   const h = nameHash(name);
   return {
+    identity: name,
     shape: DEFAULT_SHAPES[(h >>> 4) % DEFAULT_SHAPES.length]!,
     color: PALETTE_HEXES[h % PALETTE_HEXES.length]!,
     accessory: "none",

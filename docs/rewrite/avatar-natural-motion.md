@@ -1,16 +1,58 @@
-# Natural avatar motion research
+# Natural avatar motion
 
-Research and A/B experiments are in progress. Reference media and captures stay outside the repository. Study behavior only; copy no third-party character designs, rigs, frames or assets.
+Research and measurements: 8 October 2026. Study behavior only: no reference designs, rigs, assets or video frames enter this repository or the PR. Downloaded official media and extracted frames are in the external `avatar-research` scratchpad. PR #270 contains captures of our own renderer.
 
-## Questions to test
+## Verified references
 
-1. Identical face proportions and symmetric expressions erase identity even when silhouettes differ.
-2. Repeating double blinks and speech loops read as a timer rather than attention.
-3. Features translate together like a sticker; head turns need compression and occlusion.
-4. A full-strength expression held indefinitely looks forced. Eyelids, brows and cheeks need a shared intensity.
-5. Shape-specific body motion needs stable identity-specific phase and amplitude.
-6. Lighting and contact shadow should support volume without adding steady paint work.
+Exact-name live searches included `OpenAI Dots avatar launch demo engineering`, `xAI GrokBot avatar launch demo`, and `Meta Muse AI avatar launch engineering`; official pages were opened before coverage. These are the new products, not the ChatGPT orb or Grok companions. No public Dots or Grok Bot rig specification was found; their motion observations below are measurements of edited demos, not product guarantees.
 
-## Evidence
+- **OpenAI Dots**, [launch](https://openai.com/index/introducing-dots/) (29 September 2026), [official launch video](https://player.vimeo.com/video/1231177365?h=bc1cde7d20), plus two launch-page demos ([presence](https://player.vimeo.com/video/1230606080?h=ae5fad6134), [desktop character](https://player.vimeo.com/video/1231113706?h=9e51d5dd78)). Downloaded all three, inspected overview frames and a 15 fps close sequence. Simple eyes and long still holds carry attention; headwear overlaps body movement. In launch frames 22.40–22.53 s, closed eyes reopen over about 130 ms, then remain open through 23.93 s. Closure onset is outside this crop: this is **not** a full blink-duration measurement. Lesson: quiet holds and delayed secondary parts contribute more than constant facial activity. [Getting started](https://help-lb.openai.com/en/articles/20001530-getting-started-with-your-dot) (undated, accessed 8 October) documents personalization, not animation engineering.
+- **xAI Grok Bot** (official spelling), [launch](https://x.ai/news/introducing-grok-bot) (11 August 2026), [product](https://x.ai/bot) (undated), [official YouTube demo](https://www.youtube.com/watch?v=F1_0Lkp16Rc) (11 August), [official product MP4](https://media.x.ai/v1/website/260810_2245_bw_dr_cursor_bot_edit_v8-60724aba.mp4). Downloaded both versions; examined ending frames at 15 fps. The small mark expands in roughly 130 ms, holds roughly 400 ms, then the title settles over roughly 130 ms (103.25–103.98 s). Sparse slanted eyes remain readable without a busy mouth. These are launch-title timings; tiny product shots cannot establish blink or gaze distributions. Lesson: distinguish an intentional reaction from continuous idle motion.
+- **Meta Muse**, [launch](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/) (8 September, updated 30 September 2026), [How We Designed Muse](https://introducing.muse.ai/) (September 2026), [launch MP4](https://about.fb.com/wp-content/uploads/2026/09/Introducing-Muse_Sizzle-Video.mp4). The personal character is Jolly/Jollybot. Downloaded the launch and all eleven official engineering-page clips, including a bear and an illustrated human. Frame sequences show conversational holds, restrained mouth openings and torso/hand follow-through rather than uniform bobbing. [Bringing your Muse to life](https://research.meta.ai/blog/bringing-your-muse-to-life) (23 September 2026) publishes 448×768 output at 25 fps, approximately 870 ms to first byte, eight-frame/320 ms chunks produced in about 20 ms on one GB200, and a 120-to-two-step distillation. This is a generated video-avatar system, not evidence of an SVG rig. Lesson: use pauses and coherent whole-character responses; do not import its compute-heavy approach.
+- **Duolingo**, [viseme engineering](https://blog.duolingo.com/world-character-visemes/) (10 November 2022; accessed 8 October 2026), [official Duocon 2023 talk](https://www.youtube.com/watch?v=fgOqvyPif3g) (2023). Downloaded and inspected the talk, including its viseme charts and Rive demonstrations. The article describes more than twenty mouth shapes, phoneme timestamps and separate mouth/body state machines. Lesson: silence is a mouth pose, and speech should interrupt cleanly. Our text-streaming avatar has no phoneme/audio channel, so its new closed/rounded/wide envelope remains explicitly synthetic.
+- **Disney Research**, [Modeling and Animating Eye Blinks](https://la.disneyresearch.com/wp-content/uploads/Modeling-and-Animating-Eye-Blinks-Paper.pdf) (May 2011). The study used 300 fps acquisition and compared 7/9/11/13-frame blinks at 30 fps; shorter 7/9-frame examples were preferred to the longest examples. Closure is faster than reopening. Lesson: avoid symmetric sine-wave blinks. Our 200–280 ms choice is a tuning range, not a copied product specification.
+- **Apple ARKit**, [blendshape locations](https://developer.apple.com/documentation/arkit/arfaceanchor/blendshapelocation) (undated, accessed 8 October 2026). Independent left/right blink, squint, wide-eye and cheek channels support asymmetric coupled expressions; weights are normalized. This is an interface reference, not a measured Memoji timing model. Rive's separate state-machine technique is supported by Duolingo's primary engineering account. A requested Pixar expression-paper URL redirected without yielding the paper; no Pixar-specific numerical claim is made.
 
-Reference observations, timing measurements, experiment decisions and before/after performance will be added here as the experiments run. Numbers measured from demo frames will be distinguished from published engineering specifications and our own tuning values.
+## Why the old face felt odd, ranked
+
+1. **Identity stops at the silhouette.** Identical eyes, brows and timing make different bots act like copies. The individuality ablation restores differences in proportions, asymmetry, gain and timing; the 24×4 board makes the accumulated small differences visible. Retain.
+2. **The face reads as a sticker.** Uniform translation provides no turning cue. Sine displacement plus cosine compression, silhouette clipping and opposite travel of ears/headwear give restrained side glances volume. Retain modest yaw. The 135° back-view experiment makes some silhouettes read as temporarily faceless; keep it in the dev experiment only, pending visual review. It is a layered illusion, not a fully modeled side/back silhouette.
+3. **Motion advertises its timer.** Repeated blinks, common starting phase and regular mouth loops suggest machinery. Irregular blink gaps, occasional double blinks, fast eye darts, micro-corrections and gaze leading head motion replace that cadence. Identity phases prevent rows starting together. Retain, but freeze detailed eye/turn timelines at ≤44 px: the cost is not justified there.
+4. **Emotion is too uniformly strong.** Shared intensity blending and eyelid/brow/cheek support soften default poses while preserving closed happy/asleep eyes and every named expression. Retain. The coupling comparison is subtle; it warrants the user's eyes more than the distinct personality board.
+5. **Speech never seems to rest.** Closed intervals and rounded/wide mouth scaling reduce the clean repeating flap. Retain synthetic energy as a fallback; it does not match phonemes or actual audio. Real lip sync needs an upstream audio/phoneme signal and is outside the stable current props.
+6. **Weight and depth are weak.** Keep existing static gradient/rim lighting; add a soft ground-contact shadow whose transform follows breathing. Reject animated lighting/filters and large idle rotations. The shading ablation includes the existing rim lighting, so it does not establish that all lighting is new.
+
+The gallery's eight comparisons are **effect ablations**: left disables one flag, right enables it, with identical identities and other effects enabled. Separate before/after movies use the untouched origin/main avatar implementation. Shapes and hats need optical support, not maximum movement; the 24×4 board includes all 24 silhouettes and a cap column.
+
+## Implementation and tuning
+
+`personality.ts` derives independent, deterministic bounded traits from bot ID, falling back to name/look for legacy callers. There is no render-time randomness. Eye size varies ±9%, spacing ±6%, facial height ±1.3 viewBox units, brows and smile have restrained handed asymmetry. Blink gaps are 3.8–6.8 s before irregular jitter; durations 200–280 ms, with 35% closure/65% reopening. Gaze intervals are 2.2–4.8 s before jitter; darts take 65 ms, head response begins 120 ms later and takes 400 ms. These are our tuning choices. Talking, excited and error body loops also inherit individual tempo and phase. Native transform/opacity timelines are precomputed for 83 s and independently phased; body breathing remains CSS. No per-avatar rAF loop or new 3D library.
+
+Default-shape slots retain their previous order: only the heart slot maps to pebble. This preserves other hash-derived looks and makes Sessions/AbacusAI calmer. Saved heart looks still resolve unchanged and heart remains selectable. Public `BotAvatar` props are unchanged. Pointed silhouettes use a smaller optical face island; faces are clipped to the body and accessories retain their existing paths.
+
+The full turn/back experiment and flag controls exist only in the development fixture `/__ui?fixture=bots-avatar-experiments`; production retains restrained side glances. Identity, mouth, gaze, coupled intensity, phase and shadow changes ship without experiment controls.
+
+## Performance
+
+Production-built actual avatar components, isolated Electron renderer, viewport 1000×900/DPR 1, sixty visible 36 px rows or one talking 72 px avatar. Three alternating five-second samples after warm-up; same CDP renderer/GPU process CPU-time deltas, layer inspection, rAF intervals and long-task observer as the earlier avatar work. CPU is percent of one core. A final three-second trace per workload checks DrawFrame/DroppedFrame/Paint. Baseline is latest origin/main at setup, not an older clone. These are component-fixture measurements, not whole-app CPU claims. Other user workloads were running; ranges matter.
+
+| Workload / metric | Before | After |
+| --- | ---: | ---: |
+| 60 rows: renderer CPU median (range) | 8.49% (8.32–8.49) | 5.63% (5.35–7.79) |
+| 60 rows: GPU CPU median (range) | 16.87% (16.46–17.37) | 3.46% (3.25–4.76) |
+| 60 rows: layers / drawing layers | 52 / 44 | 16 / 14 |
+| 60 rows: Paint events / 3 s | 176 | 0 |
+| Talking: renderer CPU median (range) | 11.09% (7.73–14.07) | 11.11% (6.03–12.53) |
+| Talking: GPU CPU median (range) | 17.45% (11.07–21.86) | 16.20% (8.43–19.25) |
+| Talking: layers / drawing layers | 13 / 10 | 15 / 12 |
+| Talking: Paint events / 3 s | 360 | 348 |
+| Both: dropped frames / long tasks | 0 / 0 | 0 / 0 |
+| Both: worst sample p95 frame interval | 17.7 ms | 17.7 ms |
+
+The first attempt animated all small SVG faces: about 1,195 Paint events/3 s. Dropped that version and gated detailed native timelines to >44 px. SVG transform-only authoring does **not** guarantee compositor-only execution: the hero's SVG face still paints, as did baseline speech. The list now has no steady paint in this trace; hero layering increases by two and CPU ranges overlap, so no reliable talking CPU improvement is claimed. Six animation leases, one shared reaction clock, offscreen/blur/hidden pausing, tiny static poses and reduced-motion static poses remain enforced. Raw measurement samples are in `docs/performance/avatar-natural-motion-results.json`.
+
+## Validation and evidence
+
+Web typecheck, touched-code oxlint/oxfmt, knip, locale/key/copy checks and 67 tests across avatar, saved-look and gallery accessibility suites pass. Tests cover 200 identities (unique, deterministic, bounded distributions), all shape optical islands, all mood/expression combinations, natural schedule timing and native-animation lease cleanup. Evidence comprises 24 shapes × four identities before/after, seven-mood movies/contact sheet, turn movies, and eight A/B comparison clips/contact sheet.
+
+The existing web-only gallery fails at an Electron-only import in `features/notch/gallery.tsx`; captures use a disposable production-built renderer harness with the actual gallery component and actual avatar code. Only the persisted motion-preference reader is replaced with a system-preference adapter; no private profile or API key is used. Runtime CDP checks confirm blur, reduced motion and offscreen movement cancel all native timelines and focus/motion restoration resumes them. Harness and media stay outside tracked files. Human review should focus on mouth pauses, whether tiny faces retain sufficient character, accessory turns, and whether the subtle coupling improves emotional readability.

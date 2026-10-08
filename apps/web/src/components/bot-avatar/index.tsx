@@ -350,6 +350,7 @@ const AvatarBody = ({
           "--bav-color": look.color,
           "--bav-period": `${personalityFor(look.shape).period * personality.period}s`,
           "--bav-phase": `${experiments?.phase === false ? 0 : -personality.phase}s`,
+          "--bav-tempo": personality.period,
           "--bav-breath": personality.breath,
           "--bav-hop": personality.hop,
           "--bav-wobble": personality.wobble,

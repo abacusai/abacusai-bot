@@ -19,7 +19,7 @@ export const TRAIT_BOUNDS = {
   smileAsymmetry: [0.15, 0.7],
   blush: [0.8, 1.15],
   blinkGap: [3.8, 6.8],
-  blinkDuration: [0.16, 0.24],
+  blinkDuration: [0.2, 0.28],
   doubleBlink: [0.08, 0.22],
   saccadeGap: [2.2, 4.8],
   saccadeAmplitude: [0.65, 1.6],

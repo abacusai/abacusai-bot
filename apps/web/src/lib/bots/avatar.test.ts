@@ -39,6 +39,15 @@ describe("avatar look", () => {
     ).toMatchObject({ shape: "heart", color: "#f472b6", identity: "bot-42" });
   });
 
+  it("keeps bot identity through renames and seeds distinct default callers", () => {
+    const saved = { ...bot("heart", "#f472b6"), id: "bot-42" };
+    expect(resolveLook({ ...saved, name: "Renamed" })).toEqual(
+      resolveLook(saved)
+    );
+    expect(defaultLook("Scout").identity).toBe("Scout");
+    expect(defaultLook("Assistant").identity).toBe("Assistant");
+  });
+
   it("every palette colour and legacy target reaches 4.5:1 with its foreground", () => {
     for (const hex of [
       ...AVATAR_PALETTE.map((c) => c.hex),

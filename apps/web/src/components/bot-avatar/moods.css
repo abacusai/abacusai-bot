@@ -49,9 +49,9 @@ html[data-reduce-motion="on"] .bav * { animation: none !important; }
 @keyframes bav-blink { 0%,36%,40%,43%,47%,100% { transform: scaleY(1); } 38%,45% { transform: scaleY(.025); } }
 
 .bav[data-animate][data-steady][data-shape="bunny"] .bav-life { animation-name: bav-hop; }
-.bav[data-animate][data-steady][data-mood="excited"] .bav-life { animation: bav-hop 1.8s ease-in-out infinite; }
-.bav[data-animate][data-steady][data-mood="error"] .bav-life { animation: bav-shake 5s ease-in-out infinite; }
-.bav[data-animate][data-steady][data-mood="talking"] .bav-life { animation: bav-speech-bob 1.37s ease-in-out infinite; }
+.bav[data-animate][data-steady][data-mood="excited"] .bav-life { animation: bav-hop calc(1.8s * var(--bav-tempo, 1)) ease-in-out infinite; animation-delay: var(--bav-phase); }
+.bav[data-animate][data-steady][data-mood="error"] .bav-life { animation: bav-shake calc(5s * var(--bav-tempo, 1)) ease-in-out infinite; animation-delay: var(--bav-phase); }
+.bav[data-animate][data-steady][data-mood="talking"] .bav-life { animation: bav-speech-bob calc(1.37s * var(--bav-tempo, 1)) ease-in-out infinite; animation-delay: var(--bav-phase); }
 .bav:not([data-natural])[data-animate][data-steady][data-mood="talking"] .bav-speech { animation: bav-speech 1.37s ease-in-out infinite; will-change: transform; }
 @keyframes bav-hop { 0%,8%,60%,100% { transform: translateY(0) scale(1,1); } 13% { transform: translateY(1%) scale(1.025,.976); } 27% { transform: translateY(calc(-3% * var(--bav-hop, 1))) scale(.98,1.02); } 39% { transform: translateY(0) scale(1.018,.982); } }
 @keyframes bav-shake { 0%,8%,20%,100% { transform: rotate(0deg); } 10%,16% { transform: rotate(-1.5deg); } 13%,18% { transform: rotate(1.5deg); } }
