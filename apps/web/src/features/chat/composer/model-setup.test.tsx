@@ -9,6 +9,11 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ModelSetupBinding } from "#renderer/components/model-setup/types";
+import {
+  clearDraft,
+  draftStore,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { setMediaMatches } from "#renderer/test-support/media";
 import { Toaster, toast } from "#renderer/ui/toast";
 
@@ -16,7 +21,6 @@ import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderWithDb } from "../testing";
 import { ModelChip } from "./chips";
-import { clearDraft, draftStore, updateDraft } from "./draft-store";
 
 const animate = vi.fn(
   (_frames: Keyframe[], _options: KeyframeAnimationOptions) => ({

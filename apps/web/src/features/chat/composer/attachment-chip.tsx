@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { containmentRootFor } from "#renderer/components/file-preview/paths";
 import { Spinner } from "#renderer/components/spinner";
+import type { DraftAttachment } from "#renderer/lib/continuity/composer-drafts";
 import {
   Attachment,
   AttachmentAction,
@@ -19,7 +20,6 @@ import {
 
 import type { ChatHostActions } from "../runtime/host-actions";
 import { formatSize } from "./attachments";
-import type { DraftAttachment } from "./draft-store";
 
 export const AttachmentChip = ({
   attachment,

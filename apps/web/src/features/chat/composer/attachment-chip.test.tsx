@@ -1,11 +1,15 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import {
+  draftStore,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
+
 import { inertHostActions } from "../runtime/host-actions";
 import { renderWithDb } from "../testing";
 import { AttachmentChip } from "./attachment-chip";
 import { addFiles, retryAttachment } from "./attachments";
-import { draftStore, updateDraft } from "./draft-store";
 
 let current: { cleanup(): Promise<void> } | undefined;
 afterEach(async () => {

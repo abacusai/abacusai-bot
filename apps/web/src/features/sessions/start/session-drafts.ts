@@ -1,10 +1,10 @@
-import { releaseAttachments } from "#renderer/features/chat/composer/attachments";
+import { releaseAttachments } from "#renderer/lib/continuity/attachment-retries";
 import {
   draftStore,
   EMPTY_DRAFT,
   updateDraft,
   type Draft,
-} from "#renderer/features/chat/composer/draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
 import { persistedStore } from "#renderer/lib/continuity/registry";
 
 import type { StartDraft } from "./start-session";

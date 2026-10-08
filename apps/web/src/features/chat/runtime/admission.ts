@@ -14,14 +14,8 @@ import type { UIMessage } from "@tanstack/ai-client";
 
 import { isDefinitive, type AiClient } from "#renderer/data/ai";
 import { isHostUnavailable } from "#renderer/data/transport/lifecycle";
-
-export interface SubmissionEnvelope {
-  runId: string;
-  messageId: string;
-  userText?: UserTextTags;
-  parts: UIMessage["parts"];
-  forwardedProps?: Record<string, unknown>;
-}
+import type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
+export type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 
 type OutboxState = "sending" | "accepted" | "unconfirmed" | "failed";
 

@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   draftStore,
   updateDraft,
-} from "#renderer/features/chat/composer/draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
 import {
   captureDrafts,
   persistedStore,

@@ -10,10 +10,13 @@ import { useEffect, useEffectEvent, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import {
+  draftStore,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
 
-import { draftStore, updateDraft } from "../composer/draft-store";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { useThreadHost } from "../runtime/host";

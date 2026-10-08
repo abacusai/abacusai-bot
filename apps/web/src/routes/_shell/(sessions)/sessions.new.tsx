@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
-import { updateDraft } from "#renderer/features/chat/composer/draft-store";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { restoreSessionDraft } from "#renderer/features/sessions/start/session-drafts";
@@ -23,6 +22,7 @@ import {
   shellStore,
 } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 const SessionsNewRoute = () => {

@@ -12,8 +12,12 @@ import {
   clearFeedbackStates,
   MessageFeedback,
 } from "#renderer/features/bots/chat/feedback";
+import {
+  draftStore,
+  updateDraft,
+  clearDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 
-import { draftStore, updateDraft, clearDraft } from "../composer/draft-store";
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay } from "../testing";

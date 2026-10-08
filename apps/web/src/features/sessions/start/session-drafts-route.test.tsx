@@ -7,8 +7,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
-import { draftStore } from "#renderer/features/chat/composer/draft-store";
 import { openFloating, shellStore } from "#renderer/features/shell/shell-store";
+import { draftStore } from "#renderer/lib/continuity/composer-drafts";
 import { renderApp } from "#renderer/test-support/app-harness";
 
 import { sessionDraftsStore } from "./session-drafts";

@@ -28,6 +28,15 @@ import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
 import { cn } from "#renderer/lib/cn";
+import {
+  clearDraft,
+  draftStore,
+  draftRevision,
+  restoreDraft,
+  EMPTY_DRAFT,
+  updateDraft,
+  type Draft,
+} from "#renderer/lib/continuity/composer-drafts";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
@@ -66,15 +75,6 @@ import {
   removeAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
-import {
-  clearDraft,
-  draftStore,
-  draftRevision,
-  restoreDraft,
-  EMPTY_DRAFT,
-  updateDraft,
-  type Draft,
-} from "./draft-store";
 import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 

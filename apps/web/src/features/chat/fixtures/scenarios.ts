@@ -7,7 +7,8 @@ import { v1ToUiMessages } from "@abacus-ai/contract/transcript/v1-to-ui-messages
  */
 import type { StreamChunk, UIMessage } from "@tanstack/ai";
 
-import type { Draft } from "../composer/draft-store";
+import type { Draft } from "#renderer/lib/continuity/composer-drafts";
+
 import * as b from "./builders";
 import { golden } from "./goldens";
 import type { RelayEvent } from "./relay";

@@ -9,7 +9,7 @@ import {
 import {
   updateDraft,
   draftStore,
-} from "#renderer/features/chat/composer/draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
 
 import { sessionDraftsStore } from "./session-drafts";
 import {

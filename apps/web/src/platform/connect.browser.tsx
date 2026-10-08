@@ -26,7 +26,6 @@ import {
   createHostTransport,
   type HostTransport,
 } from "#renderer/data/transport/websocket";
-import { importLegacyDrafts } from "#renderer/features/chat/composer/draft-store";
 import { followWriteAuthorization } from "#renderer/features/onboarding/gate";
 import {
   PhoneWhatsAppApp,
@@ -55,6 +54,7 @@ import {
   installSignOutUnmount,
 } from "#renderer/lib/browser/sign-out";
 import { installUiContinuity } from "#renderer/lib/continuity";
+import { importLegacyDrafts } from "#renderer/lib/continuity/composer-drafts";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";

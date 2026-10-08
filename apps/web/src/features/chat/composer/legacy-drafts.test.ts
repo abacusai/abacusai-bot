@@ -1,9 +1,14 @@
 import { expect, it, vi } from "vitest";
 
-import { draftStore, clearDraft, updateDraft } from "./draft-store";
+import {
+  draftStore,
+  clearDraft,
+  updateDraft,
+} from "#renderer/lib/continuity/composer-drafts";
 
 it("imports a synthetic v1.0.85 durable draft once without overwriting a new draft", async () => {
-  const { importLegacyDrafts } = await import("./draft-store");
+  const { importLegacyDrafts } =
+    await import("#renderer/lib/continuity/composer-drafts");
   const acknowledge = vi.fn().mockResolvedValue(undefined);
   const legacy = {
     "old-thread": "unsent legacy words",

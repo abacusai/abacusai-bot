@@ -8,7 +8,8 @@
  */
 import type { StreamChunk } from "@tanstack/ai";
 
-import { updateDraft } from "../composer/draft-store";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
+
 import { inertHostActions } from "../runtime/host-actions";
 import { createChatRuntime, type ChatRuntime } from "../runtime/runtime";
 import * as b from "./builders";

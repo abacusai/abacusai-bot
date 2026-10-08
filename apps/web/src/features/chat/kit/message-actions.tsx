@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { cn } from "#renderer/lib/cn";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { BubbleReactions } from "#renderer/ui/bubble";
 import { Button } from "#renderer/ui/button";
@@ -36,7 +37,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
-import { updateDraft } from "../composer/draft-store";
 import { reactionPillEnter, reactionPillExit } from "../motion";
 import { useChatView } from "./context";
 import type { ReplyTarget } from "./reply";

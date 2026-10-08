@@ -7,9 +7,9 @@ import { BOT_AVATAR_COLORS } from "@abacus-ai/contract/bots";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type CSSProperties } from "react";
 
+import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
 import { botAccentStyle } from "#renderer/lib/theme";
 
-import { clearDraft } from "../composer/draft-store";
 import { fixtureRuntime } from "../fixtures/player";
 import { SCENARIOS, type Scenario } from "../fixtures/scenarios";
 import type { ComposerConfig } from "../kit/context";

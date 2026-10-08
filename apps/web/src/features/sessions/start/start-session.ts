@@ -11,9 +11,9 @@ import { Store } from "@tanstack/react-store";
 import type { Db } from "#renderer/data/db";
 import { isRpcError } from "#renderer/data/query-client";
 import type { AppClient } from "#renderer/data/transport/types";
-import { updateDraft } from "#renderer/features/chat/composer/draft-store";
-import type { SubmissionEnvelope } from "#renderer/features/chat/runtime/admission";
+import { updateDraft } from "#renderer/lib/continuity/composer-drafts";
 import { persistedStore } from "#renderer/lib/continuity/registry";
+import type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
@@ -24,7 +24,7 @@ import {
   removeSessionDraft,
   sessionDraftsStore,
 } from "./session-drafts";
-export type { SubmissionEnvelope } from "#renderer/features/chat/runtime/admission";
+export type { SubmissionEnvelope } from "#renderer/lib/continuity/submission-envelope";
 export interface StartDraft {
   id: string;
   workspaceId: string | null;

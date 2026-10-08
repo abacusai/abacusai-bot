@@ -17,7 +17,7 @@ import { usePrefs } from "#renderer/data/db/prefs";
 import {
   draftStore,
   updateDraft,
-} from "#renderer/features/chat/composer/draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 
 import { useCheckoutQueries, useSessionsTransport } from "./queries";

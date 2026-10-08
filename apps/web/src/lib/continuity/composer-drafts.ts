@@ -22,7 +22,7 @@ export interface DraftAttachment {
   preview?: string;
 }
 
-import type { SubmissionEnvelope } from "../runtime/admission";
+import type { SubmissionEnvelope } from "./submission-envelope";
 
 export interface Draft {
   selectionStart?: number;

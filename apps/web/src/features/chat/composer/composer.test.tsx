@@ -15,17 +15,18 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import * as b from "../fixtures/builders";
-import { FakeRelay } from "../fixtures/relay";
-import { renderRelay, renderScenario, renderWithDb } from "../testing";
-import { ModeChip, ModelChip } from "./chips";
-import { SURFACE_RADIUS, useComposerExpanded } from "./composer";
 import {
   clearDraft,
   updateDraft,
   draftRevision,
   draftStore,
-} from "./draft-store";
+} from "#renderer/lib/continuity/composer-drafts";
+
+import * as b from "../fixtures/builders";
+import { FakeRelay } from "../fixtures/relay";
+import { renderRelay, renderScenario, renderWithDb } from "../testing";
+import { ModeChip, ModelChip } from "./chips";
+import { SURFACE_RADIUS, useComposerExpanded } from "./composer";
 
 let current: { cleanup(): Promise<void> } | null = null;
 afterEach(async () => {

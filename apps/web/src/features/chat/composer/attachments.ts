@@ -1,10 +1,15 @@
+import {
+  draftStore,
+  updateDraft,
+  type DraftAttachment,
+} from "#renderer/lib/continuity/composer-drafts";
+
 /**
  * Attachments (spec 02 §8.6): a picked or dropped file with a real path is
  * used directly; pasted data is saved under the attachments base first.
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
 import type { ChatHostActions } from "../runtime/host-actions";
-import { draftStore, updateDraft, type DraftAttachment } from "./draft-store";
 
 const MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -29,7 +34,7 @@ const pastedName = (
   return `${id}.${ext || "bin"}`;
 };
 
-const retries = new Map<string, () => Promise<void>>();
+import { attachmentRetries as retries } from "#renderer/lib/continuity/attachment-retries";
 let counter = 0;
 const nextId = (): string => `att-${Date.now().toString(36)}-${++counter}`;
 
@@ -169,9 +174,4 @@ export const retryAttachment = async (
   } catch (error) {
     patch(threadId, id, { state: "error", error: String(error) });
   }
-};
-
-export const releaseAttachments = (threadId: string): void => {
-  for (const key of retries.keys())
-    if (key.startsWith(`${threadId}:`)) retries.delete(key);
 };

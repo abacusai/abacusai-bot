@@ -15,11 +15,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { clearDraft } from "#renderer/lib/continuity/composer-drafts";
+
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario } from "../testing";
 import { formatElapsed } from "./composer";
-import { clearDraft } from "./draft-store";
 
 type VoiceState = "idle" | "starting" | "recording" | "transcribing" | "error";
 
