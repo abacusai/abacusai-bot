@@ -86,6 +86,11 @@ jobs:
       - run: pnpm run check:scripts
       # The guard compares the browser graph with the Electron renderer's, so
       # both builds have to exist; turbo builds the desktop's dependencies too.
+      # Electron 44 fetches its binary on first require, not on install, and
+      # the desktop build reads Chromium's notices from it.
+      - name: Install Electron before the desktop build
+        working-directory: apps/desktop
+        run: node -e 'require("electron")'
       - name: Browser bundle platform guard
         run: |
           pnpm exec turbo run build --filter=@abacus-ai/desktop --filter=@abacus-ai/web
@@ -144,14 +149,15 @@ jobs:
       # vendored search binaries. A clean runner has neither until the complete
       # build graph has run: fetching the binaries alone leaves the suites that
       # spawn the CLI failing on a bundle that was never built.
-      - name: Build what the tests execute
-        run: pnpm run build
-
-      # Electron 44 installs on first require. Parallel Vitest workers can
+      # Electron 44 installs on first require. The desktop build reads
+      # Chromium's notices from the binary, and parallel Vitest workers can
       # race while extracting into the same directory, especially on Windows.
-      - name: Install Electron before the desktop test workers start
+      - name: Install Electron before the desktop build and test workers
         working-directory: apps/desktop
         run: node -e 'require("electron")'
+
+      - name: Build what the tests execute
+        run: pnpm run build
 
       - name: Prepare Linux desktop tests
         if: runner.os == 'Linux'
@@ -295,6 +301,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+
+      # Electron 44 fetches its binary on first require, not on install, and
+      # the desktop build reads Chromium's notices from it.
+      - name: Install Electron before the desktop build
+        working-directory: apps/desktop
+        run: node -e 'require("electron")'
 
       # Build every workspace dependency and fetch every vendored runtime before
       # electron-builder walks dist/ and extraResources. Calling package:dir on
