@@ -74,7 +74,7 @@
     "ghostty-web": "0.4.0",
     "i18next": "^25.8.7",
     "jszip": "3.10.1",
-    "linkify-it": "5.0.0",
+    "linkify-it": "5.0.2",
     "lucide-react": "^1.49.0",
     "motion": "^13.4.6",
     "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
