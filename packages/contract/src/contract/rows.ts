@@ -226,6 +226,7 @@ export interface PrefsAppearance {
   textSize: PrefsTextSize;
   bubbleTint: boolean;
   palette: string;
+  /** "default" follows the palette; null preserves the neutral primary. */
   accent: string | null;
   contrast: "system" | "standard" | "high";
   radius: "sharp" | "default" | "round";

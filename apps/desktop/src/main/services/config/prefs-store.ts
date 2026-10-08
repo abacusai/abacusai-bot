@@ -78,7 +78,7 @@ const DEFAULTS: PrefsValues = {
     textSize: 14,
     bubbleTint: true,
     palette: "default",
-    accent: null,
+    accent: "default",
     contrast: "system",
     radius: "default",
     uiFont: "",
@@ -345,10 +345,13 @@ export class PrefsStore {
       for (const leaf of PREFS_LEAVES) {
         const value = getPrefsLeaf(storedRow, leaf);
         if (!validLeaf(leaf, value)) continue;
-        setLeaf(row, leaf, value);
         // A leaf's own mark, else its group's (the per-field format).
         const mark =
           storedProvenance[leaf] ?? storedProvenance[leaf.split(".")[0]!];
+        // An untouched accent follows today's default without rewriting prefs.
+        // Explicit neutral (null) and all user/legacy colors remain unchanged.
+        if (leaf === "appearance.accent" && mark === "default") continue;
+        setLeaf(row, leaf, value);
         if (mark === "legacy" || mark === "user") provenance[leaf] = mark;
       }
       if (typeof storedRow.updatedAt === "string")

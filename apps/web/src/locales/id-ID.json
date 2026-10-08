@@ -2713,6 +2713,8 @@
       "themeAccent": "Aksen tema",
       "customAccent": "Aksen kustom",
       "colors": {
+        "abacusai": "AbacusAI",
+        "neutral": "Netral",
         "blue": "Biru",
         "violet": "Ungu",
         "pink": "Merah muda",

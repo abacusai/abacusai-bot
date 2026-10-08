@@ -56,7 +56,7 @@ it("renders a live mini-app preview per theme from its own tokens", async () => 
     STOCK.light["chat-user-bubble"]
   );
   expect(stock.getPropertyValue("--ring")).toBe(
-    themeTokens(THEMES[0]!, "light", { high: false, accent: null }).ring
+    themeTokens(THEMES[0]!, "light", { high: false, accent: "default" }).ring
   );
   expect(document.documentElement.style.getPropertyValue("--background")).toBe(
     ""
@@ -87,8 +87,15 @@ it("moves through the gallery and the accents with arrow keys, one tab stop each
     accents.map(
       (radio) => radio.getAttribute("aria-label") ?? radio.textContent
     )
-  ).toEqual([copy.themeAccent, ...Object.values(copy.colors)]);
-  fireEvent.keyDown(accents[0]!, { key: "ArrowLeft" });
+  ).toEqual([
+    copy.colors.abacusai,
+    copy.themeAccent,
+    copy.colors.neutral,
+    ...Object.entries(copy.colors)
+      .filter(([name]) => name !== "abacusai" && name !== "neutral")
+      .map(([, name]) => name),
+  ]);
+  fireEvent.keyDown(accents[1]!, { key: "End" });
   await waitFor(() => expect(look()?.accent).toBe("#12838f"));
 });
 
@@ -111,6 +118,10 @@ it("picking a theme, an accent, contrast and fonts writes prefs and re-themes th
     ).not.toBe("")
   );
   fireEvent.click(row("accent").getByRole("radio", { name: copy.themeAccent }));
+  await waitFor(() => expect(look()?.accent).toBe("default"));
+  fireEvent.click(
+    row("accent").getByRole("radio", { name: copy.colors.neutral })
+  );
   await waitFor(() => expect(look()?.accent).toBeNull());
 
   fireEvent.click(row("contrast").getByRole("button", { name: copy.high }));

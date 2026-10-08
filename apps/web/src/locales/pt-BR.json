@@ -2713,6 +2713,8 @@
       "themeAccent": "Destaque do tema",
       "customAccent": "Destaque personalizado",
       "colors": {
+        "abacusai": "AbacusAI",
+        "neutral": "Neutro",
         "blue": "Azul",
         "violet": "Violeta",
         "pink": "Rosa",

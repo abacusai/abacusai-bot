@@ -278,6 +278,21 @@ describe("PrefsStore", () => {
     });
   });
 
+  it("uses the new default only for untouched accents on reload", () => {
+    for (const accent of [null, "#2f6fde"]) {
+      const store = new PrefsStore({ file });
+      store.update({ appearance: { accent } });
+      expect(new PrefsStore({ file }).get().appearance?.accent).toBe(accent);
+    }
+    const stored = JSON.parse(fs.readFileSync(file, "utf8"));
+    stored.row.appearance.accent = null;
+    stored.provenance["appearance.accent"] = "default";
+    fs.writeFileSync(file, JSON.stringify(stored));
+    const before = fs.readFileSync(file, "utf8");
+    expect(new PrefsStore({ file }).get().appearance?.accent).toBe("default");
+    expect(fs.readFileSync(file, "utf8")).toBe(before);
+  });
+
   it("keeps everything in memory with no file", () => {
     const store = new PrefsStore({ file: null });
     store.update({ theme: "light" });
@@ -295,7 +310,7 @@ describe("PrefsStore", () => {
         textSize: 14,
         bubbleTint: true,
         palette: "default",
-        accent: null,
+        accent: "default",
         contrast: "system",
         radius: "default",
         uiFont: "",

@@ -287,9 +287,9 @@ describe("Default", () => {
 
   it("writes no colour in standard contrast; an accent writes only its tokens", () => {
     for (const mode of ["light", "dark"] as const) {
-      expect(Object.keys(resolveLook(look(), mode, false).vars)).toEqual([
-        "code-font-size",
-      ]);
+      expect(
+        Object.keys(resolveLook(look({ accent: null }), mode, false).vars)
+      ).toEqual(["code-font-size"]);
       expect(
         themeTokens(THEMES[0]!, mode, { high: false, accent: null })
       ).toEqual(STOCK[mode]);
@@ -406,4 +406,41 @@ describe("notchTokens", () => {
       }
     }
   );
+});
+
+it("defaults to logo purple only on Default, with accessible controls and no large fills", () => {
+  for (const mode of ["light", "dark"] as const) {
+    const tokens = themeTokens(THEMES[0]!, mode, {
+      high: false,
+      accent: "default",
+    });
+    expect(tokens.primary).toBe("#A233FB");
+    expect(tokens["accent-text"]).toBe(
+      mode === "light" ? "#9f32f7" : "#b267ff"
+    );
+    expect(tokens.ring).toBe(mode === "light" ? "#471273" : "#cfa5ff");
+    expect(
+      contrastRatio(tokens.primary!, tokens["primary-foreground"]!)
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrastRatio(tokens["accent-text"]!, tokens.card!)
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrastRatio(over(tokens.ring!, 0.5, tokens.muted!), tokens.muted!)
+    ).toBeGreaterThanOrEqual(3);
+    for (const key of [
+      "background",
+      "card",
+      "sidebar",
+      "sidebar-accent",
+      "chat-user-bubble",
+    ]) {
+      expect(tokens[key]).toBe(STOCK[mode][key]);
+    }
+    for (const theme of THEMES.slice(1)) {
+      expect(
+        themeTokens(theme, mode, { high: false, accent: "default" })
+      ).toEqual(themeTokens(theme, mode, { high: false, accent: null }));
+    }
+  }
 });

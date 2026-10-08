@@ -424,7 +424,11 @@ export const THEMES: readonly LookTheme[] = [
 ];
 
 /** The accent swatches, each with a translated name (settings.appearance.colors). */
+// Logo purple #A233FB keeps near-white button text above 4.5:1 in both modes.
+// The solver derives light/dark link shades #9f32f7 / #b267ff and focus rings
+// #471273 / #cfa5ff so text reaches 4.5:1 and half-opacity focus reaches 3:1.
 export const ACCENTS = [
+  ["abacusai", "#A233FB"],
   ["blue", "#2f6fde"],
   ["violet", "#7a4fd6"],
   ["pink", "#d6457a"],
@@ -660,7 +664,7 @@ export const DEFAULT_LOOK: Look = {
   textSize: 14,
   bubbleTint: true,
   palette: "default",
-  accent: null,
+  accent: "default",
   contrast: "system",
   radius: "default",
   uiFont: "",
@@ -713,6 +717,13 @@ export const themeTokens = (
 ): Record<string, string> =>
   deriveTokens(entry[themeMode(entry, wanted)]!, {
     ...options,
+    // Only Default inherits the logo purple; other palettes keep their seeds.
+    accent:
+      options.accent === "default"
+        ? entry.stock
+          ? ACCENTS[0][1]
+          : null
+        : options.accent,
     stock: entry.stock,
   });
 

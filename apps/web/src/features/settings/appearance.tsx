@@ -431,12 +431,23 @@ export const AppearancePage = () => {
             onChange={(accent) => save({ accent: accent || null })}
             className="flex flex-wrap items-center gap-1.5"
             options={[
+              ...ACCENTS.slice(0, 1).map(([name, color]) => ({
+                value: color,
+                label: t(`${a}colors.${name}`),
+                className: "size-6 rounded-full",
+                style: { background: color },
+              })),
               {
-                value: "",
+                value: "default",
                 className: "border-input rounded-md border px-2 py-1 text-xs",
                 children: t(`${a}themeAccent`),
               },
-              ...ACCENTS.map(([name, color]) => ({
+              {
+                value: "",
+                className: "border-input rounded-md border px-2 py-1 text-xs",
+                children: t(`${a}colors.neutral`),
+              },
+              ...ACCENTS.slice(1).map(([name, color]) => ({
                 value: color,
                 label: t(`${a}colors.${name}`),
                 className: "size-6 rounded-full",
@@ -449,7 +460,11 @@ export const AppearancePage = () => {
             type="color"
             aria-label={t(`${a}customAccent`)}
             className="size-7 cursor-pointer rounded-full bg-transparent"
-            defaultValue={look.accent ?? ACCENTS[0][1]}
+            defaultValue={
+              look.accent === "default"
+                ? ACCENTS[0][1]
+                : (look.accent ?? ACCENTS[0][1])
+            }
             // The native `change` fires once the picker closes, not per drag.
             ref={(input) => {
               if (!input) return;
