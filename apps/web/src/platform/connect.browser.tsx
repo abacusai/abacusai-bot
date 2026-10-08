@@ -58,6 +58,7 @@ import { installUiContinuity } from "#renderer/lib/continuity";
 import { changeLanguage, fixedT, resolveLanguage } from "#renderer/lib/i18n";
 import { installLogRing } from "#renderer/lib/log-ring";
 import { installTransitionTypes } from "#renderer/lib/navigation/transition-types";
+import { isPhone } from "#renderer/lib/phone";
 import {
   applyBootLook,
   applyTheme,
@@ -122,10 +123,8 @@ const loadSystem = async (
   return null;
 };
 
-/** A phone: touch first, and a screen whose shorter side is phone-sized. */
-const isPhone = (): boolean =>
-  matchMedia("(pointer: coarse)").matches &&
-  Math.min(screen.width, screen.height) < 600;
+/** Tries at reading the phone's WhatsApp chat, a second apart, before the full app. */
+const PHONE_CHAT_ATTEMPTS = 4;
 
 /**
  * A phone where the server offers the bot's WhatsApp number: the bot is
@@ -136,15 +135,23 @@ const isPhone = (): boolean =>
 const mountPhoneApp = async (root: Root): Promise<boolean> => {
   const queryClient = createQueryClient({ showError });
   let chat;
-  try {
-    chat = await queryClient.fetchQuery(whatsappChatQuery(callApps));
-  } catch (error) {
-    // Signed out, tier, limit: the connect screen says so. Anything else
-    // (an apps server without the number) is the full app's to handle.
-    if (error instanceof ConnectError && error.kind !== "connection")
-      throw error;
-    console.warn("[phone] WhatsApp chat unavailable", error);
-    return false;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      chat = await queryClient.fetchQuery(whatsappChatQuery(callApps));
+      break;
+    } catch (error) {
+      // Signed out, tier, limit: the connect screen says so. Anything else
+      // (an apps server without the number) is the full app's to handle, but
+      // a passing network blip is retried first: falling through puts a
+      // phone in the full app.
+      if (error instanceof ConnectError && error.kind !== "connection")
+        throw error;
+      if (attempt >= PHONE_CHAT_ATTEMPTS) {
+        console.warn("[phone] WhatsApp chat unavailable", error);
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
   if (!chat.available) return false;
   // For the page's life: the phone app is light only.

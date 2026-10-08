@@ -17,6 +17,7 @@ import { ConnectorMark } from "#renderer/components/connector-mark";
 import { FlowPage, FlowContent } from "#renderer/components/form-kit/flow-page";
 import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
+import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent } from "#renderer/ui/dialog";
@@ -361,7 +362,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
  * The browser's first run: "Connect your WhatsApp" over the shell, once per
  * account (`seen` is the account's pref), while the server offers the bot's
  * number and none is linked. Linking or skipping marks it seen; the
- * messaging page keeps the way in.
+ * messaging page keeps the way in. A phone gets no Skip.
  */
 export const WhatsAppIntro = ({
   callApps,
@@ -400,7 +401,8 @@ export const WhatsAppIntro = ({
             callApps={callApps}
             as="h1"
             onLinked={() => close(true)}
-            onSkip={() => close(false)}
+            // On a phone the bot is WhatsApp: there is no browser to skip to.
+            {...(isPhone() ? {} : { onSkip: () => close(false) })}
           />
         </FlowContent>
       </DialogContent>
