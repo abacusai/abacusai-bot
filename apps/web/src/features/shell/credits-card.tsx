@@ -1,22 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { Sparkles, Minus } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useRef,
-  type CSSProperties,
-} from "react";
+import { AnimatePresence, motion, animate } from "motion/react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
-import {
-  ABACUS_PLAN_URL,
-  creditMarkState,
-  creditsTier,
-} from "#renderer/lib/credits";
+import { usePrefs } from "#renderer/data/db/prefs";
+import { cn } from "#renderer/lib/cn";
+import { ABACUS_PLAN_URL, creditsTier } from "#renderer/lib/credits";
 import {
   durations,
   easings,
@@ -27,10 +18,12 @@ import {
 } from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
 import { PromoCharacter } from "./promo-character";
+import { usePromoHost, consumePromoRect } from "./promo-host";
 import { promoPlacement } from "./promo-placement";
 import {
   PROMO_SNOOZE_MS,
@@ -40,25 +33,57 @@ import {
   type PromoSnooze,
 } from "./promo-state";
 
-/** Floating above the reading pane, clear of the composer and splitters. */
+/** One portal and snooze state, shared by sidebar and floating presentations. */
 export const UpgradePromo = () => {
   const { transport } = useAppContext();
+  const host = usePromoHost();
+  const snapshot = useRef<DOMRect | null>(null);
+  const [target] = useState(() => {
+    const element = document.createElement("div");
+    element.dataset.slot = "promo-portal";
+    return element;
+  });
   const { t } = useTranslation();
   const prefs = usePrefs();
-  const update = useUpdatePrefs();
   const minuteNow = useNow();
   const [deadlineNow, setDeadlineNow] = useState(() => Date.now());
   const now = Math.max(minuteNow, deadlineNow);
   const preference = useMotionPreference();
   const location = useLocation();
-  const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
-    queryKey: [
-      ...transport.orpc.account.abacus.queryKey({ input: { refresh: true } }),
-      prefs.creditsExhaustedAt,
-    ],
-    staleTime: 60_000,
-  });
+  useLayoutEffect(() => {
+    const previous = snapshot.current
+      ? snapshot.current
+      : (consumePromoRect() ?? snapshot.current);
+    target.setAttribute(
+      "style",
+      host
+        ? "pointer-events:none"
+        : "position:fixed;inset:0;pointer-events:none;z-index:30"
+    );
+    (host?.element ?? document.body).append(target);
+    const next = target.firstElementChild?.getBoundingClientRect();
+    const controls =
+      previous && next && preference !== "reduced"
+        ? animate(
+            target,
+            {
+              x: [previous.left - next.left, 0],
+              y: [previous.top - next.top, 0],
+            },
+            {
+              ...springs.panel,
+              onComplete: () => {
+                snapshot.current =
+                  target.firstElementChild?.getBoundingClientRect() ?? null;
+              },
+            }
+          )
+        : null;
+    snapshot.current = next ?? null;
+    return () => controls?.stop();
+  }, [host, target, preference]);
+  useEffect(() => () => target.remove(), [target]);
+  const account = useCreditsAccount();
   const key = promoAccountKey(account.data);
   const [snooze, setSnooze] = useState<{
     key: string;
@@ -81,21 +106,20 @@ export const UpgradePromo = () => {
     savedSnooze,
     now
   );
-  const mark = creditMarkState(
-    account.data,
-    prefs.creditsExhaustedAt,
-    now,
-    account.dataUpdatedAt >= (prefs.creditsExhaustedAt ?? Infinity)
-  );
-  useEffect(() => {
-    if (mark === "clear")
-      void update({ creditsExhaustedAt: null }).catch(() => {});
-  }, [mark, update]);
-  const [position, setPosition] = useState<CSSProperties>({
+  const [position, setPosition] = useState<ReturnType<typeof promoPlacement>>({
     left: 72,
     bottom: 24,
     maxWidth: 320,
+    compact: false,
+    visibility: "visible",
   });
+  const fullHeight = useRef(180);
+  const compact = !host && position.compact;
+  const compactRef = useRef(compact);
+  useLayoutEffect(() => {
+    compactRef.current = compact;
+  }, [compact]);
+  const { compact: _compact, ...floatingStyle } = position;
   const [excited, setExcited] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const tier = creditsTier(account.data);
@@ -109,54 +133,58 @@ export const UpgradePromo = () => {
     return () => clearTimeout(timer);
   }, [tier]);
   useLayoutEffect(() => {
-    if (!state && !celebrating) return;
+    if (host || (!state && !celebrating)) return;
     let frame = 0;
     const observer = new ResizeObserver(() => schedule());
     const observed = new Set<Element>();
     const measure = () => {
-      const composer = [
-        ...document.querySelectorAll<HTMLElement>('[data-slot="composer"]'),
-      ].find((element) => element.getBoundingClientRect().height > 0);
-      const pane =
-        composer?.closest<HTMLElement>('[data-dock-pane="chat"]') ??
-        document.querySelector<HTMLElement>('[data-slot="pane"]');
-      for (const element of [composer, pane]) {
+      const card = target.querySelector<HTMLElement>(
+        '[data-slot="upgrade-promo"]'
+      );
+      if (card && !compactRef.current)
+        fullHeight.current = card.getBoundingClientRect().height || 180;
+      const controls = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[data-slot="composer"], [data-slot="sidebar-footer"], [data-pane-gutter], .dv-sash, [data-slot="shell"] button, [data-slot="shell"] input, [data-slot="shell"] textarea, [data-slot="shell"] [role="button"]'
+        ),
+      ].filter((element) => !element.closest('[data-slot="upgrade-promo"]'));
+      const obstacles = controls
+        .map((element) => element.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0);
+      for (const element of [
+        card,
+        ...document.querySelectorAll(
+          '[data-slot="composer"], [data-slot="sidebar-footer"], [data-workspace-group], [data-pane-gutter], .dv-sash'
+        ),
+      ]) {
         if (element && !observed.has(element)) {
           observed.add(element);
           observer.observe(element);
         }
       }
-      const rect = pane?.getBoundingClientRect();
-      const composerRect = composer?.getBoundingClientRect();
-      const promoHeight =
-        document
-          .querySelector('[data-slot="upgrade-promo"]')
-          ?.getBoundingClientRect().height || 128;
+      snapshot.current = card?.getBoundingClientRect() ?? null;
       const rail = document
         .querySelector('[data-slot="rail"]')
         ?.getBoundingClientRect();
       const sidebar = document
         .querySelector('[data-slot="sidebar-slot"]')
         ?.getBoundingClientRect();
-      const footer = document
-        .querySelector('[data-slot="sidebar-footer"]')
-        ?.getBoundingClientRect();
-      setPosition(
-        promoPlacement({
-          width: window.innerWidth,
-          height: window.innerHeight,
-          railRight: rail?.right ?? 56,
-          sidebarRight: sidebar?.right ?? 56,
-          paneTop: rect?.top ?? 40,
-          cardHeight: promoHeight,
-          composer: composerRect,
-          footer,
-          splitters: [
-            ...document.querySelectorAll("[data-pane-gutter], .dv-sash"),
-          ]
-            .map((element) => element.getBoundingClientRect())
-            .filter((rect) => rect.width > 0 && rect.height > 0),
-        })
+      const next = promoPlacement({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        railRight: rail?.right ?? 56,
+        sidebarRight: sidebar?.right ?? 56,
+        cardHeight: fullHeight.current,
+        obstacles,
+      });
+      setPosition((previous) =>
+        Object.keys(next).every(
+          (key) =>
+            previous[key as keyof typeof next] ===
+            next[key as keyof typeof next]
+        )
+          ? previous
+          : next
       );
     };
     const schedule = () => {
@@ -179,20 +207,26 @@ export const UpgradePromo = () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", schedule);
     };
-  }, [state, celebrating, location.href]);
+  }, [state, celebrating, location.href, host, target]);
   const remaining =
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
-  return (
+  return createPortal(
     <AnimatePresence>
       {state || celebrating ? (
         <motion.aside
           key={key}
           data-slot="upgrade-promo"
           aria-label={t("creditsCard.upsellTitle")}
-          className="bg-background fixed isolate z-30 w-80 overflow-hidden rounded-xl border p-3 shadow-lg"
-          style={position}
+          data-presentation={host ? "sidebar" : "floating"}
+          data-compact={compact || undefined}
+          className={cn(
+            "bg-background pointer-events-auto isolate overflow-hidden rounded-(--pane-radius) border",
+            compact ? "flex h-11 items-center gap-2 p-2" : "p-3",
+            host ? "relative w-full" : "floating-surface fixed z-30 w-80"
+          )}
+          style={host ? undefined : floatingStyle}
           initial={{
             opacity: 0,
             y: preference === "reduced" ? 0 : offsets.drill,
@@ -209,7 +243,7 @@ export const UpgradePromo = () => {
           <Button
             size="icon-sm"
             variant="ghost"
-            className="absolute top-1 right-1"
+            className={compact ? "order-3 shrink-0" : "absolute top-1 right-1"}
             aria-label={t("creditsCard.remindLater")}
             title={t("creditsCard.remindLater")}
             onClick={() => {
@@ -222,19 +256,24 @@ export const UpgradePromo = () => {
               } catch {
                 /* Keep this window’s snooze. */
               }
+              setCelebrating(false);
               setSnooze({ key, value });
             }}
           >
             <Minus />
           </Button>
-          <div className="flex items-center gap-3 pr-3">
+          <div
+            className={compact ? "contents" : "flex items-center gap-3 pr-3"}
+          >
             <PromoCharacter
               remaining={remaining}
               total={account.data?.credits_granted ?? null}
               excited={excited}
               upgraded={celebrating}
+              compact={compact}
+              active={!!host || position.visibility !== "hidden"}
             />
-            <div className="min-w-0 flex-1">
+            <div className={compact ? "hidden" : "min-w-0 flex-1"}>
               <p className="text-sm font-semibold">
                 {t(
                   celebrating
@@ -291,7 +330,11 @@ export const UpgradePromo = () => {
           </div>
           <Button
             size="sm"
-            className="mt-3 h-8 rounded-lg"
+            className={
+              compact
+                ? "h-7 shrink-0 rounded-lg px-2 text-xs"
+                : "mt-3 h-8 rounded-lg"
+            }
             onMouseEnter={() => setExcited(true)}
             onMouseLeave={() => setExcited(false)}
             onFocus={() => setExcited(true)}
@@ -308,6 +351,7 @@ export const UpgradePromo = () => {
           </Button>
         </motion.aside>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    target
   );
 };

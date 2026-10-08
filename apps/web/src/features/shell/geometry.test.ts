@@ -119,23 +119,31 @@ describe("shell surfaces", () => {
       /\.shell-surface \{\s*background-color: transparent;/
     );
     // The layers over it: the pane and the in-layout panel keep nine tenths
-    // of their colour; the floating sidebar is frosted.
+    // of their colour inside solid islands; the floating sidebar stays solid.
     expect(block).toMatch(
-      /\[data-slot="pane"\], \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
+      /\[data-slot="pane"\]:not\(:has\(\[data-slot="session-dock"\]\)\), \[data-slot="side-panel"\]\[data-mode="layout"\]\) \{\s*background-color: color-mix\(in oklab, var\(--background\) 90%, transparent\);/
     );
     expect(block).toMatch(
-      /\[data-slot="sidebar-floating"\] \{\s*background-color: color-mix\(in oklab, var\(--sidebar\) \d+%, transparent\);[\s\S]*?backdrop-filter: blur\(/
+      /\[data-slot="sidebar-floating"\] \{\s*background-color: var\(--floating-surface-background\);/
     );
+    expect(block).not.toContain("backdrop-filter");
+    expect(tokensCss).toContain('data-window-focused="false"');
     // Outside that rule the chrome is opaque.
     expect(tokensCss).toMatch(
       /\.shell-surface \{\s*background-color: var\(--sidebar\);/
     );
   });
 
-  it("gives the pane and the in-layout panel a visible edge in light (V2)", () => {
+  it("keeps permanent island and gutter lines out of the surface policy", () => {
     expect(tokensCss).toMatch(
-      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\],\s*\.workspace-island \{\s*\/\*[^*]*\*\/\s*outline: 1px solid var\(--border\);\s*outline-offset: -1px;/
+      /\.workspace-island \{\s*border: 0;\s*outline: none;\s*box-shadow: none;/
     );
+    expect(tokensCss).toMatch(
+      /\[data-pane-gutter\]::after, \.panel-dock \.dv-sash::after \{[^}]*opacity: 0;/
+    );
+    expect(tokensCss).not.toContain(".dv-sash:hover::before");
+    expect(tokensCss).toContain("height: 28px");
+    expect(tokensCss).toContain("transition: opacity 150ms ease");
   });
 
   it("separates pane and panel with an 8 px gutter (V3)", () => {
@@ -143,4 +151,25 @@ describe("shell surfaces", () => {
       /\[data-pane-gutter\] \{[^}]*width: max\(8px, var\(--pane-inset\)\);/
     );
   });
+});
+
+// Sessions nests the workspace inside the route pane; it is chrome, not an island.
+it("excludes the Sessions workspace wrapper from the native content surface", () => {
+  expect(tokensCss).toContain(
+    '[data-slot="pane"]:not(:has([data-slot="session-dock"]))'
+  );
+  expect(tokensCss).not.toContain(
+    ':is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"])'
+  );
+  expect(tokensCss).toContain("prefers-reduced-transparency: reduce");
+  expect(tokensCss).toContain('data-window-focused="false"');
+});
+
+it("shares solid floating island geometry without a scrolling backdrop filter", () => {
+  expect(tokensCss).toContain(
+    "background-color: var(--floating-surface-background)"
+  );
+  expect(tokensCss).toContain("box-shadow: var(--floating-surface-shadow)");
+  expect(tokensCss).toContain("border-radius: var(--pane-radius)");
+  expect(tokensCss).toContain("backdrop-filter: none");
 });

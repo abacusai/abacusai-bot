@@ -12,6 +12,7 @@ export interface PanelTab {
   url?: string;
 }
 export interface PanelTabs {
+  closed?: PanelTab[];
   open?: boolean;
   order?: string[];
   tabs: PanelTab[];
@@ -135,7 +136,10 @@ export const closeTab = (key: string, ref: string): string | undefined => {
   updateTabs(key, (s) => {
     const repaired = removeRefs(s, [ref]);
     next = repaired.last ?? undefined;
-    return repaired;
+    const closed = s.tabs.find((tab) => tab.ref === ref);
+    return closed
+      ? { ...repaired, closed: [...(s.closed ?? []).slice(-19), closed] }
+      : repaired;
   });
   return next;
 };
@@ -171,3 +175,23 @@ export const promoteTabs = (from: string, to: string): void =>
     delete next[from];
     return next;
   });
+
+export const reopenTab = (key: string): string | null => {
+  const tab = panelTabsStore.state[key]?.closed?.at(-1);
+  if (!tab) return null;
+  updateTabs(key, (state) => ({
+    ...state,
+    closed: state.closed?.slice(0, -1),
+    open: true,
+  }));
+  const kind = tab.ref.split(":")[0];
+  const next = {
+    ...tab,
+    ref:
+      kind === "terminal" || kind === "browser"
+        ? `${kind}:${crypto.randomUUID()}`
+        : tab.ref,
+  };
+  (kind === "terminal" ? openTerminalTab : openTab)(key, next);
+  return next.ref;
+};

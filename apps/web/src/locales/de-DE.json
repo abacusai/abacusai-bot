@@ -949,18 +949,9 @@
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
     "topUpCta": "Top up",
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "remindLater": "In 10 Minuten erinnern",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
     "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits",
     "levelUpTitle": "Ready for your next level?",
     "restTitle": "A little rest, then more adventures",
     "upgraded": "Level unlocked. Let’s build!",
@@ -2526,7 +2517,10 @@
       },
       "addTab": "Add a tab",
       "closeTab": "Close {{name}}",
-      "openExternalBrowser": "Open in external browser"
+      "openExternalBrowser": "Open in external browser",
+      "renameTab": "Rename tab",
+      "saveTab": "Save",
+      "searchTabs": "Tabs suchen…"
     },
     "sidebar": {
       "loadError": "Couldn't load",
@@ -2652,7 +2646,9 @@
       "notATheme": "Das ist kein VS Code-Farbdesign.",
       "tooLarge": "Die Datei ist zu groß (höchstens 2 MB).",
       "includeHint": "Dieses Design baut auf einer weiteren Datei auf, die nicht importiert wurde; manche Farben fehlen vielleicht.",
-      "remove": "Entfernen"
+      "remove": "Entfernen",
+      "allowTwoTabRows": "Zwei Tab-Zeilen erlauben",
+      "allowTwoTabRowsDetail": "Tabs bei ausreichend Platz in einer zweiten Titelleistenzeile anzeigen."
     },
     "general": {
       "notch": {

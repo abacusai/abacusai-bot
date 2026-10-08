@@ -1,46 +1,73 @@
 import { expect, it } from "vitest";
 
-import { creditMood } from "./promo-character";
+import { creditExpression } from "./promo-character";
 import { promoPlacement } from "./promo-placement";
-
-it("uses existing moods for low, nearly exhausted and exhausted credits", () => {
-  expect(creditMood(30, 100)).toBe("waiting");
-  expect(creditMood(5, 100)).toBe("blocked");
-  expect(creditMood(0, 100)).toBe("asleep");
+const defaults = {
+  width: 1280,
+  height: 900,
+  railRight: 56,
+  sidebarRight: 56,
+  cardHeight: 180,
+  obstacles: [],
+};
+it("uses the character rig expressions for credit states", () => {
+  expect(creditExpression(30, 100)).toBe("hopeful");
+  expect(creditExpression(5, 100)).toBe("worried");
+  expect(creditExpression(0, 100)).toBe("tiredHappy");
 });
-it.each([1280, 1710])(
-  "keeps the corner card clear of composer and sidebar footer at %ipx",
-  (width) => {
-    const composer = { left: 280, right: 900, top: 700, bottom: 880 };
-    const footer = { left: 56, right: 296, top: 850, bottom: 900 };
-    const result = promoPlacement({
-      width,
-      height: 900,
-      railRight: 56,
-      sidebarRight: 296,
-      paneTop: 40,
-      cardHeight: 180,
-      composer,
-      footer,
-      splitters: [],
-    });
-    expect(result.left).toBe(232);
-    expect(result.visibility).toBe("visible");
-    expect(900 - result.bottom).toBeLessThan(composer.top);
-    expect(900 - result.bottom).toBeLessThan(footer.top);
-  }
-);
-it("keeps splitters clear and hides when the available island is too small", () => {
+it.each([1280, 1710])("anchors below a top-pane composer at %ipx", (width) => {
   const result = promoPlacement({
-    width: 800,
-    height: 300,
-    railRight: 56,
-    sidebarRight: 56,
-    paneTop: 40,
-    cardHeight: 180,
-    composer: { left: 56, right: 800, top: 180, bottom: 300 },
-    splitters: [{ left: 300, right: 308, top: 40, bottom: 300 }],
+    ...defaults,
+    width,
+    obstacles: [{ left: 64, right: 1272, top: 310, bottom: 470 }],
   });
-  expect(result.left).toBe(320);
-  expect(result.visibility).toBe("hidden");
+  expect(result).toMatchObject({
+    left: 72,
+    bottom: 24,
+    compact: false,
+    visibility: "visible",
+  });
+});
+it("moves along the bottom edge to avoid every composer and handle", () => {
+  const result = promoPlacement({
+    ...defaults,
+    width: 1710,
+    obstacles: [
+      { left: 64, right: 700, top: 700, bottom: 880 },
+      { left: 700, right: 708, top: 40, bottom: 900 },
+      { left: 1200, right: 1702, top: 700, bottom: 880 },
+    ],
+  });
+  expect(result).toMatchObject({
+    left: 724,
+    bottom: 24,
+    visibility: "visible",
+  });
+});
+it("uses a compact slot before hiding, without moving above unrelated panes", () => {
+  const result = promoPlacement({
+    ...defaults,
+    obstacles: [{ left: 300, right: 1272, top: 700, bottom: 900 }],
+  });
+  expect(result).toMatchObject({
+    left: 72,
+    bottom: 24,
+    compact: true,
+    visibility: "visible",
+  });
+});
+it("hides when even a compact bottom slot would obstruct primary controls", () => {
+  expect(
+    promoPlacement({
+      ...defaults,
+      width: 640,
+      obstacles: [{ left: 64, right: 632, top: 700, bottom: 900 }],
+    })
+  ).toMatchObject({ bottom: 24, visibility: "hidden" });
+});
+it("keeps the Bots strip and its bottom controls clear", () => {
+  expect(promoPlacement({ ...defaults, sidebarRight: 144 })).toMatchObject({
+    left: 160,
+    bottom: 24,
+  });
 });

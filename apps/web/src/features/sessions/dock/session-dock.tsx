@@ -35,13 +35,16 @@ import {
   PANEL_DRAG_TYPE,
   moveDockTab,
 } from "#renderer/components/panel-workspace";
+import { useTabsRailPlacement } from "#renderer/components/tabs-rail/placement";
+import { usePrefs } from "#renderer/data/db/prefs";
 import { followNotices } from "#renderer/data/queries/notices";
 import { TopBar } from "#renderer/features/shell/top-bar";
 import { TopBarPanelSlot } from "#renderer/features/shell/top-bar-slots";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { useShellWidth } from "#renderer/lib/shell-breakpoints";
+import { shellLayout } from "#renderer/lib/shell-layout";
 import type { PanelTabKind } from "#renderer/lib/side-panel/store";
-import { Button } from "#renderer/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -62,6 +65,7 @@ import {
   openTab,
   openTerminalTab,
   closeTab,
+  reopenTab,
   reconcileTerminals,
   updateTabs,
   focusTab,
@@ -127,7 +131,15 @@ export const SessionDock = ({
   const active =
     search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
   const expanded = search.view === "full" && entries.open === true;
-  const split = !expanded;
+  const prefs = usePrefs();
+  const width = useShellWidth();
+  const layout = shellLayout({
+    width,
+    area: "sessions",
+    pinned: prefs.sidebar.pinned,
+    panelOpen: entries.open === true,
+  });
+  const split = !expanded && layout.sidePanel !== "drawer";
   useEffect(() => {
     if (active && active !== "chat") focusTab(key, active);
   }, [key, active, entries.tabs]);
@@ -255,23 +267,25 @@ export const SessionDock = ({
     });
     select(ref);
   };
-  const titleTabs = ["changes", "terminal", "files", "browser"]
-    .flatMap((kind) => {
-      const tabs = entries.tabs.filter(
-        (tab) => tab.ref === kind || tab.ref.startsWith(`${kind}:`)
-      );
-      return tabs.length
-        ? tabs
-        : [{ ref: kind, title: t(`sessions.dock.${kind}`), openedAt: 0 }];
-    })
-    .concat(
-      entries.tabs.filter(
-        (tab) =>
-          !["changes", "terminal", "files", "browser"].includes(
-            tab.ref.split(":")[0]!
+  const titleTabs = expanded
+    ? [...entries.tabs]
+    : ["changes", "terminal", "files", "browser"]
+        .flatMap((kind) => {
+          const tabs = entries.tabs.filter(
+            (tab) => tab.ref === kind || tab.ref.startsWith(`${kind}:`)
+          );
+          return tabs.length
+            ? tabs
+            : [{ ref: kind, title: t(`sessions.dock.${kind}`), openedAt: 0 }];
+        })
+        .concat(
+          entries.tabs.filter(
+            (tab) =>
+              !["changes", "terminal", "files", "browser"].includes(
+                tab.ref.split(":")[0]!
+              )
           )
-      )
-    );
+        );
   if (entries.order)
     titleTabs.sort((a, b) => {
       const position = (ref: string) => {
@@ -284,85 +298,85 @@ export const SessionDock = ({
     if (ref === "terminal" || ref === "browser") add(ref);
     else select(ref);
   };
+  const rename = (ref: string, title: string) =>
+    updateTabs(key, (state) => ({
+      ...state,
+      tabs: state.tabs.map((tab) =>
+        tab.ref === ref ? { ...tab, title } : tab
+      ),
+    }));
   const controls = (
-    <div className="titlebar-nodrag flex shrink-0 items-center gap-1 px-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("sessions.dock.add")}
-            />
-          }
-        >
-          <Plus />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          collisionPadding={12}
-          className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
-        >
-          <DropdownMenuGroup>
-            {terminalShellsForPlatform(
-              (document.documentElement.dataset.platform ??
-                "darwin") as NodeJS.Platform
-            ).map((shell) => (
-              <DropdownMenuItem
-                key={shell.id}
-                disabled={
-                  shells.data?.statuses.find((s) => s.id === shell.id)
-                    ?.available === false
-                }
-                onClick={() =>
-                  void transport.client.terminal.shell
-                    .set({ shell: shell.id as TerminalShellId })
-                    .then(() => add("terminal", shell.id))
-                }
-              >
-                <Terminal />
-                <span className="min-w-0 truncate">
-                  {t("sessions.terminal.newShell", {
-                    shell: t(`terminalShells.${shell.labelKey}.label`),
-                  })}
-                </span>
-              </DropdownMenuItem>
-            ))}
-            {[
-              ...(IS_ELECTRON ? ["browser"] : []),
-              "terminal",
-              "files",
-              "changes",
-              "agents",
-              ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
-            ].map((kind) => (
-              <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                {kind === "browser" ? (
-                  <Globe />
-                ) : kind === "files" ? (
-                  <Folder />
-                ) : kind === "changes" ? (
-                  <GitCompare />
-                ) : kind === "agents" ? (
-                  <Bot />
-                ) : kind === "device" ? (
-                  <Monitor />
-                ) : (
+    <TopBar.Group className="titlebar-nodrag shrink-0 self-start px-1">
+      {
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<TopBar.IconButton label={t("sessions.dock.add")} />}
+          >
+            <Plus />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
+          >
+            <DropdownMenuGroup>
+              {terminalShellsForPlatform(
+                (document.documentElement.dataset.platform ??
+                  "darwin") as NodeJS.Platform
+              ).map((shell) => (
+                <DropdownMenuItem
+                  key={shell.id}
+                  disabled={
+                    shells.data?.statuses.find((s) => s.id === shell.id)
+                      ?.available === false
+                  }
+                  onClick={() =>
+                    void transport.client.terminal.shell
+                      .set({ shell: shell.id as TerminalShellId })
+                      .then(() => add("terminal", shell.id))
+                  }
+                >
                   <Terminal />
-                )}
-                <span className="min-w-0 truncate">
-                  {t(`sessions.dock.${kind}`)}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("sessions.dock.full")}
-        aria-pressed={!split}
+                  <span className="min-w-0 truncate">
+                    {t("sessions.terminal.newShell", {
+                      shell: t(`terminalShells.${shell.labelKey}.label`),
+                    })}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              {[
+                ...(IS_ELECTRON ? ["browser"] : []),
+                "terminal",
+                "files",
+                "changes",
+                "agents",
+                ...(IS_ELECTRON && device.data?.enabled ? ["device"] : []),
+              ].map((kind) => (
+                <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+                  {kind === "browser" ? (
+                    <Globe />
+                  ) : kind === "files" ? (
+                    <Folder />
+                  ) : kind === "changes" ? (
+                    <GitCompare />
+                  ) : kind === "agents" ? (
+                    <Bot />
+                  ) : kind === "device" ? (
+                    <Monitor />
+                  ) : (
+                    <Terminal />
+                  )}
+                  <span className="min-w-0 truncate">
+                    {t(`sessions.dock.${kind}`)}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+      <TopBar.IconButton
+        label={t("sessions.dock.full")}
+        aria-pressed={expanded}
         onClick={() => {
           void navigate({
             to: "/sessions/$sessionId",
@@ -376,10 +390,76 @@ export const SessionDock = ({
           });
         }}
       >
-        {split ? <Maximize /> : <Minimize />}
-      </Button>
-    </div>
+        {expanded ? <Minimize /> : <Maximize />}
+      </TopBar.IconButton>
+    </TopBar.Group>
   );
+  const railPlacement = useTabsRailPlacement();
+  const rail =
+    entries.open && active ? (
+      <>
+        {
+          <TopBar.PanelTabs
+            tabs={[
+              ...(!split
+                ? [
+                    {
+                      ref: "chat",
+                      title: t("sessions.dock.chat"),
+                      openedAt: 0,
+                    },
+                  ]
+                : []),
+              ...titleTabs,
+            ].map((tab) => ({
+              id: tab.ref,
+              kind: (tab.ref.startsWith("preview:")
+                ? "files"
+                : tab.ref === "chat"
+                  ? "thread"
+                  : tab.ref === "agents"
+                    ? "agent"
+                    : tab.ref.split(":")[0]) as PanelTabKind,
+              title: tab.title,
+            }))}
+            active={active}
+            title={(tab) => tab.title ?? ""}
+            kinds={[]}
+            onDragStart={
+              expanded
+                ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+                : undefined
+            }
+            workspaceApi={dockApi}
+            onMove={
+              expanded
+                ? (id, position) => {
+                    moveDockTab(dockApi.current, id, position);
+                  }
+                : undefined
+            }
+            onRename={rename}
+            onChange={choose}
+            onReopen={() => {
+              const ref = reopenTab(key);
+              if (ref) select(ref);
+            }}
+            onClose={close}
+            onReorder={(ids) =>
+              updateTabs(key, (s) => ({
+                ...s,
+                order: ids,
+                tabs: ids
+                  .map((id) => s.tabs.find((tab) => tab.ref === id))
+                  .filter((tab): tab is PanelTab => tab != null),
+              }))
+            }
+            onAdd={add}
+          />
+        }
+        {controls}
+      </>
+    ) : null;
   return (
     <ViewTransition
       default="none"
@@ -391,64 +471,7 @@ export const SessionDock = ({
         className="relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden"
       >
         <TopBarPanelSlot>
-          {entries.open && active ? (
-            <>
-              <TopBar.PanelTabs
-                tabs={[
-                  ...(!split
-                    ? [
-                        {
-                          ref: "chat",
-                          title: t("sessions.dock.chat"),
-                          openedAt: 0,
-                        },
-                      ]
-                    : []),
-                  ...titleTabs,
-                ].map((tab) => ({
-                  id: tab.ref,
-                  kind: (tab.ref.startsWith("preview:")
-                    ? "files"
-                    : tab.ref === "chat"
-                      ? "thread"
-                      : tab.ref === "agents"
-                        ? "agent"
-                        : tab.ref.split(":")[0]) as PanelTabKind,
-                  title: tab.title,
-                }))}
-                active={active}
-                title={(tab) => tab.title ?? ""}
-                kinds={[]}
-                onDragStart={
-                  expanded
-                    ? (id, event) =>
-                        event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-                    : undefined
-                }
-                workspaceApi={dockApi}
-                onMove={
-                  expanded
-                    ? (id, position) => {
-                        moveDockTab(dockApi.current, id, position);
-                      }
-                    : undefined
-                }
-                onChange={choose}
-                onClose={close}
-                onReorder={(ids) =>
-                  updateTabs(key, (s) => ({
-                    ...s,
-                    order: ids,
-                    tabs: ids
-                      .map((id) => s.tabs.find((tab) => tab.ref === id))
-                      .filter((tab): tab is PanelTab => tab != null),
-                  }))
-                }
-                onAdd={add}
-              />
-              {controls}
-            </>
-          ) : null}
+          {railPlacement === "titlebar" && rail}
           <TopBar.PanelToggle
             open={entries.open === true && active != null}
             onToggle={() =>
@@ -458,6 +481,11 @@ export const SessionDock = ({
             }
           />
         </TopBarPanelSlot>
+        {railPlacement === "panel" && (
+          <div className="titlebar-nodrag flex min-w-0 shrink-0 items-center">
+            {rail}
+          </div>
+        )}
         {registerHotkeys(
           () => cycle(1),
           () => cycle(-1),
@@ -471,7 +499,6 @@ export const SessionDock = ({
           expanded={expanded}
           active={active ?? null}
           onSelect={select}
-          onClose={close}
           tabs={[
             {
               id: "chat",

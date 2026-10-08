@@ -8,7 +8,10 @@ import type { WindowChromeState } from "@abacus-ai/contract/contract";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { windowChromeQuery } from "#renderer/data/queries/window";
+import {
+  windowChromeQuery,
+  windowStateQuery,
+} from "#renderer/data/queries/window";
 import type { Transport } from "#renderer/data/transport";
 
 export const DEFAULT_CHROME: WindowChromeState = {
@@ -31,11 +34,30 @@ const applyChromeState = (doc: Document, chrome: WindowChromeState): void => {
   const root = doc.documentElement;
   root.dataset.titlebar = chrome.mode;
   root.dataset.density = chrome.density;
+  root.style.setProperty("--titlebar-row-h", `${chrome.toolbarHeight}px`);
   root.style.setProperty("--toolbar-h", `${chrome.toolbarHeight}px`);
 };
 
 export const ChromeEffect = ({ transport }: { transport: Transport }): null => {
   const chrome = useChromeState(transport);
+  const { data: windowState } = useQuery({
+    ...windowStateQuery(transport.orpc),
+    retry: false,
+  });
+  useEffect(() => {
+    const focus = () => {
+      document.documentElement.dataset.windowFocused = String(
+        windowState?.focused ?? document.hasFocus()
+      );
+    };
+    focus();
+    window.addEventListener("focus", focus);
+    window.addEventListener("blur", focus);
+    return () => {
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("blur", focus);
+    };
+  }, [windowState?.focused]);
   useEffect(() => {
     applyChromeState(document, chrome);
   }, [chrome]);

@@ -47,7 +47,7 @@ describe.each([false, true])("dark=%s options matrix", (dark) => {
         titleBarOverlay: { height: 32 },
         ...(reducedTransparency
           ? {}
-          : { vibrancy: "under-window", visualEffectState: "active" }),
+          : { vibrancy: "under-window", visualEffectState: "followWindow" }),
       });
       expect(windowChromeOptions(options)).toEqual({
         titleBarStyle: "hidden",

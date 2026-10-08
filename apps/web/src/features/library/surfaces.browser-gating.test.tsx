@@ -9,6 +9,7 @@ import {
 import { expect, it, vi } from "vitest";
 
 import enUS from "#locales/en-US.json";
+import { fixturePrefs } from "#renderer/data/fixture-db/rows";
 import {
   PhoneWhatsAppApp,
   WhatsAppConnect,
@@ -41,6 +42,10 @@ import { renderApp } from "#renderer/test-support/app-harness";
 vi.mock("#renderer/lib/motion", async (original) => ({
   ...(await original<typeof import("#renderer/lib/motion")>()),
   useMotionPreference: () => "full",
+}));
+vi.mock("#renderer/data/db/prefs", async (original) => ({
+  ...(await original<typeof import("#renderer/data/db/prefs")>()),
+  usePrefs: () => ({ ...fixturePrefs(), motion: { reduce: "on" } }),
 }));
 vi.mock("#renderer/lib/voice/use-dictation", () => ({
   useConnectedDictation: () => ({ supported: false }),

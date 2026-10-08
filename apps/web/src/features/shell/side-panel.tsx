@@ -12,6 +12,9 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import { TabsRail } from "#renderer/components/tabs-rail";
+import { useTabsRailPlacement } from "#renderer/components/tabs-rail/placement";
+import { TitleBarIconButton } from "#renderer/components/title-bar";
 import { cn } from "#renderer/lib/cn";
 import {
   durations,
@@ -19,7 +22,6 @@ import {
   reducedTransition,
   useMotionPreference,
 } from "#renderer/lib/motion";
-import { Button } from "#renderer/ui/button";
 import {
   Drawer,
   DrawerContent,
@@ -27,9 +29,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "#renderer/ui/drawer";
-import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
-import type { PanelTab } from "./panel-store";
+import type { PanelTab, PanelTabKind } from "./panel-store";
 import { SidePanelOutlet, useSidePanelFilled } from "./side-panel-slot";
 
 export {
@@ -37,8 +38,6 @@ export {
   PANEL_MAX_PX,
   PANE_MIN_PX,
   PANEL_DEFAULT_PX,
-  PANEL_PREF_KEY,
-  PANEL_MAX_FRACTION,
   panelMaxFor,
   clampPanelWidth,
 } from "#renderer/lib/side-panel/geometry";
@@ -118,7 +117,7 @@ const SidePanelScrim = ({
           key="scrim"
           data-slot="side-panel-scrim"
           aria-hidden="true"
-          className="fixed inset-x-0 top-(--toolbar-h) bottom-0 z-40 bg-black/45 backdrop-blur-[2px]"
+          className="fixed inset-x-0 top-(--toolbar-h) bottom-0 z-40 bg-black/45"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -139,25 +138,38 @@ export const SidePanelDrawer = ({
   tabs,
   active,
   onTabChange,
+  onTabClose,
+  onTabReorder,
+  onReopen,
+  kinds,
+  onAdd,
   onClose,
 }: {
   open: boolean;
   tabs: readonly PanelTab[];
   active: PanelTab | undefined;
   onTabChange(id: string): void;
+  onTabClose(id: string): void;
+  onTabReorder(ids: string[]): void;
+  onReopen(): void;
+  kinds: readonly PanelTabKind[];
+  onAdd(kind: PanelTabKind): void;
   onClose(): void;
 }) => {
   const { t } = useTranslation();
   const title = usePanelTabTitle();
+  const railPlacement = useTabsRailPlacement();
   return (
     <>
       <SidePanelScrim open={open} onClose={onClose} />
       <Drawer
         open={open}
         modal={false}
+        disablePointerDismissal
         swipeDirection="right"
-        onOpenChange={(next) => {
-          if (!next) onClose();
+        onOpenChange={(next, details) => {
+          // The shell scrim dismisses; title-bar tabs and their portals stay usable.
+          if (!next && details.reason !== "focus-out") onClose();
         }}
       >
         <DrawerContent
@@ -173,38 +185,32 @@ export const SidePanelDrawer = ({
           </DrawerHeader>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between gap-1 p-2">
-              {tabs.length > 0 && active != null && (
-                <Tabs
-                  value={active.id}
-                  onValueChange={(next) => onTabChange(String(next))}
-                  data-side-panel-tabs=""
-                  className="min-w-0"
-                >
-                  <TabsList
-                    className="max-w-full flex-wrap"
-                    aria-label={t("shell.topBar.panelTabs")}
-                  >
-                    {tabs.map((item) => (
-                      <TabsTrigger
-                        key={item.id}
-                        value={item.id}
-                        className="max-w-40 truncate text-xs"
-                      >
-                        {title(item)}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+              {railPlacement === "panel" &&
+              tabs.length > 0 &&
+              active != null ? (
+                <TabsRail
+                  tabs={tabs}
+                  active={active.id}
+                  title={title}
+                  kinds={kinds}
+                  onChange={onTabChange}
+                  onClose={onTabClose}
+                  onReopen={onReopen}
+                  onAdd={onAdd}
+                  onReorder={onTabReorder}
+                />
+              ) : (
+                <span className="min-w-0 truncate px-1 text-sm font-medium">
+                  {active && title(active)}
+                </span>
               )}
-              <Button
-                variant="ghost"
-                size="icon-sm"
+              <TitleBarIconButton
                 className="shrink-0"
-                aria-label={t("shell.topBar.closePanel")}
+                label={t("shell.topBar.closePanel")}
                 onClick={onClose}
               >
                 <X />
-              </Button>
+              </TitleBarIconButton>
             </div>
             <SidePanelBody tab={active} visible={open} />
           </div>

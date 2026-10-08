@@ -44,3 +44,13 @@ it("scopes snooze to the account and organization", () => {
     promoAccountKey({ ...free, organization_id: "another-org" })
   );
 });
+it("keeps snooze when exhausted credits recover", () => {
+  expect(
+    promoState(
+      free,
+      null,
+      { until: 100 + PROMO_SNOOZE_MS, situation: "exhausted" },
+      101
+    )
+  ).toBeNull();
+});

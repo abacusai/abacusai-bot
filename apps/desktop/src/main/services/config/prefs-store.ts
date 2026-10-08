@@ -86,6 +86,7 @@ const DEFAULTS: PrefsValues = {
     codeFontSize: 12,
     translucency: true,
     railIconsOnly: false,
+    allowTwoTabRows: false,
     custom: null,
   },
   // Spec 06 §23.5 b (`haptics` is revisited by R6-T31).

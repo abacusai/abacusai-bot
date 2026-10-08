@@ -11,43 +11,24 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
-import type { DockviewApi } from "dockview-react";
 import {
   ArrowLeft,
   ArrowRight,
   Ellipsis,
-  LayoutPanelLeft,
-  LayoutPanelTop,
-  Terminal,
-  Globe,
-  Folder,
-  GitCompare,
-  Bot,
-  FileText,
-  Brain,
   PanelLeft,
   PanelRight,
-  Plus,
-  X,
 } from "lucide-react";
-import { Reorder } from "motion/react";
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppBrandMark } from "#renderer/components/app-icon";
-import { cn } from "#renderer/lib/cn";
+import { TabsRail } from "#renderer/components/tabs-rail";
 import {
-  reducedTransition,
-  springs,
-  useMotionPreference,
-} from "#renderer/lib/motion";
+  TitleBarGroup,
+  TitleBarIconButton,
+  TitleBarSpacer,
+} from "#renderer/components/title-bar";
+import { cn } from "#renderer/lib/cn";
 import { useCanGoForward } from "#renderer/lib/navigation/can-go-forward";
 import type { SidePanelTabId } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -59,34 +40,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "#renderer/ui/tabs";
 
-import type { PanelTab, PanelTabKind } from "./panel-store";
 import { shellStore } from "./shell-store";
 import { setIdentityTarget, useTopBarActionList } from "./top-bar-slots";
 
-const BarButton = ({
-  label,
-  className,
-  ...props
-}: { label: string } & ComponentProps<typeof Button>) => (
-  <Button
-    variant="ghost"
-    size="icon-sm"
-    aria-label={label}
-    title={label}
-    className={cn(
-      "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground phone:size-10 phone:rounded-full phone:[&_svg]:size-5 phone:active:bg-foreground/[0.08] size-7",
-      className
-    )}
-    {...props}
-  />
-);
+const BarButton = TitleBarIconButton;
 
 const Root = ({ children }: { children: ReactNode }) => (
   <header
     data-slot="topbar"
-    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] flex h-(--toolbar-h) min-w-0 items-center gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none [&>[data-slot=topbar-panel-tabs]]:max-w-[65%]"
+    className="titlebar-drag text-muted-foreground phone:pr-1.5 phone:text-[16px] relative flex min-h-(--toolbar-h) min-w-0 items-start gap-0 pr-[max(var(--titlebar-end),var(--pane-inset))] pl-(--titlebar-x) text-[13px] select-none"
   >
     {children}
   </header>
@@ -120,12 +83,12 @@ const Leading = ({
   const navigate = useAppNavigate();
   const canGoForward = useCanGoForward();
   return (
-    <div
+    <TitleBarGroup
       data-slot="topbar-leading"
       className={cn(
-        "phone:pl-1.5 flex items-center gap-0.5 pl-2",
+        "phone:pl-1.5 pl-(--chrome-group-gap)",
         sidebarInLayout
-          ? "w-[calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x))] min-w-min flex-none"
+          ? "w-[var(--topbar-leading-width,calc(var(--rail-w)+var(--sidebar-occupied-w)-var(--titlebar-x)))] min-w-min flex-none"
           : "flex-none pr-2.5"
       )}
     >
@@ -168,7 +131,7 @@ const Leading = ({
           is pinned (icon only when it is collapsed or floating). */}
       <span
         data-slot="topbar-brand"
-        className="text-sidebar-foreground flex min-w-0 items-center gap-2 pl-2 font-semibold"
+        className="text-sidebar-foreground flex min-w-0 items-center gap-(--chrome-group-gap) pl-(--chrome-group-gap) font-semibold"
       >
         <AppBrandMark size={20} className="shrink-0" />
         {showAppName && (
@@ -180,7 +143,7 @@ const Leading = ({
           </span>
         )}
       </span>
-    </div>
+    </TitleBarGroup>
   );
 };
 
@@ -228,7 +191,7 @@ const Identity = ({
   return (
     <div
       data-slot="topbar-identity"
-      className="flex min-w-0 flex-1 items-center gap-2 pr-2"
+      className="flex h-(--titlebar-row-h) min-w-0 flex-1 items-center gap-2 pr-2"
     >
       {children === undefined ? (
         <>
@@ -292,10 +255,7 @@ const Actions = ({
       </DropdownMenu>
     );
   return (
-    <div
-      data-slot="topbar-actions"
-      className="flex shrink-0 items-center gap-0.5"
-    >
+    <TitleBarGroup data-slot="topbar-actions" className="shrink-0">
       {actions.map((action) =>
         action.render != null ? (
           <Fragment key={action.id}>{action.render}</Fragment>
@@ -312,273 +272,7 @@ const Actions = ({
           </Button>
         )
       )}
-    </div>
-  );
-};
-
-const TAB_CLASS =
-  "titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:text-sidebar-foreground dark:data-active:bg-sidebar-accent dark:data-active:text-sidebar-foreground group/tab flex h-7 max-w-44 min-w-0 flex-none items-center gap-1 rounded-lg border-0 pr-1.5 pl-3 text-[13px] font-medium shadow-none transition-[background-color,color] duration-150 ease-out select-none data-active:pr-1";
-
-/**
- * The panel's tab strip (canvas `BotChatPanel`, `SplitView`, `TitleMac`):
- * pill tabs at the bar controls' height, the active one filled with a close
- * mark, "+" after them, 8 px before the panel toggle (V7). Tabs reorder by
- * drag (motion's Reorder, a spring so a let-go tab keeps its velocity);
- * middle click closes. Switching tabs animates nothing: it happens tens of
- * times a day.
- */
-const PanelTabs = ({
-  tabs,
-  active,
-  title,
-  kinds,
-  onChange,
-  onClose,
-  onReorder,
-  onAdd,
-  onDragStart,
-  onMove,
-  workspaceApi,
-}: {
-  tabs: readonly PanelTab[];
-  active: string | null;
-  title(tab: PanelTab): string;
-  /** The kinds "+" offers; empty hides it. */
-  kinds: readonly PanelTabKind[];
-  onChange(id: string): void;
-  onClose(id: string): void;
-  onReorder(ids: string[]): void;
-  onAdd(kind: PanelTabKind): void;
-  onDragStart?(id: string, event: React.DragEvent): void;
-  workspaceApi?: React.RefObject<DockviewApi | null>;
-  onMove?(id: string, position: "left" | "right" | "top" | "bottom"): void;
-}) => {
-  const { t } = useTranslation();
-  const motionPref = useMotionPreference();
-  const [moveGroups, setMoveGroups] = useState<{ id: string; title: string }[]>(
-    []
-  );
-  const list = useRef<HTMLDivElement>(null);
-  const restoreFocus = useRef(false);
-  useEffect(() => {
-    const selected = list.current?.querySelector<HTMLElement>(
-      '[role="tab"][aria-selected="true"]'
-    );
-    selected?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    if (restoreFocus.current && selected) {
-      restoreFocus.current = false;
-      selected.focus();
-    }
-  }, [active]);
-  useEffect(() => {
-    const element = list.current;
-    if (!element) return;
-    const observer = new ResizeObserver(() =>
-      element
-        .querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-        ?.scrollIntoView({ block: "nearest", inline: "nearest" })
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  if (tabs.length === 0 && kinds.length === 0) return null;
-  const ids = tabs.map((tab) => tab.id);
-  return (
-    <div
-      data-slot="topbar-panel-tabs"
-      className="mr-2 flex max-w-full min-w-0 shrink items-center gap-1"
-    >
-      <Tabs
-        value={active ?? undefined}
-        onValueChange={(value) => {
-          restoreFocus.current =
-            list.current?.contains(document.activeElement) ?? false;
-          onChange(String(value));
-        }}
-        className="w-full max-w-full min-w-0"
-      >
-        <TabsList
-          activateOnFocus
-          className="h-auto w-full min-w-0 bg-transparent p-0"
-          aria-label={t("shell.topBar.panelTabs")}
-        >
-          <Reorder.Group
-            as="div"
-            ref={list}
-            axis="x"
-            values={ids}
-            onReorder={onReorder}
-            role="presentation"
-            data-tour="topbar-panel-tabs"
-            data-topbar-tabs=""
-            className="scroll-fade-x flex min-w-0 items-center gap-1 overflow-x-auto"
-          >
-            {tabs.map((tab) => {
-              const selected = tab.id === active;
-              const label = title(tab);
-              return (
-                <Reorder.Item
-                  key={tab.id}
-                  as="div"
-                  value={tab.id}
-                  layout="position"
-                  transition={
-                    motionPref === "reduced"
-                      ? reducedTransition
-                      : { layout: springs.panel }
-                  }
-                  whileDrag={{ zIndex: 1 }}
-                  dragListener={onDragStart == null}
-                  draggable={onDragStart != null}
-                  onDragStartCapture={(event) => onDragStart?.(tab.id, event)}
-                  className="shrink-0"
-                >
-                  <TabsTrigger
-                    value={tab.id}
-                    data-active={selected ? "" : undefined}
-                    data-panel-tab-id={tab.id}
-                    data-panel-tab-kind={tab.kind}
-                    title={label}
-                    className={TAB_CLASS}
-                    onAuxClick={(event) => {
-                      if (event.button === 1) onClose(tab.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Delete" || event.key === "Backspace") {
-                        event.preventDefault();
-                        onClose(tab.id);
-                      }
-                    }}
-                  >
-                    <span className="min-w-0 truncate">{label}</span>
-                    {/* A glyph, not a control (a tab may hold no interactive
-                  child): the pointer closes here, the keyboard with
-                  Delete/Backspace or ⌘W on the tab. */}
-                    <span
-                      aria-hidden="true"
-                      style={
-                        tab.id === "chat" ? { display: "none" } : undefined
-                      }
-                      data-slot="panel-tab-close"
-                      title={t("shell.panel.closeTab", { name: label })}
-                      className={cn(
-                        "hover:bg-foreground/10 flex size-5 shrink-0 items-center justify-center rounded-md [&_svg]:size-3.5",
-                        !selected && "hidden group-hover/tab:flex"
-                      )}
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onClose(tab.id);
-                      }}
-                    >
-                      <X />
-                    </span>
-                  </TabsTrigger>
-                </Reorder.Item>
-              );
-            })}
-          </Reorder.Group>
-        </TabsList>
-      </Tabs>
-      {onMove && active ? (
-        <DropdownMenu
-          onOpenChange={(open) => {
-            if (open)
-              setMoveGroups(
-                workspaceApi?.current?.groups
-                  .filter(
-                    (group) =>
-                      group.id !==
-                      workspaceApi.current?.getPanel(active)?.group.id
-                  )
-                  .map((group) => ({
-                    id: group.id,
-                    title: group.activePanel?.title ?? group.id,
-                  })) ?? []
-              );
-          }}
-        >
-          <DropdownMenuTrigger
-            render={<BarButton label={t("sessions.dock.move")} />}
-          >
-            <Ellipsis />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {(["left", "right", "top", "bottom"] as const).map((position) => (
-              <DropdownMenuItem
-                key={position}
-                onClick={() => onMove(active, position)}
-              >
-                {position === "left" || position === "right" ? (
-                  <LayoutPanelLeft />
-                ) : (
-                  <LayoutPanelTop />
-                )}
-                {t(`sessions.dock.moveDirections.${position}`)}
-              </DropdownMenuItem>
-            ))}
-            {moveGroups.map((group) => (
-              <DropdownMenuItem
-                key={group.id}
-                onClick={() => {
-                  const api = workspaceApi?.current;
-                  const target = api?.groups.find(
-                    (pane) => pane.id === group.id
-                  );
-                  if (target)
-                    api
-                      ?.getPanel(active)
-                      ?.api.moveTo({ group: target, position: "center" });
-                }}
-              >
-                <LayoutPanelLeft />
-                <span className="min-w-0 truncate">
-                  {t("sessions.dock.movePane", { name: group.title })}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-      {kinds.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<BarButton label={t("shell.panel.addTab")} />}
-            data-testid="panel-add-tab"
-          >
-            <Plus />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            collisionPadding={12}
-            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
-          >
-            {kinds.map((kind) => (
-              <DropdownMenuItem key={kind} onClick={() => onAdd(kind)}>
-                {kind === "browser" ? (
-                  <Globe />
-                ) : kind === "terminal" ? (
-                  <Terminal />
-                ) : kind === "files" ? (
-                  <Folder />
-                ) : kind === "changes" ? (
-                  <GitCompare />
-                ) : kind === "memory" ? (
-                  <Brain />
-                ) : kind === "agent" ? (
-                  <Bot />
-                ) : (
-                  <FileText />
-                )}
-                <span className="min-w-0 truncate">
-                  {t(`shell.panel.tabs.${kind}`)}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+    </TitleBarGroup>
   );
 };
 
@@ -617,10 +311,13 @@ const GeometryBadge = () => {
 
 export const TopBar = {
   Root,
+  Group: TitleBarGroup,
+  IconButton: TitleBarIconButton,
+  Spacer: TitleBarSpacer,
   Leading,
   Identity,
   Actions,
-  PanelTabs,
+  PanelTabs: TabsRail,
   PanelToggle,
   GeometryBadge,
 };

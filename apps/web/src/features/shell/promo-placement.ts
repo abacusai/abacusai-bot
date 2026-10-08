@@ -1,68 +1,69 @@
-interface Rect {
+interface PromoObstacle {
   left: number;
   right: number;
   top: number;
   bottom: number;
 }
+/** Keep the promo on the window's bottom edge; occupied slots never push it upward. */
 export const promoPlacement = ({
   width,
   height,
   railRight,
   sidebarRight,
-  paneTop,
   cardHeight,
-  composer,
-  footer,
-  splitters,
+  obstacles,
 }: {
   width: number;
   height: number;
   railRight: number;
   sidebarRight: number;
-  paneTop: number;
   cardHeight: number;
-  composer?: Rect;
-  footer?: Rect;
-  splitters: Rect[];
+  obstacles: PromoObstacle[];
 }) => {
-  let left = Math.max(
-    railRight + 16,
-    sidebarRight > railRight ? sidebarRight - 64 : 0
-  );
-  let maxWidth = Math.min(320, width - left - 16);
-  const overlapsX = (rect: Rect) =>
-    left < rect.right && left + maxWidth > rect.left;
-  for (const splitter of splitters) {
-    if (
-      splitter.bottom - splitter.top > splitter.right - splitter.left &&
-      overlapsX(splitter)
-    ) {
-      maxWidth = Math.min(maxWidth, splitter.left - left - 12);
-      if (maxWidth < 240) {
-        left = splitter.right + 12;
-        maxWidth = Math.min(320, width - left - 16);
-      }
-    }
+  const inset = 16;
+  const bottom = 24;
+  const start = Math.max(railRight, sidebarRight) + inset;
+  const fit = (cardWidth: number, cardHeight: number) => {
+    const top = height - bottom - cardHeight;
+    if (top < inset) return;
+    const candidates = [
+      start,
+      ...obstacles.flatMap((r) => [
+        r.right + inset,
+        r.left - cardWidth - inset,
+      ]),
+    ]
+      .filter((left) => left >= start && left + cardWidth <= width - inset)
+      .sort((a, b) => a - b);
+    return candidates.find(
+      (left) =>
+        !obstacles.some(
+          (r) =>
+            left < r.right + inset &&
+            left + cardWidth > r.left - inset &&
+            top < r.bottom + inset &&
+            height - bottom > r.top - inset
+        )
+    );
+  };
+  for (const maxWidth of [320, 240]) {
+    const left = fit(maxWidth, cardHeight);
+    if (left != null)
+      return {
+        left,
+        bottom,
+        maxWidth,
+        compact: false,
+        visibility: "visible" as const,
+      };
   }
-  let bottom = 24;
-  for (const rect of [composer, footer])
-    if (rect && overlapsX(rect))
-      bottom = Math.max(bottom, height - rect.top + 16);
-  for (const splitter of splitters)
-    if (
-      overlapsX(splitter) &&
-      splitter.bottom - splitter.top < splitter.right - splitter.left &&
-      height - bottom > splitter.top &&
-      height - bottom - cardHeight < splitter.bottom
-    )
-      bottom = height - splitter.top + 12;
+  const maxWidth = 176;
+  const left = fit(maxWidth, 44);
   return {
-    left,
+    left: left ?? start,
     bottom,
     maxWidth,
-    visibility:
-      maxWidth >= 240 && height - bottom - cardHeight > paneTop + 16
-        ? ("visible" as const)
-        : ("hidden" as const),
+    compact: true,
+    visibility: left != null ? ("visible" as const) : ("hidden" as const),
   };
 };

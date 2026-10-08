@@ -24,10 +24,13 @@ import { usePanelRef } from "react-resizable-panels";
 import { useDb } from "#renderer/data/db";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
+import { registerWorkspace } from "#renderer/lib/dev/workspace-layout";
+import { SHELL_GEOMETRY } from "#renderer/lib/shell-geometry";
 import {
   clampPanelWidth,
   PANEL_DEFAULT_PX,
   PANEL_MIN_PX,
+  SPLIT_MIN_PX,
   panelMaxFor,
 } from "#renderer/lib/side-panel/geometry";
 import { ResizablePanelGroup, ResizablePanel } from "#renderer/ui/resizable";
@@ -42,8 +45,8 @@ export interface WorkspaceTab {
 }
 interface WorkspaceContext {
   expanded: boolean;
+  visible: string[];
   targets: Map<string, HTMLDivElement>;
-  close(id: string): void;
 }
 const Context = createContext<WorkspaceContext | null>(null);
 const Content = ({ api }: IDockviewPanelProps) => {
@@ -54,7 +57,19 @@ const Content = ({ api }: IDockviewPanelProps) => {
     if (context.expanded && target && container.current)
       container.current.append(target);
   }, [context, api.id]);
-  return <div ref={container} className="size-full min-h-0 min-w-0" />;
+  const grouped = context.expanded && context.visible.length > 1;
+  return (
+    <div
+      data-workspace-group={api.id}
+      data-group-active={context.visible.includes(api.id) ? "" : undefined}
+      className={cn(
+        "flex size-full min-h-0 min-w-0 flex-col",
+        grouped && "workspace-island dock-group-island"
+      )}
+    >
+      <div ref={container} className="min-h-0 min-w-0 flex-1" />
+    </div>
+  );
 };
 const visiblePanels = (api: DockviewApi): string[] => {
   for (const group of api.groups)
@@ -63,7 +78,12 @@ const visiblePanels = (api: DockviewApi): string[] => {
     group.activePanel ? [group.activePanel.id] : []
   );
 };
+const retainVisible = (previous: string[], next: string[]) =>
+  previous.length === next.length && previous.every((id, i) => id === next[i])
+    ? previous
+    : next;
 const components = { content: Content };
+const workspaceTheme = { ...themeDark, gap: SHELL_GEOMETRY.paneInset };
 const LAYOUT_PREFIX = "abacusai-bot:dock-layout:v1:";
 export const moveDockTab = (
   api: DockviewApi | null,
@@ -88,7 +108,6 @@ export const PanelWorkspace = ({
   open,
   expanded,
   onSelect,
-  onClose,
   apiRef,
 }: {
   scope: string;
@@ -97,7 +116,6 @@ export const PanelWorkspace = ({
   open: boolean;
   expanded: boolean;
   onSelect(id: string): void;
-  onClose(id: string): void;
   apiRef: RefObject<DockviewApi | null>;
 }) => {
   const db = useDb();
@@ -105,7 +123,18 @@ export const PanelWorkspace = ({
   const [targets] = useState(() => new Map<string, HTMLDivElement>());
   const [api, setApi] = useState<DockviewApi | null>(null);
   const [visible, setVisible] = useState<string[]>([]);
+  const [minimum, setMinimum] = useState({ width: 0, height: 0 });
+  const publishLayout = useEffectEvent((dock: DockviewApi) => {
+    setVisible((previous) => retainVisible(previous, visiblePanels(dock)));
+    setMinimum((previous) =>
+      previous.width === dock.minimumWidth &&
+      previous.height === dock.minimumHeight
+        ? previous
+        : { width: dock.minimumWidth, height: dock.minimumHeight }
+    );
+  });
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
+  const [height, setHeight] = useState(Number.POSITIVE_INFINITY);
   const container = useRef<HTMLDivElement>(null);
   const sidePanel = usePanelRef();
   const prefKey = `panel.${scope}`;
@@ -116,7 +145,11 @@ export const PanelWorkspace = ({
   writers.set(prefKey, writer);
   const resized = useRef<number | null>(null);
   const save = useEffectEvent((value: SerializedDockview) => {
-    if (expanded) {
+    if (
+      expanded &&
+      width >= Math.max(SPLIT_MIN_PX, minimum.width) &&
+      height >= minimum.height
+    ) {
       try {
         localStorage.setItem(LAYOUT_PREFIX + scope, JSON.stringify(value));
       } catch {
@@ -136,12 +169,18 @@ export const PanelWorkspace = ({
     const element = container.current;
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry && entry.contentRect.width > 0)
+      if (entry && entry.contentRect.width > 0) {
+        apiRef.current?.layout(
+          entry.contentRect.width,
+          entry.contentRect.height
+        );
         setWidth(entry.contentRect.width);
+        setHeight(entry.contentRect.height);
+      }
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [apiRef]);
   useEffect(() => () => writer.flush(), [writer]);
   const synchronize = useEffectEvent(() => {
     if (!api) return;
@@ -157,7 +196,7 @@ export const PanelWorkspace = ({
           id: tab.id,
           title: tab.title,
           component: "content",
-          renderer: "always",
+          renderer: "onlyWhenVisible",
           inactive: true,
           minimumWidth: tab.id === "chat" ? 360 : 280,
           minimumHeight: 180,
@@ -171,11 +210,15 @@ export const PanelWorkspace = ({
             : {}),
         });
     }
-    queueMicrotask(() => setVisible(visiblePanels(api)));
+    queueMicrotask(() => publishLayout(api));
   });
   useEffect(() => {
     if (!api) return;
     apiRef.current = api;
+    const unregister =
+      import.meta.env.VITE_UI_GALLERY === "1"
+        ? registerWorkspace(scope, api)
+        : undefined;
     api.clear();
     try {
       const raw = localStorage.getItem(LAYOUT_PREFIX + scope);
@@ -184,6 +227,7 @@ export const PanelWorkspace = ({
         for (const panel of Object.values(layout.panels)) {
           panel.minimumWidth = panel.id === "chat" ? 360 : 280;
           panel.minimumHeight = 180;
+          panel.renderer = "onlyWhenVisible";
         }
         api.fromJSON(layout);
       }
@@ -191,14 +235,16 @@ export const PanelWorkspace = ({
       api.clear();
     }
     synchronize();
+    const bounds = container.current?.getBoundingClientRect();
+    if (bounds?.width) api.layout(bounds.width, bounds.height);
     const subscriptions = [
       api.onDidLayoutChange(() => {
-        setVisible(visiblePanels(api));
+        publishLayout(api);
         save(api.toJSON());
       }),
       api.onDidActivePanelChange(({ panel, origin }) => {
         if (origin === "user" && panel) select(panel.id);
-        setVisible(visiblePanels(api));
+        publishLayout(api);
       }),
       api.onUnhandledDragOver((event) => {
         if (
@@ -217,6 +263,7 @@ export const PanelWorkspace = ({
       }),
     ];
     return () => {
+      unregister?.();
       subscriptions.forEach((subscription) => subscription.dispose());
       apiRef.current = null;
     };
@@ -232,7 +279,13 @@ export const PanelWorkspace = ({
   useEffect(() => {
     if (expanded && active) api?.getPanel(active)?.api.setActive();
   }, [api, active, expanded]);
-  const split = open && !expanded && width >= 728;
+  const docked =
+    expanded &&
+    width >= Math.max(SPLIT_MIN_PX, minimum.width) &&
+    height >= minimum.height;
+  const showTool = open && active != null && active !== "chat";
+  const split = showTool && !expanded && width >= SPLIT_MIN_PX;
+  const folded = showTool && !split && !docked;
   const maximum = panelMaxFor(width);
   const stored = clampPanelWidth(
     prefs.panes[prefKey] ?? prefs.panes["side-panel"] ?? PANEL_DEFAULT_PX,
@@ -240,22 +293,27 @@ export const PanelWorkspace = ({
   );
   useLayoutEffect(() => {
     if (split) sidePanel.current?.resize(stored);
-  }, [split, stored, sidePanel]);
+    else if (folded) sidePanel.current?.resize("100%");
+  }, [split, folded, stored, sidePanel]);
   const attach = (id: string, element: HTMLDivElement | null) => {
     const target = targets.get(id);
-    if (!expanded && target && element) element.append(target);
+    if (!docked && target && element) element.append(target);
   };
   return (
-    <Context value={{ expanded, targets, close: onClose }}>
+    <Context
+      value={{
+        expanded: docked,
+        visible,
+        targets,
+      }}
+    >
       <div
         ref={container}
         data-slot="panel-workspace"
+        data-workspace-expanded={docked ? "" : undefined}
         className="relative size-full min-h-0 min-w-0"
       >
-        <div
-          hidden={expanded}
-          className={cn("size-full", expanded && "hidden")}
-        >
+        <div hidden={docked} className={cn("size-full", docked && "hidden")}>
           <ResizablePanelGroup
             orientation="horizontal"
             className="gap-0"
@@ -268,10 +326,11 @@ export const PanelWorkspace = ({
               data-workspace-pane="chat"
               id="pane"
               minSize={split ? 360 : 0}
+              maxSize={folded ? 0 : undefined}
             >
               <div
                 ref={(element) => attach("chat", element)}
-                className={cn("size-full", open && !split && "hidden")}
+                className={cn("size-full", folded && "hidden")}
               />
             </ResizablePanel>
             {split ? (
@@ -287,8 +346,8 @@ export const PanelWorkspace = ({
               data-workspace-pane="tools"
               panelRef={sidePanel}
               minSize={split ? PANEL_MIN_PX : 0}
-              maxSize={!open ? 0 : split ? maximum : undefined}
-              defaultSize={open ? stored : 0}
+              maxSize={!showTool ? 0 : split ? maximum : undefined}
+              defaultSize={showTool ? (folded ? "100%" : stored) : 0}
               onResize={(size) => {
                 resized.current = size.inPixels;
               }}
@@ -309,18 +368,19 @@ export const PanelWorkspace = ({
           </ResizablePanelGroup>
         </div>
         <div
-          hidden={!expanded}
+          hidden={!docked}
           className={cn(
             "panel-dock size-full",
             visible.length === 1 && "single-group",
-            !expanded && "hidden"
+            !docked && "hidden"
           )}
         >
-          {tabs.length > 1 || api ? (
+          {tabs.length > 1 || api || docked ? (
             <DockviewReact
               className="size-full"
-              theme={themeDark}
+              theme={workspaceTheme}
               components={components}
+              disableAutoResizing
               disableFloatingGroups
               onReady={({ api: ready }) => setApi(ready)}
             />
@@ -329,10 +389,10 @@ export const PanelWorkspace = ({
         {tabs.map((tab) =>
           createPortal(
             tab.content(
-              expanded
+              docked
                 ? visible.includes(tab.id)
                 : tab.id === "chat"
-                  ? !open || split
+                  ? !folded
                   : open && active === tab.id
             ),
             targets.get(tab.id)!,

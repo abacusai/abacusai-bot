@@ -668,6 +668,7 @@ export const DEFAULT_LOOK: Look = {
   codeFontSize: 12,
   translucency: true,
   railIconsOnly: false,
+  allowTwoTabRows: false,
   custom: null,
 };
 export const lookOf = (appearance: PrefsRow["appearance"]): Look => ({

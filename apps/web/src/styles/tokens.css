@@ -18,6 +18,13 @@
   --titlebar-end: calc(
     100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw)
   );
+  --titlebar-row-h: 40px;
+  --chrome-control-size: 28px;
+  --chrome-glyph-size: 16px;
+  --chrome-control-radius: 8px;
+  --chrome-control-gap: 4px;
+  --chrome-group-gap: 8px;
+  --chrome-icon-stroke: 1.75;
   --toolbar-h: 40px; /* overwritten from window.chrome density */
   /* shell geometry (canvas); features/shell/geometry.ts holds the same
      numbers and geometry.test.ts keeps them equal. 8 px grid. */
@@ -32,6 +39,9 @@
   --side-panel-drawer-w: 356px;
   --pane-inset: 8px;
   --pane-radius: 12px;
+  --floating-surface-background: var(--popover);
+  --floating-surface-border: var(--border);
+  --floating-surface-shadow: 0 12px 36px rgb(0 0 0 / .18);
   --drawer-padding: 16px;
   /* Content widths, one system for every page (`.content-col` below):
      `--content-max-w` is the reading column (chat transcript, Settings,
@@ -55,6 +65,7 @@
 }
 
 .dark {
+  --floating-surface-shadow: 0 12px 36px rgb(0 0 0 / .45);
   color-scheme: dark;
 }
 
@@ -114,41 +125,32 @@ html {
    * the pane and the in-layout panel keep nine tenths of their colour (the
    * material shows through as a tint, never through the text, code blocks
    * or cards, which keep their own surfaces), so the window reads as one
-   * piece of glass; the floating sidebar, a sheet over the pane, is frosted.
+   * piece of glass. The floating sidebar stays solid over scrolling content.
    */
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
-    :is([data-slot="pane"], [data-slot="side-panel"][data-mode="layout"]) {
+    :is([data-slot="pane"]:not(:has([data-slot="session-dock"])), [data-slot="side-panel"][data-mode="layout"]) {
     background-color: color-mix(in oklab, var(--background) 90%, transparent);
   }
   html:is([data-platform="darwin"], [data-platform="win32"])[data-titlebar="overlay"]:not([data-translucency="off"])
     [data-slot="sidebar-floating"] {
-    background-color: color-mix(in oklab, var(--sidebar) 78%, transparent);
-    -webkit-backdrop-filter: blur(24px) saturate(1.4);
-    backdrop-filter: blur(24px) saturate(1.4);
+    background-color: var(--floating-surface-background);
   }
 }
 
-/*
- * The inset pane and the in-layout panel as cards (V2): a hairline in the
- * border colour, so the light theme's white pane reads against the near-white
- * chrome; dark already separates by lightness and keeps a fainter edge.
- */
+/* Islands separate through their surface and the material gutter, never a line. */
 [data-slot="pane"],
 [data-slot="side-panel"][data-mode="layout"],
 .workspace-island {
-  /* Inside the box: the resizable panels clip anything drawn outside. */
-  outline: 1px solid var(--border);
-  outline-offset: -1px;
-}
-.dark [data-slot="pane"],
-.dark [data-slot="side-panel"][data-mode="layout"],
-.dark .workspace-island {
-  outline-color: color-mix(in oklab, var(--border) 45%, transparent);
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }
 
-/* The island gutter uses the same 8px inset as the Bots panels. */
+/* One centred grip, visible only during interaction; the hit area stays 8px. */
 [data-pane-gutter], .panel-dock .dv-sash {
   background: transparent;
+  border: 0;
+  box-shadow: none;
   cursor: col-resize;
 }
 [data-pane-gutter] {
@@ -159,36 +161,33 @@ html {
 [data-pane-gutter]::after, .panel-dock .dv-sash::after {
   content: "";
   position: absolute;
-  inset-block: 12px;
+  top: 50%;
   left: 50%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: var(--border);
-  transition: background-color 150ms ease, width 150ms ease;
+  width: 3px;
+  height: 28px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity 150ms ease;
 }
 [data-pane-gutter]:is(:hover, :focus-visible, [data-separator="active"])::after,
 .panel-dock .dv-sash:is(:hover, :focus-visible, .dv-active, :active)::after {
-  width: 2px;
-  background: var(--primary);
+  opacity: .55;
 }
-[data-pane-gutter]:focus-visible, .panel-dock .dv-sash:focus-visible {
+[data-pane-gutter]:focus-visible::after, .panel-dock .dv-sash:focus-visible::after {
   outline: 2px solid var(--ring);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 .panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash {
   cursor: row-resize;
 }
 .panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash::after {
-  inset-inline: 12px;
-  top: 50%;
-  left: 12px;
-  width: auto;
-  height: 1px;
-  transform: translateY(-50%);
-  bottom: auto;
+  width: 28px;
+  height: 3px;
 }
-.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:is(:hover, :focus-visible, .dv-active, :active)::after {
-  height: 2px;
+@media (prefers-reduced-motion: reduce) {
+  [data-pane-gutter]::after, .panel-dock .dv-sash::after { transition: none; }
 }
 
 .titlebar-drag {
@@ -675,15 +674,48 @@ html[data-reduce-motion="on"] .phone-rise {
   height: 8px;
   margin-top: -2px;
 }
-.panel-dock .dv-sash:hover::before,
-.panel-dock .dv-sash:focus-visible::before {
-  content: "";
-  position: absolute;
-  inset: calc(50% - 12px) 2px;
-  border-radius: 4px;
-  background: var(--primary);
-  opacity: .35;
+/* Caption/traffic-light controls stay in row one as the shared rail wraps. */
+[data-slot="topbar-leading"], [data-slot="topbar-actions"], [data-slot="topbar-identity"] { align-self: start; height: var(--titlebar-row-h); }
+[data-slot="topbar"]:has([data-rail-chat]) [data-slot="topbar-identity"] { display: none; }
+[data-slot="topbar"]:has([data-slot="topbar-panel-tabs"]):not(:has([data-rail-chat])) [data-slot="topbar-identity"] { flex: 0 1 180px; }
+/* An inactive window has an opaque, contrast-stable chrome on every OS. */
+html[data-window-focused="false"][data-platform][data-titlebar], html[data-window-focused="false"][data-platform][data-titlebar] body, html[data-window-focused="false"][data-platform][data-titlebar] #root, html[data-window-focused="false"][data-platform][data-titlebar] .shell-surface { background-color: var(--sidebar); }
+.workspace-island { background-color: var(--background); }
+
+[data-slot="topbar"] > button, [data-slot="topbar-panel-outlet"] > button { align-self: start; margin-block: calc((var(--titlebar-row-h) - var(--chrome-control-size)) / 2); }
+
+[data-workspace-expanded] [data-slot="bot-identity-stand-in"] { display: none; }
+
+/* Floating islands stay solid over moving content; geometry is shared with docked islands. */
+:is(.floating-surface, [data-slot="sidebar-floating"], [data-slot="drawer-popup"][data-side-panel],
+    [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"], [data-slot="context-menu-sub-content"],
+    [data-slot="select-content"], [data-slot="combobox-content"], [data-slot="hover-card-content"], .panel-dock .dv-drop-target-selection) {
+  background-color: var(--floating-surface-background);
+  border: 1px solid var(--floating-surface-border);
+  border-radius: var(--pane-radius);
+  box-shadow: var(--floating-surface-shadow);
+  backdrop-filter: none;
 }
-.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:hover::before {
-  inset: 2px calc(50% - 12px);
+
+[data-slot="topbar"]:has([role="tablist"]) [data-slot="topbar-identity"] { max-width: max(0px, calc(var(--workspace-title-start,100vw) - var(--workspace-context-start,0px) - var(--chrome-group-gap))); }
+[data-slot="workspace-title-region"]:has([data-slot="topbar-panel-tabs"]) { min-height: var(--titlebar-row-h); }
+[data-slot="workspace-title-region"]:not(:has([data-slot="topbar-panel-tabs"])) { justify-content: flex-end; }
+[data-slot="workspace-title-region"] > button { margin-block: calc((var(--titlebar-row-h) - var(--chrome-control-size)) / 2); }
+
+.titlebar-group { display: flex; height: var(--titlebar-row-h); align-items: center; gap: var(--chrome-control-gap); }
+.titlebar-icon-button { width: var(--chrome-control-size); height: var(--chrome-control-size); flex-shrink: 0; border-radius: var(--chrome-control-radius); color: var(--muted-foreground); }
+.titlebar-icon-button:hover, .titlebar-icon-button[aria-pressed="true"] { background: var(--sidebar-accent); color: var(--sidebar-foreground); }
+.titlebar-icon-button .lucide, [data-slot="topbar"] .lucide { width: var(--chrome-glyph-size); height: var(--chrome-glyph-size); stroke-width: var(--chrome-icon-stroke); }
+
+/* A panel-owned rail leaves just the right-aligned toggle in the title bar. */
+[data-slot="topbar-panel-outlet"]:not(:has([data-slot="topbar-panel-tabs"])) {
+  justify-content: flex-end;
+}
+[data-slot="topbar"]:not(:has([role="tablist"])) [data-slot="topbar-identity"] {
+  max-width: calc(100vw - var(--workspace-context-start, 0px) - var(--titlebar-end) - var(--chrome-control-size) - var(--chrome-group-gap));
+}
+
+:is([data-slot="sidebar-floating"], [data-slot="drawer-popup"][data-side-panel]) {
+  border: 0;
 }

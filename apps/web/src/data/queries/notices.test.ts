@@ -419,6 +419,10 @@ describe("the settings and window followers", () => {
     fake.push({ type: "chrome", chrome });
     await vi.waitFor(() => expect(setQueryData).toHaveBeenCalledTimes(1));
     expect(setQueryData.mock.calls[0]?.[1]).toEqual(chrome);
+    const state = { focused: false, maximized: false, fullScreen: false };
+    fake.push({ type: "state", state });
+    await vi.waitFor(() => expect(setQueryData).toHaveBeenCalledTimes(2));
+    expect(setQueryData.mock.calls[1]?.[1]).toEqual(state);
     expect(invalidateQueries).not.toHaveBeenCalled();
     abort.abort();
     fake.real.close();

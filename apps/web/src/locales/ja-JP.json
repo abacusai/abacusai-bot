@@ -949,18 +949,9 @@
     "paidBody": "Top up your account to keep going.",
     "paidTitle": "You've used all your Pro Abacus.AI credits",
     "topUpCta": "Top up",
-    "body": "Unlock the full potential",
-    "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
     "remindLater": "10分後に通知",
-    "localBody": "Or run a model on this computer for free, with no limits.",
-    "or": "or",
-    "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
-    "switchBody": "Pick a {{providers}} model in the model picker at the bottom right to keep going.",
-    "switchTitle": "You've used all your free Abacus.AI credits",
-    "title": "You've used all your free Abacus.AI credits",
     "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits",
     "levelUpTitle": "Ready for your next level?",
     "restTitle": "A little rest, then more adventures",
     "upgraded": "Level unlocked. Let’s build!",
@@ -2526,7 +2517,10 @@
       },
       "addTab": "Add a tab",
       "closeTab": "Close {{name}}",
-      "openExternalBrowser": "Open in external browser"
+      "openExternalBrowser": "Open in external browser",
+      "renameTab": "Rename tab",
+      "saveTab": "Save",
+      "searchTabs": "タブを検索…"
     },
     "sidebar": {
       "loadError": "Couldn't load",
@@ -2652,7 +2646,9 @@
       "notATheme": "VS Code のカラーテーマではありません。",
       "tooLarge": "ファイルが大きすぎます（最大 2 MB）。",
       "includeHint": "このテーマは読み込まれていない別のファイルを元にしているため、一部の色が欠けている可能性があります。",
-      "remove": "削除"
+      "remove": "削除",
+      "allowTwoTabRows": "タブを2行に表示する",
+      "allowTwoTabRowsDetail": "スペースがある場合、タイトルバーの2行目にタブを表示します。"
     },
     "general": {
       "notch": {

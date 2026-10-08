@@ -34,20 +34,26 @@ import { isRouteTransitionActive } from "#renderer/lib/navigation/route-transiti
 import { useFloatingIntent } from "./floating-intent";
 import { SHELL_GEOMETRY } from "./geometry";
 import type { ShellArea, SidebarMode } from "./layout";
+import { PromoOutlet } from "./promo-host";
 import { shellStore } from "./shell-store";
 import { BotsStrip, NEEDS_YOU, SIDEBARS } from "./sidebars";
 
 const SidebarContent = ({
   sidebarId,
+  floating = false,
 }: {
   sidebarId: ShellArea | undefined;
+  floating?: boolean;
 }) => {
   const Sidebar = sidebarId == null ? null : SIDEBARS[sidebarId];
   const NeedsYou = sidebarId == null ? null : NEEDS_YOU[sidebarId];
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      {NeedsYou != null && <NeedsYou />}
-      {Sidebar != null && <Sidebar />}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="scroll-fade-y flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {NeedsYou != null && <NeedsYou />}
+        {Sidebar != null && <Sidebar />}
+      </div>
+      <PromoOutlet floating={floating} />
     </div>
   );
 };
@@ -187,12 +193,12 @@ export const SidebarSlot = ({
             data-slot="sidebar-floating"
             data-reason={floating.reason ?? undefined}
             className={cn(
-              "border-sidebar-border bg-sidebar fixed top-[calc(var(--toolbar-h)+4px)] bottom-1 z-30 flex overflow-hidden rounded-(--pane-radius) border pt-2 shadow-[0_24px_64px_rgb(0_0_0/0.18)] dark:shadow-[0_24px_64px_rgb(0_0_0/0.6)]",
+              "border-sidebar-border bg-sidebar fixed top-[calc(var(--toolbar-h)+4px)] bottom-1 z-30 flex overflow-hidden rounded-(--pane-radius) border pt-2",
               rail == null
                 ? "left-[calc(var(--rail-w)+4px)] w-(--sidebar-w) flex-col"
                 : // A phone's drawer: full height from the left edge, like a
                   // native navigation drawer.
-                  "top-0 bottom-0 left-0 z-40 w-[min(88vw,calc(var(--rail-w)+var(--sidebar-w)))] flex-row rounded-none rounded-r-[24px] border-y-0 border-l-0 pt-[calc(env(safe-area-inset-top)+12px)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-[0_0_48px_rgb(0_0_0/0.25)]"
+                  "top-0 bottom-0 left-0 z-40 w-[min(88vw,calc(var(--rail-w)+var(--sidebar-w)))] flex-row rounded-none rounded-r-[24px] border-y-0 border-l-0 pt-[calc(env(safe-area-inset-top)+12px)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
             )}
             {...(rail == null
               ? {
@@ -258,7 +264,10 @@ export const SidebarSlot = ({
                     : { duration: 0.14, ease: [0.2, 0, 0, 1] }
                 }
               >
-                <SidebarContent sidebarId={floating.area ?? sidebarId} />
+                <SidebarContent
+                  sidebarId={floating.area ?? sidebarId}
+                  floating
+                />
               </motion.div>
             </AnimatePresence>
           </motion.div>

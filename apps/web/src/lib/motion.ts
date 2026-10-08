@@ -9,6 +9,8 @@ import { usePrefs } from "#renderer/data/db/prefs";
 
 export const durations = {
   crossFade: 200,
+  /** Hover/focus title reveal and pause at each end (workspace tabs). */
+  tabTitleDelay: 400,
   /** Route view transitions: drills and area changes (`inferNavType`). */
   route: 120,
   sharedElement: 420,

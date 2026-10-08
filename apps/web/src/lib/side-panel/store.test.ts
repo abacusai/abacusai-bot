@@ -9,6 +9,7 @@ import {
   panelScopeKey,
   panelStore,
   reorderPanelTabs,
+  reopenPanelTab,
   resetPanelStore,
   setPanelOpen,
   setPanelExpanded,
@@ -68,7 +69,11 @@ describe("panel store", () => {
     expect(panelScope(key).active).toBe(a);
     expect(panelScope(key).open).toBe(true);
     closePanelTab(key, a);
-    expect(panelScope(key)).toEqual({ open: false, tabs: [], active: null });
+    expect(panelScope(key)).toMatchObject({
+      open: false,
+      tabs: [],
+      active: null,
+    });
   });
 
   it("reorders by id list and cycles with wrap-around", () => {
@@ -135,4 +140,20 @@ it("expanded Chat cannot close, remains focused across toggles and returns to to
   expect(panelScope(key).active).toBe("chat");
   setPanelExpanded(key, false);
   expect(panelScope(key).active).toBe(details);
+});
+
+it("reopens a closed tab with its metadata and a fresh resource identity", () => {
+  const id = openPanelTab(key, {
+    kind: "browser",
+    url: "https://example.test",
+    title: "Example",
+  });
+  closePanelTab(key, id);
+  const reopened = reopenPanelTab(key);
+  expect(reopened).not.toBe(id);
+  expect(panelScope(key).tabs[0]).toMatchObject({
+    url: "https://example.test",
+    title: "Example",
+  });
+  expect(reopenPanelTab(key)).toBeNull();
 });

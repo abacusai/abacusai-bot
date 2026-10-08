@@ -50,6 +50,7 @@ export interface PanelTab {
 }
 
 export interface PanelScope {
+  closed?: PanelTab[];
   expanded?: boolean;
   open: boolean;
   tabs: PanelTab[];
@@ -179,7 +180,13 @@ export const closePanelTab = (key: string, id: string): void =>
       scope.active !== id
         ? scope.active
         : (tabs[index]?.id ?? tabs[index - 1]?.id ?? null);
-    return { ...scope, tabs, active, open: scope.open && tabs.length > 0 };
+    return {
+      ...scope,
+      closed: [...(scope.closed ?? []).slice(-19), scope.tabs[index]!],
+      tabs,
+      active,
+      open: scope.open && tabs.length > 0,
+    };
   });
 
 export const reorderPanelTabs = (key: string, ids: readonly string[]): void =>
@@ -243,3 +250,10 @@ export const togglePanel = (key: string, area: ShellArea | undefined): void => {
 };
 
 export const resetPanelStore = (): void => panelStore.setState(() => ({}));
+
+export const reopenPanelTab = (key: string): string | null => {
+  const tab = panelScope(key).closed?.at(-1);
+  if (!tab) return null;
+  update(key, (scope) => ({ ...scope, closed: scope.closed?.slice(0, -1) }));
+  return openPanelTab(key, tab, { fresh: true });
+};

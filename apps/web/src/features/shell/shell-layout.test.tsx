@@ -26,6 +26,7 @@ import {
   panelScope,
   panelScopeKey,
   setPanelOpen,
+  setPanelExpanded,
 } from "./panel-store";
 import { HOVER_INTENT_MS, shellStore } from "./shell-store";
 import { useTopBarActions, useTopBarStatusText } from "./top-bar-slots";
@@ -324,8 +325,8 @@ describe("ShellLayout", () => {
     );
   });
 
-  it("uses a non-modal drawer with data-side-panel below xl, and a scrim only there", async () => {
-    await at(1000, "/bots/chief-of-staff?tab=details");
+  it("uses a non-modal drawer with data-side-panel below the split minimum, and a scrim only there", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -585,7 +586,7 @@ describe("the pane keeps its instance (Codex #3, Claude #1)", () => {
       ).not.toBeNull()
     );
     check();
-    act(() => setViewportWidth(1000));
+    act(() => setViewportWidth(800));
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="drawer-popup"]')
@@ -752,6 +753,24 @@ describe("the title bar", () => {
     );
   });
 
+  it("reveals a forced floating primary sidebar without closing the Session tools", async () => {
+    await at(1000, "/sessions/review-prs?tab=files");
+    fireEvent.click(screen.getByTestId("sidebar-toggle"));
+    await waitFor(() => expect(shellStore.state.floating.open).toBe(true));
+    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("tab", { name: "Changes" })
+          .getAttribute("aria-selected")
+      ).toBe("true")
+    );
+    expect(shellStore.state.floating.open).toBe(true);
+    fireEvent.click(screen.getByTestId("sidebar-toggle"));
+    await waitFor(() => expect(shellStore.state.floating.open).toBe(false));
+    expect(harness!.db.prefs.rows.get("app")?.sidebar.pinned).toBe(true);
+  });
+
   it("the panel toggle reopens a bot's strip as it was, and the strip adds, closes and switches tabs", async () => {
     await at(1280, "/bots/chief-of-staff?tab=details");
     const key = panelScopeKey("bots", "chief-of-staff")!;
@@ -801,6 +820,44 @@ describe("the title bar", () => {
       expect(
         panelScope(key).tabs.filter((tab) => tab.kind === "browser")
       ).toHaveLength(2)
+    );
+  });
+
+  it("offers every bot tool from the floating rail at narrow widths", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    const drawer = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>("[data-side-panel]");
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.click(within(drawer).getByTestId("panel-add-tab"));
+    for (const name of ["Details", "Memory", "Files", "Browser"])
+      expect(await screen.findByRole("menuitem", { name })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Browser" }));
+    await waitFor(() =>
+      expect(panelScope(key).tabs.some((tab) => tab.kind === "browser")).toBe(
+        true
+      )
+    );
+    expect(within(drawer).getByTestId("panel-add-tab")).toBeTruthy();
+  });
+
+  it("keeps Chat reachable when an expanded Bots workspace falls back to a drawer", async () => {
+    await at(800, "/bots/chief-of-staff?tab=details");
+    const key = panelScopeKey("bots", "chief-of-staff")!;
+    act(() => setPanelExpanded(key, true));
+    const chat = await screen.findByRole("tab", { name: "Chat" });
+    expect(screen.getAllByRole("tab", { name: "Chat" })).toHaveLength(1);
+    fireEvent.click(chat);
+    await waitFor(() =>
+      expect(document.querySelector("[data-side-panel]")).toBeNull()
+    );
+    expect(screen.getByTestId("bot-chat")).toBeTruthy();
+    expect(panelScope(key).expanded).toBe(true);
+    act(() => setViewportWidth(1280));
+    await waitFor(() =>
+      expect(document.querySelector("[data-workspace-expanded]")).not.toBeNull()
     );
   });
 

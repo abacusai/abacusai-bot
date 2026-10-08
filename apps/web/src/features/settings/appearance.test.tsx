@@ -301,3 +301,17 @@ it("labels every option of every control with copy, never a key", async () => {
     "System"
   );
 });
+
+it("keeps a single tab row by default and persists opting into two rows", async () => {
+  app = await renderApp("/settings/appearance");
+  const toggle = await screen.findByRole("switch", {
+    name: copy.allowTwoTabRows,
+  });
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  fireEvent.click(toggle);
+  await waitFor(() =>
+    expect(app!.collections.prefs.get("app")?.appearance?.allowTwoTabRows).toBe(
+      true
+    )
+  );
+});

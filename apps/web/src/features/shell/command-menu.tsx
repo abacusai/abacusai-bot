@@ -18,12 +18,14 @@ import {
   Terminal,
   type LucideIcon,
 } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotAvatar } from "#renderer/components/bot-avatar";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { resolveLook } from "#renderer/lib/bots/avatar";
 import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
 import { ActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
 import {
@@ -70,6 +72,7 @@ export const CommandMenu = () => {
 };
 interface Entry extends SearchableCommand {
   icon: LucideIcon;
+  avatar?: ReactNode;
   shortcut?: string;
   run(): void | Promise<void>;
 }
@@ -137,6 +140,7 @@ const CommandMenuBody = () => {
     })),
     ...(bots ?? []).map((bot): Entry => ({
       id: `bot:${bot.id}`,
+      avatar: <BotAvatar look={resolveLook(bot)} size={20} animate={false} />,
       title: bot.name,
       group: "bots",
       icon: Bot,
@@ -312,7 +316,9 @@ const CommandMenuBody = () => {
                 }}
                 className="h-8 py-1"
               >
-                <entry.icon className="text-muted-foreground size-3.5" />
+                {entry.avatar ?? (
+                  <entry.icon className="text-muted-foreground size-3.5" />
+                )}
                 <span className="min-w-0 flex-1 truncate">
                   {highlightCommand(entry.title, query).map((part, index) =>
                     part.matched ? (

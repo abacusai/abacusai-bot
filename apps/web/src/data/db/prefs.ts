@@ -50,6 +50,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
     codeFontSize: 12,
     translucency: true,
     railIconsOnly: false,
+    allowTwoTabRows: false,
     custom: null,
   },
   notch: {

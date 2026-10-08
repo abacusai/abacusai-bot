@@ -1,17 +1,3 @@
-/**
- * The shell (spec 01 §7): title bar, rail, sidebar slot, content pane and side
- * panel, laid out by the pure `shellLayout` from the width band, the area,
- * `prefs.sidebar.pinned` and the panel scope's open state (`panelStore`;
- * sessions keep `search.tab` for their dock). Mirrors the band to
- * `html[data-band]` and the sidebar's in-layout width to
- * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
- *
- * The pane always sits at the same place in the tree, the first panel of one
- * resizable group, whether the side panel is in layout, a drawer or closed
- * (Codex/Claude impl r1 #3/#1): opening the panel, closing it or crossing
- * 1100 px adds or removes a sibling, never re-parents the route subtree, so
- * its state and scroll survive.
- */
 import {
   Outlet,
   useLocation,
@@ -29,6 +15,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotTabAvatar } from "#renderer/components/bot-tab-avatar";
 import {
   PaneBoundary,
   PaneError,
@@ -39,11 +26,30 @@ import {
   PANEL_DRAG_TYPE,
   moveDockTab,
 } from "#renderer/components/panel-workspace";
+/**
+ * The shell (spec 01 §7): title bar, rail, sidebar slot, content pane and side
+ * panel, laid out by the pure `shellLayout` from the width band, the area,
+ * `prefs.sidebar.pinned` and the panel scope's open state (`panelStore`;
+ * sessions keep `search.tab` for their dock). Mirrors the band to
+ * `html[data-band]` and the sidebar's in-layout width to
+ * `--sidebar-occupied-w` (the title bar aligns the identity with the pane).
+ *
+ * The pane always sits at the same place in the tree, the first panel of one
+ * resizable group, whether the side panel is in layout, a drawer or closed
+ * (Codex/Claude impl r1 #3/#1): opening the panel, closing it or crossing
+ * 1100 px adds or removes a sibling, never re-parents the route subtree, so
+ * its state and scroll survive.
+ */
+import { WorkspaceTitleRegion } from "#renderer/components/panel-workspace/title-region";
+import {
+  tabsRailPlacement,
+  TabsRailPlacementProvider,
+} from "#renderer/components/tabs-rail/placement";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
-import { Button } from "#renderer/ui/button";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 
-import { BAND_WIDTH, useShellBand } from "./breakpoints";
+import { useShellWidth, useShellBand } from "./breakpoints";
 import { UpgradePromo } from "./credits-card";
 import { FloatingIntentContext } from "./floating-intent";
 import { APP_HOTKEYS, useAppHotkey } from "./hotkeys";
@@ -56,9 +62,12 @@ import {
   openPanelTab,
   panelScope,
   reorderPanelTabs,
+  reopenPanelTab,
+  updatePanelTab,
   setPanelOpen,
   setPanelExpanded,
   type PanelTabKind,
+  type PanelTab,
 } from "./panel-store";
 import { Rail } from "./rail";
 import {
@@ -155,6 +164,7 @@ export const ShellLayout = ({
 }: ShellLayoutProps) => {
   const { t } = useTranslation();
   const band = useShellBand();
+  const width = useShellWidth();
   const prefs = usePrefs();
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
@@ -163,12 +173,12 @@ export const ShellLayout = ({
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
-  const sidebarToggle = useSidebarToggle();
+  const sidebarToggle = useSidebarToggle(panel);
   const [intent] = useState(() => createFloatingIntent(focusInsideFloating));
 
   const tabTitle = usePanelTabTitle();
   const layout = shellLayout({
-    width: BAND_WIDTH[band],
+    width,
     area,
     pinned: prefs.sidebar.pinned,
     panelOpen: area === "sessions" ? panel.sessionOpen : panel.open,
@@ -185,55 +195,63 @@ export const ShellLayout = ({
   const panelInLayout = panelShown && layout.sidePanel === "layout";
   const scopeKey = panel.key;
   const expanded = panelShown && panel.scope.expanded === true;
+  const botId = scopeKey?.startsWith("bots:") ? scopeKey.slice(5) : undefined;
   const dockApi = useRef<import("dockview-react").DockviewApi | null>(null);
+  const [titleWidth, setTitleWidth] = useState(Infinity);
+  const railPlacement = tabsRailPlacement({
+    available: area === "sessions" ? panel.sessionOpen : panelShown,
+    floating: layout.sidePanel === "drawer",
+    phone: band === "xs",
+    titleWidth,
+  });
+  const railTabs: readonly PanelTab[] = expanded
+    ? [
+        { id: "chat", kind: "thread", title: t("sessions.dock.chat") },
+        ...panel.scope.tabs,
+      ]
+    : panel.scope.tabs;
   const strip =
-    panelShown && scopeKey != null ? (
+    panelShown && scopeKey != null && railPlacement === "titlebar" ? (
       <>
-        <TopBar.PanelTabs
-          tabs={
-            expanded
-              ? [
-                  {
-                    id: "chat",
-                    kind: "thread",
-                    title: t("sessions.dock.chat"),
-                  },
-                  ...panel.scope.tabs,
-                ]
-              : panel.scope.tabs
-          }
-          active={panel.scope.active}
-          title={tabTitle}
-          kinds={panelKinds}
-          onDragStart={
-            expanded
-              ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
-              : undefined
-          }
-          workspaceApi={dockApi}
-          onMove={
-            expanded
-              ? (id, position) => {
-                  moveDockTab(dockApi.current, id, position);
-                }
-              : undefined
-          }
-          onChange={(id) => activatePanelTab(scopeKey, id)}
-          onClose={(id) => closePanelTab(scopeKey, id)}
-          onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
-          // "+" on a multi-instance kind is a new tab (a browser's new-tab
-          // page), never a refocus of the one already open.
-          onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
-        />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("sessions.dock.full")}
+        {
+          <TopBar.PanelTabs
+            tabs={railTabs}
+            active={panel.scope.active}
+            renderIcon={(tab) =>
+              tab.id === "chat" ? <BotTabAvatar botId={botId} /> : undefined
+            }
+            title={tabTitle}
+            kinds={panelKinds}
+            onDragStart={
+              expanded
+                ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+                : undefined
+            }
+            workspaceApi={dockApi}
+            onMove={
+              expanded
+                ? (id, position) => {
+                    moveDockTab(dockApi.current, id, position);
+                  }
+                : undefined
+            }
+            onChange={(id) => activatePanelTab(scopeKey, id)}
+            onRename={(id, title) => updatePanelTab(scopeKey, id, { title })}
+            onReopen={() => reopenPanelTab(scopeKey)}
+            onClose={(id) => closePanelTab(scopeKey, id)}
+            onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
+            // "+" on a multi-instance kind is a new tab (a browser's new-tab
+            // page), never a refocus of the one already open.
+            onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
+          />
+        }
+        <TopBar.IconButton
+          label={t("sessions.dock.full")}
           aria-pressed={expanded}
           onClick={() => setPanelExpanded(scopeKey, !expanded)}
         >
           {expanded ? <Minimize /> : <Maximize />}
-        </Button>
+        </TopBar.IconButton>
       </>
     ) : null;
 
@@ -257,12 +275,15 @@ export const ShellLayout = ({
     // so only a move within the area (picking an item) closes it.
     if (!(phone && owner !== lastOwner.current)) closeFloating();
     lastOwner.current = owner;
+  }, [pathname, router, intent, phone]);
+  useEffect(() => {
+    const owner = areaOf(router, pathname);
     if (owner != null)
       rememberLocation(owner, {
         pathname,
         search: JSON.parse(searchKey) as Record<string, unknown>,
       });
-  }, [pathname, searchKey, router, intent, phone]);
+  }, [pathname, searchKey, router]);
 
   // Floating no longer applies (pinned, strip): nothing may open it later.
   const floatingEnabled = layout.sidebar === "floating";
@@ -274,139 +295,163 @@ export const ShellLayout = ({
   useEffect(() => intent.cancel, [intent]);
 
   return (
-    <FloatingIntentContext value={intent}>
-      <PanelScopeContext value={scopeKey}>
-        <div
-          data-slot="shell"
-          data-band={band}
-          data-sidebar={layout.sidebar}
-          className={cn(
-            "shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden",
-            // Clear the notch and the home indicator (viewport-fit=cover).
-            phone &&
-              "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
-          )}
-          style={
-            {
-              "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
-            } as CSSProperties
-          }
-        >
-          <TopBar.Root>
-            <TopBar.Leading
-              sidebarInLayout={layout.sidebar !== "floating"}
-              showAppName={layout.titleBar.appName}
-              sidebarExpanded={
-                floatingEnabled ? sidebarToggle.floatingOpen : undefined
-              }
-              onToggleSidebar={sidebarToggle.toggle}
-            />
-            <TopBar.Identity
-              status={layout.titleBar.status}
-              statusText={status ?? undefined}
-              badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
-            />
-            <TopBar.Actions
-              folded={layout.titleBar.actionsFolded}
-              tabs={panelShown ? panelKinds : []}
-            />
-            {strip}
-            <TopBarPanelOutlet />
-            {panelAvailable && (
-              <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+    <TabsRailPlacementProvider
+      placement={railPlacement}
+      reportWidth={setTitleWidth}
+    >
+      <FloatingIntentContext value={intent}>
+        <PanelScopeContext value={scopeKey}>
+          <div
+            data-slot="shell"
+            data-band={band}
+            data-sidebar={layout.sidebar}
+            className={cn(
+              "shell-surface text-sidebar-foreground grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[var(--toolbar-h)_minmax(0,1fr)] overflow-hidden",
+              // Clear the notch and the home indicator (viewport-fit=cover).
+              phone &&
+                "pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
             )}
-          </TopBar.Root>
-          {panelShown && scopeKey != null && (
-            <PanelHotkeys scopeKey={scopeKey} />
-          )}
-          <div className="relative flex min-h-0 min-w-0">
-            {!phone && (
-              <Rail
-                area={area}
-                floatingEnabled={floatingEnabled}
-                iconsOnly={prefs.appearance?.railIconsOnly === true}
-                initials={initials}
-              />
-            )}
-            <PaneBoundary resetKey={area}>
-              <SidebarSlot
-                mode={layout.sidebar}
-                sidebarId={sidebar}
-                onEscape={() => closeFloating()}
-                rail={
-                  phone ? (
-                    <Rail
-                      area={area}
-                      floatingEnabled={false}
-                      initials={initials}
-                    />
-                  ) : undefined
+            style={
+              {
+                "--sidebar-occupied-w": `${layout.sidebarOccupied}px`,
+              } as CSSProperties
+            }
+          >
+            <TopBar.Root>
+              <TopBar.Leading
+                sidebarInLayout={layout.sidebar !== "floating"}
+                showAppName={layout.titleBar.appName}
+                sidebarExpanded={
+                  floatingEnabled ? sidebarToggle.floatingOpen : undefined
                 }
+                onToggleSidebar={sidebarToggle.toggle}
               />
-            </PaneBoundary>
-            <div
-              className={cn(
-                "flex min-h-0 min-w-0 flex-1",
-                // A phone's pane runs edge to edge, like a native screen.
-                !phone && "pr-(--pane-inset) pb-(--pane-inset)"
+              <TopBar.Identity
+                status={layout.titleBar.status}
+                statusText={status ?? undefined}
+                badge={geometryMissing ? <TopBar.GeometryBadge /> : undefined}
+              />
+              <TopBar.Actions
+                folded={layout.titleBar.actionsFolded}
+                tabs={panelShown ? panelKinds : []}
+              />
+              <WorkspaceTitleRegion>
+                {strip}
+                <TopBarPanelOutlet />
+                {panelAvailable && (
+                  <TopBar.PanelToggle
+                    open={panelShown}
+                    onToggle={panel.toggle}
+                  />
+                )}
+              </WorkspaceTitleRegion>
+            </TopBar.Root>
+            {panelShown && scopeKey != null && (
+              <PanelHotkeys scopeKey={scopeKey} />
+            )}
+            <div className="relative flex min-h-0 min-w-0">
+              {!phone && (
+                <Rail
+                  area={area}
+                  floatingEnabled={floatingEnabled}
+                  iconsOnly={prefs.appearance?.railIconsOnly === true}
+                  initials={initials}
+                />
               )}
-            >
-              <PanelWorkspace
-                scope={scopeKey ?? "shell"}
-                apiRef={dockApi}
-                active={panel.scope.active}
-                open={panelInLayout || expanded}
-                expanded={expanded}
-                onSelect={(id) => {
-                  if (scopeKey) activatePanelTab(scopeKey, id);
-                }}
-                onClose={(id) => {
-                  if (scopeKey && id !== "chat") closePanelTab(scopeKey, id);
-                }}
-                tabs={[
-                  {
-                    id: "chat",
-                    title: t("sessions.dock.chat"),
-                    content: () => (
-                      <Pane>
-                        <PaneBoundary resetKey={location.pathname}>
-                          {children ?? <Outlet />}
-                        </PaneBoundary>
-                      </Pane>
-                    ),
-                  },
-                  ...(panelAvailable
-                    ? panel.scope.tabs.map((tab) => ({
-                        id: tab.id,
-                        title: tabTitle(tab),
-                        content: (visible: boolean) => (
-                          <SidePanelFrame visible={visible}>
-                            <PaneBoundary resetKey={scopeKey ?? ""}>
-                              <SidePanelBody tab={tab} visible={visible} />
-                            </PaneBoundary>
-                          </SidePanelFrame>
-                        ),
-                      }))
-                    : []),
-                ]}
-              />
+              <PaneBoundary resetKey={area}>
+                <SidebarSlot
+                  mode={layout.sidebar}
+                  sidebarId={sidebar}
+                  onEscape={() => closeFloating()}
+                  rail={
+                    phone ? (
+                      <Rail
+                        area={area}
+                        floatingEnabled={false}
+                        initials={initials}
+                      />
+                    ) : undefined
+                  }
+                />
+              </PaneBoundary>
+              <div
+                className={cn(
+                  "flex min-h-0 min-w-0 flex-1",
+                  // A phone's pane runs edge to edge, like a native screen.
+                  !phone && "pr-(--pane-inset) pb-(--pane-inset)"
+                )}
+              >
+                <PanelWorkspace
+                  scope={scopeKey ?? "shell"}
+                  apiRef={dockApi}
+                  active={panel.scope.active}
+                  open={panelInLayout}
+                  expanded={expanded}
+                  onSelect={(id) => {
+                    if (scopeKey) activatePanelTab(scopeKey, id);
+                  }}
+                  tabs={[
+                    {
+                      id: "chat",
+                      title: t("sessions.dock.chat"),
+                      content: () => (
+                        <Pane>
+                          <PaneBoundary resetKey={location.pathname}>
+                            {children ?? <Outlet />}
+                          </PaneBoundary>
+                        </Pane>
+                      ),
+                    },
+                    ...(panelAvailable
+                      ? panel.scope.tabs.map((tab) => ({
+                          id: tab.id,
+                          title: tabTitle(tab),
+                          content: (visible: boolean) => (
+                            <SidePanelFrame visible={visible}>
+                              <PaneBoundary resetKey={scopeKey ?? ""}>
+                                <SidePanelBody tab={tab} visible={visible} />
+                              </PaneBoundary>
+                            </SidePanelFrame>
+                          ),
+                        }))
+                      : []),
+                  ]}
+                />
+              </div>
             </div>
+            {IS_ELECTRON && <UpgradePromo />}
+            <SidePanelDrawer
+              open={
+                panelShown &&
+                layout.sidePanel === "drawer" &&
+                panel.scope.active !== "chat"
+              }
+              tabs={railTabs}
+              kinds={panelKinds}
+              onAdd={(kind) => {
+                if (scopeKey) openPanelTab(scopeKey, { kind }, { fresh: true });
+              }}
+              active={panel.active}
+              onTabClose={(id) => {
+                if (scopeKey) closePanelTab(scopeKey, id);
+              }}
+              onTabReorder={(ids) => {
+                if (scopeKey) reorderPanelTabs(scopeKey, ids);
+              }}
+              onReopen={() => {
+                if (scopeKey) reopenPanelTab(scopeKey);
+              }}
+              onTabChange={(id) => {
+                if (scopeKey != null) activatePanelTab(scopeKey, id);
+              }}
+              onClose={() => {
+                if (scopeKey != null) setPanelOpen(scopeKey, false);
+              }}
+            />
           </div>
-          <UpgradePromo />
-          <SidePanelDrawer
-            open={panelShown && layout.sidePanel === "drawer"}
-            tabs={panel.scope.tabs}
-            active={panel.active}
-            onTabChange={(id) => {
-              if (scopeKey != null) activatePanelTab(scopeKey, id);
-            }}
-            onClose={() => {
-              if (scopeKey != null) setPanelOpen(scopeKey, false);
-            }}
-          />
-        </div>
-      </PanelScopeContext>
-    </FloatingIntentContext>
+        </PanelScopeContext>
+      </FloatingIntentContext>
+    </TabsRailPlacementProvider>
   );
 };
 

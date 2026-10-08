@@ -9,12 +9,14 @@ import { transitionTypeSink } from "#renderer/lib/navigation/transition-types";
 import type { RouterContext } from "#renderer/router";
 
 import { navigateAndSettle } from "./settle";
+import { setAuditLayout } from "./workspace-layout";
 
 interface AbacusDev {
   navigateAndSettle(href: string): Promise<void>;
   navigate(href: string): Promise<void>;
   /** Invoke real main procedures in dev-only acceptance builds. */
   call(path: string, input?: unknown): Promise<unknown>;
+  workspaceLayout: typeof setAuditLayout;
   setPinned(pinned: boolean): Promise<void>;
   setTheme(theme: "system" | "light" | "dark"): Promise<void>;
   setMotion(reduce: "system" | "on" | "off"): Promise<void>;
@@ -86,6 +88,7 @@ export const installDevHooks = (router: AnyRouter, db: Db): void => {
         router,
         collections: Object.values(db.collections),
       }),
+    workspaceLayout: setAuditLayout,
     setPinned: (pinned) => db.updatePrefs({ sidebar: { pinned } }),
     setTheme: (theme) => db.updatePrefs({ theme }),
     setMotion: (reduce) => db.updatePrefs({ motion: { reduce } }),
