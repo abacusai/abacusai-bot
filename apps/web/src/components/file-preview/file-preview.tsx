@@ -292,6 +292,11 @@ export const FilePreview = ({
           )
         ) : (
           <>
+            {browserPreview && loaded.content === "" && (
+              <p role="status" className="text-muted-foreground">
+                {t("web.files.emptyFile")}
+              </p>
+            )}
             {loaded.truncated && (
               <p className="text-muted-foreground pb-2 text-xs" role="note">
                 {t("bots.chat.preview.truncated")}

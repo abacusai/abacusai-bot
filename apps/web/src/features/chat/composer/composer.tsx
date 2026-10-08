@@ -72,10 +72,11 @@ import { AttachmentChip } from "./attachment-chip";
 import {
   addFiles,
   addPaths,
-  retryAttachment,
   removeAttachment,
+  retryAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
+import { droppedFiles } from "./dropped-files";
 import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
@@ -283,12 +284,28 @@ const Attach = () => {
             }}
           >
             <FileText aria-hidden />
-            {t("chat.composer.attachFiles")}
+            {t(
+              runtime.host.pickLocalFiles
+                ? "web.files.uploadComputer"
+                : "chat.composer.attachFiles"
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async () => {
               setError(null);
               try {
+                if (runtime.host.pickLocalFiles) {
+                  const files = await runtime.host.pickLocalFiles(true);
+                  if (files?.length)
+                    await addFiles(
+                      threadId,
+                      files,
+                      runtime.host,
+                      config.attachmentsBase,
+                      config.attachmentContext
+                    );
+                  return;
+                }
                 const folder = await runtime.host.pickFolder();
                 if (folder != null) {
                   const count = await runtime.host
@@ -302,7 +319,11 @@ const Attach = () => {
             }}
           >
             <Folder aria-hidden />
-            {t("chat.composer.attachFolder")}
+            {t(
+              runtime.host.pickLocalFiles
+                ? "web.files.uploadFolder"
+                : "chat.composer.attachFolder"
+            )}
           </DropdownMenuItem>
           {runtime.host.pickVmFiles && (
             <DropdownMenuItem
@@ -310,7 +331,11 @@ const Attach = () => {
                 setError(null);
                 try {
                   const files = await runtime.host.pickVmFiles!();
-                  if (files) addPaths(threadId, files);
+                  if (files)
+                    addPaths(
+                      threadId,
+                      files.map((file) => ({ ...file, source: "vm" }))
+                    );
                 } catch {
                   setError(t("web.files.failed"));
                 }
@@ -651,6 +676,8 @@ export const ThreadComposer = () => {
       case "blocked":
         if (route.reason === "uploading")
           setError(t("chat.composer.uploading"));
+        if (route.reason === "attachment-error")
+          setError(t("web.files.failedBeforeSend"));
         return;
       case "enqueue": {
         const saved = draft;
@@ -833,16 +860,24 @@ export const ThreadComposer = () => {
       event.preventDefault();
       return;
     }
-    const files = [...event.dataTransfer.files];
-    if (files.length === 0) return;
+    if (!event.dataTransfer.types.includes("Files")) return;
     event.preventDefault();
-    void addFiles(
-      threadId,
-      files,
-      runtime.host,
-      config.attachmentsBase,
-      config.attachmentContext
-    );
+    const transfer = event.dataTransfer;
+    void (
+      runtime.host.uploadFile
+        ? droppedFiles(transfer)
+        : Promise.resolve([...transfer.files])
+    )
+      .then((files) =>
+        addFiles(
+          threadId,
+          files,
+          runtime.host,
+          config.attachmentsBase,
+          config.attachmentContext
+        )
+      )
+      .catch(() => setError(t("web.files.uploadFailed")));
   };
 
   // The 800 px band and phones (chat-kit W800): the model chip is an icon button.

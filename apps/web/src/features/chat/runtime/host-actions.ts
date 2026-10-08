@@ -7,6 +7,7 @@ import {
   uploadFiles,
   viewHostFile,
   pickUploadFiles,
+  uploadFile,
   pickHostPaths,
 } from "#platform/files";
 import type { CreditActions } from "#renderer/components/credits-card";
@@ -35,9 +36,14 @@ export interface ChatHostActions extends CreditActions {
   showItemInFolder(path: string): Promise<void>;
   pickFiles(context?: ResolveAttachmentContext): Promise<PickedPath[] | null>;
   pickFolder(): Promise<string | null>;
-  pickLocalFiles?(): Promise<File[] | null>;
+  pickLocalFiles?(folder?: boolean): Promise<File[] | null>;
   pickVmFiles?(): Promise<PickedPath[] | null>;
   validateUpload?(file: File): void;
+  uploadFile?(
+    file: File,
+    context: AttachmentContext,
+    options: import("#renderer/lib/browser/upload").UploadOptions
+  ): Promise<string>;
   /** Writes pasted blobs under `baseFolder`; returns their absolute paths. */
   savePasted(
     baseFolder: string,
@@ -74,13 +80,14 @@ export const hostActionsFor = (
       ? {}
       : {
           pickLocalFiles: pickUploadFiles,
+          uploadFile,
           pickVmFiles: async () =>
             (await pickHostPaths(client, "file", true))?.map((path) => ({
               path,
               name: path.split("/").at(-1) ?? path,
             })) ?? null,
           validateUpload: (file: File) => {
-            if (file.size > 255 * 1024 * 1024)
+            if (file.size > 256 * 1024 * 1024)
               throw new Error(i18n.t("web.files.tooLarge"));
           },
         }),

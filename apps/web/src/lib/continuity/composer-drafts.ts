@@ -7,6 +7,7 @@ import type { AgentMode } from "@abacus-ai/contract/agent-types";
  * persisted.
  */
 import { persistedStore } from "#renderer/lib/continuity/registry";
+import { i18n } from "#renderer/lib/i18n";
 
 export interface DraftAttachment {
   id: string;
@@ -14,6 +15,9 @@ export interface DraftAttachment {
   path: string | null;
   state: "uploading" | "done" | "error";
   size?: number;
+  source?: "computer" | "vm";
+  progress?: number;
+  files?: Array<{ name: string; size: number }>;
   mimeType?: string;
   error?: string;
   kind?: "file" | "folder";
@@ -61,9 +65,14 @@ export const draftStore = persistedStore<Record<string, Draft>>(
           id,
           {
             ...draft,
-            attachments: draft.attachments
-              .filter((a) => a.state === "done")
-              .map(({ preview: _preview, ...rest }) => rest),
+            attachments: draft.attachments.map(
+              ({ preview: _preview, ...rest }) => ({
+                ...rest,
+                ...(rest.state === "uploading"
+                  ? { state: "error", error: i18n.t("web.files.interrupted") }
+                  : {}),
+              })
+            ),
           },
         ])
       ),

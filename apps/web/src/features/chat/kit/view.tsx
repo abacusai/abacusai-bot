@@ -17,6 +17,8 @@ import {
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
 
+import { addFiles } from "../composer/attachments";
+import { droppedFiles } from "../composer/dropped-files";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { useThreadHost } from "../runtime/host";
@@ -118,6 +120,53 @@ export const ChatView = (props: ChatViewProps) => {
   const { threadId, skin, runtime } = props;
   const session = runtime.session(threadId);
   const [inline] = useState(createInlineRegistry);
+  const [dragging, setDragging] = useState(false);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const attachDrop = useEffectEvent((event: DragEvent) => {
+    if (event.defaultPrevented || !event.dataTransfer?.types.includes("Files"))
+      return;
+    event.preventDefault();
+    setDragging(false);
+    const transfer = event.dataTransfer;
+    void droppedFiles(transfer)
+      .then((files) =>
+        addFiles(
+          threadId,
+          files,
+          runtime.host,
+          props.composer.attachmentsBase,
+          props.composer.attachmentContext
+        )
+      )
+      .catch(() => setDropError(t("web.files.uploadFailed")));
+  });
+  useEffect(() => {
+    if (
+      !runtime.host.uploadFile ||
+      props.composer.readOnly ||
+      props.focused === false
+    )
+      return;
+    const over = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes("Files")) {
+        event.preventDefault();
+        setDragging(true);
+      }
+    };
+    const leave = (event: DragEvent) => {
+      if (!event.relatedTarget) setDragging(false);
+    };
+    const drop = (event: DragEvent) => attachDrop(event);
+    document.addEventListener("dragover", over);
+    document.addEventListener("dragleave", leave);
+    document.addEventListener("drop", drop);
+    return () => {
+      document.removeEventListener("dragover", over);
+      document.removeEventListener("dragleave", leave);
+      document.removeEventListener("drop", drop);
+    };
+  }, [runtime.host, props.composer.readOnly, props.focused]);
   const pending = useSelector(
     draftStore,
     (state) => state[threadId]?.pendingSubmit
@@ -193,6 +242,19 @@ export const ChatView = (props: ChatViewProps) => {
           data-skin={skin}
           data-thread={threadId}
         >
+          {dragging && (
+            <div
+              role="status"
+              className="border-primary bg-background/90 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl border-2 text-sm"
+            >
+              {t("web.files.dropUpload")}
+            </div>
+          )}
+          {dropError && (
+            <p role="alert" className="text-destructive px-4 text-sm">
+              {dropError}
+            </p>
+          )}
           {ready ? (
             <Kit key={threadId} skin={skin} />
           ) : phase === "error" ? (

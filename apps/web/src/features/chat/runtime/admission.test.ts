@@ -84,6 +84,12 @@ describe("R2-T20 routeSubmit", () => {
     });
   });
 
+  it("blocks failed attachments instead of dropping them", () => {
+    expect(
+      routeSubmit({ ...base, attachments: [{ path: null, state: "error" }] })
+    ).toEqual({ kind: "blocked", reason: "attachment-error" });
+  });
+
   it("appends attachments as @path lines; attachment-only is a prompt", () => {
     expect(
       routeSubmit({

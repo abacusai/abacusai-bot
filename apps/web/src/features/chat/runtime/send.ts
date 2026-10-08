@@ -16,7 +16,12 @@ export type SubmitRoute =
   | { kind: "noop" }
   | {
       kind: "blocked";
-      reason: "read-only" | "question-pending" | "uploading" | "loading";
+      reason:
+        | "read-only"
+        | "question-pending"
+        | "uploading"
+        | "loading"
+        | "attachment-error";
     }
   | {
       kind: "send";
@@ -59,7 +64,9 @@ const withAttachmentRefs = (
 
 export const routeSubmit = (input: SubmitInput): SubmitRoute => {
   if (input.composing === true) return { kind: "noop" };
-  const usable = input.attachments.filter((a) => a.state !== "error");
+  if (input.attachments.some((attachment) => attachment.state === "error"))
+    return { kind: "blocked", reason: "attachment-error" };
+  const usable = input.attachments;
   if (input.text.trim() === "" && usable.length === 0) return { kind: "noop" };
   if (input.readOnly) return { kind: "blocked", reason: "read-only" };
   if (input.questionPending)

@@ -11,3 +11,8 @@ export const pickUploadFiles: typeof import("#renderer/lib/browser/files").pickU
   async () => null;
 export const pickHostPaths: typeof import("#renderer/lib/browser/files").pickHostPaths =
   async () => null;
+
+export const uploadFile: typeof import("#renderer/lib/browser/upload").uploadFile =
+  async () => {
+    throw new Error("Browser upload unavailable on Electron");
+  };

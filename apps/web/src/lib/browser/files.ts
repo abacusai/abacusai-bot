@@ -51,11 +51,12 @@ export const uploadFiles = async (
     throw new Error("Invalid upload response");
   return value.paths;
 };
-export const pickUploadFiles = (): Promise<File[] | null> =>
+export const pickUploadFiles = (folder = false): Promise<File[] | null> =>
   new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
+    input.webkitdirectory = folder;
     input.hidden = true;
     const done = (files: File[] | null) => {
       input.remove();

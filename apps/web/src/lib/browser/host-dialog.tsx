@@ -18,7 +18,7 @@ import {
 import { Input } from "#renderer/ui/input";
 import { Skeleton } from "#renderer/ui/skeleton";
 
-const mountDialog = (render: (close: () => void) => ReactNode) => {
+export const mountDialog = (render: (close: () => void) => ReactNode) => {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
@@ -313,6 +313,17 @@ export const HostPathPicker = ({
           </form>
         )}
         <DialogFooter>
+          {mode === "file" && (
+            <Button
+              variant="outline"
+              disabled={
+                loading || error || !listing || listing.path === listing.root
+              }
+              onClick={() => done([listing!.path])}
+            >
+              {t("web.files.useFolder")}
+            </Button>
+          )}
           <Button
             variant="ghost"
             disabled={loading || error}
@@ -451,3 +462,69 @@ export const viewFile = (client: AppClient, path: string) =>
   mountDialog((close) => (
     <HostFileDialog client={client} path={path} close={close} />
   ));
+
+export const confirmUpload = (
+  count: number,
+  size: string,
+  skipped: number
+): Promise<boolean | null> =>
+  new Promise((resolve) =>
+    mountDialog((close) => (
+      <UploadConfirmation
+        count={count}
+        size={size}
+        skipped={skipped}
+        done={(include) => {
+          resolve(include);
+          close();
+        }}
+      />
+    ))
+  );
+const UploadConfirmation = ({
+  count,
+  size,
+  skipped,
+  done,
+}: {
+  count: number;
+  size: string;
+  skipped: number;
+  done: (include: boolean | null) => void;
+}) => {
+  const { t } = useTranslation();
+  const [include, setInclude] = useState(false);
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) done(null);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("web.files.confirmUpload")}</DialogTitle>
+          <DialogDescription>
+            {t("web.files.uploadCount", { count, size })}
+          </DialogDescription>
+        </DialogHeader>
+        {skipped > 0 && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={include}
+              onChange={(event) => setInclude(event.target.checked)}
+            />
+            {t("web.files.includeJunk", { count: skipped })}
+          </label>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => done(null)}>
+            {t("phase5.cancel")}
+          </Button>
+          <Button onClick={() => done(include)}>{t("web.files.upload")}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

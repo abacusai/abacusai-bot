@@ -8,6 +8,12 @@ import { mutation, query, subscription } from "./base";
 import { CheckoutRefSchema, type CheckoutKey } from "./checkout";
 import { NoInput } from "./ids";
 
+export const UPLOAD_LIMITS = {
+  fileBytes: 256 * 1024 * 1024,
+  totalBytes: 512 * 1024 * 1024,
+  fileCount: 1000,
+} as const;
+
 export type FilesEvent =
   /**
    * A checkout's tree root changed: re-read `treeRoot`/`treeChildren` for it.

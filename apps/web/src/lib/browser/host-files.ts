@@ -31,7 +31,10 @@ const response = async (
         Authorization: `Bearer ${host.token}`,
         ...(probe ? { Range: "bytes=0-0" } : {}),
       },
-      signal,
+      signal: AbortSignal.any([
+        ...(signal ? [signal] : []),
+        AbortSignal.timeout(30_000),
+      ]),
     });
   let result = await fetchFile();
   const failure =
@@ -209,11 +212,17 @@ export const readHostText: AppClient["files"]["readText"] = async (
     probe
   );
   const { bytes, truncated } = await boundedBytes(result, limit, input);
-  if (bytes.subarray(0, 8192).includes(0))
+  const encoding =
+    bytes[0] === 255 && bytes[1] === 254
+      ? "utf-16le"
+      : bytes[0] === 254 && bytes[1] === 255
+        ? "utf-16be"
+        : "utf-8";
+  if (encoding === "utf-8" && bytes.subarray(0, 8192).includes(0))
     throw fileError(input, "binary-file");
   const sizeBytes = sizeOf(result) ?? bytes.length + Number(truncated);
   return {
-    content: new TextDecoder().decode(bytes),
+    content: new TextDecoder(encoding).decode(bytes),
     sizeBytes,
     truncated: truncated || (probe && sizeBytes > limit),
   };
