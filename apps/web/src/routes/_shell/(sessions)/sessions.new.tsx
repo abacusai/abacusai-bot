@@ -57,6 +57,7 @@ const SessionsNewRoute = () => {
                 context={binding.context}
                 config={{
                   mode: "full",
+                  pending: binding.pending,
                   placeholder: t("sessions.start.placeholder"),
                   attachmentsBase: binding.root,
                   attachmentContext: binding.attachmentContext,

@@ -1687,7 +1687,7 @@
     "start": {
       "heading": "What should we build?",
       "placeholder": "Tell the agent what to do…",
-      "finishing": "Finishing your last session…",
+      "interrupted": "L’ultimo messaggio non è stato inviato completamente.",
       "continue": "Continue",
       "discard": "Discard",
       "try": "Try one of these",

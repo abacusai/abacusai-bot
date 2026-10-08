@@ -496,7 +496,7 @@ const SendOrStop = () => {
     <Button
       size="icon-lg"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
-      disabled={!hasText || config.blocked === "loading"}
+      disabled={config.pending || !hasText || config.blocked === "loading"}
       aria-disabled={!!config.blocked}
       className={cn(
         "size-9 rounded-full",
@@ -507,7 +507,7 @@ const SendOrStop = () => {
       )}
       onClick={submit}
     >
-      <ArrowUp aria-hidden />
+      {config.pending ? <Spinner aria-hidden /> : <ArrowUp aria-hidden />}
     </Button>
   );
 };
@@ -555,6 +555,7 @@ export const ThreadComposer = () => {
     })
   );
   const field = useRef<HTMLTextAreaElement>(null);
+  const submitting = useRef(false);
   const pref = useMotionPreference();
   const fieldId = useId();
 
@@ -594,6 +595,7 @@ export const ThreadComposer = () => {
               : "resting";
 
   const submit = (): void => {
+    if (submitting.current || config.pending) return;
     if (config.blocked) {
       if (config.model != null) modelChip.current?.requestModel();
       else config.onBlocked?.();
@@ -639,13 +641,14 @@ export const ThreadComposer = () => {
       }
       case "send": {
         const saved = draft;
-        clearDraft(threadId);
+        if (!config.onSubmitEnvelope) clearDraft(threadId);
         const clearedRevision = draftRevision(threadId);
         const restore = (message: string) => {
           restoreDraft(threadId, clearedRevision, saved);
           setError(message);
         };
         void config.history?.add(route.text);
+        submitting.current = config.onSubmitEnvelope != null;
         const admission = config.onSubmitEnvelope
           ? config
               .onSubmitEnvelope({
@@ -670,9 +673,17 @@ export const ThreadComposer = () => {
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
               restoreDraft(threadId, clearedRevision, saved);
-            else config.onFirstSend?.(route.text);
+            else {
+              if (
+                config.onSubmitEnvelope &&
+                draftRevision(threadId) === clearedRevision
+              )
+                clearDraft(threadId);
+              config.onFirstSend?.(route.text);
+            }
           })
           .catch((thrown: unknown) => {
+            if (config.onSubmitEnvelope) return;
             if (isRpcError(thrown) && thrown.code === "CONFLICT") {
               void runtime.queue
                 .enqueue(threadId, composed!.text, composed!.userText)
@@ -684,6 +695,9 @@ export const ThreadComposer = () => {
               return;
             }
             restore(t("chat.composer.notReady"));
+          })
+          .finally(() => {
+            submitting.current = false;
           });
         return;
       }
@@ -706,6 +720,10 @@ export const ThreadComposer = () => {
   const historyIndex = useRef(-1);
   const historyItems = useRef<string[]>([]);
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (config.pending) {
+      event.preventDefault();
+      return;
+    }
     if (event.nativeEvent.isComposing) return;
     const mod = event.metaKey || event.ctrlKey;
     if (
@@ -765,6 +783,10 @@ export const ThreadComposer = () => {
   };
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (config.pending) {
+      event.preventDefault();
+      return;
+    }
     const files = [...event.clipboardData.files];
     if (files.length === 0) return;
     event.preventDefault();
@@ -777,6 +799,10 @@ export const ThreadComposer = () => {
     );
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (config.pending) {
+      event.preventDefault();
+      return;
+    }
     const files = [...event.dataTransfer.files];
     if (files.length === 0) return;
     event.preventDefault();
@@ -879,6 +905,7 @@ export const ThreadComposer = () => {
         data-slot="composer"
         data-tour="composer"
         data-state={state}
+        aria-busy={config.pending || undefined}
         data-expanded={expanded ? "" : undefined}
         onKeyDown={(event) => {
           if (event.key !== "Escape" || event.defaultPrevented) return;
@@ -987,7 +1014,15 @@ export const ThreadComposer = () => {
             <DictationRow preview={config.dictating === true} />
           ) : (
             <>
-              {expanded ? <Attachments /> : null}
+              {expanded ? (
+                <fieldset
+                  disabled={config.pending}
+                  className="contents"
+                  data-layout="position"
+                >
+                  <Attachments />
+                </fieldset>
+              ) : null}
               {expanded ? null : (
                 <Still layout={still} className="flex shrink-0">
                   <Attach />
@@ -1006,6 +1041,7 @@ export const ThreadComposer = () => {
                     : undefined
                 }
                 value={draft.text}
+                readOnly={config.pending}
                 placeholder={placeholder}
                 rows={1}
                 onChange={(event) =>
@@ -1025,7 +1061,8 @@ export const ThreadComposer = () => {
                 )}
               />
               {expanded ? (
-                <motion.div
+                <motion.fieldset
+                  disabled={config.pending}
                   className="flex items-center gap-1.5"
                   layout={still}
                   data-layout="position"
@@ -1039,7 +1076,7 @@ export const ThreadComposer = () => {
                   {model}
                   <Dictate />
                   <SendOrStop />
-                </motion.div>
+                </motion.fieldset>
               ) : (
                 <Still
                   layout={still}
@@ -1062,12 +1099,13 @@ export const ThreadComposer = () => {
           // as its own 48 px strip: inset 12 px, bottom corners 14 px, tucked
           // 16 px under the box with the same 16 px of top padding, so it
           // reads as attached. Phones stack it plainly below.
-          <div
+          <fieldset
+            disabled={config.pending}
             className="phone:mx-0 phone:mt-2 phone:min-h-0 phone:rounded-none phone:bg-transparent phone:px-1 phone:pt-0 mx-3 -mt-4 flex min-h-12 flex-col justify-center rounded-b-[14px] bg-[var(--chat-surface-2)] px-3.5 pt-4 text-[13px]"
             data-slot="composer-context"
           >
             {view.slots.composerContext}
-          </div>
+          </fieldset>
         ) : null}
       </div>
     </ComposerContext>

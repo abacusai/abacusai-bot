@@ -78,6 +78,7 @@ export interface ComposerConfig {
   setMode?: (mode: AgentMode) => Promise<void>;
   /** A new session with no runtime yet: mode and model go with the first send. */
   preStart?: boolean;
+  pending?: boolean;
   /** The `db.sessions` turn column says busy (§4.4). */
   turnBusy?: boolean;
   /** Called after the first send of an untitled session (§8.3). */
