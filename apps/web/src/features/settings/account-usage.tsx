@@ -41,6 +41,12 @@ export const AccountPage = () => {
   const settings = useQuery(
     transport.orpc.settings.get.queryOptions({ input: {} })
   );
+  // The platform's own link to the vault page; null when this account has none.
+  const vaultUrl = useQuery({
+    ...transport.orpc.account.vaultUrl.queryOptions({ input: {} }),
+    enabled: account.data != null,
+    staleTime: 300000,
+  }).data;
   const inviteLink = referrals.data?.inviteLink;
   const canSignOut = canSignOutOfAbacus(settings.data ?? null);
   const [pending, setPending] = useState(false);
@@ -188,6 +194,25 @@ export const AccountPage = () => {
             {t("phase5.topUp")}
           </Button>
         </SettingRow>
+        {vaultUrl && (
+          <SettingRow
+            id="vault"
+            title={t("phase5.vault")}
+            detail={t("phase5.vaultDetail")}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                void platformSystem(transport.client).openExternal({
+                  url: vaultUrl,
+                })
+              }
+            >
+              {t("phase5.openVault")}
+            </Button>
+          </SettingRow>
+        )}
         {account.data.organization && (
           <SettingRow
             id="organization"

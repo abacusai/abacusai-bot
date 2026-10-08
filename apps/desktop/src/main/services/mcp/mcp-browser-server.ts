@@ -4596,7 +4596,7 @@ export class McpBrowserServer extends McpHttpServer {
       return null;
     }
     const sites = (
-      items.value.find((item) => item.itemId === itemId)?.sites ?? []
+      items.value.items.find((item) => item.itemId === itemId)?.sites ?? []
     ).filter((site) => /^[a-z0-9.-]{1,253}$/i.test(site));
     if (kept != null) kept.sites = sites;
     return sites;

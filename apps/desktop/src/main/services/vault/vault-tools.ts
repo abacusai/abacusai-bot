@@ -35,6 +35,10 @@ const TOOLS: Record<
       "",
       "Look here before asking for a login (one may be saved for the site) and to pick the",
       "card for payment_approval.",
+      "",
+      "You cannot delete or change a saved item. When the user wants to see, manage or delete",
+      "their saved logins or cards, send them the vault page link from this result: they do it",
+      "there. Never say you deleted or changed one; if one is gone, say it is no longer saved.",
     ].join("\n"),
     inputSchema: { type: "object", properties: {} },
   },
@@ -278,6 +282,16 @@ export class Vault {
     return VAULT_TOOL_NAMES.map((name) => ({ name, ...TOOLS[name]! }));
   }
 
+  /**
+   * The page where the user sees and deletes what is saved, as the platform
+   * names it for this account; null when the vault is not available here.
+   */
+  async manageUrl(): Promise<string | null> {
+    if (!this.deps.client.maybeAvailable()) return null;
+    const result = await this.deps.client.listItems();
+    return result.ok === false ? null : result.value.manageUrl;
+  }
+
   /** The approval this session's user granted, while it is good. */
   approval(sessionId: string | undefined): PaymentApproval | null {
     return sessionId == null
@@ -381,11 +395,17 @@ export class Vault {
   private async items(): Promise<McpToolResult> {
     const result = await this.deps.client.listItems();
     if (result.ok === false) return this.unavailable(result);
-    if (result.value.length === 0)
+    const { items, manageUrl } = result.value;
+    const manage =
+      manageUrl == null
+        ? "Only the user can delete saved items, on their vault page; you cannot."
+        : `Vault page, where the user sees and deletes saved items (you cannot): ${manageUrl}`;
+    if (items.length === 0)
       return ok(
-        "The vault is empty. Ask for a login or card with vault_request when one is needed."
+        "The vault is empty. Ask for a login or card with vault_request when one is needed.\n" +
+          manage
       );
-    return ok(result.value.map(describeItem).join("\n"));
+    return ok([...items.map(describeItem), manage].join("\n"));
   }
 
   private async request(

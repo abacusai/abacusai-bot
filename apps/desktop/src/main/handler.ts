@@ -468,6 +468,7 @@ export const createHostOperations = (
     // Late-bound, so nothing here is read until a caller asks for it.
     listModels: (refresh?: boolean) => listAvailableModels(refresh === true),
     getUsageSnapshot: () => getUsageSnapshot(),
+    getVaultManageUrl: () => serviceHost.vaultManageUrl(),
     readSettings: () => readSettings(),
     readPromptHistory: (scope: string) => readPromptHistory(scope),
     addPromptToHistory: (scope: string, prompt: string) =>
