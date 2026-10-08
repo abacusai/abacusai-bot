@@ -123,6 +123,7 @@ export const hostActionsFor = (
 /** A host that does nothing (gallery, tests). */
 export const inertHostActions: ChatHostActions = {
   openExternal: async () => {},
+  openUpgrade: async () => {},
   accountTier: async () => "unknown",
   showItemInFolder: async () => {},
   pickFiles: async () => null,

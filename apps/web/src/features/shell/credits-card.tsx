@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
-import { ABACUS_PLAN_URL, creditsTier } from "#renderer/lib/credits";
+import { creditsTier } from "#renderer/lib/credits";
 import {
   durations,
   easings,
@@ -16,7 +16,7 @@ import {
   reducedTransition,
   useMotionPreference,
 } from "#renderer/lib/motion";
-import { platformSystem } from "#renderer/lib/platform-system";
+import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useCreditsAccount } from "#renderer/lib/use-credits-account";
 import { useNow } from "#renderer/lib/use-now";
@@ -340,11 +340,7 @@ export const UpgradePromo = () => {
             onFocus={() => setExcited(true)}
             onBlur={() => setExcited(false)}
             disabled={celebrating}
-            onClick={() =>
-              void platformSystem(transport.client).openExternal({
-                url: ABACUS_PLAN_URL,
-              })
-            }
+            onClick={() => void openUpgrade(transport.client)}
           >
             <Sparkles aria-hidden />
             {t("creditsCard.cta")}

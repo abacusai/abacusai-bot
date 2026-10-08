@@ -3,7 +3,7 @@
  * `lib/abacus-credits.ts`, which renderer may not import).
  */
 
-/** Where Upgrade goes: the product page, before a plan picker. */
+/** Where Upgrade goes without an upgrade page of its own: the product page, before a plan picker. */
 export const ABACUS_PLAN_URL = "https://agent.abacus.ai/";
 
 /** Where a Pro account tops up, rather than the plan chooser it has used. */

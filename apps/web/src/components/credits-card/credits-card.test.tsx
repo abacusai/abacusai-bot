@@ -38,6 +38,7 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
       tier="free"
       host={{
         openExternal: async () => {},
+        openUpgrade: async () => {},
         configuredFreeSources: async () => configured,
         connectFreeSource,
       }}
@@ -62,11 +63,13 @@ it("connects OpenRouter and replays a dead turn once after the refreshed catalog
 
 it("shows top-up only on paid tiers and never sells a plan to the free tier", async () => {
   const openExternal = vi.fn(async () => {});
+  const openUpgrade = vi.fn(async () => {});
   const rendered = await renderWithDb(
-    <CreditsCard tier="basic" host={{ openExternal }} />
+    <CreditsCard tier="basic" host={{ openExternal, openUpgrade }} />
   );
   cleanup = rendered.cleanup;
   expect(document.querySelector("[data-source]")).toBeNull();
   fireEvent.click(screen.getByRole("button"));
-  expect(openExternal).toHaveBeenCalledWith("https://agent.abacus.ai/");
+  expect(openUpgrade).toHaveBeenCalledOnce();
+  expect(openExternal).not.toHaveBeenCalled();
 });
