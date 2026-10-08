@@ -81,12 +81,14 @@ export const gazeSchedule = (
       frame(t + 0.7, `translate(${x}px, ${y}px)`),
       frame(t + 0.765, `translate(${x + 0.18 * p.handedness}px, ${y - 0.1}px)`)
     );
-    const old = turnPose(yaw),
-      next = turnPose(nextYaw);
-    turn.push(frame(t + 0.12, old.transform, old.opacity), {
-      ...frame(t + 0.52, next.transform, next.opacity),
-      easing: ease,
-    });
+    const old = turnPose(yaw);
+    turn.push({ ...frame(t + 0.12, old.transform, old.opacity), easing: ease });
+    for (let step = 1; step <= 6; step++) {
+      const next = turnPose(yaw + ((nextYaw - yaw) * step) / 6);
+      turn.push(
+        frame(t + 0.12 + (step * 0.4) / 6, next.transform, next.opacity)
+      );
+    }
     gx = x;
     gy = y;
     yaw = nextYaw;
@@ -101,7 +103,27 @@ export const gazeSchedule = (
     frame(SCHEDULE_SECONDS - 0.5, old.transform, old.opacity),
     frame(SCHEDULE_SECONDS, turnPose(0).transform, 1)
   );
-  return { gaze, turn };
+  const parts = turn.map((f) => {
+    // Headwear and ears lag on the far side of the body, with a smaller travel.
+    const x = Number(
+      /translateX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 0
+    );
+    const scale = Number(
+      /scaleX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 1
+    );
+    return {
+      ...f,
+      transform: `translateX(${-x * 0.18}px) scaleX(${Math.max(0.3, scale)})`,
+      opacity: 1,
+    };
+  });
+  const head = turn.map((f) => {
+    const x = Number(
+      /translateX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 0
+    );
+    return { ...f, transform: `rotate(${x * 0.055}deg)`, opacity: 1 };
+  });
+  return { gaze, turn, parts, head };
 };
 
 /** Synthetic speech energy for text streaming. No audio/phoneme input exists in BotAvatar. */
@@ -161,7 +183,11 @@ export const useNaturalMotion = (
     if (gaze && mood !== "asleep") {
       const schedule = gazeSchedule(id, p, lookAway);
       play(".bav-gaze", schedule.gaze);
-      if (volume) play(".bav-volume", schedule.turn);
+      if (volume) {
+        play(".bav-volume", schedule.turn);
+        play(".bav-turn-parts", schedule.parts);
+        play(".bav-attention", schedule.head);
+      }
     }
     if (speech && mood === "talking")
       play(".bav-speech", speechSchedule(id, p), p.speechPeriod);

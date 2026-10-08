@@ -60,3 +60,7 @@ html[data-reduce-motion="on"] .bav * { animation: none !important; }
 
 .bav[data-shading="off"] .bav-light, .bav[data-shading="off"] .bav-shadow { opacity: 0 !important; }
 .bav-gaze { transform-origin: 50px 47px; }
+
+.bav-attention { position: absolute; inset: 0; transform-origin: 50% 70%; }
+.bav[data-natural][data-animate][data-steady] .bav-shadow { animation: bav-contact var(--bav-period) ease-in-out infinite; animation-delay: var(--bav-phase); }
+@keyframes bav-contact { 0%,100% { transform: scale(1,1); opacity: .85; } 50% { transform: scale(.985,1.02); opacity: .8; } }
