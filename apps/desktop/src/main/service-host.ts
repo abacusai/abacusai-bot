@@ -692,6 +692,7 @@ export class ServiceHost {
     clientVersion: app.getVersion(),
   });
   private readonly logSyncService = new LogSyncService();
+  private syncStarted = false;
   private readonly diagnosticsSyncService = new DiagnosticsSyncService({
     // ids only; s.config holds MCP auth
     mcpServers: () =>
@@ -2398,6 +2399,26 @@ export class ServiceHost {
     }
 
     this.startedAt = new Date().toISOString();
+    this.startSync();
+    this.workspaceRuntimeService.ensureWorkspaceWatchers();
+    this.workspaceRuntimeService.scheduleRefresh(0);
+    if (this.platform === "electron")
+      void this.builtinMcpLifecycle.startBrowserServer();
+    // Failures are per-connector and reported through the pane.
+    void this.messagingGatewayService
+      .syncConnectors()
+      .catch((error: unknown) => {
+        console.error("[messaging] failed to start connectors:", error);
+      });
+  }
+
+  /**
+   * Transcripts sync as each chat is saved, logs and diagnostics on a timer.
+   * The headless host runs this without the rest of `start()`.
+   */
+  startSync(): void {
+    if (this.syncStarted) return;
+    this.syncStarted = true;
     // Signed-out sessions have no key and are skipped inside the service.
     const persisted = (sessionId: string): void => {
       this.debugSyncService.enqueue(sessionId);
@@ -2412,16 +2433,6 @@ export class ServiceHost {
     this.threadStore.onAguiPersist(persisted);
     this.logSyncService.start();
     this.diagnosticsSyncService.start();
-    this.workspaceRuntimeService.ensureWorkspaceWatchers();
-    this.workspaceRuntimeService.scheduleRefresh(0);
-    if (this.platform === "electron")
-      void this.builtinMcpLifecycle.startBrowserServer();
-    // Failures are per-connector and reported through the pane.
-    void this.messagingGatewayService
-      .syncConnectors()
-      .catch((error: unknown) => {
-        console.error("[messaging] failed to start connectors:", error);
-      });
   }
 
   /** Startup catch-up starts after the main renderer is interactive. */
