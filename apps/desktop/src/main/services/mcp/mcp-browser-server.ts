@@ -80,6 +80,17 @@ import {
   TRAVELER_FILL_TOOL,
 } from "../vault/checkout-tools";
 import {
+  chooseLoginFields,
+  fieldName,
+  LOGIN_FIELD_FUNCTION,
+  LOGIN_FORM_PRESENT_SCRIPT,
+  type LoginCandidate,
+  loginFilledText,
+  REF_OF_FUNCTION,
+  SUBMIT_OF_FUNCTION,
+  submitName,
+} from "../vault/login-fill";
+import {
   type Activation,
   activationVerdict,
   activatesControl,
@@ -107,6 +118,7 @@ import {
   hasCodeField,
   factsFromDocument,
   fieldKindAllowed,
+  httpsHost,
   LIVE_FIELD_FUNCTION,
   type DomNode,
   type FieldFacts,
@@ -432,6 +444,7 @@ function summarizeToolCall(
     case "browser_tabs":
       return `Tabs (${action ?? "list"})`;
     case VAULT_FILL_TOOL:
+      if (a.field === "login") return "Sign in with a saved login";
       return `Fill a saved ${typeof a.field === "string" ? a.field : "value"} into ${typeof a.ref === "string" ? a.ref : "a field"}`;
     case TRAVELER_FILL_TOOL:
       return `Fill a saved passport number into ${typeof a.ref === "string" ? a.ref : "a field"}`;
@@ -568,6 +581,26 @@ const passportField = (facts: FieldFacts): boolean =>
   /passport|travel\s*doc|document\s*(?:no|num|number|id)|id\s*(?:no|num|number)|national\s*id|pasaporte|passeport|reisepass|पासपोर्ट/i.test(
     facts.hints.join(" ")
   );
+
+/** Input types a person types into: what "the page has no fields" counts. */
+const LOGIN_TEXT_ENTRY: ReadonlySet<string> = new Set([
+  "text",
+  "email",
+  "password",
+  "tel",
+  "number",
+  "search",
+  "url",
+]);
+
+/** The saved login a browser run was handed, from browser_checkout's login_item_id. */
+const loginItemOf = (
+  args: Record<string, unknown>
+): { itemId: string; sites: string[] | null } | null =>
+  typeof args.login_item_id === "string" &&
+  /^[A-Za-z0-9_-]{1,128}$/.test(args.login_item_id)
+    ? { itemId: args.login_item_id, sites: null }
+    : null;
 
 const VAULT_FIELDS: ReadonlySet<string> = new Set([
   "username",
@@ -1549,6 +1582,10 @@ export class McpBrowserServer extends McpHttpServer {
 
     const overlays = formatOverlays(result.overlays);
     if (overlays.length > 0) lines.push(overlays);
+    if (result.url !== before.url) {
+      const hint = await this.loginHint(wc, sessionId).catch(() => null);
+      if (hint != null) lines.push(hint);
+    }
 
     if (lines.length === 0)
       return "Nothing visible changed yet. If results were expected, use interact wait with text or url_pattern.";
@@ -1593,6 +1630,8 @@ export class McpBrowserServer extends McpHttpServer {
       lines.push("The page is still loading. Wait, then take a snapshot.");
     }
 
+    const hint = await this.loginHint(wc, sessionId).catch(() => null);
+    if (hint != null) lines.push(hint);
     if (tip != null) lines.push(`Tip for this site: ${tip}`);
 
     return lines.join("\n");
@@ -2109,6 +2148,8 @@ export class McpBrowserServer extends McpHttpServer {
         }
         const overlays = formatOverlays(result.overlays);
         if (overlays.length > 0) lines.push("", overlays);
+        const hint = await this.loginHint(wc, sessionId).catch(() => null);
+        if (hint != null) lines.push("", hint);
         lines.push("");
         lines.push(
           'Use @eN refs in browser_interact (e.g. ref:"@e1"). Refs stay valid while the element is on the page.'
@@ -3331,7 +3372,7 @@ export class McpBrowserServer extends McpHttpServer {
       currency,
       merchant: input.merchant,
       cvvRequired: input.cvvRequired,
-      summary: input.summary,
+      summary: await this.pauseSummary(input, session, wc),
       mediaId: image != null ? this.keepAsMedia(image, sessionId) : null,
     };
     const held = session.checkout.pause(pause);
@@ -3339,6 +3380,27 @@ export class McpBrowserServer extends McpHttpServer {
     return this.ok(
       "Paused for the user. Your run ends here and the page stays as it is; write nothing more.\n" +
         checkoutStateLine({ stage: held.stage, paused: pause })
+    );
+  }
+
+  /**
+   * What a stop tells the user. A login stop on the page where the saved
+   * login would not fill says the browser's own reason: a model that guesses
+   * one sends the user after a problem that is not there.
+   */
+  private async pauseSummary(
+    input: { need: string; summary: string },
+    session: VaultSession,
+    wc: BrowserPage | null
+  ): Promise<string> {
+    const refusal = session.loginRefusal;
+    if (input.need !== "login" || refusal == null || wc == null)
+      return input.summary;
+    const { key } = await this.documentInfo(wc);
+    if (key == null || key !== refusal.documentKey) return input.summary;
+    return pageText(
+      `The saved login could not be filled: ${refusal.reason}`,
+      400
     );
   }
 
@@ -3374,6 +3436,8 @@ export class McpBrowserServer extends McpHttpServer {
         );
         session.anchoredTotal = null;
         session.checkoutSite = null;
+        session.loginItem = loginItemOf(args);
+        session.loginRefusal = null;
         return this.ok(line());
       case "resume": {
         const paused = checkout.paused;
@@ -3382,6 +3446,8 @@ export class McpBrowserServer extends McpHttpServer {
         );
         if (resumed.ok === false)
           return this.err(`${resumed.reason}\n${line()}`);
+        // A login saved while the run waited comes with the resume.
+        session.loginItem = loginItemOf(args) ?? session.loginItem;
         // The user answered a details stop that named its site: saved
         // travelers fill on that site, and on no other, from here.
         if (
@@ -3836,9 +3902,10 @@ export class McpBrowserServer extends McpHttpServer {
     const field = typeof args.field === "string" ? args.field : "";
     const ref = typeof args.ref === "string" ? args.ref : "";
     if (itemId.length === 0) return this.err("item_id is required.");
+    if (field === "login") return this.executeLoginFill(itemId, sessionId);
     if (!VAULT_FIELDS.has(field))
       return this.err(
-        "field is one of username, password, code, card_number or cvv."
+        "field is one of login, username, password, code, card_number or cvv."
       );
 
     const wc = await this.getWC(sessionId);
@@ -4040,15 +4107,297 @@ export class McpBrowserServer extends McpHttpServer {
     }
   }
 
+  /**
+   * `browser_vault_fill field:"login"`: the saved login typed into the sign-in
+   * form the host finds itself, from each document's DOM rather than the
+   * snapshot: the one form with one password field and its username field,
+   * or on a username-first step the one username field. Each field passes the
+   * checks a fill by ref does (its kind as first seen and as it is now, the
+   * plan's origins, no script on the page, the focus right before typing).
+   * Why it did not fill is kept for a login stop on the same page.
+   */
+  private async executeLoginFill(
+    itemId: string,
+    sessionId?: string
+  ): Promise<ToolResult> {
+    const session = this.vaultSession(sessionId);
+    let documentKey: string | null = null;
+    const refuse = (reason: string): ToolResult => {
+      session.loginRefusal = { reason, documentKey };
+      return this.err(reason);
+    };
+
+    const wc = await this.getWC(sessionId);
+    if (!wc) return refuse(this.noBrowser(sessionId));
+    documentKey = (await this.documentInfo(wc)).key;
+    if (documentKey == null)
+      return refuse(
+        "The browser could not say which page this is, so nothing was filled. Snapshot and try again."
+      );
+    const secrets = this.secretsOf(wc);
+    if (secrets.scriptPending() || secrets.scriptRan(documentKey))
+      return refuse(
+        "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
+          "Reload the page, snapshot, and fill again without running scripts."
+      );
+    const topOrigin = await this.liveOrigin(wc);
+
+    // The tab's own document first, then the cross-origin frames it can reach.
+    const documents: Array<{
+      page: BrowserPage;
+      frameId: string | null;
+      frameOrigin: string | null;
+    }> = [{ page: wc, frameId: null, frameOrigin: null }];
+    const source = this.options.target?.();
+    for (const frame of (source?.frames?.(wc.id) ?? []).slice(
+      0,
+      McpBrowserServer.MAX_SNAPSHOT_FRAMES
+    )) {
+      const page = source?.framePage?.(wc.id, frame.frameId) ?? null;
+      const origin = await this.liveOrigin(wc, frame.frameId);
+      if (page == null || origin == null || this.isAbacus(origin)) continue;
+      documents.push({ page, frameId: frame.frameId, frameOrigin: origin });
+    }
+
+    try {
+      const candidates: Array<LoginCandidate<string>> = [];
+      const counts = { inputs: 0, unusable: 0 };
+      for (const [index, { page }] of documents.entries()) {
+        const dom = (await this.cdp(page, "DOM.getDocument", {
+          depth: -1,
+        }).catch(() => null)) as { root?: DomNode } | null;
+        if (dom?.root == null) continue;
+        const facts = factsFromDocument(dom.root);
+        // Seen now for the first time if no snapshot saw it: no script has run here.
+        secrets.recordFields(page, facts);
+        for (const backendNodeId of facts.keys()) {
+          const first = secrets.firstFacts(page, backendNodeId);
+          if (first == null || !LOGIN_TEXT_ENTRY.has(first.type)) continue;
+          counts.inputs += 1;
+          const kind = fieldKindAllowed("password", first, false)
+            ? "password"
+            : fieldKindAllowed("username", first, false)
+              ? "username"
+              : null;
+          if (kind == null) continue;
+          const resolved = (await this.cdp(page, "DOM.resolveNode", {
+            backendNodeId,
+            objectGroup: VAULT_OBJECT_GROUP,
+          }).catch(() => null)) as { object?: { objectId?: string } } | null;
+          const objectId = resolved?.object?.objectId;
+          if (objectId == null) continue;
+          const live = (await this.callOn(
+            page,
+            objectId,
+            LOGIN_FIELD_FUNCTION
+          )) as {
+            connected?: boolean;
+            editable?: boolean;
+            shown?: boolean;
+            form?: number;
+            facts?: FieldFacts;
+          } | null;
+          if (
+            live?.connected !== true ||
+            live.facts == null ||
+            !fieldKindAllowed(kind, live.facts, false)
+          )
+            continue;
+          if (live.shown !== true || live.editable !== true) {
+            counts.unusable += 1;
+            continue;
+          }
+          candidates.push({
+            handle: objectId,
+            document: index,
+            form: typeof live.form === "number" ? live.form : -1,
+            kind,
+            facts: live.facts,
+          });
+        }
+      }
+
+      const choice = chooseLoginFields(candidates, counts);
+      if (choice.ok === false) return refuse(choice.error);
+      const { page, frameId, frameOrigin } = documents[choice.document]!;
+      if (frameOrigin != null && this.isAbacus(frameOrigin))
+        return refuse(ABACUS_REFUSAL);
+      // This document's refs, to name the fields and the button in the result.
+      const snapshot = this.snapshots.for(sessionId);
+      const pairs = [...snapshot.refMap].filter(
+        ([ref]) => (snapshot.frameOf.get(ref) ?? null) === frameId
+      );
+      const refOf = async (objectId: string): Promise<string | null> => {
+        const ref = await this.callOn(page, objectId, REF_OF_FUNCTION, [pairs]);
+        return typeof ref === "string" ? ref : null;
+      };
+
+      const filled: { username: string | null; password: string | null } = {
+        username: null,
+        password: null,
+      };
+      for (const field of ["username", "password"] as const) {
+        const node = choice[field];
+        if (node == null) continue;
+        const name = fieldName(await refOf(node), field);
+        const failure = await this.fillLoginField({
+          wc,
+          page,
+          node,
+          itemId,
+          field,
+          sessionId,
+          topOrigin,
+          frameId,
+          frameOrigin,
+          documentKey,
+        });
+        if (failure != null)
+          return refuse(
+            filled.username != null
+              ? `The username was filled into ${filled.username}, but the password was not: ${failure}`
+              : failure
+          );
+        filled[field] = name;
+      }
+
+      const anchor = choice.password ?? choice.username!;
+      const submit = (await this.callOn(page, anchor, SUBMIT_OF_FUNCTION, [
+        pairs,
+      ])) as { ref?: unknown; label?: unknown } | null;
+      session.loginRefusal = null;
+      return this.ok(
+        loginFilledText({
+          ...filled,
+          submit: submitName(
+            submit != null
+              ? {
+                  ref: typeof submit.ref === "string" ? submit.ref : null,
+                  label: pageText(submit.label, 40),
+                }
+              : null
+          ),
+        })
+      );
+    } finally {
+      for (const { page } of documents)
+        await this.cdp(page, "Runtime.releaseObjectGroup", {
+          objectGroup: VAULT_OBJECT_GROUP,
+        }).catch(() => undefined);
+    }
+  }
+
+  /**
+   * One field of a login fill, held as `node`: planned for its own document,
+   * marked secret before the value exists here, typed, and checked. Null when
+   * it took the value; otherwise why not, with nothing typed elsewhere.
+   */
+  private async fillLoginField(input: {
+    wc: BrowserPage;
+    page: BrowserPage;
+    node: string;
+    itemId: string;
+    field: "username" | "password";
+    sessionId: string | undefined;
+    topOrigin: string | null;
+    frameId: string | null;
+    frameOrigin: string | null;
+    documentKey: string;
+  }): Promise<string | null> {
+    const { wc, page, node, field } = input;
+    const vault = this.options.vault!;
+    const plan = planFill({
+      itemId: input.itemId,
+      field,
+      topOrigin: input.topOrigin,
+      frameOrigin: input.frameOrigin,
+      inFrame: input.frameId != null,
+      approval: vault.approval(input.sessionId),
+      pageTotal: null,
+    });
+    if (plan.ok === false) return plan.error;
+    const secrets = this.secretsOf(wc);
+    if (!(await secrets.markFilledNode(page, node).catch(() => false)))
+      return `the ${field} field could not be marked as a secret field, so nothing was typed into it. Snapshot and try again.`;
+    const fetched = await vault.client.fill({
+      itemId: input.itemId,
+      field,
+      ...plan.request,
+    });
+    if (fetched.ok === false)
+      return fetched.unavailable
+        ? VAULT_UNAVAILABLE
+        : `The vault did not fill it: ${fetched.error}`;
+    const outcome = await this.typeVaultValue(
+      wc,
+      page,
+      node,
+      fetched.value,
+      plan.documentOrigin,
+      input.topOrigin!,
+      input.documentKey
+    );
+    if (outcome === "aborted")
+      return `Stopped before typing the ${field}: the page changed (it navigated or the field lost focus). Snapshot and check where the page is.`;
+    if (outcome === "moved")
+      return `The focus left the ${field} field while typing, so the value may have gone into another field; that field was cleared and hidden. Snapshot and check the form.`;
+    if (outcome === "failed")
+      return `The ${field} field did not take the value. Do not retry in a loop: snapshot, and report if it will not accept typing.`;
+    const took = await this.callOn(
+      page,
+      node,
+      "function() { return String(this.value || '').length > 0; }"
+    );
+    return took === true
+      ? null
+      : `The ${field} field still looks empty after typing; the page may have replaced it. Snapshot and check.`;
+  }
+
+  /**
+   * A line for a page on the site of the saved login the run was handed, when
+   * the page shows a sign-in field: so the run uses the vault rather than
+   * stopping. Null otherwise, or when the vault cannot say the login's sites.
+   */
+  private async loginHint(
+    wc: BrowserPage,
+    sessionId?: string
+  ): Promise<string | null> {
+    const vault = this.options.vault;
+    if (vault == null || sessionId == null) return null;
+    const login = this.vaultSession(sessionId).loginItem;
+    if (login == null) return null;
+    const host = httpsHost(await this.liveOrigin(wc));
+    if (host == null) return null;
+    if (login.sites == null) {
+      const items = await vault.client.listItems();
+      if (items.ok === false) return null;
+      login.sites = (
+        items.value.find((item) => item.itemId === login.itemId)?.sites ?? []
+      ).filter((site) => /^[a-z0-9.-]{1,253}$/i.test(site));
+    }
+    const site = login.sites.find(
+      (each) => host === each || host.endsWith(`.${each}`)
+    );
+    if (site == null) return null;
+    if ((await this.readPage(wc, LOGIN_FORM_PRESENT_SCRIPT)) !== true)
+      return null;
+    return (
+      `A saved login for ${site} can be filled here: browser_vault_fill item_id:"${login.itemId}" field:"login" ` +
+      "(the browser finds the username and password fields itself)."
+    );
+  }
+
   /** A function run on a remote object of `page`; its value, or null when it failed. */
   private async callOn(
     page: BrowserPage,
     objectId: string,
-    functionDeclaration: string
+    functionDeclaration: string,
+    args?: unknown[]
   ): Promise<any> {
     const response = (await this.cdp(page, "Runtime.callFunctionOn", {
       objectId,
       functionDeclaration,
+      ...(args != null ? { arguments: args.map((value) => ({ value })) } : {}),
       returnByValue: true,
     }).catch(() => null)) as {
       result?: { value?: unknown };

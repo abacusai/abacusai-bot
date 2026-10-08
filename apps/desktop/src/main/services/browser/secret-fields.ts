@@ -306,7 +306,9 @@ async function captureUnmasked(
 }
 
 const EXECUTE_REFUSAL =
-  "This page has a password, card or one-time code field, so scripts cannot run on it. Use browser_snapshot and browser_interact instead.";
+  "This page has a password, card or one-time code field, so scripts cannot run on it. To sign in with a saved login, " +
+  'call browser_vault_fill with its item_id and field:"login": the browser finds the fields itself. ' +
+  "For anything else on the page, use browser_snapshot and browser_interact.";
 
 /**
  * One tab's secret fields. A tab's cross-origin frame is a document of its

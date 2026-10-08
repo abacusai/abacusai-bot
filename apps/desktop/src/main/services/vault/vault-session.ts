@@ -79,6 +79,16 @@ export class VaultSession {
    * details stop the user answered (it was named to them in the question).
    */
   checkoutSite: string | null = null;
+  /**
+   * The saved login the browser run was handed (browser_task's
+   * login_item_id), and the sites it is for once the vault has said.
+   */
+  loginItem: { itemId: string; sites: string[] | null } | null = null;
+  /**
+   * Why the last `browser_vault_fill field:"login"` did not fill, on which
+   * document: a login stop on that page reports this, not the model's guess.
+   */
+  loginRefusal: { reason: string; documentKey: string | null } | null = null;
 
   constructor(private readonly now: () => number) {}
 

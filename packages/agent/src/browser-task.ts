@@ -66,6 +66,11 @@ const EXECUTE_STREAK_MESSAGE =
   'instead: browser_snapshot extract with a selector for rows of data, snapshot find:"..." ' +
   "for an element, and browser_interact by ref to act. They cost one call where the script " +
   "costs six.";
+/** The saved login a run was handed, said where the run reads its task. */
+export const loginNote = (itemId: string): string =>
+  `Saved login: vault item ${itemId}. When you reach the sign-in form on its site, call browser_vault_fill ` +
+  `with item_id "${itemId}" and field "login": the browser finds the username and password fields and types ` +
+  "them. Never type them any other way.";
 /** A resumed run gets its budget back; said outright, or the old wrap-up stands. */
 export const budgetNote = (turns: number): string =>
   `(Budget: ${turns} tool turns for this run; you will be warned as it runs low.)`;
@@ -118,8 +123,11 @@ export const BROWSER_SYSTEM_PROMPT = [
   "- Three failed tries at one element means the approach is wrong: screenshot, read where",
   "  you actually are, and change approach.",
   "- Never type a password, card number, CVV or one-time code yourself, and never solve a",
-  "  CAPTCHA. When the task gives you a vault item_id and you have browser_vault_fill, that",
-  "  tool types the saved value into the field's ref without you seeing it.",
+  "  CAPTCHA. When you are given a saved login and reach a sign-in form on its site, call",
+  '  browser_vault_fill field:"login" with its item_id: the browser finds and fills the',
+  "  username and password and names the button to click. If it says the password is still",
+  "  pending, go to the next step and call it again. If it refuses, stop with",
+  '  browser_pause need:"login": the browser reports its reason, so never guess one.',
   "- Paying: only after the user approved this payment; the browser checks the approval and",
   "  the total itself and refuses everything else. Without an approval, go on to the page with",
   '  the card form and stop there with browser_pause need:"payment" and total_ref (the element',
@@ -129,7 +137,7 @@ export const BROWSER_SYSTEM_PROMPT = [
   "- Traveler details the task gives you, fill in; never invent one. A passport number is never",
   "  in your task: when it names a saved traveler (t1), type it with browser_traveler_fill. Any",
   '  detail the form needs that the task does not give: browser_pause need:"details".',
-  "- At a step only the user can do (their details, a sign-in with no item_id, a code, the",
+  "- At a step only the user can do (their details, a sign-in with no saved login, a code, the",
   "  payment approval, a CAPTCHA, a choice the task did not make), call browser_pause alone with",
   "  what it needs. It ends your run, the page stays as it is, and you are resumed on it once",
   "  they have done it. Without browser_pause, end your report with a line starting",
@@ -205,6 +213,8 @@ export interface BrowserTaskOptions {
   checkout?: CheckoutRun;
   /** Said to a resumed run about where its checkout stands. */
   resumeNote?: string;
+  /** The saved login (vault item id) the run signs in with. */
+  loginItemId?: string;
 }
 
 export interface BrowserTaskResult {
@@ -591,6 +601,7 @@ export async function runBrowserTask(
     resume = false,
     checkout,
     resumeNote = "",
+    loginItemId,
   } = options;
   const forwardTools = forwardChildToolEvents("web", emit);
   const trace = new RunTrace(task);
@@ -830,18 +841,20 @@ export async function runBrowserTask(
         if (event.type === "agent_settled") finish();
       });
 
+      const login = loginItemId != null ? `${loginNote(loginItemId)}\n\n` : "";
       const opening =
         resumed != null
           ? "The user has done their part in the browser and says: " +
             `"${task}"\n\nThe page is as you left it. Take a snapshot to see where it is now, then continue ` +
             "from where you stopped and finish the task. Do not start over.\n\n" +
             (resumeNote.length > 0 ? `${resumeNote}\n\n` : "") +
+            login +
             `Your turn budget has been reset: any earlier note that you were near your limit no longer applies. ${budgetNote(MAX_TURNS)}`
           : resume
-            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${budgetNote(MAX_TURNS)}`
+            ? `${task}\n\n(There was no earlier browser run to continue, so this starts fresh.)\n\n${login}${budgetNote(MAX_TURNS)}`
             : startUrl != null && startUrl.trim().length > 0
-              ? `Start at ${startUrl.trim()}\n\n${task}\n\n${budgetNote(MAX_TURNS)}`
-              : `${task}\n\n${budgetNote(MAX_TURNS)}`;
+              ? `Start at ${startUrl.trim()}\n\n${task}\n\n${login}${budgetNote(MAX_TURNS)}`
+              : `${task}\n\n${login}${budgetNote(MAX_TURNS)}`;
 
       let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = new Promise<void>((resolve) => {

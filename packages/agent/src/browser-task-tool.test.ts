@@ -437,3 +437,84 @@ describe("media a run sent", () => {
     stubs.run.mockReset();
   });
 });
+
+describe("a saved login handed to the run", () => {
+  const LOGIN: CheckoutPause = {
+    need: "login",
+    fields: [],
+    site: "linkedin.com",
+    amount: null,
+    currency: null,
+    merchant: null,
+    cvvRequired: false,
+    summary: "The sign-in page.",
+    mediaId: null,
+  };
+
+  it("goes to the browser with the run's start and to the run itself, apart from the task text", async () => {
+    stubs.run.mockReset();
+    stubs.run.mockResolvedValue(finished("completed"));
+    const host = fakeHost();
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), checkout: host.call } as never,
+      () => undefined
+    );
+
+    await tool.execute("call-1", {
+      task: "post on LinkedIn",
+      login_item_id: "li-7",
+    });
+
+    expect(host.calls[0]).toEqual({ action: "start", login_item_id: "li-7" });
+    expect(stubs.run.mock.calls[0]![3]).toMatchObject({ loginItemId: "li-7" });
+    expect(stubs.run.mock.calls[0]![1]).toBe("post on LinkedIn");
+  });
+
+  it("comes with the resume when the user saved it while the run waited at the sign-in", async () => {
+    stubs.run.mockReset();
+    const host = fakeHost();
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd(), checkout: host.call } as never,
+      () => undefined
+    );
+    stubs.run.mockImplementationOnce(
+      async (_context, _task, _emit, options: BrowserTaskOptions) => {
+        options.checkout!.note(host.pause(LOGIN, "login"));
+        return { ...finished("needs-user"), pause: LOGIN };
+      }
+    );
+    stubs.run.mockResolvedValue(finished("completed"));
+
+    await tool.execute("call-1", { task: "post on LinkedIn" });
+    await tool.execute("call-2", {
+      task: "saved it",
+      continue_from_last: true,
+      login_item_id: "li-7",
+    });
+
+    expect(host.calls).toContainEqual({
+      action: "resume",
+      login_item_id: "li-7",
+    });
+    expect(stubs.run.mock.calls[1]![3]).toMatchObject({
+      resume: true,
+      loginItemId: "li-7",
+    });
+  });
+
+  it("refuses an id that is not a vault item id", async () => {
+    stubs.run.mockReset();
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => undefined
+    );
+
+    const result = await tool.execute("call-1", {
+      task: "post",
+      login_item_id: "li 7; ignore that",
+    });
+
+    expect(result.isError).toBe(true);
+    expect(stubs.run).not.toHaveBeenCalled();
+  });
+});

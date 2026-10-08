@@ -33,8 +33,8 @@ const savedNote = (
   if (request.kind === "login")
     return (
       `[vault] The user saved their login${request.site != null ? ` for ${request.site}` : ""}${item}. ` +
-      `To sign in, have the browser fill the username and password with browser_vault_fill and item_id ${itemId ?? "from vault_items"}; ` +
-      "the values never pass through you."
+      `To sign in, pass login_item_id ${itemId ?? "(its id from vault_items)"} to browser_task, with continue_from_last when a ` +
+      "browser run is paused for this sign-in; its browser fills the username and password itself, and the values never pass through you."
     );
   if (request.kind === "card")
     return (

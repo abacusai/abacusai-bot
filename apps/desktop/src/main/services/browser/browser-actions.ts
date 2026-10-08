@@ -319,7 +319,9 @@ const RECIPES: Array<{ hosts: RegExp; tip: string }> = [
   },
   {
     hosts: /(^|\.)(linkedin|x|twitter|facebook|instagram)\.com$/,
-    tip: "Social site: most content is behind a login wall and the feed loads as you scroll. If a sign-in page appears, stop and report it. Do not enter credentials.",
+    tip:
+      "Social site: most content is behind a login wall and the feed loads as you scroll. If a sign-in page appears: " +
+      'use browser_vault_fill field:"login" when the task names a saved login; otherwise browser_pause need:"login".',
   },
 ];
 

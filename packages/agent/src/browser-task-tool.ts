@@ -62,6 +62,9 @@ interface PiToolDefinitionLike {
   }>;
 }
 
+/** A vault item id, as vault_items lists it. */
+const LOGIN_ITEM_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /**
  * Runs one parent session may start in a window before it is told to stop and
  * ask. A parent that keeps re-dispatching the same site (three runs on one
@@ -188,8 +191,10 @@ export function buildBrowserTaskTool(
       "page is the question; the result says what to do next.",
       browserHandoffDescription(channel),
       "",
-      "When the user has a login saved in their vault (vault_items), name its item_id in the",
-      "task: the sub-agent signs in with it without seeing the password.",
+      "When the user has a login saved in their vault (vault_items) for the site, pass its",
+      "item_id as login_item_id: the sub-agent signs in with it without seeing the password.",
+      "When the user saves one while a run is paused for the sign-in, pass it with",
+      "continue_from_last.",
     ].join("\n"),
     parameters: Type.Object({
       task: Type.String({
@@ -206,6 +211,12 @@ export function buildBrowserTaskTool(
         Type.Boolean({
           description:
             "Resume the run that stopped for the user, on the same page with its history. task is then what the user said once done.",
+        })
+      ),
+      login_item_id: Type.Optional(
+        Type.String({
+          description:
+            "The saved login (its vault item_id) the sub-agent signs in with on its site. Works with continue_from_last too.",
         })
       ),
       report_fields: Type.Optional(
@@ -231,6 +242,10 @@ export function buildBrowserTaskTool(
           ? params.start_url.trim()
           : undefined;
       const resume = params.continue_from_last === true;
+      const loginItemId =
+        typeof params.login_item_id === "string"
+          ? params.login_item_id.trim()
+          : "";
       const reportFields = Array.isArray(params.report_fields)
         ? params.report_fields.filter(
             (field): field is string =>
@@ -242,6 +257,18 @@ export function buildBrowserTaskTool(
         return {
           content: [
             { type: "text" as const, text: "A task description is required." },
+          ],
+          details: {},
+          isError: true,
+        };
+      }
+      if (loginItemId.length > 0 && !LOGIN_ITEM_ID.test(loginItemId)) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "login_item_id is a saved login's item_id, as vault_items lists it.",
+            },
           ],
           details: {},
           isError: true,
@@ -288,7 +315,8 @@ export function buildBrowserTaskTool(
           startUrl,
           signal,
           reportFields,
-          resume
+          resume,
+          loginItemId.length > 0 ? loginItemId : undefined
         );
       } finally {
         browserBusy.running = false;
@@ -302,7 +330,8 @@ export function buildBrowserTaskTool(
     startUrl: string | undefined,
     signal: AbortSignal | undefined,
     reportFields: string[],
-    resume: boolean
+    resume: boolean,
+    loginItemId: string | undefined
   ) {
     let note = "";
     if (resume) {
@@ -315,10 +344,13 @@ export function buildBrowserTaskTool(
         (context.userWords?.() ?? []).some(
           (message) => message.seq === waiting.afterSeq + 1
         );
-      const resumed = await checkout.resume({ answered });
+      const resumed = await checkout.resume({
+        answered,
+        ...(loginItemId != null ? { loginItemId } : {}),
+      });
       if (resumed.ok === false) return nothingPaused(checkout.state.stage);
       note = resumeNote(checkout.state.stage, resumed.approved);
-    } else await checkout.start();
+    } else await checkout.start(loginItemId != null ? { loginItemId } : {});
 
     // Bracketed even on failure, or the card spins forever.
     const subtaskId = `browser-${Date.now()}-${++counter}`;
@@ -350,6 +382,7 @@ export function buildBrowserTaskTool(
         sentMedia,
         checkout,
         ...(note.length > 0 ? { resumeNote: note } : {}),
+        ...(loginItemId != null ? { loginItemId } : {}),
       });
       // The card's verdict is the tool result's: a run stopped by the user or
       // at its cap still handed back what it found, and is not a failure.
