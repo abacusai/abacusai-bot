@@ -12,9 +12,20 @@ in a commit of its own that says by how much it grew.
 
 **322 / 6500134 / 2188133.** Records the renderer as merged through `700190fc`.
 While the desktop build failed in CI (the notices step needed the Electron
-binary before it was fetched), this guard never ran, and the renderer changes
-merged since `7926220a` grew it past the gzip allowance unseen. Against `7926220a`: -1 chunk, +53365 bytes (+0.83%), +22018
-gzip bytes (+1.02%). The 1% allowance is unchanged.
+binary before it was fetched), this guard never ran. Against `7926220a`:
+-1 chunk, +53365 bytes (+0.83%), +22018 gzip bytes (+1.02%). The 1% allowance
+is unchanged.
+
+Where it grew, measured per merge from clean builds:
+
+- `4974ac1f` (#221, bot avatar expressions and character motion): +21522 gzip
+  bytes over `097b0934`. `7926220a` was measured on the license branch, which
+  did not have it, so it never counted against that baseline.
+- `420a4a54` (#224, the license browser merged on top): +11426.
+- `5104b70e`, `b8fad8cb`, `0d17bde2` (#225, #229, #230): +291 together.
+- `ee733431` (#235, browser model): +360.
+- `a7505a34` (#234, connectors): -222.
+- The merges after it to `700190fc` change no renderer code.
 
 Measured from a clean worktree build of `700190fc` (frozen-lockfile install,
 Linux x64, Node 24); this baseline-only commit changes no renderer code.
