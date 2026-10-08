@@ -469,3 +469,95 @@ describe.skipIf(!ready.runnable)("chat kit gates (Electron)", () => {
     });
   });
 });
+
+describe.skipIf(!ready.runnable)(
+  "transcript density and composer inset",
+  () => {
+    it("measures tight tool rows, text-only actions and readable padding after composer growth", async () => {
+      await open("bench-stream");
+      await bench(`
+      const messages = Array.from({ length: 20 }, (_, i) => ({
+        id: 'density-' + i, role: 'assistant', parts: [
+          { type: 'text', content: '  ' },
+          { type: 'tool-call', id: 'call-' + i, name: 'bash', state: 'complete',
+            arguments: '{}', input: { command: 'npm test -- ' + i }, output: { text: 'ok' } }
+        ]
+      }));
+      messages.unshift({ id: 'density-intro', role: 'assistant', parts: [{ type: 'text', content: 'Checking the example.' }] });
+      messages.push({ id: 'density-final', role: 'assistant', parts: [{ type: 'text', content: 'All example checks are complete.' }] });
+      b.session.hostStore.setState(s => ({ ...s, messages }));
+    `);
+      await app.until('document.querySelectorAll("[data-tool]").length === 20');
+      await app.evaluate("window.__chatHelpers.settle()");
+      const density = await app.evaluate<{
+        heights: number[];
+        pitch: number[];
+        actions: number;
+        position: string;
+        opacity: string;
+        hostHeight: number;
+        textHeight: number;
+      }>(`(() => {
+      const rows = [...document.querySelectorAll('[data-tool]')].map(e => e.getBoundingClientRect());
+      const host = document.querySelector('[data-message-id="density-final"] [data-slot="message-actions-host"]');
+      const action = host.querySelector('[data-slot="session-message-actions"]');
+      return {
+        heights: rows.map(r => r.height), pitch: rows.slice(1).map((r, i) => r.top - rows[i].top),
+        actions: document.querySelectorAll('[data-tool-only] [data-slot="message-actions-host"]').length,
+        position: getComputedStyle(action).position, opacity: getComputedStyle(action).opacity,
+        hostHeight: host.getBoundingClientRect().height, textHeight: host.firstElementChild.getBoundingClientRect().height
+      };
+    })()`);
+      for (const height of density.heights) expect(height).toBeCloseTo(28, 0);
+      for (const pitch of density.pitch) expect(pitch).toBeCloseTo(30, 0);
+      expect(density.actions).toBe(0);
+      expect(density.position).toBe("absolute");
+      expect(density.opacity).toBe("0");
+      expect(density.hostHeight).toBe(density.textHeight);
+      expect(
+        await app.evaluate<string>(`(() => {
+      const action = document.querySelector('[data-message-id="density-final"] [data-slot="session-message-actions"]');
+      action.querySelector('button').focus();
+      return getComputedStyle(action).opacity;
+    })()`)
+      ).toBe("1");
+      const initial = await app.evaluate<number>(
+        `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height`
+      );
+      await app.evaluate(`(() => {
+      const input = document.querySelector('textarea');
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Review the example.\\nCheck accessibility.\\nSummarize the results.\\nInclude any failed checks.');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      const store = window.__chatBench.session.hostStore.state.store;
+      store.setState(s => ({ ...s, queue: [{ id: 'example-queue', message: 'Write a short report', waitingFor: 'turn' }] }));
+    })()`);
+      await app.until(
+        `document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect().height > ${initial + 20}`
+      );
+      await app.until(`(() => {
+      const v = window.__chatHelpers.viewport(), d = document.querySelector('[data-slot="composer-dock"]');
+      return Math.abs(parseFloat(getComputedStyle(v).getPropertyValue('--transcript-bottom-inset')) - d.getBoundingClientRect().height) < 1;
+    })()`);
+      await app.evaluate(`(async () => {
+      const v = window.__chatHelpers.viewport(); v.scrollTop = v.scrollHeight;
+      await window.__chatHelpers.settle();
+    })()`);
+      const inset = await app.evaluate<{
+        padding: number;
+        height: number;
+        gap: number;
+        mask: string;
+      }>(`(() => {
+      const v = window.__chatHelpers.viewport(), d = document.querySelector('[data-slot="composer-dock"]').getBoundingClientRect();
+      return {
+        padding: parseFloat(getComputedStyle(document.querySelector('[data-slot="message-scroller-content"]')).paddingBottom),
+        height: d.height, gap: d.top - document.querySelector('[data-message-id="density-final"]').getBoundingClientRect().bottom,
+        mask: getComputedStyle(v).maskImage
+      };
+    })()`);
+      expect(inset.padding - inset.height).toBeCloseTo(96, 0);
+      expect(inset.gap).toBeGreaterThanOrEqual(80);
+      expect(inset.mask).not.toBe("none");
+    });
+  }
+);

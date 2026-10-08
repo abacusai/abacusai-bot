@@ -401,9 +401,15 @@ html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animatio
 
 [data-slot="chat-layout"] { --transcript-fade-size: 80px; }
 [data-transcript-fade] {
+  --scroll-fade-t-size: var(--transcript-fade-size);
+  animation-name: scroll-fade-reveal-t;
+  animation-timeline: scroll(self y);
+  animation-range: 0 var(--scroll-fade-reveal, 96px);
   --transcript-bottom: var(--transcript-bottom-inset, var(--composer-dock-h, 0px));
   --scroll-fade-mask: linear-gradient(to bottom,
     transparent,
+    rgb(0 0 0 / 45%) calc(var(--scroll-fade-t, 0px) * .4),
+    rgb(0 0 0 / 90%) calc(var(--scroll-fade-t, 0px) * .75),
     #000 var(--scroll-fade-t, 0px),
     #000 calc(100% - var(--transcript-bottom) - var(--transcript-fade-size)),
     rgb(0 0 0 / 90%) calc(100% - var(--transcript-bottom) - var(--transcript-fade-size) * .75),
