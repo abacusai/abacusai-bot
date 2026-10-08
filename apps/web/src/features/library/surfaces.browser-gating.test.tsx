@@ -37,6 +37,11 @@ import {
 } from "#renderer/lib/bots/templates";
 import { themeOverride } from "#renderer/lib/theme";
 import { renderApp } from "#renderer/test-support/app-harness";
+// The avatar reads the motion preference from prefs; no DbProvider here.
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => "full",
+}));
 vi.mock("#renderer/lib/voice/use-dictation", () => ({
   useConnectedDictation: () => ({ supported: false }),
 }));
