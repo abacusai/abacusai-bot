@@ -8,7 +8,20 @@ renderer, a chunk split by a stray import), not against features. A feature
 that needs more is measured, reviewed and recorded here as a new baseline,
 in a commit of its own that says by how much it grew.
 
-## Current: `7926220a` (open-source license browser)
+## Current: `700190fc` (renderer as merged while the guard was not running)
+
+**322 / 6500134 / 2188133.** Records the renderer as merged through `700190fc`.
+While the desktop build failed in CI (the notices step needed the Electron
+binary before it was fetched), this guard never ran, and the renderer changes
+merged since `7926220a` grew it past the gzip allowance unseen. Against `7926220a`: -1 chunk, +53365 bytes (+0.83%), +22018
+gzip bytes (+1.02%). The 1% allowance is unchanged.
+
+Measured from a clean worktree build of `700190fc` (frozen-lockfile install,
+Linux x64, Node 24); this baseline-only commit changes no renderer code.
+
+## History
+
+### `7926220a` (open-source license browser)
 
 **323 / 6446769 / 2166115.** The About license section and its deferred browser
 add five renderer chunks. Against the same clean build of `097b0934`
@@ -22,8 +35,6 @@ installs on macOS ARM64, Node 22.19.0, pnpm 12.6.0, Vite 8.2.1 and Rolldown
 1.2.4. The regeneration helper now links the installed dependencies of all
 workspace packages, including contract's agent dependency, into the source
 archive. This baseline-only commit changes no renderer code.
-
-## History
 
 ### `85fc8927` (companion controls, connect route, browser tasks)
 
