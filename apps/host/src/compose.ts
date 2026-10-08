@@ -108,6 +108,7 @@ export const composeNodeHost = async () => {
   // Chromium from ABACUSAI_BOT_CHROMIUM, else one lookup now, retried in the background while missing.
   void serviceHost.prepareHostedBrowser();
   // The hosted host's logs, transcripts and diagnostics sync like the app's, so phone users can be debugged.
+  serviceHost.startSync();
   serviceHost.startBackgroundSync();
   const tables = createTables({
     bus: mainEventBus,
