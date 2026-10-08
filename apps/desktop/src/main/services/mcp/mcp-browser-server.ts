@@ -88,7 +88,6 @@ import {
   type LoginCandidate,
   loginFilledText,
   loginPurpose,
-  onLoginSite,
   REF_OF_FUNCTION,
   submitName,
 } from "../vault/login-fill";
@@ -4194,7 +4193,7 @@ export class McpBrowserServer extends McpHttpServer {
       sites != null &&
       sites.length > 0 &&
       host != null &&
-      !sites.some((site) => onLoginSite(host, site))
+      !sites.some((site) => onSite(host, site))
     )
       return refuse(
         `Refused: the saved login ${loginItemId} is for ${sites.join(", ")}, and this page is ${host}. ` +
@@ -4531,7 +4530,7 @@ export class McpBrowserServer extends McpHttpServer {
     const host = httpsHost(await this.liveOrigin(wc));
     if (host == null) return null;
     const sites = await this.loginSites(login.itemId, sessionId);
-    const site = sites?.find((each) => onLoginSite(host, each));
+    const site = sites?.find((each) => onSite(host, each));
     if (site == null) return null;
     if ((await this.readPage(wc, LOGIN_FORM_PRESENT_SCRIPT)) !== true)
       return null;

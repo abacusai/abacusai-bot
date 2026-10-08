@@ -30,10 +30,11 @@
  * `browser_execute` is refused outright while a checkout is past search or
  * the tab is on a payment step: a script is not an element to check.
  *
- * What a payment step is: the document has card fields (autocomplete `cc-*`,
- * hint words naming card data, as `cardField` reads them; or, as the host
- * keeps them, a field first seen as one or that the vault typed card data
- * into; never a field merely masked, such as a filled login or a code), embeds a
+ * What a payment step is: the document has card fields (by the card rule in
+ * card-fields.ts: a card number or CVV, or an expiry or name beside one; or,
+ * as the host keeps them, a field first seen as one or that the vault typed
+ * card data into; never a field merely masked, such as a filled login or a
+ * code, and never a PAN or Aadhaar field), embeds a
  * payment provider's frame or a frame that says it takes payment, submits a
  * form with card fields, is a provider's frame itself, has a checkout or
  * payment path, or its origin was a payment step earlier in this checkout.
@@ -158,8 +159,14 @@ export const controlFactsScript = (
   };
   ${FIELD_FACTS_JS}
   // Card fields by the one card rule over the same facts a vault fill reads.
+  let documentFacts = null;
   const hasCard = (root) => {
-    try { return Array.from(root.querySelectorAll('input, select')).some((el) => __cardField(__factsOf(el))); }
+    try {
+      const facts = documentFacts || (documentFacts = __documentFacts(document));
+      for (const [el, fact] of facts)
+        if ((root === document || el.form === root || root.contains(el)) && __cardField(fact)) return true;
+      return false;
+    }
     catch { return false; }
   };
   const payingFrame = (frame) => {

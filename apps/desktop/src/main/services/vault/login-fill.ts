@@ -7,7 +7,6 @@
  * as it is now, the plan's origins, the script and queue checks).
  */
 import { VISIBILITY_JS } from "../browser/visibility";
-import { onSite } from "./site";
 import { type FieldFacts, FIELD_FACTS_JS } from "./vault-fill";
 
 /**
@@ -149,10 +148,6 @@ export function loginPurpose(input: {
     nameButton: input.label != null && signInLabel(input.label),
   };
 }
-
-/** Whether `host` is on `site` (a registrable domain), by the one site rule. */
-export const onLoginSite = (host: string, site: string): boolean =>
-  onSite(host, site);
 
 /** One field that may take a login value, as the host found it. */
 export interface LoginCandidate<T> {

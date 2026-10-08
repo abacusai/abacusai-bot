@@ -15,7 +15,6 @@ import {
   PAY_REFUSAL,
   STEP_REFUSAL,
 } from "./pay-guard";
-import { cardField, factsFromDocument } from "./vault-fill";
 
 /** Runs the script as the page would, in the global scope, and returns its value. */
 const read = (
@@ -153,7 +152,6 @@ describe("what makes a page a payment step", () => {
       '<input autocomplete="cc-name">',
       '<select autocomplete="cc-exp-month"><option>01</option></select>',
       '<input name="card_num">',
-      '<input placeholder="Card expiry (MM/YY)">',
     ]) {
       document.body.innerHTML = `<form>${field}<button type="submit" id="go">Continue</button></form>`;
       expect(read("#go").cardFields, field).toBe(true);
@@ -165,97 +163,5 @@ describe("what makes a page a payment step", () => {
     }
     document.body.innerHTML = `<form><input autocomplete="cc-number"><button id="pay">Pay now</button></form>`;
     expect(click("#pay")).toEqual({ kind: "refuse", reason: PAY_REFUSAL });
-  });
-});
-
-describe("the one card rule", () => {
-  /** An input's facts, as the host records them at first sighting. */
-  const first = (...attributes: string[]) =>
-    factsFromDocument({
-      nodeName: "#document",
-      children: [{ nodeName: "INPUT", backendNodeId: 1, attributes }],
-    }).get(1)!;
-
-  it("calls card data a card field, and a login or a code never one", () => {
-    expect(cardField(first("autocomplete", "cc-number"))).toBe(true);
-    expect(cardField(first("autocomplete", "billing cc-exp"))).toBe(true);
-    expect(cardField(first("name", "cvv"))).toBe(true);
-    expect(cardField(first("placeholder", "Name on card"))).toBe(true);
-    expect(cardField(first("autocomplete", "username", "name", "email"))).toBe(
-      false
-    );
-    expect(cardField(first("type", "password", "name", "password"))).toBe(
-      false
-    );
-    expect(cardField(first("autocomplete", "one-time-code"))).toBe(false);
-    expect(cardField(first("name", "postcode"))).toBe(false);
-  });
-
-  it("reads names that run the words together", () => {
-    for (const name of [
-      "creditCardNumber",
-      "paymentCardNumber",
-      "cardCvv",
-      "cardExpiry",
-      "nameOnCard",
-      "ccExpMonth",
-    ])
-      expect(cardField(first("name", name)), name).toBe(true);
-    // An expiry date counts beside a card number, in the same form.
-    const form = factsFromDocument({
-      nodeName: "FORM",
-      children: [
-        { nodeName: "INPUT", backendNodeId: 1, attributes: ["name", "cardNo"] },
-        {
-          nodeName: "INPUT",
-          backendNodeId: 2,
-          attributes: ["name", "expiryDate"],
-        },
-      ],
-    });
-    expect(cardField(form.get(2)!)).toBe(true);
-    expect(cardField(first("name", "expiryDate"))).toBe(false);
-  });
-
-  it("never counts another document's expiry or holder, even beside a card", () => {
-    const beside = (...attributes: string[]) =>
-      factsFromDocument({
-        nodeName: "FORM",
-        children: [
-          {
-            nodeName: "INPUT",
-            backendNodeId: 1,
-            attributes: ["autocomplete", "cc-number"],
-          },
-          { nodeName: "INPUT", backendNodeId: 2, attributes },
-        ],
-      }).get(2)!;
-    for (const attributes of [
-      ["placeholder", "Passport expiry"],
-      ["aria-label", "Document expiry date"],
-      ["name", "id_expiry_month"],
-      ["name", "licenseExpiry"],
-      ["aria-label", "Policy holder name"],
-      ["aria-label", "Account holder name"],
-      ["aria-label", "Passport holder name"],
-    ]) {
-      expect(cardField(beside(...attributes)), attributes.join(" ")).toBe(
-        false
-      );
-      expect(cardField(first(...attributes)), attributes.join(" ")).toBe(false);
-    }
-  });
-
-  it("does not make a page with a passport expiry a payment step", () => {
-    window.history.replaceState({}, "", "/book/travellers");
-    document.body.innerHTML = `<form><input placeholder="Passport expiry (MM/YY)" name="passportExpiry"><button type="submit" id="go">Continue</button></form>`;
-    expect(read("#go").cardFields).toBe(false);
-    expect(looksLikePaymentStep(read("#go"))).toBe(false);
-  });
-
-  it("reads the same live in the page as the host reads it first", () => {
-    window.history.replaceState({}, "", "/book/step-4");
-    document.body.innerHTML = `<form><input name="cardholder"><button type="submit" id="go">Go</button></form>`;
-    expect(read("#go").cardFields).toBe(cardField(first("name", "cardholder")));
   });
 });

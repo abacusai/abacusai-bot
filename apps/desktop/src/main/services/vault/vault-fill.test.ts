@@ -318,7 +318,7 @@ const facts = (overrides: Partial<FieldFacts> = {}): FieldFacts => ({
   wasPassword: false,
   adjacentPassword: false,
   hints: [],
-  cardPeer: false,
+  card: { number: false, detailWords: null, detail: null },
   ...overrides,
 });
 

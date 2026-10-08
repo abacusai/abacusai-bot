@@ -6,7 +6,6 @@ import {
   type LoginCandidate,
   loginFilledText,
   loginPurpose,
-  onLoginSite,
   signInLabel,
   submitName,
 } from "./login-fill";
@@ -292,15 +291,5 @@ describe("whether a form signs in", () => {
 describe("a long button label", () => {
   it("is left out: the ref alone names the button", () => {
     expect(submitName({ ref: "@e7", label: "x".repeat(41) })).toBe("@e7");
-  });
-});
-
-describe("whether a page is on a saved login's site", () => {
-  it("takes subdomains of the site, and nothing that only ends like it", () => {
-    expect(onLoginSite("www.linkedin.com", "linkedin.com")).toBe(true);
-    expect(onLoginSite("evil-linkedin.com", "linkedin.com")).toBe(false);
-    expect(onLoginSite("linkedin.com.evil.example", "linkedin.com")).toBe(
-      false
-    );
   });
 });

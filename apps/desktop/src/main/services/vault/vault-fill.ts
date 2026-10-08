@@ -6,6 +6,12 @@
  * every refusal is testable.
  */
 import { WAS_PASSWORD_ATTRIBUTE } from "../browser/secret-fields";
+import {
+  type CardClass,
+  type CardControl,
+  cardPhrases,
+  classifyCardControls,
+} from "./card-fields";
 import { onSite } from "./site";
 import type { VaultField } from "./vault-client";
 import type { PaymentApproval, SigninApproval } from "./vault-session";
@@ -355,8 +361,8 @@ export interface FieldFacts {
    * ("cc_exp_month" also gives "ccexpmonth").
    */
   hints: string[];
-  /** Its form (or, with none, its document) has a card-number field besides it. */
-  cardPeer: boolean;
+  /** What the card rule makes of it, in its document (`classifyCardControls`). */
+  card: CardClass;
 }
 
 /** Words that name a field a code must never go into, though it looks like one. */
@@ -471,16 +477,17 @@ const attributesOf = (node: DomNode): Map<string, string> => {
 };
 
 const factsOf = (
+  tag: "input" | "select",
   attributes: Map<string, string>,
   adjacentPassword: boolean,
-  cardPeer = false
+  card: CardClass
 ): FieldFacts => {
   const lower = (name: string): string =>
     (attributes.get(name) ?? "").toLowerCase();
-  const type = lower("type") || "text";
+  const type = tag === "select" ? "select" : lower("type") || "text";
   const maxLength = Number.parseInt(attributes.get("maxlength") ?? "", 10);
   return {
-    tag: "input",
+    tag,
     type,
     autocomplete: lower("autocomplete").split(/\s+/).filter(Boolean),
     role: lower("role"),
@@ -500,56 +507,118 @@ const factsOf = (
         .map((name) => joined(attributes.get(name) ?? ""))
         .filter(Boolean),
     ],
-    cardPeer,
+    card,
   };
 };
 
+/** The naming texts the card rule reads, as the host sees them (no labels in a DOM dump). */
+const NAMING_ATTRIBUTES = ["name", "id", "aria-label", "placeholder"];
+
 /**
- * The facts of every input in a document, by backend node id, from its DOM
- * as CDP returns it (in document order, not into frames).
+ * The facts of every input and select in a document, by backend node id,
+ * from its DOM as CDP returns it (in document order, not into frames). One
+ * pass: the card rule reads the document's controls once.
  */
 export const factsFromDocument = (
   root: DomNode | undefined
 ): Map<number, FieldFacts> => {
-  const inputs: Array<{
-    id: number;
-    form: DomNode | null;
+  const controls: Array<{
+    id: number | null;
+    tag: "input" | "select";
+    ancestorForm: DomNode | null;
+    group: DomNode | null;
     attributes: Map<string, string>;
   }> = [];
-  const walk = (node: DomNode | undefined, form: DomNode | null): void => {
+  const formsById = new Map<string, DomNode>();
+  const walk = (
+    node: DomNode | undefined,
+    form: DomNode | null,
+    group: DomNode | null
+  ): void => {
     if (node == null) return;
     const name = String(node.nodeName ?? "").toUpperCase();
-    if (name === "INPUT" && node.backendNodeId != null)
-      inputs.push({
-        id: node.backendNodeId,
-        form,
-        attributes: attributesOf(node),
+    const attributes =
+      name === "INPUT" ||
+      name === "SELECT" ||
+      name === "FORM" ||
+      name === "FIELDSET" ||
+      node.attributes != null
+        ? attributesOf(node)
+        : new Map<string, string>();
+    if (name === "FORM" && attributes.has("id"))
+      formsById.set(attributes.get("id")!, node);
+    if (name === "INPUT" || name === "SELECT")
+      controls.push({
+        id: node.backendNodeId ?? null,
+        tag: name === "INPUT" ? "input" : "select",
+        ancestorForm: form,
+        group,
+        attributes,
       });
-    for (const child of node.children ?? [])
-      walk(child, name === "FORM" ? node : form);
+    const childForm = name === "FORM" ? node : form;
+    const childGroup =
+      name === "FIELDSET" ||
+      (attributes.get("role") ?? "").toLowerCase() === "group"
+        ? node
+        : group;
+    for (const child of node.children ?? []) walk(child, childForm, childGroup);
   };
-  walk(root, null);
-  const entries = inputs.filter((input) =>
-    TEXT_ENTRY.has(
-      (input.attributes.get("type") ?? "text").toLowerCase() || "text"
-    )
+  walk(root, null, null);
+  const keys = new Map<DomNode, number>();
+  const keyOf = (node: DomNode | null): number => {
+    if (node == null) return 0;
+    let key = keys.get(node);
+    if (key == null) {
+      key = keys.size + 1;
+      keys.set(node, key);
+    }
+    return key;
+  };
+  // A control's form as el.form has it: its form attribute, else its ancestor.
+  const cardControls: CardControl[] = controls.map((control) => {
+    const formAttribute = control.attributes.get("form");
+    const form =
+      formAttribute != null
+        ? (formsById.get(formAttribute) ?? null)
+        : control.ancestorForm;
+    const type =
+      (control.attributes.get("type") ?? "text").toLowerCase() || "text";
+    return {
+      phrases: cardPhrases(
+        NAMING_ATTRIBUTES.map((name) => control.attributes.get(name) ?? "")
+      ),
+      autocomplete: (control.attributes.get("autocomplete") ?? "")
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean),
+      fillable: control.tag === "select" || TEXT_ENTRY.has(type),
+      form: keyOf(form),
+      group: keyOf(control.group),
+    };
+  });
+  const classes = classifyCardControls(cardControls);
+  const all = controls.map((control, at) => ({ ...control, at }));
+  const entries = all.filter(
+    (control) =>
+      control.tag === "input" &&
+      TEXT_ENTRY.has(
+        (control.attributes.get("type") ?? "text").toLowerCase() || "text"
+      )
   );
+  const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
   const isPassword = (index: number): boolean =>
     (entries[index]?.attributes.get("type") ?? "").toLowerCase() === "password";
-  const own = inputs.map((input) => factsOf(input.attributes, false));
   const facts = new Map<number, FieldFacts>();
-  for (const [at, input] of inputs.entries()) {
-    const index = entries.indexOf(input);
-    const cardPeer = inputs.some(
-      (other, k) =>
-        k !== at && other.form === input.form && cardNumberField(own[k]!)
-    );
+  for (const input of all) {
+    if (input.id == null) continue;
+    const index = entryIndex.get(input) ?? -1;
     facts.set(
       input.id,
       factsOf(
+        input.tag,
         input.attributes,
         index >= 0 && (isPassword(index - 1) || isPassword(index + 1)),
-        cardPeer
+        classes[input.at]!
       )
     );
   }
@@ -557,155 +626,73 @@ export const factsFromDocument = (
 };
 
 /**
- * The card vocabulary: the one place that says which words name card data,
- * read over a field's hint words (spaced) and each of its words alone
- * (joined, so "creditCardNumber" and "ccExpMonth" count). Shared by the
- * card rule and every card fill kind.
+ * Whether a field is a card field by the card rule (`card-fields.ts`): a
+ * card number or CVV, or a card expiry or name. The host applies it to the
+ * facts it recorded at first sighting, the Pay guard's page script to the
+ * same facts read live.
  */
-const CARD_WORDS = {
-  /** A card number or its security code: card data by itself. */
-  number:
-    /\b(?:card|cc) ?(?:num(?:ber)?|no)\b|\b(?:credit|debit) card\b|\b(?:cvv2?|cvc2?|csc)\b/,
-  numberJoined: /(?:card|cc)(?:num|no$)|cvv|cvc/,
-  /** The expiry, whole or in parts: card data only with card context. */
-  expiry: /\bexp(?:iry|iration|ires)?\b|\bvalid (?:thru|through)\b/,
-  expiryJoined: /expir|expdate|expmonth|expyears?$|(?:cc|card)exp|validthr/,
-  /** The name on the card: card data only with card context. */
-  name: /\bname on (?:the )?card\b|\bcard ?holder\b|\bholder(?:s)? name\b|\bcc name\b/,
-  nameJoined: /nameoncard|cardholder|holdername|(?:cc|card)name/,
-  /** Says the field is about a card. */
-  context: /(?<!dis|post)card(?!io)|^cc[a-z]/,
-  /** Another document or account: never card data, whatever else it says. */
-  excluded:
-    /\b(?:passport|document|doc|licen[cs]e|driving|policy|policyholder|account|identity|id|national|travel|birth|dob|experience)\b/,
-  excludedJoined:
-    /passport|document|licen[cs]e|policy|account|identity|^id(?:exp|num|no|card)|nationalid|travel|birth|experience/,
-} as const;
-
-/** What a field's words say about card data. */
-export interface CardWording {
-  number: boolean;
-  expiry: boolean;
-  name: boolean;
-  /** The words, or a card field beside it, say this is about a card. */
-  context: boolean;
-  /** The words name another document or account. */
-  excluded: boolean;
-}
-
-export const cardWording = (facts: FieldFacts): CardWording => {
-  const spaced = facts.hints.join(" ");
-  const any = (re: RegExp, joinedRe: RegExp): boolean =>
-    re.test(spaced) || facts.hints.some((word) => joinedRe.test(word));
-  return {
-    number: any(CARD_WORDS.number, CARD_WORDS.numberJoined),
-    expiry: any(CARD_WORDS.expiry, CARD_WORDS.expiryJoined),
-    name: any(CARD_WORDS.name, CARD_WORDS.nameJoined),
-    context:
-      facts.cardPeer ||
-      facts.hints.some((word) => CARD_WORDS.context.test(word)),
-    excluded: any(CARD_WORDS.excluded, CARD_WORDS.excludedJoined),
-  };
-};
-
-/** A card number or CVV field: a cc-number/cc-csc token, or wording that names one. */
-const cardNumberField = (facts: FieldFacts): boolean => {
-  if (facts.autocomplete.some((t) => t === "cc-number" || t === "cc-csc"))
-    return true;
-  const wording = cardWording(facts);
-  return wording.number && !wording.excluded;
-};
+export const cardField = (facts: FieldFacts): boolean =>
+  facts.card.number || facts.card.detail != null;
 
 /**
- * Whether a field is a card field: any `cc-*` autocomplete token, card
- * number or CVV wording, or expiry or name-on-card wording with card
- * context (card in its words, or a card-number field in its form). Words
- * that name a passport, ID, document, licence, policy or account never
- * count. The one card rule: the host applies it to the facts it recorded
- * at first sighting, the Pay guard's page script to the same facts live.
- */
-export const cardField = (facts: FieldFacts): boolean => {
-  if (facts.autocomplete.some((token) => token.startsWith("cc-"))) return true;
-  const wording = cardWording(facts);
-  if (wording.excluded) return false;
-  return (
-    wording.number || ((wording.expiry || wording.name) && wording.context)
-  );
-};
-
-const regexJs = (re: RegExp): string =>
-  `new RegExp(${JSON.stringify(re.source)})`;
-
-/**
- * In-page `__cardField(facts)` and `__cardNumberField(facts)`: the same rules
- * over `__factsOf` (embedded with `FIELD_FACTS_JS`, which uses them).
- */
-const CARD_RULES_JS = `
-  const __CARD_WORDS = {
-    ${Object.entries(CARD_WORDS)
-      .map(([key, re]) => `${key}: ${regexJs(re)}`)
-      .join(",\n    ")}
-  };
-  const __cardWording = (facts) => {
-    const spaced = facts.hints.join(' ');
-    const any = (re, joinedRe) => re.test(spaced) || facts.hints.some((word) => joinedRe.test(word));
-    return {
-      number: any(__CARD_WORDS.number, __CARD_WORDS.numberJoined),
-      expiry: any(__CARD_WORDS.expiry, __CARD_WORDS.expiryJoined),
-      name: any(__CARD_WORDS.name, __CARD_WORDS.nameJoined),
-      context: facts.cardPeer || facts.hints.some((word) => __CARD_WORDS.context.test(word)),
-      excluded: any(__CARD_WORDS.excluded, __CARD_WORDS.excludedJoined),
-    };
-  };
-  const __cardNumberField = (facts) => {
-    if (facts.autocomplete.some((t) => t === 'cc-number' || t === 'cc-csc')) return true;
-    const wording = __cardWording(facts);
-    return wording.number && !wording.excluded;
-  };
-  const __cardField = (facts) => {
-    if (facts.autocomplete.some((token) => token.startsWith('cc-'))) return true;
-    const wording = __cardWording(facts);
-    if (wording.excluded) return false;
-    return wording.number || ((wording.expiry || wording.name) && wording.context);
-  };
-`;
-
-/**
- * In-page `__factsOf(el)`: the same facts as `factsFromDocument`, read live
- * (with `__inputs(root)`, the text-entry inputs of a document in order).
+ * In-page `__documentFacts(root)` (every input and select of a document,
+ * with its facts, in one pass) and `__factsOf(el)`: the same facts as
+ * `factsFromDocument`, read live, labels included.
  */
 export const FIELD_FACTS_JS = `
-  ${CARD_RULES_JS}
+  const __cardPhrases = (${cardPhrases.toString()});
+  const __classifyCardControls = (${classifyCardControls.toString()});
   const __TEXT_ENTRY = ${JSON.stringify([...TEXT_ENTRY])};
-  const __typeOf = (el) => String(el.getAttribute('type') || 'text').toLowerCase() || 'text';
+  const __typeOf = (el) => el.tagName === 'SELECT' ? 'select' :
+    String(el.getAttribute('type') || 'text').toLowerCase() || 'text';
   const __inputs = (root) => Array.from(root.querySelectorAll('input')).filter((el) => __TEXT_ENTRY.includes(__typeOf(el)));
-  const __factsOf = (el, peers = true) => {
-    const lower = (name) => String(el.getAttribute(name) || '').toLowerCase();
-    const scope = (el.form || (el.closest && el.closest('form'))) || el.getRootNode();
-    const type = __typeOf(el);
-    const entries = __inputs(el.getRootNode());
-    const index = entries.indexOf(el);
+  const __documentFacts = (root) => {
+    const controls = Array.from(root.querySelectorAll('input, select'));
+    const entries = controls.filter((el) => el.tagName === 'INPUT' && __TEXT_ENTRY.includes(__typeOf(el)));
+    const entryIndex = new Map(entries.map((el, index) => [el, index]));
     const isPassword = (other) => !!other && __typeOf(other) === 'password';
-    const max = parseInt(el.getAttribute('maxlength') || '', 10);
-    return {
-      tag: String(el.tagName).toLowerCase(),
-      type,
-      autocomplete: lower('autocomplete').split(/\\s+/).filter(Boolean),
-      role: lower('role'),
-      inputmode: lower('inputmode'),
-      enterkeyhint: lower('enterkeyhint'),
-      pattern: lower('pattern'),
-      maxLength: Number.isFinite(max) ? max : -1,
-      wasPassword: type === 'password' || el.hasAttribute(${JSON.stringify(WAS_PASSWORD_ATTRIBUTE)}),
-      adjacentPassword: index >= 0 && (isPassword(entries[index - 1]) || isPassword(entries[index + 1])),
-      hints: [...[lower('name'), lower('id'), lower('aria-label'), lower('placeholder'),
-        ...Array.from(el.labels || []).map((label) => String(label.textContent || '').toLowerCase())]
-        .join(' ').split(/[^a-z0-9]+/).filter(Boolean),
-        ...[lower('name'), lower('id')].map((text) => text.replace(/[^a-z0-9]+/g, '')).filter(Boolean)],
-      cardPeer: peers && Array.from(scope.querySelectorAll('input')).some((other) =>
-        other !== el && __cardNumberField(__factsOf(other, false))),
+    const keys = new Map();
+    const keyOf = (node) => {
+      if (!node) return 0;
+      if (!keys.has(node)) keys.set(node, keys.size + 1);
+      return keys.get(node);
     };
+    const texts = (el) => [el.getAttribute('name'), el.getAttribute('id'), el.getAttribute('aria-label'),
+      el.getAttribute('placeholder'), ...Array.from(el.labels || []).map((label) => label.textContent)]
+      .map((text) => String(text || ''));
+    const classes = __classifyCardControls(controls.map((el) => ({
+      phrases: __cardPhrases(texts(el)),
+      autocomplete: String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/).filter(Boolean),
+      fillable: el.tagName === 'SELECT' || __TEXT_ENTRY.includes(__typeOf(el)),
+      form: keyOf(el.form),
+      group: keyOf(el.closest && el.closest('fieldset, [role=group]')),
+    })));
+    const facts = new Map();
+    controls.forEach((el, at) => {
+      const lower = (name) => String(el.getAttribute(name) || '').toLowerCase();
+      const type = __typeOf(el);
+      const index = entryIndex.has(el) ? entryIndex.get(el) : -1;
+      const max = parseInt(el.getAttribute('maxlength') || '', 10);
+      facts.set(el, {
+        tag: String(el.tagName).toLowerCase(),
+        type,
+        autocomplete: lower('autocomplete').split(/\\s+/).filter(Boolean),
+        role: lower('role'),
+        inputmode: lower('inputmode'),
+        enterkeyhint: lower('enterkeyhint'),
+        pattern: lower('pattern'),
+        maxLength: Number.isFinite(max) ? max : -1,
+        wasPassword: type === 'password' || el.hasAttribute(${JSON.stringify(WAS_PASSWORD_ATTRIBUTE)}),
+        adjacentPassword: index >= 0 && (isPassword(entries[index - 1]) || isPassword(entries[index + 1])),
+        hints: [...texts(el).map((text) => text.toLowerCase()).join(' ').split(/[^a-z0-9]+/).filter(Boolean),
+          ...[lower('name'), lower('id')].map((text) => text.replace(/[^a-z0-9]+/g, '')).filter(Boolean)],
+        card: classes[at],
+      });
+    });
+    return facts;
   };
+  const __factsOf = (el) => __documentFacts(el.getRootNode()).get(el);
+  const __cardField = (facts) => !!facts && (facts.card.number || facts.card.detail != null);
 `;
 
 /** Run on a field: whether it can be typed into now, and its facts. */
@@ -721,7 +708,8 @@ export const LIVE_FIELD_FUNCTION = `function() {
 /** The facts of each of a document's inputs (to find, and count, its code fields). */
 export const DOCUMENT_INPUT_FACTS_SCRIPT = `(function() {
   ${FIELD_FACTS_JS}
-  return Array.from(document.querySelectorAll('input')).map(__factsOf);
+  const facts = __documentFacts(document);
+  return Array.from(document.querySelectorAll('input')).map((el) => facts.get(el));
 })()`;
 
 /**
