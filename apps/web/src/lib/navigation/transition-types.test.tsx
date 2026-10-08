@@ -556,7 +556,7 @@ describe("reduced motion CSS (Codex impl r1 #9, Claude impl r1 #13)", () => {
   };
 
   it("the OS rule never applies when prefs say off", () => {
-    const media = block("@media (prefers-reduced-motion: reduce)");
+    const media = block("@media (prefers-reduced-motion: reduce) {\n  html");
     const selectors = [...media.matchAll(/^\s*(html[^{]*)\{/gm)].map((m) =>
       m[1]!.trim()
     );
