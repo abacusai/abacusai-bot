@@ -17,7 +17,7 @@ it("opens Agent in a safe web tab and confirms website sign-out without a host k
   const os = implement(contract);
   const open = vi.spyOn(window, "open").mockReturnValue(null);
   const logout = vi.fn(
-    async () =>
+    async (_input: RequestInfo | URL) =>
       new Response(
         JSON.stringify({ success: false, error: "Please retry sign-out" }),
         { status: 500 }
