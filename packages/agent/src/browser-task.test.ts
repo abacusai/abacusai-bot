@@ -231,6 +231,7 @@ describe("the user's messages while a browser run works", () => {
     run.noteUserMessage(midTaskText("ok"));
     expect(read).toEqual([{ text: "ok", messageId: "m1" }]);
     expect(run.consumedIds()).toEqual(["m1"]);
+    expect(run.consumedTexts()).toEqual(["ok"]);
     run.noteUserMessage("an unrelated nudge");
     expect(run.consumedIds()).toEqual(["m1"]);
 

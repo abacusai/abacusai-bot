@@ -164,15 +164,26 @@ export function mechanicalDigest(
   );
 }
 
+/**
+ * A chat that never ends (the phone's) has no original request: its
+ * first message is weeks old, or a greeting. Its summaries keep the degenerate
+ * guard but carry no anchor, and an anchor an earlier build left is dropped.
+ */
+export interface AnchorOptions {
+  anchorRequest: boolean;
+}
+
 /** The summary as it is stored: anchored, and never empty. */
 export function anchoredSummary(
   entries: SessionEntry[],
   summary: string,
-  firstKeptEntryId: string
+  firstKeptEntryId: string,
+  options: AnchorOptions = { anchorRequest: true }
 ): string {
   const body = isDegenerateSummary(summary)
     ? mechanicalDigest(entries, firstKeptEntryId)
     : stripAnchor(summary);
+  if (!options.anchorRequest) return body;
   const request = originalRequest(entries);
   if (request == null) return body;
 
@@ -193,7 +204,10 @@ export interface CompactionSink {
 }
 
 /** Route every stored summary through anchoredSummary. */
-export function anchorCompactions<T extends CompactionSink>(manager: T): T {
+export function anchorCompactions<T extends CompactionSink>(
+  manager: T,
+  options: AnchorOptions = { anchorRequest: true }
+): T {
   const append = manager.appendCompaction.bind(manager) as (
     ...args: unknown[]
   ) => string;
@@ -203,7 +217,7 @@ export function anchorCompactions<T extends CompactionSink>(manager: T): T {
     ...rest: unknown[]
   ) =>
     append(
-      anchoredSummary(manager.getBranch(), summary, firstKeptEntryId),
+      anchoredSummary(manager.getBranch(), summary, firstKeptEntryId, options),
       firstKeptEntryId,
       ...rest
     )) as T["appendCompaction"];

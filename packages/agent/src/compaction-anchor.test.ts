@@ -195,3 +195,35 @@ describe("anchorCompactions", () => {
     expect(tokensBefore).toBe(123);
   });
 });
+
+describe("a chat that never ends", () => {
+  it("pins no original request, drops an anchor an earlier build left, and keeps the digest guard", () => {
+    const options = { anchorRequest: false };
+    const old = anchoredSummary(
+      branch(),
+      "Progress so far: read the mail and found two urgent replies, one from the landlord about the lease " +
+        "renewal and one from the dentist moving Thursday's appointment.",
+      "a3"
+    );
+    const stored = anchoredSummary(branch(), old, "a3", options);
+
+    expect(stored).not.toContain(ANCHOR_START);
+    expect(stored).not.toContain("Original request");
+    expect(stored).toContain("two urgent replies");
+    expect(anchoredSummary(branch(), "##", "a3", options)).toContain(
+      "mechanical record"
+    );
+  });
+
+  it("is what anchorCompactions stores when asked", () => {
+    const appendCompaction = vi.fn((..._args: unknown[]) => "c1");
+    const manager = { getBranch: () => branch(), appendCompaction };
+
+    anchorCompactions(manager as never, { anchorRequest: false });
+    manager.appendCompaction("Progress so far: drafted both replies.", "a3");
+
+    expect(String(appendCompaction.mock.calls[0]![0])).not.toContain(
+      ANCHOR_START
+    );
+  });
+});

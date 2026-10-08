@@ -140,6 +140,7 @@ export function createPhoneProfile(
       PHONE_TOOL_NAMES.includes(name) ||
       name.endsWith(`_${PHONE_MEMORY_TOOL_NAME}`),
     alwaysAllowedTools: PHONE_TOOL_NAMES,
+    anchorCompaction: false,
     // Nobody can tap Approve in WhatsApp: waiting would freeze the chat.
     canAskForApproval: false,
     memory: {

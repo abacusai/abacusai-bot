@@ -50,6 +50,12 @@ export interface ForeverProfile {
   mcpTools?: McpToolPolicy;
   /** Whether an MCP tool is replaced by one of the profile's own tools. */
   replacesMcpTool(name: string): boolean;
+  /**
+   * Whether compaction summaries pin the chat's first message as its
+   * original request; on unless false. A chat that never ends (the phone)
+   * has none: its first message is weeks old, or a greeting.
+   */
+  anchorCompaction?: boolean;
   /** Tools that never ask for approval. */
   alwaysAllowedTools: readonly string[];
   /** Whether anyone can answer an approval request; when not, a call that needs one is refused at once. */

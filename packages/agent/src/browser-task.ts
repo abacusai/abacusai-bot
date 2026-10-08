@@ -170,6 +170,13 @@ const MEDIA_PROMPT = [
   "send a screenshot of the confirmation page.",
 ].join("\n");
 
+/** A run's failure, for the agent's log; the model is told only that it failed. */
+const logRunFailure = (what: string, detail: string): void => {
+  process.stderr.write(
+    `[abacusai-bot-agent] browser task: ${what}${detail.length > 0 ? `: ${detail.slice(0, 500)}` : ""}\n`
+  );
+};
+
 export interface BrowserTaskContext {
   cwd: string;
   agentDir: string;
@@ -222,6 +229,8 @@ export interface BrowserTaskResult {
   text: string;
   /** Ids of the user's mid-task messages the run's model read; it answered them. */
   consumedMessageIds?: string[];
+  /** What those messages said, in order. */
+  consumedMessageTexts?: string[];
   turns: number;
   /** `browser_execute` calls; a high share means the page tools were skipped. */
   executeCalls: number;
@@ -780,7 +789,12 @@ export async function runBrowserTask(
         if (event.type === "message_end") {
           const message = (
             event as {
-              message?: { stopReason?: unknown; errorMessage?: unknown };
+              message?: {
+                role?: string;
+                content?: unknown;
+                stopReason?: unknown;
+                errorMessage?: unknown;
+              };
             }
           ).message;
 
@@ -789,6 +803,12 @@ export async function runBrowserTask(
             typeof message.errorMessage === "string"
           ) {
             providerError = message.errorMessage;
+          }
+          // Kept as each message ends, so a run cut off by its time limit
+          // still hands back the last thing it wrote.
+          if (message?.role === "assistant") {
+            const text = extractText(message.content);
+            if (text.trim().length > 0) lastText = text;
           }
         }
 
@@ -948,11 +968,19 @@ export async function runBrowserTask(
       ...(midTask != null && midTask.consumedIds().length > 0
         ? { consumedMessageIds: midTask.consumedIds() }
         : {}),
+      ...(midTask != null && midTask.consumedTexts().length > 0
+        ? { consumedMessageTexts: midTask.consumedTexts() }
+        : {}),
     };
 
     if (outcome.stoppedBy === "error") {
+      logRunFailure("the sub-agent's prompt failed", providerError);
       return {
-        text: `The browser task failed: ${providerError.length > 0 ? providerError : "the sub-agent prompt failed"}`,
+        // The cause goes to the log; the caller gets no raw error text.
+        text:
+          turns === 0
+            ? "The browser task failed before the sub-agent could start working."
+            : "The browser task failed partway through, before the sub-agent could report.",
         ...tally,
         stoppedBy: "error",
       };
@@ -967,11 +995,9 @@ export async function runBrowserTask(
     }
 
     if (outcome.stoppedBy === "provider-error") {
+      logRunFailure("the sub-agent's model failed", providerError);
       return {
-        text:
-          providerError.length > 0
-            ? `The browser sub-agent could not reach the model: ${providerError}`
-            : "The browser sub-agent could not reach the model.",
+        text: "The browser sub-agent could not reach its model, so it stopped. Trying again later may work.",
         ...tally,
         stoppedBy: "provider-error",
       };
@@ -991,7 +1017,9 @@ export async function runBrowserTask(
       text:
         lastText.trim().length > 0
           ? lastText
-          : "The browser sub-agent finished without reporting anything.",
+          : outcome.stoppedBy === "completed"
+            ? "The browser sub-agent finished without reporting anything."
+            : "The browser sub-agent stopped before it wrote anything.",
       ...tally,
       stoppedBy: outcome.stoppedBy,
     };
@@ -1001,9 +1029,13 @@ export async function runBrowserTask(
       stoppedBy: "error",
       error: error instanceof Error ? error.message : String(error),
     });
+    logRunFailure(
+      "the run threw",
+      error instanceof Error ? error.message : String(error)
+    );
 
     return {
-      text: `The browser task failed: ${error instanceof Error ? error.message : String(error)}`,
+      text: "The browser task failed unexpectedly before it could report.",
       turns,
       executeCalls: 0,
       steers: [],

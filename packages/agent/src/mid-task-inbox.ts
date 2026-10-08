@@ -20,6 +20,7 @@ export class MidTaskRun {
   /** Handed to the run's session, not yet read by its model; oldest first. */
   private readonly unread: MidTaskMessage[] = [];
   private readonly consumed: string[] = [];
+  private readonly consumedText: string[] = [];
   private closed = false;
 
   constructor(
@@ -48,6 +49,7 @@ export class MidTaskRun {
     const [message] = this.unread.splice(index, 1);
     if (message == null) return;
     if (message.messageId != null) this.consumed.push(message.messageId);
+    this.consumedText.push(message.text);
     this.onConsumed(message);
   }
 
@@ -60,6 +62,11 @@ export class MidTaskRun {
   /** The ids the run's model read, in order. */
   consumedIds(): string[] {
     return [...this.consumed];
+  }
+
+  /** What those messages said, in order: the caller hears them too. */
+  consumedTexts(): string[] {
+    return [...this.consumedText];
   }
 }
 
