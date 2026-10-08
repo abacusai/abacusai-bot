@@ -892,31 +892,33 @@ const SessionActions = ({
     <div
       data-slot="message-actions-host"
       data-message-target={message.id}
-      className="group/message max-w-full min-w-0"
+      className="group/message relative max-w-full min-w-0"
     >
       {children}
-      <div
-        data-slot="session-message-actions"
-        className="flex h-7 items-center gap-0.5 opacity-0 group-focus-within/message:opacity-100 group-hover/message:opacity-100"
-      >
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("chat.actions.copy")}
-          onClick={() =>
-            void navigator.clipboard
-              .writeText(text)
-              .catch(() => setFailed(true))
-          }
+      {text.trim() !== "" ? (
+        <div
+          data-slot="session-message-actions"
+          className="pointer-events-none absolute start-0 top-full z-10 flex h-7 items-center gap-0.5 rounded-md bg-[var(--chat-surface)] opacity-0 group-focus-within/message:pointer-events-auto group-focus-within/message:opacity-100 group-hover/message:pointer-events-auto group-hover/message:opacity-100"
         >
-          <Copy aria-hidden />
-        </Button>
-        {message.role === "assistant" &&
-        !composer.readOnly &&
-        !composer.turnBusy
-          ? feedback
-          : null}
-      </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("chat.actions.copy")}
+            onClick={() =>
+              void navigator.clipboard
+                .writeText(text)
+                .catch(() => setFailed(true))
+            }
+          >
+            <Copy aria-hidden />
+          </Button>
+          {message.role === "assistant" &&
+          !composer.readOnly &&
+          !composer.turnBusy
+            ? feedback
+            : null}
+        </div>
+      ) : null}
       {failed ? (
         <p role="alert" className="text-destructive text-xs">
           {t("chat.actions.failed")}

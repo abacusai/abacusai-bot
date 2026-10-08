@@ -285,6 +285,7 @@ const TranscriptMessage = memo(function TranscriptMessage({
   fresh,
   virtual,
   height,
+  toolGap,
 }: {
   message: UIMessage;
   Message: TranscriptProps["Message"];
@@ -295,6 +296,7 @@ const TranscriptMessage = memo(function TranscriptMessage({
   fresh: boolean;
   virtual: boolean;
   height: number | undefined;
+  toolGap: "same" | "different" | undefined;
 }) {
   const ids = toolRows(message);
   return (
@@ -305,11 +307,12 @@ const TranscriptMessage = memo(function TranscriptMessage({
       style={
         height == null
           ? undefined
-          : { containIntrinsicSize: `auto ${height - 12}px` }
+          : { containIntrinsicSize: `auto ${height}px` }
       }
       messageId={message.id}
       scrollAnchor={message.role === "user"}
       data-fresh={fresh ? "" : undefined}
+      data-tool-gap={toolGap}
     >
       <ToolWindowProvider
         value={{
@@ -362,6 +365,28 @@ const transcriptItems = (
     fixed: 1 + (counts.get(message.id) ?? 0),
     units: toolRows(message).length,
   }));
+};
+
+const toolOnly = (message: UIMessage | undefined): boolean =>
+  message?.role === "assistant" &&
+  message.parts.some((part) => part.type === "tool-call") &&
+  message.parts.every(
+    (part) =>
+      part.type === "tool-call" ||
+      part.type === "tool-result" ||
+      (part.type === "text" && part.content.trim() === "")
+  );
+
+const toolGapBefore = (messages: UIMessage[], message: UIMessage) => {
+  const previous = messages[messages.indexOf(message) - 1];
+  if (!toolOnly(message) || !toolOnly(previous)) return undefined;
+  const last = previous!.parts.findLast((part) => part.type === "tool-call");
+  const first = message.parts.find((part) => part.type === "tool-call");
+  return last?.type === "tool-call" &&
+    first?.type === "tool-call" &&
+    last.name === first.name
+    ? ("same" as const)
+    : ("different" as const);
 };
 
 const outcomesByAnchor = (
@@ -585,7 +610,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           const height =
             entry.borderBoxSize?.[0]?.blockSize ??
             el.getBoundingClientRect().height;
-          if (height > 0) next.set(el.dataset.messageId!, height + 12);
+          if (height > 0) next.set(el.dataset.messageId!, height);
         }
         return next.size !== previous.size ||
           [...next].some(([id, height]) => previous.get(id) !== height)
@@ -713,6 +738,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         fresh={fresh[message.id] === true && !settled.has(message.id)}
         virtual={measured.size > 0}
         height={measured.get(message.id)}
+        toolGap={toolGapBefore(shown, message)}
       />
     );
     for (const outcome of byAnchor.get(message.id) ?? [])
@@ -763,7 +789,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         ) : null}
         <MessageScrollerContent
           aria-busy={active}
-          className="mx-auto w-full max-w-(--content-max-w) min-w-0 gap-3 px-4 pt-6 pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
+          className="mx-auto w-full max-w-(--content-max-w) min-w-0 gap-0 px-4 pt-6 pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
         >
           {orphans.map((outcome) => (
             <MessageScrollerItem key={`outcome-${outcome.runId}`}>

@@ -393,3 +393,8 @@ html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animatio
 [data-slot="chat-layout"][data-wallpaper] [data-slot="user-bubble"][data-tint] {
   background-color: color-mix(in oklab, var(--bot-accent, var(--primary)) 88%, transparent);
 }
+
+[data-slot="message-scroller-content"] > * + * { padding-top: 12px; }
+[data-slot="message-scroller-content"] > [data-tool-gap="same"] { padding-top: 2px; }
+[data-slot="message-scroller-content"] > [data-tool-gap="different"] { padding-top: 8px; }
+[data-slot="tool-cluster"] { display: flex; flex-direction: column; gap: 2px; }
