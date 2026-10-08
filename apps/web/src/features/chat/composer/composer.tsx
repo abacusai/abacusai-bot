@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type CSSProperties,
   type DragEvent,
   type KeyboardEvent,
   type ReactNode,
@@ -502,7 +503,7 @@ const DictationRow = ({ preview }: { preview: boolean }) => {
           size="icon-lg"
           autoFocus
           aria-label={t("chat.composer.stopDictation")}
-          className="bg-foreground text-background hover:bg-foreground/90 size-9 rounded-full"
+          className="bg-foreground text-background hover:bg-foreground/90 concentric size-(--composer-button-size)"
           onClick={() => void voice.end()}
         >
           <span aria-hidden className="size-2.5 rounded-[2px] bg-current" />
@@ -522,7 +523,7 @@ const SendOrStop = () => {
       <Button
         size="icon-lg"
         aria-label={t("chat.composer.stop")}
-        className="bg-foreground text-background hover:bg-foreground/90 size-9 rounded-full"
+        className="bg-foreground text-background hover:bg-foreground/90 concentric size-(--composer-button-size)"
         onClick={stop}
         disabled={cancelling}
       >
@@ -540,7 +541,7 @@ const SendOrStop = () => {
       disabled={config.pending || !hasText || config.blocked === "loading"}
       aria-disabled={!!config.blocked}
       className={cn(
-        "size-9 rounded-full",
+        "concentric size-(--composer-button-size)",
         skin === "bot" &&
           hasText &&
           "bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]",
@@ -1042,7 +1043,14 @@ export const ThreadComposer = () => {
               setDragging(false);
           }}
           onDrop={onDrop}
-          style={{ ...sharedStyle, borderRadius: radius }}
+          style={
+            {
+              ...sharedStyle,
+              borderRadius: radius,
+              "--composer-radius": `${radius}px`,
+              "--composer-inset": expanded ? "8px" : "6px",
+            } as CSSProperties
+          }
           data-dragging={dragging || undefined}
           data-slot="composer-surface"
           data-layout={morph.layout ? "layout" : undefined}
@@ -1059,12 +1067,12 @@ export const ThreadComposer = () => {
             // area over the toolbar row with 8 px under it, nothing else.
             expanded
               ? "gap-2 ps-3 pe-2 pt-3 pb-2"
-              : "min-h-12 flex-row items-center gap-2 px-2",
+              : "min-h-(--composer-pill-h) flex-row items-center gap-2 px-(--composer-inset)",
             // The session box (100 px, 14/8/8/16): the text area takes the
             // spare height, so the toolbar sits on the box's bottom edge.
             skin === "session" &&
               expanded &&
-              "phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4 pt-3.5 [&>textarea]:flex-1"
+              "phone:[--composer-border:1px] phone:border phone:border-foreground/[0.08] phone:shadow-[0_8px_30px_-12px_rgb(0_0_0/0.35)] min-h-[100px] ps-4 pt-3.5 [&>textarea]:flex-1"
           )}
         >
           <AnimatePresence mode="popLayout" initial={false}>

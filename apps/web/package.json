@@ -32,7 +32,8 @@
     "check:locales": "node scripts/sync-locales.js --check && node --test scripts/i18n-dynamic-keys.test.mjs && node scripts/check-ui-copy.mjs && node --test scripts/check-ui-copy.test.mjs",
     "sync:locales": "node scripts/sync-locales.js",
     "generate:routes": "node scripts/generate-routes.mjs",
-    "sync:chat-fixtures": "node scripts/sync-chat-fixtures.mjs"
+    "sync:chat-fixtures": "node scripts/sync-chat-fixtures.mjs",
+    "check:composer-geometry": "node scripts/check-composer-geometry.mjs"
   },
   "dependencies": {
     "@abacus-ai/agent": "workspace:*",
