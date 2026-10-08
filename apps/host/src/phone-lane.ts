@@ -550,12 +550,12 @@ export class PhoneLane {
    * An image or document with its caption, after whatever is already on its
    * way. Each media id goes once, and the same bytes once a turn, counted
    * only once the server took them: a resend of what already went is
-   * skipped, and its caption still goes as text. One the server refuses (or
-   * that cannot be read) also leaves its caption as text; for a file handed
-   * over, the session hears it did not go (see `noteNotAttached`). A
-   * document the server did not answer in time may still have gone: the
-   * session hears that it is unconfirmed and the caption is not repeated.
-   * `words` says whether the caption reached the chat.
+   * skipped, caption and all. One the server refuses (or that cannot be
+   * read) sends no caption either, which alone would read as if it came;
+   * the session hears it did not go instead. A document the server did not
+   * answer in time may still have gone: the session hears that it is
+   * unconfirmed and the caption is not repeated. `words` says whether the
+   * caption reached the chat.
    */
   private sendMedia(
     replyTo: string,
@@ -613,15 +613,17 @@ export class PhoneLane {
           this.noteOnce(media.ref, replyTo, unconfirmedNote(named));
         return { image: false, words: true };
       }
-      if (!duplicate && named != null)
-        this.noteOnce(hash ?? media.ref, replyTo, notAttachedNote(named));
-      const words =
-        media.caption.length === 0 ||
-        (await this.channel("reply", {
-          message_id: replyTo,
-          text: media.caption,
-        }));
-      return { image: false, words };
+      if (!duplicate)
+        this.noteOnce(
+          hash ?? media.ref,
+          replyTo,
+          named != null
+            ? notAttachedNote(named)
+            : imageNotSentNote(
+                resolved.ok === false ? resolved.reason : "the chat refused it"
+              )
+        );
+      return { image: false, words: false };
     });
     this.outbox = run.catch(() => ({ image: false, words: false }));
     return run;
@@ -1054,6 +1056,16 @@ function notAttachedNote(what: string): string {
     "in one short text, in their language, that it did not come through, and give them " +
     "its content another way if you can (a short summary, or a `page` link). Do not " +
     "send it again."
+  );
+}
+
+/** An image `send_media` named that did not reach the chat. */
+function imageNotSentNote(reason: string): string {
+  return (
+    `[not sent] An image you sent with send_media did not reach the user (${reason}). ` +
+    "If they asked to see it, take a new screenshot and send that one; otherwise tell " +
+    "them in one short text, in their language, that it did not come through. Never " +
+    "say it was sent."
   );
 }
 
