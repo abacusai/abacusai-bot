@@ -10,6 +10,25 @@ afterEach(async () => {
   await app?.cleanup();
   app = undefined;
 });
+/** Renders `path` and runs axe over it: no WCAG A/AA violations. */
+const passesAxe = async (path: string): Promise<void> => {
+  app = await renderApp(path);
+  await waitFor(() =>
+    expect(document.querySelector('[data-testid="pending-pane"]')).toBeNull()
+  );
+  const result = await axe.run(document.body, {
+    runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    rules: {
+      "color-contrast": { enabled: false },
+      region: { enabled: false },
+    },
+  });
+  expect(
+    result.violations.map(
+      (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`
+    )
+  ).toEqual([]);
+};
 describe("bots accessibility", () => {
   it.each([
     "/bots/new",
@@ -19,7 +38,6 @@ describe("bots accessibility", () => {
     "/bots/chief-of-staff?tab=files",
     "/bots/chief-of-staff/check-in",
     ...[
-      "bots-avatar",
       "bots-connector-marks",
       "bots-sidebar",
       "bots-start",
@@ -29,29 +47,13 @@ describe("bots accessibility", () => {
       "bots-files",
       "bots-check-in",
     ].map((id) => `/__ui?fixture=${id}`),
-  ])(
-    "%s passes axe",
-    async (path) => {
-      app = await renderApp(path);
-      await waitFor(() =>
-        expect(
-          document.querySelector('[data-testid="pending-pane"]')
-        ).toBeNull()
-      );
-      const result = await axe.run(document.body, {
-        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
-        rules: {
-          "color-contrast": { enabled: false },
-          region: { enabled: false },
-        },
-      });
-      expect(
-        result.violations.map(
-          (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`
-        )
-      ).toEqual([]);
-    },
-    20000
+  ])("%s passes axe", passesAxe, 20000);
+  // The avatar gallery renders every shape, mood and size, some 22,000
+  // nodes: axe alone takes about 15 s over them, on a fast machine.
+  it(
+    "/__ui?fixture=bots-avatar passes axe",
+    () => passesAxe("/__ui?fixture=bots-avatar"),
+    60_000
   );
   it("only the transcript identity is accessible while undocked", async () => {
     app = await renderApp("/bots/chief-of-staff");

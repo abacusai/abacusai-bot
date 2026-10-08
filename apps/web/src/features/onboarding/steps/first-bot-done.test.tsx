@@ -17,6 +17,11 @@ import { DoneStep } from "./done";
 import { FirstBotStep } from "./first-bot";
 
 const discard = vi.fn(async () => {});
+// The avatar reads the motion preference from prefs; no DbProvider here.
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => "full",
+}));
 vi.mock("../first-bot", async (original) => ({
   ...(await original<typeof import("../first-bot")>()),
   discardFirstBot: (...args: unknown[]) => discard(...(args as [])),
