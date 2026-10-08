@@ -10,6 +10,7 @@ import {
   cloneElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -176,16 +177,20 @@ export const ReplyLink = ({
     },
     [id]
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!opened) return;
-    const composer = ref.current
-      ?.closest('[data-slot="chat-layout"]')
-      ?.querySelector('[data-slot="composer-dock"]');
+    const layout = ref.current?.closest('[data-slot="chat-layout"]');
+    const composer = layout?.querySelector('[data-slot="composer-dock"]');
     const measure = () => {
       const top = composer?.getBoundingClientRect().top;
       setBoundary(
         top && top > 0
-          ? { x: 0, y: 0, width: window.innerWidth, height: top - 8 }
+          ? {
+              x: 0,
+              y: 0,
+              width: window.innerWidth,
+              height: Math.max(0, top - 8),
+            }
           : undefined
       );
     };
@@ -195,6 +200,7 @@ export const ReplyLink = ({
         ? new ResizeObserver(measure)
         : undefined;
     if (composer) observer?.observe(composer);
+    if (layout) observer?.observe(layout);
     window.addEventListener("resize", measure);
     return () => {
       observer?.disconnect();
@@ -257,7 +263,7 @@ export const ReplyLink = ({
         side="top"
         align="start"
         sideOffset={8}
-        className="reply-link-popup w-[min(320px,calc(100vw-24px))] overflow-hidden p-0"
+        className="reply-link-popup max-h-[var(--available-height)] w-[min(320px,calc(100vw-24px))] overflow-y-auto p-0"
         style={{
           animationDuration: reduced ? "0ms" : `${durations.childFade}ms`,
         }}
