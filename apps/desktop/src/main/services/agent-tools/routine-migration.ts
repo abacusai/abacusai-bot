@@ -216,23 +216,12 @@ const describe = (error: unknown): string =>
  */
 export const migrationNote = (
   crons: number,
-  notMoved: ReadonlyArray<{ name: string; reason: string }>,
-  /** The server's one review link: how many wait, and whether it went. */
-  review: { sent: boolean; pending: number } = { sent: false, pending: 0 }
+  notMoved: ReadonlyArray<{ name: string; reason: string }>
 ): string =>
   [
     "[routines moved] The user's routines moved to the server, to run on their own even while",
     "this computer sleeps. Their runs only read: search, and only the sites and account data",
-    "the user approves for each; they no longer send messages, change files or use the browser.",
-    ...(review.pending > 0
-      ? [
-          `${review.pending} of them are paused until the user reviews them`,
-          review.sent
-            ? "(the server sent them a link to review them, on WhatsApp or else by email)."
-            : '(a link to review them could not be sent yet; "approval_link" with a routine\'s id sends one).',
-          "Never write a link yourself.",
-        ]
-      : []),
+    "declared for each; they no longer send messages, change files or use the browser.",
     ...(crons > 0
       ? [
           `${crons} of them run on a clock at the same UTC times as before: offer once to move`,

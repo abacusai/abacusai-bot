@@ -4940,16 +4940,14 @@ export class ServiceHost {
         ...(kind === "event" || (input.webhook === true && kind !== "reminder")
           ? { event: { source: "webhook" as const } }
           : {}),
-        // The model's routines (reminders too) wait for the owner's approval;
-        // only the agent is ever named (the server refuses "user" from a bot key).
+        // Only the agent is ever named (the server refuses "user" from a bot key).
         ...(options.byAgent === true ? { createdBy: "agent" as const } : {}),
         // The caller's id when it gave one (an optimistic insert), so a retry
         // of the same create is the same routine.
         idempotencyKey: id ?? randomUUID(),
       });
     }
-    // What a local routine may reach: the user's own form sets it; what the
-    // agent asks for waits for the user to confirm it on the routine's page.
+    // What a local routine may reach, in force at once.
     const { sources, refused } = cleanSources(input.sources ?? []);
     const reads = [...new Set(input.reads ?? [])];
     if (refused.length > 0 && options.byAgent === true)
@@ -4959,14 +4957,7 @@ export class ServiceHost {
     const reach =
       sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
     const job = createJob(
-      {
-        ...input,
-        ...(reach != null
-          ? options.byAgent === true
-            ? { pendingReach: reach }
-            : { reach }
-          : {}),
-      },
+      { ...input, ...(reach != null ? { reach } : {}) },
       id
     );
     this.emitEvent({

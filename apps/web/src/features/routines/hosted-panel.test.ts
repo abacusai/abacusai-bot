@@ -1,7 +1,7 @@
 /**
  * The Routines panel's hosted fixes: a quiet run makes no notice, an absence
- * is one summary, the server's refusals in words, a routine waiting for
- * approval is not run, and what a local routine left out of its sources.
+ * is one summary, the server's refusals in words, and what a local routine
+ * left out of its sources.
  */
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
 import type { HostedRoutineRun } from "@abacus-ai/contract/routines";
@@ -46,7 +46,6 @@ const row = (overrides: Partial<RoutineRow> = {}): RoutineRow =>
     hosted: {
       kind: "task",
       timezone: "Asia/Kolkata",
-      pendingConfirmation: false,
       lastRun: null,
     },
     ...overrides,
@@ -101,11 +100,7 @@ describe("hosted run notices", () => {
 
 describe("hosted routines while the server has them off", () => {
   it("every hosted row reads as paused; local ones are unchanged", () => {
-    const waiting = row({
-      hosted: { ...row().hosted!, pendingConfirmation: true },
-    });
     expect(routineState(row(), [], [], undefined, true)).toBe("paused");
-    expect(routineState(waiting, [], [], undefined, true)).toBe("paused");
     expect(
       routineState(
         row({ runner: "local", hosted: undefined, webhookToken: null }),
@@ -182,21 +177,13 @@ describe("the server's refusals, in words", () => {
   });
 });
 
-describe("running a hosted routine waiting for approval", () => {
-  it("says to approve it first instead of asking the server to run it", () => {
+describe("running a hosted routine", () => {
+  it("asks the server to run it", () => {
     const run = vi.fn(async () => "started" as const);
     const transport = {
       client: { routines: { run } },
     } as unknown as Transport;
     const t = ((key: string) => key) as never;
-    runRoutineNow(
-      row({ hosted: { ...row().hosted!, pendingConfirmation: true } }),
-      transport,
-      t,
-      "create"
-    );
-    expect(run).not.toHaveBeenCalled();
-    expect(toast.showInfo).toHaveBeenCalledWith("routines.hosted.approveFirst");
     runRoutineNow(row(), transport, t);
     expect(run).toHaveBeenCalledWith({ id: "hosted-r1", trigger: "manual" });
   });

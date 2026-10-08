@@ -83,10 +83,8 @@ export interface CronJob {
   serverId?: string | null;
   /** Unattended unless the user turned full access on, confirming it. */
   access?: "unattended" | "full";
-  /** What its unattended runs may reach, as the user confirmed it. */
+  /** What its unattended runs may reach. */
   reach?: RoutineReach | null;
-  /** Reach the agent asked for, unused until the user confirms it. */
-  pendingReach?: RoutineReach | null;
   /** The server would not take it: it stays here, paused, with this reason. */
   notMoved?: string | null;
 }
@@ -259,9 +257,6 @@ export const createJob = (
     name?: string;
     workspaceId?: string | null;
     botId?: string | null;
-    /** Asked for by the agent: held until the user confirms it. */
-    pendingReach?: RoutineReach | null;
-    /** Set by the user's own form: theirs, so in force at once. */
     reach?: RoutineReach | null;
   },
   id?: string
@@ -307,7 +302,6 @@ export const createJob = (
     lastResult: null,
     runs: [],
     ...(input.reach != null ? { reach: input.reach } : {}),
-    ...(input.pendingReach != null ? { pendingReach: input.pendingReach } : {}),
   };
 
   write([...existing, job]);
@@ -329,9 +323,8 @@ export const updateJob = (
       | "workspaceId"
       | "access"
       | "reach"
-      | "pendingReach"
     >
-  > & { webhook?: boolean; confirmPendingReach?: boolean }
+  > & { webhook?: boolean }
 ): CronJob => {
   const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
@@ -342,21 +335,13 @@ export const updateJob = (
   if (changes.schedule != null && changes.schedule.trim().length > 0)
     parseCron(changes.schedule);
 
-  const { webhook, confirmPendingReach, ...rest } = changes;
+  const { webhook, ...rest } = changes;
   const updated: CronJob = { ...jobs[index], ...rest };
-  // The user allows what the agent asked for: it is the routine's reach now.
-  if (confirmPendingReach === true && updated.pendingReach != null) {
-    updated.reach = updated.pendingReach;
-    updated.pendingReach = null;
-  }
-  // Declined: what the agent asked for is dropped, the routine's reach kept.
-  if (confirmPendingReach === false) updated.pendingReach = null;
   // Full access was given to what the routine did: a new instruction or reach
   // runs held again until the user gives it again (unless this change does).
   const rewritten =
     (rest.prompt != null && rest.prompt !== jobs[index].prompt) ||
-    rest.reach !== undefined ||
-    rest.pendingReach !== undefined;
+    rest.reach !== undefined;
   if (rewritten && rest.access == null && updated.access === "full")
     updated.access = "unattended";
   // A one-time routine that already fired stays done: resumed as it stands

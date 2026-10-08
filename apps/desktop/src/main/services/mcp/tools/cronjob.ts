@@ -56,9 +56,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       "messages, change files, pay, or make routines. Give what a run may read: sources,",
       "the page addresses it may read under (https://news.example.com/tech/), and reads,",
       'the account data it may read ("gmail.search", "gmail.read", "calendar.read"), only',
-      "what the routine needs; nothing else is reachable. A routine that runs on its own",
-      "starts only once the user allows it at a link: give them the link, and say it",
-      'starts once allowed ("approval_link" with its id gets a fresh one).',
+      "what the routine needs; nothing else is reachable.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -73,7 +71,6 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
             "resume",
             "remove",
             "run",
-            "approval_link",
           ],
         },
         id: { type: "string" },

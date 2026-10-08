@@ -155,23 +155,17 @@ export const RoutinesGlobals = () => {
         },
       });
     };
-    // Every routine the agent sets up is the user's to know of, and one that
-    // waits for their approval is theirs to act on.
+    // Every routine the agent sets up is the user's to know of.
     const created = (event: Parameters<typeof fire>[0]) => {
       if (event.type !== "created") return;
       if (
         !remember(seenFor(seenHosted, transport), `created:${event.routineId}`)
       )
         return;
-      const body = t(
-        event.pendingApproval
-          ? "routines.createdPending"
-          : "routines.createdByAgent",
-        { name: event.name }
-      );
+      const body = t("routines.createdByAgent", { name: event.name });
       showInfo(body);
       notifyAttention(notifier, {
-        kind: event.pendingApproval ? "needs-you" : "done",
+        kind: "done",
         dedupeKey: `created:${event.routineId}`,
         botId: null,
         title: event.name,

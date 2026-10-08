@@ -56,8 +56,6 @@ export const routineState = (
   // A hosted routine runs on the server: its last run says how it went.
   if (r.runner === "hosted") {
     if (hostedOff) return "paused";
-    // Waiting for the owner to allow it: theirs to act on.
-    if (r.hosted?.pendingConfirmation === true) return "needs-you";
     if (!r.enabled) return "paused";
     const last = r.hosted?.lastRun;
     if (last != null && hostedRunFailed(last)) return "failed";

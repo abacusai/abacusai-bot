@@ -33,15 +33,11 @@ export type RoutinesEvent =
    * as one summary, not one notice each.
    */
   | { type: "hosted-away"; runs: HostedRoutineRun[] }
-  /**
-   * The agent set up a routine; the user hears of every one. It may wait for
-   * their approval first (`pendingApproval`).
-   */
+  /** The agent set up a routine; the user hears of every one. */
   | {
       type: "created";
       routineId: string;
       name: string;
-      pendingApproval: boolean;
     };
 
 /**
@@ -80,14 +76,6 @@ export const routines = {
    * whether the server runs them right now.
    */
   refreshHosted: mutation.input(NoInput).output(type<{ hosted: boolean }>()),
-  /**
-   * Ask the server to send the owner a fresh approval link (on WhatsApp, or
-   * by email) for a hosted routine waiting on them; `sent` is false when it
-   * waits on nothing.
-   */
-  approvalLink: mutation
-    .input(v.object({ id: RoutineId }))
-    .output(type<{ sent: boolean }>()),
   /** Lossless-actionable, no snapshot. */
   events: subscription
     .input(NoInput)

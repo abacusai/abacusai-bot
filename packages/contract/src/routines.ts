@@ -97,13 +97,6 @@ export interface HostedRoutineInfo {
   /** Account data its runs may read. */
   reads: RoutineRead[];
   watchUrl: string | null;
-  /**
-   * Made or changed by the agent and not yet confirmed by the user: it does
-   * not run until they allow it, at a link the server sends them itself.
-   */
-  pendingConfirmation: boolean;
-  /** The server sent the owner this version's approval link (WhatsApp, else email). */
-  approvalSent: boolean;
   /** Why the server paused it, when it did. */
   pausedReason: string | null;
   lastRun: HostedRoutineRun | null;
@@ -142,10 +135,8 @@ export interface Routine {
    * turns on, confirming it.
    */
   access?: "unattended" | "full";
-  /** What a local routine's unattended runs may reach, as the user confirmed it. */
+  /** What a local routine's unattended runs may reach. */
   reach?: RoutineReach | null;
-  /** Reach the agent asked for and the user has not confirmed: not used until they do. */
-  pendingReach?: RoutineReach | null;
 }
 
 export interface RoutineListItem extends Routine {
@@ -201,6 +192,4 @@ export type RoutineUpdateInput = Partial<
   >
 > & {
   webhook?: boolean;
-  /** The user allows (true) or declines (false) the reach the agent asked for. */
-  confirmPendingReach?: boolean;
 };

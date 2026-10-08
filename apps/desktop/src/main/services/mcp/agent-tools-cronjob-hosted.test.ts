@@ -55,16 +55,6 @@ const BOT_ROW: RoutineListItem = toRoutineListItem({
   enabled: true,
   owner_bot_id: "bot-1",
 });
-const PENDING_ROW: RoutineListItem = toRoutineListItem({
-  id: "r3",
-  kind: "task",
-  name: "Inbox digest",
-  prompt: "Mail",
-  schedule: { cron: "0 7 * * *", timezone: "UTC" },
-  approval: "pending",
-  approval_sent: true,
-});
-
 const harness = (options: {
   phone?: boolean;
   defaultRunner?: "local" | "hosted";
@@ -185,22 +175,6 @@ describe("cronjob, hosted", () => {
       kind: "task",
       webhook: true,
     });
-  });
-
-  it("says the server sent the approval link, never writing one, and that it starts once allowed", async () => {
-    const { call } = harness({ defaultRunner: "hosted", created: PENDING_ROW });
-    const text = await call({
-      action: "create",
-      prompt: "Mail",
-      schedule: "0 7 * * *",
-      reads: ["gmail.search"],
-    });
-    expect(text).toContain("does NOT start until the user allows it");
-    expect(text).toContain("Waiting for the user's approval");
-    expect(text).toContain("was sent to them");
-    expect(text).toContain("Never write a link");
-    expect(text).not.toMatch(/https?:\/\//);
-    expect(text).toContain("waiting for the user's approval");
   });
 
   it("answers a free user's second routine with the server's upgrade, once, in the user's language", async () => {
@@ -355,7 +329,6 @@ describe("cronjob, hosted", () => {
       "on the server"
     );
     expect(run).toHaveBeenCalledWith("hosted-r1", null);
-    // The model's change waits for the owner's approval, a reminder's too.
     const update = vi.spyOn(hosted, "update").mockResolvedValue(ROW);
     await call({ action: "update", id: "hosted-r1", prompt: "Call Alex" });
     expect(update).toHaveBeenCalledWith(
@@ -367,19 +340,6 @@ describe("cronjob, hosted", () => {
 });
 
 describe("cronjob, hosted, and who is asking", () => {
-  it("has the server send the approval link again, and says when nothing waits", async () => {
-    const { call, hosted } = harness({});
-    vi.spyOn(hosted, "approvalLink")
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(null);
-    const text = await call({ action: "approval_link", id: "hosted-r1" });
-    expect(text).toContain("was sent to the user again");
-    expect(text).not.toMatch(/https?:\/\//);
-    expect(await call({ action: "approval_link", id: "hosted-r1" })).toContain(
-      "not waiting for approval"
-    );
-  });
-
   it("lets a bot see and change only its own", async () => {
     const { call, hosted } = harness({ caller: "bot" });
     const listed = await call({ action: "list" });

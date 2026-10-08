@@ -114,48 +114,28 @@ export const describeHostedRoutine = (routine: RoutineListItem): string => {
   return [
     `${routine.id}  [${routine.enabled ? "enabled" : `paused${info?.pausedReason != null ? `: ${info.pausedReason}` : ""}`}]  hosted ${info?.kind ?? "task"}  ${when} (${info?.timezone ?? "UTC"})  ${routine.name}`,
     `  ${routine.prompt}`,
-    `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}${info?.pendingConfirmation === true ? "   [waiting for the user's approval]" : ""}`,
+    `  reads: ${[...(info?.reads ?? []), ...(info?.sources ?? [])].join(", ") || "search only"}`,
     `  next: ${next}   last: ${last?.at != null ? `${new Date(last.at).toISOString()} ${last.status}${last.deliveredVia != null ? ` via ${last.deliveredVia}` : ""}` : "never"}`,
   ].join("\n");
 };
 
 /**
- * What the model says of a routine waiting for approval: the server sends
- * the owner the link itself, so the model never holds or writes one.
- */
-export const approvalNote = (routine: RoutineListItem): string =>
-  routine.hosted?.pendingConfirmation !== true
-    ? ""
-    : `Waiting for the user's approval: a link to allow "${routine.name}" was sent to them (on WhatsApp, else by email). Tell them so in one line, in their language, and that it starts once they allow it. If they did not get it, "approval_link" with its id sends it again. Never write a link for it yourself. `;
-
-/**
  * The model's note after a hosted create: confirm it, offer a test run, never
- * run it. In the WhatsApp chat (no pane) results arrive in that chat. A
- * routine waiting for the user's approval starts only once they give it, at
- * a link the server sends them.
+ * run it. In the WhatsApp chat (no pane) results arrive in that chat.
  */
 export const hostedCreatedNote = (
   routine: RoutineListItem,
   inPhoneChat: boolean
-): string => {
-  const approval = routine.hosted?.pendingConfirmation === true;
-  return (
-    "Created on the server: it runs on its own, even while nothing is open. " +
-    (inPhoneChat
-      ? "Its results arrive in this chat, or by email when this chat cannot take them. "
-      : "Its results reach the user on WhatsApp when it is linked, else by email. ") +
-    (approval
-      ? "It does NOT start until the user allows it themselves. " +
-        approvalNote(routine)
-      : "") +
-    "Confirm it to the user in one line, in their language: what it does, when, in " +
-    "which time zone, what it may read, and where results arrive. It has NOT run yet: " +
-    'offer one test run ("run" with its id) only if they want it' +
-    (approval ? ", once it is approved" : "") +
-    ", and do not do the routine's work here.\n\n" +
-    describeHostedRoutine(routine)
-  );
-};
+): string =>
+  "Created on the server: it runs on its own, even while nothing is open. " +
+  (inPhoneChat
+    ? "Its results arrive in this chat, or by email when this chat cannot take them. "
+    : "Its results reach the user on WhatsApp when it is linked, else by email. ") +
+  "Confirm it to the user in one line, in their language: what it does, when, in " +
+  "which time zone, what it may read, and where results arrive. It has NOT run yet: " +
+  'offer one test run ("run" with its id) only if they want it, and do not do ' +
+  "the routine's work here.\n\n" +
+  describeHostedRoutine(routine);
 
 /** The upgrade the server offered with a refusal, or a plain mention of one. */
 const upgradeLine = (details: Record<string, unknown>): string => {
@@ -236,8 +216,6 @@ export const hostedRefusalNote = (
       return `[${nothing.toLowerCase()}] Account reads are "gmail.search", "gmail.read" or "calendar.read". Ask only for what the routine needs and try again.`;
     case "wrong_bot":
       return "[not done] That routine belongs to another of the user's bots; this one may not change it.";
-    case "not_pending":
-      return "[not done] That routine is not waiting for approval.";
     case "busy":
       return "[not done] The routine was being changed at that moment. Try once more.";
     case "queue_full":
@@ -258,7 +236,7 @@ export const hostedRefusalNote = (
     case "routine_completed":
       return "[not done] This one-time routine has already run. To run it again, update it with a new run_at.";
     case "routine_not_active":
-      return '[not done] This routine is paused, or waits for the user to allow it. If it waits, have the link sent again ("approval_link" with its id); otherwise resume it first if the user wants it to run.';
+      return "[not done] This routine is paused; resume it first if the user wants it to run.";
     case "not_available":
       return `[${nothing.toLowerCase()}] Routines that run on their own are not available for this account right now. Tell the user briefly, in their language.`;
     default:

@@ -185,8 +185,6 @@ export const RoutineDialog = ({
                     delivery: "default" as const,
                     ...reachOf(parsed),
                     watchUrl: null,
-                    pendingConfirmation: false,
-                    approvalSent: false,
                     pausedReason: null,
                     lastRun: null,
                   },
@@ -210,10 +208,7 @@ export const RoutineDialog = ({
         baseline.current = parsed;
         form.reset(parsed);
         reportDropped(savedId, parsed);
-        // One waiting for approval cannot run yet.
-        if (parsed.testRun && saved?.hosted?.pendingConfirmation === true)
-          showInfo(t("routines.hosted.approveFirst"));
-        else if (parsed.testRun)
+        if (parsed.testRun)
           void transport.client.routines
             .run({ id: savedId, trigger: "create" })
             .catch(() => showError(t("phase5.firstRunFailed")));

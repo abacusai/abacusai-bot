@@ -83,17 +83,13 @@ export const showSaveFailure = (
   );
 };
 
-/** Run a routine now; one waiting for the user's approval cannot run yet. */
+/** Run a routine now. */
 export const runRoutineNow = (
   row: RoutineRow,
   transport: Transport,
   t: TFunction,
   trigger: "manual" | "create" = "manual"
 ): void => {
-  if (row.hosted?.pendingConfirmation === true) {
-    showInfo(t("routines.hosted.approveFirst"));
-    return;
-  }
   void transport.client.routines
     .run({ id: row.id, trigger })
     .then(() => {

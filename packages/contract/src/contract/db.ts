@@ -115,7 +115,6 @@ export const RoutineUpdateInputSchema = v.object({
       })
     )
   ),
-  confirmPendingReach: v.optional(v.boolean()),
 });
 
 const NullableTimestamp = v.nullable(v.number());
