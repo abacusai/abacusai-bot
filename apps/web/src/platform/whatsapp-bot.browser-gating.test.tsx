@@ -21,7 +21,8 @@ it("restores the phone dialog from search and preserves the shell and history", 
   try {
     await act(async () => {
       await app.router.navigate({
-        search: (previous) => ({ ...previous, connect: "whatsapp" }),
+        to: "/bots",
+        search: (previous) => ({ ...previous, connect: "whatsapp" as const }),
         state: { whatsappDialog: true },
       });
     });
