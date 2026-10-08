@@ -1521,6 +1521,11 @@ export class ServiceHost {
   }
 
   /** The active workspace's primary checkout key (legacy tree events). */
+  /** The vault page for this account (see Vault.manageUrl). */
+  vaultManageUrl(): Promise<string | null> {
+    return this.vault.manageUrl();
+  }
+
   activeCheckoutKey(): string | null {
     const active = this.workspaceService.getActiveWorkspaceId();
     return active == null ? null : checkoutKey(active, null);

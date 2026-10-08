@@ -38,6 +38,15 @@ export interface VaultItem {
   nameOnCard: string | null;
 }
 
+/**
+ * The saved items, and the page where the user sees and deletes them: the
+ * platform's own link for this account, null from a server that sends none.
+ */
+export interface VaultListing {
+  items: VaultItem[];
+  manageUrl: string | null;
+}
+
 export type VaultResult<T> =
   | { ok: true; value: T }
   | {
@@ -98,34 +107,54 @@ export class VaultClient {
     return this.apiKey().length > 0 && now >= this.unavailableUntil;
   }
 
-  async listItems(): Promise<VaultResult<VaultItem[]>> {
-    const result = await this.call("_listAbacusbotVaultItems", "GET");
+  async listItems(): Promise<VaultResult<VaultListing>> {
+    const result = await this.call("_listAbacusbotVaultItems", "GET", {
+      includeManageUrl: true,
+    });
     if (result.ok === false) return result;
-    const rows = Array.isArray(result.value) ? result.value : [];
+    // `{items, manageUrl}`; a server without the manage link answers the bare list.
+    const listing =
+      result.value != null &&
+      typeof result.value === "object" &&
+      !Array.isArray(result.value)
+        ? (result.value as Record<string, unknown>)
+        : null;
+    const rows = Array.isArray(result.value)
+      ? result.value
+      : Array.isArray(listing?.items)
+        ? listing.items
+        : [];
+    const manageUrl =
+      listing == null ? null : text(field(listing, "manageUrl"));
     return {
       ok: true,
-      value: rows.flatMap((row): VaultItem[] => {
-        if (row == null || typeof row !== "object") return [];
-        const record = row as Record<string, unknown>;
-        const itemId = text(field(record, "itemId"));
-        if (itemId == null) return [];
-        const sites = field(record, "sites");
-        return [
-          {
-            itemId,
-            kind: text(record.kind) ?? "item",
-            label: text(record.label) ?? "",
-            sites: Array.isArray(sites)
-              ? sites.filter((site): site is string => typeof site === "string")
-              : [],
-            brand: text(record.brand),
-            last4: text(field(record, "last4")),
-            expiryMonth: num(field(record, "expiryMonth")),
-            expiryYear: num(field(record, "expiryYear")),
-            nameOnCard: text(field(record, "nameOnCard")),
-          },
-        ];
-      }),
+      value: {
+        manageUrl: manageUrl?.startsWith("https://") ? manageUrl : null,
+        items: rows.flatMap((row): VaultItem[] => {
+          if (row == null || typeof row !== "object") return [];
+          const record = row as Record<string, unknown>;
+          const itemId = text(field(record, "itemId"));
+          if (itemId == null) return [];
+          const sites = field(record, "sites");
+          return [
+            {
+              itemId,
+              kind: text(record.kind) ?? "item",
+              label: text(record.label) ?? "",
+              sites: Array.isArray(sites)
+                ? sites.filter(
+                    (site): site is string => typeof site === "string"
+                  )
+                : [],
+              brand: text(record.brand),
+              last4: text(field(record, "last4")),
+              expiryMonth: num(field(record, "expiryMonth")),
+              expiryYear: num(field(record, "expiryYear")),
+              nameOnCard: text(field(record, "nameOnCard")),
+            },
+          ];
+        }),
+      },
     };
   }
 

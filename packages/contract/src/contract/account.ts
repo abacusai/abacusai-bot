@@ -12,6 +12,8 @@ export const account = {
   abacus: query
     .input(v.optional(v.object({ refresh: v.optional(v.boolean()) })))
     .output(type<AbacusAccountInfo | null>()),
+  /** The vault page, where the user sees and deletes saved logins and cards; null without a vault. */
+  vaultUrl: query.input(NoInput).output(type<string | null>()),
   /** The optional local account (name and email). */
   state: query.input(NoInput).output(type<AccountState>()),
   skipOnboarding: mutation.input(NoInput).output(type<AccountState>()),

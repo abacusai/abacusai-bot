@@ -168,20 +168,23 @@ describe("VaultClient", () => {
       _listAbacusbotVaultItems: {
         body: {
           success: true,
-          result: [
-            {
-              itemId: "card-1",
-              kind: "card",
-              label: "Visa ••4242",
-              sites: [],
-              brand: "visa",
-              last4: "4242",
-              expiryMonth: 4,
-              expiryYear: 2030,
-              nameOnCard: "Ada L",
-              value: SECRET,
-            },
-          ],
+          result: {
+            manageUrl: "https://example.test/chatllm/vault",
+            items: [
+              {
+                itemId: "card-1",
+                kind: "card",
+                label: "Visa ••4242",
+                sites: [],
+                brand: "visa",
+                last4: "4242",
+                expiryMonth: 4,
+                expiryYear: 2030,
+                nameOnCard: "Ada L",
+                value: SECRET,
+              },
+            ],
+          },
         },
       },
     });
@@ -189,21 +192,25 @@ describe("VaultClient", () => {
     const listed = await vault.listItems();
 
     expect(sent[0]!.method).toBe("GET");
+    expect(sent[0]!.url.searchParams.get("includeManageUrl")).toBe("true");
     expect(listed).toEqual({
       ok: true,
-      value: [
-        {
-          itemId: "card-1",
-          kind: "card",
-          label: "Visa ••4242",
-          sites: [],
-          brand: "visa",
-          last4: "4242",
-          expiryMonth: 4,
-          expiryYear: 2030,
-          nameOnCard: "Ada L",
-        },
-      ],
+      value: {
+        manageUrl: "https://example.test/chatllm/vault",
+        items: [
+          {
+            itemId: "card-1",
+            kind: "card",
+            label: "Visa ••4242",
+            sites: [],
+            brand: "visa",
+            last4: "4242",
+            expiryMonth: 4,
+            expiryYear: 2030,
+            nameOnCard: "Ada L",
+          },
+        ],
+      },
     });
     expect(JSON.stringify(listed)).not.toContain(SECRET);
   });

@@ -7,6 +7,9 @@ export const accountRouter = impl.account.router({
   abacus: impl.account.abacus.handler(({ input, context }) =>
     context.deps.host.getAbacusAccount(input?.refresh)
   ),
+  vaultUrl: impl.account.vaultUrl.handler(({ context }) =>
+    context.deps.host.getVaultManageUrl()
+  ),
   state: impl.account.state.handler(({ context }) =>
     context.deps.app.account.get()
   ),
