@@ -19,6 +19,7 @@ import { Link2, Plug } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useBotNumberConnect } from "#platform/whatsapp-bot";
 import { Spinner } from "#renderer/components/spinner";
 import { cn } from "#renderer/lib/cn";
 import { connectErrorText } from "#renderer/lib/connect-page";
@@ -31,6 +32,8 @@ export interface ConnectorRequestCardProps {
   error: string | null;
   onConnect(values?: Record<string, string>): void;
   onDecline(): void;
+  /** Connected outside `onConnect` (the web's WhatsApp link): answer the ask. */
+  onConnected?(): void;
   /** While the connect page is open: stop waiting. */
   onStop?(): void;
 }
@@ -41,6 +44,7 @@ export const ConnectorRequestCard = ({
   error,
   onConnect,
   onDecline,
+  onConnected,
   onStop,
 }: ConnectorRequestCardProps) => {
   const { t } = useTranslation();
@@ -52,6 +56,10 @@ export const ConnectorRequestCard = ({
       ? Object.entries(connectFields(connector))
       : [];
   const [values, setValues] = useState<Record<string, string>>({});
+  // On the web, WhatsApp is AbacusAI Bot's own number, never the desktop's pairing.
+  const botNumber = useBotNumberConnect(
+    request.connectorId === "whatsapp" ? onConnected : undefined
+  );
   const hopsToBrowser = ui === "browser-hop";
   const provider = request.label;
   const fieldsReady = fields.every(
@@ -129,7 +137,11 @@ export const ConnectorRequestCard = ({
           className={cn(
             busy && hopsToBrowser && "h-auto py-1.5 whitespace-normal"
           )}
-          onClick={() => onConnect(fields.length > 0 ? values : undefined)}
+          onClick={() =>
+            botNumber
+              ? botNumber.connect()
+              : onConnect(fields.length > 0 ? values : undefined)
+          }
         >
           {busy ? <Spinner aria-hidden /> : <Link2 aria-hidden />}
           {busy && hopsToBrowser
@@ -137,6 +149,7 @@ export const ConnectorRequestCard = ({
             : t("bots.chat.connector.connect", { provider })}
         </Button>
       </div>
+      {botNumber?.dialog}
     </div>
   );
 };

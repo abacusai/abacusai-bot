@@ -19,6 +19,7 @@ import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent } from "#renderer/ui/dialog";
 import { Field, FieldLabel } from "#renderer/ui/field";
@@ -71,6 +72,102 @@ export const unlinkWhatsAppChat = async (
   );
 };
 
+const messageOf = (deepLink: string) =>
+  new URL(deepLink).searchParams.get("text") ?? "";
+
+/** The pre-typed message, as it will show in WhatsApp; a computer can copy it. */
+const MessageToSend = ({
+  deepLink,
+  copyable = false,
+}: {
+  deepLink: string;
+  copyable?: boolean;
+}) => {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const message = messageOf(deepLink);
+  return (
+    <div className="flex items-end justify-end gap-2">
+      {copyable && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            void navigator.clipboard.writeText(message).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            })
+          }
+        >
+          {t(copied ? "web.whatsapp.copied" : "web.whatsappBot.copyMessage")}
+        </Button>
+      )}
+      <p
+        aria-label={t("web.whatsappBot.message")}
+        className="bg-muted text-foreground max-w-[85%] rounded-(--pane-radius) px-3 py-2 text-left text-sm/relaxed break-words"
+      >
+        {message}
+      </p>
+    </div>
+  );
+};
+
+const WaitingLine = ({ phone }: { phone: string }) => {
+  const { t } = useTranslation();
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className="flex items-center justify-center gap-2 text-sm"
+    >
+      <Spinner aria-hidden />
+      {t("web.whatsappBot.waitingFor", { phone: maskedPhone(phone) })}
+    </p>
+  );
+};
+
+/** The same wa.me link as a QR: the phone's camera opens WhatsApp with the message typed. */
+const ScanToSend = ({ deepLink }: { deepLink: string }) => {
+  const { t } = useTranslation();
+  const [svg, setSvg] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    // Loaded on demand: only a computer's waiting step draws one.
+    void import("qrcode")
+      .then((qr) => qr.toString(deepLink, { type: "svg", margin: 1 }))
+      .then((drawn) => {
+        if (live) setSvg(drawn);
+      })
+      .catch((error: unknown) =>
+        console.warn("[whatsapp] QR not drawn", error)
+      );
+    return () => {
+      live = false;
+    };
+  }, [deepLink]);
+  return (
+    <div className="bg-background flex flex-col items-center gap-2 rounded-(--pane-radius) border px-4 pt-4 pb-3">
+      <span className="text-sm font-medium">
+        {t("web.whatsappBot.scanTitle")}
+      </span>
+      <div className="flex size-44 items-center justify-center rounded-lg bg-white p-1">
+        {svg ? (
+          <img
+            className="size-full"
+            src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
+            alt={t("web.whatsappBot.scanTitle")}
+          />
+        ) : (
+          <Spinner aria-hidden />
+        )}
+      </div>
+      <span className="text-muted-foreground text-xs text-pretty">
+        {t("web.whatsappBot.scanHint")}
+      </span>
+    </div>
+  );
+};
+
 /**
  * Number, then the message to send: the user taps Open WhatsApp (a real link,
  * so the phone hands it to the app and this tab stays to see the link land).
@@ -98,6 +195,8 @@ export const WhatsAppConnect = ({
   const [error, setError] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const numberId = useId();
+  // A mouse means a computer: the phone scans a QR rather than this tab opening WhatsApp.
+  const laptop = useMediaQuery("(pointer: fine)");
   const waiting = deepLink != null && !expired;
   const chat = useQuery({
     ...whatsappChatQuery(callApps),
@@ -180,7 +279,9 @@ export const WhatsAppConnect = ({
           expired
             ? "web.whatsappBot.expiredBody"
             : waiting
-              ? "web.whatsappBot.waitingBody"
+              ? laptop
+                ? "web.whatsappBot.waitingBodyLaptop"
+                : "web.whatsappBot.waitingBody"
               : "web.whatsappBot.body"
         )}
       </p>
@@ -212,22 +313,39 @@ export const WhatsAppConnect = ({
           </Button>
           {skip}
         </div>
+      ) : deepLink && laptop ? (
+        <div className="flex w-full flex-col gap-3">
+          <ScanToSend deepLink={deepLink} />
+          <WaitingLine phone={number} />
+          <div className="text-muted-foreground flex items-center gap-3 text-xs">
+            <span className="bg-border h-px flex-1" />
+            {t("web.whatsappBot.orFromComputer")}
+            <span className="bg-border h-px flex-1" />
+          </div>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            nativeButton={false}
+            render={<a href={deepLink} target="_blank" rel="noreferrer" />}
+          >
+            {t("web.whatsapp.openWhatsApp")}
+          </Button>
+          <MessageToSend deepLink={deepLink} copyable />
+          <Button
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={() => setDeepLink(null)}
+          >
+            {t("web.whatsappBot.changeNumber")}
+          </Button>
+          {skip}
+        </div>
       ) : deepLink ? (
         <div className="flex w-full flex-col gap-3">
-          <p
-            aria-label={t("web.whatsappBot.message")}
-            className="bg-muted text-foreground max-w-[85%] self-end rounded-(--pane-radius) px-3 py-2 text-left text-sm/relaxed break-words"
-          >
-            {new URL(deepLink).searchParams.get("text")}
-          </p>
-          <p
-            role="status"
-            aria-live="polite"
-            className="flex items-center justify-center gap-2 text-sm"
-          >
-            <Spinner aria-hidden />
-            {t("web.whatsappBot.waitingFor", { phone: maskedPhone(number) })}
-          </p>
+          <MessageToSend deepLink={deepLink} />
+          <WaitingLine phone={number} />
           <Button
             size="lg"
             className="w-full"
@@ -404,6 +522,36 @@ export const WhatsAppIntro = ({
             // On a phone the bot is WhatsApp: there is no browser to skip to.
             {...(isPhone() ? {} : { onSkip: () => close(false) })}
           />
+        </FlowContent>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/**
+ * The agent's "Connect WhatsApp" card on the web: the same number-then-message
+ * flow in a dismissible dialog. `onLinked` runs once the number is linked.
+ */
+export const WhatsAppConnectDialog = ({
+  callApps,
+  open,
+  onOpenChange,
+  onLinked,
+}: {
+  callApps: CallApps;
+  open: boolean;
+  onOpenChange(open: boolean): void;
+  onLinked(): void;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open} onOpenChange={(next) => onOpenChange(next)}>
+      <DialogContent
+        aria-label={t("web.whatsappBot.title")}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-(--pane-radius)"
+      >
+        <FlowContent media={<ConnectorMark id="whatsapp" size={56} />}>
+          <WhatsAppConnect callApps={callApps} onLinked={onLinked} />
         </FlowContent>
       </DialogContent>
     </Dialog>
