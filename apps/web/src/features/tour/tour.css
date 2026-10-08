@@ -1,0 +1,12 @@
+[data-tour-active] {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+  animation: tour-ring 240ms var(--ease-standard);
+}
+@keyframes tour-ring {
+  from { outline-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-tour-active] { animation: none; }
+}
+html[data-reduce-motion="on"] [data-tour-active] { animation: none; }

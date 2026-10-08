@@ -1,199 +1,73 @@
+import "./tour.css";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useEffect, useRef, useState } from "react";
 
-import { Spinner } from "#renderer/components/spinner";
-import { Spotlight, waitForAnchor } from "#renderer/components/spotlight";
-import type { Box } from "#renderer/components/spotlight/geometry";
 import { useDb } from "#renderer/data/db";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
-import { Badge } from "#renderer/ui/badge";
-import { Button } from "#renderer/ui/button";
+import { showError } from "#renderer/lib/toast";
 
+import { TourCard } from "./card";
 import { completeTour } from "./completion";
 import { TOUR_STOPS } from "./stops";
 import { startTour, tourStore, useTourState } from "./store";
-/** @public Phase-5 sign-out integration. */
-export { tourSignedOut } from "./store";
-export { startTour, useTourState } from "./store";
+export { tourSignedOut, startTour, useTourState } from "./store";
 export const TourHost = () => {
-  const router = useRouter();
-  const { transport } = router.options.context;
+  const { transport } = useRouter().options.context;
   const db = useDb();
-  const { t } = useTranslation();
-  const navigate = useAppNavigate();
   const active = useTourState();
-  const [rect, setRect] = useState<Box | null>(null);
-  const [busy, setBusy] = useState(false);
-  const status = useQuery({
-    ...transport.orpc.notch.status.queryOptions({ input: {} }),
-    enabled: IS_ELECTRON && active !== null,
-  });
-  const stops = TOUR_STOPS.filter(
-    (stop) => stop.id !== "notch" || status.data?.available
-  );
-  const stop = active
-    ? stops[Math.min(active.stopIndex, stops.length - 1)]
-    : null;
-  const end = (result: "done" | "skipped") =>
-    completeTour(result, {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const [closed, setClosed] = useState<number | null>(null);
+  const ending = useRef<number | null>(null);
+  const stop = active ? TOUR_STOPS[active.stopIndex] : null;
+  useEffect(() => {
+    const element =
+      stop && closed !== active?.runId
+        ? document.querySelector<HTMLElement>(
+            `[data-tour-target="${stop.target}"]`
+          )
+        : null;
+    const frame = requestAnimationFrame(() => setTarget(element));
+    element?.setAttribute("data-tour-active", "");
+    return () => {
+      cancelAnimationFrame(frame);
+      element?.removeAttribute("data-tour-active");
+    };
+  }, [stop, closed, active?.runId]);
+  if (!active || !stop || closed === active.runId) return null;
+  const end = (result: "done" | "skipped") => {
+    if (ending.current === active.runId) return;
+    ending.current = active.runId;
+    setClosed(active.runId);
+    void completeTour(result, {
       persist: (status) => db.updatePrefs({ tour: { status, at: Date.now() } }),
       telemetry: (status) =>
         transport.client.system.funnelStep({
           step: status === "done" ? "tour_done" : "tour_skipped",
         }),
-      navigate: (href) => navigate({ href }),
+      navigate: async () => {},
+    }).catch((error: unknown) => {
+      ending.current = null;
+      setClosed(null);
+      showError(error instanceof Error ? error.message : String(error));
     });
-  const dismiss = () => {
-    void end("skipped");
   };
-  useEffect(() => {
-    if (!stop) return;
-    const abort = new AbortController();
-    let observer: ResizeObserver | null = null;
-    const measure = (element: HTMLElement | null) => {
-      const r = element?.isConnected ? element.getBoundingClientRect() : null;
-      setRect(
-        r && r.width && r.height
-          ? { x: r.x, y: r.y, width: r.width, height: r.height }
-          : null
-      );
-    };
-    let element: HTMLElement | null = null;
-    const refresh = () => measure(element);
-    const prepare = async () => {
-      setBusy(true);
-      setRect(null);
-      try {
-        if (stop.to) await navigate({ to: stop.to });
-        if (stop.id === "talk") {
-          const bot = db.collections.bots.toArray.at(-1);
-          if (bot)
-            await navigate({ to: "/bots/$botId", params: { botId: bot.id } });
-          else await navigate({ to: "/sessions/new" });
-        }
-        if (stop.id === "changes" || stop.id === "preview-terminal") {
-          const session = db.collections.sessions.toArray.find(
-            (s) => s.owner == null && s.routineId == null
-          );
-          if (session)
-            await navigate({
-              to: "/sessions/$sessionId",
-              params: { sessionId: session.id },
-              search: { tab: stop.id === "changes" ? "changes" : "files" },
-            });
-        }
-        if (abort.signal.aborted) return;
-        if (IS_ELECTRON && stop.id === "notch")
-          await transport.client.notch.preview({});
-        element = stop.anchor
-          ? await waitForAnchor(stop.anchor, 2000, abort.signal)
-          : null;
-        if (abort.signal.aborted) return;
-        if (
-          stop.anchor &&
-          (!element ||
-            element.getBoundingClientRect().right <= 0 ||
-            element.getBoundingClientRect().left >= window.innerWidth)
-        ) {
+  return target ? (
+    <TourCard
+      anchor={target}
+      stop={stop}
+      index={active.stopIndex}
+      onDismiss={() => end("skipped")}
+      onNext={() => {
+        if (active.stopIndex === TOUR_STOPS.length - 1) end("done");
+        else
           tourStore.setState((state) => ({
             active: state.active
-              ? {
-                  ...state.active,
-                  stopIndex: Math.min(
-                    state.active.stopIndex + 1,
-                    stops.length - 1
-                  ),
-                }
+              ? { ...state.active, stopIndex: state.active.stopIndex + 1 }
               : null,
           }));
-          setBusy(false);
-          return;
-        }
-        element?.scrollIntoView?.({ block: "nearest" });
-        measure(element);
-        observer = new ResizeObserver(refresh);
-        if (element) observer.observe(element);
-        window.addEventListener("resize", refresh);
-        window.addEventListener("scroll", refresh, true);
-      } catch (error) {
-        if (!abort.signal.aborted) setBusy(false);
-        throw error;
-      }
-      if (!abort.signal.aborted) setBusy(false);
-    };
-    void prepare().catch(() => {
-      if (!abort.signal.aborted) setBusy(false);
-    });
-    return () => {
-      abort.abort();
-      observer?.disconnect();
-      window.removeEventListener("resize", refresh);
-      window.removeEventListener("scroll", refresh, true);
-    };
-  }, [stop, db, transport, navigate, stops.length]);
-  if (!active || !stop) return null;
-  const move = (delta: number) =>
-    tourStore.setState((state) => ({
-      active: state.active
-        ? {
-            ...state.active,
-            stopIndex: Math.max(0, state.active.stopIndex + delta),
-          }
-        : null,
-    }));
-  return (
-    <Spotlight
-      rect={rect}
-      onDismiss={dismiss}
-      busy={busy}
-      titleId="tour-title"
-      bodyId="tour-body"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <h2 data-tour-stop={stop.id} id="tour-title" className="font-semibold">
-          {t(`tour.stops.${stop.id}.title`)}
-        </h2>
-        <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
-          {t("tour.progress", {
-            current: active.stopIndex + 1,
-            total: stops.length,
-          })}
-        </span>
-      </div>
-      <p id="tour-body" className="my-4 text-sm">
-        {t(`tour.stops.${stop.id}.body`, { n: stops.length })}
-      </p>
-      {stop.optional && <Badge variant="secondary">{t("tour.optional")}</Badge>}
-      <div className="mt-4 flex gap-2">
-        <Button variant="ghost" disabled={busy} onClick={dismiss}>
-          {t("tour.skip")}
-        </Button>
-        <div className="flex-1" />
-        {active.stopIndex > 0 && (
-          <Button variant="secondary" disabled={busy} onClick={() => move(-1)}>
-            {t("common.back")}
-          </Button>
-        )}
-        <Button
-          aria-busy={busy}
-          className="aria-busy:opacity-100"
-          data-tour-next
-          disabled={busy}
-          onClick={() =>
-            active.stopIndex === stops.length - 1 ? void end("done") : move(1)
-          }
-        >
-          {busy && <Spinner />}
-          {t(
-            active.stopIndex === stops.length - 1 ? "tour.finish" : "tour.next"
-          )}
-        </Button>
-      </div>
-    </Spotlight>
-  );
+      }}
+    />
+  ) : null;
 };
 
 /** @public Settings/command-menu replay, available only after account completion. */

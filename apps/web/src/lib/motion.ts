@@ -133,11 +133,6 @@ export const onboarding = {
   shellScaleFrom: 0.98,
 } as const;
 /** @public Canvas motion tokens and their CSS mirrors. */
-export const spotlight = {
-  mask: { type: "spring", mass: 1, stiffness: 80, damping: 14 },
-  cardLag: 40,
-} as const;
-/** @public Canvas motion tokens and their CSS mirrors. */
 export const hatch = {
   wobbleCycles: 3,
   wobbleMs: 220,

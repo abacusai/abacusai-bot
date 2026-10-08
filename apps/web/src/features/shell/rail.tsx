@@ -69,6 +69,7 @@ const RailLink = ({
   title?: string;
   "data-area"?: string;
   "data-tour"?: string;
+  "data-tour-target"?: string;
 }) => {
   const navigate = useAppNavigate();
   return (
@@ -164,6 +165,7 @@ const RailItem = ({
       aria-current={active ? "page" : undefined}
       aria-label={iconsOnly ? label : undefined}
       data-area={area}
+      data-tour-target={area}
       data-tour={
         area === "artifacts"
           ? "rail-artifacts"

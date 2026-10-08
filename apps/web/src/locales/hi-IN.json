@@ -1322,7 +1322,6 @@
     "connectorsSubtitle": "Chat where you work",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "और भी बहुत…",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1353,7 +1352,9 @@
     "pages.models.localAccent": "मॉडल चलाएँ",
     "pages.models.localDetails": "{{model}}, {{size}}, बिना खाते के",
     "pages.models.downloading": "डाउनलोड हो रहा है",
-    "pages.models.download": "डाउनलोड करें"
+    "pages.models.download": "डाउनलोड करें",
+    "soundOn": "ध्वनि चालू",
+    "soundOff": "ध्वनि बंद"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1932,119 +1933,24 @@
   "tour": {
     "finish": "शुरू करें",
     "next": "आगे",
-    "optional": "Optional",
     "progress": "चरण {{current}} / {{total}}",
     "replay": "टूर देखें",
-    "skip": "टूर छोड़ें",
     "stops": {
-      "rail": {
-        "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
-        "title": "बॉट"
+      "sessions": {
+        "title": "सत्र",
+        "body": "यहाँ कोई काम शुरू करें।"
       },
-      "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Who do you need?"
-      },
-      "workspaces": {
-        "body": "हर खुला हुआ फ़ोल्डर और उसके अंदर की हर बातचीत। यहीं से वर्कस्पेस बदलिए या पिछले हफ़्ते का कोई सेशन दोबारा खोलिए।",
-        "title": "सत्र"
-      },
-      "start-session": {
-        "body": "मौजूदा वर्कस्पेस में एक खाली कम्पोज़र खोलता है। हर काम के लिए अलग सेशन रखने से संदर्भ उसी काम तक सीमित रहता है।",
-        "title": "नया सत्र"
-      },
-      "connectors": {
-        "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।",
-        "title": "कनेक्टर"
-      },
-      "changes": {
-        "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।",
-        "title": "Changes"
-      },
-      "preview-terminal": {
-        "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।",
-        "title": "Terminal"
-      },
-      "memory": {
-        "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।",
-        "title": "Memory"
-      },
-      "artifacts": {
-        "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।",
-        "title": "आर्टिफ़ैक्ट"
-      },
-      "welcome": {
-        "body": "विंडो का छोटा परिचय। {{n}} पड़ाव; आप कभी भी बाहर निकल सकते हैं।",
-        "title": "Welcome to AbacusAI Bot"
-      },
-      "talk": {
-        "body": "यहाँ अपने बॉट को काम दें। वह सवाल पूछ सकता है और अपना काम दिखा सकता है।",
-        "title": "What should we build?"
-      },
-      "notch": {
-        "body": "जवाब और मंज़ूरी के अनुरोध आपके कार्यक्षेत्र के ऊपर दिख सकते हैं। पूरी बातचीत के लिए ऐप खोलें।",
-        "title": "साथी"
-      }
-    },
-    "steps": {
-      "artifacts": {
-        "title": "आर्टिफ़ैक्ट",
-        "body": "सेशन में बनी फ़ाइलें (दस्तावेज़, इमेज, रिपोर्ट) बातचीत में बिखरी रहने के बजाय एक जगह इकट्ठी।"
-      },
-      "bots": {
-        "body": "अपने निर्देशों, शेड्यूल और चैट वाले स्थायी एजेंट। जो काम आप बार-बार सौंपते हैं, उसके लिए एक बनाएँ।",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
-        "title": "आपके बॉट"
-      },
-      "capabilities": {
-        "title": "क्षमताएँ",
-        "body": "एजेंट जिन तक पहुँच सकता है वह सब: कनेक्टर, स्किल, टूल और MCP सर्वर। यहाँ जो चालू करेंगे, अगला सेशन उसका उपयोग करेगा।"
-      },
-      "changes": {
-        "title": "बदलाव",
-        "body": "एजेंट का हर एडिट, एक diff की तरह, कहीं जाने से पहले आप पढ़ सकते हैं। बग़ल के टैब में आपकी फ़ाइलें और चल रहे सब-एजेंट हैं।"
+      "settings": {
+        "title": "सेटिंग्स",
+        "body": "रूप, मॉडल और अपनी प्राथमिकताएँ चुनें।"
       },
       "connectors": {
         "title": "कनेक्टर",
-        "body": "जिन टूल्स में आप पहले से काम करते हैं उन्हें जोड़िए। मुफ़्त Abacus.AI अकाउंट एक क्लिक में पूरा सेट जोड़ देता है।"
+        "body": "लाइब्रेरी में अपने टूल जोड़ें।"
       },
-      "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "memory": {
-        "title": "मेमोरी",
-        "body": "एजेंट सेशनों के बीच क्या याद रखता है और किन स्थायी निर्देशों पर चलता है। पढ़िए, बदलिए, और जो पुराना पड़ गया उसे हटाइए।"
-      },
-      "messaging": {
-        "title": "मैसेजिंग",
-        "body": "फ़ोन से एजेंट तक पहुँचिए। कोई चैट ऐप जोड़िए और तय कीजिए कि उसे काम कौन भेज सकता है।"
-      },
-      "newSession": {
-        "title": "नया सेशन",
-        "body": "मौजूदा वर्कस्पेस में एक खाली कम्पोज़र खोलता है। हर काम के लिए अलग सेशन रखने से संदर्भ उसी काम तक सीमित रहता है।"
-      },
-      "preview": {
-        "title": "प्रीव्यू",
-        "body": "चैट के बग़ल में ब्राउज़र और फ़ाइल व्यूअर। एजेंट ने अभी जो बनाया, वह यहीं खुलता है। ऐप छोड़े बिना देख लीजिए।"
-      },
-      "sidebar": {
-        "title": "आपके वर्कस्पेस",
-        "body": "हर खुला हुआ फ़ोल्डर और उसके अंदर की हर बातचीत। यहीं से वर्कस्पेस बदलिए या पिछले हफ़्ते का कोई सेशन दोबारा खोलिए।"
-      },
-      "terminal": {
-        "title": "टर्मिनल",
-        "body": "आपके वर्कस्पेस में असली शेल, उसी फ़ोल्डर में जिसमें एजेंट काम करता है। टाइटल बार का टर्मिनल बटन इसे दिखाता और छिपाता है।",
-        "audience": "For developers & technical users"
-      },
-      "usage": {
-        "title": "उपयोग",
-        "body": "मॉडल और सेशन के हिसाब से टोकन और ख़र्च, ताकि किसी रन की लागत बाद में चौंकाए नहीं।"
-      },
-      "welcome": {
-        "title": "AbacusAI Bot में आपका स्वागत है",
-        "body": "विंडो का एक छोटा चक्कर: हर पैनल क्या है और किस काम आता है। पंद्रह छोटे पड़ाव, और आप किसी भी पड़ाव पर बाहर निकल सकते हैं।"
+      "bots": {
+        "title": "बॉट",
+        "body": "बार-बार किए जाने वाले काम के लिए बॉट बनाएँ।"
       }
     }
   },

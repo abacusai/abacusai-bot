@@ -17,10 +17,10 @@ export const StepButton = ({
   variant?: "primary" | "secondary" | "small";
 }) => (
   <Button
-    size="lg"
+    size={variant === "small" ? "default" : "lg"}
     variant={variant === "primary" ? "default" : "secondary"}
     data-variant={variant}
-    className={cn("onboarding-button", className)}
+    className={cn("max-[800px]:min-h-11", className)}
     {...props}
   />
 );
@@ -30,9 +30,9 @@ export const StepLink = ({
   ...props
 }: Omit<ComponentProps<typeof Button>, "variant" | "size">) => (
   <Button
-    size="lg"
+    size="sm"
     variant="ghost"
-    className={cn("onboarding-link", className)}
+    className={cn("text-muted-foreground", className)}
     {...props}
   />
 );

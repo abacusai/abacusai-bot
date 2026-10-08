@@ -30,7 +30,11 @@ export interface SoundContext {
   onUnlocked?(): void;
 }
 
+export type InteractionCue = "pop" | "step" | "celebrate";
+
 export interface SoundPlayer {
+  interaction(cue: InteractionCue): void;
+  muteInteractions(): void;
   play(
     cue: Cue,
     options?: { threadId?: string; botId?: string | null; dedupeKey?: string }
@@ -52,6 +56,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
   let lastPlayedAt = Number.NEGATIVE_INFINITY;
   let audio: unknown = null;
   let disposed = false;
+  const playing = new Set<() => void>();
   const shared =
     ctx.createAudioContext === undefined && ctx.synth === undefined;
 
@@ -62,6 +67,36 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
     });
 
   return {
+    interaction(cue) {
+      const prefs = ctx.prefs();
+      if (
+        disposed ||
+        !this.unlocked() ||
+        !ctx.isWindowFocused() ||
+        !prefs.enabled ||
+        !allowed("sent", {
+          botId: null,
+          now: ctx.date?.() ?? new Date(ctx.now()),
+          sounds: prefs,
+        })
+      )
+        return;
+      const now = ctx.now();
+      if (now - lastPlayedAt < COALESCE_MS) return;
+      lastPlayedAt = now;
+      if (ctx.synth) {
+        ctx.synth(cue === "pop" ? "sent" : "done");
+        return;
+      }
+      this.muteInteractions();
+      playing.add(
+        synthTones(audio as AudioContextLike, INTERACTION_TONES[cue])
+      );
+    },
+    muteInteractions() {
+      for (const stop of playing) stop();
+      playing.clear();
+    },
     play(cue, options = {}) {
       if (disposed || (cue === "sent" && !ctx.isWindowFocused())) return;
       const prefs = ctx.prefs();
@@ -142,6 +177,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
     },
     dispose() {
       if (disposed) return;
+      this.muteInteractions();
       disposed = true;
       if (shared && audio) {
         audioUsers--;
@@ -200,13 +236,26 @@ export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
   ],
 };
 
-/** Schedules one cue's tones: sine by default, exponential release. */
-export const synthCue = (
+const INTERACTION_TONES: Record<InteractionCue, readonly Tone[]> = {
+  pop: [{ at: 0, duration: 0.06, from: 520, to: 780, gain: 0.018 }],
+  step: [
+    { at: 0, duration: 0.09, from: 660, gain: 0.018 },
+    { at: 0.1, duration: 0.09, from: 880, gain: 0.015 },
+  ],
+  celebrate: [523, 659, 784].map((from, index) => ({
+    at: index * 0.08,
+    duration: 0.12,
+    from,
+    gain: 0.015,
+  })),
+};
+const synthTones = (
   audio: AudioContextLike,
-  cue: Cue,
-  start: number = audio.currentTime
-): void => {
-  for (const tone of CUE_TONES[cue]) {
+  tones: readonly Tone[],
+  start = audio.currentTime
+): (() => void) => {
+  const nodes: Array<{ oscillator: OscillatorNode; envelope: GainNode }> = [];
+  for (const tone of tones) {
     const t0 = start + tone.at;
     const t1 = t0 + tone.duration;
     const oscillator = audio.createOscillator();
@@ -222,7 +271,21 @@ export const synthCue = (
     envelope.connect(audio.destination);
     oscillator.start(t0);
     oscillator.stop(t1 + 0.02);
+    nodes.push({ oscillator, envelope });
   }
+  return () => {
+    for (const { oscillator, envelope } of nodes) {
+      envelope.disconnect();
+      oscillator.stop();
+    }
+  };
+};
+export const synthCue = (
+  audio: AudioContextLike,
+  cue: Cue,
+  start = audio.currentTime
+): void => {
+  synthTones(audio, CUE_TONES[cue], start);
 };
 
 /** Settings preview is local and never claims an attention cue. */

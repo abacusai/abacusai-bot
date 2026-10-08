@@ -18,6 +18,7 @@ import {
   type AvatarMood,
   type Look,
 } from "#renderer/lib/bots/avatar";
+import { i18n } from "#renderer/lib/i18n";
 import { durations, easings, useMotionPreference } from "#renderer/lib/motion";
 
 export type BootStage =
@@ -44,6 +45,9 @@ export const bootMood = (stage: BootStage): AvatarMood =>
       open: "happy",
     }) as const
   )[stage];
+const PRODUCT_NAME = "AbacusAI Bot";
+const appName = () =>
+  i18n.isInitialized ? i18n.t("shell.appName") : PRODUCT_NAME;
 const LOOK = defaultLook("AbacusAI Bot");
 interface Home {
   element: HTMLElement;
@@ -71,7 +75,15 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
       const to = home.element.getBoundingClientRect();
       const from = element.getBoundingClientRect();
       element.style.transform = `translate(${to.x}px, ${to.y}px) scale(${to.width / 96})`;
-      if (previous.current && !home.reduced && from.width) {
+      if (
+        previous.current &&
+        !home.reduced &&
+        from.width &&
+        Math.abs(from.x - to.x) +
+          Math.abs(from.y - to.y) +
+          Math.abs(from.width - to.width) >
+          1
+      ) {
         void animate(
           element,
           {
@@ -101,7 +113,8 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
           <div
             ref={live}
             data-slot="boot-avatar-live"
-            className="titlebar-nodrag fixed top-0 left-0 z-40 size-24 origin-top-left"
+            data-avatar-scene
+            className="titlebar-nodrag fixed top-0 left-0 z-[60] size-24 origin-top-left"
             onPointerDown={home.onPoke}
           >
             <BotAvatar
@@ -124,6 +137,8 @@ export const BootAvatar = ({
   look = LOOK,
   brand = true,
   onPoke,
+  locationKey,
+  reduce,
 }: {
   stage?: BootStage;
   mood?: AvatarMood;
@@ -131,10 +146,13 @@ export const BootAvatar = ({
   look?: Look;
   brand?: boolean;
   onPoke?: () => void;
+  locationKey?: string;
+  reduce?: boolean;
 }) => {
   const register = use(Homes);
   const element = useRef<HTMLSpanElement>(null);
-  const reduced = useMotionPreference() === "reduced";
+  const preference = useMotionPreference();
+  const reduced = reduce ?? preference === "reduced";
   const [wake, setWake] = useState(0);
   useEffect(() => {
     if (stage !== "waking" || reduced) return;
@@ -158,7 +176,7 @@ export const BootAvatar = ({
         reduced,
         onPoke,
       });
-  }, [register, pose, size, look, reduced, onPoke]);
+  }, [register, pose, size, look, reduced, onPoke, locationKey]);
   return (
     <div data-slot="boot-avatar" className="flex flex-col items-center gap-4">
       <span
@@ -173,7 +191,7 @@ export const BootAvatar = ({
       {brand && (
         <div className="text-foreground flex items-center gap-2 text-sm font-medium">
           <BotAppMark size={22} />
-          <span>AbacusAI Bot</span>
+          <span>{appName()}</span>
         </div>
       )}
     </div>
@@ -183,7 +201,7 @@ export const BootAvatar = ({
 export const BootScreen = () => (
   <div
     role="status"
-    aria-label="AbacusAI Bot"
+    aria-label={appName()}
     className="bg-background text-foreground flex h-dvh items-center justify-center"
   >
     <BootAvatar />

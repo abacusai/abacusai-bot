@@ -77,7 +77,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const attempt = useSelector(onboardingStore, (s) => s.signIn);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [more, setMore] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const bot = first.state === "ready" ? first.result.bot : null;
   const profiles = useQuery({
@@ -272,8 +271,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           ctx={ctx}
           statuses={statuses.data}
           refresh={() => statuses.refetch()}
-          more={more}
-          setMore={setMore}
           heading={heading}
         />
       )}

@@ -41,9 +41,7 @@
   height: 6px;
   border-radius: 3px;
   background: var(--border);
-  /* The pill stretches, never jumps (canvas). One 6 px box: layout cost is nil. */
   transition:
-    width 300ms var(--ease-standard),
     background-color 300ms var(--ease-standard);
 }
 .onboarding-progress span[data-current="true"] {
@@ -65,72 +63,18 @@
   text-align: center;
 }
 
-/* ── Stage: the avatars shared across steps ───────────────────────────── */
 .onboarding-stage {
   position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 18px;
-  min-height: var(--stage-h, 120px);
-  margin-bottom: 24px;
-  view-transition-name: onboarding-stage;
-}
-.onboarding-stage[data-empty] {
-  display: none;
+  width: min(100%, 400px);
+  margin-bottom: 16px;
 }
 .onboarding-stage-avatar {
-  position: relative;
-}
-.onboarding-glow {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in oklch, var(--ob-glow, var(--primary)) 25%, transparent),
-    transparent 70%
-  );
-  animation: onboarding-pulse 2s ease-in-out infinite;
-  pointer-events: none;
+  top: 44px;
+  left: calc(50% - 44px);
+  transform-origin: center;
+  touch-action: manipulation;
 }
-.onboarding-badge {
-  position: absolute;
-  right: -6px;
-  bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #4ade80;
-  color: #052e16;
-  box-shadow: 0 0 0 3px var(--background);
-}
-/* The stage morphs live (motion layout): the router's step transition
-   must not cross-fade a stale snapshot of it over the moving avatars. */
-html:active-view-transition-type(onboarding-step)::view-transition-group(
-    onboarding-stage
-  ) {
-  animation-duration: 0s;
-}
-html:active-view-transition-type(onboarding-step)::view-transition-old(
-    onboarding-stage
-  ) {
-  animation: none;
-  opacity: 0;
-}
-html:active-view-transition-type(onboarding-step)::view-transition-new(
-    onboarding-stage
-  ) {
-  animation: none;
-}
-
 /* ── Confetti: seven 8 × 12 pieces, one 2.4 s run, then gone ─────────── */
 .onboarding-confetti {
   position: absolute;
@@ -157,22 +101,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   flex-shrink: 0;
 }
 .onboarding-step > * {
-  animation: onboarding-rise 320ms var(--ease-standard) both;
-}
-.onboarding-step > :nth-child(2) {
-  animation-delay: 60ms;
-}
-.onboarding-step > :nth-child(3) {
-  animation-delay: 120ms;
-}
-.onboarding-step > :nth-child(4) {
-  animation-delay: 180ms;
-}
-.onboarding-step > :nth-child(5) {
-  animation-delay: 240ms;
-}
-.onboarding-step > :nth-child(n + 6) {
-  animation-delay: 300ms;
+  animation: onboarding-fade 120ms linear both;
 }
 
 .onboarding-title {
@@ -282,38 +211,6 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   background: var(--ob-success);
 }
 
-/* 44 px, radius 12 (canvas); the registry button is 32 px by default. */
-.onboarding-button {
-  height: 44px;
-  padding: 0 22px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  transition:
-    transform 160ms var(--ease-standard),
-    background-color 160ms var(--ease-standard);
-}
-.onboarding-button[data-variant="secondary"] {
-  padding: 0 18px;
-  font-weight: 400;
-}
-.onboarding-button[data-variant="small"] {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-.onboarding-button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-.onboarding-link {
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-}
 .onboarding-links {
   display: flex;
   flex-wrap: wrap;
@@ -395,7 +292,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   }
   .onboarding-stage {
     margin-bottom: 16px;
-    zoom: 0.75;
+
   }
   .onboarding-title[data-size="hero"] {
     font-size: 34px;

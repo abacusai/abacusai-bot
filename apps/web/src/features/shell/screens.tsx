@@ -5,6 +5,7 @@
 import { Outlet } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
+import { BootAvatar } from "#renderer/components/boot-avatar";
 import { EmptyState } from "#renderer/components/empty-state";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { Button } from "#renderer/ui/button";
@@ -50,6 +51,9 @@ export const BootFailure = ({
     className="bg-background text-foreground flex h-dvh flex-col items-center justify-center"
   >
     <WindowDragRegion />
+    <div className="mb-6">
+      <BootAvatar stage="error" />
+    </div>
     <EmptyState
       title={title}
       description={description}

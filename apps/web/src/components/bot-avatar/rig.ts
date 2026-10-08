@@ -14,6 +14,7 @@ import {
   observeAvatar,
   subscribeActivity,
   subscribeClock,
+  subscribePointer,
 } from "./clock";
 import {
   expressionFor,
@@ -205,6 +206,31 @@ export const useFaceRig = (
     individual,
     coupled,
   ]);
+  useEffect(() => {
+    if (
+      !active ||
+      !documentVisible ||
+      !interactive ||
+      !ref.current?.closest("[data-avatar-scene]") ||
+      !matchMedia("(hover: hover) and (pointer: fine)").matches
+    )
+      return;
+    return subscribePointer((position) => {
+      const bounds = ref.current?.getBoundingClientRect();
+      if (!bounds) return;
+      pointer.current = {
+        x: Math.max(
+          -3,
+          Math.min(3, (position.x - bounds.x - bounds.width / 2) / 70)
+        ),
+        y: Math.max(
+          -2,
+          Math.min(2, (position.y - bounds.y - bounds.height / 2) / 70)
+        ),
+      };
+      setInteraction(true);
+    });
+  }, [active, documentVisible, interactive, ref]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));

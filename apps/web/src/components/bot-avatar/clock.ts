@@ -127,3 +127,57 @@ export const claimAnimation = (
     reconcile();
   };
 };
+
+export interface AvatarPointer {
+  x: number;
+  y: number;
+  speed: number;
+  at: number;
+}
+const pointers = new Set<(pointer: AvatarPointer) => void>();
+let pointerFrame = 0;
+let latestPointer: PointerEvent | null = null;
+let previousPointer: AvatarPointer | null = null;
+const movePointer = (event: PointerEvent) => {
+  if (event.pointerType !== "mouse") return;
+  latestPointer = event;
+  if (pointerFrame) return;
+  pointerFrame = requestAnimationFrame(() => {
+    pointerFrame = 0;
+    if (!latestPointer || document.hidden) return;
+    const at = performance.now();
+    const pointer = {
+      x: latestPointer.clientX,
+      y: latestPointer.clientY,
+      at,
+      speed: previousPointer
+        ? Math.min(
+            2,
+            Math.hypot(
+              latestPointer.clientX - previousPointer.x,
+              latestPointer.clientY - previousPointer.y
+            ) / Math.max(16, at - previousPointer.at)
+          )
+        : 0,
+    };
+    previousPointer = pointer;
+    for (const notify of pointers) notify(pointer);
+  });
+};
+export const subscribePointer = (
+  notify: (pointer: AvatarPointer) => void
+): (() => void) => {
+  if (!pointers.size)
+    document.addEventListener("pointermove", movePointer, { passive: true });
+  pointers.add(notify);
+  return () => {
+    pointers.delete(notify);
+    if (!pointers.size) {
+      document.removeEventListener("pointermove", movePointer);
+      cancelAnimationFrame(pointerFrame);
+      pointerFrame = 0;
+      latestPointer = null;
+      previousPointer = null;
+    }
+  };
+};

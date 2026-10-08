@@ -1,19 +1,16 @@
-/**
- * The frame (spec 06 §7.1, canvas page 11): the full-window wash, the
- * progress pill in the title bar's drag strip (five marks; `connect` and
- * `connected` share mark 2, `first-bot` and `done` mark 5), the avatar stage
- * and the centred column. It is the `/onboarding` layout's component, so it
- * (and the stage's avatars) stay mounted while the step routes swap
- * underneath.
- */
 import { useSelector } from "@tanstack/react-store";
-import type { ReactNode } from "react";
+import { Volume2, VolumeX } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { BotAppMark } from "#renderer/components/app-icon";
+import { useOptionalDb } from "#renderer/data/db";
 import { useMotionPreference } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+import { Button } from "#renderer/ui/button";
 
 import { firstBotStore, type FirstBotResult } from "./first-bot";
+import { useOnboardingSound } from "./sound";
 import { OnboardingStage, type FirstBotPhase } from "./stage";
 
 export const PROGRESS_MARK: Record<OnboardingStepId, number> = {
@@ -57,6 +54,15 @@ export const OnboardingFrame = ({
   previewBot?: FirstBotResult;
   children: ReactNode;
 }) => {
+  const { t } = useTranslation();
+  const sound = useOnboardingSound();
+  const previousStep = useRef(step);
+  const db = useOptionalDb();
+  useEffect(() => {
+    if (previousStep.current !== step)
+      sound.play(step === "done" ? "celebrate" : "step");
+    previousStep.current = step;
+  }, [step, sound]);
   const reduce = useMotionPreference() === "reduced";
   const live = useSelector(firstBotStore, (s) => s);
   const first = previewBot
@@ -72,9 +78,34 @@ export const OnboardingFrame = ({
   return (
     <div className="onboarding-frame" data-reduced-motion={reduce}>
       <OnboardingProgress step={step} />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="titlebar-nodrag absolute top-12 right-4 z-30"
+        aria-label={t(
+          sound.enabled ? "onboarding.soundOn" : "onboarding.soundOff"
+        )}
+        aria-pressed={sound.enabled}
+        onClick={sound.toggle}
+      >
+        {sound.enabled ? <Volume2 /> : <VolumeX />}
+      </Button>
       <div id="onboarding-consent" className="shrink-0 px-6" />
       <div className="onboarding-column">
-        <OnboardingStage step={step} bot={bot} phase={phase} reduced={reduce} />
+        <OnboardingStage
+          step={step}
+          bot={bot}
+          phase={phase}
+          reduced={reduce}
+          cast={db?.collections.bots.toArray
+            .filter((item) => item.channel == null && item.id !== bot?.id)
+            .slice(0, 3)}
+          onPoke={() => sound.play("pop")}
+        />
+        <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
+          <BotAppMark size={20} />
+          {t("shell.appName")}
+        </div>
         {children}
       </div>
     </div>

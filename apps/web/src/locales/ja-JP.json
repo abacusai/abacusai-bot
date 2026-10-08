@@ -1322,7 +1322,6 @@
     "connectorsSubtitle": "Chat where you work",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "ほかにも多数…",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1353,7 +1352,9 @@
     "pages.models.localAccent": "モデルを実行",
     "pages.models.localDetails": "{{model}}、{{size}}、アカウント不要",
     "pages.models.downloading": "ダウンロード中",
-    "pages.models.download": "ダウンロード"
+    "pages.models.download": "ダウンロード",
+    "soundOn": "サウンドオン",
+    "soundOff": "サウンドオフ"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1932,119 +1933,24 @@
   "tour": {
     "finish": "はじめる",
     "next": "次へ",
-    "optional": "Optional",
     "progress": "ステップ {{current}} / {{total}}",
     "replay": "ツアーを見る",
-    "skip": "ツアーをスキップ",
     "stops": {
-      "rail": {
-        "body": "独自の指示・スケジュール・チャットを持つ常駐エージェントです。繰り返し任せる仕事にはボットを作りましょう。",
-        "title": "ボット"
+      "sessions": {
+        "title": "セッション",
+        "body": "ここでタスクを始めましょう。"
       },
-      "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Who do you need?"
-      },
-      "workspaces": {
-        "body": "開いたことのあるフォルダーと、その中のすべての会話です。ここでワークスペースを切り替えたり、先週のセッションを開き直したりできます。",
-        "title": "セッション"
-      },
-      "start-session": {
-        "body": "現在のワークスペースに空の入力欄を開きます。作業ごとにセッションを分ければ、文脈はその作業のものだけで済みます。",
-        "title": "新規セッション"
+      "settings": {
+        "title": "設定",
+        "body": "外観、モデル、環境設定を選びます。"
       },
       "connectors": {
-        "body": "普段使っているツールを接続します。無料の Abacus.AI アカウントなら、ワンクリックでまとめて接続できます。",
-        "title": "コネクタ"
-      },
-      "changes": {
-        "body": "エージェントの編集はすべて差分として表示され、どこかへ渡る前に確認できます。隣のタブにはファイルと実行中のサブエージェントがあります。",
-        "title": "Changes"
-      },
-      "preview-terminal": {
-        "body": "ワークスペース内の本物のシェルで、エージェントと同じフォルダーを使います。タイトルバーのターミナルボタンで表示と非表示を切り替えます。",
-        "title": "Terminal"
-      },
-      "memory": {
-        "body": "セッションをまたいで引き継がれる内容と、常に従う指示です。読み、編集し、古くなったものは削除できます。",
-        "title": "Memory"
-      },
-      "artifacts": {
-        "body": "セッションが作ったファイル（文書、画像、レポート）が、履歴に散らばらず一か所にまとまります。",
-        "title": "成果物"
-      },
-      "welcome": {
-        "body": "ウィンドウを簡単にご案内します。{{n}} か所を巡ります。いつでも終了できます。",
-        "title": "Welcome to AbacusAI Bot"
-      },
-      "talk": {
-        "body": "ここでボットに仕事を頼めます。ボットは質問したり、作業内容を見せたりできます。",
-        "title": "What should we build?"
-      },
-      "notch": {
-        "body": "返信や承認依頼がワークスペースの上に表示されます。会話全体を見るにはアプリを開いてください。",
-        "title": "コンパニオン"
-      }
-    },
-    "steps": {
-      "artifacts": {
-        "title": "成果物",
-        "body": "セッションが作ったファイル（文書、画像、レポート）が、履歴に散らばらず一か所にまとまります。"
+        "title": "コネクター",
+        "body": "ライブラリでツールを接続します。"
       },
       "bots": {
-        "body": "独自の指示・スケジュール・チャットを持つ常駐エージェントです。繰り返し任せる仕事にはボットを作りましょう。",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
-        "title": "あなたのボット"
-      },
-      "capabilities": {
-        "title": "機能",
-        "body": "エージェントが使えるもの一式です。コネクタ、スキル、ツール、MCP サーバー。ここで有効にしたものは次のセッションから使えます。"
-      },
-      "changes": {
-        "title": "変更",
-        "body": "エージェントの編集はすべて差分として表示され、どこかへ渡る前に確認できます。隣のタブにはファイルと実行中のサブエージェントがあります。"
-      },
-      "connectors": {
-        "title": "コネクタ",
-        "body": "普段使っているツールを接続します。無料の Abacus.AI アカウントなら、ワンクリックでまとめて接続できます。"
-      },
-      "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "memory": {
-        "title": "メモリ",
-        "body": "セッションをまたいで引き継がれる内容と、常に従う指示です。読み、編集し、古くなったものは削除できます。"
-      },
-      "messaging": {
-        "title": "メッセージ",
-        "body": "スマートフォンからエージェントに連絡できます。チャットアプリを連携し、誰が依頼できるかを決めてください。"
-      },
-      "newSession": {
-        "title": "セッションを始める",
-        "body": "現在のワークスペースに空の入力欄を開きます。作業ごとにセッションを分ければ、文脈はその作業のものだけで済みます。"
-      },
-      "preview": {
-        "title": "プレビュー",
-        "body": "チャットの隣のブラウザーとファイルビューアー。作ったものはここで開かれるので、アプリを離れずに確認できます。"
-      },
-      "sidebar": {
-        "title": "ワークスペース",
-        "body": "開いたことのあるフォルダーと、その中のすべての会話です。ここでワークスペースを切り替えたり、先週のセッションを開き直したりできます。"
-      },
-      "terminal": {
-        "title": "ターミナル",
-        "body": "ワークスペース内の本物のシェルで、エージェントと同じフォルダーを使います。タイトルバーのターミナルボタンで表示と非表示を切り替えます。",
-        "audience": "For developers & technical users"
-      },
-      "usage": {
-        "title": "使用状況",
-        "body": "モデル別・セッション別のトークンと費用。実行にいくらかかったのか、後から驚くことがありません。"
-      },
-      "welcome": {
-        "title": "AbacusAI Bot へようこそ",
-        "body": "ウィンドウをひと回りします。どのパネルが何で、何のためにあるのか。短い15か所、どこででも抜けられます。"
+        "title": "ボット",
+        "body": "よく行う作業用のボットを作成します。"
       }
     }
   },

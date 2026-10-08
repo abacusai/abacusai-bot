@@ -12,17 +12,6 @@ import { ONBOARDING_STEPS } from "#renderer/lib/navigation/areas";
 
 import { OnboardingProgress, PROGRESS_MARK } from "./frame";
 
-const { readFileSync } = (
-  globalThis as unknown as {
-    process: {
-      getBuiltinModule(id: "node:fs"): {
-        readFileSync(path: string, encoding: "utf8"): string;
-      };
-    };
-  }
-).process.getBuiltinModule("node:fs");
-const css = readFileSync("src/features/onboarding/onboarding.css", "utf8");
-
 describe("OnboardingProgress", () => {
   it("maps the seven steps onto five marks; paired steps share one", () => {
     expect(ONBOARDING_STEPS.map((step) => PROGRESS_MARK[step])).toEqual([
@@ -54,45 +43,5 @@ describe("OnboardingProgress", () => {
       "false",
       "false",
     ]);
-  });
-});
-
-describe("onboarding.css", () => {
-  it("pins the pill to the title bar and animates its width", () => {
-    const rule = css.match(/\.onboarding-progress \{[^}]*\}/)![0];
-    expect(rule).toContain("position: fixed");
-    expect(rule).toContain("right: var(--titlebar-end)");
-    expect(rule).toContain("height: var(--toolbar-h)");
-    const mark = css.match(/\.onboarding-progress span \{[^}]*\}/)![0];
-    expect(mark).toMatch(/width 300ms var\(--ease-standard\)/);
-    expect(css).toMatch(
-      /\.onboarding-progress span\[data-current="true"\] \{[^}]*width: 20px/
-    );
-  });
-
-  it("uses the canvas type scale, 44 px buttons and the radial wash", () => {
-    expect(css).toMatch(/\.onboarding-title \{[^}]*font-size: 28px/);
-    expect(css).toMatch(
-      /\.onboarding-title\[data-size="hero"\] \{[^}]*font-size: 40px[^}]*line-height: 48px/
-    );
-    expect(css).toMatch(
-      /\.onboarding-title\[data-size="large"\] \{[^}]*font-size: 34px/
-    );
-    expect(css).toMatch(/\.onboarding-body \{[^}]*font-size: 14px/);
-    expect(css).toMatch(/\.onboarding-quiet \{[^}]*font-size: 13px/);
-    expect(css).toMatch(
-      /\.onboarding-button \{[^}]*height: 44px[^}]*border-radius: 12px/
-    );
-    expect(css).toMatch(/\.onboarding-link \{[^}]*height: 32px/);
-    expect(css).toMatch(/\.onboarding-frame \{[^}]*radial-gradient\(/);
-  });
-
-  it("turns rises into fades and stops the bob under reduced motion", () => {
-    expect(css).toMatch(
-      /\[data-reduced-motion="true"\] \.onboarding-step > \* \{[^}]*onboarding-fade/
-    );
-    expect(css).toMatch(
-      /\[data-reduced-motion="true"\] \.onboarding-glow \{[^}]*animation: none/
-    );
   });
 });
