@@ -433,32 +433,27 @@ const TEXT_ENTRY = new Set([
   "url",
 ]);
 
-/** Expiry wording in hint words ("expiry", "expMonth", "exp date", "valid thru"). */
-const EXPIRY_HINT =
-  /\bexp(?:iry|iration|ires)?(?:date|month|year|mm|yy|yyyy)?\b|\bvalid ?(?:thru|through)\b|\bccexp/;
-const MONTH_HINT = /month|\bmm\b/;
-const YEAR_HINT = /year|\byy(?:yy)?\b/;
-const CARDHOLDER_HINT =
-  /\bname on card\b|\bnameoncard\b|\bcard ?holder|\bholder ?name\b|\bccname\b/;
-
-/** Which expiry field the facts name, if any: the whole date, its month or its year. */
+/**
+ * Which expiry field the facts name, if any: the whole date, its month or
+ * its year. A cc-exp token says so; otherwise the card vocabulary must, with
+ * card context (or inside a payment provider's frame), and never wording
+ * that names another document or a day.
+ */
 const expiryKind = (
-  facts: FieldFacts
+  facts: FieldFacts,
+  inPaymentFrame: boolean
 ): "card_exp" | "card_exp_month" | "card_exp_year" | null => {
   const marked = (token: string): boolean => facts.autocomplete.includes(token);
   if (marked("cc-exp")) return "card_exp";
   if (marked("cc-exp-month")) return "card_exp_month";
   if (marked("cc-exp-year")) return "card_exp_year";
-  const hints = facts.hints.join(" ");
-  const month = MONTH_HINT.test(hints);
-  const year = YEAR_HINT.test(hints);
-  const expiry = EXPIRY_HINT.test(hints);
-  // "MM/YY" on its own names an expiry; with a day it is some other date.
-  if (/\bdd\b|\bday\b|birth|dob/.test(hints)) return null;
-  if (month && year) return expiry || /\bmm\b/.test(hints) ? "card_exp" : null;
-  if (!expiry) return null;
-  if (month) return "card_exp_month";
-  if (year) return "card_exp_year";
+  const wording = cardWording(facts);
+  if (wording.excluded || !(wording.context || inPaymentFrame)) return null;
+  // "MM/YY" alone, on a card form, names the expiry.
+  if (wording.month && wording.year) return "card_exp";
+  if (!wording.expiry) return null;
+  if (wording.month) return "card_exp_month";
+  if (wording.year) return "card_exp_year";
   return "card_exp";
 };
 
@@ -511,15 +506,25 @@ export const fieldKindAllowed = (
           ["text", "tel", "number", "password"].includes(facts.type))
       );
     case "card_exp":
-      return facts.tag === "input" && typed && expiryKind(facts) === field;
+      return (
+        facts.tag === "input" &&
+        typed &&
+        expiryKind(facts, inPaymentFrame) === field
+      );
     case "card_exp_month":
     case "card_exp_year":
-      return (facts.tag === "select" || typed) && expiryKind(facts) === field;
-    case "cardholder_name":
       return (
-        facts.type === "text" &&
-        (marked("cc-name") || CARDHOLDER_HINT.test(facts.hints.join(" ")))
+        (facts.tag === "select" || typed) &&
+        expiryKind(facts, inPaymentFrame) === field
       );
+    case "cardholder_name": {
+      if (facts.type !== "text") return false;
+      if (marked("cc-name")) return true;
+      const wording = cardWording(facts);
+      return (
+        wording.name && !wording.excluded && (wording.context || inPaymentFrame)
+      );
+    }
     case "code": {
       const numeric =
         facts.type === "number" ||
@@ -551,29 +556,41 @@ export interface CardExpiry {
 }
 
 /**
- * The text an expiry kind is typed as, shaped by the field: its maxlength
- * and whether its placeholder or name asks for a four-digit year. A single
- * field takes "MM/YY" unless it says otherwise ("MM/YYYY", "MMYY", "MM / YY").
+ * The text an expiry kind is typed as, shaped by the field; null when no
+ * usual form fits it. A single field takes the form whose length is its
+ * maxlength exactly, else the first that fits, preferring what its words
+ * ask for ("MM/YYYY", "YY"): MM/YY, MMYY, MM/YYYY, MMYYYY, then the spaced
+ * "MM / YY" and "MM / YYYY".
  */
 export const formatExpiry = (
   kind: "card_exp" | "card_exp_month" | "card_exp_year",
   expiry: CardExpiry,
   facts: FieldFacts
-): string => {
+): string | null => {
   const month = expiry.month.padStart(2, "0");
-  const hints = facts.hints.join(" ");
+  const yyyy = expiry.year;
+  const yy = expiry.year.slice(-2);
   const max = facts.maxLength;
-  if (kind === "card_exp_month") return month;
-  const fourDigit = /\byyyy\b/.test(hints);
-  if (kind === "card_exp_year")
-    return max === 2 || (/\byy\b/.test(hints) && !fourDigit)
-      ? expiry.year.slice(-2)
-      : expiry.year;
-  const full = fourDigit || max === 6 || (max === 7 && !/\byy\b/.test(hints));
-  const year = full ? expiry.year : expiry.year.slice(-2);
-  if (max === 4 || max === 6) return `${month}${year}`;
-  if ((max === 7 && !full) || max === 9) return `${month} / ${year}`;
-  return `${month}/${year}`;
+  const hints = facts.hints.join(" ");
+  const wantFour = /\byyyy\b|yyyy$/.test(hints);
+  const wantTwo = !wantFour && /\byy\b|yy$/.test(hints);
+  const fits = (text: string): boolean => max <= 0 || text.length <= max;
+  if (kind === "card_exp_month") return fits(month) ? month : null;
+  if (kind === "card_exp_year") {
+    const years = wantTwo || max === 2 || max === 3 ? [yy] : [yyyy, yy];
+    return years.find(fits) ?? null;
+  }
+  const two = [`${month}/${yy}`, `${month}${yy}`, `${month} / ${yy}`];
+  const four = [`${month}/${yyyy}`, `${month}${yyyy}`, `${month} / ${yyyy}`];
+  const ordered = wantFour
+    ? four
+    : wantTwo
+      ? two
+      : [two[0]!, two[1]!, four[0]!, four[1]!, two[2]!, four[2]!];
+  if (max <= 0) return ordered[0]!;
+  return (
+    ordered.find((text) => text.length === max) ?? ordered.find(fits) ?? null
+  );
 };
 
 /**
@@ -583,9 +600,9 @@ export const formatExpiry = (
  */
 export const SELECT_OPTION_FUNCTION = `function(candidates) {
   const wanted = candidates.map((item) => String(item).toLowerCase());
+  const norm = (text) => String(text || '').replace(/\\s+/g, ' ').trim().toLowerCase();
   const option = Array.from(this.options || []).find((item) =>
-    wanted.includes(String(item.value).trim().toLowerCase()) ||
-    wanted.includes(String(item.textContent || '').trim().toLowerCase()));
+    wanted.includes(norm(item.value)) || wanted.includes(norm(item.textContent)));
   if (!option) return false;
   this.value = option.value;
   this.dispatchEvent(new Event('input', { bubbles: true }));
@@ -608,7 +625,7 @@ const MONTH_NAMES = [
   "december",
 ];
 
-/** The option texts or values a select may list a month or year as. */
+/** The option texts or values a select may list a month or year as ("03", "3", "Mar", "1 - Jan", "01/Jan"). */
 export const selectCandidates = (
   kind: "card_exp_month" | "card_exp_year",
   expiry: CardExpiry
@@ -616,14 +633,14 @@ export const selectCandidates = (
   if (kind === "card_exp_year") return [expiry.year, expiry.year.slice(-2)];
   const number = Number(expiry.month);
   const name = MONTH_NAMES[number - 1] ?? "";
-  return [
-    String(number).padStart(2, "0"),
-    String(number),
-    name,
-    name.slice(0, 3),
-    `${String(number).padStart(2, "0")} - ${name}`,
-    `${String(number).padStart(2, "0")} - ${name.slice(0, 3)}`,
-  ];
+  const numbers = [String(number).padStart(2, "0"), String(number)];
+  const names = [name, name.slice(0, 3)];
+  const joined = numbers.flatMap((n) =>
+    names.flatMap((m) =>
+      [" - ", "-", " / ", "/", " "].map((sep) => `${n}${sep}${m}`)
+    )
+  );
+  return [...new Set([...numbers, ...names, ...joined])];
 };
 
 /** A DOM node as CDP's `DOM.getDocument` returns it. */

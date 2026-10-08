@@ -40,7 +40,13 @@ export interface VaultItem {
 
 export type VaultResult<T> =
   | { ok: true; value: T }
-  | { ok: false; unavailable: boolean; error: string };
+  | {
+      ok: false;
+      unavailable: boolean;
+      error: string;
+      /** The server said it has no such item or value. */
+      notFound?: boolean;
+    };
 
 export interface VaultClientDeps {
   fetch?: typeof fetch;

@@ -635,19 +635,30 @@ describe("a login fill", () => {
 });
 
 describe("a card's expiry and cardholder name", () => {
-  /** Hint words as the page names a field ("MM/YY" → mm, yy). */
+  /** Hint words as the page names a field ("MM/YY" → mm, yy; "ccExpMonth" → ccexpmonth). */
   const named = (text: string): string[] =>
     text
       .toLowerCase()
       .split(/[^a-z0-9]+/)
-      .filter(Boolean);
+      .filter(Boolean); /** On a card form: a card-number field beside it. */
+  const onCardForm = (overrides: Partial<FieldFacts>) => ({
+    cardPeer: true,
+    ...overrides,
+  });
 
-  it("goes only into the field that names it, by autocomplete or by its name", () => {
+  it("goes only into the field that names it, by autocomplete or by card wording", () => {
     expect(accepts("card_exp", { autocomplete: ["cc-exp"] })).toBe(true);
-    expect(accepts("card_exp", { hints: named("MM/YY") })).toBe(true);
-    expect(accepts("card_exp", { hints: named("Expiry date") })).toBe(true);
+    expect(accepts("card_exp", onCardForm({ hints: named("MM/YY") }))).toBe(
+      true
+    );
+    expect(accepts("card_exp", { hints: named("Card expiry date") })).toBe(
+      true
+    );
     expect(
-      accepts("card_exp", { type: "tel", hints: named("exp MM / YYYY") })
+      accepts(
+        "card_exp",
+        onCardForm({ type: "tel", hints: named("exp MM / YYYY") })
+      )
     ).toBe(true);
     expect(
       accepts("card_exp_month", {
@@ -656,16 +667,15 @@ describe("a card's expiry and cardholder name", () => {
         autocomplete: ["cc-exp-month"],
       })
     ).toBe(true);
-    expect(accepts("card_exp_month", { hints: named("expMonth") })).toBe(true);
-    expect(accepts("card_exp_year", { hints: named("expiry-year") })).toBe(
-      true
-    );
+    expect(accepts("card_exp_month", { hints: ["ccexpmonth"] })).toBe(true);
     expect(
-      accepts("card_exp_year", {
-        tag: "select",
-        type: "select",
-        hints: named("exp_yy"),
-      })
+      accepts("card_exp_year", onCardForm({ hints: named("expiry-year") }))
+    ).toBe(true);
+    expect(
+      accepts(
+        "card_exp_year",
+        onCardForm({ tag: "select", type: "select", hints: named("exp_yy") })
+      )
     ).toBe(true);
     expect(accepts("cardholder_name", { autocomplete: ["cc-name"] })).toBe(
       true
@@ -673,18 +683,54 @@ describe("a card's expiry and cardholder name", () => {
     expect(accepts("cardholder_name", { hints: named("Name on card") })).toBe(
       true
     );
+    expect(accepts("cardholder_name", { hints: ["nameoncard"] })).toBe(true);
+    // In a payment provider's frame, the frame is the card context.
+    expect(
+      accepts("card_exp", { type: "tel", hints: named("MM / YY") }, true)
+    ).toBe(true);
   });
 
-  it("never goes into another date, a split field's other half, a name or a search box", () => {
-    expect(accepts("card_exp", { hints: named("DD/MM/YYYY") })).toBe(false);
-    expect(accepts("card_exp", { hints: named("birth month year") })).toBe(
+  it("needs card context: expiry or name wording alone, off a card form, is not a card's", () => {
+    expect(accepts("card_exp", { hints: named("MM/YY") })).toBe(false);
+    expect(accepts("card_exp", { hints: named("Expiry date") })).toBe(false);
+    expect(accepts("card_exp_month", { hints: named("expMonth") })).toBe(false);
+    expect(accepts("cardholder_name", { hints: named("Holder name") })).toBe(
       false
     );
+  });
+
+  it("never goes into another document's dates or holder, even on a card form", () => {
+    for (const [kind, words] of [
+      ["card_exp", "Passport expiry"],
+      ["card_exp_month", "passport expiry month"],
+      ["card_exp", "Travel date MM/YY"],
+      ["card_exp_year", "Years of experience exp_years"],
+      ["card_exp", "Document expiry date"],
+      ["card_exp_month", "id_expiry_month"],
+      ["card_exp", "DD/MM/YYYY"],
+      ["card_exp", "birth month year"],
+      ["cardholder_name", "Policy holder name"],
+      ["cardholder_name", "Account holder name"],
+      ["cardholder_name", "Passport holder name"],
+    ] as const) {
+      expect(accepts(kind, onCardForm({ hints: named(words) })), words).toBe(
+        false
+      );
+      expect(
+        accepts(
+          kind,
+          onCardForm({ tag: "select", type: "select", hints: named(words) })
+        ),
+        words
+      ).toBe(false);
+    }
+  });
+
+  it("never goes into a split field's other half, a generic name or a search box", () => {
     expect(accepts("card_exp", { autocomplete: ["cc-exp-month"] })).toBe(false);
     expect(accepts("card_exp_month", { autocomplete: ["cc-exp-year"] })).toBe(
       false
     );
-    expect(accepts("card_exp_month", { hints: named("Month") })).toBe(false);
     expect(accepts("card_exp", { autocomplete: ["cc-number"] })).toBe(false);
     expect(
       accepts("card_exp", {
@@ -693,17 +739,15 @@ describe("a card's expiry and cardholder name", () => {
         autocomplete: ["cc-exp"],
       })
     ).toBe(false);
-    expect(accepts("cardholder_name", { hints: named("Full name") })).toBe(
-      false
-    );
+    expect(
+      accepts("cardholder_name", onCardForm({ hints: named("Full name") }))
+    ).toBe(false);
     expect(
       accepts("cardholder_name", { type: "search", autocomplete: ["cc-name"] })
     ).toBe(false);
-    // A provider's frame is no reason on its own: the field must still name it.
-    expect(accepts("card_exp", { type: "tel" }, true)).toBe(false);
   });
 
-  it("is typed as the field asks: MM/YY, MMYY, MM/YYYY, MM / YY, or a month or year alone", () => {
+  it("is typed in the form that fits the field, or refused when none does", () => {
     const expiry = { month: "3", year: "2030" };
     const exp = (overrides: Partial<FieldFacts>) =>
       formatExpiry("card_exp", expiry, facts(overrides));
@@ -714,26 +758,43 @@ describe("a card's expiry and cardholder name", () => {
     expect(exp({ maxLength: 6 })).toBe("032030");
     expect(exp({ maxLength: 7 })).toBe("03/2030");
     expect(exp({ maxLength: 7, hints: named("MM / YY") })).toBe("03 / 30");
+    expect(exp({ maxLength: 8 })).toBe("03/30");
+    expect(exp({ maxLength: 10, hints: named("MM/YYYY") })).toBe("03/2030");
+    expect(exp({ maxLength: 9, hints: named("MM / YYYY") })).toBe("03 / 2030");
+    expect(exp({ maxLength: 3 })).toBeNull();
     expect(formatExpiry("card_exp_month", expiry, facts())).toBe("03");
+    expect(
+      formatExpiry("card_exp_month", expiry, facts({ maxLength: 1 }))
+    ).toBeNull();
     expect(formatExpiry("card_exp_year", expiry, facts())).toBe("2030");
     expect(formatExpiry("card_exp_year", expiry, facts({ maxLength: 2 }))).toBe(
+      "30"
+    );
+    expect(formatExpiry("card_exp_year", expiry, facts({ maxLength: 3 }))).toBe(
       "30"
     );
     expect(
       formatExpiry("card_exp_year", expiry, facts({ hints: named("YY") }))
     ).toBe("30");
+    expect(
+      formatExpiry("card_exp_year", expiry, facts({ maxLength: 1 }))
+    ).toBeNull();
   });
 
   it("is chosen in a list by the value or text it may be listed as", () => {
-    const expiry = { month: "3", year: "2030" };
-    expect(selectCandidates("card_exp_month", expiry)).toEqual([
-      "03",
-      "3",
-      "march",
-      "mar",
-      "03 - march",
-      "03 - mar",
-    ]);
+    const expiry = { month: "1", year: "2030" };
+    const months = selectCandidates("card_exp_month", expiry);
+    for (const label of [
+      "01",
+      "1",
+      "january",
+      "jan",
+      "1 - jan",
+      "01/jan",
+      "01 - january",
+      "1 jan",
+    ])
+      expect(months, label).toContain(label);
     expect(selectCandidates("card_exp_year", expiry)).toEqual(["2030", "30"]);
   });
 

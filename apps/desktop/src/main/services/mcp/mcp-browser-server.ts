@@ -618,9 +618,17 @@ const loginItemOf = (
     ? { itemId: args.login_item_id, sites: null, retryAt: 0 }
     : null;
 
-/** A fill of card data the vault cannot give (an older server), left to the user, never guessed. */
+/** The card details the vault may not have (an older server, or not saved with the card). */
+const CARD_DETAILS: ReadonlySet<VaultField> = new Set([
+  "card_exp_month",
+  "card_exp_year",
+  "cardholder_name",
+]);
+
+/** A card detail the vault cannot give, left to the user, never guessed. */
 const CARD_DETAIL_UNSUPPORTED =
-  "The vault cannot fill the card's expiry or the name on it yet, so nothing was typed. Do not type or guess " +
+  "The vault cannot fill the card's expiry or the name on it (not supported, or not saved with the card), so " +
+  "nothing was typed. Do not type or guess " +
   'them yourself: stop with browser_pause need:"user" and ask the user to complete the expiry and name on the ' +
   "page themselves.";
 
@@ -4023,7 +4031,8 @@ export class McpBrowserServer extends McpHttpServer {
     }
     // Taken now, before anything waits, so a second fill of this field is refused.
     for (const one of fieldsOf(kind)) plan.uses?.add(one);
-    let delivered = false;
+    // The vault fields the vault handed over: spent, whatever happens next.
+    const handed = new Set<VaultField>();
     const secrets = this.secretsOf(wc);
 
     try {
@@ -4107,7 +4116,24 @@ export class McpBrowserServer extends McpHttpServer {
           `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
         );
 
-      // Each vault field the kind is made of, then shaped to the field.
+      const expiryKind =
+        kind === "card_exp" ||
+        kind === "card_exp_month" ||
+        kind === "card_exp_year"
+          ? kind
+          : null;
+      // Shaped by length alone, so a field no form fits is refused before the vault is asked.
+      if (
+        expiryKind != null &&
+        live.facts.tag !== "select" &&
+        formatExpiry(expiryKind, { month: "12", year: "2030" }, live.facts) ==
+          null
+      )
+        return this.err(
+          `${ref} takes no usual form of a card expiry (its length allows none of MM/YY, MMYY or MM/YYYY). ` +
+            'Do not type one yourself; stop with browser_pause need:"user" so the user completes it.'
+        );
+      // Every vault field the kind is made of, before anything is typed.
       const values = new Map<VaultField, string>();
       for (const one of fieldsOf(kind)) {
         const fetched = await vault.client.fill({
@@ -4115,15 +4141,23 @@ export class McpBrowserServer extends McpHttpServer {
           field: one,
           ...plan.request,
         });
-        if (fetched.ok === false)
+        if (fetched.ok === false) {
+          // What the vault does not have (an older server, or not saved) is left to the user.
+          const missing =
+            CARD_DETAILS.has(one) &&
+            (fetched.notFound === true || fieldUnsupported(fetched.error, one));
           return this.err(
             fetched.unavailable
               ? VAULT_UNAVAILABLE
-              : fieldUnsupported(fetched.error, one)
+              : missing
                 ? CARD_DETAIL_UNSUPPORTED
-                : `The vault did not fill it: ${fetched.error}`
+                : values.size > 0
+                  ? `The vault gave part of the ${field} but not the rest (${fetched.error}), so nothing was typed. ` +
+                    'Do not type it yourself; stop with browser_pause need:"user" so the user completes it.'
+                  : `The vault did not fill it: ${fetched.error}`
           );
-        delivered = true;
+        }
+        handed.add(one);
         values.set(one, fetched.value);
       }
       const expiry = {
@@ -4152,10 +4186,8 @@ export class McpBrowserServer extends McpHttpServer {
             );
       }
       const value =
-        kind === "card_exp" ||
-        kind === "card_exp_month" ||
-        kind === "card_exp_year"
-          ? formatExpiry(kind, expiry, live.facts)
+        expiryKind != null
+          ? formatExpiry(expiryKind, expiry, live.facts)!
           : values.get(kind as VaultField)!;
       const outcome = await this.typeVaultValue(
         wc,
@@ -4193,7 +4225,9 @@ export class McpBrowserServer extends McpHttpServer {
           );
     } finally {
       // Not spent unless the vault handed the value over.
-      if (!delivered) for (const one of fieldsOf(kind)) plan.uses?.delete(one);
+      // Only what the vault handed over is spent; the rest can be filled again.
+      for (const one of fieldsOf(kind))
+        if (!handed.has(one)) plan.uses?.delete(one);
       await this.cdp(page, "Runtime.releaseObjectGroup", {
         objectGroup: VAULT_OBJECT_GROUP,
       }).catch(() => undefined);
