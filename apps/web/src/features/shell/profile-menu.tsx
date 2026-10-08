@@ -1,16 +1,14 @@
 import { canSignOutOfAbacus } from "@abacus-ai/contract/settings";
-import { formatForDisplay } from "@tanstack/hotkeys";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronDown,
   CreditCard,
   Gift,
-  Globe,
   HelpCircle,
   LogOut,
   Monitor,
   Moon,
-  Settings,
+  Palette,
+  UserRound,
   Sun,
   ChartNoAxesColumn,
   X,
@@ -22,16 +20,13 @@ import { signOutAbacus } from "#platform/sign-out";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { ReferralLink } from "#renderer/features/settings/referral-link";
-import { ABACUS_HELP_URL } from "#renderer/lib/abacus-links";
 import { accountIdentity } from "#renderer/lib/account-identity";
 import { cn } from "#renderer/lib/cn";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
-import { platformSystem } from "#renderer/lib/platform-system";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
-import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAccount } from "#renderer/lib/use-account";
-import { useAppContext, useSystem } from "#renderer/lib/use-app-context";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "#renderer/ui/avatar";
 import { Button } from "#renderer/ui/button";
 import {
@@ -51,16 +46,14 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
-export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
+export const ProfileMenu = () => {
   const { t } = useTranslation();
   const context = useAppContext();
   const { transport } = context;
-  const system = useSystem();
   const navigate = useAppNavigate();
   const account = useAccount();
   const identity = accountIdentity(account.data);
@@ -81,9 +74,6 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
     enabled: IS_ELECTRON && open,
     staleTime: 60_000,
   });
-  const shortcut = Object.hasOwn(prefs.keymap ?? {}, "open-settings")
-    ? prefs.keymap?.["open-settings"]
-    : "Mod+,";
   const label = identity.name || t("shell.rail.account");
   const button = (
     <button
@@ -91,10 +81,7 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
       type="button"
       aria-label={label}
       data-slot="profile-button"
-      className={cn(
-        "titlebar-nodrag hover:bg-sidebar-accent/50 focus-visible:ring-ring flex shrink-0 items-center gap-2 rounded-(--pane-radius) p-2 text-start outline-none focus-visible:ring-2",
-        compact ? "size-9 justify-center p-0" : "h-12 w-full"
-      )}
+      className="titlebar-nodrag hover:bg-sidebar-accent/50 focus-visible:ring-ring/50 flex size-9 shrink-0 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2"
     >
       <Avatar size="sm">
         {identity.picture && <AvatarImage src={identity.picture} alt="" />}
@@ -102,45 +89,27 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
           {identity.initials}
         </AvatarFallback>
       </Avatar>
-      {!compact && (
-        <>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium" title={label}>
-              {label}
-            </span>
-            <span
-              className="text-muted-foreground block truncate text-[11px]"
-              title={policy.plan}
-            >
-              {policy.plan}
-            </span>
-          </span>
-          <ChevronDown
-            className="text-muted-foreground size-3 shrink-0"
-            aria-hidden
-          />
-        </>
-      )}
     </button>
   );
   const row = "h-8 [&_svg]:size-4";
-  const go = (to: "/settings" | "/settings/usage" | "/settings/language") =>
-    void navigate({ to, transition: "settings-in" });
+  const go = (
+    to:
+      | "/settings/account"
+      | "/settings/usage"
+      | "/settings/appearance"
+      | "/settings/about"
+  ) => void navigate({ to, transition: "settings-in" });
   return (
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        {compact ? (
-          <Tooltip>
-            <TooltipTrigger render={<DropdownMenuTrigger render={button} />} />
-            <TooltipContent side="right">{label}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <DropdownMenuTrigger render={button} />
-        )}
+        <Tooltip>
+          <TooltipTrigger render={<DropdownMenuTrigger render={button} />} />
+          <TooltipContent side="right">{label}</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent
-          side="top"
-          align="start"
-          className="floating-surface scroll-fade-y w-64 rounded-(--pane-radius)"
+          side="right"
+          align="end"
+          className="floating-surface scroll-fade-y w-60 rounded-(--pane-radius)"
           data-sidebar-overlay=""
         >
           {account.data?.email && (
@@ -154,16 +123,12 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
               <DropdownMenuSeparator />
             </DropdownMenuGroup>
           )}
-          <DropdownMenuItem className={row} onClick={() => go("/settings")}>
-            <Settings aria-hidden />
-            <span className="truncate">{t("shell.rail.settings")}</span>
-            {shortcut && (
-              <DropdownMenuShortcut className="ms-auto">
-                {formatForDisplay(shortcut, {
-                  platform: uiPlatform(system.platform),
-                })}
-              </DropdownMenuShortcut>
-            )}
+          <DropdownMenuItem
+            className={row}
+            onClick={() => go("/settings/account")}
+          >
+            <UserRound aria-hidden />
+            <span className="truncate">{t("settings.pages.account")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             className={row}
@@ -172,23 +137,27 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
             <ChartNoAxesColumn aria-hidden />
             <span className="truncate">{t("settings.pages.usage")}</span>
           </DropdownMenuItem>
+          {policy.billing && (
+            <DropdownMenuItem
+              className={row}
+              onClick={() => go("/settings/account")}
+            >
+              <CreditCard aria-hidden />
+              <span className="truncate">
+                {t(
+                  policy.billing === "upgrade"
+                    ? "creditsCard.cta"
+                    : "phase5.managePlan"
+                )}
+              </span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             className={row}
-            onClick={() => go("/settings/language")}
+            onClick={() => go("/settings/appearance")}
           >
-            <Globe aria-hidden />
-            <span className="truncate">{t("settings.pages.language")}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className={row}
-            onClick={() =>
-              void platformSystem(transport.client).openExternal({
-                url: ABACUS_HELP_URL,
-              })
-            }
-          >
-            <HelpCircle aria-hidden />
-            <span className="truncate">{t("profile.help")}</span>
+            <Palette aria-hidden />
+            <span className="truncate">{t("settings.pages.appearance")}</span>
           </DropdownMenuItem>
           <DropdownMenuRadioGroup
             value={prefs.theme}
@@ -221,22 +190,14 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
-          {(policy.billing || account.data) && <DropdownMenuSeparator />}
-          {policy.billing && (
-            <DropdownMenuItem
-              className={row}
-              onClick={() => void openUpgrade(transport.client)}
-            >
-              <CreditCard aria-hidden />
-              <span className="truncate">
-                {t(
-                  policy.billing === "upgrade"
-                    ? "creditsCard.cta"
-                    : "phase5.managePlan"
-                )}
-              </span>
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className={row}
+            onClick={() => go("/settings/about")}
+          >
+            <HelpCircle aria-hidden />
+            <span className="truncate">{t("profile.help")}</span>
+          </DropdownMenuItem>
           {account.data && (
             <DropdownMenuItem className={row} onClick={() => setInvite(true)}>
               <Gift aria-hidden />

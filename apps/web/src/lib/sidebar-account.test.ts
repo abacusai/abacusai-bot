@@ -30,7 +30,6 @@ it.each([
     expect(sidebarAccount(account(tier))).toMatchObject({
       paid,
       billing,
-      plan: "Display plan",
     });
   }
 );

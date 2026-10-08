@@ -357,8 +357,6 @@ export const ShellLayout = ({
                   floatingEnabled={floatingEnabled}
                   iconsOnly={prefs.appearance?.railIconsOnly === true}
                   initials={initials}
-                  profileInSidebar={layout.sidebar === "pinned"}
-                  agentInSidebar={layout.sidebar !== "floating"}
                 />
               )}
               <PaneBoundary resetKey={area}>

@@ -12,8 +12,6 @@ export const sidebarAccount = (
   const free = tier === "free";
   return {
     paid,
-    free,
-    plan: account?.plan?.trim() || account?.subscription_tier?.trim() || "",
     billing: free
       ? "upgrade"
       : selfServe && (account?.org_user_count ?? 1) <= 1

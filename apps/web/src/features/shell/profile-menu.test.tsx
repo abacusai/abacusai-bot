@@ -41,7 +41,7 @@ const summary = {
   gmailConnected: false,
 };
 
-it("moves Settings into the profile menu, changes the shared theme and deep-links Usage", async () => {
+it("keeps Settings in the rail, changes the shared theme and deep-links Usage", async () => {
   const app = await renderApp("/sessions/new", {
     procedures: {
       account: { abacus: os.account.abacus.handler(() => account) },
@@ -50,14 +50,17 @@ it("moves Settings into the profile menu, changes the shared theme and deep-link
   try {
     const trigger = await screen.findByRole("button", { name: account.name });
     expect(
-      screen.queryByRole("link", { name: en.shell.rail.settings })
-    ).toBeNull();
+      screen.getByRole("link", { name: en.shell.rail.settings })
+    ).toBeTruthy();
     fireEvent.click(trigger);
     const menu = await screen.findByRole("menu");
     expect(within(menu).getByText(account.email)).toBeTruthy();
     expect(
-      within(menu).getByRole("menuitem", { name: /Settings/ }).textContent
-    ).toContain("⌘");
+      within(menu).queryByRole("menuitem", { name: /Settings/ })
+    ).toBeNull();
+    expect(
+      within(menu).getByRole("menuitem", { name: en.settings.pages.account })
+    ).toBeTruthy();
     fireEvent.click(
       within(menu).getByRole("menuitemradio", { name: en.theme.dark })
     );
@@ -196,11 +199,24 @@ it.each(["pinned", "collapsed", "strip", "floating", "phone"] as const)(
       expect(
         screen.getAllByRole("link", { name: en.profile.agent })
       ).toHaveLength(1);
+      expect(
+        screen
+          .getByRole("link", { name: en.profile.agent })
+          .closest('[data-slot="rail"]')
+      ).toBeTruthy();
+      expect(
+        screen
+          .getByRole("link", { name: en.shell.rail.settings })
+          .closest('[data-slot="rail"]')
+      ).toBeTruthy();
       const trigger = screen.getByRole("button", { name: account.name });
+      expect(trigger.closest('[data-slot="rail"]')).toBeTruthy();
       fireEvent.click(trigger);
       const menu = await screen.findByRole("menu");
       expect(
-        within(menu).getAllByRole("menuitem", { name: /Settings/ })
+        within(menu).getAllByRole("menuitem", {
+          name: en.settings.pages.account,
+        })
       ).toHaveLength(1);
       fireEvent.keyDown(menu, { key: "Escape" });
       await waitFor(() => expect(document.activeElement).toBe(trigger));

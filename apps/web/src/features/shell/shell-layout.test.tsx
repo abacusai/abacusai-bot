@@ -534,7 +534,11 @@ describe("Rail: icons only (Settings › Appearance)", () => {
   it("gives each item a tooltip while the sidebar is pinned, none while it floats", async () => {
     await at(1280, "/bots/new", seedIconsOnly(true));
     expect(railLink("sessions").dataset.slot).toBe("tooltip-trigger");
-    expect(rail().querySelector('a[aria-label="Settings"]')).toBeNull();
+    expect(
+      rail()
+        .querySelector('a[aria-label="Settings"]')
+        ?.getAttribute("data-slot")
+    ).toBe("tooltip-trigger");
     expect(document.querySelector('[data-slot="profile-button"]')).toBeTruthy();
     // Unpinned: hovering the rail opens the floating sidebar instead.
     fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
