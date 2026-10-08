@@ -1,7 +1,9 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { Store } from "@tanstack/react-store";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
+
+import { mountPlatformApp } from "#platform/connect";
 
 /**
  * renderer boot (spec 01 §8.6): styles, the stored theme before the
@@ -13,8 +15,8 @@ import { createRoot } from "react-dom/client";
  * (`mountPlatformApp`, spec 09 D12).
  */
 import "./styles/app.css";
-import { mountPlatformApp } from "#platform/connect";
 import { installLease } from "#platform/lease";
+import { BootAvatarHost, BootScreen } from "#renderer/components/boot-avatar";
 import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
 import { createQueryClient } from "#renderer/data/query-client";
@@ -106,9 +108,17 @@ if (import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1")
 
 const container = document.getElementById("root");
 if (container == null) throw new Error("renderer: #root is missing");
-const root = createRoot(container, {
+const reactRoot = createRoot(container, {
   onUncaughtError: (error) => console.error("[renderer] render error", error),
 });
+
+const root: Root = {
+  ...reactRoot,
+  render: (children) =>
+    reactRoot.render(<BootAvatarHost>{children}</BootAvatarHost>),
+  unmount: () => reactRoot.unmount(),
+};
+root.render(<BootScreen />);
 
 /** `t` that never throws: English copy is bundled, keys are the last resort. */
 const text = (key: string): string => {

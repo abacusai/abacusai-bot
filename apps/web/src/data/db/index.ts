@@ -117,8 +117,10 @@ const DbContext = createContext<Db | null>(null);
 export const DbProvider = DbContext.Provider;
 
 /** The collections and the prefs writer, from the nearest `<DbProvider>`. */
+export const useOptionalDb = (): Db | null => use(DbContext);
+
 export const useDb = (): Db => {
-  const db = use(DbContext);
+  const db = useOptionalDb();
   if (db == null) throw new Error("useDb outside <DbProvider>");
   return db;
 };
