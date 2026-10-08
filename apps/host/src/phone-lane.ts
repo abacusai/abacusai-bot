@@ -16,6 +16,7 @@ import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
 import { backoffDelayMs } from "#main/services/messaging/connector";
 
+import { nudgeNotes } from "./nudge-agenda";
 import {
   type InboundMessage,
   PhoneInbox,
@@ -69,6 +70,8 @@ interface PhoneLaneDeps {
   resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
   /** Keeps media held for an answer from eviction, or lets it go. */
   pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
+  /** Each answered inbox poll, for what it says besides messages (the user's zone). */
+  onPolled?: (result: { tz?: unknown }) => void;
   log?: (line: string) => void;
 }
 
@@ -122,7 +125,8 @@ function phoneTurnText(entry: PhoneInboxEntry): string {
     const line = (entry.text ?? "").replace(/\s+/g, " ").trim();
     return /^\[[a-z][a-z -]*\]/i.test(line) ? line : `[note] ${line}`;
   }
-  if (entry.kind !== "linked") return entry.text ?? "";
+  if (entry.kind !== "linked")
+    return [...nudgeNotes(entry), entry.text ?? ""].join("\n\n");
   const name = entry.sender?.trim();
   return name
     ? `[linked] The user just connected WhatsApp. Their WhatsApp name: ${name}.`
@@ -217,7 +221,10 @@ export class PhoneLane {
       const abort = new AbortController();
       this.pollAbort = abort;
       try {
-        const result = await this.deps.call<{ messages?: PhoneInboxEntry[] }>(
+        const result = await this.deps.call<{
+          messages?: PhoneInboxEntry[];
+          tz?: unknown;
+        }>(
           {
             action: "inbox",
             wait: INBOX_WAIT_SECS,
@@ -230,6 +237,7 @@ export class PhoneLane {
         );
         failures = 0;
         this.redeliver = false;
+        this.deps.onPolled?.(result);
         for (const entry of result.messages ?? []) this.arrive(entry);
       } catch (error) {
         if (!this.running) return;

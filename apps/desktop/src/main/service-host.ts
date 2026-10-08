@@ -248,6 +248,10 @@ import {
   type RenderDocumentRequest,
 } from "./services/agent-tools/pdf-agent";
 import {
+  type PendingWait,
+  PendingWaits,
+} from "./services/agent-tools/pending-waits";
+import {
   ROUTINE_RESULTS,
   started as startedResult,
 } from "./services/agent-tools/routine-attempts";
@@ -848,7 +852,22 @@ export class ServiceHost {
         };
       },
       show: (input) => this.connectorGate.show(input),
-      watch: (input) => this.connectWatcher.watch(input),
+      watch: (input) => {
+        this.connectWatcher.watch(input);
+        // Only a host lane's session (the hosted phone) reads its waits.
+        if (
+          input.sessionId == null ||
+          this.agentSessionManagerService.laneOf(input.sessionId) == null
+        )
+          return;
+        this.pendingWaits.connectOffered(
+          input.sessionId,
+          input.connectorIds.map((id) => ({
+            id,
+            label: connectorById(id)?.name ?? id,
+          }))
+        );
+      },
       disconnect: async (connectorId) => {
         const result = await this.disconnectConnector(connectorId);
         if (result.ok === true) return null;
@@ -1008,6 +1027,8 @@ export class ServiceHost {
   private readonly connectorGate = new ConnectorGate((event) =>
     this.emitEvent(event)
   );
+  /** What each session waits on the user for; read by the hosted phone lane's agenda. */
+  private readonly pendingWaits = new PendingWaits();
 
   /** Offers (links, cards) followed until they connect; see connectorsConnected. */
   private readonly connectWatcher = new ConnectWatcher({
@@ -1108,6 +1129,7 @@ export class ServiceHost {
     )
       this.refreshAgentProviders();
     this.connectorGate.clearFor(offer.connectorIds);
+    this.pendingWaits.connectLanded(offer.connectorIds);
     const accounts = [...new Set(Object.values(offer.accounts))];
     const names = connectors.map((connector) => connector.name).join(", ");
     const missing = offer.notGranted
@@ -1293,6 +1315,19 @@ export class ServiceHost {
 
   listConnectorStatuses(): Promise<ConnectorStatuses> {
     return this.connectorStatuses.list();
+  }
+
+  /** What the session waits on the user for, as structured state only. */
+  async waitsFor(sessionId: string): Promise<PendingWait[]> {
+    const statuses: ConnectorStatuses = await this.connectorStatuses
+      .list()
+      .catch(() => ({}));
+    const connected = new Set(
+      Object.entries(statuses)
+        .filter(([, status]) => status.state === "connected")
+        .map(([id]) => id)
+    );
+    return this.pendingWaits.list(sessionId, connected);
   }
 
   /** Something moved a connector's status; the renderer re-reads once. */

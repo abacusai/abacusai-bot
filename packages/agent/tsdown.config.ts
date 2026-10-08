@@ -43,6 +43,8 @@ export default defineConfig({
     "src/user-text.ts",
     // The phone reply's bubble split, for the hosted app's WhatsApp lane.
     "src/phone/phone-bubbles.ts",
+    // The phone loop's zone, check-in language and due loops, for its agenda.
+    "src/phone/phone-nudges.ts",
     // Media for the chat: the hosted app's lane and main's media store read it.
     "src/send-media.ts",
     // What a chat can do, and which tools it gets: main and its tests read them.

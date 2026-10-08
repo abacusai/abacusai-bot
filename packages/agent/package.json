@@ -45,6 +45,10 @@
       "types": "./dist/phone/phone-bubbles.d.ts",
       "default": "./dist/phone/phone-bubbles.js"
     },
+    "./phone-nudges": {
+      "types": "./dist/phone/phone-nudges.d.ts",
+      "default": "./dist/phone/phone-nudges.js"
+    },
     "./send-media": {
       "types": "./dist/send-media.d.ts",
       "default": "./dist/send-media.js"

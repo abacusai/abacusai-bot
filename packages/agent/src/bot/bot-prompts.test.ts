@@ -50,6 +50,35 @@ describe("what the prompts say about the browser, per channel", () => {
   });
 });
 
+describe("the phone loop's clock and check-ins", () => {
+  const flat = (text: string) => text.replace(/\s+/g, " ");
+
+  it("states the user's zone, not this machine's, and the check-in language", () => {
+    const prompt = flat(
+      phoneOperatingPrompt(null, { zone: "Asia/Kolkata", language: "es" })
+    );
+    expect(prompt).toMatch(
+      /local timezone is Asia\/Kolkata \(GMT\+5:30, UTC\+05:30\)/
+    );
+    expect(prompt).toMatch(/Check-ins go out in: es\./);
+    expect(flat(phoneOperatingPrompt(null))).toMatch(
+      /Check-ins go out in: not set\./
+    );
+  });
+
+  it("has the linked greeting say once that the bot may check in and the user can say stop", () => {
+    expect(flat(phoneOperatingPrompt(null))).toMatch(
+      /check in here about their unfinished tasks, and that they can say stop/
+    );
+  });
+
+  it("asks which stop is meant before turning check-ins off", () => {
+    expect(flat(phoneOperatingPrompt(null))).toMatch(
+      /could mean the task you are on, ask which they mean/
+    );
+  });
+});
+
 describe("the payment rule", () => {
   const prompts = {
     phone: phoneOperatingPrompt(null),

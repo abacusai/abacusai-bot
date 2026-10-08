@@ -23,6 +23,10 @@ export interface PhoneInboxEntry {
    * from the server, so never acknowledged.
    */
   kind?: string;
+  /** Check-ins the server sent since the user's last message. */
+  nudges_sent?: Array<{ at?: number; text?: string }>;
+  /** The message is exactly STOP or UNSUBSCRIBE, and nothing was turned off. */
+  stop_keyword?: boolean;
 }
 
 export type InboundState = "queued" | "handed" | "closing" | "answered";
