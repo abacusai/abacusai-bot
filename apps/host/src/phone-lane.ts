@@ -157,6 +157,10 @@ export class PhoneLane {
   private outbox: Promise<unknown> = Promise.resolve();
   /** Media for the turn's final answer: `send_media` with_answer, and `present_deliverable`'s. */
   private heldMedia: PhoneMedia[] = [];
+  /** Handled message ids the server has not taken an ack for yet. */
+  private readonly unacked = new Set<string>();
+  private ackFailures = 0;
+  private ackRetry: NodeJS.Timeout | null = null;
   /** Media ids the server took: each goes to the user once. */
   private readonly deliveredIds = new Set<string>();
   /** Files the session already heard did not go, by content or id. */
@@ -204,6 +208,8 @@ export class PhoneLane {
     this.unsubscribe = null;
     if (this.batchTimer != null) clearTimeout(this.batchTimer);
     this.batchTimer = null;
+    if (this.ackRetry != null) clearTimeout(this.ackRetry);
+    this.ackRetry = null;
     this.idle();
   }
 
@@ -214,6 +220,8 @@ export class PhoneLane {
         await sleep(this.timings.keyWaitMs);
         continue;
       }
+      // Acks still owed go first, so a handled message is not handed back.
+      if (this.unacked.size > 0) await this.acknowledge([]);
       const abort = new AbortController();
       this.pollAbort = abort;
       try {
@@ -345,6 +353,7 @@ export class PhoneLane {
   ): Promise<void> {
     const run = this.sending.then(async () => {
       if (await this.trySend(text, handoff)) {
+        for (const message of messages) message.taken = true;
         this.refusals = 0;
         this.deps.activity();
         return;
@@ -677,16 +686,15 @@ export class PhoneLane {
   }
 
   /**
-   * The session's work ran out of time. Everything it holds is claimed and
-   * acknowledged at once (the session may have acted on it, so it is never
-   * run again), the session is stopped (its queue with it), and the user
-   * hears the apology; nothing new goes to the session until it is idle or
-   * closed.
+   * The session's work ran out of time. Everything it holds is claimed at
+   * once, the session is stopped (its queue with it), and the user hears the
+   * apology; nothing new goes to the session until it is idle or closed.
+   * What the session took is acknowledged (it may have acted on it, so it
+   * is never run again); what it never took goes again.
    */
   private async giveUp(reason: string): Promise<void> {
     const messages = this.inbox.abandon();
     if (messages.length === 0) return;
-    const acked = this.ack(messages);
     this.clock.stop();
     this.release(this.heldMedia.splice(0));
     this.turnMediaHashes = new Set();
@@ -697,9 +705,14 @@ export class PhoneLane {
       `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`
     );
     await this.stopping;
+    // A handoff still on its way settles (refused) before it is judged.
+    await this.sending;
     this.stopping = null;
-    await acked;
-    this.done(messages);
+    const taken = messages.filter((message) => message.taken);
+    // One the session never took was never run: it goes to the next turn.
+    this.inbox.putBack(messages.filter((message) => !message.taken));
+    await this.ack(taken);
+    this.done(taken);
   }
 
   private async stopSession(): Promise<void> {
@@ -823,15 +836,36 @@ export class PhoneLane {
     );
   }
 
+  /**
+   * Acknowledges `ids`. One that fails stays owed and goes again, with
+   * backoff and on every inbox poll, until the server takes it: an ack
+   * that never lands would have the message run again.
+   */
   private async acknowledge(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
+    for (const id of ids) this.unacked.add(id);
+    const owed = [...this.unacked];
+    if (owed.length === 0) return;
     try {
       await this.deps.call(
-        { action: "ack", message_ids: ids },
+        { action: "ack", message_ids: owed },
         CALL_TIMEOUT_MS
       );
+      for (const id of owed) this.unacked.delete(id);
+      this.ackFailures = 0;
+      if (this.ackRetry != null) clearTimeout(this.ackRetry);
+      this.ackRetry = null;
     } catch (error) {
-      this.log(`[phone] ack failed: ${describe(error)}`);
+      this.ackFailures += 1;
+      this.log(
+        `[phone] ack failed (attempt ${this.ackFailures}): ${describe(error)}`
+      );
+      if (this.ackRetry == null && this.running) {
+        this.ackRetry = setTimeout(() => {
+          this.ackRetry = null;
+          void this.acknowledge([]);
+        }, backoffDelayMs(this.ackFailures));
+        this.ackRetry.unref?.();
+      }
     }
   }
 

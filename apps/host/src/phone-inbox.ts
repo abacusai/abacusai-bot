@@ -7,6 +7,7 @@
  *   handed  -> queued   the session definitely refused it
  *   handed  -> closing  its turn ended (or was given up); acknowledged, and
  *                       its answer (or the apology) is going out
+ *   closing -> queued   given up on before the session took it
  *   closing -> handled  done, whether or not the answer reached the user: a
  *                       handled message is never run again, and neither is
  *                       a host note that rode along with it
@@ -40,6 +41,8 @@ export interface InboundMessage {
   handoff: string | null;
   /** How many times it was handed to the session. */
   handoffs: number;
+  /** The session took it: its turn may act on it. */
+  taken: boolean;
 }
 
 /** Handled messages kept to recognise a redelivery whose ack was lost. */
@@ -62,6 +65,7 @@ export class PhoneInbox {
       state: "queued",
       handoff: null,
       handoffs: 0,
+      taken: false,
     });
     return true;
   }
@@ -112,6 +116,15 @@ export class PhoneInbox {
   requeue(messages: readonly InboundMessage[]): void {
     for (const message of messages) {
       this.expect(message, "handed");
+      message.state = "queued";
+      message.handoff = null;
+    }
+  }
+
+  /** closing -> queued: given up on before the session took it, so it goes again. */
+  putBack(messages: readonly InboundMessage[]): void {
+    for (const message of messages) {
+      this.expect(message, "closing");
       message.state = "queued";
       message.handoff = null;
     }

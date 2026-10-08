@@ -481,15 +481,23 @@ describe("the phone lane", () => {
       holdReplies?: boolean;
       stop?: (workspaceId: string, sessionId: string) => Promise<void>;
       timings?: Record<string, number>;
+      /** The server fails this many acks, then takes them. */
+      ackFailsTimes?: number;
+      /** Holds the session's answer to these sends until `settleSend`. */
+      holdSend?: (messageId: string) => boolean;
     } = {}
   ) => {
     const held: Array<() => void> = [];
     const calls: Array<Record<string, unknown>> = [];
     const logs: string[] = [];
     let listener: (sessionId: string, payload: never) => void = () => {};
+    let settleSend: (taken: boolean) => void = () => {};
     const send = vi.fn(
-      async (_w: string, _s: string, _text: string, messageId: string) =>
-        !(options.refuse?.(messageId) ?? false)
+      async (_w: string, _s: string, _text: string, messageId: string) => {
+        if (options.holdSend?.(messageId) === true)
+          return new Promise<boolean>((resolve) => (settleSend = resolve));
+        return !(options.refuse?.(messageId) ?? false);
+      }
     );
     const activity = vi.fn();
     const pinMedia = vi.fn();
@@ -506,6 +514,10 @@ describe("the phone lane", () => {
         call: (async (body: Record<string, unknown>) => {
           calls.push(body);
           callOrder.push(order());
+          if (body.action === "ack" && (options.ackFailsTimes ?? 0) > 0) {
+            options.ackFailsTimes! -= 1;
+            throw new Error("ack failed");
+          }
           if (body.action === "reply" && options.holdReplies === true)
             await new Promise<void>((resolve) => held.push(resolve));
           if (
@@ -601,6 +613,7 @@ describe("the phone lane", () => {
       callOrder,
       handled,
       logs,
+      settleSend: (taken: boolean) => settleSend(taken),
     };
   };
 
@@ -1136,6 +1149,60 @@ describe("the phone lane", () => {
     await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m1"]]));
     expect(send).toHaveBeenCalledTimes(1);
     phone.stop();
+  });
+
+  it("retries an ack that failed until the server takes it, so the message is not run again", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, reply, calls } = lane({ ackFailsTimes: 1 });
+      phone.arrive({ id: "m1", text: "book it" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      reply(["m1"], "Booked.");
+      await vi.advanceTimersByTimeAsync(0);
+      const ackCalls = () => calls.filter((body) => body.action === "ack");
+      expect(ackCalls()).toHaveLength(1);
+      // Owed, and sent again after the backoff.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(ackCalls().map((body) => body.message_ids)).toEqual([
+        ["m1"],
+        ["m1"],
+      ]);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(ackCalls()).toHaveLength(2);
+      expect(send).toHaveBeenCalledTimes(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up acking only what the session took: a steer still on its way goes again", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, settleStop, settleSend, acks } = lane({
+        holdSend: (id) => id === "m2",
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      phone.arrive({ id: "m2", text: "only nonstop" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(2);
+      // Idle limit: the work is given up while m2's send is still out.
+      await vi.advanceTimersByTimeAsync(1_000);
+      settleStop();
+      // The stopped session refuses the send that was on its way.
+      settleSend(false);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"]]);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(3);
+      expect(send.mock.calls[2]![3]).toBe("m2");
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("runs a request once when its reply is refused, and hands the host's notes over once", async () => {
