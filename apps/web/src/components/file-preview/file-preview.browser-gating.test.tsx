@@ -120,3 +120,30 @@ it("ignores an old read after selection changes and avoids refetching for inline
   );
   expect(read.text).toHaveBeenCalledTimes(2);
 });
+it("changes from source to a rendered preview for the same file when opening a preview tab", async () => {
+  const read = readers();
+  const view = render(
+    <FilePreview path="/w/index.html" hostRoot="/w" read={read} />
+  );
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="file-preview-text"]')?.textContent
+    ).toBe("<h1>Todo</h1>")
+  );
+  view.rerender(
+    <FilePreview
+      path="/w/index.html"
+      hostRoot="/w"
+      read={read}
+      initialView="preview"
+    />
+  );
+  expect((await screen.findByTitle("index.html")).tagName).toBe("IFRAME");
+  view.rerender(<FilePreview path="/w/other.html" hostRoot="/w" read={read} />);
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="file-preview-text"]')?.textContent
+    ).toBe("<h1>Todo</h1>")
+  );
+  expect(screen.queryByTitle("other.html")).toBeNull();
+});

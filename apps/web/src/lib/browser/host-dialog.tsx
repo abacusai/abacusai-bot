@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { FilePreview } from "#renderer/components/file-preview";
 import type { AppClient } from "#renderer/data/transport/types";
 import { Button } from "#renderer/ui/button";
+import { Checkbox } from "#renderer/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -255,33 +256,47 @@ export const HostPathPicker = ({
             </p>
           ) : (
             entries.map((entry) => (
-              <Button
-                key={entry.path}
-                data-host-path-row
-                variant="ghost"
-                size="sm"
-                title={entry.name}
-                aria-pressed={
-                  entry.kind === "file"
-                    ? selected.includes(entry.path)
-                    : undefined
-                }
-                className="h-8 w-full justify-start"
-                onClick={() => {
-                  if (entry.kind === "directory") go(entry.path);
-                  else
-                    setSelected((paths) =>
-                      multiple
-                        ? paths.includes(entry.path)
-                          ? paths.filter((p) => p !== entry.path)
-                          : [...paths, entry.path]
-                        : [entry.path]
-                    );
-                }}
-              >
-                {entry.kind === "directory" ? <Folder /> : <FileText />}
-                <span className="truncate">{entry.name}</span>
-              </Button>
+              <div key={entry.path} className="flex items-center gap-1">
+                {mode === "file" && multiple && entry.kind === "directory" && (
+                  <Checkbox
+                    aria-label={entry.name}
+                    checked={selected.includes(entry.path)}
+                    onCheckedChange={(checked) =>
+                      setSelected((paths) =>
+                        checked
+                          ? [...paths, entry.path]
+                          : paths.filter((path) => path !== entry.path)
+                      )
+                    }
+                  />
+                )}
+                <Button
+                  data-host-path-row
+                  variant="ghost"
+                  size="sm"
+                  title={entry.name}
+                  aria-pressed={
+                    entry.kind === "file"
+                      ? selected.includes(entry.path)
+                      : undefined
+                  }
+                  className="h-8 w-full justify-start"
+                  onClick={() => {
+                    if (entry.kind === "directory") go(entry.path);
+                    else
+                      setSelected((paths) =>
+                        multiple
+                          ? paths.includes(entry.path)
+                            ? paths.filter((p) => p !== entry.path)
+                            : [...paths, entry.path]
+                          : [entry.path]
+                      );
+                  }}
+                >
+                  {entry.kind === "directory" ? <Folder /> : <FileText />}
+                  <span className="truncate">{entry.name}</span>
+                </Button>
+              </div>
             ))
           )}
         </div>

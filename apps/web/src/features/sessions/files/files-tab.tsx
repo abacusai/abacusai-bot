@@ -47,7 +47,9 @@ export const SessionFilePreview = ({
   root,
   path,
   renderLocal,
+  preview = false,
 }: {
+  preview?: boolean;
   root: string;
   path: string;
   renderLocal: (path: string) => ReactNode;
@@ -65,6 +67,7 @@ export const SessionFilePreview = ({
     return <>{renderLocal(absolute)}</>;
   return (
     <FilePreview
+      initialView={preview ? "preview" : "source"}
       path={absolute}
       hostRoot={root}
       read={{

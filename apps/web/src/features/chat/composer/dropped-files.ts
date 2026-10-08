@@ -15,21 +15,26 @@ export const isUploadJunk = (file: File): boolean =>
     .some((part) => junk.has(part));
 export const droppedFiles = async (transfer: DataTransfer): Promise<File[]> => {
   const files: File[] = [];
+  let regular = 0;
+  let skipped = 0;
   const walk = async (
     entry: FileSystemEntry,
     prefix: string
   ): Promise<void> => {
-    if (files.length >= 1001) return;
     const path = `${prefix}${entry.name}`;
+    const ignored = path.split("/").some((part) => junk.has(part));
+    if (regular >= 1001 || (ignored && skipped >= 1001)) return;
     if (entry.isFile) {
       const file = await new Promise<File>((resolve, reject) =>
         (entry as FileSystemFileEntry).file(resolve, reject)
       );
       relativePaths.set(file, path);
       files.push(file);
+      if (ignored) skipped++;
+      else regular++;
     } else if (entry.isDirectory) {
       const reader = (entry as FileSystemDirectoryEntry).createReader();
-      while (files.length < 1001) {
+      while (regular < 1001 && (!ignored || skipped < 1001)) {
         const entries = await new Promise<FileSystemEntry[]>(
           (resolve, reject) => reader.readEntries(resolve, reject)
         );

@@ -62,7 +62,15 @@ export const FilePreview = ({
   initialView = "source",
 }: FilePreviewProps) => {
   const { t } = useTranslation();
-  const [htmlPreview, setHtmlPreview] = useState(initialView === "preview");
+  const htmlKey = `${path}\u0000${initialView}`;
+  const [htmlChoice, setHtmlChoice] = useState<{
+    key: string;
+    preview: boolean;
+  }>();
+  const htmlPreview =
+    htmlChoice?.key === htmlKey
+      ? htmlChoice.preview
+      : initialView === "preview";
   const [attempt, setAttempt] = useState(0);
   const [downloadFailure, setDownloadFailure] = useState<string | null>(null);
   const kind =
@@ -161,7 +169,9 @@ export const FilePreview = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setHtmlPreview(!htmlPreview)}
+              onClick={() =>
+                setHtmlChoice({ key: htmlKey, preview: !htmlPreview })
+              }
             >
               {t(htmlPreview ? "web.files.source" : "web.files.preview")}
             </Button>

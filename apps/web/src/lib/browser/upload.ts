@@ -9,6 +9,8 @@ export interface UploadOptions {
   batch: string;
   relativePath: string;
 }
+class TransientUploadError extends Error {}
+
 export const uploadFile = async (
   file: File,
   context: UploadContext,
@@ -48,13 +50,15 @@ export const uploadFile = async (
       request.onabort = () =>
         reject(new DOMException("Cancelled", "AbortError"));
       request.onerror = request.ontimeout = () =>
-        reject(new Error(i18n.t("web.files.uploadFailed")));
+        reject(new TransientUploadError(i18n.t("web.files.uploadFailed")));
       request.onload = () => {
         if (request.status === 401 || request.status === 403) {
           reject(new Error("upload-auth"));
           return;
         }
         try {
+          if (request.status >= 500)
+            throw new TransientUploadError(i18n.t("web.files.uploadFailed"));
           const value = JSON.parse(request.responseText) as {
             success?: boolean;
             paths?: string[];
@@ -78,12 +82,40 @@ export const uploadFile = async (
       };
       request.send(file);
     });
-  try {
-    return await send();
-  } catch (error) {
-    if (!(error instanceof Error) || error.message !== "upload-auth")
-      throw error;
-    host = await refreshUploadToken(true, host.token);
-    return send();
+  let refreshed = false;
+  for (let retry = 0; ; retry++) {
+    try {
+      return await send();
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "upload-auth" &&
+        !refreshed
+      ) {
+        host = await refreshUploadToken(true, host.token);
+        refreshed = true;
+        continue;
+      }
+      if (
+        !(error instanceof TransientUploadError) ||
+        retry >= 2 ||
+        options.signal.aborted
+      )
+        throw error;
+      await new Promise<void>((resolve, reject) => {
+        const cancelled = () => {
+          clearTimeout(timer);
+          reject(new DOMException("Cancelled", "AbortError"));
+        };
+        const timer = setTimeout(
+          () => {
+            options.signal.removeEventListener("abort", cancelled);
+            resolve();
+          },
+          500 * 2 ** retry
+        );
+        options.signal.addEventListener("abort", cancelled, { once: true });
+      });
+    }
   }
 };
