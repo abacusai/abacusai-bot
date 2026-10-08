@@ -192,8 +192,9 @@ export function buildBrowserTaskTool(
       browserHandoffDescription(channel),
       "",
       "When the user has a login saved in their vault (vault_items) for the site, pass its",
-      "item_id as login_item_id: the sub-agent signs in with it without seeing the password.",
-      "When the user saves one while a run is paused for the sign-in, pass it with",
+      "item_id as login_item_id: the sub-agent signs in with it without seeing the password,",
+      "once the user allowed that sign-in (signin_approval; saving the login allows the first).",
+      "When the user saves one or allows a sign-in while a run is paused for it, pass it with",
       "continue_from_last.",
     ].join("\n"),
     parameters: Type.Object({

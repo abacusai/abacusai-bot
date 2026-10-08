@@ -125,6 +125,7 @@ import {
   type DomNode,
   type FieldFacts,
   isPaymentFrameOrigin,
+  NO_SIGNIN_REASON,
   planFill,
   readPageTotal,
   type PageTotal,
@@ -597,6 +598,9 @@ const LOGIN_TEXT_ENTRY: ReadonlySet<string> = new Set([
 
 /** How long a failed read of a saved login's sites is believed. */
 const LOGIN_SITES_RETRY_MS = 60_000;
+
+/** Why one login field was not filled, and whether it only waits on the user's sign-in approval. */
+type LoginFieldFailure = { reason: string; awaitingApproval: boolean };
 
 /** The saved login a browser run was handed, from browser_checkout's login_item_id. */
 const loginItemOf = (
@@ -1937,6 +1941,7 @@ export class McpBrowserServer extends McpHttpServer {
           case "vault_items":
           case "vault_request":
           case "payment_approval":
+          case "signin_approval":
             return this.options.vault == null
               ? Promise.resolve(this.err(VAULT_UNAVAILABLE))
               : this.options.vault.run(name, args, sessionId, {
@@ -3404,9 +3409,12 @@ export class McpBrowserServer extends McpHttpServer {
       return input.summary;
     const { key } = await this.documentInfo(wc);
     if (key == null || key !== refusal.documentKey) return input.summary;
-    // The browser's reason first, so the bound keeps it; the model's words after.
+    // The browser's reason first, so the bound keeps it; the model's words
+    // after. Waiting on the user's approval is not a page problem: said as such.
     return pageText(
-      `The browser could not fill the saved login: ${refusal.reason} Agent: ${input.summary}`,
+      refusal.awaitingApproval
+        ? `${refusal.reason} Agent: ${input.summary}`
+        : `The browser could not fill the saved login: ${refusal.reason} Agent: ${input.summary}`,
       400
     );
   }
@@ -3964,17 +3972,26 @@ export class McpBrowserServer extends McpHttpServer {
       frameId != null ? await this.liveOrigin(wc, frameId) : null;
     if (frameOrigin != null && this.isAbacus(frameOrigin))
       return this.err(ABACUS_REFUSAL);
-    const approval = vault.approval(sessionId);
     const plan = planFill({
       itemId,
       field: field as VaultField,
       topOrigin,
       frameOrigin,
       inFrame: frameId != null,
-      approval,
+      approval: vault.approval(sessionId),
+      signin: vault.signin(sessionId),
       pageTotal: total,
     });
-    if (plan.ok === false) return this.err(plan.error);
+    if (plan.ok === false) {
+      // A login stop on this page says it waits on the user, not that the page failed.
+      if (plan.awaitingApproval === true)
+        this.vaultSession(sessionId).loginRefusal = {
+          reason: plan.error,
+          documentKey,
+          awaitingApproval: true,
+        };
+      return this.err(plan.error);
+    }
     // The plan checked this total against the approval. Anchored already (at
     // the payment pause), it must be that same element; otherwise it becomes
     // the one the Pay click re-reads.
@@ -3986,7 +4003,7 @@ export class McpBrowserServer extends McpHttpServer {
         return this.err(TOTAL_NOT_ANCHORED);
     }
     // Taken now, before anything waits, so a second fill of this field is refused.
-    if (plan.once) approval!.used.add(field as VaultField);
+    plan.uses?.add(field as VaultField);
     let delivered = false;
     const secrets = this.secretsOf(wc);
 
@@ -4110,7 +4127,7 @@ export class McpBrowserServer extends McpHttpServer {
           );
     } finally {
       // Not spent unless the vault handed the value over.
-      if (plan.once && !delivered) approval!.used.delete(field as VaultField);
+      if (!delivered) plan.uses?.delete(field as VaultField);
       await this.cdp(page, "Runtime.releaseObjectGroup", {
         objectGroup: VAULT_OBJECT_GROUP,
       }).catch(() => undefined);
@@ -4127,16 +4144,16 @@ export class McpBrowserServer extends McpHttpServer {
    * Why it did not fill is kept for a login stop on the same page.
    */
   private async executeLoginFill(
-    itemId: string,
+    // The model's item_id is not used: the login is the allowed sign-in's.
+    _itemId: string,
     sessionId?: string
   ): Promise<ToolResult> {
     const session = this.vaultSession(sessionId);
     let documentKey: string | null = null;
-    const refuse = (reason: string): ToolResult => {
-      session.loginRefusal = { reason, documentKey };
+    const refuse = (reason: string, awaitingApproval = false): ToolResult => {
+      session.loginRefusal = { reason, documentKey, awaitingApproval };
       return this.err(reason);
     };
-
     const wc = await this.getWC(sessionId);
     if (!wc) return refuse(this.noBrowser(sessionId));
     documentKey = (await this.documentInfo(wc)).key;
@@ -4151,9 +4168,12 @@ export class McpBrowserServer extends McpHttpServer {
           "Reload the page, snapshot, and fill again without running scripts."
       );
     const topOrigin = await this.liveOrigin(wc);
-    // The login the run was handed wins over an id the model typed, and an
-    // item whose sites the vault names must be for this page.
-    const loginItemId = session.loginItem?.itemId ?? itemId;
+    // The login is the one the user allowed a sign-in with, never an id the
+    // model typed; an item whose sites the vault names must be for this page.
+    const signin = session.allowedSignin();
+    // No sign-in allowed: that is the reason, before any item or site one.
+    if (signin == null) return refuse(NO_SIGNIN_REASON, true);
+    const loginItemId = signin.item;
     const sites = await this.loginSites(loginItemId, sessionId);
     const host = httpsHost(topOrigin);
     if (
@@ -4285,9 +4305,17 @@ export class McpBrowserServer extends McpHttpServer {
         username: null,
         password: null,
       };
+      // A username filled under this sign-in whose password was not (it
+      // failed before the vault handed it over, or the site asks again on
+      // its password step) is left as it is: the retry fills the password.
+      const usernameKept =
+        choice.password != null &&
+        signin.used.has("username") &&
+        !signin.used.has("password");
       for (const field of ["username", "password"] as const) {
         const node = choice[field];
         if (node == null) continue;
+        if (field === "username" && usernameKept) continue;
         const name = fieldName(await refOf(node), field);
         const failure = await this.fillLoginField({
           wc,
@@ -4304,8 +4332,9 @@ export class McpBrowserServer extends McpHttpServer {
         if (failure != null)
           return refuse(
             filled.username != null
-              ? `The username was filled into ${filled.username}, but the password was not: ${failure}`
-              : failure
+              ? `The username was filled into ${filled.username}, but the password was not: ${failure.reason}`
+              : failure.reason,
+            failure.awaitingApproval
           );
         filled[field] = name;
       }
@@ -4314,6 +4343,7 @@ export class McpBrowserServer extends McpHttpServer {
       return this.ok(
         loginFilledText({
           ...filled,
+          usernameKept,
           // A button that does not read as signing in is never named as the next click.
           submit: submitName(purpose.nameButton ? submit : null),
         })
@@ -4329,7 +4359,8 @@ export class McpBrowserServer extends McpHttpServer {
   /**
    * One field of a login fill, held as `node`: planned for its own document,
    * marked secret before the value exists here, typed, and checked. Null when
-   * it took the value; otherwise why not, with nothing typed elsewhere.
+   * it took the value; otherwise why not (and whether it only waits on the
+   * user's sign-in approval), with nothing typed elsewhere.
    */
   private async fillLoginField(input: {
     wc: BrowserPage;
@@ -4342,7 +4373,7 @@ export class McpBrowserServer extends McpHttpServer {
     frameId: string | null;
     frameOrigin: string | null;
     documentKey: string;
-  }): Promise<string | null> {
+  }): Promise<LoginFieldFailure | null> {
     const { field } = input;
     const vault = this.options.vault!;
     const plan = planFill({
@@ -4352,21 +4383,25 @@ export class McpBrowserServer extends McpHttpServer {
       frameOrigin: input.frameOrigin,
       inFrame: input.frameId != null,
       approval: vault.approval(input.sessionId),
+      signin: vault.signin(input.sessionId),
       pageTotal: null,
     });
-    if (plan.ok === false) return plan.error;
+    if (plan.ok === false)
+      return {
+        reason: plan.error,
+        awaitingApproval: plan.awaitingApproval === true,
+      };
     // Taken now, as a fill by ref takes it: a value filled once under an
     // approval is not filled again, and is given back if the vault never
     // handed it over.
-    const approval = vault.approval(input.sessionId);
-    if (plan.once) approval!.used.add(field);
+    plan.uses?.add(field);
     let delivered = false;
     try {
       return await this.typeLoginValue(input, plan, () => {
         delivered = true;
       });
     } finally {
-      if (plan.once && !delivered) approval!.used.delete(field);
+      if (!delivered) plan.uses?.delete(field);
     }
   }
 
@@ -4383,21 +4418,29 @@ export class McpBrowserServer extends McpHttpServer {
     },
     plan: Extract<ReturnType<typeof planFill>, { ok: true }>,
     handedOver: () => void
-  ): Promise<string | null> {
+  ): Promise<LoginFieldFailure | null> {
+    const failed = (reason: string): LoginFieldFailure => ({
+      reason,
+      awaitingApproval: false,
+    });
     const { wc, page, node, field } = input;
     const vault = this.options.vault!;
     const secrets = this.secretsOf(wc);
     if (!(await secrets.markFilledNode(page, node).catch(() => false)))
-      return `the ${field} field could not be marked as a secret field, so nothing was typed into it. Snapshot and try again.`;
+      return failed(
+        `the ${field} field could not be marked as a secret field, so nothing was typed into it. Snapshot and try again.`
+      );
     const fetched = await vault.client.fill({
       itemId: input.itemId,
       field,
       ...plan.request,
     });
     if (fetched.ok === false)
-      return fetched.unavailable
-        ? VAULT_UNAVAILABLE
-        : `The vault did not fill it: ${fetched.error}`;
+      return failed(
+        fetched.unavailable
+          ? VAULT_UNAVAILABLE
+          : `The vault did not fill it: ${fetched.error}`
+      );
     handedOver();
     const outcome = await this.typeVaultValue(
       wc,
@@ -4409,11 +4452,17 @@ export class McpBrowserServer extends McpHttpServer {
       input.documentKey
     );
     if (outcome === "aborted")
-      return `Stopped before typing the ${field}: the page changed (it navigated or the field lost focus). Snapshot and check where the page is.`;
+      return failed(
+        `Stopped before typing the ${field}: the page changed (it navigated or the field lost focus). Snapshot and check where the page is.`
+      );
     if (outcome === "moved")
-      return `The focus left the ${field} field while typing, so the value may have gone into another field; that field was cleared and hidden. Snapshot and check the form.`;
+      return failed(
+        `The focus left the ${field} field while typing, so the value may have gone into another field; that field was cleared and hidden. Snapshot and check the form.`
+      );
     if (outcome === "failed")
-      return `The ${field} field did not take the value. Do not retry in a loop: snapshot, and report if it will not accept typing.`;
+      return failed(
+        `The ${field} field did not take the value. Do not retry in a loop: snapshot, and report if it will not accept typing.`
+      );
     const took = await this.callOn(
       page,
       node,
@@ -4421,7 +4470,9 @@ export class McpBrowserServer extends McpHttpServer {
     );
     return took === true
       ? null
-      : `The ${field} field still looks empty after typing; the page may have replaced it. Snapshot and check.`;
+      : failed(
+          `The ${field} field still looks empty after typing; the page may have replaced it. Snapshot and check.`
+        );
   }
 
   /**

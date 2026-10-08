@@ -472,6 +472,11 @@ const spent = new Set<string>();
 let holdScript: Promise<void> = Promise.resolve();
 /** Set to keep the vault's answer to a fill waiting. */
 let holdFill: Promise<void> = Promise.resolve();
+/** What the platform says of a sign-in approval, and of a vault page the bot sent. */
+let signinStatus = "pending";
+/** A login field the vault refuses once, before handing anything over. */
+let refuseFieldOnce: string | null = null;
+let requestStatusResult: Record<string, unknown> = { status: "pending" };
 const platformFetch = (async (input: URL | string, init?: RequestInit) => {
   const url = new URL(String(input));
   const method = url.pathname.split("/").at(-1)!;
@@ -483,6 +488,13 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
   if (method === "_fillAbacusbotVaultField") {
     timeline.push("fetched");
     await holdFill;
+    if (refuseFieldOnce != null && body.field === refuseFieldOnce) {
+      refuseFieldOnce = null;
+      return new Response(
+        JSON.stringify({ success: false, error: "Too many vault fills." }),
+        { status: 429 }
+      );
+    }
   }
   if (method === "_fillAbacusbotVaultField" && body.paymentApprovalId != null) {
     const key = `${String(body.paymentApprovalId)}:${String(body.field)}`;
@@ -510,6 +522,46 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
           },
         ],
       })
+    );
+  if (method === "_createAbacusbotSigninApproval")
+    return new Response(
+      JSON.stringify({
+        success: true,
+        result: {
+          signinApprovalId: "sa-secret-id",
+          url: "https://example.test/app/vault/signin?r=abc",
+          site: "shop.example",
+          status: "pending",
+          expiresAt: Math.floor(Date.now() / 1000) + 1800,
+        },
+      })
+    );
+  if (method === "_getAbacusbotSigninApproval")
+    return new Response(
+      JSON.stringify({
+        success: true,
+        result: {
+          signinApprovalId: body.signinApprovalId,
+          status: signinStatus,
+          site: "shop.example",
+          expiresAt: Math.floor(Date.now() / 1000) + 300,
+        },
+      })
+    );
+  if (method === "_createAbacusbotVaultRequest")
+    return new Response(
+      JSON.stringify({
+        success: true,
+        result: {
+          requestId: "req-login-1",
+          url: "https://example.test/app/vault/login?r=abc",
+          expiresAt: Math.floor(Date.now() / 1000) + 1800,
+        },
+      })
+    );
+  if (method === "_getAbacusbotVaultRequestStatus")
+    return new Response(
+      JSON.stringify({ success: true, result: requestStatusResult })
     );
   const result =
     method === "_fillAbacusbotVaultField"
@@ -596,6 +648,18 @@ const approve = (amount = "1234.00", cvvRequired = false): void => {
   };
 };
 
+/** The sign-in the user allowed, as the waiter holds it once they tapped Allow. */
+const allowSignin = (item = "login-1"): void => {
+  vault.sessions.for("s1").signin = {
+    id: "signin-1",
+    item,
+    site: "shop.example",
+    status: "approved",
+    used: new Set(),
+    expiresAt: Date.now() + 60_000,
+  };
+};
+
 const fills = () =>
   platformCalls.filter((entry) => entry.method === "_fillAbacusbotVaultField");
 const typed = () =>
@@ -672,11 +736,17 @@ beforeEach(() => {
   snapshotOverride = null;
   vault.sessions.for("s1").loginItem = null;
   vault.sessions.for("s1").loginRefusal = null;
+  // The user allowed a sign-in with the shop's login: the fill cases are about the page.
+  allowSignin();
   timeline.length = 0;
   // A fresh page each time: one the browser has not been told anything about yet.
   tab = makeTab();
   holdFill = Promise.resolve();
   holdScript = Promise.resolve();
+  signinStatus = "pending";
+  refuseFieldOnce = null;
+  requestStatusResult = { status: "pending" };
+  vault.sessions.for("s1").requests.clear();
   frames = [];
   secrets = new SecretFields();
   otherSecrets = new SecretFields();
@@ -763,6 +833,7 @@ describe("browser_vault_fill", () => {
       itemId: "login-1",
       field: "password",
       origin: "https://accounts.shop.example",
+      signinApprovalId: "signin-1",
     });
   });
 
@@ -2189,11 +2260,13 @@ describe('browser_vault_fill field:"login"', () => {
         itemId: "login-1",
         field: "username",
         origin: "https://www.shop.example",
+        signinApprovalId: "signin-1",
       },
       {
         itemId: "login-1",
         field: "password",
         origin: "https://www.shop.example",
+        signinApprovalId: "signin-1",
       },
     ]);
     expect(typed()).toHaveLength(2);
@@ -2375,5 +2448,237 @@ describe('browser_vault_fill field:"login"', () => {
     await call("browser_pause", { need: "login", summary: "Needs a login." });
     await checkout("resume");
     expect(vault.sessions.for("s1").loginRefusal).toBeNull();
+  });
+});
+
+describe("sign-in approval", () => {
+  /** A sign-in form on the shop, as the browser finds it. */
+  const signInForm = (fields: string[] = ["#user", "#pass"]): void => {
+    const all: Record<string, { id: number; attributes: string[] }> = {
+      "#user": {
+        id: 801,
+        attributes: ["type", "email", "autocomplete", "username"],
+      },
+      "#pass": { id: 802, attributes: ["type", "password"] },
+    };
+    page.fields = {
+      tab: Object.fromEntries(
+        fields.map((selector) => [selector, all[selector]!])
+      ),
+    };
+    page.submit = null;
+  };
+  const fillLogin = (itemId = "login-1") =>
+    call("browser_vault_fill", { item_id: itemId, field: "login" });
+  /** Words that only make sense inside an app; the phone has none of them. */
+  const APP_WORDS =
+    /\b(app|pane|panel|window|settings|desktop|sidebar|click|button)\b/i;
+  /** What the model is told, without the links (a link's path is the platform's own). */
+  const wording = (text: string): string =>
+    text.replace(/https:\/\/\S+/g, "<link>");
+  /** The id the platform gave the approval: the host's alone. */
+  const APPROVAL_ID = "sa-secret-id";
+
+  it("is waited for, not reported as a page failure, when no sign-in is allowed", async () => {
+    vault.sessions.for("s1").signin = null;
+    signInForm();
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(fills()).toEqual([]);
+    expect(typed()).toEqual([]);
+    const paused = await call("browser_pause", {
+      need: "login",
+      summary: "The password is wrong.",
+    });
+    const state = JSON.parse(
+      paused.text
+        .split("\n")
+        .find((line) => line.startsWith(CHECKOUT_STATE_PREFIX))!
+        .slice(CHECKOUT_STATE_PREFIX.length)
+    ) as { paused: { summary: string } };
+    expect(state.paused.summary).toMatch(/^Waiting for sign-in approval:/);
+    expect(state.paused.summary).not.toContain("could not be filled");
+  });
+
+  it("refuses a by-ref login field without one too, asking the vault nothing", async () => {
+    vault.sessions.for("s1").signin = null;
+    await snapshot();
+
+    const result = await call("browser_vault_fill", {
+      item_id: "login-1",
+      field: "password",
+      ref: "@e1",
+    });
+
+    expect(result.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("runs end to end: link, the user's Allow, one fill of each field, and never the id to the model", async () => {
+    vault.sessions.for("s1").signin = null;
+    const notes: string[] = [];
+
+    const asked = await call("signin_approval", { item_id: "login-1" });
+    expect(asked.isError).toBe(false);
+    expect(asked.text).toContain("https://example.test/app/vault/signin?r=abc");
+    expect(asked.text).toContain("Tap to let me sign in to shop.example once");
+    expect(wording(asked.text)).not.toMatch(APP_WORDS);
+    expect(vault.sessions.get("s1")?.signin?.status).toBe("pending");
+
+    // Pending: the browser still waits.
+    signInForm();
+    expect((await fillLogin()).text).toMatch(/^Waiting for sign-in approval:/);
+    notes.push(...(await vault.waiter.checkNow("s1")));
+    expect(notes).toEqual([]);
+
+    // The user taps Allow.
+    signinStatus = "approved";
+    notes.push(...(await vault.waiter.checkNow("s1")));
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("allowed one sign-in to shop.example");
+    expect(notes[0]).not.toMatch(APP_WORDS);
+
+    // The model names another login: the browser signs in with the allowed one.
+    const filled = await fillLogin("login-9");
+    expect(filled.isError).toBe(false);
+    expect(fills().map((entry) => entry.body)).toEqual([
+      {
+        itemId: "login-1",
+        field: "username",
+        origin: "https://www.shop.example",
+        signinApprovalId: APPROVAL_ID,
+      },
+      {
+        itemId: "login-1",
+        field: "password",
+        origin: "https://www.shop.example",
+        signinApprovalId: APPROVAL_ID,
+      },
+    ]);
+
+    // Each field once: a second sign-in needs a new approval.
+    const again = await fillLogin();
+    expect(again.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(fills()).toHaveLength(2);
+
+    // The id never reached the model: not in a result, not in a note.
+    for (const raw of responses) expect(raw).not.toContain(APPROVAL_ID);
+    for (const note of notes) expect(note).not.toContain(APPROVAL_ID);
+  });
+
+  it("keeps a username-first sign-in's approval for its password step", async () => {
+    signInForm(["#user"]);
+    expect((await fillLogin()).isError).toBe(false);
+    expect([...vault.sessions.for("s1").signin!.used]).toEqual(["username"]);
+
+    // The site moved on to its password step.
+    tab = makeTab();
+    secrets = new SecretFields();
+    signInForm(["#pass"]);
+    const password = await fillLogin();
+    expect(password.isError).toBe(false);
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+    ]);
+  });
+
+  it("retries a sign-in whose password failed before delivery: the username stays, the password fills", async () => {
+    signInForm();
+    refuseFieldOnce = "password";
+
+    const first = await fillLogin();
+    expect(first.isError).toBe(true);
+    expect(first.text).toContain("The username was filled into");
+    expect([...vault.sessions.for("s1").signin!.used]).toEqual(["username"]);
+
+    const retry = await fillLogin();
+    expect(retry.isError).toBe(false);
+    expect(retry.text).toContain("username already filled; password filled");
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+      "password",
+    ]);
+  });
+
+  it("leaves the email the password step shows again as it is, and fills the password", async () => {
+    signInForm(["#user"]);
+    expect((await fillLogin()).isError).toBe(false);
+
+    // The password step shows the email again beside the password field.
+    tab = makeTab();
+    secrets = new SecretFields();
+    signInForm(["#user", "#pass"]);
+    const password = await fillLogin();
+
+    expect(password.isError).toBe(false);
+    expect(password.text).toContain("username already filled");
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+    ]);
+  });
+
+  it("says it waits for approval first, before saying the login is for another site", async () => {
+    vault.sessions.for("s1").signin = null;
+    await checkout("start", { login_item_id: "login-1" });
+    signInForm();
+    page.top = "https://www.elsewhere.example";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("refuses on another site than the one the user allowed", async () => {
+    signInForm();
+    vault.sessions.for("s1").signin!.site = "elsewhere.example";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(result.text).toContain("elsewhere.example");
+    expect(fills()).toEqual([]);
+  });
+
+  it("tells the model when the user denied it, and drops it", async () => {
+    vault.sessions.for("s1").signin = null;
+    await call("signin_approval", { item_id: "login-1" });
+    signinStatus = "denied";
+
+    const notes = await vault.waiter.checkNow("s1");
+
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain("denied signing in to shop.example");
+    expect(notes[0]).not.toMatch(APP_WORDS);
+    expect(vault.sessions.get("s1")?.signin ?? null).toBeNull();
+  });
+
+  it("holds the sign-in a login's save allowed, bound to the server's site", async () => {
+    vault.sessions.for("s1").signin = null;
+    await call("vault_request", { kind: "login", site: "www.shop.example" });
+    requestStatusResult = {
+      status: "completed",
+      itemId: "login-1",
+      signinApprovalId: APPROVAL_ID,
+    };
+    signinStatus = "approved";
+
+    const notes = await vault.waiter.checkNow("s1");
+
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).not.toContain(APPROVAL_ID);
+    expect(vault.sessions.get("s1")?.signin).toMatchObject({
+      item: "login-1",
+      site: "shop.example",
+      status: "approved",
+    });
+    signInForm();
+    expect((await fillLogin()).isError).toBe(false);
   });
 });

@@ -41,7 +41,7 @@ export function browserHandoffDescription(
         "done, call this tool again with continue_from_last: true and their message as the task; " +
         "the same sub-agent carries on from the same page with everything it already found."
     : "The user cannot see this browser: they act only through this chat, one-time links " +
-        "(vault_request) and approval pages (payment_approval). Do what the result says next " +
+        "(vault_request) and approval pages (payment_approval, signin_approval). Do what the result says next " +
         "that way; when they have done it, call this tool again with continue_from_last: true " +
         "and their message as the task.";
 }
@@ -54,7 +54,8 @@ export function browserStopNote(channel: ChannelCapabilities): string {
         "their reply as the task; the same sub-agent continues with everything it has found.)"
     : "(The run stopped at a step only the user can do. They cannot see this browser and act only " +
         "through this chat, one-time links and approval pages: a login, card or code goes through a " +
-        "vault_request link, a payment through payment_approval, anything else as a question here. " +
+        "vault_request link, a payment through payment_approval, a sign-in with a saved login through " +
+        "signin_approval, anything else as a question here. " +
         "Never ask for a password or card details in the chat. Once it is done, call browser_task with " +
         "continue_from_last: true and their reply as the task. If none of that can do the step, tell " +
         "them how far it got and that they finish it on the site themselves.)";

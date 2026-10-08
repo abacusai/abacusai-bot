@@ -42,8 +42,30 @@ export interface PaymentApproval {
   expiresAt: number;
 }
 
+/**
+ * A sign-in approval the session asked for (or the user gave by saving the
+ * login), pending or granted. Only the host holds it: a login fill takes its
+ * item and site from here, never from the model.
+ */
+export interface SigninApproval {
+  id: string;
+  /** The saved login it is for. */
+  item: string;
+  /** The registrable domain the server bound it to. */
+  site: string;
+  status: "pending" | "approved";
+  /** The login's fields filled (or being filled) under it: each is filled once. */
+  used: Set<VaultField>;
+  /** Epoch ms after which it is no use: the page's life while pending, the approval's once granted. */
+  expiresAt: number;
+}
+
 /** How long a granted approval lets cards be filled (the server's own bound). */
 export const APPROVAL_LIFETIME_MS = 10 * 60_000;
+/** How long an allowed sign-in lets its login be filled (the server's own bound). */
+export const SIGNIN_LIFETIME_MS = 5 * 60_000;
+/** How long saving a login lets it be filled once (the server's own bound). */
+export const SIGNIN_ON_SAVE_LIFETIME_MS = 10 * 60_000;
 /** A page whose expiry the server did not say lives this long (the server's own). */
 export const REQUEST_LIFETIME_MS = 30 * 60_000;
 
@@ -51,6 +73,8 @@ export class VaultSession {
   readonly requests = new Map<string, PendingVaultRequest>();
   /** The session's one payment approval: a new one replaces the last. */
   approval: PaymentApproval | null = null;
+  /** The session's one sign-in approval: a new one replaces the last. */
+  signin: SigninApproval | null = null;
   /** The session's booking or purchase, moved by its browser run. */
   readonly checkout = new CheckoutRun();
   /**
@@ -93,7 +117,12 @@ export class VaultSession {
    * Why the last `browser_vault_fill field:"login"` did not fill, on which
    * document: a login stop on that page reports this, not the model's guess.
    */
-  loginRefusal: { reason: string; documentKey: string | null } | null = null;
+  loginRefusal: {
+    reason: string;
+    documentKey: string | null;
+    /** The fill was not refused by the page: no sign-in is approved yet. */
+    awaitingApproval: boolean;
+  } | null = null;
 
   constructor(private readonly now: () => number) {}
 
@@ -108,9 +137,24 @@ export class VaultSession {
     return approval;
   }
 
+  /** The sign-in the user allowed, while it is good. */
+  allowedSignin(): SigninApproval | null {
+    const signin = this.signin;
+    if (signin?.status !== "approved") return null;
+    if (this.now() >= signin.expiresAt) {
+      this.signin = null;
+      return null;
+    }
+    return signin;
+  }
+
   /** Whether anything is waiting on the user. */
   outstanding(): boolean {
-    return this.requests.size > 0 || this.approval?.status === "pending";
+    return (
+      this.requests.size > 0 ||
+      this.approval?.status === "pending" ||
+      this.signin?.status === "pending"
+    );
   }
 
   /** The origin is a payment step; remembered for the hold window. */
@@ -178,6 +222,7 @@ export class VaultSessions {
       session != null &&
       !session.outstanding() &&
       session.approved() == null &&
+      session.allowedSignin() == null &&
       !session.checkout.active() &&
       !session.rememberedPaymentSteps()
     )

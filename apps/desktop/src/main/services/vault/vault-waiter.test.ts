@@ -361,3 +361,142 @@ describe("asking for a bank's code", () => {
     expect(vault.approval("s1")?.codeOrigin).toBeNull();
   });
 });
+
+describe("sign-in approvals in the waiter", () => {
+  /** A platform that answers sign-in calls with what the test sets. */
+  const signinClient = () => {
+    const state = {
+      signin: "pending" as "pending" | "approved" | "denied" | "expired",
+      request: {
+        status: "pending",
+        itemId: null as string | null,
+        signinApprovalId: null as string | null,
+      },
+      signinCalls: 0,
+    };
+    const client = {
+      maybeAvailable: () => true,
+      createRequest: vi.fn(async () => ({
+        ok: true as const,
+        value: {
+          requestId: "req-login",
+          url: "https://example.test/app/vault/login?r=x",
+          expiresAt: null,
+        },
+      })),
+      requestStatus: vi.fn(async () => ({
+        ok: true as const,
+        value: state.request,
+      })),
+      createSigninApproval: vi.fn(async () => ({
+        ok: true as const,
+        value: {
+          signinApprovalId: "sa-hidden",
+          url: "https://example.test/app/vault/signin?r=x",
+          site: "shop.example",
+          expiresAt: Math.floor(Date.now() / 1000) + 30 * 60,
+        },
+      })),
+      signinApprovalStatus: vi.fn(async () => {
+        state.signinCalls += 1;
+        return {
+          ok: true as const,
+          value: {
+            status: state.signin,
+            site: "shop.example",
+            expiresAt: Math.floor(Date.now() / 1000) + 5 * 60,
+          },
+        };
+      }),
+      paymentApprovalStatus: vi.fn(),
+    };
+    const vault = new Vault({
+      client: client as unknown as VaultClient,
+      deliver: () => {},
+    });
+    return { vault, state, client };
+  };
+
+  it("drops a pending sign-in that outlived its page without asking the platform", async () => {
+    const { vault, state } = signinClient();
+    await vault.run("signin_approval", { item_id: "login-1" }, "s1", browser);
+    expect(vault.sessions.get("s1")?.signin?.status).toBe("pending");
+
+    // The polling is off: this is the check itself on a page that has gone.
+    vault.waiter.stop();
+    vi.advanceTimersByTime(31 * 60_000);
+    expect(await vault.waiter.checkNow("s1")).toEqual([]);
+    expect(state.signinCalls).toBe(0);
+    expect(vault.sessions.get("s1")?.signin ?? null).toBeNull();
+  });
+
+  it("drops one the platform says expired, with no note", async () => {
+    const { vault, state } = signinClient();
+    await vault.run("signin_approval", { item_id: "login-1" }, "s1", browser);
+    state.signin = "expired";
+
+    expect(await vault.waiter.checkNow("s1")).toEqual([]);
+    expect(vault.sessions.get("s1")?.signin ?? null).toBeNull();
+  });
+
+  it("lets an allowed sign-in lapse when its five minutes are up", async () => {
+    const { vault, state } = signinClient();
+    await vault.run("signin_approval", { item_id: "login-1" }, "s1", browser);
+    state.signin = "approved";
+    await vault.waiter.checkNow("s1");
+    expect(vault.signin("s1")?.item).toBe("login-1");
+
+    vi.advanceTimersByTime(5 * 60_000 - 1_000);
+    expect(vault.signin("s1")).not.toBeNull();
+    vi.advanceTimersByTime(2_000);
+    expect(vault.signin("s1")).toBeNull();
+  });
+
+  it("keeps one session's sign-in from another session", async () => {
+    const { vault, state } = signinClient();
+    await vault.run("signin_approval", { item_id: "login-1" }, "s1", browser);
+    state.signin = "approved";
+    await vault.waiter.checkNow("s1");
+
+    expect(vault.signin("s1")).not.toBeNull();
+    expect(vault.signin("s2")).toBeNull();
+    expect(await vault.waiter.checkNow("s2")).toEqual([]);
+  });
+
+  it("says a save allowed the first sign-in only when that grant was held", async () => {
+    const held = signinClient();
+    await held.vault.run(
+      "vault_request",
+      { kind: "login", site: "shop.example" },
+      "s1",
+      browser
+    );
+    held.state.request = {
+      status: "completed",
+      itemId: "login-1",
+      signinApprovalId: "sa-saved",
+    };
+    held.state.signin = "approved";
+    const [heldNote] = await held.vault.waiter.checkNow("s1");
+    expect(heldNote).toContain("Saving it allowed this first sign-in");
+    expect(held.vault.signin("s1")?.item).toBe("login-1");
+
+    const lost = signinClient();
+    await lost.vault.run(
+      "vault_request",
+      { kind: "login", site: "shop.example" },
+      "s1",
+      browser
+    );
+    lost.state.request = {
+      status: "completed",
+      itemId: "login-1",
+      signinApprovalId: "sa-saved",
+    };
+    lost.state.signin = "expired";
+    const [lostNote] = await lost.vault.waiter.checkNow("s1");
+    expect(lostNote).not.toContain("Saving it allowed");
+    expect(lostNote).toContain("needs signin_approval");
+    expect(lost.vault.signin("s1")).toBeNull();
+  });
+});

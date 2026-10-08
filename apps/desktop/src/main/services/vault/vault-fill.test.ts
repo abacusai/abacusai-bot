@@ -14,7 +14,7 @@ import {
   sameAmount,
   type FillContext,
 } from "./vault-fill";
-import type { PaymentApproval } from "./vault-session";
+import type { PaymentApproval, SigninApproval } from "./vault-session";
 
 const approval = (
   overrides: Partial<PaymentApproval> = {}
@@ -33,6 +33,16 @@ const approval = (
   ...overrides,
 });
 
+const signin = (overrides: Partial<SigninApproval> = {}): SigninApproval => ({
+  id: "signin-1",
+  item: "login-1",
+  site: "example.com",
+  status: "approved",
+  used: new Set(),
+  expiresAt: Date.now() + 60_000,
+  ...overrides,
+});
+
 const context = (overrides: Partial<FillContext>): FillContext => ({
   itemId: "card-1",
   field: "card_number",
@@ -40,9 +50,22 @@ const context = (overrides: Partial<FillContext>): FillContext => ({
   frameOrigin: null,
   inFrame: false,
   approval: approval(),
+  signin: null,
   pageTotal: readPageTotal("Total ₹1,234.00"),
   ...overrides,
 });
+
+/** A login field on the login's own site, under the sign-in the user allowed. */
+const loginContext = (overrides: Partial<FillContext> = {}): FillContext =>
+  context({
+    itemId: "login-1",
+    field: "password",
+    topOrigin: "https://www.example.com",
+    approval: null,
+    signin: signin(),
+    pageTotal: null,
+    ...overrides,
+  });
 
 describe("which frames may receive a card or code", () => {
   it("takes the payment providers' frames and their subdomains, over https only", () => {
@@ -105,28 +128,28 @@ describe("which frames may receive a card or code", () => {
         currency: "INR",
       },
       documentOrigin: "https://js.stripe.com",
-      once: true,
+      uses: new Set(),
     });
   });
 
   it("fills a login into a cross-origin frame under that frame's origin", () => {
     expect(
       planFill(
-        context({
-          field: "password",
-          itemId: "login-1",
+        loginContext({
+          topOrigin: "https://shop.example.net",
           inFrame: true,
-          frameOrigin: "https://login.example",
+          frameOrigin: "https://login.example.com",
         })
       )
     ).toEqual({
       ok: true,
       request: {
-        origin: "https://login.example",
-        frameOrigin: "https://login.example",
+        origin: "https://login.example.com",
+        frameOrigin: "https://login.example.com",
+        signinApprovalId: "signin-1",
       },
-      documentOrigin: "https://login.example",
-      once: false,
+      documentOrigin: "https://login.example.com",
+      uses: new Set(),
     });
   });
 });
@@ -208,7 +231,7 @@ describe("a bank's code for the approved card", () => {
         paymentApprovalId: "pay-1",
       },
       documentOrigin: "https://acs.bank.example",
-      once: false,
+      uses: null,
     });
   });
 
@@ -544,5 +567,64 @@ describe("an input's facts as the page has it now", () => {
     });
     expect(live(zip).facts.hints).toEqual(["zip", "code"]);
     expect(fieldKindAllowed("code", live(zip).facts, false)).toBe(false);
+  });
+});
+
+describe("a login fill", () => {
+  it("goes under the sign-in the user allowed, on its site and subdomains, and spends that field", () => {
+    const allowed = signin();
+    const plan = planFill(loginContext({ signin: allowed, field: "username" }));
+    expect(plan).toMatchObject({
+      ok: true,
+      request: {
+        origin: "https://www.example.com",
+        signinApprovalId: "signin-1",
+      },
+    });
+    expect(plan.ok && plan.uses).toBe(allowed.used);
+  });
+
+  it("waits for the user's approval when none is allowed, and says so apart from a page failure", () => {
+    const plan = planFill(loginContext({ signin: null }));
+    expect(plan).toMatchObject({ ok: false, awaitingApproval: true });
+    if (plan.ok === false) {
+      expect(plan.error).toMatch(/^Waiting for sign-in approval:/);
+      expect(plan.error).toContain('need:"login"');
+      // The approval's id is the host's alone: no refusal names it.
+      expect(plan.error).not.toContain("signin-1");
+    }
+  });
+
+  it("is refused for another login, another site, or a field already filled under it", () => {
+    for (const plan of [
+      planFill(loginContext({ itemId: "login-2" })),
+      planFill(loginContext({ topOrigin: "https://example.com.evil.net" })),
+      planFill(loginContext({ topOrigin: "https://notexample.com" })),
+      planFill(
+        loginContext({ signin: signin({ used: new Set(["password"]) }) })
+      ),
+    ])
+      expect(plan).toMatchObject({ ok: false, awaitingApproval: true });
+    // A username filled on the first step leaves the password for the next.
+    expect(
+      planFill(
+        loginContext({ signin: signin({ used: new Set(["username"]) }) })
+      ).ok
+    ).toBe(true);
+  });
+
+  it("puts a login's sign-in code under the same sign-in, and a bank's code under the payment", () => {
+    expect(planFill(loginContext({ field: "code", signin: null })).ok).toBe(
+      false
+    );
+    expect(planFill(loginContext({ field: "code" }))).toMatchObject({
+      ok: true,
+      request: { signinApprovalId: "signin-1" },
+    });
+    // A card's code never goes under a sign-in, nor a card field.
+    expect(
+      planFill(context({ approval: null, signin: signin({ item: "card-1" }) }))
+        .ok
+    ).toBe(false);
   });
 });

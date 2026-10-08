@@ -7,7 +7,7 @@
  */
 import { WAS_PASSWORD_ATTRIBUTE } from "../browser/secret-fields";
 import type { VaultField } from "./vault-client";
-import type { PaymentApproval } from "./vault-session";
+import type { PaymentApproval, SigninApproval } from "./vault-session";
 
 /**
  * Payment providers whose card and code frames a checkout embeds. A card
@@ -130,6 +130,7 @@ export interface FillRequest {
   origin: string;
   frameOrigin?: string;
   paymentApprovalId?: string;
+  signinApprovalId?: string;
   amount?: string;
   currency?: string;
 }
@@ -140,10 +141,15 @@ export type FillPlan =
       request: FillRequest;
       /** The origin the field's own document must still have when it is typed into. */
       documentOrigin: string;
-      /** The field is a card field: it is filled once under the approval. */
-      once: boolean;
+      /** The fields of the approval this fill spends (it is filled once under it); null when none. */
+      uses: Set<VaultField> | null;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** Nothing is wrong with the page: no sign-in for this login is allowed yet. */
+      awaitingApproval?: true;
+    };
 
 export interface FillContext {
   itemId: string;
@@ -156,6 +162,8 @@ export interface FillContext {
   inFrame: boolean;
   /** The approval the user granted this session, if any. */
   approval: PaymentApproval | null;
+  /** The sign-in the user allowed this session, if any. */
+  signin: SigninApproval | null;
   /**
    * The total the page shows, as the host read it from the element the
    * model pointed at; null when none was named or it could not be read.
@@ -164,13 +172,24 @@ export interface FillContext {
 }
 
 const refuse = (error: string): FillPlan => ({ ok: false, error });
+/** Why a login fill waits when the user has allowed no sign-in: the first thing a login fill says. */
+export const NO_SIGNIN_REASON =
+  'Waiting for sign-in approval: no sign-in is allowed for this login now, so nothing was filled. Stop with browser_pause need:"login"; the user allows the sign-in first.';
+
+const awaitSignin = (error: string): FillPlan => ({
+  ok: false,
+  error: `Waiting for sign-in approval: ${error}`,
+  awaitingApproval: true,
+});
 
 /**
  * The origin and approval a fill goes under, or why it may not happen.
  *
  * - A login's username, password or sign-in code is filled for the document
- *   the field is in (the frame's origin in a frame, else the page's), and a
- *   code goes into a cross-origin frame only when it is a payment provider's.
+ *   the field is in (the frame's origin in a frame, else the page's), only
+ *   under the sign-in the user allowed for that login on that document's
+ *   site, once each; a code goes into a cross-origin frame only when it is a
+ *   payment provider's.
  * - A card number or CVV goes under the top-level page's origin, on the
  *   approved site, into the page or a payment provider's frame, against the
  *   total the page shows, once each.
@@ -212,7 +231,7 @@ export function planFill(context: FillContext): FillPlan {
         paymentApprovalId: approval.id,
       },
       documentOrigin,
-      once: false,
+      uses: null,
     };
   }
 
@@ -226,13 +245,36 @@ export function planFill(context: FillContext): FillPlan {
       `Refused: that field is in a frame from ${context.frameOrigin}, and a card number, CVV or code is typed ` +
         "only into the page itself or a payment provider's frame. Do not try another way; report where the field is."
     );
-  if (!card)
+  if (!card) {
+    const signin = context.signin;
+    const host = httpsHost(documentOrigin)!;
+    const pause =
+      'nothing was filled. Stop with browser_pause need:"login"; the user allows the sign-in first.';
+    if (signin == null)
+      return { ok: false, error: NO_SIGNIN_REASON, awaitingApproval: true };
+    if (signin.item !== context.itemId)
+      return awaitSignin(
+        `the sign-in the user allowed is for another saved login, so ${pause}`
+      );
+    if (!withinDomain(host, signin.site))
+      return awaitSignin(
+        `the sign-in the user allowed is for ${signin.site}, and this page is ${host}, so ${pause}`
+      );
+    if (signin.used.has(context.field))
+      return awaitSignin(
+        `the ${context.field} was already filled once under the sign-in the user allowed, so ${pause}`
+      );
     return {
       ok: true,
-      request: { origin: documentOrigin, ...frameOrigin },
+      request: {
+        origin: documentOrigin,
+        ...frameOrigin,
+        signinApprovalId: signin.id,
+      },
       documentOrigin,
-      once: false,
+      uses: signin.used,
     };
+  }
 
   if (approval == null)
     return refuse(
@@ -281,7 +323,7 @@ export function planFill(context: FillContext): FillPlan {
       currency: approval.currency,
     },
     documentOrigin,
-    once: true,
+    uses: approval.used,
   };
 }
 
