@@ -35,6 +35,7 @@ export interface ModelGroup {
  * "App default"; `label` is then the resolved default's name.
  */
 export interface ModelChipBinding {
+  setup?: import("#renderer/components/model-setup/types").ModelSetupBinding;
   onConfigureProviders?(): void;
   value: string | null;
   label: string;
@@ -51,7 +52,7 @@ export interface ComposerConfig {
   mode: "full" | "mini";
   availableModes?: AgentMode[];
   defaultMode?: AgentMode;
-  blocked?: "no-model" | "loading";
+  blocked?: "no-model" | "loading" | "error";
   onBlocked?: () => void;
   history?: { list(): Promise<string[]>; add(text: string): Promise<void> };
   onSubmitEnvelope?: (envelope: SubmissionEnvelope) => Promise<void>;

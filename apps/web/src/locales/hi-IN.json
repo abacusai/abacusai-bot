@@ -1727,8 +1727,7 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "OpenRouter कनेक्ट करें",
-      "connectGoogleAi": "Connect Google AI",
-      "configure": "Configure a model"
+      "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
       "add": "Add tab",
@@ -3112,6 +3111,16 @@
       "cancelReply": "जवाब रद्द करें",
       "jumpToOriginal": "मूल संदेश पर जाएँ",
       "failed": "कार्रवाई पूरी नहीं हो सकी"
+    },
+    "modelSetup": {
+      "choose": "मॉडल चुनें",
+      "unset": "कोई मॉडल सेट नहीं है। मॉडल चुनें",
+      "sendHint": "यह संदेश भेजने के लिए मॉडल चुनें",
+      "fetchError": "मॉडल लोड नहीं हो सके। फिर कोशिश करें।",
+      "noAvailable": "कनेक्ट है, लेकिन कोई मॉडल उपलब्ध नहीं है। ऐक्सेस जाँचने के लिए प्रदाता की सेटिंग खोलें।",
+      "allSettings": "मॉडल की सभी सेटिंग",
+      "connected": "कनेक्ट हो गया। मॉडल चुनें",
+      "storedOnHost": "कुंजियाँ आपकी होस्ट VM पर सेव होती हैं।"
     }
   },
   "notch": {

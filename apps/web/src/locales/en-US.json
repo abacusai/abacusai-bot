@@ -1727,8 +1727,7 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "Connect OpenRouter",
-      "connectGoogleAi": "Connect Google AI",
-      "configure": "Configure a model"
+      "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
       "add": "Add tab",
@@ -3112,6 +3111,16 @@
       "cancelReply": "Cancel reply",
       "jumpToOriginal": "Go to original message",
       "failed": "Could not complete the action"
+    },
+    "modelSetup": {
+      "choose": "Choose a model",
+      "unset": "No model set. Choose a model",
+      "sendHint": "Choose a model to send this message",
+      "fetchError": "Could not load models. Try again.",
+      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
+      "allSettings": "All model settings",
+      "connected": "Connected. Pick a model",
+      "storedOnHost": "Keys are stored on your host VM."
     }
   },
   "notch": {

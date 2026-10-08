@@ -71,7 +71,7 @@ import {
   formatSize,
   removeAttachment,
 } from "./attachments";
-import { ModeChip, ModelChip } from "./chips";
+import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
 import {
   clearDraft,
   draftStore,
@@ -496,13 +496,14 @@ const SendOrStop = () => {
     <Button
       size="icon-lg"
       aria-label={busy ? t("chat.composer.queue") : t("chat.composer.send")}
-      disabled={!hasText || !!config.blocked}
+      disabled={!hasText || config.blocked === "loading"}
+      aria-disabled={!!config.blocked}
       className={cn(
         "size-9 rounded-full",
         skin === "bot" &&
           hasText &&
           "bg-[var(--bot-accent,var(--primary))] text-[var(--bot-accent-foreground,var(--primary-foreground))]",
-        !hasText && "bg-secondary text-muted-foreground"
+        (!hasText || !!config.blocked) && "bg-secondary text-muted-foreground"
       )}
       onClick={submit}
     >
@@ -545,6 +546,7 @@ export const ThreadComposer = () => {
     [threadId]
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const modelChip = useRef<ModelChipHandle>(null);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
@@ -593,7 +595,8 @@ export const ThreadComposer = () => {
 
   const submit = (): void => {
     if (config.blocked) {
-      config.onBlocked?.();
+      if (config.model != null) modelChip.current?.requestModel();
+      else config.onBlocked?.();
       return;
     }
     const route = routeSubmit({
@@ -862,6 +865,7 @@ export const ThreadComposer = () => {
     config.model != null ? (
       <ModelChip
         binding={config.model}
+        ref={modelChip}
         compact={narrow}
         onUseLocalModel={config.onUseLocalModel}
         onOpenChange={(open) => setModelMenu(threadId, open)}

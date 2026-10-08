@@ -11,6 +11,7 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
  * app default (03-bots §24.2).
  */
 import {
+  AlertCircle,
   CalendarClock,
   Cpu,
   KeyRound,
@@ -24,13 +25,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { ModelSetupPopover } from "#renderer/components/model-setup/setup-list";
 import { cn } from "#renderer/lib/cn";
 import {
   durations,
@@ -53,6 +63,7 @@ import {
 } from "#renderer/ui/combobox";
 import { Command, CommandItem, CommandList } from "#renderer/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "#renderer/ui/popover";
+import { toast } from "#renderer/ui/toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 import type { ModelChipBinding, ModelGroup } from "../kit/context";
@@ -333,12 +344,18 @@ const rowsFor = (
   return { rows, sections };
 };
 
+export interface ModelChipHandle {
+  requestModel(): void;
+}
+
 export const ModelChip = ({
   binding,
+  ref,
   compact = false,
   onOpenChange,
   onUseLocalModel,
 }: {
+  ref?: Ref<ModelChipHandle>;
   onUseLocalModel?(): void;
   onOpenChange?(open: boolean): void;
   binding: ModelChipBinding;
@@ -346,9 +363,53 @@ export const ModelChip = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const chip = useRef<HTMLButtonElement>(null);
+  const ring = useRef<HTMLSpanElement>(null);
+  const animations = useRef<Animation[]>([]);
+  const descriptionId = useId();
   const [query, setQuery] = useState("");
+  const [connected, setConnected] = useState(false);
   const [railChoice, setRailChoice] = useState<Rail | null>(null);
   const pref = useMotionPreference();
+  useImperativeHandle(ref, () => ({
+    requestModel() {
+      setAttempt((value) => value + 1);
+      chip.current?.focus({ preventScroll: true });
+      animations.current.forEach((animation) => animation.cancel());
+      const easing = `cubic-bezier(${easings.notch.join(",")})`;
+      animations.current = [
+        ...(pref === "full" && chip.current
+          ? [
+              chip.current.animate(
+                [0, -4, 4, -4, 4, -2, 0].map((x) => ({
+                  transform: `translateX(${x}px)`,
+                })),
+                { duration: 400, easing }
+              ),
+            ]
+          : []),
+        ...(ring.current
+          ? [
+              ring.current.animate(
+                [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }],
+                { duration: 400, easing }
+              ),
+            ]
+          : []),
+      ];
+      toast.add({
+        id: "composer-model-required",
+        title: t("chat.modelSetup.sendHint"),
+      });
+    },
+  }));
+  useEffect(
+    () => () => {
+      animations.current.forEach((animation) => animation.cancel());
+    },
+    []
+  );
   const label = binding.label;
   // The catalogue's rows are read only while the picker is open: a closed
   // chip touches ids, never the (lazily materialised) labels.
@@ -386,6 +447,7 @@ export const ModelChip = ({
     if (!next) {
       setQuery("");
       setRailChoice(null);
+      setConnected(false);
     }
   };
   const pick = (row: ModelRow | null) => {
@@ -425,6 +487,62 @@ export const ModelChip = ({
     current.connect != null
       ? current
       : null;
+  const setup = binding.setup;
+  if (setup != null && setup.status !== "ready")
+    return (
+      <ModelSetupPopover
+        setup={setup}
+        open={open}
+        onOpenChange={change}
+        connected={() => setConnected(true)}
+      >
+        <Button
+          variant="ghost"
+          size={compact ? "icon" : "sm"}
+          ref={chip}
+          data-slot="chat-model-picker"
+          aria-invalid={attempt > 0 || undefined}
+          aria-describedby={attempt > 0 ? descriptionId : undefined}
+          aria-label={t("chat.modelSetup.unset")}
+          className={cn(
+            "relative h-[30px] rounded-full text-[13px] aria-invalid:border-[var(--chat-status-attention)] aria-invalid:ring-[var(--chat-status-attention)]/20",
+            !compact && "px-2.5",
+            open && "bg-secondary"
+          )}
+        >
+          <span
+            ref={ring}
+            aria-hidden
+            data-slot="chat-model-attention-ring"
+            className="pointer-events-none absolute -inset-0.5 rounded-full border-2 border-[var(--chat-status-attention)] opacity-0"
+          />
+          <span
+            id={descriptionId}
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {attempt > 0 ? (
+              <span key={attempt}>{t("chat.modelSetup.sendHint")}</span>
+            ) : null}
+          </span>
+          {compact ? (
+            <AlertCircle
+              aria-hidden
+              className="size-3.5 text-[var(--chat-status-attention)]"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="size-1.5 shrink-0 rounded-full bg-[var(--chat-status-attention)]"
+            />
+          )}
+          <span className={compact ? "sr-only" : undefined}>
+            {t("chat.modelSetup.choose")}
+          </span>
+        </Button>
+      </ModelSetupPopover>
+    );
   return (
     <Combobox<ModelRow>
       open={open}
@@ -532,6 +650,11 @@ export const ModelChip = ({
             aria-label={t("chat.composer.models")}
             className="m-0! h-8! shrink-0"
           />
+          {connected ? (
+            <p role="status" className="text-muted-foreground px-2 py-1">
+              {t("chat.modelSetup.connected")}
+            </p>
+          ) : null}
           {notConnected != null ? (
             <div
               data-slot="chat-model-not-connected"

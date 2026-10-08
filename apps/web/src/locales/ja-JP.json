@@ -1727,8 +1727,7 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "OpenRouterを接続",
-      "connectGoogleAi": "Connect Google AI",
-      "configure": "Configure a model"
+      "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
       "add": "Add tab",
@@ -3112,6 +3111,16 @@
       "cancelReply": "返信をキャンセル",
       "jumpToOriginal": "元のメッセージへ移動",
       "failed": "操作を完了できませんでした"
+    },
+    "modelSetup": {
+      "choose": "モデルを選択",
+      "unset": "モデルが未設定です。モデルを選択",
+      "sendHint": "このメッセージを送信するにはモデルを選択してください",
+      "fetchError": "モデルを読み込めませんでした。もう一度お試しください。",
+      "noAvailable": "接続済みですが、利用可能なモデルがありません。プロバイダー設定でアクセス権を確認してください。",
+      "allSettings": "モデルのすべての設定",
+      "connected": "接続しました。モデルを選択してください",
+      "storedOnHost": "キーはホストの仮想マシンに保存されます。"
     }
   },
   "notch": {

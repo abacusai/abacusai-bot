@@ -8,6 +8,8 @@ import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { ModelSetupPopover } from "#renderer/components/model-setup/setup-list";
+import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useMotionPreference } from "#renderer/lib/motion";
@@ -63,7 +65,14 @@ export const useBotModelBinding = (
         search: (previous) => ({ ...previous, provider }),
       }),
   });
+  const setup = useModelSetup({
+    models: catalog,
+    loading: models.isPending || settings.isPending,
+    failed: models.isError || settings.isError,
+    select: onChange,
+  });
   return {
+    setup,
     value,
     onConfigureProviders: () =>
       void navigate({ to: "/settings/models", transition: "settings-in" }),
@@ -94,6 +103,27 @@ export const ModelPicker = ({
       <span className="min-w-0 truncate" title={binding.label}>
         {binding.value === null ? t("bots.form.modelDefault") : binding.label}
       </span>
+    );
+  if (binding.setup.status !== "ready")
+    return (
+      <ModelSetupPopover
+        setup={binding.setup}
+        open={open}
+        onOpenChange={setOpen}
+        connected={() => {}}
+      >
+        <Button
+          variant="secondary"
+          aria-label={t("chat.modelSetup.unset")}
+          className="max-w-full min-w-0 shrink justify-start"
+        >
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full bg-[var(--chat-status-attention)]"
+          />
+          {t("chat.modelSetup.choose")}
+        </Button>
+      </ModelSetupPopover>
     );
   return (
     <Popover open={open} onOpenChange={setOpen}>

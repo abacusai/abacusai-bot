@@ -378,12 +378,6 @@ const SessionRoute = () => {
                   open={select}
                 />
               ),
-              banner:
-                model.blocked === "no-model" ? (
-                  <Button onClick={model.onBlocked}>
-                    {t("sessions.model.configure")}
-                  </Button>
-                ) : undefined,
               runTail: (
                 <SessionChangesCard
                   row={row}
@@ -420,7 +414,6 @@ const SessionRoute = () => {
               }),
               showModeChip: true,
               model: model.model,
-              onBlocked: model.onBlocked,
               onResumeOnFreePool: model.onResumeOnFreePool,
               availableModes: model.availableModes,
               blocked: model.blocked,

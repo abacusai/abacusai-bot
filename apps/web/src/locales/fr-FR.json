@@ -1727,8 +1727,7 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "Connecter OpenRouter",
-      "connectGoogleAi": "Connect Google AI",
-      "configure": "Configure a model"
+      "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
       "add": "Add tab",
@@ -3112,6 +3111,16 @@
       "cancelReply": "Annuler la réponse",
       "jumpToOriginal": "Aller au message original",
       "failed": "Impossible de terminer l’action"
+    },
+    "modelSetup": {
+      "choose": "Choisir un modèle",
+      "unset": "Aucun modèle sélectionné. Choisir un modèle",
+      "sendHint": "Choisissez un modèle pour envoyer ce message",
+      "fetchError": "Impossible de charger les modèles. Réessayez.",
+      "noAvailable": "Connecté, mais aucun modèle disponible. Vérifiez les droits d’accès dans les paramètres du fournisseur.",
+      "allSettings": "Tous les paramètres des modèles",
+      "connected": "Connecté. Choisissez un modèle",
+      "storedOnHost": "Les clés sont stockées sur la machine virtuelle hôte."
     }
   },
   "notch": {

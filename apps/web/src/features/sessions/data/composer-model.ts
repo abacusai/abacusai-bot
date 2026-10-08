@@ -10,6 +10,7 @@ import {
   botModelGroups,
   effectiveModelLabel,
 } from "#renderer/components/model-groups";
+import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -45,6 +46,28 @@ export const useSessionComposerModel = (row?: SessionRow) => {
     defaultModel: settings.data?.defaultModel,
     catalog: models,
   });
+  const changeModel = (id: string | null) => {
+    if (!row) {
+      setDraftModel(id);
+      return;
+    }
+    if (id)
+      void setSessionModel(db, transport.client, row, id).catch((e) =>
+        setError(String(e))
+      );
+    else
+      void db.collections.sessions
+        .update(row.id, (d) => {
+          d.model = null;
+        })
+        .isPersisted.promise.catch((e) => setError(String(e)));
+  };
+  const setup = useModelSetup({
+    models,
+    loading: catalog.isPending || settings.isPending,
+    failed: catalog.isError || settings.isError,
+    select: changeModel,
+  });
   return {
     error,
     onResumeOnFreePool: async () => {
@@ -56,8 +79,6 @@ export const useSessionComposerModel = (row?: SessionRow) => {
           sessionId: row.id,
         });
     },
-    onBlocked: () =>
-      void navigate({ to: "/settings/models", transition: "nav-lateral" }),
     missing: checkout.data?.exists === false,
     availableModes: sandbox.data?.available
       ? [
@@ -74,12 +95,15 @@ export const useSessionComposerModel = (row?: SessionRow) => {
           AgentMode.Yolo,
         ],
     blocked:
-      catalog.isPending || settings.isPending
-        ? ("loading" as const)
-        : selected === null
-          ? ("no-model" as const)
-          : undefined,
+      setup.status === "error"
+        ? ("error" as const)
+        : catalog.isPending || settings.isPending
+          ? ("loading" as const)
+          : selected === null
+            ? ("no-model" as const)
+            : undefined,
     model: {
+      setup,
       onConfigureProviders: () =>
         void navigate({ to: "/settings/models", transition: "settings-in" }),
       value,
@@ -108,22 +132,7 @@ export const useSessionComposerModel = (row?: SessionRow) => {
             transition: "nav-lateral",
           }),
       }),
-      onChange: (id: string | null) => {
-        if (!row) {
-          setDraftModel(id);
-          return;
-        }
-        if (id)
-          void setSessionModel(db, transport.client, row, id).catch((e) =>
-            setError(String(e))
-          );
-        else
-          void db.collections.sessions
-            .update(row.id, (d) => {
-              d.model = null;
-            })
-            .isPersisted.promise.catch((e) => setError(String(e)));
-      },
+      onChange: changeModel,
     },
   };
 };

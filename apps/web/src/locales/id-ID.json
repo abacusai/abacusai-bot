@@ -1727,8 +1727,7 @@
       "local": "On this machine",
       "free": "Free",
       "connectOpenRouter": "Hubungkan OpenRouter",
-      "connectGoogleAi": "Connect Google AI",
-      "configure": "Configure a model"
+      "connectGoogleAi": "Connect Google AI"
     },
     "dock": {
       "add": "Add tab",
@@ -3112,6 +3111,16 @@
       "cancelReply": "Batalkan balasan",
       "jumpToOriginal": "Ke pesan asli",
       "failed": "Tindakan tidak dapat diselesaikan"
+    },
+    "modelSetup": {
+      "choose": "Pilih model",
+      "unset": "Belum ada model. Pilih model",
+      "sendHint": "Pilih model untuk mengirim pesan ini",
+      "fetchError": "Model tidak dapat dimuat. Coba lagi.",
+      "noAvailable": "Terhubung, tetapi tidak ada model yang tersedia. Buka pengaturan penyedia untuk memeriksa akses.",
+      "allSettings": "Semua pengaturan model",
+      "connected": "Terhubung. Pilih model",
+      "storedOnHost": "Kunci disimpan di VM host Anda."
     }
   },
   "notch": {

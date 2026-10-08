@@ -13,7 +13,6 @@ import { registerPreviewConsumer } from "#renderer/features/shell/preview-consum
 import { shellStore } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
-import { Button } from "#renderer/ui/button";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();
@@ -52,11 +51,6 @@ const SessionsNewRoute = () => {
           prefill={(id, text) => updateDraft(id, (d) => ({ ...d, text }))}
           renderComposer={(binding) => (
             <>
-              {model.blocked === "no-model" ? (
-                <Button onClick={model.onBlocked}>
-                  {t("sessions.model.configure")}
-                </Button>
-              ) : null}
               <StartComposer
                 threadId={binding.threadId}
                 runtime={chat}
@@ -68,7 +62,6 @@ const SessionsNewRoute = () => {
                   attachmentContext: binding.attachmentContext,
                   showModeChip: true,
                   model: model.model,
-                  onBlocked: model.onBlocked,
                   availableModes: model.availableModes,
                   defaultMode: prefs.defaultMode,
                   blocked: binding.blocked ? "loading" : model.blocked,
