@@ -193,6 +193,11 @@ const startingFields = () => ({
   },
 });
 
+/** The page with no card form: its card field is gone (an ordinary page). */
+const noCardForm = (): void => {
+  delete page.fields.tab?.["#card"];
+};
+
 /** A document's DOM as `DOM.getDocument` returns it, from its declared inputs. */
 const domOf = (target: string) => ({
   root: {
@@ -300,6 +305,15 @@ const respond = (
     }
     case "Runtime.callFunctionOn": {
       const objectId = String(params.objectId);
+      // A known node is in the page while its document still declares it.
+      if (fn.includes("return this.isConnected; }"))
+        return {
+          result: {
+            value: Object.values(page.fields[target] ?? {}).some(
+              (input) => objectId === `node-${input.id}`
+            ),
+          },
+        };
       if (fn.includes("shown: shown")) {
         const selector = selectorOfObject(target, objectId);
         return {
@@ -929,37 +943,6 @@ describe("browser_vault_fill", () => {
     });
   });
 
-  it("marks a field given card data as a card field, and a login's as masked only", async () => {
-    frames = [{ frameId: "F1", origin: "https://js.stripe.com" }];
-    approve();
-    await snapshot();
-    await call("browser_vault_fill", {
-      item_id: "card-1",
-      field: "card_number",
-      ref: "@f1e1",
-      total_ref: "@e3",
-    });
-    await call("browser_vault_fill", {
-      item_id: "login-1",
-      field: "password",
-      ref: "@e1",
-    });
-    const marks = commands.filter(
-      (entry) =>
-        entry.method === "Runtime.callFunctionOn" &&
-        String(entry.params.functionDeclaration).includes(
-          "data-abacusai-card"
-        ) &&
-        String(entry.params.objectId).includes("-field:")
-    );
-    expect(
-      marks.map((entry) => [entry.target, entry.params.arguments])
-    ).toEqual([
-      ["F1", [{ value: true }]],
-      ["tab", [{ value: false }]],
-    ]);
-  });
-
   it("refuses a card for a cross-origin frame that is not a payment provider's, asking the vault nothing", async () => {
     frames = [{ frameId: "F1", origin: "https://ads.example" }];
     page.frame = "https://ads.example";
@@ -1214,6 +1197,7 @@ describe("Abacus.AI's own pages and APIs", () => {
   });
 
   it("stop a page script in the same evaluation when its document is on one", async () => {
+    noCardForm();
     await snapshot();
     // The check before the call saw the shop; the script itself runs on the approval page.
     const realRespond = tab.debugger.sendCommand;
@@ -1399,6 +1383,7 @@ describe("what a vault fill guards", () => {
   });
 
   it("makes a fill issued while a script runs wait for it, then refuses it", async () => {
+    noCardForm();
     await snapshot();
     let release!: () => void;
     holdScript = new Promise((resolve) => {
@@ -1898,6 +1883,7 @@ describe("the Pay guard, over the browser server", () => {
   });
 
   it("lets Sign in through on a login page, and does not remember it as a payment step", async () => {
+    noCardForm();
     page.url = "https://www.shop.example/login";
     guardFacts = {
       ...ORDINARY,
@@ -1912,6 +1898,18 @@ describe("the Pay guard, over the browser server", () => {
     ).toBe(false);
   });
 
+  it("keeps a card step whose card field the page stripped: the host's first sighting counts", async () => {
+    // The page now reads as having no card fields; the host saw #card as cc-number.
+    guardFacts = { ...ORDINARY, kind: "submit", label: "Continue" };
+    const refused = await click();
+    expect(refused.isError).toBe(true);
+    expect(refused.text).toMatch(/payment step/);
+    // With the field gone from the page, the same control goes through.
+    noCardForm();
+    vault.sessions.for("s1").forgetPaymentSteps(null);
+    expect((await click()).isError).toBe(false);
+  });
+
   it("keeps a payment step guarded across a new run while the tab is still on it", async () => {
     guardFacts = onPaymentStep({});
     await click();
@@ -1920,6 +1918,7 @@ describe("the Pay guard, over the browser server", () => {
     guardFacts = { ...ORDINARY, kind: "submit", label: "Go" };
     expect((await click()).isError).toBe(true);
     page.url = "https://www.other.example/";
+    noCardForm();
     await checkout("start");
     page.url = CHECKOUT;
     expect((await click()).isError).toBe(false);
@@ -1989,6 +1988,7 @@ describe("the Pay guard, over the browser server", () => {
   });
 
   it("checks the re-render retry again", async () => {
+    noCardForm();
     guardQueue = [{ ...ORDINARY }, { ...PAY }];
     clickStatuses = ["not_found"];
     const result = await click();
@@ -2017,6 +2017,7 @@ describe("the Pay guard, over the browser server", () => {
   });
 
   it("refuses scripts once a checkout is past search, and on a payment step, before they count as run", async () => {
+    noCardForm();
     guardFacts = { ...ORDINARY };
     page.url = "https://www.shop.example/cart";
     await call("browser_pause", {
@@ -2106,6 +2107,7 @@ describe("the checkout, kept beside the vault", () => {
   });
 
   it("refuses a payment pause off a payment step", async () => {
+    noCardForm();
     guardFacts = { ...ORDINARY, url: "https://www.shop.example/cart" };
     page.url = "https://www.shop.example/cart";
     await snapshot();

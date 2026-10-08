@@ -470,13 +470,18 @@ describe("navigation", () => {
     ).toBeNull();
   });
 
-  it("takes another bucket or github.io page for another site", () => {
+  it("takes another tenant on a private suffix (S3, github.io, myshopify.com, pages.dev) for another site", () => {
     for (const [from, to] of [
       [
         "https://bucket-a.s3.us-west-2.amazonaws.com/pay",
         "https://bucket-b.s3.us-west-2.amazonaws.com/x",
       ],
       ["https://a.github.io/checkout", "https://b.github.io/x"],
+      [
+        "https://shop-a.myshopify.com/checkout",
+        "https://shop-b.myshopify.com/x",
+      ],
+      ["https://a.pages.dev/pay", "https://b.pages.dev/x"],
     ] as const)
       expect(
         navigationVerdict({

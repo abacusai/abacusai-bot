@@ -1,8 +1,15 @@
 /**
  * What a "site" is, everywhere the browser, the vault and a checkout compare
  * one: the registrable domain by the public suffix list, private suffixes
- * included, the server's site rule. Two buckets under
- * `s3.us-west-2.amazonaws.com`, or two `github.io` pages, are two sites.
+ * included, the same rule the server uses. Two buckets under
+ * `s3.us-west-2.amazonaws.com`, or two `github.io` or `myshopify.com` stores,
+ * are two sites.
+ *
+ * The list here is tldts's snapshot and the server has its own, so they can
+ * differ for a suffix one of them has not picked up yet; the server's check
+ * decides what a fill or approval binds to. A name under a suffix not on the
+ * list (`shop.example`) gets the one-label default here, where the server
+ * refuses it: no approval or fill can exist for it, so that fails closed.
  */
 import { getDomain } from "tldts";
 

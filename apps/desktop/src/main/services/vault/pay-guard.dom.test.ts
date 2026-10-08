@@ -15,6 +15,7 @@ import {
   PAY_REFUSAL,
   STEP_REFUSAL,
 } from "./pay-guard";
+import { cardField, factsFromDocument } from "./vault-fill";
 
 /** Runs the script as the page would, in the global scope, and returns its value. */
 const read = (
@@ -145,13 +146,14 @@ describe("what makes a page a payment step", () => {
     expect(click("#verify")).toEqual({ kind: "allow" });
   });
 
-  it("still a card page, strictly guarded, by any cc-* token or the vault's card mark", () => {
+  it("still a card page, strictly guarded, by any cc-* token or card naming", () => {
     window.history.replaceState({}, "", "/book/step-4");
     for (const field of [
       '<input autocomplete="section-pay cc-number">',
       '<input autocomplete="cc-name">',
       '<select autocomplete="cc-exp-month"><option>01</option></select>',
-      '<input name="holder" data-abacusai-secret data-abacusai-card>',
+      '<input name="card_num">',
+      '<input placeholder="Expiry (MM/YY)">',
     ]) {
       document.body.innerHTML = `<form>${field}<button type="submit" id="go">Continue</button></form>`;
       expect(read("#go").cardFields, field).toBe(true);
@@ -163,5 +165,35 @@ describe("what makes a page a payment step", () => {
     }
     document.body.innerHTML = `<form><input autocomplete="cc-number"><button id="pay">Pay now</button></form>`;
     expect(click("#pay")).toEqual({ kind: "refuse", reason: PAY_REFUSAL });
+  });
+});
+
+describe("the one card rule", () => {
+  /** An input's facts, as the host records them at first sighting. */
+  const first = (...attributes: string[]) =>
+    factsFromDocument({
+      nodeName: "#document",
+      children: [{ nodeName: "INPUT", backendNodeId: 1, attributes }],
+    }).get(1)!;
+
+  it("calls card data a card field, and a login or a code never one", () => {
+    expect(cardField(first("autocomplete", "cc-number"))).toBe(true);
+    expect(cardField(first("autocomplete", "billing cc-exp"))).toBe(true);
+    expect(cardField(first("name", "cvv"))).toBe(true);
+    expect(cardField(first("placeholder", "Name on card"))).toBe(true);
+    expect(cardField(first("autocomplete", "username", "name", "email"))).toBe(
+      false
+    );
+    expect(cardField(first("type", "password", "name", "password"))).toBe(
+      false
+    );
+    expect(cardField(first("autocomplete", "one-time-code"))).toBe(false);
+    expect(cardField(first("name", "postcode"))).toBe(false);
+  });
+
+  it("reads the same live in the page as the host reads it first", () => {
+    window.history.replaceState({}, "", "/book/step-4");
+    document.body.innerHTML = `<form><input name="cardholder"><button type="submit" id="go">Go</button></form>`;
+    expect(read("#go").cardFields).toBe(cardField(first("name", "cardholder")));
   });
 });

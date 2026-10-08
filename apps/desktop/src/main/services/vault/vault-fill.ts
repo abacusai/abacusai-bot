@@ -26,10 +26,6 @@ export const PAYMENT_FRAME_HOSTS: readonly string[] = [
 
 const CARD_FIELDS: ReadonlySet<VaultField> = new Set(["card_number", "cvv"]);
 
-/** Whether a vault field is card data: what makes the field it goes into a card field. */
-export const isCardField = (field: VaultField): boolean =>
-  CARD_FIELDS.has(field);
-
 export const httpsHost = (origin: string | null): string | null => {
   if (origin == null) return null;
   try {
@@ -240,7 +236,7 @@ export function planFill(context: FillContext): FillPlan {
     };
   }
 
-  const card = isCardField(context.field);
+  const card = CARD_FIELDS.has(context.field);
   if (
     context.inFrame &&
     (card || context.field === "code") &&
@@ -561,6 +557,27 @@ export const FIELD_FACTS_JS = `
         .join(' ').split(/[^a-z0-9]+/).filter(Boolean),
     };
   };
+`;
+
+/** What names a card number, CVV, expiry or cardholder field, in a field's hint words. */
+const CARD_NAMING =
+  /\b(?:card ?(?:num(?:ber)?|no)|cc ?num(?:ber)?|cvv2?|cvc2?|csc|expiry|expiration|exp ?(?:month|year|date)|name on card|cardholder)\b/;
+
+/**
+ * Whether a field is a card field: any `cc-*` autocomplete token, or hint
+ * words naming card data. The one card rule: the host applies it to the
+ * facts it recorded at first sighting, the Pay guard's page script to the
+ * same facts read live.
+ */
+export const cardField = (facts: FieldFacts): boolean =>
+  facts.autocomplete.some((token) => token.startsWith("cc-")) ||
+  CARD_NAMING.test(facts.hints.join(" "));
+
+/** In-page `__cardField(facts)`, `cardField` over `__factsOf` (needs `FIELD_FACTS_JS`). */
+export const CARD_FIELD_JS = `
+  const __CARD_NAMING = new RegExp(${JSON.stringify(CARD_NAMING.source)});
+  const __cardField = (facts) => facts.autocomplete.some((token) => token.startsWith('cc-')) ||
+    __CARD_NAMING.test(facts.hints.join(' '));
 `;
 
 /** Run on a field: whether it can be typed into now, and its facts. */

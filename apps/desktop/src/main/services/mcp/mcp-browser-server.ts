@@ -115,6 +115,7 @@ import {
 import { onSite, registrableDomain } from "../vault/site";
 import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
+  cardField,
   codeFieldAllowed,
   DOCUMENT_INPUT_FACTS_SCRIPT,
   hasCodeField,
@@ -124,7 +125,6 @@ import {
   LIVE_FIELD_FUNCTION,
   type DomNode,
   type FieldFacts,
-  isCardField,
   isPaymentFrameOrigin,
   NO_SIGNIN_REASON,
   planFill,
@@ -2930,7 +2930,14 @@ export class McpBrowserServer extends McpHttpServer {
       typeof value.attrs !== "string"
     )
       return null;
-    return value as ControlFacts;
+    const facts = value as ControlFacts;
+    if (facts.cardFields) return facts;
+    // The host's own facts count too: a page that strips a card field's
+    // attributes after it was first seen (or filled) is still a card step.
+    const known = await this.secretsOf(page)
+      .hasCardField(page, cardField)
+      .catch(() => null);
+    return known == null ? null : { ...facts, cardFields: known };
   }
 
   /**
@@ -3962,7 +3969,7 @@ export class McpBrowserServer extends McpHttpServer {
         "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
           "Reload the page, snapshot, and fill again without running scripts."
       );
-    const card = isCardField(field as VaultField);
+    const card = field === "card_number" || field === "cvv";
     const total = card
       ? await this.readTotal(wc, args.total_ref, sessionId)
       : null;
@@ -4078,7 +4085,10 @@ export class McpBrowserServer extends McpHttpServer {
       }
       // Hidden and locked before any value exists here: from now on the
       // field reads as hidden and the tab runs no scripts until it navigates.
-      if (!(await secrets.markFilledNode(page, node, card).catch(() => false)))
+      // A card fill also makes the field a card field for the Pay guard.
+      if (plan.once && backendNodeId != null)
+        secrets.noteCardFill(page, backendNodeId);
+      if (!(await secrets.markFilledNode(page, node).catch(() => false)))
         return this.err(
           `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
         );

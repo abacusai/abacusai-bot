@@ -31,7 +31,8 @@
  * the tab is on a payment step: a script is not an element to check.
  *
  * What a payment step is: the document has card fields (autocomplete `cc-*`,
- * card number, CVV or expiry inputs, or a field the vault typed card data
+ * hint words naming card data, as `cardField` reads them; or, as the host
+ * keeps them, a field first seen as one or that the vault typed card data
  * into; never a field merely masked, such as a filled login or a code), embeds a
  * payment provider's frame or a frame that says it takes payment, submits a
  * form with card fields, is a provider's frame itself, has a checkout or
@@ -41,9 +42,10 @@
  * canvas, in a closed shadow root, behind a frame with no telling attributes)
  * is guarded only by the words signal until the checkout is past the review.
  */
-import { CARD_ATTRIBUTE } from "../browser/secret-fields";
 import { onSite, sameSite } from "./site";
 import {
+  CARD_FIELD_JS,
+  FIELD_FACTS_JS,
   isPaymentFrameOrigin,
   PAYMENT_FRAME_HOSTS,
   type PageTotal,
@@ -78,7 +80,7 @@ export interface ControlFacts {
   checked: boolean;
   /** The URL of the document it sits in. */
   url: string;
-  /** The document has card fields, or a field the vault typed card data into. */
+  /** The document has card fields: read live, or as the host first saw them or filled them. */
   cardFields: boolean;
   /** The document embeds a payment provider's frame, or one that says it takes payment. */
   paymentFrame: boolean;
@@ -155,14 +157,11 @@ export const controlFactsScript = (
       return hosts.some((domain) => host === domain || host.endsWith('.' + domain));
     } catch { return false; }
   };
-  // Card fields by payment facts only: a cc-* autocomplete token, card naming, or the vault's card mark.
-  const CARD_NAMED = 'input[name*="cardnum" i], input[name*="card_num" i], input[name*="card-num" i], ' +
-    'input[id*="cardnum" i], input[id*="card_num" i], input[id*="card-num" i], input[name*="cvv" i], input[name*="cvc" i], ' +
-    'input[id*="cvv" i], input[id*="cvc" i], input[name*="expiry" i], input[name*="exp_month" i], [${CARD_ATTRIBUTE}]';
-  const isCard = (el) => el.matches(CARD_NAMED) ||
-    String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/).some((token) => token.startsWith('cc-'));
+  ${FIELD_FACTS_JS}
+  ${CARD_FIELD_JS}
+  // Card fields by the one card rule over the same facts a vault fill reads.
   const hasCard = (root) => {
-    try { return Array.from(root.querySelectorAll('input, select, textarea, [${CARD_ATTRIBUTE}]')).some(isCard); }
+    try { return Array.from(root.querySelectorAll('input, select')).some((el) => __cardField(__factsOf(el))); }
     catch { return false; }
   };
   const payingFrame = (frame) => {
