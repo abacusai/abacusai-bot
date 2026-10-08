@@ -100,7 +100,7 @@ const OnboardingRoute = () => {
           await navigate({
             ...onboardingExitTarget(exit),
             replace: true,
-            transition: "onboarding-finish",
+            transition: "none",
           });
           if (router.state.isLoading)
             await new Promise<void>((resolve) => {

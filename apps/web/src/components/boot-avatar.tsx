@@ -65,6 +65,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
   const live = useRef<HTMLDivElement>(null);
   const previous = useRef<DOMRect | null>(null);
   const wasOverlay = useRef(false);
+  const settleUntil = useRef(0);
   const flight = useRef<{ stop(): void } | null>(null);
   useEffect(() => () => flight.current?.stop(), []);
   const home = homes.filter((item) => item.overlay).at(-1) ?? homes.at(-1);
@@ -81,7 +82,9 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
       flight.current?.stop();
       element.style.transform = `translate(${to.x}px, ${to.y}px) scale(${to.width / 96})`;
       element.style.opacity = "1";
-      const dialogChange = home.overlay || wasOverlay.current;
+      if (home.overlay || wasOverlay.current)
+        settleUntil.current = performance.now() + 250;
+      const dialogChange = performance.now() < settleUntil.current;
       wasOverlay.current = home.overlay;
       if (dialogChange && !home.reduced) {
         flight.current = animate(

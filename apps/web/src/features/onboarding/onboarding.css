@@ -51,6 +51,7 @@
   align-items: stretch;
   width: 100%;
   max-width: 688px;
+  min-height: 640px;
   margin: auto;
   padding: 16px var(--page-gutter) 40px;
   text-align: left;
