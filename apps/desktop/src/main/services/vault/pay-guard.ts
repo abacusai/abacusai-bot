@@ -44,7 +44,6 @@
  */
 import { onSite, sameSite } from "./site";
 import {
-  CARD_FIELD_JS,
   FIELD_FACTS_JS,
   isPaymentFrameOrigin,
   PAYMENT_FRAME_HOSTS,
@@ -158,7 +157,6 @@ export const controlFactsScript = (
     } catch { return false; }
   };
   ${FIELD_FACTS_JS}
-  ${CARD_FIELD_JS}
   // Card fields by the one card rule over the same facts a vault fill reads.
   const hasCard = (root) => {
     try { return Array.from(root.querySelectorAll('input, select')).some((el) => __cardField(__factsOf(el))); }
