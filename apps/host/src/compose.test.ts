@@ -1243,6 +1243,30 @@ describe("the phone lane", () => {
     }
   });
 
+  it("asks for a resend when the send still on its way at the stop turns out taken", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, settleStop, settleSend, replies } = lane({
+        holdSend: (id) => id === "m2",
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      phone.arrive({ id: "m2", text: "only nonstop" });
+      await vi.advanceTimersByTimeAsync(1_000);
+      // No apology yet: the wording waits for the send's outcome.
+      expect(replies()).toEqual([]);
+      // The session had taken m2: it ran in the stopped work, nothing runs next.
+      settleSend(true);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(replies()[0]!.text).toMatch(/send that again/);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("gives up acking only what the session took: a steer still on its way goes again", async () => {
     vi.useFakeTimers();
     try {
