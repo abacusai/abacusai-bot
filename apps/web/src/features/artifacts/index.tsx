@@ -235,6 +235,10 @@ export const ArtifactsPage = ({
   const set = (patch: Partial<Search>) =>
     void navigate({ search: (p) => ({ ...p, ...patch }), transition: "none" });
   const open = async (a: (typeof rows)[number]) => {
+    if (!IS_ELECTRON && a.kind !== "link") {
+      set({ item: a.id });
+      return;
+    }
     try {
       const result = await openArtifact(transport, a);
       if (result === "missing")

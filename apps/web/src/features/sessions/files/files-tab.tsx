@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { FilePreview, previewKind } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
+import { i18n } from "#renderer/lib/i18n";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
@@ -26,6 +27,7 @@ import {
 } from "#renderer/ui/alert-dialog";
 import { Button } from "#renderer/ui/button";
 import { Input } from "#renderer/ui/input";
+import { Skeleton } from "#renderer/ui/skeleton";
 
 import {
   useSessionsTransport,
@@ -51,14 +53,18 @@ export const SessionFilePreview = ({
   renderLocal: (path: string) => ReactNode;
 }) => {
   const transport = useSessionsTransport();
-  if (!isRelativePath(path)) return null;
+  if (!isRelativePath(path))
+    return (
+      <p role="alert" className="p-4">
+        {i18n.t("bots.chat.preview.failed")}
+      </p>
+    );
   const absolute = `${root}/${path}`;
   const kind = previewKind(absolute);
   if (IS_ELECTRON && (kind === "pdf" || kind === "html"))
     return <>{renderLocal(absolute)}</>;
   return (
     <FilePreview
-      textOnly={!IS_ELECTRON && kind === "html"}
       path={absolute}
       hostRoot={root}
       read={{
@@ -165,7 +171,7 @@ export const FilesTab = ({
     });
   };
   const requestTrash = (path: string) => {
-    if (path.endsWith("/")) setTrash(path);
+    if (!IS_ELECTRON || path.endsWith("/")) setTrash(path);
     else void doTrash(path).catch((e) => setError(String(e)));
   };
   const paths = useMemo(
@@ -181,10 +187,26 @@ export const FilesTab = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {!IS_ELECTRON && (
+          <Button variant="ghost" size="sm" onClick={() => void tree.refetch()}>
+            {t("web.files.refresh")}
+          </Button>
+        )}
         {tree.isError ? (
           <Button onClick={() => void tree.refetch()}>
             {t("sessions.common.retry")}
           </Button>
+        ) : debounced && search.isPending ? (
+          <Skeleton className="h-8 w-full" />
+        ) : debounced && search.isError ? (
+          <div role="alert">
+            <p>{t("web.files.failed")}</p>
+            <Button onClick={() => void search.refetch()}>
+              {t("sessions.common.retry")}
+            </Button>
+          </div>
+        ) : debounced && search.data?.items.length === 0 ? (
+          <p role="status">{t("web.files.empty")}</p>
         ) : debounced ? (
           search.data?.items.map((item) => (
             <Button
@@ -221,13 +243,17 @@ export const FilesTab = ({
                     label: t("sessions.files.preview"),
                     run: () => onPreview(item.path),
                   },
-                  {
-                    label: t("sessions.files.openEditor"),
-                    run: () =>
-                      void platformSystem(transport.client).openPath({
-                        path: `${root}/${item.path}`,
-                      }),
-                  },
+                  ...(IS_ELECTRON
+                    ? [
+                        {
+                          label: t("sessions.files.openEditor"),
+                          run: () =>
+                            void platformSystem(transport.client).openPath({
+                              path: `${root}/${item.path}`,
+                            }),
+                        },
+                      ]
+                    : []),
                   { label: t("sessions.files.rename"), run: rename },
                   {
                     label: t("sessions.files.copyPath"),
@@ -322,10 +348,19 @@ export const FilesTab = ({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("sessions.files.trashFolder")}
+              {t(
+                IS_ELECTRON
+                  ? "sessions.files.trashFolder"
+                  : "web.files.trashTitle"
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("sessions.files.trashFolderBody", { path: trash })}
+              {t(
+                IS_ELECTRON
+                  ? "sessions.files.trashFolderBody"
+                  : "web.files.trashBody",
+                { path: trash }
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

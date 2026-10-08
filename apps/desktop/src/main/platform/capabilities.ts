@@ -49,6 +49,8 @@ export const WEB_HOST_ALLOWED = [
   "git.discard",
   "git.checkoutStatus",
   "git.watch",
+  "files.listDirectory",
+  "files.mkdir",
   "files.treeRoot",
   "files.treeChildren",
   "files.search",

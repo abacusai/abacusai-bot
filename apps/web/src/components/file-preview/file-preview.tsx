@@ -3,9 +3,15 @@ import type { PptxDeck } from "@abacus-ai/contract/pptx";
  * URLs come from the caller's host file boundary before the viewer loads. */
 import { TextPart } from "@tanstack/ai-react/ui";
 import { ExternalLink, FolderOpen } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  browserPreview,
+  previewBlob,
+  previewSize,
+  downloadFile,
+} from "#platform/preview-files";
 import { highlightFile, toFileUrl } from "#renderer/lib/file-highlight";
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
@@ -26,7 +32,6 @@ interface FilePreviewReaders {
 }
 
 export interface FilePreviewProps {
-  textOnly?: boolean;
   path: string;
   hostRoot: string;
   read: FilePreviewReaders;
@@ -38,6 +43,7 @@ export interface FilePreviewProps {
 type Loaded =
   | { state: "loading" }
   | { state: "failed" }
+  | { state: "binary"; sizeBytes: number }
   | { state: "text"; content: string; truncated: boolean }
   | { state: "image"; src: string }
   | { state: "slides"; deck: PptxDeck }
@@ -52,16 +58,17 @@ export const FilePreview = ({
   onOpenExternally,
   onReveal,
   showActions = true,
-  textOnly = false,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
-  const kind = textOnly
-    ? "code"
-    : previewKind(path) === "pptx" && read.pptx == null
+  const [htmlPreview, setHtmlPreview] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [downloadError, setDownloadError] = useState(false);
+  const kind =
+    previewKind(path) === "pptx" && read.pptx == null
       ? "external"
       : previewKind(path);
   // Keyed by what was read, so a new path shows loading without a reset.
-  const key = `${kind}\u0000${hostRoot}\u0000${path}`;
+  const key = `${kind}\u0000${hostRoot}\u0000${path}\u0000${attempt}\u0000${htmlPreview}`;
   const [result, setResult] = useState<{ key: string; loaded: Loaded }>({
     key: "",
     loaded: { state: "loading" },
@@ -69,11 +76,24 @@ export const FilePreview = ({
   const loaded: Loaded =
     result.key === key ? result.loaded : { state: "loading" };
 
-  useEffect(() => {
-    if (kind === "external") return;
-    let live = true;
-    const load = async (): Promise<Loaded> => {
-      if (kind === "pdf" || kind === "html") {
+  const loadFile = useEffectEvent(
+    async (signal: AbortSignal): Promise<Loaded> => {
+      const input = { filePath: path, hostRoot };
+      if (browserPreview && kind === "external")
+        return { state: "binary", sizeBytes: await previewSize(input, signal) };
+      if (
+        browserPreview &&
+        (kind === "pdf" || (kind === "html" && htmlPreview))
+      )
+        return {
+          state: "local",
+          url: await previewBlob(
+            input,
+            kind === "pdf" ? "application/pdf" : "text/html",
+            signal
+          ),
+        };
+      if (!browserPreview && (kind === "pdf" || kind === "html")) {
         if (!read.localUrl)
           throw new Error("Host file URL resolver unavailable");
         const url = new URL(await read.localUrl(path, hostRoot));
@@ -93,19 +113,70 @@ export const FilePreview = ({
           state: "slides",
           deck: ((await read.pptx!(path, hostRoot)) as { deck: PptxDeck }).deck,
         };
-      const text = await read.text(path, hostRoot);
-      return { state: "text", ...text };
-    };
-    load()
-      .then((next) => live && setResult({ key, loaded: next }))
-      .catch(() => live && setResult({ key, loaded: { state: "failed" } }));
+      try {
+        return { state: "text", ...(await read.text(path, hostRoot)) };
+      } catch (error) {
+        if (
+          browserPreview &&
+          (error as { data?: { reason?: string } }).data?.reason ===
+            "binary-file"
+        )
+          return {
+            state: "binary",
+            sizeBytes: await previewSize(input, signal),
+          };
+        throw error;
+      }
+    }
+  );
+  useEffect(() => {
+    if (kind === "external" && !browserPreview) return;
+    const abort = new AbortController();
+    let objectUrl: string | undefined;
+    loadFile(abort.signal)
+      .then((next) => {
+        if (browserPreview && next.state === "local") objectUrl = next.url;
+        if (abort.signal.aborted) {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+        } else setResult({ key, loaded: next });
+      })
+      .catch(() => {
+        if (!abort.signal.aborted)
+          setResult({ key, loaded: { state: "failed" } });
+      });
     return () => {
-      live = false;
+      abort.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [key, kind, path, hostRoot, read]);
+  }, [key, kind]);
 
   const actions = (
     <div className="flex shrink-0 items-center gap-1">
+      {browserPreview && (
+        <>
+          {previewKind(path) === "html" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHtmlPreview(!htmlPreview)}
+            >
+              {t(htmlPreview ? "web.files.source" : "web.files.preview")}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDownloadError(false);
+              void downloadFile({ filePath: path, hostRoot }).catch(() =>
+                setDownloadError(true)
+              );
+            }}
+          >
+            {t("web.files.download")}
+          </Button>
+        </>
+      )}
       {onReveal != null && (
         <Button
           variant="ghost"
@@ -142,10 +213,11 @@ export const FilePreview = ({
         >
           {baseName(path)}
         </span>
-        {showActions && actions}
+        {(showActions || browserPreview) && actions}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">
-        {kind === "external" ? (
+        {downloadError && <p role="alert">{t("web.files.downloadFailed")}</p>}
+        {kind === "external" && !browserPreview ? (
           <div className="flex flex-col items-start gap-2" role="status">
             <p className="text-muted-foreground">
               {t("bots.chat.preview.noViewer")}
@@ -166,10 +238,21 @@ export const FilePreview = ({
             <Skeleton className="h-4 w-2/3" />
           </div>
         ) : loaded.state === "failed" ? (
-          <div className="flex flex-col items-start gap-2" role="status">
+          <div
+            className="flex flex-col items-start gap-2"
+            role={browserPreview ? "alert" : "status"}
+          >
             <p className="text-muted-foreground">
               {t("bots.chat.preview.failed")}
             </p>
+            {browserPreview && (
+              <Button
+                variant="secondary"
+                onClick={() => setAttempt(attempt + 1)}
+              >
+                {t("sessions.common.retry")}
+              </Button>
+            )}
             {onOpenExternally && (
               <Button
                 variant="secondary"
@@ -179,16 +262,34 @@ export const FilePreview = ({
               </Button>
             )}
           </div>
+        ) : loaded.state === "binary" ? (
+          <p role="status" className="text-muted-foreground">
+            {t("web.files.binary", { size: loaded.sizeBytes.toLocaleString() })}
+          </p>
         ) : loaded.state === "image" ? (
           <img
             src={loaded.src}
             alt={baseName(path)}
+            onError={
+              browserPreview
+                ? () => setResult({ key, loaded: { state: "failed" } })
+                : undefined
+            }
             className="mx-auto max-h-full max-w-full object-contain"
           />
         ) : loaded.state === "slides" ? (
           <PptxSlides deck={loaded.deck} />
         ) : loaded.state === "local" ? (
-          <webview src={loaded.url} className="h-[600px] w-full bg-white" />
+          browserPreview ? (
+            <iframe
+              title={baseName(path)}
+              src={loaded.url}
+              sandbox={kind === "pdf" ? "allow-same-origin" : ""}
+              className="h-full min-h-[320px] w-full bg-white"
+            />
+          ) : (
+            <webview src={loaded.url} className="h-[600px] w-full bg-white" />
+          )
         ) : (
           <>
             {loaded.truncated && (

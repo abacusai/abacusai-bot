@@ -19,6 +19,17 @@ export type FilesEvent =
   /** Show a path in the pane of the conversation that presented it. */
   | { type: "preview-open"; path: string; conversationKey?: ConversationKey };
 
+export interface DirectoryListing {
+  root: string;
+  path: string;
+  entries: Array<{
+    name: string;
+    path: string;
+    kind: "directory" | "file";
+    sizeBytes: number;
+  }>;
+}
+
 export interface FileSearchResult {
   items: Array<{
     relativePath: string;
@@ -41,6 +52,14 @@ const HostFileInput = v.object({
  * "outside"}`).
  */
 export const files = {
+  listDirectory: query
+    .input(v.object({ path: v.optional(v.string()) }))
+    .output(type<DirectoryListing>()),
+  mkdir: mutation
+    .input(
+      v.object({ path: v.string(), name: v.pipe(v.string(), v.nonEmpty()) })
+    )
+    .output(type<{ path: string }>()),
   treeRoot: query
     .input(v.optional(v.object({ checkout: v.optional(CheckoutRefSchema) })))
     .output(type<FileTreeRootSnapshot>()),
