@@ -247,6 +247,9 @@ importers:
       '@abacus-ai/config':
         specifier: workspace:*
         version: link:packages/config
+      '@nogoo9/gitleaks':
+        specifier: 8.30.1-post.2
+        version: 8.30.1-post.2
       '@size-limit/file':
         specifier: ^14.1.0
         version: 14.1.0(size-limit@14.1.0)
@@ -259,6 +262,9 @@ importers:
       knip:
         specifier: 6.38.0
         version: 6.38.0
+      lefthook:
+        specifier: 2.1.10
+        version: 2.1.10
       oxc-parser:
         specifier: 0.150.0
         version: 0.150.0
@@ -1875,6 +1881,56 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@nogoo9/gitleaks-darwin-arm64@8.30.1-post.2':
+    resolution: {integrity: sha512-3j1zSvCKY7N4RnSl+oJrnrLZAY6HihD3uyi32qYrdIXH5hgVjmKiJhvGyoaV7DNw/4NdN3UsadrTM1u5M7iCuw==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@nogoo9/gitleaks-darwin-x64@8.30.1-post.2':
+    resolution: {integrity: sha512-EbWRmrWdwRtzfO4ivYXA2ZKcf4aqVZFGQVu2HJjCFjRNryyMfou4Hw3tdZc5tRbdSE0yiwaAXJ8lPazApd3iGQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@nogoo9/gitleaks-linux-arm64@8.30.1-post.2':
+    resolution: {integrity: sha512-XJzvhOEsqr6nJrBuLzDb+qBfdLjssKv/7gqQNhojd8LPM0/aEiC380kYuM9mFCXF3o3PpD4IXv/Jvemw5JJQGA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@nogoo9/gitleaks-linux-arm@8.30.1-post.2':
+    resolution: {integrity: sha512-a5aZc5WQnBmNz5CCOPd0MT75csSBUEYMEVIHR6p56TOt4lj8h+IeQ5VTKG+f9j9nU+hmG2e//j4hLcbZZkCspw==}
+    cpu: [arm]
+    os: [linux]
+
+  '@nogoo9/gitleaks-linux-x32@8.30.1-post.2':
+    resolution: {integrity: sha512-d20jRC6HCzc9J79Ti8JHFc3X3iJktF78NaUEg0EPGLHRsVpxVObtiCQAJzCgH0uXNMOVFrnsf/+dSDFwjTLU9Q==}
+    cpu: [ia32]
+    os: [linux]
+
+  '@nogoo9/gitleaks-linux-x64@8.30.1-post.2':
+    resolution: {integrity: sha512-GSJ7RU0xuaF9Blf2AmDeytxyiZb4W7/Urd5Cw5LlNK+IF/C+Nd/Fp5pKbaAF4osdxADbCZ7d4XMYUMSdlpjQFA==}
+    cpu: [x64]
+    os: [linux]
+
+  '@nogoo9/gitleaks-windows-arm64@8.30.1-post.2':
+    resolution: {integrity: sha512-cTu+rMASv3BuNJcPj57PhfiOHwapmOVH6s5PFBqAXzJomUnHdB/ZMrTDNseW78UZQQ/c0RPI3VXwieyMC23w7w==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@nogoo9/gitleaks-windows-x32@8.30.1-post.2':
+    resolution: {integrity: sha512-MGMtKVEOf0TsXIGBu/1eGb94mAZRX2rzZmgNRYqzZBSYPnmyl3w1n4tic9e6rPOewyGfuxnweCDnu0Lu/qkaaw==}
+    cpu: [ia32]
+    os: [win32]
+
+  '@nogoo9/gitleaks-windows-x64@8.30.1-post.2':
+    resolution: {integrity: sha512-whDUUm3+J5YRQUJS0mcE72JaPb2N0Njmjaj6NYTcG1OJS3v42Y/JYen6R9FuQ5jUCfsVGcblmSBmDb9uZVdwrw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@nogoo9/gitleaks@8.30.1-post.2':
+    resolution: {integrity: sha512-WkQPfryKH8w9DEqJ1Bxw3ex9aXl0M8cxDDt1ATvyieaMvWiGamGXHNLZaJeqECInVfxNPEiZA4Few8Uwtuj1wQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -5432,6 +5488,60 @@ packages:
   lazy-val@1.0.5:
     resolution: {integrity: sha512-0/BnGCCfyUMkBpeDgWihanIAF9JmZhHBgUhEqzvf+adhNGLoP6TaiI5oF8oyb3I45P+PcnrqihSf01M0l0G5+Q==}
 
+  lefthook-darwin-arm64@2.1.10:
+    resolution: {integrity: sha512-nw+X8wRNDoUUV6WSteyKBbcLySq+fsmZt5WV/s50ZJpysmsDKJOUMln6SllNfP+60dzUahAO7REco/2633BsLg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  lefthook-darwin-x64@2.1.10:
+    resolution: {integrity: sha512-KQ/bHmvpkFdHMn4pZnUdTf+GuSC+aBBgBTxZT4GW+6cSf+qbErKZBhK7cH6BmILsvx43+VzEArvHYY7YOfRFOQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  lefthook-freebsd-arm64@2.1.10:
+    resolution: {integrity: sha512-8su6DwydP7+pv7kG0zCtjphqsw4ouOnfexRUErapy5GTxYBoUOhYz3RSHTSWNRsK6W4jva7FPUh2Lp5/PSn30w==}
+    cpu: [arm64]
+    os: [freebsd]
+
+  lefthook-freebsd-x64@2.1.10:
+    resolution: {integrity: sha512-GeAJEFxko3Lk+AsnS3NleAFrpyMLFUKOlgJvPKuU0xHwVEI/z+ZoCcmuO0BX+4CS0NLbZhC/YQAvBASqDvvVdQ==}
+    cpu: [x64]
+    os: [freebsd]
+
+  lefthook-linux-arm64@2.1.10:
+    resolution: {integrity: sha512-1sHTCmpTWjVMs+yKPBLRNT1kuuIr1yjietlk7rCB6wFPVOS6Ph3o2zPFH2AvW1UymHlqwyHXzBr9EtDpQ7j1mQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  lefthook-linux-x64@2.1.10:
+    resolution: {integrity: sha512-z/VlRB3bh6mBvW3r1rwnJ5vP8z+Krx5gJzkZ4veDXh+6FlRTx8wtd3g3fllOv/yZMxkgmL3fQoFXv05Esa7vBQ==}
+    cpu: [x64]
+    os: [linux]
+
+  lefthook-openbsd-arm64@2.1.10:
+    resolution: {integrity: sha512-430zL8sSIKw5P0YXGG6PB+eAhHa06n0PXuaERaAQE4Ss3odfqwnl5Mq9hQmkEnOS1EGiQEKkd0UHv/i4PtMNIQ==}
+    cpu: [arm64]
+    os: [openbsd]
+
+  lefthook-openbsd-x64@2.1.10:
+    resolution: {integrity: sha512-bgkO8PphGZVDhQgCJ524aYYPI5491pVmCiLPGjBIo1AvOSlIyw4N1Y+1C3QfqwEmechzw+Aq16SNc8pqv6UuXg==}
+    cpu: [x64]
+    os: [openbsd]
+
+  lefthook-windows-arm64@2.1.10:
+    resolution: {integrity: sha512-5Q6etF0Fla2DDA4ilDySrdNgiR5+W7cJZwnZ69Je3kvWCaWm4wnkuc8FEdjp3kiL2x3ZXipdI00f5vpO8aWmog==}
+    cpu: [arm64]
+    os: [win32]
+
+  lefthook-windows-x64@2.1.10:
+    resolution: {integrity: sha512-c/XH8YZtylG4XaxzqFfXluvq2LXq2W/p54Bnzn3+Z7E5X2Fk3JlFJAibulMbIt2+w8T7UI/r97ok5GqE4kGaeA==}
+    cpu: [x64]
+    os: [win32]
+
+  lefthook@2.1.10:
+    resolution: {integrity: sha512-K7mM4WoqMwqfXYK11EHy+lSH1uW8XHni3Yn/bSqyerPkUPygGdf3xn18JoV5HyA06xuQL3ofGAOjG01QX9oJ4w==}
+    hasBin: true
+
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
 
@@ -8525,6 +8635,45 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@nogoo9/gitleaks-darwin-arm64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-darwin-x64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-linux-arm64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-linux-arm@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-linux-x32@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-linux-x64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-windows-arm64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-windows-x32@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks-windows-x64@8.30.1-post.2':
+    optional: true
+
+  '@nogoo9/gitleaks@8.30.1-post.2':
+    optionalDependencies:
+      '@nogoo9/gitleaks-darwin-arm64': 8.30.1-post.2
+      '@nogoo9/gitleaks-darwin-x64': 8.30.1-post.2
+      '@nogoo9/gitleaks-linux-arm': 8.30.1-post.2
+      '@nogoo9/gitleaks-linux-arm64': 8.30.1-post.2
+      '@nogoo9/gitleaks-linux-x32': 8.30.1-post.2
+      '@nogoo9/gitleaks-linux-x64': 8.30.1-post.2
+      '@nogoo9/gitleaks-windows-arm64': 8.30.1-post.2
+      '@nogoo9/gitleaks-windows-x32': 8.30.1-post.2
+      '@nogoo9/gitleaks-windows-x64': 8.30.1-post.2
 
   '@opentelemetry/api@1.9.0':
     optional: true
@@ -11781,6 +11930,49 @@ snapshots:
       zod: 4.4.3
 
   lazy-val@1.0.5: {}
+
+  lefthook-darwin-arm64@2.1.10:
+    optional: true
+
+  lefthook-darwin-x64@2.1.10:
+    optional: true
+
+  lefthook-freebsd-arm64@2.1.10:
+    optional: true
+
+  lefthook-freebsd-x64@2.1.10:
+    optional: true
+
+  lefthook-linux-arm64@2.1.10:
+    optional: true
+
+  lefthook-linux-x64@2.1.10:
+    optional: true
+
+  lefthook-openbsd-arm64@2.1.10:
+    optional: true
+
+  lefthook-openbsd-x64@2.1.10:
+    optional: true
+
+  lefthook-windows-arm64@2.1.10:
+    optional: true
+
+  lefthook-windows-x64@2.1.10:
+    optional: true
+
+  lefthook@2.1.10:
+    optionalDependencies:
+      lefthook-darwin-arm64: 2.1.10
+      lefthook-darwin-x64: 2.1.10
+      lefthook-freebsd-arm64: 2.1.10
+      lefthook-freebsd-x64: 2.1.10
+      lefthook-linux-arm64: 2.1.10
+      lefthook-linux-x64: 2.1.10
+      lefthook-openbsd-arm64: 2.1.10
+      lefthook-openbsd-x64: 2.1.10
+      lefthook-windows-arm64: 2.1.10
+      lefthook-windows-x64: 2.1.10
 
   lie@3.3.0:
     dependencies:

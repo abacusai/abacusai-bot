@@ -30,6 +30,7 @@ catalog:
 nodeLinker: hoisted
 
 allowBuilds:
+  lefthook: true
   "@ast-grep/lang-python": true
   "@tailwindcss/oxide": true
   "@google/genai": false

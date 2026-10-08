@@ -1,0 +1,45 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "abacus-session-token"
+description = "Abacus session tokens"
+regex = '''\b(s2_[A-Za-z0-9_-]{20,})\b'''
+secretGroup = 1
+entropy = 3
+keywords = ["s2_"]
+
+[[rules]]
+id = "mobile-number"
+description = "International phone numbers"
+regex = '''(?:^|[^A-Za-z0-9_])(\+[1-9](?:[ .()-]?[0-9]){6,14})\b'''
+secretGroup = 1
+keywords = ["+"]
+
+[[rules]]
+id = "mobile-national-number"
+description = "National mobile numbers in phone fields"
+regex = '''(?i)\b(?:phone|mobile|whatsapp|msisdn|tel)(?:[_-]?(?:number|no))?["\'\t ]*[:=]["\'\t ]*([6-9][0-9]{9})\b'''
+secretGroup = 1
+keywords = ["phone", "mobile", "whatsapp", "msisdn", "tel"]
+
+[[allowlists]]
+targetRules = ["mobile-number", "mobile-national-number"]
+regexes = [
+  # Fictional NANP number
+  '''^\+1 555-000-1234$''',
+  # Fictional NANP number
+  '''^\+15550009999$''',
+  # Fictional NANP number
+  '''^\+1 555 000 9999$''',
+  # Fictional NANP number
+  '''^\+15550001234$''',
+  # Reserved NANP 555-01xx number
+  '''^\+1 415 555 0123$''',
+  # Fictional NANP number
+  '''^\+1 555 0100$''',
+  # Fictional NANP number
+  '''^\+15550100100$''',
+  # Maintainer-confirmed test number
+  '''^\+919800000314$''',
+]
