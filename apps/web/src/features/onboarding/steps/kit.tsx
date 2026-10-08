@@ -76,20 +76,6 @@ export const StepBody = ({ className, ...props }: ComponentProps<"p">) => (
   <p className={cn("onboarding-body", className)} {...props} />
 );
 
-export const Pill = ({
-  dot,
-  children,
-}: {
-  /** The dot's colour (a CSS colour). */
-  dot: string;
-  children: ReactNode;
-}) => (
-  <span className="onboarding-pill" style={{ "--pill-dot": dot } as never}>
-    <i aria-hidden="true" />
-    {children}
-  </span>
-);
-
 export const ConnectedMark = ({ children }: { children: ReactNode }) => (
   <span className="onboarding-connected">
     <i aria-hidden="true" />

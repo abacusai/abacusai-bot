@@ -891,7 +891,7 @@ export const ThreadComposer = () => {
       <div
         className="flex flex-col"
         data-slot="composer"
-        data-tour="composer"
+
         data-state={state}
         aria-busy={config.pending || undefined}
         data-expanded={expanded ? "" : undefined}

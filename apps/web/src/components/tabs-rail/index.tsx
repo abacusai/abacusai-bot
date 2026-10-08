@@ -299,7 +299,7 @@ export const TabsRail = ({
               )
             }
             role="presentation"
-            data-tour="topbar-panel-tabs"
+
             data-topbar-tabs=""
             className={cn(
               "no-scrollbar flex w-full min-w-0 snap-x items-center gap-1 overflow-x-auto",

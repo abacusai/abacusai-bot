@@ -152,7 +152,7 @@ export const BotStartPage = ({
               <InputGroupInput
                 autoFocus={empty}
                 aria-label={t("bots.form.name")}
-                data-tour="bots-name-input"
+
                 placeholder={t("bots.start.namePlaceholder")}
                 value={values.name}
                 maxLength={30}

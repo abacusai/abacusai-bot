@@ -63,6 +63,8 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
   const [homes, setHomes] = useState<Home[]>([]);
   const live = useRef<HTMLDivElement>(null);
   const previous = useRef<DOMRect | null>(null);
+  const flight = useRef<{ stop(): void } | null>(null);
+  useEffect(() => () => flight.current?.stop(), []);
   const home = homes.at(-1);
   const [register] = useState(() => (next: Home) => {
     setHomes((all) => [...all, next]);
@@ -74,6 +76,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
     const move = () => {
       const to = home.element.getBoundingClientRect();
       const from = element.getBoundingClientRect();
+      flight.current?.stop();
       element.style.transform = `translate(${to.x}px, ${to.y}px) scale(${to.width / 96})`;
       if (
         previous.current &&
@@ -84,7 +87,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
           Math.abs(from.width - to.width) >
           1
       ) {
-        void animate(
+        flight.current = animate(
           element,
           {
             transform: [

@@ -1,13 +1,7 @@
-/*
- * Onboarding (canvas page 11, OnboardMotion). One full-window frame with the
- * radial wash, the progress pill in the title bar, a centred column holding
- * the avatar stage and the step, and the design's type scale. Motion values
- * mirror lib/motion.ts `onboarding` (rise 12 px / 320 ms, stagger 60 ms).
- */
 .onboarding-frame {
   --ob-success: #16a34a;
   --ob-success-soft: color-mix(in oklch, var(--ob-success) 14%, transparent);
-  --ob-surface: var(--muted);
+  --ob-surface: var(--card);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -41,8 +35,7 @@
   height: 6px;
   border-radius: 3px;
   background: var(--border);
-  transition:
-    background-color 300ms var(--ease-standard);
+  transition: background-color 300ms var(--ease-standard);
 }
 .onboarding-progress span[data-current="true"] {
   width: 20px;
@@ -156,23 +149,6 @@
   color: var(--ob-success);
 }
 
-.onboarding-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--ob-surface);
-  font-size: 13px;
-}
-.onboarding-pill i {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--pill-dot, var(--primary));
-}
-
 .onboarding-card {
   border-radius: 12px;
   background: var(--ob-surface);
@@ -190,8 +166,7 @@
   text-align: left;
   transition: border-color 200ms var(--ease-standard);
 }
-.onboarding-row[data-connected="true"],
-.onboarding-tile[data-connected="true"] {
+.onboarding-row[data-connected="true"] {
   border-color: var(--ob-success);
 }
 .onboarding-row-title {
@@ -224,17 +199,6 @@
 }
 
 /* ── Keyframes ────────────────────────────────────────────────────────── */
-@keyframes onboarding-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-}
-@keyframes onboarding-pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
 @keyframes onboarding-confetti {
   0% {
     opacity: 0;
@@ -256,9 +220,6 @@
     animation: onboarding-fade 120ms linear both;
     animation-delay: 0ms;
   }
-  html:not([data-reduce-motion="off"]) .onboarding-glow {
-    animation: none;
-  }
   html:not([data-reduce-motion="off"]) .onboarding-progress span {
     transition: none;
   }
@@ -269,9 +230,6 @@
 [data-reduced-motion="true"] .onboarding-step > * {
   animation: onboarding-fade 120ms linear both;
   animation-delay: 0ms;
-}
-[data-reduced-motion="true"] .onboarding-glow {
-  animation: none;
 }
 [data-reduced-motion="true"] .onboarding-progress span {
   transition: none;

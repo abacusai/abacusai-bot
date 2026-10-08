@@ -75,7 +75,7 @@ export const ConnectorsStep = ({
         {t("onboarding.pages.connectors.body")}
       </StepBody>
       <ul
-        className="mt-7 grid w-full max-w-[760px] grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4"
+        className="mt-7 grid w-full max-w-[640px] grid-cols-2 gap-2"
         data-slot="connector-grid"
       >
         {tiles.map((entry) => {

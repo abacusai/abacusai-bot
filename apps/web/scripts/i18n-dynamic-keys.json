@@ -1208,21 +1208,6 @@
     "sources": ["features/settings/search-index.ts"]
   },
   {
-    "prefix": "onboarding.welcomeModels",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
-    "prefix": "onboarding.welcomeConnectors",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
-    "prefix": "onboarding.welcomeMemory",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
     "prefix": "onboarding.pages.",
     "values": [
       "connectedLabel",
@@ -1315,9 +1300,6 @@
   {
     "prefix": "onboarding.",
     "values": [
-      "welcomeModels",
-      "welcomeConnectors",
-      "welcomeMemory",
       "pages.connect.body",
       "pages.connectors.body",
       "pages.first-bot.body",
@@ -1555,10 +1537,6 @@
       "review-pull-requests.name",
       "review-pull-requests.detail"
     ]
-  },
-  {
-    "prefix": "onboarding.welcomeFreeBadge",
-    "values": [""]
   },
   {
     "prefix": "tour.stops.",

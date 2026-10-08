@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "#renderer/ui/button";
@@ -26,7 +26,6 @@ export const TourCard = ({
   onNext(): void;
 }) => {
   const { t } = useTranslation();
-  const popup = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const dismiss = (event: KeyboardEvent) => {
       if (event.key === "Escape") onDismiss();
@@ -43,7 +42,6 @@ export const TourCard = ({
       }}
     >
       <PopoverContent
-        ref={popup}
         anchor={anchor}
         side="right"
         sideOffset={12}
