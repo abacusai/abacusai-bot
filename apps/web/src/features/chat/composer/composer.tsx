@@ -23,6 +23,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SendError } from "#renderer/components/send-error";
 import { Spinner } from "#renderer/components/spinner";
 import { isNotFound } from "#renderer/data/ai";
 import { isRpcError } from "#renderer/data/query-client";
@@ -706,6 +707,7 @@ export const ThreadComposer = () => {
   const stop = (): void => void session.cancel().catch(() => {});
 
   const setText = (text: string, caret: number | null) => {
+    setError(null);
     updateDraft(threadId, (current) => ({ ...current, text }));
     setTrigger(
       caret == null
@@ -951,6 +953,7 @@ export const ThreadComposer = () => {
             onClose={() => setTrigger(null)}
           />
         ) : null}
+        {!config.preStart && <SendError error={error} />}
         <label htmlFor={fieldId} className="sr-only">
           {config.placeholder}
         </label>
@@ -1089,11 +1092,6 @@ export const ThreadComposer = () => {
             </>
           )}
         </motion.div>
-        {error != null ? (
-          <p role="alert" className="text-destructive px-4 pt-1.5 text-xs">
-            {error}
-          </p>
-        ) : null}
         {view.slots.composerContext != null ? (
           // The context bar (repo · branch · worktree) hangs under the box
           // as its own 48 px strip: inset 12 px, bottom corners 14 px, tucked

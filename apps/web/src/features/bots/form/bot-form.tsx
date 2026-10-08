@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { useAppForm } from "#renderer/components/form-kit";
+import { SendError } from "#renderer/components/send-error";
 import { useDb } from "#renderer/data/db";
 import { accentVars } from "#renderer/lib/bots/avatar";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -222,6 +223,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
   }, [bot, form, baseline]);
   return (
     <form
+      onChangeCapture={() => setError(null)}
       className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden [container:bot-form/inline-size]"
       style={accentVars(look)}
       onSubmit={(event) => {
@@ -230,6 +232,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
         void form.handleSubmit();
       }}
     >
+      <SendError error={error} />
       <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
         <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10 text-center">
           <BotFace morph look={look} size={wide ? 96 : 56} mood="happy" />
@@ -313,11 +316,6 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
         {changed && (
           <p role="status" className="text-muted-foreground mr-auto text-xs">
             {t("bots.form.remoteChange")}
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="text-destructive text-xs">
-            {error}
           </p>
         )}
         <Button

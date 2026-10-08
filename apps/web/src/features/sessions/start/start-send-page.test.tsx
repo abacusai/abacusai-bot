@@ -102,6 +102,13 @@ it("keeps the focused composer and text through admission and navigation without
     expect((field as HTMLTextAreaElement).value).toBe("List the files");
     expect((field as HTMLTextAreaElement).readOnly).toBe(true);
     expect(document.activeElement).toBe(field);
+    const starter = screen.getByRole("button", {
+      name: /^Review my pull requests/,
+    });
+    expect(starter.getAttribute("aria-disabled")).toBe("true");
+    expect(starter.hasAttribute("disabled")).toBe(false);
+    fireEvent.click(starter);
+    expect((field as HTMLTextAreaElement).value).toBe("List the files");
     accept();
     await waitFor(() => expect(navigate).toHaveBeenCalledOnce());
     expect((field as HTMLTextAreaElement).readOnly).toBe(true);
@@ -202,6 +209,19 @@ it("restores text after a failed automatic resume and retries with the original 
     );
     expect((field as HTMLTextAreaElement).value).toBe("List the files");
     expect(h.view.container.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    const alert = screen.getByRole("alert");
+    expect(alert.getAttribute("aria-live")).toBe("assertive");
+    expect(alert.querySelector("svg")).not.toBeNull();
+    expect(
+      alert.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0);
+    const starter = screen.getByRole("button", {
+      name: /^Review my pull requests/,
+    });
+    expect(starter.hasAttribute("disabled")).toBe(false);
+    expect(starter.getAttribute("aria-disabled")).toBe("false");
+    fireEvent.change(field, { target: { value: "List the files again" } });
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
     fail = false;
     fireEvent.keyDown(field, { key: "Enter" });

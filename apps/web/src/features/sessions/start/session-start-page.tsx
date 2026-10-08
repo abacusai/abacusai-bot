@@ -21,6 +21,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import { SendError } from "#renderer/components/send-error";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -173,38 +174,33 @@ export const SessionStartPage = ({
           className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
           style={{ "--rise-i": 3 } as CSSProperties}
         >
-          {renderComposer({
-            threadId: id,
-            attachmentContext: async () => {
-              if (!draft.workspaceId)
-                throw new Error("Select a workspace before uploading files");
-              await db.collections.sessions.preload();
-              const existing = db.collections.sessions.get(draft.id);
-              if (existing && existing.workspaceId !== draft.workspaceId)
-                throw new Error(
-                  "Session identity belongs to another workspace"
-                );
-              if (!existing)
-                await db.collections.sessions.insert(optimisticSession(draft))
-                  .isPersisted.promise;
-              return { workspaceId: draft.workspaceId, sessionId: draft.id };
-            },
-            workspaceId: draft.workspaceId,
-            root: workspace?.path ?? null,
-            context,
-            submit,
-            pending,
-            blocked: !draft.workspaceId || pathStatus.data?.exists === false,
-          })}
+          <SendError error={error} />
+          <div onChangeCapture={() => setError(null)}>
+            {renderComposer({
+              threadId: id,
+              attachmentContext: async () => {
+                if (!draft.workspaceId)
+                  throw new Error("Select a workspace before uploading files");
+                await db.collections.sessions.preload();
+                const existing = db.collections.sessions.get(draft.id);
+                if (existing && existing.workspaceId !== draft.workspaceId)
+                  throw new Error(
+                    "Session identity belongs to another workspace"
+                  );
+                if (!existing)
+                  await db.collections.sessions.insert(optimisticSession(draft))
+                    .isPersisted.promise;
+                return { workspaceId: draft.workspaceId, sessionId: draft.id };
+              },
+              workspaceId: draft.workspaceId,
+              root: workspace?.path ?? null,
+              context,
+              submit,
+              pending,
+              blocked: !draft.workspaceId || pathStatus.data?.exists === false,
+            })}
+          </div>
         </div>
-        {error ? (
-          <p
-            role="alert"
-            className="text-destructive phone:order-5 phone:px-5 text-sm"
-          >
-            {error}
-          </p>
-        ) : null}
         {!prefs.sidebar.pinned &&
         workspace &&
         (recent ?? []).some(
@@ -256,11 +252,13 @@ export const SessionStartPage = ({
             {starters.map((starter, index) => (
               <Button
                 key={starter.id}
-                disabled={pending}
+                aria-disabled={pending}
                 variant="secondary"
                 style={{ "--rise-i": index + 1 } as CSSProperties}
                 className="phone-rise phone:h-[132px] phone:w-[156px] phone:shrink-0 phone:snap-start phone:justify-between phone:rounded-[22px] phone:border phone:border-foreground/[0.08] phone:bg-foreground/[0.045] phone:backdrop-blur-xl phone:p-3.5 phone:font-medium h-auto min-h-20 flex-col items-start gap-2 rounded-2xl p-3 text-start whitespace-normal"
                 onClick={() => {
+                  if (pending) return;
+                  setError(null);
                   prefill(id, starter.prompt);
                   requestAnimationFrame(() =>
                     document

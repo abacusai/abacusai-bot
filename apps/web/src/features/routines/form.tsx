@@ -9,6 +9,7 @@ import * as v from "valibot";
 
 import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
+import { SendError } from "#renderer/components/send-error";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isRpcError } from "#renderer/data/query-client";
 import { ABACUS_PLAN_URL } from "#renderer/lib/abacus-links";
@@ -334,11 +335,13 @@ export const RoutineDialog = ({
           </DialogHeader>
           <form
             className="flex min-h-0 flex-col"
+            onChangeCapture={() => setError(null)}
             onSubmit={(e) => {
               e.preventDefault();
               void form.handleSubmit();
             }}
           >
+            <SendError error={error} />
             <FieldGroup className="min-h-0 overflow-y-auto pr-1">
               {!routineId && (
                 <div>
@@ -682,7 +685,7 @@ export const RoutineDialog = ({
                 }}
               </form.Subscribe>
               {remote && <p role="status">{t("phase5.remoteChanged")}</p>}
-              {error && <p role="alert">{error}</p>}
+
               {refusal && (
                 <div role="alert" className="flex flex-col gap-1 text-[13px]">
                   <p>{t(refusal.key)}</p>
