@@ -1,21 +1,26 @@
 /**
  * Follows what each session sent the user to do on a vault page (save a
- * login or card, enter a code, approve a payment) so nothing waits inside a
- * tool call. While anything is outstanding it reads each one's status every
- * few seconds; a page that completed or failed, and a payment the user
- * approved, raises one note for the session that asked, and an expired one
- * is dropped. The user saying they are done checks at once (`checkNow`).
+ * login or card, enter a code, approve a payment, allow a sign-in) so
+ * nothing waits inside a tool call. While anything is outstanding it reads
+ * each one's status every few seconds; a page that completed or failed, a
+ * payment the user approved and a sign-in they allowed or denied raises one
+ * note for the session that asked, and an expired one is dropped. The user saying they are done checks at once (`checkNow`).
  */
 import type { VaultClient } from "./vault-client";
 import {
   APPROVAL_LIFETIME_MS,
+  SIGNIN_LIFETIME_MS,
+  SIGNIN_ON_SAVE_LIFETIME_MS,
   type PendingVaultRequest,
   type VaultSession,
   type VaultSessions,
 } from "./vault-session";
 
 export interface VaultWaiterDeps {
-  client: Pick<VaultClient, "requestStatus" | "paymentApprovalStatus">;
+  client: Pick<
+    VaultClient,
+    "requestStatus" | "paymentApprovalStatus" | "signinApprovalStatus"
+  >;
   sessions: VaultSessions;
   /** A note for the session's model, raised once per outcome. */
   raise: (sessionId: string, note: string) => void;
@@ -34,7 +39,8 @@ const savedNote = (
     return (
       `[vault] The user saved their login${request.site != null ? ` for ${request.site}` : ""}${item}. ` +
       `To sign in, pass login_item_id ${itemId ?? "(its id from vault_items)"} to browser_task, with continue_from_last when a ` +
-      "browser run is paused for this sign-in; its browser fills the username and password itself, and the values never pass through you."
+      "browser run is paused for this sign-in; its browser fills the username and password itself, and the values never pass through you. " +
+      "Saving it allowed this first sign-in for the next 10 minutes; a later one needs signin_approval."
     );
   if (request.kind === "card")
     return (
@@ -137,6 +143,14 @@ export class VaultWaiter {
       if (status.ok === false) continue;
       if (status.value.status === "pending") continue;
       session.requests.delete(requestId);
+      const saved = status.value;
+      // Saving a login on its page allowed the one sign-in that follows.
+      if (saved.status === "completed" && saved.signinApprovalId != null)
+        await this.adoptSavedSignin(
+          session,
+          saved.signinApprovalId,
+          saved.itemId
+        );
       if (status.value.status === "completed")
         notes.push(savedNote(request, status.value.itemId) + TELL_USER);
       else if (status.value.status === "failed")
@@ -165,6 +179,67 @@ export class VaultWaiter {
         }
       }
     }
+    const signin = session.signin;
+    if (signin?.status === "pending") {
+      if (this.now() >= signin.expiresAt) session.signin = null;
+      else {
+        const status = await this.deps.client.signinApprovalStatus(signin.id);
+        // Replaced while the read was out: the new one is checked next time.
+        if (status.ok && session.signin === signin) {
+          if (status.value.status === "expired") session.signin = null;
+          else if (status.value.status === "denied") {
+            session.signin = null;
+            notes.push(
+              `[vault] The user denied signing in to ${signin.site}. Do not sign in there; ask them how to go on.` +
+                TELL_USER
+            );
+          } else if (status.value.status === "approved") {
+            signin.status = "approved";
+            signin.expiresAt =
+              status.value.expiresAt != null
+                ? status.value.expiresAt * 1000
+                : this.now() + SIGNIN_LIFETIME_MS;
+            notes.push(
+              `[vault] The user allowed one sign-in to ${signin.site}. For the next 5 minutes the browser can fill that ` +
+                "login's username and password there, once each: call browser_task with login_item_id " +
+                `${signin.item} (and continue_from_last when a run is paused for this sign-in).` +
+                TELL_USER
+            );
+          }
+        }
+      }
+    }
     return notes;
+  }
+
+  /**
+   * The sign-in a login's save allowed, held as the session's: bound to the
+   * site the server says, not the one the model asked to save for.
+   */
+  private async adoptSavedSignin(
+    session: VaultSession,
+    signinApprovalId: string,
+    itemId: string | null
+  ): Promise<void> {
+    if (itemId == null) return;
+    const status =
+      await this.deps.client.signinApprovalStatus(signinApprovalId);
+    if (
+      status.ok === false ||
+      status.value.status !== "approved" ||
+      status.value.site == null
+    )
+      return;
+    session.signin = {
+      id: signinApprovalId,
+      item: itemId,
+      site: status.value.site,
+      status: "approved",
+      used: new Set(),
+      expiresAt:
+        status.value.expiresAt != null
+          ? status.value.expiresAt * 1000
+          : this.now() + SIGNIN_ON_SAVE_LIFETIME_MS,
+    };
   }
 }

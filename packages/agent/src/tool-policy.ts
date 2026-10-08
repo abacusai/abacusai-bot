@@ -81,6 +81,7 @@ export const PHONE_MCP_TOOLS: McpToolPolicy = {
     "vault_items",
     "vault_request",
     "payment_approval",
+    "signin_approval",
   ],
   connectors: true,
 };

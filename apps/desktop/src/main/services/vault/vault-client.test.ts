@@ -245,9 +245,117 @@ describe("VaultClient", () => {
 
     expect(await vault.requestStatus("req-1")).toEqual({
       ok: true,
-      value: { status: "completed", itemId: "i-9" },
+      value: { status: "completed", itemId: "i-9", signinApprovalId: null },
     });
     expect(sent[0]!.url.searchParams.get("requestId")).toBe("req-1");
+  });
+
+  it("reads the sign-in a saved login's page allowed with its status", async () => {
+    const { vault } = client({
+      _getAbacusbotVaultRequestStatus: {
+        body: {
+          success: true,
+          result: {
+            status: "completed",
+            itemId: "i-9",
+            signinApprovalId: "sa-1",
+          },
+        },
+      },
+    });
+
+    expect(await vault.requestStatus("req-1")).toEqual({
+      ok: true,
+      value: { status: "completed", itemId: "i-9", signinApprovalId: "sa-1" },
+    });
+  });
+
+  it("asks for a sign-in approval for a saved login, and needs its link and site", async () => {
+    const { vault, sent } = client({
+      _createAbacusbotSigninApproval: {
+        body: {
+          success: true,
+          result: {
+            signinApprovalId: "sa-1",
+            url: "https://example.test/app/vault/signin?r=abc",
+            site: "shop.example",
+            expiresAt: 1_900_000_000,
+          },
+        },
+      },
+    });
+
+    expect(await vault.createSigninApproval({ itemId: "login-1" })).toEqual({
+      ok: true,
+      value: {
+        signinApprovalId: "sa-1",
+        url: "https://example.test/app/vault/signin?r=abc",
+        site: "shop.example",
+        expiresAt: 1_900_000_000,
+      },
+    });
+    expect(sent[0]!.body).toEqual({
+      itemId: "login-1",
+    });
+
+    const console_ = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { vault: siteless } = client({
+      _createAbacusbotSigninApproval: {
+        body: {
+          success: true,
+          result: { signinApprovalId: "sa-1", url: "https://x.test/v" },
+        },
+      },
+    });
+    expect(
+      (await siteless.createSigninApproval({ itemId: "login-1" })).ok
+    ).toBe(false);
+    console_.mockRestore();
+  });
+
+  it("reads a sign-in approval's status, and anything else as expired", async () => {
+    for (const [status, expected] of [
+      ["approved", "approved"],
+      ["pending", "pending"],
+      ["denied", "denied"],
+      ["expired", "expired"],
+      ["weird", "expired"],
+    ] as const) {
+      const { vault } = client({
+        _getAbacusbotSigninApproval: {
+          body: {
+            success: true,
+            result: { status, site: "shop.example", expiresAt: 1_900_000_000 },
+          },
+        },
+      });
+      expect(await vault.signinApprovalStatus("sa-1")).toEqual({
+        ok: true,
+        value: {
+          status: expected,
+          site: "shop.example",
+          expiresAt: 1_900_000_000,
+        },
+      });
+    }
+  });
+
+  it("sends a login fill's sign-in approval with it", async () => {
+    const { vault, sent } = client({
+      _fillAbacusbotVaultField: {
+        body: { success: true, result: { value: "pw" } },
+      },
+    });
+
+    await vault.fill({
+      itemId: "login-1",
+      field: "password",
+      origin: "https://www.shop.example",
+      signinApprovalId: "sa-1",
+    });
+    expect(sent[0]!.body).toMatchObject({
+      signinApprovalId: "sa-1",
+    });
   });
 
   it("reads an approval the platform no longer knows as expired", async () => {

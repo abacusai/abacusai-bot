@@ -1,6 +1,6 @@
 /**
- * The vault as the agent sees it: `vault_items`, `vault_request` and
- * `payment_approval` for the conversation's own agent, and the schema of
+ * The vault as the agent sees it: `vault_items`, `vault_request`,
+ * `payment_approval` and `signin_approval` for the conversation's own agent, and the schema of
  * `browser_vault_fill`, which the browser server runs for its sub-agent.
  * Request and approval ids stay in `VaultSessions`; no tool takes one.
  */
@@ -16,6 +16,7 @@ import {
   REQUEST_LIFETIME_MS,
   VaultSessions,
   type PaymentApproval,
+  type SigninApproval,
 } from "./vault-session";
 import { VaultWaiter } from "./vault-waiter";
 
@@ -55,8 +56,10 @@ const TOOLS: Record<
       "  while the browser is on the page asking for it.",
       "",
       "Once a login is saved, pass its item_id to browser_task as login_item_id: its browser",
-      "signs in with browser_vault_fill. The link works once, only for this user, for 30",
-      "minutes. Only the user opens it: the browser never opens Abacus.AI pages.",
+      "signs in with browser_vault_fill. Saving it also allows that first sign-in, for 10",
+      "minutes; every later sign-in needs signin_approval. The link works once, only for",
+      "this user, for 30 minutes. Only the user opens it: the browser never opens Abacus.AI",
+      "pages.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -121,6 +124,29 @@ const TOOLS: Record<
       required: ["item_id", "merchant", "amount", "currency"],
     },
   },
+  signin_approval: {
+    description: [
+      "Ask the user to let the browser sign in once with a saved login: returns a one-time",
+      "link to send them, whose page asks them to allow or deny signing in to the login's",
+      'site. Use it when a browser run needs that login (it stops with need "login" and says',
+      "it is waiting for sign-in approval), or just before starting one that will sign in.",
+      "Not needed right after the user saved the login: saving it allowed that first sign-in.",
+      "",
+      "Once allowed, the browser can fill that login's username and password (and a sign-in",
+      "code) on its site, once each, within 5 minutes; you are told when they answer. Never",
+      "open the link in the browser: allowing is the user's alone.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        item_id: {
+          type: "string",
+          description: "The saved login, from vault_items",
+        },
+      },
+      required: ["item_id"],
+    },
+  },
   [VAULT_FILL_TOOL]: {
     description: [
       "Type one of the user's saved vault values into a field, without you ever seeing it:",
@@ -134,7 +160,8 @@ const TOOLS: Record<
       'To sign in, use field "login" with no ref: the browser finds the sign-in form itself,',
       "fills the username and the password, and names the button to click. On a sign-in that",
       "asks for the username first, it fills that and says the password is pending: go on to",
-      "the next step and call it again.",
+      "the next step and call it again. A login fills only while the user has allowed this",
+      'sign-in; when it says it is waiting for sign-in approval, stop with need "login".',
       "",
       "Card number and CVV fill only after the user approved this payment, once each: pass",
       "total_ref, the ref of the element showing the order total with its currency. The",
@@ -258,6 +285,13 @@ export class Vault {
       : (this.sessions.get(sessionId)?.approved() ?? null);
   }
 
+  /** The sign-in this session's user allowed, while it is good. */
+  signin(sessionId: string | undefined): SigninApproval | null {
+    return sessionId == null
+      ? null
+      : (this.sessions.get(sessionId)?.allowedSignin() ?? null);
+  }
+
   /** Runs one of the parent's tools. */
   async run(
     name: string,
@@ -274,6 +308,8 @@ export class Vault {
         return this.request(args, sessionId, browser);
       case "payment_approval":
         return this.approve(args, sessionId, browser);
+      case "signin_approval":
+        return this.signinApproval(args, sessionId);
       default:
         return err(`Unknown tool: ${name}`);
     }
@@ -494,6 +530,33 @@ export class Vault {
       `Send the user this link to approve paying ${result.value.amount} ${result.value.currency} to ${merchant}` +
         ` on ${result.value.site}: ${result.value.url}\n` +
         "You are told when they approve. Until then no card is filled."
+    );
+  }
+
+  private async signinApproval(
+    args: Record<string, unknown>,
+    sessionId: string
+  ): Promise<McpToolResult> {
+    const itemId = typeof args.item_id === "string" ? args.item_id.trim() : "";
+    if (!ITEM_ID_RE.test(itemId))
+      return err("item_id is the saved login's id, from vault_items.");
+    const result = await this.deps.client.createSigninApproval({ itemId });
+    if (result.ok === false) return this.unavailable(result);
+    const now = this.now();
+    // Held here only: no tool takes or shows the approval's id.
+    this.sessions.for(sessionId).signin = {
+      id: result.value.signinApprovalId,
+      item: itemId,
+      site: result.value.site,
+      status: "pending",
+      used: new Set(),
+      expiresAt: until(result.value.expiresAt, now),
+    };
+    this.waiter.watch();
+    return ok(
+      `Send the user this link: ${result.value.url}\n` +
+        `Introduce it in one short line in their language, like "Tap to let me sign in to ${result.value.site} once". ` +
+        "Its page asks them to allow or deny that one sign-in. You are told when they answer; until then no login is filled."
     );
   }
 }

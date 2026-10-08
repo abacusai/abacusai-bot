@@ -147,10 +147,13 @@ export class VaultClient {
     };
   }
 
-  async requestStatus(
-    requestId: string
-  ): Promise<
-    VaultResult<{ status: VaultRequestStatus; itemId: string | null }>
+  async requestStatus(requestId: string): Promise<
+    VaultResult<{
+      status: VaultRequestStatus;
+      itemId: string | null;
+      /** A saved login's page approves the one sign-in that follows. */
+      signinApprovalId: string | null;
+    }>
   > {
     const result = await this.call("_getAbacusbotVaultRequestStatus", "GET", {
       requestId,
@@ -167,7 +170,11 @@ export class VaultClient {
       return this.malformed("_getAbacusbotVaultRequestStatus");
     return {
       ok: true,
-      value: { status, itemId: text(field(record, "itemId")) },
+      value: {
+        status,
+        itemId: text(field(record, "itemId")),
+        signinApprovalId: text(field(record, "signinApprovalId")),
+      },
     };
   }
 
@@ -248,6 +255,73 @@ export class VaultClient {
     };
   }
 
+  /** A pending sign-in approval for a saved login, and the page the user allows it on. */
+  async createSigninApproval(input: { itemId: string }): Promise<
+    VaultResult<{
+      signinApprovalId: string;
+      url: string;
+      site: string;
+      expiresAt: number | null;
+    }>
+  > {
+    const result = await this.call("_createAbacusbotSigninApproval", "POST", {
+      itemId: input.itemId,
+    });
+    if (result.ok === false) return result;
+    const record = (result.value ?? {}) as Record<string, unknown>;
+    const signinApprovalId = text(field(record, "signinApprovalId"));
+    const url = text(record.url);
+    // The site is what a fill is checked against; an approval without one is no use.
+    const site = text(record.site);
+    if (
+      signinApprovalId == null ||
+      url == null ||
+      !url.startsWith("https://") ||
+      site == null
+    )
+      return this.malformed("_createAbacusbotSigninApproval");
+    return {
+      ok: true,
+      value: {
+        signinApprovalId,
+        url,
+        site,
+        expiresAt: num(field(record, "expiresAt")),
+      },
+    };
+  }
+
+  /**
+   * The sign-in approval's status (`expired` for anything the platform does
+   * not call live), with the site it is bound to and, once approved, until
+   * when (epoch seconds).
+   */
+  async signinApprovalStatus(signinApprovalId: string): Promise<
+    VaultResult<{
+      status: "pending" | "approved" | "denied" | "expired";
+      site: string | null;
+      expiresAt: number | null;
+    }>
+  > {
+    const result = await this.call("_getAbacusbotSigninApproval", "GET", {
+      signinApprovalId,
+    });
+    if (result.ok === false) return result;
+    const record = (result.value ?? {}) as Record<string, unknown>;
+    const status = record.status;
+    return {
+      ok: true,
+      value: {
+        status:
+          status === "approved" || status === "pending" || status === "denied"
+            ? status
+            : "expired",
+        site: text(record.site),
+        expiresAt: num(field(record, "expiresAt")),
+      },
+    };
+  }
+
   /**
    * One field's value, for the caller to type at once and drop. `origin` is
    * the live page's; the server checks it against the item.
@@ -257,6 +331,7 @@ export class VaultClient {
     field: VaultField;
     origin: string;
     paymentApprovalId?: string;
+    signinApprovalId?: string;
     amount?: string;
     currency?: string;
     frameOrigin?: string;
@@ -267,6 +342,9 @@ export class VaultClient {
       origin: input.origin,
       ...(input.paymentApprovalId != null
         ? { paymentApprovalId: input.paymentApprovalId }
+        : {}),
+      ...(input.signinApprovalId != null
+        ? { signinApprovalId: input.signinApprovalId }
         : {}),
       ...(input.amount != null ? { amount: input.amount } : {}),
       ...(input.currency != null ? { currency: input.currency } : {}),

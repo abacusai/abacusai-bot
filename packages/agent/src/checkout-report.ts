@@ -71,9 +71,11 @@ function nextStep(pause: CheckoutPause, channel: ChannelCapabilities): string {
       );
     case "login":
       return (
-        `Look in vault_items for a login for ${site}; if there is none, send a vault_request ` +
-        `login link for it. Once it is saved, call browser_task with continue_from_last: true ` +
-        "and the item_id in the task. Never ask for the password in the chat." +
+        `Look in vault_items for a login for ${site}. If there is one, ask the user to allow this ` +
+        "sign-in: signin_approval with its item_id, and send the link it returns. If there is none, " +
+        "send a vault_request login link for it (saving it allows this sign-in). Once they allowed it " +
+        "or saved it, call browser_task with continue_from_last: true and the item_id as " +
+        "login_item_id. Never ask for the password in the chat." +
         (channel.pane
           ? " Without the vault, the user can sign in themselves in the Browser pane."
           : "")
