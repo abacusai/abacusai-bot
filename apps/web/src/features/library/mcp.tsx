@@ -14,6 +14,7 @@ import * as v from "valibot";
 
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
 import {
   AreaPage,
   GroupCard,
@@ -37,7 +38,6 @@ import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -626,7 +626,7 @@ export const McpServerDialog = ({
         if (!open) close();
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-[560px]">
+      <ConnectDialogContent className="max-h-[90vh] overflow-auto sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{t("phase5.customMcp")}</DialogTitle>
           <DialogDescription>{t("phase5.mcpLive")}</DialogDescription>
@@ -748,7 +748,7 @@ export const McpServerDialog = ({
             </FieldGroup>
           </form>
         )}
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };

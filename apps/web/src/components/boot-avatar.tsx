@@ -75,7 +75,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
   useLayoutEffect(() => {
     if (!home || !live.current) return;
     const element = live.current;
-    const move = () => {
+    const move = (fly = true) => {
       const to = home.element.getBoundingClientRect();
       const from = element.getBoundingClientRect();
       flight.current?.stop();
@@ -90,6 +90,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
           { duration: 0.12 }
         );
       } else if (
+        fly &&
         previous.current &&
         !home.reduced &&
         from.width &&
@@ -111,15 +112,16 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
       }
       previous.current = to;
     };
-    const delay = home.overlay ? setTimeout(move, 120) : null;
+    const delay = home.overlay ? setTimeout(move, 200) : null;
     if (!home.overlay) move();
     else element.style.opacity = "0";
-    window.addEventListener("resize", move);
-    window.addEventListener("scroll", move, true);
+    const follow = () => move(false);
+    window.addEventListener("resize", follow);
+    window.addEventListener("scroll", follow, true);
     return () => {
       if (delay != null) clearTimeout(delay);
-      window.removeEventListener("resize", move);
-      window.removeEventListener("scroll", move, true);
+      window.removeEventListener("resize", follow);
+      window.removeEventListener("scroll", follow, true);
     };
   }, [home]);
   return (

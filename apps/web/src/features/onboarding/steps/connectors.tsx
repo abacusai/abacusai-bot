@@ -135,7 +135,9 @@ export const ConnectorsStep = ({
                   {state === "error" && (
                     <>
                       <TriangleAlertIcon className="text-destructive size-3.5" />
-                      <span className="sr-only">{t("common.retry")}</span>
+                      <span className="sr-only">
+                        {t("onboarding.pages.retry")}
+                      </span>
                     </>
                   )}
                 </span>

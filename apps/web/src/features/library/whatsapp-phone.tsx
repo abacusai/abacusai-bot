@@ -12,6 +12,7 @@ import * as v from "valibot";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
 import {
   AreaPage,
   GroupCard,
@@ -22,7 +23,6 @@ import { maskedPhone } from "#renderer/lib/format/phone";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -162,7 +162,7 @@ const LinkDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={reset}>
-      <DialogContent
+      <ConnectDialogContent
         className="sm:max-w-[440px]"
         finalFocus={dialog.finalFocus}
       >
@@ -373,7 +373,7 @@ const LinkDialog = ({
             </>
           )}
         </div>
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };

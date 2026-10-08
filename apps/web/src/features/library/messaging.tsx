@@ -17,6 +17,7 @@ import { WebMessagingPage } from "#platform/whatsapp-phone";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
 import { SettingSwitch, Choice } from "#renderer/components/form-kit/controls";
 import {
   AreaPage,
@@ -36,7 +37,6 @@ import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -257,7 +257,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
         if (!open) void close();
       }}
     >
-      <DialogContent
+      <ConnectDialogContent
         className="sm:max-w-[480px]"
         finalFocus={dialog.finalFocus}
       >
@@ -415,7 +415,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
             {t("phase5.done")}
           </Button>
         </div>
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };

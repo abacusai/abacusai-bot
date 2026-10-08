@@ -14,12 +14,12 @@ import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
 import type { Transport } from "#renderer/data/transport";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -83,7 +83,7 @@ export const ProviderKeyDialog = ({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-w-[480px] rounded-2xl p-5">
+      <ConnectDialogContent className="sm:max-w-[480px]">
         <DialogHeader className="text-left">
           <DialogTitle className="text-sm font-semibold">
             {t("onboarding.setupKeyDialogTitle", { provider: label })}
@@ -162,7 +162,7 @@ export const ProviderKeyDialog = ({
             <StepButton type="submit">{t("bots.save")}</StepButton>
           </div>
         </form>
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };
