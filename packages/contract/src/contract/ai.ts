@@ -31,6 +31,7 @@ export const ClientTool = v.looseObject({
 
 export const AiSendInputSchema = v.object({
   threadId: SessionId,
+  startId: v.optional(SessionId),
   runId: v.pipe(v.string(), v.nonEmpty()),
   parentRunId: v.optional(v.string()),
   messages: v.array(UIMessageLoose),

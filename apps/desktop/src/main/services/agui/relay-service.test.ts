@@ -1429,3 +1429,84 @@ it("applies a reaction without starting a stopped agent and delivers the note on
     1
   );
 });
+
+it("admits a session's first message once across simultaneous tabs and a host restart", async () => {
+  const first = setup();
+  first.agent.answer = (command) =>
+    command.type === "run"
+      ? started((command.input as { runId: string }).runId)
+      : [];
+  const input = {
+    threadId: "s1",
+    startId: "s1",
+    runId: "start-run",
+    messages: [userMessage("start-message", "hello")],
+  };
+  const answers = await Promise.all([
+    first.client.ai.send(input),
+    first.client.ai.send(input),
+  ]);
+  expect(answers.map((a) => a.status)).toEqual(["started", "duplicate"]);
+  expect(first.agent.commands.filter((c) => c.type === "run")).toHaveLength(1);
+  expect(first.store.readCurrentFile("s1")?.startAdmission).toMatchObject({
+    runId: "start-run",
+    messageId: "start-message",
+    status: "started",
+  });
+  const restarted = setup();
+  await expect(
+    restarted.client.ai.send({ ...input, runId: "another-run" })
+  ).resolves.toMatchObject({ status: "duplicate", original: "started" });
+  expect(restarted.agent.commands.filter((c) => c.type === "run")).toHaveLength(
+    0
+  );
+});
+
+it("reconciles a previously completed first message before dispatching a start", async () => {
+  const first = setup();
+  first.agent.boot();
+  for (const event of [...started("saved-run"), finished("saved-run")])
+    first.agent.emit("s1", event);
+  const restarted = setup();
+  await expect(
+    restarted.client.ai.send({
+      threadId: "s1",
+      startId: "s1",
+      runId: "saved-run",
+      messages: [userMessage("saved-message", "hello")],
+    })
+  ).resolves.toMatchObject({ status: "started" });
+  expect(restarted.agent.commands.filter((c) => c.type === "run")).toHaveLength(
+    0
+  );
+});
+
+it("does not acknowledge a first message until its receipt persists and retries the same run safely", async () => {
+  const { agent, client, store } = setup();
+  agent.answer = (command) =>
+    command.type === "run"
+      ? started((command.input as { runId: string }).runId)
+      : [];
+  const persist = vi
+    .spyOn(store, "recordStartAdmission")
+    .mockImplementationOnce(() => {
+      throw new Error("Disk full");
+    });
+  const input = {
+    threadId: "s1",
+    startId: "s1",
+    runId: "saved-run",
+    messages: [userMessage("saved-message", "hello")],
+  };
+  await expect(client.ai.send(input)).rejects.toThrow();
+  await expect(client.ai.send(input)).resolves.toMatchObject({
+    status: "duplicate",
+    original: "started",
+  });
+  expect(agent.commands.filter((c) => c.type === "run")).toHaveLength(1);
+  expect(persist).toHaveBeenCalledTimes(2);
+  agent.emit("s1", finished("saved-run"));
+  expect(store.readCurrentFile("s1")?.startAdmission?.messageId).toBe(
+    "saved-message"
+  );
+});

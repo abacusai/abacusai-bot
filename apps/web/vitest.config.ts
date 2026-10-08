@@ -64,7 +64,10 @@ export default defineConfig({
           include:
             platform === "electron"
               ? ["src/**/*.test.{ts,tsx}"]
-              : ["src/**/*.browser-gating.test.{ts,tsx}"],
+              : [
+                  "src/**/*.browser-gating.test.{ts,tsx}",
+                  "src/features/sessions/start/start-send-page.test.tsx",
+                ],
           exclude:
             platform === "electron"
               ? ["src/**/*.browser-gating.test.{ts,tsx}"]

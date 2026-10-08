@@ -467,3 +467,26 @@ it("reply keeps input, voice and send icons inside one inset pill", async () => 
   expect(send.textContent).toBe("");
   expect(pill?.querySelectorAll("button svg").length).toBe(3);
 });
+
+it("a rejected reply keeps editable text below one alert and clears it on edit", async () => {
+  const view = mount("rejected");
+  fireEvent.click(await screen.findByRole("button", { name: "Launch reply" }));
+  const input = await screen.findByRole("textbox");
+  fireEvent.change(input, { target: { value: "Keep this reply" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  await waitFor(() =>
+    expect(view.submit).toHaveBeenCalledWith("Keep this reply")
+  );
+  const alert = await screen.findByRole("alert");
+  expect(alert.getAttribute("aria-live")).toBe("assertive");
+  expect(
+    alert.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect((input as HTMLInputElement).value).toBe("Keep this reply");
+  expect(input.hasAttribute("disabled")).toBe(false);
+  expect(
+    alert.closest('[data-slot="send-error"]')?.classList.contains("w-full")
+  ).toBe(true);
+  fireEvent.change(input, { target: { value: "Retry this reply" } });
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+});

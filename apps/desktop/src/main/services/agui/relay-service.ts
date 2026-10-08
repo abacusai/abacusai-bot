@@ -140,6 +140,10 @@ export interface AguiThreadFiles {
       migratedFrom?: { updatedAt: string };
     }
   ): void;
+  recordStartAdmission?(
+    threadId: string,
+    receipt: NonNullable<ThreadFileV2["startAdmission"]>
+  ): void;
   remove(threadId: string): void;
 }
 
@@ -292,6 +296,7 @@ export class AguiRelayService implements AguiSource {
   readonly #pendingReactions = new Map<string, ReactionCommand[]>();
   /** threadId → the runtime start in progress (one at a time per thread). */
   readonly #starting = new Map<string, Promise<void>>();
+  readonly #startAdmissions = new Map<string, Promise<AiSendAck>>();
 
   /** The newest run-finished notices, oldest first, for `lastEventId`. */
   readonly #notices: SequencedNotice[] = [];
@@ -770,6 +775,55 @@ export class AguiRelayService implements AguiSource {
   }
 
   async send(input: AiSendInput): Promise<AiSendAck> {
+    if (input.startId == null) return this.#send(input);
+    const { threadId, runId, startId } = input;
+    if (startId !== threadId)
+      throw badRequest("Start identity is not this session");
+    if (this.#host.workspaceOf(threadId) == null)
+      throw notFound("session", threadId);
+    const record = this.#files.recordStartAdmission;
+    if (!record)
+      throw unavailable("Start admission persistence is unavailable", 1000);
+    const duplicate = (ack: AiSendAck): AiSendAck => ({
+      ...ack,
+      runId,
+      status: "duplicate",
+      original: ack.status === "duplicate" ? ack.original : ack.status,
+    });
+    const receipt = this.#files.readCurrentFile(threadId)?.startAdmission;
+    if (receipt) return duplicate(receipt);
+    const pending = this.#startAdmissions.get(threadId);
+    if (pending) return duplicate(await pending);
+    const messageId = newestUserId(input.messages);
+    if (!messageId) throw badRequest("A start needs a user message identity");
+    const task = (async () => {
+      const thread = this.#known(threadId);
+      const accepted =
+        thread.hasFinished(runId) ||
+        thread.checkpoint().messages.some((m) => m.id === messageId);
+      const ack = accepted
+        ? { runId, status: "started" as const }
+        : await this.#send(input);
+      const status =
+        ack.status === "duplicate" ? (ack.original ?? "started") : ack.status;
+      if (status === "started" || status === "queued")
+        record.call(this.#files, threadId, {
+          runId,
+          messageId,
+          status,
+          ...(ack.entryId ? { entryId: ack.entryId } : {}),
+        });
+      return ack;
+    })();
+    this.#startAdmissions.set(threadId, task);
+    try {
+      return await task;
+    } finally {
+      this.#startAdmissions.delete(threadId);
+    }
+  }
+
+  async #send(input: AiSendInput): Promise<AiSendAck> {
     const { threadId, runId } = input;
     if (this.#host.workspaceOf(threadId) == null)
       throw notFound("session", threadId);

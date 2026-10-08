@@ -26,6 +26,7 @@ import {
   notchMotion,
   useNotchMotion,
 } from "#renderer/components/notch-controls";
+import { SendError } from "#renderer/components/send-error";
 import { cueForNotice, permissionCueKey } from "#renderer/lib/attention/cues";
 import { runErrorCopy } from "#renderer/lib/attention/error-copy";
 import { resolveLook } from "#renderer/lib/bots/avatar";
@@ -812,6 +813,7 @@ export const ReplyView = ({
   const send = async () => {
     if (!draft.trim() || inFlight.current) return;
     inFlight.current = true;
+    setError(false);
     setSending(true);
     try {
       const outcome = await submit(draft);
@@ -838,6 +840,7 @@ export const ReplyView = ({
           )}
         </p>
       )}
+      <SendError error={error ? t("notch.reply.failed") : null} />
       <AnimatePresence initial={false}>
         {presentation.attention?.canReply && (
           <motion.div
@@ -856,6 +859,7 @@ export const ReplyView = ({
               disabled={sending}
               onFocus={() => void transport.client.notch.focus({ focus: true })}
               onChange={(event) => {
+                setError(false);
                 setDraft(event.target.value);
                 drafts.set(id, event.target.value);
               }}
@@ -917,7 +921,6 @@ export const ReplyView = ({
       {voice.state === "error" && (
         <p role="alert">{t("notch.listening.error")}</p>
       )}
-      {error && <p role="alert">{t("notch.reply.failed")}</p>}
     </motion.div>
   );
 };

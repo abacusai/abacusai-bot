@@ -11,10 +11,17 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import { SendError } from "#renderer/components/send-error";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -30,7 +37,6 @@ import { SESSION_STARTERS } from "../starters";
 import {
   startDraftStore,
   startSession,
-  newStartDraft,
   optimisticSession,
   type SubmissionEnvelope,
 } from "./start-session";
@@ -50,6 +56,7 @@ export interface StartComposerBinding {
   context: ReactNode;
   submit(envelope: SubmissionEnvelope): Promise<void>;
   blocked: boolean;
+  pending: boolean;
   attachmentContext(): Promise<{ workspaceId: string; sessionId: string }>;
 }
 export const SessionStartPage = ({
@@ -60,7 +67,7 @@ export const SessionStartPage = ({
 }: {
   workspaceId: string | null;
   renderComposer: (binding: StartComposerBinding) => ReactNode;
-  handoff: (id: string, envelope: SubmissionEnvelope) => void;
+  handoff: (id: string, envelope: SubmissionEnvelope) => Promise<void>;
   prefill: (id: string, text: string) => void;
 }) => {
   const { t, i18n } = useTranslation();
@@ -79,13 +86,15 @@ export const SessionStartPage = ({
     refetchOnWindowFocus: true,
   });
   const [now] = useState(() => Date.now());
+  const [resume] = useState(() => draft.envelope !== null);
+  const [inFlight] = useState(() => new Set<string>());
+  const [pending, setPending] = useState(resume);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (draft.stage === "draft" && draft.workspaceId === null && workspaceId)
       startDraftStore.setState((s) => ({ ...s, workspaceId }));
   }, [workspaceId, draft.workspaceId, draft.stage]);
-  const submit = async (envelope?: SubmissionEnvelope) => {
-    setError(null);
+  const send = async (envelope?: SubmissionEnvelope) => {
     try {
       await startSession(
         {
@@ -104,8 +113,26 @@ export const SessionStartPage = ({
     } catch (e) {
       setError(String(e));
       throw e;
+    } finally {
+      inFlight.delete("submit");
+      setPending(false);
     }
   };
+  const submit = async (envelope: SubmissionEnvelope) => {
+    if (inFlight.has("submit")) return;
+    inFlight.add("submit");
+    setPending(true);
+    setError(null);
+    await send(envelope);
+  };
+  const resumeStart = useEffectEvent(() => {
+    if (inFlight.has("submit")) return;
+    inFlight.add("submit");
+    queueMicrotask(() => void send().catch(() => {}));
+  });
+  useEffect(() => {
+    if (resume) resumeStart();
+  }, [resume]);
   const id = `draft:${draft.id}`;
   const starters = SESSION_STARTERS;
   const context = draft.workspaceId ? (
@@ -143,50 +170,12 @@ export const SessionStartPage = ({
         <h1 className="phone-rise phone:px-5 phone:text-start phone:text-[32px] phone:leading-[38px] phone:tracking-tight text-center text-[28px] leading-9 font-semibold">
           {t("sessions.start.heading")}
         </h1>
-        {draft.stage !== "draft" ? (
-          <div
-            role="status"
-            className="bg-muted phone:order-4 phone:mx-3 rounded-xl p-4"
-          >
-            <p>{t("sessions.start.finishing")}</p>
-            <p className="whitespace-pre-wrap">
-              {draft.envelope?.parts
-                .filter((part) => part.type === "text")
-                .map((part) => part.content)
-                .join("\n")}
-            </p>
-            {draft.stage === "created" ? context : null}
-            <Button onClick={() => void submit().catch(() => {})}>
-              {t("sessions.start.continue")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                void db.collections.sessions
-                  .delete(draft.id)
-                  .isPersisted.promise.then(() =>
-                    startDraftStore.setState(() => {
-                      const next = newStartDraft();
-                      prefill(
-                        `draft:${next.id}`,
-                        draft.envelope?.parts
-                          .filter((p) => p.type === "text")
-                          .map((p) => p.content)
-                          .join("\n") ?? ""
-                      );
-                      return { ...next, workspaceId: draft.workspaceId };
-                    })
-                  );
-              }}
-            >
-              {t("sessions.start.discard")}
-            </Button>
-          </div>
-        ) : (
-          <div
-            className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
-            style={{ "--rise-i": 3 } as CSSProperties}
-          >
+        <div
+          className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
+          style={{ "--rise-i": 3 } as CSSProperties}
+        >
+          <SendError error={error} />
+          <div onChangeCapture={() => setError(null)}>
             {renderComposer({
               threadId: id,
               attachmentContext: async () => {
@@ -207,18 +196,11 @@ export const SessionStartPage = ({
               root: workspace?.path ?? null,
               context,
               submit,
+              pending,
               blocked: !draft.workspaceId || pathStatus.data?.exists === false,
             })}
           </div>
-        )}
-        {error ? (
-          <p
-            role="alert"
-            className="text-destructive phone:order-5 phone:px-5 text-sm"
-          >
-            {error}
-          </p>
-        ) : null}
+        </div>
         {!prefs.sidebar.pinned &&
         workspace &&
         (recent ?? []).some(
@@ -270,10 +252,13 @@ export const SessionStartPage = ({
             {starters.map((starter, index) => (
               <Button
                 key={starter.id}
+                aria-disabled={pending}
                 variant="secondary"
                 style={{ "--rise-i": index + 1 } as CSSProperties}
                 className="phone-rise phone:h-[132px] phone:w-[156px] phone:shrink-0 phone:snap-start phone:justify-between phone:rounded-[22px] phone:border phone:border-foreground/[0.08] phone:bg-foreground/[0.045] phone:backdrop-blur-xl phone:p-3.5 phone:font-medium h-auto min-h-20 flex-col items-start gap-2 rounded-2xl p-3 text-start whitespace-normal"
                 onClick={() => {
+                  if (pending) return;
+                  setError(null);
                   prefill(id, starter.prompt);
                   requestAnimationFrame(() =>
                     document

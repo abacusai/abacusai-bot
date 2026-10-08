@@ -485,7 +485,15 @@ describe("R2-T25 composer", () => {
       if (newText === "") fireEvent.change(field(), { target: { value: "" } });
       await act(async () => reject());
       expect((field() as HTMLTextAreaElement).value).toBe(newText);
-      expect(screen.getByText(/didn.t accept/)).toBeTruthy();
+      const alert = screen.getByRole("alert");
+      expect(alert.getAttribute("aria-live")).toBe("assertive");
+      expect(alert.textContent).toMatch(/didn.t accept/);
+      expect(
+        alert.compareDocumentPosition(field()) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      fireEvent.change(field(), { target: { value: "retry" } });
+      await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     }
   );
 
