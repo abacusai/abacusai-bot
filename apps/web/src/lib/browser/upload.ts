@@ -77,7 +77,11 @@ export const uploadFile = async (
             );
           resolve(value.paths[0]);
         } catch (error) {
-          reject(error);
+          reject(
+            error instanceof SyntaxError
+              ? new Error(i18n.t("web.files.uploadFailed"))
+              : error
+          );
         }
       };
       request.send(file);

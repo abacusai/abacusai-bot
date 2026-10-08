@@ -312,20 +312,8 @@ export const FilesTab = ({
       <section className="flex min-w-0 flex-1 flex-col">
         {selected ? (
           <>
-            <div
-              className={
-                IS_ELECTRON
-                  ? "flex h-10 shrink-0 items-center gap-2 border-b px-3"
-                  : "flex shrink-0 flex-wrap items-center gap-1 border-b px-3 py-2"
-              }
-            >
-              <span
-                className={
-                  IS_ELECTRON
-                    ? "min-w-0 flex-1 truncate font-mono text-xs"
-                    : "w-full truncate font-mono text-xs"
-                }
-              >
+            <div className="flex shrink-0 flex-wrap items-center gap-1 border-b px-3 py-2">
+              <span className="w-full truncate font-mono text-xs">
                 {selected}
               </span>
               <Button
