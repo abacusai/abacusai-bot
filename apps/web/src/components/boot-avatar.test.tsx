@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { BootAvatar, BootAvatarHost, bootMood } from "./boot-avatar";
 
@@ -57,4 +57,28 @@ describe("boot avatar", () => {
     unmount();
     expect(document.querySelector('[data-slot="boot-avatar-live"]')).toBeNull();
   });
+});
+
+it("does not install pointer tracking for standalone or hosted boot avatars", () => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("hover"),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  const listener = vi.spyOn(document, "addEventListener");
+  const view = render(<BootAvatar stage="open" />);
+  try {
+    view.rerender(
+      <BootAvatarHost>
+        <BootAvatar stage="open" />
+      </BootAvatarHost>
+    );
+    expect(listener.mock.calls.some(([kind]) => kind === "pointermove")).toBe(
+      false
+    );
+  } finally {
+    view.unmount();
+    listener.mockRestore();
+    vi.unstubAllGlobals();
+  }
 });

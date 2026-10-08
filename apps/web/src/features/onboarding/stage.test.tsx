@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { fixtureBots } from "#renderer/data/fixture-db/rows";
@@ -50,4 +50,48 @@ describe("stage", () => {
     expect(view.container.querySelector("[data-animate]")).toBeNull();
     expect(view.container.querySelector('[data-slot="confetti"]')).toBeNull();
   });
+});
+
+it("never subscribes to pointer movement and keeps press reactions", () => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("hover"),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  const listener = vi.spyOn(document, "addEventListener");
+  const onPoke = vi.fn();
+  const view = render(
+    <OnboardingStage
+      step="welcome"
+      bot={null}
+      phase="none"
+      reduced={false}
+      onPoke={onPoke}
+    />
+  );
+  try {
+    expect(listener.mock.calls.some(([kind]) => kind === "pointermove")).toBe(
+      false
+    );
+    const avatar = view.container.querySelector(
+      '[data-avatar-id="parade-cat"]'
+    )!;
+    const rig = avatar.querySelector('[data-slot="bot-avatar"]')!;
+    const mood = rig.getAttribute("data-mood");
+    fireEvent.pointerOver(avatar);
+    fireEvent.pointerMove(avatar, {
+      clientX: 500,
+      clientY: 200,
+      pointerType: "mouse",
+    });
+    expect(rig.getAttribute("data-mood")).toBe(mood);
+    fireEvent.pointerDown(rig);
+    expect(onPoke).toHaveBeenCalledOnce();
+    expect(rig.getAttribute("data-mood")).toBe("excited");
+    fireEvent.pointerUp(rig);
+  } finally {
+    view.unmount();
+    listener.mockRestore();
+    vi.unstubAllGlobals();
+  }
 });

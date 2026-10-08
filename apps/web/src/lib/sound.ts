@@ -6,6 +6,7 @@
 import type { PrefsRow } from "@abacus-ai/contract/contract";
 
 import { allowed } from "./notify";
+import { masterOutput } from "./sound-output";
 
 export type Cue =
   | "sent"
@@ -89,9 +90,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
         return;
       }
       this.muteInteractions();
-      playing.add(
-        synthTones(audio as AudioContextLike, INTERACTION_TONES[cue])
-      );
+      playing.add(synthInteraction(audio as AudioContextLike, cue));
     },
     muteInteractions() {
       for (const stop of playing) stop();
@@ -198,7 +197,11 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
 /** What synthesis needs of an (Offline)AudioContext. */
 export type AudioContextLike = Pick<
   BaseAudioContext,
-  "currentTime" | "destination" | "createOscillator" | "createGain"
+  | "currentTime"
+  | "destination"
+  | "createOscillator"
+  | "createGain"
+  | "createWaveShaper"
 >;
 
 interface Tone {
@@ -236,20 +239,26 @@ export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
   ],
 };
 
-const INTERACTION_TONES: Record<InteractionCue, readonly Tone[]> = {
-  pop: [{ at: 0, duration: 0.06, from: 520, to: 780, gain: 0.018 }],
+export const INTERACTION_TONES: Record<InteractionCue, readonly Tone[]> = {
+  pop: [{ at: 0, duration: 0.06, from: 520, to: 780, gain: 0.036 }],
   step: [
-    { at: 0, duration: 0.09, from: 660, gain: 0.018 },
-    { at: 0.1, duration: 0.09, from: 880, gain: 0.015 },
+    { at: 0, duration: 0.09, from: 660, gain: 0.036 },
+    { at: 0.1, duration: 0.09, from: 880, gain: 0.03 },
   ],
   celebrate: [523, 659, 784].map((from, index) => ({
     at: index * 0.08,
     duration: 0.12,
     from,
-    gain: 0.015,
+    gain: 0.03,
   })),
 };
-const synthTones = (
+export const synthInteraction = (
+  audio: AudioContextLike,
+  cue: InteractionCue,
+  start = audio.currentTime
+): (() => void) => synthTones(audio, INTERACTION_TONES[cue], start);
+
+export const synthTones = (
   audio: AudioContextLike,
   tones: readonly Tone[],
   start = audio.currentTime
@@ -268,7 +277,7 @@ const synthTones = (
     envelope.gain.exponentialRampToValueAtTime(tone.gain, t0 + 0.005);
     envelope.gain.exponentialRampToValueAtTime(0.0001, t1);
     oscillator.connect(envelope);
-    envelope.connect(audio.destination);
+    envelope.connect(masterOutput(audio));
     oscillator.start(t0);
     oscillator.stop(t1 + 0.02);
     nodes.push({ oscillator, envelope });

@@ -5,11 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { BootAvatar } from "#renderer/components/boot-avatar";
 import { BotAvatar } from "#renderer/components/bot-avatar";
 import {
-  subscribeClock,
-  subscribePointer,
-} from "#renderer/components/bot-avatar/clock";
-import type { ExpressionMix } from "#renderer/components/bot-avatar/expression";
-import {
   AVATAR_PALETTE,
   resolveLook,
   type AvatarMood,
@@ -45,7 +40,6 @@ interface Keyframe {
   y: number;
   depth: number;
   mood: AvatarMood;
-  gaze: "cursor" | "centre";
 }
 export interface StageSlot extends Keyframe {
   id: StageAvatarId;
@@ -60,9 +54,8 @@ const frame = (
   x: number,
   y: number,
   depth: number,
-  mood: AvatarMood,
-  gaze: Keyframe["gaze"] = "cursor"
-): Keyframe => ({ x, y, depth, mood, gaze });
+  mood: AvatarMood
+): Keyframe => ({ x, y, depth, mood });
 export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
   welcome: [
     frame(-42, 4, 1, "happy"),
@@ -72,9 +65,9 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
   ],
   connect: [
     frame(0, 0, 1, "waiting"),
-    frame(-126, -30, 0.64, "thinking", "centre"),
-    frame(115, -8, 0.72, "waiting", "centre"),
-    frame(64, -64, 0.55, "idle", "centre"),
+    frame(-126, -30, 0.64, "thinking"),
+    frame(115, -8, 0.72, "waiting"),
+    frame(64, -64, 0.55, "idle"),
   ],
   connected: [
     frame(0, -8, 1, "happy"),
@@ -95,9 +88,9 @@ export const CHOREOGRAPHY: Record<OnboardingStepId, readonly Keyframe[]> = {
     frame(48, -65, 0.6, "focused"),
   ],
   "first-bot": [
-    frame(-119, -28, 0.65, "happy", "centre"),
-    frame(-60, -68, 0.55, "wink", "centre"),
-    frame(116, -20, 0.7, "love", "centre"),
+    frame(-119, -28, 0.65, "happy"),
+    frame(-60, -68, 0.55, "wink"),
+    frame(116, -20, 0.7, "love"),
     frame(0, 8, 1.15, "surprised"),
   ],
   done: [
@@ -132,48 +125,6 @@ export const stageFor = (
     size: Math.round(88 * CHOREOGRAPHY[step][index]!.depth),
   })),
 });
-interface Pointer {
-  x: number;
-  y: number;
-  speed: number;
-}
-const REST: Pointer = { x: 0, y: 0, speed: 0 };
-const CURIOUS: ExpressionMix = "curious";
-const ALERT: ExpressionMix = { from: "curious", to: "worried", mix: 0.75 };
-const useStagePointer = (
-  reduced: boolean,
-  root: React.RefObject<HTMLDivElement | null>
-) => {
-  const [pointer, setPointer] = useState(REST);
-  useEffect(() => {
-    if (reduced || !matchMedia("(hover: hover) and (pointer: fine)").matches)
-      return;
-    let latest = REST;
-    let moved = 0;
-    const stopPointer = subscribePointer((position) => {
-      const bounds = root.current?.getBoundingClientRect();
-      if (!bounds) return;
-      latest = {
-        x: position.x - bounds.x - bounds.width / 2,
-        y: position.y - bounds.y - bounds.height / 2,
-        speed: position.speed,
-      };
-      moved = position.at;
-    });
-    const stop = subscribeClock((_, visible) => {
-      if (!visible) return;
-      if (performance.now() - moved > 300 && latest.speed)
-        latest = { ...latest, speed: 0 };
-      setPointer(latest);
-    });
-    return () => {
-      stop();
-      stopPointer();
-    };
-  }, [reduced, root]);
-  return pointer;
-};
-
 export const OnboardingStage = ({
   step,
   bot,
@@ -190,7 +141,6 @@ export const OnboardingStage = ({
   onPoke?: () => void;
 }) => {
   const root = useRef<HTMLDivElement>(null);
-  const pointer = useStagePointer(reduced, root);
   const { slots, height } = stageFor(step, bot, phase);
   const looks = cast.map(botLook);
   const [reaction, setReaction] = useState<"happy" | "excited" | null>(null);
@@ -205,12 +155,10 @@ export const OnboardingStage = ({
       if (
         (event.target as Element).closest("[data-connector], [data-template]")
       )
-        setReaction(event.type === "click" ? "excited" : "happy");
+        setReaction("excited");
     };
-    frame?.addEventListener("pointerover", react);
     frame?.addEventListener("click", react);
     return () => {
-      frame?.removeEventListener("pointerover", react);
       frame?.removeEventListener("click", react);
     };
   }, []);
@@ -223,19 +171,7 @@ export const OnboardingStage = ({
       data-reduced-motion={reduced}
     >
       {slots.map((slot, index) => {
-        const dx = pointer.x - slot.x;
-        const dy = pointer.y - slot.y;
-        const gaze = !reduced && slot.gaze === "cursor";
-        const expression = gaze
-          ? pointer.speed > 1
-            ? ALERT
-            : CURIOUS
-          : undefined;
-        const mood =
-          reaction ??
-          (!reduced && pointer.speed > 1 && Math.hypot(dx, dy) < 180
-            ? "surprised"
-            : slot.mood);
+        const mood = reaction ?? slot.mood;
         const look =
           slot.id !== "first-bot" && index > 0 && looks[index - 1]
             ? looks[index - 1]!
@@ -258,7 +194,7 @@ export const OnboardingStage = ({
               slot.id === "parade-blob"
                 ? undefined
                 : {
-                    transform: `translate(${slot.x + (gaze ? Math.max(-4, Math.min(4, dx / 100)) : 0)}px, ${slot.y}px) scale(${slot.depth})`,
+                    transform: `translate(${slot.x}px, ${slot.y}px) scale(${slot.depth})`,
                     opacity: 1,
                   }
             }
@@ -282,7 +218,7 @@ export const OnboardingStage = ({
               <BotAvatar
                 look={look}
                 mood={mood}
-                expression={expression}
+                followPointer={false}
                 size={88}
                 animate={!reduced}
               />

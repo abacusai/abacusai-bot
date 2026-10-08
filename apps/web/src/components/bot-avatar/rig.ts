@@ -44,7 +44,8 @@ export const useFaceRig = (
   expression?: ExpressionMix,
   interactive = true,
   individual?: AvatarPersonality,
-  coupled = true
+  coupled = true,
+  followPointer = true
 ) => {
   const [admitted, setAdmitted] = useState(false);
   const [interaction, setInteraction] = useState(false);
@@ -210,6 +211,7 @@ export const useFaceRig = (
       !active ||
       !documentVisible ||
       !interactive ||
+      !followPointer ||
       !ref.current?.closest("[data-avatar-scene]") ||
       !matchMedia("(hover: hover) and (pointer: fine)").matches
     )
@@ -231,7 +233,7 @@ export const useFaceRig = (
       rig.gazeY.set(pointer.current.y);
       rig.lean.set(rig.lean.get() * 0.8 + pointer.current.x * 0.13);
     });
-  }, [active, documentVisible, interactive, ref, rig]);
+  }, [active, documentVisible, interactive, followPointer, ref, rig]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));

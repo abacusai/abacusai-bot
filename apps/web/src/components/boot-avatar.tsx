@@ -141,6 +141,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
             onPointerDown={home.onPoke}
           >
             <BotAvatar
+              followPointer={false}
               look={home.look}
               mood={home.mood}
               size={96}
@@ -211,7 +212,13 @@ export const BootAvatar = ({
         style={{ width: size, height: size }}
       >
         {!register && (
-          <BotAvatar look={look} mood={pose} size={size} animate={!reduced} />
+          <BotAvatar
+            followPointer={false}
+            look={look}
+            mood={pose}
+            size={size}
+            animate={!reduced}
+          />
         )}
       </span>
       {brand && (

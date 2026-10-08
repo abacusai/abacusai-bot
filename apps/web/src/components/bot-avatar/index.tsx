@@ -139,6 +139,8 @@ export interface BotAvatarProps {
   animate?: boolean;
   /** Pointer gaze/lean/press feedback; tiny/static contexts opt out. */
   interactive?: boolean;
+  /** Keep press feedback without hover or cursor following in setup scenes. */
+  followPointer?: boolean;
   /** An accessible name; without one the avatar is decorative. */
   label?: string;
   title?: string;
@@ -267,6 +269,7 @@ const AvatarBody = ({
   size,
   animate = false,
   interactive = true,
+  followPointer = true,
   label,
   title,
   className,
@@ -296,7 +299,8 @@ const AvatarBody = ({
     expression,
     interactive,
     personality,
-    experiments?.coupling ?? true
+    experiments?.coupling ?? true,
+    followPointer
   );
   const { rig } = faceRig;
   useNaturalMotion(
@@ -338,8 +342,8 @@ const AvatarBody = ({
       aria-label={label}
       aria-hidden={label == null ? true : undefined}
       title={title}
-      onPointerEnter={faceRig.onPointerEnter}
-      onPointerMove={faceRig.onPointerMove}
+      onPointerEnter={followPointer ? faceRig.onPointerEnter : undefined}
+      onPointerMove={followPointer ? faceRig.onPointerMove : undefined}
       onPointerLeave={faceRig.onPointerLeave}
       onPointerDown={faceRig.onPointerDown}
       onPointerUp={faceRig.onPointerUp}
