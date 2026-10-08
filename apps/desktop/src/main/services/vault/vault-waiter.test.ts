@@ -110,6 +110,9 @@ describe("VaultWaiter", () => {
     expect(delivered).toHaveLength(1);
     expect(delivered[0]![0]).toBe("s1");
     expect(delivered[0]![1]).toContain("login-7");
+    // A structured handle for the browser run, not an id buried in task text.
+    expect(delivered[0]![1]).toContain("login_item_id login-7 to browser_task");
+    expect(delivered[0]![1]).toContain("continue_from_last");
     expect(delivered[0]![1]).toContain("linkedin.com");
 
     await vi.advanceTimersByTimeAsync(30_000);

@@ -5,11 +5,13 @@
  */
 
 import { SECRET_FIELD_JS } from "./secret-fields";
+import { VISIBILITY_JS } from "./visibility";
 
 // Runs in page context via Runtime.evaluate: @eN refs for interactive and
 // cursor-interactive elements, content roles, landmarks, and CSS selectors.
 export const SNAPSHOT_BUILD_JS = `(function() {
   ${SECRET_FIELD_JS}
+  ${VISIBILITY_JS}
   const INTERACTIVE_TAGS = new Set([
     'A','BUTTON','INPUT','TEXTAREA','SELECT','DETAILS','SUMMARY',
   ]);
@@ -51,25 +53,8 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   const vpW = window.innerWidth;
   const vpH = window.innerHeight;
 
-  // Three states, not two. 'gone' takes the subtree with it; 'invisible' is an
-  // element a user cannot see or click but whose children may still be both:
-  // visibility, unlike display, is inherited and can be turned back on.
-  //
-  // visibility:hidden used to slip through entirely: such an element keeps its
-  // layout box, so it has an offsetParent and a non-zero rect, and the old
-  // check only looked at the computed style when offsetParent was null. Hidden
-  // menus and closed dropdowns therefore came back as refs the agent could not
-  // click.
-  function visibilityOf(el) {
-    const s = getComputedStyle(el);
-    if (s.display === 'none') return 'gone';
-    if (!el.offsetParent && el.tagName !== 'BODY' && el.tagName !== 'HTML'
-        && s.position !== 'fixed' && s.position !== 'sticky') return 'gone';
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) return 'gone';
-    if (s.visibility === 'hidden' || s.visibility === 'collapse') return 'invisible';
-    return 'visible';
-  }
+  // What counts as on the page: see visibility.ts, shared with the vault's login scan.
+  const visibilityOf = __visibilityOf;
 
   function isInViewport(el) {
     const r = el.getBoundingClientRect();
@@ -353,7 +338,9 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   const addOverlay = (el, kind) => {
     if (seenOverlay.has(el) || overlays.length >= 3) return;
     for (const other of seenOverlay) if (other.contains(el) || el.contains(other)) return;
-    if (visibilityOf(el) !== 'visible') return;
+    // A wrapper with no box of its own (display:contents) still holds what is on top.
+    const shown = visibilityOf(el);
+    if (shown !== 'visible' && shown !== 'transparent') return;
     const buttons = overlayButtons(el);
     if (buttons.length === 0) return;
     seenOverlay.add(el);

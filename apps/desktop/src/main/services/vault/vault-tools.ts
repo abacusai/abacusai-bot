@@ -54,9 +54,9 @@ const TOOLS: Record<
       '  "code" with no item_id for the bank\'s code (3-D Secure) of the payment they approved,',
       "  while the browser is on the page asking for it.",
       "",
-      "Once saved, give the item_id to browser_task: its browser types the value with",
-      "browser_vault_fill. The link works once, only for this user, for 30 minutes. Only the",
-      "user opens it: the browser never opens Abacus.AI pages.",
+      "Once a login is saved, pass its item_id to browser_task as login_item_id: its browser",
+      "signs in with browser_vault_fill. The link works once, only for this user, for 30",
+      "minutes. Only the user opens it: the browser never opens Abacus.AI pages.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -131,6 +131,11 @@ const TOOLS: Record<
       "username into the sign-in form's username or email field, a code into the one-time code",
       "field, card values into the checkout's card fields; never a search box or text area.",
       "",
+      'To sign in, use field "login" with no ref: the browser finds the sign-in form itself,',
+      "fills the username and the password, and names the button to click. On a sign-in that",
+      "asks for the username first, it fills that and says the password is pending: go on to",
+      "the next step and call it again.",
+      "",
       "Card number and CVV fill only after the user approved this payment, once each: pass",
       "total_ref, the ref of the element showing the order total with its currency. The",
       "browser reads that total itself and refuses if it differs from the approved amount.",
@@ -145,12 +150,14 @@ const TOOLS: Record<
         item_id: { type: "string", description: "The vault item" },
         field: {
           type: "string",
-          enum: ["username", "password", "code", "card_number", "cvv"],
-          description: "Which of its values to type",
+          enum: ["login", "username", "password", "code", "card_number", "cvv"],
+          description:
+            'Which of its values to type; "login" fills the sign-in form\'s username and password',
         },
         ref: {
           type: "string",
-          description: "The field to type into, e.g. @e12 or @f1e3",
+          description:
+            'The field to type into, e.g. @e12 or @f1e3. Not for "login", which finds its fields.',
         },
         total_ref: {
           type: "string",
@@ -158,7 +165,7 @@ const TOOLS: Record<
             'Required for card_number and cvv: the ref of the element showing the order total, e.g. "Total ₹1,234.00"',
         },
       },
-      required: ["item_id", "field", "ref"],
+      required: ["item_id", "field"],
     },
   },
 };

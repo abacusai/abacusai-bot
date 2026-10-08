@@ -78,6 +78,8 @@ let guardQueue: Array<Record<string, unknown> | null> = [];
 let clickStatuses: string[] = [];
 /** Overlays the next snapshots report. */
 let overlays: unknown[] = [];
+/** A snapshot to report in place of `SNAPSHOT`; null for that one. */
+let snapshotOverride: Record<string, unknown> | null = null;
 
 const SECRET = "Pa55-w0rd-never-seen";
 const CARD = "4242424242424242";
@@ -150,6 +152,17 @@ const page = {
   treeFrames: [] as string[],
   /** The main document's loader: a new one is a new document. */
   loader: "L1",
+  /** Fields a person could not type into now (hidden, off screen), by selector. */
+  hiddenFields: [] as string[],
+  /** The form each field is in, by selector; 0 when not listed. */
+  formOf: {} as Record<string, number>,
+  /** What the page says it is: title, main heading and path. */
+  purpose: "Sign in | Sign in to Shop | /login",
+  /** The button that submits a login form, as the page reports it. */
+  submit: { ref: "@e9", label: "Sign in" } as {
+    ref: string | null;
+    label: string;
+  } | null,
 };
 
 /** What the page was told never to load, over the whole run (once per page). */
@@ -191,6 +204,17 @@ const domOf = (target: string) => ({
     })),
   },
 });
+
+/** The selector of the field a remote object stands for (by query, or by node id). */
+const selectorOfObject = (target: string, objectId: string): string => {
+  if (objectId.includes("-field:")) return objectId.split("-field:")[1] ?? "";
+  const id = Number(/^node-(\d+)$/.exec(objectId)?.[1]);
+  return (
+    Object.entries(page.fields[target] ?? {}).find(
+      ([, input]) => input.id === id
+    )?.[0] ?? ""
+  );
+};
 
 /** One field's facts as the page has them now. */
 const liveFactsOf = (target: string, selector: string) => {
@@ -255,7 +279,11 @@ const respond = (
       if (expression.includes(frameSnapshotScript(1)))
         return { result: { value: FRAME_SNAPSHOT } };
       if (expression.includes(SNAPSHOT_BUILD_JS))
-        return { result: { value: { ...SNAPSHOT, url: page.url, overlays } } };
+        return {
+          result: {
+            value: snapshotOverride ?? { ...SNAPSHOT, url: page.url, overlays },
+          },
+        };
       if (expression.includes(DOCUMENT_INPUT_FACTS_SCRIPT))
         return {
           result: {
@@ -272,6 +300,35 @@ const respond = (
     }
     case "Runtime.callFunctionOn": {
       const objectId = String(params.objectId);
+      if (fn.includes("shown: shown")) {
+        const selector = selectorOfObject(target, objectId);
+        return {
+          result: {
+            value: {
+              connected: true,
+              editable: true,
+              shown: !page.hiddenFields.includes(selector),
+              form: page.formOf[selector] ?? 0,
+              facts: liveFactsOf(target, selector),
+            },
+          },
+        };
+      }
+      if (fn.includes("button[type=submit]"))
+        return {
+          result: { value: { submit: page.submit, page: page.purpose } },
+        };
+      if (fn.includes("return pair[0]")) {
+        const selector = selectorOfObject(target, objectId);
+        const pairs = (
+          params.arguments as Array<{ value: Array<[string, string]> }>
+        )[0]!.value;
+        return {
+          result: {
+            value: pairs.find((pair) => pair[1] === selector)?.[0] ?? null,
+          },
+        };
+      }
       if (fn.includes("editable:"))
         return {
           result: {
@@ -440,6 +497,20 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
       );
     spent.add(key);
   }
+  if (method === "_listAbacusbotVaultItems")
+    return new Response(
+      JSON.stringify({
+        success: true,
+        result: [
+          {
+            itemId: "login-1",
+            kind: "login",
+            label: "Shop",
+            sites: ["shop.example"],
+          },
+        ],
+      })
+    );
   const result =
     method === "_fillAbacusbotVaultField"
       ? { value: body.field === "card_number" ? CARD : SECRET }
@@ -593,7 +664,14 @@ beforeEach(() => {
     refuseBlock: false,
     treeFrames: [],
     loader: "L1",
+    hiddenFields: [],
+    formOf: {},
+    purpose: "Sign in | Sign in to Shop | /login",
+    submit: { ref: "@e9", label: "Sign in" },
   });
+  snapshotOverride = null;
+  vault.sessions.for("s1").loginItem = null;
+  vault.sessions.for("s1").loginRefusal = null;
   timeline.length = 0;
   // A fresh page each time: one the browser has not been told anything about yet.
   tab = makeTab();
@@ -2055,5 +2133,247 @@ describe("browser_traveler_fill", () => {
     expect(result.text).toMatch(/\(hidden\)/);
     expect(typed().map((entry) => entry.params.text)).toEqual([PASSPORT]);
     expect(responses.join("\n")).not.toContain(PASSPORT);
+  });
+});
+
+describe('browser_vault_fill field:"login"', () => {
+  /** A sign-in page: an email field marked username, a password field and Sign in. */
+  const signInPage = (fields: string[] = ["#user", "#pass"]): void => {
+    const all: Record<string, { id: number; attributes: string[] }> = {
+      "#user": {
+        id: 701,
+        attributes: ["type", "email", "autocomplete", "username"],
+      },
+      "#pass": { id: 702, attributes: ["type", "password"] },
+    };
+    page.fields = {
+      tab: Object.fromEntries(
+        fields.map((selector) => [selector, all[selector]!])
+      ),
+    };
+    snapshotOverride = {
+      title: "Sign in",
+      url: page.url,
+      tree: {
+        tag: "form",
+        children: [
+          { ref: "@e5", selector: "#user", tag: "input", type: "email" },
+          { ref: "@e6", selector: "#pass", tag: "input", type: "password" },
+          { ref: "@e7", selector: "#signin", tag: "button", name: "Sign in" },
+        ].filter(
+          (node) => node.tag === "button" || fields.includes(node.selector)
+        ),
+      },
+      refCount: 3,
+      visibleCount: 3,
+      offscreenCount: 0,
+      overlays: [],
+    };
+    page.submit = { ref: "@e7", label: "Sign in" };
+  };
+  const fillLogin = () =>
+    call("browser_vault_fill", { item_id: "login-1", field: "login" });
+
+  it("fills the username and the password it finds itself, and names the button to click", async () => {
+    signInPage();
+    await snapshot();
+
+    const result = await fillLogin();
+
+    expect(result).toEqual({
+      text: "Saved login filled (username into @e5, password into @e6); now click Sign in @e7.",
+      isError: false,
+    });
+    expect(fills().map((entry) => entry.body)).toEqual([
+      {
+        itemId: "login-1",
+        field: "username",
+        origin: "https://www.shop.example",
+      },
+      {
+        itemId: "login-1",
+        field: "password",
+        origin: "https://www.shop.example",
+      },
+    ]);
+    expect(typed()).toHaveLength(2);
+    // The values went only into the page, never into a result.
+    for (const raw of responses) expect(raw).not.toContain(SECRET);
+  });
+
+  it("finds the form on a page no snapshot has read: the DOM is read, not the tree", async () => {
+    signInPage();
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(false);
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+    ]);
+    expect(typed()).toHaveLength(2);
+  });
+
+  it("fills the username alone on a username-first step, and says the password is pending", async () => {
+    signInPage(["#user"]);
+    page.submit = { ref: "@e7", label: "Next" };
+    await snapshot();
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain("username filled into @e5");
+    expect(result.text).toContain("The password is still pending");
+    expect(result.text).toContain("Click Next @e7");
+    expect(fills().map((entry) => entry.body.field)).toEqual(["username"]);
+  });
+
+  it("refuses, with the real reason, when the page has no sign-in form", async () => {
+    page.fields = {
+      tab: { "#q": { id: 503, attributes: ["type", "search", "name", "q"] } },
+    };
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(
+      /no password field, and no field marked for a username or email/
+    );
+    expect(fills()).toEqual([]);
+    expect(typed()).toEqual([]);
+  });
+
+  it("says the fields are there but cannot be typed into, rather than that there are none", async () => {
+    signInPage();
+    page.hiddenFields = ["#user", "#pass"];
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/hidden, off screen, disabled or read-only/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("puts the browser's reason, not the model's guess, on the login stop that follows", async () => {
+    page.fields = { tab: {} };
+    await fillLogin();
+
+    const paused = await call("browser_pause", {
+      need: "login",
+      summary: "The site has blocked automated sign-ins.",
+    });
+    const state = JSON.parse(
+      paused.text
+        .split("\n")
+        .find((line) => line.startsWith(CHECKOUT_STATE_PREFIX))!
+        .slice(CHECKOUT_STATE_PREFIX.length)
+    ) as { paused: { summary: string } };
+
+    // The browser's reason leads; the model's words stay beside it.
+    expect(state.paused.summary).toMatch(
+      /^The browser could not fill the saved login: No sign-in form here.* Agent: The site has blocked automated sign-ins/
+    );
+  });
+
+  it("offers the saved login on its own site's sign-in page once the run was handed it", async () => {
+    signInPage();
+    await checkout("start", { login_item_id: "login-1" });
+
+    const text = await snapshot();
+
+    expect(text).toContain(
+      'A saved login for shop.example can be filled here: browser_vault_fill item_id:"login-1" field:"login"'
+    );
+  });
+
+  it("offers nothing when the run was handed no login, or the page is another site's", async () => {
+    signInPage();
+    expect(await snapshot()).not.toContain("A saved login");
+
+    await checkout("start", { login_item_id: "login-1" });
+    page.top = "https://www.elsewhere.example";
+    expect(await snapshot()).not.toContain("A saved login");
+  });
+
+  it("refuses a form whose password field is for a new password", async () => {
+    signInPage();
+    page.fields.tab!["#pass"]!.attributes = [
+      "type",
+      "password",
+      "autocomplete",
+      "new-password",
+    ];
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/for a new password/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("refuses a form whose button joins, resets or deletes, and types nothing", async () => {
+    for (const label of ["Join now", "Delete account", "Send reset link"]) {
+      signInPage();
+      page.submit = { ref: "@e7", label };
+      platformCalls.length = 0;
+
+      const result = await fillLogin();
+
+      expect(result.isError, label).toBe(true);
+      expect(result.text).toMatch(/not a sign-in/);
+      expect(fills()).toEqual([]);
+    }
+    expect(typed()).toEqual([]);
+  });
+
+  it("does not fill a lone email field on a page that says it is a password reset", async () => {
+    signInPage(["#user"]);
+    page.submit = { ref: "@e7", label: "Continue" };
+    page.purpose = "Forgot password | Reset your password | /checkpoint/rp";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/sign-up or password reset/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("fills, but names no button, when the button does not read as signing in", async () => {
+    signInPage();
+    page.submit = { ref: "@e7", label: "Go" };
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain(
+      "now click the form's sign-in button (snapshot to find it)"
+    );
+    expect(result.text).not.toContain("@e7");
+  });
+
+  it("refuses a login whose saved site is not this page's", async () => {
+    signInPage();
+    page.top = "https://www.elsewhere.example";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(
+      /saved login login-1 is for shop\.example, and this page is www\.elsewhere\.example/
+    );
+    expect(fills()).toEqual([]);
+  });
+
+  it("forgets a refusal once a fill succeeds or the run resumes, so a later stop is not blamed on it", async () => {
+    page.fields = { tab: {} };
+    await fillLogin();
+    expect(vault.sessions.for("s1").loginRefusal).not.toBeNull();
+
+    signInPage();
+    await fillLogin();
+    expect(vault.sessions.for("s1").loginRefusal).toBeNull();
+
+    page.fields = { tab: {} };
+    await fillLogin();
+    await call("browser_pause", { need: "login", summary: "Needs a login." });
+    await checkout("resume");
+    expect(vault.sessions.for("s1").loginRefusal).toBeNull();
   });
 });
