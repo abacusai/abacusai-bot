@@ -28,6 +28,8 @@ export interface PhoneInboxEntry {
    * from the server, so never acknowledged.
    */
   kind?: string;
+  /** A photo or document, its bytes inline; saved to disk on arrival. */
+  attachments?: Array<{ name?: string; mime?: string; data_b64?: string }>;
   /** Check-ins the server sent since the user's last message. */
   nudges_sent?: Array<{ at?: number; text?: string }>;
   /** The message is exactly STOP or UNSUBSCRIBE, and nothing was turned off. */

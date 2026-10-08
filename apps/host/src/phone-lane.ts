@@ -14,7 +14,10 @@ import {
 import type { AgentEvent, DesktopEvent } from "@abacus-ai/contract/agent-types";
 import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
-import { backoffDelayMs } from "#main/services/messaging/connector";
+import {
+  backoffDelayMs,
+  saveInboundMedia,
+} from "#main/services/messaging/connector";
 
 import {
   type InboundMessage,
@@ -283,14 +286,15 @@ export class PhoneLane {
    * One inbox entry, with "typing…" shown now: steered in while the session
    * works on earlier messages, else queued for the next handoff.
    */
-  arrive(entry: PhoneInboxEntry): void {
-    if (typeof entry.id !== "string") return;
-    const known = this.inbox.get(entry.id);
+  arrive(arrived: PhoneInboxEntry): void {
+    if (typeof arrived.id !== "string") return;
+    const known = this.inbox.get(arrived.id);
     if (known != null) {
       // Back from the server: handled, but the ack was lost (or is on its way).
       if (known.state === "handled") void this.ack([known]);
       return;
     }
+    const entry = this.withAttachments(arrived);
     if (entry.kind !== "linked" && !entry.text?.trim()) {
       void this.acknowledge([entry.id]);
       return;
@@ -302,6 +306,38 @@ export class PhoneLane {
     const message = this.inbox.get(entry.id)!;
     if (this.canSteer(message)) this.steer(message);
     else if (!this.busy) this.armBatch();
+  }
+
+  /**
+   * A photo or document the user sent rides into the text as a saved path, as
+   * on the app's chat channels, so the session can open it; the bytes are not kept.
+   */
+  private withAttachments(entry: PhoneInboxEntry): PhoneInboxEntry {
+    const files = entry.attachments ?? [];
+    if (files.length === 0) return entry;
+    const lines = files.flatMap((file) => {
+      if (file.data_b64 == null || file.data_b64.length === 0) return [];
+      const name = file.name ?? "file";
+      try {
+        const saved = saveInboundMedia(
+          "whatsapp",
+          "phone",
+          name,
+          Buffer.from(file.data_b64, "base64")
+        );
+        return [`[attachment: ${name} saved to ${saved}]`];
+      } catch (error) {
+        this.log(`[phone] could not save an attachment: ${describe(error)}`);
+        return [];
+      }
+    });
+    const { attachments: _bytes, ...rest } = entry;
+    return {
+      ...rest,
+      text: [entry.text ?? "", ...lines]
+        .filter((part) => part.length > 0)
+        .join("\n"),
+    };
   }
 
   /**
