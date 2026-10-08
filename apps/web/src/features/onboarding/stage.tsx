@@ -262,7 +262,7 @@ export const OnboardingStage = ({
                     opacity: 1,
                   }
             }
-            transition={reduced ? { duration: 0 } : springs.avatar}
+            transition={reduced ? { duration: 0 } : springs.surface}
             onPointerDown={() => {
               setReaction("excited");
               onPoke?.();

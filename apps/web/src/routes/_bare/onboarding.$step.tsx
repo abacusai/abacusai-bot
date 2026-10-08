@@ -51,7 +51,7 @@ const OnboardingRoute = () => {
       to: "/onboarding/$step",
       params: { step },
       replace: true,
-      transition: "onboarding-step",
+      transition: "none",
     });
   const entered = useRef<OnboardingStepId | null>(null);
   useEffect(() => {

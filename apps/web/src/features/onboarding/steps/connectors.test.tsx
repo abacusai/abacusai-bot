@@ -83,6 +83,15 @@ describe("ConnectorsStep", () => {
       "true"
     );
     expect(tile("abacus-gmailuser").textContent).toContain("Connected");
+    expect(tile("abacus-gmailuser").tagName).toBe("BUTTON");
+    expect(tile("abacus-gmailuser").getAttribute("aria-pressed")).toBe("true");
+    expect(tile("messaging-whatsapp").querySelectorAll("button")).toHaveLength(
+      0
+    );
+    expect(
+      tile("messaging-whatsapp").querySelector('[data-slot="connector-state"]')
+    ).not.toBeNull();
+    expect(tile("messaging-whatsapp").getAttribute("data-state")).toBe("idle");
 
     expect(view.container.querySelectorAll("[data-connector]")).toHaveLength(
       CURATED_IDS.length
@@ -108,10 +117,7 @@ describe("ConnectorsStep", () => {
         heading={createRef()}
       />
     );
-    const gmail = screen
-      .getByText("Gmail")
-      .closest("[data-connector]")!
-      .querySelector("button")!;
+    const gmail = screen.getByText("Gmail").closest("[data-connector]")!;
     fireEvent.click(gmail);
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(context.props.connect).toHaveBeenCalledWith("abacus-gmailuser");

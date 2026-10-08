@@ -14,7 +14,7 @@ export const FlowContent = ({
 }) => (
   <div
     className={cn(
-      "flex w-full max-w-sm flex-col items-center gap-6 text-center [&_[data-slot=button]]:max-[800px]:min-h-11 [&_[data-slot=button]]:max-[800px]:text-[15px] [&_[data-slot=input]]:max-[800px]:min-h-11 [&_[data-slot=input]]:max-[800px]:text-base",
+      "flex w-full max-w-sm flex-col items-stretch gap-3 text-left [&_[data-slot=button]]:text-[13px]",
       className
     )}
   >
@@ -31,9 +31,9 @@ export const FlowHeader = ({
   description?: string;
 }) => (
   <div className="flex flex-col gap-2">
-    <h1 className="page-title text-balance">{title}</h1>
+    <h1 className="text-xl font-semibold text-balance">{title}</h1>
     {description && (
-      <p className="text-muted-foreground text-sm/relaxed text-pretty">
+      <p className="text-muted-foreground text-[13px]/relaxed text-pretty">
         {description}
       </p>
     )}

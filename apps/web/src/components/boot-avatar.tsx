@@ -19,7 +19,7 @@ import {
   type Look,
 } from "#renderer/lib/bots/avatar";
 import { i18n } from "#renderer/lib/i18n";
-import { durations, easings, useMotionPreference } from "#renderer/lib/motion";
+import { springs, useMotionPreference } from "#renderer/lib/motion";
 
 export type BootStage =
   | "waking"
@@ -64,6 +64,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
   const [homes, setHomes] = useState<Home[]>([]);
   const live = useRef<HTMLDivElement>(null);
   const previous = useRef<DOMRect | null>(null);
+  const wasOverlay = useRef(false);
   const flight = useRef<{ stop(): void } | null>(null);
   useEffect(() => () => flight.current?.stop(), []);
   const home = homes.at(-1);
@@ -79,7 +80,15 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
       const from = element.getBoundingClientRect();
       flight.current?.stop();
       element.style.transform = `translate(${to.x}px, ${to.y}px) scale(${to.width / 96})`;
-      if (
+      const dialogChange = home.overlay || wasOverlay.current;
+      wasOverlay.current = home.overlay;
+      if (dialogChange && !home.reduced) {
+        flight.current = animate(
+          element,
+          { opacity: [0, 1] },
+          { duration: 0.12 }
+        );
+      } else if (
         previous.current &&
         !home.reduced &&
         from.width &&
@@ -96,15 +105,18 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
               element.style.transform,
             ],
           },
-          { duration: durations.layout / 1000, ease: easings.standard }
+          springs.surface
         );
       }
       previous.current = to;
     };
-    move();
+    const delay = home.overlay ? setTimeout(move, 120) : null;
+    if (!home.overlay) move();
+    else element.style.opacity = "0";
     window.addEventListener("resize", move);
     window.addEventListener("scroll", move, true);
     return () => {
+      if (delay != null) clearTimeout(delay);
       window.removeEventListener("resize", move);
       window.removeEventListener("scroll", move, true);
     };

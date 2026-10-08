@@ -91,7 +91,7 @@ export const OnboardingLocalModels = ({
     >
       <span
         aria-hidden="true"
-        className="bg-background/60 flex size-9 shrink-0 items-center justify-center rounded-[10px]"
+        className="bg-background/60 flex size-9 shrink-0 items-center justify-end rounded-[10px]"
       >
         <Laptop size={18} strokeWidth={1.75} />
       </span>

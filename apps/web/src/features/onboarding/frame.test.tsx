@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { initI18n } from "#renderer/lib/i18n";
 import { ONBOARDING_STEPS } from "#renderer/lib/navigation/areas";
 
-import { OnboardingProgress, PROGRESS_MARK } from "./frame";
+import { OnboardingProgress, PROGRESS_MARK, stepDirection } from "./frame";
 
 describe("OnboardingProgress", () => {
   it("maps the seven steps onto five marks; paired steps share one", () => {
@@ -44,4 +44,9 @@ describe("OnboardingProgress", () => {
       "false",
     ]);
   });
+});
+
+it("uses one direction for the content of a step", () => {
+  expect(stepDirection("models", "connectors")).toBe("forward");
+  expect(stepDirection("connectors", "models")).toBe("back");
 });

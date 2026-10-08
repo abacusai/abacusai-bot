@@ -1,12 +1,16 @@
 import { useSelector } from "@tanstack/react-store";
 import { Volume2, VolumeX } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { LayoutGroup, motion } from "motion/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAppMark } from "#renderer/components/app-icon";
 import { useOptionalDb } from "#renderer/data/db";
-import { useMotionPreference } from "#renderer/lib/motion";
-import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
+import { springs, useMotionPreference } from "#renderer/lib/motion";
+import {
+  ONBOARDING_STEPS,
+  type OnboardingStepId,
+} from "#renderer/lib/navigation/areas";
 import { Button } from "#renderer/ui/button";
 
 import { firstBotStore, type FirstBotResult } from "./first-bot";
@@ -22,6 +26,10 @@ export const PROGRESS_MARK: Record<OnboardingStepId, number> = {
   "first-bot": 5,
   done: 5,
 };
+export const stepDirection = (from: OnboardingStepId, to: OnboardingStepId) =>
+  ONBOARDING_STEPS.indexOf(to) < ONBOARDING_STEPS.indexOf(from)
+    ? "back"
+    : "forward";
 const MARKS = [1, 2, 3, 4, 5] as const;
 
 export const OnboardingProgress = ({ step }: { step: OnboardingStepId }) => {
@@ -55,6 +63,12 @@ export const OnboardingFrame = ({
   children: ReactNode;
 }) => {
   const { t } = useTranslation();
+  const [transition, setTransition] = useState({
+    step,
+    direction: "forward" as "forward" | "back",
+  });
+  if (transition.step !== step)
+    setTransition({ step, direction: stepDirection(transition.step, step) });
   const sound = useOnboardingSound();
   const previousStep = useRef(step);
   const db = useOptionalDb();
@@ -91,23 +105,41 @@ export const OnboardingFrame = ({
         {sound.enabled ? <Volume2 /> : <VolumeX />}
       </Button>
       <div id="onboarding-consent" className="shrink-0 px-6" />
-      <div className="onboarding-column">
-        <OnboardingStage
-          step={step}
-          bot={bot}
-          phase={phase}
-          reduced={reduce}
-          cast={db?.collections.bots.toArray
-            .filter((item) => item.channel == null && item.id !== bot?.id)
-            .slice(0, 3)}
-          onPoke={() => sound.play("pop")}
-        />
-        <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
-          <BotAppMark size={20} />
-          {t("shell.appName")}
+      <LayoutGroup id="onboarding">
+        <div
+          className="onboarding-column"
+          data-step-direction={transition.direction}
+        >
+          <OnboardingStage
+            step={step}
+            bot={bot}
+            phase={phase}
+            reduced={reduce}
+            cast={db?.collections.bots.toArray
+              .filter((item) => item.channel == null && item.id !== bot?.id)
+              .slice(0, 3)}
+            onPoke={() => sound.play("pop")}
+          />
+          <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
+            <BotAppMark size={20} />
+            {t("shell.appName")}
+          </div>
+          <motion.div
+            key={step}
+            className="w-full"
+            data-slot="onboarding-content"
+            data-direction={transition.direction}
+            initial={{
+              opacity: 0,
+              x: reduce ? 0 : transition.direction === "back" ? -12 : 12,
+            }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={reduce ? { duration: 0.12 } : springs.surface}
+          >
+            {children}
+          </motion.div>
         </div>
-        {children}
-      </div>
+      </LayoutGroup>
     </div>
   );
 };

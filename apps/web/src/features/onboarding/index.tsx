@@ -256,7 +256,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       {step !== "welcome" && (
         <Button
           variant="ghost"
-          className="titlebar-nodrag absolute top-12 left-4 z-30"
+          className="titlebar-nodrag mb-3 self-start"
           onClick={() => {
             if (step === "connect")
               void perform(async () => {

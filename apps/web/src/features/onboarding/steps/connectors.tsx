@@ -1,18 +1,14 @@
 import { CONNECTORS, type Connector } from "@abacus-ai/connectors/registry";
-import type { Ref } from "react";
+import { CheckIcon, LoaderCircleIcon, TriangleAlertIcon } from "lucide-react";
+import { useState, type Ref } from "react";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { Button } from "#renderer/ui/button";
 
 import type { StepContext } from "./context";
-import {
-  ConnectedMark,
-  StepBody,
-  StepButton,
-  StepLink,
-  StepTitle,
-} from "./kit";
+import { StepBody, StepButton, StepTitle } from "./kit";
 
 export type ConnectorStatuses = Record<
   string,
@@ -53,6 +49,8 @@ export const ConnectorsStep = ({
 }) => {
   const { t, busy, props, perform, advance } = ctx;
   const prefs = usePrefs();
+  const [pending, setPending] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const tiles = connectorTiles(statuses);
   const connectedAny = tiles.some(
     (entry) => statuses?.[entry.id]?.state === "connected"
@@ -71,54 +69,82 @@ export const ConnectorsStep = ({
         {t("onboarding.pages.connectors.body")}
       </StepBody>
       <ul
-        className="mt-7 grid w-full max-w-[640px] grid-cols-2 gap-2"
+        className="mt-5 grid w-full grid-cols-2 gap-2 min-[900px]:grid-cols-3"
         data-slot="connector-grid"
       >
         {tiles.map((entry) => {
           const connected = statuses?.[entry.id]?.state === "connected";
-          const deferred = prefs.onboardingPairing?.includes(
-            entry.id.replace("messaging-", "") as never
-          );
+          const state =
+            pending === entry.id
+              ? "connecting"
+              : failed === entry.id || statuses?.[entry.id]?.state === "error"
+                ? "error"
+                : connected
+                  ? "connected"
+                  : "idle";
           return (
-            <li
-              key={entry.id}
-              className="bg-card border-border data-[connected=true]:border-primary flex items-center gap-2.5 rounded-(--radius) border py-3 pr-3 pl-4"
-              data-connector={entry.id}
-              data-connected={connected}
-            >
-              <ConnectorMark
-                id={entry.logo ?? entry.id}
-                initial={entry.name.slice(0, 1)}
-                size={28}
-              />
-              <span className="min-w-0 flex-1 truncate text-[13px]">
-                {entry.name}
-              </span>
-              {connected ? (
-                <ConnectedMark>
-                  {t("onboarding.pages.connectedLabel")}
-                </ConnectedMark>
-              ) : (
-                <StepLink
-                  className="-mr-1 h-7 px-2 text-xs"
-                  disabled={busy}
-                  onClick={() =>
-                    void perform(async () => {
+            <li key={entry.id} className="min-w-0">
+              <Button
+                variant="outline"
+                className="data-[connected=true]:border-primary data-[connected=true]:bg-primary/5 h-9 w-full justify-between gap-2 px-3 text-[13px] transition-colors"
+                data-connector={entry.id}
+                data-connected={connected}
+                data-state={state}
+                aria-pressed={connected}
+                aria-busy={state === "connecting"}
+                disabled={busy || connected}
+                onClick={() =>
+                  void perform(async () => {
+                    setPending(entry.id);
+                    setFailed(null);
+                    try {
                       await props.connect?.(entry.id);
                       await refresh();
-                    })
-                  }
+                    } catch (error) {
+                      setFailed(entry.id);
+                      throw error;
+                    } finally {
+                      setPending(null);
+                    }
+                  })
+                }
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <ConnectorMark
+                    id={entry.logo ?? entry.id}
+                    initial={entry.name.slice(0, 1)}
+                    size={20}
+                  />
+                  <span className="truncate">{entry.name}</span>
+                </span>
+                <span
+                  className="flex size-4 shrink-0 items-center justify-center"
+                  data-slot="connector-state"
                 >
-                  {deferred
-                    ? t("onboarding.pages.deferred")
-                    : t("onboarding.pages.connectLabel")}
-                </StepLink>
-              )}
+                  {state === "connected" && (
+                    <>
+                      <CheckIcon className="text-primary size-3.5" />
+                      <span className="sr-only">
+                        {t("onboarding.pages.connectedLabel")}
+                      </span>
+                    </>
+                  )}
+                  {state === "connecting" && (
+                    <LoaderCircleIcon className="size-3.5 animate-spin motion-reduce:animate-none" />
+                  )}
+                  {state === "error" && (
+                    <>
+                      <TriangleAlertIcon className="text-destructive size-3.5" />
+                      <span className="sr-only">{t("common.retry")}</span>
+                    </>
+                  )}
+                </span>
+              </Button>
             </li>
           );
         })}
       </ul>
-      <div className="mt-8 flex flex-wrap justify-center gap-2.5">
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
         <StepButton disabled={busy} onClick={finish}>
           {t("onboarding.connectorsContinue")}
         </StepButton>

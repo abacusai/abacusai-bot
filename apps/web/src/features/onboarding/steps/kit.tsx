@@ -1,9 +1,3 @@
-/**
- * The step vocabulary (canvas page 11): a 44 px primary/secondary button, a
- * 32 px quiet link, the title scale (hero 40/48, large 34/42, medium 32/40,
- * default 28/36), a body line and a pill. Thin wrappers over the registry
- * primitives so every step reads the same.
- */
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "#renderer/lib/cn";
@@ -17,10 +11,10 @@ export const StepButton = ({
   variant?: "primary" | "secondary" | "small";
 }) => (
   <Button
-    size={variant === "small" ? "default" : "lg"}
-    variant={variant === "primary" ? "default" : "secondary"}
+    size="default"
+    variant={variant === "primary" ? "default" : "ghost"}
     data-variant={variant}
-    className={cn("max-[800px]:min-h-11", className)}
+    className={cn("text-[13px]", className)}
     {...props}
   />
 );
@@ -30,7 +24,7 @@ export const StepLink = ({
   ...props
 }: Omit<ComponentProps<typeof Button>, "variant" | "size">) => (
   <Button
-    size="sm"
+    size="default"
     variant="ghost"
     className={cn("text-muted-foreground", className)}
     {...props}
