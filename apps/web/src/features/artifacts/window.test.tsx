@@ -8,6 +8,8 @@ import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
 
 import { artifactStressRows } from "./gallery";
 beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(800);
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -23,6 +25,7 @@ afterEach(async () => {
   await app?.cleanup();
   app = undefined;
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 it("rendered grid eviction preserves full-row anchors including the 10px gap", async () => {
   const seed = defaultSeed();
@@ -75,15 +78,19 @@ it("a grid appearing after an empty snapshot observes later viewport resizes", a
   await screen.findByText("Nothing made yet");
   await act(async () => app!.db.artifacts.upsert(artifactStressRows[400]!));
   const grid = await screen.findByRole("list");
-  const observer = observations.find(
+  const observers = observations.filter(
     (entry) => entry.element === grid.parentElement!.parentElement
   );
-  expect(observer).toBeDefined();
-  await act(async () => observer!.resize(450));
+  expect(observers.length).toBeGreaterThan(0);
+  await act(async () => {
+    for (const observer of observers) observer.resize(450);
+  });
   await waitFor(() =>
     expect(grid.style.gridTemplateColumns).toBe("repeat(2,minmax(0,1fr))")
   );
-  await act(async () => observer!.resize(1100));
+  await act(async () => {
+    for (const observer of observers) observer.resize(1100);
+  });
   await waitFor(() =>
     expect(grid.style.gridTemplateColumns).toBe("repeat(5,minmax(0,1fr))")
   );

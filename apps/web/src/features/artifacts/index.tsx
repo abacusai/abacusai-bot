@@ -2,8 +2,9 @@ import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useSearch } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Ellipsis } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "#renderer/components/empty-state";
@@ -41,8 +42,8 @@ import {
   formatForArtifact,
   openArtifact,
   artifactTarget,
-  cardWindow,
   artifactListEntries,
+  type ArtifactListEntry,
 } from "./data";
 import { artifactStressRows } from "./gallery";
 import { ArtifactThumbnail } from "./thumbnail";
@@ -73,6 +74,47 @@ type Search = {
   item?: string;
   view?: "grid" | "list";
   sort?: "newest" | "oldest" | "name";
+};
+// Keep the virtualizer's mutable instance outside React Compiler's cached render.
+const useArtifactWindow = (
+  entries: ArtifactListEntry[],
+  columns: number,
+  list: boolean,
+  viewport: RefObject<HTMLDivElement | null>,
+  selected?: string
+) => {
+  "use no memo";
+  const virtualizer = useVirtualizer({
+    count: Math.ceil(entries.length / columns),
+    getScrollElement: () => viewport.current,
+    estimateSize: () => (list ? 72 : 190),
+    overscan: 4,
+    initialRect: { width: 800, height: 800 },
+    getItemKey: (index) => {
+      const entry = entries[index * columns]!;
+      return "artifact" in entry ? entry.artifact.id : entry.day;
+    },
+  });
+  const virtualRows = virtualizer.getVirtualItems();
+  const firstRow = virtualRows[0];
+  const lastRow = virtualRows.at(-1);
+  const selectedIndex = selected
+    ? entries.findIndex(
+        (entry) => "artifact" in entry && entry.artifact.id === selected
+      )
+    : -1;
+  useEffect(() => {
+    if (selectedIndex >= 0)
+      virtualizer.scrollToIndex(Math.floor(selectedIndex / columns), {
+        align: "auto",
+      });
+  }, [selectedIndex, columns, virtualizer]);
+  return {
+    start: (firstRow?.index ?? 0) * columns,
+    end: ((lastRow?.index ?? -1) + 1) * columns,
+    before: firstRow?.start ?? 0,
+    after: virtualizer.getTotalSize() - (lastRow?.end ?? 0),
+  };
 };
 export const ArtifactsSidebar = () => {
   const { t } = useTranslation();
@@ -159,7 +201,6 @@ export const ArtifactsPage = ({
   // The grid lives in the wide content column (tokens.css), so columns
   // come from the column's width, not the viewport's.
   const column = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState(0);
   const [size, setSize] = useState({ width: 800, height: 800 });
   const [notice, setNotice] = useState<Record<string, string>>({});
   const list = search.view === "list" || !!search.item;
@@ -168,12 +209,12 @@ export const ArtifactsPage = ({
     ? 1
     : Math.max(1, Math.floor(size.width / (size.width < 440 ? 160 : 210)));
   const entries = artifactListEntries(filtered, list && search.sort !== "name");
-  const window = cardWindow(
-    entries.length,
-    top,
+  const window = useArtifactWindow(
+    entries,
     columns,
-    list ? 72 : 190,
-    size.height
+    list,
+    viewport,
+    search.item
   );
   const hasViewport = filtered.length > 0;
   useEffect(() => {
@@ -190,21 +231,6 @@ export const ArtifactsPage = ({
     observer.observe(el);
     return () => observer.disconnect();
   }, [hasViewport]);
-  useEffect(() => {
-    if (!search.item) return;
-    const index = entries.findIndex(
-      (entry) => "artifact" in entry && entry.artifact.id === search.item
-    );
-    if (index < 0) return;
-    const offset = Math.floor(index / columns) * (list ? 72 : 190);
-    if (
-      viewport.current &&
-      (offset < top || offset > top + viewport.current.clientHeight)
-    ) {
-      viewport.current.scrollTop = offset;
-      setTop(offset);
-    }
-  }, [search.item, entries, columns, list, top]);
   const set = (patch: Partial<Search>) =>
     void navigate({ search: (p) => ({ ...p, ...patch }), transition: "none" });
   const open = async (a: (typeof rows)[number]) => {
@@ -335,7 +361,6 @@ export const ArtifactsPage = ({
                 ? "hidden w-[420px] shrink-0 overflow-auto p-3 lg:block"
                 : "min-w-0 flex-1 overflow-auto py-5"
             }
-            onScroll={(e) => setTop(e.currentTarget.scrollTop)}
           >
             <div
               ref={column}
@@ -466,7 +491,11 @@ export const ArtifactsPage = ({
                   );
                 })}
               </div>
-              <div style={{ height: window.after }} />
+              <div
+                style={{
+                  height: window.after,
+                }}
+              />
             </div>
           </div>
         )}

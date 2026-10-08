@@ -172,30 +172,6 @@ export const artifactTarget = (
         };
   return { to: "/sessions/$sessionId", params: { sessionId } };
 };
-export const MAX_MOUNTED = 400;
-export const cardWindow = (
-  length: number,
-  scrollTop: number,
-  columns: number,
-  height: number,
-  viewportHeight = 800
-) => {
-  const perRow = Math.min(MAX_MOUNTED, Math.max(1, columns));
-  const rows = Math.ceil(viewportHeight / height) + 8;
-  const budget = Math.min(rows, Math.floor(MAX_MOUNTED / perRow)) * perRow;
-  const start = Math.min(
-    Math.ceil(Math.max(0, length - budget) / perRow) * perRow,
-    Math.max(0, Math.floor(scrollTop / height) - 4) * perRow
-  );
-  const end = Math.min(length, start + budget);
-  return {
-    start,
-    end,
-    before: Math.floor(start / perRow) * height,
-    after: Math.ceil((length - end) / perRow) * height,
-  };
-};
-
 /** Local calendar dates, including daylight-saving boundaries. */
 export const artifactDay = (date: string): string => {
   const value = new Date(date);
