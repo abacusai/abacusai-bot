@@ -3112,6 +3112,9 @@
       "cancelReply": "답장 취소",
       "jumpToOriginal": "원본 메시지로 이동",
       "failed": "작업을 완료할 수 없습니다"
+    },
+    "links": {
+      "dismiss": "{{hostname}} 미리보기 닫기"
     }
   },
   "notch": {
@@ -3489,7 +3492,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "답변에 링크 미리보기 표시",
+      "linkPreviewsDetail": "미리보기는 연결된 사이트에 접속하며 데스크톱에서는 IP 주소가 공개됩니다. 웹에서는 호스트가 가져옵니다."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

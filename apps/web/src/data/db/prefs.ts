@@ -27,6 +27,7 @@ export const DEFAULT_PREFS: Required<PrefsRow> & {
   recentFolders: [],
   creditsExhaustedAt: null,
   browserHomepage: null,
+  showLinkPreviews: true,
   onboardingStep: null,
   dismissals: { referralCardUntil: null, upsell: false, whatsappIntroAt: null },
   panes: {},

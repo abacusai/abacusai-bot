@@ -81,6 +81,8 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
         <Markdown
           content={content}
           role={scope.role}
+          reply={scope.role === "assistant"}
+          selectable
           streaming={scope.streaming}
           workspaceRoot={workspaceRoot}
         />

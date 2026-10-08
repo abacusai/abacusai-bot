@@ -3112,6 +3112,9 @@
       "cancelReply": "Cancelar resposta",
       "jumpToOriginal": "Ir para a mensagem original",
       "failed": "Não foi possível concluir a ação"
+    },
+    "links": {
+      "dismiss": "Dispensar prévia de {{hostname}}"
     }
   },
   "notch": {
@@ -3489,7 +3492,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "Mostrar prévias de links nas respostas",
+      "linkPreviewsDetail": "As prévias acessam os sites vinculados e revelam seu endereço IP no desktop. Na web, o servidor as busca."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

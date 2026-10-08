@@ -49,6 +49,7 @@ import {
   useSubagentScope,
   type MessageDecoration,
 } from "./context";
+import { LinkPreviews } from "./link-previews";
 import {
   MessageActions,
   MessageMenu,
@@ -265,6 +266,7 @@ const UserMessage = ({
             <Markdown
               content={body}
               role="user"
+              selectable
               workspaceRoot={workspaceRoot}
             />
             {badge != null ? (
@@ -302,7 +304,10 @@ const Credits = ({ message }: { message: UIMessage }) => {
   if (credits == null || credits.length === 0) return null;
   const total = credits.reduce((sum, item) => sum + item.creditsUsed, 0);
   return (
-    <div className="text-muted-foreground text-xs">
+    <div
+      className="text-muted-foreground text-xs select-none"
+      data-selection-chrome=""
+    >
       {t("chat.message.credits", { count: total })}
     </div>
   );
@@ -410,6 +415,7 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
           {message.parts.some((part) => part.type === "subagent") ? (
             <StepControls side="more" />
           ) : null}
+          <LinkPreviews message={message} streaming={streaming} />
           <Credits message={message} />
           {decoration?.after}
         </div>
@@ -570,6 +576,7 @@ export const SessionMessage = ({ message }: MessageProps<unknown>) => {
           <StepControls side="earlier" />
           <GroupedParts message={message} />
           <StepControls side="more" />
+          <LinkPreviews message={message} streaming={streaming} />
           <Credits message={message} />
         </div>
       </MessageActions>

@@ -505,10 +505,14 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         0
       );
   const [window, setWindow] = useState<WindowState>(() => newestWindow(items));
+  const [selectionWindow, setSelectionWindow] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
   const away = useMessageScrollerScrollable().end;
   useEffect(() => {
-    if (!away) session.retain();
-  }, [away, messages, session]);
+    if (!away && selectionWindow == null) session.retain();
+  }, [away, messages, session, selectionWindow]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [jump, setJump] = useState<string | null>(null);
   const handledJump = useRef<string | null>(null);
@@ -700,9 +704,34 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
 
   const { byAnchor, orphans } = outcomesByAnchor(messages, visible, outcomes);
   const latest = active ? null : outcomes.at(-1)?.runId;
-  const shown = visible.slice(window.start, window.end);
+  // Keep the mounted selection window until selection is released. Moving
+  // paging boundaries can then load rows without destroying the native range.
+
+  const dragging = useRef(false);
+  useEffect(() => {
+    const release = () => {
+      dragging.current = false;
+      if (document.getSelection()?.isCollapsed !== false)
+        setSelectionWindow(null);
+    };
+    const changed = () => {
+      if (!dragging.current && document.getSelection()?.isCollapsed !== false)
+        setSelectionWindow(null);
+    };
+    document.addEventListener("pointerup", release);
+    document.addEventListener("pointercancel", release);
+    document.addEventListener("selectionchange", changed);
+    return () => {
+      document.removeEventListener("pointerup", release);
+      document.removeEventListener("pointercancel", release);
+      document.removeEventListener("selectionchange", changed);
+    };
+  }, []);
+  const start = Math.min(window.start, selectionWindow?.start ?? window.start);
+  const end = Math.max(window.end, selectionWindow?.end ?? window.end);
+  const shown = visible.slice(start, end);
   let lastDay: string | null = null;
-  for (let index = 0; index < window.start; index += 1) {
+  for (let index = 0; index < start; index += 1) {
     const key = dayKey(messageTime(visible[index]!));
     if (key != null) lastDay = key;
   }
@@ -738,7 +767,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         more={more}
         earlier={earlier}
         fresh={fresh[message.id] === true && !settled.has(message.id)}
-        virtual={measured.size > 0}
+        virtual={measured.size > 0 && selectionWindow == null}
         height={measured.get(message.id)}
         toolGap={toolGapBefore(shown[index - 1], message)}
       />
@@ -766,6 +795,22 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           overflowAnchor: "none",
         }}
         aria-label={t("chat.transcript.label")}
+        onPointerDownCapture={(event) => {
+          if (
+            event.button === 0 &&
+            (event.target as HTMLElement).closest("[data-message-text]")
+          ) {
+            dragging.current = true;
+            setSelectionWindow({ start, end });
+          }
+        }}
+        onKeyDownCapture={(event) => {
+          if (
+            (event.target as HTMLElement).closest("[data-message-text]") &&
+            (event.shiftKey || event.metaKey || event.ctrlKey)
+          )
+            setSelectionWindow({ start, end });
+        }}
         onScroll={() => {
           preserve(() => {});
           observed.current = anchor.current;
@@ -777,11 +822,11 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
             {slots.header}
           </div>
         )}
-        {window.start === 0 ? <OlderRow /> : null}
-        {window.start > 0 ? (
+        {start === 0 ? <OlderRow /> : null}
+        {start > 0 ? (
           <Placeholder
-            rows={window.start}
-            height={placeholderHeight(0, window.start)}
+            rows={start}
+            height={placeholderHeight(0, start)}
             label={t("chat.transcript.showEarlier")}
             onActivate={() =>
               preserve(() => setWindow(showEarlier(items, window)))
@@ -800,10 +845,10 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
           {rows}
           <RunTail messages={messages} />
         </MessageScrollerContent>{" "}
-        {window.end < visible.length ? (
+        {end < visible.length ? (
           <Placeholder
-            rows={visible.length - window.end}
-            height={placeholderHeight(window.end, visible.length)}
+            rows={visible.length - end}
+            height={placeholderHeight(end, visible.length)}
             label={t("chat.transcript.showLater")}
             onActivate={() =>
               preserve(() => setWindow(showLater(items, window)))

@@ -296,3 +296,16 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 
 
 [data-slot="tab-label-reveal"]::before { content: attr(data-label); }
+
+/* Message text overrides the context-menu and coarse-pointer control defaults. */
+[data-message-text], [data-message-text] .chat-prose, [data-message-text] .chat-prose a, [data-message-text] pre {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-app-region: no-drag;
+}
+[data-message-text] .chat-code-header, [data-message-text] .chat-code-more,
+[data-slot="message-scroller-item"] button, [data-slot="day-separator"],
+[data-slot="message-scroller-item"] [role="status"], [data-selection-chrome] {
+  -webkit-user-select: none;
+  user-select: none;
+}

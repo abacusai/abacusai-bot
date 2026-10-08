@@ -67,7 +67,11 @@
         "pptxgenjs",
         "qrcode",
         "tuf-js",
-        "@abacus-ai/config"
+        "@abacus-ai/config",
+        "parse5",
+        "ipaddr.js",
+        "@silvia-odwyer/photon-node",
+        "image-size"
       ]
     }
   },

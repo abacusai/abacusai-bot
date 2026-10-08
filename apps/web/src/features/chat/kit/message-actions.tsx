@@ -516,6 +516,7 @@ export const MessageActionBar = ({ children }: { children: ReactNode }) => {
         <ActiveContext value={active?.id ?? null}>{children}</ActiveContext>
         <PopoverContent
           ref={popupRef}
+          onMouseDown={(event) => event.preventDefault()}
           data-slot="message-actions-popup"
           data-moving={moved ? "" : undefined}
           data-scrolling={scrolling ? "" : undefined}
@@ -791,6 +792,7 @@ export const MessageMenu = ({
         }}
       >
         <DropdownMenuTrigger
+          onMouseDown={(event) => event.preventDefault()}
           data-slot="message-menu"
           data-shown={shown ? "" : undefined}
           aria-label={t("chat.actions.menu")}
@@ -897,6 +899,7 @@ const SessionActions = ({
       {children}
       {text.trim() !== "" ? (
         <div
+          onMouseDown={(event) => event.preventDefault()}
           data-slot="session-message-actions"
           className="pointer-events-none absolute start-0 top-full z-10 flex h-7 items-center gap-0.5 rounded-md bg-[var(--chat-surface)] opacity-0 group-focus-within/message:pointer-events-auto group-focus-within/message:opacity-100 group-hover/message:pointer-events-auto group-hover/message:opacity-100"
         >
@@ -1009,7 +1012,10 @@ const ChatMessageActions = ({
     <ContextMenu>
       <ContextMenuTrigger
         render={<div />}
-        className={cn("flex min-w-0 select-text", role === "user" && "justify-end")}
+        className={cn(
+          "flex min-w-0 select-text",
+          role === "user" && "justify-end"
+        )}
       >
         <div
           ref={hostRef}
@@ -1036,6 +1042,7 @@ const ChatMessageActions = ({
           }}
           onClick={(event) => {
             if (
+              window.getSelection()?.isCollapsed !== false &&
               window.matchMedia("(max-width: 799px)").matches &&
               !(event.target as HTMLElement).closest("button,a,input,textarea")
             ) {
@@ -1132,6 +1139,7 @@ export const MessageReactionPills = ({
             variant="ghost"
             size="xs"
             className="hover:bg-foreground/10 h-5 min-w-5 rounded-full px-1 text-[13px]/none"
+            onMouseDown={(event) => event.preventDefault()}
             aria-label={t("chat.actions.removeReaction", { emoji })}
             aria-pressed
             disabled={composer.readOnly != null || pending}

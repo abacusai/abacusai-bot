@@ -10,6 +10,7 @@ import { devicesRouter } from "./procedures/devices";
 import { filesRouter } from "./procedures/files";
 import { gitRouter } from "./procedures/git";
 import { impl } from "./procedures/impl";
+import { linksRouter } from "./procedures/links";
 import { localModelsRouter } from "./procedures/local-models";
 import { mcpRouter } from "./procedures/mcp";
 import { memoryRouter } from "./procedures/memory";
@@ -45,6 +46,7 @@ const routes: {
   notch: typeof notchRouter;
   settings: typeof settingsRouter;
   models: typeof modelsRouter;
+  links: typeof linksRouter;
   localModels: typeof localModelsRouter;
   account: typeof accountRouter;
   auth: typeof authRouter;
@@ -75,6 +77,7 @@ const routes: {
   settings: settingsRouter,
   models: modelsRouter,
   localModels: localModelsRouter,
+  links: linksRouter,
   account: accountRouter,
   auth: authRouter,
   referrals: referralsRouter,

@@ -3112,6 +3112,9 @@
       "cancelReply": "जवाब रद्द करें",
       "jumpToOriginal": "मूल संदेश पर जाएँ",
       "failed": "कार्रवाई पूरी नहीं हो सकी"
+    },
+    "links": {
+      "dismiss": "{{hostname}} का पूर्वावलोकन हटाएं"
     }
   },
   "notch": {
@@ -3489,7 +3492,9 @@
       "sound-routine-fired": "Routine fired",
       "terminalShell": "Terminal shell",
       "changelog": "What's new",
-      "mode-ACCEPTEDITS": "Edits go through, commands ask"
+      "mode-ACCEPTEDITS": "Edits go through, commands ask",
+      "showLinkPreviews": "जवाबों में लिंक का पूर्वावलोकन दिखाएं",
+      "linkPreviewsDetail": "पूर्वावलोकन लिंक की वेबसाइटों से संपर्क करते हैं और डेस्कटॉप पर आपका IP पता बताते हैं। वेब पर होस्ट उन्हें लाता है।"
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

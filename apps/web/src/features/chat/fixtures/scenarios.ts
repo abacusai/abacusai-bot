@@ -506,6 +506,62 @@ const migratedHistory = (): UIMessage[] => {
 };
 
 export const SCENARIOS: Scenario[] = [
+  {
+    id: "bot-message-links-loading",
+    canvas: ["Reply preview loading"],
+    skin: "bot",
+    events: () =>
+      seqd([
+        ...b.sessionReady("inc-loading", "YOLO"),
+        ...userTurn("r-loading", "u-loading", "Show the two references."),
+        ...b.text(
+          "a-loading",
+          "assistant",
+          "Read https://developer.mozilla.org/en-US/docs/Web/JavaScript?preview-example=loading and https://example.com/?preview-example=loading."
+        ),
+        b.runFinished("r-loading", "success"),
+      ]),
+  },
+  {
+    id: "bot-message-links-failed",
+    canvas: ["Reply preview failure"],
+    skin: "bot",
+    events: () =>
+      seqd([
+        ...b.sessionReady("inc-failed", "YOLO"),
+        ...userTurn(
+          "r-failed",
+          "u-failed",
+          "Keep the link usable even if its preview fails."
+        ),
+        ...b.text(
+          "a-failed",
+          "assistant",
+          "This page has no preview: https://example.com/not-a-preview. The reply stays readable."
+        ),
+        b.runFinished("r-failed", "success"),
+      ]),
+  },
+  {
+    id: "bot-message-links",
+    canvas: ["Reply links and selection"],
+    skin: "bot",
+    events: () =>
+      seqd([
+        ...b.sessionReady("inc-links", "YOLO"),
+        ...userTurn(
+          "r-links",
+          "u-links",
+          "Please compare these two references. Keep this paragraph selectable, including www.example.com/docs which should stay plain in my message."
+        ),
+        ...b.text(
+          "a-links",
+          "assistant",
+          "You can select this entire paragraph, copy a word, or use the keyboard to extend your selection. Read https://developer.mozilla.org/en-US/docs/Web/JavaScript and https://example.com/ for the two references.\n\nCode stays literal: `https://example.com/code`."
+        ),
+        b.runFinished("r-links", "success"),
+      ]),
+  },
   { id: "bot-chat", canvas: ["BotChat"], skin: "bot", events: botChat },
   {
     id: "bot-chat-scrolled",
