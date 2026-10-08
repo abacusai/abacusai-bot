@@ -19,7 +19,6 @@ import {
   mediaLine,
 } from "@abacus-ai/agent/send-media";
 import { UNATTENDED_TOOLS } from "@abacus-ai/agent/tool-policy";
-import { describeForListing } from "@abacus-ai/connectors/describe";
 import {
   CONNECTORS,
   resolveConnector,
@@ -100,7 +99,7 @@ import {
 import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
 import { McpHttpServer, type McpToolListing } from "./mcp-http-server";
-import { agentTool, AGENT_TOOLS } from "./tools";
+import { agentTool, AGENT_TOOL_NAMES, AGENT_TOOLS } from "./tools";
 import {
   approvalNote,
   describeHostedRoutine,
@@ -111,7 +110,17 @@ import {
   requestedRunner,
   requestedSources,
 } from "./tools/cronjob-hosted";
+import type {
+  ConnectOutcome,
+  DisconnectOutcome,
+} from "./tools/connect-outcome";
 import type { ToolDefinition, ToolResult } from "./tools/definition";
+import {
+  NOT_YET_PHONE_OWNED,
+  PHONE_AGENT_TOOLS,
+  phoneAgentTool,
+} from "./tools/phone";
+import type { PhoneToolDefinition } from "./tools/phone/definition";
 import { readTranscriptTail } from "./transcript-tail";
 
 const SERVER_NAME = "agent-tools";
@@ -159,13 +168,13 @@ const loopbackOrigin = (url: string): string | null => {
 /** Files that go to a chat as pictures. */
 const IMAGE_FILE = /\.(png|jpe?g|webp)$/i;
 
-const toolsetsFor = (definition: ToolDefinition): readonly string[] =>
+/** A tool as some caller sees it: the app's definition, or the phone's own. */
+type ListedTool = ToolDefinition | PhoneToolDefinition;
+
+const toolsetsFor = (definition: ListedTool): readonly string[] =>
   definition.toolsets === "always" ? [] : definition.toolsets;
 
-const isToolEnabled = (
-  definition: ToolDefinition,
-  enabled: Set<string>
-): boolean =>
+const isToolEnabled = (definition: ListedTool, enabled: Set<string>): boolean =>
   definition.toolsets === "always" ||
   definition.toolsets.some((toolset) => enabled.has(toolset));
 
@@ -408,23 +417,59 @@ export class McpAgentToolsServer extends McpHttpServer {
     // A run nobody is watching is offered only what it may call.
     const held = this.isHeld(callerSession);
 
-    return AGENT_TOOLS.filter((definition) =>
-      held && !Object.hasOwn(UNATTENDED_TOOLS, definition.name)
-        ? false
-        : forEditor
-          ? definition.name === "cronjob"
-          : this.isListed(definition.name, enabled, forBot)
-    ).map((definition) => ({
-      name: definition.name,
-      description:
-        typeof definition.description === "string"
-          ? definition.description
-          : definition.description(channel),
-      inputSchema:
-        typeof definition.inputSchema === "function"
-          ? definition.inputSchema(channel)
-          : definition.inputSchema,
-    }));
+    return this.toolsFor(callerSession)
+      .filter((definition) =>
+        held && !Object.hasOwn(UNATTENDED_TOOLS, definition.name)
+          ? false
+          : forEditor
+            ? definition.name === "cronjob"
+            : this.isListedTool(definition, enabled, forBot)
+      )
+      .map((definition) => ({
+        name: definition.name,
+        description:
+          typeof definition.description === "string"
+            ? definition.description
+            : definition.description(channel),
+        inputSchema:
+          typeof definition.inputSchema === "function"
+            ? definition.inputSchema(channel)
+            : definition.inputSchema,
+      }));
+  }
+
+  /**
+   * The phone lane's session: it is served only phone definitions
+   * (tools/phone), never an app tool's words.
+   */
+  private isPhoneCaller(callerSession?: string): boolean {
+    return !this.channelFor(callerSession).pane;
+  }
+
+  /** The definition `name` has for this caller, or none: a phone caller never falls back to the app's. */
+  private toolFor(
+    name: string,
+    callerSession?: string
+  ): ListedTool | undefined {
+    if (!this.isPhoneCaller(callerSession)) return agentTool(name);
+    return (
+      phoneAgentTool(name) ??
+      (NOT_YET_PHONE_OWNED.includes(name) ? agentTool(name) : undefined)
+    );
+  }
+
+  /** Every definition this caller may be listed, in the app's order. */
+  private toolsFor(callerSession?: string): ListedTool[] {
+    if (!this.isPhoneCaller(callerSession)) return [...AGENT_TOOLS];
+    const names = [
+      ...AGENT_TOOL_NAMES,
+      ...PHONE_AGENT_TOOLS.map((definition) => definition.name).filter(
+        (name) => !AGENT_TOOL_NAMES.includes(name)
+      ),
+    ];
+    return names
+      .map((name) => this.toolFor(name, callerSession))
+      .filter((definition) => definition != null);
   }
 
   /**
@@ -470,7 +515,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
-    const definition = agentTool(name);
+    const definition = this.toolFor(name, callerSession);
 
     if (definition == null) return this.err(`Unknown tool: ${name}`);
 
@@ -486,14 +531,22 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (
       !forEditor &&
       !isToolEnabled(definition, this.options.enabledToolsets()) &&
-      !(definition.botAlways === true && this.isBotCaller(callerSession))
+      !(
+        "botAlways" in definition &&
+        definition.botAlways === true &&
+        this.isBotCaller(callerSession)
+      )
     ) {
       return this.err(
         `The ${toolsetsFor(definition).join("/")} toolset is switched off in Capabilities.`
       );
     }
 
-    if (definition.botsOnly === true && !this.isBotCaller(callerSession)) {
+    if (
+      "botsOnly" in definition &&
+      definition.botsOnly === true &&
+      !this.isBotCaller(callerSession)
+    ) {
       return this.err(
         `${name} is only available in a bot's chat. Carry on and use your best judgement.`
       );
@@ -1736,7 +1789,8 @@ export class McpAgentToolsServer extends McpHttpServer {
    * See ToolDefinition.ready. An instance method because messaging readiness
    * lives on the gateway.
    */
-  private isToolConfigured(definition: ToolDefinition): boolean {
+  private isToolConfigured(definition: ListedTool): boolean {
+    if ("surface" in definition) return definition.ready?.() ?? true;
     if (definition.hidden === true) {
       return (this.options.messaging?.runningPlatforms().length ?? 0) > 0;
     }
@@ -1750,10 +1804,22 @@ export class McpAgentToolsServer extends McpHttpServer {
     return definition.ready?.() ?? true;
   }
 
-  /** Whether `tools/list` shows a tool to this caller. */
+  /** Whether `tools/list` shows an app tool to an app caller. */
   isListed(name: string, enabled: Set<string>, forBot: boolean): boolean {
     const definition = agentTool(name);
-    if (definition == null || definition.hidden === true) return false;
+    return definition != null && this.isListedTool(definition, enabled, forBot);
+  }
+
+  private isListedTool(
+    definition: ListedTool,
+    enabled: Set<string>,
+    forBot: boolean
+  ): boolean {
+    if ("surface" in definition)
+      return (
+        isToolEnabled(definition, enabled) && this.isToolConfigured(definition)
+      );
+    if (definition.hidden === true) return false;
     return (
       (isToolEnabled(definition, enabled) ||
         (forBot && definition.botAlways === true)) &&
@@ -1850,116 +1916,82 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   /**
    * List the catalog, connected or not, so the agent can name what it lacks;
-   * or ask, which blocks on the user's answer. The ask resolves display names
-   * as well as ids, forgivingly: Gmail's id is `gmailuser`, and any name the
-   * tool can print the model may ask for.
+   * or ask, which never waits on the user. The ask resolves display names as
+   * well as ids, forgivingly: Gmail's id is `gmailuser`, and any name the tool
+   * can print the model may ask for. Facts only: each chat surface words the
+   * outcome (tools/connectors.ts, tools/phone/connectors.ts). `card` puts a
+   * Connect card up in the app beside the link, for a surface that has one.
    */
-  async connectConnector(
+  async connectConnectorOutcome(
     args: Record<string, unknown>,
-    callerSession?: string
-  ): Promise<ToolResult> {
+    callerSession: string | undefined,
+    options: { card: boolean }
+  ): Promise<ConnectOutcome> {
     const connectors = this.options.connectors;
-    if (connectors == null)
-      return this.err("Connectors are not available in this session.");
+    if (connectors == null) return { code: "no_connectors" };
 
     // A caller with no conversation gets no card: putting it "wherever the
     // user is" lands a bot's ask in a stranger's session. It still gets a link.
     const conversationKey =
-      callerSession == null
+      callerSession == null || !options.card
         ? null
         : (this.options.conversationKeyForSession?.(callerSession) ?? null);
 
     const statuses = await connectors.list();
     const statusOf = (connector: Connector): ConnectorStatus =>
       statuses[connector.id] ?? { state: "available" };
+    const named = (item: Connector) => ({ id: item.id, name: item.name });
 
     const asked = String(args.service ?? "").trim();
 
-    if (asked.length === 0) {
-      return this.ok(
-        [
-          "Connectors available in this chat:",
-          "",
-          ...CONNECTORS.map((connector) =>
-            describeForListing(connector, statusOf(connector))
-          ),
-          "",
-          "A connector listed as connected is one whose tools are already in your",
-          "tool list. Use those; do not guess a tool name. Where it says what it is",
-          "connected as, that is the user's own account on that service: it is who",
-          '"me" and "myself" mean, so do not ask them for it.',
-        ].join("\n")
-      );
-    }
+    if (asked.length === 0)
+      return {
+        code: "list",
+        entries: CONNECTORS.map((connector) => ({
+          connector,
+          status: statusOf(connector),
+        })),
+      };
 
     const resolved = resolveConnector(asked);
     if ("ambiguous" in resolved)
-      return this.ok(
-        `"${asked}" matches more than one connector: ${resolved.ambiguous
-          .map((item) => `${item.name} (${item.id})`)
-          .join(", ")}. Ask again with one of those.`
-      );
+      return {
+        code: "ambiguous",
+        asked,
+        options: resolved.ambiguous.map(named),
+      };
     const match = resolved.match;
     if (match == null)
-      return this.ok(
-        `There is no connector called "${asked}". Available: ${CONNECTORS.map(
-          (item) => `${item.name} (${item.id})`
-        ).join(", ")}.`
-      );
+      return { code: "unknown", asked, options: CONNECTORS.map(named) };
 
     const status = statusOf(match);
-    const accountOf = (): string =>
-      status.account != null && status.account.length > 0
-        ? ` as ${status.account}`
-        : "";
 
-    if (status.state === "connected") {
-      if (match.kind === "messaging")
-        return this.ok(
-          `${match.name} is connected. Send, list and read with its own tools ` +
-            "(send_<platform>_message, list_<platform>_chats, read_<platform>_messages). Do not ask the user to " +
-            "connect anything."
-        );
-      if (match.kind === "platform" && match.via != null)
-        return this.ok(
-          `${match.name} is already connected${accountOf()}, so ${match.via} ` +
-            "are authenticated as the user. Use them: there is nothing to ask the user for."
-        );
-      return this.ok(
-        `${match.name} is already connected${accountOf()}. Use it: ` +
-          "there is nothing to ask the user for, and that account is who they mean " +
-          'by "me". Its tools are already in your tool list; use those rather than ' +
-          "guessing a tool name."
-      );
-    }
+    if (status.state === "connected")
+      return {
+        code: "connected",
+        name: match.name,
+        kind: match.kind,
+        ...(match.kind === "platform" && match.via != null
+          ? { via: match.via }
+          : {}),
+        ...(status.account != null && status.account.length > 0
+          ? { account: status.account }
+          : {}),
+      };
 
-    if (status.state === "unavailable") {
-      const why =
-        status.reason === "not-signed-in"
-          ? "the app is not signed in to Abacus.AI"
-          : status.reason === "not-offered"
-            ? "the user's Abacus.AI account does not offer it"
-            : "it cannot be reached right now";
-      return this.ok(
-        `${match.name} cannot be connected from here: ${why}. Say so, and offer whatever ` +
-          "part of the task does not need it."
-      );
-    }
+    if (status.state === "unavailable")
+      return {
+        code: "unavailable",
+        name: match.name,
+        reason:
+          status.reason === "not-signed-in" || status.reason === "not-offered"
+            ? status.reason
+            : "unreachable",
+      };
 
     // Nothing here waits for the user: the call answers at once, a card (in
     // the app) and a link (anywhere) do the connecting, and the chat that
     // asked is told when it lands.
-    const card = (): void => {
-      if (conversationKey == null) return;
-      connectors.show({
-        connectorId: match.id,
-        label: match.name,
-        conversationKey,
-        ...(typeof args.reason === "string" && args.reason.length > 0
-          ? { reason: args.reason }
-          : {}),
-      });
-    };
     const link =
       match.kind !== "messaging" ? await connectors.link(match.id) : null;
     // A bundle's members already connected are no part of this link, and are
@@ -1975,7 +2007,15 @@ export class McpAgentToolsServer extends McpHttpServer {
     // Every connector the link covers is already connected: it can only
     // reconnect them, and only the link's own completion says it landed.
     const reconnect = link != null && asking.length === 0;
-    card();
+    if (conversationKey != null)
+      connectors.show({
+        connectorId: match.id,
+        label: match.name,
+        conversationKey,
+        ...(typeof args.reason === "string" && args.reason.length > 0
+          ? { reason: args.reason }
+          : {}),
+      });
     connectors.watch({
       connectorIds: reconnect ? link.connectorIds : asking,
       sessionId: callerSession ?? null,
@@ -1983,102 +2023,73 @@ export class McpAgentToolsServer extends McpHttpServer {
       ...(reconnect ? { byLinkOnly: true } : {}),
     });
     if (link == null)
-      return this.ok(
-        conversationKey == null
-          ? `${match.name} is connected from Connectors in the AbacusAI Bot app. Tell the user so, and offer whatever part of the task does not need it.`
-          : `A Connect card for ${match.name} is in front of the user in the app. Say in one short line that it needs connecting there, ` +
-              "then carry on with whatever does not need it: this call does not wait, and you will be told when it is connected."
-      );
+      return {
+        code: "no_link",
+        name: match.name,
+        kind: match.kind,
+        card: conversationKey != null,
+      };
     const nameOf = (id: string): string =>
       CONNECTORS.find((item) => item.id === id)?.name ?? id;
     if (reconnect)
-      return this.ok(
-        [
-          `The account reports ${link.connectorIds.map(nameOf).join(", ")} as already connected with every permission, ` +
-            "though this machine's list has not caught up yet. If their tools are in your tool list, use them and do not " +
-            "send anything. Only if they are missing or fail for lack of access, send the user this link to reconnect them:",
-          link.url,
-          "",
-          "Put it in a message of its own with one short line in the user's language, saying it reconnects the account. " +
-            "Copy it exactly; never shorten or reword it. This call does not wait: you will be told when the reconnect " +
-            "lands. Never offer to flag or report anything: there is no such process.",
-        ].join("\n")
-      );
-    const covered = asking.map(nameOf).join(", ");
-    const connected = [...already].map(nameOf).join(", ");
-    return this.ok(
-      [
-        ...(already.size > 0
-          ? [
-              `${connected} ${already.size > 1 ? "are" : "is"} already connected; ${already.size > 1 ? "their" : "its"} tools are in your tool list. ` +
-                `Still to connect: ${covered}. This link asks only for ${asking.length > 1 ? "those" : "that"}.`,
-            ]
-          : []),
-        `Send the user this link to connect ${asking.length > 1 ? `${covered}, all in one step` : covered}:`,
-        link.url,
-        "",
-        "Put it in a message of its own with one short line in the user's language. Copy it exactly; never shorten or reword it. " +
-          "It opens the provider's own sign-in, and stays connected after that." +
-          (asking.length > 1
-            ? " The sign-in screen may show a checkbox for each; whatever is left unticked is not connected."
-            : ""),
-        "This call does not wait. Carry on with whatever does not need it. When it lands you will be told exactly what " +
-          "connected and anything that was not allowed, and its tools appear in your tool list then. Until then do not " +
-          "send it again unless the user asks for it, and never offer to flag or report anything: there is no such process.",
-      ].join("\n")
-    );
+      return {
+        code: "reconnect",
+        names: link.connectorIds.map(nameOf),
+        url: link.url,
+      };
+    return {
+      code: "link",
+      asking: asking.map(nameOf),
+      already: [...already].map(nameOf),
+      url: link.url,
+    };
   }
 
-  async disconnectConnector(
-    args: Record<string, unknown>
-  ): Promise<ToolResult> {
+  /**
+   * Drop one connector. A chat app is switched off only for a surface that
+   * allows it (`chatApps`); the outcome is facts, worded per surface.
+   */
+  async disconnectConnectorOutcome(
+    args: Record<string, unknown>,
+    options: { chatApps: boolean }
+  ): Promise<DisconnectOutcome> {
     const asked = String(args.service ?? "")
       .trim()
       .toLowerCase();
-    if (asked.length === 0)
-      return this.err(
-        'A service is required, e.g. "googlecalendar" or "whatsapp".'
-      );
+    if (asked.length === 0) return { code: "required" };
 
     const resolved = resolveConnector(asked);
     if ("ambiguous" in resolved)
-      return this.ok(
-        `"${asked}" matches more than one connector: ${resolved.ambiguous
-          .map((item) => `${item.name} (${item.id})`)
-          .join(", ")}. Ask again with one of those.`
-      );
+      return {
+        code: "ambiguous",
+        asked,
+        options: resolved.ambiguous.map((item) => ({
+          id: item.id,
+          name: item.name,
+        })),
+      };
     const match = resolved.match;
-    if (match == null)
-      return this.err(
-        `There is no connector called "${asked}". Ask connect_connector with no arguments for the list.`
-      );
+    if (match == null) return { code: "unknown", asked };
 
     // The same lever as the card in Settings, so "off" means one thing.
     if (match.kind === "messaging") {
+      if (!options.chatApps) return { code: "platform_off", name: match.name };
       const disable = this.options.messaging?.disablePlatform;
-      if (disable == null)
-        return this.err("Messaging is not available in this session.");
+      if (disable == null) return { code: "no_messaging" };
       await disable(match.platform);
-      return this.ok(
-        `${match.name} is disconnected. The platform is switched off. ` +
-          "connect_connector switches it back on when the user wants it again."
-      );
+      return { code: "disconnected", name: match.name, kind: match.kind };
     }
 
     const connectors = this.options.connectors;
-    if (connectors?.disconnect == null)
-      return this.err("Connectors are not available in this session.");
+    if (connectors?.disconnect == null) return { code: "no_connectors" };
 
     const statuses = await connectors.list();
     if (statuses[match.id]?.state !== "connected")
-      return this.ok(`${match.name} is not connected: nothing to disconnect.`);
+      return { code: "not_connected", name: match.name };
 
     const error = await connectors.disconnect(match.id);
-    if (error != null) return this.err(error);
-    return this.ok(
-      `${match.name} is disconnected. Its tools are gone from your tool list; ` +
-        "connect_connector brings it back when the user wants it again."
-    );
+    if (error != null) return { code: "failed", error };
+    return { code: "disconnected", name: match.name, kind: match.kind };
   }
 
   /**
@@ -2636,7 +2647,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     return { content: [{ type: "text", text }] };
   }
 
-  private err(text: string): ToolResult {
+  err(text: string): ToolResult {
     return { content: [{ type: "text", text }], isError: true };
   }
 }
