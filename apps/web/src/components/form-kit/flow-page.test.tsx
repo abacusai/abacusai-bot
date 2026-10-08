@@ -32,3 +32,18 @@ it("keeps the standalone heading, named fields and actions in reading order", ()
       Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
 });
+
+it("keeps flow consumers on shared controls and theme tokens", async () => {
+  const sources = await Promise.all([
+    import("#renderer/features/shell/connect/index.tsx?raw"),
+    import("#renderer/features/onboarding/whatsapp.tsx?raw"),
+    import("#renderer/features/routines/reach-panel.tsx?raw"),
+    import("#renderer/features/routines/hosted-results.tsx?raw"),
+  ]);
+  for (const { default: source } of sources) {
+    expect(source).not.toMatch(/<button\b/);
+    expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
+    expect(source).not.toMatch(/rounded-\[\d/);
+    expect(source).not.toMatch(/<div\b[^>]*role="dialog"/s);
+  }
+});

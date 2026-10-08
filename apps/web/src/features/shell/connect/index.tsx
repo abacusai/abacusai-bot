@@ -268,7 +268,7 @@ export const SetupScreen = ({ stage }: { stage: ConnectStage }) => {
                 {index < current ? (
                   <CheckIcon
                     aria-hidden
-                    className="size-4 text-(--bots-done)"
+                    className="text-primary size-4"
                     strokeWidth={1.75}
                   />
                 ) : index === current ? (

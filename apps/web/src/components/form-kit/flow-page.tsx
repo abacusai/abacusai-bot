@@ -14,7 +14,7 @@ export const FlowContent = ({
 }) => (
   <div
     className={cn(
-      "flex w-full max-w-sm flex-col items-center gap-6 text-center [&_[data-slot=button]]:max-[800px]:min-h-11 [&_[data-slot=input]]:max-[800px]:min-h-11 [&_[data-slot=input]]:max-[800px]:text-base",
+      "flex w-full max-w-sm flex-col items-center gap-6 text-center [&_[data-slot=button]]:max-[800px]:min-h-11 [&_[data-slot=button]]:max-[800px]:text-[15px] [&_[data-slot=input]]:max-[800px]:min-h-11 [&_[data-slot=input]]:max-[800px]:text-base",
       className
     )}
   >

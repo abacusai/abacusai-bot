@@ -5,6 +5,7 @@ import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
+import { Item } from "#renderer/ui/item";
 import { Switch } from "#renderer/ui/switch";
 
 import { isHosted } from "./hosted";
@@ -84,9 +85,10 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
         </p>
       )}
       {row.hosted?.pendingConfirmation === true && (
-        <div
+        <Item
+          variant="muted"
           role="status"
-          className="bg-card flex flex-col gap-2 rounded-xl p-3"
+          className="flex-col items-start rounded-(--pane-radius)"
         >
           <p>{t("routines.reach.awaitingApproval")}</p>
           <Button
@@ -109,12 +111,13 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
           >
             {t("routines.reach.approve")}
           </Button>
-        </div>
+        </Item>
       )}
       {row.pendingReach != null && (
-        <div
+        <Item
+          variant="muted"
           role="status"
-          className="bg-card flex flex-col gap-2 rounded-xl p-3"
+          className="flex-col items-start rounded-(--pane-radius)"
         >
           <p>
             {t("routines.reach.asked", {
@@ -124,7 +127,7 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
               ].join(", "),
             })}
           </p>
-          <span className="flex gap-2">
+          <span className="flex flex-wrap gap-2">
             <ConfirmAction
               title={t("routines.reach.allowTitle")}
               description={t("routines.reach.allowDescription")}
@@ -139,10 +142,10 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
               {t("routines.reach.decline")}
             </Button>
           </span>
-        </div>
+        </Item>
       )}
       {!isHosted(row) && (
-        <label className="flex items-center gap-2 text-xs">
+        <Item size="sm" className="rounded-(--pane-radius)">
           {row.access === "full" ? (
             <Switch
               aria-label={t("routines.reach.fullAccess")}
@@ -169,14 +172,14 @@ export const RoutineReachPanel = ({ row }: { row: RoutineRow }) => {
               }}
             />
           )}
-          <span>
+          <span className="min-w-0 flex-1">
             {t(
               row.access === "full"
                 ? "routines.reach.fullAccessOn"
                 : "routines.reach.unattended"
             )}
           </span>
-        </label>
+        </Item>
       )}
     </section>
   );

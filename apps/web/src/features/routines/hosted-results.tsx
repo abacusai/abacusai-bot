@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppContext } from "#renderer/lib/use-app-context";
+import { Badge } from "#renderer/ui/badge";
+import { Empty, EmptyDescription } from "#renderer/ui/empty";
+import { Item, ItemGroup } from "#renderer/ui/item";
+import { Skeleton } from "#renderer/ui/skeleton";
 
 import { deliveredKey, hostedStatusKey, hostedUnread } from "./hosted";
 
@@ -35,33 +39,44 @@ export const HostedResults = ({ row }: { row: RoutineRow }) => {
     void refetch();
   }, [row.id, lastAt, refetch]);
   return (
-    <section>
-      <h2 className="mb-2 text-sm font-semibold">
-        {t("routines.hosted.results")}
-      </h2>
-      <p className="text-muted-foreground mb-2 text-xs">
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-semibold">{t("routines.hosted.results")}</h2>
+      <p className="text-muted-foreground text-xs">
         {t("routines.hosted.resultsLead")}
       </p>
       {runs.isError ? (
-        <p className="text-muted-foreground text-xs">
+        <Item
+          variant="muted"
+          role="alert"
+          className="text-muted-foreground rounded-(--pane-radius)"
+        >
           {t("routines.hosted.resultsFailed")}
-        </p>
+        </Item>
       ) : (runs.data ?? []).length === 0 ? (
-        <p className="text-muted-foreground text-xs">
-          {runs.isPending ? "" : t("routines.noRunsYet")}
-        </p>
+        runs.isPending ? (
+          <Skeleton
+            aria-hidden
+            className="h-12 w-full rounded-(--pane-radius)"
+          />
+        ) : (
+          <Empty>
+            <EmptyDescription>{t("routines.noRunsYet")}</EmptyDescription>
+          </Empty>
+        )
       ) : (
-        <div className="flex flex-col gap-1">
+        <ItemGroup className="gap-2">
           {(runs.data ?? []).map((run) => {
             const via = deliveredKey(run.deliveredVia);
             return (
-              <div
+              <Item
                 key={run.id}
-                className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2 text-[13px]"
+                role="listitem"
+                variant="outline"
+                className="min-h-13 rounded-(--pane-radius)"
               >
-                <span className="w-28 shrink-0">
+                <Badge variant="secondary">
                   {t(hostedStatusKey(run.status, run.delivered))}
-                </span>
+                </Badge>
                 <time className="text-muted-foreground w-28 shrink-0 text-xs">
                   {run.at != null
                     ? new Date(run.at).toLocaleString(i18n.language, {
@@ -80,10 +95,10 @@ export const HostedResults = ({ row }: { row: RoutineRow }) => {
                     {t(via)}
                   </span>
                 )}
-              </div>
+              </Item>
             );
           })}
-        </div>
+        </ItemGroup>
       )}
     </section>
   );
