@@ -17,6 +17,8 @@ import {
   type FieldFacts,
   factsFromDocument,
   cardField,
+  fieldKindAllowed,
+  type FillKind,
 } from "./vault-fill";
 
 /** The document as CDP's DOM.getDocument gives it, with each node's element. */
@@ -334,6 +336,94 @@ describe("the review's probes", () => {
     ]) {
       document.body.innerHTML = `<form><input id="t" aria-label="${label}"></form>`;
       expect(classOf("#t").number, label).toBe(false);
+    }
+  });
+});
+
+describe("a fill of the card's expiry or name", () => {
+  /** Whether the vault may fill `kind` into the element `selector` names, host and page alike. */
+  const takes = (kind: FillKind, selector: string): boolean => {
+    const el = document.querySelector(selector)!;
+    const { root, elements } = dump();
+    const id = [...elements].find(([, each]) => each === el)![0];
+    const host = fieldKindAllowed(
+      kind,
+      factsFromDocument(root).get(id)!,
+      false
+    );
+    const page = fieldKindAllowed(kind, live().get(el)!, false);
+    expect(page, selector).toBe(host);
+    return host;
+  };
+
+  it("goes into the card section's fields, never the passport section's", () => {
+    document.body.innerHTML = `
+      <form>
+        <fieldset><legend>Passport</legend>
+          <select id="pp-month" name="pp_exp_month"><option>01</option></select>
+          <select id="pp-year" name="pp_exp_year"><option>2030</option></select>
+          <input id="pax-exp" name="pax0_exp" placeholder="MM/YY">
+          <input id="visa" name="visaExpiry">
+          <input id="ticket" aria-label="Ticket holder name">
+          <input name="pax0_first"><input name="pax0_last"><input name="pax0_email">
+        </fieldset>
+        <fieldset><legend>Card</legend>
+          <input name="cardNumber">
+          <select id="month" name="expMonth"><option>01</option></select>
+          <select id="year" name="expYear"><option>2030</option></select>
+          <input id="holder" aria-label="Name on card">
+        </fieldset>
+      </form>`;
+    expect(takes("card_exp_month", "#month")).toBe(true);
+    expect(takes("card_exp_year", "#year")).toBe(true);
+    expect(takes("cardholder_name", "#holder")).toBe(true);
+    expect(takes("card_exp_month", "#pp-month")).toBe(false);
+    expect(takes("card_exp_year", "#pp-year")).toBe(false);
+    expect(takes("card_exp", "#pax-exp")).toBe(false);
+    expect(takes("card_exp", "#visa")).toBe(false);
+    expect(takes("cardholder_name", "#ticket")).toBe(false);
+  });
+
+  it("refuses the review's probes and takes the real card form", () => {
+    const card = (after: string, extra = "") => `<form>
+      <fieldset><legend>Card</legend><input name="cardNumber">${extra}<input name="cvc"></fieldset>
+      ${after}</form>`;
+    document.body.innerHTML = card(
+      '<fieldset><legend>Passport</legend><input id="t" name="pp_exp" placeholder="MM/YY"></fieldset>'
+    );
+    expect(takes("card_exp", "#t")).toBe(false);
+    document.body.innerHTML = card(
+      '<input id="t" aria-label="Passenger name">'
+    );
+    expect(takes("cardholder_name", "#t")).toBe(false);
+    document.body.innerHTML = card(
+      "",
+      '<input id="g" aria-label="Guest name"><input id="c" aria-label="Contact name">'
+    );
+    expect(takes("cardholder_name", "#g")).toBe(false);
+    expect(takes("cardholder_name", "#c")).toBe(false);
+    document.body.innerHTML = card(
+      "",
+      '<input id="t" aria-label="Expiry (Visa/Mastercard)"><input id="h" aria-label="Name on card">'
+    );
+    expect(takes("card_exp", "#t")).toBe(true);
+    expect(takes("cardholder_name", "#h")).toBe(true);
+  });
+
+  it("takes nothing named an expiry or holder with no card number beside it", () => {
+    for (const [kind, field] of [
+      ["card_exp", '<input id="t" placeholder="Travel date MM/YY">'],
+      [
+        "card_exp_year",
+        '<input id="t" name="exp_years" aria-label="Years of experience">',
+      ],
+      ["cardholder_name", '<input id="t" aria-label="Policy holder name">'],
+      ["cardholder_name", '<input id="t" aria-label="Account holder name">'],
+      ["cardholder_name", '<input id="t" aria-label="Passport holder name">'],
+      ["card_exp", '<input id="t" name="cardExpiry">'],
+    ] as const) {
+      document.body.innerHTML = `<form>${field}<input name="email" type="email"></form>`;
+      expect(takes(kind, "#t"), field).toBe(false);
     }
   });
 });

@@ -105,10 +105,13 @@ const SNAPSHOT = {
       { ref: "@e5", selector: "#q", tag: "input", type: "search" },
       { ref: "@e6", selector: "#pay", tag: "button", name: "Pay" },
       { ref: "@e7", selector: "#passport", tag: "input", name: "Passport" },
+      { ref: "@e8", selector: "#exp", tag: "input", name: "Expiry" },
+      { ref: "@e9", selector: "#exp-month", tag: "select", name: "Month" },
+      { ref: "@e10", selector: "#holder", tag: "input", name: "Name on card" },
     ],
   },
-  refCount: 7,
-  visibleCount: 7,
+  refCount: 10,
+  visibleCount: 10,
   offscreenCount: 0,
 };
 
@@ -142,7 +145,7 @@ const page = {
   /** Each document's inputs as the page declares them, by selector. */
   fields: {} as Record<
     string,
-    Record<string, { id: number; attributes: string[] }>
+    Record<string, { id: number; attributes: string[]; tag?: string }>
   >,
   /** Attributes a field has now in place of those it was first seen with. */
   liveAttributes: {} as Record<string, string[]>,
@@ -184,6 +187,19 @@ const startingFields = () => ({
       id: 504,
       attributes: ["type", "text", "name", "passportNumber"],
     },
+    "#exp": {
+      id: 505,
+      attributes: ["type", "text", "placeholder", "MM/YY", "maxlength", "5"],
+    },
+    "#exp-month": {
+      id: 506,
+      tag: "SELECT",
+      attributes: ["autocomplete", "cc-exp-month"],
+    },
+    "#holder": {
+      id: 507,
+      attributes: ["type", "text", "autocomplete", "cc-name"],
+    },
   },
   F1: {
     "input[name=cardnumber]": {
@@ -193,9 +209,10 @@ const startingFields = () => ({
   },
 });
 
-/** The page with no card form: its card field is gone (an ordinary page). */
+/** The page with no card form: its card fields are gone (an ordinary page). */
 const noCardForm = (): void => {
-  delete page.fields.tab?.["#card"];
+  for (const selector of ["#card", "#exp", "#exp-month", "#holder"])
+    delete page.fields.tab?.[selector];
 };
 
 /** A document's DOM as `DOM.getDocument` returns it, from its declared inputs. */
@@ -203,7 +220,7 @@ const domOf = (target: string) => ({
   root: {
     nodeName: "#document",
     children: Object.values(page.fields[target] ?? {}).map((input) => ({
-      nodeName: "INPUT",
+      nodeName: input.tag ?? "INPUT",
       backendNodeId: input.id,
       attributes: input.attributes,
     })),
@@ -226,9 +243,20 @@ const liveFactsOf = (target: string, selector: string) => {
   const declared = page.fields[target]?.[selector];
   const attributes =
     page.liveAttributes[selector] ?? declared?.attributes ?? [];
+  // Read in its document, as the page script reads it: its neighbours count.
+  const others = Object.entries(page.fields[target] ?? {})
+    .filter(([other]) => other !== selector)
+    .map(([, input]) => ({
+      nodeName: input.tag ?? "INPUT",
+      backendNodeId: input.id,
+      attributes: input.attributes,
+    }));
   const facts = factsFromDocument({
     nodeName: "#document",
-    children: [{ nodeName: "INPUT", backendNodeId: 1, attributes }],
+    children: [
+      { nodeName: declared?.tag ?? "INPUT", backendNodeId: 1, attributes },
+      ...others,
+    ],
   }).get(1);
   return facts;
 };
@@ -314,6 +342,10 @@ const respond = (
             ),
           },
         };
+      if (fn.includes("function(candidates)")) {
+        timeline.push("picked");
+        return { result: { value: true } };
+      }
       if (fn.includes("shown: shown")) {
         const selector = selectorOfObject(target, objectId);
         return {
@@ -491,6 +523,18 @@ let signinStatus = "pending";
 /** A login field the vault refuses once, before handing anything over. */
 let refuseFieldOnce: string | null = null;
 let requestStatusResult: Record<string, unknown> = { status: "pending" };
+/** Set to answer as a server from before expiry and cardholder fills. */
+let oldVault = false;
+/** Set to answer that the card has no saved name. */
+let nameMissing = false;
+/** Set to fail the year of an expiry. */
+let yearFails = false;
+const CARD_DETAILS: Record<string, string> = {
+  card_number: CARD,
+  card_exp_month: "12",
+  card_exp_year: "2030",
+  cardholder_name: "ASHA RAO",
+};
 const platformFetch = (async (input: URL | string, init?: RequestInit) => {
   const url = new URL(String(input));
   const method = url.pathname.split("/").at(-1)!;
@@ -510,6 +554,41 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
       );
     }
   }
+  if (
+    method === "_fillAbacusbotVaultField" &&
+    oldVault &&
+    String(body.field).startsWith("card") &&
+    body.field !== "card_number"
+  )
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: `There is no vault field called ${String(body.field)}.`,
+      }),
+      { status: 400 }
+    );
+  if (
+    method === "_fillAbacusbotVaultField" &&
+    nameMissing &&
+    body.field === "cardholder_name"
+  )
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "No such value",
+        errorType: "DataNotFoundError",
+      }),
+      { status: 404 }
+    );
+  if (
+    method === "_fillAbacusbotVaultField" &&
+    yearFails &&
+    body.field === "card_exp_year"
+  )
+    return new Response(
+      JSON.stringify({ success: false, error: "Too many requests." }),
+      { status: 429 }
+    );
   if (method === "_fillAbacusbotVaultField" && body.paymentApprovalId != null) {
     const key = `${String(body.paymentApprovalId)}:${String(body.field)}`;
     if (spent.has(key))
@@ -579,7 +658,7 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
     );
   const result =
     method === "_fillAbacusbotVaultField"
-      ? { value: body.field === "card_number" ? CARD : SECRET }
+      ? { value: CARD_DETAILS[String(body.field)] ?? SECRET }
       : method === "_createAbacusbotPaymentApproval"
         ? {
             paymentApprovalId: "pay-1",
@@ -756,6 +835,9 @@ beforeEach(() => {
   // A fresh page each time: one the browser has not been told anything about yet.
   tab = makeTab();
   holdFill = Promise.resolve();
+  oldVault = false;
+  nameMissing = false;
+  yearFails = false;
   holdScript = Promise.resolve();
   signinStatus = "pending";
   refuseFieldOnce = null;
@@ -941,6 +1023,154 @@ describe("browser_vault_fill", () => {
       amount: "1234.00",
       currency: "INR",
     });
+  });
+
+  it("fills a single expiry field from the card's month and year, as MM/YY to fit it", async () => {
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp",
+      ref: "@e8",
+      total_ref: "@e3",
+    });
+    expect(result).toEqual({
+      text: "Filled card_exp into @e8 (hidden).",
+      isError: false,
+    });
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "card_exp_month",
+      "card_exp_year",
+    ]);
+    expect(typed().map((entry) => entry.params.text)).toEqual(["12/30"]);
+    // Each is spent: a second expiry fill under this approval is refused.
+    expect(
+      (
+        await call("browser_vault_fill", {
+          item_id: "card-1",
+          field: "card_exp_month",
+          ref: "@e9",
+          total_ref: "@e3",
+        })
+      ).isError
+    ).toBe(true);
+  });
+
+  it("chooses the expiry month in a list, typing nothing, and types the cardholder name", async () => {
+    approve();
+    await snapshot();
+    const month = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp_month",
+      ref: "@e9",
+      total_ref: "@e3",
+    });
+    expect(month.isError).toBe(false);
+    const picked = commands.find((entry) =>
+      String(entry.params.functionDeclaration ?? "").includes(
+        "function(candidates)"
+      )
+    );
+    const candidates = (
+      picked!.params.arguments as Array<{ value: string[] }>
+    )[0]!.value;
+    expect(candidates).toEqual(
+      expect.arrayContaining(["12", "december", "dec", "12 - dec"])
+    );
+    expect(typed()).toEqual([]);
+    const name = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "cardholder_name",
+      ref: "@e10",
+      total_ref: "@e3",
+    });
+    expect(name.isError).toBe(false);
+    expect(typed().map((entry) => entry.params.text)).toEqual(["ASHA RAO"]);
+  });
+
+  it("refuses an expiry for a field that is not one, before any value is asked for", async () => {
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp",
+      ref: "@e2",
+      total_ref: "@e3",
+    });
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/single expiry field/);
+    expect(fills()).toHaveLength(0);
+  });
+
+  it("leaves the name to the user when it was not saved with the card", async () => {
+    nameMissing = true;
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "cardholder_name",
+      ref: "@e10",
+      total_ref: "@e3",
+    });
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/Do not type or guess/);
+    expect(typed()).toEqual([]);
+  });
+
+  it("types nothing when the vault gives the month but not the year, and spends only the month", async () => {
+    yearFails = true;
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp",
+      ref: "@e8",
+      total_ref: "@e3",
+    });
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/part of the card_exp/);
+    expect(typed()).toEqual([]);
+    const used = vault.approval("s1")!.used;
+    expect(used.has("card_exp_month")).toBe(true);
+    expect(used.has("card_exp_year")).toBe(false);
+  });
+
+  it("refuses an expiry field no usual form fits, before the vault is asked", async () => {
+    page.fields.tab!["#exp"]!.attributes = [
+      "type",
+      "text",
+      "placeholder",
+      "MM/YY",
+      "maxlength",
+      "3",
+    ];
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp",
+      ref: "@e8",
+      total_ref: "@e3",
+    });
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/no usual form/);
+    expect(fills()).toHaveLength(0);
+  });
+
+  it("leaves the expiry to the user when the vault cannot give it, and types nothing", async () => {
+    oldVault = true;
+    approve();
+    await snapshot();
+    const result = await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_exp",
+      ref: "@e8",
+      total_ref: "@e3",
+    });
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/Do not type or guess/);
+    expect(result.text).toMatch(/need:"user"/);
+    expect(typed()).toEqual([]);
   });
 
   it("refuses a card for a cross-origin frame that is not a payment provider's, asking the vault nothing", async () => {

@@ -124,9 +124,16 @@ import {
   LIVE_FIELD_FUNCTION,
   type DomNode,
   type FieldFacts,
+  FILL_KINDS,
+  type FillKind,
+  fieldsOf,
+  fieldUnsupported,
+  formatExpiry,
   isPaymentFrameOrigin,
   NO_SIGNIN_REASON,
   planFill,
+  SELECT_OPTION_FUNCTION,
+  selectCandidates,
   readPageTotal,
   type PageTotal,
 } from "../vault/vault-fill";
@@ -611,13 +618,19 @@ const loginItemOf = (
     ? { itemId: args.login_item_id, sites: null, retryAt: 0 }
     : null;
 
-const VAULT_FIELDS: ReadonlySet<string> = new Set([
-  "username",
-  "password",
-  "code",
-  "card_number",
-  "cvv",
+/** The card details the vault may not have (an older server, or not saved with the card). */
+const CARD_DETAILS: ReadonlySet<VaultField> = new Set([
+  "card_exp_month",
+  "card_exp_year",
+  "cardholder_name",
 ]);
+
+/** A card detail the vault cannot give, left to the user, never guessed. */
+const CARD_DETAIL_UNSUPPORTED =
+  "The vault cannot fill the card's expiry or the name on it (not supported, or not saved with the card), so " +
+  "nothing was typed. Do not type or guess " +
+  'them yourself: stop with browser_pause need:"user" and ask the user to complete the expiry and name on the ' +
+  "page themselves.";
 
 export interface McpBrowserServerOptions {
   /** Gate consulted before each tool call; when omitted, nothing is gated. */
@@ -1507,7 +1520,12 @@ export class McpBrowserServer extends McpHttpServer {
     page: BrowserPage,
     tree: SnapshotNode
   ): Promise<void> {
-    if (!flattenNodes(tree).some((node) => node.tag === "input")) return;
+    if (
+      !flattenNodes(tree).some(
+        (node) => node.tag === "input" || node.tag === "select"
+      )
+    )
+      return;
     const document = (await this.cdp(page, "DOM.getDocument", {
       depth: -1,
     }).catch(() => null)) as { root?: DomNode } | null;
@@ -3930,10 +3948,9 @@ export class McpBrowserServer extends McpHttpServer {
     const ref = typeof args.ref === "string" ? args.ref : "";
     if (itemId.length === 0) return this.err("item_id is required.");
     if (field === "login") return this.executeLoginFill(itemId, sessionId);
-    if (!VAULT_FIELDS.has(field))
-      return this.err(
-        "field is one of login, username, password, code, card_number or cvv."
-      );
+    if (!(FILL_KINDS as readonly string[]).includes(field))
+      return this.err(`field is one of login, ${FILL_KINDS.join(", ")}.`);
+    const kind = field as FillKind;
 
     const wc = await this.getWC(sessionId);
     if (!wc) return this.err(this.noBrowser(sessionId));
@@ -3968,7 +3985,7 @@ export class McpBrowserServer extends McpHttpServer {
         "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
           "Reload the page, snapshot, and fill again without running scripts."
       );
-    const card = field === "card_number" || field === "cvv";
+    const card = !["username", "password", "code"].includes(kind);
     const total = card
       ? await this.readTotal(wc, args.total_ref, sessionId)
       : null;
@@ -3984,7 +4001,7 @@ export class McpBrowserServer extends McpHttpServer {
       return this.err(ABACUS_REFUSAL);
     const plan = planFill({
       itemId,
-      field: field as VaultField,
+      field: kind,
       topOrigin,
       frameOrigin,
       inFrame: frameId != null,
@@ -4013,8 +4030,9 @@ export class McpBrowserServer extends McpHttpServer {
         return this.err(TOTAL_NOT_ANCHORED);
     }
     // Taken now, before anything waits, so a second fill of this field is refused.
-    plan.uses?.add(field as VaultField);
-    let delivered = false;
+    for (const one of fieldsOf(kind)) plan.uses?.add(one);
+    // The vault fields the vault handed over: spent, whatever happens next.
+    const handed = new Set<VaultField>();
     const secrets = this.secretsOf(wc);
 
     try {
@@ -4052,8 +4070,8 @@ export class McpBrowserServer extends McpHttpServer {
         frameId != null && isPaymentFrameOrigin(frameOrigin);
       if (
         live.facts == null ||
-        !fieldKindAllowed(field as VaultField, first, inPaymentFrame) ||
-        !fieldKindAllowed(field as VaultField, live.facts, inPaymentFrame)
+        !fieldKindAllowed(kind, first, inPaymentFrame) ||
+        !fieldKindAllowed(kind, live.facts, inPaymentFrame)
       )
         return this.err(
           `Refused: ${ref} is not a field a ${field} goes into. ` +
@@ -4063,7 +4081,13 @@ export class McpBrowserServer extends McpHttpServer {
                 ? "A username goes only into the sign-in form's username or email field."
                 : field === "code"
                   ? "A code goes only into the one-time code field."
-                  : "A card number or CVV goes only into the checkout's card fields.") +
+                  : kind === "card_exp"
+                    ? "card_exp goes only into a single expiry field (MM/YY); for separate month and year fields use card_exp_month and card_exp_year."
+                    : kind === "card_exp_month" || kind === "card_exp_year"
+                      ? "An expiry month or year goes only into the card's expiry month or year field."
+                      : kind === "cardholder_name"
+                        ? "The cardholder name goes only into the card's name-on-card field."
+                        : "A card number or CVV goes only into the checkout's card fields.") +
             " Snapshot and pick that field."
         );
       // A code goes into a field marked for one, or the page's only code-like field.
@@ -4092,23 +4116,84 @@ export class McpBrowserServer extends McpHttpServer {
           `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
         );
 
-      const fetched = await vault.client.fill({
-        itemId,
-        field: field as VaultField,
-        ...plan.request,
-      });
-      if (fetched.ok === false)
+      const expiryKind =
+        kind === "card_exp" ||
+        kind === "card_exp_month" ||
+        kind === "card_exp_year"
+          ? kind
+          : null;
+      // Shaped by length alone, so a field no form fits is refused before the vault is asked.
+      if (
+        expiryKind != null &&
+        live.facts.tag !== "select" &&
+        formatExpiry(expiryKind, { month: "12", year: "2030" }, live.facts) ==
+          null
+      )
         return this.err(
-          fetched.unavailable
-            ? VAULT_UNAVAILABLE
-            : `The vault did not fill it: ${fetched.error}`
+          `${ref} takes no usual form of a card expiry (its length allows none of MM/YY, MMYY or MM/YYYY). ` +
+            'Do not type one yourself; stop with browser_pause need:"user" so the user completes it.'
         );
-      delivered = true;
+      // Every vault field the kind is made of, before anything is typed.
+      const values = new Map<VaultField, string>();
+      for (const one of fieldsOf(kind)) {
+        const fetched = await vault.client.fill({
+          itemId,
+          field: one,
+          ...plan.request,
+        });
+        if (fetched.ok === false) {
+          // What the vault does not have (an older server, or not saved) is left to the user.
+          const missing =
+            CARD_DETAILS.has(one) &&
+            (fetched.notFound === true || fieldUnsupported(fetched.error, one));
+          return this.err(
+            fetched.unavailable
+              ? VAULT_UNAVAILABLE
+              : missing
+                ? CARD_DETAIL_UNSUPPORTED
+                : values.size > 0
+                  ? `The vault gave part of the ${field} but not the rest (${fetched.error}), so nothing was typed. ` +
+                    'Do not type it yourself; stop with browser_pause need:"user" so the user completes it.'
+                  : `The vault did not fill it: ${fetched.error}`
+          );
+        }
+        handed.add(one);
+        values.set(one, fetched.value);
+      }
+      const expiry = {
+        month: values.get("card_exp_month") ?? "",
+        year: values.get("card_exp_year") ?? "",
+      };
+      const select = live.facts.tag === "select";
+      if (select && kind !== "card_exp_month" && kind !== "card_exp_year")
+        return this.err(`${ref} is a list, not a field to type into.`);
+      if (select) {
+        const picked = await this.pickVaultOption(
+          wc,
+          page,
+          node,
+          selectCandidates(kind as "card_exp_month" | "card_exp_year", expiry),
+          plan.documentOrigin,
+          topOrigin!,
+          documentKey
+        );
+        return picked === "picked"
+          ? this.ok(`Chose the ${field} in ${ref} (hidden).`)
+          : this.err(
+              picked === "aborted"
+                ? `Stopped before choosing: the page under ${ref} changed. Nothing was chosen. Snapshot and try again.`
+                : `${ref} has no option for the card's ${field === "card_exp_month" ? "month" : "year"}. Do not choose one yourself; report what the list offers.`
+            );
+      }
+      const value =
+        expiryKind != null
+          ? formatExpiry(expiryKind, expiry, live.facts)!
+          : values.get(kind as VaultField)!;
       const outcome = await this.typeVaultValue(
         wc,
         page,
         node,
-        fetched.value,
+        value,
         plan.documentOrigin,
         topOrigin!,
         documentKey
@@ -4140,7 +4225,9 @@ export class McpBrowserServer extends McpHttpServer {
           );
     } finally {
       // Not spent unless the vault handed the value over.
-      if (!delivered) plan.uses?.delete(field as VaultField);
+      // Only what the vault handed over is spent; the rest can be filled again.
+      for (const one of fieldsOf(kind))
+        if (!handed.has(one)) plan.uses?.delete(one);
       await this.cdp(page, "Runtime.releaseObjectGroup", {
         objectGroup: VAULT_OBJECT_GROUP,
       }).catch(() => undefined);
@@ -4577,6 +4664,43 @@ export class McpBrowserServer extends McpHttpServer {
       () => null
     );
     return typeof text === "string" ? readPageTotal(text) : null;
+  }
+
+  /**
+   * Chooses the option of the select `node` that is one of `candidates`,
+   * under the same checks as typing: the same document, no script on it,
+   * the node focused in its document with the planned origins.
+   */
+  private async pickVaultOption(
+    wc: BrowserPage,
+    page: BrowserPage,
+    node: string,
+    candidates: string[],
+    documentOrigin: string,
+    topOrigin: string,
+    documentKey: string
+  ): Promise<"picked" | "aborted" | "none"> {
+    page.focus();
+    const now = await this.documentInfo(wc);
+    if (now.key !== documentKey || this.secretsOf(wc).scriptRan(documentKey))
+      return "aborted";
+    await this.cdp(wc, "Emulation.setFocusEmulationEnabled", {
+      enabled: true,
+    }).catch(() => undefined);
+    const armed = await this.callOn(page, node, ARM_FUNCTION);
+    if (
+      armed?.focused !== true ||
+      armed.origin !== documentOrigin ||
+      armed.top !== topOrigin
+    )
+      return "aborted";
+    const response = (await this.cdp(page, "Runtime.callFunctionOn", {
+      objectId: node,
+      functionDeclaration: SELECT_OPTION_FUNCTION,
+      arguments: [{ value: candidates }],
+      returnByValue: true,
+    }).catch(() => null)) as { result?: { value?: unknown } } | null;
+    return response?.result?.value === true ? "picked" : "none";
   }
 
   /**

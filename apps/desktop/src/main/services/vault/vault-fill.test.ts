@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { VaultField } from "./vault-client";
 import {
   codeFieldAllowed,
+  selectCandidates,
+  formatExpiry,
+  type FillKind,
+  fieldUnsupported,
   factsFromDocument,
   hasCodeField,
   fieldKindAllowed,
@@ -323,7 +326,7 @@ const facts = (overrides: Partial<FieldFacts> = {}): FieldFacts => ({
 });
 
 const accepts = (
-  field: VaultField,
+  field: FillKind,
   overrides: Partial<FieldFacts>,
   inPaymentFrame = false
 ): boolean => fieldKindAllowed(field, facts(overrides), inPaymentFrame);
@@ -626,6 +629,154 @@ describe("a login fill", () => {
     expect(
       planFill(context({ approval: null, signin: signin({ item: "card-1" }) }))
         .ok
+    ).toBe(false);
+  });
+});
+
+describe("a card's expiry and cardholder name", () => {
+  /** Hint words as the page names a field ("MM/YY" → mm, yy). */
+  const named = (text: string): string[] =>
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
+  /** A field the card rule found to be this detail, by token or beside a card number. */
+  const detail = (
+    kind: "exp" | "exp_month" | "exp_year" | "name",
+    overrides: Partial<FieldFacts> = {}
+  ) =>
+    facts({
+      card: { number: false, detailWords: kind, detail: kind },
+      ...overrides,
+    });
+  /** Words naming the detail, but nowhere near a card number. */
+  const wordsOnly = (
+    kind: "exp" | "exp_month" | "exp_year" | "name",
+    overrides: Partial<FieldFacts> = {}
+  ) =>
+    facts({
+      card: { number: false, detailWords: kind, detail: null },
+      ...overrides,
+    });
+
+  it("goes only into the detail the card rule found the field to be", () => {
+    expect(accepts("card_exp", detail("exp"))).toBe(true);
+    expect(accepts("card_exp", detail("exp", { type: "tel" }))).toBe(true);
+    expect(
+      accepts(
+        "card_exp_month",
+        detail("exp_month", { tag: "select", type: "select" })
+      )
+    ).toBe(true);
+    expect(accepts("card_exp_year", detail("exp_year"))).toBe(true);
+    expect(accepts("cardholder_name", detail("name"))).toBe(true);
+    // The other half of a split expiry, or another detail.
+    expect(accepts("card_exp", detail("exp_month"))).toBe(false);
+    expect(accepts("card_exp_month", detail("exp_year"))).toBe(false);
+    expect(accepts("cardholder_name", detail("exp"))).toBe(false);
+  });
+
+  it("does not go where only words name it, except in a payment provider's frame", () => {
+    expect(accepts("card_exp", wordsOnly("exp"))).toBe(false);
+    expect(accepts("cardholder_name", wordsOnly("name"))).toBe(false);
+    expect(accepts("card_exp", wordsOnly("exp", { type: "tel" }), true)).toBe(
+      true
+    );
+    expect(accepts("cardholder_name", wordsOnly("name"), true)).toBe(true);
+    expect(accepts("card_exp", facts({ type: "tel" }), true)).toBe(false);
+  });
+
+  it("never goes into a single expiry list, a search box, or a name that is not text", () => {
+    expect(
+      accepts("card_exp", detail("exp", { tag: "select", type: "select" }))
+    ).toBe(false);
+    expect(accepts("cardholder_name", detail("name", { type: "search" }))).toBe(
+      false
+    );
+    expect(accepts("cardholder_name", detail("name", { type: "tel" }))).toBe(
+      false
+    );
+    expect(accepts("card_exp", detail("exp", { tag: "textarea" }))).toBe(false);
+  });
+
+  it("is typed in the form that fits the field, or refused when none does", () => {
+    const expiry = { month: "3", year: "2030" };
+    const exp = (overrides: Partial<FieldFacts>) =>
+      formatExpiry("card_exp", expiry, facts(overrides));
+    expect(exp({})).toBe("03/30");
+    expect(exp({ maxLength: 5, hints: named("MM/YY") })).toBe("03/30");
+    expect(exp({ maxLength: 4 })).toBe("0330");
+    expect(exp({ hints: named("MM/YYYY") })).toBe("03/2030");
+    expect(exp({ maxLength: 6 })).toBe("032030");
+    expect(exp({ maxLength: 7 })).toBe("03/2030");
+    expect(exp({ maxLength: 7, hints: named("MM / YY") })).toBe("03 / 30");
+    expect(exp({ maxLength: 8 })).toBe("03/30");
+    expect(exp({ maxLength: 10, hints: named("MM/YYYY") })).toBe("03/2030");
+    expect(exp({ maxLength: 9, hints: named("MM / YYYY") })).toBe("03 / 2030");
+    expect(exp({ maxLength: 3 })).toBeNull();
+    expect(formatExpiry("card_exp_month", expiry, facts())).toBe("03");
+    expect(
+      formatExpiry("card_exp_month", expiry, facts({ maxLength: 1 }))
+    ).toBeNull();
+    expect(formatExpiry("card_exp_year", expiry, facts())).toBe("2030");
+    expect(formatExpiry("card_exp_year", expiry, facts({ maxLength: 2 }))).toBe(
+      "30"
+    );
+    expect(formatExpiry("card_exp_year", expiry, facts({ maxLength: 3 }))).toBe(
+      "30"
+    );
+    expect(
+      formatExpiry("card_exp_year", expiry, facts({ hints: named("YY") }))
+    ).toBe("30");
+    expect(
+      formatExpiry("card_exp_year", expiry, facts({ maxLength: 1 }))
+    ).toBeNull();
+  });
+
+  it("is chosen in a list by the value or text it may be listed as", () => {
+    const expiry = { month: "1", year: "2030" };
+    const months = selectCandidates("card_exp_month", expiry);
+    for (const label of [
+      "01",
+      "1",
+      "january",
+      "jan",
+      "1 - jan",
+      "01/jan",
+      "01 - january",
+      "1 jan",
+    ])
+      expect(months, label).toContain(label);
+    expect(selectCandidates("card_exp_year", expiry)).toEqual(["2030", "30"]);
+  });
+
+  it("is filled under the payment approval, the month and year both spent by one expiry fill", () => {
+    const fill = planFill(context({ field: "card_exp" }));
+    expect(fill.ok).toBe(true);
+    const used = approval({ used: new Set(["card_exp_year"]) });
+    expect(planFill(context({ field: "card_exp", approval: used })).ok).toBe(
+      false
+    );
+    expect(
+      planFill(context({ field: "cardholder_name", approval: null })).ok
+    ).toBe(false);
+  });
+
+  it("knows a vault from before these fields by its refusal", () => {
+    expect(
+      fieldUnsupported(
+        "There is no vault field called card_exp_month.",
+        "card_exp_month"
+      )
+    ).toBe(true);
+    expect(
+      fieldUnsupported("A card has no cardholder_name.", "cardholder_name")
+    ).toBe(true);
+    expect(
+      fieldUnsupported(
+        "This payment was approved for another site.",
+        "card_exp_month"
+      )
     ).toBe(false);
   });
 });

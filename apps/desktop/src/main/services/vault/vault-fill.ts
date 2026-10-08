@@ -30,7 +30,42 @@ export const PAYMENT_FRAME_HOSTS: readonly string[] = [
   "paypal.com",
 ];
 
-const CARD_FIELDS: ReadonlySet<VaultField> = new Set(["card_number", "cvv"]);
+const CARD_FIELDS: ReadonlySet<VaultField> = new Set([
+  "card_number",
+  "cvv",
+  "card_exp_month",
+  "card_exp_year",
+  "cardholder_name",
+]);
+
+/**
+ * What `browser_vault_fill` can type: a vault field, or `card_exp`, a
+ * single expiry field filled from the card's month and year.
+ */
+export type FillKind = VaultField | "card_exp";
+
+export const FILL_KINDS: readonly FillKind[] = [
+  "username",
+  "password",
+  "code",
+  "card_number",
+  "cvv",
+  "card_exp",
+  "card_exp_month",
+  "card_exp_year",
+  "cardholder_name",
+];
+
+/** The vault fields a fill kind is made of. */
+export const fieldsOf = (kind: FillKind): VaultField[] =>
+  kind === "card_exp" ? ["card_exp_month", "card_exp_year"] : [kind];
+
+/**
+ * Whether the vault said it has no such field: a server from before expiry
+ * and cardholder fills. The model is then told to leave them to the user.
+ */
+export const fieldUnsupported = (error: string, field: VaultField): boolean =>
+  error.includes(field) && /\bno vault field\b|\bhas no\b/i.test(error);
 
 export const httpsHost = (origin: string | null): string | null => {
   if (origin == null) return null;
@@ -160,7 +195,7 @@ export type FillPlan =
 
 export interface FillContext {
   itemId: string;
-  field: VaultField;
+  field: FillKind;
   /** The live origin of the tab's top-level page. */
   topOrigin: string | null;
   /** The live origin of the cross-origin frame the field is in; null when it is in the page. */
@@ -242,7 +277,8 @@ export function planFill(context: FillContext): FillPlan {
     };
   }
 
-  const card = CARD_FIELDS.has(context.field);
+  const fields = fieldsOf(context.field);
+  const card = fields.some((field) => CARD_FIELDS.has(field));
   if (
     context.inFrame &&
     (card || context.field === "code") &&
@@ -267,7 +303,7 @@ export function planFill(context: FillContext): FillPlan {
       return awaitSignin(
         `the sign-in the user allowed is for ${signin.site}, and this page is ${host}, so ${pause}`
       );
-    if (signin.used.has(context.field))
+    if (signin.used.has(context.field as VaultField))
       return awaitSignin(
         `the ${context.field} was already filled once under the sign-in the user allowed, so ${pause}`
       );
@@ -297,7 +333,7 @@ export function planFill(context: FillContext): FillPlan {
     return refuse(
       `Refused: the payment was approved for ${approval.site || "another site"}, and this page is ${host}. Report where the checkout went.`
     );
-  if (approval.used.has(context.field))
+  if (fields.some((field) => approval.used.has(field)))
     return refuse(
       `Refused: the ${context.field} was already filled once under this approval. If the checkout needs it again, the user approves a new payment.`
     );
@@ -398,21 +434,51 @@ const TEXT_ENTRY = new Set([
 ]);
 
 /**
- * Whether `field` may go into a field with these facts:
+ * Which card detail a field is, by the card rule: what `classifyCardControls`
+ * found it to be in its document (a cc-exp or cc-name token, or its words
+ * beside a card number or CVV), or, in a payment provider's frame, what its
+ * tokens or words name.
+ */
+const cardDetail = (
+  facts: FieldFacts,
+  inPaymentFrame: boolean
+): FillKind | null => {
+  const detail =
+    facts.card.detail ?? (inPaymentFrame ? facts.card.detailWords : null);
+  return detail == null
+    ? null
+    : detail === "name"
+      ? "cardholder_name"
+      : detail === "exp"
+        ? "card_exp"
+        : detail === "exp_month"
+          ? "card_exp_month"
+          : "card_exp_year";
+};
+
+/**
+ * Whether `kind` may go into a field with these facts:
  * - password: a field that is or was a password field;
  * - username: a text or email input marked username or email, or right
  *   next to the password field;
  * - card_number / cvv: an input marked cc-number / cc-csc, or a plain input
  *   in a payment provider's frame;
+ * - card_exp (one text input), card_exp_month / card_exp_year (an input or
+ *   select), cardholder_name (a text input): the field the card rule makes
+ *   that detail (`card-fields.ts`: a cc-exp or cc-name token, or its words
+ *   beside a card number or CVV), or in a provider's frame, what it names;
  * - code: an input marked one-time-code, or a short numeric input.
- * Never a search input, and never anything but an input.
+ * Never a search input, and never anything but an input (or, for an
+ * expiry's month or year, a select).
  */
 export const fieldKindAllowed = (
-  field: VaultField,
+  field: FillKind,
   facts: FieldFacts,
   inPaymentFrame: boolean
 ): boolean => {
-  if (facts.tag !== "input") return false;
+  const select = field === "card_exp_month" || field === "card_exp_year";
+  if (facts.tag !== "input" && !(select && facts.tag === "select"))
+    return false;
   if (
     facts.type === "search" ||
     facts.role === "searchbox" ||
@@ -421,6 +487,7 @@ export const fieldKindAllowed = (
   )
     return false;
   const marked = (token: string): boolean => facts.autocomplete.includes(token);
+  const typed = ["text", "tel", "number"].includes(facts.type);
   switch (field) {
     case "password":
       return facts.wasPassword;
@@ -435,6 +502,23 @@ export const fieldKindAllowed = (
         marked(field === "card_number" ? "cc-number" : "cc-csc") ||
         (inPaymentFrame &&
           ["text", "tel", "number", "password"].includes(facts.type))
+      );
+    case "card_exp":
+      return (
+        facts.tag === "input" &&
+        typed &&
+        cardDetail(facts, inPaymentFrame) === field
+      );
+    case "card_exp_month":
+    case "card_exp_year":
+      return (
+        (facts.tag === "select" || typed) &&
+        cardDetail(facts, inPaymentFrame) === field
+      );
+    case "cardholder_name":
+      return (
+        facts.type === "text" &&
+        cardDetail(facts, inPaymentFrame) === "cardholder_name"
       );
     case "code": {
       const numeric =
@@ -458,6 +542,100 @@ export const fieldKindAllowed = (
     default:
       return false;
   }
+};
+
+/** A card expiry as the vault gives it: month "1"–"12", year four digits. */
+export interface CardExpiry {
+  month: string;
+  year: string;
+}
+
+/**
+ * The text an expiry kind is typed as, shaped by the field; null when no
+ * usual form fits it. A single field takes the form whose length is its
+ * maxlength exactly, else the first that fits, preferring what its words
+ * ask for ("MM/YYYY", "YY"): MM/YY, MMYY, MM/YYYY, MMYYYY, then the spaced
+ * "MM / YY" and "MM / YYYY".
+ */
+export const formatExpiry = (
+  kind: "card_exp" | "card_exp_month" | "card_exp_year",
+  expiry: CardExpiry,
+  facts: FieldFacts
+): string | null => {
+  const month = expiry.month.padStart(2, "0");
+  const yyyy = expiry.year;
+  const yy = expiry.year.slice(-2);
+  const max = facts.maxLength;
+  const hints = facts.hints.join(" ");
+  const wantFour = /\byyyy\b|yyyy$/.test(hints);
+  const wantTwo = !wantFour && /\byy\b|yy$/.test(hints);
+  const fits = (text: string): boolean => max <= 0 || text.length <= max;
+  if (kind === "card_exp_month") return fits(month) ? month : null;
+  if (kind === "card_exp_year") {
+    const years = wantTwo || max === 2 || max === 3 ? [yy] : [yyyy, yy];
+    return years.find(fits) ?? null;
+  }
+  const two = [`${month}/${yy}`, `${month}${yy}`, `${month} / ${yy}`];
+  const four = [`${month}/${yyyy}`, `${month}${yyyy}`, `${month} / ${yyyy}`];
+  const ordered = wantFour
+    ? four
+    : wantTwo
+      ? two
+      : [two[0]!, two[1]!, four[0]!, four[1]!, two[2]!, four[2]!];
+  if (max <= 0) return ordered[0]!;
+  return (
+    ordered.find((text) => text.length === max) ?? ordered.find(fits) ?? null
+  );
+};
+
+/**
+ * Run on a select with the candidates for one value ("05", "5", "May"):
+ * picks the first option whose value or text is one of them, as a person's
+ * pick would (input and change events); false when none is.
+ */
+export const SELECT_OPTION_FUNCTION = `function(candidates) {
+  const wanted = candidates.map((item) => String(item).toLowerCase());
+  const norm = (text) => String(text || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const option = Array.from(this.options || []).find((item) =>
+    wanted.includes(norm(item.value)) || wanted.includes(norm(item.textContent)));
+  if (!option) return false;
+  this.value = option.value;
+  this.dispatchEvent(new Event('input', { bubbles: true }));
+  this.dispatchEvent(new Event('change', { bubbles: true }));
+  return this.value === option.value;
+}`;
+
+const MONTH_NAMES = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/** The option texts or values a select may list a month or year as ("03", "3", "Mar", "1 - Jan", "01/Jan"). */
+export const selectCandidates = (
+  kind: "card_exp_month" | "card_exp_year",
+  expiry: CardExpiry
+): string[] => {
+  if (kind === "card_exp_year") return [expiry.year, expiry.year.slice(-2)];
+  const number = Number(expiry.month);
+  const name = MONTH_NAMES[number - 1] ?? "";
+  const numbers = [String(number).padStart(2, "0"), String(number)];
+  const names = [name, name.slice(0, 3)];
+  const joined = numbers.flatMap((n) =>
+    names.flatMap((m) =>
+      [" - ", "-", " / ", "/", " "].map((sep) => `${n}${sep}${m}`)
+    )
+  );
+  return [...new Set([...numbers, ...names, ...joined])];
 };
 
 /** A DOM node as CDP's `DOM.getDocument` returns it. */
