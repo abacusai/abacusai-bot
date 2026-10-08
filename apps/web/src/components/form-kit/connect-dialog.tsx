@@ -19,7 +19,7 @@ export const ConnectDialogContent = ({
 }) => {
   const phone = useMediaQuery("(max-width: 799px)");
   const content = (
-    <div className="flex min-w-0 flex-col gap-3 text-left [&_[data-slot=button]]:text-[13px] [&_[data-slot=input]]:h-8">
+    <div className="flex min-w-0 flex-col gap-3 text-left [&_[data-slot=boot-avatar]]:items-start [&_[data-slot=button]]:text-[13px] [&_[data-slot=input]]:h-8">
       <BootAvatar stage={stage} mood={mood} size={48} brand={false} overlay />
       {children}
     </div>

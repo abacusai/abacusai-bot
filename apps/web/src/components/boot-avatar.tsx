@@ -67,7 +67,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
   const wasOverlay = useRef(false);
   const flight = useRef<{ stop(): void } | null>(null);
   useEffect(() => () => flight.current?.stop(), []);
-  const home = homes.at(-1);
+  const home = homes.filter((item) => item.overlay).at(-1) ?? homes.at(-1);
   const [register] = useState(() => (next: Home) => {
     setHomes((all) => [...all, next]);
     return () => setHomes((all) => all.filter((item) => item !== next));
