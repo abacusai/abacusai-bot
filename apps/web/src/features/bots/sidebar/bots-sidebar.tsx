@@ -249,7 +249,10 @@ export const BotsSidebar = () => {
           {t("bots.sidebar.noMatches")}
         </p>
       ) : (
-        <div data-slot="nav-list-rows" className="flex flex-col pt-1">
+        <div
+          data-slot="nav-list-rows"
+          className="ui-list flex flex-col gap-0.5 pt-1"
+        >
           {model.entries.map((entry) =>
             entry.kind === "label" ? (
               <GroupLabel

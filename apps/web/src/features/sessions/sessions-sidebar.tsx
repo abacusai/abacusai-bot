@@ -229,7 +229,7 @@ export const SessionsSidebar = () => {
             </span>
           </p>
         ) : (
-          <div className="flex flex-col">
+          <div className="ui-list flex flex-col gap-0.5">
             {needs.length ? (
               <NavList.Group label={t("sessions.attention.needs-you")}>
                 {needs.map((s) => row(s, false))}

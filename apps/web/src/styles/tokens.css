@@ -734,3 +734,12 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
 .flow-progress::-webkit-progress-bar { background: var(--muted); }
 .flow-progress::-webkit-progress-value { background: var(--primary); }
 .flow-progress::-moz-progress-bar { background: var(--primary); }
+
+:root {
+  --row-gap: 2px;
+  --row-radius: 8px;
+  --row-hover: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --row-selected: var(--sidebar-accent);
+  --row-pressed: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --row-focus: color-mix(in oklab, var(--ring) 50%, transparent);
+}

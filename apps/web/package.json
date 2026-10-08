@@ -24,6 +24,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "dev": "node ../desktop/scripts/generate-notices.js --graph && vite",
+    "check:popup-bounds": "node --test scripts/check-popup-bounds.mjs",
     "check:layout": "node scripts/check-page-layout.mjs",
     "check:workspace-geometry": "node scripts/check-workspace-geometry.mjs",
     "check:i18n": "node scripts/check-jsx-i18n.js",

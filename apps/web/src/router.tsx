@@ -95,12 +95,6 @@ export const routeMasks = [
   createRouteMask({ routeTree, from: "/routines/new", to: "/routines" }),
   createRouteMask({
     routeTree,
-    from: "/library/messaging",
-    to: "/library/messaging",
-    search: ({ platform: _platform, ...rest }) => rest,
-  }),
-  createRouteMask({
-    routeTree,
     from: "/library/mcp",
     to: "/library/mcp",
     search: ({ server: _server, ...rest }) => rest,
@@ -182,6 +176,7 @@ declare module "@tanstack/react-router" {
     sidebar?: SidebarId;
   }
   interface HistoryState {
+    messagingDialog?: boolean;
     navIntent?: { id: string; type: NavType | "none" };
   }
 }

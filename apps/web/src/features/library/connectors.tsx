@@ -36,13 +36,6 @@ import {
 } from "#renderer/ui/dialog";
 import { Field, FieldLabel, FieldGroup } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "#renderer/ui/sheet";
 
 import { useConnectFlow } from "./connect-flow";
 import { CONNECTOR_CATEGORY_TABS } from "./search";
@@ -193,7 +186,7 @@ export const ConnectorsPage = () => {
     </AreaPage>
   );
 };
-export const ConnectorSheet = ({ connector }: { connector: string }) => {
+export const ConnectorDialog = ({ connector }: { connector: string }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const flow = useConnectFlow();
@@ -209,18 +202,21 @@ export const ConnectorSheet = ({ connector }: { connector: string }) => {
       transition: "none",
     });
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(open) => {
         if (!open) close();
       }}
     >
-      <SheetContent data-testid="connector-sheet" className="sm:max-w-[420px]">
-        <SheetHeader>
-          <SheetTitle>{entry?.name ?? connector}</SheetTitle>
-          <SheetDescription>{entry?.description}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-1 flex-col gap-4 overflow-auto p-4">
+      <DialogContent
+        data-testid="connector-dialog"
+        className="sm:max-w-[420px]"
+      >
+        <DialogHeader>
+          <DialogTitle>{entry?.name ?? connector}</DialogTitle>
+          <DialogDescription>{entry?.description}</DialogDescription>
+        </DialogHeader>
+        <div className="flex min-w-0 flex-col gap-4">
           <ConnectorMark id={entry?.logo ?? connector} size={40} />
           <StatePill>
             {statuses.data?.[connector]?.account ??
@@ -269,8 +265,8 @@ export const ConnectorSheet = ({ connector }: { connector: string }) => {
             {t("phase5.done")}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 const FieldForm = ({ connector }: { connector: string }) => {

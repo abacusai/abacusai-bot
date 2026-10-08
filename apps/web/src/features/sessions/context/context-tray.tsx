@@ -92,7 +92,7 @@ export const SessionContextTray = ({
               ? t("sessions.tray.default")
               : workspace?.label}
           </PopoverTrigger>
-          <PopoverContent className="scroll-fade-y max-h-72 w-[min(340px,var(--available-width))] gap-1 overflow-y-auto rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
+          <PopoverContent className="w-[min(340px,var(--available-width))] gap-1 rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
             {workspaces.length > 8 ? (
               <Input
                 aria-label={t("sessions.tray.search")}
@@ -142,7 +142,7 @@ export const SessionContextTray = ({
                 {branch.data.currentBranch}
               </span>
             </PopoverTrigger>
-            <PopoverContent className="scroll-fade-y max-h-72 w-[min(340px,var(--available-width))] gap-1 overflow-y-auto rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
+            <PopoverContent className="w-[min(340px,var(--available-width))] gap-1 rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
               <BranchList
                 workspaceId={workspaceId}
                 sessionId={sessionId}
@@ -164,7 +164,7 @@ export const SessionContextTray = ({
                 <GitBranch aria-label={t("sessions.tray.newWorktree")} />
               )}
             </PopoverTrigger>
-            <PopoverContent className="scroll-fade-y flex max-h-72 w-[min(340px,var(--available-width))] flex-col gap-1 overflow-y-auto rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg">
+            <PopoverContent className="flex w-[min(340px,var(--available-width))] flex-col gap-1 rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg">
               <Button
                 variant="ghost"
                 onClick={() => onWorktree({ kind: "current" })}
@@ -262,7 +262,7 @@ export const SessionContextTray = ({
               : t(IS_ELECTRON ? "sessions.tray.local" : "web.hostLabel")}
             {mode === "AUTO" ? ` · ${t("sessions.tray.sandboxed")}` : ""}
           </PopoverTrigger>
-          <PopoverContent className="scroll-fade-y max-h-72 w-[min(340px,var(--available-width))] gap-1 overflow-y-auto rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
+          <PopoverContent className="w-[min(340px,var(--available-width))] gap-1 rounded-[14px] p-1.5 [&_button]:h-8 [&_button]:justify-start [&_button]:rounded-lg [&_button]:px-2 [&_input]:h-8">
             {(["local", "docker"] as const).map((backend) => (
               <Button
                 key={backend}

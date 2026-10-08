@@ -99,6 +99,15 @@ export const GallerySearch = v.object({
     "app"
   ),
   open: optionalField(v.picklist(GALLERY_OVERLAY_IDS)),
+  stress: optionalField(
+    v.picklist([
+      "sidebar",
+      "top-left",
+      "top-right",
+      "bottom-left",
+      "bottom-right",
+    ])
+  ),
   /** A chat scenario (spec 02 §11.2), shown at full size instead of sections. */
   fixture: optionalField(v.pipe(v.string(), v.regex(/^[a-z0-9-]+$/))),
   /** Stop after this many events (mid-stream states). */

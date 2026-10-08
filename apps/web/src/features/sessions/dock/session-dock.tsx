@@ -314,10 +314,7 @@ export const SessionDock = ({
           >
             <Plus />
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
-          >
+          <DropdownMenuContent align="end" className="titlebar-nodrag w-56">
             <DropdownMenuGroup>
               {terminalShellsForPlatform(
                 (document.documentElement.dataset.platform ??

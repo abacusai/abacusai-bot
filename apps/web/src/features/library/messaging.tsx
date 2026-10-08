@@ -9,7 +9,6 @@ import {
 import { useLiveQuery } from "@tanstack/react-db";
 import { revalidateLogic } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
@@ -31,26 +30,26 @@ import {
   useMutation,
   useMutationState,
 } from "#renderer/data/query-client";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "#renderer/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "#renderer/ui/sheet";
 
 import {
   connectPlatform,
   disablePlatform,
   useConnectFlow,
 } from "./connect-flow";
+import { useMessagingDialog } from "./messaging-dialog";
 export const MessagingPage = () =>
   IS_ELECTRON ? <DesktopMessagingPage /> : <WebMessagingPage />;
 const DesktopMessagingPage = () => {
@@ -63,7 +62,7 @@ const DesktopMessagingPage = () => {
     transport.orpc.messaging.snapshot.queryOptions({ input: {} })
   );
   const s = query.data;
-  const navigate = useAppNavigate();
+  const dialog = useMessagingDialog();
   const settings = useMutation(
     transport.orpc.messaging.updateSettings.mutationOptions({
       ...optimistic(
@@ -95,13 +94,8 @@ const DesktopMessagingPage = () => {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() =>
-                  void navigate({
-                    to: "/library/messaging",
-                    search: { platform: p.id },
-                    transition: "none",
-                  })
-                }
+                data-messaging-channel={p.id}
+                onClick={() => void dialog.open(p.id)}
               >
                 {t(
                   p.state === "connected" ? "phase5.manage" : "phase5.connect"
@@ -164,7 +158,7 @@ const DesktopMessagingPage = () => {
           </SettingRow>
         </GroupCard>
       )}
-      <PlatformSheet />
+      <PlatformDialog />
     </AreaPage>
   );
 };
@@ -180,12 +174,10 @@ const useWritesSnapshot = () => {
       ),
   };
 };
-const PlatformSheet = () => {
-  const search = useSearch({ strict: false }) as {
-    platform?: MessagingPlatformId;
-  };
-  return search.platform ? (
-    <PlatformDetail key={search.platform} platform={search.platform} />
+const PlatformDialog = () => {
+  const { platform } = useMessagingDialog();
+  return platform ? (
+    <PlatformDetail key={platform} platform={platform} />
   ) : null;
 };
 const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
@@ -199,7 +191,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   const p = s?.platforms.find((p) => p.id === platform);
   const sharedId = SHARED_BOT_PLATFORM_OF[platform];
   const shared = s?.platforms.find((p) => p.id === sharedId);
-  const navigate = useAppNavigate();
+  const dialog = useMessagingDialog();
   const flow = useConnectFlow();
   const flowRef = useRef(flow);
   useEffect(() => {
@@ -225,11 +217,7 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
   const close = async () => {
     try {
       await flow.settlePairing(platform);
-      await navigate({
-        to: "/library/messaging",
-        search: { platform: undefined },
-        transition: "none",
-      });
+      await dialog.close();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("phase5.failed"));
     }
@@ -263,22 +251,25 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
     };
   }, [platform, transport, cache, sharedId, t]);
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(open) => {
         if (!open) void close();
       }}
     >
-      <SheetContent className="sm:max-w-[480px]">
-        <SheetHeader>
-          <SheetTitle>
+      <DialogContent
+        className="sm:max-w-[480px]"
+        finalFocus={dialog.finalFocus}
+      >
+        <DialogHeader>
+          <DialogTitle>
             {t(`messaging.platforms.${p?.nameKey ?? platform}`)}
-          </SheetTitle>
-          <SheetDescription>
+          </DialogTitle>
+          <DialogDescription>
             {t("phase5.messagingDescription")}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 overflow-auto p-4">
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex min-w-0 flex-col gap-3">
           {p && <StatePill>{t(`messaging.states.${p.state}`)}</StatePill>}
           {(error || p?.errorMessage) && (
             <p role="alert">{error ?? p?.errorMessage}</p>
@@ -424,8 +415,8 @@ const PlatformDetail = ({ platform }: { platform: MessagingPlatformId }) => {
             {t("phase5.done")}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 

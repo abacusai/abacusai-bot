@@ -207,14 +207,6 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
     color: var(--destructive) !important;
   }
 }
-/* A menu item is one line: a long label (de-DE, fr-FR) widens the menu
-   rather than wrapping under its icon; the menu's own max width clips. */
-@layer components {
-  [data-slot="context-menu-item"],
-  [data-slot="dropdown-menu-item"] {
-    white-space: nowrap;
-  }
-}
 .session-dock-mini [data-slot="composer-dock"] { position: static; }
 
 /* Scroll fades come from shadcn/tailwind.css (rewrite PLAN: foundation).
@@ -309,3 +301,72 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   -webkit-user-select: none;
   user-select: none;
 }
+.ui-popup {
+  max-width: min(22rem, calc(100vw - 16px));
+  min-width: min(8rem, calc(100vw - 16px));
+  max-height: min(var(--available-height, calc(100dvh - 16px)), 24rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+:is([data-slot="select-content"], [data-slot="combobox-content"]) {
+  min-width: min(var(--anchor-width), 22rem, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.popup-list {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 4px;
+}
+.popup-row {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  scroll-margin-block: 4px;
+  & > :not(svg):not([data-slot$="indicator"]):not([data-slot$="shortcut"]) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  & svg, & [data-slot$="shortcut"] { flex-shrink: 0; }
+}
+.popup-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+[data-slot="tooltip-content"] { overflow: visible; white-space: normal; }
+.popup-tooltip-label { min-width: 0; max-height: calc(min(var(--available-height, calc(100dvh - 16px)), 24rem) - 12px); overflow-x: hidden; overflow-y: auto; overflow-wrap: anywhere; }
+[data-slot="dialog-content"] { max-height: calc(100dvh - 16px); overflow-y: auto; }
+
+.ui-list, [data-slot="nav-list-rows"], [cmdk-group-items],
+[data-slot="select-list"], [data-slot="dropdown-menu-radio-group"], [data-slot="context-menu-radio-group"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+.ui-list-fixed > * {
+  height: calc(var(--list-row-height) - var(--row-gap));
+  flex-shrink: 0;
+  & > button:first-child { height: 100%; }
+}
+.ui-row {
+  border-radius: var(--row-radius);
+  min-width: 0;
+  &:is(:hover, [data-highlighted], [data-popup-open], [cmdk-item][data-selected="true"]) {
+    background-color: var(--row-hover);
+  }
+  &:is([data-active], [data-selected="true"], [aria-selected="true"], [data-checked]):not([cmdk-item]) {
+    background-color: var(--row-selected);
+  }
+  &:active { background-color: var(--row-pressed); }
+  &:focus-visible { outline: 2px solid var(--row-focus); outline-offset: -2px; }
+}
+:is([data-slot="dropdown-menu-content"], [data-slot="context-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="context-menu-sub-content"]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+
+.setting-row { min-height: calc(var(--setting-row-min) - var(--row-gap)); padding-block: 11px; }
