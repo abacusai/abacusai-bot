@@ -258,7 +258,9 @@ export const composeNodeHost = async () => {
     },
     startRunner: () => routineRunner.start(),
     stopLocalScheduler: () => serviceHost.stopCronScheduler(),
-    note: (text) => phoneLane.note(text),
+    // Not the WhatsApp chat: the routines belong to the user's bots, not to it,
+    // and the server already sends the owner the review link for them.
+    note: () => console.log("[routines] move note not sent to the phone chat"),
     sendReviewLink: () => serviceHost.hostedRoutines.sendReviewLink(),
   };
   stopIfMigrated(routinesSetup);
