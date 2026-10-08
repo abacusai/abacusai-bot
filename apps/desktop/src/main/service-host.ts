@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import fs from "node:fs";
 /**
  * Composition root for the desktop services: constructs them, wires their
@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "path";
 
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
   connectorById,
   connectorForService,
@@ -181,8 +182,10 @@ import type {
   Routine,
   RoutineCreateInput,
   RoutineListItem,
+  RoutineRunner,
   RoutineUpdateInput,
 } from "@abacus-ai/contract/routines";
+import { InvalidInputError } from "@abacus-ai/contract/service-errors";
 import type {
   TerminalShellId,
   TerminalShellState,
@@ -236,6 +239,16 @@ import {
   type RenderDesignRequest,
 } from "./services/agent-tools/design-agent";
 import {
+  HostedRoutineRefusal,
+  HostedRoutines,
+  isHostedRoutineId,
+  routinesTransport,
+} from "./services/agent-tools/hosted-routines";
+import {
+  buildHostedRunPrompt,
+  type HostedRunRequest,
+} from "./services/agent-tools/hosted-run";
+import {
   applyMemoryAction,
   forgetAll,
   forgetEntryAt,
@@ -262,7 +275,9 @@ import {
   shouldPauseAfter,
   stuckRuns,
 } from "./services/agent-tools/routine-guards";
+import { readMigrationMarker } from "./services/agent-tools/routine-migration";
 import { buildRoutineFirePrompt } from "./services/agent-tools/routine-prompt";
+import { cleanSources, policyFor } from "./services/agent-tools/routine-reach";
 import {
   countRoutineRuns,
   readLastRoutineRun,
@@ -317,6 +332,7 @@ import {
   setExecBackend,
   setToolsetEnabled,
   readSettings,
+  credentialFor,
 } from "./services/config/settings";
 import {
   ConnectWatcher,
@@ -389,6 +405,7 @@ import {
 } from "./services/providers/abacus-connector-service";
 import {
   abacusRoutellmV1,
+  abacusUserAgent,
   hostPublicBase,
 } from "./services/providers/abacus-host";
 import {
@@ -518,7 +535,24 @@ const SELF_LANE_BOTS: Record<
  * so far, so an uncapped routine's per-fire cost grows forever. Wide enough
  * that a run of connector reads finishes between compactions.
  */
+/** A bot's chat with someone other than its owner: no pages, no reads, no files. */
+const SENDER_CHAT_POLICY: UnattendedPolicy = {
+  sources: [],
+  watchUrl: null,
+  files: false,
+};
+
+
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
+
+/** The longest an unattended run's agent may take to start. */
+const UNATTENDED_STARTUP_TIMEOUT_MS = 90_000;
+
+/** How long a finished turn waits for an error reported just after its idle. */
+const UNATTENDED_IDLE_GRACE_MS = 1_500;
+
+/** The folder every hosted routine run works in: one, kept out of the pickers. */
+const HOSTED_RUNS_FOLDER = "hosted-runs";
 
 /** Registry connector ids for platform service keys, dropping unknown ones. */
 const connectorIdsFor = (services: string[]): string[] =>
@@ -722,8 +756,7 @@ export class ServiceHost {
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
     checkoutToken: this.checkoutToken,
     heldSession: (sessionId) => {
-      const policy =
-        this.agentSessionManagerService.unattendedPolicy(sessionId);
+      const policy = this.heldPolicy(sessionId);
       if (policy == null) return null;
       // Only the hosted computer's own browser can open a page apart from
       // its profile; anywhere else an unattended run has no browser.
@@ -735,9 +768,22 @@ export class ServiceHost {
     },
   });
 
-  /** A session held to the unattended mode (a run nobody is watching). */
+  /**
+   * The reach a session is held to: a routine run's own, or for a bot's chat
+   * with anyone but its owner, nothing (no files, sends, routines or vault).
+   */
+  private heldPolicy(sessionId: string): UnattendedPolicy | null {
+    const held = this.agentSessionManagerService.unattendedPolicy(sessionId);
+    if (held != null) return held;
+    const owner = this.agentSessionManagerService.get(sessionId)?.owner;
+    return owner?.kind === "bot" && owner.role === "sender"
+      ? SENDER_CHAT_POLICY
+      : null;
+  }
+
+  /** A session held to the unattended mode (a run nobody is watching, or a stranger's chat). */
   private isUnattendedSession(sessionId: string): boolean {
-    return this.agentSessionManagerService.unattendedPolicy(sessionId) != null;
+    return this.heldPolicy(sessionId) != null;
   }
 
   /**
@@ -749,7 +795,8 @@ export class ServiceHost {
     const session = this.agentSessionManagerService.get(sessionId);
     if (
       session == null ||
-      this.agentSessionManagerService.isRoutineSession(sessionId)
+      this.agentSessionManagerService.isRoutineSession(sessionId) ||
+      this.isUnattendedSession(sessionId)
     )
       return false;
     return session.owner == null || session.owner.role === "forever";
@@ -850,6 +897,24 @@ export class ServiceHost {
    * One server for the small in-process toolsets. Reads the enabled set per
    * request, so toggles take effect without a new session.
    */
+  /** The account's routines on the server; empty and unasked on an old server. */
+  readonly hostedRoutines = new HostedRoutines({
+    call: routinesTransport({
+      baseUrl: abacusRoutellmV1,
+      key: () => {
+        const key = credentialFor("ABACUS_API_KEY");
+        return key.length > 0 ? key : null;
+      },
+      userAgent: abacusUserAgent,
+    }),
+    hasKey: () => credentialFor("ABACUS_API_KEY").length > 0,
+    onChanged: () =>
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      }),
+  });
+
   private readonly mcpAgentToolsServer = new McpAgentToolsServer({
     skillsService: this.skillsService,
     enabledToolsets: () => {
@@ -932,6 +997,13 @@ export class ServiceHost {
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
     isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
+    sessionRole: (sessionId) =>
+      this.agentSessionManagerService.get(sessionId)?.owner?.role ?? null,
+    routines: {
+      defaultRunner: () => this.defaultRoutineRunner(),
+      create: (input, options) => this.createRoutine(input, undefined, options),
+      hosted: this.hostedRoutines,
+    },
     ownActivity: (botId) => {
       const owned = this.agentSessionManagerService.listOwnedBy(botId);
       // The forever chat may predate owner stamps; the record pointer names it.
@@ -1878,8 +1950,7 @@ export class ServiceHost {
     resolveAuthEnv: () => buildAgentAuthEnv(),
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
-    resolveUnattended: (sessionId: string) =>
-      this.agentSessionManagerService.unattendedPolicy(sessionId),
+    resolveUnattended: (sessionId: string) => this.heldPolicy(sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
       if (state.status === "starting" || state.pid == null)
         this.modelSwitches.invalidate(sessionId);
@@ -4297,6 +4368,149 @@ export class ServiceHost {
     else this.pauseIfFailingRepeatedly(session.routineId);
   }
 
+  /**
+   * One hosted routine run on this computer, from the server's routine lane:
+   * a fresh session held to the unattended mode and the routine's declared
+   * reach, given the run's prompt, and stopped at its deadline. Resolves
+   * with how it ended and its final answer's text; never retried.
+   */
+  async runUnattended(request: HostedRunRequest): Promise<{
+    outcome: "completed" | "failed" | "timeout" | "not-started";
+    text: string;
+    /** It failed for want of credits. */
+    creditsOut?: boolean;
+  }> {
+    const target = await this.ensureRoutineWorkspace(HOSTED_RUNS_FOLDER);
+    if (target == null) return { outcome: "not-started", text: "" };
+    const session = this.agentSessionManagerService.create(target);
+    // Held before it can start; a session that cannot be held never runs.
+    if (
+      !this.agentSessionManagerService.holdUnattended(
+        session.id,
+        policyFor(
+          { sources: request.sources, reads: request.reads },
+          {
+            watchUrl: request.watchUrl,
+            watchPrompt: request.prompt,
+            privateInput: request.payload != null,
+            // Every hosted run shares one folder: no run reads another's.
+            files: false,
+          }
+        )
+      )
+    ) {
+      this.agentSessionManagerService.remove(target, session.id);
+      return { outcome: "not-started", text: "" };
+    }
+    this.emitEvent({
+      type: "local-cli-session-created",
+      workspaceId: target,
+      sessionId: session.id,
+      session,
+      emittedAt: new Date().toISOString(),
+    });
+    this.updateAgentSessionLabel(
+      target,
+      session.id,
+      `Routine: ${request.name}`
+    );
+
+    // The final answer is the last assistant message's text.
+    const texts = new Map<string, string>();
+    let lastMessage: string | null = null;
+    // Only what follows the run's own message counts: startup reports its
+    // own statuses, an idle among them.
+    let sent = false;
+    let turnStarted = false;
+    let settle!: (result: {
+      outcome: "completed" | "failed";
+      creditsOut?: boolean;
+    }) => void;
+    const settled = new Promise<{
+      outcome: "completed" | "failed";
+      creditsOut?: boolean;
+    }>((resolve) => {
+      settle = resolve;
+    });
+    // A failed turn can report its error just after its idle: the idle
+    // settles only once that has had a moment to arrive.
+    let idleTimer: NodeJS.Timeout | undefined;
+    const stopListening = this.onAgentEvent((sessionId, payload) => {
+      if (sessionId !== session.id || payload.type !== "event" || !sent) return;
+      const event = payload.event;
+      if (event.type === "text_delta") {
+        turnStarted = true;
+        const id = event.messageId ?? "message";
+        lastMessage = id;
+        texts.set(id, (texts.get(id) ?? "") + event.content);
+      } else if (event.type === "error") {
+        clearTimeout(idleTimer);
+        settle({
+          outcome: "failed",
+          creditsOut: ranOutOfAbacusCredits(event.error),
+        });
+      } else if (event.type === "status_changed") {
+        if (event.status !== AgentStatus.Idle) {
+          turnStarted = true;
+          clearTimeout(idleTimer);
+        } else if (turnStarted) {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(
+            () => settle({ outcome: "completed" }),
+            UNATTENDED_IDLE_GRACE_MS
+          );
+        }
+      }
+    });
+    const stop = async (): Promise<void> => {
+      clearTimeout(idleTimer);
+      stopListening();
+      await this.agentManagerService
+        .stopSessionAndWait(target, session.id)
+        .catch(() => undefined);
+    };
+
+    const started = await this.startAgentSession({
+      workspaceId: target,
+      sessionId: session.id,
+      // Startup comes out of the run's own time.
+      startupTimeoutMs: Math.min(
+        UNATTENDED_STARTUP_TIMEOUT_MS,
+        request.deadlineSecs * 1000
+      ),
+    });
+    if (!started.success) {
+      await stop();
+      return { outcome: "not-started", text: "" };
+    }
+    sent = true;
+    this.sendAgentMessage({
+      workspaceId: target,
+      sessionId: session.id,
+      message: buildHostedRunPrompt(request),
+      userText: { routineFire: true },
+    });
+
+    let timer: NodeJS.Timeout | undefined;
+    const deadline = new Promise<"timeout">((resolve) => {
+      timer = setTimeout(() => resolve("timeout"), request.deadlineSecs * 1000);
+      timer.unref?.();
+    });
+    try {
+      const ended = await Promise.race([settled, deadline]);
+      const text = lastMessage != null ? (texts.get(lastMessage) ?? "") : "";
+      if (ended === "timeout") return { outcome: "timeout", text };
+      return {
+        outcome: ended.outcome,
+        text,
+        ...(ended.creditsOut === true ? { creditsOut: true } : {}),
+      };
+    } finally {
+      if (timer != null) clearTimeout(timer);
+      await stop();
+    }
+  }
+
   /** A routine that keeps failing pauses itself rather than failing forever. */
   private pauseIfFailingRepeatedly(routineId: string): void {
     // Failures before the user last resumed it are the old streak.
@@ -4529,39 +4743,144 @@ export class ServiceHost {
   listRoutines(): RoutineListItem[] {
     const port = this.webhookService.port();
 
-    return listJobs().map((job) => ({
-      ...job,
-      nextRunAt: (() => {
-        if (!job.enabled) return null;
-        if (job.runAt != null) return job.runAt;
-        if (job.schedule == null) return null;
-        try {
-          return nextRun(job.schedule)?.getTime() ?? null;
-        } catch {
-          return null;
-        }
-      })(),
-      // The public relay URL once registered, loopback as fallback.
-      webhookUrl:
-        this.webhookRelay.publicUrlFor(job.webhookToken) ??
-        (job.webhookToken != null && port != null
-          ? `http://127.0.0.1:${port}/hooks/${job.webhookToken}`
-          : null),
-      webhookPublicPending:
-        job.webhookToken != null &&
-        job.enabled &&
-        this.webhookRelay.publicUrlFor(job.webhookToken) == null &&
-        this.webhookRelay.canRegister(),
-      botName:
-        job.botId != null
-          ? (this.botService.list().find((bot) => bot.id === job.botId)?.name ??
-            null)
-          : null,
-    }));
+    // A job moved to the server is listed once, as the server's.
+    const local = listJobs()
+      .filter((job) => job.serverId == null)
+      .map((job) => ({
+        ...job,
+        nextRunAt: (() => {
+          if (!job.enabled) return null;
+          if (job.runAt != null) return job.runAt;
+          if (job.schedule == null) return null;
+          try {
+            return nextRun(job.schedule)?.getTime() ?? null;
+          } catch {
+            return null;
+          }
+        })(),
+        // The public relay URL once registered, loopback as fallback.
+        webhookUrl:
+          this.webhookRelay.publicUrlFor(job.webhookToken) ??
+          (job.webhookToken != null && port != null
+            ? `http://127.0.0.1:${port}/hooks/${job.webhookToken}`
+            : null),
+        webhookPublicPending:
+          job.webhookToken != null &&
+          job.enabled &&
+          this.webhookRelay.publicUrlFor(job.webhookToken) == null &&
+          this.webhookRelay.canRegister(),
+        botName:
+          job.botId != null
+            ? (this.botService.list().find((bot) => bot.id === job.botId)
+                ?.name ?? null)
+            : null,
+      }));
+    return [...local, ...this.hostedRoutines.list()];
   }
 
-  createRoutine(input: RoutineCreateInput, id?: string): Routine {
-    const job = createJob(input, id);
+  /**
+   * Where a routine that names no runner goes: hosted on the hosted bot when
+   * the server keeps routines; local everywhere else, as always.
+   */
+  /**
+   * The hosted bot once its routines moved to the server, or while the server
+   * keeps them: every routine there is hosted.
+   */
+  hostedOnly(): boolean {
+    return (
+      this.platform === "web-host" &&
+      (this.hostedRoutines.capableNow() || readMigrationMarker() != null)
+    );
+  }
+
+  defaultRoutineRunner(): RoutineRunner {
+    return this.platform === "web-host" && this.hostedRoutines.capableNow()
+      ? "hosted"
+      : "local";
+  }
+
+  /**
+   * The one create path, for the `cronjob` tool, the Routines form and a
+   * bot's own forms: local into this computer's store, or hosted on the
+   * server, by the input's runner or this app's default. A hosted refusal
+   * (a free plan, say) throws HostedRoutineRefusal.
+   */
+  async createRoutine(
+    input: RoutineCreateInput,
+    id?: string,
+    /** The agent asked for it (the cronjob tool), not the user's own form. */
+    options: { byAgent?: boolean; runAtText?: string | null } = {}
+  ): Promise<Routine> {
+    // A hosted bot whose routines run on the server has no other scheduler:
+    // a local one there would never fire, and would sidestep the plan.
+    const runner = this.hostedOnly()
+      ? "hosted"
+      : (input.runner ?? this.defaultRoutineRunner());
+    if (runner === "hosted") {
+      // An old server keeps none: said as a refusal, never quietly made local.
+      if (!(await this.hostedRoutines.capability()))
+        throw new HostedRoutineRefusal("unavailable");
+      const kind =
+        input.kind ??
+        (input.reminderText != null
+          ? "reminder"
+          : input.watchUrl != null
+            ? "watch"
+            : input.webhook === true &&
+                (input.schedule ?? "").length === 0 &&
+                input.runAt == null
+              ? "event"
+              : "task");
+      const prompt = input.prompt.trim();
+      return this.hostedRoutines.create({
+        kind,
+        name: (input.name ?? "").trim() || prompt.slice(0, 60),
+        ...(kind === "reminder"
+          ? { reminderText: input.reminderText ?? prompt }
+          : { prompt }),
+        cron: (input.schedule ?? "").trim() || null,
+        // The user's own words for a moment go as written (wall time in the zone).
+        at: options.runAtText ?? input.runAt ?? null,
+        timezone: input.timezone ?? null,
+        notify: input.notify,
+        delivery: input.delivery ?? "default",
+        sources: input.sources ?? [],
+        reads: input.reads ?? [],
+        ownerBotId: input.botId ?? null,
+        watchUrl: input.watchUrl ?? null,
+        // A webhook goes with the schedule too: both fire it.
+        ...(kind === "event" || (input.webhook === true && kind !== "reminder")
+          ? { event: { source: "webhook" as const } }
+          : {}),
+        // The model's routines (reminders too) wait for the owner's approval;
+        // only the agent is ever named (the server refuses "user" from a bot key).
+        ...(options.byAgent === true ? { createdBy: "agent" as const } : {}),
+        // The caller's id when it gave one (an optimistic insert), so a retry
+        // of the same create is the same routine.
+        idempotencyKey: id ?? randomUUID(),
+      });
+    }
+    // What a local routine may reach: the user's own form sets it; what the
+    // agent asks for waits for the user to confirm it on the routine's page.
+    const { sources, refused } = cleanSources(input.sources ?? []);
+    const reads = [...new Set(input.reads ?? [])];
+    if (refused.length > 0 && options.byAgent === true)
+      throw new InvalidInputError(
+        `These cannot be a routine's sources: ${refused.join(", ")}.`
+      );
+    const reach =
+      sources.length > 0 || reads.length > 0 ? { sources, reads } : null;
+    const job = createJob(
+      {
+        ...input,
+        ...(reach != null
+          ? options.byAgent === true
+            ? { pendingReach: reach }
+            : { reach }
+          : {}),
+      },
+      id
+    );
     this.emitEvent({
       type: "cronjobs-updated",
       emittedAt: new Date().toISOString(),
@@ -4571,7 +4890,32 @@ export class ServiceHost {
     return job;
   }
 
-  updateRoutine(id: string, changes: RoutineUpdateInput): Routine {
+  async updateRoutine(
+    id: string,
+    changes: RoutineUpdateInput
+  ): Promise<Routine | null> {
+    if (isHostedRoutineId(id)) {
+      const { enabled, ...rest } = changes;
+      let routine =
+        rest.name != null ||
+        rest.prompt != null ||
+        rest.schedule != null ||
+        rest.runAt != null
+          ? await this.hostedRoutines.update(id, {
+              ...(rest.name != null ? { name: rest.name } : {}),
+              ...(rest.prompt != null ? { prompt: rest.prompt } : {}),
+              ...(rest.schedule != null ? { cron: rest.schedule } : {}),
+              ...(rest.runAt != null ? { at: rest.runAt } : {}),
+            })
+          : null;
+      if (enabled != null)
+        routine = await this.hostedRoutines.setEnabled(id, enabled);
+      return routine;
+    }
+    return this.updateLocalRoutine(id, changes);
+  }
+
+  private updateLocalRoutine(id: string, changes: RoutineUpdateInput): Routine {
     const job = updateJob(id, changes);
     this.emitEvent({
       type: "cronjobs-updated",
@@ -4582,6 +4926,10 @@ export class ServiceHost {
   }
 
   async removeRoutine(id: string): Promise<void> {
+    if (isHostedRoutineId(id)) {
+      await this.hostedRoutines.remove(id);
+      return;
+    }
     const job = getJob(id);
     removeJob(id);
     try {
@@ -4624,6 +4972,15 @@ export class ServiceHost {
     trigger: CronTrigger,
     payload: string | null = null
   ): Promise<RoutineRunStart> {
+    // A hosted routine runs on the server's side; this asks it to, now.
+    if (isHostedRoutineId(jobId)) {
+      try {
+        await this.hostedRoutines.runNow(jobId);
+        return "started";
+      } catch {
+        return "failed";
+      }
+    }
     const start = this.startRoutineRun(jobId, trigger, payload);
     const pending =
       this.routineRunStarts.get(jobId) ?? new Set<Promise<RoutineRunStart>>();
@@ -4678,9 +5035,12 @@ export class ServiceHost {
     if (getJob(jobId) == null) return "skipped";
     const home = this.routineHome(job);
 
+    // Unattended unless the user turned full access on for this routine.
+    const unattended = job.access !== "full";
     const prompt = this.withBotVoice(
       job.botId,
       buildRoutineFirePrompt(job, trigger, payload, {
+        unattended,
         dir: home,
         // The project when there is one; the run's cwd is that folder and its
         // records sit inside it. Otherwise the routine's own folder is both.
@@ -4722,8 +5082,30 @@ export class ServiceHost {
     });
     this.updateAgentSessionLabel(target, session.id, `Routine: ${job.name}`);
 
+    // Held to what the user confirmed it may reach; a run that cannot be held
+    // does not start in any other mode.
+    if (
+      unattended &&
+      !this.agentSessionManagerService.holdUnattended(
+        session.id,
+        policyFor(job.reach, { privateInput: payload != null })
+      )
+    ) {
+      this.agentSessionManagerService.setRunOutcome(session.id, "failed");
+      recordRun(jobId, `${ROUTINE_RESULTS.startFailedPrefix}held`, trigger, {
+        kind: "start-failed",
+        sessionId: session.id,
+      });
+      this.emitEvent({
+        type: "cronjobs-updated",
+        emittedAt: new Date().toISOString(),
+      });
+      return "failed";
+    }
+
     // Nobody is at the keyboard: a tool waiting for approval would wait
-    // until the reaper fails the run.
+    // until the reaper fails the run. A full-access routine runs in the
+    // default mode; any other is held unattended whatever this asks.
     const started = await this.startAgentSession({
       workspaceId: target,
       sessionId: session.id,

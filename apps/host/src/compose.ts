@@ -14,6 +14,11 @@ import { mainEventBus } from "#main/rpc/event-bus";
 import { createTables } from "#main/rpc/tables";
 import { createEventTrackers } from "#main/rpc/trackers";
 import { ServiceHost } from "#main/service-host";
+import {
+  listJobs,
+  markMovedToServer,
+  markNotMoved,
+} from "#main/services/agent-tools/cron-store";
 import { PrefsStore } from "#main/services/config/prefs-store";
 import { resolveAbacusApiKey } from "#main/services/providers/abacus";
 import {
@@ -23,9 +28,15 @@ import {
 
 import { createNodeAppOperations } from "./app-operations";
 import { createWebAuth, followProvisionedKey } from "./auth-web";
+import {
+  setUpHostedRoutines,
+  stopIfMigrated,
+  type HostedRoutinesSetupDeps,
+} from "./hosted-routines-setup";
 import { HostLease } from "./lease";
 import { NudgeAgenda } from "./nudge-agenda";
 import { channelsTransport, PhoneLane } from "./phone-lane";
+import { RoutineEntryRunner } from "./routine-runner";
 import { shutdown } from "./shutdown";
 
 const refuse = (procedure: string) => () => {
@@ -75,6 +86,7 @@ export const composeNodeHost = async () => {
     () =>
       serviceHost.aguiRelay.busy ||
       phoneLane.holdsHost ||
+      routineRunner.busy ||
       serviceHost
         .listRoutineHistories()
         .some(({ id }) =>
@@ -215,6 +227,43 @@ export const composeNodeHost = async () => {
     )
       nudgeAgenda.languageCallEnded();
   });
+  // Server-kept routines: the routine lane's runs, and this computer's
+  // routines moved there once. Off until the server says it keeps them.
+  const routineRunner = new RoutineEntryRunner({
+    call: channelsTransport({
+      baseUrl: abacusRoutellmV1,
+      key: resolveAbacusApiKey,
+      userAgent: abacusUserAgent,
+    }),
+    hasKey: () => resolveAbacusApiKey() != null,
+    run: (request) => serviceHost.runUnattended(request),
+    activity: () => lease.activity(),
+  });
+  let disposed = false;
+  const routinesSetup: HostedRoutinesSetupDeps = {
+    hasKey: () => resolveAbacusApiKey() != null,
+    capability: () => serviceHost.hostedRoutines.capability(),
+    refresh: () => serviceHost.hostedRoutines.refresh(),
+    migration: {
+      jobs: listJobs,
+      create: (request) => serviceHost.hostedRoutines.create(request),
+      pause: (id) => serviceHost.hostedRoutines.setEnabled(id, false),
+      remove: (id) => serviceHost.hostedRoutines.remove(id),
+      moved: (jobId, serverId) => {
+        markMovedToServer(jobId, serverId.replace(/^hosted-/, ""));
+      },
+      notMoved: (jobId, reason) => {
+        markNotMoved(jobId, reason);
+      },
+    },
+    startRunner: () => routineRunner.start(),
+    stopLocalScheduler: () => serviceHost.stopCronScheduler(),
+    note: (text) => phoneLane.note(text),
+    sendReviewLink: () => serviceHost.hostedRoutines.sendReviewLink(),
+  };
+  stopIfMigrated(routinesSetup);
+  const routinesReady = setUpHostedRoutines(routinesSetup, () => disposed);
+
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.
   const stopConnected = serviceHost.onLaneNote("phone", (note) =>
@@ -231,11 +280,15 @@ export const composeNodeHost = async () => {
     appOps,
     phoneLane,
     nudgeAgenda,
+    routineRunner,
+    routinesReady,
     dispose: async () => {
+      disposed = true;
       stopProvisionedKey();
       phoneLane.stop();
       nudgeAgenda.stop();
       stopTurns();
+      routineRunner.stop();
       stopConnected();
       stopOutput();
       trackers.dispose();

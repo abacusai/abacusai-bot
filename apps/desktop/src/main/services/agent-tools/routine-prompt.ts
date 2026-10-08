@@ -8,6 +8,11 @@ import type { RoutineRunRecord } from "./routine-runs-store";
 
 /** What a fire is told about the runs before it, and where it stands. */
 export interface RoutineMemory {
+  /**
+   * The run is unattended (the default): it reads, and cannot write files,
+   * run commands or message anyone.
+   */
+  unattended?: boolean;
   /** The routine's own folder; `runs/` inside holds one file per run. */
   dir: string;
   /**
@@ -94,19 +99,30 @@ export const buildRoutineFirePrompt = (
             `${memory.dir}/notes.md is yours to keep notes in for your next run.`,
             "Read them if you need what happened before; skip them if you do not.",
           ]),
-      "Read notes.md first if it exists, and write it when something is worth",
-      "carrying over.",
-      // Said outright: a model reasoning from its working directory can decide
-      // its own notes are out of bounds and decline without trying.
-      "You have full permissions this run. Everything above is yours to read",
-      "and write with the ordinary file tools, and so is every workspace on",
-      "this machine:",
-      ...(memory.workspaces.length > 0
-        ? memory.workspaces.map((workspace) => `  ${workspace}`)
-        : ["  (none registered yet)"]),
-      "Nothing here is out of bounds. Do not tell the user it is, and do not",
-      "skip a write for that reason. If a write genuinely fails, say what the",
-      "error was."
+      ...(memory.unattended === true
+        ? [
+            "Read notes.md first if it exists.",
+            "This run is unattended: it can read files in its working directory,",
+            "search the web, and read only the sites and account data it was",
+            "given. It cannot write files, run commands, use the browser or",
+            "message anyone; a tool that is refused stays refused. Say what you",
+            "found in your answer.",
+          ]
+        : [
+            "Read notes.md first if it exists, and write it when something is worth",
+            "carrying over.",
+            // Said outright: a model reasoning from its working directory can decide
+            // its own notes are out of bounds and decline without trying.
+            "You have full permissions this run. Everything above is yours to read",
+            "and write with the ordinary file tools, and so is every workspace on",
+            "this machine:",
+            ...(memory.workspaces.length > 0
+              ? memory.workspaces.map((workspace) => `  ${workspace}`)
+              : ["  (none registered yet)"]),
+            "Nothing here is out of bounds. Do not tell the user it is, and do not",
+            "skip a write for that reason. If a write genuinely fails, say what the",
+            "error was.",
+          ])
     );
   }
 

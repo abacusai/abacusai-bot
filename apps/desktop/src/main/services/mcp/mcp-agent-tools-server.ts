@@ -36,6 +36,12 @@ import {
   type MessagingPlatformId,
   describePlatformForAgent,
 } from "@abacus-ai/contract/messaging";
+import type {
+  Routine,
+  RoutineCreateInput,
+  RoutineListItem,
+  RoutineRunner,
+} from "@abacus-ai/contract/routines";
 
 import { emitHostEvent } from "#main/rpc/emit";
 
@@ -49,6 +55,11 @@ import {
   type RoutineRunStart,
 } from "../agent-tools/cron-store";
 import { exportDeckPdf } from "../agent-tools/deck-pdf";
+import {
+  HostedRoutineRefusal,
+  isHostedRoutineId,
+  type HostedRoutines,
+} from "../agent-tools/hosted-routines";
 import {
   haCallService,
   haGetState,
@@ -90,6 +101,16 @@ import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
 import { McpHttpServer, type McpToolListing } from "./mcp-http-server";
 import { agentTool, AGENT_TOOLS } from "./tools";
+import {
+  approvalNote,
+  describeHostedRoutine,
+  hostedCreatedNote,
+  hostedCreateInput,
+  hostedRefusalNote,
+  requestedReads,
+  requestedRunner,
+  requestedSources,
+} from "./tools/cronjob-hosted";
 import type { ToolDefinition, ToolResult } from "./tools/definition";
 import { readTranscriptTail } from "./transcript-tail";
 
@@ -205,6 +226,22 @@ export interface McpAgentToolsServerOptions {
   routineEditorFor?: (sessionId: string) => string | null;
   /** A run nobody is watching: it gets only the unattended allowlist. */
   isUnattended?: (sessionId: string) => boolean;
+  /** What a bot-owned session is to its bot: its own chat, or one with someone else. */
+  sessionRole?: (sessionId: string) => "forever" | "sender" | "routine" | null;
+  /**
+   * Routines beyond this computer's own: the one create path both runners
+   * share, and the server's hosted routines. Absent, every routine is local.
+   */
+  routines?: {
+    /** The runner a create that names none gets here. */
+    defaultRunner: () => RoutineRunner;
+    /** ServiceHost.createRoutine: local or hosted by `input.runner`. */
+    create: (
+      input: RoutineCreateInput,
+      options?: { byAgent?: boolean; runAtText?: string | null }
+    ) => Promise<Routine>;
+    hosted: HostedRoutines;
+  };
   /** Every conversation a bot owns, with its agent log; for my_activity. */
   ownActivity?: (botId: string) => Array<{
     sessionId: string;
@@ -621,6 +658,13 @@ export class McpAgentToolsServer extends McpHttpServer {
     const action = String(args.action ?? "");
     const id = typeof args.id === "string" ? args.id.trim() : "";
 
+    // A routine runs as the user: a chat with someone else neither sees nor
+    // touches any, before any runner is chosen (a hosted-only host's too).
+    if (this.isSenderChat(callerSession))
+      return this.err(
+        "Routines are set up by the user, not from a chat with someone else."
+      );
+
     try {
       if (action === "list") {
         const jobs = listJobs();
@@ -643,15 +687,30 @@ export class McpAgentToolsServer extends McpHttpServer {
 
         const none =
           callerBot == null ? "No routines yet." : "No routines of yours yet.";
+        // Hosted routines are the account's, listed beside this computer's;
+        // a bot sees its own, and a chat with someone else sees none.
+        const hosted = this.visibleHosted(callerSession).map(
+          describeHostedRoutine
+        );
+        const local = visible
+          .filter((job) => job.serverId == null)
+          .map(describeJob);
 
         return this.ok(
-          visible.length === 0
+          local.length + hosted.length === 0
             ? `${none}${suffix}`
-            : visible.map(describeJob).join("\n\n") + suffix
+            : [...local, ...hosted].join("\n\n") + suffix
         );
       }
 
       if (action === "create") {
+        const runner =
+          requestedRunner(args) ??
+          this.options.routines?.defaultRunner() ??
+          "local";
+        if (runner === "hosted" && this.options.routines != null)
+          return await this.createHostedRoutine(args, callerSession);
+
         const schedule = typeof args.schedule === "string" ? args.schedule : "";
         const prompt = typeof args.prompt === "string" ? args.prompt : "";
         const webhook = args.webhook === true;
@@ -666,14 +725,25 @@ export class McpAgentToolsServer extends McpHttpServer {
             ? (this.options.botIdForSession?.(callerSession) ?? null)
             : null;
 
-        const job = createJob({
+        const input = {
           schedule: schedule.trim().length > 0 ? schedule : null,
           webhook,
           prompt,
           name: typeof args.name === "string" ? args.name : undefined,
           workspaceId: this.options.workspaceId?.() ?? null,
           botId,
-        });
+        };
+        // What it may read, as asked: held until the user allows it.
+        const sources = requestedSources(args);
+        const reads = requestedReads(args);
+        // The one create path, local here; without a host, the store itself.
+        const job =
+          this.options.routines != null
+            ? await this.options.routines.create(
+                { ...input, runner: "local", sources, reads },
+                { byAgent: true }
+              )
+            : createJob(input);
         this.options.onCronChanged?.();
 
         // Every routine runs once the moment it is set up: waiting for the
@@ -714,8 +784,19 @@ export class McpAgentToolsServer extends McpHttpServer {
             ? `\nIt can also be fired by POST to the webhook shown in the Routines panel.`
             : "";
 
+        // Its runs are unattended: say what that means, and that what it was
+        // asked to read waits for the user.
+        const reach =
+          " Its runs are unattended: they search the web and read its own folder, but " +
+          "cannot write files, run commands or message anyone, unless the user gives it " +
+          "full access on its page." +
+          (sources.length + reads.length > 0
+            ? " It reads nothing you asked for (" +
+              [...reads, ...sources].join(", ") +
+              ") until the user allows it on the routine's page: tell them."
+            : "");
         return this.ok(
-          `Created. ${delivery}${first}${hook}\n\n${describeJob(job)}`
+          `Created. ${delivery}${reach}${first}${hook}\n\n${describeJob(job)}`
         );
       }
 
@@ -723,6 +804,25 @@ export class McpAgentToolsServer extends McpHttpServer {
         return this.err(
           `"${action}" needs an id. Use action "list" to see them.`
         );
+
+      if (isHostedRoutineId(id) && this.options.routines != null) {
+        // Only what this caller may see may be touched: a bot its own, a
+        // chat with someone else nothing.
+        if (
+          !this.visibleHosted(callerSession).some(
+            (routine) => routine.id === id
+          )
+        )
+          return this.err(
+            `Routine ${id} is not yours to ${action}, or does not exist.`
+          );
+        return await this.hostedRoutineAction(
+          action,
+          id,
+          args,
+          this.callerBot(callerSession)
+        );
+      }
 
       // A bot may change or fire only its own routines: `list` hides the
       // rest, but an id read off the Routines panel or an earlier turn must
@@ -808,6 +908,177 @@ export class McpAgentToolsServer extends McpHttpServer {
       return this.err(`Unknown action "${action}".`);
     } catch (error) {
       return this.err(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /** The bot behind a session, or null for the user's own. */
+  private callerBot(callerSession?: string): string | null {
+    return callerSession != null
+      ? (this.options.botIdForSession?.(callerSession) ?? null)
+      : null;
+  }
+
+  /** A bot's chat with someone other than the user: never near the user's routines. */
+  private isSenderChat(callerSession?: string): boolean {
+    return (
+      callerSession != null &&
+      this.options.sessionRole?.(callerSession) === "sender"
+    );
+  }
+
+  /** The hosted routines a caller may see: a bot its own, the user all. */
+  private visibleHosted(callerSession?: string): RoutineListItem[] {
+    if (this.isSenderChat(callerSession)) return [];
+    const bot = this.callerBot(callerSession);
+    const all = this.options.routines?.hosted.list() ?? [];
+    return bot == null ? all : all.filter((routine) => routine.botId === bot);
+  }
+
+  /** A hosted create: the server's answer, or its refusal, said to the model. */
+  private async createHostedRoutine(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
+    // A routine runs as the user; nobody else's chat may set one up.
+    if (this.isSenderChat(callerSession))
+      return this.err(
+        "Routines that run on their own are set up by the user, not from a chat with someone else."
+      );
+    // A bot's own chat makes the bot's routine, and only that.
+    const botId = this.callerBot(callerSession);
+    const { input, runAtText } = hostedCreateInput(args, botId);
+    if (
+      (input.prompt ?? "").trim().length === 0 ||
+      ((input.schedule ?? "").length === 0 &&
+        runAtText == null &&
+        input.webhook !== true)
+    )
+      return this.err(
+        "A prompt (or reminder_text), and a schedule, run_at or webhook: true, are required."
+      );
+    try {
+      const routine = await this.options.routines!.create(input, {
+        byAgent: true,
+        runAtText,
+      });
+      this.options.onCronChanged?.();
+      const row = this.options.routines!.hosted.find(routine.id);
+      return this.ok(
+        row != null
+          ? hostedCreatedNote(row, !this.channelFor(callerSession).pane)
+          : `Created ${routine.id}.`
+      );
+    } catch (error) {
+      if (error instanceof HostedRoutineRefusal)
+        return this.ok(hostedRefusalNote(error));
+      throw error;
+    }
+  }
+
+  /** pause, resume, remove, update, run or approval_link on a hosted routine, by its id. */
+  private async hostedRoutineAction(
+    action: string,
+    id: string,
+    args: Record<string, unknown>,
+    /** The calling bot: the server refuses it another bot's routine too. */
+    botId: string | null
+  ): Promise<ToolResult> {
+    const hosted = this.options.routines!.hosted;
+    try {
+      if (action === "approval_link") {
+        // The server sends it to the owner itself; the model never sees it.
+        const sent = await hosted.approvalLink(id);
+        return this.ok(
+          sent == null
+            ? `${id} is not waiting for approval.`
+            : sent
+              ? `The link to allow it was sent to the user again (on WhatsApp, else by email). Tell them so in one line, in their language. Never write a link yourself.`
+              : "The server did not send the link again just now. Tell the user briefly, in their language, to use the one it sent them before."
+        );
+      }
+      if (action === "remove") {
+        await hosted.remove(id, botId);
+        this.options.onCronChanged?.();
+        return this.ok(`Removed ${id}.`);
+      }
+      if (action === "pause" || action === "resume") {
+        const routine = await hosted.setEnabled(id, action === "resume", botId);
+        this.options.onCronChanged?.();
+        return this.ok(
+          (routine != null
+            ? describeHostedRoutine(routine)
+            : `${action}d ${id}.`) +
+            (routine != null && routine.hosted?.pendingConfirmation === true
+              ? `\n\n${approvalNote(routine)}`
+              : "")
+        );
+      }
+      if (action === "run") {
+        await hosted.runNow(id, botId);
+        return this.ok(
+          `Started ${id} on the server; its result goes to the user the usual way, not here.`
+        );
+      }
+      if (action === "update") {
+        // The user's words for a moment go as written.
+        const runAt =
+          typeof args.run_at === "string" && args.run_at.trim().length > 0
+            ? args.run_at.trim()
+            : null;
+        const sources = requestedSources(args);
+        const reads = requestedReads(args);
+        const changes = {
+          ...(typeof args.name === "string" && args.name.trim().length > 0
+            ? { name: args.name.trim() }
+            : {}),
+          ...(typeof args.prompt === "string" && args.prompt.trim().length > 0
+            ? { prompt: args.prompt.trim() }
+            : {}),
+          ...(typeof args.schedule === "string" &&
+          args.schedule.trim().length > 0
+            ? { cron: args.schedule.trim() }
+            : {}),
+          ...(runAt != null ? { at: runAt } : {}),
+          ...(sources.length > 0 ? { sources } : {}),
+          ...(reads.length > 0 ? { reads } : {}),
+          ...(typeof args.watch_url === "string" &&
+          args.watch_url.trim().length > 0
+            ? { watchUrl: args.watch_url.trim() }
+            : {}),
+          ...(typeof args.timezone === "string" &&
+          args.timezone.trim().length > 0
+            ? { timezone: args.timezone.trim() }
+            : {}),
+        };
+        const enabled =
+          typeof args.enabled === "boolean" ? args.enabled : undefined;
+        if (Object.keys(changes).length === 0 && enabled == null)
+          return this.err(
+            "Nothing to update: give a schedule, run_at, timezone, a prompt, a name, or enabled."
+          );
+        let routine =
+          Object.keys(changes).length > 0
+            ? await hosted.update(id, changes, botId)
+            : null;
+        if (enabled != null)
+          routine = await hosted.setEnabled(id, enabled, botId);
+        this.options.onCronChanged?.();
+        // A change to what it does or reads waits for the user's approval.
+        const approval =
+          routine != null && routine.hosted?.pendingConfirmation === true
+            ? `\n\nThis change does not take effect until the user approves it. ${approvalNote(routine)}`
+            : "";
+        return this.ok(
+          (routine != null
+            ? describeHostedRoutine(routine)
+            : `Updated ${id}.`) + approval
+        );
+      }
+      return this.err(`Unknown action "${action}".`);
+    } catch (error) {
+      if (error instanceof HostedRoutineRefusal)
+        return this.ok(hostedRefusalNote(error, action));
+      throw error;
     }
   }
 

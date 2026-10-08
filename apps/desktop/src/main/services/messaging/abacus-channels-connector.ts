@@ -48,6 +48,12 @@ type InboxEntry = {
   channel: string;
   sender: string | null;
   text: string;
+  /** Where it was said: the owner's own DM with the bot, or a group the bot is in. */
+  chat?: "dm" | "group";
+  /** The group's id on the platform, for a group message. */
+  chat_id?: string;
+  /** False when someone other than the linked owner said it. */
+  from_owner?: boolean;
   /** Small files (a Telegram photo) ride inline from the server. */
   attachments?: Array<{
     name?: string;
@@ -74,6 +80,25 @@ type PairResponse = {
   display_name?: string | null;
   /** What to encode as a QR when the link is meant for a phone. */
   qr_data?: string;
+};
+
+/** How a Telegram group message's sender reads when the server names no chat. */
+const TELEGRAM_GROUP_SENDER = / in group "(.*)"$/;
+
+/**
+ * The chat an entry belongs to: the owner's own DM, or a group (or anyone
+ * else), which goes through the sender path and its held, approval-gated chat.
+ */
+export const entryChatId = (entry: {
+  chat?: string;
+  chat_id?: string;
+  from_owner?: boolean;
+  sender: string | null;
+}): string => {
+  const titled = TELEGRAM_GROUP_SENDER.exec(entry.sender ?? "")?.[1];
+  if (entry.chat !== "group" && entry.from_owner !== false && titled == null)
+    return SELF_CHAT_ID;
+  return `group:${entry.chat_id ?? titled ?? "unknown"}`;
 };
 
 export const isWebUrl = (url: string): boolean => {
@@ -171,7 +196,8 @@ export class AbacusChannelsConnector implements MessagingConnector {
     text: string,
     replyContext?: Record<string, string>
   ): Promise<void> {
-    if (chatId !== SELF_CHAT_ID)
+    // Anywhere but the owner's DM, only an answer to a message said there.
+    if (chatId !== SELF_CHAT_ID && replyContext?.message_id == null)
       throw new Error(
         "The Abacus AI bot only talks to you. It cannot message other people."
       );
@@ -442,13 +468,14 @@ export class AbacusChannelsConnector implements MessagingConnector {
 
   private deliver(entry: InboxEntry): void {
     if (typeof entry.text !== "string" || entry.text.length === 0) return;
+    const chatId = entryChatId(entry);
     // Inline files land in the messaging media folder so the agent can open them.
     const attachments = (entry.attachments ?? []).flatMap((file) => {
       if (file.data_b64 == null || file.data_b64.length === 0) return [];
       try {
         const path = saveInboundMedia(
           this.id,
-          SELF_CHAT_ID,
+          chatId,
           file.name ?? "file",
           Buffer.from(file.data_b64, "base64")
         );
@@ -463,9 +490,9 @@ export class AbacusChannelsConnector implements MessagingConnector {
       }
     });
     this.callbacks.onMessage({
-      userId: SELF_CHAT_ID,
+      userId: chatId,
       userName: entry.sender ?? null,
-      chatId: SELF_CHAT_ID,
+      chatId,
       text: entry.text,
       ...(attachments.length > 0 ? { attachments } : {}),
       replyContext: { message_id: entry.id },

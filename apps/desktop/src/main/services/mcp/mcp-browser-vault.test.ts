@@ -1354,6 +1354,25 @@ describe("Abacus.AI's own pages and APIs", () => {
     expect(page.loads).toEqual([]);
   });
 
+  // The fence sits above the engine: the Electron views, the hosted
+  // Chromium and the user's Chrome (relay) all come through this server.
+  it("include a routine's approval page, on the app host and the API host", async () => {
+    for (const url of [
+      "https://apps.abacus.ai/api/abacusaibotRoutine/approval/tok123",
+      "https://routellm.abacus.ai/api/abacusaibotRoutine/approval/tok123",
+      "apps.abacus.ai/api/abacusaibotRoutine/approval/tok123?ok=1",
+    ]) {
+      const result = await call("browser_navigate", { action: "goto", url });
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("Abacus.AI's own pages");
+    }
+    const script = await call("browser_execute", {
+      code: "location.href = 'https://apps.abacus.ai/api/abacusaibotRoutine/approval/tok123'",
+    });
+    expect(script.isError).toBe(true);
+    expect(page.loads).toEqual([]);
+  });
+
   it("are never opened by clicking a link to one", async () => {
     await snapshot();
     page.linkHref = "https://abacus.ai/app/vault/payment?r=abc";

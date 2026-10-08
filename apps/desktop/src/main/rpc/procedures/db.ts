@@ -117,13 +117,13 @@ export const dbRouter = impl.db.router({
   routines: {
     snapshot: impl.db.routines.snapshot.handler(routines.snapshot),
     changes: impl.db.routines.changes.handler(routines.changes),
-    insert: impl.db.routines.insert.handler(({ input, context }) => {
+    insert: impl.db.routines.insert.handler(async ({ input, context }) => {
       const { id, ...create } = input;
-      const routine = context.deps.serviceHost.createRoutine(create, id);
+      const routine = await context.deps.serviceHost.createRoutine(create, id);
       return echo(context.deps.tables.routines, routine.id);
     }),
-    update: impl.db.routines.update.handler(({ input, context }) => {
-      context.deps.serviceHost.updateRoutine(input.id, input.patch);
+    update: impl.db.routines.update.handler(async ({ input, context }) => {
+      await context.deps.serviceHost.updateRoutine(input.id, input.patch);
       return echo(context.deps.tables.routines, input.id);
     }),
     delete: impl.db.routines.delete.handler(async ({ input, context }) => {

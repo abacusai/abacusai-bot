@@ -82,6 +82,17 @@ export const RoutineCreateInputSchema = v.object({
   prompt: v.string(),
   workspaceId: v.optional(v.nullable(v.string())),
   botId: v.optional(v.nullable(v.string())),
+  runner: v.optional(v.picklist(["local", "hosted"])),
+  kind: v.optional(v.picklist(["reminder", "task", "watch", "event"])),
+  timezone: v.optional(v.nullable(v.string())),
+  notify: v.optional(v.picklist(["always", "relevant"])),
+  delivery: v.optional(v.picklist(["default", "whatsapp", "email", "panel"])),
+  sources: v.optional(v.array(v.string())),
+  reads: v.optional(
+    v.array(v.picklist(["gmail.search", "gmail.read", "calendar.read"]))
+  ),
+  watchUrl: v.optional(v.nullable(v.string())),
+  reminderText: v.optional(v.nullable(v.string())),
 });
 
 export const RoutineUpdateInputSchema = v.object({
@@ -93,6 +104,18 @@ export const RoutineUpdateInputSchema = v.object({
   botId: v.optional(v.nullable(v.string())),
   workspaceId: v.optional(v.nullable(v.string())),
   webhook: v.optional(v.boolean()),
+  access: v.optional(v.picklist(["unattended", "full"])),
+  reach: v.optional(
+    v.nullable(
+      v.object({
+        sources: v.array(v.string()),
+        reads: v.array(
+          v.picklist(["gmail.search", "gmail.read", "calendar.read"])
+        ),
+      })
+    )
+  ),
+  confirmPendingReach: v.optional(v.boolean()),
 });
 
 const NullableTimestamp = v.nullable(v.number());

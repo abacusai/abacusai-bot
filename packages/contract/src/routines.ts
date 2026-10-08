@@ -36,6 +36,79 @@ export interface RoutineRun {
   attemptId: string | null;
 }
 
+/**
+ * Where a routine runs: `local`, on this computer's own scheduler while the
+ * app runs; `hosted`, kept and timed by the server and run on the user's
+ * hosted bot (a reminder is sent by the server itself).
+ */
+export type RoutineRunner = "local" | "hosted";
+
+/** A hosted routine's kind: a reminder sends fixed text and runs nothing. */
+export type HostedRoutineKind = "reminder" | "task" | "watch" | "event";
+
+/** `relevant`: delivered only when the run says its condition holds. */
+export type HostedRoutineNotify = "always" | "relevant";
+
+export type HostedRoutineDelivery = "default" | "whatsapp" | "email" | "panel";
+
+/** One finished hosted run, as the server reports it. */
+export interface HostedRoutineRun {
+  id: string;
+  /** The routine's id in the Routines table, when the server names it. */
+  routineId: string | null;
+  name: string | null;
+  /**
+   * `queued`, `running` or `done`; for a failed run, why (`missed`,
+   * `timeout`, `payment_required`, `plan_limit`, `no_host`, ...).
+   */
+  status: string;
+  at: number | null;
+  /** `whatsapp`, `email` or `panel`. */
+  deliveredVia: string | null;
+  /** A done run whose answer was not worth sending (`notify: relevant`) is false. */
+  delivered: boolean | null;
+  /** What the run reported. */
+  summary: string | null;
+}
+
+/**
+ * Account data a routine may read unattended, by connector read: none unless
+ * declared, and only what the routine needs.
+ */
+export type RoutineRead = "gmail.search" | "gmail.read" | "calendar.read";
+
+/** What an unattended run of a routine may reach, as the user confirmed it. */
+export interface RoutineReach {
+  /** URL prefixes its runs may read pages under. */
+  sources: string[];
+  /** Account data its runs may read. */
+  reads: RoutineRead[];
+}
+
+/** What a hosted routine row carries beyond a local one. */
+export interface HostedRoutineInfo {
+  kind: HostedRoutineKind;
+  /** The IANA zone its schedule is read in. */
+  timezone: string | null;
+  notify: HostedRoutineNotify;
+  delivery: HostedRoutineDelivery;
+  /** URL prefixes its runs may read pages under. */
+  sources: string[];
+  /** Account data its runs may read. */
+  reads: RoutineRead[];
+  watchUrl: string | null;
+  /**
+   * Made or changed by the agent and not yet confirmed by the user: it does
+   * not run until they allow it, at a link the server sends them itself.
+   */
+  pendingConfirmation: boolean;
+  /** The server sent the owner this version's approval link (WhatsApp, else email). */
+  approvalSent: boolean;
+  /** Why the server paused it, when it did. */
+  pausedReason: string | null;
+  lastRun: HostedRoutineRun | null;
+}
+
 export interface Routine {
   id: string;
   name: string;
@@ -54,6 +127,20 @@ export interface Routine {
   lastRunAt: number | null;
   lastResult: string | null;
   runs: RoutineRun[];
+  /** Absent on routines from before runners: local. */
+  runner?: RoutineRunner;
+  /** A local routine moved to the server: its id there. It no longer fires here. */
+  serverId?: string | null;
+  /**
+   * How a local routine runs: unattended (the default; no shell, no writes,
+   * no sends, and only `reach`) or with full access, which only the user
+   * turns on, confirming it.
+   */
+  access?: "unattended" | "full";
+  /** What a local routine's unattended runs may reach, as the user confirmed it. */
+  reach?: RoutineReach | null;
+  /** Reach the agent asked for and the user has not confirmed: not used until they do. */
+  pendingReach?: RoutineReach | null;
 }
 
 export interface RoutineListItem extends Routine {
@@ -64,6 +151,8 @@ export interface RoutineListItem extends Routine {
    */
   webhookPublicPending: boolean;
   botName: string | null;
+  /** Set on a hosted routine's row. */
+  hosted?: HostedRoutineInfo;
 }
 
 export interface RoutineCreateInput {
@@ -75,6 +164,21 @@ export interface RoutineCreateInput {
   prompt: string;
   workspaceId?: string | null;
   botId?: string | null;
+  /** Where it runs; absent picks this app's default (see createRoutine). */
+  runner?: RoutineRunner;
+  /** Hosted only. */
+  kind?: HostedRoutineKind;
+  timezone?: string | null;
+  notify?: HostedRoutineNotify;
+  delivery?: HostedRoutineDelivery;
+  /** URL prefixes its runs may read pages under. */
+  sources?: string[];
+  /** Account data its runs may read; none unless declared. */
+  reads?: RoutineRead[];
+  /** The one page a hosted watch run opens. */
+  watchUrl?: string | null;
+  /** A reminder's fixed text, sent as written. */
+  reminderText?: string | null;
 }
 
 export type RoutineUpdateInput = Partial<
@@ -87,5 +191,11 @@ export type RoutineUpdateInput = Partial<
     | "name"
     | "botId"
     | "workspaceId"
+    | "access"
+    | "reach"
   >
-> & { webhook?: boolean };
+> & {
+  webhook?: boolean;
+  /** The user allows the reach the agent asked for (`pendingReach`). */
+  confirmPendingReach?: boolean;
+};
