@@ -9,7 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   LocalModelProxy,
+  bearerMatches,
   forwardablePath,
+  isLoopbackHost,
   modelInBody,
   type UpstreamServer,
 } from "./local-model-proxy";
@@ -21,6 +23,7 @@ class FakeUpstream implements UpstreamServer {
   starts = 0;
   stops = 0;
   failStart = false;
+  onRequest: ((request: http.IncomingMessage) => void) | null = null;
 
   constructor(readonly modelId: string) {}
 
@@ -32,6 +35,7 @@ class FakeUpstream implements UpstreamServer {
     this.starts += 1;
     if (this.failStart) throw new Error("no such luck");
     const server = http.createServer((request, response) => {
+      this.onRequest?.(request);
       const chunks: Buffer[] = [];
       request.on("data", (chunk: Buffer) => chunks.push(chunk));
       request.on("end", () => {
@@ -63,10 +67,16 @@ let proxy: LocalModelProxy;
 let upstreams: Record<string, FakeUpstream>;
 let defaultModel: string | null;
 
-const post = async (body: unknown, path = "/v1/chat/completions") => {
+const post = async (
+  body: unknown,
+  path = "/v1/chat/completions",
+  headers: Record<string, string> = {
+    authorization: `Bearer ${proxy.apiKey}`,
+  }
+) => {
   const response = await fetch(`${proxy.baseUrl.replace(/\/v1$/, "")}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
   return {
@@ -117,7 +127,75 @@ describe("forwardablePath", () => {
   });
 });
 
+/** A raw request, so the Host header can be anything a rebound page would send. */
+const rawGet = (host: string): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const port = Number(new URL(proxy.baseUrl).port);
+    const request = http.request(
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/v1/models",
+        headers: { host, authorization: `Bearer ${proxy.apiKey}` },
+      },
+      (response) => {
+        response.resume();
+        resolve(response.statusCode ?? 0);
+      }
+    );
+    request.on("error", reject);
+    request.end();
+  });
+
+describe("isLoopbackHost", () => {
+  it("accepts only loopback names on the proxy's own port", () => {
+    expect(isLoopbackHost("127.0.0.1:41434", 41434)).toBe(true);
+    expect(isLoopbackHost("LOCALHOST:41434", 41434)).toBe(true);
+    expect(isLoopbackHost("[::1]:41434", 41434)).toBe(true);
+    expect(isLoopbackHost("127.0.0.1:41435", 41434)).toBe(false);
+    expect(isLoopbackHost("127.0.0.1", 41434)).toBe(false);
+    expect(isLoopbackHost("evil.example:41434", 41434)).toBe(false);
+    expect(isLoopbackHost(undefined, 41434)).toBe(false);
+  });
+});
+
+describe("bearerMatches", () => {
+  it("matches only the exact token", () => {
+    expect(bearerMatches("Bearer abc", "abc")).toBe(true);
+    expect(bearerMatches("bearer abc", "abc")).toBe(true);
+    expect(bearerMatches("Bearer abd", "abc")).toBe(false);
+    expect(bearerMatches("Bearer ab", "abc")).toBe(false);
+    expect(bearerMatches("abc", "abc")).toBe(false);
+    expect(bearerMatches(undefined, "abc")).toBe(false);
+  });
+});
+
 describe("the local model endpoint", () => {
+  it("refuses a request without this boot's key, before starting anything", async () => {
+    const none = await post({ model: "a" }, "/v1/chat/completions", {});
+    expect(none.status).toBe(401);
+    const wrong = await post({ model: "a" }, "/v1/chat/completions", {
+      authorization: "Bearer local",
+    });
+    expect(wrong.status).toBe(401);
+    expect(upstreams.a!.starts).toBe(0);
+  });
+
+  it("refuses a non-loopback Host even with the key", async () => {
+    expect(await rawGet("attacker.example")).toBe(403);
+    expect(await rawGet(`localhost:${new URL(proxy.baseUrl).port}`)).toBe(200);
+    expect(upstreams.a!.starts).toBe(1);
+  });
+
+  it("does not pass its key on to the model server", async () => {
+    let seen: string | undefined = "unset";
+    upstreams.a!.onRequest = (request) => {
+      seen = request.headers.authorization;
+    };
+    await post({ model: "a" });
+    expect(seen).toBeUndefined();
+  });
+
   it("answers 404 off the API path rather than forwarding anywhere", async () => {
     const reply = await post({ model: "a" }, "/health");
     expect(reply.status).toBe(404);

@@ -136,22 +136,54 @@ export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
  * are sanitized rather than trusted; the stamp keeps a chat's fifth photo.jpg
  * from overwriting its first.
  */
+/** CON, PRN, AUX, NUL, COM1-9, LPT1-9: devices on Windows, with any extension. */
+const WINDOWS_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(\.|$)/i;
+
+/**
+ * One path segment from untrusted text: only letters, digits, `._ -` survive
+ * (no `:`, controls or bidi marks); no leading dots, no trailing dots or
+ * spaces (Windows drops them), and a device name gets a prefix.
+ */
+export const safeMediaSegment = (
+  raw: string,
+  max: number,
+  fallback: string
+): string => {
+  const tidy = (text: string): string =>
+    text.replace(/^[.\s]+/, "").replace(/[.\s]+$/, "");
+  const cleaned = tidy(
+    tidy(raw.replace(/[^\p{L}\p{N}._ -]+/gu, "_")).slice(0, max)
+  );
+  if (cleaned.length === 0) return fallback;
+  return WINDOWS_DEVICE_NAME.test(cleaned) ? `_${cleaned}` : cleaned;
+};
+
+/**
+ * A sender-chosen attachment name as it may appear in prompt text: one line,
+ * no controls or bidi marks, no brackets to close the `[attachment: …]` note
+ * early, and capped.
+ */
+export const promptSafeAttachmentName = (name: string): string => {
+  const cleaned = name
+    .replace(/[\p{Cc}\u2028\u2029]+/gu, " ")
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/[[\]<>`]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+  const chars = [...cleaned];
+  return chars.length > 120
+    ? `${chars.slice(0, 119).join("")}…`
+    : cleaned || "file";
+};
+
 export const saveInboundMedia = (
   platform: MessagingPlatformId,
   chatId: string,
   name: string,
   data: Buffer
 ): string => {
-  const safeChat =
-    chatId
-      .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
-      .trim()
-      .slice(0, 60) || "chat";
-  const safeName =
-    path
-      .basename(name)
-      .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
-      .slice(0, 80) || "file";
+  const safeChat = safeMediaSegment(chatId, 60, "chat");
+  const safeName = safeMediaSegment(path.basename(name), 80, "file");
   const dir = path.join(abacusBotHome(), "messaging-media", platform, safeChat);
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${Date.now()}-${safeName}`);

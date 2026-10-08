@@ -7,7 +7,11 @@
  *
  * Requests are forwarded byte for byte, streaming responses included; the
  * body is read first only to learn which model is being asked for.
+ *
+ * Every request must carry this boot's bearer token and a loopback Host, so a
+ * web page (DNS rebinding included) or another local process cannot use it.
  */
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import http from "node:http";
 
 export interface UpstreamServer {
@@ -80,6 +84,32 @@ export const forwardablePath = (
   return FORWARDED_PATHS.find((known) => known === parsed.pathname) ?? null;
 };
 
+/** Host headers a loopback client sends for `port`; anything else is a rebound name. */
+export const isLoopbackHost = (
+  host: string | undefined,
+  port: number
+): boolean => {
+  if (host == null) return false;
+  const value = host.toLowerCase();
+  return (
+    value === `127.0.0.1:${port}` ||
+    value === `localhost:${port}` ||
+    value === `[::1]:${port}`
+  );
+};
+
+/** Constant-time check of an `Authorization: Bearer` header against `token`. */
+export const bearerMatches = (
+  header: string | undefined,
+  token: string
+): boolean => {
+  const match = /^Bearer\s+(\S+)$/i.exec(header ?? "");
+  if (match == null) return false;
+  const given = Buffer.from(match[1]!, "utf8");
+  const expected = Buffer.from(token, "utf8");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+};
+
 const fail = (
   response: http.ServerResponse,
   status: number,
@@ -97,6 +127,8 @@ export class LocalModelProxy {
   private starting: Promise<void> | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
   private inFlight = 0;
+  /** This boot's bearer token; config.json carries it as the provider's key. */
+  readonly apiKey = randomBytes(32).toString("hex");
 
   constructor(private readonly options: ProxyOptions) {}
 
@@ -187,6 +219,14 @@ export class LocalModelProxy {
     this.inFlight += 1;
     this.clearIdle();
     try {
+      if (!isLoopbackHost(request.headers.host, this.port)) {
+        fail(response, 403, "not a loopback request");
+        return;
+      }
+      if (!bearerMatches(request.headers.authorization, this.apiKey)) {
+        fail(response, 401, "missing or wrong local model key");
+        return;
+      }
       const path = forwardablePath(request.url);
       if (path == null) {
         fail(response, 404, "not an endpoint of the local model");
@@ -230,6 +270,7 @@ export class LocalModelProxy {
       const base = new URL(upstream.baseUrl);
       const headers = { ...request.headers };
       delete headers.host;
+      delete headers.authorization;
       delete headers["content-length"];
       const proxied = http.request(
         {

@@ -20,6 +20,11 @@ const upstream = new URL(
 const vite = new URL(process.env.HOST_PROXY_VITE || "http://127.0.0.1:5173");
 const port = Number(process.env.HOST_PROXY_PORT || 443);
 const previewHost = `local.preview.apps.abacus.ai${port === 443 ? "" : `:${port}`}`;
+// The proxy attaches the owner's credentials, so a browser request from any
+// other page is refused; no Origin at all is a navigation or a non-browser client.
+const allowedOrigins = new Set([origin, `https://${previewHost}`]);
+const originAllowed = (headers) =>
+  headers.origin == null || allowedOrigins.has(headers.origin);
 // Only the path and query of the incoming request reach the chosen upstream;
 // an absolute request-target cannot redirect the proxy to another host.
 const upstreamUrl = (base, requestUrl) => {
@@ -63,6 +68,11 @@ const proxy = createServer(
     cert: readFileSync(join(certDir, "cert.pem")),
   },
   (req, res) => {
+    if (!originAllowed(req.headers)) {
+      req.resume();
+      res.writeHead(403).end();
+      return;
+    }
     // The production preview proxy supplies CORS; the host deliberately does not.
     const isHost = req.headers.host?.startsWith("local.preview.");
     const cors =
@@ -138,6 +148,10 @@ const proxy = createServer(
 );
 const sockets = new WebSocketServer({ noServer: true });
 proxy.on("upgrade", (req, socket, head) => {
+  if (!originAllowed(req.headers)) {
+    socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+    return;
+  }
   const hmr = req.headers["sec-websocket-protocol"]?.includes("vite-hmr");
   const target = upstreamUrl(hmr ? vite : upstream, req.url);
   target.protocol = "ws:";

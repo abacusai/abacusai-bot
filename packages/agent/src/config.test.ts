@@ -16,9 +16,10 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { loadSkills } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { applyStoredApiKeys } from "./config.js";
+import { applyStoredApiKeys, skillDirs, skillDirsByScope } from "./config.js";
 
 let home: string;
 let previousHome: string | undefined;
@@ -131,5 +132,41 @@ describe("config that cannot be trusted", () => {
     fs.writeFileSync(path.join(home, "config.json"), "{ not json", "utf8");
 
     expect(applyStoredApiKeys({})).toEqual([]);
+  });
+});
+
+describe("skills with the same name", () => {
+  it("loads the user's global skill over a project's", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "skills-cwd-"));
+    try {
+      const dirs = skillDirsByScope(cwd);
+      expect(skillDirs(cwd)).toEqual([dirs.global, dirs.project]);
+      const write = (root: string, name: string, description: string) => {
+        fs.mkdirSync(path.join(root, name), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, name, "SKILL.md"),
+          `---\nname: ${name}\ndescription: ${description}\n---\nBody.\n`
+        );
+      };
+      write(dirs.global, "deploy", "the user's own");
+      write(dirs.project, "deploy", "from the repository");
+      write(dirs.project, "lint", "project only");
+
+      const { skills, diagnostics } = loadSkills({
+        cwd,
+        agentDir: path.join(home, "agent"),
+        skillPaths: skillDirs(cwd),
+        includeDefaults: false,
+      });
+      const byName = new Map(skills.map((skill) => [skill.name, skill]));
+      expect(byName.get("deploy")?.description).toBe("the user's own");
+      expect(byName.get("lint")?.description).toBe("project only");
+      expect(
+        diagnostics.find((diagnostic) => diagnostic.type === "collision")
+          ?.collision?.loserPath
+      ).toContain(dirs.project);
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });

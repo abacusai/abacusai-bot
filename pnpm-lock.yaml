@@ -281,7 +281,7 @@ importers:
   apps/desktop:
     dependencies:
       '@ff-labs/fff-node':
-        specifier: ^0.9.6
+        specifier: 0.9.6
         version: 0.9.6
       '@lydell/node-pty':
         specifier: 1.2.0-beta.15
@@ -432,7 +432,7 @@ importers:
         specifier: workspace:*
         version: link:../updater
       '@ff-labs/fff-node':
-        specifier: ^0.9.6
+        specifier: 0.9.6
         version: 0.9.6
       '@lydell/node-pty':
         specifier: 1.2.0-beta.15
@@ -453,7 +453,7 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(supports-color@7.2.0)
       ffi-rs:
-        specifier: ^1.3.2
+        specifier: 1.3.7
         version: 1.3.7
       pptxgenjs:
         specifier: ^4.0.1

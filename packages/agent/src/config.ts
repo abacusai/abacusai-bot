@@ -299,9 +299,12 @@ export function skillDirsByScope(cwd: string): {
   };
 }
 
-/** Skill directories, workspace-local first so a project can override a global skill. */
+/**
+ * Skill directories, global first: on a name collision the first one loaded
+ * wins, so a cloned repository cannot replace one of the user's own skills.
+ */
 export function skillDirs(cwd: string): string[] {
   const dirs = skillDirsByScope(cwd);
 
-  return [dirs.project, dirs.global];
+  return [dirs.global, dirs.project];
 }

@@ -135,25 +135,41 @@ export function rewriteAttachmentParams(
   return next;
 }
 
+/** C0/C1 controls and the bidi marks, embeddings, overrides and isolates. */
+const INVISIBLE_FILENAME_CHARACTERS =
+  /[\p{Cc}\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu;
+/** Characters Windows refuses in a name; `:` would also open an NTFS stream. */
+const WINDOWS_FORBIDDEN_CHARACTERS = /[:<>"|?*]/g;
+/** CON, PRN, AUX, NUL, COM1-9, LPT1-9: devices on Windows, with any extension. */
+const WINDOWS_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(\.|$)/i;
+
 /**
- * A server-supplied filename reduced to something that cannot navigate: both
- * separators (\`basename\` leaves backslashes intact on POSIX), control
- * characters and leading dots go; length-capped with the extension kept.
+ * A server-supplied filename reduced to something that cannot navigate or
+ * mislead: both separators (\`basename\` leaves backslashes intact on POSIX),
+ * control and bidi characters, Windows-forbidden characters, leading dots and
+ * trailing dots or spaces go, and a device name gets a prefix; length-capped
+ * with the extension kept.
  */
-const sanitizeFilename = (raw: string): string => {
+export const sanitizeFilename = (raw: string): string => {
   const lastSegment = raw.replace(/\\/g, "/").split("/").pop() ?? "";
-  const cleaned = [...lastSegment]
-    .filter((character) => character.charCodeAt(0) >= 0x20)
-    .join("")
-    .replace(/^\.+/, "")
-    .trim();
+  const tidy = (name: string): string =>
+    name
+      .replace(/^[.\s]+/, "")
+      .replace(/[.\s]+$/, "")
+      .trim();
+  let cleaned = tidy(
+    lastSegment
+      .replace(INVISIBLE_FILENAME_CHARACTERS, "")
+      .replace(WINDOWS_FORBIDDEN_CHARACTERS, "_")
+  );
 
   if (cleaned.length === 0) return "attachment";
-  if (cleaned.length <= 128) return cleaned;
+  if (cleaned.length > 128) {
+    const extension = path.extname(cleaned).slice(0, 16);
+    cleaned = `${tidy(cleaned.slice(0, 128 - extension.length))}${extension}`;
+  }
 
-  const extension = path.extname(cleaned).slice(0, 16);
-
-  return `${cleaned.slice(0, 128 - extension.length)}${extension}`;
+  return WINDOWS_DEVICE_NAME.test(cleaned) ? `_${cleaned}` : cleaned;
 };
 
 /** A name that cannot escape the attachments directory or collide silently. */

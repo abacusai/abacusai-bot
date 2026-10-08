@@ -204,6 +204,59 @@ describe("read_output", () => {
     expect(result.isError).toBe(true);
   });
 
+  it("refuses a catastrophic-backtracking pattern instead of hanging", async () => {
+    await spillBig();
+    const readOutput = pi.tools.get("read_output")!;
+    const started = Date.now();
+    for (const grep of [
+      "(x+)+$",
+      "(x|xx)*y",
+      "((x)*)*",
+      "(\\w+\\s?){2,}$",
+      "x".repeat(600),
+    ]) {
+      const result = await readOutput.execute("c6", { id: "out-1", grep });
+      expect(result.isError, grep).toBe(true);
+      expect(result.content[0]!.text).toMatch(/Grep pattern refused/);
+    }
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it("keeps ordinary patterns working", async () => {
+    await spillBig();
+    const readOutput = pi.tools.get("read_output")!;
+    for (const grep of [
+      "^line 12[0-9] ",
+      "line \\d+ x{20}$",
+      "(?:line) 4999",
+      "[(+*]|line 7 ",
+      "(foo|line 3 )x?",
+      "a{1}|line 9 ",
+    ]) {
+      const result = await readOutput.execute("c7", { id: "out-1", grep });
+      expect(result.isError, grep).toBe(false);
+      expect(result.content[0]!.text, grep).not.toMatch(/ 0 lines match/);
+    }
+  });
+
+  it("stops a scan that runs past its time budget", async () => {
+    await spillBig();
+    const readOutput = pi.tools.get("read_output")!;
+    let clock = 0;
+    const now = vi.spyOn(Date, "now").mockImplementation(() => (clock += 1));
+    try {
+      const result = await readOutput.execute("c8", {
+        id: "out-1",
+        grep: "line",
+      });
+      expect(result.content[0]!.text).toMatch(
+        /grep stopped at line \d+: too slow/
+      );
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("bounds its own response, so retrieval cannot undo the spill", async () => {
     await spillBig();
     const readOutput = pi.tools.get("read_output")!;

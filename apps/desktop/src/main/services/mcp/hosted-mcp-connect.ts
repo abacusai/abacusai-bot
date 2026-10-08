@@ -7,7 +7,9 @@
  * until the provider's redirect lands at `<base>/mcp/callback` and its code is
  * exchanged; only then is the entry added (never touching one already there).
  * The PKCE verifier never leaves the host. A server that asks for no sign-in
- * holds no credentials, so it is installed on the GET. Admission is the
+ * holds no credentials, so it is installed on the GET, but only with a
+ * one-time nonce the host minted into the link; without one the tab gets a
+ * confirm link carrying a fresh nonce. Admission is the
  * proxy's signed proof (checked by the HTTP server), the owner identity,
  * top-level navigation fetch metadata, and the OAuth state for the callback
  * (spec 08, D8 exception).
@@ -28,6 +30,13 @@ import {
 
 /** How long a sign-in waits for the provider's redirect. */
 const PENDING_TTL_MS = 30 * 60_000;
+
+/** How long a connect link's nonce stays good, and how many may be live. */
+const NONCE_TTL_MS = 15 * 60_000;
+const MAX_NONCES = 256;
+
+/** The query key of a connect link's one-time nonce. */
+const NONCE_PARAM = "nonce";
 
 /** One `/mcp/*` request, as the HTTP server read it. */
 export interface HostedRequest {
@@ -142,10 +151,44 @@ class PendingSignIns {
   }
 }
 
+/** One-time nonces for connect links, in memory, each for one connector. */
+class ConnectNonces {
+  private readonly live = new Map<string, { name: string; at: number }>();
+
+  constructor(private readonly now: () => number) {}
+
+  mint(name: string): string {
+    this.prune();
+    // Oldest first out once full: a flood of links only expires older ones.
+    while (this.live.size >= MAX_NONCES)
+      this.live.delete(this.live.keys().next().value!);
+    const nonce = crypto.randomBytes(24).toString("base64url");
+    this.live.set(nonce, { name, at: this.now() });
+    return nonce;
+  }
+
+  /** Whether `nonce` is a live one for `name`; spent either way. */
+  take(name: string, nonce: string | null): boolean {
+    this.prune();
+    if (nonce == null) return false;
+    const held = this.live.get(nonce);
+    if (held == null) return false;
+    this.live.delete(nonce);
+    return held.name === name;
+  }
+
+  private prune(): void {
+    const now = this.now();
+    for (const [nonce, held] of this.live)
+      if (now - held.at >= NONCE_TTL_MS) this.live.delete(nonce);
+  }
+}
+
 const CONNECT_ROUTE = /^\/mcp\/connect\/([^/]{1,256})$/;
 
 export class HostedMcpConnect {
   private readonly pending: PendingSignIns;
+  private readonly nonces: ConnectNonces;
 
   constructor(
     private readonly options: {
@@ -163,11 +206,13 @@ export class HostedMcpConnect {
     }
   ) {
     this.pending = new PendingSignIns(options.now ?? Date.now);
+    this.nonces = new ConnectNonces(options.now ?? Date.now);
   }
 
-  /** The route a browser opens to connect `name`; also the link sent in chat. */
+  /** The route a browser opens to connect `name`; also the link sent in chat. One use. */
   connectUrl(name: string): string {
-    return `${this.options.base}/mcp/connect/${encodeURIComponent(name)}`;
+    const nonce = this.nonces.mint(name);
+    return `${this.options.base}/mcp/connect/${encodeURIComponent(name)}?${NONCE_PARAM}=${nonce}`;
   }
 
   /** Drops the pending sign-in for `name`, or for every connector. */
@@ -184,10 +229,9 @@ export class HostedMcpConnect {
     const { headers } = request;
     // Sec-Fetch-Site is deliberately not checked: chat and WhatsApp links
     // arrive cross-site. That is safe because the GET never installs a
-    // connector that signs in, a no-sign-in registry connector carries no
-    // credentials, an existing entry is never touched, and the worst a
-    // forged navigation does is replace an in-flight sign-in, which the
-    // user retries.
+    // connector that signs in, a no-sign-in one needs the link's host-minted
+    // nonce, an existing entry is never touched, and the worst a forged
+    // navigation does is replace an in-flight sign-in, which the user retries.
     if (
       !sameOwner(headers["x-abacus-user-id"], owner) ||
       headers["sec-fetch-dest"] !== "document" ||
@@ -199,14 +243,22 @@ export class HostedMcpConnect {
       return this.callback(request.query, owner);
     const name = connectName(request.pathname);
     if (name == null) return { kind: "missing" };
-    return this.start(owner, name, returnPath(request.query.get("return")));
+    // Spent here, after admission, so a link preview cannot use it up.
+    const confirmed = this.nonces.take(name, request.query.get(NONCE_PARAM));
+    return this.start(
+      owner,
+      name,
+      returnPath(request.query.get("return")),
+      confirmed
+    );
   }
 
   /** Straight to the provider's consent; nothing persists but a no-sign-in install. */
   private async start(
     owner: string,
     name: string,
-    returnTo: string | null
+    returnTo: string | null,
+    confirmed: boolean
   ): Promise<HostedResponse> {
     const plan = this.options.plan(name);
     if (plan.kind === "missing") return { kind: "missing" };
@@ -217,7 +269,9 @@ export class HostedMcpConnect {
     const { label, entry } = plan;
     const serverUrl = entry.url;
     if (!plan.signsIn || serverUrl == null)
-      return this.finish(name, label, entry, returnTo);
+      return confirmed
+        ? this.finish(name, label, entry, returnTo)
+        : this.confirmPage(name, label, returnTo);
     const ticket = this.pending.ticket();
     try {
       const prepared = await prepareSignIn({
@@ -231,7 +285,9 @@ export class HostedMcpConnect {
         return this.fail(name, label);
       }
       if (prepared.kind === "open")
-        return this.finish(name, label, entry, returnTo);
+        return confirmed
+          ? this.finish(name, label, entry, returnTo)
+          : this.confirmPage(name, label, returnTo);
       const { state, verifier, redirectUri, metadata, client } = prepared;
       this.pending.hold(owner, {
         name,
@@ -311,6 +367,20 @@ export class HostedMcpConnect {
   ): HostedResponse {
     if (!this.options.install(name, entry)) return this.fail(name, label);
     return this.connectedAnswer(name, label, returnTo);
+  }
+
+  /** An install-on-GET without a nonce: a link with a fresh one, which only this page can read. */
+  private confirmPage(
+    name: string,
+    label: string,
+    returnTo: string | null
+  ): HostedResponse {
+    const url = new URL(this.connectUrl(name));
+    if (returnTo != null) url.searchParams.set("return", returnTo);
+    return page(
+      200,
+      `<h2>Connect ${escapeHtml(label)}?</h2><p><a href="${escapeHtml(url.toString())}">Connect ${escapeHtml(label)}</a></p>`
+    );
   }
 
   /** Announces `name` connected and sends the tab on. */

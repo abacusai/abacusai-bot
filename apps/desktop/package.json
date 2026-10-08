@@ -51,7 +51,7 @@
     "ui:audit": "node scripts/ui-audit-capture.mjs"
   },
   "dependencies": {
-    "@ff-labs/fff-node": "^0.9.6",
+    "@ff-labs/fff-node": "0.9.6",
     "@lydell/node-pty": "1.2.0-beta.15",
     "@orpc/client": "1.15.4",
     "@orpc/contract": "1.15.4",

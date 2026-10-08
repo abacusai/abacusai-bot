@@ -50,6 +50,76 @@ const DEFAULT_LINE_LIMIT = 200;
  */
 const MAX_GREP_SUBJECT_CHARS = 2_000;
 
+/** Longest grep pattern accepted, and the wall-clock budget for one scan. */
+const MAX_GREP_PATTERN_CHARS = 512;
+const GREP_BUDGET_MS = 2_000;
+
+/**
+ * Why a grep pattern could backtrack catastrophically, or null. Refuses a
+ * repeated group that itself repeats or alternates (`(a+)+`, `(a|ab)*`): the
+ * shapes behind exponential backtracking. Classes and escapes are skipped.
+ */
+export function unsafeGrepPattern(pattern: string): string | null {
+  if (pattern.length > MAX_GREP_PATTERN_CHARS)
+    return `the pattern is longer than ${MAX_GREP_PATTERN_CHARS} characters`;
+  // Per open group: whether it repeats or alternates inside.
+  const groups: Array<{ risky: boolean }> = [];
+  let closed: { risky: boolean } | null = null;
+  for (let i = 0; i < pattern.length; i++) {
+    const ch = pattern[i]!;
+    const quantifier = repeatingQuantifierAt(pattern, i);
+    if (quantifier > 0) {
+      if (closed?.risky)
+        return "it repeats a group that already repeats or alternates";
+      for (const group of groups) group.risky = true;
+      closed = null;
+      i += quantifier - 1;
+      continue;
+    }
+    closed = null;
+    if (ch === "\\") i++;
+    else if (ch === "[") i = classEnd(pattern, i);
+    else if (ch === "(") groups.push({ risky: false });
+    else if (ch === "|") {
+      const top = groups.at(-1);
+      if (top) top.risky = true;
+    } else if (ch === ")") {
+      const group = groups.pop();
+      if (group) {
+        closed = group;
+        // A risky group makes its enclosing group risky too.
+        const parent = groups.at(-1);
+        if (parent && group.risky) parent.risky = true;
+      }
+    }
+  }
+  return null;
+}
+
+/** Length of a repeating quantifier (`*`, `+`, `{n,}`, `{n,m}` with m > 1) at `i`, else 0. */
+function repeatingQuantifierAt(pattern: string, i: number): number {
+  const ch = pattern[i];
+  if (ch === "*" || ch === "+") return 1;
+  if (ch !== "{") return 0;
+  const match = /^\{(\d+)(,(\d*))?\}/.exec(pattern.slice(i));
+  if (!match) return 0;
+  const repeats =
+    match[2] !== undefined && (match[3] === "" || Number(match[3]) > 1);
+  return repeats ? match[0].length : 0;
+}
+
+/** Index of the `]` closing the class opened at `start`. */
+function classEnd(pattern: string, start: number): number {
+  let i = start + 1;
+  if (pattern[i] === "^") i++;
+  if (pattern[i] === "]") i++;
+  for (; i < pattern.length; i++) {
+    if (pattern[i] === "\\") i++;
+    else if (pattern[i] === "]") return i;
+  }
+  return pattern.length;
+}
+
 /** Directory and file modes: owner-only. Tool output is not public. */
 const DIR_MODE = 0o700;
 const FILE_MODE = 0o600;
@@ -271,7 +341,21 @@ export default function (pi: ExtensionAPI) {
         })
       );
 
+      let grepStoppedAt: number | null = null;
       if (params.grep !== undefined && params.grep !== "") {
+        const unsafe = unsafeGrepPattern(params.grep);
+        if (unsafe) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Grep pattern refused: ${unsafe}. Use a simpler pattern, e.g. a plain substring or one quantifier per group.`,
+              },
+            ],
+            isError: true,
+            details: { id: params.id, matched: 0, returned: 0 },
+          };
+        }
         let re: RegExp;
         try {
           re = new RegExp(params.grep);
@@ -287,13 +371,24 @@ export default function (pi: ExtensionAPI) {
             details: { id: params.id, matched: 0, returned: 0 },
           };
         }
-        selected = selected.filter((entry) =>
-          re.test(
-            entry.text.length > MAX_GREP_SUBJECT_CHARS
-              ? entry.text.slice(0, MAX_GREP_SUBJECT_CHARS)
-              : entry.text
+        // A budget across lines: polynomial backtracking adds up over a big file.
+        const deadline = Date.now() + GREP_BUDGET_MS;
+        const scanned: typeof selected = [];
+        for (const entry of selected) {
+          if (Date.now() > deadline) {
+            grepStoppedAt = entry.line;
+            break;
+          }
+          if (
+            re.test(
+              entry.text.length > MAX_GREP_SUBJECT_CHARS
+                ? entry.text.slice(0, MAX_GREP_SUBJECT_CHARS)
+                : entry.text
+            )
           )
-        );
+            scanned.push(entry);
+        }
+        selected = scanned;
       }
 
       const matched = selected.length;
@@ -314,6 +409,9 @@ export default function (pi: ExtensionAPI) {
       const header =
         `${params.id} (${record.toolName}, ${record.totalLines} lines total)` +
         (params.grep ? ` · ${matched} lines match /${params.grep}/` : "") +
+        (grepStoppedAt != null
+          ? ` (grep stopped at line ${grepStoppedAt}: too slow; use a simpler pattern)`
+          : "") +
         ` · showing ${window.length} from offset ${offset}`;
       const footer = truncated
         ? "\n\n[response capped; narrow with grep or a smaller limit]"

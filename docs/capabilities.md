@@ -77,7 +77,8 @@ agent behavior, not permission enforcement.
 A skill is a directory with a `SKILL.md` procedure and optional supporting
 files. Store a project skill in `<workspace>/.abacusai-bot/skills/` and commit it
 with the project. Store a personal skill in `~/.abacusai-bot/skills/` to make it
-available in every workspace.
+available in every workspace. When both define a skill with the same name, the personal
+one is used and the project's is ignored.
 
 The app can install skills from skills.sh or add one from a URL. Review a skill
 before installing it. Its instructions become part of the agent's operating

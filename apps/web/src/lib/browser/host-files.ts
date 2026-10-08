@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/client";
+import type JSZip from "jszip";
 
 import type { AppClient } from "#renderer/data/transport/types";
 
@@ -214,6 +215,49 @@ export const readHostText: AppClient["files"]["readText"] = async (
   };
 };
 
+/** Inflated-size caps for a deck's parts, so a zip bomb cannot exhaust the tab's memory. */
+const MAX_PPTX_ENTRY_BYTES = 128 * 1024 * 1024;
+const MAX_PPTX_TOTAL_BYTES = 256 * 1024 * 1024;
+
+/** One entry inflated, refused once it or the deck so far passes its cap. */
+const inflateCapped = (
+  entry: JSZip.JSZipObject,
+  budget: { left: number },
+  tooLarge: () => Error
+): Promise<Uint8Array> =>
+  new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    // The chunked reader `async` runs on; JSZip's declarations leave it out.
+    const stream = (
+      entry as JSZip.JSZipObject & {
+        internalStream(type: "uint8array"): JSZip.JSZipStreamHelper<Uint8Array>;
+      }
+    ).internalStream("uint8array");
+    stream
+      .on("data", (chunk) => {
+        size += chunk.byteLength;
+        budget.left -= chunk.byteLength;
+        if (size > MAX_PPTX_ENTRY_BYTES || budget.left < 0) {
+          stream.pause();
+          reject(tooLarge());
+          return;
+        }
+        chunks.push(chunk);
+      })
+      .on("error", reject)
+      .on("end", () => {
+        const out = new Uint8Array(size);
+        let at = 0;
+        for (const chunk of chunks) {
+          out.set(chunk, at);
+          at += chunk.byteLength;
+        }
+        resolve(out);
+      })
+      .resume();
+  });
+
 export const readHostPptx: AppClient["files"]["readPptx"] = async (
   input,
   options
@@ -226,13 +270,17 @@ export const readHostPptx: AppClient["files"]["readPptx"] = async (
   ]);
   const zip = await JSZip.loadAsync(bytes);
   const entries = new Map<string, Uint8Array>();
+  const budget = { left: MAX_PPTX_TOTAL_BYTES };
   for (const entry of Object.values(zip.files)) {
     if (
       !entry.dir &&
       (/\.(xml|rels)$/i.test(entry.name) ||
         /\.(png|jpe?g|gif|webp|bmp|ico|svg|tiff?)$/i.test(entry.name))
     )
-      entries.set(entry.name, await entry.async("uint8array"));
+      entries.set(
+        entry.name,
+        await inflateCapped(entry, budget, () => fileError(input, "too-large"))
+      );
   }
   const deck = parsePptx({
     list: () => [...entries.keys()],

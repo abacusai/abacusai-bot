@@ -49,13 +49,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec turbo run build --filter=@abacus-ai/updater
       - name: Classify the changed paths
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           # No --depth here: the base can gain commits between checkout and
           # this fetch (a merge landing mid-run), and a shallow fetch grafts
           # that tip with no ancestry, so `...` finds no merge base.
-          git fetch --no-tags origin "${{ github.base_ref }}"
-          result=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | node apps/updater/dist/classify.mjs)
+          git fetch --no-tags origin "$BASE_REF"
+          result=$(git diff --name-only "origin/$BASE_REF"...HEAD | node apps/updater/dist/classify.mjs)
           kind=$(echo "$result" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log(JSON.parse(d).kind))')
           echo "This change is a **${kind}** release." >> "$GITHUB_STEP_SUMMARY"
           echo "$result"
