@@ -13,7 +13,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageScrollerProvider } from "#renderer/ui/message-scroller";
 
-
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { ChatViewProvider, createInlineRegistry } from "../kit/context";
