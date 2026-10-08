@@ -28,6 +28,8 @@ interface Case {
   normal: Decision;
   acceptEdits: Decision;
   plan: Decision;
+  /** Full access and Auto, when they do not simply allow it. */
+  unattended?: Decision;
   /** Why, when the answer is not obvious from the name. */
   because?: string;
 }
@@ -153,7 +155,25 @@ const CASES: Case[] = [
     normal: "ask",
     acceptEdits: "ask",
     plan: "refuse",
+    unattended: "ask",
+    because:
+      "a skill is instructions every later turn follows, so even Full access asks",
   },
+
+  // Messages a real person as the user, and can carry a file: egress with the
+  // user's name on it.
+  ...[
+    "send_chat_message",
+    "send_whatsapp_message",
+    "send_telegram_message",
+    "send_discord_message",
+  ].map((name) => ({
+    name,
+    input: { to: "someone", message: "hi" },
+    normal: "ask" as const,
+    acceptEdits: "ask" as const,
+    plan: "refuse" as const,
+  })),
 
   // Puts a directory on an http port. Not a disk mutation, and the same
   // outbound-channel reasoning `web_fetch` already carries, and more so, since the
@@ -348,14 +368,26 @@ describe("the gate, tool by tool", () => {
     }
   );
 
-  it("lets everything through in Full access and Auto, which is what they mean", () => {
+  it("lets everything else through in Full access and Auto, which is what they mean", () => {
     for (const entry of CASES) {
       for (const mode of [AgentMode.Yolo, AgentMode.Auto]) {
         expect(
           gateToolCall(call(entry.name, entry.input), options(mode)).kind,
           `${entry.name} in ${mode}`
-        ).toBe("allow");
+        ).toBe(entry.unattended ?? "allow");
       }
+    }
+  });
+
+  it("asks about skill_add even when the user chose to always allow it", () => {
+    for (const mode of [AgentMode.Normal, AgentMode.Yolo, AgentMode.Auto]) {
+      expect(
+        gateToolCall(call("skill_add", { query: "pdf" }), {
+          ...options(mode),
+          allowedTools: ["skill_add"],
+        }).kind,
+        `skill_add in ${mode}`
+      ).toBe("ask");
     }
   });
 });

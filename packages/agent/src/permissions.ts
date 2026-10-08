@@ -54,7 +54,20 @@ const MUTATING_TOOLS = new Set([
   // A fetch and a write at once, and what lands is text this agent will then
   // follow.
   "skill_add",
+  // Messages a real person as the user, and can carry a file: an outbound
+  // channel like web_fetch, with the user's name on it.
+  "send_chat_message",
+  "send_whatsapp_message",
+  "send_telegram_message",
+  "send_discord_message",
 ]);
+
+/**
+ * Asked about in every mode, Full access and Auto included: a skill is
+ * instructions every later turn follows, so the model must not install one
+ * on its own. Installing from the Skills page is the user's own action.
+ */
+const ALWAYS_ASK_TOOLS = new Set(["skill_add"]);
 
 /**
  * Tools whose sub-agent runs unsupervised, listed so the ask can say so:
@@ -141,6 +154,11 @@ export function isMutatingCall(tool: ToolRequest): boolean {
 
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
+
+  // Ahead of every mode and every "always allow" (see ALWAYS_ASK_TOOLS); plan
+  // mode still refuses it below, as a mutation.
+  if (ALWAYS_ASK_TOOLS.has(tool.name) && mode !== AgentMode.PlanMode)
+    return { kind: "ask", request: buildGenericRequest(tool) };
 
   // Full access means exactly that: no prompts and no sandbox.
   if (mode === AgentMode.Yolo) return { kind: "allow" };

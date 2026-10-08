@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 
@@ -117,6 +118,18 @@ type ChatMedia = NonNullable<
   ReturnType<NonNullable<McpAgentToolsServerOptions["chatMedia"]>>
 >;
 
+/** `args` cut down to the properties `schema` declares; none when it declares none. */
+const declaredArgs = (
+  args: Record<string, unknown>,
+  schema: Record<string, unknown>
+): Record<string, unknown> => {
+  const properties = schema.properties;
+  if (properties == null || typeof properties !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(args ?? {}).filter(([key]) => Object.hasOwn(properties, key))
+  );
+};
+
 /** Text for a result line: one line, whatever it held. */
 const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
 
@@ -132,6 +145,27 @@ const loopbackOrigin = (url: string): string | null => {
   } catch {
     return null;
   }
+};
+
+/** How long a file handed to a messaging platform is kept for its upload. */
+const SEND_COPY_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * `bytes` as a file in a fresh owner-only directory, removed once the upload
+ * has had time to finish.
+ */
+const privateCopy = async (bytes: Buffer, name: string): Promise<string> => {
+  const directory = await fs.promises.mkdtemp(
+    path.join(os.tmpdir(), "abacusai-bot-send-")
+  );
+  const file = path.join(directory, name);
+  await fs.promises.writeFile(file, bytes, { flag: "wx", mode: 0o600 });
+  setTimeout(() => {
+    void fs.promises
+      .rm(directory, { recursive: true, force: true })
+      .catch(() => undefined);
+  }, SEND_COPY_TTL_MS).unref();
+  return file;
 };
 
 /** Files that go to a chat as pictures. */
@@ -441,8 +475,19 @@ export class McpAgentToolsServer extends McpHttpServer {
       );
     }
 
+    // Only what the tool declares: send_whatsapp_message must not take the
+    // attachment_path its schema leaves out just because the handler reads it.
+    const schema =
+      typeof definition.inputSchema === "function"
+        ? definition.inputSchema(this.channelFor(callerSession))
+        : definition.inputSchema;
+
     try {
-      return await definition.run(this, args, callerSession);
+      return await definition.run(
+        this,
+        declaredArgs(args, schema),
+        callerSession
+      );
     } catch (error) {
       return this.err(error instanceof Error ? error.message : String(error));
     }
@@ -1279,19 +1324,50 @@ export class McpAgentToolsServer extends McpHttpServer {
   }
 
   /**
-   * A file on disk, kept as the session's media, or why it cannot go. Only a
-   * regular file whose real path is under the workspace or the app's own
-   * output and temp folders, outside every credential store; read no further
-   * than the most the chat takes.
+   * A file on disk, kept as the session's media, or why it cannot go.
    */
   private async keepFile(
     filePath: string,
     sessionId: string,
     chatMedia: ChatMedia
   ): Promise<{ id: string } | { reason: string }> {
+    const read = await this.readSendableFile(filePath, (real) =>
+      IMAGE_FILE.test(real)
+        ? {
+            maxBytes: MEDIA_MAX_BYTES,
+            tooLarge: () =>
+              "it is an image larger than 5 MB, the most a picture may be; save a smaller copy (or a PDF) and send that.",
+          }
+        : {
+            maxBytes: DOCUMENT_MAX_BYTES,
+            tooLarge: () => "it is larger than 16 MB, the most the chat takes.",
+          }
+    );
+    if ("reason" in read) return read;
+    return chatMedia.keep(sessionId, read.bytes, path.basename(read.real));
+  }
+
+  /**
+   * A file the agent wants to send out of the machine, or why it cannot go.
+   * Only a regular file whose real path is under the workspace or the app's
+   * own output and temp folders, outside every credential store; opened
+   * without following a link, checked to be the file validated, and read no
+   * further than its limit.
+   */
+  private async readSendableFile(
+    filePath: string,
+    limitFor: (real: string) => {
+      maxBytes: number;
+      tooLarge: (size: number) => string;
+    }
+  ): Promise<
+    { bytes: Buffer; real: string } | { reason: string; missing?: true }
+  > {
     let handle: fs.promises.FileHandle | null = null;
     try {
-      const real = await fs.promises.realpath(filePath);
+      const real = await fs.promises.realpath(filePath).catch(() => null);
+      if (real == null)
+        return { reason: "there is no file there.", missing: true };
       const workspace = this.options.workspacePath();
       const roots = await Promise.all(
         [
@@ -1322,13 +1398,11 @@ export class McpAgentToolsServer extends McpHttpServer {
       if (stat.dev !== checked.dev || stat.ino !== checked.ino)
         return { reason: "it changed while being read; send it again." };
       if (!stat.isFile()) return { reason: "it is not a regular file." };
-      if (IMAGE_FILE.test(real) && stat.size > MEDIA_MAX_BYTES)
-        return {
-          reason:
-            "it is an image larger than 5 MB, the most a picture may be; save a smaller copy (or a PDF) and send that.",
-        };
+      const limit = limitFor(real);
+      if (stat.size > limit.maxBytes)
+        return { reason: limit.tooLarge(stat.size) };
       // Read no further than the limit, whatever the size said.
-      const buffer = Buffer.alloc(DOCUMENT_MAX_BYTES + 1);
+      const buffer = Buffer.alloc(limit.maxBytes + 1);
       let length = 0;
       while (length < buffer.length) {
         const { bytesRead } = await handle.read(
@@ -1340,16 +1414,11 @@ export class McpAgentToolsServer extends McpHttpServer {
         if (bytesRead === 0) break;
         length += bytesRead;
       }
-      if (length > DOCUMENT_MAX_BYTES)
-        return { reason: "it is larger than 16 MB, the most the chat takes." };
-      return chatMedia.keep(
-        sessionId,
-        Buffer.from(buffer.subarray(0, length)),
-        path.basename(real)
-      );
+      if (length > limit.maxBytes) return { reason: limit.tooLarge(length) };
+      return { bytes: Buffer.from(buffer.subarray(0, length)), real };
     } catch (error) {
       console.error(
-        `[agent-tools] could not read a deliverable: ${error instanceof Error ? error.message : String(error)}`
+        `[agent-tools] could not read a file to send: ${error instanceof Error ? error.message : String(error)}`
       );
       return { reason: "it could not be read." };
     } finally {
@@ -1531,20 +1600,24 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (attachmentPath.length > 0) {
       if (messaging.sendFile == null)
         return this.err("Sending files is not wired up in this build.");
-      let size: number;
-      try {
-        size = fs.statSync(attachmentPath).size;
-      } catch {
-        return this.err(`No file at ${attachmentPath}.`);
-      }
-      if (size > MAX_ATTACHMENT_BYTES)
+      const read = await this.readSendableFile(attachmentPath, () => ({
+        maxBytes: MAX_ATTACHMENT_BYTES,
+        tooLarge: (size) =>
+          `That file is ${Math.round(size / 1024 / 1024)}MB; the limit is ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB.`,
+      }));
+      if ("reason" in read)
         return this.err(
-          `That file is ${Math.round(size / 1024 / 1024)}MB; the limit is ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB.`
+          read.missing === true
+            ? `No file at ${attachmentPath}.`
+            : `Not sent: ${read.reason}`
         );
+      // The platform reads the file it is handed later, so it gets a private
+      // copy of the bytes checked here, never a path that could be swapped.
+      const copy = await privateCopy(read.bytes, path.basename(read.real));
       await messaging.sendFile(
         platform,
         to,
-        attachmentPath,
+        copy,
         message.trim().length > 0 ? message : undefined
       );
 
