@@ -23,7 +23,6 @@ const AccountSettingsRoute = () => {
       <AccountPage />
       {invite && (IS_ELECTRON || invite !== "whatsapp") && (
         <InviteDialog
-          key={invite}
           channel={invite}
           connectGmail={() => flow.start("abacus-gmailuser")}
         />

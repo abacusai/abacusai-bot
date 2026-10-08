@@ -51,7 +51,22 @@ export const InviteDialog = ({
     ...transport.orpc.referrals.whatsappContacts.queryOptions({ input: {} }),
     enabled: IS_ELECTRON && channel === "whatsapp",
   });
-  const [selected, setSelected] = useState<string[]>([]);
+  // Overrides belong to each source, so refetches and tab changes keep manual choices.
+  const [choices, setChoices] = useState<
+    Record<string, Record<string, boolean>>
+  >({});
+  const contacts =
+    channel === "gmail"
+      ? (summary.data?.gmailConnected ? (gmail.data ?? []) : []).map((c) => ({
+          id: c.email,
+          label: c.name ?? c.email,
+        }))
+      : channel === "whatsapp" && IS_ELECTRON
+        ? (whatsapp.data ?? []).map((c) => ({ id: c.chatId, label: c.name }))
+        : [];
+  const selected = contacts
+    .filter((c) => choices[channel]?.[c.id] !== false)
+    .map((c) => c.id);
   const [error, setError] = useState<string | null>(null);
   const schema = v.object({
     emails: v.string(),
@@ -125,7 +140,7 @@ export const InviteDialog = ({
         <Segments
           label={t("phase5.inviteChannel")}
           value={channel}
-          values={["link", "gmail", "whatsapp"]
+          values={["gmail", "whatsapp", "link"]
             .filter((x) => IS_ELECTRON || x !== "whatsapp")
             .map((x) => ({
               value: x,
@@ -182,16 +197,7 @@ export const InviteDialog = ({
                 </Button>
               )}
               <div className="max-h-48 overflow-auto">
-                {(channel === "gmail"
-                  ? (gmail.data ?? []).map((c) => ({
-                      id: c.email,
-                      label: c.name ?? c.email,
-                    }))
-                  : (whatsapp.data ?? []).map((c) => ({
-                      id: c.chatId,
-                      label: c.name,
-                    }))
-                ).map((c) => (
+                {contacts.map((c) => (
                   <label
                     key={c.id}
                     className="flex items-center gap-2 py-1 text-sm"
@@ -199,11 +205,13 @@ export const InviteDialog = ({
                     <Checkbox
                       checked={selected.includes(c.id)}
                       onCheckedChange={(checked) =>
-                        setSelected((old) =>
-                          checked === true
-                            ? [...old, c.id]
-                            : old.filter((id) => id !== c.id)
-                        )
+                        setChoices((old) => ({
+                          ...old,
+                          [channel]: {
+                            ...old[channel],
+                            [c.id]: checked === true,
+                          },
+                        }))
                       }
                     />
                     {c.label}

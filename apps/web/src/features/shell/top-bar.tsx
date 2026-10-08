@@ -21,7 +21,7 @@ import {
 import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AppBrandMark } from "#renderer/components/app-icon";
+import { BotAppMark } from "#renderer/components/app-icon";
 import { TabsRail } from "#renderer/components/tabs-rail";
 import {
   TitleBarGroup,
@@ -133,7 +133,7 @@ const Leading = ({
         data-slot="topbar-brand"
         className="text-sidebar-foreground flex min-w-0 items-center gap-(--chrome-group-gap) pl-(--chrome-group-gap) font-semibold"
       >
-        <AppBrandMark size={20} className="shrink-0" />
+        <BotAppMark size={20} className="shrink-0" />
         {showAppName && (
           <span
             data-slot="topbar-app-name"
