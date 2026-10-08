@@ -746,7 +746,7 @@ describe("the phone lane", () => {
     phone.stop();
   });
 
-  it("still says the words when an image cannot go, and still answers", async () => {
+  it("sends no lone caption when an image cannot go, and still answers", async () => {
     const { phone, send, event, reply, replies, handled } = lane({
       imageFails: true,
     });
@@ -768,9 +768,8 @@ describe("the phone lane", () => {
     reply(["m1"], "Here it is.");
 
     await handled([["m1"]]);
-    // An unknown id never reaches the server; a refused image leaves its words.
+    // An unknown id never reaches the server and its caption stays unsent; the answer still goes.
     expect(replies()).toEqual([
-      { action: "reply", message_id: "m1", text: "Gone" },
       {
         action: "reply",
         message_id: "m1",
