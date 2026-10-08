@@ -25,6 +25,7 @@ import { BotAvatar } from "#renderer/components/bot-avatar";
 import { useCollections } from "#renderer/data/db";
 import { isListedSession, isListedWorkspace } from "#renderer/data/db/filters";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
+import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { resolveLook } from "#renderer/lib/bots/avatar";
 import { dispatchHotkeyAction } from "#renderer/lib/hotkeys";
 import { ActionBindingsContext } from "#renderer/lib/keyboard/action-bindings";
@@ -161,7 +162,10 @@ const CommandMenuBody = () => {
       run: () =>
         navigate({
           to: "/sessions/new",
-          search: { workspace: workspace.id },
+          search: {
+            workspace: workspace.id,
+            draft: openStartDraft(undefined, workspace.id),
+          },
           transition: "nav-lateral",
         }),
     })),
@@ -171,7 +175,12 @@ const CommandMenuBody = () => {
       title: t("sessions.page.newTitle"),
       group: "actions",
       icon: Plus,
-      run: () => navigate({ to: "/sessions/new", transition: "nav-lateral" }),
+      run: () =>
+        navigate({
+          to: "/sessions/new",
+          search: { draft: openStartDraft() },
+          transition: "nav-lateral",
+        }),
     },
     {
       id: "new-bot",

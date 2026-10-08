@@ -12,6 +12,7 @@ import { AppIconSprite } from "#renderer/components/app-icon";
 import { DbProvider, type Db } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import type { Transport } from "#renderer/data/transport";
+import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { ChromeEffect, useChromeState } from "#renderer/lib/chrome-state";
 import { inertWhileHidden } from "#renderer/lib/inert-hidden";
 import { resolveKeymap } from "#renderer/lib/keyboard/actions";
@@ -84,6 +85,9 @@ const useShellActions = (): ShellActions => {
             : "/sessions/new";
       void navigate({
         to,
+        ...(to === "/sessions/new"
+          ? { search: { draft: openStartDraft() } }
+          : {}),
         transition: area === "routines" ? "none" : "nav-lateral",
       });
     },

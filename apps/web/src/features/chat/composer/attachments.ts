@@ -4,7 +4,7 @@
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
 import type { ChatHostActions } from "../runtime/host-actions";
-import { updateDraft, type DraftAttachment } from "./draft-store";
+import { draftStore, updateDraft, type DraftAttachment } from "./draft-store";
 
 const MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -29,6 +29,7 @@ const pastedName = (
   return `${id}.${ext || "bin"}`;
 };
 
+const retries = new Map<string, () => Promise<void>>();
 let counter = 0;
 const nextId = (): string => `att-${Date.now().toString(36)}-${++counter}`;
 
@@ -36,17 +37,26 @@ const patch = (
   threadId: string,
   id: string,
   change: Partial<DraftAttachment>
-): void =>
+): void => {
+  if (!draftStore.state[threadId]?.attachments.some((a) => a.id === id)) return;
   updateDraft(threadId, (draft) => ({
     ...draft,
     attachments: draft.attachments.map((a) =>
       a.id === id ? { ...a, ...change } : a
     ),
   }));
+};
 
 export const addPaths = (
   threadId: string,
-  files: Array<{ path: string; name?: string; size?: number }>
+  files: Array<{
+    path: string;
+    name?: string;
+    size?: number;
+    mimeType?: string;
+    kind?: "file" | "folder";
+    count?: number;
+  }>
 ): void =>
   updateDraft(threadId, (draft) => ({
     ...draft,
@@ -58,6 +68,8 @@ export const addPaths = (
         path: file.path,
         state: "done",
         ...(file.size != null ? { size: file.size } : {}),
+        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
+        ...(file.kind ? { kind: file.kind, count: file.count } : {}),
       })),
     ],
   }));
@@ -73,7 +85,9 @@ export const addFiles = async (
   for (const file of files) {
     const path = host.pathForFile(file);
     if (path != null) {
-      addPaths(threadId, [{ path, name: file.name, size: file.size }]);
+      addPaths(threadId, [
+        { path, name: file.name, size: file.size, mimeType: file.type },
+      ]);
       continue;
     }
     if (attachmentsBase == null) continue;
@@ -98,26 +112,33 @@ export const addFiles = async (
         },
       ],
     }));
-    try {
-      const data = new Uint8Array(await file.arrayBuffer());
-      const [saved] = await host.savePasted(
-        attachmentsBase,
-        [{ name: pastedName(id, file), data }],
-        context
-      );
-      if (saved == null) throw new Error("not saved");
-      patch(threadId, id, { path: saved, state: "done" });
-    } catch (error) {
-      patch(threadId, id, {
-        state: "error",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    const upload = async () => {
+      patch(threadId, id, { state: "uploading", error: undefined });
+      try {
+        const data = new Uint8Array(await file.arrayBuffer());
+        const [saved] = await host.savePasted(
+          attachmentsBase,
+          [{ name: pastedName(id, file), data }],
+          context
+        );
+        if (saved == null) throw new Error("not saved");
+        patch(threadId, id, { path: saved, state: "done" });
+        retries.delete(`${threadId}:${id}`);
+      } catch (error) {
+        patch(threadId, id, {
+          state: "error",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+    retries.set(`${threadId}:${id}`, upload);
+    await upload();
   }
 };
 
 export const removeAttachment = (threadId: string, id: string): void =>
   updateDraft(threadId, (draft) => {
+    retries.delete(`${threadId}:${id}`);
     const gone = draft.attachments.find((a) => a.id === id);
     if (gone?.preview != null) URL.revokeObjectURL?.(gone.preview);
     return {
@@ -131,4 +152,21 @@ export const formatSize = (bytes: number | undefined): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export const retryAttachment = async (
+  threadId: string,
+  id: string,
+  host: ChatHostActions,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
+): Promise<void> => {
+  const upload = retries.get(`${threadId}:${id}`);
+  if (upload) return upload();
+  try {
+    const [picked] = (await host.pickFiles(context)) ?? [];
+    if (picked)
+      patch(threadId, id, { ...picked, state: "done", error: undefined });
+  } catch (error) {
+    patch(threadId, id, { state: "error", error: String(error) });
+  }
 };

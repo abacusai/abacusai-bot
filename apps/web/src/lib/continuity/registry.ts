@@ -26,6 +26,8 @@ const attachment = v.object({
   size: v.optional(v.number()),
   mimeType: v.optional(v.string()),
   error: v.optional(v.string()),
+  kind: v.optional(v.picklist(["file", "folder"])),
+  count: v.optional(v.number()),
 });
 const composerDraft = v.object({
   text: v.string(),

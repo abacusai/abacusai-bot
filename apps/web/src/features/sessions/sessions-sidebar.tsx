@@ -23,7 +23,6 @@ import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { useCollectionStatus } from "#renderer/data/db/status";
 import { usePendingConnectorAsks } from "#renderer/lib/connector-requests";
 import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
-import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON, uiPlatform } from "#renderer/lib/platform";
 import {
@@ -65,7 +64,12 @@ import { useSessionsTransport } from "./data/queries";
 import { renameSession, deleteSession } from "./data/session-actions";
 import { sessionsUnreadStore, markSessionUnread } from "./data/unread-store";
 import { openTab } from "./dock/panel-tabs-store";
-import { newStartDraft, startDraftStore } from "./start/start-session";
+import { SessionDraftsSection } from "./start/session-drafts-section";
+import {
+  newStartDraft,
+  openStartDraft,
+  startDraftStore,
+} from "./start/start-session";
 
 export interface SessionGroups {
   pinned: SessionRow[];
@@ -178,7 +182,10 @@ export const SessionsSidebar = () => {
             await collections.workspaces.utils.resync();
             await navigate({
               to: "/sessions/new",
-              search: { workspace: result.workspaceId },
+              search: {
+                workspace: result.workspaceId,
+                draft: openStartDraft(undefined, result.workspaceId),
+              },
               transition: "nav-forward",
             });
           })
@@ -190,7 +197,20 @@ export const SessionsSidebar = () => {
           <CommandPaletteAction />
           <NavList.Action
             label={t("sessions.sidebar.new")}
-            render={<AppLink to="/sessions/new" transition="nav-lateral" />}
+            onClick={() => {
+              void navigate({
+                to: "/sessions/new",
+                search: { draft: openStartDraft() },
+                transition: "nav-lateral",
+              });
+              requestAnimationFrame(() =>
+                document
+                  .querySelector<HTMLTextAreaElement>(
+                    "[data-slot=composer] textarea"
+                  )
+                  ?.focus()
+              );
+            }}
           >
             <Plus />
           </NavList.Action>
@@ -202,6 +222,7 @@ export const SessionsSidebar = () => {
           aria-label={t("sessions.sidebar.search")}
           placeholder={t("sessions.sidebar.search")}
         />
+        <SessionDraftsSection workspaces={workspaces ?? []} />
         {dropError ? <p role="alert">{dropError}</p> : null}
         {status === "error" ? (
           <NavList.Error
@@ -379,7 +400,10 @@ const SessionSidebarRow = ({
             }));
             return navigate({
               to: "/sessions/new",
-              search: { workspace: session.workspaceId },
+              search: {
+                workspace: session.workspaceId,
+                draft: startDraftStore.state.id,
+              },
               transition: "nav-forward",
             });
           })

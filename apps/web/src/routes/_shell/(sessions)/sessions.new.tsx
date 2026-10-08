@@ -1,11 +1,14 @@
 import { draftConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { createFileRoute } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { usePrefs } from "#renderer/data/db/prefs";
 import { updateDraft } from "#renderer/features/chat/composer/draft-store";
 import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
+import { restoreSessionDraft } from "#renderer/features/sessions/start/session-drafts";
 import { SessionStartPage } from "#renderer/features/sessions/start/session-start-page";
 import { SessionStartResources } from "#renderer/features/sessions/start/start-resources";
 import {
@@ -17,11 +20,24 @@ import { registerPreviewConsumer } from "#renderer/features/shell/preview-consum
 import { shellStore } from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 const SessionsNewRoute = () => {
   const { t } = useTranslation();
   const { transport, chat } = Route.useRouteContext();
-  const { workspaceId } = Route.useLoaderData();
-  const model = useSessionComposerModel();
+  const { workspaceId, draftId } = Route.useLoaderData();
+  const draft = useSelector(startDraftStore, (s) => s);
+  const search = Route.useSearch();
+  const navigate = useAppNavigate();
+  const model = useSessionComposerModel(undefined, `draft:${draft.id}`);
+  useEffect(() => {
+    if (search.draft !== draftId)
+      void navigate({
+        to: "/sessions/new",
+        search: { ...search, draft: draftId },
+        replace: true,
+        transition: "none",
+      });
+  }, [draftId, search, navigate]);
   const prefs = usePrefs();
   return (
     <>
@@ -48,6 +64,7 @@ const SessionsNewRoute = () => {
         }
       >
         <SessionStartPage
+          key={draft.id}
           workspaceId={workspaceId}
           handoff={async (id, envelope) => {
             const ack = await transport.client.ai.send({
@@ -67,7 +84,8 @@ const SessionsNewRoute = () => {
               forwardedProps: envelope.forwardedProps,
             });
             if (ack.status === "rejected" || ack.original === "rejected") {
-              startDraftStore.setState((s) => ({ ...s, envelope: null }));
+              if (startDraftStore.state.id === id)
+                startDraftStore.setState((s) => ({ ...s, envelope: null }));
               throw new Error(t("chat.composer.rejected"));
             }
           }}
@@ -75,6 +93,7 @@ const SessionsNewRoute = () => {
           renderComposer={(binding) => (
             <>
               <StartComposer
+                key={binding.threadId}
                 threadId={binding.threadId}
                 runtime={chat}
                 context={binding.context}
@@ -126,7 +145,10 @@ const SessionsNewRoute = () => {
 };
 export const Route = createFileRoute("/_shell/(sessions)/sessions/new")({
   validateSearch: NewSessionSearch,
-  loaderDeps: ({ search }) => ({ workspace: search.workspace }),
+  loaderDeps: ({ search }) => ({
+    workspace: search.workspace,
+    draft: search.draft,
+  }),
   loader: async ({ context, deps, preload }) => {
     const { sessions, workspaces } = context.db.collections;
     await Promise.all([
@@ -150,8 +172,14 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/new")({
       await workspaces.utils.resync();
       workspaceId = result.workspaceId;
     }
-    prepareStartDraft(context.db, workspaceId);
-    return { workspaceId };
+    if (!preload) {
+      if (deps.draft && deps.draft !== startDraftStore.state.id) {
+        const saved = restoreSessionDraft(deps.draft);
+        if (saved) startDraftStore.setState(() => saved);
+      }
+      prepareStartDraft(context.db, workspaceId);
+    }
+    return { workspaceId, draftId: startDraftStore.state.id };
   },
   component: SessionsNewRoute,
 });

@@ -79,6 +79,11 @@ export const openStartDraft = (id?: string, workspaceId?: string): string => {
     }));
   else if (workspaceId)
     startDraftStore.setState((d) => ({ ...d, workspaceId }));
+  requestAnimationFrame(() =>
+    document
+      .querySelector<HTMLTextAreaElement>("[data-slot=composer] textarea")
+      ?.focus()
+  );
   return startDraftStore.state.id;
 };
 
@@ -116,6 +121,7 @@ export interface StartSessionDeps {
   handoff(id: string, envelope: SubmissionEnvelope): Promise<void> | void;
   navigate(id: string): Promise<unknown> | void;
 }
+const sendingDrafts = new Map<string, Store<StartDraft>>();
 const running = new WeakMap<Store<StartDraft>, Promise<void>>();
 const navigating = new WeakMap<Store<StartDraft>, number>();
 export const prepareStartDraft = (db: Db, workspaceId: string | null): void => {
@@ -144,20 +150,38 @@ export const startSession = async (
   deps: StartSessionDeps,
   envelope?: SubmissionEnvelope
 ): Promise<void> => {
-  const store = deps.store ?? startDraftStore;
+  const managed = deps.store === undefined;
+  const id = startDraftStore.state.id;
+  const store =
+    deps.store ?? sendingDrafts.get(id) ?? new Store(startDraftStore.state);
+  if (managed && !sendingDrafts.has(id)) {
+    sendingDrafts.set(id, store);
+    store.subscribe((draft) => {
+      saveSessionDraft(draft);
+      if (startDraftStore.state.id === draft.id)
+        startDraftStore.setState(() => draft);
+    });
+  }
   const sessionId = store.state.id;
   let task = running.get(store);
   if (!task) {
-    task = runStartSession(deps, envelope).finally(() => running.delete(store));
+    task = runStartSession({ ...deps, store }, envelope).finally(() =>
+      running.delete(store)
+    );
     running.set(store, task);
   }
   navigating.set(store, (navigating.get(store) ?? 0) + 1);
   try {
     await task;
-    await deps.navigate(sessionId);
-    if (navigating.get(store) === 1 && store.state.id === sessionId) {
-      if (store === startDraftStore) removeSessionDraft(sessionId);
-      store.setState(() => newStartDraft());
+    if (!managed || startDraftStore.state.id === sessionId)
+      await deps.navigate(sessionId);
+    if (navigating.get(store) === 1) {
+      if (managed) {
+        removeSessionDraft(sessionId);
+        sendingDrafts.delete(sessionId);
+        if (startDraftStore.state.id === sessionId)
+          startDraftStore.setState(newStartDraft);
+      } else if (store.state.id === sessionId) store.setState(newStartDraft);
     }
   } finally {
     const remaining = (navigating.get(store) ?? 1) - 1;
@@ -165,6 +189,7 @@ export const startSession = async (
     else navigating.delete(store);
   }
 };
+
 const runStartSession = async (
   deps: StartSessionDeps,
   envelope?: SubmissionEnvelope

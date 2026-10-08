@@ -17,10 +17,12 @@ import type { FocusEvent, PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
+import { openStartDraft } from "#renderer/features/sessions/start/start-session";
 import { cn } from "#renderer/lib/cn";
 import type { NavType } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";
+import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { uiPlatform } from "#renderer/lib/platform";
 import { useSystem } from "#renderer/lib/use-app-context";
 import { Kbd } from "#renderer/ui/kbd";
@@ -67,22 +69,42 @@ const RailLink = ({
   title?: string;
   "data-area"?: string;
   "data-tour"?: string;
-}) => (
-  <AppLink
-    {...(props as object)}
-    onPointerEnter={(event) => {
-      preloadSidebar(area);
-      onPointerEnter?.(event);
-    }}
-    onFocus={(event) => {
-      preloadSidebar(area);
-      onFocus?.(event);
-    }}
-    to={target.pathname as never}
-    search={target.search as never}
-    transition={transition}
-  />
-);
+}) => {
+  const navigate = useAppNavigate();
+  return (
+    <AppLink
+      {...(props as object)}
+      onPointerEnter={(event) => {
+        preloadSidebar(area);
+        onPointerEnter?.(event);
+      }}
+      onFocus={(event) => {
+        preloadSidebar(area);
+        onFocus?.(event);
+      }}
+      onClick={(event) => {
+        if (
+          area === "sessions" &&
+          target.pathname === "/sessions/new" &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          event.button === 0
+        ) {
+          event.preventDefault();
+          void navigate({
+            to: "/sessions/new",
+            search: { draft: openStartDraft() },
+            transition,
+          });
+        }
+      }}
+      to={target.pathname as never}
+      search={target.search as never}
+      transition={transition}
+    />
+  );
+};
 
 /**
  * The item's name (and shortcut) to its right, only when the labels are

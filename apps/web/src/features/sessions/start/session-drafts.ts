@@ -30,7 +30,9 @@ export const pruneSessionDrafts = (
 ): SessionDrafts => {
   const kept = Object.values(state.drafts).filter(
     (d) =>
-      d.id === state.activeId || d.envelope || now - d.updatedAt < DRAFT_TTL
+      d.envelope ||
+      (now - d.updatedAt < DRAFT_TTL &&
+        (d.id === state.activeId || hasDraftContent(d.composer)))
   );
   const oldest = kept
     .filter((d) => d.id !== state.activeId && !d.envelope)

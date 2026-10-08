@@ -16,6 +16,8 @@ export interface DraftAttachment {
   size?: number;
   mimeType?: string;
   error?: string;
+  kind?: "file" | "folder";
+  count?: number;
   /** Object URL of a pasted image, revoked on removal. */
   preview?: string;
 }
