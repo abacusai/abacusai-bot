@@ -3,6 +3,7 @@ import {
   PHONE_VAULT_TOOL_NAMES,
 } from "@abacus-ai/agent/tool-policy";
 
+import { PHONE_BILLING_TOOLS } from "./billing";
 import { PHONE_CONNECTORS_TOOLS } from "./connectors";
 import type { PhoneToolDefinition } from "./definition";
 
@@ -12,6 +13,7 @@ import type { PhoneToolDefinition } from "./definition";
  */
 export const PHONE_AGENT_TOOLS: readonly PhoneToolDefinition[] = [
   ...PHONE_CONNECTORS_TOOLS,
+  ...PHONE_BILLING_TOOLS,
 ];
 
 /**

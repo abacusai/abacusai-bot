@@ -49,6 +49,7 @@ export const PHONE_AGENT_TOOL_NAMES: readonly string[] = [
   "present_deliverable",
   "connect_connector",
   "disconnect_connector",
+  "billing_plan",
 ];
 
 /** The vault's tools, from the browser server: saved logins, approved cards and sign-ins. */
