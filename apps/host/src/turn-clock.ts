@@ -8,8 +8,12 @@
 export const PHONE_TURN_LIMITS = {
   /** No sign of work for this long: the agent is stuck, not busy. */
   idleMs: 10 * 60_000,
-  /** However busy, a turn never runs longer than this. */
-  hardCapMs: 45 * 60_000,
+  /**
+   * However busy, a turn never runs longer than this. Under the server's
+   * last redelivery (three, 15 minutes apart), so a long turn is acked
+   * before the server gives up on its message and apologizes for it.
+   */
+  hardCapMs: 40 * 60_000,
 };
 
 export class TurnClock {
