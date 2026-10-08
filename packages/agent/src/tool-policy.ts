@@ -31,65 +31,78 @@ export function mcpToolAllowed(
 }
 
 /**
- * The WhatsApp number's chat: every built-in tool that works without a
- * screen. Left out: `memory` (the phone keeps its own) and the `device_*`
- * tools, which drive simulators and devices mirrored into an app pane.
- * `serve` and `present_deliverable` word themselves for the phone (see the
- * desktop's tools/deliverables.ts).
+ * The agent-tools tools the WhatsApp chat gets: one per job. The desktop's
+ * phone definitions (its tools/phone) are exactly these, checked when that
+ * module loads, so a tool reaches the phone only by a definition written in
+ * its words.
+ */
+export const PHONE_AGENT_TOOL_NAMES: readonly string[] = [
+  "skills_list",
+  "skill_view",
+  "cronjob",
+  "vision_analyze",
+  "video_analyze",
+  "x_search",
+  "pdf",
+  "deck_export_pdf",
+  "serve",
+  "present_deliverable",
+  "connect_connector",
+  "disconnect_connector",
+];
+
+/** The vault's tools, from the browser server: saved logins, approved cards and sign-ins. */
+export const PHONE_VAULT_TOOL_NAMES: readonly string[] = [
+  "vault_items",
+  "vault_request",
+  "payment_approval",
+  "signin_approval",
+];
+
+/**
+ * The WhatsApp number's chat. Left out, each with why, in
+ * `PHONE_EXCLUDED_MCP_TOOLS`.
  */
 export const PHONE_MCP_TOOLS: McpToolPolicy = {
-  builtin: [
-    "skills_list",
-    "skill_view",
-    "skill_manage",
-    "todo",
-    "cronjob",
-    "vision_analyze",
-    "video_analyze",
-    "image_generate",
-    "text_to_speech",
-    "video_generate",
-    "xai_video_edit",
-    "xai_video_extend",
-    "bfl_flux3_text_to_video",
-    "bfl_flux3_image_to_video",
-    "bfl_flux3_keyframes_to_video",
-    "bfl_flux3_video_continuation",
-    "bfl_flux3_get_result",
-    "bfl_flux3_prompting_guide",
-    "x_search",
-    "ha_list_entities",
-    "ha_get_state",
-    "ha_list_services",
-    "ha_call_service",
-    "pdf",
-    "deck_export_pdf",
-    "serve",
-    "present_deliverable",
-    "connect_connector",
-    "disconnect_connector",
-    "my_activity",
-    "list_whatsapp_chats",
-    "send_whatsapp_message",
-    "read_whatsapp_messages",
-    "list_telegram_chats",
-    "send_telegram_message",
-    "read_telegram_messages",
-    "list_discord_chats",
-    "send_discord_message",
-    "read_discord_messages",
-    // The vault, from the browser server: saved logins and approved cards.
-    "vault_items",
-    "vault_request",
-    "payment_approval",
-    "signin_approval",
-  ],
+  builtin: [...PHONE_AGENT_TOOL_NAMES, ...PHONE_VAULT_TOOL_NAMES],
   connectors: true,
 };
+
+const MESSAGING =
+  "the chat apps on the user's computer: the phone's chat is WhatsApp itself";
+const MEDIA_OFF =
+  "its toolset is off on the hosted bot, and audio or video cannot go to the chat";
 
 /** The built-in tools the phone does not get, each with why. */
 export const PHONE_EXCLUDED_MCP_TOOLS: Readonly<Record<string, string>> = {
   memory: "the phone keeps its own memory tool",
+  todo: "one list for every session, lost on restart: the phone's memory tracks follow-ups",
+  skill_manage: "writes skill files the user never sees",
+  my_activity: "a bot's own chat only",
+  image_generate: MEDIA_OFF,
+  text_to_speech: MEDIA_OFF,
+  video_generate: MEDIA_OFF,
+  xai_video_edit: MEDIA_OFF,
+  xai_video_extend: MEDIA_OFF,
+  bfl_flux3_text_to_video: MEDIA_OFF,
+  bfl_flux3_image_to_video: MEDIA_OFF,
+  bfl_flux3_keyframes_to_video: MEDIA_OFF,
+  bfl_flux3_video_continuation: MEDIA_OFF,
+  bfl_flux3_get_result: MEDIA_OFF,
+  bfl_flux3_prompting_guide: MEDIA_OFF,
+  ha_list_entities: "a home on the user's own network",
+  ha_get_state: "a home on the user's own network",
+  ha_list_services: "a home on the user's own network",
+  ha_call_service: "a home on the user's own network",
+  list_whatsapp_chats: MESSAGING,
+  send_whatsapp_message: MESSAGING,
+  read_whatsapp_messages: MESSAGING,
+  list_telegram_chats: MESSAGING,
+  send_telegram_message: MESSAGING,
+  read_telegram_messages: MESSAGING,
+  list_discord_chats: MESSAGING,
+  send_discord_message: MESSAGING,
+  read_discord_messages: MESSAGING,
   send_chat_message: "hidden: the per-platform tools delegate to it",
   list_chats: "hidden: the per-platform tools delegate to it",
   read_chat_messages: "hidden: the per-platform tools delegate to it",

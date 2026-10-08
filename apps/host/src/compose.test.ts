@@ -292,9 +292,11 @@ describe("connectors connected elsewhere", () => {
       const statuses = await t.sh.listConnectorStatuses();
       expect(statuses["abacus-googledriveuser"].state).toBe("connected");
       expect(statuses["abacus-googlecalendar"].state).toBe("connected");
-      const asked = await t.sh.mcpAgentToolsServer.connectConnector({
-        service: "googledriveuser",
-      });
+      const asked = await t.sh.mcpAgentToolsServer.executeTool(
+        "connect_connector",
+        { service: "googledriveuser" },
+        t.session.id
+      );
       expect(asked.content[0].text).toContain(
         "Google Drive is already connected"
       );

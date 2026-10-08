@@ -30,14 +30,15 @@ export type ToolHost = Pick<
   | "submitVideoJob"
   | "xSearch"
   | "sendChatMessage"
-  | "connectConnector"
-  | "disconnectConnector"
+  | "connectConnectorOutcome"
+  | "disconnectConnectorOutcome"
   | "myActivity"
   | "listChats"
   | "readChatMessages"
   | "autoReply"
   | "homeAssistant"
   | "ok"
+  | "err"
 >;
 
 /**
