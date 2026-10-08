@@ -521,10 +521,12 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
   const callback = (state: string, code = "c") =>
     get(`/mcp/callback?code=${code}&state=${encodeURIComponent(state)}`, owner);
   try {
-    // The chat link and the click open the same route.
+    // The chat link and the click open the same route, with a one-time nonce.
     expect(await flow.connect("notion")).toEqual({
       ok: true,
-      url: `${hostBase}/mcp/connect/notion`,
+      url: expect.stringMatching(
+        /^https:\/\/apps\.abacus\.ai\/api\/botHost\/h1\/mcp\/connect\/notion\?nonce=[\w-]{32}$/
+      ),
     });
 
     // The proxy's proof: a valid one admits; none, a stale one, or one over
@@ -745,26 +747,61 @@ it("MCP connect: the link goes straight to the provider, and the connector is in
     expect(entries.has("notion")).toBe(false);
     expect(await tokensFor(serverUrl)).toBeUndefined();
 
-    // No sign-in, no credentials: installed on the GET, then connected.
+    // No sign-in, no credentials: installed on the GET, but only with a
+    // host-minted nonce. Without one (a forged navigation, or a link the
+    // page built) the tab gets a confirm link that carries a fresh one.
+    const relative = (url: string) => url.slice(hostBase.length);
     expect(entries.has("huggingface")).toBe(false);
-    const open = await get("/mcp/connect/huggingface");
+    const unconfirmed = await get("/mcp/connect/huggingface");
+    expect(unconfirmed.status).toBe(200);
+    const confirmHtml = await unconfirmed.text();
+    expect(confirmHtml).toContain("Connect Hugging Face?");
+    expect(confirmHtml).not.toContain("<script");
+    expect(entries.has("huggingface")).toBe(false);
+    // Someone else's or a made-up nonce is no better.
+    for (const nonce of [
+      "made-up",
+      new URL(hosted.connectUrl("mine")).searchParams.get("nonce")!,
+    ])
+      expect(
+        await (await get(`/mcp/connect/huggingface?nonce=${nonce}`)).text()
+      ).toContain("Connect Hugging Face?");
+    expect(entries.has("huggingface")).toBe(false);
+    const confirmLink = /href="([^"]+)"/
+      .exec(confirmHtml)![1]!
+      .replaceAll("&amp;", "&");
+    const open = await get(relative(confirmLink));
     expect(open.status).toBe(200);
     expect(await open.text()).toContain("Hugging Face is connected.");
     expect(entries.get("huggingface")).toEqual({
       url: "https://huggingface.co/mcp",
     });
     expect(connected).toHaveBeenLastCalledWith("huggingface");
-    expect(
-      (
-        await get(
-          `/mcp/connect/huggingface?return=${encodeURIComponent("/bot/library/connectors")}`
-        )
-      ).headers.get("location")
-    ).toBe("/bot/library/connectors?connected=huggingface");
-    // The user's own server that asks for none, signed in by its name.
-    expect(await (await get("/mcp/connect/mine")).text()).toContain(
-      "mine is connected."
+    // Spent: the same link only confirms again.
+    expect(await (await get(relative(confirmLink))).text()).toContain(
+      "Connect Hugging Face?"
     );
+    // Expired: the same.
+    const stale = relative(hosted.connectUrl("huggingface"));
+    now += 16 * 60_000;
+    expect(await (await get(stale)).text()).toContain("Connect Hugging Face?");
+    // The confirm link keeps the return path.
+    const returnConfirm = /href="([^"]+)"/
+      .exec(
+        await (
+          await get(
+            `/mcp/connect/huggingface?return=${encodeURIComponent("/bot/library/connectors")}`
+          )
+        ).text()
+      )![1]!
+      .replaceAll("&amp;", "&");
+    expect((await get(relative(returnConfirm))).headers.get("location")).toBe(
+      "/bot/library/connectors?connected=huggingface"
+    );
+    // The user's own server that asks for none, signed in by its name.
+    expect(
+      await (await get(relative(hosted.connectUrl("mine")))).text()
+    ).toContain("mine is connected.");
 
     // A connector that needs keys is connected from the app, never here.
     const keyed = await get("/mcp/connect/keyed");
