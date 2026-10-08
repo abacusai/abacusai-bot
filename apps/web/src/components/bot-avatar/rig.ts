@@ -228,9 +228,13 @@ export const useFaceRig = (
           Math.min(2, (position.y - bounds.y - bounds.height / 2) / 70)
         ),
       };
-      setInteraction(true);
+      rig.gazeX.set(pointer.current.x);
+      rig.gazeY.set(pointer.current.y);
+      rig.lean.set(rig.lean.get() * 0.8 + pointer.current.x * 0.13);
+      rig.tiltX.set(rig.tiltX.get() * 0.8 + pointer.current.x * 0.18);
+      rig.tiltY.set(rig.tiltY.get() * 0.8 + pointer.current.y * 0.14);
     });
-  }, [active, documentVisible, interactive, ref]);
+  }, [active, documentVisible, interactive, ref, rig]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));

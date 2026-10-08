@@ -201,15 +201,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       document.querySelector('[role="dialog"], [role="menu"]') != null
     )
       return;
-    if (event.key === "Enter") {
+    if (event.key === "Enter" || event.key === "ArrowRight") {
       const primary = primaryAction(step, {
         signIn: props.signIn,
         advance: () => go("next"),
-        continueConnectors: () => {
-          if (!facts.ownsBot)
-            void perform(() => props.complete({ to: "new-bot" }));
-          else go("next");
-        },
+        continueConnectors: () => go("next"),
         hello: bot
           ? () =>
               void perform(async () => {
@@ -234,7 +230,7 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
         event.preventDefault();
         primary();
       }
-    } else if (event.key === "Escape") {
+    } else if (event.key === "Escape" || event.key === "ArrowLeft") {
       if (step === "connect") {
         event.preventDefault();
         void perform(async () => {

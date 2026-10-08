@@ -143,7 +143,6 @@ const OnboardingRoute = () => {
         },
         startTour: () =>
           startTour({
-            origin: router.state.location.publicHref,
             onboarded: true,
           }),
       },

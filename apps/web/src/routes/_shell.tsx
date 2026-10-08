@@ -65,7 +65,6 @@ const ShellRoute = () => {
         navigate: async () => undefined,
         startTour: () =>
           startTour({
-            origin: router.state.location.publicHref,
             onboarded: true,
           }),
       },

@@ -55,6 +55,7 @@ interface Home {
   size: number;
   look: Look;
   reduced: boolean;
+  overlay: boolean;
   onPoke?: () => void;
 }
 const Homes = createContext<((home: Home) => () => void) | null>(null);
@@ -117,7 +118,8 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
             ref={live}
             data-slot="boot-avatar-live"
             data-avatar-scene
-            className="titlebar-nodrag fixed top-0 left-0 z-[60] size-24 origin-top-left"
+            className="titlebar-nodrag fixed top-0 left-0 size-24 origin-top-left"
+            style={{ zIndex: home.overlay ? 60 : 20 }}
             onPointerDown={home.onPoke}
           >
             <BotAvatar
@@ -142,6 +144,7 @@ export const BootAvatar = ({
   onPoke,
   locationKey,
   reduce,
+  overlay = false,
 }: {
   stage?: BootStage;
   mood?: AvatarMood;
@@ -151,6 +154,7 @@ export const BootAvatar = ({
   onPoke?: () => void;
   locationKey?: string;
   reduce?: boolean;
+  overlay?: boolean;
 }) => {
   const register = use(Homes);
   const element = useRef<HTMLSpanElement>(null);
@@ -177,9 +181,10 @@ export const BootAvatar = ({
         size,
         look,
         reduced,
+        overlay,
         onPoke,
       });
-  }, [register, pose, size, look, reduced, onPoke, locationKey]);
+  }, [register, pose, size, look, reduced, onPoke, locationKey, overlay]);
   return (
     <div data-slot="boot-avatar" className="flex flex-col items-center gap-4">
       <span

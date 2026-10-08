@@ -138,6 +138,8 @@ interface Pointer {
   speed: number;
 }
 const REST: Pointer = { x: 0, y: 0, speed: 0 };
+const CURIOUS: ExpressionMix = "curious";
+const ALERT: ExpressionMix = { from: "curious", to: "worried", mix: 0.75 };
 const useStagePointer = (
   reduced: boolean,
   root: React.RefObject<HTMLDivElement | null>
@@ -190,6 +192,7 @@ export const OnboardingStage = ({
   const root = useRef<HTMLDivElement>(null);
   const pointer = useStagePointer(reduced, root);
   const { slots, height } = stageFor(step, bot, phase);
+  const looks = cast.map(botLook);
   const [reaction, setReaction] = useState<"happy" | "excited" | null>(null);
   useEffect(() => {
     if (!reaction) return;
@@ -223,12 +226,10 @@ export const OnboardingStage = ({
         const dx = pointer.x - slot.x;
         const dy = pointer.y - slot.y;
         const gaze = !reduced && slot.gaze === "cursor";
-        const expression: ExpressionMix | undefined = gaze
-          ? {
-              from: "curious",
-              to: "worried",
-              mix: Math.min(1, pointer.speed / 2),
-            }
+        const expression = gaze
+          ? pointer.speed > 1
+            ? ALERT
+            : CURIOUS
           : undefined;
         const mood =
           reaction ??
@@ -236,8 +237,8 @@ export const OnboardingStage = ({
             ? "surprised"
             : slot.mood);
         const look =
-          slot.id !== "first-bot" && index > 0 && cast[index - 1]
-            ? botLook(cast[index - 1]!)
+          slot.id !== "first-bot" && index > 0 && looks[index - 1]
+            ? looks[index - 1]!
             : slot.look;
         return (
           <motion.div

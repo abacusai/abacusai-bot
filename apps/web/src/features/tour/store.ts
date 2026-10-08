@@ -4,20 +4,16 @@ export const tourStore = new Store<{
   active: {
     runId: number;
     stopIndex: number;
-    origin: string;
-    startedAt: number;
   } | null;
 }>({ active: null });
 export const startTour = ({
-  origin,
   onboarded = false,
 }: {
-  origin: string;
   onboarded?: boolean;
 }): void => {
   if (!onboarded || tourStore.state.active) return;
   tourStore.setState(() => ({
-    active: { runId: ++nextRun, stopIndex: 0, origin, startedAt: Date.now() },
+    active: { runId: ++nextRun, stopIndex: 0 },
   }));
 };
 export const tourSignedOut = (): void =>

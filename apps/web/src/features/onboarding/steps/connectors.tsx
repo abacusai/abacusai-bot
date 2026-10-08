@@ -58,11 +58,7 @@ export const ConnectorsStep = ({
     (entry) => statuses?.[entry.id]?.state === "connected"
   );
   const queuedAny = (prefs.onboardingPairing?.length ?? 0) > 0;
-  const finish = () => {
-    if (!props.facts.ownsBot)
-      void perform(() => props.complete({ to: "new-bot" }));
-    else advance();
-  };
+  const finish = advance;
   return (
     <>
       <StepTitle ref={heading} size="medium">

@@ -108,20 +108,18 @@ describe("ConnectorsStep", () => {
         heading={createRef()}
       />
     );
-    const slack = screen
+    const gmail = screen
       .getByText("Gmail")
       .closest("[data-connector]")!
       .querySelector("button")!;
-    fireEvent.click(slack);
+    fireEvent.click(gmail);
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(context.props.connect).toHaveBeenCalledWith("abacus-gmailuser");
     expect(
       screen.getByRole("button", { name: "Continue without connectors" })
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await vi.waitFor(() =>
-      expect(context.props.complete).toHaveBeenCalledWith({ to: "new-bot" })
-    );
-    expect(context.advance).not.toHaveBeenCalled();
+    expect(context.advance).toHaveBeenCalledOnce();
+    expect(context.props.complete).not.toHaveBeenCalled();
   });
 });

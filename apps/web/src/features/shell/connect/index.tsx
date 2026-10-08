@@ -137,7 +137,7 @@ export const ConnectScreen = ({
   return (
     <FlowPage
       role="status"
-      media={<BootAvatar stage={error ? "error" : stage} />}
+      media={<BootAvatar stage={error ? "error" : stage} overlay />}
     >
       <FlowHeader
         title={t(
@@ -160,7 +160,7 @@ const HostPage = ({
   description: string;
   mood?: AvatarMood;
 }) => (
-  <FlowPage {...props} media={<BootAvatar mood={mood} />}>
+  <FlowPage {...props} media={<BootAvatar mood={mood} overlay />}>
     <FlowHeader title={title} description={description} />
     {children}
   </FlowPage>

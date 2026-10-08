@@ -44,7 +44,6 @@ export const TourHost = () => {
         transport.client.system.funnelStep({
           step: status === "done" ? "tour_done" : "tour_skipped",
         }),
-      navigate: async () => {},
     }).catch((error: unknown) => {
       ending.current = null;
       setClosed(null);
@@ -79,7 +78,6 @@ export const useStartTour = () => {
   );
   return () =>
     startTour({
-      origin: router.state.location.publicHref,
       onboarded: account.data?.onboarded === true,
     });
 };
