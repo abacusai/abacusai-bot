@@ -83,7 +83,7 @@ const harness = () => {
     inbound: (text: string) =>
       internals.handleInbound("whatsapp", {
         userId: "U1",
-        userName: "Sreemanti 2",
+        userName: "Alex 2",
         chatId: "C1",
         text,
       }),
@@ -114,11 +114,11 @@ describe("the bot chat's transcript", () => {
     await h.inbound("Hi");
 
     expect(h.shown).toEqual([
-      { from: "user", content: "[WhatsApp message from Sreemanti 2] Hi" },
+      { from: "user", content: "[WhatsApp message from Alex 2] Hi" },
     ]);
     // The rules still reach the model, just not the transcript.
     expect(h.prompts[0]).toContain("[auto-reply]");
-    expect(h.prompts[0]).toContain("[WhatsApp message from Sreemanti 2] Hi");
+    expect(h.prompts[0]).toContain("[WhatsApp message from Alex 2] Hi");
   });
 
   it("shows the delivered words, not the notes the model wrote around them", async () => {
@@ -183,10 +183,10 @@ describe("the bot chat's transcript", () => {
 
     h.delta("<reply>hey!</reply>");
     h.idle();
-    await h.inboundAs("Sreemanti 2", "you there?");
+    await h.inboundAs("Alex 2", "you there?");
 
     expect(h.shown.at(-1)?.content).toBe(
-      "[WhatsApp message from Sreemanti 2] you there?"
+      "[WhatsApp message from Alex 2] you there?"
     );
   });
 
