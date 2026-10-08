@@ -75,10 +75,10 @@ export class BotNumber {
         STATUS_TIMEOUT_MS
       );
       this.set(reply.whatsapp_bot?.status === "linked");
+      // Only an answer counts as a read: a failed one (no key yet) asks again next time.
+      this.readAt = this.now();
     } catch (error) {
       console.warn("[bot-number] status failed:", describe(error));
-    } finally {
-      this.readAt = this.now();
     }
     return this.known;
   }

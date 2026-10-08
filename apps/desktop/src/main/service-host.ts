@@ -2334,6 +2334,11 @@ export class ServiceHost {
     this.logSyncService.syncNow();
   }
 
+  /** Read the WhatsApp link now: a new key can read what a keyless start could not, and a link just made shows at once. */
+  refreshBotNumber(): void {
+    void this.botNumber?.read({ fresh: true });
+  }
+
   /**
    * True while an agent turn is in flight: an agui runtime's from the
    * relay's run state (authoritative, never raced by compat; spec 07 review

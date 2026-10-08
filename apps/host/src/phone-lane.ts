@@ -73,6 +73,8 @@ interface PhoneLaneDeps {
   resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
   /** Keeps media held for an answer from eviction, or lets it go. */
   pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
+  /** The server says the user just linked WhatsApp (the "linked" entry). */
+  onLinked?: () => void;
   /** Each answered inbox poll, for what it says besides messages (the user's zone, chats' step events). */
   onPolled?: (result: { tz?: unknown; events?: unknown }) => void;
   /**
@@ -320,6 +322,7 @@ export class PhoneLane {
       void this.acknowledge([entry.id]);
       return;
     }
+    if (entry.kind === "linked") this.deps.onLinked?.();
     this.inbox.add(entry);
     this.lastInboundId = entry.id;
     this.lastArrivalAt = Date.now();
