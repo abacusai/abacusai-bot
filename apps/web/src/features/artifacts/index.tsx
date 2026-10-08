@@ -84,6 +84,7 @@ const useArtifactWindow = (
   selected?: string
 ) => {
   "use no memo";
+  // oxlint-disable-next-line incompatible-library -- This hook explicitly opts out of compiler caching.
   const virtualizer = useVirtualizer({
     count: Math.ceil(entries.length / columns),
     getScrollElement: () => viewport.current,
