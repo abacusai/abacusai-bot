@@ -396,7 +396,9 @@ export const ErrorCard = ({
                           '[data-slot="chat-model-picker"]'
                         )
                         ?.click();
-                  } else if (action.link != null)
+                  } else if (action.type === "upgrade-abacus")
+                    void runtime.host.openUpgrade();
+                  else if (action.link != null)
                     void runtime.host.openExternal(action.link);
                 }}
               >
@@ -586,7 +588,9 @@ export const NoticeRow = ({
                       '[data-slot="chat-model-picker"]'
                     )
                     ?.click();
-              } else if (action.link != null)
+              } else if (action.type === "upgrade-abacus")
+                void runtime.host.openUpgrade();
+              else if (action.link != null)
                 void runtime.host.openExternal(action.link);
             }}
           >

@@ -21,6 +21,7 @@ import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
 import { showError, showInfo } from "#renderer/lib/toast";
+import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
@@ -695,6 +696,11 @@ export const RoutineDialog = ({
                       href={refusal.upgradeUrl ?? ABACUS_PLAN_URL}
                       target="_blank"
                       rel="noopener"
+                      onClick={(event) => {
+                        if (refusal.upgradeUrl != null) return;
+                        event.preventDefault();
+                        void openUpgrade(transport.client);
+                      }}
                     >
                       {t("routines.hosted.upgrade")}
                     </a>

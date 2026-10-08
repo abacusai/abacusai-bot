@@ -10,10 +10,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { GroupCard } from "#renderer/components/form-kit/page";
-import {
-  ABACUS_BUY_CREDITS_URL,
-  ABACUS_PLAN_URL,
-} from "#renderer/lib/abacus-links";
+import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
@@ -29,6 +26,8 @@ import { Separator } from "#renderer/ui/separator";
 
 export interface CreditActions {
   openExternal(url: string): Promise<void>;
+  /** The account's own upgrade page, or the plan page without one. */
+  openUpgrade(): Promise<void>;
   configuredFreeSources?(): Promise<Record<string, boolean>>;
   connectFreeSource?(source: FreePoolProvider, key?: string): Promise<boolean>;
   markCreditsExhausted?(): Promise<void>;
@@ -143,9 +142,9 @@ export const CreditsCard = ({
                 <Button
                   size="sm"
                   onClick={() =>
-                    void host.openExternal(
-                      tier === "paid" ? ABACUS_BUY_CREDITS_URL : ABACUS_PLAN_URL
-                    )
+                    void (tier === "paid"
+                      ? host.openExternal(ABACUS_BUY_CREDITS_URL)
+                      : host.openUpgrade())
                   }
                 >
                   {t("creditsCard.topUpCta")}

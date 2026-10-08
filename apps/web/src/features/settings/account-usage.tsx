@@ -10,15 +10,15 @@ import {
   GroupCard,
   SettingRow,
 } from "#renderer/components/form-kit/page";
+import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showInfo } from "#renderer/lib/toast";
+import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
-
-import { ABACUS_PLAN_URL, ABACUS_BUY_CREDITS_URL } from "./credits";
 export const AccountPage = () => {
   const { t, i18n } = useTranslation();
   const number = (value: unknown) =>
@@ -159,14 +159,7 @@ export const AccountPage = () => {
           id="plan"
           title={account.data.plan ?? t("phase5.unknownPlan")}
         >
-          <Button
-            size="sm"
-            onClick={() =>
-              void platformSystem(transport.client).openExternal({
-                url: ABACUS_PLAN_URL,
-              })
-            }
-          >
+          <Button size="sm" onClick={() => void openUpgrade(transport.client)}>
             {t("phase5.managePlan")}
           </Button>
         </SettingRow>

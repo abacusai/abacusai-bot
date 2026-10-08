@@ -4,9 +4,9 @@ import type { TFunction } from "i18next";
 import { useEffect } from "react";
 
 import type { Transport } from "#renderer/data/transport";
-import { ABACUS_PLAN_URL } from "#renderer/lib/abacus-links";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showError, showInfo } from "#renderer/lib/toast";
+import { openUpgrade } from "#renderer/lib/upgrade";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
 import { routineRefusal } from "./refusal";
@@ -72,9 +72,11 @@ export const showSaveFailure = (
           action: {
             label: t("routines.hosted.upgrade"),
             onClick: () =>
-              void platformSystem(transport.client).openExternal({
-                url: refusal.upgradeUrl ?? ABACUS_PLAN_URL,
-              }),
+              void (refusal.upgradeUrl != null
+                ? platformSystem(transport.client).openExternal({
+                    url: refusal.upgradeUrl,
+                  })
+                : openUpgrade(transport.client)),
           },
         }
       : undefined

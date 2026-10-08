@@ -23,6 +23,13 @@ export const openSharedLink = async (
 ): Promise<void> => {
   await client.messaging.openSharedLink(input);
 };
+/** A link the host has to look up first, opened once it answers. */
+export const openPendingLink = async (
+  client: AppClient,
+  resolve: () => Promise<string>
+): Promise<void> => {
+  await client.system.openExternal({ url: await resolve() });
+};
 /** Abacus sign-in: PKCE through main on Electron, the web handoff in browsers. */
 export const signInAbacus = (
   transport: Transport,

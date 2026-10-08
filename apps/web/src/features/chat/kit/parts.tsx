@@ -8,7 +8,6 @@ import { Brain, ChevronRight, FileText, Globe, Layers } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ABACUS_PLAN_URL } from "#renderer/lib/abacus-links";
 import { cn } from "#renderer/lib/cn";
 import {
   Attachment,
@@ -185,7 +184,7 @@ export const TextPartDispatch = ({ part }: PartProps<unknown, "text">) => {
           })}
           <Button
             variant="secondary"
-            onClick={() => void runtime.host.openExternal(ABACUS_PLAN_URL)}
+            onClick={() => void runtime.host.openUpgrade()}
           >
             {t("creditsCard.topUpCta")}
           </Button>

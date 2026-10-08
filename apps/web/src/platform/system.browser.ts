@@ -70,3 +70,21 @@ export const openSharedLink = async (
     throw error;
   }
 };
+
+/** A link the host has to look up first: the tab is taken inside the click, then filled. */
+export const openPendingLink = async (
+  _client: AppClient,
+  resolve: () => Promise<string>
+): Promise<void> => {
+  const tab = window.open("about:blank", "_blank");
+  if (tab) tab.opener = null;
+  try {
+    const url = await resolve();
+    if (!/^https?:/i.test(url)) tab?.close();
+    else if (tab) tab.location.href = url;
+    else openTab(url);
+  } catch (error) {
+    tab?.close();
+    throw error;
+  }
+};

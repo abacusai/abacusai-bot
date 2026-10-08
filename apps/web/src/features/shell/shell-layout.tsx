@@ -47,7 +47,6 @@ import {
 } from "#renderer/components/tabs-rail/placement";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { cn } from "#renderer/lib/cn";
-import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { useShellWidth, useShellBand } from "./breakpoints";
 import { UpgradePromo } from "./credits-card";
@@ -419,7 +418,7 @@ export const ShellLayout = ({
                 />
               </div>
             </div>
-            {IS_ELECTRON && <UpgradePromo />}
+            <UpgradePromo />
             <SidePanelDrawer
               open={
                 panelShown &&
