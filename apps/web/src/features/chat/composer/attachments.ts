@@ -294,6 +294,7 @@ const addUploads = async (
         },
       ],
     }));
+    const uploadBatch = folder ? batch : `${batch}-${id}`;
     const job = {
       controller: new AbortController(),
       run: async (): Promise<void> => {
@@ -312,7 +313,7 @@ const addUploads = async (
             const relativePath = relativeFilePath(file);
             const saved = await host.uploadFile!(file, resolved, {
               signal: job.controller.signal,
-              batch,
+              batch: uploadBatch,
               relativePath,
               progress: (percent) =>
                 patch(threadId, id, {

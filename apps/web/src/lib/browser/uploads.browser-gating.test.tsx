@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 
 import { act, fireEvent, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
 
 import type { Transport } from "#renderer/data/transport";
 import { sessionReady } from "#renderer/features/chat/fixtures/builders";
@@ -11,6 +11,7 @@ import {
   hostActionsFor,
 } from "#renderer/features/chat/runtime/host-actions";
 import { renderRelay } from "#renderer/features/chat/testing";
+import { initI18n } from "#renderer/lib/i18n";
 import { renderApp } from "#renderer/test-support/app-harness";
 const host = vi.hoisted(() => ({ base: "", token: "fixture-token" }));
 vi.mock("#renderer/features/shell/connect/services", async (original) => ({
@@ -23,7 +24,13 @@ vi.mock("#renderer/lib/voice/use-dictation", () => ({
   useConnectedDictation: () => ({ supported: false }),
 }));
 import { uploadFiles } from "./files";
-afterEach(() => vi.restoreAllMocks());
+beforeEach(async () => {
+  await initI18n();
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 it("fake HTTP host requires session/workspace, accepts multipart and returns the host success shape", async () => {
   const queries: URLSearchParams[] = [];
   const server = createServer(async (request, response) => {
@@ -96,7 +103,7 @@ it("fake HTTP host requires session/workspace, accepts multipart and returns the
         workspaceId: "w",
         sessionId: "wrong",
       })
-    ).rejects.toThrow("Upload failed (400)");
+    ).rejects.toThrow("Could not upload these files");
     await expect(uploadFiles([])).rejects.toThrow("Select a session");
     expect(queries).toHaveLength(2);
   } finally {
@@ -144,7 +151,7 @@ it("native chooser forwards the selected composer's context and removes itself o
     new Response(null, { status: 400 })
   );
   fireEvent.change(input);
-  await expect(pick).rejects.toThrow("Upload failed (400)");
+  await expect(pick).rejects.toThrow("Could not upload these files");
   expect(context).toHaveBeenCalledOnce();
   expect(document.querySelector('input[type="file"]')).toBeNull();
 });
@@ -164,20 +171,42 @@ it("new-session attachments persist the identity before asking the host to uploa
     await screen.findByRole("button", { name: "Attach" });
     fireEvent.click(screen.getByRole("button", { name: "Attach" }));
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Files or images" })
+      await screen.findByRole("menuitem", {
+        name: "Upload from this computer…",
+      })
     );
     const input = document.querySelector('input[type="file"]')!;
     Object.defineProperty(input, "files", {
       value: [new File(["content"], "test.txt")],
     });
-    const fetch = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        Response.json({ success: true, paths: ["/workspace/test.txt"] })
-      );
+    let uploadedUrl = "";
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        status = 200;
+        responseText = JSON.stringify({
+          success: true,
+          paths: ["/workspace/test.txt"],
+        });
+        upload = {};
+        onload?: () => void;
+        onloadend?: () => void;
+        open(_method: string, url: string) {
+          uploadedUrl = url;
+        }
+        setRequestHeader() {}
+        send() {
+          queueMicrotask(() => {
+            this.onload?.();
+            this.onloadend?.();
+          });
+        }
+        abort() {}
+      }
+    );
     await act(async () => fireEvent.change(input));
-    await screen.findByText("test.txt");
-    const url = new URL(String(fetch.mock.calls[0]![0]));
+    await screen.findByText("test.txt", {}, { timeout: 5000 });
+    const url = new URL(uploadedUrl);
     expect(url.searchParams.get("workspaceId")).toBe(
       startDraftStore.state.workspaceId
     );

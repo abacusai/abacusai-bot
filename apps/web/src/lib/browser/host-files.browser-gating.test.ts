@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import { CONTRACT_VERSION } from "@abacus-ai/contract/contract";
 import type { ArtifactRow } from "@abacus-ai/contract/contract/rows";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import JSZip from "jszip";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -11,6 +12,7 @@ import {
 } from "#renderer/data/transport/websocket";
 import { openArtifact } from "#renderer/features/artifacts/data";
 import { resolveBrowserHost } from "#renderer/features/shell/connect/services";
+import { initI18n } from "#renderer/lib/i18n";
 import { configureVoice, fetchWhisperModel } from "#renderer/lib/voice/whisper";
 
 import { viewHostFile } from "./files";
@@ -32,6 +34,8 @@ let files: Map<string, Uint8Array | string>;
 let bootstrapCount: number;
 
 beforeEach(async () => {
+  await initI18n();
+  await import("./host-dialog");
   requests = [];
   statuses = [];
   files = new Map([[file.filePath, "transcript ".repeat(120_000)]]);
@@ -266,19 +270,35 @@ it("renders downloaded images and text in the host-file dialog", async () => {
   const host = transport();
   const client = {
     files: host.client.files,
+    db: {
+      workspaces: {
+        snapshot: async () => ({
+          rows: [{ isActive: true, path: file.hostRoot }],
+        }),
+      },
+    },
     system: { info: async () => ({ paths: { home: file.hostRoot } }) },
   } as unknown as typeof host.client;
   files.set("/workspace/photo.png", new Uint8Array([7, 7, 7]));
   await viewHostFile(client, "/workspace/photo.png");
-  expect(document.querySelector("dialog img")?.getAttribute("src")).toBe(
-    "data:image/png;base64,BwcH"
+  const imageDialog = await screen.findByRole("dialog");
+  await waitFor(() =>
+    expect(imageDialog.querySelector("img")?.getAttribute("src")).toBe(
+      "data:image/png;base64,BwcH"
+    )
   );
-  document.querySelector("dialog")?.remove();
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await viewHostFile(client, file.filePath);
-  expect(document.querySelector("dialog pre")?.textContent?.length).toBe(
-    524288
+  const textDialog = await screen.findByRole("dialog");
+  await waitFor(() =>
+    expect(
+      textDialog.querySelector('[data-slot="file-preview-text"]')?.textContent
+        ?.length
+    ).toBe(1_000_000)
   );
-  document.querySelector("dialog")?.remove();
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   host.close();
 });
 it("keeps a real RPC socket open after a real host oversized snapshot error", async () => {
@@ -363,6 +383,13 @@ it.each(["pdf", "png", "pptx"])(
     const host = transport();
     const client = {
       files: host.client.files,
+      db: {
+        workspaces: {
+          snapshot: async () => ({
+            rows: [{ isActive: true, path: file.hostRoot }],
+          }),
+        },
+      },
       system: { info: async () => ({ paths: { home: file.hostRoot } }) },
     } as unknown as typeof host.client;
     try {
@@ -374,13 +401,24 @@ it.each(["pdf", "png", "pptx"])(
       ).toBe("opened");
       expect(requests[0]!.range).toBe("bytes=0-0");
       expect(requests[0]!.query.has("maxBytes")).toBe(false);
-      expect(
-        document.querySelector(
-          `dialog ${extension === "pdf" ? "iframe" : extension === "png" ? "img" : "pre"}`
-        )
-      ).not.toBeNull();
+      const dialog = await screen.findByRole("dialog");
+      await waitFor(() =>
+        expect(
+          dialog.querySelector(
+            extension === "pdf"
+              ? "iframe"
+              : extension === "png"
+                ? "img"
+                : '[data-slot="file-preview-slides"]'
+          )
+        ).not.toBeNull()
+      );
     } finally {
-      document.querySelector("dialog")?.remove();
+      const close = screen.queryByRole("button", {
+        name: "Close",
+      });
+      if (close) fireEvent.click(close);
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       host.close();
     }
   }
@@ -525,7 +563,9 @@ it("concurrent delayed 403s use a single forced refresh", async () => {
   expect(bootstrapCount).toBe(2);
 });
 
-it("reveals a directory artifact from the host not-a-file response", async () => {
+it("copies a directory artifact path instead of invoking native reveal", async () => {
+  const copy = vi.fn(async () => {});
+  vi.stubGlobal("navigator", { clipboard: { writeText: copy } });
   const fetch = globalThis.fetch;
   vi.stubGlobal(
     "fetch",
@@ -542,7 +582,8 @@ it("reveals a directory artifact from the host not-a-file response", async () =>
       location: "/workspace/folder",
     } as ArtifactRow)
   ).toBe("directory");
-  expect(document.querySelector("dialog")).toBeNull();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(copy).toHaveBeenCalledWith("/workspace/folder");
   host.close();
 });
 it.each(["readImageAsDataUrl", "readPptx"] as const)(
@@ -603,4 +644,19 @@ it("does not inflate deck audio or video entries", async () => {
   expect(movie).not.toHaveBeenCalled();
   expect(audio).not.toHaveBeenCalled();
   host.close();
+});
+
+it("decodes UTF-16 text with a BOM instead of treating it as binary", async () => {
+  files.set(
+    file.filePath,
+    new Uint8Array(
+      Buffer.concat([Buffer.from([255, 254]), Buffer.from("Résumé", "utf16le")])
+    )
+  );
+  const host = transport();
+  try {
+    expect((await host.client.files.readText(file)).content).toBe("Résumé");
+  } finally {
+    host.close();
+  }
 });

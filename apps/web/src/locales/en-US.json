@@ -4026,7 +4026,6 @@
       "hostOutdated": "Your bot is out of date. Restart your computer to update it."
     },
     "files": {
-      "open": "Open folder",
       "download": "Download",
       "downloadFailed": "Could not download this file. Try again.",
       "binary": "Binary file · {{size}} bytes. Download it to open it.",

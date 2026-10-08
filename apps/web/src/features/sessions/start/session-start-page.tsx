@@ -179,18 +179,23 @@ export const SessionStartPage = ({
             {renderComposer({
               threadId: id,
               attachmentContext: async () => {
-                if (!draft.workspaceId)
+                const current = startDraftStore.state;
+                if (!current.workspaceId)
                   throw new Error("Select a workspace before uploading files");
                 await db.collections.sessions.preload();
-                const existing = db.collections.sessions.get(draft.id);
-                if (existing && existing.workspaceId !== draft.workspaceId)
+                const existing = db.collections.sessions.get(current.id);
+                if (existing && existing.workspaceId !== current.workspaceId)
                   throw new Error(
                     "Session identity belongs to another workspace"
                   );
                 if (!existing)
-                  await db.collections.sessions.insert(optimisticSession(draft))
-                    .isPersisted.promise;
-                return { workspaceId: draft.workspaceId, sessionId: draft.id };
+                  await db.collections.sessions.insert(
+                    optimisticSession(current)
+                  ).isPersisted.promise;
+                return {
+                  workspaceId: current.workspaceId,
+                  sessionId: current.id,
+                };
               },
               workspaceId: draft.workspaceId,
               root: workspace?.path ?? null,

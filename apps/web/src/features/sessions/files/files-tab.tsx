@@ -180,7 +180,13 @@ export const FilesTab = ({
   );
   return (
     <div className="flex size-full min-h-0">
-      <aside className="flex w-[232px] min-w-[180px] shrink-0 flex-col gap-2 border-r p-2">
+      <aside
+        className={
+          IS_ELECTRON
+            ? "flex w-[232px] min-w-[180px] shrink-0 flex-col gap-2 border-r p-2"
+            : "flex w-2/5 max-w-[232px] min-w-[120px] shrink-0 flex-col gap-2 border-r p-2"
+        }
+      >
         <Input
           aria-label={t("sessions.files.filter")}
           placeholder={t("sessions.files.filter")}
@@ -303,8 +309,20 @@ export const FilesTab = ({
       <section className="flex min-w-0 flex-1 flex-col">
         {selected ? (
           <>
-            <div className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
-              <span className="min-w-0 flex-1 truncate font-mono text-xs">
+            <div
+              className={
+                IS_ELECTRON
+                  ? "flex h-10 shrink-0 items-center gap-2 border-b px-3"
+                  : "flex shrink-0 flex-wrap items-center gap-1 border-b px-3 py-2"
+              }
+            >
+              <span
+                className={
+                  IS_ELECTRON
+                    ? "min-w-0 flex-1 truncate font-mono text-xs"
+                    : "w-full truncate font-mono text-xs"
+                }
+              >
                 {selected}
               </span>
               <Button

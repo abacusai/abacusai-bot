@@ -170,7 +170,8 @@ export const createHostHttpServer = (
             json(response, 400, { error: "invalid-max-bytes" });
             return;
           }
-          const rangeHeader = request.headers.range;
+          const rangeHeader =
+            request.method === "GET" ? request.headers.range : undefined;
           const rangeMatch = rangeHeader?.match(/^bytes=(\d+)-(\d*)$/);
           const start = rangeMatch ? Number(rangeMatch[1]) : 0;
           const end = rangeMatch?.[2]

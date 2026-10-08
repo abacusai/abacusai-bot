@@ -124,10 +124,11 @@ export const ChatView = (props: ChatViewProps) => {
   const [dropError, setDropError] = useState<string | null>(null);
   const { t } = useTranslation();
   const attachDrop = useEffectEvent((event: DragEvent) => {
-    if (event.defaultPrevented || !event.dataTransfer?.types.includes("Files"))
-      return;
-    event.preventDefault();
+    if (!event.dataTransfer?.types.includes("Files")) return;
     setDragging(false);
+    if (event.defaultPrevented) return;
+    event.preventDefault();
+    setDropError(null);
     const transfer = event.dataTransfer;
     void droppedFiles(transfer)
       .then((files) =>
@@ -237,7 +238,11 @@ export const ChatView = (props: ChatViewProps) => {
     <ChatViewProvider value={value}>
       <MarkdownLinksProvider value={links}>
         <div
-          className="flex size-full min-h-0 flex-col"
+          className={
+            runtime.host.uploadFile
+              ? "relative flex size-full min-h-0 flex-col"
+              : "flex size-full min-h-0 flex-col"
+          }
           data-slot="chat-view"
           data-skin={skin}
           data-thread={threadId}

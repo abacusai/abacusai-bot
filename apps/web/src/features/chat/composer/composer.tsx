@@ -254,7 +254,11 @@ const Attach = () => {
         >
           <Plus aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start">
+        <DropdownMenuContent
+          side="top"
+          align="start"
+          className={runtime.host.pickLocalFiles ? "w-64" : undefined}
+        >
           <DropdownMenuItem
             onClick={async () => {
               setError(null);
@@ -262,7 +266,7 @@ const Attach = () => {
                 if (runtime.host.pickLocalFiles) {
                   const files = await runtime.host.pickLocalFiles();
                   if (files?.length) {
-                    if (!config.attachmentsBase)
+                    if (!config.attachmentsBase && !runtime.host.uploadFile)
                       throw new Error(t("chat.composer.pasteUnavailable"));
                     await addFiles(
                       threadId,
