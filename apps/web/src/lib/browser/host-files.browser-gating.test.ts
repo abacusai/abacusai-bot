@@ -222,6 +222,25 @@ it("parses downloaded deck bytes with embedded media and slide relationships", a
   expect(JSON.stringify(result.deck)).toContain("data:image/png;base64,BwcH");
   host.close();
 });
+it("refuses a deck whose parts inflate past the cap", async () => {
+  const zip = new JSZip();
+  zip.file("ppt/presentation.xml", "<p:presentation/>");
+  // A few hundred kilobytes on the wire, 129 MiB once inflated.
+  zip.file("ppt/slides/slide1.xml", new Uint8Array(129 * 1024 * 1024));
+  const input = { ...file, filePath: "/workspace/bomb.pptx" };
+  const bytes = await zip.generateAsync({
+    type: "uint8array",
+    compression: "DEFLATE",
+    compressionOptions: { level: 1 },
+  });
+  expect(bytes.byteLength).toBeLessThan(2 * 1024 * 1024);
+  files.set(input.filePath, bytes);
+  const host = transport();
+  await expect(host.client.files.readPptx(input)).rejects.toMatchObject({
+    data: { reason: "too-large" },
+  });
+  host.close();
+}, 60_000);
 it("Whisper downloads model files through HTTP without calling the denied procedure", async () => {
   files.set("model", new Uint8Array(2 * 1024 * 1024).fill(8));
   const host = transport();
