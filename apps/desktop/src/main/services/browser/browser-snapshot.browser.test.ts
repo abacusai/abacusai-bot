@@ -17,11 +17,17 @@
  *     element keeps its layout box and the old check only looked at style when
  *     it had none.
  *   - Refs were numbered on the way back up, so `@e2` appeared above `@e1`.
+ *
+ * A fourth came later, from a real sign-in page: an element with no box of
+ * its own was treated as hidden and its subtree dropped. A `display: contents`
+ * wrapper never has a box, so a login form nested under a few of them was
+ * missing whole, and the snapshot showed only the page's footer links.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { extractScript, valueScript } from "./browser-page-scripts";
 import {
+  frameSnapshotScript,
   PAGE_SUMMARY_JS,
   renderTree,
   SNAPSHOT_BUILD_JS,
@@ -57,6 +63,30 @@ const wrap = (body: string, head = ""): string =>
 const nest = (depth: number, inner: string): string =>
   "<div>".repeat(depth) + inner + "</div>".repeat(depth);
 
+/**
+ * A sign-in form the way a component-built page nests it: under wrappers that
+ * are display:contents (a plain div, a custom element, a slot) and so have no
+ * box of their own, beside a footer that is laid out normally.
+ */
+const CONTENTS_LOGIN = wrap(`
+  <main>
+    <div style="display:contents">
+      <login-shell style="display:contents">
+        <slot>
+          <div style="display:contents">
+            <form id="login">
+              <input id="username" name="session_key" type="text" autocomplete="username" aria-label="Email or phone">
+              <input id="password" name="session_password" type="password" autocomplete="current-password" aria-label="Password">
+              <button type="submit">Sign in</button>
+            </form>
+          </div>
+        </slot>
+      </login-shell>
+    </div>
+  </main>
+  <footer><a href="/legal/user-agreement">User Agreement</a></footer>
+`);
+
 const FIXTURES: Record<string, string> = {
   // ── What counts as visible ────────────────────────────────────────────────
   visibility: wrap(`
@@ -74,6 +104,20 @@ const FIXTURES: Record<string, string> = {
       <button id="off">Hidden by the parent</button>
       <button id="on" style="visibility:visible">Visible again</button>
     </div>
+  `),
+  // ── Elements with no box of their own ─────────────────────────────────────
+  contentsLogin: CONTENTS_LOGIN,
+  boxless: wrap(`
+    <div style="position:relative;width:0;height:0">
+      <button style="position:absolute;top:0;left:0;width:160px">Outside a collapsed box</button>
+    </div>
+    <div style="width:0;height:0;overflow:hidden">
+      <button>Clipped by a collapsed box</button>
+    </div>
+    <div style="display:contents;visibility:hidden">
+      <button>Hidden inside a wrapper</button>
+    </div>
+    <svg width="24" height="24" role="button" aria-label="Drawn in SVG"><rect width="24" height="24"></rect></svg>
   `),
   // ── How deep it looks ─────────────────────────────────────────────────────
   shallow: wrap(nest(5, "<button>Five deep</button>")),
@@ -265,6 +309,50 @@ describeInBrowser("the snapshot walker, against real layout", () => {
       // visibility is inherited and can be overridden, unlike display.
       expect(refs("visibilityRestored")).toContain("Visible again");
       expect(refs("visibilityRestored")).not.toContain("Hidden by the parent");
+    });
+  });
+
+  describe("elements with no box of their own", () => {
+    it("sees through display:contents wrappers to the sign-in form inside", () => {
+      // The bug: such a wrapper has no offsetParent and a 0x0 rect, so it read
+      // as gone and took the form with it. Only the footer link was left.
+      const names = refs("contentsLogin");
+
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "Email or phone",
+          "Password",
+          "Sign in",
+          "User Agreement",
+        ])
+      );
+      const password = flatten(pages.contentsLogin!.tree).find(
+        (node) => node.type === "password"
+      );
+      expect(password?.selector).toBe("#password");
+    });
+
+    it("gives the wrappers themselves no ref", () => {
+      const wrappers = flatten(pages.contentsLogin!.tree).filter(
+        (node) =>
+          node.ref != null &&
+          ["div", "login-shell", "slot", "form"].includes(node.tag ?? "")
+      );
+
+      expect(wrappers).toEqual([]);
+    });
+
+    it("keeps what overflows a collapsed box, and drops what a collapsed box clips", () => {
+      expect(refs("boxless")).toContain("Outside a collapsed box");
+      expect(refs("boxless")).not.toContain("Clipped by a collapsed box");
+    });
+
+    it("still hides what a box-less wrapper makes invisible", () => {
+      expect(refs("boxless")).not.toContain("Hidden inside a wrapper");
+    });
+
+    it("judges an SVG control by its box, since offsetParent is HTML-only", () => {
+      expect(refs("boxless")).toContain("Drawn in SVG");
     });
   });
 
@@ -675,8 +763,14 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
     masked: Loose;
   };
   let summary: Loose;
+  let framed: Loose;
 
   beforeAll(() => {
+    // The frame snapshot is the same walker with its refs renamed.
+    framed = runSnapshotFixtures(frameSnapshotScript(2), {
+      login: CONTENTS_LOGIN,
+    }) as unknown as Loose;
+
     const twice = `(() => {
       const first = ${SNAPSHOT_BUILD_JS};
       document.body.insertAdjacentHTML('afterbegin', '<button id="late">Late</button>');
@@ -702,6 +796,15 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
         </div>
       `),
       plain: wrap(`<button id="go">Go</button>`),
+      // The dialog is a display:contents wrapper; its box is the child's.
+      contentsDialog: wrap(`
+        <button id="go">Go</button>
+        <div role="dialog" aria-modal="true" style="display:contents">
+          <div style="position:fixed;top:10px;left:10px;width:300px;height:100px;background:#fff">
+            Sign in to continue <button id="close">Close</button>
+          </div>
+        </div>
+      `),
     }) as unknown as Loose;
 
     extracted = runSnapshotFixtures(
@@ -837,6 +940,27 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
       { kind: "dialog", buttons: [{ name: "Close" }] },
     ]);
     expect(overlays.plain.overlays).toEqual([]);
+  });
+
+  it("reports a dialog whose wrapper is display:contents", () => {
+    expect(overlays.contentsDialog.overlays).toMatchObject([
+      { kind: "dialog", buttons: [{ name: "Close" }] },
+    ]);
+  });
+
+  it("sees the sign-in form through display:contents in a frame snapshot too", () => {
+    const fields = flatten(framed.login.tree as SnapshotResult["tree"])
+      .filter((node) => node.ref != null)
+      .map((node) => `${node.ref}:${node.name}`);
+
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^@f2e\d+:Email or phone$/),
+        expect.stringMatching(/^@f2e\d+:Password$/),
+        expect.stringMatching(/^@f2e\d+:Sign in$/),
+      ])
+    );
+    expect(fields.every((entry) => entry.startsWith("@f2e"))).toBe(true);
   });
 
   it("extracts list rows with their link and named fields", () => {
