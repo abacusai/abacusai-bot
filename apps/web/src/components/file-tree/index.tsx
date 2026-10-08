@@ -37,6 +37,19 @@ const CheckoutTree = ({
   const { model } = useFileTree({
     paths,
     density: "compact",
+    unsafeCSS: `
+      [data-type="item"] {
+        flex-basis: calc(var(--trees-row-height) - 2px);
+        height: calc(var(--trees-row-height) - 2px);
+        line-height: calc(var(--trees-row-height) - 2px);
+        margin-block: 1px;
+        border-radius: var(--row-radius, 8px);
+      }
+      [data-item-selected="true"]:has(+ [data-item-selected="true"]),
+      [data-item-selected="true"] + [data-item-selected="true"] {
+        border-radius: var(--row-radius, 8px);
+      }
+    `,
     gitStatus,
     dragAndDrop: {
       onDropComplete: (event) => {
@@ -81,17 +94,17 @@ const CheckoutTree = ({
           "--trees-theme-sidebar-bg": "var(--background)",
           "--trees-theme-sidebar-fg": "var(--foreground)",
           "--trees-theme-input-bg": "var(--card)",
-          "--trees-theme-list-hover-bg": "var(--muted)",
-          "--trees-theme-list-active-selection-bg": "var(--accent)",
+          "--trees-theme-list-hover-bg": "var(--row-hover)",
+          "--trees-theme-list-active-selection-bg": "var(--row-selected)",
           "--trees-theme-list-active-selection-fg": "var(--accent-foreground)",
-          "--trees-theme-focus-ring": "var(--ring)",
+          "--trees-theme-focus-ring": "var(--row-focus)",
           "--trees-theme-input-fg": "var(--foreground)",
           "--trees-theme-input-border": "var(--input)",
           "--trees-theme-sidebar-border": "var(--border)",
           "--trees-theme-sidebar-header-fg": "var(--muted-foreground)",
           "--trees-theme-scrollbar-thumb": "var(--border)",
           "--trees-fg-muted-override": "var(--muted-foreground)",
-          "--trees-bg-muted-override": "var(--muted)",
+          "--trees-bg-muted-override": "var(--row-hover)",
           // Unset without a chosen interface font: the library's default.
           "--trees-font-family-override": "var(--ui-font-family)",
           "--trees-theme-git-added-fg": "var(--bots-done)",

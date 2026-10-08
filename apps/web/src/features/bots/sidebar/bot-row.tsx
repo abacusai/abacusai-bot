@@ -186,7 +186,7 @@ export const BotRowView = ({
             aria-label={label}
             data-slot="item"
             data-active={active || undefined}
-            className="text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent focus-visible:ring-ring/50 flex h-[var(--bots-row-h,56px)] items-center gap-2.5 rounded-[10px] px-2 outline-none focus-visible:ring-2"
+            className="ui-row text-sidebar-foreground flex h-[calc(var(--bots-row-h,56px)-2px)] items-center gap-2.5 rounded-[10px] px-2 outline-none"
           >
             <BotFace
               bot={bot}

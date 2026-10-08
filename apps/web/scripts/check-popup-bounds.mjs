@@ -109,3 +109,75 @@ test(
     }
   }
 );
+
+test(
+  "three shared rows and file-tree highlights keep a two-pixel separation",
+  { skip: !endpoint },
+  async () => {
+    const pages = await (await fetch(`${endpoint}/json/list`)).json();
+    const cdp = await connect(
+      pages.find((page) => page.type === "page").webSocketDebuggerUrl
+    );
+    try {
+      const path = "/__ui?section=item&stress=sidebar&theme=light";
+      if (gallery.includes("?path="))
+        await cdp.evaluate(
+          "window.popupApp.router.navigate({to:'/__ui',search:{section:'item',stress:'sidebar',theme:'light'}})"
+        );
+      else
+        await cdp.send("Page.navigate", {
+          url: gallery.replace("{path}", path),
+        });
+      let rows;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        rows = await cdp.evaluate(`(()=>{
+        const group=document.querySelector('[data-row-states] [data-slot="item-group"]');
+        if(!group)return null;
+        return {gap:parseFloat(getComputedStyle(group).rowGap),boxes:[...group.children].map(row=>({top:row.getBoundingClientRect().top,bottom:row.getBoundingClientRect().bottom,radius:getComputedStyle(row).borderRadius}))};
+      })()`);
+        if (rows) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      assert.ok(rows);
+      assert.ok(rows.gap >= 2);
+      for (let i = 1; i < rows.boxes.length; i++)
+        assert.ok(
+          rows.boxes[i].top - rows.boxes[i - 1].bottom >= 2,
+          JSON.stringify(rows)
+        );
+      const hover = await cdp.evaluate(
+        `(()=>{const row=document.querySelectorAll('[data-row-states] [data-slot="item"]')[1];const box=row.getBoundingClientRect();return {x:box.x+20,y:box.y+10}})()`
+      );
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        ...hover,
+      });
+      await cdp.send("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        key: "Tab",
+        code: "Tab",
+        windowsVirtualKeyCode: 9,
+      });
+      const colors = await cdp.evaluate(
+        `(()=>{const rows=[...document.querySelectorAll('[data-row-states] [data-slot="item"]')]; rows[2].focus();return rows.map(row=>({bg:getComputedStyle(row).backgroundColor,outline:getComputedStyle(row).outlineWidth,radius:getComputedStyle(row).borderRadius}));})()`
+      );
+      assert.notEqual(
+        colors[0].bg,
+        colors[1].bg,
+        "selection stays distinct from hover"
+      );
+      assert.equal(colors[2].outline, "2px");
+      assert.ok(colors.every((row) => row.radius === "8px"));
+      const tree = await cdp.evaluate(`(()=>{
+      const root=document.querySelector('[data-row-states] file-tree-container')?.shadowRoot;
+      const rows=[...root.querySelectorAll('[data-type="item"]')]; rows[0].click();
+      return rows.map(row=>({top:row.getBoundingClientRect().top,bottom:row.getBoundingClientRect().bottom}));
+    })()`);
+      assert.equal(tree.length, 3);
+      for (let i = 1; i < tree.length; i++)
+        assert.ok(tree[i].top - tree[i - 1].bottom >= 2, JSON.stringify(tree));
+    } finally {
+      cdp.close();
+    }
+  }
+);

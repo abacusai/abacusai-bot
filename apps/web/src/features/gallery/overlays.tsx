@@ -11,6 +11,7 @@ import {
   type ReactElement,
 } from "react";
 
+import { FileTreeView } from "#renderer/components/file-tree";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,6 +80,7 @@ import {
 } from "#renderer/ui/hover-card";
 import { Input } from "#renderer/ui/input";
 import { InputGroupAddon } from "#renderer/ui/input-group";
+import { Item, ItemGroup, ItemContent, ItemTitle } from "#renderer/ui/item";
 import {
   Popover,
   PopoverContent,
@@ -126,7 +128,7 @@ const useOverlay = (id: GalleryOverlayId) => {
 };
 
 const FRUITS = ["Apple", "Banana", "Cherry", "Grape", "Mango"];
-export const SESSION_MENU_LABELS = [
+const SESSION_MENU_LABELS = [
   "Rename session",
   "Pin",
   "Mark as unread",
@@ -135,7 +137,7 @@ export const SESSION_MENU_LABELS = [
   "Copy session ID",
   "Delete session",
 ];
-export const POPUP_STRESS_LABELS = Array.from(
+const POPUP_STRESS_LABELS = Array.from(
   { length: 50 },
   (_, index) =>
     `Connection ${index + 1}: a very long workspace and branch label that needs to fit inside a narrow window`
@@ -164,6 +166,43 @@ export const OverlayExample = ({ id }: { id: GalleryOverlayId }) => {
       }
     >
       <Example />
+    </div>
+  );
+};
+
+export const RowStatesExample = () => {
+  const { stress } = use(OverlayContext);
+  if (!stress) return null;
+  return (
+    <div className="flex flex-col gap-4" data-row-states>
+      <ItemGroup>
+        {[
+          "Selected connection",
+          "Hovered connection",
+          "Keyboard focused connection",
+        ].map((label, index) => (
+          <Item
+            key={label}
+            data-selected={index === 0 || undefined}
+            render={<button type="button" />}
+          >
+            <ItemContent>
+              <ItemTitle>{label}</ItemTitle>
+            </ItemContent>
+            <span className="shrink-0" aria-hidden>
+              ⋯
+            </span>
+          </Item>
+        ))}
+      </ItemGroup>
+      <div className="h-40">
+        <FileTreeView
+          paths={["notes.md", "plan.md", "report.md"]}
+          onSelect={() => {}}
+          onOpen={() => {}}
+          onRename={() => {}}
+        />
+      </div>
     </div>
   );
 };

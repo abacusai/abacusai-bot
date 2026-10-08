@@ -81,7 +81,7 @@ const Group = ({
     return (
       <div role="group" aria-label={label} className="mt-2 first:mt-0">
         {label && <div className={headingClass}>{heading}</div>}
-        <div className="flex flex-col">{children}</div>
+        <div className="ui-list flex flex-col gap-0.5">{children}</div>
       </div>
     );
   return (
@@ -99,7 +99,7 @@ const Group = ({
         <ChevronRight className="size-3 transition-transform group-data-[panel-open]/trigger:rotate-90" />
         {heading}
       </CollapsibleTrigger>
-      <CollapsibleContent className="flex flex-col">
+      <CollapsibleContent className="ui-list flex flex-col gap-0.5">
         {children}
       </CollapsibleContent>
     </Collapsible>
@@ -144,7 +144,7 @@ const NavItem = ({
     aria-current={active ? "page" : undefined}
     title={hint}
     className={cn(
-      "text-sidebar-foreground hover:bg-sidebar-accent/60 data-active:bg-sidebar-accent phone:rounded-xl phone:px-3 phone:text-[15px] h-(--row-h) flex-nowrap gap-2 rounded-lg px-2 py-0 text-[13px]",
+      "text-sidebar-foreground phone:px-3 phone:text-[15px] h-[calc(var(--row-h)-2px)] flex-nowrap gap-2 rounded-lg px-2 py-0 text-[13px]",
       indent && "pl-7",
       className
     )}
@@ -214,7 +214,7 @@ const Skeleton = ({ rows = 6 }: { rows?: number }) => (
  * (`aria-required-children`, Claude impl r1 #9).
  */
 const Rows = ({ children }: { children: ReactNode }) => (
-  <div data-slot="nav-list-rows" className="flex flex-col pt-2">
+  <div data-slot="nav-list-rows" className="ui-list flex flex-col gap-0.5 pt-2">
     {children}
   </div>
 );

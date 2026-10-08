@@ -370,10 +370,14 @@ export const ArtifactsPage = ({
               <div style={{ height: window.before }} />
               <div
                 role="list"
-                className={list ? "flex flex-col gap-0" : "grid gap-2.5"}
+                className={
+                  list
+                    ? "ui-list ui-list-fixed flex flex-col gap-0.5"
+                    : "grid gap-2.5"
+                }
                 style={
                   list
-                    ? undefined
+                    ? ({ "--list-row-height": "72px" } as React.CSSProperties)
                     : {
                         gridTemplateColumns: `repeat(${columns},minmax(0,1fr))`,
                       }
@@ -404,7 +408,12 @@ export const ArtifactsPage = ({
                             key={a.id}
                             role="listitem"
                             data-artifact-card
-                            className="bg-card relative flex flex-col overflow-hidden rounded-xl"
+                            data-selected={search.item === a.id || undefined}
+                            className={
+                              list
+                                ? "ui-row relative flex min-w-0 flex-col rounded-lg"
+                                : "bg-card relative flex flex-col overflow-hidden rounded-xl"
+                            }
                           >
                             <button
                               className={

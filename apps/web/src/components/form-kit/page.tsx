@@ -44,7 +44,7 @@ export const GroupCard = ({
 }) => (
   <div
     className={cn(
-      "bg-card border-border/60 phone:border-0 phone:px-0 flex min-w-0 flex-col divide-y rounded-(--pane-radius) border px-1",
+      "ui-list bg-card border-border/60 phone:border-0 phone:px-0 flex min-w-0 flex-col gap-0.5 divide-y rounded-(--pane-radius) border px-1 py-0.5",
       className
     )}
   >
@@ -70,7 +70,7 @@ export const SettingRow = ({
   media?: ReactNode;
   children?: ReactNode;
 }) => (
-  <div data-setting-id={id} className="setting-row @container/setting">
+  <div data-setting-id={id} className="ui-row setting-row @container/setting">
     {media != null && <div className="shrink-0">{media}</div>}
     <div className="min-w-0 flex-[1_1_140px]">
       <div

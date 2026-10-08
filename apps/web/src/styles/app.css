@@ -338,3 +338,34 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 .popup-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 [data-slot="tooltip-content"] { overflow: visible; white-space: normal; }
 [data-slot="dialog-content"] { max-height: calc(100dvh - 16px); overflow-y: auto; }
+
+.ui-list, [data-slot="nav-list-rows"], [cmdk-group-items],
+[data-slot="select-list"], [data-slot="dropdown-menu-radio-group"], [data-slot="context-menu-radio-group"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+.ui-list-fixed > * {
+  height: calc(var(--list-row-height) - var(--row-gap));
+  flex-shrink: 0;
+  & > button:first-child { height: 100%; }
+}
+.ui-row {
+  border-radius: var(--row-radius);
+  min-width: 0;
+  &:is(:hover, [data-highlighted], [data-popup-open], [cmdk-item][data-selected="true"]) {
+    background-color: var(--row-hover);
+  }
+  &:is([data-active], [data-selected="true"], [aria-selected="true"], [data-checked]):not([cmdk-item]) {
+    background-color: var(--row-selected);
+  }
+  &:active { background-color: var(--row-pressed); }
+  &:focus-visible { outline: 2px solid var(--row-focus); outline-offset: -2px; }
+}
+:is([data-slot="dropdown-menu-content"], [data-slot="context-menu-content"]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-gap);
+}
+
+.setting-row { min-height: calc(var(--setting-row-min) - var(--row-gap)); padding-block: 11px; }
