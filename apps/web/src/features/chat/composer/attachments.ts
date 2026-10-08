@@ -1,9 +1,3 @@
-import {
-  draftStore,
-  updateDraft,
-  type DraftAttachment,
-} from "#renderer/lib/continuity/composer-drafts";
-
 /**
  * Attachments (spec 02 §8.6): a picked or dropped file with a real path is
  * used directly; pasted data is saved under the attachments base first.
@@ -11,6 +5,11 @@ import {
  */
 import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
 
+import {
+  draftStore,
+  updateDraft,
+  type DraftAttachment,
+} from "#renderer/lib/continuity/composer-drafts";
 import { i18n } from "#renderer/lib/i18n";
 
 import type { ChatHostActions } from "../runtime/host-actions";

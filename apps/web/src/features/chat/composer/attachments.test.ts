@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
+import { draftStore } from "#renderer/lib/continuity/composer-drafts";
 import { initI18n } from "#renderer/lib/i18n";
 
 import { inertHostActions } from "../runtime/host-actions";
@@ -10,7 +11,6 @@ import {
   removeAttachment,
   retryAttachment,
 } from "./attachments";
-import { draftStore } from "./draft-store";
 const context = async () => ({ workspaceId: "w", sessionId: "s" });
 beforeEach(async () => {
   await initI18n();
@@ -69,7 +69,12 @@ it("retains failures for retry and aborts a removed upload", async () => {
   const attachment = draftStore.state.thread!.attachments[0]!;
   expect(attachment).toMatchObject({ state: "error", error: "offline" });
   succeed = true;
-  retryAttachment(attachment.id);
+  void retryAttachment(
+    "thread",
+    attachment.id,
+    { ...inertHostActions, uploadFile },
+    context
+  );
   await vi.waitFor(() =>
     expect(draftStore.state.thread!.attachments[0]!.state).toBe("done")
   );
