@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AVATAR_ACCESSORIES,
   AVATAR_SHAPES,
+  type AvatarMood,
   LIFECYCLE_MOODS,
   REACTION_MOODS,
   type Look,
@@ -33,6 +34,13 @@ afterEach(() => {
   preference.reduced = false;
   vi.unstubAllGlobals();
 });
+
+/**
+ * The most DOM nodes one avatar may render. A page shows many at once (the
+ * sidebar, the strip, galleries), so its cost is per avatar: raise this
+ * only on purpose.
+ */
+const AVATAR_NODE_BUDGET = 60;
 
 const look = (patch: Partial<Look> = {}): Look => ({
   shape: "blob",
@@ -258,5 +266,24 @@ describe("BotAvatar", () => {
     expect(css).toMatch(
       /\.dark \.accent-outline \{\s*border-color: transparent/
     );
+  });
+});
+
+describe("an avatar's size in the page", () => {
+  it("stays within its node budget for every shape, accessory and mood", () => {
+    const nodes = (patch: Partial<Look>, mood: AvatarMood = "idle") => {
+      const { container, unmount } = render(
+        <BotAvatar look={look(patch)} mood={mood} size={72} animate />
+      );
+      const count = container.querySelectorAll("*").length;
+      unmount();
+      return count;
+    };
+    const counts = [
+      ...AVATAR_SHAPES.map((shape) => nodes({ shape })),
+      ...AVATAR_ACCESSORIES.map((accessory) => nodes({ accessory })),
+      ...[...LIFECYCLE_MOODS, ...REACTION_MOODS].map((mood) => nodes({}, mood)),
+    ];
+    expect(Math.max(...counts)).toBeLessThanOrEqual(AVATAR_NODE_BUDGET);
   });
 });

@@ -15,9 +15,10 @@ import { useBotModelBinding } from "../model/picker";
 import { DetailsTab, MemoryTab, FilesTab } from "../panel/bot-side-panel";
 import { BotsSidebar, BotsStrip } from "../sidebar/bots-sidebar";
 import { BotStartPage } from "../start/bot-start-page";
-import { AvatarGallery } from "./avatars";
+import { AvatarGallery, AvatarShapes } from "./avatars";
 const ids = [
   "bots-avatar",
+  "bots-avatar-shapes",
   "bots-connector-marks",
   "bots-sidebar",
   "bots-start",
@@ -96,6 +97,7 @@ const View = ({
   play: boolean;
 }) => {
   if (fixture === "bots-avatar") return <AvatarGallery />;
+  if (fixture === "bots-avatar-shapes") return <AvatarShapes />;
   if (fixture === "bots-connector-marks")
     return (
       <div className="flex flex-wrap gap-4">
