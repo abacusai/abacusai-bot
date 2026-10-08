@@ -188,14 +188,14 @@ describe("inferNavType", () => {
     ).toBeNull();
   });
 
-  it("keeps a designed type between siblings: onboarding steps", () => {
+  it("leaves onboarding step motion to its shared stage", () => {
     const step = (key: string) => ({
       fullPath: "/onboarding/$step",
       paneKey: key,
     });
     expect(
-      inferNavType(step("welcome"), step("models"), "new", "onboarding-step")
-    ).toBe("onboarding-step");
+      inferNavType(step("welcome"), step("models"), "new", "none")
+    ).toBeNull();
   });
 
   it("keeps drills within one area: the bot chat ↔ editor morph", () => {

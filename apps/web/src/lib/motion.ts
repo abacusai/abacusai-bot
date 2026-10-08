@@ -64,8 +64,6 @@ export type NavType =
   | "nav-back"
   | "settings-in"
   | "settings-out"
-  | "onboarding-step"
-  | "onboarding-finish"
   | "notch-expand"
   | "notch-contract"
   | "notch-swap";
@@ -76,8 +74,6 @@ export const NAV_TYPES: readonly NavType[] = [
   "nav-back",
   "settings-in",
   "settings-out",
-  "onboarding-step",
-  "onboarding-finish",
   "notch-expand",
   "notch-contract",
   "notch-swap",
