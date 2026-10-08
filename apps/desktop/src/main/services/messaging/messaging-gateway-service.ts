@@ -26,7 +26,11 @@ import { readDefaultAgentMode } from "../config/settings";
 import { environmentNoticeService } from "../providers/environment-notice-service";
 import { AbacusChannelsConnector } from "./abacus-channels-connector";
 import { forChat } from "./chat-markdown";
-import { backoffDelayMs, looksLikeBotOutput } from "./connector";
+import {
+  backoffDelayMs,
+  looksLikeBotOutput,
+  promptSafeAttachmentName,
+} from "./connector";
 import type { InboundMessage, MessagingConnector } from "./connector";
 import { DiscordWebConnector } from "./discord-web-connector";
 import {
@@ -712,7 +716,8 @@ export class MessagingGatewayService {
     // the agent all see where the file is instead of "📷 Photo".
     if (message.attachments != null && message.attachments.length > 0) {
       const lines = message.attachments.map(
-        (file) => `[attachment: ${file.name} saved to ${file.path}]`
+        (file) =>
+          `[attachment: ${promptSafeAttachmentName(file.name)} saved to ${file.path}]`
       );
       message = {
         ...message,

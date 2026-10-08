@@ -158,6 +158,24 @@ export const safeMediaSegment = (
   return WINDOWS_DEVICE_NAME.test(cleaned) ? `_${cleaned}` : cleaned;
 };
 
+/**
+ * A sender-chosen attachment name as it may appear in prompt text: one line,
+ * no controls or bidi marks, no brackets to close the `[attachment: …]` note
+ * early, and capped.
+ */
+export const promptSafeAttachmentName = (name: string): string => {
+  const cleaned = name
+    .replace(/[\p{Cc}\u2028\u2029]+/gu, " ")
+    .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/[[\]<>`]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+  const chars = [...cleaned];
+  return chars.length > 120
+    ? `${chars.slice(0, 119).join("")}…`
+    : cleaned || "file";
+};
+
 export const saveInboundMedia = (
   platform: MessagingPlatformId,
   chatId: string,
