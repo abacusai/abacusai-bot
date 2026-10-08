@@ -153,8 +153,7 @@ export const ModeChip = ({
             data-slot="chat-mode-picker"
             aria-haspopup="listbox"
             className={cn(
-              "h-[30px] rounded-full text-[13px]",
-              !compact && "px-2.5",
+              "h-[30px] rounded-full px-2.5 text-[13px]",
               open && "bg-secondary",
               shown === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
             )}
