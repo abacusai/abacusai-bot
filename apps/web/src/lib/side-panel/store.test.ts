@@ -11,6 +11,7 @@ import {
   reorderPanelTabs,
   resetPanelStore,
   setPanelOpen,
+  setPanelExpanded,
   togglePanel,
   updatePanelTab,
 } from "./store";
@@ -120,4 +121,18 @@ describe("panel store", () => {
     ) as Record<string, { open: boolean }>;
     expect(raw[key]?.open).toBe(true);
   });
+});
+
+it("expanded Chat cannot close, remains focused across toggles and returns to tools on collapse", () => {
+  const details = openPanelTab(key, { kind: "details" });
+  setPanelExpanded(key, true);
+  activatePanelTab(key, "chat");
+  expect(panelScope(key).active).toBe("chat");
+  closePanelTab(key, "chat");
+  expect(panelScope(key).active).toBe("chat");
+  setPanelOpen(key, false);
+  setPanelOpen(key, true);
+  expect(panelScope(key).active).toBe("chat");
+  setPanelExpanded(key, false);
+  expect(panelScope(key).active).toBe(details);
 });

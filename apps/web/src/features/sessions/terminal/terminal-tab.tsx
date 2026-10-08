@@ -211,6 +211,7 @@ export const TerminalTab = ({
           abort.signal
         );
         let timer: ReturnType<typeof setTimeout> | undefined;
+        let paintFrame = 0;
         const fit = () => {
           if (timer) clearTimeout(timer);
           timer = setTimeout(() => {
@@ -225,7 +226,8 @@ export const TerminalTab = ({
                 ...size,
               });
             }
-            repaint(view.term);
+            cancelAnimationFrame(paintFrame);
+            paintFrame = requestAnimationFrame(() => repaint(view.term));
           }, 40);
         };
         const observer = new ResizeObserver(fit);
@@ -234,6 +236,7 @@ export const TerminalTab = ({
         disposers.push(() => {
           observer.disconnect();
           if (timer) clearTimeout(timer);
+          cancelAnimationFrame(paintFrame);
           if (view.refit === fit) view.refit = undefined;
         });
         if (container.current) observer.observe(container.current);
@@ -254,19 +257,20 @@ export const TerminalTab = ({
   }, [transport, key, id, row.workspaceId, row.id, t, shell]);
   useEffect(() => {
     let live = true;
-    if (!visible)
-      void getTerminalView(`${key}:${id}`)
-        .then((view) => {
-          if (live && view.generation != null)
-            void transport.client.terminal.hide({
-              conversationKey: key,
-              terminalId: id,
-              generation: view.generation,
-            });
-        })
-        .catch((e) => {
-          if (live) setError(String(e));
-        });
+    void getTerminalView(`${key}:${id}`)
+      .then((view) => {
+        if (!live) return;
+        if (visible) view.refit?.();
+        else if (view.generation != null)
+          void transport.client.terminal.hide({
+            conversationKey: key,
+            terminalId: id,
+            generation: view.generation,
+          });
+      })
+      .catch((e) => {
+        if (live) setError(String(e));
+      });
     return () => {
       live = false;
     };

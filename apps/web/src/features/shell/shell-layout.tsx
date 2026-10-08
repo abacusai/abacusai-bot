@@ -19,6 +19,7 @@ import {
   type AnyRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
+import { Maximize, Minimize } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -26,20 +27,21 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   PaneBoundary,
   PaneError,
   RoutePending,
 } from "#renderer/components/page-state";
-import { useDb } from "#renderer/data/db";
-import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
-import { cn } from "#renderer/lib/cn";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "#renderer/ui/resizable";
+  PanelWorkspace,
+  PANEL_DRAG_TYPE,
+  moveDockTab,
+} from "#renderer/components/panel-workspace";
+import { usePrefs } from "#renderer/data/db/prefs";
+import { cn } from "#renderer/lib/cn";
+import { Button } from "#renderer/ui/button";
 
 import { BAND_WIDTH, useShellBand } from "./breakpoints";
 import { FloatingIntentContext } from "./floating-intent";
@@ -54,6 +56,7 @@ import {
   panelScope,
   reorderPanelTabs,
   setPanelOpen,
+  setPanelExpanded,
   type PanelTabKind,
 } from "./panel-store";
 import { Rail } from "./rail";
@@ -63,20 +66,15 @@ import {
   rememberLocation,
 } from "./shell-store";
 import {
-  clampPanelWidth,
-  PANE_MIN_PX,
-  PANEL_DEFAULT_PX,
-  PANEL_MIN_PX,
-  PANEL_PREF_KEY,
-  panelMaxFor,
   SidePanelBody,
   SidePanelDrawer,
   SidePanelFrame,
   usePanelTabTitle,
 } from "./side-panel";
-import { useSidePanelOverride } from "./side-panel-slot";
+import { useSidePanelFilled, useSidePanelOverride } from "./side-panel-slot";
 import { SidebarSlot } from "./sidebar-slot";
 import { TopBar } from "./top-bar";
+import { TopBarPanelOutlet } from "./top-bar-slots";
 import { useTopBarStatus } from "./top-bar-slots";
 import { PanelScopeContext, usePanel } from "./use-panel";
 import { useShellMatch } from "./use-shell-match";
@@ -154,12 +152,13 @@ export const ShellLayout = ({
   initials = "",
   children,
 }: ShellLayoutProps) => {
+  const { t } = useTranslation();
   const band = useShellBand();
   const prefs = usePrefs();
-  const db = useDb();
   const { area, sidebar } = useShellMatch();
   const panel = usePanel(area);
   const overridden = useSidePanelOverride();
+  const botPanelFilled = useSidePanelFilled("details");
   const location = useLocation();
   const router = useRouter();
   const status = useTopBarStatus();
@@ -171,31 +170,70 @@ export const ShellLayout = ({
     width: BAND_WIDTH[band],
     area,
     pinned: prefs.sidebar.pinned,
-    panelOpen:
-      area === "sessions"
-        ? (location.search as { tab?: string }).tab != null
-        : panel.open,
+    panelOpen: area === "sessions" ? panel.sessionOpen : panel.open,
     view: (location.search as { view?: string }).view,
   });
   const panelKinds: readonly PanelTabKind[] =
     area == null ? [] : AREA_PANEL_KINDS[area];
-  const panelShown = !overridden && area !== "sessions" && panel.open;
+  const panelAvailable =
+    area === "bots" &&
+    /^\/bots\/[^/]+(?:\/chats\/[^/]+|\/check-in)?$/.test(location.pathname) &&
+    botPanelFilled &&
+    !overridden;
+  const panelShown = panelAvailable && panel.open;
   const panelInLayout = panelShown && layout.sidePanel === "layout";
   const scopeKey = panel.key;
+  const expanded = panelShown && panel.scope.expanded === true;
+  const dockApi = useRef<import("dockview-react").DockviewApi | null>(null);
   const strip =
-    panelInLayout && scopeKey != null ? (
-      <TopBar.PanelTabs
-        tabs={panel.scope.tabs}
-        active={panel.scope.active}
-        title={tabTitle}
-        kinds={panelKinds}
-        onChange={(id) => activatePanelTab(scopeKey, id)}
-        onClose={(id) => closePanelTab(scopeKey, id)}
-        onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
-        // "+" on a multi-instance kind is a new tab (a browser's new-tab
-        // page), never a refocus of the one already open.
-        onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
-      />
+    panelShown && scopeKey != null ? (
+      <>
+        <TopBar.PanelTabs
+          tabs={
+            expanded
+              ? [
+                  {
+                    id: "chat",
+                    kind: "thread",
+                    title: t("sessions.dock.chat"),
+                  },
+                  ...panel.scope.tabs,
+                ]
+              : panel.scope.tabs
+          }
+          active={panel.scope.active}
+          title={tabTitle}
+          kinds={panelKinds}
+          onDragStart={
+            expanded
+              ? (id, event) => event.dataTransfer.setData(PANEL_DRAG_TYPE, id)
+              : undefined
+          }
+          workspaceApi={dockApi}
+          onMove={
+            expanded
+              ? (id, position) => {
+                  moveDockTab(dockApi.current, id, position);
+                }
+              : undefined
+          }
+          onChange={(id) => activatePanelTab(scopeKey, id)}
+          onClose={(id) => closePanelTab(scopeKey, id)}
+          onReorder={(ids) => reorderPanelTabs(scopeKey, ids)}
+          // "+" on a multi-instance kind is a new tab (a browser's new-tab
+          // page), never a refocus of the one already open.
+          onAdd={(kind) => openPanelTab(scopeKey, { kind }, { fresh: true })}
+        />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("sessions.dock.full")}
+          aria-pressed={expanded}
+          onClick={() => setPanelExpanded(scopeKey, !expanded)}
+        >
+          {expanded ? <Minimize /> : <Maximize />}
+        </Button>
+      </>
     ) : null;
 
   useEffect(() => {
@@ -234,26 +272,6 @@ export const ShellLayout = ({
   }, [floatingEnabled, intent]);
   useEffect(() => intent.cancel, [intent]);
 
-  const [paneWidth] = useState(() => createPaneWidthWriter(db, PANEL_PREF_KEY));
-  // The split's width bounds the panel (60 %, 960 px, the pane's minimum).
-  const group = useRef<HTMLDivElement>(null);
-  const [groupWidth, setGroupWidth] = useState(Number.POSITIVE_INFINITY);
-  useEffect(() => {
-    const element = group.current;
-    if (element == null) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? 0;
-      if (width > 0) setGroupWidth(width);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  const panelMax = panelMaxFor(groupWidth);
-  const storedPanel = clampPanelWidth(
-    prefs.panes[PANEL_PREF_KEY] ?? PANEL_DEFAULT_PX,
-    panelMax
-  );
-
   return (
     <FloatingIntentContext value={intent}>
       <PanelScopeContext value={scopeKey}>
@@ -289,12 +307,15 @@ export const ShellLayout = ({
             />
             <TopBar.Actions
               folded={layout.titleBar.actionsFolded}
-              tabs={panelInLayout ? panelKinds : []}
+              tabs={panelShown ? panelKinds : []}
             />
             {strip}
-            <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+            <TopBarPanelOutlet />
+            {panelAvailable && (
+              <TopBar.PanelToggle open={panelShown} onToggle={panel.toggle} />
+            )}
           </TopBar.Root>
-          {panelInLayout && scopeKey != null && (
+          {panelShown && scopeKey != null && (
             <PanelHotkeys scopeKey={scopeKey} />
           )}
           <div className="relative flex min-h-0 min-w-0">
@@ -323,47 +344,51 @@ export const ShellLayout = ({
               />
             </PaneBoundary>
             <div
-              ref={group}
               className={cn(
                 "flex min-h-0 min-w-0 flex-1",
                 // A phone's pane runs edge to edge, like a native screen.
                 !phone && "pr-(--pane-inset) pb-(--pane-inset)"
               )}
             >
-              <ResizablePanelGroup orientation="horizontal" className="gap-0">
-                <ResizablePanel id="pane" minSize={PANE_MIN_PX}>
-                  <Pane>
-                    <PaneBoundary resetKey={location.pathname}>
-                      {children ?? <Outlet />}
-                    </PaneBoundary>
-                  </Pane>
-                </ResizablePanel>
-                {panelInLayout && (
-                  <>
-                    <ResizableHandle
-                      data-pane-gutter=""
-                      className="w-(--pane-inset) bg-transparent"
-                    />
-                    <ResizablePanel
-                      id="side-panel"
-                      minSize={PANEL_MIN_PX}
-                      maxSize={panelMax}
-                      defaultSize={storedPanel}
-                      onResize={(size) =>
-                        paneWidth.write(
-                          clampPanelWidth(size.inPixels, panelMax)
-                        )
-                      }
-                    >
-                      <SidePanelFrame>
-                        <PaneBoundary resetKey={scopeKey ?? ""}>
-                          <SidePanelBody tab={panel.active} />
+              <PanelWorkspace
+                scope={scopeKey ?? "shell"}
+                apiRef={dockApi}
+                active={panel.scope.active}
+                open={panelInLayout || expanded}
+                expanded={expanded}
+                onSelect={(id) => {
+                  if (scopeKey) activatePanelTab(scopeKey, id);
+                }}
+                onClose={(id) => {
+                  if (scopeKey && id !== "chat") closePanelTab(scopeKey, id);
+                }}
+                tabs={[
+                  {
+                    id: "chat",
+                    title: t("sessions.dock.chat"),
+                    content: () => (
+                      <Pane>
+                        <PaneBoundary resetKey={location.pathname}>
+                          {children ?? <Outlet />}
                         </PaneBoundary>
-                      </SidePanelFrame>
-                    </ResizablePanel>
-                  </>
-                )}
-              </ResizablePanelGroup>
+                      </Pane>
+                    ),
+                  },
+                  ...(panelAvailable
+                    ? panel.scope.tabs.map((tab) => ({
+                        id: tab.id,
+                        title: tabTitle(tab),
+                        content: (visible: boolean) => (
+                          <SidePanelFrame visible={visible}>
+                            <PaneBoundary resetKey={scopeKey ?? ""}>
+                              <SidePanelBody tab={tab} visible={visible} />
+                            </PaneBoundary>
+                          </SidePanelFrame>
+                        ),
+                      }))
+                    : []),
+                ]}
+              />
             </div>
           </div>
           <SidePanelDrawer

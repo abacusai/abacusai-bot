@@ -5,9 +5,17 @@
  * bots' `?preview=`) is a deep link: consumed into the store, then stripped
  * from the URL, so later navigations within the scope never reset the panel.
  */
+import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useStore } from "@tanstack/react-store";
 import { createContext, useContext, useEffect } from "react";
+
+import { useDb } from "#renderer/data/db";
+import {
+  panelTabsStore,
+  EMPTY_TABS,
+  updateTabs,
+} from "#renderer/features/sessions/dock/panel-tabs-store";
 
 import type { ShellArea } from "./layout";
 import {
@@ -20,7 +28,6 @@ import {
   type PanelScope,
   type PanelTab,
 } from "./panel-store";
-import { rememberSessionTab, shellStore } from "./shell-store";
 
 /** The scope key the shell resolved for the current location. */
 export const PanelScopeContext = createContext<string | null>(null);
@@ -37,23 +44,33 @@ export const activeTabOf = (scope: PanelScope): PanelTab | undefined =>
   scope.tabs.find((tab) => tab.id === scope.active);
 
 export const usePanel = (area: ShellArea | undefined) => {
-  const params = useParams({ strict: false }) as { botId?: string };
+  const params = useParams({ strict: false }) as {
+    botId?: string;
+    sessionId?: string;
+  };
+  const db = useDb();
+  const row = params.sessionId
+    ? db.collections.sessions.get(params.sessionId)
+    : undefined;
+  const sessionKey =
+    area === "sessions" && row
+      ? sessionConversationKey(row.workspaceId, row.id)
+      : null;
+  const sessionTabs = useStore(panelTabsStore, (state) =>
+    sessionKey ? (state[sessionKey] ?? EMPTY_TABS) : EMPTY_TABS
+  );
   const key = panelScopeKey(area, params.botId);
   const scope = usePanelScope(key);
   const search = useSearch({ strict: false }) as {
     tab?: string;
     preview?: string;
+    view?: "full" | "split";
   };
   const navigate = useNavigate();
   const deepTab = typeof search.tab === "string" ? search.tab : undefined;
   const deepPreview =
     typeof search.preview === "string" ? search.preview : undefined;
-  // The sessions dock keeps `?tab=` as its own active tab; the toggle
-  // remembers it so ⌘⌥B reopens the same one.
   const sessions = area === "sessions";
-  useEffect(() => {
-    if (sessions && deepTab != null) rememberSessionTab(deepTab as never);
-  }, [sessions, deepTab]);
   useEffect(() => {
     if (key == null || sessions) return;
     if (deepTab == null && deepPreview == null) return;
@@ -75,22 +92,42 @@ export const usePanel = (area: ShellArea | undefined) => {
     scope,
     open: scope.open && scope.tabs.length > 0,
     active: activeTabOf(scope),
+    sessionOpen:
+      sessions &&
+      (deepTab != null
+        ? deepTab !== "chat" ||
+          (search.view === "full" && sessionTabs.open === true)
+        : sessionTabs.open === true),
     toggle: () => {
       if (sessions) {
+        if (!sessionKey) return;
+        const current = panelTabsStore.state[sessionKey] ?? EMPTY_TABS;
+        const tab = (
+          deepTab != null
+            ? deepTab !== "chat" || (search.view === "full" && current.open)
+            : current.open
+        )
+          ? undefined
+          : (current.last ?? "changes");
+        updateTabs(sessionKey, (previous) => ({
+          ...previous,
+          open: tab != null,
+          last: tab ?? previous.last,
+        }));
         void navigate({
-          to: ".",
-          search: (previous: Record<string, unknown>) => ({
+          from: "/sessions/$sessionId",
+          to: "/sessions/$sessionId",
+          params: { sessionId: row!.id },
+          search: (previous) => ({
             ...previous,
-            tab:
-              deepTab != null
-                ? undefined
-                : (shellStore.state.lastSessionTab ?? "changes"),
+            tab,
           }),
           replace: true,
         });
         return;
       }
-      if (key != null) togglePanel(key, area);
+      if (key != null && params.botId && params.botId !== "new")
+        togglePanel(key, area);
     },
   };
 };

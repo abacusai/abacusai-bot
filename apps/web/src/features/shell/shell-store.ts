@@ -4,8 +4,6 @@
  */
 import { Store } from "@tanstack/react-store";
 
-import type { SessionTabRef } from "#renderer/lib/navigation/search";
-
 import type { ShellArea } from "./layout";
 
 export interface OcclusionRect {
@@ -34,8 +32,6 @@ export interface ShellState {
   commandOpen: boolean;
   lastLocationOutsideSettings: AreaLocation;
   lastLocationByArea: Partial<Record<ShellArea, AreaLocation>>;
-  /** The sessions dock's tab last shown (⌘⌥B reopens it; `?tab=` is its state). */
-  lastSessionTab: SessionTabRef | null;
   occlusion: { any: boolean; rects: OcclusionRect[] };
 }
 
@@ -44,7 +40,6 @@ const initialShellState = (): ShellState => ({
   commandOpen: false,
   lastLocationOutsideSettings: { pathname: "/bots/new", search: {} },
   lastLocationByArea: {},
-  lastSessionTab: null,
   occlusion: { any: false, rects: [] },
 });
 
@@ -97,11 +92,6 @@ export const rememberLocation = (
           lastLocationOutsideSettings:
             area === "settings" ? state.lastLocationOutsideSettings : location,
         }
-  );
-
-export const rememberSessionTab = (tab: SessionTabRef): void =>
-  shellStore.setState((state) =>
-    state.lastSessionTab === tab ? state : { ...state, lastSessionTab: tab }
   );
 
 export const setOcclusion = (rects: OcclusionRect[]): void =>

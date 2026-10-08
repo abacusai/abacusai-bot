@@ -26,8 +26,10 @@ it("mounts the dock's panes with a pending files tab while its chunk loads", asy
       expect(found).not.toBeNull();
       return found!;
     });
-    expect(document.querySelector('[data-session-pane="chat"]')).not.toBeNull();
-    expect(pane.closest('[data-session-pane="tools"]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-workspace-pane="chat"]')
+    ).not.toBeNull();
+    expect(pane.closest('[data-workspace-pane="tools"]')).not.toBeNull();
     expect(within(pane).getByRole("status", { name: "Loading" })).toBeDefined();
     expect(screen.queryByText("Loading")).toBeNull();
   } finally {

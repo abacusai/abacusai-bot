@@ -1657,13 +1657,16 @@
       "device": "기기",
       "terminal": "Terminal",
       "browser": "Browser",
-      "close": "패널 닫기",
       "closeTab": "Close {{name}}",
       "full": "Toggle full view",
       "move": "Move tab",
-      "moveRight": "Split right",
-      "moveBelow": "Split below",
-      "movePane": "Move to pane {{name}}"
+      "movePane": "Move to pane {{name}}",
+      "moveDirections": {
+        "left": "Split left",
+        "right": "Split right",
+        "top": "Split above",
+        "bottom": "Split below"
+      }
     },
     "browser": {
       "activate": "Click to use this browser",

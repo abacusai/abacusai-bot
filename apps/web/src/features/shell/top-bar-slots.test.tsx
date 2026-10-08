@@ -85,3 +85,51 @@ it("renders the global pill expanded and its action in the folded menu", async (
   await folded.cleanup();
   registration.unmount();
 });
+
+it("offers keyboard-accessible edge moves from the title bar in expanded view", async () => {
+  const onMove = vi.fn();
+  const view = await renderWithDb(
+    <TopBar.PanelTabs
+      tabs={[{ id: "chat", kind: "thread", title: "Chat" }]}
+      active="chat"
+      title={(tab) => tab.title ?? ""}
+      kinds={[]}
+      onChange={vi.fn()}
+      onClose={vi.fn()}
+      onReorder={vi.fn()}
+      onAdd={vi.fn()}
+      onMove={onMove}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Move tab" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Split below" }));
+  expect(onMove).toHaveBeenCalledWith("chat", "bottom");
+  await view.cleanup();
+});
+
+it("portals the add menu outside a clipped title strip with icons and bounded geometry", async () => {
+  const onAdd = vi.fn();
+  const view = await renderWithDb(
+    <div data-testid="clipped-strip" style={{ overflow: "hidden", width: 120 }}>
+      <TopBar.PanelTabs
+        tabs={[]}
+        active={null}
+        title={() => ""}
+        kinds={["terminal", "browser", "files"]}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onReorder={vi.fn()}
+        onAdd={onAdd}
+      />
+    </div>
+  );
+  fireEvent.click(screen.getByTestId("panel-add-tab"));
+  const menu = await screen.findByRole("menu");
+  expect(screen.getByTestId("clipped-strip").contains(menu)).toBe(false);
+  expect(menu.className).toContain("scroll-fade-y");
+  const item = screen.getByRole("menuitem", { name: "Terminal" });
+  expect(item.querySelector("svg")).not.toBeNull();
+  fireEvent.click(item);
+  expect(onAdd).toHaveBeenCalledWith("terminal");
+  await view.cleanup();
+});

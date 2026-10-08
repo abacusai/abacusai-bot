@@ -11,7 +11,11 @@ import {
 import { useBotChatSlots } from "#renderer/features/bots/chat/slots";
 import { loadSenderChat } from "#renderer/features/bots/data/loaders";
 import { useBot } from "#renderer/features/bots/data/queries";
-import { FilesTab } from "#renderer/features/bots/panel/bot-side-panel";
+import {
+  DetailsTab,
+  MemoryTab,
+  FilesTab,
+} from "#renderer/features/bots/panel/bot-side-panel";
 import { ChatView } from "#renderer/features/chat/kit/lazy-view";
 import { useThreadHost } from "#renderer/features/chat/runtime/host";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
@@ -20,9 +24,11 @@ import {
   openPanelTab,
   panelScopeKey,
   updatePanelTab,
+  setPanelOpen,
 } from "#renderer/features/shell/panel-store";
 import { SidePanelContent } from "#renderer/features/shell/side-panel-slot";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
+import { activeTabOf, usePanelScope } from "#renderer/features/shell/use-panel";
 import { accentVars, resolveLook } from "#renderer/lib/bots/avatar";
 import { BotSearch } from "#renderer/lib/navigation/search";
 
@@ -46,6 +52,12 @@ const Sender = ({
     requestBrowserOpen({ sessionId, url })
   );
   const panelKey = panelScopeKey("bots", bot.id)!;
+  const panel = usePanelScope(panelKey);
+  const detailsOpen = panel.open && activeTabOf(panel)?.kind === "details";
+  const toggle = () => {
+    if (detailsOpen) setPanelOpen(panelKey, false);
+    else openPanelTab(panelKey, { kind: "details" });
+  };
   if (!slots.session) return <BotGone chat />;
   return (
     <div className="size-full" style={accentVars(resolveLook(bot))}>
@@ -53,8 +65,8 @@ const Sender = ({
       <TopBarSlot>
         <BotChatIdentity
           bot={bot}
-          detailsOpen={false}
-          onToggle={() => slots.setTab("files")}
+          detailsOpen={detailsOpen}
+          onToggle={toggle}
         />
       </TopBarSlot>
       <ChatView
@@ -67,6 +79,22 @@ const Sender = ({
         slots={{ ...slots.chat, wallpaper: bot.wallpaper ?? null }}
         composer={slots.composer}
       />
+      <SidePanelContent kind="details">
+        {(_, active) => (
+          <DetailsTab
+            bot={bot}
+            binding={{
+              ...slots.binding,
+              layoutId: active ? slots.binding.layoutId : undefined,
+            }}
+            modelInComposer={false}
+            setTab={slots.setTab}
+          />
+        )}
+      </SidePanelContent>
+      <SidePanelContent kind="memory">
+        <MemoryTab bot={bot} />
+      </SidePanelContent>
       <SidePanelContent kind="browser">
         {(tab, active) => (
           <BotBrowser

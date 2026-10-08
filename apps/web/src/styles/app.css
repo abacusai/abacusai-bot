@@ -216,3 +216,53 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   }
 }
 .session-dock-mini [data-slot="composer-dock"] { position: static; }
+
+/* Scroll fades come from shadcn/tailwind.css (rewrite PLAN: foundation).
+   Its scroll-driven masks reveal only edges with more content. */
+@utility scroll-fade-x {
+  --scroll-fade-size: min(12%, calc(var(--spacing) * 10));
+}
+@utility scroll-fade-y {
+  --scroll-fade-size: min(12%, calc(var(--spacing) * 10));
+}
+.panel-dock .dockview-theme-dark {
+  --dv-background-color: transparent;
+  --dv-group-view-background-color: transparent;
+  --dv-tabs-and-actions-container-background-color: var(--background);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--secondary);
+  --dv-activegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--background);
+  --dv-activegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-separator-border: var(--border);
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tab-font-size: 12px;
+  --dv-sash-size: 8px;
+  --dv-active-sash-color: var(--primary);
+  --dv-drag-over-background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
+/* SessionRunning / SplitView use the same radius and gutters as Bots. */
+[data-slot="pane"]:has([data-slot="session-dock"]),
+.workspace-island:has([data-slot="session-dock"]),
+.panel-dock .dockview-theme-dark,
+.panel-dock .dv-groupview {
+  background: transparent;
+  outline: none;
+}
+.panel-dock .dv-render-overlay {
+  box-sizing: border-box;
+  padding: calc(var(--pane-inset) / 2);
+}
+.workspace-island {
+  background: var(--background);
+  border-radius: var(--pane-radius);
+  overflow: hidden;
+}
+.panel-dock .workspace-island [data-slot="pane"],
+.panel-dock .workspace-island [data-slot="side-panel"] {
+  outline: none;
+}

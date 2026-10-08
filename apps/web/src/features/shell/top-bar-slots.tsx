@@ -94,3 +94,18 @@ export const useTopBarStatusText = (status: string | null): void => {
 
 export const useTopBarStatus = (): string | null =>
   useStore(topBarSlots, (state) => state.status);
+
+const panelTarget = new Store<HTMLElement | null>(null);
+const setPanelTarget = (element: HTMLElement | null): void => {
+  panelTarget.setState(() => element);
+};
+export const TopBarPanelOutlet = () => (
+  <div
+    className="titlebar-nodrag flex max-w-[65%] min-w-0 items-center empty:hidden"
+    ref={setPanelTarget}
+  />
+);
+export const TopBarPanelSlot = ({ children }: { children: ReactNode }) => {
+  const target = useStore(panelTarget);
+  return target == null ? null : createPortal(children, target);
+};

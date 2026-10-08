@@ -215,7 +215,14 @@ const featureBoundaryHits = (
           "data/transport/index.ts",
         ].includes(file.path) &&
         ["/connect/services", "/lease"].includes(subpath ?? "");
-      if (!allowed && !platformSeam)
+      const panelSeam =
+        (file.path === "features/sessions/dock/session-dock.tsx" &&
+          feature === "shell" &&
+          ["/top-bar", "/top-bar-slots"].includes(subpath ?? "")) ||
+        (file.path === "features/shell/use-panel.ts" &&
+          feature === "sessions" &&
+          subpath === "/dock/panel-tabs-store");
+      if (!allowed && !platformSeam && !panelSeam)
         hits.push(`${file.path}: ${specifier} (other feature)`);
       else if (
         subpath != null &&

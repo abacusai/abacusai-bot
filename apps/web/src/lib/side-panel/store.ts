@@ -50,6 +50,7 @@ export interface PanelTab {
 }
 
 export interface PanelScope {
+  expanded?: boolean;
   open: boolean;
   tabs: PanelTab[];
   active: string | null;
@@ -137,7 +138,8 @@ export const activatePanelTab = (key: string, id: string): void =>
   update(key, (scope) =>
     scope.active === id && scope.open
       ? scope
-      : scope.tabs.some((tab) => tab.id === id)
+      : (id === "chat" && scope.expanded) ||
+          scope.tabs.some((tab) => tab.id === id)
         ? { ...scope, open: true, active: id }
         : scope
   );
@@ -201,6 +203,16 @@ export const cyclePanelTab = (key: string, direction: 1 | -1): void =>
     return { ...scope, active: next.id };
   });
 
+export const setPanelExpanded = (key: string, expanded: boolean): void =>
+  update(key, (scope) => ({
+    ...scope,
+    expanded,
+    active:
+      !expanded && scope.active === "chat"
+        ? (scope.tabs[0]?.id ?? null)
+        : scope.active,
+  }));
+
 export const setPanelOpen = (key: string, open: boolean): void =>
   update(key, (scope) => (scope.open === open ? scope : { ...scope, open }));
 
@@ -218,9 +230,11 @@ export const togglePanel = (key: string, area: ShellArea | undefined): void => {
     update(key, (current) => ({
       ...current,
       open: true,
-      active: current.tabs.some((tab) => tab.id === current.active)
-        ? current.active
-        : current.tabs[0]!.id,
+      active:
+        (current.expanded && current.active === "chat") ||
+        current.tabs.some((tab) => tab.id === current.active)
+          ? current.active
+          : current.tabs[0]!.id,
     }));
     return;
   }

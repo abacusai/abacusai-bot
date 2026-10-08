@@ -128,32 +128,61 @@ html {
  * chrome; dark already separates by lightness and keeps a fainter edge.
  */
 [data-slot="pane"],
-[data-slot="side-panel"][data-mode="layout"] {
+[data-slot="side-panel"][data-mode="layout"],
+.workspace-island {
   /* Inside the box: the resizable panels clip anything drawn outside. */
   outline: 1px solid var(--border);
   outline-offset: -1px;
 }
 .dark [data-slot="pane"],
-.dark [data-slot="side-panel"][data-mode="layout"] {
+.dark [data-slot="side-panel"][data-mode="layout"],
+.dark .workspace-island {
   outline-color: color-mix(in oklab, var(--border) 45%, transparent);
 }
 
-/* The pane/panel gutter (V3): an 8 px hit area with a 1 px line on hover. */
+/* The island gutter uses the same 8px inset as the Bots panels. */
+[data-pane-gutter], .panel-dock .dv-sash {
+  background: transparent;
+  cursor: col-resize;
+}
 [data-pane-gutter] {
   position: relative;
-  width: var(--pane-inset);
+  width: max(8px, var(--pane-inset));
   flex: none;
-  background: transparent;
 }
-[data-pane-gutter]::after {
+[data-pane-gutter]::after, .panel-dock .dv-sash::after {
+  content: "";
+  position: absolute;
   inset-block: 12px;
+  left: 50%;
   width: 1px;
-  background: transparent;
-  transition: background-color 150ms ease;
-}
-[data-pane-gutter]:hover::after,
-[data-pane-gutter]:focus-visible::after {
+  transform: translateX(-50%);
   background: var(--border);
+  transition: background-color 150ms ease, width 150ms ease;
+}
+[data-pane-gutter]:is(:hover, :focus-visible, [data-separator="active"])::after,
+.panel-dock .dv-sash:is(:hover, :focus-visible, .dv-active, :active)::after {
+  width: 2px;
+  background: var(--primary);
+}
+[data-pane-gutter]:focus-visible, .panel-dock .dv-sash:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash {
+  cursor: row-resize;
+}
+.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash::after {
+  inset-inline: 12px;
+  top: 50%;
+  left: 12px;
+  width: auto;
+  height: 1px;
+  transform: translateY(-50%);
+  bottom: auto;
+}
+.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:is(:hover, :focus-visible, .dv-active, :active)::after {
+  height: 2px;
 }
 
 .titlebar-drag {
@@ -588,4 +617,25 @@ html[data-reduce-motion="on"] .phone-rise {
 /* Phone reading size for chat prose. */
 [data-band="xs"] .chat-prose {
   font-size: 0.9375rem;
+}
+
+.panel-dock .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash {
+  width: 8px;
+  margin-left: -2px;
+}
+.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash {
+  height: 8px;
+  margin-top: -2px;
+}
+.panel-dock .dv-sash:hover::before,
+.panel-dock .dv-sash:focus-visible::before {
+  content: "";
+  position: absolute;
+  inset: calc(50% - 12px) 2px;
+  border-radius: 4px;
+  background: var(--primary);
+  opacity: .35;
+}
+.panel-dock .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:hover::before {
+  inset: 2px calc(50% - 12px);
 }
