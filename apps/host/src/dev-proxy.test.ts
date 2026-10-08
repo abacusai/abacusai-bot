@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
+import { WebSocket } from "ws";
 
 it("exposes file metadata through the dev preview proxy", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-proxy-test-"));
@@ -86,8 +87,30 @@ it("exposes file metadata through the dev preview proxy", async () => {
         expect(response.headers["x-file-size"]).toBe("10");
       }
     }
-    const foreign = await request("https://example.com");
-    expect(foreign.headers["access-control-expose-headers"]).toBeUndefined();
+    // Another page's request never reaches the host with the owner's credentials.
+    for (const method of ["GET", "OPTIONS"]) {
+      const foreign = await request("https://example.com", method);
+      expect(foreign.statusCode).toBe(403);
+      expect(foreign.headers["access-control-expose-headers"]).toBeUndefined();
+    }
+    expect(
+      (await request(`https://local.preview.apps.abacus.ai:${port}`)).statusCode
+    ).toBe(206);
+    // Nor does another page's WebSocket.
+    const refusedSocket = await new Promise<number>((resolve, reject) => {
+      // Only the refusal is under test; the certificate is checked above.
+      const socket = new WebSocket(`wss://127.0.0.1:${port}/rpc`, {
+        rejectUnauthorized: false,
+        origin: "https://example.com",
+        headers: { Host: "local.preview.apps.abacus.ai" },
+      });
+      socket.once("unexpected-response", (_request, response) =>
+        resolve(response.statusCode ?? 0)
+      );
+      socket.once("open", () => reject(new Error("opened")));
+      socket.once("error", reject);
+    });
+    expect(refusedSocket).toBe(403);
   } finally {
     if (child.exitCode === null && child.signalCode === null) {
       const exited = once(child, "exit");
