@@ -61,12 +61,19 @@ export interface BillingPlan {
 }
 
 /**
- * The signed-in account's plan, credits and upgrade paths: a free account's
- * upgrades are its own one-time Basic and Pro links. Null when signed out,
- * when the platform offers none, or when the call fails.
+ * The signed-in account's plan, credits and upgrade paths: with `upgrade`, a
+ * free account's upgrades carry its own one-time Basic and Pro links (minted
+ * only then). Null when signed out, when the platform offers none, or when
+ * the call fails.
  */
-export const fetchBillingPlan = async (): Promise<BillingPlan | null> => {
-  const { ok, result } = await abacusApiCall("_getAbacusbotBillingPlan", "GET");
+export const fetchBillingPlan = async (
+  upgrade: boolean
+): Promise<BillingPlan | null> => {
+  const { ok, result } = await abacusApiCall(
+    "_getAbacusbotBillingPlan",
+    "GET",
+    upgrade ? { includeUpgradeLinks: true } : undefined
+  );
   if (!ok || result == null || typeof result !== "object") return null;
   return result as BillingPlan;
 };
