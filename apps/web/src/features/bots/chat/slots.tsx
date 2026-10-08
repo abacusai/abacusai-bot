@@ -246,6 +246,12 @@ export const useBotChatSlots = (
       },
       showModeChip: false,
       model: expanded && !readOnly ? binding : null,
+      blocked:
+        readOnly || binding.setup.status === "ready"
+          ? undefined
+          : binding.setup.status === "empty"
+            ? ("no-model" as const)
+            : binding.setup.status,
       fixedMode: mode.data ?? AgentMode.Normal,
       ...(!readOnly
         ? {

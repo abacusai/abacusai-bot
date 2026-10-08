@@ -8,6 +8,7 @@ import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { useModelSetup } from "#renderer/components/model-setup/use-model-setup";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { useMotionPreference } from "#renderer/lib/motion";
@@ -63,7 +64,14 @@ export const useBotModelBinding = (
         search: (previous) => ({ ...previous, provider }),
       }),
   });
+  const setup = useModelSetup({
+    models: catalog,
+    loading: models.isPending || settings.isPending,
+    failed: models.isError || settings.isError,
+    select: onChange,
+  });
   return {
+    setup,
     value,
     onConfigureProviders: () =>
       void navigate({ to: "/settings/models", transition: "settings-in" }),

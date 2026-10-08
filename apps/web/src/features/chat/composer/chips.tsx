@@ -31,6 +31,7 @@ import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { ModelSetupPopover } from "#renderer/components/model-setup/setup-list";
 import { cn } from "#renderer/lib/cn";
 import {
   durations,
@@ -335,18 +336,26 @@ const rowsFor = (
 
 export const ModelChip = ({
   binding,
+  blocked,
+  openRequest = 0,
   compact = false,
   onOpenChange,
   onUseLocalModel,
 }: {
+  blocked?: "no-model" | "loading" | "error";
+  openRequest?: number;
   onUseLocalModel?(): void;
   onOpenChange?(open: boolean): void;
   binding: ModelChipBinding;
   compact?: boolean;
 }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setOpen] = useState(false);
+  const [dismissedRequest, setDismissedRequest] = useState(0);
+  const open = menuOpen || openRequest > dismissedRequest;
+  const hint = openRequest > dismissedRequest;
   const [query, setQuery] = useState("");
+  const [connected, setConnected] = useState(false);
   const [railChoice, setRailChoice] = useState<Rail | null>(null);
   const pref = useMotionPreference();
   const label = binding.label;
@@ -386,6 +395,8 @@ export const ModelChip = ({
     if (!next) {
       setQuery("");
       setRailChoice(null);
+      setDismissedRequest(openRequest);
+      setConnected(false);
     }
   };
   const pick = (row: ModelRow | null) => {
@@ -425,6 +436,34 @@ export const ModelChip = ({
     current.connect != null
       ? current
       : null;
+  const setup = binding.setup;
+  if (setup != null && setup.status !== "ready")
+    return (
+      <ModelSetupPopover
+        setup={setup}
+        open={open}
+        onOpenChange={change}
+        hint={hint}
+        connected={() => setConnected(true)}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          data-slot="chat-model-picker"
+          aria-label={t("chat.modelSetup.unset")}
+          className={cn(
+            "h-[30px] rounded-full px-2.5 text-[13px]",
+            open && "bg-secondary"
+          )}
+        >
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full bg-[var(--chat-status-attention)]"
+          />
+          {t("chat.modelSetup.choose")}
+        </Button>
+      </ModelSetupPopover>
+    );
   return (
     <Combobox<ModelRow>
       open={open}
@@ -532,6 +571,16 @@ export const ModelChip = ({
             aria-label={t("chat.composer.models")}
             className="m-0! h-8! shrink-0"
           />
+          {connected ? (
+            <p role="status" className="text-muted-foreground px-2 py-1">
+              {t("chat.modelSetup.connected")}
+            </p>
+          ) : null}
+          {hint && blocked ? (
+            <p role="status" className="text-muted-foreground px-2 py-1">
+              {t("chat.modelSetup.sendHint")}
+            </p>
+          ) : null}
           {notConnected != null ? (
             <div
               data-slot="chat-model-not-connected"
