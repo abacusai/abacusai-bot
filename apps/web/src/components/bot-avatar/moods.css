@@ -42,9 +42,9 @@ html[data-reduce-motion="on"] .bav * { animation: none !important; }
 .bav[data-animate][data-steady][data-shape="blob"] .bav-life { animation-name: bav-soft; }
 .bav[data-animate][data-steady][data-shape="ghost"] .bav-life,
 .bav[data-animate][data-steady][data-shape="cloud"] .bav-life { animation-name: bav-float; }
-.bav[data-animate][data-steady]:not([data-mood="asleep"]) .bav-eye-open { animation: bav-blink var(--bav-blink-period) linear infinite; animation-delay: var(--bav-phase); }
-@keyframes bav-breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(.994,1.006); } }
-@keyframes bav-soft { 0%,100% { transform: skewX(-.8deg) scale(1.008,.992); } 50% { transform: skewX(.8deg) scale(.992,1.008); } }
+.bav:not([data-natural])[data-animate][data-steady]:not([data-mood="asleep"]) .bav-eye-open { animation: bav-blink var(--bav-blink-period) linear infinite; animation-delay: var(--bav-phase); }
+@keyframes bav-breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(calc(1 - .006 * var(--bav-breath, 1)),calc(1 + .006 * var(--bav-breath, 1))); } }
+@keyframes bav-soft { 0%,100% { transform: skewX(calc(-.8deg * var(--bav-wobble, 1))) scale(calc(1 + .008 * var(--bav-breath, 1)),calc(1 - .008 * var(--bav-breath, 1))); } 50% { transform: skewX(calc(.8deg * var(--bav-wobble, 1))) scale(calc(1 - .008 * var(--bav-breath, 1)),calc(1 + .008 * var(--bav-breath, 1))); } }
 @keyframes bav-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5%); } }
 @keyframes bav-blink { 0%,36%,40%,43%,47%,100% { transform: scaleY(1); } 38%,45% { transform: scaleY(.025); } }
 
@@ -52,8 +52,11 @@ html[data-reduce-motion="on"] .bav * { animation: none !important; }
 .bav[data-animate][data-steady][data-mood="excited"] .bav-life { animation: bav-hop 1.8s ease-in-out infinite; }
 .bav[data-animate][data-steady][data-mood="error"] .bav-life { animation: bav-shake 5s ease-in-out infinite; }
 .bav[data-animate][data-steady][data-mood="talking"] .bav-life { animation: bav-speech-bob 1.37s ease-in-out infinite; }
-.bav[data-animate][data-steady][data-mood="talking"] .bav-speech { animation: bav-speech 1.37s ease-in-out infinite; will-change: transform; }
-@keyframes bav-hop { 0%,8%,60%,100% { transform: translateY(0) scale(1,1); } 13% { transform: translateY(1%) scale(1.025,.976); } 27% { transform: translateY(-3%) scale(.98,1.02); } 39% { transform: translateY(0) scale(1.018,.982); } }
+.bav:not([data-natural])[data-animate][data-steady][data-mood="talking"] .bav-speech { animation: bav-speech 1.37s ease-in-out infinite; will-change: transform; }
+@keyframes bav-hop { 0%,8%,60%,100% { transform: translateY(0) scale(1,1); } 13% { transform: translateY(1%) scale(1.025,.976); } 27% { transform: translateY(calc(-3% * var(--bav-hop, 1))) scale(.98,1.02); } 39% { transform: translateY(0) scale(1.018,.982); } }
 @keyframes bav-shake { 0%,8%,20%,100% { transform: rotate(0deg); } 10%,16% { transform: rotate(-1.5deg); } 13%,18% { transform: rotate(1.5deg); } }
 @keyframes bav-speech { 0%,29%,71%,100% { transform: scale(1,.18); } 9%,43% { transform: scale(.88,1.15); } 19%,54%,89% { transform: scale(1.08,.55); } 64%,82% { transform: scale(.94,.95); } }
 @keyframes bav-speech-bob { 0%,29%,71%,100% { transform: translateY(0); } 9%,43% { transform: translateY(-.6%); } 19%,54%,89% { transform: translateY(-.25%); } 64%,82% { transform: translateY(-.45%); } }
+
+.bav[data-shading="off"] .bav-light, .bav[data-shading="off"] .bav-shadow { opacity: 0 !important; }
+.bav-gaze { transform-origin: 50px 47px; }

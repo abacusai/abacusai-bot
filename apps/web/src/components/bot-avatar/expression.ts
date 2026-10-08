@@ -1,5 +1,7 @@
 import type { AvatarMood, AvatarShape } from "#renderer/lib/bots/avatar";
 
+import type { AvatarPersonality } from "./personality";
+
 /** One numeric pose in a 100-unit drawing. Positive smile curves down. */
 export interface Expression {
   eyes: number;
@@ -621,4 +623,28 @@ export const mouthPath = (p: Expression, widthScale = 1): string => {
   const top = y + p.smile - p.mouthOpen * 0.65;
   const bottom = y + p.smile + p.mouthOpen * 1.35;
   return `M${x - half} ${leftY} C${x - half} ${top} ${x + half} ${top} ${x + half} ${rightY} C${x + half} ${bottom} ${x - half} ${bottom} ${x - half} ${leftY} Z`;
+};
+
+/** Apply identity to the whole expression, retaining closed eyes and the mood's intent. */
+export const individualExpression = (
+  pose: Expression,
+  p: AvatarPersonality
+): Expression => {
+  const q = blendExpressions(expressionFor("idle"), pose, p.expressiveness);
+  // Closed emotional lids should stay closed; intensity must not turn a smile into a stare.
+  q.eyes = pose.eyes < 0.2 ? pose.eyes : q.eyes;
+  q.wink = pose.wink;
+  q.lidCurve = pose.lidCurve;
+  q.mouthWidth *= p.mouthWidth;
+  q.smile += p.smileBias;
+  q.cornerTilt += p.smileAsymmetry * p.handedness;
+  q.cheek *= p.blush;
+  q.browTilt += p.browAngle;
+  q.browAsymmetry += 0.35 * p.handedness;
+  q.lean += p.tilt;
+  q.gazeX += p.gazeX;
+  q.gazeY += p.gazeY;
+  // Cheek lift slightly supports the lower eyelid; positive brows open attentive eyes.
+  if (q.eyes > 0.2) q.eyes *= 1 - Math.max(0, q.cheek - 0.16) * 0.08;
+  return q;
 };

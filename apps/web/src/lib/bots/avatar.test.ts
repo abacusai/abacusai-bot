@@ -28,7 +28,15 @@ describe("avatar look", () => {
     expect(AVATAR_SHAPES).toHaveLength(24);
     expect(new Set(AVATAR_SHAPES).size).toBe(24);
     expect(AVATAR_PALETTE).toHaveLength(10);
-    expect(DEFAULT_SHAPES).toEqual(AVATAR_SHAPES.slice(0, 16));
+    expect(DEFAULT_SHAPES).not.toContain("heart");
+    expect(DEFAULT_SHAPES).toHaveLength(16);
+  });
+
+  it("keeps saved hearts and colors while the Sessions default becomes pebble", () => {
+    expect(defaultLook("AbacusAI").shape).toBe("pebble");
+    expect(
+      resolveLook({ ...bot("heart", "#f472b6"), id: "bot-42" })
+    ).toMatchObject({ shape: "heart", color: "#f472b6", identity: "bot-42" });
   });
 
   it("every palette colour and legacy target reaches 4.5:1 with its foreground", () => {
@@ -57,6 +65,7 @@ describe("avatar look", () => {
       shape: "ghost",
       color: "#60a5fa",
       accessory: "crown",
+      identity: "x",
     });
     // A light custom colour passes 4.5:1 with the dark foreground.
     expect(resolveLook(bot("blob", "#ffd0e0")).color).toBe("#ffd0e0");

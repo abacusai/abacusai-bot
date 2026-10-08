@@ -4,7 +4,7 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AvatarMood, AvatarShape } from "#renderer/lib/bots/avatar";
 import { springs } from "#renderer/lib/motion";
@@ -17,6 +17,7 @@ import {
 } from "./clock";
 import {
   expressionFor,
+  individualExpression,
   entryExpression,
   mouthPath,
   personalityFor,
@@ -24,6 +25,7 @@ import {
   type Expression,
   type ExpressionMix,
 } from "./expression";
+import type { AvatarPersonality } from "./personality";
 
 type Rig = { [K in keyof Expression]: MotionValue<number> };
 const channels = Object.keys(expressionFor("idle")) as (keyof Expression)[];
@@ -39,7 +41,9 @@ export const useFaceRig = (
   size: number,
   ref: React.RefObject<HTMLSpanElement | null>,
   expression?: ExpressionMix,
-  interactive = true
+  interactive = true,
+  individual?: AvatarPersonality,
+  coupled = true
 ) => {
   const [admitted, setAdmitted] = useState(false);
   const [interaction, setInteraction] = useState(false);
@@ -47,10 +51,11 @@ export const useFaceRig = (
   const [documentVisible, setDocumentVisible] = useState(
     () => !document.hidden
   );
-  const id = useId();
-  const seed = [...id].reduce((sum, c) => sum + c.charCodeAt(0), 0) * 0.173;
+  const seed = individual?.phase ?? 0;
   const [rig] = useState(() => {
-    const pose = expressionFor(mood, expression);
+    const base = expressionFor(mood, expression);
+    const pose =
+      individual && coupled ? individualExpression(base, individual) : base;
     return Object.fromEntries(
       channels.map((key) => [key, motionValue(pose[key])])
     ) as Rig;
@@ -89,7 +94,8 @@ export const useFaceRig = (
     previousShape.current = shape;
     const controls = new Map<keyof Expression, ReturnType<typeof animate>>();
     const personality = personalityFor(shape);
-    let anticipationUntil = performance.now() / 1000 + 0.1;
+    let anticipationUntil =
+      performance.now() / 1000 + 0.1 + (individual?.latency ?? 0);
     let following = 0;
     let blinkUntil = 0;
     const restingEyes = expressionFor(mood, expression).eyes;
@@ -99,6 +105,7 @@ export const useFaceRig = (
         moving && dynamic
           ? sampleExpression(mood, shape, seconds, seed, expression)
           : expressionFor(mood, expression);
+      if (individual && coupled) pose = individualExpression(pose, individual);
       if (moving) {
         pose.gazeX += pointer.current.x;
         pose.gazeY += pointer.current.y;
@@ -162,7 +169,8 @@ export const useFaceRig = (
                     ? 150 / (personality.softness ?? 0.65)
                     : key === "overlap"
                       ? 160
-                      : springs.character.stiffness,
+                      : springs.character.stiffness *
+                        (individual?.stiffness ?? 1),
             })
           );
         }
@@ -185,7 +193,18 @@ export const useFaceRig = (
       unsubscribe?.();
       for (const control of controls.values()) control.stop();
     };
-  }, [active, documentVisible, dynamic, mood, shape, seed, rig, expression]);
+  }, [
+    active,
+    documentVisible,
+    dynamic,
+    mood,
+    shape,
+    seed,
+    rig,
+    expression,
+    individual,
+    coupled,
+  ]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));
