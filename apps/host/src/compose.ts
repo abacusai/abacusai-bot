@@ -206,6 +206,14 @@ export const composeNodeHost = async () => {
       payload.event.type === "turn_reply"
     )
       nudgeAgenda.turnEnded();
+    else if (
+      sessionId === phoneSessionId &&
+      payload.type === "event" &&
+      payload.event.type === "tool_execution_complete" &&
+      /(^|_)checkins$/.test(payload.event.tool.name) &&
+      payload.event.tool.input.op === "language"
+    )
+      nudgeAgenda.languageCallEnded();
   });
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.
