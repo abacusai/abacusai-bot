@@ -197,6 +197,7 @@ export const composeNodeHost = async () => {
         ? serviceHost.mediaStore.pin(ref, sessionId)
         : serviceHost.mediaStore.unpin(ref, sessionId),
     onPolled: (result) => nudgeAgenda.polled(result),
+    turnNotes: (entry) => nudgeAgenda.notes(entry),
   });
   const stopTurns = serviceHost.onAgentEvent((sessionId, payload) => {
     if (

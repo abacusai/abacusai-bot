@@ -6,6 +6,8 @@ import {
   type NudgeAgendaItem,
   phoneLanguage,
   phoneZone,
+  retireNudgedLoops,
+  scriptLanguage,
   writePhoneZone,
 } from "@abacus-ai/agent/phone-nudges";
 
@@ -51,16 +53,14 @@ const CALL_TIMEOUT_MS = 20_000;
 const UNKNOWN_ACTION_RE = /action must be one of/i;
 /** The server keeps at most this many items. */
 const MAX_ITEMS = 10;
-/** A connector link not finished is worth one check-in this long after it went. */
-const CONNECT_AFTER_MS = 2 * 60 * 60_000;
 
-/** One wait as an agenda item: its kind and stage, never anything typed. */
+/** One wait as an agenda item; a connector link's `at` is when it went (the server waits 2h). */
 export function waitItem(wait: PendingWait): NudgeAgendaItem {
   const name = (wait.label ?? "A connector").slice(0, 60);
   return {
     item_id: wait.itemId,
     kind: "connect",
-    at: seconds(wait.since + CONNECT_AFTER_MS),
+    at: seconds(wait.since),
     expires_at: seconds(wait.expiresAt),
     summary: `${name} link was sent and is not connected yet.`.slice(
       0,
@@ -70,6 +70,10 @@ export function waitItem(wait: PendingWait): NudgeAgendaItem {
 }
 
 const seconds = (ms: number): number => Math.floor(ms / 1000);
+
+interface AgendaReply {
+  dropped?: Array<{ reason?: unknown }>;
+}
 
 export class NudgeAgenda {
   private readonly timings: typeof NUDGE_AGENDA_TIMINGS;
@@ -83,8 +87,14 @@ export class NudgeAgenda {
   /** The last body the server took. */
   private lastBody: string | null = null;
   private refusedOnce = false;
+  /** The server took an agenda this start: it knows check-ins. */
+  private supported = false;
   /** The server does not know the action: nothing more is posted this start. */
   private unsupported = false;
+  /** Whether the server reports check-ins on; null until it said. */
+  private enabled: boolean | null = null;
+  /** The user's language as their script names it, while none was set. */
+  private scriptLang: string | null = null;
   /** A pending post goes even when nothing changed. */
   private forceNext = false;
   private posting: Promise<void> = Promise.resolve();
@@ -104,7 +114,9 @@ export class NudgeAgenda {
     this.posted = false;
     this.lastBody = null;
     this.refusedOnce = false;
+    this.supported = false;
     this.unsupported = false;
+    this.enabled = null;
     this.check = setInterval(
       () => this.schedule(false),
       this.timings.checkEveryMs
@@ -120,26 +132,64 @@ export class NudgeAgenda {
     this.check = null;
   }
 
-  /** An inbox poll answered: the user's zone becomes the loop's clock; the start's first posts the agenda. */
+  /**
+   * An inbox poll answered: the server's zone becomes the loop's clock (null
+   * forgets it; an older server says nothing and nothing changes), and the
+   * start's first posts the agenda.
+   */
   polled(result: { tz?: unknown }): void {
     if (!this.running) return;
-    if (typeof result.tz === "string" && result.tz.length > 0) {
+    const tz =
+      result.tz === null
+        ? null
+        : typeof result.tz === "string" && result.tz.length > 0
+          ? result.tz
+          : undefined;
+    if (tz !== undefined) {
       try {
         mkdirSync(this.deps.phoneDir, { recursive: true });
-        if (writePhoneZone(this.deps.phoneDir, result.tz))
-          this.log(`[phone] timezone ${result.tz}`);
+        if (writePhoneZone(this.deps.phoneDir, tz))
+          this.log(`[phone] timezone ${tz ?? "unknown"}`);
       } catch (error) {
         this.log(`[phone] timezone not saved: ${describe(error)}`);
       }
     }
     if (this.posted) return;
     this.posted = true;
-    void this.post(true);
+    void this.post(true).then(() => this.readEnabled());
   }
 
   /** A phone turn ended: the agenda goes again, changed or not. */
   turnEnded(): void {
     this.schedule(true);
+  }
+
+  /**
+   * Hidden lines for the loop ahead of one inbox entry: what the server sent
+   * and a bare STOP (nudgeNotes); the ask to set the check-in language while
+   * none is set; for the linked greeting, that check-ins are on. Also retires
+   * due loops a check-in already covered.
+   */
+  notes(entry: PhoneInboxEntry): string[] {
+    if (entry.kind === "note") return [];
+    const dir = this.deps.phoneDir;
+    if (entry.kind === "linked")
+      return this.enabled === true ? [CHECKINS_ON_GREETING] : [];
+    const notes = nudgeNotes(entry);
+    const sentAts = (
+      Array.isArray(entry.nudges_sent) ? entry.nudges_sent : []
+    ).flatMap((nudge) => (typeof nudge?.at === "number" ? [nudge.at] : []));
+    try {
+      if (retireNudgedLoops(dir, sentAts, phoneZone(dir))) this.schedule(true);
+    } catch (error) {
+      this.log(`[phone] nudged loops not saved: ${describe(error)}`);
+    }
+    if (this.supported && phoneLanguage(dir) == null) {
+      notes.push(SET_LANGUAGE_NOTE);
+      const fromScript = scriptLanguage(entry.text ?? "");
+      if (fromScript != null) this.scriptLang = fromScript;
+    }
+    return notes;
   }
 
   private schedule(force: boolean): void {
@@ -155,7 +205,7 @@ export class NudgeAgenda {
     this.debounce.unref?.();
   }
 
-  /** What the server is told: due loops, waits, and the language, at most MAX_ITEMS. */
+  /** What the server is told: waits, due loops and the language, at most MAX_ITEMS. */
   async build(): Promise<{ lang?: string; items: NudgeAgendaItem[] }> {
     const dir = this.deps.phoneDir;
     const now = this.now();
@@ -168,7 +218,7 @@ export class NudgeAgenda {
     const items = [...waits, ...due]
       .sort((a, b) => rank[a.kind] - rank[b.kind] || a.at - b.at)
       .slice(0, MAX_ITEMS);
-    const lang = phoneLanguage(dir);
+    const lang = phoneLanguage(dir) ?? this.scriptLang;
     return { ...(lang != null ? { lang } : {}), items };
   }
 
@@ -179,14 +229,19 @@ export class NudgeAgenda {
       const body = JSON.stringify(agenda);
       if (!force && body === this.lastBody) return;
       try {
-        await this.deps.call(
+        const reply = await this.deps.call<AgendaReply>(
           { action: "nudge_agenda", ...agenda },
           CALL_TIMEOUT_MS
         );
         this.lastBody = body;
+        this.supported = true;
+        const reasons = (Array.isArray(reply?.dropped) ? reply.dropped : [])
+          .map((dropped) => dropped?.reason)
+          .filter((reason): reason is string => typeof reason === "string");
+        if (reasons.length > 0)
+          this.log(`[phone] agenda dropped ${reasons.join(",")}`);
       } catch (error) {
         // Said once a start; an older server's refusal also ends the posting.
-        this.lastBody = body;
         if (UNKNOWN_ACTION_RE.test(describe(error))) this.unsupported = true;
         if (!this.refusedOnce)
           this.log(`[phone] agenda not taken: ${describe(error)}`);
@@ -196,7 +251,30 @@ export class NudgeAgenda {
     this.posting = run.catch(() => {});
     return run;
   }
+
+  /** Whether the server has check-ins on, for the linked greeting. */
+  private async readEnabled(): Promise<void> {
+    if (!this.supported) return;
+    try {
+      const reply = await this.deps.call<{ ok?: unknown; enabled?: unknown }>(
+        { action: "checkins", op: "status" },
+        CALL_TIMEOUT_MS
+      );
+      this.enabled = reply?.ok === true && reply.enabled === true;
+    } catch (error) {
+      this.log(`[phone] check-in status not read: ${describe(error)}`);
+    }
+  }
 }
+
+/** While no language is set, every turn asks for it: the server writes check-ins in no other. */
+const SET_LANGUAGE_NOTE =
+  "[check-ins language] No check-in language is set. Call `checkins` with op language and the code of the " +
+  "language the user writes in, without mentioning it, then answer them as usual.";
+
+const CHECKINS_ON_GREETING =
+  "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +
+  "about their unfinished tasks, and that they can say stop any time.";
 
 /** Longest check-in text the loop is shown. */
 const NUDGE_TEXT_MAX_CHARS = 600;

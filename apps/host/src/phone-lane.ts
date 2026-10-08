@@ -16,7 +16,6 @@ import { isMessageReaction } from "@abacus-ai/contract/message-reactions";
 
 import { backoffDelayMs } from "#main/services/messaging/connector";
 
-import { nudgeNotes } from "./nudge-agenda";
 import {
   type InboundMessage,
   PhoneInbox,
@@ -72,6 +71,8 @@ interface PhoneLaneDeps {
   pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
   /** Each answered inbox poll, for what it says besides messages (the user's zone). */
   onPolled?: (result: { tz?: unknown }) => void;
+  /** Hidden tagged lines that go to the session ahead of an entry. */
+  turnNotes?: (entry: PhoneInboxEntry) => string[];
   log?: (line: string) => void;
 }
 
@@ -117,20 +118,22 @@ interface PhoneMedia {
 /** WhatsApp's longest caption; a longer first bubble goes as its own text. */
 const MAX_CAPTION_CHARS = 1_024;
 
-/** What the loop is told for one inbox entry. */
-function phoneTurnText(entry: PhoneInboxEntry): string {
+/** What the loop is told for one inbox entry, after `notes`, each its own tagged part. */
+function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
   // The host's own news is one tagged line, so the agent never takes it for
   // the user's words (a consent it checks reads only those).
   if (entry.kind === "note") {
     const line = (entry.text ?? "").replace(/\s+/g, " ").trim();
     return /^\[[a-z][a-z -]*\]/i.test(line) ? line : `[note] ${line}`;
   }
-  if (entry.kind !== "linked")
-    return [...nudgeNotes(entry), entry.text ?? ""].join("\n\n");
+  if (entry.kind !== "linked") return [...notes, entry.text ?? ""].join("\n\n");
   const name = entry.sender?.trim();
-  return name
-    ? `[linked] The user just connected WhatsApp. Their WhatsApp name: ${name}.`
-    : "[linked] The user just connected WhatsApp.";
+  return [
+    name
+      ? `[linked] The user just connected WhatsApp. Their WhatsApp name: ${name}.`
+      : "[linked] The user just connected WhatsApp.",
+    ...notes,
+  ].join("\n\n");
 }
 
 export class PhoneLane {
@@ -341,7 +344,7 @@ export class PhoneLane {
     void this.handOff(
       batch,
       handoff,
-      batch.map((message) => phoneTurnText(message.entry)).join("\n\n")
+      batch.map((message) => this.turnText(message.entry)).join("\n\n")
     );
   }
 
@@ -349,7 +352,7 @@ export class PhoneLane {
   private handOff(
     messages: InboundMessage[],
     handoff: string,
-    text = phoneTurnText(messages[0]!.entry)
+    text = this.turnText(messages[0]!.entry)
   ): Promise<void> {
     const run = this.sending.then(async () => {
       if (await this.trySend(text, handoff)) {
@@ -370,6 +373,10 @@ export class PhoneLane {
       this.log(`[phone] handoff failed: ${describe(error)}`)
     );
     return run;
+  }
+
+  private turnText(entry: PhoneInboxEntry): string {
+    return phoneTurnText(entry, this.deps.turnNotes?.(entry) ?? []);
   }
 
   private async trySend(text: string, handoff: string): Promise<boolean> {

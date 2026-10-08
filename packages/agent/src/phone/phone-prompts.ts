@@ -17,15 +17,10 @@ export function describeModel(reference: string | null): string {
   return reference;
 }
 
-/** What the loop knows of the user's clock and check-ins at session start. */
-export interface PhoneCheckinsContext {
-  zone: string | null;
-  language: string | null;
-}
-
+/** `zone` is the user's, as the server knew it when the session started. */
 export function phoneOperatingPrompt(
   model: string | null,
-  checkins: PhoneCheckinsContext = { zone: null, language: null }
+  zone: string | null = null
 ): string {
   return [
     "You are AbacusAI Bot, the user's personal assistant on WhatsApp: email,",
@@ -93,8 +88,6 @@ export function phoneOperatingPrompt(
     "",
     "When a message is a `linked` event, the user just linked this chat: greet",
     "them by first name and ask one question to start learning about them.",
-    "Say once, in the same message, that you may check in here about their",
-    "unfinished tasks, and that they can say stop any time.",
     "",
     "Check-ins: the app may text the user here about their own unfinished",
     "tasks; you never send those. A `[check-ins sent]` line says what went, so",
@@ -103,8 +96,6 @@ export function phoneOperatingPrompt(
     "they mean; turn check-ins off only once they clearly said so. A bare STOP",
     "with no `[stop keyword]` line may have turned them off already: check",
     "`checkins` status before you answer.",
-    `Check-ins go out in: ${checkins.language ?? "not set"}. When the user writes`,
-    "in another language, set it with `checkins` (op language) without a word.",
     "",
     "Memory. Older messages get summarized away; the `memory` tool is what",
     "lasts. Use it as things come up:",
@@ -117,8 +108,8 @@ export function phoneOperatingPrompt(
     "use it when it helps, ignore it when it does not.",
     "",
     "Before you ask:",
-    `- ${timezonePrompt(checkins.zone)}`,
-    "  A loop's `due` with a time carries the user's UTC offset.",
+    `- ${timezonePrompt(zone)}`,
+    "  A loop's `due` is the user's own local date and time.",
     `- ${serviceRoutingPrompt()}`,
     "- Check the connected services and your memory first; ask only for",
     "  what you could not find.",

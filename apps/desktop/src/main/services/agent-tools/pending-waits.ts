@@ -25,6 +25,8 @@ export const CONNECT_OFFER_LIFETIME_MS = 24 * 60 * 60_000;
 
 interface ConnectOffer {
   label: string;
+  /** The platform's service key ("gmailuser"): what the server checks it by. */
+  service: string;
   since: number;
 }
 
@@ -37,14 +39,18 @@ export class PendingWaits {
   /** The session sent a link or card for these connectors; a resend restarts each one's clock. */
   connectOffered(
     sessionId: string | null,
-    connectors: ReadonlyArray<{ id: string; label: string }>
+    connectors: ReadonlyArray<{ id: string; label: string; service: string }>
   ): void {
     if (sessionId == null || connectors.length === 0) return;
     this.prune();
     const offers =
       this.offers.get(sessionId) ?? new Map<string, ConnectOffer>();
     for (const connector of connectors)
-      offers.set(connector.id, { label: connector.label, since: this.now() });
+      offers.set(connector.id, {
+        label: connector.label,
+        service: connector.service,
+        since: this.now(),
+      });
     this.offers.set(sessionId, offers);
   }
 
@@ -55,6 +61,11 @@ export class PendingWaits {
         if (offer.since + CONNECT_OFFER_LIFETIME_MS <= now) offers.delete(id);
       if (offers.size === 0) this.offers.delete(sessionId);
     }
+  }
+
+  /** Whether the session has connector offers open (worth reading the statuses for). */
+  hasOffers(sessionId: string): boolean {
+    return (this.offers.get(sessionId)?.size ?? 0) > 0;
   }
 
   /** These connected, for every session. */
@@ -78,7 +89,7 @@ export class PendingWaits {
         continue;
       }
       waits.push({
-        itemId: `connect:${id}`,
+        itemId: `connect:${offer.service}`,
         kind: "connector",
         stage: "link_sent",
         site: null,

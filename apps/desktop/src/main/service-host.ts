@@ -860,12 +860,15 @@ export class ServiceHost {
           this.agentSessionManagerService.laneOf(input.sessionId) == null
         )
           return;
+        // Platform connectors only: a hosted MCP's sign-in ends with this host.
         this.pendingWaits.connectOffered(
           input.sessionId,
-          input.connectorIds.map((id) => ({
-            id,
-            label: connectorById(id)?.name ?? id,
-          }))
+          input.connectorIds.flatMap((id) => {
+            const connector = connectorById(id);
+            return connector?.kind === "platform"
+              ? [{ id, label: connector.name, service: connector.service }]
+              : [];
+          })
         );
       },
       disconnect: async (connectorId) => {
@@ -1319,6 +1322,8 @@ export class ServiceHost {
 
   /** What the session waits on the user for, as structured state only. */
   async waitsFor(sessionId: string): Promise<PendingWait[]> {
+    if (!this.pendingWaits.hasOffers(sessionId))
+      return this.pendingWaits.list(sessionId, new Set());
     const statuses: ConnectorStatuses = await this.connectorStatuses
       .list()
       .catch(() => ({}));

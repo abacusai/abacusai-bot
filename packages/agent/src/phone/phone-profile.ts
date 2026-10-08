@@ -37,7 +37,7 @@ import {
   phoneMemoryFingerprint,
   phoneStandingPrompt,
 } from "./phone-memory.js";
-import { phoneLanguage, phoneZone } from "./phone-nudges.js";
+import { phoneZone } from "./phone-nudges.js";
 import {
   buildPhonePageTool,
   type PagePublisher,
@@ -114,12 +114,7 @@ export function createPhoneProfile(
 
   return {
     // Read at session start; `current_time` reads the zone on every call.
-    systemPrompt: () => [
-      phoneOperatingPrompt(options.model, {
-        zone: phoneZone(home),
-        language: phoneLanguage(home),
-      }),
-    ],
+    systemPrompt: () => [phoneOperatingPrompt(options.model, phoneZone(home))],
     tools: () => [
       buildPhoneMemoryTool(home),
       buildPhonePageTool(home, options.pagePublisher),

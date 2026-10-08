@@ -131,6 +131,8 @@ export const WhatsAppConnect = ({
           {
             phoneNumber: number,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            // The default language for check-ins until the bot learns the user's own.
+            language: navigator.language,
             ...(token ? { token } : {}),
           }
         )
