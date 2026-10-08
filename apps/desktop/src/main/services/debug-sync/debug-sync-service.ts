@@ -137,11 +137,6 @@ export class DebugSyncService {
   }
 
   private enabled(): boolean {
-    if (
-      import.meta.env.ABACUS_WEB_HOST === true &&
-      !process.env.ABACUSAI_BOT_DEBUG_SYNC_URL
-    )
-      return false;
     if (this.disabledForRun != null) return false;
     const settings = readSettings();
     const toggle = settings.serverDebugSync ?? true; // default on
