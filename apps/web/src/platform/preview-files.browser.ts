@@ -23,11 +23,11 @@ export const previewBlob = async (
 export const previewSize = (input: HostFile, signal: AbortSignal) =>
   hostFiles.size(input, signal);
 export const downloadFile = async (input: HostFile) => {
-  const blob = await hostFiles.blob(input);
-  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = url;
+  link.href = await hostFiles.downloadUrl(input);
   link.download = input.filePath.split("/").at(-1) ?? "";
+  link.rel = "noreferrer";
+  document.body.append(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  link.remove();
 };

@@ -71,12 +71,12 @@ import {
 import { AttachmentChip } from "./attachment-chip";
 import {
   addFiles,
+  addDroppedFiles,
   addPaths,
   removeAttachment,
   retryAttachment,
 } from "./attachments";
 import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
-import { droppedFiles } from "./dropped-files";
 import { setQueueEditing } from "./queue-editing";
 import { TriggerMenu, triggerAt, type TriggerState } from "./triggers";
 
@@ -869,19 +869,21 @@ export const ThreadComposer = () => {
     const transfer = event.dataTransfer;
     void (
       runtime.host.uploadFile
-        ? droppedFiles(transfer)
-        : Promise.resolve([...transfer.files])
-    )
-      .then((files) =>
-        addFiles(
-          threadId,
-          files,
-          runtime.host,
-          config.attachmentsBase,
-          config.attachmentContext
-        )
-      )
-      .catch(() => setError(t("web.files.uploadFailed")));
+        ? addDroppedFiles(
+            threadId,
+            transfer,
+            runtime.host,
+            config.attachmentsBase,
+            config.attachmentContext
+          )
+        : addFiles(
+            threadId,
+            [...transfer.files],
+            runtime.host,
+            config.attachmentsBase,
+            config.attachmentContext
+          )
+    ).catch(() => setError(t("web.files.uploadFailed")));
   };
 
   // The 800 px band and phones (chat-kit W800): the model chip is an icon button.

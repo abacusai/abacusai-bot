@@ -5,6 +5,7 @@ import { initI18n } from "#renderer/lib/i18n";
 import { inertHostActions } from "../runtime/host-actions";
 import {
   addFiles,
+  addDroppedFiles,
   addPaths,
   removeAttachment,
   retryAttachment,
@@ -133,4 +134,47 @@ it("VM and native paths use the same completed descriptor and native paste keeps
     { path: "/vm/existing.txt", state: "done" },
     { path: "/native/image.png", state: "done" },
   ]);
+});
+
+it("reserves a pending attachment while a dropped directory is read and cancellation prevents uploading", async () => {
+  let release!: (file: File) => void;
+  const entry = {
+    name: "a.txt",
+    isFile: true,
+    file: (resolve: (file: File) => void) => {
+      release = resolve;
+    },
+  };
+  const transfer = {
+    items: [{ webkitGetAsEntry: () => entry }],
+  } as unknown as DataTransfer;
+  const uploadFile = vi.fn();
+  const pending = addDroppedFiles(
+    "thread",
+    transfer,
+    { ...inertHostActions, uploadFile },
+    "/vm",
+    context
+  );
+  expect(draftStore.state.thread!.attachments[0]!.state).toBe("uploading");
+  removeAttachment("thread", draftStore.state.thread!.attachments[0]!.id);
+  release(new File(["one"], "a.txt"));
+  await pending;
+  expect(uploadFile).not.toHaveBeenCalled();
+  expect(draftStore.state.thread!.attachments).toHaveLength(0);
+});
+it("resolves one shared session context for a concurrent selection", async () => {
+  const resolve = vi.fn(context);
+  await addFiles(
+    "thread",
+    [new File(["a"], "a.txt"), new File(["b"], "b.txt")],
+    { ...inertHostActions, uploadFile: async (file) => `/vm/${file.name}` },
+    null,
+    resolve
+  );
+  expect(resolve).toHaveBeenCalledOnce();
+  expect(draftStore.state.thread!.attachments).toHaveLength(2);
+  expect(
+    draftStore.state.thread!.attachments.every((item) => item.state === "done")
+  ).toBe(true);
 });

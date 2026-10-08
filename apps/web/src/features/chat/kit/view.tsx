@@ -17,8 +17,7 @@ import {
 import { Button } from "#renderer/ui/button";
 import { Skeleton } from "#renderer/ui/skeleton";
 
-import { addFiles } from "../composer/attachments";
-import { droppedFiles } from "../composer/dropped-files";
+import { addDroppedFiles } from "../composer/attachments";
 import { CODE_THEME_CSS } from "../markdown/highlighter";
 import { MarkdownLinksProvider } from "../markdown/markdown";
 import { useThreadHost } from "../runtime/host";
@@ -130,17 +129,13 @@ export const ChatView = (props: ChatViewProps) => {
     event.preventDefault();
     setDropError(null);
     const transfer = event.dataTransfer;
-    void droppedFiles(transfer)
-      .then((files) =>
-        addFiles(
-          threadId,
-          files,
-          runtime.host,
-          props.composer.attachmentsBase,
-          props.composer.attachmentContext
-        )
-      )
-      .catch(() => setDropError(t("web.files.uploadFailed")));
+    void addDroppedFiles(
+      threadId,
+      transfer,
+      runtime.host,
+      props.composer.attachmentsBase,
+      props.composer.attachmentContext
+    ).catch(() => setDropError(t("web.files.uploadFailed")));
   });
   useEffect(() => {
     if (

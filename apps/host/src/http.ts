@@ -13,6 +13,7 @@ import type { WhisperModelService } from "#main/services/voice/whisper-model-ser
 import { openHostFile } from "#main/services/workspace/host-path";
 
 import { authenticate, mcpProofFailure, type HostIdentity } from "./auth";
+import { downloadTicket, downloadFailure } from "./downloads";
 import type { HostLease } from "./lease";
 import { streamUpload } from "./uploads";
 const json = (response: ServerResponse, status: number, value: unknown) =>
@@ -96,11 +97,35 @@ export const createHostHttpServer = (
           return;
       }
     }
-    const failure = authenticate(request, identity);
+    const failure =
+      url.pathname === "/files" &&
+      (request.method === "GET" || request.method === "HEAD") &&
+      url.searchParams.has("ticket")
+        ? downloadFailure(request, identity, url, now())
+        : authenticate(request, identity);
     if (failure) {
       console.warn(`[host-auth] ${failure}`);
       json(response, 403, { error: "forbidden" });
       request.resume();
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/files") {
+      const path = url.searchParams.get("path") ?? "";
+      const root = url.searchParams.get("hostRoot") ?? "";
+      const file = await openHostFile(path, root);
+      if (file.ok === false || !file.stat.isFile()) {
+        json(
+          response,
+          file.ok === false ? (file.error === "not-found" ? 404 : 403) : 409,
+          {
+            error: "download-failed",
+          }
+        );
+        return;
+      }
+      json(response, 200, {
+        ticket: downloadTicket(identity, path, root, now()),
+      });
       return;
     }
     if (

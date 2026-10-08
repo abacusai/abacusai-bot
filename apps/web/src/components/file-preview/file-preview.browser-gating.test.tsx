@@ -6,11 +6,16 @@ import { initI18n } from "#renderer/lib/i18n";
 
 import { FilePreview } from "./file-preview";
 
-const files = vi.hoisted(() => ({ size: vi.fn(), blob: vi.fn() }));
+const files = vi.hoisted(() => ({
+  size: vi.fn(),
+  blob: vi.fn(),
+  downloadUrl: vi.fn(),
+}));
 vi.mock("#renderer/lib/browser/host-files", () => ({ hostFiles: files }));
 beforeAll(initI18n);
 beforeEach(() => {
   files.size.mockResolvedValue(1024);
+  files.downloadUrl.mockResolvedValue("https://host.test/files?ticket=scoped");
   files.blob.mockResolvedValue(new Blob(["preview"]));
   URL.createObjectURL = vi.fn(() => "blob:http://localhost/file");
   URL.revokeObjectURL = vi.fn();
@@ -63,7 +68,7 @@ it("renders binary size and offers an authenticated download", async () => {
     .mockImplementation(() => {});
   fireEvent.click(screen.getByRole("button", { name: "Download" }));
   await waitFor(() => expect(click).toHaveBeenCalled());
-  expect(files.blob).toHaveBeenCalledWith({
+  expect(files.downloadUrl).toHaveBeenCalledWith({
     filePath: "/w/a.bin",
     hostRoot: "/w",
   });
