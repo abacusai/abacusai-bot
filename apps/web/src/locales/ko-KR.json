@@ -4172,6 +4172,7 @@
       "doneTitle": "모두 준비됐어요",
       "doneBody": "봇이 WhatsApp에 있어요. 언제든 메시지를 보내세요.",
       "useDifferentNumber": "다른 번호 사용"
-    }
+    },
+    "signOutDetail": "This ends your website session and clears this browser's bot data."
   }
 }

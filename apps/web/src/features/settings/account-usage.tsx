@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { signInAbacus } from "#platform/sign-in";
+import { signOutAbacus } from "#platform/sign-out";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import {
   AreaPage,
@@ -25,7 +26,8 @@ export const AccountPage = () => {
     new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(
       Number(value) || 0
     );
-  const { transport, credentialsChanged } = useAppContext();
+  const context = useAppContext();
+  const { transport, credentialsChanged } = context;
   const navigate = useAppNavigate();
   const account = useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: {} }),
@@ -48,7 +50,7 @@ export const AccountPage = () => {
     staleTime: 300000,
   }).data;
   const inviteLink = referrals.data?.inviteLink;
-  const canSignOut = canSignOutOfAbacus(settings.data ?? null);
+  const canSignOut = !IS_ELECTRON || canSignOutOfAbacus(settings.data ?? null);
   const [pending, setPending] = useState(false);
   const [removeOthers, setRemoveOthers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +88,14 @@ export const AccountPage = () => {
           <Button disabled={pending} onClick={() => void signIn()}>
             {t(pending ? "phase5.waitingSignIn" : "phase5.signIn")}
           </Button>
+          {!IS_ELECTRON && (
+            <ConfirmAction
+              title={t("phase5.signOut")}
+              description={t("web.signOutDetail")}
+              label={t("phase5.signOut")}
+              onConfirm={() => signOutAbacus(context, true)}
+            />
+          )}
           {pending && (
             <>
               <Button
@@ -131,22 +141,22 @@ export const AccountPage = () => {
           {canSignOut && (
             <ConfirmAction
               title={t("phase5.signOut")}
-              description={t("phase5.signOutDetail")}
+              description={t(
+                IS_ELECTRON ? "phase5.signOutDetail" : "web.signOutDetail"
+              )}
               label={t("phase5.signOut")}
               onConfirm={async () => {
+                await signOutAbacus(context, !removeOthers);
                 if (IS_ELECTRON)
-                  await transport.client.auth.abacus.signOut({
-                    keepOtherApiKeys: !removeOthers,
+                  void navigate({
+                    to: "/bots/new",
+                    transition: "settings-out",
                   });
-                await transport.client.account.signOut({});
-                // The shell gate caches "signed in"; do not race the notice.
-                await credentialsChanged();
-                void navigate({ to: "/bots/new", transition: "settings-out" });
               }}
             />
           )}
         </SettingRow>
-        {canSignOut && (
+        {IS_ELECTRON && canSignOut && (
           <label className="flex items-center gap-2 p-3 text-xs">
             <Checkbox
               checked={removeOthers}

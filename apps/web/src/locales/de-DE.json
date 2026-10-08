@@ -4172,6 +4172,7 @@
       "doneTitle": "Alles bereit",
       "doneBody": "Dein Bot ist auf WhatsApp. Schreib ihm jederzeit.",
       "useDifferentNumber": "Andere Nummer verwenden"
-    }
+    },
+    "signOutDetail": "This ends your website session and clears this browser's bot data."
   }
 }
