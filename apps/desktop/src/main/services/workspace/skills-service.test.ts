@@ -1,6 +1,7 @@
 /**
  * openFile is "double-click this file": it must only reach paths inside a
- * skills directory, the same boundary remove() enforces.
+ * skills directory, the same boundary remove() enforces. Install and import
+ * must not be steered out of where they read and write either.
  */
 import fs from "fs";
 import os from "os";
@@ -113,5 +114,51 @@ describe("SkillsService.openFile", () => {
       expect(res.success).toBe(false);
     }
     expect(openPath).not.toHaveBeenCalled();
+  });
+});
+
+describe("SkillsService.install", () => {
+  it.each([
+    ["..\\..\\other\\repo\\main\\x", "acme/skills"],
+    ["%2e%2e", "acme/skills"],
+    ["..", "acme/skills"],
+    ["pdf", "..\\x/skills"],
+    ["pdf", "acme/%2e%2e"],
+  ])("refuses %s from %s before fetching anything", async (skillId, source) => {
+    const res = await skillsService.install({
+      skillId,
+      source,
+      name: skillId,
+      scope: "global",
+    });
+
+    expect(res.success).toBe(false);
+    // Refused by the checks, not by a failed fetch.
+    expect(res.error).toMatch(/^Invalid (skill id|source format)$/);
+  });
+});
+
+describe("SkillsService.importFromPaths", () => {
+  it("copies a skill folder without the symlinks in it", async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "skills-out-"));
+    const src = path.join(outside, "shared-skill");
+    fs.mkdirSync(src);
+    fs.writeFileSync(path.join(src, "SKILL.md"), "---\ndescription: x\n---\n");
+    fs.writeFileSync(path.join(outside, "secret.txt"), "private");
+    fs.symlinkSync(
+      path.join(outside, "secret.txt"),
+      path.join(src, "notes.txt")
+    );
+
+    const res = await skillsService.importFromPaths({
+      paths: [src],
+      kind: "folder",
+    });
+
+    const dest = path.join(home, "skills", "shared-skill");
+    expect(res.success).toBe(true);
+    expect(fs.existsSync(path.join(dest, "SKILL.md"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, "notes.txt"))).toBe(false);
+    fs.rmSync(outside, { recursive: true, force: true });
   });
 });

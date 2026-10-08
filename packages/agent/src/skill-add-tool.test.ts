@@ -23,12 +23,24 @@ let reloads: number;
 const SKILL_MD =
   "---\nname: pdf\ndescription: Work with PDFs.\n---\n\nDo PDF things.\n";
 
-/** Serve the given URLs; every other request 404s, as GitHub does for a missing layout. */
+/** The commit every repo's default branch resolves to in these tests. */
+const SHA = "0123456789abcdef0123456789abcdef01234567";
+
+/**
+ * Serve the given URLs; every other request 404s, as GitHub does for a missing
+ * layout. Every repo's HEAD resolves to SHA unless a route says otherwise.
+ */
 const serve = (routes: Record<string, string>): void => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
-      const body = routes[String(url)];
+      const body =
+        routes[String(url)] ??
+        (/^https:\/\/api\.github\.com\/repos\/[^/]+\/[^/]+\/commits\/HEAD$/.test(
+          String(url)
+        )
+          ? SHA
+          : undefined);
 
       return {
         status: body == null ? 404 : 200,
@@ -89,7 +101,7 @@ describe("skill_add", () => {
           },
         ],
       }),
-      [rawUrl("anthropics/skills/HEAD/pdf/SKILL.md")]: SKILL_MD,
+      [rawUrl(`anthropics/skills/${SHA}/pdf/SKILL.md`)]: SKILL_MD,
     });
 
     const result = await call({ query: "pdf" });
@@ -107,7 +119,8 @@ describe("skill_add", () => {
 
   it("finds a skill filed under a curated monorepo layout", async () => {
     serve({
-      [rawUrl("openai/skills/HEAD/skills/.curated/canvas/SKILL.md")]: SKILL_MD,
+      [rawUrl(`openai/skills/${SHA}/skills/.curated/canvas/SKILL.md`)]:
+        SKILL_MD,
     });
 
     const result = await call({ query: "canvas", source: "openai/skills" });
@@ -119,7 +132,7 @@ describe("skill_add", () => {
   });
 
   it("installs into the workspace when the scope says project", async () => {
-    serve({ [rawUrl("acme/skills/HEAD/deploy/SKILL.md")]: SKILL_MD });
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
 
     await call({ query: "deploy", source: "acme/skills", scope: "project" });
 
@@ -195,8 +208,8 @@ describe("skill_add", () => {
     expect(result.text).toContain("Could not reach");
   });
 
-  it("leaves an already-installed skill alone, and says how to replace it", async () => {
-    serve({ [rawUrl("acme/skills/HEAD/deploy/SKILL.md")]: SKILL_MD });
+  it("leaves an already-installed skill alone, and does not offer to replace a global one", async () => {
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
     await call({ query: "deploy", source: "acme/skills" });
     const mine = `${SKILL_MD}\nMy own notes.\n`;
     fs.writeFileSync(
@@ -209,19 +222,42 @@ describe("skill_add", () => {
 
     expect(result.isError).toBe(true);
     expect(result.text).toContain("already installed");
-    expect(result.text).toContain("replace true");
+    expect(result.text).not.toContain("replace true");
     // The edits are the whole point of not overwriting.
     expect(
       fs.readFileSync(path.join(root, "global", "deploy", "SKILL.md"), "utf8")
     ).toBe(mine);
   });
 
-  it("overwrites when replace is passed, and says it replaced rather than installed", async () => {
-    serve({ [rawUrl("acme/skills/HEAD/deploy/SKILL.md")]: SKILL_MD });
+  it("overwrites a project skill when replace is passed, and says it replaced rather than installed", async () => {
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
+    await call({ query: "deploy", source: "acme/skills", scope: "project" });
+    fs.writeFileSync(
+      path.join(root, "project", "deploy", "SKILL.md"),
+      "stale\n",
+      "utf8"
+    );
+
+    const result = await call({
+      query: "deploy",
+      source: "acme/skills",
+      scope: "project",
+      replace: true,
+    });
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain("Replaced");
+    expect(
+      fs.readFileSync(path.join(root, "project", "deploy", "SKILL.md"), "utf8")
+    ).toBe(SKILL_MD);
+  });
+
+  it("never replaces a global skill, which loads in every workspace", async () => {
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
     await call({ query: "deploy", source: "acme/skills" });
     fs.writeFileSync(
       path.join(root, "global", "deploy", "SKILL.md"),
-      "stale\n",
+      "mine\n",
       "utf8"
     );
 
@@ -231,17 +267,73 @@ describe("skill_add", () => {
       replace: true,
     });
 
-    expect(result.isError).toBe(false);
-    expect(result.text).toContain("Replaced");
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("project scope");
     expect(
       fs.readFileSync(path.join(root, "global", "deploy", "SKILL.md"), "utf8")
-    ).toBe(SKILL_MD);
+    ).toBe("mine\n");
+  });
+
+  it("fetches from the commit HEAD resolved to, and reports it", async () => {
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
+
+    const result = await call({ query: "deploy", source: "acme/skills" });
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain(SHA);
+    const fetched = (
+      vi.mocked(fetch).mock.calls as unknown as Array<[string]>
+    ).map(([url]) => String(url));
+    expect(
+      fetched.filter((url) => url.startsWith("https://raw.githubusercontent"))
+        .length
+    ).toBeGreaterThan(0);
+    for (const url of fetched.filter((u) =>
+      u.startsWith("https://raw.githubusercontent")
+    ))
+      expect(url).toContain(`/${SHA}/`);
+  });
+
+  it("installs nothing when the commit cannot be resolved", async () => {
+    serve({
+      "https://api.github.com/repos/acme/skills/commits/HEAD": "not a sha",
+      [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD,
+    });
+
+    const result = await call({ query: "deploy", source: "acme/skills" });
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("commit");
+    expect(fs.existsSync(path.join(root, "global", "deploy"))).toBe(false);
+  });
+
+  it.each([["..\\..\\other\\repo\\main\\x"], ["%2e%2e"], [".."], ["a..b"]])(
+    "refuses the skill id %s, which could walk to another repo",
+    async (query) => {
+      serve({});
+
+      const result = await call({ query, source: "acme/skills" });
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain("not a usable skill id");
+      expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    }
+  );
+
+  it("refuses an owner or repo that could walk out of the URL", async () => {
+    serve({});
+
+    const result = await call({ query: "pdf", source: "..\\x/skills" });
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain("owner/repo");
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 
   it("refuses a file that is not a skill, rather than installing one nothing loads", async () => {
     // What a repo without that skill often serves: a page, with a 200.
     serve({
-      [rawUrl("acme/skills/HEAD/ghost/SKILL.md")]:
+      [rawUrl(`acme/skills/${SHA}/ghost/SKILL.md`)]:
         "# Ghost\n\nJust a readme.\n",
     });
 
@@ -254,7 +346,7 @@ describe("skill_add", () => {
 
   it("refuses frontmatter with no description, which pi would drop silently", async () => {
     serve({
-      [rawUrl("acme/skills/HEAD/bare/SKILL.md")]:
+      [rawUrl(`acme/skills/${SHA}/bare/SKILL.md`)]:
         "---\nname: bare\n---\n\nBody.\n",
     });
 
@@ -267,7 +359,7 @@ describe("skill_add", () => {
   it("accepts a description written as a block scalar", async () => {
     const block =
       "---\nname: wide\ndescription: >-\n  A description that\n  runs over two lines.\n---\n\nBody.\n";
-    serve({ [rawUrl("acme/skills/HEAD/wide/SKILL.md")]: block });
+    serve({ [rawUrl(`acme/skills/${SHA}/wide/SKILL.md`)]: block });
 
     const result = await call({ query: "wide", source: "acme/skills" });
 
@@ -279,7 +371,7 @@ describe("skill_add", () => {
 
   it("refuses a file too large to be a skill", async () => {
     const huge = `---\nname: huge\ndescription: Big.\n---\n${"x".repeat(1_000_001)}`;
-    serve({ [rawUrl("acme/skills/HEAD/huge/SKILL.md")]: huge });
+    serve({ [rawUrl(`acme/skills/${SHA}/huge/SKILL.md`)]: huge });
 
     const result = await call({ query: "huge", source: "acme/skills" });
 
@@ -290,7 +382,7 @@ describe("skill_add", () => {
 
   it("cannot be talked into writing outside the skills directory", async () => {
     // The id is the model's to choose, and it is joined to a path.
-    serve({ [rawUrl("acme/skills/HEAD/passwd/SKILL.md")]: SKILL_MD });
+    serve({ [rawUrl(`acme/skills/${SHA}/passwd/SKILL.md`)]: SKILL_MD });
 
     const result = await call({
       query: "../../../../etc/passwd",
@@ -305,7 +397,7 @@ describe("skill_add", () => {
   });
 
   it("reports an install that landed but could not be re-scanned", async () => {
-    serve({ [rawUrl("acme/skills/HEAD/deploy/SKILL.md")]: SKILL_MD });
+    serve({ [rawUrl(`acme/skills/${SHA}/deploy/SKILL.md`)]: SKILL_MD });
     const built = buildSkillAddTool({
       skillDirs: () => ({
         project: path.join(root, "project"),
@@ -360,7 +452,7 @@ describe("skill_add", () => {
           },
         ],
       }),
-      [rawUrl("a/b/HEAD/yamllint/SKILL.md")]: SKILL_MD,
+      [rawUrl(`a/b/${SHA}/yamllint/SKILL.md`)]: SKILL_MD,
     });
 
     const result = await call({ query: "something to lint my yaml" });

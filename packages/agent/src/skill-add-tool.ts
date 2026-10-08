@@ -103,8 +103,9 @@ export function buildSkillAddTool(
       "The install returns the path it wrote. The skill joins your listed skills from your",
       "next turn; to act on it in this one, read that file.",
       "",
-      "A skill of the same id that is already installed is left alone: pass replace true to",
-      "overwrite it, which discards any edits made to it locally.",
+      "A skill of the same id that is already installed is left alone. In the project scope,",
+      "pass replace true to overwrite it, which discards any edits made to it locally; a",
+      "global skill is only ever replaced by the user, from Skills.",
       "",
       "For a skill that already exists use skills_list and skill_view. To write a new skill of",
       "your own, write a SKILL.md with the file tools: this tool only fetches published ones.",
@@ -129,7 +130,7 @@ export function buildSkillAddTool(
       replace: Type.Optional(
         Type.Boolean({
           description:
-            "Overwrite a skill of this id that is already installed, losing any local edits.",
+            "Overwrite a project skill of this id that is already installed, losing any local edits. Not for global skills.",
         })
       ),
     }),
@@ -148,6 +149,20 @@ export function buildSkillAddTool(
             ),
           ],
           details: {},
+          isError: true,
+        };
+      }
+
+      // A global skill loads in every workspace; overwriting one is the user's
+      // call from Skills, never a side effect of a turn.
+      if (replace && scope === "global") {
+        return {
+          content: [
+            text(
+              "replace only works in the project scope. A global skill can only be replaced by the user, from Skills: ask them to remove it there first."
+            ),
+          ],
+          details: { skillId: query, source },
           isError: true,
         };
       }
@@ -208,7 +223,7 @@ export function buildSkillAddTool(
         // Already-installed is the one failure with a useful next step.
         const already = result.path != null;
         const message = already
-          ? `${result.error}\n${result.path}\n\nRead it with skill_view, or call again with replace true to overwrite it.`
+          ? `${result.error}\n${result.path}\n\nRead it with skill_view${scope === "project" ? ", or call again with replace true to overwrite it" : ""}.`
           : result.error;
 
         return {
@@ -230,7 +245,7 @@ export function buildSkillAddTool(
         content: [
           text(
             [
-              `${result.existed ? "Replaced" : "Installed"} "${result.id}" from ${from} (${scope}).`,
+              `${result.existed ? "Replaced" : "Installed"} "${result.id}" from ${from} at commit ${result.commit} (${scope}).`,
               result.path,
               "",
               loaded
@@ -242,6 +257,7 @@ export function buildSkillAddTool(
         details: {
           id: result.id,
           source: from,
+          commit: result.commit,
           scope,
           path: result.path,
           replaced: result.existed,

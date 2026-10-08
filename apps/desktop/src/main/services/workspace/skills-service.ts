@@ -305,6 +305,16 @@ function isSafeSegment(segment: string): boolean {
   );
 }
 
+/**
+ * A skill id, owner or repo as it goes into a raw GitHub URL. `..`, `%2e` and
+ * a backslash (which URL parsing turns into `/`) would walk to another repo.
+ */
+function isSafeUrlSegment(segment: string): boolean {
+  return (
+    /^[\w.-]+$/.test(segment) && segment !== "." && !segment.includes("..")
+  );
+}
+
 /** True when `target` is strictly inside `root` (boundary-aware, not substring). */
 function isInside(root: string, target: string): boolean {
   const rel = path.relative(path.resolve(root), target);
@@ -619,7 +629,7 @@ export class SkillsService {
       const { skillId, source, scope, name } = request;
       const leaf = skillId.split("/").pop() ?? skillId;
       const fileId = slugify(leaf);
-      if (!isSafeSegment(fileId) || fileId === "") {
+      if (!isSafeUrlSegment(leaf) || !isSafeSegment(fileId) || fileId === "") {
         return { success: false, error: "Invalid skill id" };
       }
 
@@ -638,7 +648,12 @@ export class SkillsService {
       }
 
       const [owner, repo] = source.split("/");
-      if (owner == null || repo == null || owner === "" || repo === "") {
+      if (
+        owner == null ||
+        repo == null ||
+        !isSafeUrlSegment(owner) ||
+        !isSafeUrlSegment(repo)
+      ) {
         return { success: false, error: "Invalid source format" };
       }
 
@@ -779,7 +794,13 @@ export class SkillsService {
     if (!isInside(targetDir, dest))
       throw new Error("Refusing to import outside the skills directory");
     await fs.promises.rm(dest, { recursive: true, force: true });
-    await fs.promises.cp(src, dest, { recursive: true });
+    // Symlinks are skipped, not copied: one inside a shared skill folder could
+    // point the agent's skill at any file on disk.
+    await fs.promises.cp(src, dest, {
+      recursive: true,
+      filter: async (entry) =>
+        entry === src || !(await fs.promises.lstat(entry)).isSymbolicLink(),
+    });
   }
 
   remove(request: RemoveSkillRequest): SkillMutationResult {

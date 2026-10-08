@@ -28,6 +28,7 @@ const SEARCH_URL = (query: string): string =>
 const rawCandidates = (
   owner: string,
   repo: string,
+  commit: string,
   skillId: string
 ): string[] =>
   [
@@ -41,8 +42,40 @@ const rawCandidates = (
     `SKILL.md`,
   ].map(
     (candidate) =>
-      `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${candidate}`
+      `https://raw.githubusercontent.com/${owner}/${repo}/${commit}/${candidate}`
   );
+
+/**
+ * A skill id, owner or repo as it goes into a raw GitHub URL. `..`, `%2e` and
+ * a backslash (which URL parsing turns into `/`) would walk to another repo.
+ */
+function isSafeUrlSegment(segment: string): boolean {
+  return (
+    /^[\w.-]+$/.test(segment) && segment !== "." && !segment.includes("..")
+  );
+}
+
+const COMMIT_SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * The commit the repo's default branch points at now. Every file is fetched
+ * from that one commit, so what installs is what was resolved and recorded,
+ * not whatever the branch moves to between requests.
+ */
+async function resolveCommit(
+  owner: string,
+  repo: string
+): Promise<string | null> {
+  const response = await getText(
+    `https://api.github.com/repos/${owner}/${repo}/commits/HEAD`,
+    { accept: "application/vnd.github.sha" }
+  );
+  if (response == null || response.status < 200 || response.status >= 300)
+    return null;
+  const sha = response.body.trim().toLowerCase();
+
+  return COMMIT_SHA.test(sha) ? sha : null;
+}
 
 /** Lowercase, dashes for anything else: the id the on-disk scanner will derive. */
 export function slugifySkillId(value: string): string {
@@ -55,11 +88,12 @@ export function slugifySkillId(value: string): string {
 }
 
 async function getText(
-  url: string
+  url: string,
+  headers: Record<string, string> = {}
 ): Promise<{ status: number; body: string } | null> {
   try {
     const response = await fetch(url, {
-      headers: { "user-agent": "abacusai-bot" },
+      headers: { "user-agent": "abacusai-bot", ...headers },
     });
 
     return { status: response.status, body: await response.text() };
@@ -150,12 +184,17 @@ export async function installSkill(options: {
   /** Overwrite a skill of the same id that is already installed. */
   replace?: boolean;
 }): Promise<
-  | { ok: true; id: string; path: string; existed: boolean }
+  | { ok: true; id: string; path: string; existed: boolean; commit: string }
   | { ok: false; error: string; path?: string }
 > {
   const leaf = options.skillId.split("/").pop() ?? options.skillId;
-  // Slugified before it is joined to a path: `..`, nested paths and
-  // backslashes collapse to a single segment or to '', the one case refused.
+  if (!isSafeUrlSegment(leaf)) {
+    return {
+      ok: false,
+      error: `"${options.skillId}" is not a usable skill id.`,
+    };
+  }
+  // Slugified before it is joined to a path, after the URL check above.
   const id = slugifySkillId(leaf);
   if (id === "") {
     return {
@@ -165,7 +204,12 @@ export async function installSkill(options: {
   }
 
   const [owner, repo] = options.source.split("/");
-  if (owner == null || repo == null || owner === "" || repo === "") {
+  if (
+    owner == null ||
+    repo == null ||
+    !isSafeUrlSegment(owner) ||
+    !isSafeUrlSegment(repo)
+  ) {
     return {
       ok: false,
       error: `Source must be "owner/repo", got "${options.source}".`,
@@ -185,8 +229,16 @@ export async function installSkill(options: {
     };
   }
 
+  const commit = await resolveCommit(owner, repo);
+  if (commit == null) {
+    return {
+      ok: false,
+      error: `Could not resolve the current commit of ${options.source}.`,
+    };
+  }
+
   const responses = await Promise.all(
-    rawCandidates(owner, repo, leaf).map((url) => getText(url))
+    rawCandidates(owner, repo, commit, leaf).map((url) => getText(url))
   );
   const hit = responses.find(
     (response) =>
@@ -234,5 +286,5 @@ export async function installSkill(options: {
     };
   }
 
-  return { ok: true, id, path: destPath, existed };
+  return { ok: true, id, path: destPath, existed, commit };
 }
