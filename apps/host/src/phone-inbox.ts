@@ -5,10 +5,14 @@
  *
  *   queued  -> handed   given to the session under a handoff id
  *   handed  -> queued   the session definitely refused it
- *   handed  -> closing  its answer (or the apology) is going out
- *   closing -> answered that reached the user; acknowledged
- *   closing -> released it did not: a server message is forgotten for the
- *                       server to redeliver, a host note is queued again
+ *   handed  -> closing  its turn ended (or was given up); acknowledged, and
+ *                       its answer (or the apology) is going out
+ *   closing -> handled  done, whether or not the answer reached the user: a
+ *                       handled message is never run again, and neither is
+ *                       a host note that rode along with it
+ *
+ * Only a message whose turn never ended (the host died mid-turn) stays
+ * unacknowledged, for the server to hand back.
  */
 
 export interface PhoneInboxEntry {
@@ -25,7 +29,7 @@ export interface PhoneInboxEntry {
   kind?: string;
 }
 
-export type InboundState = "queued" | "handed" | "closing" | "answered";
+export type InboundState = "queued" | "handed" | "closing" | "handled";
 
 export interface InboundMessage {
   readonly entry: PhoneInboxEntry;
@@ -38,8 +42,8 @@ export interface InboundMessage {
   handoffs: number;
 }
 
-/** Answered messages kept to recognise a redelivery whose ack was lost. */
-const ANSWERED_KEPT = 500;
+/** Handled messages kept to recognise a redelivery whose ack was lost. */
+const HANDLED_KEPT = 500;
 
 export class PhoneInbox {
   private readonly messages = new Map<string, InboundMessage>();
@@ -113,31 +117,14 @@ export class PhoneInbox {
     }
   }
 
-  /** closing -> answered; queued -> answered when it is given up on before it went. */
-  answer(messages: readonly InboundMessage[]): void {
+  /** closing -> handled; queued -> handled when it is given up on before it went. */
+  handle(messages: readonly InboundMessage[]): void {
     for (const message of messages) {
       if (message.state !== "closing") this.expect(message, "queued");
-      message.state = "answered";
+      message.state = "handled";
       message.handoff = null;
     }
     this.prune();
-  }
-
-  /**
-   * closing -> released: its answer never reached the user. The server
-   * redelivers its own messages, so those are forgotten unacknowledged; a
-   * host note exists only here, so it is queued again.
-   */
-  release(messages: readonly InboundMessage[]): void {
-    for (const message of messages) {
-      this.expect(message, "closing");
-      if (message.entry.kind === "note") {
-        message.state = "queued";
-        message.handoff = null;
-      } else {
-        this.messages.delete(message.entry.id);
-      }
-    }
   }
 
   private inState(state: InboundState): InboundMessage[] {
@@ -154,10 +141,10 @@ export class PhoneInbox {
   }
 
   private prune(): void {
-    const answered = this.inState("answered");
-    for (const message of answered.slice(
+    const handled = this.inState("handled");
+    for (const message of handled.slice(
       0,
-      Math.max(0, answered.length - ANSWERED_KEPT)
+      Math.max(0, handled.length - HANDLED_KEPT)
     ))
       this.messages.delete(message.entry.id);
   }

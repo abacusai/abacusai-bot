@@ -252,8 +252,8 @@ export class PhoneLane {
     if (typeof entry.id !== "string") return;
     const known = this.inbox.get(entry.id);
     if (known != null) {
-      // Back from the server: answered, but the ack was lost (or is on its way).
-      if (known.state === "answered") void this.ack([known]);
+      // Back from the server: handled, but the ack was lost (or is on its way).
+      if (known.state === "handled") void this.ack([known]);
       return;
     }
     if (entry.kind !== "linked" && !entry.text?.trim()) {
@@ -629,14 +629,17 @@ export class PhoneLane {
   }
 
   /**
-   * The session's final answer to the messages it names: answered once that
-   * answer (or, for a failed turn, the apology) reached the user. Otherwise
-   * they are released unacknowledged, and the server hands them back.
+   * The session's final answer to the messages it names. Its turn ended, so
+   * they are handled and acknowledged now, whether or not the reply reaches
+   * the user: a reply that does not go is retried as a send, then logged and
+   * dropped, never run again. Only a host that dies mid-turn leaves them
+   * unacknowledged, for the server to hand back.
    */
   private async finish(reply: TurnReply): Promise<void> {
     const messages = this.inbox.close(this.inbox.handedUnder(reply.messageIds));
     if (messages.length === 0) return;
     this.clock.touch();
+    const acked = this.ack(messages);
     const replyTo = this.replyTarget(messages)!;
     const bubbles = splitPhoneBubbles(reply.text);
     // A failed turn's media is not an answer; it goes with nothing.
@@ -652,13 +655,13 @@ export class PhoneLane {
       this.release(media);
     }
     const apologized = reply.failed && (await this.apologize(replyTo));
-    const answered =
-      apologized || (!reply.failed && (bubbles.length === 0 || delivered));
+    const went = reply.failed ? apologized : bubbles.length === 0 || delivered;
     this.log(
-      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}`
+      `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}${went ? "" : " dropped=1"}`
     );
     this.turnMediaHashes = new Set();
-    await this.close(messages, answered);
+    await acked;
+    this.done(messages);
   }
 
   /** Every bubble out, with one more try for what did not go; true when all went. */
@@ -674,13 +677,16 @@ export class PhoneLane {
   }
 
   /**
-   * The session's work ran out of time. Everything it holds is claimed at
-   * once, the session is stopped (its queue with it), and the user hears the
-   * apology; nothing new goes to the session until it is idle or closed.
+   * The session's work ran out of time. Everything it holds is claimed and
+   * acknowledged at once (the session may have acted on it, so it is never
+   * run again), the session is stopped (its queue with it), and the user
+   * hears the apology; nothing new goes to the session until it is idle or
+   * closed.
    */
   private async giveUp(reason: string): Promise<void> {
     const messages = this.inbox.abandon();
     if (messages.length === 0) return;
+    const acked = this.ack(messages);
     this.clock.stop();
     this.release(this.heldMedia.splice(0));
     this.turnMediaHashes = new Set();
@@ -692,7 +698,8 @@ export class PhoneLane {
     );
     await this.stopping;
     this.stopping = null;
-    await this.close(messages, apologized);
+    await acked;
+    this.done(messages);
   }
 
   private async stopSession(): Promise<void> {
@@ -705,24 +712,16 @@ export class PhoneLane {
     }
   }
 
-  /** Closing messages: answered and acknowledged, or released. */
-  private async close(
-    messages: InboundMessage[],
-    answered: boolean
-  ): Promise<void> {
-    if (answered) {
-      this.inbox.answer(messages);
-      if (this.running) await this.ack(messages);
-    } else {
-      this.inbox.release(messages);
-    }
+  /** Closing messages, acknowledged: handled, and the lane free for what waits. */
+  private done(messages: InboundMessage[]): void {
+    this.inbox.handle(messages);
     this.deps.activity();
     this.settle();
   }
 
   /**
    * Nothing held any more: stop the clocks, and hand over what waited. A
-   * note that was released waits to ride along with the user's next message.
+   * note the session refused waits to ride along with the user's next message.
    */
   private settle(): void {
     if (this.busy) return;
@@ -750,7 +749,7 @@ export class PhoneLane {
     );
     if (!apologized) return;
     const waiting = messages.filter((message) => message.state === "queued");
-    this.inbox.answer(waiting);
+    this.inbox.handle(waiting);
     await this.ack(waiting);
   }
 
@@ -815,8 +814,9 @@ export class PhoneLane {
   }
 
   /** The server's messages among these; the host's own notes have nothing to acknowledge. */
-  private ack(messages: readonly InboundMessage[]): Promise<void> {
-    return this.acknowledge(
+  private async ack(messages: readonly InboundMessage[]): Promise<void> {
+    if (!this.running) return;
+    await this.acknowledge(
       messages
         .filter((message) => message.entry.kind !== "note")
         .map((message) => message.entry.id)
