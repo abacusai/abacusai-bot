@@ -1072,6 +1072,7 @@ export class ServiceHost {
       this.agentSessionManagerService.get(sessionId)?.owner?.role ?? null,
     routines: {
       defaultRunner: () => this.defaultRoutineRunner(),
+      hostedOnly: () => this.hostedOnly(),
       create: async (input, options) => {
         const routine = await this.createRoutine(input, undefined, options);
         // The user hears of every routine the agent sets up.

@@ -101,6 +101,10 @@ import { locateHostFile } from "../workspace/host-path";
 import type { SkillsService } from "../workspace/skills-service";
 import { McpHttpServer, type McpToolListing } from "./mcp-http-server";
 import { agentTool, AGENT_TOOL_NAMES, AGENT_TOOLS } from "./tools";
+import type {
+  ConnectOutcome,
+  DisconnectOutcome,
+} from "./tools/connect-outcome";
 import {
   approvalNote,
   describeHostedRoutine,
@@ -111,10 +115,6 @@ import {
   requestedRunner,
   requestedSources,
 } from "./tools/cronjob-hosted";
-import type {
-  ConnectOutcome,
-  DisconnectOutcome,
-} from "./tools/connect-outcome";
 import type { ToolDefinition, ToolResult } from "./tools/definition";
 import {
   NOT_YET_PHONE_OWNED,
@@ -252,6 +252,8 @@ export interface McpAgentToolsServerOptions {
   routines?: {
     /** The runner a create that names none gets here. */
     defaultRunner: () => RoutineRunner;
+    /** Every routine here runs on the server (the hosted bot): a local ask is made hosted. */
+    hostedOnly?: () => boolean;
     /** ServiceHost.createRoutine: local or hosted by `input.runner`. */
     create: (
       input: RoutineCreateInput,
@@ -782,7 +784,13 @@ export class McpAgentToolsServer extends McpHttpServer {
           requestedRunner(args) ??
           this.options.routines?.defaultRunner() ??
           "local";
-        if (runner === "hosted" && this.options.routines != null)
+        // On a hosted-only bot a "local" ask is made hosted too, through the
+        // same input (time zone, kind, reminder text), never a bare local one.
+        if (
+          (runner === "hosted" ||
+            this.options.routines?.hostedOnly?.() === true) &&
+          this.options.routines != null
+        )
           return await this.createHostedRoutine(args, callerSession);
 
         const schedule = typeof args.schedule === "string" ? args.schedule : "";
