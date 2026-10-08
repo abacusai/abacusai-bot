@@ -131,6 +131,12 @@ export const ReplyLink = ({
   const { transport } = useAppContext();
   const ref = useRef<HTMLAnchorElement>(null);
   const [near, setNear] = useState(false);
+  const [boundary, setBoundary] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>();
   const id = useId();
   const opened = useSyncExternalStore(
     subscribe,
@@ -170,6 +176,31 @@ export const ReplyLink = ({
     },
     [id]
   );
+  useEffect(() => {
+    if (!opened) return;
+    const composer = ref.current
+      ?.closest('[data-slot="chat-layout"]')
+      ?.querySelector('[data-slot="composer-dock"]');
+    const measure = () => {
+      const top = composer?.getBoundingClientRect().top;
+      setBoundary(
+        top && top > 0
+          ? { x: 0, y: 0, width: window.innerWidth, height: top - 8 }
+          : undefined
+      );
+    };
+    measure();
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measure)
+        : undefined;
+    if (composer) observer?.observe(composer);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [opened]);
   if (!allowed || query.data === null || query.isError) return anchor;
   const preview = query.data;
   const fallback =
@@ -222,6 +253,7 @@ export const ReplyLink = ({
         render={trigger}
       />
       <HoverCardContent
+        collisionBoundary={boundary}
         side="top"
         align="start"
         sideOffset={8}

@@ -95,6 +95,22 @@ it("fetches only near links, shares a URL request, swaps bare labels and preserv
   await near();
   await waitFor(() => expect(first.textContent).toBe("A useful page title"));
   expect(fetch).toHaveBeenCalledTimes(3);
+  const caption = first.querySelector(".reply-link-caption")!;
+  const range = document.createRange();
+  range.selectNodeContents(caption);
+  document.getSelection()!.removeAllRanges();
+  document.getSelection()!.addRange(range);
+  const copy = vi.fn();
+  fireEvent.copy(first, { clipboardData: { setData: copy } });
+  expect(copy).toHaveBeenCalledWith(
+    "text/plain",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript"
+  );
+  fireEvent.keyDown(first, { key: "a", metaKey: true });
+  expect(document.getSelection()!.toString()).not.toContain(
+    "Compare these references"
+  );
+  expect(document.getSelection()!.toString()).toContain("reference guide");
   expect([...intersections.keys()].at(-1)?.textContent).toBe("reference guide");
   expect(first.getAttribute("aria-label")).toBe(
     "A useful page title — developer.mozilla.org"
@@ -240,4 +256,14 @@ it("truncates against both character width and the available pane", () => {
   expect(css).toContain("max-width: min(36ch, 100%)");
   expect(css).toContain("text-overflow: ellipsis");
   expect(css).toContain("text-decoration: underline dotted");
+});
+
+it("does not open or fetch on touch", async () => {
+  const fetch = await start();
+  const link = [...intersections.keys()][0]!;
+  fireEvent.touchStart(link);
+  fireEvent.touchEnd(link);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(fetch).not.toHaveBeenCalled();
+  expect(document.querySelector('[data-slot="hover-card-content"]')).toBeNull();
 });

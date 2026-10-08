@@ -64,7 +64,7 @@ export const SelectableText = ({
         if (
           !el ||
           (event.target instanceof Element &&
-            event.target.closest("button,a,input,textarea"))
+            event.target.closest("button,input,textarea"))
         )
           return;
         const selection = document.getSelection();

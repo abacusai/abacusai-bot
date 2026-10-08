@@ -537,7 +537,7 @@ export const SCENARIOS: Scenario[] = [
         ...b.text(
           "a-loading",
           "assistant",
-          "Read https://developer.mozilla.org/en-US/docs/Web/JavaScript?preview-example=loading and https://example.com/?preview-example=loading."
+          "Read https://httpbin.org/delay/3?inline-preview=loading. The link stays usable while its preview loads."
         ),
         b.runFinished("r-loading", "success"),
       ]),
