@@ -2,8 +2,8 @@ import type {
   BotRow,
   RoutineRow as Row,
 } from "@abacus-ai/contract/contract/rows";
-import { CalendarClock, Ellipsis } from "lucide-react";
-import { useState } from "react";
+import { CalendarClock, Cloud, Ellipsis } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
@@ -11,7 +11,7 @@ import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { resolveLook, type AvatarMood } from "#renderer/lib/bots/avatar";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { showError, showInfo } from "#renderer/lib/toast";
+import { showError } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
@@ -30,6 +30,8 @@ import {
 } from "#renderer/ui/dropdown-menu";
 
 import { routineState } from "./data";
+import { hostedUnread, isHosted } from "./hosted";
+import { runRoutineNow, showSaveFailure } from "./hosted-sync";
 
 type State = ReturnType<typeof routineState>;
 const moods: Partial<Record<State, AvatarMood>> = {
@@ -80,14 +82,13 @@ export const RoutineSidebarRow = ({
   const { db, transport } = useAppContext();
   const navigate = useAppNavigate();
   const [deleting, setDeleting] = useState(false);
+  const unread = useSyncExternalStore(hostedUnread.subscribe, () =>
+    hostedUnread.count(row.id)
+  );
   const actions = [
     {
       label: t("phase5.runNow"),
-      run: () =>
-        void transport.client.routines
-          .run({ id: row.id, trigger: "manual" })
-          .then(() => showInfo(t("phase5.routineStarted")))
-          .catch(() => showError(t("phase5.runFailed"))),
+      run: () => runRoutineNow(row, transport, t),
     },
     {
       label: t("phase5.edit"),
@@ -105,7 +106,9 @@ export const RoutineSidebarRow = ({
           .update(row.id, (d) => {
             d.enabled = !row.enabled;
           })
-          .isPersisted.promise.catch(() => showError(t("phase5.failed"))),
+          .isPersisted.promise.catch((error: unknown) =>
+            showSaveFailure(error, transport, t)
+          ),
     },
     { label: t("phase5.delete"), run: () => setDeleting(true) },
   ];
@@ -123,11 +126,27 @@ export const RoutineSidebarRow = ({
               <RoutineIdentity bot={bot} state={state} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px]">{row.name}</span>
+              <span className="flex min-w-0 items-center gap-1 text-[13px]">
+                <span className="truncate">{row.name}</span>
+                {isHosted(row) && (
+                  <Cloud
+                    aria-label={t("routines.hosted.badge")}
+                    className="text-muted-foreground size-3 shrink-0"
+                  />
+                )}
+              </span>
               <span className="text-sidebar-foreground/80 block truncate text-[11px]">
                 {label}
               </span>
             </span>
+            {unread > 0 && (
+              <span
+                className="bg-primary text-primary-foreground shrink-0 rounded-full px-1.5 text-[10px] leading-4"
+                aria-label={t("routines.hosted.unread", { count: unread })}
+              >
+                {unread}
+              </span>
+            )}
             <span
               aria-hidden
               data-routine-state={state}

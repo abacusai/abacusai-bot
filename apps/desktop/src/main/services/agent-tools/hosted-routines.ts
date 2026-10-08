@@ -276,6 +276,9 @@ export const toRoutineListItem = (wire: HostedRoutineWire): RoutineListItem => {
   };
 };
 
+/** How many created rows keep the id their creator gave them. */
+const CREATED_AS_MAX = 50;
+
 export class HostedRoutines {
   /** `answered`: the server knows the endpoint, even with routines switched off. */
   private capable: { value: boolean; answered: boolean; at: number } | null =
@@ -346,13 +349,31 @@ export class HostedRoutines {
     return this.capable?.value === true;
   }
 
+  /** Each row created here, by the id its creator gave it; the newest few. */
+  private readonly createdAs = new Map<string, string>();
+
+  private rememberCreatedAs(id: string, key: string): void {
+    this.createdAs.delete(id);
+    this.createdAs.set(id, key);
+    // Only an optimistic row's echo needs it: the oldest go first.
+    for (const old of this.createdAs.keys()) {
+      if (this.createdAs.size <= CREATED_AS_MAX) break;
+      this.createdAs.delete(old);
+    }
+  }
+
   /** The cached rows, for the Routines table. */
   list(): RoutineListItem[] {
-    return this.cached;
+    return this.cached.map((routine) => {
+      const createdAs = this.createdAs.get(routine.id);
+      return createdAs == null || routine.hosted == null
+        ? routine
+        : { ...routine, hosted: { ...routine.hosted, createdAs } };
+    });
   }
 
   find(id: string): RoutineListItem | null {
-    return this.cached.find((routine) => routine.id === id) ?? null;
+    return this.list().find((routine) => routine.id === id) ?? null;
   }
 
   /** Re-read the account's hosted routines; the cache stays on failure. */
@@ -416,9 +437,9 @@ export class HostedRoutines {
         : {}),
       idempotency_key: input.idempotencyKey,
     };
-    const routine = await this.write(body);
+    const routine = await this.write(body, input.idempotencyKey);
     if (routine == null) throw new HostedRoutineRefusal("unavailable");
-    return routine;
+    return this.find(routine.id) ?? routine;
   }
 
   async update(
@@ -583,7 +604,9 @@ export class HostedRoutines {
    * row, and the list is re-read either way so the panel catches up.
    */
   private async write(
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
+    /** A create's own idempotency key, remembered for its row; see createdAs. */
+    createdAs: string | null = null
   ): Promise<RoutineListItem | null> {
     let result = await this.options.call(body);
     // The routine was mid-change on the server: once more, after a beat.
@@ -609,6 +632,8 @@ export class HostedRoutines {
           )
         : null;
     if (routine != null) {
+      // Remembered before the panel hears of the row, so its echo carries it.
+      if (createdAs != null) this.rememberCreatedAs(routine.id, createdAs);
       this.cached = [
         ...this.cached.filter((entry) => entry.id !== routine.id),
         routine,

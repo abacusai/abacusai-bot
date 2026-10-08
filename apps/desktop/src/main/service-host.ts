@@ -239,6 +239,10 @@ import {
   type RenderDesignRequest,
 } from "./services/agent-tools/design-agent";
 import {
+  HostedRoutineFeed,
+  type HostedFeedEvent,
+} from "./services/agent-tools/hosted-feed";
+import {
   HostedRoutineRefusal,
   HostedRoutines,
   isHostedRoutineId,
@@ -542,6 +546,8 @@ const SENDER_CHAT_POLICY: UnattendedPolicy = {
   files: false,
 };
 
+/** A new routine; a hosted one carries what the server says of it. */
+type CreatedRoutine = Routine & Pick<RoutineListItem, "hosted">;
 
 const ROUTINE_CONTEXT_CAP_TOKENS = 80_000;
 
@@ -553,6 +559,9 @@ const UNATTENDED_IDLE_GRACE_MS = 1_500;
 
 /** The folder every hosted routine run works in: one, kept out of the pickers. */
 const HOSTED_RUNS_FOLDER = "hosted-runs";
+
+/** Where the hosted results feed keeps the last read's `since`. */
+const FEED_FILE = "routines-feed.json";
 
 /** Registry connector ids for platform service keys, dropping unknown ones. */
 const connectorIdsFor = (services: string[]): string[] =>
@@ -915,6 +924,62 @@ export class ServiceHost {
       }),
   });
 
+  /**
+   * Finished hosted runs, announced once each while the app listens: every
+   * 2 minutes on the hosted bot, every 5 on the desktop.
+   */
+  private readonly hostedFeed = new HostedRoutineFeed({
+    hosted: this.hostedRoutines,
+    intervalMs: () => (this.platform === "web-host" ? 2 * 60_000 : 5 * 60_000),
+    store: {
+      read: () => {
+        try {
+          const parsed = JSON.parse(
+            fs.readFileSync(path.join(abacusBotHome(), FEED_FILE), "utf8")
+          ) as { since?: unknown };
+          return typeof parsed.since === "string" ? parsed.since : null;
+        } catch {
+          return null;
+        }
+      },
+      write: (since) =>
+        fs.writeFileSync(
+          path.join(abacusBotHome(), FEED_FILE),
+          JSON.stringify({ since })
+        ),
+    },
+  });
+
+  /** Routines the agent set up, for the app to tell the user about. */
+  private readonly routineCreatedListeners = new Set<
+    (routine: CreatedRoutine) => void
+  >();
+
+  /** Hear of each routine the agent sets up (never one the user's form makes). */
+  onRoutineCreatedByAgent(
+    listener: (routine: CreatedRoutine) => void
+  ): () => void {
+    this.routineCreatedListeners.add(listener);
+    return () => {
+      this.routineCreatedListeners.delete(listener);
+    };
+  }
+
+  private routineCreatedByAgent(routine: CreatedRoutine): void {
+    for (const listener of this.routineCreatedListeners) {
+      try {
+        listener(routine);
+      } catch (error) {
+        console.warn("[routines] created listener threw", error);
+      }
+    }
+  }
+
+  /** Hear each finished hosted run once (the Routines notifications). */
+  onHostedRun(listener: (event: HostedFeedEvent) => void): () => void {
+    return this.hostedFeed.listen(listener);
+  }
+
   private readonly mcpAgentToolsServer = new McpAgentToolsServer({
     skillsService: this.skillsService,
     enabledToolsets: () => {
@@ -1001,7 +1066,12 @@ export class ServiceHost {
       this.agentSessionManagerService.get(sessionId)?.owner?.role ?? null,
     routines: {
       defaultRunner: () => this.defaultRoutineRunner(),
-      create: (input, options) => this.createRoutine(input, undefined, options),
+      create: async (input, options) => {
+        const routine = await this.createRoutine(input, undefined, options);
+        // The user hears of every routine the agent sets up.
+        if (options?.byAgent === true) this.routineCreatedByAgent(routine);
+        return routine;
+      },
       hosted: this.hostedRoutines,
     },
     ownActivity: (botId) => {
@@ -4810,7 +4880,7 @@ export class ServiceHost {
     id?: string,
     /** The agent asked for it (the cronjob tool), not the user's own form. */
     options: { byAgent?: boolean; runAtText?: string | null } = {}
-  ): Promise<Routine> {
+  ): Promise<CreatedRoutine> {
     // A hosted bot whose routines run on the server has no other scheduler:
     // a local one there would never fire, and would sidestep the plan.
     const runner = this.hostedOnly()
@@ -4900,8 +4970,12 @@ export class ServiceHost {
         rest.name != null ||
         rest.prompt != null ||
         rest.schedule != null ||
-        rest.runAt != null
+        rest.runAt != null ||
+        rest.reach != null
           ? await this.hostedRoutines.update(id, {
+              ...(rest.reach != null
+                ? { sources: rest.reach.sources, reads: rest.reach.reads }
+                : {}),
               ...(rest.name != null ? { name: rest.name } : {}),
               ...(rest.prompt != null ? { prompt: rest.prompt } : {}),
               ...(rest.schedule != null ? { cron: rest.schedule } : {}),

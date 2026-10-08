@@ -349,6 +349,8 @@ export const updateJob = (
     updated.reach = updated.pendingReach;
     updated.pendingReach = null;
   }
+  // Declined: what the agent asked for is dropped, the routine's reach kept.
+  if (confirmPendingReach === false) updated.pendingReach = null;
   // Full access was given to what the routine did: a new instruction or reach
   // runs held again until the user gives it again (unless this change does).
   const rewritten =

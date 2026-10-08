@@ -4,18 +4,118 @@
  * calls, then re-diffs the table at once and returns the position of the
  * batch that carries its echo (or the current one, when nothing changed).
  */
+import type {
+  PreconditionReason,
+  RoutineRefusal,
+} from "@abacus-ai/contract/contract/errors";
 import type { TablePosition } from "@abacus-ai/contract/contract/rows";
+import type { RoutineUpdateInput } from "@abacus-ai/contract/routines";
+import { ORPCError } from "@orpc/server";
 
+import {
+  HostedRoutineRefusal,
+  isHostedRoutineId,
+} from "../../services/agent-tools/hosted-routines";
+import { cleanSources } from "../../services/agent-tools/routine-reach";
 import type { RpcContext } from "../context";
 import {
   badRequest,
   forbidden,
   notFound,
+  preconditionFailed,
+  unavailable,
   unwrapResult,
   workspaceFailure,
 } from "../errors";
 import type { TableFeed } from "../tables/table-feed";
 import { impl } from "./impl";
+
+/** A hosted routine's values the server would not take, by its code. */
+const REFUSED_VALUES: Record<string, RoutineRefusal> = {
+  invalid_schedule: "schedule",
+  interval_too_short: "interval",
+  timezone_required: "timezone",
+  invalid_timezone: "timezone",
+  invalid_source_url: "sources",
+  invalid_url: "sources",
+  invalid_connector_reads: "reads",
+  name_required: "text",
+  prompt_required: "text",
+  reminder_text_required: "text",
+  unsupported_kind: "other",
+  invalid_delivery: "other",
+  invalid_notify: "other",
+  invalid_event: "other",
+  invalid_bot_id: "other",
+  invalid_request: "other",
+};
+
+/** The form field a refused value belongs to. */
+const REFUSAL_FIELDS: Partial<Record<RoutineRefusal, string>> = {
+  schedule: "schedule",
+  interval: "schedule",
+  timezone: "schedule",
+  sources: "sources",
+  reads: "reads",
+};
+
+/** The server's own reasons, by code, for the app to word. */
+const REFUSAL_REASONS: Record<string, PreconditionReason> = {
+  limit: "routine-limit",
+  no_host: "no-host",
+  routine_not_active: "routine-not-active",
+  routine_completed: "routine-not-active",
+  busy: "routine-busy",
+  already_queued: "routine-busy",
+  queue_full: "queue-full",
+  wrong_bot: "wrong-bot",
+  not_available: "routines-off",
+};
+
+/**
+ * A hosted routine the server would not create, change or resume, as the
+ * app can word it: the free plan's limits (with its upgrade link), its other
+ * reasons, or the value it refused. Only the code goes out, never the body.
+ * Anything that is not a refusal passes through unchanged.
+ */
+const hostedRefusalError = (error: unknown): unknown => {
+  if (!(error instanceof HostedRoutineRefusal)) return error;
+  const { code, details } = error;
+  if (code === "plan_limit") {
+    // The server's own upgrade link for this account goes along, when it sent one.
+    const upgrade = (details.upgrade ?? {}) as { url?: unknown };
+    const url =
+      typeof upgrade.url === "string" && upgrade.url.startsWith("https://")
+        ? upgrade.url
+        : undefined;
+    // Which of the free plan's limits: its kinds, its daily floor, or its one routine.
+    const reason =
+      typeof details.kind === "string"
+        ? "plan-kind"
+        : details.min_interval_secs != null
+          ? "plan-interval"
+          : "plan-required";
+    return preconditionFailed(reason, url);
+  }
+  const reason = REFUSAL_REASONS[code];
+  if (reason != null) return preconditionFailed(reason);
+  const refusal = REFUSED_VALUES[code];
+  if (refusal != null)
+    return new ORPCError("BAD_REQUEST", {
+      status: 400,
+      message: `The server refused the routine (${code}).`,
+      data: { refusal, field: REFUSAL_FIELDS[refusal] },
+    });
+  return unavailable("The routine could not be saved on the server right now.");
+};
+
+/** A local routine keeps only the sources it can read; the rest are dropped. */
+const cleanReach = (
+  reach: RoutineUpdateInput["reach"]
+): RoutineUpdateInput["reach"] =>
+  reach == null
+    ? reach
+    : { ...reach, sources: cleanSources(reach.sources).sources };
 
 const echo = <Row, Key extends string>(
   feed: TableFeed<Row, Key>,
@@ -119,11 +219,25 @@ export const dbRouter = impl.db.router({
     changes: impl.db.routines.changes.handler(routines.changes),
     insert: impl.db.routines.insert.handler(async ({ input, context }) => {
       const { id, ...create } = input;
-      const routine = await context.deps.serviceHost.createRoutine(create, id);
+      let routine: { id: string };
+      try {
+        routine = await context.deps.serviceHost.createRoutine(create, id);
+      } catch (error) {
+        throw hostedRefusalError(error);
+      }
       return echo(context.deps.tables.routines, routine.id);
     }),
     update: impl.db.routines.update.handler(async ({ input, context }) => {
-      await context.deps.serviceHost.updateRoutine(input.id, input.patch);
+      const patch = isHostedRoutineId(input.id)
+        ? input.patch
+        : input.patch.reach != null
+          ? { ...input.patch, reach: cleanReach(input.patch.reach) }
+          : input.patch;
+      try {
+        await context.deps.serviceHost.updateRoutine(input.id, patch);
+      } catch (error) {
+        throw hostedRefusalError(error);
+      }
       return echo(context.deps.tables.routines, input.id);
     }),
     delete: impl.db.routines.delete.handler(async ({ input, context }) => {

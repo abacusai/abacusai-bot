@@ -50,7 +50,7 @@ const READS: Record<string, string> = {
   models: "list",
   notch: "events layout openCommands status",
   referrals: "gmailContacts summary whatsappContacts",
-  routines: "events",
+  routines: "events hostedRuns runners",
   sessions: "turnState",
   settings:
     "defaultMode.get events execBackend.get get keys.listProviders notifications.get promptHistory.list sandboxSupport toolsets.get",

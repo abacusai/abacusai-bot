@@ -14,11 +14,20 @@ import { platformSystem } from "#renderer/lib/platform-system";
 import { createReadinessQueue } from "#renderer/lib/readiness-queue";
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
 import { createSoundPlayer } from "#renderer/lib/sound";
+import { showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 
-import { routineOwns } from "./notify";
-import { completionNotice, createFireHandler } from "./notify";
+import { hostedRunFailed, hostedUnread } from "./hosted";
+import {
+  completionNotice,
+  createFireHandler,
+  hostedAwayNotice,
+  hostedRunNotice,
+  remember,
+  routineOwns,
+} from "./notify";
 const seenFires = new WeakMap<object, Set<string>>();
+const seenHosted = new WeakMap<object, Set<string>>();
 const seenNotices = new WeakMap<object, Set<string>>();
 const seenFor = (map: WeakMap<object, Set<string>>, key: object) => {
   let set = map.get(key);
@@ -88,10 +97,102 @@ export const RoutinesGlobals = () => {
       (id, botId) => player.play("routine-fired", { threadId: id, botId }),
       seenFor(seenFires, transport)
     );
+    const hosted = (event: Parameters<typeof fire>[0]) => {
+      const notice = hostedRunNotice(
+        event,
+        db.collections.routines.toArray,
+        seenFor(seenHosted, transport)
+      );
+      if (!notice) return;
+      const failed = hostedRunFailed(notice.run);
+      if (notice.routineId) hostedUnread.add(notice.routineId, notice.run.id);
+      player.play(failed ? "failed" : "done", {
+        threadId: notice.routineId ?? notice.run.id,
+        dedupeKey: notice.run.id,
+        botId: notice.botId,
+      });
+      notifyAttention(notifier, {
+        kind: failed ? "failed" : "done",
+        dedupeKey: notice.run.id,
+        botId: notice.botId,
+        title: notice.name,
+        // The server sends the out-of-credits WhatsApp notice itself; this is the in-app one.
+        body: t(
+          notice.run.status === "payment_required"
+            ? "routines.hosted.notifyCredits"
+            : failed
+              ? "routines.hosted.notifyFailed"
+              : "routines.hosted.notifyDone"
+        ),
+        metadata: {
+          kind: "routine",
+          routineId: notice.routineId ?? "",
+          sessionId: "",
+        },
+      });
+    };
+    // What came in while the app was away for over a day: one notice in all.
+    const away = (event: Parameters<typeof fire>[0]) => {
+      const runs = hostedAwayNotice(
+        event,
+        db.collections.routines.toArray,
+        seenFor(seenHosted, transport)
+      );
+      if (!runs) return;
+      for (const { routineId, run } of runs)
+        if (routineId) hostedUnread.add(routineId, run.id);
+      notifyAttention(notifier, {
+        kind: "done",
+        dedupeKey: `away:${runs[0]!.run.id}`,
+        botId: null,
+        title: t("routines.hosted.awayTitle"),
+        body: t("routines.hosted.away", { count: runs.length }),
+        metadata: {
+          kind: "routine",
+          // Opens the latest one's routine.
+          routineId: runs.at(-1)!.routineId ?? "",
+          sessionId: "",
+        },
+      });
+    };
+    // Every routine the agent sets up is the user's to know of, and one that
+    // waits for their approval is theirs to act on.
+    const created = (event: Parameters<typeof fire>[0]) => {
+      if (event.type !== "created") return;
+      if (
+        !remember(seenFor(seenHosted, transport), `created:${event.routineId}`)
+      )
+        return;
+      const body = t(
+        event.pendingApproval
+          ? "routines.createdPending"
+          : "routines.createdByAgent",
+        { name: event.name }
+      );
+      showInfo(body);
+      notifyAttention(notifier, {
+        kind: event.pendingApproval ? "needs-you" : "done",
+        dedupeKey: `created:${event.routineId}`,
+        botId: null,
+        title: event.name,
+        body,
+        metadata: {
+          kind: "routine",
+          routineId: event.routineId,
+          sessionId: "",
+        },
+      });
+    };
     followNotice(
       "routines",
       transport,
-      (event) => readiness.run(() => fire(event)),
+      (event) =>
+        readiness.run(() => {
+          fire(event);
+          hosted(event);
+          away(event);
+          created(event);
+        }),
       abort.signal
     );
     const waiting = new Set<string>();

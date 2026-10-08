@@ -380,6 +380,51 @@ describe("the hosted routines client", () => {
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 
+  it("remembers the id a routine was created under here, for its creator", async () => {
+    const call = reply({
+      capabilities: { ok: true, body: { hosted_routines: true } },
+      create: { ok: true, body: { routine: WIRE } },
+      list: { ok: true, body: { routines: [WIRE] } },
+    });
+    const hosted = new HostedRoutines({ call, hasKey: () => true });
+    const routine = await hosted.create({
+      kind: "task",
+      name: "Morning digest",
+      prompt: "My calendar",
+      idempotencyKey: "routine-abc",
+    });
+    expect(routine.hosted?.createdAs).toBe("routine-abc");
+    await hosted.refresh();
+    expect(hosted.find("hosted-r1")?.hosted?.createdAs).toBe("routine-abc");
+  });
+
+  it("gives a create's key to its own row only, while another write is in flight", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const call = (async (body: Record<string, unknown>) => {
+      if (body.action === "create") {
+        await gate;
+        return { ok: true, body: { routine: { ...WIRE, id: "new" } } };
+      }
+      if (body.action === "pause")
+        return { ok: true, body: { routine: { ...WIRE, id: "other" } } };
+      return { ok: true, body: { hosted_routines: true, routines: [] } };
+    }) as RoutinesCall;
+    const hosted = new HostedRoutines({ call, hasKey: () => true });
+    const created = hosted.create({
+      kind: "task",
+      name: "n",
+      prompt: "p",
+      idempotencyKey: "mine",
+    });
+    await hosted.setEnabled("hosted-other", false);
+    release();
+    expect((await created).hosted?.createdAs).toBe("mine");
+    expect(hosted.find("hosted-other")?.hosted?.createdAs).toBeUndefined();
+  });
+
   it("throws the server's refusal by its code, with what came with it", async () => {
     const call = reply({
       create: {

@@ -30,6 +30,10 @@ import {
 import { Switch } from "#renderer/ui/switch";
 
 import { runsView, scheduleLabel, routineState, useRoutinesData } from "./data";
+import { isHosted } from "./hosted";
+import { HostedResults } from "./hosted-results";
+import { runRoutineNow, showSaveFailure, useHostedOff } from "./hosted-sync";
+import { RoutineReachPanel } from "./reach-panel";
 import { RoutineIdentity } from "./row";
 export const RoutinesListBody = () => {
   const { t } = useTranslation();
@@ -171,6 +175,7 @@ export const RoutinePage = ({
   const { routines, runs, workspaces, sessions, bots } = useRoutinesData();
   const row = routines.find((r) => r.id === routineId);
   const [limit, setLimit] = useState(50);
+  const hostedOff = useHostedOff();
   if (!row) return <RoutineGone />;
   const attempts = runsView(row, runs);
   const clear = () =>
@@ -178,11 +183,7 @@ export const RoutinePage = ({
       search: (p) => ({ ...p, run: undefined }),
       transition: "none",
     });
-  const runNow = () =>
-    void transport.client.routines
-      .run({ id: row.id, trigger: "manual" })
-      .then(() => showInfo(t("phase5.routineStarted")))
-      .catch(() => showError(t("phase5.runFailed")));
+  const runNow = () => runRoutineNow(row, transport, t);
   return (
     <ReportLayout
       open={!!run}
@@ -219,19 +220,25 @@ export const RoutinePage = ({
             <div className="phone:basis-full flex min-w-0 flex-1 basis-72 items-center gap-3">
               <RoutineIdentity
                 bot={bots.find((b) => b.id === row.botId)}
-                state={routineState(row, runs, sessions)}
+                state={routineState(row, runs, sessions, undefined, hostedOff)}
                 size={40}
               />
               <div className="mr-auto min-w-0 flex-1 basis-48">
                 <h1 className="page-title">{row.name}</h1>
                 <p className="text-muted-foreground text-xs [overflow-wrap:anywhere]">
                   {scheduleLabel(row, t, i18n.language)} ·{" "}
-                  {workspaces.find(
-                    (w) =>
-                      w.id === row.workspaceId &&
-                      w.kind !== "routine" &&
-                      w.kind !== "bot"
-                  )?.label ?? t("phase5.ownFolder")}
+                  {isHosted(row)
+                    ? // An event routine has no time, so no zone to name.
+                      row.hosted?.timezone != null &&
+                      (row.schedule != null || row.runAt != null)
+                      ? t("routines.hosted.info", { zone: row.hosted.timezone })
+                      : t("routines.hosted.badge")
+                    : (workspaces.find(
+                        (w) =>
+                          w.id === row.workspaceId &&
+                          w.kind !== "routine" &&
+                          w.kind !== "bot"
+                      )?.label ?? t("phase5.ownFolder"))}
                   {row.botName &&
                     ` · ${t("phase5.madeBy", { name: row.botName })}`}
                 </p>
@@ -266,8 +273,8 @@ export const RoutinePage = ({
                       .update(row.id, (d) => {
                         d.enabled = enabled;
                       })
-                      .isPersisted.promise.catch(() =>
-                        showError(t("phase5.failed"))
+                      .isPersisted.promise.catch((error: unknown) =>
+                        showSaveFailure(error, transport, t)
                       )
                   }
                 />
@@ -291,6 +298,11 @@ export const RoutinePage = ({
               />
             </div>
           </PageToolbar>
+          {isHosted(row) && hostedOff && (
+            <p role="status" className="text-muted-foreground text-xs">
+              {t("routines.hosted.unavailable")}
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-2 @min-[440px]:grid-cols-3">
             {[
               [
@@ -370,83 +382,88 @@ export const RoutinePage = ({
               )}
             </Collapsible>
           </section>
-          <section>
-            <h2 className="mb-2 text-sm font-semibold">{t("phase5.runs")}</h2>
-            <p className="text-muted-foreground mb-2 text-xs">
-              {t("phase5.freshSession")}
-            </p>
-            <div className="flex flex-col gap-1">
-              {attempts.slice(0, limit).map((a) => {
-                const content = (
-                  <>
-                    <span className="w-20 shrink-0">
-                      {t(`phase5.outcomes.${a.outcome}`)}
-                    </span>
-                    <time className="w-28 shrink-0 text-xs">
-                      {new Date(a.at).toLocaleString(i18n.language, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                    <span className="line-clamp-2 min-w-32 flex-1">
-                      {a.result &&
-                      !/^(?:started session\s+)?[a-f0-9-]{32,}$/i.test(
-                        a.result.trim()
-                      )
-                        ? a.result
-                        : t(`phase5.outcomes.${a.outcome}`)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {t(
-                        ["manual", "schedule", "webhook"].includes(a.trigger)
-                          ? `routines.triggers.${a.trigger}`
-                          : "routines.triggers.schedule"
-                      )}
-                    </span>
-                  </>
-                );
-                return a.sessionId && !a.note ? (
-                  <Button
-                    key={a.id}
-                    variant={run === a.sessionId ? "secondary" : "ghost"}
-                    className="h-auto min-h-14 min-w-0 flex-wrap justify-start gap-x-3 gap-y-1 py-2 text-left whitespace-normal"
-                    aria-pressed={run === a.sessionId}
-                    onClick={() =>
-                      void navigate({
-                        search: (p) => ({
-                          ...p,
-                          run: run === a.sessionId ? undefined : a.sessionId!,
-                        }),
-                        transition: "none",
-                      })
-                    }
-                  >
-                    {content}
-                  </Button>
-                ) : (
-                  <div
-                    key={a.id}
-                    className="text-muted-foreground flex min-h-12 items-center gap-3 px-2 text-xs"
-                  >
-                    {content}
-                  </div>
-                );
-              })}
-            </div>
-            {attempts.length === 0 && (
-              <p className="text-muted-foreground text-xs">
-                {t("routines.noRunsYet")}
+          <RoutineReachPanel row={row} />
+          {isHosted(row) ? (
+            <HostedResults row={row} />
+          ) : (
+            <section>
+              <h2 className="mb-2 text-sm font-semibold">{t("phase5.runs")}</h2>
+              <p className="text-muted-foreground mb-2 text-xs">
+                {t("phase5.freshSession")}
               </p>
-            )}
-            {attempts.length > limit && (
-              <Button variant="ghost" onClick={() => setLimit(limit + 50)}>
-                {t("phase5.showMore")}
-              </Button>
-            )}
-          </section>
-          <EditorChat key={row.id} routineId={row.id} />
+              <div className="flex flex-col gap-1">
+                {attempts.slice(0, limit).map((a) => {
+                  const content = (
+                    <>
+                      <span className="w-20 shrink-0">
+                        {t(`phase5.outcomes.${a.outcome}`)}
+                      </span>
+                      <time className="w-28 shrink-0 text-xs">
+                        {new Date(a.at).toLocaleString(i18n.language, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                      <span className="line-clamp-2 min-w-32 flex-1">
+                        {a.result &&
+                        !/^(?:started session\s+)?[a-f0-9-]{32,}$/i.test(
+                          a.result.trim()
+                        )
+                          ? a.result
+                          : t(`phase5.outcomes.${a.outcome}`)}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {t(
+                          ["manual", "schedule", "webhook"].includes(a.trigger)
+                            ? `routines.triggers.${a.trigger}`
+                            : "routines.triggers.schedule"
+                        )}
+                      </span>
+                    </>
+                  );
+                  return a.sessionId && !a.note ? (
+                    <Button
+                      key={a.id}
+                      variant={run === a.sessionId ? "secondary" : "ghost"}
+                      className="h-auto min-h-14 min-w-0 flex-wrap justify-start gap-x-3 gap-y-1 py-2 text-left whitespace-normal"
+                      aria-pressed={run === a.sessionId}
+                      onClick={() =>
+                        void navigate({
+                          search: (p) => ({
+                            ...p,
+                            run: run === a.sessionId ? undefined : a.sessionId!,
+                          }),
+                          transition: "none",
+                        })
+                      }
+                    >
+                      {content}
+                    </Button>
+                  ) : (
+                    <div
+                      key={a.id}
+                      className="text-muted-foreground flex min-h-12 items-center gap-3 px-2 text-xs"
+                    >
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+              {attempts.length === 0 && (
+                <p className="text-muted-foreground text-xs">
+                  {t("routines.noRunsYet")}
+                </p>
+              )}
+              {attempts.length > limit && (
+                <Button variant="ghost" onClick={() => setLimit(limit + 50)}>
+                  {t("phase5.showMore")}
+                </Button>
+              )}
+            </section>
+          )}
+          {!isHosted(row) && <EditorChat key={row.id} routineId={row.id} />}
         </div>
       </div>
     </ReportLayout>

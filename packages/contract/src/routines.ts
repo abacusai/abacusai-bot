@@ -107,6 +107,11 @@ export interface HostedRoutineInfo {
   /** Why the server paused it, when it did. */
   pausedReason: string | null;
   lastRun: HostedRoutineRun | null;
+  /**
+   * The id it was created under in this app (an optimistic insert's), so the
+   * form that made it can find it; null once the app restarted.
+   */
+  createdAs?: string | null;
 }
 
 export interface Routine {
@@ -196,6 +201,6 @@ export type RoutineUpdateInput = Partial<
   >
 > & {
   webhook?: boolean;
-  /** The user allows the reach the agent asked for (`pendingReach`). */
+  /** The user allows (true) or declines (false) the reach the agent asked for. */
   confirmPendingReach?: boolean;
 };
