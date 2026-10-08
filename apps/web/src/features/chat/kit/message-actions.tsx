@@ -934,6 +934,9 @@ export const MessageActions = (props: {
   children: ReactNode;
 }) => {
   const { skin } = useChatView();
+  const text = props.text ?? messageMarkdown(props.message);
+  if (props.message.role === "assistant" && text.trim() === "")
+    return <>{props.children}</>;
   return skin === "session" ? (
     <SessionActions
       {...props}

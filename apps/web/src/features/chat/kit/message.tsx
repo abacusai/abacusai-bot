@@ -472,7 +472,10 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
         for (const part of parts) {
           if (
             part.part.type === "tool-result" ||
-            (part.part.type === "text" && part.part.content.trim() === "")
+            (part.part.type === "text" &&
+              part.part.content.trim() === "" &&
+              !(part.part as { metadata?: { abacus?: { kind?: string } } })
+                .metadata?.abacus?.kind)
           )
             continue;
           if (
@@ -484,11 +487,13 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
           const index = indexed.parts.get(part.part)!;
           const id = indexed.groupIds.get(index) ?? null;
           const previous = blocks.at(-1);
+          const previousPart = previous?.parts.at(-1)?.part;
           if (
             previous?.id === id &&
             (id != null ||
               (part.part.type === "tool-call" &&
-                previous.parts.at(-1)?.part.type === "tool-call"))
+                previousPart?.type === "tool-call" &&
+                previousPart.name === part.part.name))
           )
             previous.parts.push(part);
           else blocks.push({ id, parts: [part] });
@@ -532,7 +537,9 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
                 <ChevronRight aria-hidden className="size-3" />
                 {group?.summary ?? group?.category ?? block.id}
               </CollapsibleTrigger>
-              <CollapsibleContent>{content}</CollapsibleContent>
+              <CollapsibleContent data-slot="tool-cluster">
+                {content}
+              </CollapsibleContent>
             </Collapsible>
           );
         });

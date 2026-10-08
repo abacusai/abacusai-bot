@@ -188,3 +188,32 @@ describe("R2-T11 parts", () => {
     expect(screen.getByText("Boom")).toBeTruthy();
   });
 });
+
+it("clusters consecutive tools while dropping blank prose wrappers", async () => {
+  const relay = new FakeRelay();
+  relay.emitAll([
+    ...b.sessionReady(),
+    b.runStarted("density"),
+    b.textStart("calls"),
+    b.textDelta("calls", "  "),
+    ...b.toolCall("c1", "bash", "calls", { command: "npm test" }),
+    b.toolResult("c1", { text: "ok" }),
+    ...b.toolCall("c2", "bash", "calls", { command: "npm run lint" }),
+    b.toolResult("c2", { text: "ok" }),
+    ...b.toolCall("c3", "read", "calls", { path: "/tmp/example.txt" }),
+    b.toolResult("c3", { text: "example" }),
+    b.textEnd("calls"),
+  ]);
+  current = await renderRelay(relay, "session");
+  await screen.findByText("Run npm test");
+  const clusters = document.querySelectorAll('[data-slot="tool-cluster"]');
+  expect(clusters).toHaveLength(2);
+  expect(clusters[0]!.querySelectorAll("[data-tool]")).toHaveLength(2);
+  expect(clusters[1]!.querySelectorAll("[data-tool]")).toHaveLength(1);
+  expect(
+    document.querySelectorAll('[data-role="assistant"] > div')
+  ).toHaveLength(2);
+  expect(
+    document.querySelector('[data-slot="session-message-actions"]')
+  ).toBeNull();
+});

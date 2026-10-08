@@ -61,9 +61,6 @@ import {
   ROW_FALLBACK_PX,
 } from "./window";
 
-/** The screenshot run's build (dev fixture tables). */
-const VISUAL_BUILD = import.meta.env.VITE_NEXT_DB_FIXTURES === "1";
-
 export interface TranscriptProps {
   messages: UIMessage[];
   Message: ComponentType<{ message: UIMessage }>;
@@ -307,12 +304,15 @@ const TranscriptMessage = memo(function TranscriptMessage({
       style={
         height == null
           ? undefined
-          : { containIntrinsicSize: `auto ${height}px` }
+          : {
+              containIntrinsicSize: `auto calc(${height}px - var(--transcript-row-gap, 0px))`,
+            }
       }
       messageId={message.id}
       scrollAnchor={message.role === "user"}
       data-fresh={fresh ? "" : undefined}
       data-tool-gap={toolGap}
+      data-tool-only={toolOnly(message) ? "" : undefined}
     >
       <ToolWindowProvider
         value={{
@@ -374,11 +374,13 @@ const toolOnly = (message: UIMessage | undefined): boolean =>
     (part) =>
       part.type === "tool-call" ||
       part.type === "tool-result" ||
-      (part.type === "text" && part.content.trim() === "")
+      (part.type === "text" &&
+        part.content.trim() === "" &&
+        !(part as { metadata?: { abacus?: { kind?: string } } }).metadata
+          ?.abacus?.kind)
   );
 
-const toolGapBefore = (messages: UIMessage[], message: UIMessage) => {
-  const previous = messages[messages.indexOf(message) - 1];
+const toolGapBefore = (previous: UIMessage | undefined, message: UIMessage) => {
   if (!toolOnly(message) || !toolOnly(previous)) return undefined;
   const last = previous!.parts.findLast((part) => part.type === "tool-call");
   const first = message.parts.find((part) => part.type === "tool-call");
@@ -705,7 +707,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
     if (key != null) lastDay = key;
   }
   const rows: ReactNode[] = [];
-  for (const message of shown) {
+  for (const [index, message] of shown.entries()) {
     const time = messageTime(message);
     const key = dayKey(time);
     if (key != null && key !== lastDay && time != null) {
@@ -738,7 +740,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         fresh={fresh[message.id] === true && !settled.has(message.id)}
         virtual={measured.size > 0}
         height={measured.get(message.id)}
-        toolGap={toolGapBefore(shown, message)}
+        toolGap={toolGapBefore(shown[index - 1], message)}
       />
     );
     for (const outcome of byAnchor.get(message.id) ?? [])
@@ -751,10 +753,10 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
 
   return (
     <MessageScroller>
-      {/* Visual fixtures disable scroll-linked fades for screenshot settling. */}
       <MessageScrollerViewport
         ref={viewportRef}
         className="scroll-fade-y"
+        data-transcript-fade
         data-continuity-scroll="chat-transcript"
         // The header's scroll-linked morph into the title bar reads this
         // viewport's named timeline (bots.css).
@@ -762,7 +764,6 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         preserveScrollOnPrepend
         style={{
           overflowAnchor: "none",
-          ...(VISUAL_BUILD ? { animation: "none", maskImage: "none" } : {}),
         }}
         aria-label={t("chat.transcript.label")}
         onScroll={() => {
@@ -789,7 +790,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
         ) : null}
         <MessageScrollerContent
           aria-busy={active}
-          className="mx-auto w-full max-w-(--content-max-w) min-w-0 gap-0 px-4 pt-6 pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
+          className="mx-auto w-full max-w-(--content-max-w) min-w-0 gap-0 px-4 pt-6 pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px)+var(--transcript-fade-size,80px))]"
         >
           {orphans.map((outcome) => (
             <MessageScrollerItem key={`outcome-${outcome.runId}`}>
@@ -812,7 +813,7 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
       </MessageScrollerViewport>
       <MessageScrollerButton
         direction="end"
-        className="bg-popover text-popover-foreground phone:h-10 phone:min-w-10 phone:rounded-full phone:bg-popover/85 phone:backdrop-blur-lg border opacity-100 shadow-lg data-[direction=end]:bottom-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
+        className="bg-popover text-popover-foreground phone:h-10 phone:min-w-10 phone:rounded-full phone:bg-popover/85 phone:backdrop-blur-lg border opacity-100 shadow-lg data-[direction=end]:bottom-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px)+var(--transcript-fade-size,80px))]"
         aria-label={
           marker.count > 0
             ? t("chat.transcript.jumpNew", { count: marker.count })

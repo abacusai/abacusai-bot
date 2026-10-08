@@ -709,7 +709,7 @@ it("right-click offers the bot's feedback, sharing its state with the hover menu
   ).toBe("true");
 });
 
-it("sessions show stable feedback and Copy controls without reaction UI", async () => {
+it("sessions show feedback and Copy on text hover or focus without reserving space", async () => {
   const relay = new FakeRelay({
     history: [{ ...original, metadata: { abacus: { reactions: ["👍"] } } }],
   });
@@ -744,5 +744,46 @@ it("sessions show stable feedback and Copy controls without reaction UI", async 
   ).toBeTruthy();
   expect(
     host().querySelector('[data-slot="session-message-actions"]')?.className
-  ).toContain("h-7");
+  ).toContain("absolute");
+  expect(
+    host().querySelector('[data-slot="session-message-actions"]')?.className
+  ).toContain("group-focus-within/message:opacity-100");
+});
+
+it("sessions never render Copy or feedback for tool-only messages with blank text", async () => {
+  const relay = new FakeRelay({
+    history: [
+      {
+        id: "tools-only",
+        role: "assistant",
+        parts: [
+          { type: "text", content: "  \n" },
+          {
+            type: "tool-call",
+            id: "c-only",
+            name: "bash",
+            arguments: "{}",
+            state: "input-complete",
+          },
+        ],
+      },
+    ],
+  });
+  relay.emitAll(b.sessionReady());
+  current = await renderRelay(
+    relay,
+    "session",
+    {},
+    {
+      slots: {
+        decorateMessage: () => ({ actions: <button>Feedback</button> }),
+      },
+    }
+  );
+  await screen.findByText("bash");
+  expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  expect(
+    document.querySelector('[data-slot="session-message-actions"]')
+  ).toBeNull();
 });
