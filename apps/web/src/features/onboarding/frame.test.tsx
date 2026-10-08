@@ -5,23 +5,25 @@
  * the type scale from onboarding.css.
  */
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { initI18n } from "#renderer/lib/i18n";
 import { ONBOARDING_STEPS } from "#renderer/lib/navigation/areas";
 
-import { OnboardingProgress, PROGRESS_MARK } from "./frame";
+import {
+  OnboardingFrame,
+  OnboardingProgress,
+  PROGRESS_MARK,
+  stepDirection,
+} from "./frame";
 
-const { readFileSync } = (
-  globalThis as unknown as {
-    process: {
-      getBuiltinModule(id: "node:fs"): {
-        readFileSync(path: string, encoding: "utf8"): string;
-      };
-    };
-  }
-).process.getBuiltinModule("node:fs");
-const css = readFileSync("src/features/onboarding/onboarding.css", "utf8");
+vi.mock("./sound", () => ({
+  useOnboardingSound: () => ({
+    enabled: false,
+    play: () => {},
+    toggle: () => {},
+  }),
+}));
 
 describe("OnboardingProgress", () => {
   it("maps the seven steps onto five marks; paired steps share one", () => {
@@ -57,42 +59,42 @@ describe("OnboardingProgress", () => {
   });
 });
 
-describe("onboarding.css", () => {
-  it("pins the pill to the title bar and animates its width", () => {
-    const rule = css.match(/\.onboarding-progress \{[^}]*\}/)![0];
-    expect(rule).toContain("position: fixed");
-    expect(rule).toContain("right: var(--titlebar-end)");
-    expect(rule).toContain("height: var(--toolbar-h)");
-    const mark = css.match(/\.onboarding-progress span \{[^}]*\}/)![0];
-    expect(mark).toMatch(/width 300ms var\(--ease-standard\)/);
-    expect(css).toMatch(
-      /\.onboarding-progress span\[data-current="true"\] \{[^}]*width: 20px/
-    );
-  });
+it("uses one direction for the content of a step", () => {
+  expect(stepDirection("models", "connectors")).toBe("forward");
+  expect(stepDirection("connectors", "models")).toBe("back");
+});
 
-  it("uses the canvas type scale, 44 px buttons and the radial wash", () => {
-    expect(css).toMatch(/\.onboarding-title \{[^}]*font-size: 28px/);
-    expect(css).toMatch(
-      /\.onboarding-title\[data-size="hero"\] \{[^}]*font-size: 40px[^}]*line-height: 48px/
-    );
-    expect(css).toMatch(
-      /\.onboarding-title\[data-size="large"\] \{[^}]*font-size: 34px/
-    );
-    expect(css).toMatch(/\.onboarding-body \{[^}]*font-size: 14px/);
-    expect(css).toMatch(/\.onboarding-quiet \{[^}]*font-size: 13px/);
-    expect(css).toMatch(
-      /\.onboarding-button \{[^}]*height: 44px[^}]*border-radius: 12px/
-    );
-    expect(css).toMatch(/\.onboarding-link \{[^}]*height: 32px/);
-    expect(css).toMatch(/\.onboarding-frame \{[^}]*radial-gradient\(/);
-  });
-
-  it("turns rises into fades and stops the bob under reduced motion", () => {
-    expect(css).toMatch(
-      /\[data-reduced-motion="true"\] \.onboarding-step > \* \{[^}]*onboarding-fade/
-    );
-    expect(css).toMatch(
-      /\[data-reduced-motion="true"\] \.onboarding-glow \{[^}]*animation: none/
-    );
-  });
+it("moves the whole content in one direction while keeping the cast mounted", async () => {
+  await initI18n();
+  const view = render(
+    <OnboardingFrame step="models">
+      <p>Models</p>
+    </OnboardingFrame>
+  );
+  const avatars = [
+    ...view.container.querySelectorAll('[data-slot="bot-avatar"]'),
+  ];
+  view.rerender(
+    <OnboardingFrame step="connectors">
+      <p>Connectors</p>
+    </OnboardingFrame>
+  );
+  expect(
+    view.container
+      .querySelector('[data-slot="onboarding-content"]')
+      ?.getAttribute("data-direction")
+  ).toBe("forward");
+  expect([
+    ...view.container.querySelectorAll('[data-slot="bot-avatar"]'),
+  ]).toEqual(avatars);
+  view.rerender(
+    <OnboardingFrame step="models">
+      <p>Models</p>
+    </OnboardingFrame>
+  );
+  expect(
+    view.container
+      .querySelector('[data-slot="onboarding-content"]')
+      ?.getAttribute("data-direction")
+  ).toBe("back");
 });

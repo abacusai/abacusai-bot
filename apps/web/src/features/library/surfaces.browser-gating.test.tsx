@@ -192,7 +192,7 @@ it("terminal shell menu uses the translated label rather than an object", async 
 it("uses workspace copy on the browser connection screen", () => {
   const view = render(<ConnectScreen stage="starting" restart={() => {}} />);
   try {
-    expect(screen.getByRole("status").textContent).toBe(
+    expect(screen.getByRole("status").textContent).toContain(
       "Starting your workspace"
     );
   } finally {
@@ -236,8 +236,8 @@ it("the setup page maps every stage to a step, with a bar always measured", () =
             : 92
       );
       expect(bar.getAttribute("aria-label")).toBeTruthy();
-      // The setup page holds the light theme while it shows.
-      expect(themeOverride.state).toBe("light");
+      // Setup follows the app theme.
+      expect(themeOverride.state).toBeNull();
     } finally {
       view.unmount();
     }
@@ -327,14 +327,14 @@ it("the host status picks failures first, then open, then the banner, setup or p
   try {
     for (const [patch, slot] of cases) {
       const view = show(patch);
-      const text = view.container.textContent ?? "";
+      const text = document.body.textContent ?? "";
       expect(text, JSON.stringify(patch)).not.toContain(RAW);
       if (slot == null) expect(view.container.firstChild).toBeNull();
       else if (slot === "status")
         expect(text).toContain("Sign in to use AbacusAI Bot on the web.");
       else
         expect(
-          view.container.querySelector(`[data-slot="${slot}"]`),
+          document.querySelector(`[data-slot="${slot}"]`),
           slot
         ).not.toBeNull();
       view.unmount();

@@ -100,5 +100,13 @@ describe("onboarding keys", () => {
     await waitFor(() =>
       expect(app!.router.state.location.pathname).toBe("/onboarding/models")
     );
+    await press("ArrowRight");
+    await waitFor(() =>
+      expect(app!.router.state.location.pathname).toBe("/onboarding/connectors")
+    );
+    await press("ArrowLeft");
+    await waitFor(() =>
+      expect(app!.router.state.location.pathname).toBe("/onboarding/models")
+    );
   });
 });

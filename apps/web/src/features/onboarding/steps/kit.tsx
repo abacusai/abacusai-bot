@@ -1,9 +1,3 @@
-/**
- * The step vocabulary (canvas page 11): a 44 px primary/secondary button, a
- * 32 px quiet link, the title scale (hero 40/48, large 34/42, medium 32/40,
- * default 28/36), a body line and a pill. Thin wrappers over the registry
- * primitives so every step reads the same.
- */
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "#renderer/lib/cn";
@@ -17,10 +11,14 @@ export const StepButton = ({
   variant?: "primary" | "secondary" | "small";
 }) => (
   <Button
-    size="lg"
-    variant={variant === "primary" ? "default" : "secondary"}
+    size="default"
+    variant={variant === "primary" ? "default" : "ghost"}
     data-variant={variant}
-    className={cn("onboarding-button", className)}
+    className={cn(
+      "text-[13px]",
+      variant !== "primary" && "text-muted-foreground",
+      className
+    )}
     {...props}
   />
 );
@@ -30,9 +28,9 @@ export const StepLink = ({
   ...props
 }: Omit<ComponentProps<typeof Button>, "variant" | "size">) => (
   <Button
-    size="lg"
+    size="default"
     variant="ghost"
-    className={cn("onboarding-link", className)}
+    className={cn("text-muted-foreground text-[13px]", className)}
     {...props}
   />
 );
@@ -74,20 +72,6 @@ export const StepTitle = ({
 
 export const StepBody = ({ className, ...props }: ComponentProps<"p">) => (
   <p className={cn("onboarding-body", className)} {...props} />
-);
-
-export const Pill = ({
-  dot,
-  children,
-}: {
-  /** The dot's colour (a CSS colour). */
-  dot: string;
-  children: ReactNode;
-}) => (
-  <span className="onboarding-pill" style={{ "--pill-dot": dot } as never}>
-    <i aria-hidden="true" />
-    {children}
-  </span>
 );
 
 export const ConnectedMark = ({ children }: { children: ReactNode }) => (

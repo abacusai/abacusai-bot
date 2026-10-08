@@ -13,24 +13,22 @@ it.each(["persist", "telemetry"] as const)(
     const deps = {
       persist: vi.fn(async () => {}),
       telemetry: vi.fn(async () => {}),
-      navigate: vi.fn(async () => {}),
     };
     deps[stage] = vi.fn(() => pending);
-    startTour({ origin: "/old", onboarded: true });
+    startTour({ onboarded: true });
     const work = completeTour("done", deps);
     await Promise.resolve();
     tourSignedOut();
-    startTour({ origin: "/new", onboarded: true });
+    startTour({ onboarded: true });
     resolve();
     await work;
-    expect(deps.navigate).not.toHaveBeenCalled();
-    expect(tourStore.state.active?.origin).toBe("/new");
+    expect(tourStore.state.active?.stopIndex).toBe(0);
     if (stage === "persist") expect(deps.telemetry).not.toHaveBeenCalled();
   }
 );
-it("valid completion persists and reports before returning to its origin", async () => {
+it("valid completion persists and reports before clearing its run", async () => {
   const calls: string[] = [];
-  startTour({ origin: "/origin", onboarded: true });
+  startTour({ onboarded: true });
   await completeTour("skipped", {
     persist: async () => {
       calls.push("persist");
@@ -38,10 +36,7 @@ it("valid completion persists and reports before returning to its origin", async
     telemetry: async () => {
       calls.push("telemetry");
     },
-    navigate: async (origin) => {
-      calls.push(origin);
-    },
   });
-  expect(calls).toEqual(["persist", "telemetry", "/origin"]);
+  expect(calls).toEqual(["persist", "telemetry"]);
   expect(tourStore.state.active).toBeNull();
 });

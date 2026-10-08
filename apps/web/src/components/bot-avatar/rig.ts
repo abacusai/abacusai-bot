@@ -14,6 +14,7 @@ import {
   observeAvatar,
   subscribeActivity,
   subscribeClock,
+  subscribePointer,
 } from "./clock";
 import {
   expressionFor,
@@ -43,7 +44,8 @@ export const useFaceRig = (
   expression?: ExpressionMix,
   interactive = true,
   individual?: AvatarPersonality,
-  coupled = true
+  coupled = true,
+  followPointer = true
 ) => {
   const [admitted, setAdmitted] = useState(false);
   const [interaction, setInteraction] = useState(false);
@@ -112,8 +114,7 @@ export const useFaceRig = (
         // Gaze reaches its target first. The heavier head follows on an arc.
         following += (pose.gazeX - following) * 0.12;
         pose.lean += following * 0.65;
-        pose.tiltX = following * 0.9;
-        pose.tiltY = pose.gazeY * 0.7;
+
         if (pressed.current || seconds < pressUntil.current) {
           pose.stretch *= 0.9;
           pose.lift += 2;
@@ -205,15 +206,42 @@ export const useFaceRig = (
     individual,
     coupled,
   ]);
+  useEffect(() => {
+    if (
+      !active ||
+      !documentVisible ||
+      !interactive ||
+      !followPointer ||
+      !ref.current?.closest("[data-avatar-scene]") ||
+      !matchMedia("(hover: hover) and (pointer: fine)").matches
+    )
+      return;
+    return subscribePointer((position) => {
+      const bounds = ref.current?.getBoundingClientRect();
+      if (!bounds) return;
+      pointer.current = {
+        x: Math.max(
+          -3,
+          Math.min(3, (position.x - bounds.x - bounds.width / 2) / 70)
+        ),
+        y: Math.max(
+          -2,
+          Math.min(2, (position.y - bounds.y - bounds.height / 2) / 70)
+        ),
+      };
+      rig.gazeX.set(pointer.current.x);
+      rig.gazeY.set(pointer.current.y);
+      rig.lean.set(rig.lean.get() * 0.8 + pointer.current.x * 0.13);
+    });
+  }, [active, documentVisible, interactive, followPointer, ref, rig]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));
     const margin = 0.98 - Math.max(0, -lift - 1) * 0.018;
-    return `translateY(${lift}%) rotate(${rig.lean.get()}deg) skewY(${rig.tiltX.get() * 0.35}deg) scale(${margin / stretch}, ${margin * stretch})`;
+    return `translateY(${lift}%) rotate(${rig.lean.get()}deg) scale(${margin / stretch}, ${margin * stretch})`;
   });
   const face = useTransform(
-    () =>
-      `translate(${rig.tiltX.get() * 0.8}px, ${rig.tiltY.get() * 0.6}px) scaleX(${1 - Math.min(0.09, Math.abs(rig.tiltX.get()) * 0.015)})`
+    () => `translate(${rig.tiltX.get() * 0.8}px, ${rig.tiltY.get() * 0.6}px)`
   );
   const secondary = rig.overlap;
   const mouth = useTransform(() => mouthPath(read(rig), size <= 24 ? 1.1 : 1));

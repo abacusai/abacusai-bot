@@ -1243,8 +1243,8 @@
     "haveAccountCta": "J'ai déjà un compte",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "welcomeTagline": "Votre coéquipier IA personnel et open source, doté d'une mémoire persistante",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeTagline": "Connectez vos outils et créez votre premier bot.",
+    "welcomeTitle": "Voici votre nouvel assistant",
     "connectedCta": "Commencer",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
@@ -1257,9 +1257,6 @@
     "haveAccountContinueWith": "J'ai déjà un compte · Continuer avec {{browser}}",
     "signInOptions": "Autres façons de se connecter",
     "usesBrowserSessions": "La connexion avec Google, Microsoft et Apple utilise vos comptes de {{browser}}.",
-    "welcomeModels": "Access",
-    "welcomeConnectors": "100+ Connectors",
-    "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
     "frame.progress": "Étape {{n}} sur 5",
     "frame.failed": "Une erreur est survenue. Réessayez.",
@@ -1275,7 +1272,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "Discutez là où vous travaillez. Reliez les outils que vous utilisez et l’agent pourra y lire, rédiger et agir, en demandant d’abord.",
+    "pages.connectors.body": "Choisissez vos outils. Vous pourrez en ajouter plus tard.",
     "pages.first-bot.title": "Nous avons créé votre premier bot",
     "pages.first-bot.body": "{{name}} organise votre journée dans Gmail, Agenda et Slack. Renommez-le, changez son style ou repartez de zéro.",
     "pages.done.title": "Vous êtes prêt",
@@ -1291,7 +1288,7 @@
     "pages.pairing": "Terminer la connexion à {{platform}}",
     "pages.finishPairing": "Terminer la connexion",
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "Votre navigateur s'ouvre pour vous connecter ou créer un compte. L'application reçoit sa propre clé d'API ; votre mot de passe ne la traverse jamais.",
+    "connectBody": "Utilisez votre compte Abacus.AI pour continuer.",
     "connectTitle": "Connecter Abacus.AI",
     "connectorsSkipCta": "Continue without connectors",
     "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
@@ -1305,25 +1302,15 @@
     "signInCta": "Se connecter à Abacus.AI",
     "skipCta": "Not now",
     "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
     "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
     "connectorsTitleAccent": "tools & services",
     "connectorsSubtitle": "Chat where you work",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "Et bien d’autres…",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1336,8 +1323,6 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
-    "connectedPromiseChat": "",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
     "webSignIn": {
       "body": "Connecting the account signed in on this site. If your session has expired, sign in again to continue.",
       "waiting": "Connecting your account…",
@@ -1354,7 +1339,9 @@
     "pages.models.localAccent": "sur cet ordinateur",
     "pages.models.localDetails": "{{model}}, {{size}}, sans compte",
     "pages.models.downloading": "Téléchargement",
-    "pages.models.download": "Télécharger"
+    "pages.models.download": "Télécharger",
+    "soundOn": "Son activé",
+    "soundOff": "Son désactivé"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1933,119 +1920,24 @@
   "tour": {
     "finish": "Commencer",
     "next": "Suivant",
-    "optional": "Optional",
     "progress": "Étape {{current}} sur {{total}}",
     "replay": "Refaire la visite",
-    "skip": "Passer la visite",
     "stops": {
-      "rail": {
-        "body": "Des agents permanents avec leurs propres instructions, horaires et conversations. Créez-en un pour le travail que vous déléguez plus d'une fois.",
-        "title": "Bots"
+      "sessions": {
+        "title": "Sessions",
+        "body": "Commencez une tâche ici."
       },
-      "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Who do you need?"
-      },
-      "workspaces": {
-        "body": "Chaque dossier ouvert et chaque conversation qu'il contient. C'est ici que vous changez d'espace ou rouvrez une session de la semaine dernière.",
-        "title": "Sessions"
-      },
-      "start-session": {
-        "body": "Ouvre un champ vide dans l'espace courant. Une session par tâche garde le contexte collé au travail auquel il appartient.",
-        "title": "Nouvelle session"
-      },
-      "connectors": {
-        "body": "Connectez les outils que vous utilisez déjà. Un compte Abacus.AI gratuit en rattache tout un lot en un clic.",
-        "title": "Connecteurs"
-      },
-      "changes": {
-        "body": "Chaque édition de l'agent, sous forme de diff à lire avant que quoi que ce soit ne parte. À côté : vos fichiers et les sous-agents en cours.",
-        "title": "Changes"
-      },
-      "preview-terminal": {
-        "body": "Un vrai shell dans votre espace, dans le dossier même où travaille l'agent. Le bouton terminal de la barre de titre l'affiche et le masque.",
-        "title": "Terminal"
-      },
-      "memory": {
-        "body": "Ce que l'agent garde d'une session à l'autre, et les consignes permanentes qu'il suit. Lisez-les, modifiez-les, supprimez ce qui a vieilli.",
-        "title": "Memory"
-      },
-      "artifacts": {
-        "body": "Les fichiers produits par une session (documents, images, rapports) rassemblés au même endroit plutôt qu'éparpillés dans l'historique.",
-        "title": "Artefacts"
-      },
-      "welcome": {
-        "body": "Un petit tour de la fenêtre. {{n}} étapes ; vous pouvez partir à tout moment.",
-        "title": "Welcome to AbacusAI Bot"
-      },
-      "talk": {
-        "body": "Confiez une tâche à votre bot ici. Il peut poser des questions et montrer son travail.",
-        "title": "What should we build?"
-      },
-      "notch": {
-        "body": "Les réponses et demandes d’approbation peuvent apparaître au-dessus de votre espace de travail. Ouvrez l’application pour voir toute la conversation.",
-        "title": "Compagnon"
-      }
-    },
-    "steps": {
-      "artifacts": {
-        "title": "Artefacts",
-        "body": "Les fichiers produits par une session (documents, images, rapports) rassemblés au même endroit plutôt qu'éparpillés dans l'historique."
-      },
-      "bots": {
-        "body": "Des agents permanents avec leurs propres instructions, horaires et conversations. Créez-en un pour le travail que vous déléguez plus d'une fois.",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
-        "title": "Vos bots"
-      },
-      "capabilities": {
-        "title": "Capacités",
-        "body": "Tout ce que l'agent peut atteindre : connecteurs, skills, outils et serveurs MCP. Ce que vous activez ici, la prochaine session pourra l'utiliser."
-      },
-      "changes": {
-        "title": "Modifications",
-        "body": "Chaque édition de l'agent, sous forme de diff à lire avant que quoi que ce soit ne parte. À côté : vos fichiers et les sous-agents en cours."
+      "settings": {
+        "title": "Paramètres",
+        "body": "Choisissez votre apparence, vos modèles et vos préférences."
       },
       "connectors": {
         "title": "Connecteurs",
-        "body": "Connectez les outils que vous utilisez déjà. Un compte Abacus.AI gratuit en rattache tout un lot en un clic."
+        "body": "Connectez vos outils dans la bibliothèque."
       },
-      "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "memory": {
-        "title": "Mémoire",
-        "body": "Ce que l'agent garde d'une session à l'autre, et les consignes permanentes qu'il suit. Lisez-les, modifiez-les, supprimez ce qui a vieilli."
-      },
-      "messaging": {
-        "title": "Messagerie",
-        "body": "Joignez l'agent depuis votre téléphone. Reliez une application de chat et décidez qui a le droit de lui confier du travail."
-      },
-      "newSession": {
-        "title": "Démarrer une session",
-        "body": "Ouvre un champ vide dans l'espace courant. Une session par tâche garde le contexte collé au travail auquel il appartient."
-      },
-      "preview": {
-        "title": "Aperçu",
-        "body": "Un navigateur et une visionneuse de fichiers à côté du chat. L'agent y ouvre ce qu'il vient de construire, sans que vous quittiez l'application."
-      },
-      "sidebar": {
-        "title": "Vos espaces de travail",
-        "body": "Chaque dossier ouvert et chaque conversation qu'il contient. C'est ici que vous changez d'espace ou rouvrez une session de la semaine dernière."
-      },
-      "terminal": {
-        "title": "Terminal",
-        "body": "Un vrai shell dans votre espace, dans le dossier même où travaille l'agent. Le bouton terminal de la barre de titre l'affiche et le masque.",
-        "audience": "For developers & technical users"
-      },
-      "usage": {
-        "title": "Utilisation",
-        "body": "Tokens et dépenses par modèle et par session, pour que le coût d'une exécution ne soit jamais une surprise."
-      },
-      "welcome": {
-        "title": "Bienvenue dans AbacusAI Bot",
-        "body": "Un tour rapide de la fenêtre : ce qu'est chaque panneau et à quoi il sert. Quinze courtes étapes, et vous pouvez partir à n'importe laquelle."
+      "bots": {
+        "title": "Bots",
+        "body": "Créez un bot pour vos tâches fréquentes."
       }
     }
   },

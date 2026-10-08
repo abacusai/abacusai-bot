@@ -5,7 +5,7 @@
  */
 import { useSyncExternalStore } from "react";
 
-import { usePrefs } from "#renderer/data/db/prefs";
+import { useOptionalDb } from "#renderer/data/db";
 
 export const durations = {
   crossFade: 200,
@@ -64,8 +64,6 @@ export type NavType =
   | "nav-back"
   | "settings-in"
   | "settings-out"
-  | "onboarding-step"
-  | "onboarding-finish"
   | "notch-expand"
   | "notch-contract"
   | "notch-swap";
@@ -76,8 +74,6 @@ export const NAV_TYPES: readonly NavType[] = [
   "nav-back",
   "settings-in",
   "settings-out",
-  "onboarding-step",
-  "onboarding-finish",
   "notch-expand",
   "notch-contract",
   "notch-swap",
@@ -103,9 +99,16 @@ const resolveMotionPreference = (
   pref === "on" || (pref === "system" && systemReduce) ? "reduced" : "full";
 
 export const useMotionPreference = (): MotionPreference => {
-  const prefs = usePrefs();
+  const db = useOptionalDb();
+  const pref = useSyncExternalStore(
+    (notify) => {
+      const subscription = db?.collections.prefs.subscribeChanges(notify);
+      return () => subscription?.unsubscribe();
+    },
+    () => db?.collections.prefs.get("app")?.motion.reduce ?? "system"
+  );
   const system = useSyncExternalStore(subscribeReduced, systemReduced);
-  return resolveMotionPreference(prefs.motion.reduce, system);
+  return resolveMotionPreference(pref, system);
 };
 
 export const motionFor = <T>(pref: MotionPreference, full: T, reduced: T): T =>
@@ -124,11 +127,6 @@ export const onboarding = {
   stagger: 60,
   rise: 12,
   shellScaleFrom: 0.98,
-} as const;
-/** @public Canvas motion tokens and their CSS mirrors. */
-export const spotlight = {
-  mask: { type: "spring", mass: 1, stiffness: 80, damping: 14 },
-  cardLag: 40,
 } as const;
 /** @public Canvas motion tokens and their CSS mirrors. */
 export const hatch = {

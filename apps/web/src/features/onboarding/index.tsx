@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useDb } from "#renderer/data/db";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
 import { IS_ELECTRON } from "#renderer/lib/platform";
+import { Button } from "#renderer/ui/button";
 
 import { ensureFirstBot, firstBotStore } from "./first-bot";
 import { next, connectedProviders } from "./machine";
@@ -77,7 +78,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
   const attempt = useSelector(onboardingStore, (s) => s.signIn);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [more, setMore] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const bot = first.state === "ready" ? first.result.bot : null;
   const profiles = useQuery({
@@ -165,7 +165,19 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     setBusy(false);
   };
   const go = (event: "next" | "back") => {
-    const target = next(step, { type: event }, facts, attempt?.id ?? null);
+    const result = next(step, { type: event }, facts, attempt?.id ?? null);
+    const target =
+      event === "back" && result === "ignore"
+        ? step === "connected"
+          ? "welcome"
+          : step === "first-bot"
+            ? "connectors"
+            : step === "done"
+              ? bot
+                ? "first-bot"
+                : "connectors"
+              : result
+        : result;
     if (target !== "ignore" && target !== "complete")
       void props.navigate(target);
   };
@@ -189,15 +201,11 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
       document.querySelector('[role="dialog"], [role="menu"]') != null
     )
       return;
-    if (event.key === "Enter") {
+    if (event.key === "Enter" || event.key === "ArrowRight") {
       const primary = primaryAction(step, {
         signIn: props.signIn,
         advance: () => go("next"),
-        continueConnectors: () => {
-          if (!facts.ownsBot)
-            void perform(() => props.complete({ to: "new-bot" }));
-          else go("next");
-        },
+        continueConnectors: () => go("next"),
         hello: bot
           ? () =>
               void perform(async () => {
@@ -222,16 +230,14 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
         event.preventDefault();
         primary();
       }
-    } else if (event.key === "Escape") {
+    } else if (event.key === "Escape" || event.key === "ArrowLeft") {
       if (step === "connect") {
         event.preventDefault();
         void perform(async () => {
           await props.cancelSignIn();
           await props.navigate("welcome");
         });
-      } else if (
-        next(step, { type: "back" }, facts, attempt?.id ?? null) !== "ignore"
-      ) {
+      } else if (step !== "welcome") {
         event.preventDefault();
         go("back");
       }
@@ -247,6 +253,22 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
     (bot != null && (bots?.some((b) => b.id === bot.id) ?? false));
   return (
     <section className="onboarding-step" data-onboarding-step={step}>
+      {step !== "welcome" && (
+        <Button
+          variant="ghost"
+          className="titlebar-nodrag mb-3 self-start"
+          onClick={() => {
+            if (step === "connect")
+              void perform(async () => {
+                await props.cancelSignIn();
+                await props.navigate("welcome");
+              });
+            else go("back");
+          }}
+        >
+          {t("common.back")}
+        </Button>
+      )}
       {step === "welcome" && (
         <WelcomeStep ctx={ctx} profiles={profiles.data} heading={heading} />
       )}
@@ -272,8 +294,6 @@ export const OnboardingStepPage = (props: OnboardingPageProps) => {
           ctx={ctx}
           statuses={statuses.data}
           refresh={() => statuses.refetch()}
-          more={more}
-          setMore={setMore}
           heading={heading}
         />
       )}

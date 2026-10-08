@@ -51,7 +51,7 @@ const OnboardingRoute = () => {
       to: "/onboarding/$step",
       params: { step },
       replace: true,
-      transition: "onboarding-step",
+      transition: "none",
     });
   const entered = useRef<OnboardingStepId | null>(null);
   useEffect(() => {
@@ -100,7 +100,7 @@ const OnboardingRoute = () => {
           await navigate({
             ...onboardingExitTarget(exit),
             replace: true,
-            transition: "onboarding-finish",
+            transition: "none",
           });
           if (router.state.isLoading)
             await new Promise<void>((resolve) => {
@@ -143,7 +143,6 @@ const OnboardingRoute = () => {
         },
         startTour: () =>
           startTour({
-            origin: router.state.location.publicHref,
             onboarded: true,
           }),
       },

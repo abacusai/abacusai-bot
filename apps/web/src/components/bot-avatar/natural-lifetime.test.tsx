@@ -32,13 +32,13 @@ it("cancels native timelines when the visibility lease stops and recreates them 
   });
   try {
     const { rerender, unmount } = render(<Rehearsal active />);
-    expect(animate).toHaveBeenCalledTimes(3);
+    expect(animate).toHaveBeenCalledTimes(2);
     rerender(<Rehearsal active={false} />);
-    expect(cancel).toHaveBeenCalledTimes(3);
+    expect(cancel).toHaveBeenCalledTimes(2);
     rerender(<Rehearsal active />);
-    expect(animate).toHaveBeenCalledTimes(6);
+    expect(animate).toHaveBeenCalledTimes(4);
     unmount();
-    expect(cancel).toHaveBeenCalledTimes(6);
+    expect(cancel).toHaveBeenCalledTimes(4);
   } finally {
     if (original) Object.defineProperty(Element.prototype, "animate", original);
     else Reflect.deleteProperty(Element.prototype, "animate");

@@ -1,14 +1,6 @@
-/**
- * `welcome` (canvas OnboardWelcome): title, tagline, four pill facts,
- * "Sign up for free" / "I already have an account" (a profile menu when the
- * browser has several signed-in sessions), the browser-sessions hint.
- * The browser build arrives signed in to the website: its welcome is the
- * account hand-off starting (first-run.ts), never the sign-up wall.
- */
 import type { Ref } from "react";
 
 import { Spinner } from "#renderer/components/spinner";
-import { AVATAR_PALETTE } from "#renderer/lib/bots/avatar";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import {
@@ -21,7 +13,7 @@ import {
 
 import { websiteSignInStarted } from "../first-run";
 import type { StepContext } from "./context";
-import { Pill, StepBody, StepButton, StepTitle } from "./kit";
+import { StepBody, StepButton, StepTitle } from "./kit";
 
 export interface BrowserProfile {
   id: string;
@@ -30,16 +22,6 @@ export interface BrowserProfile {
   isDefault?: boolean;
   hasAbacusSession?: boolean | null;
 }
-
-const swatch = (id: (typeof AVATAR_PALETTE)[number]["id"]): string =>
-  AVATAR_PALETTE.find((entry) => entry.id === id)!.hex;
-
-const FACTS = [
-  { key: "onboarding.welcomeFreeBadge", dot: swatch("green") },
-  { key: "onboarding.welcomeModels", dot: swatch("blue") },
-  { key: "onboarding.welcomeConnectors", dot: swatch("orange") },
-  { key: "onboarding.welcomeMemory", dot: swatch("purple") },
-] as const;
 
 export const WelcomeStep = ({
   ctx,
@@ -91,14 +73,7 @@ export const WelcomeStep = ({
       <p className="onboarding-tagline mt-2">
         {t("onboarding.welcomeTagline")}
       </p>
-      <div className="mt-6 flex flex-wrap justify-center gap-2">
-        {FACTS.map((fact) => (
-          <Pill key={fact.key} dot={fact.dot}>
-            {t(fact.key)}
-          </Pill>
-        ))}
-      </div>
-      <div className="mt-9 flex flex-wrap justify-center gap-2.5">
+      <div className="mt-9 flex flex-wrap justify-end gap-2.5">
         <StepButton disabled={busy} onClick={() => props.signIn("signup")}>
           {t("onboarding.connectCta")}
         </StepButton>
@@ -115,10 +90,10 @@ export const WelcomeStep = ({
             <DropdownMenuTrigger
               render={
                 <Button
-                  size="lg"
-                  variant="secondary"
+                  size="default"
+                  variant="ghost"
                   data-variant="secondary"
-                  className="onboarding-button"
+                  className="text-muted-foreground text-[13px]"
                   disabled={busy}
                 />
               }

@@ -85,6 +85,7 @@ it("R5-T26 all native players and previews use one engine, with two audible rout
       destination: {},
       resume: async () => undefined,
       close,
+      createWaveShaper: () => ({ connect: vi.fn() }),
       createOscillator: () => ({
         frequency: {
           setValueAtTime: (frequency: number) => frequencies.push(frequency),
@@ -164,4 +165,85 @@ it("previews bypass gates and arbitration while attention cues retain dedupe cla
   expect(claim).toHaveBeenCalledExactlyOnceWith("done:run-1", "t");
   expect(synth).toHaveBeenCalledTimes(2);
   player.dispose();
+});
+
+it("keeps interaction tones subtle and cancels scheduled nodes immediately", () => {
+  const stops: ReturnType<typeof vi.fn>[] = [];
+  const disconnects: ReturnType<typeof vi.fn>[] = [];
+  const levels: number[] = [];
+  const audio = {
+    state: "running",
+    currentTime: 0,
+    destination: {},
+    close: async () => {},
+    createWaveShaper: () => ({ connect: vi.fn() }),
+    createOscillator: () => {
+      const stop = vi.fn();
+      stops.push(stop);
+      return {
+        type: "sine",
+        frequency: {
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        start: vi.fn(),
+        stop,
+      };
+    },
+    createGain: () => {
+      const disconnect = vi.fn();
+      disconnects.push(disconnect);
+      return {
+        gain: {
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: (level: number) => levels.push(level),
+        },
+        connect: vi.fn(),
+        disconnect,
+      };
+    },
+  };
+  const player = createSoundPlayer({
+    isThreadVisible: () => false,
+    isWindowFocused: () => true,
+    prefs: () => ({ enabled: true, perEvent: {} }),
+    now: () => 1000,
+    createAudioContext: () => audio,
+  });
+  player.interaction("celebrate");
+  expect(stops).toHaveLength(0);
+  player.unlock();
+  player.interaction("celebrate");
+  expect(stops).toHaveLength(3);
+  expect(Math.max(...levels)).toBeLessThanOrEqual(0.04);
+  player.muteInteractions();
+  expect(stops.every((stop) => stop.mock.calls.length === 2)).toBe(true);
+  expect(
+    disconnects
+      .slice(0, 1)
+      .concat(disconnects.slice(2))
+      .every((disconnect) => disconnect.mock.calls.length === 1)
+  ).toBe(true);
+  player.dispose();
+});
+it("respects quiet hours and background focus for interaction tones", () => {
+  for (const overrides of [
+    { isWindowFocused: () => false },
+    {
+      prefs: () => ({
+        enabled: true,
+        perEvent: {},
+        quietHours: { enabled: true, start: "22:00", end: "07:00" },
+      }),
+      date: () => new Date(2026, 9, 8, 23),
+    },
+  ]) {
+    const { ctx, synth } = context(overrides);
+    const player = createSoundPlayer(ctx);
+    player.unlock();
+    player.interaction("pop");
+    expect(synth).not.toHaveBeenCalled();
+    player.dispose();
+  }
 });

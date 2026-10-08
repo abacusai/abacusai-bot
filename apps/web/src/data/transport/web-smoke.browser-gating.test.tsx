@@ -169,7 +169,7 @@ it("R8-T3 boots the browser shell against smoke:rpc --serve without denied calls
     await visit("/bots", '[data-slot="shell"]');
     const { startTour, tourSignedOut } =
       await import("#renderer/features/tour/store");
-    await act(async () => startTour({ origin: "/bots", onboarded: true }));
+    await act(async () => startTour({ onboarded: true }));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"]')).not.toBeNull()
     );

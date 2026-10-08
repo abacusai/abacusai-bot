@@ -11,13 +11,11 @@ import {
 
 const experiments = [
   "individuality",
-  "volume",
   "gaze",
   "coupling",
   "speech",
   "phase",
   "shading",
-  "lookAway",
 ] as const;
 const moods: AvatarMood[] = [
   "idle",

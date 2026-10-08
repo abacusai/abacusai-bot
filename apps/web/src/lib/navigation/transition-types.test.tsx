@@ -188,14 +188,14 @@ describe("inferNavType", () => {
     ).toBeNull();
   });
 
-  it("keeps a designed type between siblings: onboarding steps", () => {
+  it("leaves onboarding step motion to its shared stage", () => {
     const step = (key: string) => ({
       fullPath: "/onboarding/$step",
       paneKey: key,
     });
     expect(
-      inferNavType(step("welcome"), step("models"), "new", "onboarding-step")
-    ).toBe("onboarding-step");
+      inferNavType(step("welcome"), step("models"), "new", "none")
+    ).toBeNull();
   });
 
   it("keeps drills within one area: the bot chat ↔ editor morph", () => {
@@ -556,7 +556,7 @@ describe("reduced motion CSS (Codex impl r1 #9, Claude impl r1 #13)", () => {
   };
 
   it("the OS rule never applies when prefs say off", () => {
-    const media = block("@media (prefers-reduced-motion: reduce)");
+    const media = block("@media (prefers-reduced-motion: reduce) {\n  html");
     const selectors = [...media.matchAll(/^\s*(html[^{]*)\{/gm)].map((m) =>
       m[1]!.trim()
     );

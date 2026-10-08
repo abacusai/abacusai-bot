@@ -1,38 +1,41 @@
+import "./tour.css";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Spotlight } from "#renderer/components/spotlight";
 import { Button } from "#renderer/ui/button";
-export const TourGallery = ({ stop = "welcome" }: { stop?: string }) => {
+
+import { TourCard } from "./card";
+import { TOUR_STOPS } from "./stops";
+export const TourGallery = ({ stop = "sessions" }: { stop?: string }) => {
   const { t } = useTranslation();
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(true);
+  const initial = Math.max(
+    0,
+    TOUR_STOPS.findIndex((item) => item.id === stop)
+  );
+  const [index, setIndex] = useState(initial);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("tour.replay")}</Button>
-      {open && (
-        <Spotlight
-          rect={
-            stop === "welcome" || stop === "notch"
-              ? null
-              : { x: 260, y: 220, width: 220, height: 80 }
-          }
+      <Button
+        ref={setAnchor}
+        data-tour-active={open ? "" : undefined}
+        onClick={() => setOpen(true)}
+      >
+        {t("tour.replay")}
+      </Button>
+      {open && anchor && (
+        <TourCard
+          anchor={anchor}
+          stop={TOUR_STOPS[index]!}
+          index={index}
           onDismiss={() => setOpen(false)}
-          titleId="gallery-tour-title"
-          bodyId="gallery-tour-body"
-        >
-          <h2 id="gallery-tour-title">{t(`tour.stops.${stop}.title`)}</h2>
-          <p id="gallery-tour-body" className="my-4">
-            {t(`tour.stops.${stop}.body`, { n: 12 })}
-          </p>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              {t("tour.skip")}
-            </Button>
-            <Button data-tour-next onClick={() => setOpen(false)}>
-              {t("tour.next")}
-            </Button>
-          </div>
-        </Spotlight>
+          onNext={() =>
+            index === TOUR_STOPS.length - 1
+              ? setOpen(false)
+              : setIndex(index + 1)
+          }
+        />
       )}
     </>
   );

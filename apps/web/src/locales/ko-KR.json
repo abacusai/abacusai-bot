@@ -1243,8 +1243,8 @@
     "haveAccountCta": "이미 계정이 있습니다",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "welcomeTagline": "지속 메모리를 갖춘 나만의 오픈소스 AI 동료",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeTagline": "도구를 연결하고 첫 봇을 만드세요.",
+    "welcomeTitle": "새로운 동료를 만나세요",
     "connectedCta": "시작하기",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
@@ -1257,9 +1257,6 @@
     "haveAccountContinueWith": "이미 계정이 있습니다 · {{browser}}(으)로 계속",
     "signInOptions": "다른 로그인 방법",
     "usesBrowserSessions": "Google, Microsoft, Apple 로그인은 {{browser}}의 계정을 사용합니다.",
-    "welcomeModels": "Access",
-    "welcomeConnectors": "100+ Connectors",
-    "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
     "frame.progress": "5단계 중 {{n}}단계",
     "frame.failed": "문제가 발생했습니다. 다시 시도하세요.",
@@ -1275,7 +1272,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "일하는 곳에서 바로 채팅하세요. 사용하는 도구를 연결하면 에이전트가 그 안에서 읽고, 초안을 쓰고, 먼저 물어본 뒤 작업합니다.",
+    "pages.connectors.body": "도구를 선택하세요. 나중에 더 추가할 수 있어요.",
     "pages.first-bot.title": "첫 번째 봇을 만들어 두었어요",
     "pages.first-bot.body": "{{name}}이(가) Gmail, 캘린더, Slack에서 하루 업무를 챙깁니다. 이름이나 모습을 바꾸거나 처음부터 만들어도 됩니다.",
     "pages.done.title": "준비 완료",
@@ -1291,7 +1288,7 @@
     "pages.pairing": "{{platform}} 연결 완료",
     "pages.finishPairing": "연결 완료",
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "브라우저가 열려 로그인하거나 계정을 만들 수 있습니다. 앱은 전용 API 키를 받으며, 비밀번호는 앱에 전달되지 않습니다.",
+    "connectBody": "Abacus.AI 계정으로 계속하세요.",
     "connectTitle": "Abacus.AI 연결",
     "connectorsSkipCta": "Continue without connectors",
     "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
@@ -1305,25 +1302,15 @@
     "signInCta": "Abacus.AI에 로그인",
     "skipCta": "Not now",
     "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
     "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
     "connectorsTitleAccent": "tools & services",
     "connectorsSubtitle": "Chat where you work",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "그 외 다수…",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1336,8 +1323,6 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
-    "connectedPromiseChat": "",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
     "webSignIn": {
       "body": "Connecting the account signed in on this site. If your session has expired, sign in again to continue.",
       "waiting": "Connecting your account…",
@@ -1354,7 +1339,9 @@
     "pages.models.localAccent": "모델 실행",
     "pages.models.localDetails": "{{model}}, {{size}}, 계정 불필요",
     "pages.models.downloading": "다운로드 중",
-    "pages.models.download": "다운로드"
+    "pages.models.download": "다운로드",
+    "soundOn": "소리 켜짐",
+    "soundOff": "소리 꺼짐"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1933,119 +1920,24 @@
   "tour": {
     "finish": "시작하기",
     "next": "다음",
-    "optional": "Optional",
     "progress": "{{total}}단계 중 {{current}}단계",
     "replay": "둘러보기",
-    "skip": "둘러보기 건너뛰기",
     "stops": {
-      "rail": {
-        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
-        "title": "봇"
+      "sessions": {
+        "title": "세션",
+        "body": "여기서 작업을 시작하세요."
       },
-      "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Who do you need?"
-      },
-      "workspaces": {
-        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다.",
-        "title": "세션"
-      },
-      "start-session": {
-        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다.",
-        "title": "새 세션"
-      },
-      "connectors": {
-        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다.",
-        "title": "커넥터"
-      },
-      "changes": {
-        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다.",
-        "title": "Changes"
-      },
-      "preview-terminal": {
-        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다.",
-        "title": "Terminal"
-      },
-      "memory": {
-        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요.",
-        "title": "Memory"
-      },
-      "artifacts": {
-        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다.",
-        "title": "산출물"
-      },
-      "welcome": {
-        "body": "창을 간단히 둘러봅니다. {{n}}개 지점이며 언제든 나갈 수 있습니다.",
-        "title": "Welcome to AbacusAI Bot"
-      },
-      "talk": {
-        "body": "여기에서 봇에게 작업을 맡기세요. 봇은 질문하고 작업 내용을 보여줄 수 있습니다.",
-        "title": "What should we build?"
-      },
-      "notch": {
-        "body": "답변과 승인 요청이 작업 공간 위에 표시될 수 있습니다. 전체 대화를 보려면 앱을 여세요.",
-        "title": "도우미"
-      }
-    },
-    "steps": {
-      "artifacts": {
-        "title": "결과물",
-        "body": "세션이 만든 파일(문서, 이미지, 보고서)이 대화 곳곳에 흩어지지 않고 한곳에 모입니다."
-      },
-      "bots": {
-        "body": "자체 지침·일정·채팅을 가진 상주 에이전트입니다. 반복해서 맡기는 일이라면 봇을 만드세요.",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
-        "title": "내 봇"
-      },
-      "capabilities": {
-        "title": "기능",
-        "body": "에이전트가 쓸 수 있는 것 전부입니다. 커넥터, 스킬, 도구, MCP 서버. 여기서 켜면 다음 세션부터 사용합니다."
-      },
-      "changes": {
-        "title": "변경 사항",
-        "body": "에이전트의 모든 편집이 diff로 보이니, 어디로 가기 전에 읽어 볼 수 있습니다. 옆 탭에는 파일과 실행 중인 서브에이전트가 있습니다."
+      "settings": {
+        "title": "설정",
+        "body": "모양, 모델 및 환경설정을 선택하세요."
       },
       "connectors": {
         "title": "커넥터",
-        "body": "이미 쓰고 있는 도구를 연결하세요. 무료 Abacus.AI 계정이면 한 번의 클릭으로 한 세트가 붙습니다."
+        "body": "라이브러리에서 도구를 연결하세요."
       },
-      "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "memory": {
-        "title": "메모리",
-        "body": "에이전트가 세션 사이에 가지고 다니는 내용과 늘 따르는 지시입니다. 읽고, 고치고, 오래된 것은 지우세요."
-      },
-      "messaging": {
-        "title": "메시지",
-        "body": "휴대폰에서 에이전트에게 연락하세요. 채팅 앱을 연결하고 누가 일을 보낼 수 있는지 정하면 됩니다."
-      },
-      "newSession": {
-        "title": "세션 시작",
-        "body": "현재 워크스페이스에 빈 입력창을 엽니다. 작업마다 세션을 나누면 맥락이 그 작업에만 머무릅니다."
-      },
-      "preview": {
-        "title": "미리보기",
-        "body": "채팅 옆의 브라우저 겸 파일 뷰어입니다. 방금 만든 것이 여기서 열리므로 앱을 떠나지 않고 확인합니다."
-      },
-      "sidebar": {
-        "title": "워크스페이스",
-        "body": "열어 본 모든 폴더와 그 안의 모든 대화입니다. 여기서 워크스페이스를 바꾸거나 지난주 세션을 다시 엽니다."
-      },
-      "terminal": {
-        "title": "터미널",
-        "body": "워크스페이스 안의 진짜 셸이며, 에이전트가 일하는 폴더를 그대로 씁니다. 제목 표시줄의 터미널 버튼으로 열고 닫습니다.",
-        "audience": "For developers & technical users"
-      },
-      "usage": {
-        "title": "사용량",
-        "body": "모델별·세션별 토큰과 비용. 한 번의 실행에 얼마가 들었는지 나중에 놀랄 일이 없습니다."
-      },
-      "welcome": {
-        "title": "AbacusAI Bot에 오신 것을 환영합니다",
-        "body": "창을 한 바퀴 돌아봅니다. 각 패널이 무엇이고 어디에 쓰는지. 짧은 열다섯 곳이고, 언제든 나갈 수 있습니다."
+      "bots": {
+        "title": "봇",
+        "body": "자주 하는 작업을 위한 봇을 만드세요."
       }
     }
   },

@@ -1,13 +1,7 @@
-/*
- * Onboarding (canvas page 11, OnboardMotion). One full-window frame with the
- * radial wash, the progress pill in the title bar, a centred column holding
- * the avatar stage and the step, and the design's type scale. Motion values
- * mirror lib/motion.ts `onboarding` (rise 12 px / 320 ms, stagger 60 ms).
- */
 .onboarding-frame {
   --ob-success: #16a34a;
   --ob-success-soft: color-mix(in oklch, var(--ob-success) 14%, transparent);
-  --ob-surface: var(--muted);
+  --ob-surface: var(--card);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -41,10 +35,7 @@
   height: 6px;
   border-radius: 3px;
   background: var(--border);
-  /* The pill stretches, never jumps (canvas). One 6 px box: layout cost is nil. */
-  transition:
-    width 300ms var(--ease-standard),
-    background-color 300ms var(--ease-standard);
+  transition: background-color 300ms var(--ease-standard);
 }
 .onboarding-progress span[data-current="true"] {
   width: 20px;
@@ -57,80 +48,28 @@
 .onboarding-column {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
-  max-width: 840px;
+  max-width: 688px;
+  min-height: 640px;
   margin: auto;
   padding: 16px var(--page-gutter) 40px;
-  text-align: center;
+  text-align: left;
 }
 
-/* ── Stage: the avatars shared across steps ───────────────────────────── */
 .onboarding-stage {
   position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 18px;
-  min-height: var(--stage-h, 120px);
-  margin-bottom: 24px;
-  view-transition-name: onboarding-stage;
-}
-.onboarding-stage[data-empty] {
-  display: none;
+  width: min(100%, 400px);
+  align-self: center;
+  margin-bottom: 16px;
 }
 .onboarding-stage-avatar {
-  position: relative;
-}
-.onboarding-glow {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in oklch, var(--ob-glow, var(--primary)) 25%, transparent),
-    transparent 70%
-  );
-  animation: onboarding-pulse 2s ease-in-out infinite;
-  pointer-events: none;
+  top: 44px;
+  left: calc(50% - 44px);
+  transform-origin: center;
+  touch-action: manipulation;
 }
-.onboarding-badge {
-  position: absolute;
-  right: -6px;
-  bottom: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #4ade80;
-  color: #052e16;
-  box-shadow: 0 0 0 3px var(--background);
-}
-/* The stage morphs live (motion layout): the router's step transition
-   must not cross-fade a stale snapshot of it over the moving avatars. */
-html:active-view-transition-type(onboarding-step)::view-transition-group(
-    onboarding-stage
-  ) {
-  animation-duration: 0s;
-}
-html:active-view-transition-type(onboarding-step)::view-transition-old(
-    onboarding-stage
-  ) {
-  animation: none;
-  opacity: 0;
-}
-html:active-view-transition-type(onboarding-step)::view-transition-new(
-    onboarding-stage
-  ) {
-  animation: none;
-}
-
 /* ── Confetti: seven 8 × 12 pieces, one 2.4 s run, then gone ─────────── */
 .onboarding-confetti {
   position: absolute;
@@ -152,61 +91,24 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
 .onboarding-step {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
   flex-shrink: 0;
 }
-.onboarding-step > * {
-  animation: onboarding-rise 320ms var(--ease-standard) both;
-}
-.onboarding-step > :nth-child(2) {
-  animation-delay: 60ms;
-}
-.onboarding-step > :nth-child(3) {
-  animation-delay: 120ms;
-}
-.onboarding-step > :nth-child(4) {
-  animation-delay: 180ms;
-}
-.onboarding-step > :nth-child(5) {
-  animation-delay: 240ms;
-}
-.onboarding-step > :nth-child(n + 6) {
-  animation-delay: 300ms;
-}
-
 .onboarding-title {
-  font-size: 28px;
-  line-height: 36px;
+  font-size: 24px;
+  line-height: 30px;
   font-weight: 600;
   letter-spacing: -0.01em;
   text-wrap: balance;
   outline: none;
 }
-.onboarding-title[data-size="hero"] {
-  font-size: 40px;
-  line-height: 48px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.onboarding-title[data-size="large"] {
-  font-size: 34px;
-  line-height: 42px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.onboarding-title[data-size="medium"] {
-  font-size: 32px;
-  line-height: 40px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
 .onboarding-accent {
   color: var(--primary);
 }
 .onboarding-tagline {
-  font-size: 17px;
-  line-height: 24px;
+  font-size: 13px;
+  line-height: 20px;
   color: color-mix(in oklch, var(--foreground) 80%, var(--muted-foreground));
 }
 .onboarding-body {
@@ -227,23 +129,6 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   color: var(--ob-success);
 }
 
-.onboarding-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--ob-surface);
-  font-size: 13px;
-}
-.onboarding-pill i {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--pill-dot, var(--primary));
-}
-
 .onboarding-card {
   border-radius: 12px;
   background: var(--ob-surface);
@@ -261,8 +146,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   text-align: left;
   transition: border-color 200ms var(--ease-standard);
 }
-.onboarding-row[data-connected="true"],
-.onboarding-tile[data-connected="true"] {
+.onboarding-row[data-connected="true"] {
   border-color: var(--ob-success);
 }
 .onboarding-row-title {
@@ -282,43 +166,11 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   background: var(--ob-success);
 }
 
-/* 44 px, radius 12 (canvas); the registry button is 32 px by default. */
-.onboarding-button {
-  height: 44px;
-  padding: 0 22px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  transition:
-    transform 160ms var(--ease-standard),
-    background-color 160ms var(--ease-standard);
-}
-.onboarding-button[data-variant="secondary"] {
-  padding: 0 18px;
-  font-weight: 400;
-}
-.onboarding-button[data-variant="small"] {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-.onboarding-button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-.onboarding-link {
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-}
 .onboarding-links {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 4px;
 }
 .onboarding-links > span {
@@ -327,17 +179,6 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
 }
 
 /* ── Keyframes ────────────────────────────────────────────────────────── */
-@keyframes onboarding-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-}
-@keyframes onboarding-pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
 @keyframes onboarding-confetti {
   0% {
     opacity: 0;
@@ -353,52 +194,8 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   }
 }
 
-/* ── Reduced motion: rises become fades, nothing bobs, no confetti ────── */
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduce-motion="off"]) .onboarding-step > * {
-    animation: onboarding-fade 120ms linear both;
-    animation-delay: 0ms;
-  }
-  html:not([data-reduce-motion="off"]) .onboarding-glow {
-    animation: none;
-  }
-  html:not([data-reduce-motion="off"]) .onboarding-progress span {
-    transition: none;
-  }
-  html:not([data-reduce-motion="off"]) .onboarding-confetti {
-    display: none;
-  }
+  html:not([data-reduce-motion="off"]) .onboarding-confetti { display: none; }
 }
-[data-reduced-motion="true"] .onboarding-step > * {
-  animation: onboarding-fade 120ms linear both;
-  animation-delay: 0ms;
-}
-[data-reduced-motion="true"] .onboarding-glow {
-  animation: none;
-}
-[data-reduced-motion="true"] .onboarding-progress span {
-  transition: none;
-}
-[data-reduced-motion="true"] .onboarding-confetti {
-  display: none;
-}
-@keyframes onboarding-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-/* The 800 × 600 minimum window: tighter rhythm, the stage scaled down. */
-@media (max-height: 720px) {
-  .onboarding-column {
-    padding: 8px var(--page-gutter) 24px;
-  }
-  .onboarding-stage {
-    margin-bottom: 16px;
-    zoom: 0.75;
-  }
-  .onboarding-title[data-size="hero"] {
-    font-size: 34px;
-    line-height: 40px;
-  }
-}
+[data-reduced-motion="true"] .onboarding-progress span { transition: none; }
+[data-reduced-motion="true"] .onboarding-confetti { display: none; }

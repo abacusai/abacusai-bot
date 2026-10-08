@@ -23,6 +23,14 @@ const parse = <T extends v.GenericSchema>(schema: T, input: unknown) =>
   v.parse(schema, input);
 
 describe("search schemas", () => {
+  it("restores a WhatsApp dialog from a typed deep link", () => {
+    expect(parse(ShellSearch, { connect: "whatsapp" })).toEqual({
+      connect: "whatsapp",
+    });
+    expect(parse(ShellSearch, { connect: "invalid" })).toEqual({
+      connect: undefined,
+    });
+  });
   it("round-trips valid input", () => {
     expect(parse(ShellSearch, { tab: "terminal" })).toEqual({
       tab: "terminal",

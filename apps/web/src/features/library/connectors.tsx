@@ -14,6 +14,7 @@ import * as v from "valibot";
 import { ConnectorMark } from "#renderer/components/connector-mark";
 import { useAppForm } from "#renderer/components/form-kit";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { ConnectDialogContent } from "#renderer/components/form-kit/connect-dialog";
 import { Segments } from "#renderer/components/form-kit/controls";
 import {
   AreaPage,
@@ -28,7 +29,6 @@ import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -208,7 +208,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
         if (!open) close();
       }}
     >
-      <DialogContent
+      <ConnectDialogContent
         data-testid="connector-dialog"
         className="sm:max-w-[420px]"
       >
@@ -265,7 +265,7 @@ export const ConnectorDialog = ({ connector }: { connector: string }) => {
             {t("phase5.done")}
           </Button>
         </div>
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };
@@ -303,7 +303,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
         if (!open) void flow.cancel();
       }}
     >
-      <DialogContent className="sm:max-w-[480px]">
+      <ConnectDialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>
             {t("phase5.connectName", { name: entry.name })}
@@ -356,7 +356,7 @@ const FieldForm = ({ connector }: { connector: string }) => {
             </DialogFooter>
           </FieldGroup>
         </form>
-      </DialogContent>
+      </ConnectDialogContent>
     </Dialog>
   );
 };

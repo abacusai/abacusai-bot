@@ -42,6 +42,7 @@ export const SessionTabRef = v.union([
 export type SessionTabRef = v.InferOutput<typeof SessionTabRef>;
 
 export const ShellSearch = v.object({
+  connect: optionalField(v.picklist(["whatsapp"])),
   /**
    * A deep link: the shell opens this panel tab and strips the param (the
    * panel's state lives in `panelStore`). Sessions keep it as their dock's

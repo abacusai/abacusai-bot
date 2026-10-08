@@ -1,8 +1,8 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { Store } from "@tanstack/react-store";
-import { createRoot } from "react-dom/client";
 
+import { mountPlatformApp } from "#platform/connect";
 /**
  * renderer boot (spec 01 §8.6): styles, the stored theme before the
  * first paint, i18n, then bootstrap() (transport, system facts, the
@@ -12,8 +12,6 @@ import { createRoot } from "react-dom/client";
  * The browser mounts its app before its host is reachable instead
  * (`mountPlatformApp`, spec 09 D12).
  */
-import "./styles/app.css";
-import { mountPlatformApp } from "#platform/connect";
 import { installLease } from "#platform/lease";
 import { createDb, installDb, type Db } from "#renderer/data/db";
 import { DEFAULT_PREFS } from "#renderer/data/db/prefs";
@@ -60,6 +58,7 @@ import {
 import { showError } from "#renderer/lib/toast";
 import { toast } from "#renderer/ui/toast";
 
+import { root } from "./render-root";
 import { createAppRouter } from "./router";
 
 // 1–2. The stored theme: main set nativeTheme from prefs before the window
@@ -103,12 +102,6 @@ settleSkippedViewTransitions(document);
 // reported (and counted for R1-T11b).
 if (import.meta.env.DEV || import.meta.env.VITE_UI_GALLERY === "1")
   guardSingleViewTransition(document);
-
-const container = document.getElementById("root");
-if (container == null) throw new Error("renderer: #root is missing");
-const root = createRoot(container, {
-  onUncaughtError: (error) => console.error("[renderer] render error", error),
-});
 
 /** `t` that never throws: English copy is bundled, keys are the last resort. */
 const text = (key: string): string => {

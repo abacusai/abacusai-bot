@@ -1,9 +1,3 @@
-/**
- * The connectors slide (canvas OnboardConnectors): the curated grid in the
- * canvas's order, Connected/Connect from the live statuses, "Many more…"
- * expanding inside the slide (no navigation) to every other platform entry,
- * and the second continue only while nothing is attached or queued.
- */
 import { CONNECTORS } from "@abacus-ai/connectors/registry";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
@@ -48,61 +42,38 @@ const ctx = (overrides: Partial<StepContext["props"]> = {}): StepContext => {
 
 describe("connectorTiles", () => {
   it("leads with the canvas's set, in order, every id a real inline-connectable entry", () => {
-    const ids = connectorTiles(undefined, false).map((entry) => entry.id);
+    const ids = connectorTiles(undefined).map((entry) => entry.id);
     expect(ids).toEqual([...CURATED_IDS]);
     for (const id of ids) {
       const entry = CONNECTORS.find((c) => c.id === id)!;
       expect(["platform", "messaging"]).toContain(entry.kind);
     }
-    // Every connector the old step offered is reachable without expanding.
-    for (const old of [
+    expect(ids).toEqual([
       "messaging-whatsapp",
       "messaging-telegram",
       "messaging-discord",
       "abacus-gmailuser",
-    ])
-      expect(ids).toContain(old);
-  });
-
-  it("expands to the rest of the flagged and platform entries, registry order, without duplicates", () => {
-    const ids = connectorTiles(undefined, true).map((entry) => entry.id);
-    expect(ids.slice(0, CURATED_IDS.length)).toEqual([...CURATED_IDS]);
-    expect(new Set(ids).size).toBe(ids.length);
-    const expected = CONNECTORS.filter(
-      (entry) =>
-        !(CURATED_IDS as readonly string[]).includes(entry.id) &&
-        (entry.onboarding || entry.kind === "platform")
-    ).map((entry) => entry.id);
-    expect(ids.slice(CURATED_IDS.length)).toEqual(expected);
-    expect(ids).toContain("abacus-onedrive");
-    expect(ids).toContain("abacus-confluence");
+    ]);
   });
 
   it("hides a tile the host does not offer", () => {
-    const ids = connectorTiles(
-      { "abacus-slack": { state: "disconnected", reason: "not-offered" } },
-      false
-    ).map((entry) => entry.id);
-    expect(ids).not.toContain("abacus-slack");
+    const ids = connectorTiles({
+      "abacus-gmailuser": { state: "disconnected", reason: "not-offered" },
+    }).map((entry) => entry.id);
+    expect(ids).not.toContain("abacus-gmailuser");
     expect(ids).toHaveLength(CURATED_IDS.length - 1);
   });
 });
 
 describe("ConnectorsStep", () => {
-  it("shows Connected from the statuses, expands in place, and drops the skip once something is attached", async () => {
+  it("shows connected status and keeps the full catalog out of onboarding", async () => {
     await initI18n();
     const context = ctx();
-    let more = false;
-    const setMore = vi.fn((next: boolean) => {
-      more = next;
-    });
     const view = render(
       <ConnectorsStep
         ctx={context}
         statuses={{ "abacus-gmailuser": { state: "connected" } }}
         refresh={async () => {}}
-        more={more}
-        setMore={setMore}
         heading={createRef()}
       />
     );
@@ -112,28 +83,22 @@ describe("ConnectorsStep", () => {
       "true"
     );
     expect(tile("abacus-gmailuser").textContent).toContain("Connected");
-    expect(tile("abacus-slack").textContent).toContain("Connect");
+    expect(tile("abacus-gmailuser").tagName).toBe("BUTTON");
+    expect(tile("abacus-gmailuser").getAttribute("aria-pressed")).toBe("true");
+    expect(tile("messaging-whatsapp").querySelectorAll("button")).toHaveLength(
+      0
+    );
+    expect(
+      tile("messaging-whatsapp").querySelector('[data-slot="connector-state"]')
+    ).not.toBeNull();
+    expect(tile("messaging-whatsapp").getAttribute("data-state")).toBe("idle");
+
     expect(view.container.querySelectorAll("[data-connector]")).toHaveLength(
       CURATED_IDS.length
     );
     expect(
       screen.queryByRole("button", { name: "Continue without connectors" })
     ).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Many more…" }));
-    expect(setMore).toHaveBeenCalledWith(true);
-    view.rerender(
-      <ConnectorsStep
-        ctx={context}
-        statuses={{ "abacus-gmailuser": { state: "connected" } }}
-        refresh={async () => {}}
-        more={true}
-        setMore={setMore}
-        heading={createRef()}
-      />
-    );
-    expect(
-      view.container.querySelectorAll("[data-connector]").length
-    ).toBeGreaterThan(CURATED_IDS.length);
     expect(screen.queryByRole("button", { name: "Many more…" })).toBeNull();
     expect(context.props.navigate).not.toHaveBeenCalled();
   });
@@ -149,25 +114,23 @@ describe("ConnectorsStep", () => {
         ctx={context}
         statuses={{}}
         refresh={refresh}
-        more={false}
-        setMore={() => {}}
         heading={createRef()}
       />
     );
-    const slack = screen
-      .getByText("Slack")
-      .closest("[data-connector]")!
-      .querySelector("button")!;
-    fireEvent.click(slack);
+    const gmail = screen.getByText("Gmail").closest("[data-connector]")!;
+    fireEvent.click(gmail);
     await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
-    expect(context.props.connect).toHaveBeenCalledWith("abacus-slack");
+    expect(context.props.connect).toHaveBeenCalledWith("abacus-gmailuser");
     expect(
       screen.getByRole("button", { name: "Continue without connectors" })
     ).toBeTruthy();
+    const skip = screen.getByRole("button", {
+      name: "Continue without connectors",
+    });
+    expect(skip.className).toContain("text-muted-foreground");
+    expect(skip.className).not.toContain("bg-primary");
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await vi.waitFor(() =>
-      expect(context.props.complete).toHaveBeenCalledWith({ to: "new-bot" })
-    );
-    expect(context.advance).not.toHaveBeenCalled();
+    expect(context.advance).toHaveBeenCalledOnce();
+    expect(context.props.complete).not.toHaveBeenCalled();
   });
 });

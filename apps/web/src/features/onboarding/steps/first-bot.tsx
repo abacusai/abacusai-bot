@@ -96,7 +96,7 @@ export const FirstBotStep = ({
               {t("mcpManagement.edit")}
             </StepButton>
           </div>
-          <div className="mt-7 flex flex-wrap justify-center gap-2.5">
+          <div className="mt-7 flex flex-wrap justify-end gap-2.5">
             <StepButton
               disabled={busy}
               onClick={() =>

@@ -69,6 +69,7 @@ const RailLink = ({
   title?: string;
   "data-area"?: string;
   "data-tour"?: string;
+  "data-tour-target"?: string;
 }) => {
   const navigate = useAppNavigate();
   return (
@@ -164,13 +165,7 @@ const RailItem = ({
       aria-current={active ? "page" : undefined}
       aria-label={iconsOnly ? label : undefined}
       data-area={area}
-      data-tour={
-        area === "artifacts"
-          ? "rail-artifacts"
-          : area === "library"
-            ? "rail-library"
-            : undefined
-      }
+      data-tour-target={area}
       className={cn(
         "titlebar-nodrag group/rail focus-visible:ring-ring/50 flex size-(--rail-item) shrink-0 flex-col items-center justify-center gap-[3px] rounded-lg text-[10px] font-medium outline-none focus-visible:ring-2",
         active
@@ -226,7 +221,7 @@ export const Rail = ({
     <nav
       aria-label={label ?? t("shell.rail.label")}
       data-slot="rail"
-      data-tour="rail-bots-sessions"
+
       data-icons-only={iconsOnly ? "" : undefined}
       className="scroll-fade-y flex min-h-0 w-(--rail-w) shrink-0 flex-col items-center overflow-y-auto pt-1 pb-3"
       // Hover intent is a mouse gesture: a tap navigates and never opens or
@@ -268,6 +263,7 @@ export const Rail = ({
       >
         <RailLink
           area="settings"
+          data-tour-target="settings"
           target={railTarget("settings", last)}
           transition="settings-in"
           aria-label={t("shell.rail.settings")}

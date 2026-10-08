@@ -22,54 +22,7 @@
   </head>
 
   <body>
-    <div id="root">
-      <!-- splash: browser builds only (vite.renderer.ts strips it for
-           Electron); painted at HTML parse, replaced when React mounts. -->
-      <style>
-        #splash {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          background: #fff;
-          color: #737373;
-          font:
-            500 13px/1.4 system-ui,
-            sans-serif;
-        }
-        #splash span {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: currentColor;
-          animation: splash 1.2s ease-in-out infinite;
-        }
-        @keyframes splash {
-          50% {
-            opacity: 0.25;
-          }
-        }
-        /* Phones are light only (the browser boot keeps them light too). */
-        @media (prefers-color-scheme: dark) and (min-width: 800px) {
-          #splash {
-            background: #0a0a0a;
-            color: #a3a3a3;
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          #splash span {
-            animation: none;
-          }
-        }
-      </style>
-      <div id="splash" role="status" aria-label="Loading AbacusAI Bot">
-        <span></span>AbacusAI Bot
-      </div>
-      <!-- /splash -->
-    </div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/entry.tsx"></script>
   </body>
 </html>

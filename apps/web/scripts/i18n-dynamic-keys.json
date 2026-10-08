@@ -1209,21 +1209,6 @@
     "sources": ["features/settings/search-index.ts"]
   },
   {
-    "prefix": "onboarding.welcomeModels",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
-    "prefix": "onboarding.welcomeConnectors",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
-    "prefix": "onboarding.welcomeMemory",
-    "values": [""],
-    "sources": ["features/onboarding/index.tsx"]
-  },
-  {
     "prefix": "onboarding.pages.",
     "values": [
       "connectedLabel",
@@ -1274,20 +1259,16 @@
   {
     "prefix": "tour.stops.",
     "values": [
-      "rail.body",
-      "make-bot.body",
-      "workspaces.body",
-      "start-session.body",
+      "sessions.title",
+      "sessions.body",
+      "settings.title",
+      "settings.body",
+      "connectors.title",
       "connectors.body",
-      "changes.body",
-      "preview-terminal.body",
-      "memory.body",
-      "artifacts.body",
-      "welcome.body",
-      "talk.body",
-      "notch.body"
+      "bots.title",
+      "bots.body"
     ],
-    "sources": ["features/tour/index.tsx"]
+    "sources": ["features/tour/card.tsx", "features/tour/gallery.tsx"]
   },
   {
     "prefix": "notch.wings.",
@@ -1320,9 +1301,6 @@
   {
     "prefix": "onboarding.",
     "values": [
-      "welcomeModels",
-      "welcomeConnectors",
-      "welcomeMemory",
       "pages.connect.body",
       "pages.connectors.body",
       "pages.first-bot.body",
@@ -1562,36 +1540,17 @@
     ]
   },
   {
-    "prefix": "onboarding.welcomeFreeBadge",
-    "values": [""]
-  },
-  {
     "prefix": "tour.stops.",
     "values": [
-      "rail.title",
-      "rail.body",
-      "make-bot.title",
-      "make-bot.body",
-      "workspaces.title",
-      "workspaces.body",
-      "start-session.title",
-      "start-session.body",
+      "sessions.title",
+      "sessions.body",
+      "settings.title",
+      "settings.body",
       "connectors.title",
       "connectors.body",
-      "changes.title",
-      "changes.body",
-      "preview-terminal.title",
-      "preview-terminal.body",
-      "memory.title",
-      "memory.body",
-      "artifacts.title",
-      "artifacts.body",
-      "welcome.title",
-      "welcome.body",
-      "talk.title",
-      "talk.body",
-      "notch.title",
-      "notch.body"
-    ]
+      "bots.title",
+      "bots.body"
+    ],
+    "sources": ["features/tour/card.tsx", "features/tour/gallery.tsx"]
   }
 ]

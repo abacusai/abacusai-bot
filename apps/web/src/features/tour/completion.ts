@@ -5,7 +5,6 @@ export const completeTour = async (
   deps: {
     persist(result: "done" | "skipped"): Promise<unknown>;
     telemetry(result: "done" | "skipped"): Promise<unknown>;
-    navigate(origin: string): Promise<unknown>;
   }
 ): Promise<void> => {
   const running = tourStore.state.active;
@@ -16,5 +15,4 @@ export const completeTour = async (
   await deps.telemetry(result);
   if (!current()) return;
   tourStore.setState(() => ({ active: null }));
-  await deps.navigate(running.origin);
 };

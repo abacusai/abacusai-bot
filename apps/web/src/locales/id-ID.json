@@ -1243,8 +1243,8 @@
     "haveAccountCta": "Saya sudah punya akun",
     "setupDoneCta": "Continue to AbacusAI Bot",
     "setupKeyInvalid": "That doesn't look like an API key. Check the paste for a stray line or URL.",
-    "welcomeTagline": "Rekan kerja AI open-source pribadimu dengan memori persisten",
-    "welcomeTitle": "Welcome to AbacusAI Bot",
+    "welcomeTagline": "Hubungkan alat Anda dan buat bot pertama.",
+    "welcomeTitle": "Kenali rekan baru Anda",
     "connectedCta": "Mulai",
     "setupExistingTitle": "Existing subscriptions",
     "setupExistingBody": "Bring your paid models and tools into one place",
@@ -1257,9 +1257,6 @@
     "haveAccountContinueWith": "Saya sudah punya akun · Lanjutkan dengan {{browser}}",
     "signInOptions": "Cara lain untuk masuk",
     "usesBrowserSessions": "Masuk dengan Google, Microsoft, dan Apple memakai akun Anda di {{browser}}.",
-    "welcomeModels": "Access",
-    "welcomeConnectors": "100+ Connectors",
-    "welcomeMemory": "Persistent Memory",
     "connectorsContinue": "Continue",
     "frame.progress": "Langkah {{n}} dari 5",
     "frame.failed": "Terjadi kesalahan. Coba lagi.",
@@ -1275,7 +1272,7 @@
     "pages.models.abacus": "Abacus.AI",
     "pages.models.openrouter": "OpenRouter",
     "pages.models.gemini": "Google Gemini",
-    "pages.connectors.body": "Mengobrol di tempat Anda bekerja. Hubungkan alat yang Anda pakai dan agen dapat membaca, menyusun, dan bertindak di dalamnya, dengan bertanya lebih dulu.",
+    "pages.connectors.body": "Pilih alat Anda. Anda dapat menambahkan lagi nanti.",
     "pages.first-bot.title": "Kami sudah membuat bot pertama untuk Anda",
     "pages.first-bot.body": "{{name}} mengatur hari kerja Anda di Gmail, Kalender, dan Slack. Ganti nama, ubah tampilannya, atau mulai dari awal.",
     "pages.done.title": "Semua siap",
@@ -1291,7 +1288,7 @@
     "pages.pairing": "Selesaikan koneksi {{platform}}",
     "pages.finishPairing": "Selesaikan koneksi",
     "abacusConnected": "Abacus.AI is successfully connected",
-    "connectBody": "Browser Anda terbuka untuk masuk atau membuat akun. Aplikasi mendapat kunci API-nya sendiri; kata sandi Anda tidak pernah menyentuhnya.",
+    "connectBody": "Gunakan akun Abacus.AI Anda untuk melanjutkan.",
     "connectTitle": "Hubungkan Abacus.AI",
     "connectorsSkipCta": "Continue without connectors",
     "setupAbacusNote": "Changed your mind? A new Abacus.AI account starts with $2 of credit and a few free models to try, DeepSeek among them.",
@@ -1305,25 +1302,15 @@
     "signInCta": "Masuk ke Abacus.AI",
     "skipCta": "Not now",
     "welcomeCapabilityModels": "Access",
-    "welcomeFreeBadge": "Free to start",
     "welcomeCapabilityMemory": "Persistent Memory",
     "welcomeCapabilityConnectors": "100+ Connectors",
-    "connectedPromiseAgent": "The best-in-class open-source AI agent",
-    "connectedPromiseModels": "Access to free models",
-    "connectedPromiseWork": "Gets your work done, and connects to all your services",
     "setupAbacusGrant": "Access to the Abacus free tier: 2000 credits across a mixture of open-source models",
     "connectedTitleLead": "Welcome to",
-    "connectedPromiseAgentLead": "Best-in-class,",
-    "connectedPromiseModelsLead": "Access",
-    "connectedPromiseWorkLead": "Get work done",
-    "connectedPromiseLocalLead": "Runs locally.",
-    "connectedPromiseLocal": "Chat with it wherever you work.",
     "connectorsTitleLead": "Connect with your",
     "connectorsTitleAccent": "tools & services",
     "connectorsSubtitle": "Chat where you work",
     "connectorsConnectCta": "Connect",
     "connectorsConnectedCta": "Connected",
-    "connectorsMore": "Masih banyak lagi…",
     "setupTitleLead": "Hook up your",
     "setupTitleAccent": "AI",
     "setupSubtitle": "Connect powerful models to unlock more inside your bot.",
@@ -1336,8 +1323,6 @@
     "setupBlurbGeminiAccent": "free to create anything",
     "setupKeyDialogBody": "Open the console, create a key, then paste it here. This window stays open while you do.",
     "setupKeyDialogLink": "Open {{provider}}",
-    "connectedPromiseChat": "",
-    "connectedPromiseChatLead": "Work from WhatsApp, Telegram and Discord.",
     "webSignIn": {
       "body": "Connecting the account signed in on this site. If your session has expired, sign in again to continue.",
       "waiting": "Connecting your account…",
@@ -1354,7 +1339,9 @@
     "pages.models.localAccent": "di komputer ini",
     "pages.models.localDetails": "{{model}}, {{size}}, tanpa akun",
     "pages.models.downloading": "Mengunduh",
-    "pages.models.download": "Unduh"
+    "pages.models.download": "Unduh",
+    "soundOn": "Suara aktif",
+    "soundOff": "Suara nonaktif"
   },
   "referralCard": {
     "cta": "Invite friends",
@@ -1933,119 +1920,24 @@
   "tour": {
     "finish": "Mulai bekerja",
     "next": "Lanjut",
-    "optional": "Optional",
     "progress": "Langkah {{current}} dari {{total}}",
     "replay": "Ikuti tur",
-    "skip": "Lewati tur",
     "stops": {
-      "rail": {
-        "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan.",
-        "title": "Bot"
+      "sessions": {
+        "title": "Sesi",
+        "body": "Mulai tugas di sini."
       },
-      "make-bot": {
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own.",
-        "title": "Who do you need?"
-      },
-      "workspaces": {
-        "body": "Setiap folder yang pernah dibuka dan setiap percakapan di dalamnya. Ganti workspace di sini, atau buka lagi sesi minggu lalu.",
-        "title": "Sesi"
-      },
-      "start-session": {
-        "body": "Membuka komposer kosong di workspace ini. Satu sesi per tugas menjaga konteksnya tetap pada pekerjaan yang bersangkutan.",
-        "title": "Sesi baru"
-      },
-      "connectors": {
-        "body": "Sambungkan alat yang memang sudah Anda pakai. Akun Abacus.AI gratis memasang satu set sekaligus dengan sekali klik.",
-        "title": "Konektor"
-      },
-      "changes": {
-        "body": "Setiap suntingan agen, sebagai diff yang bisa Anda baca sebelum apa pun dikirim. Tab di sebelahnya berisi berkas Anda dan subagen yang sedang berjalan.",
-        "title": "Changes"
-      },
-      "preview-terminal": {
-        "body": "Shell sungguhan di workspace Anda, di folder yang sama dengan tempat agen bekerja. Tombol terminal di bilah judul menampilkan dan menyembunyikannya.",
-        "title": "Terminal"
-      },
-      "memory": {
-        "body": "Apa yang diingat agen antar sesi, dan instruksi tetap yang ia ikuti. Baca, sunting, dan hapus yang sudah tidak berlaku.",
-        "title": "Memory"
-      },
-      "artifacts": {
-        "body": "Berkas yang dihasilkan sebuah sesi (dokumen, gambar, laporan) terkumpul di satu tempat, bukan berserak di transkrip.",
-        "title": "Artefak"
-      },
-      "welcome": {
-        "body": "Tur singkat jendela. {{n}} perhentian; Anda dapat keluar kapan saja.",
-        "title": "Welcome to AbacusAI Bot"
-      },
-      "talk": {
-        "body": "Berikan tugas kepada bot Anda di sini. Bot dapat bertanya dan menunjukkan pekerjaannya.",
-        "title": "What should we build?"
-      },
-      "notch": {
-        "body": "Balasan dan persetujuan dapat muncul di atas ruang kerja Anda. Buka aplikasi untuk melihat percakapan lengkap.",
-        "title": "Pendamping"
-      }
-    },
-    "steps": {
-      "artifacts": {
-        "title": "Artefak",
-        "body": "Berkas yang dihasilkan sebuah sesi (dokumen, gambar, laporan) terkumpul di satu tempat, bukan berserak di transkrip."
-      },
-      "bots": {
-        "body": "Agen tetap dengan instruksi, jadwal, dan chat sendiri. Buat satu untuk pekerjaan yang sering Anda delegasikan.",
-        "bulletBots": "Create reusable bots with their own instructions, tools, and chats.",
-        "bulletSessions": "Use sessions for one-off tasks and quick work.",
-        "title": "Bot Anda"
-      },
-      "capabilities": {
-        "title": "Kapabilitas",
-        "body": "Semua yang bisa dijangkau agen: konektor, skill, tool, dan server MCP. Yang Anda nyalakan di sini akan dipakai sesi berikutnya."
-      },
-      "changes": {
-        "title": "Perubahan",
-        "body": "Setiap suntingan agen, sebagai diff yang bisa Anda baca sebelum apa pun dikirim. Tab di sebelahnya berisi berkas Anda dan subagen yang sedang berjalan."
+      "settings": {
+        "title": "Pengaturan",
+        "body": "Pilih tampilan, model, dan preferensi Anda."
       },
       "connectors": {
         "title": "Konektor",
-        "body": "Sambungkan alat yang memang sudah Anda pakai. Akun Abacus.AI gratis memasang satu set sekaligus dengan sekali klik."
+        "body": "Hubungkan alat Anda di Pustaka."
       },
-      "makeBot": {
-        "title": "Make a bot",
-        "body": "Name one here, or start from a template below. A bot reads and edits files, runs commands, and works in the tools you connect, with a chat and a memory of its own."
-      },
-      "memory": {
-        "title": "Memori",
-        "body": "Apa yang diingat agen antar sesi, dan instruksi tetap yang ia ikuti. Baca, sunting, dan hapus yang sudah tidak berlaku."
-      },
-      "messaging": {
-        "title": "Perpesanan",
-        "body": "Hubungi agen dari ponsel. Sambungkan aplikasi chat dan tentukan siapa yang boleh mengirimkan pekerjaan."
-      },
-      "newSession": {
-        "title": "Mulai sesi",
-        "body": "Membuka komposer kosong di workspace ini. Satu sesi per tugas menjaga konteksnya tetap pada pekerjaan yang bersangkutan."
-      },
-      "preview": {
-        "title": "Pratinjau",
-        "body": "Peramban dan penampil berkas di samping chat. Agen membuka hasil kerjanya di sini, jadi Anda bisa melihat tanpa keluar aplikasi."
-      },
-      "sidebar": {
-        "title": "Workspace Anda",
-        "body": "Setiap folder yang pernah dibuka dan setiap percakapan di dalamnya. Ganti workspace di sini, atau buka lagi sesi minggu lalu."
-      },
-      "terminal": {
-        "title": "Terminal",
-        "body": "Shell sungguhan di workspace Anda, di folder yang sama dengan tempat agen bekerja. Tombol terminal di bilah judul menampilkan dan menyembunyikannya.",
-        "audience": "For developers & technical users"
-      },
-      "usage": {
-        "title": "Penggunaan",
-        "body": "Token dan biaya per model dan per sesi, supaya harga sebuah proses tidak pernah mengejutkan di belakang."
-      },
-      "welcome": {
-        "title": "Selamat datang di AbacusAI Bot",
-        "body": "Keliling singkat jendela ini: apa saja panelnya dan untuk apa. Lima belas perhentian pendek, dan Anda boleh berhenti kapan saja."
+      "bots": {
+        "title": "Bot",
+        "body": "Buat bot untuk pekerjaan yang sering dilakukan."
       }
     }
   },

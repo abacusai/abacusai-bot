@@ -177,6 +177,7 @@ declare module "@tanstack/react-router" {
   }
   interface HistoryState {
     messagingDialog?: boolean;
+    whatsappDialog?: boolean;
     navIntent?: { id: string; type: NavType | "none" };
   }
 }
