@@ -11,6 +11,7 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
  * app default (03-bots §24.2).
  */
 import {
+  AlertCircle,
   CalendarClock,
   Cpu,
   KeyRound,
@@ -152,7 +153,8 @@ export const ModeChip = ({
             data-slot="chat-mode-picker"
             aria-haspopup="listbox"
             className={cn(
-              "h-[30px] rounded-full px-2.5 text-[13px]",
+              "h-[30px] rounded-full text-[13px]",
+              !compact && "px-2.5",
               open && "bg-secondary",
               shown === AgentMode.Yolo && "text-[var(--chat-status-attention)]"
             )}
@@ -448,19 +450,29 @@ export const ModelChip = ({
       >
         <Button
           variant="ghost"
-          size="sm"
+          size={compact ? "icon" : "sm"}
           data-slot="chat-model-picker"
           aria-label={t("chat.modelSetup.unset")}
           className={cn(
-            "h-[30px] rounded-full px-2.5 text-[13px]",
+            "h-[30px] rounded-full text-[13px]",
+            !compact && "px-2.5",
             open && "bg-secondary"
           )}
         >
-          <span
-            aria-hidden
-            className="size-1.5 shrink-0 rounded-full bg-[var(--chat-status-attention)]"
-          />
-          {t("chat.modelSetup.choose")}
+          {compact ? (
+            <AlertCircle
+              aria-hidden
+              className="size-3.5 text-[var(--chat-status-attention)]"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="size-1.5 shrink-0 rounded-full bg-[var(--chat-status-attention)]"
+            />
+          )}
+          <span className={compact ? "sr-only" : undefined}>
+            {t("chat.modelSetup.choose")}
+          </span>
         </Button>
       </ModelSetupPopover>
     );

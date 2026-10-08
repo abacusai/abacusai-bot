@@ -3113,13 +3113,14 @@
       "failed": "操作を完了できませんでした"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "モデルを選択",
+      "unset": "モデルが未設定です。モデルを選択",
+      "sendHint": "このメッセージを送信するにはモデルを選択してください",
+      "fetchError": "モデルを読み込めませんでした。もう一度お試しください。",
+      "noAvailable": "接続済みですが、利用可能なモデルがありません。プロバイダー設定でアクセス権を確認してください。",
+      "allSettings": "モデルのすべての設定",
+      "connected": "接続しました。モデルを選択してください",
+      "storedOnHost": "キーはホストの仮想マシンに保存されます。"
     }
   },
   "notch": {

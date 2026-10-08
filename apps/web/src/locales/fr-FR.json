@@ -3113,13 +3113,14 @@
       "failed": "Impossible de terminer l’action"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "Choisir un modèle",
+      "unset": "Aucun modèle sélectionné. Choisir un modèle",
+      "sendHint": "Choisissez un modèle pour envoyer ce message",
+      "fetchError": "Impossible de charger les modèles. Réessayez.",
+      "noAvailable": "Connecté, mais aucun modèle disponible. Vérifiez les droits d’accès dans les paramètres du fournisseur.",
+      "allSettings": "Tous les paramètres des modèles",
+      "connected": "Connecté. Choisissez un modèle",
+      "storedOnHost": "Les clés sont stockées sur la machine virtuelle hôte."
     }
   },
   "notch": {

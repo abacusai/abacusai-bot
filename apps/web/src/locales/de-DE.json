@@ -3113,13 +3113,14 @@
       "failed": "Aktion fehlgeschlagen"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "Modell auswählen",
+      "unset": "Kein Modell festgelegt. Modell auswählen",
+      "sendHint": "Wähle ein Modell, um diese Nachricht zu senden",
+      "fetchError": "Modelle konnten nicht geladen werden. Versuche es erneut.",
+      "noAvailable": "Verbunden, aber keine Modelle verfügbar. Prüfe den Zugriff in den Anbietereinstellungen.",
+      "allSettings": "Alle Modelleinstellungen",
+      "connected": "Verbunden. Wähle ein Modell",
+      "storedOnHost": "Schlüssel werden auf deiner Host-VM gespeichert."
     }
   },
   "notch": {

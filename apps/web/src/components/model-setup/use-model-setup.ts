@@ -76,9 +76,10 @@ export const useModelSetup = ({
           : await transport.client.auth.openRouter.start({});
       if (!result.ok) {
         if (!result.cancelled) throw new Error(result.error);
-        return;
+        return false;
       }
       await refresh(true);
+      return true;
     },
     save: async (provider, key) => {
       await transport.client.settings.keys.save({ provider, key });

@@ -3113,13 +3113,14 @@
       "failed": "Tindakan tidak dapat diselesaikan"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "Pilih model",
+      "unset": "Belum ada model. Pilih model",
+      "sendHint": "Pilih model untuk mengirim pesan ini",
+      "fetchError": "Model tidak dapat dimuat. Coba lagi.",
+      "noAvailable": "Terhubung, tetapi tidak ada model yang tersedia. Buka pengaturan penyedia untuk memeriksa akses.",
+      "allSettings": "Semua pengaturan model",
+      "connected": "Terhubung. Pilih model",
+      "storedOnHost": "Kunci disimpan di VM host Anda."
     }
   },
   "notch": {

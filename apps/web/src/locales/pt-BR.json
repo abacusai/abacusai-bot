@@ -3113,13 +3113,14 @@
       "failed": "Não foi possível concluir a ação"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "Escolher um modelo",
+      "unset": "Nenhum modelo definido. Escolha um modelo",
+      "sendHint": "Escolha um modelo para enviar esta mensagem",
+      "fetchError": "Não foi possível carregar os modelos. Tente novamente.",
+      "noAvailable": "Conectado, mas nenhum modelo está disponível. Verifique o acesso nas configurações do provedor.",
+      "allSettings": "Todas as configurações de modelos",
+      "connected": "Conectado. Escolha um modelo",
+      "storedOnHost": "As chaves são armazenadas na VM do host."
     }
   },
   "notch": {

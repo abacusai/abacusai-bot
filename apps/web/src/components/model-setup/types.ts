@@ -7,7 +7,7 @@ export interface ModelSetupBinding {
     connect: boolean;
   }>;
   localAvailable: boolean;
-  connect(provider: string): Promise<void>;
+  connect(provider: string): Promise<boolean>;
   save(provider: string, key: string): Promise<void>;
   retry(): Promise<void>;
   settings(provider?: string): void;

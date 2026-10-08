@@ -7,6 +7,7 @@ import {
   ConnectorMark,
   markForProvider,
 } from "#renderer/components/connector-mark";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Command, CommandItem, CommandList } from "#renderer/ui/command";
@@ -38,19 +39,21 @@ export const ModelSetupPopover = ({
   const [key, setKey] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const perform = async (action: () => Promise<void>, success = false) => {
+  const perform = async (
+    action: () => Promise<void | boolean>,
+    success = false
+  ) => {
     setError(null);
     setPending(true);
     try {
-      await action();
-      if (success) connected();
+      const result = await action();
+      if (success && result !== false) connected();
       setProvider(null);
       setKey("");
     } catch (error) {
       setError(errorText(error));
-    } finally {
-      setPending(false);
     }
+    setPending(false);
   };
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -61,7 +64,7 @@ export const ModelSetupPopover = ({
         align="end"
         sideOffset={8}
         initialFocus={list}
-        className="w-[min(360px,var(--available-width))] min-w-0 gap-1 rounded-[14px] p-1.5 text-[13px]"
+        className="scroll-fade-y max-h-[var(--available-height)] w-[min(360px,var(--available-width))] min-w-0 gap-1 overflow-y-auto rounded-[14px] p-1.5 text-[13px]"
       >
         {hint ? (
           <p role="status" className="text-muted-foreground px-2 py-1.5">
@@ -84,7 +87,7 @@ export const ModelSetupPopover = ({
             tabIndex={0}
             shouldFilter={false}
             label={t("chat.modelSetup.choose")}
-            className="bg-transparent p-0"
+            className="bg-transparent p-0 outline-none"
           >
             <CommandList className="scroll-fade-y max-h-[min(320px,var(--available-height))]">
               {setup.status === "error" ? (
@@ -93,7 +96,7 @@ export const ModelSetupPopover = ({
                     {t("chat.modelSetup.fetchError")}
                   </p>
                   <CommandItem onSelect={() => void perform(setup.retry)}>
-                    {t("common.retry")}
+                    {t("phase5.retry")}
                   </CommandItem>
                 </>
               ) : (
@@ -190,7 +193,11 @@ export const ModelSetupPopover = ({
               />
             </Field>
             <p className="text-muted-foreground text-xs">
-              {t("phase5.storedHere")}
+              {t(
+                IS_ELECTRON
+                  ? "phase5.storedHere"
+                  : "chat.modelSetup.storedOnHost"
+              )}
             </p>
             <div className="flex justify-end gap-2">
               <Button

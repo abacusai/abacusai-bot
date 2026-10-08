@@ -3119,7 +3119,8 @@
       "fetchError": "Could not load models. Try again.",
       "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
       "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "connected": "Connected. Pick a model",
+      "storedOnHost": "Keys are stored on your host VM."
     }
   },
   "notch": {

@@ -3113,13 +3113,14 @@
       "failed": "कार्रवाई पूरी नहीं हो सकी"
     },
     "modelSetup": {
-      "choose": "Choose a model",
-      "unset": "No model set. Choose a model",
-      "sendHint": "Choose a model to send this message",
-      "fetchError": "Could not load models. Try again.",
-      "noAvailable": "Connected, but no models are available. Open the provider settings to check access.",
-      "allSettings": "All model settings",
-      "connected": "Connected. Pick a model"
+      "choose": "मॉडल चुनें",
+      "unset": "कोई मॉडल सेट नहीं है। मॉडल चुनें",
+      "sendHint": "यह संदेश भेजने के लिए मॉडल चुनें",
+      "fetchError": "मॉडल लोड नहीं हो सके। फिर कोशिश करें।",
+      "noAvailable": "कनेक्ट है, लेकिन कोई मॉडल उपलब्ध नहीं है। ऐक्सेस जाँचने के लिए प्रदाता की सेटिंग खोलें।",
+      "allSettings": "मॉडल की सभी सेटिंग",
+      "connected": "कनेक्ट हो गया। मॉडल चुनें",
+      "storedOnHost": "कुंजियाँ आपकी होस्ट VM पर सेव होती हैं।"
     }
   },
   "notch": {
