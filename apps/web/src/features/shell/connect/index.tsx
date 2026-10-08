@@ -7,10 +7,11 @@
  */
 import { useSelector } from "@tanstack/react-store";
 import { CheckIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
+import { FlowPage, FlowHeader } from "#renderer/components/form-kit/flow-page";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import { defaultLook } from "#renderer/lib/bots/avatar";
 import { cn } from "#renderer/lib/cn";
@@ -73,16 +74,39 @@ const ConnectAction = ({
   const { t } = useTranslation();
   const kind = kindOf(error);
   if (kind === "signin")
-    return <a href={webSignInHref()}>{t("phase5.signIn")}</a>;
-  if (kind === "tier") return <a href="/chatllm">{t("web.connect.upgrade")}</a>;
+    return (
+      <Button
+        size="lg"
+        nativeButton={false}
+        render={<a href={webSignInHref()} />}
+      >
+        {t("phase5.signIn")}
+      </Button>
+    );
+  if (kind === "tier")
+    return (
+      <Button size="lg" nativeButton={false} render={<a href="/chatllm" />}>
+        {t("web.connect.upgrade")}
+      </Button>
+    );
   if (kind === "limit")
     return (
-      <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener">
+      <Button
+        size="lg"
+        nativeButton={false}
+        render={
+          <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener" />
+        }
+      >
         {t("web.connect.download")}
-      </a>
+      </Button>
     );
   if (kind === "version")
-    return <button onClick={restart}>{t("web.connect.restart")}</button>;
+    return (
+      <Button size="lg" onClick={restart}>
+        {t("web.connect.restart")}
+      </Button>
+    );
   return null;
 };
 
@@ -112,17 +136,43 @@ export const ConnectScreen = ({
   if (screen?.kind === "failed")
     return <FailedScreen error={error} retry={() => location.reload()} />;
   return (
-    <main
-      className="bg-background text-foreground fixed inset-0 z-50 flex h-screen flex-col items-center justify-center gap-4"
-      role="status"
-    >
-      <p>
-        {t(`web.connect.${REFUSAL_TEXT[kindOf(error) ?? "none"] ?? stage}`)}
-      </p>
+    <FlowPage role="status">
+      <FlowHeader
+        title={t(
+          `web.connect.${REFUSAL_TEXT[kindOf(error) ?? "none"] ?? stage}`
+        )}
+      />
       <ConnectAction error={error} restart={restart} />
-    </main>
+    </FlowPage>
   );
 };
+
+const HostPage = ({
+  title,
+  description,
+  mood = "asleep",
+  children,
+  ...props
+}: ComponentProps<typeof FlowPage> & {
+  title: string;
+  description: string;
+  mood?: "idle" | "asleep";
+}) => (
+  <FlowPage
+    {...props}
+    media={
+      <BotAvatar
+        animate
+        look={defaultLook("AbacusAI Bot")}
+        mood={mood}
+        size={112}
+      />
+    }
+  >
+    <FlowHeader title={title} description={description} />
+    {children}
+  </FlowPage>
+);
 
 /**
  * The web host is out of room (the free hosts are at capacity): a full page
@@ -131,50 +181,35 @@ export const ConnectScreen = ({
 export const LimitScreen = () => {
   const { t } = useTranslation();
   return (
-    <main
+    <HostPage
       data-slot="host-limit"
-      className="bg-background text-foreground fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
+      title={t("web.connect.busyTitle")}
+      description={t("web.connect.busyBody")}
     >
-      <div className="flex w-full max-w-[400px] flex-col items-center gap-6 text-center">
-        <BotAvatar
-          animate
-          look={defaultLook("AbacusAI Bot")}
-          mood="asleep"
-          size={112}
-        />
-        <div className="flex flex-col gap-3">
-          <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">
-            {t("web.connect.busyTitle")}
-          </h1>
-          <p className="text-muted-foreground text-[15px] leading-[22px] text-pretty">
-            {t("web.connect.busyBody")}
-          </p>
-        </div>
-        <div className="flex w-full flex-col gap-3">
-          <Button
-            size="lg"
-            className="h-12 w-full rounded-full text-base"
-            nativeButton={false}
-            render={
-              <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener" />
-            }
-          >
-            {t("web.connect.busyDownload")}
-          </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="h-12 w-full rounded-full text-base"
-            onClick={() => location.reload()}
-          >
-            {t("web.connect.retry")}
-          </Button>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          {t("web.connect.busyNote")}
-        </p>
+      <div className="flex w-full flex-col gap-3">
+        <Button
+          size="lg"
+          className="w-full"
+          nativeButton={false}
+          render={
+            <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener" />
+          }
+        >
+          {t("web.connect.busyDownload")}
+        </Button>
+        <Button
+          size="lg"
+          variant="secondary"
+          className="w-full"
+          onClick={() => location.reload()}
+        >
+          {t("web.connect.retry")}
+        </Button>
       </div>
-    </main>
+      <p className="text-muted-foreground text-xs">
+        {t("web.connect.busyNote")}
+      </p>
+    </HostPage>
   );
 };
 
@@ -184,9 +219,9 @@ const useLightOnly = (): void => {
 };
 
 const SETUP_STEPS = [
-  { key: "stepStarting", progress: "33%" },
-  { key: "stepInstalling", progress: "66%" },
-  { key: "stepConnecting", progress: "92%" },
+  { key: "stepStarting", progress: 33 },
+  { key: "stepInstalling", progress: 66 },
+  { key: "stepConnecting", progress: 92 },
 ] as const;
 
 /** Every stage's setup step, exhaustively. */
@@ -205,69 +240,55 @@ export const SetupScreen = ({ stage }: { stage: ConnectStage }) => {
   useLightOnly();
   const current = SETUP_STEP_OF[stage];
   return (
-    <main
+    <HostPage
       data-slot="host-setup"
       role="status"
-      className="bg-background text-foreground fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
+      mood="idle"
+      title={t("web.connect.setupTitle")}
+      description={t("web.connect.setupBody")}
     >
-      <div className="flex w-full max-w-[400px] flex-col items-center gap-8 text-center">
-        <BotAvatar
-          animate
-          look={defaultLook("AbacusAI Bot")}
-          mood="idle"
-          size={112}
-        />
-        <div className="flex flex-col gap-3">
-          <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">
-            {t("web.connect.setupTitle")}
-          </h1>
-          <p className="text-muted-foreground text-[15px] leading-[22px] text-pretty">
-            {t("web.connect.setupBody")}
-          </p>
-        </div>
-        <div className="flex w-full flex-col gap-5">
-          <ol className="flex flex-col gap-3 text-left text-[15px]">
-            {SETUP_STEPS.map((step, index) => (
-              <li
-                key={step.key}
-                data-state={
-                  index < current
-                    ? "done"
-                    : index === current
-                      ? "current"
-                      : "pending"
-                }
-                className={cn(
-                  "flex items-center gap-3",
-                  index > current && "text-muted-foreground"
+      <div className="flex w-full flex-col gap-4">
+        <ol className="flex flex-col gap-3 text-left text-sm">
+          {SETUP_STEPS.map((step, index) => (
+            <li
+              key={step.key}
+              data-state={
+                index < current
+                  ? "done"
+                  : index === current
+                    ? "current"
+                    : "pending"
+              }
+              className={cn(
+                "flex items-center gap-3",
+                index > current && "text-muted-foreground"
+              )}
+            >
+              <span className="flex size-5 shrink-0 items-center justify-center">
+                {index < current ? (
+                  <CheckIcon
+                    aria-hidden
+                    className="text-primary size-4"
+                    strokeWidth={1.75}
+                  />
+                ) : index === current ? (
+                  <Spinner aria-hidden className="size-4" />
+                ) : (
+                  <span className="border-border size-4 rounded-full border-2" />
                 )}
-              >
-                <span className="flex size-5 shrink-0 items-center justify-center">
-                  {index < current ? (
-                    <CheckIcon
-                      aria-hidden
-                      className="size-5 text-emerald-600"
-                      strokeWidth={2.5}
-                    />
-                  ) : index === current ? (
-                    <Spinner aria-hidden className="size-5" />
-                  ) : (
-                    <span className="border-border size-4 rounded-full border-2" />
-                  )}
-                </span>
-                {t(`web.connect.${step.key}`)}
-              </li>
-            ))}
-          </ol>
-          <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
-            <div
-              className="bg-primary h-full rounded-full transition-[width] duration-700 ease-out"
-              style={{ width: SETUP_STEPS[current].progress }}
-            />
-          </div>
-        </div>
+              </span>
+              {t(`web.connect.${step.key}`)}
+            </li>
+          ))}
+        </ol>
+        <progress
+          className="flow-progress"
+          aria-label={t(`web.connect.${SETUP_STEPS[current].key}`)}
+          max={100}
+          value={SETUP_STEPS[current].progress}
+        />
       </div>
-    </main>
+    </HostPage>
   );
 };
 
@@ -290,47 +311,34 @@ export const FailedScreen = ({
     if (error) console.warn("[connect] host unreachable", error);
   }, [error]);
   return (
-    <main
+    <HostPage
       data-slot="host-failed"
       role="alert"
-      className="bg-background text-foreground fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
+      title={t("web.connect.failedTitle")}
+      description={t("web.connect.failedBody")}
     >
-      <div className="flex w-full max-w-[400px] flex-col items-center gap-6 text-center">
-        <BotAvatar
-          animate
-          look={defaultLook("AbacusAI Bot")}
-          mood="asleep"
-          size={112}
-        />
-        <div className="flex flex-col gap-3">
-          <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">
-            {t("web.connect.failedTitle")}
-          </h1>
-          <p className="text-muted-foreground text-[15px] leading-[22px] text-pretty">
-            {t("web.connect.failedBody")}
-          </p>
-        </div>
-        <div className="flex w-full flex-col items-center gap-4">
-          <Button
-            size="lg"
-            className="h-12 w-full rounded-full text-base"
-            onClick={retry}
-            disabled={attempting}
-          >
-            {attempting && <Spinner aria-hidden />}
-            {t("web.connect.tryAgain")}
-          </Button>
-          <a
-            href={DESKTOP_DOWNLOAD_URL}
-            target="_blank"
-            rel="noopener"
-            className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
-          >
-            {t("web.connect.desktopInstead")}
-          </a>
-        </div>
+      <div className="flex w-full flex-col items-center gap-4">
+        <Button
+          size="lg"
+          className="w-full"
+          onClick={retry}
+          disabled={attempting}
+        >
+          {attempting && <Spinner aria-hidden />}
+          {t("web.connect.tryAgain")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="lg"
+          nativeButton={false}
+          render={
+            <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener" />
+          }
+        >
+          {t("web.connect.desktopInstead")}
+        </Button>
       </div>
-    </main>
+    </HostPage>
   );
 };
 
@@ -353,7 +361,7 @@ export const StatusPill = ({ stage }: { stage: ConnectStage }) => {
       role="status"
       className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center pt-[max(0.5rem,env(safe-area-inset-top))]"
     >
-      <span className="bg-background text-muted-foreground border-border flex items-center gap-2 rounded-full border px-3 py-1 text-xs shadow-xs">
+      <span className="floating-surface text-muted-foreground flex items-center gap-2 rounded-(--pane-radius) px-3 py-2 text-xs">
         <Spinner aria-hidden className="size-3.5" />
         {t(`web.connect.${PILL_LABEL[stage]}`)}
       </span>
@@ -388,7 +396,7 @@ export const HostStatus = () => {
       <div
         data-slot="host-status"
         role="status"
-        className="bg-muted text-muted-foreground fixed inset-x-0 top-0 z-40 flex items-center justify-center gap-3 px-4 py-1 text-xs"
+        className="bg-muted text-muted-foreground fixed inset-x-0 top-0 z-40 flex flex-wrap items-center justify-center gap-2 px-(--page-gutter) py-2 text-xs"
       >
         <span>{t(`web.connect.${stage}`)}</span>
         <ConnectAction error={error} restart={restartHost} />

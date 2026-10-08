@@ -9,15 +9,18 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
+import { FlowPage, FlowContent } from "#renderer/components/form-kit/flow-page";
 import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { showInfo } from "#renderer/lib/toast";
 import { Button } from "#renderer/ui/button";
+import { Dialog, DialogContent } from "#renderer/ui/dialog";
+import { Field, FieldLabel } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 
 export type CallApps = (service: string, input: unknown) => Promise<unknown>;
@@ -93,6 +96,7 @@ export const WhatsAppConnect = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const numberId = useId();
   const waiting = deepLink != null && !expired;
   const chat = useQuery({
     ...whatsappChatQuery(callApps),
@@ -154,14 +158,14 @@ export const WhatsAppConnect = ({
   };
 
   const skip = onSkip && (
-    <Button variant="ghost" className="h-11 w-full" onClick={onSkip}>
+    <Button variant="ghost" size="lg" className="w-full" onClick={onSkip}>
       {t("web.whatsappBot.skip")}
     </Button>
   );
 
   return (
     <>
-      <Heading ref={heading} tabIndex={-1} className="outline-none">
+      <Heading ref={heading} tabIndex={-1} className="page-title outline-none">
         {t(
           expired
             ? "web.whatsappBot.expiredTitle"
@@ -170,7 +174,7 @@ export const WhatsAppConnect = ({
               : "web.whatsappBot.title"
         )}
       </Heading>
-      <p>
+      <p className="text-muted-foreground text-sm/relaxed text-pretty">
         {t(
           expired
             ? "web.whatsappBot.expiredBody"
@@ -188,7 +192,7 @@ export const WhatsAppConnect = ({
           )}
           <Button
             size="lg"
-            className="h-12 w-full rounded-full text-base"
+            className="w-full"
             disabled={busy}
             onClick={() => void start()}
           >
@@ -196,7 +200,8 @@ export const WhatsAppConnect = ({
           </Button>
           <Button
             variant="ghost"
-            className="h-11 w-full"
+            size="lg"
+            className="w-full"
             onClick={() => {
               setDeepLink(null);
               setExpired(false);
@@ -210,7 +215,7 @@ export const WhatsAppConnect = ({
         <div className="flex w-full flex-col gap-3">
           <p
             aria-label={t("web.whatsappBot.message")}
-            className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-emerald-100 px-4 py-2.5 text-left text-[15px] leading-[21px] text-emerald-950 dark:bg-emerald-900 dark:text-emerald-50"
+            className="bg-muted text-foreground max-w-[85%] self-end rounded-(--pane-radius) px-3 py-2 text-left text-sm/relaxed break-words"
           >
             {new URL(deepLink).searchParams.get("text")}
           </p>
@@ -224,7 +229,7 @@ export const WhatsAppConnect = ({
           </p>
           <Button
             size="lg"
-            className="h-12 w-full rounded-full text-base"
+            className="w-full"
             nativeButton={false}
             render={<a href={deepLink} target="_blank" rel="noreferrer" />}
           >
@@ -232,7 +237,8 @@ export const WhatsAppConnect = ({
           </Button>
           <Button
             variant="ghost"
-            className="h-11 w-full"
+            size="lg"
+            className="w-full"
             onClick={() => setDeepLink(null)}
           >
             {t("web.whatsappBot.changeNumber")}
@@ -247,11 +253,12 @@ export const WhatsAppConnect = ({
             void start();
           }}
         >
-          <label className="flex flex-col gap-2">
-            <span className="text-muted-foreground text-[13px] font-medium">
+          <Field>
+            <FieldLabel htmlFor={numberId}>
               {t("web.whatsappBot.numberLabel")}
-            </span>
+            </FieldLabel>
             <Input
+              id={numberId}
               type="tel"
               inputMode="tel"
               autoComplete="tel"
@@ -259,9 +266,8 @@ export const WhatsAppConnect = ({
               placeholder={t("web.whatsapp.numberPlaceholder")}
               value={number}
               onChange={(event) => setNumber(event.target.value)}
-              className="h-12 rounded-[14px] text-base"
             />
-          </label>
+          </Field>
           {error && (
             <p role="alert" className="text-destructive text-sm">
               {error}
@@ -271,7 +277,7 @@ export const WhatsAppConnect = ({
             type="submit"
             size="lg"
             disabled={busy || number.replace(/\D/g, "").length < MIN_DIGITS}
-            className="h-12 rounded-full text-base"
+            className="w-full"
           >
             {t("web.whatsappBot.connect")}
           </Button>
@@ -308,46 +314,46 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
     }
   };
   return (
-    <main className="bg-background text-foreground flex min-h-dvh justify-center overflow-y-auto">
-      <div className="[&>p]:text-muted-foreground flex w-full max-w-md flex-col items-center gap-5 px-6 pt-[max(56px,env(safe-area-inset-top))] pb-10 text-center [&>h1]:text-2xl [&>h1]:font-semibold">
-        <ConnectorMark id="whatsapp" size={56} />
-        {chat.data?.status === "linked" ? (
-          <>
-            <h1>{t("web.whatsappBot.doneTitle")}</h1>
-            <p>{t("web.whatsappBot.doneBody")}</p>
-            {error && (
-              <p role="alert" className="text-destructive text-sm">
-                {error}
-              </p>
-            )}
-            <Button
-              size="lg"
-              className="h-12 w-full rounded-full text-base"
-              nativeButton={false}
-              render={
-                <a
-                  href={`https://wa.me/${(chat.data.number ?? "").replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              {t("web.whatsapp.openWhatsApp")}
-            </Button>
-            <Button
-              variant="ghost"
-              className="h-11 w-full"
-              disabled={busy}
-              onClick={() => void changeNumber()}
-            >
-              {t("web.whatsappBot.useDifferentNumber")}
-            </Button>
-          </>
-        ) : (
-          <WhatsAppConnect callApps={callApps} as="h1" />
-        )}
-      </div>
-    </main>
+    <FlowPage media={<ConnectorMark id="whatsapp" size={56} />}>
+      {chat.data?.status === "linked" ? (
+        <>
+          <h1 className="page-title">{t("web.whatsappBot.doneTitle")}</h1>
+          <p className="text-muted-foreground text-sm/relaxed">
+            {t("web.whatsappBot.doneBody")}
+          </p>
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
+          <Button
+            size="lg"
+            className="w-full"
+            nativeButton={false}
+            render={
+              <a
+                href={`https://wa.me/${(chat.data.number ?? "").replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noreferrer"
+              />
+            }
+          >
+            {t("web.whatsapp.openWhatsApp")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            disabled={busy}
+            onClick={() => void changeNumber()}
+          >
+            {t("web.whatsappBot.useDifferentNumber")}
+          </Button>
+        </>
+      ) : (
+        <WhatsAppConnect callApps={callApps} as="h1" />
+      )}
+    </FlowPage>
   );
 };
 
@@ -379,22 +385,26 @@ export const WhatsAppIntro = ({
     );
   };
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("web.whatsappBot.title")}
-      className="bg-background fixed inset-0 z-50 flex justify-center overflow-y-auto"
+    <Dialog
+      open
+      disablePointerDismissal
+      onOpenChange={(_, details) => details.cancel()}
     >
-      <div className="[&>p]:text-muted-foreground flex w-full max-w-md flex-col items-center gap-5 px-6 pt-[max(56px,env(safe-area-inset-top))] pb-10 text-center [&>h1]:text-2xl [&>h1]:font-semibold">
-        <ConnectorMark id="whatsapp" size={56} />
-        <WhatsAppConnect
-          callApps={callApps}
-          as="h1"
-          onLinked={() => close(true)}
-          onSkip={() => close(false)}
-        />
-      </div>
-    </div>
+      <DialogContent
+        aria-label={t("web.whatsappBot.title")}
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-(--pane-radius)"
+      >
+        <FlowContent media={<ConnectorMark id="whatsapp" size={56} />}>
+          <WhatsAppConnect
+            callApps={callApps}
+            as="h1"
+            onLinked={() => close(true)}
+            onSkip={() => close(false)}
+          />
+        </FlowContent>
+      </DialogContent>
+    </Dialog>
   );
 };
 
