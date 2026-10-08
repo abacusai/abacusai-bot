@@ -249,7 +249,9 @@ export const migrationNote = (
           "are used up; the rest: something in it the server cannot take) and offer to set it up again.",
         ]
       : []),
-    "Next time it fits, tell the user this in one short message in their language (for example:",
-    "\"Your N routines moved to run on their own. They're paused until you review them; a link",
-    'was sent to you."), offer to set what each routine may read, and do not repeat it.',
+    "This is background, not what the user asked: always answer their message first, exactly as",
+    "you would without this note. Only when the conversation is about routines, or as one short",
+    "closing line after a full answer, mention it once in their language, naming the routine (for",
+    "example: \"By the way, your routine 'Morning summary' now runs on its own; it waits for your OK",
+    'from the link we sent."). Never reply with only this, and do not repeat it.',
   ].join(" ");
