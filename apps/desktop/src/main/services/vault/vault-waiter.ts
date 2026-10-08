@@ -135,7 +135,8 @@ export class VaultWaiter {
               ? { item_kind: request.kind, outcome: "failed" }
               : {
                   item_kind: request.kind,
-                  outcome: "saved",
+                  // A one-time code is held for its fill, never saved.
+                  outcome: request.kind === "code" ? "code_received" : "saved",
                   ...(request.site != null ? { site: request.site } : {}),
                   ...(saved.itemId != null ? { item_id: saved.itemId } : {}),
                   for_payment: request.forPayment,

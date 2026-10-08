@@ -142,14 +142,16 @@ const vaultSavedNote = (facts: StepFacts): string => {
         : "Each sign-in with it needs signin_approval first. ") +
       TELL
     );
+  if (facts.outcome === "code_received" || facts.item_kind === "code")
+    return facts.for_payment === true
+      ? `[vault] The bank's code for the approved payment arrived. Have the browser fill it with browser_vault_fill, field "code" and the card's item_id${itemId != null ? ` (${itemId})` : ""}, within a few minutes. ${TELL}`
+      : `[vault] The user's sign-in code${site != null ? ` for ${site}` : ""} arrived. Have the browser fill it with browser_vault_fill, field "code"${itemId != null ? ` and item_id ${itemId}` : ""}, within a few minutes. ${TELL}`;
   if (facts.item_kind === "card")
     return (
       `[vault] The user saved a card${item}. ` +
       `It is filled only under a payment they approve: payment_approval at the checkout's review step, with the exact amount. ${TELL}`
     );
-  return facts.for_payment === true
-    ? `[vault] The user entered their bank's code for the approved payment. Have the browser fill it with browser_vault_fill, field "code" and the card's item_id${itemId != null ? ` (${itemId})` : ""}, within a few minutes. ${TELL}`
-    : `[vault] The user entered their sign-in code${site != null ? ` for ${site}` : ""}. Have the browser fill it with browser_vault_fill, field "code"${itemId != null ? ` and item_id ${itemId}` : ""}, within a few minutes. ${TELL}`;
+  return `[vault] The vault page was completed. ${TELL}`;
 };
 
 const signinNote = (facts: StepFacts): string => {
