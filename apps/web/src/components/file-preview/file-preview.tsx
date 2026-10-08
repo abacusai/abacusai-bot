@@ -26,6 +26,7 @@ interface FilePreviewReaders {
 }
 
 export interface FilePreviewProps {
+  textOnly?: boolean;
   path: string;
   hostRoot: string;
   read: FilePreviewReaders;
@@ -51,10 +52,12 @@ export const FilePreview = ({
   onOpenExternally,
   onReveal,
   showActions = true,
+  textOnly = false,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
-  const kind =
-    previewKind(path) === "pptx" && read.pptx == null
+  const kind = textOnly
+    ? "code"
+    : previewKind(path) === "pptx" && read.pptx == null
       ? "external"
       : previewKind(path);
   // Keyed by what was read, so a new path shows loading without a reset.

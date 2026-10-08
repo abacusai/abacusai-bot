@@ -54,9 +54,11 @@ export const SessionFilePreview = ({
   if (!isRelativePath(path)) return null;
   const absolute = `${root}/${path}`;
   const kind = previewKind(absolute);
-  if (kind === "pdf" || kind === "html") return <>{renderLocal(absolute)}</>;
+  if (IS_ELECTRON && (kind === "pdf" || kind === "html"))
+    return <>{renderLocal(absolute)}</>;
   return (
     <FilePreview
+      textOnly={!IS_ELECTRON && kind === "html"}
       path={absolute}
       hostRoot={root}
       read={{
