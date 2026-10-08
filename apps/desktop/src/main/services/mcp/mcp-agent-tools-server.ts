@@ -18,6 +18,8 @@ import {
   DOCUMENT_MAX_BYTES,
   MEDIA_MAX_BYTES,
   mediaLine,
+  parseSendMedia,
+  type ResolvedMedia,
 } from "@abacus-ai/agent/send-media";
 import { UNATTENDED_TOOLS } from "@abacus-ai/agent/tool-policy";
 import {
@@ -92,6 +94,7 @@ import {
   htmlPagesIn,
 } from "../agent-tools/static-server";
 import { renderTodos, readTodos, setTodos } from "../agent-tools/todo-store";
+import type { BotNumberOutcome } from "../messaging/bot-number";
 import { MAX_ATTACHMENT_BYTES } from "../messaging/connector";
 import {
   resolveSender,
@@ -132,6 +135,8 @@ const UNREAD_CHATS_READ_CAP = 10;
 const UNREAD_PER_CHAT_DEFAULT = 50;
 /** For a chat marked unread by hand, which has no count to go by. */
 const UNREAD_MARKED_PEEK = 5;
+/** The server takes this much text in one WhatsApp message from AbacusAI Bot. */
+const MAX_BOT_NUMBER_TEXT = 4_000;
 
 type UnreadFetch =
   | {
@@ -360,6 +365,19 @@ export interface McpAgentToolsServerOptions {
       removeSender: (candidate: SenderCandidate) => void;
     };
   };
+  /**
+   * The user's WhatsApp link to AbacusAI Bot's own number, on the hosted
+   * computer; null elsewhere, where send_to_whatsapp is never listed.
+   */
+  botNumber?: () => {
+    linked: () => boolean;
+    notify: (
+      text: string,
+      media: Extract<ResolvedMedia, { ok: true }> | null
+    ) => Promise<BotNumberOutcome>;
+    /** A media id, as bytes, for the session that holds it. */
+    resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
+  } | null;
   /** Optional: headless has no account, and the tool reports unconfigured. */
   connectors?: {
     /** Every registry connector's status on this machine, by connector id. */
@@ -1803,6 +1821,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (definition.hidden === true) {
       return (this.options.messaging?.runningPlatforms().length ?? 0) > 0;
     }
+    if (definition.botNumber === true)
+      return this.options.botNumber?.()?.linked() === true;
     // No Discord tools on a machine that never connected Discord.
     if (definition.platform != null)
       return (
@@ -1924,6 +1944,46 @@ export class McpAgentToolsServer extends McpHttpServer {
   }
 
   /**
+   * `send_to_whatsapp`: the server sends it through its gate, or says why
+   * not, and the result is that answer: never "sent" for what did not go.
+   */
+  async sendToWhatsApp(
+    args: Record<string, unknown>,
+    callerSession?: string
+  ): Promise<ToolResult> {
+    const botNumber = this.options.botNumber?.() ?? null;
+    if (botNumber == null || callerSession == null)
+      return this.err(
+        "Not sent: WhatsApp through AbacusAI Bot's number is not available in this chat."
+      );
+    const message = String(args.message ?? "").trim();
+    const ref = typeof args.media === "string" ? args.media.trim() : "";
+    let media: Extract<ResolvedMedia, { ok: true }> | null = null;
+    if (ref.length > 0) {
+      const parsed = parseSendMedia({ media: ref, caption: message });
+      if (parsed.ok === false) return this.err(`Not sent: ${parsed.reason}`);
+      const resolved = botNumber.resolveMedia(ref, callerSession);
+      if (resolved.ok === false)
+        return this.err(`Not sent: ${resolved.reason}`);
+      media = resolved;
+    } else if (message.length === 0)
+      return this.err("Not sent: there is no message.");
+    else if (message.length > MAX_BOT_NUMBER_TEXT)
+      return this.err(
+        `Not sent: the message is too long (${message.length} characters, at most ${MAX_BOT_NUMBER_TEXT}). Shorten it.`
+      );
+    const outcome = await botNumber.notify(message, media);
+    if (outcome.sent === true) return this.ok("Sent to the user's WhatsApp.");
+    if (outcome.unconfirmed === true)
+      return this.ok(
+        `Unconfirmed: ${outcome.reason}. Do not send it again unless the user says it did not arrive, and do not tell them it failed.`
+      );
+    return this.err(
+      `Not sent: ${outcome.reason}. Tell the user in one short line, in their language, and give them the content here instead. Never say it was sent.`
+    );
+  }
+
+  /**
    * List the catalog, connected or not, so the agent can name what it lacks;
    * or ask, which never waits on the user. The ask resolves display names as
    * well as ids, forgivingly: Gmail's id is `gmailuser`, and any name the tool
@@ -1986,6 +2046,7 @@ export class McpAgentToolsServer extends McpHttpServer {
         ...(status.account != null && status.account.length > 0
           ? { account: status.account }
           : {}),
+        ...(status.botNumber === true ? { botNumber: true } : {}),
       };
 
     if (status.state === "unavailable")
@@ -2084,7 +2145,11 @@ export class McpAgentToolsServer extends McpHttpServer {
 
     // The same lever as the card in Settings, so "off" means one thing.
     if (match.kind === "messaging") {
-      if (!options.chatApps) return { code: "platform_off", name: match.name };
+      // The link to AbacusAI Bot's number is the user's to undo, in the app.
+      const linkedToBotNumber =
+        (await this.options.connectors?.list())?.[match.id]?.botNumber === true;
+      if (!options.chatApps || linkedToBotNumber)
+        return { code: "platform_off", name: match.name };
       const disable = this.options.messaging?.disablePlatform;
       if (disable == null) return { code: "no_messaging" };
       await disable(match.platform);

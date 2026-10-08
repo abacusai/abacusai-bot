@@ -797,6 +797,11 @@ export interface ConnectorStatus {
   account?: string;
   /** Why it is unavailable or pending, for the card and the model. */
   reason?: string;
+  /**
+   * WhatsApp, connected on the web through AbacusAI Bot's own number, which
+   * the user linked: the agent reaches only the user there (send_to_whatsapp).
+   */
+  botNumber?: boolean;
 }
 
 /** Keyed by registry connector id. */

@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Enviar uma mensagem pelo Discord.",
       "send_telegram_message": "Enviar uma mensagem pelo Telegram.",
+      "send_to_whatsapp": "Envia uma mensagem para o seu WhatsApp pelo número do AbacusAI Bot.",
       "send_whatsapp_message": "Enviar uma mensagem pelo WhatsApp.",
       "serve": "Servir uma pasta por http para que uma página web criada possa ser aberta.",
       "session_search": "Search past conversations.",

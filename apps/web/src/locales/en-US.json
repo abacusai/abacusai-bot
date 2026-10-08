@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Send a message on Discord.",
       "send_telegram_message": "Send a message on Telegram.",
+      "send_to_whatsapp": "Send a message or a screenshot to your own WhatsApp, from AbacusAI Bot's number.",
       "send_whatsapp_message": "Send a message on WhatsApp.",
       "serve": "Serve a folder over http so a web page you wrote can be opened.",
       "session_search": "Search past conversations.",

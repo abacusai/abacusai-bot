@@ -139,6 +139,12 @@ export function appConnectResult(
       );
     case "connected": {
       const account = outcome.account != null ? ` as ${outcome.account}` : "";
+      if (outcome.botNumber === true)
+        return host.ok(
+          `${outcome.name} is connected through AbacusAI Bot's own number, which the user linked. send_to_whatsapp ` +
+            "messages the user there (text, and a screenshot or file by its media id); it reaches only them. Do not " +
+            "ask the user to connect anything."
+        );
       if (outcome.kind === "messaging")
         return host.ok(
           `${outcome.name} is connected. Send, list and read with its own tools ` +

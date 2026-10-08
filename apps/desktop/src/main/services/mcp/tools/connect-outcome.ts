@@ -18,7 +18,7 @@ export type ConnectOutcome =
       code: "list";
       entries: ReadonlyArray<{
         connector: Connector;
-        status: { state: string; account?: string };
+        status: { state: string; account?: string; botNumber?: boolean };
       }>;
     }
   | { code: "ambiguous"; asked: string; options: NamedConnector[] }
@@ -29,6 +29,8 @@ export type ConnectOutcome =
       kind: Connector["kind"];
       via?: string;
       account?: string;
+      /** WhatsApp through AbacusAI Bot's own number: send_to_whatsapp reaches the user. */
+      botNumber?: boolean;
     }
   | {
       code: "unavailable";

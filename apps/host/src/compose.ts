@@ -183,6 +183,8 @@ export const composeNodeHost = async () => {
     key: resolveAbacusApiKey,
     userAgent: abacusUserAgent,
   });
+  // App chats see the user's link to AbacusAI Bot's number and can message them there.
+  serviceHost.attachBotNumber(channels);
   const nudgeAgenda = new NudgeAgenda({
     call: channels,
     phoneDir,

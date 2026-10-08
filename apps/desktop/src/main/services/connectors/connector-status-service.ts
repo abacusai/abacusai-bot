@@ -1,7 +1,8 @@
 /**
  * One answer to "is this connector connected?", for every kind, keyed by
  * registry id. Each kind has exactly one source of truth: the platform's
- * listing, the stored credentials, the messaging gateway's live state, the
+ * listing, the stored credentials, the messaging gateway's live state (and,
+ * on the hosted computer, the server's link to AbacusAI Bot's number), the
  * MCP config. This is the only place those are read for that question.
  * The renderer, the environment notice and `connect_connector` all consume
  * the same statuses, so no surface computes "installed" on its own.
@@ -37,6 +38,8 @@ export interface StatusInputs {
   mcpServers: readonly McpServerInfo[];
   /** Each installed server's sign-in, by server id; absent when unlisted. */
   mcpTokens: ReadonlyMap<string, McpTokenState>;
+  /** The user's WhatsApp is linked to AbacusAI Bot's own number (the hosted computer only). */
+  botNumber?: boolean;
 }
 
 const statusOf = (
@@ -67,6 +70,8 @@ const statusOf = (
     case "messaging":
       if (isMessagingPlatformConnected(inputs.messaging, connector.platform))
         return { state: "connected" };
+      if (connector.platform === "whatsapp" && inputs.botNumber === true)
+        return { state: "connected", botNumber: true };
       // Enabled and configured but not live: a broken link, or a shared-bot
       // lane still to be linked. Attached, in other words, but not usable.
       return isMessagingPlatformInstalled(inputs.messaging, connector.platform)
@@ -113,6 +118,8 @@ export interface StatusSources {
   messaging: () => MessagingSnapshot | null;
   mcpServers: () => readonly McpServerInfo[];
   mcpTokens: () => ReadonlyMap<string, McpTokenState>;
+  /** Absent where there is no AbacusAI Bot number (the desktop app). */
+  botNumber?: (options?: { fresh?: boolean }) => Promise<boolean>;
 }
 
 /**
@@ -136,6 +143,7 @@ export class ConnectorStatusService {
       messaging: this.sources.messaging(),
       mcpServers: this.sources.mcpServers(),
       mcpTokens: this.sources.mcpTokens(),
+      botNumber: (await this.sources.botNumber?.(options)) === true,
     });
   }
 }

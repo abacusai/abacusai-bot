@@ -67,7 +67,7 @@ export const catalogPrompt = (): string => {
 /** How a connector reads in a listing for the model, by its status. */
 export const describeForListing = (
   connector: Connector,
-  status: { state: string; account?: string }
+  status: { state: string; account?: string; botNumber?: boolean }
 ): string => {
   const connected = status.state === "connected";
   const account =
@@ -76,9 +76,11 @@ export const describeForListing = (
       : "";
   const how =
     connector.kind === "messaging"
-      ? connected
-        ? "connected: send with its send_<platform>_message tool"
-        : "not connected: ask for it with this tool"
+      ? status.botNumber === true
+        ? "connected through AbacusAI Bot's number: send_to_whatsapp messages the user there"
+        : connected
+          ? "connected: send with its send_<platform>_message tool"
+          : "not connected: ask for it with this tool"
       : connected
         ? `connected${account}${connector.kind === "platform" && connector.via != null ? `: use ${connector.via}` : ""}`
         : "not connected: ask for it with this tool";

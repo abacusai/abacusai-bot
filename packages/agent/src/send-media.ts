@@ -85,6 +85,17 @@ export function declaredMedia(resultText: string): string[] {
     .filter(isMediaId);
 }
 
+/** The fields that carry media to the server's channels API: an image, or a document and its name. */
+export const mediaFields = (
+  media: Extract<ResolvedMedia, { ok: true }>
+): Record<string, string> =>
+  media.kind === "image"
+    ? { image_b64: media.data.toString("base64") }
+    : {
+        document_b64: media.data.toString("base64"),
+        filename: media.filename,
+      };
+
 /** A `send_media` call's input as a request, or why it is refused. */
 export function parseSendMedia(
   input: Record<string, unknown>

@@ -30,6 +30,7 @@ export type ToolHost = Pick<
   | "submitVideoJob"
   | "xSearch"
   | "sendChatMessage"
+  | "sendToWhatsApp"
   | "connectConnectorOutcome"
   | "disconnectConnectorOutcome"
   | "myActivity"
@@ -85,6 +86,8 @@ export interface ToolDefinition {
   hidden?: boolean;
   /** Listed only while this platform's connector runs. */
   platform?: MessagingPlatformId;
+  /** Listed only while the user's WhatsApp is linked to AbacusAI Bot's own number (the hosted computer). */
+  botNumber?: boolean;
   /**
    * Whether the third-party credential it needs is set. Consulted only when
    * listing, so a toolset can be on by default and cost no prompt budget
