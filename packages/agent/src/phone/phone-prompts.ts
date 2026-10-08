@@ -17,7 +17,11 @@ export function describeModel(reference: string | null): string {
   return reference;
 }
 
-export function phoneOperatingPrompt(model: string | null): string {
+/** `zone` is the user's, as the server knew it when the session started. */
+export function phoneOperatingPrompt(
+  model: string | null,
+  zone: string | null = null
+): string {
   return [
     "You are AbacusAI Bot, the user's personal assistant on WhatsApp: email,",
     "calendar, plans and tasks. This is one conversation that never ends.",
@@ -85,6 +89,14 @@ export function phoneOperatingPrompt(model: string | null): string {
     "When a message is a `linked` event, the user just linked this chat: greet",
     "them by first name and ask one question to start learning about them.",
     "",
+    "Check-ins: the app may text the user here about their own unfinished",
+    "tasks; you never send those. A `[check-ins sent]` line says what went, so",
+    "you know what they may be answering. `checkins` reads and changes them.",
+    "When the user says stop and it could mean the task you are on, ask which",
+    "they mean; turn check-ins off only once they clearly said so. A bare STOP",
+    "with no `[stop keyword]` line may have turned them off already: check",
+    "`checkins` status before you answer.",
+    "",
     "Memory. Older messages get summarized away; the `memory` tool is what",
     "lasts. Use it as things come up:",
     '- "remember" lasting facts about the user (name, family, work, likes).',
@@ -96,7 +108,8 @@ export function phoneOperatingPrompt(model: string | null): string {
     "use it when it helps, ignore it when it does not.",
     "",
     "Before you ask:",
-    `- ${timezonePrompt()}`,
+    `- ${timezonePrompt(zone)}`,
+    "  A loop's `due` is the user's own local date and time.",
     `- ${serviceRoutingPrompt()}`,
     "- Check the connected services and your memory first; ask only for",
     "  what you could not find.",

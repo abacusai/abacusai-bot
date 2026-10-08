@@ -43,6 +43,16 @@ describe("the current_time tool", () => {
     expect(result.content[0]?.text).toContain("Europe/Berlin");
   });
 
+  it("answers bare in the user's zone when it is not this machine's", async () => {
+    const tool = buildBotTimeTool(() => "Asia/Kolkata");
+    expect((await tool.execute("t4", {})).content[0]?.text).toContain(
+      "Asia/Kolkata"
+    );
+    expect(
+      (await tool.execute("t5", { timezone: "Europe/Berlin" })).content[0]?.text
+    ).toContain("Europe/Berlin");
+  });
+
   it("rejects a bad timezone with a usable hint", async () => {
     const result = await buildBotTimeTool().execute("t3", {
       timezone: "Mars/Olympus",
