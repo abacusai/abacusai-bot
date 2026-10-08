@@ -55,6 +55,9 @@ const UNKNOWN_ACTION_RE = /action must be one of/i;
 /** The server keeps at most this many items. */
 const MAX_ITEMS = 10;
 
+/** A wait is not checked in about sooner than this after it began. */
+const WAITING_FLOOR_MS = 2 * 60_000;
+
 /** What a paused checkout waits for, by what it paused for. */
 const PAUSE_NEEDS: Record<string, string> = {
   details: "the traveler or contact details",
@@ -80,6 +83,16 @@ export function siteName(site: string): string | null {
   return name != null && /^[a-z][a-z0-9-]*$/.test(name) ? name : null;
 }
 
+/** A payee as the server bound it, or its name alone when it reads as a domain ("Amazon.in"). */
+function payeeName(merchant: string): string | null {
+  const trimmed = merchant.replace(/\s+/g, " ").trim().slice(0, 60);
+  if (trimmed.length === 0) return null;
+  return DOMAIN_LIKE_RE.test(trimmed) ? siteName(trimmed) : trimmed;
+}
+
+/** Anything the server's link check would read as a domain: a word, a dot, two letters. */
+const DOMAIN_LIKE_RE = /[a-z0-9-]\.[a-z]{2,}/i;
+
 /** A total as people write it ("₹5,412"), or null for one that is not a plain number. */
 function money(amount: string, currency: string): string | null {
   if (!/^\d+(\.\d{1,2})?$/.test(amount.trim())) return null;
@@ -103,7 +116,8 @@ function waitSummary(wait: PendingWait): string {
     wait.amount != null && wait.currency != null
       ? money(wait.amount, wait.currency)
       : null;
-  const payee = wait.merchant ?? name;
+  const payee =
+    (wait.merchant != null ? payeeName(wait.merchant) : null) ?? name;
   switch (wait.kind) {
     case "connector":
       return `${(wait.label ?? "A connector").slice(0, 60)} link was sent and is not connected yet.`;
@@ -121,17 +135,17 @@ function waitSummary(wait: PendingWait): string {
 }
 
 /**
- * One wait as an agenda item, `at` when it began: a connector link is
- * `connect` (the server waits 2h); everything else is `waiting`, which the
- * server holds until the bot has been quiet for a while. An approval's page
- * lives about ten minutes, so a later `at` could outlive it.
+ * One wait as an agenda item. A connector link is `connect`, `at` when it
+ * went (the server waits 2h). Everything else is `waiting`, `at` two minutes
+ * after it began at the earliest (a pending approval lives 30 minutes; the
+ * server also waits for the bot to be quiet).
  */
 export function waitItem(wait: PendingWait): NudgeAgendaItem {
   const connect = wait.kind === "connector";
   return {
     item_id: wait.itemId,
     kind: connect ? "connect" : "waiting",
-    at: seconds(wait.since),
+    at: seconds(wait.since + (connect ? 0 : WAITING_FLOOR_MS)),
     expires_at: seconds(wait.expiresAt),
     summary: waitSummary(wait).slice(0, NUDGE_SUMMARY_MAX_CHARS),
   };
@@ -161,6 +175,8 @@ export class NudgeAgenda {
   private unsupported = false;
   /** Whether the server reports check-ins on; null until it said. */
   private enabled: boolean | null = null;
+  /** `checkins language` calls this start that left no language set. */
+  private languageRefusals = 0;
   /** The user's language as their script names it, while none was set. */
   private scriptLang: string | null = null;
   /** A pending post goes even when nothing changed. */
@@ -185,6 +201,7 @@ export class NudgeAgenda {
     this.supported = false;
     this.unsupported = false;
     this.enabled = null;
+    this.languageRefusals = 0;
     this.check = setInterval(
       () => this.schedule(false),
       this.timings.checkEveryMs
@@ -253,11 +270,17 @@ export class NudgeAgenda {
       this.log(`[phone] nudged loops not saved: ${describe(error)}`);
     }
     if (this.supported && phoneLanguage(dir) == null) {
-      notes.push(SET_LANGUAGE_NOTE);
+      if (this.languageRefusals < MAX_LANGUAGE_REFUSALS)
+        notes.push(SET_LANGUAGE_NOTE);
       const fromScript = scriptLanguage(entry.text ?? "");
       if (fromScript != null) this.scriptLang = fromScript;
     }
     return notes;
+  }
+
+  /** The loop called `checkins language`: a call that left none set counts toward giving up the ask. */
+  languageCallEnded(): void {
+    if (phoneLanguage(this.deps.phoneDir) == null) this.languageRefusals += 1;
   }
 
   private schedule(force: boolean): void {
@@ -334,6 +357,9 @@ export class NudgeAgenda {
     }
   }
 }
+
+/** Refused language calls after which a start stops asking: the server will not take one. */
+const MAX_LANGUAGE_REFUSALS = 3;
 
 /** While no language is set, every turn asks for it: the server writes check-ins in no other. */
 const SET_LANGUAGE_NOTE =
