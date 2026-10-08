@@ -9,6 +9,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 
 import { Agent } from "undici";
 
+import { withoutCredentials } from "../sandbox/secrets.js";
 import { resolveSpawn } from "./windows-spawn.js";
 
 export interface McpToolInfo {
@@ -243,7 +244,8 @@ class StdioTransport implements McpTransport {
     // Windows .cmd shims cannot be spawned directly (see windows-spawn.ts).
     // Resolution takes the CHILD's environment: that is the PATH the command
     // resolves against and what cmd.exe expands %NAME% from.
-    const childEnv = { ...process.env, ...env };
+    // The server's own configured env is kept; the app's keys are not inherited.
+    const childEnv = { ...withoutCredentials(process.env), ...env };
     const spec = resolveSpawn(command, args, process.platform, childEnv);
 
     this.child = spawn(spec.file, spec.args, {

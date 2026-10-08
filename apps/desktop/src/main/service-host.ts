@@ -1841,6 +1841,7 @@ export class ServiceHost {
     },
     resolveArtifact: () => this.artifactResolverService.resolveBundledCliPath(),
     resolveAuthEnv: () => buildAgentAuthEnv(),
+    resolveCheckoutToken: () => this.checkoutToken,
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
@@ -4798,8 +4799,6 @@ export class ServiceHost {
       ...(sessionId != null && this.isOwnerSession(sessionId)
         ? { ABACUSAI_BOT_AUDIENCE: "owner" }
         : {}),
-      // Read once by the agent runtime and removed from its environment.
-      ABACUSAI_BOT_CHECKOUT_TOKEN: this.checkoutToken,
       // Routine chats compact early; see ROUTINE_CONTEXT_CAP_TOKENS.
       ...(sessionId != null &&
       this.agentSessionManagerService.isRoutineSession(sessionId)

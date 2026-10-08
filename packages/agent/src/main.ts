@@ -19,6 +19,7 @@ import { helloEvent, serialize } from "./agui/event.js";
 import { AguiHost } from "./agui/host.js";
 import { newIncarnation } from "./agui/ids.js";
 import { useBundledTools } from "./bundled-tools.js";
+import { receiveCheckoutToken } from "./checkout-run.js";
 import { applyStoredApiKeys } from "./config.js";
 import { followGithubToken } from "./github-token.js";
 import { sandboxAvailability } from "./sandbox/index.js";
@@ -96,6 +97,10 @@ async function main(): Promise<void> {
   if (threadId == null || threadId.length === 0) {
     throw new Error("--wire agui needs --thread-id");
   }
+
+  // Before the session exists; the descriptor is closed once read.
+  const tokenFd = Number(readFlag(argv, "--checkout-token-fd"));
+  if (Number.isInteger(tokenFd) && tokenFd > 2) receiveCheckoutToken(tokenFd);
 
   const compatFlag = readFlag(argv, "--compat-fd");
   const compatFd = compatFlag != null ? Number(compatFlag) : undefined;

@@ -7,6 +7,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { writeFileAtomicSync } from "./atomic-file.js";
+
 export interface CustomProviderModel {
   id: string;
   name?: string;
@@ -229,12 +231,9 @@ export function loadConfig(): AbacusBotConfig {
 }
 
 export function saveConfig(config: AbacusBotConfig): void {
-  fs.mkdirSync(abacusBotDir(), { recursive: true });
-  fs.writeFileSync(
-    configPath(),
-    `${JSON.stringify(config, null, 2)}\n`,
-    "utf8"
-  );
+  // It holds API keys: the folder is the owner's alone, and so is the file.
+  fs.mkdirSync(abacusBotDir(), { recursive: true, mode: 0o700 });
+  writeFileAtomicSync(configPath(), `${JSON.stringify(config, null, 2)}\n`);
 }
 
 export function accountPath(): string {

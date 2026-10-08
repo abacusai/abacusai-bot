@@ -3,12 +3,9 @@
  * the memory/time/reaction tools and bash, and the daily-notes memory with its
  * pre-compaction flush and daily consolidation into MEMORY.md.
  */
-import {
-  createBashToolDefinition,
-  createLocalBashOperations,
-} from "@earendil-works/pi-coding-agent";
+import { createBashToolDefinition } from "@earendil-works/pi-coding-agent";
 
-import { backendOperations } from "../backends.js";
+import { backendOperations, localBashOperations } from "../backends.js";
 import { withBackgroundOption } from "../background-bash.js";
 import type { ForeverProfile } from "../forever/profile.js";
 import { buildOwnerTools } from "../owner-tools.js";
@@ -56,7 +53,7 @@ const CONSOLIDATE_EVERY_MS = 24 * 60 * 60_000;
  */
 export function botBashTool(
   cwd: string,
-  operations = backendOperations() ?? createLocalBashOperations()
+  operations = backendOperations() ?? localBashOperations()
 ): ReturnType<typeof createBashToolDefinition> {
   return withBackgroundOption(
     createBashToolDefinition(cwd, { operations }) as never,

@@ -269,7 +269,7 @@ describe("deciding whether to replace pi's own local shell", () => {
     }
   );
 
-  it("gives pi's bash tool the same answer the operations gave", async () => {
+  it("always gives a bash tool, so pi's built-in never runs with this process's keys", async () => {
     process.env.ABACUSAI_BOT_EXEC_BACKEND = "local";
     onPlatform("darwin");
     const { confinedBashTool } = await load();
@@ -277,7 +277,7 @@ describe("deciding whether to replace pi's own local shell", () => {
     expect(confinedBashTool("/work/project")).not.toBeNull();
 
     process.env.ABACUSAI_BOT_SANDBOX = "off";
-    expect(confinedBashTool("/work/project")).toBeNull();
+    expect(confinedBashTool("/work/project")).not.toBeNull();
   });
 });
 
@@ -378,6 +378,21 @@ describe("running a command in a container", () => {
 
     expect(env.FOO).toBe("bar");
     expect(env.PATH).toBe(process.env.PATH);
+  });
+
+  it("never hands the container the app's keys", async () => {
+    const operations = await dockerOperations();
+    const running = exec(operations, "ls", "/work", {
+      env: { FOO: "bar", ABACUS_API_KEY: "k", OPENAI_API_KEY: "o" },
+    });
+    child.finish(0);
+    await running;
+
+    const { env } = lastSpawn().options as { env: Record<string, string> };
+
+    expect(env.FOO).toBe("bar");
+    expect(env.ABACUS_API_KEY).toBeUndefined();
+    expect(env.OPENAI_API_KEY).toBeUndefined();
   });
 
   it("inherits the environment when the caller supplied none", async () => {
@@ -516,6 +531,30 @@ describe("running a command on this machine", () => {
       ...SHELL_ENV,
       NODE_USE_ENV_PROXY: "1",
     });
+  });
+
+  it("drops the app's credentials and keeps the GitHub token", async () => {
+    onPlatform("darwin");
+    const operations = await localOperations();
+
+    const running = exec(operations, "ls", "/work", {
+      env: {
+        PATH: "/caller/bin",
+        ABACUS_API_KEY: "k",
+        ABACUSAI_BOT_CHECKOUT_TOKEN: "c",
+        ANTHROPIC_API_KEY: "a",
+        GH_TOKEN: "g",
+      },
+    });
+    child.finish(0);
+    await running;
+
+    const { env } = lastSpawn().options as { env: Record<string, string> };
+
+    expect(env.ABACUS_API_KEY).toBeUndefined();
+    expect(env.ABACUSAI_BOT_CHECKOUT_TOKEN).toBeUndefined();
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.GH_TOKEN).toBe("g");
   });
 
   it("keeps the caller's PATH in front of the shell's, and reaches both", async () => {

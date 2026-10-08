@@ -16,9 +16,22 @@ import {
   type PermissionRequest,
   type ToolRequest,
 } from "./protocol.js";
-import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
+import {
+  isAppSecretPath,
+  isWithin,
+  namedSecretPaths,
+} from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
+
+/** File tools that write where their path points. */
+const WRITE_TOOLS_LIST = [
+  "write",
+  "edit",
+  "batch_edit",
+  "notebook_edit",
+  "ast_edit",
+];
 
 /** Tools that change something on disk or run code. */
 const MUTATING_TOOLS = new Set([
@@ -139,8 +152,49 @@ export function isMutatingCall(tool: ToolRequest): boolean {
   return isMutatingTool(tool.name);
 }
 
+/** Tools that open a path the model names, by pi's names and the desktop's. */
+const PATH_TOOLS = new Set([
+  "read",
+  "batch_file_read",
+  "grep",
+  "find",
+  "glob",
+  "ls",
+  "code_map",
+  ...WRITE_TOOLS_LIST,
+]);
+
+/**
+ * Why a file tool may not open what it names, in any mode: the app's own home
+ * (keys, sign-in state, other profiles) and process environments hold the
+ * credentials this process runs on. Null when every path is fine.
+ */
+export function privatePathRefusal(
+  tool: { name: string; input: Record<string, unknown> },
+  cwd: string
+): string | null {
+  if (!PATH_TOOLS.has(tool.name)) return null;
+
+  const named = Array.isArray(tool.input.paths)
+    ? (tool.input.paths as unknown[]).map(String)
+    : [String(tool.input.path ?? tool.input.notebookPath ?? ".")];
+
+  for (const candidate of named) {
+    const lexical = path.resolve(cwd, candidate);
+    const real = realPathOf(lexical);
+    if (isAppSecretPath(lexical) || (real !== null && isAppSecretPath(real)))
+      return `${candidate} is the app's private storage or a process environment, which file tools never open.`;
+  }
+
+  return null;
+}
+
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
+
+  // Before the mode: Full access does not reach the app's own keys.
+  const refusal = privatePathRefusal(tool, options.cwd);
+  if (refusal != null) return { kind: "refuse", reason: refusal };
 
   // Full access means exactly that: no prompts and no sandbox.
   if (mode === AgentMode.Yolo) return { kind: "allow" };
@@ -286,13 +340,7 @@ function gateWebFetch(tool: ToolRequest, options: GateOptions): Gate {
  * through, one outside asks in every mode but Yolo, as the
  * `write_outside_directory` / `edit_outside_directory` request types.
  */
-const WRITE_TOOLS = new Set([
-  "write",
-  "edit",
-  "batch_edit",
-  "notebook_edit",
-  "ast_edit",
-]);
+const WRITE_TOOLS = new Set(WRITE_TOOLS_LIST);
 
 /** Where a file tool's path lands, resolved for the card and the check. */
 function writeTarget(

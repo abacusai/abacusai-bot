@@ -13,6 +13,7 @@ import {
   posixShellEnv,
   type PosixShell,
 } from "./posix-shell-install.js";
+import { withoutCredentials } from "./sandbox/secrets.js";
 
 export {
   BUSYBOX_LINKED_APPLETS,
@@ -79,7 +80,10 @@ export function posixShellOperations(
           throw new Error("Invalid timeout");
         const child = spawn(shell.sh, [...args, "-c", command], {
           cwd,
-          env: posixShellEnv(options.env ?? process.env, shell),
+          env: posixShellEnv(
+            withoutCredentials(options.env ?? process.env),
+            shell
+          ),
           stdio: ["ignore", "pipe", "pipe"],
           windowsHide: true,
         });
@@ -129,7 +133,10 @@ export function posixShellOperations(
     exec: (command, cwd, options) =>
       local.exec(command, cwd, {
         ...options,
-        env: posixShellEnv(options.env ?? process.env, shell),
+        env: posixShellEnv(
+          withoutCredentials(options.env ?? process.env),
+          shell
+        ),
       }),
   };
 }

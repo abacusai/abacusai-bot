@@ -16,6 +16,7 @@ import {
   isToolCallEventType,
 } from "@earendil-works/pi-coding-agent";
 
+import { privatePathRefusal } from "../permissions.js";
 import { isInsideDirectory, realPathOf } from "../workspace-path.js";
 
 /**
@@ -294,6 +295,16 @@ export default function (pi: ExtensionAPI) {
     isInsideDirectory(abs, cwd);
 
   pi.on("tool_call", async (event, ctx) => {
+    // Here too: sub-agents run without the permission gate.
+    const refusal = privatePathRefusal(
+      {
+        name: event.toolName,
+        input: (event.input ?? {}) as Record<string, unknown>,
+      },
+      ctx.cwd
+    );
+    if (refusal != null) return { block: true, reason: refusal };
+
     if (isToolCallEventType("read", event)) {
       knownFiles.add(path.resolve(ctx.cwd, event.input.path));
       return;

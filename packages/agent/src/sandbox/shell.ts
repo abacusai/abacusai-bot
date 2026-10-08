@@ -14,6 +14,7 @@ import * as path from "node:path";
 
 import { mergePath } from "../merge-path.js";
 import { posixShell } from "../posix-shell.js";
+import { withoutCredentials } from "./secrets.js";
 
 // Re-exported where it has always been imported from; it lives in its own
 // module now because an entry point that must not reach pi needs it too.
@@ -170,6 +171,7 @@ export async function runFallbackShell(
   return new Promise((resolve) => {
     const child = spawn(shell.file, shell.args, {
       cwd,
+      env: withoutCredentials(process.env),
       stdio: ["ignore", "pipe", "pipe"],
       ...(shell.windowsVerbatimArguments === true
         ? { windowsVerbatimArguments: true }

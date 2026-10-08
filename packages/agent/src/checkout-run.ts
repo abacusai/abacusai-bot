@@ -5,6 +5,7 @@
  * it through `browser_checkout`, a tool no model is offered, and keeps the
  * last answer for wording the result. Nothing here decides a stage.
  */
+import * as fs from "node:fs";
 
 /** Keep in step with CHECKOUT_STATE_PREFIX in the desktop's vault/checkout-tools.ts. */
 export const CHECKOUT_STATE_PREFIX = "checkout-state: ";
@@ -104,28 +105,59 @@ export type HostCheckoutCall = (
   args: Record<string, unknown>
 ) => Promise<{ text: string; isError: boolean } | null>;
 
-const CHECKOUT_TOKEN_ENV = "ABACUSAI_BOT_CHECKOUT_TOKEN";
-let checkoutToken: string | null | undefined;
+let checkoutToken: string | null = null;
+
+/** How long the desktop gets to write the token before the agent goes on without one. */
+const TOKEN_READ_DEADLINE_MS = 5_000;
+
+const PAUSE = new Int32Array(new SharedArrayBuffer(4));
 
 /**
- * The capability the desktop handed this process for `browser_checkout`.
- * Taken out of the environment on first read, so no shell the agent starts
- * inherits it.
+ * Take the capability for `browser_checkout` from the descriptor the desktop
+ * wrote it to, then close it. A descriptor rather than the environment, which
+ * any process of this user can read back from /proc. Without one, or on any
+ * failure, the agent simply has no checkout.
  */
-function takeCheckoutToken(): string | null {
-  if (checkoutToken === undefined) {
-    const value = (process.env[CHECKOUT_TOKEN_ENV] ?? "").trim();
+export function receiveCheckoutToken(fd: number, io: typeof fs = fs): void {
+  try {
+    const stat = io.fstatSync(fd);
+    // An inherited regular file or tty is not what the desktop passes.
+    if (process.platform !== "win32" && !stat.isFIFO() && !stat.isSocket())
+      return;
+    const chunks: Buffer[] = [];
+    const buffer = Buffer.alloc(256);
+    const deadline = Date.now() + TOKEN_READ_DEADLINE_MS;
+    for (;;) {
+      let read: number;
+      try {
+        read = io.readSync(fd, buffer, 0, buffer.length, null);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EAGAIN") throw error;
+        if (Date.now() > deadline) return;
+        Atomics.wait(PAUSE, 0, 0, 10);
+        continue;
+      }
+      if (read === 0) break;
+      chunks.push(Buffer.from(buffer.subarray(0, read)));
+    }
+    const value = Buffer.concat(chunks).toString("utf8").trim();
     checkoutToken = value.length > 0 ? value : null;
-    delete process.env[CHECKOUT_TOKEN_ENV];
+  } catch {
+    checkoutToken = null;
+  } finally {
+    try {
+      io.closeSync(fd);
+    } catch {
+      // Already closed, or never open.
+    }
   }
-  return checkoutToken;
 }
 
 /** `call` with this process's checkout capability on every request; null without one. */
 export function withCheckoutToken(
   call: HostCheckoutCall
 ): HostCheckoutCall | null {
-  const token = takeCheckoutToken();
+  const token = checkoutToken;
   return token == null ? null : (args) => call({ ...args, token });
 }
 

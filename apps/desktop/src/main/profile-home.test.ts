@@ -186,3 +186,14 @@ describe("account profile ownership", () => {
     expect(process.env.ABACUSAI_BOT_HOME).toBe(sandbox);
   });
 });
+
+describe.skipIf(process.platform === "win32")("the home's mode", () => {
+  it("tightens the base and the active profile to the owner alone", async () => {
+    fs.chmodSync(sandbox, 0o755);
+    const { initProfileHome } = await import("./profile-home");
+
+    initProfileHome();
+
+    expect(fs.statSync(sandbox).mode & 0o777).toBe(0o700);
+  });
+});

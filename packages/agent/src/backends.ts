@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 
 import {
   createBashToolDefinition,
+  createLocalBashOperations,
   type BashOperations,
 } from "@earendil-works/pi-coding-agent";
 
@@ -35,6 +36,7 @@ import {
   type SandboxApprovals,
 } from "./sandbox/index.js";
 import { classifyCommand } from "./sandbox/intent.js";
+import { withoutCredentials } from "./sandbox/secrets.js";
 import {
   fallbackShell,
   loginEnvironment,
@@ -138,7 +140,7 @@ function dockerOperations(image: string): BashOperations {
                   ...(process.env.PATH != null
                     ? { PATH: process.env.PATH }
                     : {}),
-                  ...options.env,
+                  ...withoutCredentials(options.env),
                 },
               }
             : {}
@@ -252,11 +254,13 @@ function localSandboxedOperations(
 
     // The profile is sourced once, in `loginEnvironment` (sandbox/shell.ts);
     // inheriting this process's env would mean the launchd PATH.
+    // The app's own keys stay in this process (sandbox/secrets.ts).
     const shell = loginEnvironment();
-    const inherited =
+    const inherited = withoutCredentials(
       options.env != null
         ? withMergedPath(options.env, shell.PATH ?? shell.Path)
-        : shell;
+        : shell
+    );
     // Node's own fetch ignores the proxy variables unless told; without this a
     // Node tool's request goes direct, is refused, and no card can be raised.
     const childEnv =
@@ -517,20 +521,34 @@ export function backendOperations(
 }
 
 /**
- * pi's bash tool rebuilt to run through this backend, or null when pi's own is
- * right. Every session that gives a model a shell must call this, sub-agents
- * included, and add `'bash'` to `excludeTools` when it returns a tool, or the
- * unconfined built-in stays available. No `background` option: a sub-agent
- * loads only guardrails, so it could neither hear about nor read the job.
+ * pi's local operations with the app's credentials kept out of the child's
+ * environment: what runs wherever no backend applies.
+ */
+export function localBashOperations(): BashOperations {
+  const local = createLocalBashOperations();
+
+  return {
+    exec: (command, cwd, options) =>
+      local.exec(command, cwd, {
+        ...options,
+        env: withoutCredentials(options.env ?? process.env),
+      }),
+  };
+}
+
+/**
+ * pi's bash tool rebuilt to run through this backend, or through
+ * {@link localBashOperations} when there is none; pi's built-in would hand the
+ * shell this process's keys. Every session that gives a model a shell must use
+ * it, sub-agents included. No `background` option: a sub-agent loads only
+ * guardrails, so it could neither hear about nor read the job.
  */
 export function confinedBashTool(
   cwd: string
-): ReturnType<typeof createBashToolDefinition> | null {
-  const operations = backendOperations();
-
-  return operations == null
-    ? null
-    : createBashToolDefinition(cwd, { operations });
+): ReturnType<typeof createBashToolDefinition> {
+  return createBashToolDefinition(cwd, {
+    operations: backendOperations() ?? localBashOperations(),
+  });
 }
 
 /**

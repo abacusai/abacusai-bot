@@ -332,7 +332,7 @@ export async function runDesignTask(
       resourceLoader,
       settingsManager: context.settingsManager,
       customTools: [
-        ...(confinedBash != null ? [confinedBash] : []),
+        confinedBash,
         ...buildTools(
           done,
           outputDir,
@@ -343,11 +343,7 @@ export async function runDesignTask(
       ] as never,
       // Capabilities choices apply here too, or the shell comes back off-
       // switch.
-      excludeTools: [
-        ...EXCLUDED_TOOLS,
-        ...excludedTools(),
-        ...(confinedBash != null ? ["bash"] : []),
-      ],
+      excludeTools: [...EXCLUDED_TOOLS, ...excludedTools(), "bash"],
       ...(context.model != null ? { model: context.model as never } : {}),
     });
 

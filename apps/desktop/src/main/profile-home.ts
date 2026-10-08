@@ -65,8 +65,22 @@ const readRegistry = (): ProfileRegistry => {
   }
 };
 
+/**
+ * Keys, sign-in state and transcripts live under these folders: the owner's
+ * alone (0700), created that way and tightened if an older build made them
+ * wider. Best effort: Windows has no POSIX modes.
+ */
+const ensurePrivateDir = (dir: string): void => {
+  try {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.chmodSync(dir, 0o700);
+  } catch {
+    // Read-only or foreign filesystems; the stores report their own errors.
+  }
+};
+
 const writeRegistry = (registry: ProfileRegistry): void => {
-  fs.mkdirSync(BASE, { recursive: true });
+  ensurePrivateDir(BASE);
   const target = registryPath();
   const temporary = `${target}.tmp-${process.pid}`;
   try {
@@ -99,6 +113,8 @@ export const initProfileHome = (): void => {
   process.env.ABACUSAI_BOT_BASE = BASE;
   // Unconditional: a relaunch inherits the previous process's mutated value.
   process.env.ABACUSAI_BOT_HOME = activeHome();
+  ensurePrivateDir(BASE);
+  ensurePrivateDir(process.env.ABACUSAI_BOT_HOME);
 };
 
 const slug = (value: string): string =>
@@ -194,7 +210,7 @@ export const activateProfile = (
   const current = process.env.ABACUSAI_BOT_HOME || BASE;
   if (path.resolve(current) === target) return false;
 
-  fs.mkdirSync(target, { recursive: true });
+  ensurePrivateDir(target);
   if (seedAbacusKey != null && seedAbacusKey.trim().length > 0)
     seedApiKey(target, seedAbacusKey.trim());
 

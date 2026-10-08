@@ -2,7 +2,6 @@ import * as path from "node:path";
 
 import {
   createAgentSession,
-  createLocalBashOperations,
   DefaultResourceLoader,
   type AgentSession,
   type AgentSessionEvent,
@@ -16,7 +15,7 @@ import {
 import { sponsoredRunActive } from "./abacus-endpoint.js";
 import { Allowances } from "./allowances.js";
 import { allowedPathsFromEnv } from "./allowed-paths.js";
-import { backendOperations } from "./backends.js";
+import { backendOperations, localBashOperations } from "./backends.js";
 import { notifyConversationQueueCleared } from "./background-processes.js";
 /**
  * The bridge: one pi `AgentSession`, presented as the desktop's event stream.
@@ -1040,8 +1039,7 @@ export class AbacusBotSession {
         // Background runs go through the same operations as the foreground
         // ones, so `background: true` cannot become a way around the sandbox.
         operations:
-          backendOperations(this.sandboxApprovals) ??
-          createLocalBashOperations(),
+          backendOperations(this.sandboxApprovals) ?? localBashOperations(),
         // A getter: refreshMcp swaps `this.mcp`, and captured routes would
         // call closed clients forever.
         mcp: () => this.mcp,

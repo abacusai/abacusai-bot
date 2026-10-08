@@ -134,7 +134,7 @@ export async function runDelegatedTask(
       // The no-nesting rule plus the user's Capabilities choices, which must
       // reach sub-agents or the shell comes back off-switch.
       excludeTools: ["delegate_task", ...excludedTools()],
-      customTools: (confinedBash != null ? [confinedBash] : []) as never,
+      customTools: [confinedBash] as never,
       ...(context.model != null ? { model: context.model as never } : {}),
     });
 

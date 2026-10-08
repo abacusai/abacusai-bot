@@ -142,4 +142,16 @@ describe("restrict", () => {
       expect(fs.statSync(target()).mode & 0o777).toBe(0o600);
     }
   );
+
+  it.skipIf(process.platform === "win32")(
+    "is the default, and the temp file is created that way",
+    () => {
+      const write = vi.spyOn(fs, "writeFileSync");
+      writeFileAtomicSync(target(), "secret");
+
+      expect(write.mock.calls[0]?.[2]).toMatchObject({ mode: 0o600 });
+      expect(fs.statSync(target()).mode & 0o777).toBe(0o600);
+      write.mockRestore();
+    }
+  );
 });

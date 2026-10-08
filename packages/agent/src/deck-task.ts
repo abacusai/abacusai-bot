@@ -442,16 +442,12 @@ export async function runDeckTask(
       resourceLoader,
       settingsManager: context.settingsManager,
       customTools: [
-        ...(confinedBash != null ? [confinedBash] : []),
+        confinedBash,
         ...buildTools(draft, outputPath, wantedSlides, context.hostServices),
       ] as never,
       // Capabilities choices apply here too, or the shell comes back off-
       // switch.
-      excludeTools: [
-        ...EXCLUDED_TOOLS,
-        ...excludedTools(),
-        ...(confinedBash != null ? ["bash"] : []),
-      ],
+      excludeTools: [...EXCLUDED_TOOLS, ...excludedTools(), "bash"],
       ...(context.model != null ? { model: context.model as never } : {}),
     });
 

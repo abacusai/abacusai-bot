@@ -11,7 +11,10 @@ import fsPromises from "fs/promises";
 import path from "path";
 
 export interface AtomicWriteOptions {
-  /** 0600, applied to the temp file too so it is never briefly world-readable. */
+  /**
+   * 0600, from the temp file's creation on, so it is never briefly readable by
+   * others. On by default: every store here is the app's own private state.
+   */
   restrict?: boolean;
   /**
    * Skip the write when the file already holds these bytes, sparing readers a
@@ -64,17 +67,22 @@ export function writeFileAtomicSync(
   contents: string,
   options: AtomicWriteOptions = {}
 ): void {
+  const restrict = options.restrict !== false;
   if (options.skipIfUnchanged === true && unchanged(filePath, contents)) {
     // Still chmod: the bytes may match a file written by something else.
-    if (options.restrict === true) restrictToOwner(filePath);
+    if (restrict) restrictToOwner(filePath);
     return;
   }
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temp = tempPathFor(filePath);
   try {
-    fs.writeFileSync(temp, contents, "utf-8");
-    if (options.restrict === true) restrictToOwner(temp);
+    fs.writeFileSync(temp, contents, {
+      encoding: "utf-8",
+      ...(restrict ? { mode: 0o600 } : {}),
+    });
+    // The mode above is filtered by the umask; this is not.
+    if (restrict) restrictToOwner(temp);
 
     for (let attempt = 1; attempt <= RENAME_ATTEMPTS; attempt++) {
       try {
@@ -86,7 +94,7 @@ export function writeFileAtomicSync(
       }
     }
     // A rename onto an existing file keeps that file's mode, not the temp's.
-    if (options.restrict === true) restrictToOwner(filePath);
+    if (restrict) restrictToOwner(filePath);
   } catch (err) {
     try {
       fs.rmSync(temp, { force: true });
@@ -103,12 +111,13 @@ export async function writeFileAtomic(
   contents: string,
   options: AtomicWriteOptions = {}
 ): Promise<void> {
+  const restrict = options.restrict !== false;
   await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
   const temp = tempPathFor(filePath);
   try {
     await fsPromises.writeFile(temp, contents, {
       encoding: "utf-8",
-      ...(options.restrict === true ? { mode: 0o600 } : {}),
+      ...(restrict ? { mode: 0o600 } : {}),
     });
 
     for (let attempt = 1; attempt <= RENAME_ATTEMPTS; attempt++) {
@@ -122,7 +131,7 @@ export async function writeFileAtomic(
         );
       }
     }
-    if (options.restrict === true) restrictToOwner(filePath);
+    if (restrict) restrictToOwner(filePath);
   } catch (err) {
     await fsPromises.rm(temp, { force: true }).catch(() => {});
     throw err;

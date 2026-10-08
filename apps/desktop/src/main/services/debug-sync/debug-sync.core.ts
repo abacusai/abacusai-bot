@@ -7,6 +7,7 @@
  */
 
 import type { ClientEnvironment } from "../diagnostics/client-environment";
+import { scrubValue } from "../diagnostics/scrub";
 import type { StoredTranscript } from "../session/transcript-service";
 
 export interface SyncClientMeta {
@@ -138,7 +139,8 @@ export function buildSyncPayload(
   const events: SyncEvent[] = [];
   for (const { key, segment } of unsyncedSegments(transcript, state)) {
     sequences[key] = next;
-    events.push({ event_sequence_number: next, segment });
+    // Keys a tool printed and the user's name never leave the machine.
+    events.push({ event_sequence_number: next, segment: scrubValue(segment) });
     next += 1;
   }
   return {

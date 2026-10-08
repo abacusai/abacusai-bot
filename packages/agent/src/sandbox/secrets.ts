@@ -39,13 +39,98 @@ function appHome(env: NodeJS.ProcessEnv, home: string): string {
   return configured.length > 0 ? configured : path.join(home, ".abacusai-bot");
 }
 
+/**
+ * The install-wide folder holding every account's profile; the active home is
+ * it or one of its `profiles/<key>` folders.
+ */
+function appBase(env: NodeJS.ProcessEnv, home: string): string {
+  const configured = (env.ABACUSAI_BOT_BASE ?? "").trim();
+  if (configured.length > 0) return configured;
+  const fallback = path.join(home, ".abacusai-bot");
+
+  return isWithin(appHome(env, home), fallback) ? fallback : appHome(env, home);
+}
+
+/**
+ * The only folders of the app's own home a command or file tool may read:
+ * workspaces, and the scratch and output folders the model works in. The rest
+ * (keys, sign-in state, MCP auth, transcripts, other profiles) stays hidden.
+ */
+export const APP_HOME_READABLE: readonly string[] = [
+  "session-home",
+  "bot-home",
+  "worktrees",
+  "routines",
+  "bots",
+  "skills",
+  "spill",
+  "generated",
+  "temp",
+  "messaging-media",
+  "python",
+];
+
+/**
+ * Every child of the app's base folder except the readable ones of the active
+ * profile, named one by one: a backend's deny wins over its allows, so the
+ * folder itself cannot be denied with workspaces carved back out of it.
+ */
+function appHomeEntries(
+  env: NodeJS.ProcessEnv,
+  home: string,
+  list: (dir: string) => string[],
+  isDirectory: (candidate: string) => boolean
+): SecretEntry[] {
+  const active = path.resolve(appHome(env, home));
+  const base = path.resolve(appBase(env, home));
+  const entries: SecretEntry[] = [];
+
+  const walk = (dir: string): void => {
+    for (const name of list(dir)) {
+      const child = path.join(dir, name);
+      if (dir === active && APP_HOME_READABLE.includes(name)) continue;
+      // Down the path to the active profile; everything beside it is hidden.
+      if (isWithin(active, child) && isDirectory(child)) walk(child);
+      else entries.push({ path: child });
+    }
+  };
+
+  if (isWithin(active, base)) {
+    walk(base);
+  } else {
+    entries.push({ path: base });
+    walk(active);
+  }
+
+  return entries;
+}
+
+/**
+ * Whether a file tool must refuse this (already real) path in every mode: the
+ * app's own home outside its readable folders, and any process's environment.
+ */
+export function isAppSecretPath(
+  real: string,
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = os.homedir()
+): boolean {
+  if (/^\/proc\/[^/]+(\/task\/[^/]+)?\/environ$/.test(real)) return true;
+
+  const active = canonical(appHome(env, home));
+  const base = canonical(appBase(env, home));
+  if (!isWithin(real, base) && !isWithin(real, active)) return false;
+
+  return !APP_HOME_READABLE.some((name) =>
+    isWithin(real, path.join(active, name))
+  );
+}
+
 export function secretEntries(
   home: string,
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env
 ): SecretEntry[] {
   const at = (...parts: string[]): string => path.join(home, ...parts);
-  const app = appHome(env, home);
 
   const entries: SecretEntry[] = [
     // Private keys. Config, known hosts and public keys stay readable so ssh
@@ -82,15 +167,6 @@ export function secretEntries(
     { path: at(".docker", "config.json"), prompt: true },
     { path: at(".netrc"), prompt: true },
     { path: at(".pypirc"), prompt: true },
-    // This app's own settings hold provider API keys, and the Electron
-    // partition holds the in-app browser's cookies.
-    { path: path.join(app, "config.json") },
-    { path: path.join(app, "account.json") },
-    { path: path.join(app, "messaging.json") },
-    { path: path.join(app, "mcp-code.json") },
-    { path: path.join(app, "electron") },
-    // Saved travelers: passport numbers the model is never shown.
-    { path: path.join(app, "memories", "travelers.json") },
   ];
 
   if (platform === "win32") {
@@ -219,7 +295,12 @@ export function resolveSecretPaths(options: {
   const allowed: string[] = [];
   const promptable: string[] = [];
 
-  for (const entry of secretEntries(home, options.platform, options.env)) {
+  const entries = [
+    ...secretEntries(home, options.platform, options.env),
+    ...appHomeEntries(options.env ?? process.env, home, list, isDirectory),
+  ];
+
+  for (const entry of entries) {
     if (!exists(entry.path)) continue;
 
     const resolved = canonical(entry.path);
@@ -316,4 +397,43 @@ export function mentionedSecretPaths(
   promptable: readonly string[]
 ): string[] {
   return promptable.filter((store) => output.includes(store));
+}
+
+/**
+ * Credentials the app hands its agent process, dropped from every child the
+ * agent starts: shells, background jobs, MCP servers. GH_TOKEN stays, since it
+ * is the GitHub connector's token and the user expects git and gh to use it.
+ */
+export const CREDENTIAL_ENV_VARS: readonly string[] = [
+  "ABACUS_API_KEY",
+  "ABACUSAI_BOT_CHECKOUT_TOKEN",
+  "AI_GATEWAY_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "BASETEN_API_KEY",
+  "CEREBRAS_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "FIREWORKS_API_KEY",
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "HF_TOKEN",
+  "MINIMAX_API_KEY",
+  "MISTRAL_API_KEY",
+  "MOONSHOT_API_KEY",
+  "NVIDIA_API_KEY",
+  "OPENAI_API_KEY",
+  "OPENCODE_API_KEY",
+  "OPENROUTER_API_KEY",
+  "TOGETHER_API_KEY",
+  "XAI_API_KEY",
+  "ZAI_API_KEY",
+];
+
+/** `env` without the app's credentials; names compared case-blind for Windows. */
+export function withoutCredentials(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(env)) {
+    if (!CREDENTIAL_ENV_VARS.includes(name.toUpperCase())) out[name] = value;
+  }
+
+  return out;
 }

@@ -83,3 +83,27 @@ describe("uploading a transcript that is rewritten in place", () => {
     ]);
   });
 });
+
+describe("what an upload carries", () => {
+  it("scrubs keys out of every segment's text, keys and shape untouched", () => {
+    const current: StoredTranscript = {
+      version: 1,
+      sessionId: "sess",
+      updatedAt: "",
+      segments: [
+        {
+          id: "tool",
+          type: "tool",
+          output:
+            "ABACUS_API_KEY=s2_0123456789abcdef0123 and sk-proj-abcdefghij",
+        } as never,
+      ],
+    };
+    const { payload } = buildSyncPayload(current, meta, emptySyncState());
+    const segment = payload.events[0]!.segment as Record<string, string>;
+
+    expect(Object.keys(segment)).toEqual(["id", "type", "output"]);
+    expect(segment.output).not.toContain("s2_0123456789abcdef0123");
+    expect(segment.output).not.toContain("sk-proj-abcdefghij");
+  });
+});

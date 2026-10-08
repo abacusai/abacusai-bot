@@ -28,7 +28,10 @@ const DYING_SCRIPT =
 
 let workspace: string | null = null;
 
-const service = (script = IDLE_SCRIPT): AgentManagerService => {
+const service = (
+  script = IDLE_SCRIPT,
+  checkoutToken: string | null = null
+): AgentManagerService => {
   workspace = fs.mkdtempSync(path.join(os.tmpdir(), "cli-manager-"));
 
   return new AgentManagerService({
@@ -39,6 +42,7 @@ const service = (script = IDLE_SCRIPT): AgentManagerService => {
       agentRoot: workspace ?? "",
     }),
     resolveAuthEnv: () => ({}),
+    resolveCheckoutToken: () => checkoutToken,
     resolveAdditionalConfigEnv: async () => ({}),
     emitStateUpdated: () => {},
     emitNdjson: () => {},
@@ -51,6 +55,19 @@ const service = (script = IDLE_SCRIPT): AgentManagerService => {
     runHostService: async () => null,
   });
 };
+
+/** Writes what it received of the checkout token to out.json, then idles. */
+const TOKEN_SCRIPT = `
+const fs = require("fs");
+const at = process.argv.indexOf("--checkout-token-fd");
+const fd = at >= 0 ? Number(process.argv[at + 1]) : null;
+fs.writeFileSync("out.json", JSON.stringify({
+  fd,
+  token: fd == null ? null : fs.readFileSync(fd, "utf8"),
+  env: process.env.ABACUSAI_BOT_CHECKOUT_TOKEN ?? null,
+}));
+setInterval(() => {}, 1000);
+`;
 
 afterEach(() => {
   if (workspace != null) fs.rmSync(workspace, { recursive: true, force: true });
@@ -328,4 +345,29 @@ describe("a command on its way to the agent", () => {
 
     expect(serializeCommand(command)).toBe(JSON.stringify(command));
   });
+});
+
+describe("the checkout token", () => {
+  it("reaches the agent on its own descriptor, never in the environment", async () => {
+    const manager = service(TOKEN_SCRIPT, "cap-token");
+    try {
+      const started = await manager.startSession({
+        workspaceId: "workspace-1",
+        sessionId: "session-1",
+      });
+      expect(started.success).toBe(true);
+      const out = path.join(workspace!, "out.json");
+      await vi.waitFor(() => expect(fs.existsSync(out)).toBe(true), {
+        timeout: 10_000,
+      });
+
+      expect(JSON.parse(fs.readFileSync(out, "utf8"))).toEqual({
+        fd: 4,
+        token: "cap-token",
+        env: null,
+      });
+    } finally {
+      await manager.dispose();
+    }
+  }, 15_000);
 });

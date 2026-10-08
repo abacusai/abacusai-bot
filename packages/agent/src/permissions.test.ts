@@ -1268,3 +1268,65 @@ describe.skipIf(process.platform === "win32")(
     });
   }
 );
+
+describe.skipIf(process.platform === "win32")(
+  "the app's private storage, in every mode",
+  () => {
+    let base: string;
+    let saved: { home?: string; base?: string };
+
+    beforeEach(() => {
+      base = fs.mkdtempSync(path.join(os.tmpdir(), "gate-home-"));
+      fs.mkdirSync(path.join(base, "session-home"));
+      fs.writeFileSync(path.join(base, "config.json"), "{}");
+      saved = {
+        home: process.env.ABACUSAI_BOT_HOME,
+        base: process.env.ABACUSAI_BOT_BASE,
+      };
+      process.env.ABACUSAI_BOT_HOME = base;
+      process.env.ABACUSAI_BOT_BASE = base;
+    });
+
+    afterEach(() => {
+      for (const [name, value] of [
+        ["ABACUSAI_BOT_HOME", saved.home],
+        ["ABACUSAI_BOT_BASE", saved.base],
+      ] as const) {
+        if (value == null) delete process.env[name];
+        else process.env[name] = value;
+      }
+      fs.rmSync(base, { recursive: true, force: true });
+    });
+
+    it.each([AgentMode.Yolo, AgentMode.Auto, AgentMode.Normal])(
+      "refuses reading and writing the app's settings in %s",
+      (mode) => {
+        const config = path.join(base, "config.json");
+        for (const tool of [
+          call("read", { path: config }),
+          call("batch_file_read", { paths: ["a.ts", config] }),
+          call("ls", { path: base }),
+          call("write", { path: path.join(base, "mcp-code.json") }),
+        ]) {
+          expect(gateToolCall(tool, options({ mode })).kind).toBe("refuse");
+        }
+      }
+    );
+
+    it("refuses a process's environment, through /proc/self too", () => {
+      const gate = gateToolCall(
+        call("read", { path: "/proc/self/environ" }),
+        options({ mode: AgentMode.Yolo })
+      );
+      expect(gate.kind).toBe("refuse");
+    });
+
+    it("leaves the app's work folders to the usual rules", () => {
+      const gate = gateToolCall(
+        call("read", { path: path.join(base, "session-home", "notes.md") }),
+        options({ mode: AgentMode.Yolo })
+      );
+      expect(gate.kind).toBe("allow");
+    });
+  }
+);

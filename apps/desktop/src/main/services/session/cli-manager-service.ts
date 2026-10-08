@@ -5,6 +5,7 @@ import {
 } from "child_process";
 import { existsSync } from "fs";
 import { delimiter } from "path";
+import type { Writable } from "stream";
 
 import {
   AgentMode,
@@ -106,6 +107,9 @@ type ExitedRuntimeRecord = {
   mcpLogs: Array<{ serverId: string; entries: AgentMcpLogEntry[] }>;
 };
 
+/** The agent's descriptor for the checkout token (see resolveCheckoutToken). */
+const CHECKOUT_TOKEN_FD = 4;
+
 /** Exited sessions kept for the dump. Enough for a bad startup loop. */
 const MAX_EXITED_RECORDS = 20;
 
@@ -116,6 +120,8 @@ type AgentManagerServiceOptions = {
   ) => string | null;
   resolveArtifact: () => ResolvedAgentArtifact;
   resolveAuthEnv: () => Record<string, string>;
+  /** The `browser_checkout` capability, written to the agent's fd 4, never its env. */
+  resolveCheckoutToken?: () => string | null;
   resolveAdditionalConfigEnv: (
     sessionId: string
   ) => Promise<Record<string, string>>;
@@ -669,6 +675,9 @@ export class AgentManagerService {
     }
     // See shouldRunCliInDebugMode.
     if (shouldRunCliInDebugMode()) spawnArgs.push("--debug");
+    const checkoutToken = this.options.resolveCheckoutToken?.() ?? null;
+    if (checkoutToken != null)
+      spawnArgs.push("--checkout-token-fd", String(CHECKOUT_TOKEN_FD));
     const command = `${artifact.execPath} ${spawnArgs.join(" ")}`;
 
     let child: ChildProcessWithoutNullStreams;
@@ -676,8 +685,12 @@ export class AgentManagerService {
       child = spawn(artifact.execPath, spawnArgs, {
         cwd: workspacePath,
         env,
-        // agui: fd 3 is the compatibility channel the agent negotiates.
-        stdio: ["pipe", "pipe", "pipe", "pipe"],
+        // agui: fd 3 is the compatibility channel the agent negotiates; fd 4
+        // carries the checkout token.
+        stdio:
+          checkoutToken != null
+            ? ["pipe", "pipe", "pipe", "pipe", "pipe"]
+            : ["pipe", "pipe", "pipe", "pipe"],
       }) as ChildProcessWithoutNullStreams;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -709,6 +722,11 @@ export class AgentManagerService {
     // An async EPIPE from a dying child bypasses sendCommand's try/catch;
     // without a handler on the stream it is an uncaught exception.
     child.stdin.on("error", () => {});
+    if (checkoutToken != null) {
+      const tokenPipe = child.stdio[CHECKOUT_TOKEN_FD] as Writable | null;
+      tokenPipe?.on("error", () => {});
+      tokenPipe?.end(checkoutToken);
+    }
 
     const startedAt = new Date().toISOString();
     let resolveReadiness!: (state: AgentSessionSnapshot) => void;

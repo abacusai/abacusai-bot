@@ -13,12 +13,14 @@ import { describe, expect, it } from "vitest";
 
 import { SandboxApprovals } from "./approvals.js";
 import {
+  isAppSecretPath,
   isWithin,
   mentionedSecretPaths,
   namedSecretPaths,
   readableExemptions,
   resolveSecretPaths,
   secretEntries,
+  withoutCredentials,
 } from "./secrets.js";
 
 const home = "/home/dev";
@@ -129,26 +131,65 @@ describe.skipIf(onWindows)("the deny-list", () => {
     expect(result.denied).toEqual(["/home/dev/.ssh"]);
   });
 
-  it("hides this app's own settings wherever ABACUSAI_BOT_HOME points", () => {
+  it("hides everything in the app's home but its work folders", () => {
     const result = resolve(
-      { "/srv/bot/config.json": null, "/srv/bot/electron": [] },
+      {
+        "/srv/bot": [
+          "config.json",
+          "mcp-auth.json",
+          "runtime",
+          "sign-in-session",
+          "memories",
+          "session-home",
+          "skills",
+          "generated",
+        ],
+        "/srv/bot/config.json": null,
+        "/srv/bot/mcp-auth.json": null,
+        "/srv/bot/runtime": ["mcp-code-1.json"],
+        "/srv/bot/sign-in-session": [],
+        "/srv/bot/memories": ["travelers.json"],
+        "/srv/bot/session-home": [],
+        "/srv/bot/skills": [],
+        "/srv/bot/generated": [],
+      },
       { env: { ABACUSAI_BOT_HOME: "/srv/bot" } }
     );
     expect(result.denied).toEqual([
       "/srv/bot/config.json",
-      "/srv/bot/electron",
+      "/srv/bot/mcp-auth.json",
+      "/srv/bot/runtime",
+      "/srv/bot/sign-in-session",
+      "/srv/bot/memories",
     ]);
   });
 
-  it("hides the saved travelers, whose passport numbers the model never sees", () => {
+  it("hides other profiles whole, and only the active profile's work folders show", () => {
     const result = resolve(
       {
-        "/srv/bot/memories/travelers.json": null,
-        "/srv/bot/memories/USER.md": null,
+        "/srv/bot": ["config.json", "profiles.json", "profiles"],
+        "/srv/bot/config.json": null,
+        "/srv/bot/profiles.json": null,
+        "/srv/bot/profiles": ["other", "me"],
+        "/srv/bot/profiles/other": ["config.json", "session-home"],
+        "/srv/bot/profiles/me": ["config.json", "session-home"],
+        "/srv/bot/profiles/me/config.json": null,
+        "/srv/bot/profiles/me/session-home": [],
       },
-      { env: { ABACUSAI_BOT_HOME: "/srv/bot" } }
+      {
+        env: {
+          ABACUSAI_BOT_BASE: "/srv/bot",
+          ABACUSAI_BOT_HOME: "/srv/bot/profiles/me",
+        },
+        workspaceRoot: "/srv/bot/profiles/me/session-home",
+      }
     );
-    expect(result.denied).toEqual(["/srv/bot/memories/travelers.json"]);
+    expect(result.denied).toEqual([
+      "/srv/bot/config.json",
+      "/srv/bot/profiles.json",
+      "/srv/bot/profiles/other",
+      "/srv/bot/profiles/me/config.json",
+    ]);
   });
 
   it("lists macOS keychain and browser stores only on macOS", () => {
@@ -311,10 +352,53 @@ describe.skipIf(onWindows)("the policy honours an approved read", () => {
 
   it("never marks the app's own settings as promptable", () => {
     const result = resolve(
-      { "/srv/bot/config.json": null, "/home/dev/.netrc": null },
+      {
+        "/srv/bot": ["config.json"],
+        "/srv/bot/config.json": null,
+        "/home/dev/.netrc": null,
+      },
       { env: { ABACUSAI_BOT_HOME: "/srv/bot" } }
     );
     expect(result.denied).toContain("/srv/bot/config.json");
     expect(result.promptable).toEqual(["/home/dev/.netrc"]);
+  });
+});
+
+describe.skipIf(onWindows)("what a file tool refuses in every mode", () => {
+  const env = {
+    ABACUSAI_BOT_BASE: "/srv/bot",
+    ABACUSAI_BOT_HOME: "/srv/bot/profiles/me",
+  };
+
+  it("refuses the app's home and other profiles, not its work folders", () => {
+    expect(isAppSecretPath("/srv/bot/config.json", env, home)).toBe(true);
+    expect(isAppSecretPath("/srv/bot/profiles/other/x", env, home)).toBe(true);
+    expect(
+      isAppSecretPath("/srv/bot/profiles/me/mcp-auth.json", env, home)
+    ).toBe(true);
+    expect(
+      isAppSecretPath("/srv/bot/profiles/me/session-home/a.ts", env, home)
+    ).toBe(false);
+    expect(isAppSecretPath("/home/dev/project/a.ts", env, home)).toBe(false);
+  });
+
+  it("refuses any process's environment", () => {
+    expect(isAppSecretPath("/proc/123/environ", env, home)).toBe(true);
+    expect(isAppSecretPath("/proc/self/task/9/environ", env, home)).toBe(true);
+    expect(isAppSecretPath("/proc/123/status", env, home)).toBe(false);
+  });
+});
+
+describe("what a child process inherits", () => {
+  it("drops the app's credentials, case-blind, and keeps the rest", () => {
+    expect(
+      withoutCredentials({
+        PATH: "/bin",
+        ABACUS_API_KEY: "k",
+        openai_api_key: "o",
+        ABACUSAI_BOT_CHECKOUT_TOKEN: "c",
+        GH_TOKEN: "g",
+      })
+    ).toEqual({ PATH: "/bin", GH_TOKEN: "g" });
   });
 });
