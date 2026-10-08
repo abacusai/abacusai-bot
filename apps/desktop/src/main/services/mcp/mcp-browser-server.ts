@@ -88,7 +88,6 @@ import {
   type LoginCandidate,
   loginFilledText,
   loginPurpose,
-  onLoginSite,
   REF_OF_FUNCTION,
   submitName,
 } from "../vault/login-fill";
@@ -109,12 +108,13 @@ import {
   navigationVerdict,
   originOf,
   pageFactsScript,
-  siteOf,
   TOTAL_NOT_ANCHORED,
   USED_REFUSAL,
 } from "../vault/pay-guard";
+import { onSite, registrableDomain } from "../vault/site";
 import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
+  cardField,
   codeFieldAllowed,
   DOCUMENT_INPUT_FACTS_SCRIPT,
   hasCodeField,
@@ -2929,7 +2929,14 @@ export class McpBrowserServer extends McpHttpServer {
       typeof value.attrs !== "string"
     )
       return null;
-    return value as ControlFacts;
+    const facts = value as ControlFacts;
+    if (facts.cardFields) return facts;
+    // The host's own facts count too: a page that strips a card field's
+    // attributes after it was first seen (or filled) is still a card step.
+    const known = await this.secretsOf(page)
+      .hasCardField(page, cardField)
+      .catch(() => null);
+    return known == null ? null : { ...facts, cardFields: known };
   }
 
   /**
@@ -3377,7 +3384,10 @@ export class McpBrowserServer extends McpHttpServer {
       need: input.need,
       fields: input.fields,
       // The bare registrable domain ("akasaair.com"): what the user is told.
-      site: topOrigin != null ? siteOf(new URL(topOrigin).hostname) : null,
+      site:
+        topOrigin != null
+          ? registrableDomain(new URL(topOrigin).hostname)
+          : null,
       amount,
       currency,
       merchant: input.merchant,
@@ -3567,7 +3577,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (
       !TRAVELER_FILL_STAGES.has(session.checkout.stage) ||
       session.checkoutSite == null ||
-      siteOf(new URL(topOrigin).hostname) !== session.checkoutSite
+      !onSite(new URL(topOrigin).hostname, session.checkoutSite)
     )
       return this.err(
         "Refused: a passport number is typed only into the booking under way, on its own site, from its traveler " +
@@ -4074,6 +4084,9 @@ export class McpBrowserServer extends McpHttpServer {
       }
       // Hidden and locked before any value exists here: from now on the
       // field reads as hidden and the tab runs no scripts until it navigates.
+      // A card fill also makes the field a card field for the Pay guard.
+      if (card && backendNodeId != null)
+        secrets.noteCardFill(page, backendNodeId);
       if (!(await secrets.markFilledNode(page, node).catch(() => false)))
         return this.err(
           `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
@@ -4180,7 +4193,7 @@ export class McpBrowserServer extends McpHttpServer {
       sites != null &&
       sites.length > 0 &&
       host != null &&
-      !sites.some((site) => onLoginSite(host, site))
+      !sites.some((site) => onSite(host, site))
     )
       return refuse(
         `Refused: the saved login ${loginItemId} is for ${sites.join(", ")}, and this page is ${host}. ` +
@@ -4517,7 +4530,7 @@ export class McpBrowserServer extends McpHttpServer {
     const host = httpsHost(await this.liveOrigin(wc));
     if (host == null) return null;
     const sites = await this.loginSites(login.itemId, sessionId);
-    const site = sites?.find((each) => onLoginSite(host, each));
+    const site = sites?.find((each) => onSite(host, each));
     if (site == null) return null;
     if ((await this.readPage(wc, LOGIN_FORM_PRESENT_SCRIPT)) !== true)
       return null;

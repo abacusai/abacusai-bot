@@ -30,8 +30,11 @@
  * `browser_execute` is refused outright while a checkout is past search or
  * the tab is on a payment step: a script is not an element to check.
  *
- * What a payment step is: the document has card fields (autocomplete `cc-*`,
- * card number, CVV or expiry inputs, or a field the vault filled), embeds a
+ * What a payment step is: the document has card fields (by the card rule in
+ * card-fields.ts: a card number or CVV, or an expiry or name beside one; or,
+ * as the host keeps them, a field first seen as one or that the vault typed
+ * card data into; never a field merely masked, such as a filled login or a
+ * code, and never a PAN or Aadhaar field), embeds a
  * payment provider's frame or a frame that says it takes payment, submits a
  * form with card fields, is a provider's frame itself, has a checkout or
  * payment path, or its origin was a payment step earlier in this checkout.
@@ -40,7 +43,9 @@
  * canvas, in a closed shadow root, behind a frame with no telling attributes)
  * is guarded only by the words signal until the checkout is past the review.
  */
+import { onSite, sameSite } from "./site";
 import {
+  FIELD_FACTS_JS,
   isPaymentFrameOrigin,
   PAYMENT_FRAME_HOSTS,
   type PageTotal,
@@ -75,7 +80,7 @@ export interface ControlFacts {
   checked: boolean;
   /** The URL of the document it sits in. */
   url: string;
-  /** The document has card fields, or a field the vault filled. */
+  /** The document has card fields: read live, or as the host first saw them or filled them. */
   cardFields: boolean;
   /** The document embeds a payment provider's frame, or one that says it takes payment. */
   paymentFrame: boolean;
@@ -152,12 +157,18 @@ export const controlFactsScript = (
       return hosts.some((domain) => host === domain || host.endsWith('.' + domain));
     } catch { return false; }
   };
-  const CARD = 'input[autocomplete~="cc-number" i], input[autocomplete~="cc-csc" i], input[autocomplete~="cc-exp" i], ' +
-    'input[autocomplete~="cc-exp-month" i], input[name*="cardnum" i], input[name*="card_num" i], input[name*="card-num" i], ' +
-    'input[id*="cardnum" i], input[id*="card_num" i], input[id*="card-num" i], input[name*="cvv" i], input[name*="cvc" i], ' +
-    'input[id*="cvv" i], input[id*="cvc" i], input[name*="expiry" i], input[name*="exp_month" i], ' +
-    '[data-abacusai-secret]:not([data-abacusai-password])';
-  const hasCard = (root) => { try { return root.querySelector(CARD) != null; } catch { return false; } };
+  ${FIELD_FACTS_JS}
+  // Card fields by the one card rule over the same facts a vault fill reads.
+  let documentFacts = null;
+  const hasCard = (root) => {
+    try {
+      const facts = documentFacts || (documentFacts = __documentFacts(document));
+      for (const [el, fact] of facts)
+        if ((root === document || el.form === root || root.contains(el)) && __cardField(fact)) return true;
+      return false;
+    }
+    catch { return false; }
+  };
   const payingFrame = (frame) => {
     const words = [frame.getAttribute('title'), frame.getAttribute('name'), frame.getAttribute('id'),
       frame.getAttribute('class'), frame.getAttribute('aria-label')].join(' ');
@@ -594,17 +605,6 @@ export function commitVerdict(
   return null;
 }
 
-/** The registrable part of a host, near enough: the last two labels, three under a short second-level one. */
-export function siteOf(host: string): string {
-  const labels = host.toLowerCase().split(".").filter(Boolean);
-  if (labels.length <= 2) return labels.join(".");
-  const second = labels.at(-2)!;
-  const top = labels.at(-1)!;
-  const keep =
-    top.length === 2 && (second.length <= 3 || second === "gov") ? 3 : 2;
-  return labels.slice(-keep).join(".");
-}
-
 const hostOf = (url: string): string | null => {
   try {
     return new URL(url).hostname;
@@ -639,8 +639,7 @@ export function navigationVerdict(input: {
   if (fromHost == null) return null;
   if (input.action === "goto") {
     const toHost = input.to != null ? hostOf(input.to) : null;
-    const sameSite = toHost != null && siteOf(toHost) === siteOf(fromHost);
-    if (!sameSite)
+    if (toHost == null || !sameSite(toHost, fromHost))
       // Off to another site: refused only for an address that commits by itself.
       return input.strict !== false &&
         !input.approvalLive &&
@@ -664,13 +663,7 @@ export const EXECUTE_REFUSAL =
 
 /** Whether an approval for `site` (a registrable domain) covers a page at `origin`. */
 export function approvalCovers(site: string, origin: string | null): boolean {
-  if (origin == null || site.length === 0) return false;
-  let host: string;
-  try {
-    host = new URL(origin).hostname.toLowerCase();
-  } catch {
-    return false;
-  }
-  const domain = site.toLowerCase();
-  return host === domain || host.endsWith(`.${domain}`);
+  if (origin == null) return false;
+  const host = hostOf(origin);
+  return host != null && onSite(host, site);
 }

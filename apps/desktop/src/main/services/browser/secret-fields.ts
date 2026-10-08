@@ -416,6 +416,57 @@ export class SecretFields {
     return this.firstSeen.get(page.frameId ?? "")?.get(backendNodeId) ?? null;
   }
 
+  /** Fields the vault typed card data into, per document, by backend node id. */
+  private readonly cardFilled = new Map<string, Set<number>>();
+
+  /** The vault typed card data into the field `backendNodeId` of `page`'s document. */
+  noteCardFill(page: BrowserPage, backendNodeId: number): void {
+    const scope = page.frameId ?? "";
+    let filled = this.cardFilled.get(scope);
+    if (filled == null) {
+      filled = new Set();
+      this.cardFilled.set(scope, filled);
+    }
+    filled.add(backendNodeId);
+  }
+
+  /**
+   * Whether `page`'s document still holds a card field as the host knows it:
+   * one `cardField` (the vault's card rule, passed in) calls so as first
+   * seen, or one the vault typed card data into. What the page did to the
+   * field since cannot take that back.
+   */
+  async hasCardField(
+    page: BrowserPage,
+    cardField: (facts: FieldFacts) => boolean
+  ): Promise<boolean> {
+    const scope = page.frameId ?? "";
+    const ids = new Set(this.cardFilled.get(scope) ?? []);
+    for (const [id, facts] of this.firstSeen.get(scope) ?? [])
+      if (cardField(facts)) ids.add(id);
+    try {
+      for (const backendNodeId of ids) {
+        const resolved = (await command(page, "DOM.resolveNode", {
+          backendNodeId,
+          objectGroup: OBJECT_GROUP,
+        }).catch(() => null)) as { object?: { objectId?: string } } | null;
+        const objectId = resolved?.object?.objectId;
+        if (objectId == null) continue;
+        const { result } = (await command(page, "Runtime.callFunctionOn", {
+          objectId,
+          functionDeclaration: "function() { return this.isConnected; }",
+          returnByValue: true,
+        })) as { result?: { value?: unknown } };
+        if (result?.value === true) return true;
+      }
+      return false;
+    } finally {
+      await command(page, "Runtime.releaseObjectGroup", {
+        objectGroup: OBJECT_GROUP,
+      }).catch(() => undefined);
+    }
+  }
+
   /** Documents (by `documentInfo` key) a page script ran on: what they show may be the script's. */
   private readonly scripted = new Set<string>();
 
@@ -451,6 +502,7 @@ export class SecretFields {
     this.filledFields = 0;
     this.knownBy.clear();
     this.firstSeen.clear();
+    this.cardFilled.clear();
   }
 
   /**

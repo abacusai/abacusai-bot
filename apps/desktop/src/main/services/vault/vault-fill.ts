@@ -6,6 +6,13 @@
  * every refusal is testable.
  */
 import { WAS_PASSWORD_ATTRIBUTE } from "../browser/secret-fields";
+import {
+  type CardClass,
+  type CardControl,
+  cardPhrases,
+  classifyCardControls,
+} from "./card-fields";
+import { onSite } from "./site";
 import type { VaultField } from "./vault-client";
 import type { PaymentApproval, SigninApproval } from "./vault-session";
 
@@ -256,7 +263,7 @@ export function planFill(context: FillContext): FillPlan {
       return awaitSignin(
         `the sign-in the user allowed is for another saved login, so ${pause}`
       );
-    if (!withinDomain(host, signin.site))
+    if (!onSite(host, signin.site))
       return awaitSignin(
         `the sign-in the user allowed is for ${signin.site}, and this page is ${host}, so ${pause}`
       );
@@ -286,7 +293,7 @@ export function planFill(context: FillContext): FillPlan {
       `Refused: the approved payment is for card ${approval.item}, not ${context.itemId}.`
     );
   const host = httpsHost(context.topOrigin)!;
-  if (approval.site.length === 0 || !withinDomain(host, approval.site))
+  if (!onSite(host, approval.site))
     return refuse(
       `Refused: the payment was approved for ${approval.site || "another site"}, and this page is ${host}. Report where the checkout went.`
     );
@@ -348,8 +355,14 @@ export interface FieldFacts {
   wasPassword: boolean;
   /** The text-entry input just before or after it, in document order, is a password field. */
   adjacentPassword: boolean;
-  /** Words naming the field: its name, id, aria-label and placeholder (and, read live, its labels). */
+  /**
+   * Words naming the field: its name, id, aria-label and placeholder (and,
+   * read live, its labels), plus its name and id with separators removed
+   * ("cc_exp_month" also gives "ccexpmonth").
+   */
   hints: string[];
+  /** What the card rule makes of it, in its document (`classifyCardControls`). */
+  card: CardClass;
 }
 
 /** Words that name a field a code must never go into, though it looks like one. */
@@ -361,6 +374,10 @@ const CODE_LOOKALIKES = new Set([
   "pin",
   "pincode",
 ]);
+
+/** Naming text as one lowercase word, separators removed ("cc_exp-Month" → "ccexpmonth"). */
+const joined = (text: string): string =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 /** Splits naming text into lowercase words. */
 const words = (text: string): string[] =>
@@ -447,6 +464,8 @@ export const fieldKindAllowed = (
 export interface DomNode {
   backendNodeId?: number;
   nodeName?: string;
+  /** A text node's text. */
+  nodeValue?: string;
   attributes?: string[];
   children?: DomNode[];
 }
@@ -460,15 +479,17 @@ const attributesOf = (node: DomNode): Map<string, string> => {
 };
 
 const factsOf = (
+  tag: "input" | "select",
   attributes: Map<string, string>,
-  adjacentPassword: boolean
+  adjacentPassword: boolean,
+  card: CardClass
 ): FieldFacts => {
   const lower = (name: string): string =>
     (attributes.get(name) ?? "").toLowerCase();
-  const type = lower("type") || "text";
+  const type = tag === "select" ? "select" : lower("type") || "text";
   const maxLength = Number.parseInt(attributes.get("maxlength") ?? "", 10);
   return {
-    tag: "input",
+    tag,
     type,
     autocomplete: lower("autocomplete").split(/\s+/).filter(Boolean),
     role: lower("role"),
@@ -478,47 +499,144 @@ const factsOf = (
     maxLength: Number.isFinite(maxLength) ? maxLength : -1,
     wasPassword: type === "password" || attributes.has(WAS_PASSWORD_ATTRIBUTE),
     adjacentPassword,
-    hints: words(
-      ["name", "id", "aria-label", "placeholder"]
-        .map((name) => attributes.get(name) ?? "")
-        .join(" ")
-    ),
+    hints: [
+      ...words(
+        ["name", "id", "aria-label", "placeholder"]
+          .map((name) => attributes.get(name) ?? "")
+          .join(" ")
+      ),
+      ...["name", "id"]
+        .map((name) => joined(attributes.get(name) ?? ""))
+        .filter(Boolean),
+    ],
+    card,
   };
 };
 
+/** The naming texts the card rule reads, as the host sees them (no labels in a DOM dump). */
+const NAMING_ATTRIBUTES = ["name", "id", "aria-label", "placeholder"];
+
 /**
- * The facts of every input in a document, by backend node id, from its DOM
- * as CDP returns it (in document order, not into frames).
+ * The facts of every input and select in a document, by backend node id,
+ * from its DOM as CDP returns it (in document order, not into frames). One
+ * pass: the card rule reads the document's controls once.
  */
 export const factsFromDocument = (
   root: DomNode | undefined
 ): Map<number, FieldFacts> => {
-  const inputs: Array<{ id: number; attributes: Map<string, string> }> = [];
-  const walk = (node: DomNode | undefined): void => {
+  const controls: Array<{
+    id: number | null;
+    tag: "input" | "select";
+    ancestorForm: DomNode | null;
+    group: DomNode | null;
+    attributes: Map<string, string>;
+  }> = [];
+  const formsById = new Map<string, DomNode>();
+  const walk = (
+    node: DomNode | undefined,
+    form: DomNode | null,
+    group: DomNode | null
+  ): void => {
     if (node == null) return;
-    if (
-      String(node.nodeName ?? "").toUpperCase() === "INPUT" &&
-      node.backendNodeId != null
-    )
-      inputs.push({ id: node.backendNodeId, attributes: attributesOf(node) });
-    for (const child of node.children ?? []) walk(child);
+    const name = String(node.nodeName ?? "").toUpperCase();
+    const attributes =
+      name === "INPUT" ||
+      name === "SELECT" ||
+      name === "FORM" ||
+      name === "FIELDSET" ||
+      node.attributes != null
+        ? attributesOf(node)
+        : new Map<string, string>();
+    if (name === "FORM" && attributes.has("id"))
+      formsById.set(attributes.get("id")!, node);
+    if (name === "INPUT" || name === "SELECT")
+      controls.push({
+        id: node.backendNodeId ?? null,
+        tag: name === "INPUT" ? "input" : "select",
+        ancestorForm: form,
+        group,
+        attributes,
+      });
+    const childForm = name === "FORM" ? node : form;
+    const childGroup =
+      name === "FIELDSET" ||
+      (attributes.get("role") ?? "").toLowerCase() === "group"
+        ? node
+        : group;
+    for (const child of node.children ?? []) walk(child, childForm, childGroup);
   };
-  walk(root);
-  const entries = inputs.filter((input) =>
-    TEXT_ENTRY.has(
-      (input.attributes.get("type") ?? "text").toLowerCase() || "text"
-    )
+  walk(root, null, null);
+  /** A group's own label: its aria-label, and a fieldset's legend text. */
+  const textOf = (node: DomNode): string =>
+    String(node.nodeName ?? "") === "#text"
+      ? (node.nodeValue ?? "")
+      : (node.children ?? []).map(textOf).join(" ");
+  const groupLabel = (group: DomNode | null): string[] => {
+    if (group == null) return [];
+    const legend = (group.children ?? []).find(
+      (child) => String(child.nodeName ?? "").toUpperCase() === "LEGEND"
+    );
+    return [
+      attributesOf(group).get("aria-label") ?? "",
+      legend != null ? textOf(legend) : "",
+    ];
+  };
+  const keys = new Map<DomNode, number>();
+  const keyOf = (node: DomNode | null): number => {
+    if (node == null) return 0;
+    let key = keys.get(node);
+    if (key == null) {
+      key = keys.size + 1;
+      keys.set(node, key);
+    }
+    return key;
+  };
+  // A control's form as el.form has it: its form attribute, else its ancestor.
+  const cardControls: CardControl[] = controls.map((control) => {
+    const formAttribute = control.attributes.get("form");
+    const form =
+      formAttribute != null
+        ? (formsById.get(formAttribute) ?? null)
+        : control.ancestorForm;
+    const type =
+      (control.attributes.get("type") ?? "text").toLowerCase() || "text";
+    return {
+      phrases: cardPhrases(
+        NAMING_ATTRIBUTES.map((name) => control.attributes.get(name) ?? "")
+      ),
+      autocomplete: (control.attributes.get("autocomplete") ?? "")
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean),
+      fillable: control.tag === "select" || TEXT_ENTRY.has(type),
+      form: keyOf(form),
+      group: keyOf(control.group),
+      groupPhrases: cardPhrases(groupLabel(control.group)),
+    };
+  });
+  const classes = classifyCardControls(cardControls);
+  const all = controls.map((control, at) => ({ ...control, at }));
+  const entries = all.filter(
+    (control) =>
+      control.tag === "input" &&
+      TEXT_ENTRY.has(
+        (control.attributes.get("type") ?? "text").toLowerCase() || "text"
+      )
   );
+  const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
   const isPassword = (index: number): boolean =>
     (entries[index]?.attributes.get("type") ?? "").toLowerCase() === "password";
   const facts = new Map<number, FieldFacts>();
-  for (const input of inputs) {
-    const index = entries.indexOf(input);
+  for (const input of all) {
+    if (input.id == null) continue;
+    const index = entryIndex.get(input) ?? -1;
     facts.set(
       input.id,
       factsOf(
+        input.tag,
         input.attributes,
-        index >= 0 && (isPassword(index - 1) || isPassword(index + 1))
+        index >= 0 && (isPassword(index - 1) || isPassword(index + 1)),
+        classes[input.at]!
       )
     );
   }
@@ -526,36 +644,80 @@ export const factsFromDocument = (
 };
 
 /**
- * In-page `__factsOf(el)`: the same facts as `factsFromDocument`, read live
- * (with `__inputs(root)`, the text-entry inputs of a document in order).
+ * Whether a field is a card field by the card rule (`card-fields.ts`): a
+ * card number or CVV, or a card expiry or name. The host applies it to the
+ * facts it recorded at first sighting, the Pay guard's page script to the
+ * same facts read live.
+ */
+export const cardField = (facts: FieldFacts): boolean =>
+  facts.card.number || facts.card.detail != null;
+
+/**
+ * In-page `__documentFacts(root)` (every input and select of a document,
+ * with its facts, in one pass) and `__factsOf(el)`: the same facts as
+ * `factsFromDocument`, read live, labels included.
  */
 export const FIELD_FACTS_JS = `
+  const __cardPhrases = (${cardPhrases.toString()});
+  const __classifyCardControls = (${classifyCardControls.toString()});
   const __TEXT_ENTRY = ${JSON.stringify([...TEXT_ENTRY])};
-  const __typeOf = (el) => String(el.getAttribute('type') || 'text').toLowerCase() || 'text';
+  const __typeOf = (el) => el.tagName === 'SELECT' ? 'select' :
+    String(el.getAttribute('type') || 'text').toLowerCase() || 'text';
   const __inputs = (root) => Array.from(root.querySelectorAll('input')).filter((el) => __TEXT_ENTRY.includes(__typeOf(el)));
-  const __factsOf = (el) => {
-    const lower = (name) => String(el.getAttribute(name) || '').toLowerCase();
-    const type = __typeOf(el);
-    const entries = __inputs(el.getRootNode());
-    const index = entries.indexOf(el);
+  const __documentFacts = (root) => {
+    const controls = Array.from(root.querySelectorAll('input, select'));
+    const entries = controls.filter((el) => el.tagName === 'INPUT' && __TEXT_ENTRY.includes(__typeOf(el)));
+    const entryIndex = new Map(entries.map((el, index) => [el, index]));
     const isPassword = (other) => !!other && __typeOf(other) === 'password';
-    const max = parseInt(el.getAttribute('maxlength') || '', 10);
-    return {
-      tag: String(el.tagName).toLowerCase(),
-      type,
-      autocomplete: lower('autocomplete').split(/\\s+/).filter(Boolean),
-      role: lower('role'),
-      inputmode: lower('inputmode'),
-      enterkeyhint: lower('enterkeyhint'),
-      pattern: lower('pattern'),
-      maxLength: Number.isFinite(max) ? max : -1,
-      wasPassword: type === 'password' || el.hasAttribute(${JSON.stringify(WAS_PASSWORD_ATTRIBUTE)}),
-      adjacentPassword: index >= 0 && (isPassword(entries[index - 1]) || isPassword(entries[index + 1])),
-      hints: [lower('name'), lower('id'), lower('aria-label'), lower('placeholder'),
-        ...Array.from(el.labels || []).map((label) => String(label.textContent || '').toLowerCase())]
-        .join(' ').split(/[^a-z0-9]+/).filter(Boolean),
+    const keys = new Map();
+    const keyOf = (node) => {
+      if (!node) return 0;
+      if (!keys.has(node)) keys.set(node, keys.size + 1);
+      return keys.get(node);
     };
+    const groupOf = (el) => (el.closest && el.closest('fieldset, [role=group]')) || null;
+    const groupLabel = (group) => {
+      if (!group) return [];
+      const legend = Array.from(group.children).find((child) => child.tagName === 'LEGEND');
+      return [String(group.getAttribute('aria-label') || ''), legend ? String(legend.textContent || '') : ''];
+    };
+    const texts = (el) => [el.getAttribute('name'), el.getAttribute('id'), el.getAttribute('aria-label'),
+      el.getAttribute('placeholder'), ...Array.from(el.labels || []).map((label) => label.textContent)]
+      .map((text) => String(text || ''));
+    const classes = __classifyCardControls(controls.map((el) => ({
+      phrases: __cardPhrases(texts(el)),
+      autocomplete: String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/).filter(Boolean),
+      fillable: el.tagName === 'SELECT' || __TEXT_ENTRY.includes(__typeOf(el)),
+      form: keyOf(el.form),
+      group: keyOf(groupOf(el)),
+      groupPhrases: __cardPhrases(groupLabel(groupOf(el))),
+    })));
+    const facts = new Map();
+    controls.forEach((el, at) => {
+      const lower = (name) => String(el.getAttribute(name) || '').toLowerCase();
+      const type = __typeOf(el);
+      const index = entryIndex.has(el) ? entryIndex.get(el) : -1;
+      const max = parseInt(el.getAttribute('maxlength') || '', 10);
+      facts.set(el, {
+        tag: String(el.tagName).toLowerCase(),
+        type,
+        autocomplete: lower('autocomplete').split(/\\s+/).filter(Boolean),
+        role: lower('role'),
+        inputmode: lower('inputmode'),
+        enterkeyhint: lower('enterkeyhint'),
+        pattern: lower('pattern'),
+        maxLength: Number.isFinite(max) ? max : -1,
+        wasPassword: type === 'password' || el.hasAttribute(${JSON.stringify(WAS_PASSWORD_ATTRIBUTE)}),
+        adjacentPassword: index >= 0 && (isPassword(entries[index - 1]) || isPassword(entries[index + 1])),
+        hints: [...texts(el).map((text) => text.toLowerCase()).join(' ').split(/[^a-z0-9]+/).filter(Boolean),
+          ...[lower('name'), lower('id')].map((text) => text.replace(/[^a-z0-9]+/g, '')).filter(Boolean)],
+        card: classes[at],
+      });
+    });
+    return facts;
   };
+  const __factsOf = (el) => __documentFacts(el.getRootNode()).get(el);
+  const __cardField = (facts) => !!facts && (facts.card.number || facts.card.detail != null);
 `;
 
 /** Run on a field: whether it can be typed into now, and its facts. */
@@ -571,7 +733,8 @@ export const LIVE_FIELD_FUNCTION = `function() {
 /** The facts of each of a document's inputs (to find, and count, its code fields). */
 export const DOCUMENT_INPUT_FACTS_SCRIPT = `(function() {
   ${FIELD_FACTS_JS}
-  return Array.from(document.querySelectorAll('input')).map(__factsOf);
+  const facts = __documentFacts(document);
+  return Array.from(document.querySelectorAll('input')).map((el) => facts.get(el));
 })()`;
 
 /**

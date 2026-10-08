@@ -6,7 +6,15 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { type ControlFacts, controlFactsScript } from "./pay-guard";
+import {
+  activationVerdict,
+  type ControlFacts,
+  controlFactsScript,
+  type GuardState,
+  looksLikePaymentStep,
+  PAY_REFUSAL,
+  STEP_REFUSAL,
+} from "./pay-guard";
 
 /** Runs the script as the page would, in the global scope, and returns its value. */
 const read = (
@@ -95,5 +103,65 @@ describe("what the guard reads of a page", () => {
 
   it("says when nothing matched", () => {
     expect(read("#missing").found).toBe(false);
+  });
+});
+
+describe("what makes a page a payment step", () => {
+  /** A checkout under way, no payment approved, the page not remembered as a payment step. */
+  const fresh: GuardState = {
+    knownPaymentStep: false,
+    pastReview: false,
+    bankStep: false,
+    approval: {
+      live: false,
+      coversSite: false,
+      paid: false,
+      reviewed: false,
+      bankSubmitted: false,
+    },
+  };
+  const click = (selector: string) =>
+    activationVerdict({ action: "click", selector }, read(selector), fresh);
+
+  it("not a sign-in page whose username the vault filled", () => {
+    window.history.replaceState({}, "", "/login");
+    // As the host leaves it: the username masked, the password marked as one.
+    document.body.innerHTML = `
+      <form><input name="email" autocomplete="username" data-abacusai-secret>
+      <input type="password" name="password" data-abacusai-password data-abacusai-secret>
+      <button type="submit" id="signin">Sign in</button></form>`;
+    expect(read("#signin").cardFields).toBe(false);
+    expect(read("#signin").submitsCardForm).toBe(false);
+    expect(looksLikePaymentStep(read("#signin"))).toBe(false);
+    expect(click("#signin")).toEqual({ kind: "allow" });
+  });
+
+  it("not a page asking for a one-time code", () => {
+    window.history.replaceState({}, "", "/verify");
+    document.body.innerHTML = `
+      <form><input autocomplete="one-time-code" inputmode="numeric" maxlength="6" data-abacusai-secret>
+      <button type="submit" id="verify">Verify</button></form>`;
+    expect(looksLikePaymentStep(read("#verify"))).toBe(false);
+    expect(click("#verify")).toEqual({ kind: "allow" });
+  });
+
+  it("still a card page, strictly guarded, by any cc-* token or card naming", () => {
+    window.history.replaceState({}, "", "/book/step-4");
+    for (const field of [
+      '<input autocomplete="section-pay cc-number">',
+      '<input autocomplete="cc-name">',
+      '<select autocomplete="cc-exp-month"><option>01</option></select>',
+      '<input name="card_num">',
+    ]) {
+      document.body.innerHTML = `<form>${field}<button type="submit" id="go">Continue</button></form>`;
+      expect(read("#go").cardFields, field).toBe(true);
+      expect(read("#go").submitsCardForm, field).toBe(true);
+      expect(click("#go"), field).toEqual({
+        kind: "refuse",
+        reason: STEP_REFUSAL,
+      });
+    }
+    document.body.innerHTML = `<form><input autocomplete="cc-number"><button id="pay">Pay now</button></form>`;
+    expect(click("#pay")).toEqual({ kind: "refuse", reason: PAY_REFUSAL });
   });
 });

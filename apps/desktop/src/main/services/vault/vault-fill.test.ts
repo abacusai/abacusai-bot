@@ -318,6 +318,7 @@ const facts = (overrides: Partial<FieldFacts> = {}): FieldFacts => ({
   wasPassword: false,
   adjacentPassword: false,
   hints: [],
+  card: { number: false, detailWords: null, detail: null },
   ...overrides,
 });
 
@@ -481,7 +482,7 @@ describe("an input's facts as first seen", () => {
     expect(fieldKindAllowed("username", read.get(1)!, false)).toBe(false);
     expect(fieldKindAllowed("username", read.get(3)!, false)).toBe(true);
     expect(fieldKindAllowed("code", read.get(6)!, false)).toBe(true);
-    expect(read.get(7)?.hints).toEqual(["billing", "zip"]);
+    expect(read.get(7)?.hints).toEqual(["billing", "zip", "billingzip"]);
     expect(fieldKindAllowed("code", read.get(7)!, false)).toBe(false);
   });
 });
