@@ -96,6 +96,10 @@ const CALL_TIMEOUT_MS = 20_000;
 /** A reply carrying a document: up to 16 MB goes up in it. */
 const DOCUMENT_CALL_TIMEOUT_MS = 90_000;
 const PRESENT_TOOL = "present_deliverable";
+/** Quiet for minutes while its sub-agent waits on a page or a model: the turn clock gives it its own limit. */
+const BROWSER_TOOL = "browser_task";
+/** The server's own apology for a failed turn, in the chat's language. */
+const TURN_FAILED_NOTICE = "turn_failed";
 /** The app's built-in tool server: its tools may arrive under its prefix. */
 const BUILTIN_TOOLS_SERVER = "agent-tools";
 /** Media ids remembered as sent; each lives 30 minutes, so far fewer are live. */
@@ -455,16 +459,22 @@ export class PhoneLane {
           this.log(`[phone] ${event.type} id=${event.messageId}`);
         this.clock.touch();
         return;
+      case "tool_execution_start":
+        if (isTool(event.tool.name, BROWSER_TOOL))
+          this.clock.longTool(event.tool.id, true);
+        else this.clock.touch();
+        return;
       case "text_delta":
       case "thinking_delta":
-      case "tool_execution_start":
       case "tool_output_update":
       case "subtask_start":
       case "subtask_end":
         this.clock.touch();
         return;
       case "tool_execution_complete":
-        this.clock.touch();
+        if (isTool(event.tool.name, BROWSER_TOOL))
+          this.clock.longTool(event.tool.id, false);
+        else this.clock.touch();
         this.onToolDone(event);
         return;
       default:
@@ -627,7 +637,7 @@ export class PhoneLane {
   ): Promise<"sent" | "refused" | "unknown"> {
     try {
       const result = await this.deps.call<{ ok?: boolean; error?: string }>(
-        { action: "reply", ...body },
+        { action: "reply", ...body, poller: this.poller },
         document ? DOCUMENT_CALL_TIMEOUT_MS : CALL_TIMEOUT_MS
       );
       if (result.ok === true) return "sent";
@@ -692,16 +702,15 @@ export class PhoneLane {
 
   /**
    * The session's final answer to the messages it names. Its turn ended, so
-   * they are handled and acknowledged now, whether or not the reply reaches
-   * the user: a reply that does not go is retried as a send, then logged and
-   * dropped, never run again. Only a host that dies mid-turn leaves them
+   * they are handled, and acknowledged once the answer went or was dropped,
+   * whether or not the reply reached the user: a reply that does not go is
+   * retried as a send, then logged and dropped, never run again. Only a host that dies mid-turn leaves them
    * unacknowledged, for the server to hand back.
    */
   private async finish(reply: TurnReply): Promise<void> {
     const messages = this.inbox.close(this.inbox.handedUnder(reply.messageIds));
     if (messages.length === 0) return;
     this.clock.touch();
-    const acked = this.ack(messages);
     const replyTo = this.replyTarget(messages)!;
     const bubbles = splitPhoneBubbles(reply.text);
     // A failed turn's media is not an answer; it goes with nothing.
@@ -722,7 +731,10 @@ export class PhoneLane {
       `[phone] reply ids=${reply.messageIds.join(",")} bubbles=${bubbles.length} media=${media.length} delivered=${delivered ? 1 : 0} failed=${reply.failed ? 1 : 0} apology=${apologized ? 1 : 0}${went ? "" : " dropped=1"}`
     );
     this.turnMediaHashes = new Set();
-    await acked;
+    // Acked once the answer went (or was dropped), never before: an ack ends
+    // the server's entry, and until then a host that took the message over
+    // still holds it, so this host's answer is refused rather than doubled.
+    await this.ack(messages);
     this.done(messages);
   }
 
@@ -828,12 +840,51 @@ export class PhoneLane {
     await this.ack(waiting);
   }
 
+  /**
+   * The apology for a turn that failed or was given up. A plain failure asks
+   * the server for its own words, in the chat's language; only a server that
+   * does not know that notice yet gets the English text instead. A notice
+   * that may have gone (a timeout) is never followed by a second apology.
+   */
   private async apologize(
     replyTo: string,
     text = FAILURE_REPLY
   ): Promise<boolean> {
     if (!this.running) return false;
-    return (await this.sendInOrder(replyTo, [text])) === 1;
+    if (text !== FAILURE_REPLY)
+      return (await this.sendInOrder(replyTo, [text])) === 1;
+    const run = this.outbox.then(async () => {
+      if (!this.running) return false;
+      const notice = await this.sendNotice(replyTo, TURN_FAILED_NOTICE);
+      if (notice !== "unsupported") return notice === "sent";
+      return (await this.sendBubbles(replyTo, [text])) === 1;
+    });
+    this.outbox = run.catch(() => false);
+    return run.catch(() => false);
+  }
+
+  /** A server notice as a reply: sent, refused, or a server that does not know it. */
+  private async sendNotice(
+    replyTo: string,
+    notice: string
+  ): Promise<"sent" | "refused" | "unsupported"> {
+    try {
+      const result = await this.deps.call<{ ok?: boolean; error?: string }>(
+        { action: "reply", message_id: replyTo, notice, poller: this.poller },
+        CALL_TIMEOUT_MS
+      );
+      if (result.ok === true) return "sent";
+      this.log(`[phone] notice refused: ${result.error ?? "no reason"}`);
+      return "refused";
+    } catch (error) {
+      this.log(`[phone] notice failed: ${describe(error)}`);
+      // An older server reads it as a reply with no text; a newer one names the notice it does not know.
+      return error instanceof Error &&
+        /text is required|notice must be/.test(error.message)
+        ? "unsupported"
+        : "refused";
+    }
+  }
   }
 
   /** The session took work: the clock runs and the user sees "typing…". */
@@ -912,7 +963,8 @@ export class PhoneLane {
     if (owed.length === 0) return;
     try {
       await this.deps.call(
-        { action: "ack", message_ids: owed },
+        // The server leaves an entry another host holds alone.
+        { action: "ack", message_ids: owed, poller: this.poller },
         CALL_TIMEOUT_MS
       );
       for (const id of owed) this.unacked.delete(id);
@@ -941,8 +993,12 @@ export class PhoneLane {
     timeoutMs = CALL_TIMEOUT_MS
   ): Promise<boolean> {
     try {
+      // A reply names this host: the server refuses it while another host
+      // holds the message, so the user never gets two answers.
       const result = await this.deps.call<{ ok?: boolean; error?: string }>(
-        { action, ...body },
+        action === "reply"
+          ? { action, ...body, poller: this.poller }
+          : { action, ...body },
         timeoutMs
       );
       if (action === "typing" || result.ok === true) return true;

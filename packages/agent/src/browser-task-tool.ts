@@ -18,6 +18,10 @@ import {
   browserStopNote,
 } from "./channel.js";
 import { pauseReport, resumeNote } from "./checkout-report.js";
+import {
+  ID_NUMBER_WITHHELD,
+  redactIdNumbers,
+} from "./traveler/id-numbers.js";
 import { CheckoutRun } from "./checkout-run.js";
 import { currentMode, unattendedPolicy } from "./current-mode.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
@@ -90,13 +94,23 @@ export class DispatchBudget {
 
   /** Records a run at `now` unless the window is full; @returns whether it may run. */
   take(now = Date.now()): boolean {
-    while (this.starts.length > 0 && now - this.starts[0]! > this.windowMs) {
-      this.starts.shift();
-    }
+    this.expire(now);
     if (this.starts.length >= this.limit) return false;
     this.starts.push(now);
 
     return true;
+  }
+
+  /** New runs the window allows right now. */
+  left(now = Date.now()): number {
+    this.expire(now);
+    return Math.max(0, this.limit - this.starts.length);
+  }
+
+  private expire(now: number): void {
+    while (this.starts.length > 0 && now - this.starts[0]! > this.windowMs) {
+      this.starts.shift();
+    }
   }
 }
 
@@ -118,6 +132,34 @@ function watchTask(policy: UnattendedPolicy & { watchUrl: string }): string {
 /** The tool's name, as a pi tool's `name` field. */
 const toolName = (tool: unknown): string =>
   String((tool as { name?: unknown }).name ?? "");
+/** A mid-run message as long as it may be quoted to the caller. */
+const QUOTED_USER_CHARS = 300;
+
+/**
+ * Code-like secrets a user may type mid-run: a code after its label, or six
+ * to eight digits alone (a one-time code). Four-digit runs stay: years,
+ * times and flight numbers.
+ */
+const CODE_SHAPES: readonly RegExp[] = [
+  /\b(otp|code|pin|passcode|password|pwd)(\s*(?:is|:|=|-)?\s*)\S+/gi,
+  /(?<![\d+$₹£€.,])\b\d{6,8}\b(?![\d.,])/g,
+];
+
+/**
+ * The user's mid-run words as they go into the caller's transcript: clipped,
+ * with ID numbers and code-like strings withheld (they were typed for the
+ * page, not for the transcript).
+ */
+export const quotedUserWords = (text: string): string => {
+  let out = redactIdNumbers(text);
+  out = out.replace(CODE_SHAPES[0]!, (_match, label: string, gap: string) =>
+    `${label}${gap}${ID_NUMBER_WITHHELD}`
+  );
+  out = out.replace(CODE_SHAPES[1]!, ID_NUMBER_WITHHELD);
+  return out.length > QUOTED_USER_CHARS
+    ? `${out.slice(0, QUOTED_USER_CHARS)}…`
+    : out;
+};
 
 /** The card's one-word verdict for a run that did not simply finish. */
 export type BrowserRunOutcome = "needs-user" | "limit" | "budget";
@@ -516,10 +558,22 @@ export function buildBrowserTaskTool(
       result.stoppedBy === "needs-user"
         ? `\n\n${pause != null ? pauseReport(pause, checkout.state.stage, channel) : browserStopNote(channel)}`
         : result.stoppedBy === "turn-limit"
-          ? "\n\n(The browser sub-agent hit its limit; this is what it had, and may be incomplete.)"
+          ? "\n\n(The browser sub-agent hit its limit; anything above is partial.)"
           : result.stoppedBy === "timeout"
-            ? "\n\n(The browser sub-agent ran out of time; this is what it had, and may be incomplete.)"
+            ? "\n\n(The browser sub-agent ran out of time; anything above is partial.)"
             : "";
+    // The user's words the run read and answered: the caller must know them too.
+    const heard = (result.consumedMessageTexts ?? []).map(quotedUserWords);
+    const heardNote =
+      heard.length > 0
+        ? `\n\n(While it worked, the user wrote: ${heard.map((text) => JSON.stringify(text)).join("; ")}. The run read ${heard.length > 1 ? "these" : "this"}.)`
+        : "";
+    // Said once it matters: the caller plans the rest of the task around it.
+    const left = budget.left();
+    const budgetNote =
+      left <= 1
+        ? `\n\n(${left === 1 ? "1 more new browser run" : "No more new browser runs"} can start until one of the last ${DISPATCH_LIMIT} is ${DISPATCH_WINDOW_MS / 60_000} minutes old; continuing this one does not count.)`
+        : "";
 
     // What the run asked to send: the chat sends each id once, so the loop
     // sending it again adds nothing.
@@ -531,7 +585,10 @@ export function buildBrowserTaskTool(
 
     return {
       content: [
-        { type: "text" as const, text: `${result.text}${tail}${sentNote}` },
+        {
+          type: "text" as const,
+          text: `${result.text}${tail}${heardNote}${sentNote}${budgetNote}`,
+        },
       ],
       details: {
         checkoutStage: checkout.state.stage,

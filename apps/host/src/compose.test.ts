@@ -587,7 +587,14 @@ describe("the phone lane", () => {
       listener("s", { type: "event", event: inner } as never);
     const reply = (messageIds: string[], text: string, failed = false) =>
       event({ type: "turn_reply", messageIds, text, failed });
-    const replies = () => calls.filter((body) => body.action === "reply");
+    // Every reply names this host's poller; the tests read what it says.
+    const replies = () =>
+      calls
+        .filter((body) => body.action === "reply")
+        .map(({ poller, ...rest }) => {
+          expect(poller).toEqual(expect.any(String));
+          return rest;
+        });
     const acks = () =>
       calls
         .filter((body) => body.action === "ack")
@@ -1354,6 +1361,67 @@ describe("the phone lane", () => {
     await handled([["m1"]]);
     expect(replies()).toHaveLength(1);
     phone.stop();
+  });
+
+  it("asks the server for the apology in the chat's language, and says it in English when the server does not know it", async () => {
+    const known = lane();
+    known.phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(known.send).toHaveBeenCalledTimes(1));
+    known.reply(["m1"], "", true);
+    await known.handled([["m1"]]);
+    expect(known.replies()).toEqual([
+      { action: "reply", message_id: "m1", notice: "turn_failed" },
+    ]);
+    known.phone.stop();
+
+    // An older server reads a notice as a reply with no text, and refuses it.
+    const older = lane({ replyFails: (text) => text === "undefined" });
+    older.phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(older.send).toHaveBeenCalledTimes(1));
+    older.reply(["m1"], "", true);
+    await older.handled([["m1"]]);
+    expect(older.replies()).toEqual([
+      { action: "reply", message_id: "m1", notice: "turn_failed" },
+      {
+        action: "reply",
+        message_id: "m1",
+        text: "Sorry, something went wrong on my side. Could you send that again?",
+      },
+    ]);
+    older.phone.stop();
+  });
+
+  it("gives a browser run its own idle limit, and the usual one once it is done", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, settleStop, event, replies } = lane({
+        timings: { idleMs: 1_000, longToolIdleMs: 3_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "book it" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      event({
+        type: "tool_execution_start",
+        tool: { id: "t1", name: "browser_task" },
+      });
+      // A quiet sub-agent call: past the usual limit, inside the run's own.
+      await vi.advanceTimersByTimeAsync(2_500);
+      expect(replies()).toEqual([]);
+      event({
+        type: "tool_execution_complete",
+        tool: { id: "t1", name: "browser_task", input: {} },
+        result: { content: "Done." },
+      });
+      await vi.advanceTimersByTimeAsync(999);
+      expect(replies()).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      settleStop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(replies()).toHaveLength(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("restarts the idle limit on tool progress and gives up at the hard cap", async () => {

@@ -9,6 +9,12 @@ export const PHONE_TURN_LIMITS = {
   /** No sign of work for this long: the agent is stuck, not busy. */
   idleMs: 10 * 60_000,
   /**
+   * The idle limit while a long tool runs that can be quiet for minutes (a
+   * browser run, whose own limit is 12 minutes): that tool's limit and a
+   * minute. The hard cap still counts.
+   */
+  longToolIdleMs: 13 * 60_000,
+  /**
    * However busy, a turn never runs longer than this. Under the server's
    * last redelivery (three, 15 minutes apart), so a long turn is acked
    * before the server gives up on its message and apologizes for it.
@@ -19,6 +25,8 @@ export const PHONE_TURN_LIMITS = {
 export class TurnClock {
   private idle: NodeJS.Timeout | null = null;
   private cap: NodeJS.Timeout | null = null;
+  /** Long tools in flight, by call id: the idle limit is theirs while any runs. */
+  private readonly longTools = new Set<string>();
 
   constructor(
     private readonly limits: typeof PHONE_TURN_LIMITS,
@@ -41,8 +49,19 @@ export class TurnClock {
   touch(): void {
     if (!this.running) return;
     if (this.idle != null) clearTimeout(this.idle);
-    this.idle = setTimeout(() => this.expire("idle"), this.limits.idleMs);
+    const idleMs =
+      this.longTools.size > 0
+        ? Math.max(this.limits.idleMs, this.limits.longToolIdleMs)
+        : this.limits.idleMs;
+    this.idle = setTimeout(() => this.expire("idle"), idleMs);
     this.idle.unref?.();
+  }
+
+  /** A long tool started (`running`) or finished: the idle limit follows it. */
+  longTool(callId: string, running: boolean): void {
+    if (running) this.longTools.add(callId);
+    else this.longTools.delete(callId);
+    this.touch();
   }
 
   stop(): void {
@@ -50,6 +69,7 @@ export class TurnClock {
     if (this.cap != null) clearTimeout(this.cap);
     this.idle = null;
     this.cap = null;
+    this.longTools.clear();
   }
 
   private expire(reason: "idle" | "cap"): void {

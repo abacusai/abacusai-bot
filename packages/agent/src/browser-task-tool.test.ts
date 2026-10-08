@@ -26,7 +26,12 @@ vi.mock("./browser-task.js", async (original) => ({
   hasPausedRun: stubs.paused,
 }));
 
-const { buildBrowserTaskTool, DispatchBudget, DISPATCH_LIMIT } =
+const {
+  buildBrowserTaskTool,
+  DispatchBudget,
+  DISPATCH_LIMIT,
+  quotedUserWords,
+} =
   await import("./browser-task-tool.js");
 
 const finished = (stoppedBy: BrowserTaskResult["stoppedBy"]) => ({
@@ -69,8 +74,35 @@ describe("a browser run's card", () => {
       expect(status).toBe("completed");
       expect(outcome).toBe("limit");
       expect(result.isError).toBe(false);
-      expect(result.content[0]?.text).toMatch(/may be incomplete/);
+      expect(result.content[0]?.text).toMatch(/anything above is partial/);
     }
+  });
+
+  it("tells the caller what the user wrote mid-run, word for word", async () => {
+    stubs.run.mockResolvedValue({
+      ...finished("completed"),
+      consumedMessageIds: ["m2"],
+      consumedMessageTexts: ["window seat please"],
+    });
+    const tool = buildBrowserTaskTool(
+      { cwd: process.cwd() } as never,
+      () => {}
+    );
+    const result = await tool.execute("call-1", { task: "book it" });
+    expect(result.content[0]?.text).toContain(
+      '(While it worked, the user wrote: "window seat please". The run read this.)'
+    );
+  });
+
+  it("quotes the user's mid-run words clipped, with codes and ID numbers withheld", () => {
+    expect(quotedUserWords("the code is 482913, take the 1840 flight")).toBe(
+      "the code is [number withheld], take the 1840 flight"
+    );
+    expect(quotedUserWords("otp: 4417")).toBe("otp: [number withheld]");
+    expect(quotedUserWords("passport K1234567")).toBe(
+      "passport [number withheld]"
+    );
+    expect(quotedUserWords("x".repeat(400))).toHaveLength(301);
   });
 
   it("carries no verdict word for a run that simply finished", async () => {
@@ -406,7 +438,9 @@ describe("one browser run at a time", () => {
     finish(finished("completed"));
     await first;
     const third = await tool.execute("call-3", { task: "site two" });
-    expect(third.content[0]?.text).toBe("the report");
+    expect(third.content[0]?.text).toBe(
+      "the report\n\n(1 more new browser run can start until one of the last 3 is 15 minutes old; continuing this one does not count.)"
+    );
     expect(stubs.run).toHaveBeenCalledTimes(2);
   });
 });

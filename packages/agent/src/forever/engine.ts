@@ -506,7 +506,9 @@ export class ForeverEngine {
 
     this.session = created.session;
     // A degenerate summary from a cheap model must not erase the history.
-    anchorCompactions(this.session.sessionManager);
+    anchorCompactions(this.session.sessionManager, {
+      anchorRequest: this.profile.anchorCompaction !== false,
+    });
     this.unsubscribe = this.session.subscribe((event) => this.onPiEvent(event));
 
     this.emitReady();
@@ -1509,7 +1511,9 @@ export class ForeverEngine {
 
       this.session = created.session;
       // A degenerate summary from a cheap model must not erase the history.
-      anchorCompactions(this.session.sessionManager);
+      anchorCompactions(this.session.sessionManager, {
+        anchorRequest: this.profile.anchorCompaction !== false,
+      });
       this.unsubscribe = this.session.subscribe((event) =>
         this.onPiEvent(event)
       );
