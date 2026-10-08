@@ -6,7 +6,11 @@
  * the channel takes media.
  */
 import { type PhoneToolDefinition, toolText } from "./phone/phone-tool.js";
-import { parseSendMedia, SEND_MEDIA_TOOL_NAME } from "./send-media.js";
+import {
+  MEDIA_HELD,
+  parseSendMedia,
+  SEND_MEDIA_TOOL_NAME,
+} from "./send-media.js";
 
 /** Ids a ledger remembers; each media id lives 30 minutes anyway. */
 const MAX_LEDGER_IDS = 1_000;
@@ -36,8 +40,37 @@ export class DeliveredMedia {
   }
 }
 
-/** `sent`: a browser run's ledger; the loop's own tool has none. */
-export function buildSendMediaTool(sent?: DeliveredMedia): PhoneToolDefinition {
+/**
+ * Whether the app holds `media` for this session: false when it says it does
+ * not, true when it does or cannot be asked (the app's own check at send time
+ * still stands).
+ */
+export type MediaCheck = (media: string) => Promise<boolean>;
+
+/** A `MediaCheck` over the browser's `browser_media` tool, as `mcpToolCaller` calls it. */
+export function mediaCheckFrom(
+  call: (
+    args: Record<string, unknown>
+  ) => Promise<{ text: string; isError: boolean } | null>
+): MediaCheck {
+  return async (media) => {
+    const answer = await call({ media });
+    return answer == null || answer.isError || answer.text === MEDIA_HELD;
+  };
+}
+
+const NOT_HELD =
+  "Not sent: unknown or expired media id; take a new screenshot.";
+
+/**
+ * `sent`: a browser run's ledger; the loop's own tool has none. `held`: asked
+ * before the tool says an image went, so a made-up or expired id is refused
+ * in the same turn.
+ */
+export function buildSendMediaTool(
+  sent?: DeliveredMedia,
+  held?: MediaCheck
+): PhoneToolDefinition {
   return {
     name: SEND_MEDIA_TOOL_NAME,
     label: SEND_MEDIA_TOOL_NAME,
@@ -71,6 +104,8 @@ export function buildSendMediaTool(sent?: DeliveredMedia): PhoneToolDefinition {
         return toolText(`Not sent: ${parsed.reason}`, true);
       if (sent?.has(parsed.request.media) === true)
         return toolText("This run already sent it; not sent again.");
+      if (held != null && !(await held(parsed.request.media)))
+        return toolText(NOT_HELD, true);
       sent?.add(parsed.request.media);
       return toolText(
         parsed.request.when === "now" ? "Sent." : "It goes with your answer."

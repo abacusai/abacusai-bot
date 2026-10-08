@@ -56,7 +56,10 @@ describe("what the phone loop's model reads", () => {
       ["compaction", PHONE_COMPACTION_CONTINUATION_PROMPT],
       ["malformed", PHONE_MALFORMED_CONTINUATION_PROMPT],
       ...(
-        [...profile.tools(dir), ...progressTools] as Array<{
+        [
+          ...profile.tools(dir, { mediaCheck: async () => true }),
+          ...progressTools,
+        ] as Array<{
           name: string;
           description: string;
           parameters: unknown;

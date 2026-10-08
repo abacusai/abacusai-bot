@@ -115,22 +115,22 @@ export function createPhoneProfile(
   return {
     // Read at session start; `current_time` reads the zone on every call.
     systemPrompt: () => [phoneOperatingPrompt(options.model, phoneZone(home))],
-    tools: () => [
+    tools: (_cwd, host) => [
       buildPhoneMemoryTool(home),
       buildPhonePageTool(home, options.pagePublisher),
       buildBotTimeTool(() => phoneZone(home)),
       buildBotReactionTool(),
       buildPhoneProgressTool(),
-      buildSendMediaTool(),
+      buildSendMediaTool(undefined, host.mediaCheck),
       buildPhoneCheckinsTool(home),
       ...buildOwnerTools({ recentUserText }),
     ],
     // A browser run keeps the user posted, and hears them, from inside.
     browserTask: {
       userWords: recentUserText.read,
-      progressTools: (sent) => [
+      progressTools: (sent, held) => [
         buildPhoneProgressTool(),
-        buildSendMediaTool(sent),
+        buildSendMediaTool(sent, held),
       ],
       channel: WHATSAPP_CHANNEL,
     },

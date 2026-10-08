@@ -16,6 +16,7 @@ import {
 
 import { DEFAULT_ABACUS_V1, sponsoredRunHeaders } from "../abacus-endpoint.js";
 import { abacusBotDir, desktopMcpConfigPath } from "../config.js";
+import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
 import {
   UNATTENDED_EXCLUDED_TOOLS,
   UNATTENDED_TOOLS,
@@ -197,11 +198,13 @@ const DESKTOP_ONLY_SERVERS = ["browser", "device", "agent-tools"];
 
 /**
  * Tools a desktop server serves for this agent's own runtime, not for a
- * model: the browser's `browser_checkout`, which `browser_task` drives.
+ * model: the browser's `browser_checkout`, which `browser_task` drives, and
+ * `browser_media`, which `send_media` asks before it says an image went.
  * Routed, so the runtime can call them; never listed among a model's tools.
  */
 export const HOST_INTERNAL_TOOLS: ReadonlySet<string> = new Set([
   "browser_checkout",
+  MEDIA_CHECK_TOOL_NAME,
 ]);
 
 /** A server the app itself hosts: marked so, and under one of its reserved names. */

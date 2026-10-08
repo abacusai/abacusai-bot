@@ -4,6 +4,7 @@
  * tools and memory.
  */
 import type { BrowserTaskContext } from "../browser-task.js";
+import type { MediaCheck } from "../send-media-tool.js";
 import type { McpToolPolicy } from "../tool-policy.js";
 
 /** A hidden or continuation message: its custom-message type and its text. */
@@ -41,11 +42,17 @@ export interface ForeverContinuations {
   languageRepairType: string;
 }
 
+/** What the engine hands a profile's tools from the app behind it. */
+export interface ProfileToolHost {
+  /** Whether the app holds a media id for this session (`send_media`). */
+  mediaCheck: MediaCheck;
+}
+
 export interface ForeverProfile {
   /** Standing prompt parts after pi's base prompt, fixed for the session. */
   systemPrompt(): string[];
   /** The profile's own pi tool definitions, ahead of browser_task and MCP. */
-  tools(cwd: string): unknown[];
+  tools(cwd: string, host: ProfileToolHost): unknown[];
   /** The MCP tools this chat gets, none unless named there; every one without it. */
   mcpTools?: McpToolPolicy;
   /** Whether an MCP tool is replaced by one of the profile's own tools. */
