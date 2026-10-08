@@ -49,10 +49,10 @@ export const startDraftStore = persistedStore<StartDraft>(
   "abacusai-bot:abacus.sessions.start",
   newStartDraft
 );
-const restored = sessionDraftsStore.state.activeId
-  ? restoreSessionDraft(sessionDraftsStore.state.activeId)
-  : undefined;
+const savedActiveId = sessionDraftsStore.state.activeId;
+const restored = savedActiveId ? restoreSessionDraft(savedActiveId) : undefined;
 if (restored) startDraftStore.setState(() => restored);
+else if (savedActiveId) startDraftStore.setState(newStartDraft);
 saveSessionDraft(startDraftStore.state, true);
 const subscription = startDraftStore.subscribe((draft) =>
   saveSessionDraft(draft, true)
@@ -122,6 +122,12 @@ export interface StartSessionDeps {
   navigate(id: string): Promise<unknown> | void;
 }
 const sendingDrafts = new Map<string, Store<StartDraft>>();
+export const rejectStartSubmission = (id: string): void => {
+  const store = sendingDrafts.get(id);
+  if (store) store.setState((d) => ({ ...d, envelope: null }));
+  else if (startDraftStore.state.id === id)
+    startDraftStore.setState((d) => ({ ...d, envelope: null }));
+};
 const running = new WeakMap<Store<StartDraft>, Promise<void>>();
 const navigating = new WeakMap<Store<StartDraft>, number>();
 export const prepareStartDraft = (db: Db, workspaceId: string | null): void => {
@@ -262,12 +268,12 @@ const runStartSession = async (
           throw new Error(result.error ?? "Couldn't attach checkout");
       }
     }
-    const from = draftConversationKey(workspaceId);
+    const from = draftConversationKey(workspaceId, sessionId);
     const to = sessionConversationKey(workspaceId, sessionId);
     const promotions = await Promise.allSettled([
       deps.client.terminal.promoteScope({
         draftConversationKey: from,
-        draftConversation: draftConversationRef(workspaceId),
+        draftConversation: draftConversationRef(workspaceId, sessionId),
         sessionConversationKey: to,
         sessionConversation: sessionConversationRef(workspaceId, sessionId),
       }),

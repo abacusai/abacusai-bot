@@ -9,6 +9,7 @@ import {
 export type DraftConversationScope = {
   workspaceId: string;
   kind: "draft";
+  draftId?: string;
 };
 
 export type SessionConversationScope = {
@@ -26,7 +27,7 @@ export type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
 export const conversationKey = (scope: ConversationScope): ConversationKey => {
   const ref =
     scope.kind === "draft"
-      ? draftConversationRef(scope.workspaceId)
+      ? draftConversationRef(scope.workspaceId, scope.draftId)
       : sessionConversationRef(scope.workspaceId, scope.sessionId);
   return sharedConversationKey(ref);
 };

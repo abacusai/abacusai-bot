@@ -283,7 +283,7 @@ export type PersistedStore<T> = Store<T> & {
 };
 
 /**
- * A module-level store kept in `sessionStorage` under `storage`, one of
+ * A module-level store kept in `sessionStorage` or durable `localStorage` under `storage`, one of
  * `CONTINUITY_STORES` (so its schema checks what is read back, and a
  * document swap carries it): read once at creation, keeping what the schema
  * accepts entry by entry (`initial` when nothing is usable; storage is left

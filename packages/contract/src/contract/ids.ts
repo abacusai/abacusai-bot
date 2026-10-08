@@ -51,6 +51,7 @@ export const DraftConversationRefSchema = v.object({
   version: v.literal(1),
   kind: v.literal("draft"),
   workspaceId: v.string(),
+  draftId: v.optional(v.string()),
 });
 
 export const SessionConversationRefSchema = v.object({

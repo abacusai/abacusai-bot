@@ -170,3 +170,8 @@ export const retryAttachment = async (
     patch(threadId, id, { state: "error", error: String(error) });
   }
 };
+
+export const releaseAttachments = (threadId: string): void => {
+  for (const key of retries.keys())
+    if (key.startsWith(`${threadId}:`)) retries.delete(key);
+};

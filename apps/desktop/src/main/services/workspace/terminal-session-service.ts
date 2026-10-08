@@ -123,7 +123,11 @@ const assertIdentity = (
 
 const registryScope = (conversation: ConversationRef) =>
   conversation.kind === "draft"
-    ? { kind: "draft" as const, workspaceId: conversation.workspaceId }
+    ? {
+        kind: "draft" as const,
+        workspaceId: conversation.workspaceId,
+        ...(conversation.draftId ? { draftId: conversation.draftId } : {}),
+      }
     : {
         kind: "session" as const,
         workspaceId: conversation.workspaceId,
@@ -134,7 +138,7 @@ const conversationFromEvent = (
   event: ConversationTerminalEvent
 ): ConversationRef =>
   event.scope.kind === "draft"
-    ? draftConversationRef(event.scope.workspaceId)
+    ? draftConversationRef(event.scope.workspaceId, event.scope.draftId)
     : sessionConversationRef(event.scope.workspaceId, event.scope.sessionId);
 
 const snapshot = (

@@ -522,6 +522,7 @@ export const ThreadComposer = () => {
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const modelChip = useRef<ModelChipHandle>(null);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
@@ -785,6 +786,7 @@ export const ThreadComposer = () => {
     );
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    setDragging(false);
     if (config.pending) {
       event.preventDefault();
       return;
@@ -944,11 +946,21 @@ export const ThreadComposer = () => {
         <motion.div
           {...morph}
           transition={surfaceTransition}
-          onDragOver={(event: DragEvent<HTMLDivElement>) =>
-            event.preventDefault()
-          }
+          onDragOver={(event: DragEvent<HTMLDivElement>) => {
+            if (event.dataTransfer.types.includes("Files")) {
+              event.preventDefault();
+              setDragging(true);
+            }
+          }}
+          onDragLeave={(event) => {
+            if (
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            )
+              setDragging(false);
+          }}
           onDrop={onDrop}
           style={{ ...sharedStyle, borderRadius: radius }}
+          data-dragging={dragging || undefined}
           data-slot="composer-surface"
           data-layout={morph.layout ? "layout" : undefined}
           data-radius={radius}
@@ -959,6 +971,7 @@ export const ThreadComposer = () => {
             // the surface rather than drawn ahead of it. Clip, not hidden:
             // no scroll container, so focus never scrolls the surface.
             "relative z-10 flex flex-col overflow-clip bg-[var(--chat-surface)]",
+            dragging && "ring-primary/40 ring-2",
             // ComposerStates: the pill is 48 px; the typing box is the text
             // area over the toolbar row with 8 px under it, nothing else.
             expanded

@@ -625,7 +625,10 @@ const WorkspaceGroup = ({
       run: () =>
         void navigate({
           to: "/sessions/new",
-          search: { workspace: workspace.id },
+          search: {
+            workspace: workspace.id,
+            draft: openStartDraft(undefined, workspace.id),
+          },
         }),
     },
     {

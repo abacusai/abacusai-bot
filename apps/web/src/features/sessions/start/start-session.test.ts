@@ -6,14 +6,64 @@ import {
   FixtureDb,
   fixtureTransport,
 } from "#renderer/data/fixture-db/fixture-db";
+import {
+  updateDraft,
+  draftStore,
+} from "#renderer/features/chat/composer/draft-store";
 
+import { sessionDraftsStore } from "./session-drafts";
 import {
   startSession,
+  startDraftStore,
+  openStartDraft,
   newStartDraft,
   type StartDraft,
   optimisticSession,
   type SubmissionEnvelope,
 } from "./start-session";
+it("accepts a managed draft once and removes only that draft when another composer opens during handoff", async () => {
+  const fixture = new FixtureDb();
+  const db = createDb(fixtureTransport(fixture));
+  const envelope: SubmissionEnvelope = {
+    runId: "run",
+    messageId: "message",
+    parts: [{ type: "text", content: "First prompt" }],
+  };
+  const first = {
+    ...newStartDraft(),
+    workspaceId: "w",
+    stage: "checkout-ready" as const,
+    envelope,
+  };
+  startDraftStore.setState(() => first);
+  updateDraft(`draft:${first.id}`, (d) => ({ ...d, text: "First prompt" }));
+  let accept!: () => void;
+  const receipt = new Promise<void>((resolve) => {
+    accept = resolve;
+  });
+  const handoff = vi.fn(() => receipt);
+  const navigate = vi.fn();
+  const deps = { db, client: {} as never, handoff, navigate };
+  const send = startSession(deps);
+  const repeat = startSession(deps);
+  const next = openStartDraft(undefined, "other-workspace");
+  updateDraft(`draft:${next}`, (d) => ({ ...d, text: "Second prompt" }));
+  try {
+    accept();
+    await Promise.all([send, repeat]);
+    expect(handoff).toHaveBeenCalledOnce();
+    expect(handoff).toHaveBeenCalledWith(first.id, envelope);
+    expect(sessionDraftsStore.state.drafts[first.id]).toBeUndefined();
+    expect(startDraftStore.state.id).toBe(next);
+    expect(draftStore.state[`draft:${next}`]?.text).toBe("Second prompt");
+    expect(navigate).not.toHaveBeenCalled();
+  } finally {
+    startDraftStore.setState(newStartDraft);
+    db.stop();
+    for (const collection of Object.values(db.collections))
+      await collection.cleanup();
+  }
+});
 it("R4-T12/R4-T13 resumes an attached checkout after failure and persists model/mode", async () => {
   const fixture = new FixtureDb();
   const db = createDb(fixtureTransport(fixture));

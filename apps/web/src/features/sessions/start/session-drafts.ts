@@ -1,3 +1,4 @@
+import { releaseAttachments } from "#renderer/features/chat/composer/attachments";
 import {
   draftStore,
   EMPTY_DRAFT,
@@ -94,6 +95,7 @@ export const sessionDraftsStore = persistedStore<SessionDrafts>(
 
 export const saveSessionDraft = (draft: StartDraft, active = false): void => {
   const now = Date.now();
+  const previous = sessionDraftsStore.state.drafts;
   sessionDraftsStore.setState((state) =>
     pruneSessionDrafts({
       activeId: active ? draft.id : state.activeId,
@@ -111,11 +113,33 @@ export const saveSessionDraft = (draft: StartDraft, active = false): void => {
       },
     })
   );
+  const removed = Object.keys(previous).filter(
+    (id) => !sessionDraftsStore.state.drafts[id]
+  );
+  if (removed.length) {
+    for (const id of removed) {
+      releaseAttachments(`draft:${id}`);
+      for (const attachment of previous[id]!.composer.attachments)
+        if (attachment.preview?.startsWith("blob:"))
+          URL.revokeObjectURL?.(attachment.preview);
+    }
+    draftStore.setState((state) =>
+      Object.fromEntries(
+        Object.entries(state).filter(
+          ([key]) => !removed.some((id) => key === `draft:${id}`)
+        )
+      )
+    );
+  }
 };
 
 export const restoreSessionDraft = (id: string): SessionDraft | undefined => {
   const draft = sessionDraftsStore.state.drafts[id];
   if (!draft) return;
+  if (!draft.envelope && Date.now() - draft.updatedAt >= DRAFT_TTL) {
+    removeSessionDraft(id);
+    return;
+  }
   updateDraft(`draft:${id}`, () => draft.composer);
   return draft;
 };
@@ -136,6 +160,13 @@ export const removeSessionDraft = (id: string): (() => boolean) => {
     )
   );
   let undone = false;
+  const timer = setTimeout(() => {
+    if (undone) return;
+    releaseAttachments(`draft:${id}`);
+    for (const attachment of saved?.composer.attachments ?? [])
+      if (attachment.preview?.startsWith("blob:"))
+        URL.revokeObjectURL?.(attachment.preview);
+  }, 6000);
   return () => {
     if (
       !saved ||
@@ -145,6 +176,7 @@ export const removeSessionDraft = (id: string): (() => boolean) => {
     )
       return false;
     undone = true;
+    clearTimeout(timer);
     updateDraft(`draft:${id}`, () => saved.composer);
     sessionDraftsStore.setState((state) =>
       pruneSessionDrafts({ ...state, drafts: { ...state.drafts, [id]: saved } })
@@ -152,6 +184,16 @@ export const removeSessionDraft = (id: string): (() => boolean) => {
     return true;
   };
 };
+
+draftStore.setState((state) => ({
+  ...state,
+  ...Object.fromEntries(
+    Object.values(sessionDraftsStore.state.drafts).map((d) => [
+      `draft:${d.id}`,
+      d.composer,
+    ])
+  ),
+}));
 
 const subscription = draftStore.subscribe((next) => {
   sessionDraftsStore.setState((state) => {

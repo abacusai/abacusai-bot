@@ -1,5 +1,5 @@
 import { FileText, Folder, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { containmentRootFor } from "#renderer/components/file-preview/paths";
@@ -35,6 +35,7 @@ export const AttachmentChip = ({
   onRetry(): void;
 }) => {
   const { t } = useTranslation();
+  const errorId = useId();
   const [open, setOpen] = useState(false);
   const [image, setImage] = useState(attachment.preview);
   const [text, setText] = useState<string>();
@@ -80,7 +81,9 @@ export const AttachmentChip = ({
   ]);
   const details =
     attachment.kind === "folder"
-      ? t("chat.composer.folderItems", { count: attachment.count ?? 0 })
+      ? attachment.count == null
+        ? ""
+        : t("chat.composer.folderItems", { count: attachment.count })
       : formatSize(attachment.size);
   return (
     <Attachment
@@ -96,6 +99,9 @@ export const AttachmentChip = ({
               type="button"
               className="flex min-w-0 flex-1 items-center gap-1.5 text-start outline-none"
               aria-label={attachment.name}
+              aria-describedby={
+                attachment.state === "error" ? errorId : undefined
+              }
             />
           }
         >
@@ -141,6 +147,11 @@ export const AttachmentChip = ({
           ) : null}
         </HoverCardContent>
       </HoverCard>
+      {attachment.state === "error" ? (
+        <span id={errorId} className="sr-only">
+          {attachment.error || t("chat.composer.attachFailed")}
+        </span>
+      ) : null}
       {attachment.state === "error" ? (
         <AttachmentAction
           aria-label={t("chat.composer.retryAttachment")}

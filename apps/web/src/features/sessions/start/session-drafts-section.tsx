@@ -2,7 +2,7 @@ import type { WorkspaceRow } from "@abacus-ai/contract/contract";
 import { useLocation } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { Paperclip, SquarePen, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { NavList } from "#renderer/components/nav-list";
@@ -22,7 +22,7 @@ import {
   removeSessionDraft,
   sessionDraftsStore,
 } from "./session-drafts";
-import { openStartDraft, startDraftStore } from "./start-session";
+import { newStartDraft, startDraftStore } from "./start-session";
 
 export const SessionDraftsSection = ({
   workspaces,
@@ -34,16 +34,21 @@ export const SessionDraftsSection = ({
   const pathname = useLocation({ select: (s) => s.pathname });
   const navigate = useAppNavigate();
   const [open, setOpen] = useState(true);
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const drafts = Object.values(state.drafts)
     .filter((d) => d.stage !== "handed-off" && hasDraftContent(d.composer))
     .sort((a, b) => b.updatedAt - a.updatedAt || b.createdAt - a.createdAt);
   if (!drafts.length) return null;
   const discard = (id: string) => {
     const active = startDraftStore.state.id === id;
+    if (active) startDraftStore.setState(newStartDraft);
     const undo = removeSessionDraft(id);
     if (active && pathname === "/sessions/new") {
-      const fresh = openStartDraft(id);
+      const fresh = startDraftStore.state.id;
       void navigate({
         to: "/sessions/new",
         search: { draft: fresh },

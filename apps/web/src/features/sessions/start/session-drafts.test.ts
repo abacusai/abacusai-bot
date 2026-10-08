@@ -7,6 +7,7 @@ import {
 } from "#renderer/features/chat/composer/draft-store";
 import {
   captureDrafts,
+  persistedStore,
   restoreDrafts,
 } from "#renderer/lib/continuity/registry";
 
@@ -103,6 +104,14 @@ it("persists locally and restores through continuity without copying into a real
     attachments: [{ state: "error", name: "image.png" }],
   });
   expect(saved.drafts[id].composer.attachments[0].preview).toBeUndefined();
+  const restarted = persistedStore<typeof sessionDraftsStore.state>(
+    "abacusai-bot:abacus.sessions.drafts",
+    () => ({ activeId: null, drafts: {} }),
+    { durable: true, bind: false }
+  );
+  expect(restarted.state.activeId).toBe(id);
+  expect(restarted.state.drafts[id]?.composer.text).toBe("Survive restart");
+  restarted.dispose();
   const snapshot = captureDrafts();
   sessionDraftsStore.setState(() => ({ activeId: null, drafts: {} }));
   restoreDrafts(snapshot);
@@ -156,4 +165,19 @@ it("expires old drafts, removes abandoned empty drafts and caps oldest content w
   expect(result.drafts["empty"]).toBeUndefined();
   expect(result.drafts["draft-21"]).toBeUndefined();
   expect(result.drafts["draft-22"]).toBeDefined();
+});
+
+it("does not resurrect an expired deep link or leave its composer behind", () => {
+  const id = startDraftStore.state.id;
+  updateDraft(`draft:${id}`, (d) => ({ ...d, text: "Expired" }));
+  sessionDraftsStore.setState((s) => ({
+    ...s,
+    drafts: {
+      ...s.drafts,
+      [id]: { ...s.drafts[id]!, updatedAt: Date.now() - DRAFT_TTL - 1 },
+    },
+  }));
+  expect(openStartDraft(id)).not.toBe(id);
+  expect(sessionDraftsStore.state.drafts[id]).toBeUndefined();
+  expect(draftStore.state[`draft:${id}`]).toBeUndefined();
 });

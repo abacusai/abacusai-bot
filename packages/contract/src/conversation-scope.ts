@@ -4,6 +4,7 @@ export type DraftConversationRef = {
   version: typeof CONVERSATION_KEY_VERSION;
   kind: "draft";
   workspaceId: string;
+  draftId?: string;
 };
 
 export type SessionConversationRef = {
@@ -34,11 +35,13 @@ const requireId = (value: string, label: string): string => {
 };
 
 export const draftConversationRef = (
-  workspaceId: string
+  workspaceId: string,
+  draftId?: string
 ): DraftConversationRef => ({
   version: CONVERSATION_KEY_VERSION,
   kind: "draft",
   workspaceId: requireId(workspaceId, "workspaceId"),
+  ...(draftId ? { draftId: requireId(draftId, "draftId") } : {}),
 });
 
 export const sessionConversationRef = (
@@ -54,14 +57,23 @@ export const sessionConversationRef = (
 export const conversationKey = (ref: ConversationRef): ConversationKey =>
   JSON.stringify(
     ref.kind === "draft"
-      ? ["conversation", ref.version, ref.workspaceId, ref.kind]
+      ? [
+          "conversation",
+          ref.version,
+          ref.workspaceId,
+          ref.kind,
+          ...(ref.draftId ? [ref.draftId] : []),
+        ]
       : ["conversation", ref.version, ref.workspaceId, ref.kind, ref.sessionId]
   ) as ConversationKey;
 
 export const draftConversationKey = (
-  workspaceId: string
+  workspaceId: string,
+  draftId?: string
 ): DraftConversationKey =>
-  conversationKey(draftConversationRef(workspaceId)) as DraftConversationKey;
+  conversationKey(
+    draftConversationRef(workspaceId, draftId)
+  ) as DraftConversationKey;
 
 export const sessionConversationKey = (
   workspaceId: string,
@@ -87,8 +99,12 @@ export const conversationRefFromKey = (
     ) {
       return null;
     }
-    if (kind === "draft" && sessionId === undefined) {
-      return draftConversationRef(workspaceId);
+    if (
+      kind === "draft" &&
+      (sessionId === undefined ||
+        (typeof sessionId === "string" && sessionId.length > 0))
+    ) {
+      return draftConversationRef(workspaceId, sessionId);
     }
     if (
       kind === "session" &&

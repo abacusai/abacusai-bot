@@ -13,6 +13,7 @@ import { SessionStartPage } from "#renderer/features/sessions/start/session-star
 import { SessionStartResources } from "#renderer/features/sessions/start/start-resources";
 import {
   prepareStartDraft,
+  rejectStartSubmission,
   startDraftStore,
 } from "#renderer/features/sessions/start/start-session";
 import { nativePresenterFor } from "#renderer/features/shell/platform-presenter";
@@ -30,7 +31,7 @@ const SessionsNewRoute = () => {
   const navigate = useAppNavigate();
   const model = useSessionComposerModel(undefined, `draft:${draft.id}`);
   useEffect(() => {
-    if (search.draft !== draftId)
+    if (draftId === startDraftStore.state.id && search.draft !== draftId)
       void navigate({
         to: "/sessions/new",
         search: { ...search, draft: draftId },
@@ -84,8 +85,7 @@ const SessionsNewRoute = () => {
               forwardedProps: envelope.forwardedProps,
             });
             if (ack.status === "rejected" || ack.original === "rejected") {
-              if (startDraftStore.state.id === id)
-                startDraftStore.setState((s) => ({ ...s, envelope: null }));
+              rejectStartSubmission(id);
               throw new Error(t("chat.composer.rejected"));
             }
           }}
@@ -123,11 +123,17 @@ const SessionsNewRoute = () => {
                     ? {
                         list: () =>
                           transport.client.settings.promptHistory.list({
-                            scope: draftConversationKey(binding.workspaceId!),
+                            scope: draftConversationKey(
+                              binding.workspaceId!,
+                              draft.id
+                            ),
                           }),
                         add: async (prompt) => {
                           await transport.client.settings.promptHistory.add({
-                            scope: draftConversationKey(binding.workspaceId!),
+                            scope: draftConversationKey(
+                              binding.workspaceId!,
+                              draft.id
+                            ),
                             prompt,
                           });
                         },
