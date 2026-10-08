@@ -1687,9 +1687,6 @@
     "start": {
       "heading": "What should we build?",
       "placeholder": "Tell the agent what to do…",
-      "interrupted": "L’ultimo messaggio non è stato inviato completamente.",
-      "continue": "Continue",
-      "discard": "Discard",
       "try": "Try one of these",
       "starters": {
         "build-a-store": {

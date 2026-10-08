@@ -530,6 +530,7 @@ export class ThreadStore {
     const owner = this.ownership(sessionId, threadFile);
     if (owner === "foreign" || owner === "unreadable")
       throw new ThreadFileProtectedError(sessionId, owner);
+    const startAdmission = this.readCurrentFile(sessionId)?.startAdmission;
     const file: ThreadFileV2 = {
       version: 3,
       threadId: sessionId,
@@ -543,6 +544,7 @@ export class ThreadStore {
       },
       messages: thread.messages,
       runs: thread.runs,
+      ...(startAdmission != null && { startAdmission }),
     };
     this.persist(sessionId, threadFile, file, "agui", true);
     // Held in memory (write-blocked) or on disk: readers now see it.
@@ -553,6 +555,34 @@ export class ThreadStore {
         this.log(`an AG-UI persist listener threw: ${String(error)}`);
       }
     }
+  }
+
+  recordStartAdmission(
+    sessionId: string,
+    receipt: NonNullable<ThreadFileV2["startAdmission"]>
+  ): void {
+    const filePath = this.threadPath(sessionId);
+    if (!filePath) throw new Error("Missing session identity");
+    const owner = this.ownership(sessionId, filePath);
+    if (owner === "foreign" || owner === "unreadable")
+      throw new ThreadFileProtectedError(sessionId, owner);
+    const current = this.readCurrentFile(sessionId);
+    this.persist(
+      sessionId,
+      filePath,
+      {
+        ...current,
+        version: 3,
+        threadId: sessionId,
+        updatedAt: new Date().toISOString(),
+        source: { kind: "agui", ...this.afterClear(sessionId) },
+        messages: current?.messages ?? [],
+        runs: current?.runs ?? [],
+        startAdmission: receipt,
+      },
+      "agui",
+      true
+    );
   }
 
   private readonly aguiListeners = new Set<(sessionId: string) => void>();

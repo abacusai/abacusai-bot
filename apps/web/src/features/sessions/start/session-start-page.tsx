@@ -11,11 +11,16 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { BotAvatar } from "#renderer/components/bot-avatar";
-import { Spinner } from "#renderer/components/spinner";
 import { useDb } from "#renderer/data/db";
 import { isListedSession } from "#renderer/data/db/filters";
 import { usePrefs } from "#renderer/data/db/prefs";
@@ -24,13 +29,6 @@ import { formatChatStamp } from "#renderer/lib/format/chat-stamp";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { Button } from "#renderer/ui/button";
-import {
-  Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemFooter,
-} from "#renderer/ui/item";
 
 import { SessionContextTray } from "../context/context-tray";
 import { useSessionsTransport, useWorkspace } from "../data/queries";
@@ -38,7 +36,6 @@ import { SESSION_STARTERS } from "../starters";
 import {
   startDraftStore,
   startSession,
-  newStartDraft,
   optimisticSession,
   type SubmissionEnvelope,
 } from "./start-session";
@@ -69,7 +66,7 @@ export const SessionStartPage = ({
 }: {
   workspaceId: string | null;
   renderComposer: (binding: StartComposerBinding) => ReactNode;
-  handoff: (id: string, envelope: SubmissionEnvelope) => void;
+  handoff: (id: string, envelope: SubmissionEnvelope) => Promise<void>;
   prefill: (id: string, text: string) => void;
 }) => {
   const { t, i18n } = useTranslation();
@@ -88,21 +85,15 @@ export const SessionStartPage = ({
     refetchOnWindowFocus: true,
   });
   const [now] = useState(() => Date.now());
-  const [recovering, setRecovering] = useState(
-    () => draft.stage !== "draft" && draft.envelope !== null
-  );
+  const [resume] = useState(() => draft.envelope !== null);
   const [inFlight] = useState(() => new Set<string>());
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(resume);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (draft.stage === "draft" && draft.workspaceId === null && workspaceId)
       startDraftStore.setState((s) => ({ ...s, workspaceId }));
   }, [workspaceId, draft.workspaceId, draft.stage]);
-  const submit = async (envelope?: SubmissionEnvelope) => {
-    if (inFlight.has("submit")) return;
-    inFlight.add("submit");
-    setPending(true);
-    setError(null);
+  const send = async (envelope?: SubmissionEnvelope) => {
     try {
       await startSession(
         {
@@ -126,6 +117,21 @@ export const SessionStartPage = ({
       setPending(false);
     }
   };
+  const submit = async (envelope: SubmissionEnvelope) => {
+    if (inFlight.has("submit")) return;
+    inFlight.add("submit");
+    setPending(true);
+    setError(null);
+    await send(envelope);
+  };
+  const resumeStart = useEffectEvent(() => {
+    if (inFlight.has("submit")) return;
+    inFlight.add("submit");
+    queueMicrotask(() => void send().catch(() => {}));
+  });
+  useEffect(() => {
+    if (resume) resumeStart();
+  }, [resume]);
   const id = `draft:${draft.id}`;
   const starters = SESSION_STARTERS;
   const context = draft.workspaceId ? (
@@ -163,103 +169,34 @@ export const SessionStartPage = ({
         <h1 className="phone-rise phone:px-5 phone:text-start phone:text-[32px] phone:leading-[38px] phone:tracking-tight text-center text-[28px] leading-9 font-semibold">
           {t("sessions.start.heading")}
         </h1>
-        {recovering ? (
-          <Item
-            role="status"
-            variant="outline"
-            className="phone:order-4 phone:mx-3 gap-3 p-4"
-          >
-            <ItemContent>
-              <ItemTitle>{t("sessions.start.interrupted")}</ItemTitle>
-              <ItemDescription className="line-clamp-3 whitespace-pre-wrap">
-                {draft.envelope?.parts
-                  .filter((part) => part.type === "text")
-                  .map((part) => part.content)
-                  .join("\n")}
-              </ItemDescription>
-            </ItemContent>
-            {draft.stage === "created" ? (
-              <fieldset disabled={pending} className="w-full">
-                {context}
-              </fieldset>
-            ) : null}
-            <ItemFooter className="justify-start gap-2">
-              <Button
-                autoFocus
-                disabled={pending}
-                onClick={() => void submit().catch(() => {})}
-              >
-                {pending ? <Spinner aria-hidden /> : null}
-                {t("sessions.start.continue")}
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={pending}
-                onClick={async () => {
-                  if (inFlight.has("submit")) return;
-                  inFlight.add("submit");
-                  setPending(true);
-                  setError(null);
-                  try {
-                    await db.collections.sessions.preload();
-                    if (db.collections.sessions.get(draft.id))
-                      await db.collections.sessions.delete(draft.id).isPersisted
-                        .promise;
-                    const next = {
-                      ...newStartDraft(),
-                      workspaceId: draft.workspaceId,
-                    };
-                    prefill(
-                      `draft:${next.id}`,
-                      draft.envelope?.parts
-                        .filter((p) => p.type === "text")
-                        .map((p) => p.content)
-                        .join("\n") ?? ""
-                    );
-                    startDraftStore.setState(() => next);
-                    setRecovering(false);
-                  } catch (e) {
-                    setError(String(e));
-                  } finally {
-                    inFlight.delete("submit");
-                    setPending(false);
-                  }
-                }}
-              >
-                {t("sessions.start.discard")}
-              </Button>
-            </ItemFooter>
-          </Item>
-        ) : (
-          <div
-            className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
-            style={{ "--rise-i": 3 } as CSSProperties}
-          >
-            {renderComposer({
-              threadId: id,
-              attachmentContext: async () => {
-                if (!draft.workspaceId)
-                  throw new Error("Select a workspace before uploading files");
-                await db.collections.sessions.preload();
-                const existing = db.collections.sessions.get(draft.id);
-                if (existing && existing.workspaceId !== draft.workspaceId)
-                  throw new Error(
-                    "Session identity belongs to another workspace"
-                  );
-                if (!existing)
-                  await db.collections.sessions.insert(optimisticSession(draft))
-                    .isPersisted.promise;
-                return { workspaceId: draft.workspaceId, sessionId: draft.id };
-              },
-              workspaceId: draft.workspaceId,
-              root: workspace?.path ?? null,
-              context,
-              submit,
-              pending,
-              blocked: !draft.workspaceId || pathStatus.data?.exists === false,
-            })}
-          </div>
-        )}
+        <div
+          className="phone-rise phone:order-4 phone:px-3 phone:[&_[data-slot=composer]>.z-10]:min-h-[128px]"
+          style={{ "--rise-i": 3 } as CSSProperties}
+        >
+          {renderComposer({
+            threadId: id,
+            attachmentContext: async () => {
+              if (!draft.workspaceId)
+                throw new Error("Select a workspace before uploading files");
+              await db.collections.sessions.preload();
+              const existing = db.collections.sessions.get(draft.id);
+              if (existing && existing.workspaceId !== draft.workspaceId)
+                throw new Error(
+                  "Session identity belongs to another workspace"
+                );
+              if (!existing)
+                await db.collections.sessions.insert(optimisticSession(draft))
+                  .isPersisted.promise;
+              return { workspaceId: draft.workspaceId, sessionId: draft.id };
+            },
+            workspaceId: draft.workspaceId,
+            root: workspace?.path ?? null,
+            context,
+            submit,
+            pending,
+            blocked: !draft.workspaceId || pathStatus.data?.exists === false,
+          })}
+        </div>
         {error ? (
           <p
             role="alert"
@@ -319,7 +256,7 @@ export const SessionStartPage = ({
             {starters.map((starter, index) => (
               <Button
                 key={starter.id}
-                disabled={pending || recovering}
+                disabled={pending}
                 variant="secondary"
                 style={{ "--rise-i": index + 1 } as CSSProperties}
                 className="phone-rise phone:h-[132px] phone:w-[156px] phone:shrink-0 phone:snap-start phone:justify-between phone:rounded-[22px] phone:border phone:border-foreground/[0.08] phone:bg-foreground/[0.045] phone:backdrop-blur-xl phone:p-3.5 phone:font-medium h-auto min-h-20 flex-col items-start gap-2 rounded-2xl p-3 text-start whitespace-normal"

@@ -8,6 +8,10 @@ import { StartComposer } from "#renderer/features/chat/composer/start-composer";
 import { useSessionComposerModel } from "#renderer/features/sessions/data/composer-model";
 import { SessionStartPage } from "#renderer/features/sessions/start/session-start-page";
 import { SessionStartResources } from "#renderer/features/sessions/start/start-resources";
+import {
+  prepareStartDraft,
+  startDraftStore,
+} from "#renderer/features/sessions/start/start-session";
 import { nativePresenterFor } from "#renderer/features/shell/platform-presenter";
 import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
 import { shellStore } from "#renderer/features/shell/shell-store";
@@ -45,9 +49,28 @@ const SessionsNewRoute = () => {
       >
         <SessionStartPage
           workspaceId={workspaceId}
-          handoff={(id, envelope) =>
-            updateDraft(id, (d) => ({ ...d, pendingSubmit: envelope }))
-          }
+          handoff={async (id, envelope) => {
+            const ack = await transport.client.ai.send({
+              threadId: id,
+              startId: id,
+              runId: envelope.runId,
+              messages: [
+                {
+                  id: envelope.messageId,
+                  role: "user",
+                  parts: envelope.parts.map((part) => ({ ...part })),
+                  ...(envelope.userText
+                    ? { metadata: { abacus: { userText: envelope.userText } } }
+                    : {}),
+                },
+              ],
+              forwardedProps: envelope.forwardedProps,
+            });
+            if (ack.status === "rejected" || ack.original === "rejected") {
+              startDraftStore.setState((s) => ({ ...s, envelope: null }));
+              throw new Error(t("chat.composer.rejected"));
+            }
+          }}
           prefill={(id, text) => updateDraft(id, (d) => ({ ...d, text }))}
           renderComposer={(binding) => (
             <>
@@ -127,6 +150,7 @@ export const Route = createFileRoute("/_shell/(sessions)/sessions/new")({
       await workspaces.utils.resync();
       workspaceId = result.workspaceId;
     }
+    prepareStartDraft(context.db, workspaceId);
     return { workspaceId };
   },
   component: SessionsNewRoute,

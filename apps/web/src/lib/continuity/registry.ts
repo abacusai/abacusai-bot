@@ -85,6 +85,7 @@ const start = v.object({
   ]),
   worktreeOperationId: nullableString,
   stage: v.picklist(["draft", "created", "checkout-ready", "handed-off"]),
+  submittedAt: v.optional(v.number()),
   envelope: v.nullable(envelope),
 });
 const tabs = v.record(

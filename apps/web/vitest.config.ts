@@ -66,7 +66,7 @@ export default defineConfig({
               ? ["src/**/*.test.{ts,tsx}"]
               : [
                   "src/**/*.browser-gating.test.{ts,tsx}",
-                  "src/features/sessions/start/start-recovery.test.tsx",
+                  "src/features/sessions/start/start-send-page.test.tsx",
                 ],
           exclude:
             platform === "electron"

@@ -45,6 +45,12 @@ export interface ThreadFileV2 {
   messages: Array<UIMessage & { reactions?: string[] }>;
   /** Durable run outcomes (spec 02 §14.7): `agui` files only. */
   runs?: unknown[];
+  startAdmission?: {
+    runId: string;
+    messageId: string;
+    status: "started" | "queued";
+    entryId?: string;
+  };
 }
 
 /**

@@ -7,7 +7,13 @@ import {
   fixtureTransport,
 } from "#renderer/data/fixture-db/fixture-db";
 
-import { startSession, newStartDraft, type StartDraft } from "./start-session";
+import {
+  startSession,
+  newStartDraft,
+  type StartDraft,
+  optimisticSession,
+  type SubmissionEnvelope,
+} from "./start-session";
 it("R4-T12/R4-T13 resumes an attached checkout after failure and persists model/mode", async () => {
   const fixture = new FixtureDb();
   const db = createDb(fixtureTransport(fixture));
@@ -100,5 +106,46 @@ it("failed materialization resumes with explicit detach without inserting or mat
   } finally {
     db.stop();
     for (const c of Object.values(db.collections)) await c.cleanup();
+  }
+});
+
+it("two documents resume an existing session with one host admission identity", async () => {
+  const fixture = new FixtureDb();
+  const db = createDb(fixtureTransport(fixture));
+  const draft: StartDraft = {
+    ...newStartDraft(),
+    workspaceId: "w",
+    stage: "checkout-ready",
+    envelope: {
+      runId: "saved-run",
+      messageId: "saved-message",
+      parts: [{ type: "text", content: "hello" }],
+    },
+  };
+  fixture.sessions.upsert(optimisticSession(draft));
+  const admitted = new Set<string>();
+  const delivered: string[] = [];
+  const handoff = vi.fn(async (id: string, envelope: SubmissionEnvelope) => {
+    if (!admitted.has(id)) {
+      admitted.add(id);
+      delivered.push(envelope.messageId);
+    }
+  });
+  const first = new Store(structuredClone(draft));
+  const second = new Store(structuredClone(draft));
+  const deps = { db, client: {} as never, handoff, navigate: vi.fn() };
+  try {
+    await Promise.all([
+      startSession({ ...deps, store: first }),
+      startSession({ ...deps, store: second }),
+    ]);
+    expect(fixture.sessions.rows.size).toBe(1);
+    expect(delivered).toEqual(["saved-message"]);
+    expect(handoff).toHaveBeenNthCalledWith(1, draft.id, draft.envelope);
+    expect(handoff).toHaveBeenNthCalledWith(2, draft.id, draft.envelope);
+  } finally {
+    db.stop();
+    for (const collection of Object.values(db.collections))
+      await collection.cleanup();
   }
 });
