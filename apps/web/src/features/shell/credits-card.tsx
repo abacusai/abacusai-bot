@@ -121,19 +121,9 @@ export const UpgradePromo = () => {
   }, [compact]);
   const { compact: _compact, ...floatingStyle } = position;
   const [excited, setExcited] = useState(false);
-  const [celebrating, setCelebrating] = useState(false);
   const tier = creditsTier(account.data);
-  const previousTier = useRef(tier);
-  useEffect(() => {
-    const upgraded = previousTier.current === "free" && tier === "paid";
-    previousTier.current = tier;
-    if (!upgraded) return;
-    setCelebrating(true);
-    const timer = window.setTimeout(() => setCelebrating(false), 1800);
-    return () => clearTimeout(timer);
-  }, [tier]);
   useLayoutEffect(() => {
-    if (host || (!state && !celebrating)) return;
+    if (host || !state) return;
     let frame = 0;
     const observer = new ResizeObserver(() => schedule());
     const observed = new Set<Element>();
@@ -207,14 +197,15 @@ export const UpgradePromo = () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", schedule);
     };
-  }, [state, celebrating, location.href, host, target]);
+  }, [state, location.href, host, target]);
   const remaining =
     account.data?.credits_granted != null && account.data.credits_used != null
       ? Math.max(0, account.data.credits_granted - account.data.credits_used)
       : null;
+  if (tier !== "free") return createPortal(null, target);
   return createPortal(
     <AnimatePresence>
-      {state || celebrating ? (
+      {state ? (
         <motion.aside
           key={key}
           data-slot="upgrade-promo"
@@ -256,7 +247,6 @@ export const UpgradePromo = () => {
               } catch {
                 /* Keep this window’s snooze. */
               }
-              setCelebrating(false);
               setSnooze({ key, value });
             }}
           >
@@ -269,18 +259,16 @@ export const UpgradePromo = () => {
               remaining={remaining}
               total={account.data?.credits_granted ?? null}
               excited={excited}
-              upgraded={celebrating}
+              upgraded={false}
               compact={compact}
               active={!!host || position.visibility !== "hidden"}
             />
             <div className={compact ? "hidden" : "min-w-0 flex-1"}>
               <p className="text-sm font-semibold">
                 {t(
-                  celebrating
-                    ? "creditsCard.upgraded"
-                    : remaining === 0
-                      ? "creditsCard.restTitle"
-                      : "creditsCard.levelUpTitle"
+                  remaining === 0
+                    ? "creditsCard.restTitle"
+                    : "creditsCard.levelUpTitle"
                 )}
               </p>
               {remaining != null ? (
@@ -339,7 +327,6 @@ export const UpgradePromo = () => {
             onMouseLeave={() => setExcited(false)}
             onFocus={() => setExcited(true)}
             onBlur={() => setExcited(false)}
-            disabled={celebrating}
             onClick={() => void openUpgrade(transport.client)}
           >
             <Sparkles aria-hidden />

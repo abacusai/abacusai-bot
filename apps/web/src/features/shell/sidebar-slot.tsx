@@ -31,9 +31,11 @@ import {
 } from "#renderer/lib/motion";
 import { isRouteTransitionActive } from "#renderer/lib/navigation/route-transition";
 
+import { AgentLink } from "./agent-link";
 import { useFloatingIntent } from "./floating-intent";
 import { SHELL_GEOMETRY } from "./geometry";
 import type { ShellArea, SidebarMode } from "./layout";
+import { ProfileMenu } from "./profile-menu";
 import { PromoOutlet } from "./promo-host";
 import { shellStore } from "./shell-store";
 import { BotsStrip, NEEDS_YOU, SIDEBARS } from "./sidebars";
@@ -54,6 +56,10 @@ const SidebarContent = ({
         {Sidebar != null && <Sidebar />}
       </div>
       <PromoOutlet floating={floating} />
+      <div className="mx-2 mb-2 flex shrink-0 flex-col gap-1">
+        <AgentLink compact={floating} />
+        {!floating && <ProfileMenu />}
+      </div>
     </div>
   );
 };
@@ -165,8 +171,16 @@ export const SidebarSlot = ({
           </div>
         )}
         {mode === "strip" && (
-          <motion.div className="h-full" style={{ width: column }}>
-            <BotsStrip />
+          <motion.div
+            className="flex h-full flex-col"
+            style={{ width: column }}
+          >
+            <div className="scroll-fade-y min-h-0 flex-1 overflow-y-auto">
+              <BotsStrip />
+            </div>
+            <div className="mb-2 flex shrink-0 justify-center">
+              <AgentLink compact />
+            </div>
           </motion.div>
         )}
       </motion.div>

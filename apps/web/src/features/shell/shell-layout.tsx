@@ -147,7 +147,9 @@ const PanelHotkeys = ({ scopeKey }: { scopeKey: string }) => {
 };
 
 const focusInsideFloating = (): boolean =>
-  document.activeElement?.closest(FLOATING_SELECTOR) != null;
+  document.activeElement?.closest(
+    `${FLOATING_SELECTOR}, [data-sidebar-overlay]`
+  ) != null;
 
 export interface ShellLayoutProps {
   /** Dev only: the chrome reported overlay-unavailable. */
@@ -355,6 +357,8 @@ export const ShellLayout = ({
                   floatingEnabled={floatingEnabled}
                   iconsOnly={prefs.appearance?.railIconsOnly === true}
                   initials={initials}
+                  profileInSidebar={layout.sidebar === "pinned"}
+                  agentInSidebar={layout.sidebar !== "floating"}
                 />
               )}
               <PaneBoundary resetKey={area}>

@@ -1,6 +1,6 @@
 /**
  * The rail (spec 01 §7.2, canvas `Rail`): 56 px; Bots, Sessions, Routines,
- * Artifacts, Library on top, Settings and Account at the bottom. Items stack
+ * Artifacts, Library on top, the profile menu at the bottom. Items stack
  * on a 48 px pitch (V5). Each item goes to the area's last visited route
  * location (pathname + search; for a masked pop-up, the background it
  * showed). Hovering the rail while the sidebar floats opens it after 120 ms
@@ -11,27 +11,22 @@
  * the sidebar floats: there a hover opens the floating sidebar for the
  * area, and a tooltip would fight it.
  */
-import { formatForDisplay } from "@tanstack/hotkeys";
 import { useStore } from "@tanstack/react-store";
 import type { FocusEvent, PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
-import { accountIdentity } from "#renderer/lib/account-identity";
 import { cn } from "#renderer/lib/cn";
 import type { NavType } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";
-import { uiPlatform } from "#renderer/lib/platform";
-import { useAccount } from "#renderer/lib/use-account";
-import { useSystem } from "#renderer/lib/use-app-context";
-import { Avatar, AvatarFallback, AvatarImage } from "#renderer/ui/avatar";
 import { Kbd } from "#renderer/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { AgentLink } from "./agent-link";
 import { useFloatingIntent } from "./floating-intent";
-import { APP_HOTKEYS } from "./hotkeys";
 import type { ShellArea } from "./layout";
+import { ProfileMenu } from "./profile-menu";
 import {
   previewFloatingArea,
   shellStore,
@@ -184,8 +179,10 @@ export const Rail = ({
   area,
   floatingEnabled,
   iconsOnly = false,
-  initials,
+  initials: _initials,
   label,
+  profileInSidebar = false,
+  agentInSidebar = false,
 }: {
   area: ShellArea | undefined;
   /** Overrides the landmark name (the gallery shows several rails). */
@@ -195,13 +192,13 @@ export const Rail = ({
   /** Settings › Appearance "Rail: icons only". */
   iconsOnly?: boolean;
   initials: string;
+  profileInSidebar?: boolean;
+  agentInSidebar?: boolean;
 }) => {
   const { t } = useTranslation();
-  const identity = accountIdentity(useAccount().data);
-  const accountLabel = identity.name || t("shell.rail.account");
-  const system = useSystem();
   const last = useStore(shellStore, (state) => state.lastLocationByArea);
   const intent = useFloatingIntent();
+  const floatingOpen = useStore(shellStore, (state) => state.floating.open);
   // While the sidebar floats, a hover opens it for the area: no tooltips.
   const tooltip = iconsOnly && !floatingEnabled;
 
@@ -239,51 +236,8 @@ export const Rail = ({
         />
       ))}
       <div className="flex-1" />
-      <RailTip
-        label={t("shell.rail.settings")}
-        shortcut={formatForDisplay(APP_HOTKEYS.settings, {
-          platform: uiPlatform(system.platform),
-        })}
-        enabled={tooltip}
-      >
-        <RailLink
-          area="settings"
-          target={railTarget("settings", last)}
-          transition="settings-in"
-          aria-label={t("shell.rail.settings")}
-          // The tooltip names it; otherwise the native one does.
-          title={tooltip ? undefined : t("shell.rail.settings")}
-          aria-current={area === "settings" ? "page" : undefined}
-          className={cn(
-            "titlebar-nodrag focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2",
-            area === "settings"
-              ? "bg-sidebar-accent text-sidebar-foreground"
-              : "text-muted-foreground hover:text-sidebar-foreground"
-          )}
-        >
-          <AppIcon name="settings" size={18} />
-        </RailLink>
-      </RailTip>
-      <RailTip label={accountLabel} enabled={tooltip}>
-        <AppLink
-          to="/settings/account"
-          transition="settings-in"
-          aria-label={accountLabel}
-          title={tooltip ? undefined : accountLabel}
-          className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
-        >
-          <Avatar size="sm">
-            {identity.picture && (
-              <AvatarImage src={identity.picture} alt={identity.name} />
-            )}
-            <AvatarFallback className="text-foreground text-[11px] font-semibold">
-              {identity.name
-                ? identity.initials
-                : initials || identity.initials}
-            </AvatarFallback>
-          </Avatar>
-        </AppLink>
-      </RailTip>
+      {!agentInSidebar && !floatingOpen && <AgentLink compact />}
+      {!profileInSidebar && <ProfileMenu compact />}
     </nav>
   );
 };

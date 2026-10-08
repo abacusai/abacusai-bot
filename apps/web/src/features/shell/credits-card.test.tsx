@@ -112,14 +112,15 @@ it("does not show the promo for an account already on a paid tier", async () => 
   );
 });
 
-it("celebrates only a confirmed free-to-paid account change", () => {
+it("removes the promo immediately on upgrade and restores it on downgrade", () => {
   const view = render(<UpgradePromo />);
   state.account = { ...state.account, subscription_tier: "pro" };
   view.rerender(<UpgradePromo />);
-  expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Upgrade" }).hasAttribute("disabled")
-  ).toBe(true);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  expect(screen.queryByTestId("character")).toBeNull();
+  state.account = { ...state.account, subscription_tier: "free" };
+  view.rerender(<UpgradePromo />);
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
 });
 
 afterEach(() => vi.useRealTimers());
@@ -223,17 +224,4 @@ it("keeps one account cache when an exhaustion notice is cleared", () => {
   view.rerender(<UpgradePromo />);
   for (const [options] of state.query.mock.calls)
     expect(options.queryKey).toEqual(["account"]);
-});
-
-it("snoozes a confirmed upgrade celebration across presentations", async () => {
-  const view = render(<UpgradePromo />);
-  state.account = { ...state.account, subscription_tier: "pro" };
-  view.rerender(<UpgradePromo />);
-  expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Remind me in 10 minutes" })
-  );
-  await waitFor(() =>
-    expect(screen.queryByText("Level unlocked. Let’s build!")).toBeNull()
-  );
 });

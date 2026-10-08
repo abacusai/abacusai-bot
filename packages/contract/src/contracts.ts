@@ -1571,13 +1571,6 @@ export interface AbacusAccountInfo {
   subscription_tier: string | null;
   credits_used: number | null;
   credits_granted: number | null;
-  /** Optional account capabilities; absence does not imply unlimited credits. */
-  can_manage_billing?: boolean;
-  credits_unlimited?: boolean;
-  /** ISO date, when the account supplies a trial deadline. */
-  trial_ends_at?: string;
-  /** The host retained its cached account after a transient fetch failure. */
-  stale?: boolean;
   /** The account was created on the website, before the app was installed. */
   web_signup?: boolean;
 }

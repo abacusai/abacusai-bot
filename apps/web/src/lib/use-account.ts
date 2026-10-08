@@ -8,6 +8,7 @@ export const useAccount = () => {
   return useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
     staleTime: 60_000,
+    refetchOnWindowFocus: true,
     refetchInterval: 300_000,
   });
 };

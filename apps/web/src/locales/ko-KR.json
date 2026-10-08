@@ -954,7 +954,6 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Ready for your next level?",
     "restTitle": "A little rest, then more adventures",
-    "upgraded": "Level unlocked. Let’s build!",
     "progress": "{{remaining}} of {{total}} credits left",
     "used": "Credits used"
   },
@@ -4034,7 +4033,13 @@
     "permissionsFullAccess": "Full access",
     "permissionsAuto": "Auto",
     "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
-    "notSignedInShort": "로그인되지 않음"
+    "notSignedInShort": "로그인되지 않음",
+    "agent": "AbacusAI Agent로 이동",
+    "help": "도움말",
+    "referralValue": "친구를 AbacusAI Bot에 초대하고 크레딧을 받으세요.",
+    "inviteContacts": "연락처 초대",
+    "terms": "서비스 약관",
+    "close": "닫기"
   },
   "sidebarNav": {
     "app": "App",

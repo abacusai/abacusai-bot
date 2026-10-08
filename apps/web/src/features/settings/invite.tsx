@@ -21,6 +21,9 @@ import {
 } from "#renderer/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "#renderer/ui/field";
 import { Textarea } from "#renderer/ui/textarea";
+
+import { ReferralLink } from "./referral-link";
+
 export const inviteEmails = (text: string) => [
   ...new Set(
     text
@@ -160,15 +163,7 @@ export const InviteDialog = ({
         {!summary.data ? (
           <p>{t("phase5.inviteSignIn")}</p>
         ) : channel === "link" ? (
-          <Button
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(summary.data!.inviteLink)
-                .then(() => showInfo(t("phase5.copied")))
-            }
-          >
-            {t("phase5.copyInvite")}
-          </Button>
+          <ReferralLink summary={summary.data} />
         ) : (
           <form
             className="flex flex-col gap-3"
