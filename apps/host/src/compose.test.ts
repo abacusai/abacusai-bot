@@ -485,6 +485,8 @@ describe("the phone lane", () => {
       ackFailsTimes?: number;
       /** Holds the session's answer to these sends until `settleSend`. */
       holdSend?: (messageId: string) => boolean;
+      /** These sends throw on their way (outcome unknown). */
+      throwSend?: (messageId: string) => boolean;
     } = {}
   ) => {
     const held: Array<() => void> = [];
@@ -494,6 +496,8 @@ describe("the phone lane", () => {
     let settleSend: (taken: boolean) => void = () => {};
     const send = vi.fn(
       async (_w: string, _s: string, _text: string, messageId: string) => {
+        if (options.throwSend?.(messageId) === true)
+          throw new Error("socket closed");
         if (options.holdSend?.(messageId) === true)
           return new Promise<boolean>((resolve) => (settleSend = resolve));
         return !(options.refuse?.(messageId) ?? false);
@@ -1171,6 +1175,68 @@ describe("the phone lane", () => {
       await vi.advanceTimersByTimeAsync(120_000);
       expect(ackCalls()).toHaveLength(2);
       expect(send).toHaveBeenCalledTimes(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the host up while an ack is owed, without holding back new turns", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, reply } = lane({ ackFailsTimes: 1 });
+      phone.arrive({ id: "m1", text: "book it" });
+      await vi.advanceTimersByTimeAsync(0);
+      reply(["m1"], "Booked.");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(phone.busy).toBe(false);
+      expect(phone.holdsHost).toBe(true);
+      // A new message still goes at once.
+      phone.arrive({ id: "m2", text: "thanks" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(2);
+      reply(["m2"], "Anytime.");
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(phone.holdsHost).toBe(false);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never hands a message again when its send threw: the session may have it", async () => {
+    let throws = 1;
+    const { phone, send, reply, acks, handled } = lane({
+      throwSend: () => throws-- > 0,
+    });
+    phone.arrive({ id: "m1", text: "book it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Not retried as a refusal would be.
+    expect(send).toHaveBeenCalledTimes(1);
+    // The session had it after all and answers: acked as handled.
+    reply(["m1"], "Booked.");
+    await handled([["m1"]]);
+    expect(acks()).toEqual([["m1"]]);
+    phone.stop();
+  });
+
+  it("does not ask the user to send again what will run anyway", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, settleStop, settleSend, replies } = lane({
+        holdSend: (id) => id === "m2",
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      phone.arrive({ id: "m2", text: "only nonstop" });
+      await vi.advanceTimersByTimeAsync(1_000);
+      settleStop();
+      settleSend(false);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(replies()[0]!.text).toMatch(/on your latest message/);
+      expect(replies()[0]!.text).not.toMatch(/send that again/);
       phone.stop();
     } finally {
       vi.useRealTimers();

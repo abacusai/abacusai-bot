@@ -104,6 +104,9 @@ const REACT_TOOL = "react_to_message";
 /** What the user hears when a turn fails: never silence, never the raw error. */
 const FAILURE_REPLY =
   "Sorry, something went wrong on my side. Could you send that again?";
+/** When the work was stopped but the user's newest message still runs. */
+const CONTINUING_REPLY =
+  "Sorry, that took too long and I had to stop it. I'm on your latest message now.";
 
 type TurnReply = Extract<AgentEvent, { type: "turn_reply" }>;
 
@@ -186,6 +189,15 @@ export class PhoneLane {
     this.clock = new TurnClock(this.timings, (reason) => {
       void this.giveUp(`timeout-${reason}`);
     });
+  }
+
+  /**
+   * Work the host must stay up for: `busy`, or an ack still owed (a host
+   * that idles out with one would have the message handed back and run
+   * again). Apart from `busy`, which gates new turns: an owed ack never does.
+   */
+  get holdsHost(): boolean {
+    return this.busy || this.unacked.size > 0;
   }
 
   /** The session holds messages, their answers are going out, or it is being stopped. */
@@ -359,7 +371,10 @@ export class PhoneLane {
     text = this.turnText(messages[0]!.entry)
   ): Promise<void> {
     const run = this.sending.then(async () => {
-      if (await this.trySend(text, handoff)) {
+      const sent = await this.trySend(text, handoff);
+      // Unknown counts as taken: a message the session may have is never
+      // handed again. If it has none, the turn limit ends the wait.
+      if (sent !== "refused") {
         for (const message of messages) message.taken = true;
         this.refusals = 0;
         this.deps.activity();
@@ -396,14 +411,29 @@ export class PhoneLane {
       .join("\n\n");
   }
 
-  private async trySend(text: string, handoff: string): Promise<boolean> {
+  /**
+   * "taken" or "refused" as the session says; "unknown" when the send threw
+   * on its way, so the session may have it. Not having opened a session at
+   * all is a refusal.
+   */
+  private async trySend(
+    text: string,
+    handoff: string
+  ): Promise<"taken" | "refused" | "unknown"> {
     try {
       this.session ??= await this.deps.openSession();
-      const { workspaceId, sessionId } = this.session;
-      return await this.deps.send(workspaceId, sessionId, text, handoff);
     } catch (error) {
-      this.log(`[phone] send failed: ${describe(error)}`);
-      return false;
+      this.log(`[phone] session open failed: ${describe(error)}`);
+      return "refused";
+    }
+    const { workspaceId, sessionId } = this.session;
+    try {
+      return (await this.deps.send(workspaceId, sessionId, text, handoff))
+        ? "taken"
+        : "refused";
+    } catch (error) {
+      this.log(`[phone] send outcome unknown: ${describe(error)}`);
+      return "unknown";
     }
   }
 
@@ -723,7 +753,15 @@ export class PhoneLane {
     this.turnMediaHashes = new Set();
     // The session refuses a handoff still on its way; the stop is bounded by its owner.
     this.stopping = this.stopSession();
-    const apologized = await this.apologize(this.replyTarget(messages)!);
+    // A message whose handoff is still out goes to the next turn: the user is
+    // not asked to send again what will run anyway.
+    const continuing = messages.some(
+      (message) => !message.taken && message.entry.kind !== "note"
+    );
+    const apologized = await this.apologize(
+      this.replyTarget(messages)!,
+      continuing ? CONTINUING_REPLY : FAILURE_REPLY
+    );
     this.log(
       `[phone] gave up outcome=${reason} messages=${messages.length} apology=${apologized ? 1 : 0}`
     );
@@ -789,9 +827,12 @@ export class PhoneLane {
     await this.ack(waiting);
   }
 
-  private async apologize(replyTo: string): Promise<boolean> {
+  private async apologize(
+    replyTo: string,
+    text = FAILURE_REPLY
+  ): Promise<boolean> {
     if (!this.running) return false;
-    return (await this.sendInOrder(replyTo, [FAILURE_REPLY])) === 1;
+    return (await this.sendInOrder(replyTo, [text])) === 1;
   }
 
   /** The session took work: the clock runs and the user sees "typing…". */
