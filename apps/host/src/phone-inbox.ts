@@ -40,6 +40,15 @@ export interface PhoneInboxEntry {
   nudges_sent?: Array<{ at?: number; text?: string }>;
   /** The message is exactly STOP or UNSUBSCRIBE, and nothing was turned off. */
   stop_keyword?: boolean;
+  /** On the user's first `linked` entry: open with a short brief of what they connected. */
+  first_brief?: boolean;
+  /** A free account due one soft upgrade line: the plan, its first-month price and its full price line. */
+  upgrade_hint?: {
+    plan?: string;
+    first_month?: string;
+    price_text?: string;
+    messages?: number;
+  };
 }
 
 export type InboundState = "queued" | "handed" | "closing" | "handled";

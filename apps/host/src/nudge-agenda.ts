@@ -260,8 +260,10 @@ export class NudgeAgenda {
   notes(entry: PhoneInboxEntry): string[] {
     if (entry.kind === "note" || entry.kind === "event") return [];
     const dir = this.deps.phoneDir;
-    if (entry.kind === "linked")
-      return this.enabled === true ? [CHECKINS_ON_GREETING] : [];
+    if (entry.kind === "linked") {
+      const greeting = this.enabled === true ? [CHECKINS_ON_GREETING] : [];
+      return entry.first_brief === true ? [FIRST_BRIEF, ...greeting] : greeting;
+    }
     const notes = nudgeNotes(entry);
     const sentAts = (
       Array.isArray(entry.nudges_sent) ? entry.nudges_sent : []
@@ -368,6 +370,16 @@ const SET_LANGUAGE_NOTE =
   "[check-ins language] No check-in language is set. Call `checkins` with op language and the code of the " +
   "language the user writes in, without mentioning it, then answer them as usual.";
 
+const FIRST_BRIEF =
+  "[first brief] This is the user's first time here: instead of a question, open with a short brief, all in this one " +
+  "reply and in their language. Greet them by first name. If their calendar is connected, their next meetings today " +
+  "or tomorrow (time and title, at most 3). If Gmail is connected, how many unread emails came in the last two days and " +
+  "the few (at most 3) that look like they need a reply, each as the sender and a few words, skipping newsletters, " +
+  "receipts and promotions. Then offer to draft replies to those into their Gmail Drafts, saying nothing will be sent, " +
+  "and ask them to reply yes. Last, one line offering to send this brief here every morning at 8; on their yes, set " +
+  "it up with `cronjob`. If neither is connected, greet them and offer to connect Google so you can brief them. Never " +
+  "send an email, and draft only after their yes.";
+
 const CHECKINS_ON_GREETING =
   "[check-ins] Check-ins are on: say once in this greeting, in the user's language, that you may check in here " +
   "about their unfinished tasks, and that they can say stop any time.";
@@ -396,12 +408,45 @@ export function nudgeNotes(entry: PhoneInboxEntry): string[] {
     notes.push(
       `[check-ins sent] Since the user's last message the app texted them: ${sent.join("; ")}. Their message may answer that.`
     );
+  const hint = upgradeHintNote(entry.upgrade_hint);
+  if (hint != null) notes.push(hint);
   if (entry.stop_keyword === true)
     notes.push(
       "[stop keyword] The user wrote only STOP, and nothing was turned off. Ask in one short line, in their language, " +
         "whether they want no more check-ins or want you to stop the task you are on; change nothing until they say."
     );
   return notes;
+}
+
+const HINT_FIELD_MAX_CHARS = 80;
+
+/** One field of the server's upgrade hint, or null when it is missing. */
+function hintField(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.replace(/\s+/g, " ").trim().slice(0, HINT_FIELD_MAX_CHARS);
+  return text.length > 0 ? text : null;
+}
+
+/**
+ * The hidden line for a free account due one soft upgrade line. The agent
+ * picks the moment (a finished task, a thanks) or leaves it out.
+ */
+function upgradeHintNote(hint: PhoneInboxEntry["upgrade_hint"]): string | null {
+  const plan = hintField(hint?.plan);
+  const firstMonth = hintField(hint?.first_month);
+  const priceText = hintField(hint?.price_text);
+  if (plan == null || firstMonth == null || priceText == null) return null;
+  const messages =
+    typeof hint?.messages === "number" && hint.messages > 0
+      ? ` and has sent ${Math.floor(hint.messages)} messages`
+      : "";
+  return (
+    `[upgrade hint] The user is on the free plan${messages}. Only if this reply finishes a task for them or answers ` +
+    `their thanks, end it with one short, friendly line in their language: what you have done for them so far, that ` +
+    `${plan} adds more credits, more routines and top models for ${priceText} (write ${firstMonth} exactly), and ask ` +
+    `whether they want the link. On their yes, send it with \`billing_plan\`. Never mid-task, after a complaint or an ` +
+    `error, or when you just asked them something: then leave it out.`
+  );
 }
 
 const describe = (error: unknown): string =>
