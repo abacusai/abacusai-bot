@@ -393,3 +393,36 @@ html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animatio
 [data-slot="chat-layout"][data-wallpaper] [data-slot="user-bubble"][data-tint] {
   background-color: color-mix(in oklab, var(--bot-accent, var(--primary)) 88%, transparent);
 }
+
+[data-slot="message-scroller-content"] > * + * { --transcript-row-gap: 12px; padding-top: 12px; }
+[data-slot="message-scroller-content"] > [data-tool-only] + [data-tool-gap="same"] { --transcript-row-gap: 2px; padding-top: 2px; }
+[data-slot="message-scroller-content"] > [data-tool-only] + [data-tool-gap="different"] { --transcript-row-gap: 8px; padding-top: 8px; }
+[data-slot="tool-cluster"] { display: flex; flex-direction: column; gap: 2px; }
+
+[data-slot="chat-layout"] { --transcript-fade-size: 80px; }
+[data-transcript-fade] {
+  --scroll-fade-t-size: var(--transcript-fade-size);
+  animation-name: scroll-fade-reveal-t;
+  animation-timeline: scroll(self y);
+  animation-range: 0 var(--scroll-fade-reveal, 96px);
+  --transcript-bottom: var(--transcript-bottom-inset, var(--composer-dock-h, 0px));
+  --scroll-fade-mask: linear-gradient(to bottom,
+    transparent,
+    rgb(0 0 0 / 45%) calc(var(--scroll-fade-t, 0px) * .4),
+    rgb(0 0 0 / 90%) calc(var(--scroll-fade-t, 0px) * .75),
+    #000 var(--scroll-fade-t, 0px),
+    #000 calc(100% - var(--transcript-bottom) - var(--transcript-fade-size)),
+    rgb(0 0 0 / 90%) calc(100% - var(--transcript-bottom) - var(--transcript-fade-size) * .75),
+    rgb(0 0 0 / 45%) calc(100% - var(--transcript-bottom) - var(--transcript-fade-size) * .4),
+    transparent calc(100% - var(--transcript-bottom)));
+  scroll-padding-bottom: calc(var(--transcript-bottom) + var(--transcript-fade-size) + var(--composer-dock-gap, 16px));
+}
+[data-slot="composer-surface"] { box-shadow: 0 -2px 16px color-mix(in oklab, var(--foreground) 6%, transparent); }
+@media (prefers-reduced-transparency: reduce) {
+  [data-slot="chat-layout"] { --transcript-fade-size: 0px; }
+  [data-transcript-fade] { --scroll-fade-t: 0px; animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduce-motion="off"]) [data-transcript-fade] { animation: none; }
+}
+html[data-reduce-motion="on"] [data-transcript-fade] { animation: none; }

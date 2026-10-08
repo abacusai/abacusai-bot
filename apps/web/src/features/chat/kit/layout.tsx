@@ -236,7 +236,7 @@ export const COMPOSER_DOCK_GAP_PX = 16;
 
 /** What the dock's height places: the scroller's end padding and the jump button. */
 const DOCK_CONSUMERS =
-  '[data-slot="message-scroller-content"], [data-slot="message-scroller-button"][data-direction="end"], [data-slot="chat-empty"]';
+  '[data-slot="message-scroller-viewport"], [data-slot="message-scroller-content"], [data-slot="message-scroller-button"][data-direction="end"], [data-slot="chat-empty"]';
 
 /**
  * The composer dock floats over the transcript's bottom edge. Its measured
@@ -270,11 +270,13 @@ const useComposerDockHeight = (
     const place = (value: number) => {
       const px = `${Math.round(value)}px`;
       for (const el of host.querySelectorAll<HTMLElement>(DOCK_CONSUMERS)) {
-        if (el.dataset.slot === "chat-empty") el.style.paddingBottom = px;
+        if (el.dataset.slot === "message-scroller-viewport")
+          el.style.setProperty("--transcript-bottom-inset", px);
+        else if (el.dataset.slot === "chat-empty") el.style.paddingBottom = px;
         else if (el.dataset.slot === "message-scroller-button")
-          el.style.bottom = `calc(${px} + var(--composer-dock-gap, 16px))`;
+          el.style.bottom = `calc(${px} + var(--composer-dock-gap, 16px) + var(--transcript-fade-size, 80px))`;
         else
-          el.style.paddingBottom = `calc(${px} + var(--composer-dock-gap, 16px))`;
+          el.style.paddingBottom = `calc(${px} + var(--composer-dock-gap, 16px) + var(--transcript-fade-size, 80px))`;
       }
     };
     settle(height.get());
@@ -308,6 +310,7 @@ const useComposerDockHeight = (
       for (const el of host.querySelectorAll<HTMLElement>(DOCK_CONSUMERS)) {
         el.style.removeProperty("padding-bottom");
         el.style.removeProperty("bottom");
+        el.style.removeProperty("--transcript-bottom-inset");
       }
     };
   }, [layout, dock, pref]);

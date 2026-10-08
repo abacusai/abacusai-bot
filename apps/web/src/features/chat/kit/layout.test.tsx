@@ -3,7 +3,7 @@
  * take their clamps from the shell's tokens (`--content-max-w`,
  * `--composer-max-w`), the composer a step narrower and both centred.
  */
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SHELL_GEOMETRY } from "#renderer/features/shell/geometry";
@@ -112,13 +112,36 @@ describe("the floating composer dock", () => {
         '[data-slot="message-scroller-content"]'
       )!;
       expect(content.className).toContain(
-        "pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
+        "pb-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px)+var(--transcript-fade-size,80px))]"
+      );
+      const viewport = document.querySelector<HTMLElement>(
+        '[data-slot="message-scroller-viewport"]'
+      )!;
+      expect(viewport.style.getPropertyValue("--transcript-bottom-inset")).toBe(
+        "123px"
+      );
+      act(() =>
+        callback!([
+          {
+            target: dock,
+            borderBoxSize: [{ blockSize: 267, inlineSize: 700 }],
+          } as unknown as ResizeObserverEntry,
+        ])
+      );
+      await waitFor(() =>
+        expect(layout.style.getPropertyValue("--composer-dock-h")).toBe("267px")
+      );
+      expect(viewport.style.getPropertyValue("--transcript-bottom-inset")).toBe(
+        "267px"
+      );
+      expect((content as HTMLElement).style.paddingBottom).toBe(
+        "calc(267px + var(--composer-dock-gap, 16px) + var(--transcript-fade-size, 80px))"
       );
       const jump = document.querySelector(
         '[data-slot="message-scroller-button"]'
       )!;
       expect(jump.className).toContain(
-        "bottom-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px))]"
+        "bottom-[calc(var(--composer-dock-h,0px)+var(--composer-dock-gap,16px)+var(--transcript-fade-size,80px))]"
       );
     } finally {
       vi.unstubAllGlobals();

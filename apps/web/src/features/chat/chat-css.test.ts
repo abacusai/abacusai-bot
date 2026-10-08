@@ -114,3 +114,37 @@ describe("chat CSS reduced motion", () => {
     expect(css).not.toMatch(/data-motion=/);
   });
 });
+
+describe("tool cluster geometry", () => {
+  it("keeps consecutive calls tight and separates other rows", () => {
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.append(style);
+    try {
+      document.body.innerHTML = `<div data-slot="message-scroller-content">
+        <div data-tool-only></div>
+        <div id="same" data-tool-only data-tool-gap="same"></div>
+        <div id="different" data-tool-only data-tool-gap="different"></div>
+        <div id="text"></div>
+        <div id="after-text" data-tool-gap="same"></div>
+      </div><div id="cluster" data-slot="tool-cluster"></div>`;
+      expect(
+        getComputedStyle(document.querySelector("#same")!).paddingTop
+      ).toBe("2px");
+      expect(
+        getComputedStyle(document.querySelector("#different")!).paddingTop
+      ).toBe("8px");
+      expect(
+        getComputedStyle(document.querySelector("#text")!).paddingTop
+      ).toBe("12px");
+      expect(
+        getComputedStyle(document.querySelector("#after-text")!).paddingTop
+      ).toBe("12px");
+      expect(getComputedStyle(document.querySelector("#cluster")!).gap).toBe(
+        "2px"
+      );
+    } finally {
+      style.remove();
+    }
+  });
+});
