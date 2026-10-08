@@ -12,7 +12,7 @@ import {
   type VaultItem,
   type VaultRequestKind,
 } from "./vault-client";
-import { httpsHost, isPaymentFrameOrigin } from "./vault-fill";
+import { FILL_KINDS, httpsHost, isPaymentFrameOrigin } from "./vault-fill";
 import {
   REQUEST_LIFETIME_MS,
   VaultSessions,
@@ -148,7 +148,8 @@ const TOOLS: Record<
   [VAULT_FILL_TOOL]: {
     description: [
       "Type one of the user's saved vault values into a field, without you ever seeing it:",
-      "username, password, a sign-in code, card_number or cvv. Give the item_id your task names",
+      "username, password, a sign-in code, or the card's card_number, cvv, expiry and",
+      "cardholder_name. Give the item_id your task names",
       "and the field's ref from a snapshot. The browser reads the page's own origin and the",
       "vault checks it against the item, so it only works on the site the value belongs to.",
       "Each value goes only into its own kind of field: a password into the password field, a",
@@ -161,13 +162,15 @@ const TOOLS: Record<
       "the next step and call it again. A login fills only while the user has allowed this",
       'sign-in; when it says it is waiting for sign-in approval, stop with need "login".',
       "",
-      "Card number and CVV fill only after the user approved this payment, once each: pass",
+      "Card values fill only after the user approved this payment, once each: pass",
       "total_ref, the ref of the element showing the order total with its currency. The",
       "browser reads that total itself and refuses if it differs from the approved amount.",
-      "Expiry and name on card are not secret: fill those with",
-      "browser_interact. Afterwards the field reads (hidden) everywhere.",
+      "The expiry: card_exp for one MM/YY field, or card_exp_month and card_exp_year for",
+      "separate month and year fields or lists; the browser formats it to the field.",
+      "Afterwards the field reads (hidden) everywhere.",
       "",
-      "Never type a password, card number, CVV or code any other way.",
+      "Never type a password, card number, CVV, expiry, cardholder name or code any other",
+      "way, and never guess one: if a fill is refused, report it.",
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -175,7 +178,7 @@ const TOOLS: Record<
         item_id: { type: "string", description: "The vault item" },
         field: {
           type: "string",
-          enum: ["login", "username", "password", "code", "card_number", "cvv"],
+          enum: ["login", ...FILL_KINDS],
           description:
             'Which of its values to type; "login" fills the sign-in form\'s username and password',
         },
@@ -187,7 +190,7 @@ const TOOLS: Record<
         total_ref: {
           type: "string",
           description:
-            'Required for card_number and cvv: the ref of the element showing the order total, e.g. "Total ₹1,234.00"',
+            'Required for card values: the ref of the element showing the order total, e.g. "Total ₹1,234.00"',
         },
       },
       required: ["item_id", "field"],

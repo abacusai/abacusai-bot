@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { VaultField } from "./vault-client";
 import {
   codeFieldAllowed,
+  selectCandidates,
+  formatExpiry,
+  type FillKind,
+  fieldUnsupported,
   factsFromDocument,
   hasCodeField,
   fieldKindAllowed,
@@ -626,6 +630,140 @@ describe("a login fill", () => {
     expect(
       planFill(context({ approval: null, signin: signin({ item: "card-1" }) }))
         .ok
+    ).toBe(false);
+  });
+});
+
+describe("a card's expiry and cardholder name", () => {
+  /** Hint words as the page names a field ("MM/YY" → mm, yy). */
+  const named = (text: string): string[] =>
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean);
+
+  it("goes only into the field that names it, by autocomplete or by its name", () => {
+    expect(accepts("card_exp", { autocomplete: ["cc-exp"] })).toBe(true);
+    expect(accepts("card_exp", { hints: named("MM/YY") })).toBe(true);
+    expect(accepts("card_exp", { hints: named("Expiry date") })).toBe(true);
+    expect(
+      accepts("card_exp", { type: "tel", hints: named("exp MM / YYYY") })
+    ).toBe(true);
+    expect(
+      accepts("card_exp_month", {
+        tag: "select",
+        type: "select",
+        autocomplete: ["cc-exp-month"],
+      })
+    ).toBe(true);
+    expect(accepts("card_exp_month", { hints: named("expMonth") })).toBe(true);
+    expect(accepts("card_exp_year", { hints: named("expiry-year") })).toBe(
+      true
+    );
+    expect(
+      accepts("card_exp_year", {
+        tag: "select",
+        type: "select",
+        hints: named("exp_yy"),
+      })
+    ).toBe(true);
+    expect(accepts("cardholder_name", { autocomplete: ["cc-name"] })).toBe(
+      true
+    );
+    expect(accepts("cardholder_name", { hints: named("Name on card") })).toBe(
+      true
+    );
+  });
+
+  it("never goes into another date, a split field's other half, a name or a search box", () => {
+    expect(accepts("card_exp", { hints: named("DD/MM/YYYY") })).toBe(false);
+    expect(accepts("card_exp", { hints: named("birth month year") })).toBe(
+      false
+    );
+    expect(accepts("card_exp", { autocomplete: ["cc-exp-month"] })).toBe(false);
+    expect(accepts("card_exp_month", { autocomplete: ["cc-exp-year"] })).toBe(
+      false
+    );
+    expect(accepts("card_exp_month", { hints: named("Month") })).toBe(false);
+    expect(accepts("card_exp", { autocomplete: ["cc-number"] })).toBe(false);
+    expect(
+      accepts("card_exp", {
+        tag: "select",
+        type: "select",
+        autocomplete: ["cc-exp"],
+      })
+    ).toBe(false);
+    expect(accepts("cardholder_name", { hints: named("Full name") })).toBe(
+      false
+    );
+    expect(
+      accepts("cardholder_name", { type: "search", autocomplete: ["cc-name"] })
+    ).toBe(false);
+    // A provider's frame is no reason on its own: the field must still name it.
+    expect(accepts("card_exp", { type: "tel" }, true)).toBe(false);
+  });
+
+  it("is typed as the field asks: MM/YY, MMYY, MM/YYYY, MM / YY, or a month or year alone", () => {
+    const expiry = { month: "3", year: "2030" };
+    const exp = (overrides: Partial<FieldFacts>) =>
+      formatExpiry("card_exp", expiry, facts(overrides));
+    expect(exp({})).toBe("03/30");
+    expect(exp({ maxLength: 5, hints: named("MM/YY") })).toBe("03/30");
+    expect(exp({ maxLength: 4 })).toBe("0330");
+    expect(exp({ hints: named("MM/YYYY") })).toBe("03/2030");
+    expect(exp({ maxLength: 6 })).toBe("032030");
+    expect(exp({ maxLength: 7 })).toBe("03/2030");
+    expect(exp({ maxLength: 7, hints: named("MM / YY") })).toBe("03 / 30");
+    expect(formatExpiry("card_exp_month", expiry, facts())).toBe("03");
+    expect(formatExpiry("card_exp_year", expiry, facts())).toBe("2030");
+    expect(formatExpiry("card_exp_year", expiry, facts({ maxLength: 2 }))).toBe(
+      "30"
+    );
+    expect(
+      formatExpiry("card_exp_year", expiry, facts({ hints: named("YY") }))
+    ).toBe("30");
+  });
+
+  it("is chosen in a list by the value or text it may be listed as", () => {
+    const expiry = { month: "3", year: "2030" };
+    expect(selectCandidates("card_exp_month", expiry)).toEqual([
+      "03",
+      "3",
+      "march",
+      "mar",
+      "03 - march",
+      "03 - mar",
+    ]);
+    expect(selectCandidates("card_exp_year", expiry)).toEqual(["2030", "30"]);
+  });
+
+  it("is filled under the payment approval, the month and year both spent by one expiry fill", () => {
+    const fill = planFill(context({ field: "card_exp" }));
+    expect(fill.ok).toBe(true);
+    const used = approval({ used: new Set(["card_exp_year"]) });
+    expect(planFill(context({ field: "card_exp", approval: used })).ok).toBe(
+      false
+    );
+    expect(
+      planFill(context({ field: "cardholder_name", approval: null })).ok
+    ).toBe(false);
+  });
+
+  it("knows a vault from before these fields by its refusal", () => {
+    expect(
+      fieldUnsupported(
+        "There is no vault field called card_exp_month.",
+        "card_exp_month"
+      )
+    ).toBe(true);
+    expect(
+      fieldUnsupported("A card has no cardholder_name.", "cardholder_name")
+    ).toBe(true);
+    expect(
+      fieldUnsupported(
+        "This payment was approved for another site.",
+        "card_exp_month"
+      )
     ).toBe(false);
   });
 });

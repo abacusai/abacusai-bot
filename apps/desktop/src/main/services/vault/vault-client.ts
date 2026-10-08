@@ -19,7 +19,10 @@ export type VaultField =
   | "password"
   | "code"
   | "card_number"
-  | "cvv";
+  | "cvv"
+  | "card_exp_month"
+  | "card_exp_year"
+  | "cardholder_name";
 export type VaultRequestStatus = "pending" | "completed" | "failed" | "expired";
 
 /** A saved item as the platform lists it: metadata only, never a value. */

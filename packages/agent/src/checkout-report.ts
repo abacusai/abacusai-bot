@@ -154,10 +154,11 @@ export function pauseReport(
 export function resumeNote(stage: CheckoutStage, approved: boolean): string {
   if (stage === "card_fill" && approved)
     return (
-      "The user approved this payment. Fill the card number once with browser_vault_fill " +
-      "(the card's item_id from the task, total_ref = the order total), the CVV only if the page " +
-      "asks, expiry and name with browser_interact, then click Pay once. The browser checks the " +
-      'total again; if it changed, do not pay: browser_pause need:"payment".'
+      "The user approved this payment. Fill every card field with browser_vault_fill (the card's " +
+      "item_id from the task, total_ref = the order total): the card number, the expiry " +
+      "(card_exp, or card_exp_month and card_exp_year), the cardholder name if asked, and the CVV " +
+      "only if the page asks. Never type or guess card details yourself. Then click Pay once. The " +
+      'browser checks the total again; if it changed, do not pay: browser_pause need:"payment".'
     );
   if (stage === "awaiting_approval")
     return (

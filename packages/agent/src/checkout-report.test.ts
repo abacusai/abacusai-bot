@@ -95,6 +95,9 @@ describe("what a resumed run is told", () => {
   it("is approved only when the browser said the approval is live", () => {
     expect(resumeNote("card_fill", true)).toMatch(/approved this payment/);
     expect(resumeNote("card_fill", true)).toMatch(/CVV only if the page/);
+    // Every card value goes through the vault; none is typed by the model.
+    expect(resumeNote("card_fill", true)).toMatch(/card_exp/);
+    expect(resumeNote("card_fill", true)).not.toMatch(/browser_interact/);
     expect(resumeNote("card_fill", false)).toBe("");
     expect(resumeNote("awaiting_approval", false)).toMatch(/not approved/);
     expect(resumeNote("details", false)).toBe("");
