@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PendingWait } from "#main/services/agent-tools/pending-waits";
 
-import { NudgeAgenda, nudgeNotes, waitItem } from "./nudge-agenda";
+import { NudgeAgenda, nudgeNotes, siteName, waitItem } from "./nudge-agenda";
 import { PhoneLane } from "./phone-lane";
 import { refusedTextRule } from "./refused-text.test-support";
 
@@ -256,6 +256,70 @@ describe("the check-in agenda", () => {
     );
   });
 
+  it("puts what waits on the user ahead, from when it began, to expire with it", () => {
+    const wait = (over: Partial<PendingWait>): PendingWait => ({
+      itemId: "wait:1",
+      kind: "payment",
+      stage: "approval",
+      site: "akasaair.com",
+      since: NOW,
+      expiresAt: NOW + 8 * 60_000,
+      ...over,
+    });
+    expect(
+      waitItem(
+        wait({ merchant: "Akasa Air", amount: "5412.00", currency: "INR" })
+      )
+    ).toEqual({
+      item_id: "wait:1",
+      kind: "waiting",
+      at: NOW / 1000,
+      expires_at: (NOW + 8 * 60_000) / 1000,
+      summary:
+        "A payment of ₹5,412 to Akasa Air is waiting for the user's approval on the page sent.",
+    });
+    expect(
+      waitItem(wait({ amount: "about 5k", currency: "INR" })).summary
+    ).toBe(
+      "A payment to akasaair is waiting for the user's approval on the page sent."
+    );
+  });
+
+  it("names a site without its domain", () => {
+    expect(siteName("akasaair.com")).toBe("akasaair");
+    expect(siteName("www.booking.makemytrip.com")).toBe("makemytrip");
+    expect(siteName("tickets.example.co.uk")).toBe("example");
+    expect(siteName("localhost")).toBeNull();
+  });
+
+  it("lists waiting first, then due, then connect", async () => {
+    fs.writeFileSync(
+      path.join(dir, "zone.json"),
+      JSON.stringify({ timezone: "UTC" })
+    );
+    writeLoops([
+      { id: "L1", text: "Pay rent", due: "2026-10-09", status: "open" },
+    ]);
+    const { nudges } = agenda({
+      waits: [
+        gmail,
+        {
+          itemId: "wait:2",
+          kind: "vault_card",
+          stage: "page_sent",
+          site: null,
+          since: NOW,
+          expiresAt: NOW + 20 * 60_000,
+        },
+      ],
+    });
+    expect((await nudges.build()).items.map((item) => item.kind)).toEqual([
+      "waiting",
+      "due",
+      "connect",
+    ]);
+  });
+
   it("builds only summaries the server's deny-check lets through", () => {
     writeLoops([
       {
@@ -281,8 +345,53 @@ describe("the check-in agenda", () => {
       ...dueAgendaItems(dir, NOW, "Asia/Kolkata").map((item) => item.summary),
       waitItem(gmail).summary,
       waitItem({ ...gmail, label: "Google Calendar" }).summary,
+      ...(
+        [
+          { kind: "vault_login", stage: "page_sent", site: "akasaair.com" },
+          {
+            kind: "vault_login",
+            stage: "page_sent",
+            site: "accounts.example.co.uk",
+          },
+          { kind: "vault_card", stage: "page_sent", site: null },
+          { kind: "vault_code", stage: "page_sent", site: null },
+          {
+            kind: "payment",
+            stage: "approval",
+            site: "akasaair.com",
+            merchant: "Akasa Air",
+            amount: "5412.00",
+            currency: "INR",
+          },
+          {
+            kind: "payment",
+            stage: "approval",
+            site: "store.example.com",
+            amount: "1234567.89",
+            currency: "USD",
+          },
+          { kind: "checkout", stage: "details", site: "akasaair.com" },
+          { kind: "checkout", stage: "code", site: "akasaair.com" },
+          {
+            kind: "checkout",
+            stage: "payment",
+            site: "akasaair.com",
+            merchant: "Akasa Air",
+            amount: "18999.50",
+            currency: "EUR",
+          },
+        ] as const
+      ).map(
+        (over) =>
+          waitItem({
+            itemId: "wait:1",
+            since: NOW,
+            expiresAt: NOW + 60_000,
+            ...over,
+          }).summary
+      ),
     ];
-    expect(summaries).toHaveLength(5);
+    expect(summaries).toHaveLength(14);
     for (const summary of summaries)
       expect(refusedTextRule(summary), summary).toBeNull();
     // The port refuses what the server refuses.

@@ -1323,7 +1323,11 @@ export class ServiceHost {
   /** What the session waits on the user for, as structured state only. */
   async waitsFor(sessionId: string): Promise<PendingWait[]> {
     if (!this.pendingWaits.hasOffers(sessionId))
-      return this.pendingWaits.list(sessionId, new Set());
+      return this.pendingWaits.list(
+        sessionId,
+        new Set(),
+        this.vault.sessions.get(sessionId)
+      );
     const statuses: ConnectorStatuses = await this.connectorStatuses
       .list()
       .catch(() => ({}));
@@ -1332,7 +1336,11 @@ export class ServiceHost {
         .filter(([, status]) => status.state === "connected")
         .map(([id]) => id)
     );
-    return this.pendingWaits.list(sessionId, connected);
+    return this.pendingWaits.list(
+      sessionId,
+      connected,
+      this.vault.sessions.get(sessionId)
+    );
   }
 
   /** Something moved a connector's status; the renderer re-reads once. */

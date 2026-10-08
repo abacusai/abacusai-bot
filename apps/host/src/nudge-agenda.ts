@@ -18,9 +18,10 @@ import type { PhoneInboxEntry } from "./phone-inbox";
 /**
  * The phone loop's check-in agenda: what the user's unfinished work is
  * waiting on, as value-free summaries the server may check in about inside
- * the WhatsApp window (`nudge_agenda` on `/v1/abacusaibot_channels`). Loops
- * due soon, connector links not finished, and the language check-ins go out
- * in. Posted on every start (an empty agenda clears what a previous host
+ * the WhatsApp window (`nudge_agenda` on `/v1/abacusaibot_channels`). What
+ * waits on the user (a vault page, a payment approval, a paused checkout),
+ * loops due soon, connector links not finished, and the language check-ins
+ * go out in. Posted on every start (an empty agenda clears what a previous host
  * left), after every turn, and when it changes. The server sends the
  * check-ins; nothing here does, and nothing wakes this host for one. A
  * server that does not know the action is left alone.
@@ -54,18 +55,85 @@ const UNKNOWN_ACTION_RE = /action must be one of/i;
 /** The server keeps at most this many items. */
 const MAX_ITEMS = 10;
 
-/** One wait as an agenda item; a connector link's `at` is when it went (the server waits 2h). */
+/** What a paused checkout waits for, by what it paused for. */
+const PAUSE_NEEDS: Record<string, string> = {
+  details: "the traveler or contact details",
+  login: "a sign-in",
+  code: "a one-time code",
+  payment: "the payment approval",
+  captcha: "a CAPTCHA",
+  choose: "a choice",
+};
+
+/** Second-level labels that are not the site's own name ("co" in "x.co.uk"). */
+const GENERIC_LABELS = new Set(["co", "com", "net", "org", "gov", "ac", "edu"]);
+
+/**
+ * A site by its name alone ("akasaair" for "akasaair.com"): the server
+ * refuses any domain in a summary as a link.
+ */
+export function siteName(site: string): string | null {
+  const labels = site.toLowerCase().split(".").filter(Boolean);
+  labels.pop();
+  while (labels.length > 1 && GENERIC_LABELS.has(labels.at(-1)!)) labels.pop();
+  const name = labels.at(-1);
+  return name != null && /^[a-z][a-z0-9-]*$/.test(name) ? name : null;
+}
+
+/** A total as people write it ("₹5,412"), or null for one that is not a plain number. */
+function money(amount: string, currency: string): string | null {
+  if (!/^\d+(\.\d{1,2})?$/.test(amount.trim())) return null;
+  const value = Number(amount);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    }).format(value);
+  } catch {
+    // Not a currency Intl knows.
+    return null;
+  }
+}
+
+/** One wait as one sentence: its kind and stage, the payee or site's name and a total; never a domain or anything typed. */
+function waitSummary(wait: PendingWait): string {
+  const name = wait.site != null ? siteName(wait.site) : null;
+  const total =
+    wait.amount != null && wait.currency != null
+      ? money(wait.amount, wait.currency)
+      : null;
+  const payee = wait.merchant ?? name;
+  switch (wait.kind) {
+    case "connector":
+      return `${(wait.label ?? "A connector").slice(0, 60)} link was sent and is not connected yet.`;
+    case "vault_login":
+      return `A secure page to sign in${name != null ? ` to ${name}` : ""} was sent and is not finished yet.`;
+    case "vault_card":
+      return "A secure page to add a card was sent and is not finished yet.";
+    case "vault_code":
+      return "A secure page for a one-time code was sent and is not finished yet.";
+    case "payment":
+      return `A payment${total != null ? ` of ${total}` : ""}${payee != null ? ` to ${payee}` : ""} is waiting for the user's approval on the page sent.`;
+    case "checkout":
+      return `A booking or purchase${payee != null ? ` with ${payee}` : ""}${total != null ? ` (${total})` : ""} is paused, waiting for ${PAUSE_NEEDS[wait.stage] ?? "the user"}.`;
+  }
+}
+
+/**
+ * One wait as an agenda item, `at` when it began: a connector link is
+ * `connect` (the server waits 2h); everything else is `waiting`, which the
+ * server holds until the bot has been quiet for a while. An approval's page
+ * lives about ten minutes, so a later `at` could outlive it.
+ */
 export function waitItem(wait: PendingWait): NudgeAgendaItem {
-  const name = (wait.label ?? "A connector").slice(0, 60);
+  const connect = wait.kind === "connector";
   return {
     item_id: wait.itemId,
-    kind: "connect",
+    kind: connect ? "connect" : "waiting",
     at: seconds(wait.since),
     expires_at: seconds(wait.expiresAt),
-    summary: `${name} link was sent and is not connected yet.`.slice(
-      0,
-      NUDGE_SUMMARY_MAX_CHARS
-    ),
+    summary: waitSummary(wait).slice(0, NUDGE_SUMMARY_MAX_CHARS),
   };
 }
 
