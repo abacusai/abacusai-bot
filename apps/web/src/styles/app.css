@@ -337,6 +337,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
 }
 .popup-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 [data-slot="tooltip-content"] { overflow: visible; white-space: normal; }
+.popup-tooltip-label { min-width: 0; max-height: calc(min(var(--available-height, calc(100dvh - 16px)), 24rem) - 12px); overflow-x: hidden; overflow-y: auto; overflow-wrap: anywhere; }
 [data-slot="dialog-content"] { max-height: calc(100dvh - 16px); overflow-y: auto; }
 
 .ui-list, [data-slot="nav-list-rows"], [cmdk-group-items],
@@ -362,7 +363,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   &:active { background-color: var(--row-pressed); }
   &:focus-visible { outline: 2px solid var(--row-focus); outline-offset: -2px; }
 }
-:is([data-slot="dropdown-menu-content"], [data-slot="context-menu-content"]) {
+:is([data-slot="dropdown-menu-content"], [data-slot="context-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="context-menu-sub-content"]) {
   display: flex;
   flex-direction: column;
   gap: var(--row-gap);

@@ -69,10 +69,13 @@ function ContextMenuContent({
   );
 }
 
-function ContextMenuGroup({ ...props }: ContextMenuPrimitive.Group.Props) {
+function ContextMenuGroup({
+  className,
+  ...props
+}: ContextMenuPrimitive.Group.Props) {
   return (
     <ContextMenuPrimitive.Group
-      className="ui-list"
+      className={cn("ui-list", className)}
       data-slot="context-menu-group"
       {...props}
     />

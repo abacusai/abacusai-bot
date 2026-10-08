@@ -56,10 +56,10 @@ function DropdownMenuContent({
   );
 }
 
-function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
+function DropdownMenuGroup({ className, ...props }: MenuPrimitive.Group.Props) {
   return (
     <MenuPrimitive.Group
-      className="ui-list"
+      className={cn("ui-list", className)}
       data-slot="dropdown-menu-group"
       {...props}
     />

@@ -47,6 +47,9 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "#renderer/ui/context-menu";
 import {
@@ -70,6 +73,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
@@ -315,6 +321,18 @@ const DropdownMenuExample = () => {
         Actions
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        {stress && stress !== "sidebar" && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              More actions with a very long submenu label
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {POPUP_STRESS_LABELS.map((label) => (
+                <DropdownMenuItem key={label}>{label}</DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuGroup>
           {(stress === "sidebar"
             ? SESSION_MENU_LABELS
@@ -360,6 +378,16 @@ const ContextMenuExample = () => {
         Right-click here
       </ContextMenuTrigger>
       <ContextMenuContent>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            More actions with a very long submenu label
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {labels.map((label) => (
+              <ContextMenuItem key={label}>{label}</ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         {labels.map((label) => (
           <ContextMenuItem key={label}>{label}</ContextMenuItem>
         ))}
@@ -391,12 +419,15 @@ const PopoverExample = () => {
 
 const TooltipExample = () => {
   const state = useOverlay("tooltip");
+  const { stress } = use(OverlayContext);
   return (
     <Tooltip {...state}>
       <TooltipTrigger render={<Button variant="outline" />}>
         Hover me
       </TooltipTrigger>
-      <TooltipContent>New session</TooltipContent>
+      <TooltipContent>
+        {stress ? POPUP_STRESS_LABELS[0] : "New session"}
+      </TooltipContent>
     </Tooltip>
   );
 };

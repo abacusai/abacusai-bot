@@ -181,3 +181,91 @@ test(
     }
   }
 );
+
+test(
+  "nested menus collide safely and keyboard navigation scrolls long lists",
+  { skip: !endpoint },
+  async (t) => {
+    const pages = await (await fetch(`${endpoint}/json/list`)).json();
+    const cdp = await connect(
+      pages.find((page) => page.type === "page").webSocketDebuggerUrl
+    );
+    try {
+      for (const width of widths)
+        for (const kind of ["dropdown-menu", "context-menu"])
+          await t.test(`${kind}, ${width}px`, async () => {
+            await cdp.send("Emulation.setDeviceMetricsOverride", {
+              width,
+              height: 900,
+              deviceScaleFactor: 1,
+              mobile: false,
+            });
+            const search = {
+              section: kind,
+              stress: "bottom-right",
+              theme: "light",
+            };
+            if (gallery.includes("?path=")) {
+              await cdp.evaluate(
+                `window.popupApp.router.navigate({to:'/__ui',search:${JSON.stringify(search)}})`
+              );
+              await cdp.evaluate(
+                `window.popupApp.router.navigate({to:'/__ui',search:${JSON.stringify({ ...search, open: kind })}})`
+              );
+            } else
+              await cdp.send("Page.navigate", {
+                url: gallery.replace(
+                  "{path}",
+                  `/__ui?${new URLSearchParams({ ...search, open: kind })}`
+                ),
+              });
+            for (let attempt = 0; attempt < 100; attempt++) {
+              if (
+                await cdp.evaluate(
+                  `!!document.querySelector('[data-slot="${kind}-sub-trigger"]')`
+                )
+              )
+                break;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            await cdp.evaluate(
+              `document.querySelector('[data-slot="${kind}-item"]').focus()`
+            );
+            await cdp.send("Input.dispatchKeyEvent", {
+              type: "keyDown",
+              key: "End",
+              code: "End",
+              windowsVirtualKeyCode: 35,
+            });
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            const scroll = await cdp.evaluate(
+              `(()=>{const p=document.querySelector('[data-slot="${kind}-content"]');const r=p.querySelector('[data-highlighted]');const a=p.getBoundingClientRect(),b=r?.getBoundingClientRect();return {scroll:p.scrollTop,visible:!!b&&b.top>=a.top&&b.bottom<=a.bottom};})()`
+            );
+            assert.ok(
+              scroll.scroll > 0 && scroll.visible,
+              JSON.stringify(scroll)
+            );
+            await cdp.evaluate(
+              `(()=>{const p=document.querySelector('[data-slot="${kind}-content"]');p.scrollTop=0;const s=p.querySelector('[data-slot="${kind}-sub-trigger"]');s.focus();s.click();})()`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            const sub = await cdp.evaluate(
+              `(()=>{const p=document.querySelector('[data-slot="${kind}-sub-content"]');if(!p)return null;const r=p.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,gap:parseFloat(getComputedStyle(p).gap),overflow:p.scrollWidth>p.clientWidth+1};})()`
+            );
+            assert.ok(sub, "submenu opens");
+            assert.ok(
+              sub.left >= 7 &&
+                sub.right <= width - 7 &&
+                sub.top >= 7 &&
+                sub.bottom <= 893,
+              JSON.stringify(sub)
+            );
+            assert.ok(sub.gap >= 2);
+            assert.equal(sub.overflow, false);
+          });
+    } finally {
+      cdp.close();
+    }
+  }
+);
