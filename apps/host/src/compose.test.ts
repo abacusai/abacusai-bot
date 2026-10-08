@@ -1284,7 +1284,12 @@ describe("the phone lane", () => {
       settleSend(true);
       settleStop();
       await vi.advanceTimersByTimeAsync(0);
-      expect(replies()[0]!.text).toMatch(/send that again/);
+      // The plain failure apology: the server's, in the chat's language.
+      expect(replies()[0]).toEqual({
+        action: "reply",
+        message_id: "m2",
+        notice: "turn_failed",
+      });
       phone.stop();
     } finally {
       vi.useRealTimers();
