@@ -227,7 +227,7 @@ export const hostedRefusalNote = (
       return `[${nothing.toLowerCase()}] The schedule is not valid: a five-field cron, or run_at in the future. Fix it and try again.`;
     case "interval_too_short": {
       const secs = count(details.min_interval_secs);
-      return `[${nothing.toLowerCase()}] It may run at most once every ${secs != null ? interval(secs) : "hour"} on the user's plan. Pick a longer interval (ask the user if it matters) and try again.`;
+      return `[${nothing.toLowerCase()}] It may run at most once every ${secs != null ? interval(secs) : "hour"}. Pick a longer interval (ask the user if it matters) and try again. Do not call this a plan limit unless a refusal says so.`;
     }
     case "invalid_source_url":
     case "invalid_url":
