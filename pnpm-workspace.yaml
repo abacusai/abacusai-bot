@@ -38,7 +38,6 @@ allowBuilds:
   protobufjs: false
   # esbuild only verifies its platform binary on install.
   esbuild: true
-  zigpty: set this to true or false
 
 # dompurify below 3.4.13 carries known XSS bypasses and arrives transitively
 # through the markdown pipeline. deepmerge-ts below 8 breaks CJS/ESM interop.
