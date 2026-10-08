@@ -30,6 +30,7 @@ function fixture() {
     dependencies: { runtime: "1" },
     devDependencies: { unused: "1" },
   });
+  json("apps/web/package.json", { name: "web" });
   json("apps/updater/package.json", {
     name: "updater",
     dependencies: { updates: "1" },
@@ -52,6 +53,18 @@ function fixture() {
   write("apps/web/src/x.test.tsx", 'import "unused";\n');
   write("apps/web/src/index.css", '@import "mono";\n');
   json("apps/desktop/build/licenses/sources.json", []);
+  json("apps/desktop/build/licenses/reviews.json", {});
+  write("pnpm-workspace.yaml", "packages:\n  - apps/*\n");
+  // Electron's own license and the Chromium notices its binary brings.
+  json("node_modules/electron/package.json", {
+    name: "electron",
+    version: "44.0.0",
+  });
+  write("node_modules/electron/LICENSE", "Electron copyright");
+  write(
+    "node_modules/electron/dist/LICENSES.chromium.html",
+    "Chromium notices"
+  );
   write("apps/desktop/resources/decks/TEMPLATES-LICENSE", "Template copyright");
   write("apps/desktop/resources/pdf/fonts/LICENSE-font.txt", "Font copyright");
   for (const name of [
@@ -89,16 +102,19 @@ function fixture() {
       fs.readFileSync(path.join(spdxRoot, file), "utf8")
     );
   }
-  write(
-    "apps/desktop/scripts/generate-notices.js",
-    fs.readFileSync(
-      path.resolve(
-        import.meta.dirname,
-        "../../../apps/desktop/scripts/generate-notices.js"
-      ),
-      "utf8"
-    )
-  );
+  // The script and the module it imports.
+  for (const file of ["generate-notices.js", "license-data.mjs"])
+    write(
+      `apps/desktop/scripts/${file}`,
+      fs.readFileSync(
+        path.resolve(
+          import.meta.dirname,
+          "../../../apps/desktop/scripts",
+          file
+        ),
+        "utf8"
+      )
+    );
   const run = () => {
     execFileSync(
       process.execPath,
@@ -106,7 +122,7 @@ function fixture() {
       { stdio: "pipe" }
     );
     return fs.readFileSync(
-      path.join(root, "apps/desktop/dist/THIRD-PARTY-NOTICES.txt"),
+      path.join(root, "apps/desktop/dist/THIRD_PARTY_NOTICES.txt"),
       "utf8"
     );
   };
