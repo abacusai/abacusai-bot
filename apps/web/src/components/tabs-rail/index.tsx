@@ -524,7 +524,7 @@ export const TabsRail = ({
           </PopoverTrigger>
           <PopoverContent
             align="end"
-            className="titlebar-nodrag w-56 max-w-[calc(100vw-24px)] gap-0 p-0"
+            className="titlebar-nodrag w-56 gap-0 p-0"
           >
             <Command>
               <CommandInput placeholder={t("shell.panel.searchTabs")} />
@@ -624,10 +624,7 @@ export const TabsRail = ({
           >
             <Plus />
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="titlebar-nodrag scroll-fade-y max-h-[min(var(--available-height),320px)] w-56 max-w-[calc(100vw-24px)]"
-          >
+          <DropdownMenuContent align="end" className="titlebar-nodrag">
             {kinds.map((kind) => (
               <DropdownMenuItem key={kind} onClick={() => onAdd(kind)}>
                 {kind === "browser" ? (

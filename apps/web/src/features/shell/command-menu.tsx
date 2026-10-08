@@ -286,10 +286,7 @@ const CommandMenuBody = () => {
         value={query}
         onValueChange={setQuery}
       />
-      <CommandList
-        className="scroll-fade-y max-h-[min(55vh,440px)]"
-        aria-busy={loading}
-      >
+      <CommandList aria-busy={loading}>
         {loading ? (
           <div
             role="status"
