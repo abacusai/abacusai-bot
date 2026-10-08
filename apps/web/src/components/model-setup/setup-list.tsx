@@ -22,14 +22,12 @@ export const ModelSetupPopover = ({
   setup,
   open,
   onOpenChange,
-  hint,
   children,
   connected,
 }: {
   setup: ModelSetupBinding;
   open: boolean;
   onOpenChange(open: boolean): void;
-  hint: boolean;
   connected(): void;
   children: React.ReactElement;
 }) => {
@@ -66,11 +64,6 @@ export const ModelSetupPopover = ({
         initialFocus={list}
         className="scroll-fade-y max-h-[var(--available-height)] w-[min(360px,var(--available-width))] min-w-0 gap-1 overflow-y-auto rounded-[14px] p-1.5 text-[13px]"
       >
-        {hint ? (
-          <p role="status" className="text-muted-foreground px-2 py-1.5">
-            {t("chat.modelSetup.sendHint")}
-          </p>
-        ) : null}
         {setup.status === "loading" ? (
           <div
             aria-label={t("common.loading")}

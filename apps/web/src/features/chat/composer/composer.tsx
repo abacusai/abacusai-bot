@@ -71,7 +71,7 @@ import {
   formatSize,
   removeAttachment,
 } from "./attachments";
-import { ModeChip, ModelChip } from "./chips";
+import { ModeChip, ModelChip, type ModelChipHandle } from "./chips";
 import {
   clearDraft,
   draftStore,
@@ -546,7 +546,7 @@ export const ThreadComposer = () => {
     [threadId]
   );
   const [menuOpen, setMenuOpen] = useState(false);
-  const [modelRequest, setModelRequest] = useState(0);
+  const modelChip = useRef<ModelChipHandle>(null);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState<TriggerState | null>(() =>
     triggerAt(draft.text, draft.text.length, {
@@ -595,7 +595,7 @@ export const ThreadComposer = () => {
 
   const submit = (): void => {
     if (config.blocked) {
-      if (config.model != null) setModelRequest((request) => request + 1);
+      if (config.model != null) modelChip.current?.requestModel();
       else config.onBlocked?.();
       return;
     }
@@ -865,8 +865,7 @@ export const ThreadComposer = () => {
     config.model != null ? (
       <ModelChip
         binding={config.model}
-        blocked={config.blocked}
-        openRequest={modelRequest}
+        ref={modelChip}
         compact={narrow}
         onUseLocalModel={config.onUseLocalModel}
         onOpenChange={(open) => setModelMenu(threadId, open)}

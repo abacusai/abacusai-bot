@@ -1,19 +1,45 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ModelSetupBinding } from "#renderer/components/model-setup/types";
+import { setMediaMatches } from "#renderer/test-support/media";
+import { Toaster, toast } from "#renderer/ui/toast";
 
 import * as b from "../fixtures/builders";
 import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderWithDb } from "../testing";
 import { ModelChip } from "./chips";
-import { clearDraft, draftStore } from "./draft-store";
+import { clearDraft, draftStore, updateDraft } from "./draft-store";
 
+const animate = vi.fn(
+  (_frames: Keyframe[], _options: KeyframeAnimationOptions) => ({
+    cancel: vi.fn(),
+  })
+);
+let toaster: ReturnType<typeof render> | undefined;
+beforeEach(() => {
+  animate.mockClear();
+  Object.defineProperty(Element.prototype, "animate", {
+    configurable: true,
+    value: animate,
+  });
+});
 let cleanup: (() => Promise<void>) | undefined;
 afterEach(async () => {
   await cleanup?.();
   cleanup = undefined;
   clearDraft("t-1");
+  toast.close();
+  toaster?.unmount();
+  toaster = undefined;
+  delete (Element.prototype as Partial<Element>).animate;
 });
 const setup = (extra: Partial<ModelSetupBinding> = {}): ModelSetupBinding => ({
   status: "empty",
@@ -67,12 +93,18 @@ describe("model setup in the composer", () => {
     );
   });
 
-  it.each(["click", "Enter"])(
-    "opens setup on %s without losing the draft",
-    async (action) => {
+  it.each([
+    ["session", "click"],
+    ["session", "Enter"],
+    ["bot", "click"],
+    ["bot", "Enter"],
+  ] as const)(
+    "draws attention on %s %s without changing the draft",
+    async (skin, action) => {
+      toaster = render(<Toaster />);
       const relay = new FakeRelay();
       relay.emitAll(b.sessionReady());
-      const rendered = await renderRelay(relay, "session", {
+      const rendered = await renderRelay(relay, skin, {
         blocked: "no-model",
         model: binding(setup()),
       });
@@ -80,17 +112,110 @@ describe("model setup in the composer", () => {
       const composer = document.querySelector(
         '[data-slot="composer"]'
       ) as HTMLElement;
-      const field = within(composer).getByRole("textbox");
+      const field = within(composer).getByRole(
+        "textbox"
+      ) as HTMLTextAreaElement;
       fireEvent.change(field, { target: { value: "Keep this draft" } });
-      if (action === "click")
-        fireEvent.click(within(composer).getByRole("button", { name: "Send" }));
-      else fireEvent.keyDown(field, { key: "Enter", code: "Enter" });
-      await screen.findByText("Choose a model to send this message");
-      expect(draftStore.state["t-1"]?.text).toBe("Keep this draft");
-      expect((field as HTMLTextAreaElement).value).toBe("Keep this draft");
+      act(() =>
+        updateDraft("t-1", (draft) => ({
+          ...draft,
+          attachments: [
+            {
+              id: "attachment",
+              name: "notes.txt",
+              path: "/repo/notes.txt",
+              state: "done",
+            },
+          ],
+        }))
+      );
+      const draft = draftStore.state["t-1"];
+      field.setSelectionRange(3, 7);
+      field.scrollTop = 12;
+      const send = () =>
+        action === "click"
+          ? fireEvent.click(
+              within(composer).getByRole("button", { name: "Send" })
+            )
+          : fireEvent.keyDown(field, { key: "Enter", code: "Enter" });
+      send();
+      const chip = within(composer).getByRole("button", {
+        name: /No model set/,
+      });
+      expect(document.activeElement).toBe(chip);
+      expect(chip.getAttribute("aria-invalid")).toBe("true");
+      expect(screen.queryByRole("listbox")).toBeNull();
+      expect(animate).toHaveBeenCalledTimes(2);
+      expect(animate.mock.calls[0]?.[0]).toEqual(
+        [0, -4, 4, -4, 4, -2, 0].map((x) => ({
+          transform: `translateX(${x}px)`,
+        }))
+      );
+      send();
+      expect(animate).toHaveBeenCalledTimes(4);
+      expect(animate.mock.results[0]?.value.cancel).toHaveBeenCalledOnce();
+      expect(animate.mock.results[1]?.value.cancel).toHaveBeenCalledOnce();
+      await waitFor(() =>
+        expect(document.querySelectorAll('[data-slot="toast"]')).toHaveLength(1)
+      );
+      expect(
+        within(
+          document.querySelector('[data-slot="toast"]') as HTMLElement
+        ).getByText("Choose a model to send this message")
+      ).toBeTruthy();
+      expect(draftStore.state["t-1"]).toBe(draft);
+      expect(field.value).toBe("Keep this draft");
+      expect(field.selectionStart).toBe(3);
+      expect(field.selectionEnd).toBe(7);
+      expect(field.scrollTop).toBe(12);
+      expect(within(composer).getByRole("textbox")).toBe(field);
       expect(relay.stats.send).toHaveLength(0);
+      fireEvent.click(chip);
+      expect(await screen.findByRole("listbox")).toBeTruthy();
     }
   );
+
+  it("uses only a ring pulse with reduced motion and clears invalid state once ready", async () => {
+    setMediaMatches({ "(prefers-reduced-motion: reduce)": true });
+    const ref = { current: null } as {
+      current: import("./chips").ModelChipHandle | null;
+    };
+    const model = binding(setup());
+    const rendered = await renderWithDb(
+      <ModelChip ref={ref} binding={model} />
+    );
+    cleanup = rendered.cleanup;
+    act(() => ref.current?.requestModel());
+    const chip = screen.getByRole("button", { name: /No model set/ });
+    expect(document.activeElement).toBe(chip);
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.calls[0]?.[0]).toEqual([
+      { opacity: 0 },
+      { opacity: 1, offset: 0.25 },
+      { opacity: 0 },
+    ]);
+    const description = document.getElementById(
+      chip.getAttribute("aria-describedby")!
+    );
+    expect(description?.getAttribute("aria-live")).toBe("polite");
+    expect(description?.textContent).toBe(
+      "Choose a model to send this message"
+    );
+    expect(screen.queryByRole("listbox")).toBeNull();
+    await rendered.rerender(
+      <ModelChip
+        ref={ref}
+        binding={{
+          ...model,
+          setup: { ...model.setup, status: "ready" },
+          label: "GPT",
+        }}
+      />
+    );
+    expect(
+      screen.getByRole("combobox", { name: /GPT/ }).hasAttribute("aria-invalid")
+    ).toBe(false);
+  });
 
   it("keeps connection failures inline and lets users retry", async () => {
     const state = setup({

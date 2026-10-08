@@ -110,7 +110,6 @@ export const ModelPicker = ({
         setup={binding.setup}
         open={open}
         onOpenChange={setOpen}
-        hint={false}
         connected={() => {}}
       >
         <Button
