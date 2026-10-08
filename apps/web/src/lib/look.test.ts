@@ -414,7 +414,11 @@ it("defaults to logo purple only on Default, with accessible controls and no lar
       high: false,
       accent: "default",
     });
-    console.log(mode, tokens.primary, tokens["accent-text"], tokens.ring);
+    expect(tokens.primary).toBe("#A233FB");
+    expect(tokens["accent-text"]).toBe(
+      mode === "light" ? "#9f32f7" : "#b267ff"
+    );
+    expect(tokens.ring).toBe(mode === "light" ? "#471273" : "#cfa5ff");
     expect(
       contrastRatio(tokens.primary!, tokens["primary-foreground"]!)
     ).toBeGreaterThanOrEqual(4.5);

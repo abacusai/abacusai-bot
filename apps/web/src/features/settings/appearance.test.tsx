@@ -95,7 +95,7 @@ it("moves through the gallery and the accents with arrow keys, one tab stop each
       .filter(([name]) => name !== "abacusai" && name !== "neutral")
       .map(([, name]) => name),
   ]);
-  fireEvent.keyDown(accents[0]!, { key: "ArrowLeft" });
+  fireEvent.keyDown(accents[1]!, { key: "End" });
   await waitFor(() => expect(look()?.accent).toBe("#12838f"));
 });
 
@@ -118,6 +118,10 @@ it("picking a theme, an accent, contrast and fonts writes prefs and re-themes th
     ).not.toBe("")
   );
   fireEvent.click(row("accent").getByRole("radio", { name: copy.themeAccent }));
+  await waitFor(() => expect(look()?.accent).toBe("default"));
+  fireEvent.click(
+    row("accent").getByRole("radio", { name: copy.colors.neutral })
+  );
   await waitFor(() => expect(look()?.accent).toBeNull());
 
   fireEvent.click(row("contrast").getByRole("button", { name: copy.high }));

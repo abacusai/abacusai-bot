@@ -424,6 +424,9 @@ export const THEMES: readonly LookTheme[] = [
 ];
 
 /** The accent swatches, each with a translated name (settings.appearance.colors). */
+// Logo purple #A233FB keeps near-white button text above 4.5:1 in both modes.
+// The solver derives light/dark link shades #9f32f7 / #b267ff and focus rings
+// #471273 / #cfa5ff so text reaches 4.5:1 and half-opacity focus reaches 3:1.
 export const ACCENTS = [
   ["abacusai", "#A233FB"],
   ["blue", "#2f6fde"],
