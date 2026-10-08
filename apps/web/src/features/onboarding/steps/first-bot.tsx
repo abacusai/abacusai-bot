@@ -63,6 +63,7 @@ export const FirstBotStep = ({
         <>
           <div className="onboarding-card mt-6 flex w-full max-w-[520px] items-center gap-3 rounded-[14px] py-3 pr-3 pl-4">
             <BotAvatar
+              animate
               look={resolveLook({
                 name: bot.name,
                 avatarShape: bot.avatarShape,

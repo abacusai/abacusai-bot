@@ -7,8 +7,8 @@
  * `springs.avatar`. Entering avatars rise in (12 px, staggered 60 ms),
  * leaving ones drift up and out (160 ms); the rest rearrange. The egg on
  * `first-bot` hatches into the created bot's own look, and that bot is the
- * one that stays on `done` and flies into the shell's bot identity
- * (`view-transition-name: bot-identity-<id>`, spec 06 OB17).
+ * one that stays on `done`. The shell renders its live identity rig after
+ * onboarding without a raster shared-element snapshot.
  *
  * `stageFor` is pure: which avatar ids, looks, moods and sizes a step shows.
  * Reduced motion: every change is a cut, nothing bobs.
@@ -32,7 +32,6 @@ import {
   springs,
 } from "#renderer/lib/motion";
 import type { OnboardingStepId } from "#renderer/lib/navigation/areas";
-import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { Confetti } from "./confetti";
@@ -56,8 +55,6 @@ export interface StageSlot {
   glow?: boolean;
   /** Play the egg → look hatch (the bot exists now). */
   hatch?: boolean;
-  /** A cross-route shared-element name (the flight into the shell). */
-  shared?: string;
 }
 
 export interface Stage {
@@ -174,7 +171,6 @@ export const stageFor = (
                 look: botLook(bot),
                 mood: "excited",
                 size: 80,
-                shared: `bot-identity-${bot.id}`,
               }
             : parade("parade-blob", 80, "excited"),
           parade("parade-cat", 56),
@@ -216,7 +212,6 @@ const StageAvatar = ({
   reduced: boolean;
   onHatched(): void;
 }) => {
-  const shared = useSharedElementName(slot.shared ?? null);
   return (
     <motion.div
       className="onboarding-stage-avatar"
@@ -232,7 +227,6 @@ const StageAvatar = ({
         transition: leave(reduced),
       }}
       transition={rise(index, reduced)}
-      style={shared}
     >
       {slot.glow && (
         <span
@@ -241,10 +235,7 @@ const StageAvatar = ({
           style={{ "--ob-glow": slot.look.color } as CSSProperties}
         />
       )}
-      <span
-        className="onboarding-bob"
-        style={{ animationDelay: `${(index * 4) / 10}s` }}
-      >
+      <span>
         <BotAvatar
           look={slot.look}
           mood={slot.mood}

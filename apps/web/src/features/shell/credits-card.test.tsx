@@ -1,154 +1,155 @@
-import { contract } from "@abacus-ai/contract/contract";
-import type { AbacusAccountInfo } from "@abacus-ai/contract/contracts";
-import { FREE_POOL_PROVIDERS } from "@abacus-ai/contract/free-pool";
-import { implement } from "@orpc/server";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import enUS from "#locales/en-US.json";
-import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
+import { initI18n } from "#renderer/lib/i18n";
 
-const os = implement(contract);
-let app: Awaited<ReturnType<typeof renderApp>> | undefined;
-beforeEach(() => localStorage.clear());
-afterEach(async () => {
-  app?.view.unmount();
-  await app?.cleanup();
-  app = undefined;
-});
-const card = () =>
-  document.querySelector<HTMLElement>('[data-slot="sidebar-credits-card"]');
-const mount = async (
-  tier: string,
-  used: number,
-  providers: string[] = [],
-  runtimeAvailable = false
-) => {
-  const seed = defaultSeed();
-  seed.prefs!.creditsExhaustedAt = null;
-  const openExternal = vi.fn(
-    async (_options: { input: { url: string } }) => {}
-  );
-  app = await renderApp("/bots", {
-    seed,
-    procedures: {
-      account: {
-        abacus: os.account.abacus.handler(
-          () =>
-            ({
-              subscription_tier: tier,
-              credits_granted: 100,
-              credits_used: used,
-            }) as AbacusAccountInfo
-        ),
-      },
-      models: { list: os.models.list.handler(() => []) },
-      settings: {
-        keys: {
-          listProviders: os.settings.keys.listProviders.handler(
-            () => providers
-          ),
+import { UpgradePromo } from "./credits-card";
+import { promoAccountKey } from "./promo-state";
+
+const state = vi.hoisted(() => ({
+  account: {
+    user_id: "dummy",
+    organization_id: "dummy-org",
+    name: null,
+    email: null,
+    picture: null,
+    organization: null,
+    org_user_count: null,
+    plan: null,
+    subscription_tier: "free",
+    credits_granted: 100,
+    credits_used: 95,
+  },
+  open: vi.fn(),
+  update: vi.fn(),
+}));
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: state.account, dataUpdatedAt: 1 }),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => ({ href: "/sessions/example" }),
+}));
+vi.mock("#renderer/data/db/prefs", () => ({
+  usePrefs: () => ({ creditsExhaustedAt: null }),
+  useUpdatePrefs: () => state.update,
+}));
+vi.mock("#renderer/lib/use-app-context", () => ({
+  useAppContext: () => ({
+    transport: {
+      orpc: {
+        account: {
+          abacus: { queryOptions: () => ({}), queryKey: () => ["account"] },
         },
       },
-      localModels: {
-        state: os.localModels.state.handler(() => ({
-          runtimeAvailable,
-          totalMemoryBytes: 0,
-          recommendedId: "qwen3.5-4b",
-          catalog: [],
-          installedIds: [],
-          download: null,
-          servingId: null,
-        })),
-      },
-      system: { openExternal: os.system.openExternal.handler(openExternal) },
+      client: { system: { openExternal: state.open } },
     },
-  });
-  return openExternal;
-};
-it("uses account counters without a local mark and keeps the exhaustion explanation open", async () => {
-  await mount("free", 100);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.connectBody)
+  }),
+}));
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => "reduced",
+}));
+vi.mock("./promo-character", () => ({
+  PromoCharacter: ({ excited }: { excited: boolean }) => (
+    <span data-testid="character">{excited ? "excited" : "worried"}</span>
+  ),
+}));
+beforeEach(async () => {
+  await initI18n();
+  localStorage.clear();
+  state.account.subscription_tier = "free";
+  state.account.user_id = "dummy";
+  state.account.credits_used = 95;
+});
+it("shows actual credit progress, reacts to CTA focus and persists snooze across remount", () => {
+  const first = render(<UpgradePromo />);
+  expect(screen.getByText("5 of 100 credits left")).toBeTruthy();
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "95"
   );
-  await waitFor(() =>
-    expect(card()?.querySelector('[data-source="gemini"]')).not.toBeNull()
+  fireEvent.focus(screen.getByRole("button", { name: "Upgrade" }));
+  expect(screen.getByTestId("character").textContent).toBe("excited");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
   );
+  expect(localStorage.getItem(promoAccountKey(state.account))).not.toBeNull();
+  first.unmount();
+  const second = render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  second.unmount();
+});
+it("does not show the promo for an account already on a paid tier", () => {
+  state.account.subscription_tier = "pro";
+  render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+});
+
+it("celebrates only a confirmed free-to-paid account change", () => {
+  const view = render(<UpgradePromo />);
+  state.account = { ...state.account, subscription_tier: "pro" };
+  view.rerender(<UpgradePromo />);
+  expect(screen.getByText("Level unlocked. Let’s build!")).toBeTruthy();
   expect(
-    within(card()!).queryByRole("button", { name: enUS.creditsCard.dismiss })
-  ).toBeNull();
-  fireEvent.click(
-    within(card()!).getByRole("button", { name: enUS.creditsCard.inviteCta })
-  );
-  await waitFor(() =>
-    expect(app!.router.state.location.pathname).toBe("/settings/account")
-  );
-  expect(app!.router.state.location.search).toMatchObject({ invite: "link" });
+    screen.getByRole("button", { name: "Upgrade" }).hasAttribute("disabled")
+  ).toBe(true);
 });
-it("remembers dismissing the headroom upsell, but still shows later exhaustion", async () => {
-  await mount("free", 10);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.upsellTitle)
-  );
+
+afterEach(() => vi.useRealTimers());
+it("expires a persisted snooze after ten minutes while mounted", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2030-01-01T00:00:00Z"));
+  const first = render(<UpgradePromo />);
   fireEvent.click(
-    within(card()!).getByRole("button", { name: enUS.creditsCard.dismiss })
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
   );
-  expect(card()).toBeNull();
-  app!.view.unmount();
-  await app!.cleanup();
-  app = undefined;
-  await mount("free", 100);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.connectBody)
-  );
-});
-it("prefers a configured provider outside the exhausted pool", async () => {
-  await mount("free", 100, ["openai"]);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.switchTitle)
-  );
-  expect(card()?.textContent).toContain("OpenAI");
-  expect(card()?.querySelector("button")).toBeNull();
-});
-it("opens local setup once all free sources are configured", async () => {
-  await mount("free", 100, [...FREE_POOL_PROVIDERS], true);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.localBody)
-  );
-  fireEvent.click(
-    within(card()!).getByRole("button", { name: enUS.localModels.useLocal })
-  );
-  await waitFor(() =>
-    expect(app!.router.state.location.pathname).toBe("/settings/models")
-  );
-  expect(app!.router.state.location.search).toMatchObject({
-    provider: "local",
+  first.unmount();
+  render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  await act(async () => {
+    vi.advanceTimersByTime(10 * 60 * 1000 + 1);
   });
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
 });
-it("points at the picker without buttons when the runtime is unavailable and sources are connected", async () => {
-  await mount("free", 100, [...FREE_POOL_PROVIDERS]);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.pickBody)
-  );
-  expect(card()?.querySelector("button")).toBeNull();
-});
-it("offers a spent paid account its top-up, with no free sources", async () => {
-  const open = await mount("pro", 100);
-  await waitFor(() =>
-    expect(card()?.textContent).toContain(enUS.creditsCard.paidTitle)
-  );
+it("refreshes snooze on window focus and isolates accounts", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2030-01-01T00:00:00Z"));
+  const first = render(<UpgradePromo />);
   fireEvent.click(
-    within(card()!).getByRole("button", { name: enUS.creditsCard.topUpCta })
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
   );
-  await waitFor(() => expect(open).toHaveBeenCalledOnce());
-  expect(open.mock.calls[0]?.[0].input.url).toContain("buyCredits=true");
-  expect(card()?.querySelector("[data-source]")).toBeNull();
+  first.unmount();
+  const second = render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+  vi.setSystemTime(new Date("2030-01-01T00:10:01Z"));
+  fireEvent(window, new Event("focus"));
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  second.unmount();
+  state.account.user_id = "another-dummy";
+  render(<UpgradePromo />);
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
 });
-it.each(["basic", "pro"])(
-  "keeps a %s account with headroom free of an upsell",
-  async (tier) => {
-    await mount(tier, 10);
-    await screen.findByRole("heading", { name: "Bots" });
-    expect(card()).toBeNull();
-  }
-);
+it("reappears immediately when a snoozed free account exhausts its credits", () => {
+  const first = render(<UpgradePromo />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
+  );
+  first.unmount();
+  state.account.credits_used = 100;
+  render(<UpgradePromo />);
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+});
+
+it("does not apply one account's active snooze to another account", () => {
+  const first = render(<UpgradePromo />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remind me in 10 minutes" })
+  );
+  first.unmount();
+  state.account.user_id = "another-dummy";
+  const second = render(<UpgradePromo />);
+  expect(screen.getByRole("button", { name: "Upgrade" })).toBeTruthy();
+  second.unmount();
+  state.account.user_id = "dummy";
+  render(<UpgradePromo />);
+  expect(screen.queryByRole("button", { name: "Upgrade" })).toBeNull();
+});

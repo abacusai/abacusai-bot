@@ -137,6 +137,7 @@ export const LimitScreen = () => {
     >
       <div className="flex w-full max-w-[400px] flex-col items-center gap-6 text-center">
         <BotAvatar
+          animate
           look={defaultLook("AbacusAI Bot")}
           mood="asleep"
           size={112}
@@ -210,7 +211,12 @@ export const SetupScreen = ({ stage }: { stage: ConnectStage }) => {
       className="bg-background text-foreground fixed inset-0 z-50 flex min-h-dvh flex-col items-center justify-center overflow-y-auto px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
     >
       <div className="flex w-full max-w-[400px] flex-col items-center gap-8 text-center">
-        <BotAvatar look={defaultLook("AbacusAI Bot")} mood="idle" size={112} />
+        <BotAvatar
+          animate
+          look={defaultLook("AbacusAI Bot")}
+          mood="idle"
+          size={112}
+        />
         <div className="flex flex-col gap-3">
           <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance">
             {t("web.connect.setupTitle")}
@@ -291,6 +297,7 @@ export const FailedScreen = ({
     >
       <div className="flex w-full max-w-[400px] flex-col items-center gap-6 text-center">
         <BotAvatar
+          animate
           look={defaultLook("AbacusAI Bot")}
           mood="asleep"
           size={112}

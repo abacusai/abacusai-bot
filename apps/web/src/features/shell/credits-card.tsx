@@ -1,45 +1,56 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { Sparkles, Minus } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+  type CSSProperties,
+} from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  CreditsCard,
-  missingFreeSources,
-} from "#renderer/components/credits-card";
-import { creditActionsFor } from "#renderer/components/credits-card/actions";
-import { GroupCard } from "#renderer/components/form-kit/page";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import {
   ABACUS_PLAN_URL,
-  alternativeProviderLabels,
   creditMarkState,
-  creditsCardState,
   creditsTier,
-  joinProviderLabels,
 } from "#renderer/lib/credits";
-import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
-import { IS_ELECTRON } from "#renderer/lib/platform";
+import {
+  durations,
+  easings,
+  offsets,
+  springs,
+  reducedTransition,
+  useMotionPreference,
+} from "#renderer/lib/motion";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { useNow } from "#renderer/lib/use-now";
 import { Button } from "#renderer/ui/button";
 
-const DISMISSED_KEY = "abacusai-bot:local-code:upsell-dismissed";
-const readDismissed = () => {
-  try {
-    return localStorage.getItem(DISMISSED_KEY) != null;
-  } catch {
-    return false;
-  }
-};
-export const SidebarCreditsCard = () => {
-  const { transport, credentialsChanged } = useAppContext();
+import { PromoCharacter } from "./promo-character";
+import { promoPlacement } from "./promo-placement";
+import {
+  PROMO_SNOOZE_MS,
+  promoAccountKey,
+  promoState,
+  readPromoSnooze,
+  type PromoSnooze,
+} from "./promo-state";
+
+/** Floating above the reading pane, clear of the composer and splitters. */
+export const UpgradePromo = () => {
+  const { transport } = useAppContext();
   const { t } = useTranslation();
   const prefs = usePrefs();
   const update = useUpdatePrefs();
-  const navigate = useAppNavigate();
-  const now = useNow();
-  const [dismissed, setDismissed] = useState(readDismissed);
+  const minuteNow = useNow();
+  const [deadlineNow, setDeadlineNow] = useState(() => Date.now());
+  const now = Math.max(minuteNow, deadlineNow);
+  const preference = useMotionPreference();
+  const location = useLocation();
   const account = useQuery({
     ...transport.orpc.account.abacus.queryOptions({ input: { refresh: true } }),
     queryKey: [
@@ -48,21 +59,27 @@ export const SidebarCreditsCard = () => {
     ],
     staleTime: 60_000,
   });
-  // Fresh for five minutes, as the bots catalog (features/bots/data/queries).
-  const models = useQuery(
-    transport.orpc.models.list.queryOptions({
-      input: {},
-      staleTime: 5 * 60_000,
-    })
-  );
-  const keys = useQuery(
-    transport.orpc.settings.keys.listProviders.queryOptions({ input: {} })
-  );
-  const local = useQuery(
-    transport.orpc.localModels.state.queryOptions({
-      input: {},
-      enabled: IS_ELECTRON,
-    })
+  const key = promoAccountKey(account.data);
+  const [snooze, setSnooze] = useState<{
+    key: string;
+    value: PromoSnooze | null;
+  } | null>(null);
+  const savedSnooze = snooze?.key === key ? snooze.value : readPromoSnooze(key);
+  useEffect(() => {
+    const refresh = () => setDeadlineNow(Date.now());
+    const delay = (savedSnooze?.until ?? 0) - Date.now();
+    const timer = delay > 0 ? window.setTimeout(refresh, delay) : undefined;
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [key, savedSnooze?.until]);
+  const state = promoState(
+    account.data,
+    prefs.creditsExhaustedAt,
+    savedSnooze,
+    now
   );
   const mark = creditMarkState(
     account.data,
@@ -74,129 +91,223 @@ export const SidebarCreditsCard = () => {
     if (mark === "clear")
       void update({ creditsExhaustedAt: null }).catch(() => {});
   }, [mark, update]);
-  const state = creditsCardState(
-    account.data,
-    prefs.creditsExhaustedAt,
-    dismissed,
-    now
-  );
-  if (state == null) return null;
+  const [position, setPosition] = useState<CSSProperties>({
+    left: 72,
+    bottom: 24,
+    maxWidth: 320,
+  });
+  const [excited, setExcited] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
   const tier = creditsTier(account.data);
-  const configured = Object.fromEntries(
-    [
-      ...(keys.data ?? []),
-      ...(models.data ?? [])
-        .filter((model) => model.configured)
-        .map((model) => model.provider),
-    ].map((provider) => [provider, true])
-  );
-  const alternatives = alternativeProviderLabels(configured);
-  const canSwitch = tier === "free" && alternatives.length > 0;
-  const canConnect =
-    tier === "free" && !canSwitch && missingFreeSources(configured).length > 0;
-  const canGoLocal =
-    IS_ELECTRON &&
-    tier === "free" &&
-    !canSwitch &&
-    !canConnect &&
-    local.data?.runtimeAvailable === true;
-  const invite = (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={() =>
-        void navigate({
-          to: "/settings/account",
-          search: { invite: "link" },
-          transition: "settings-in",
-        })
+  const previousTier = useRef(tier);
+  useEffect(() => {
+    const upgraded = previousTier.current === "free" && tier === "paid";
+    previousTier.current = tier;
+    if (!upgraded) return;
+    setCelebrating(true);
+    const timer = window.setTimeout(() => setCelebrating(false), 1800);
+    return () => clearTimeout(timer);
+  }, [tier]);
+  useLayoutEffect(() => {
+    if (!state && !celebrating) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => schedule());
+    const observed = new Set<Element>();
+    const measure = () => {
+      const composer = [
+        ...document.querySelectorAll<HTMLElement>('[data-slot="composer"]'),
+      ].find((element) => element.getBoundingClientRect().height > 0);
+      const pane =
+        composer?.closest<HTMLElement>('[data-dock-pane="chat"]') ??
+        document.querySelector<HTMLElement>('[data-slot="pane"]');
+      for (const element of [composer, pane]) {
+        if (element && !observed.has(element)) {
+          observed.add(element);
+          observer.observe(element);
+        }
       }
-    >
-      {t("creditsCard.inviteCta")}
-    </Button>
-  );
+      const rect = pane?.getBoundingClientRect();
+      const composerRect = composer?.getBoundingClientRect();
+      const promoHeight =
+        document
+          .querySelector('[data-slot="upgrade-promo"]')
+          ?.getBoundingClientRect().height || 128;
+      const rail = document
+        .querySelector('[data-slot="rail"]')
+        ?.getBoundingClientRect();
+      const sidebar = document
+        .querySelector('[data-slot="sidebar-slot"]')
+        ?.getBoundingClientRect();
+      const footer = document
+        .querySelector('[data-slot="sidebar-footer"]')
+        ?.getBoundingClientRect();
+      setPosition(
+        promoPlacement({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          railRight: rail?.right ?? 56,
+          sidebarRight: sidebar?.right ?? 56,
+          paneTop: rect?.top ?? 40,
+          cardHeight: promoHeight,
+          composer: composerRect,
+          footer,
+          splitters: [
+            ...document.querySelectorAll("[data-pane-gutter], .dv-sash"),
+          ]
+            .map((element) => element.getBoundingClientRect())
+            .filter((rect) => rect.width > 0 && rect.height > 0),
+        })
+      );
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    measure();
+    const shell = document.querySelector('[data-slot="shell"]');
+    if (shell) observer.observe(shell);
+    for (const element of document.querySelectorAll(
+      '[data-slot="composer"], [data-slot="pane"], [data-slot="panel-workspace"]'
+    ))
+      observer.observe(element);
+    const moves = new MutationObserver(schedule);
+    if (shell) moves.observe(shell, { childList: true, subtree: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      observer.disconnect();
+      moves.disconnect();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [state, celebrating, location.href]);
+  const remaining =
+    account.data?.credits_granted != null && account.data.credits_used != null
+      ? Math.max(0, account.data.credits_granted - account.data.credits_used)
+      : null;
   return (
-    <div className="mt-auto p-2" data-slot="sidebar-credits-card">
-      {state === "upsell" ? (
-        <GroupCard title={t("creditsCard.upsellTitle")}>
-          <div className="flex flex-col gap-2 p-3">
-            <Button
-              size="sm"
-              onClick={() =>
-                void platformSystem(transport.client).openExternal({
-                  url: ABACUS_PLAN_URL,
-                })
-              }
-            >
-              {t("creditsCard.cta")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                try {
-                  localStorage.setItem(DISMISSED_KEY, "1");
-                } catch {
-                  /* Dismiss for this window if storage is unavailable. */
-                }
-                setDismissed(true);
-              }}
-            >
-              {t("creditsCard.dismiss")}
-            </Button>
-          </div>
-        </GroupCard>
-      ) : tier === "paid" || canConnect ? (
-        <CreditsCard
-          host={creditActionsFor(transport, credentialsChanged)}
-          tier={tier}
-          {...(canConnect
-            ? {
-                title: t("creditsCard.title"),
-                note: t("creditsCard.connectBody"),
-                alternatives: invite,
-              }
-            : {})}
-        />
-      ) : (
-        <GroupCard
-          title={t(canSwitch ? "creditsCard.switchTitle" : "creditsCard.title")}
+    <AnimatePresence>
+      {state || celebrating ? (
+        <motion.aside
+          key={key}
+          data-slot="upgrade-promo"
+          aria-label={t("creditsCard.upsellTitle")}
+          className="bg-background fixed isolate z-30 w-80 overflow-hidden rounded-xl border p-3 shadow-lg"
+          style={position}
+          initial={{
+            opacity: 0,
+            y: preference === "reduced" ? 0 : offsets.drill,
+          }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: preference === "reduced" ? 0 : offsets.drill }}
+          transition={
+            preference === "reduced"
+              ? reducedTransition
+              : { duration: durations.crossFade / 1000, ease: easings.standard }
+          }
         >
-          <div className="flex flex-col gap-2 p-3">
-            <p className="text-muted-foreground text-sm">
-              {canSwitch
-                ? t("creditsCard.switchBody", {
-                    providers: joinProviderLabels(
-                      alternatives,
-                      t("creditsCard.or")
-                    ),
-                  })
-                : t(
-                    canGoLocal
-                      ? "creditsCard.localBody"
-                      : "creditsCard.pickBody"
+          <div className="phone-glow pointer-events-none -z-10" aria-hidden />
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            className="absolute top-1 right-1"
+            aria-label={t("creditsCard.remindLater")}
+            title={t("creditsCard.remindLater")}
+            onClick={() => {
+              const value: PromoSnooze = {
+                until: Date.now() + PROMO_SNOOZE_MS,
+                situation: state ?? "upsell",
+              };
+              try {
+                localStorage.setItem(key, JSON.stringify(value));
+              } catch {
+                /* Keep this window’s snooze. */
+              }
+              setSnooze({ key, value });
+            }}
+          >
+            <Minus />
+          </Button>
+          <div className="flex items-center gap-3 pr-3">
+            <PromoCharacter
+              remaining={remaining}
+              total={account.data?.credits_granted ?? null}
+              excited={excited}
+              upgraded={celebrating}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {t(
+                  celebrating
+                    ? "creditsCard.upgraded"
+                    : remaining === 0
+                      ? "creditsCard.restTitle"
+                      : "creditsCard.levelUpTitle"
+                )}
+              </p>
+              {remaining != null ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t("creditsCard.progress", {
+                    remaining,
+                    total: account.data?.credits_granted ?? 0,
+                  })}
+                </p>
+              ) : null}
+              {account.data?.credits_granted != null &&
+              account.data.credits_granted > 0 &&
+              remaining != null ? (
+                <div
+                  role="progressbar"
+                  aria-label={t("creditsCard.used")}
+                  aria-valuemin={0}
+                  aria-valuemax={account.data.credits_granted}
+                  aria-valuenow={Math.min(
+                    account.data.credits_granted,
+                    Math.max(0, account.data.credits_used ?? 0)
                   )}
-            </p>
-            {canGoLocal && (
-              <>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    void navigate({
-                      to: "/settings/models",
-                      search: { provider: "local" },
-                      transition: "settings-in",
-                    })
-                  }
+                  className="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
                 >
-                  {t("localModels.useLocal")}
-                </Button>
-                {invite}
-              </>
-            )}
+                  <motion.div
+                    className="bg-primary h-full origin-left rounded-full"
+                    initial={false}
+                    animate={{
+                      scaleX: Math.min(
+                        1,
+                        Math.max(
+                          0,
+                          (account.data.credits_used ?? 0) /
+                            account.data.credits_granted
+                        )
+                      ),
+                    }}
+                    transition={
+                      preference === "reduced"
+                        ? reducedTransition
+                        : springs.panel
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
-        </GroupCard>
-      )}
-    </div>
+          <Button
+            size="sm"
+            className="mt-3 h-8 rounded-lg"
+            onMouseEnter={() => setExcited(true)}
+            onMouseLeave={() => setExcited(false)}
+            onFocus={() => setExcited(true)}
+            onBlur={() => setExcited(false)}
+            disabled={celebrating}
+            onClick={() =>
+              void platformSystem(transport.client).openExternal({
+                url: ABACUS_PLAN_URL,
+              })
+            }
+          >
+            <Sparkles aria-hidden />
+            {t("creditsCard.cta")}
+          </Button>
+        </motion.aside>
+      ) : null}
+    </AnimatePresence>
   );
 };

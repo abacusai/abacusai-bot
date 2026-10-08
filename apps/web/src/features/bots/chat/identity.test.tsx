@@ -107,10 +107,10 @@ describe("the bot identity, one element with two homes", () => {
     expect(standIn().getAttribute("aria-hidden")).toBe("true");
     expect(standIn().hasAttribute("inert")).toBe(true);
     expect(standIn().querySelector("button")).toBeNull();
-    // The avatar carries the route-transition name, once, in both states.
-    expect(named()).toHaveLength(1);
-    expect(named()[0]!.dataset.part).toBe("avatar");
-    expect(identity().contains(named()[0]!)).toBe(true);
+    // One full-detail live rig travels; no named raster snapshot replaces it.
+    const live = identity().querySelector('[data-slot="bot-avatar"]');
+    expect(live?.getAttribute("data-optical")).toBe("full");
+    expect(named()).toHaveLength(0);
     // The transcript's viewport names the timeline the title bar reads.
     expect(
       document
@@ -125,7 +125,8 @@ describe("the bot identity, one element with two homes", () => {
     expect(
       screen.getAllByRole("button", { name: "Details for Chief of Staff" })
     ).toHaveLength(1);
-    expect(named()).toHaveLength(1);
+    expect(named()).toHaveLength(0);
+    expect(identity().querySelector('[data-slot="bot-avatar"]')).toBe(live);
     expect(identity().tabIndex).toBe(0);
     scrollHeader(1);
     await waitFor(() =>

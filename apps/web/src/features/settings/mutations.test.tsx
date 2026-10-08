@@ -184,7 +184,7 @@ it("installing Maestro is sent once and refetches the device status", async () =
   expect(reads.mock.calls.length).toBeGreaterThanOrEqual(2);
 });
 
-it("a local model install is sent once and refetches the model state and list", async () => {
+it("a local model install is sent once, refetches its state and invalidates the cached catalog", async () => {
   const model = LOCAL_MODEL_CATALOG[0]!;
   const state: LocalModelState = {
     runtimeAvailable: true,
@@ -212,6 +212,10 @@ it("a local model install is sent once and refetches the model state and list", 
       models: { list: os.models.list.handler(lists) },
     },
   });
+  app.router.options.context!.queryClient.setQueryData(
+    app.transport.orpc.models.list.queryKey({ input: {} }),
+    []
+  );
   const button = await (
     await findRow(`local-${model.id}`)
   ).findByRole("button", {
@@ -221,18 +225,20 @@ it("a local model install is sent once and refetches the model state and list", 
   await waitFor(() => expect(button.hasAttribute("disabled")).toBe(true));
   fireEvent.click(button);
   await waitFor(() => expect(answer.pending()).toBe(1));
-  const [stateReads, listReads] = [
-    reads.mock.calls.length,
-    lists.mock.calls.length,
-  ];
+  const stateReads = reads.mock.calls.length;
   answer.settle(true);
   expect(
     await row(`local-${model.id}`).findByText(enUS.phase5.installed)
   ).not.toBeNull();
   expect(install).toHaveBeenCalledTimes(1);
   expect(reads.mock.calls.length).toBeGreaterThan(stateReads);
+  // No incidental sidebar observer: refresh this cached catalog when a picker next opens.
   await waitFor(() =>
-    expect(lists.mock.calls.length).toBeGreaterThan(listReads)
+    expect(
+      app!.router.options.context!.queryClient.getQueryState(
+        app!.transport.orpc.models.list.queryKey({ input: {} })
+      )?.isInvalidated
+    ).toBe(true)
   );
 });
 
@@ -289,6 +295,10 @@ it("install-and-use stays pending through the adoption, and a failed adoption sh
   app = await renderApp("/settings/models?provider=local&for=session:gone", {
     procedures,
   });
+  app.router.options.context!.queryClient.setQueryData(
+    app.transport.orpc.models.list.queryKey({ input: {} }),
+    []
+  );
   const button = await (
     await findRow(`local-${model.id}`)
   ).findByRole("button", { name: enUS.phase5.installUse });

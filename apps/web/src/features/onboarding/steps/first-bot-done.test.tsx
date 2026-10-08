@@ -16,6 +16,11 @@ import type { StepContext } from "./context";
 import { DoneStep } from "./done";
 import { FirstBotStep } from "./first-bot";
 
+vi.mock("#renderer/lib/motion", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/motion")>()),
+  useMotionPreference: () => "none",
+}));
+
 const discard = vi.fn(async () => {});
 // The avatar reads the motion preference from prefs; no DbProvider here.
 vi.mock("#renderer/lib/motion", async (original) => ({

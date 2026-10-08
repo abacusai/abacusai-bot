@@ -952,7 +952,7 @@
     "body": "Unlock the full potential",
     "connectBody": "Connect a free source to keep going. No card needed.",
     "cta": "Upgrade",
-    "dismiss": "Dismiss",
+    "remindLater": "Me le rappeler dans 10 minutes",
     "localBody": "Or run a model on this computer for free, with no limits.",
     "or": "or",
     "pickBody": "Pick another model in the model picker at the bottom right to keep going.",
@@ -960,7 +960,12 @@
     "switchTitle": "You've used all your free Abacus.AI credits",
     "title": "You've used all your free Abacus.AI credits",
     "upsellTitle": "Unlock the full potential on desktop and web",
-    "inviteCta": "Or invite friends for free credits"
+    "inviteCta": "Or invite friends for free credits",
+    "levelUpTitle": "Ready for your next level?",
+    "restTitle": "A little rest, then more adventures",
+    "upgraded": "Level unlocked. Let’s build!",
+    "progress": "{{remaining}} of {{total}} credits left",
+    "used": "Credits used"
   },
   "execBackends": {
     "daytona": {

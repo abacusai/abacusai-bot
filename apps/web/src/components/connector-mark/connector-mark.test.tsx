@@ -40,7 +40,11 @@ describe("ConnectorMark", () => {
       expect(tile.className).toContain("bg-muted");
       expect(tile.className).not.toContain("ring-");
       expect(tile.querySelector("svg")?.getAttribute("width")).toBe("22");
-      expect(tile.querySelectorAll("path").length).toBeGreaterThan(0);
+      if (id === "abacus")
+        expect(
+          tile.querySelector("[data-slot=app-brand-mark] image")
+        ).not.toBeNull();
+      else expect(tile.querySelectorAll("path").length).toBeGreaterThan(0);
       expect(tile.getAttribute("aria-hidden")).toBe("true");
       unmount();
     }

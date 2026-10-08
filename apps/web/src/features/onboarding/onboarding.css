@@ -82,10 +82,6 @@
 .onboarding-stage-avatar {
   position: relative;
 }
-.onboarding-bob {
-  display: block;
-  animation: onboarding-bob 3.2s ease-in-out infinite;
-}
 .onboarding-glow {
   position: absolute;
   left: 50%;
@@ -337,11 +333,6 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
     transform: translateY(12px);
   }
 }
-@keyframes onboarding-bob {
-  50% {
-    transform: translateY(-6px);
-  }
-}
 @keyframes onboarding-pulse {
   50% {
     opacity: 0.5;
@@ -368,7 +359,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
     animation: onboarding-fade 120ms linear both;
     animation-delay: 0ms;
   }
-  html:not([data-reduce-motion="off"]) :is(.onboarding-bob, .onboarding-glow) {
+  html:not([data-reduce-motion="off"]) .onboarding-glow {
     animation: none;
   }
   html:not([data-reduce-motion="off"]) .onboarding-progress span {
@@ -382,7 +373,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
   animation: onboarding-fade 120ms linear both;
   animation-delay: 0ms;
 }
-[data-reduced-motion="true"] :is(.onboarding-bob, .onboarding-glow) {
+[data-reduced-motion="true"] .onboarding-glow {
   animation: none;
 }
 [data-reduced-motion="true"] .onboarding-progress span {

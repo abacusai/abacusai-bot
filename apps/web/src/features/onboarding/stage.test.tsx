@@ -92,7 +92,6 @@ describe("stageFor", () => {
     ]);
     expect(slots[1]).toMatchObject({
       mood: "excited",
-      shared: `bot-identity-${bot.id}`,
       look: { shape: "squircle" },
     });
     expect(ids("done", null, "none")).toEqual([
@@ -164,7 +163,7 @@ describe("OnboardingStage", () => {
     );
     expect(avatar(container, "first-bot")).toBe(first);
     expect(first.getAttribute("data-size")).toBe("80");
-    expect(first.style.viewTransitionName).toBe(`bot-identity-${bot.id}`);
+    expect(first.style.viewTransitionName ?? "").toBe("");
     expect(
       first
         .querySelector('[data-slot="bot-avatar"]')!
@@ -172,20 +171,11 @@ describe("OnboardingStage", () => {
     ).toBe("squircle");
   });
 
-  it("staggers the idle bob and stops the mood keyframes under reduced motion", () => {
+  it("leaves body motion to the rig and stops mood keyframes under reduced motion", () => {
     const { container, rerender } = render(
       <OnboardingStage step="welcome" bot={null} phase="none" reduced={false} />
     );
-    const bobs = [
-      ...container.querySelectorAll<HTMLElement>(".onboarding-bob"),
-    ];
-    expect(bobs.map((b) => b.style.animationDelay)).toEqual([
-      "0s",
-      "0.4s",
-      "0.8s",
-      "1.2s",
-      "1.6s",
-    ]);
+    expect(container.querySelectorAll(".onboarding-bob")).toHaveLength(0);
     expect(
       container
         .querySelector('[data-slot="bot-avatar"]')!

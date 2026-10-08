@@ -31,7 +31,6 @@ import {
 } from "#renderer/lib/motion";
 import { isRouteTransitionActive } from "#renderer/lib/navigation/route-transition";
 
-import { SidebarCreditsCard } from "./credits-card";
 import { useFloatingIntent } from "./floating-intent";
 import { SHELL_GEOMETRY } from "./geometry";
 import type { ShellArea, SidebarMode } from "./layout";
@@ -49,7 +48,6 @@ const SidebarContent = ({
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
       {NeedsYou != null && <NeedsYou />}
       {Sidebar != null && <Sidebar />}
-      <SidebarCreditsCard />
     </div>
   );
 };
