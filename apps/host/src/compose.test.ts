@@ -481,14 +481,23 @@ describe("the phone lane", () => {
       holdReplies?: boolean;
       stop?: (workspaceId: string, sessionId: string) => Promise<void>;
       timings?: Record<string, number>;
+      /** The server fails this many acks, then takes them. */
+      ackFailsTimes?: number;
+      /** Holds the session's answer to these sends until `settleSend`. */
+      holdSend?: (messageId: string) => boolean;
     } = {}
   ) => {
     const held: Array<() => void> = [];
     const calls: Array<Record<string, unknown>> = [];
+    const logs: string[] = [];
     let listener: (sessionId: string, payload: never) => void = () => {};
+    let settleSend: (taken: boolean) => void = () => {};
     const send = vi.fn(
-      async (_w: string, _s: string, _text: string, messageId: string) =>
-        !(options.refuse?.(messageId) ?? false)
+      async (_w: string, _s: string, _text: string, messageId: string) => {
+        if (options.holdSend?.(messageId) === true)
+          return new Promise<boolean>((resolve) => (settleSend = resolve));
+        return !(options.refuse?.(messageId) ?? false);
+      }
     );
     const activity = vi.fn();
     const pinMedia = vi.fn();
@@ -505,6 +514,10 @@ describe("the phone lane", () => {
         call: (async (body: Record<string, unknown>) => {
           calls.push(body);
           callOrder.push(order());
+          if (body.action === "ack" && (options.ackFailsTimes ?? 0) > 0) {
+            options.ackFailsTimes! -= 1;
+            throw new Error("ack failed");
+          }
           if (body.action === "reply" && options.holdReplies === true)
             await new Promise<void>((resolve) => held.push(resolve));
           if (
@@ -554,7 +567,7 @@ describe("the phone lane", () => {
                   }
                 : { ok: false as const, reason: "unknown" },
         pinMedia,
-        log: () => {},
+        log: (line) => logs.push(line),
       },
       {
         batchMs: 0,
@@ -576,6 +589,14 @@ describe("the phone lane", () => {
         .filter((body) => body.action === "ack")
         .map((body) => body.message_ids);
     const release = () => held.splice(0).forEach((resolve) => resolve());
+    /** Waits for these acks, and for every acked turn's answer to have gone out (or been dropped). */
+    const handled = (expected: unknown[]) =>
+      vi.waitFor(() => {
+        expect(acks()).toEqual(expected);
+        expect(
+          logs.filter((line) => /^\[phone\] (reply ids=|gave up)/.test(line))
+        ).toHaveLength(expected.length);
+      });
     return {
       phone,
       calls,
@@ -590,11 +611,15 @@ describe("the phone lane", () => {
       release,
       pinMedia,
       callOrder,
+      handled,
+      logs,
+      settleSend: (taken: boolean) => settleSend(taken),
     };
   };
 
   it("sends a progress line at once and acks only once the final answer is out", async () => {
-    const { phone, send, activity, event, reply, replies, acks } = lane();
+    const { phone, send, activity, event, reply, replies, acks, handled } =
+      lane();
     phone.arrive({ id: "m1", text: "find flights to Goa" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     expect(send).toHaveBeenLastCalledWith(
@@ -620,7 +645,7 @@ describe("the phone lane", () => {
     expect(acks()).toEqual([]);
     expect(phone.busy).toBe(true);
     reply(["m1"], "Cheapest is 4,200.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies().map((body) => body.text)).toEqual([
       "On it: Goa flights",
       "Cheapest is 4,200.",
@@ -630,7 +655,7 @@ describe("the phone lane", () => {
   });
 
   it("sends an image at once with its caption, and keeps the turn open", async () => {
-    const { phone, send, event, reply, replies, acks, calls } = lane();
+    const { phone, send, event, reply, replies, acks, calls, handled } = lane();
     phone.arrive({ id: "m1", text: "share a screenshot?" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
 
@@ -659,12 +684,12 @@ describe("the phone lane", () => {
     );
     expect(acks()).toEqual([]);
     reply(["m1"], "Ready for you to pay.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     phone.stop();
   });
 
   it("sends with_answer media with the final answer, its first bubble as the caption", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "take me to the payment page" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event({
@@ -678,7 +703,7 @@ describe("the phone lane", () => {
 
     reply(["m1"], "It is ready for you to pay.\n---\nTotal: 4,200.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toEqual([
       {
         action: "reply",
@@ -692,7 +717,7 @@ describe("the phone lane", () => {
   });
 
   it("still says the words when an image cannot go, and still answers", async () => {
-    const { phone, send, event, reply, replies, acks } = lane({
+    const { phone, send, event, reply, replies, handled } = lane({
       imageFails: true,
     });
     phone.arrive({ id: "m1", text: "show me" });
@@ -712,7 +737,7 @@ describe("the phone lane", () => {
     });
     reply(["m1"], "Here it is.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     // An unknown id never reaches the server; a refused image leaves its words.
     expect(replies()).toEqual([
       { action: "reply", message_id: "m1", text: "Gone" },
@@ -728,7 +753,7 @@ describe("the phone lane", () => {
   });
 
   it("never sends what the tool refused, nor a call that ended in an error", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "show me" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     const done = (
@@ -754,7 +779,7 @@ describe("the phone lane", () => {
     done("send_media", { media: SHOT, caption: "The page" });
 
     reply(["m1"], "Done.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toEqual([
       {
         action: "reply",
@@ -768,7 +793,7 @@ describe("the phone lane", () => {
   });
 
   it("drops media held for a turn that failed", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "book it" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event({
@@ -778,19 +803,19 @@ describe("the phone lane", () => {
     });
     reply(["m1"], "", true);
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies().some((body) => body.image_b64 != null)).toBe(false);
     phone.stop();
   });
 
   it("sends what present_deliverable handed over with the answer: a pdf, a docx and an image", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event(presented([PDF, DOCX, SHOT]));
     reply(["m1"], "Here's your one-pager on love.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     // The answer rides on the first file as its caption.
     expect(replies()).toEqual([
       {
@@ -817,14 +842,14 @@ describe("the phone lane", () => {
   });
 
   it("sends nothing from a present_deliverable call that ended in an error", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "send it" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     const failed = presented([PDF]);
     event({ ...failed, result: { ...failed.result, rejected: true } });
     reply(["m1"], "Done.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toEqual([
       { action: "reply", message_id: "m1", text: "Done." },
     ]);
@@ -832,7 +857,7 @@ describe("the phone lane", () => {
   });
 
   it("when the server cannot take a document, still says the words and has the session tell the user", async () => {
-    const { phone, send, event, reply, replies, acks } = lane({
+    const { phone, send, event, reply, replies, handled } = lane({
       documentFails: true,
     });
     phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
@@ -840,7 +865,7 @@ describe("the phone lane", () => {
     event(presented([PDF]));
     reply(["m1"], "Here's your one-pager on love.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toEqual([
       {
         action: "reply",
@@ -864,7 +889,7 @@ describe("the phone lane", () => {
   });
 
   it("sends a media id once: the loop resending a browser run's screenshot is a no-op", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "open it and send me a screenshot" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     const sendMedia = (id: string) =>
@@ -878,13 +903,13 @@ describe("the phone lane", () => {
     event(presented([SHOT]));
     reply(["m1"], "Done.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies().filter((body) => body.image_b64 != null)).toHaveLength(1);
     phone.stop();
   });
 
   it("sends the same picture once a turn, whatever its id", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "screenshot please" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     for (const media of [SHOT, SHOT_AGAIN])
@@ -895,7 +920,7 @@ describe("the phone lane", () => {
       });
     reply(["m1"], "Here it is.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toEqual([
       {
         action: "reply",
@@ -910,7 +935,7 @@ describe("the phone lane", () => {
   });
 
   it("counts a media id as sent only once the server took it: a refused one goes on a retry", async () => {
-    const { phone, send, event, reply, replies, acks } = lane({
+    const { phone, send, event, reply, replies, handled } = lane({
       imageFailsTimes: 1,
     });
     phone.arrive({ id: "m1", text: "screenshot please" });
@@ -926,19 +951,21 @@ describe("the phone lane", () => {
     sendMedia();
     reply(["m1"], "Done.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     // Refused, then taken on the retry, then skipped: it went once.
     expect(replies().filter((body) => body.image_b64 != null)).toHaveLength(2);
     phone.stop();
   });
 
   it("raises one note per file and one per user message, however often it fails", async () => {
-    const { phone, send, event, reply, acks } = lane({ documentFails: true });
+    const { phone, send, event, reply, acks, handled } = lane({
+      documentFails: true,
+    });
     phone.arrive({ id: "m1", text: "send both" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event(presented([PDF, DOCX]));
     reply(["m1"], "Here they are.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     // Two files failed under one message: one note.
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     reply(["m1"], "Sorry, they did not come through.");
@@ -958,7 +985,7 @@ describe("the phone lane", () => {
   });
 
   it("a document WhatsApp did not confirm in time: logged unknown, the session told it is unconfirmed, nothing repeated", async () => {
-    const { phone, send, event, reply, replies, acks } = lane({
+    const { phone, send, event, reply, replies, handled } = lane({
       documentTimesOut: true,
     });
     phone.arrive({ id: "m1", text: "share a 1 page pdf on love" });
@@ -966,7 +993,7 @@ describe("the phone lane", () => {
     event(presented([PDF]));
     reply(["m1"], "Here's your one-pager on love.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toHaveLength(1);
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     const note = String(send.mock.calls[1]![2]);
@@ -977,7 +1004,7 @@ describe("the phone lane", () => {
   });
 
   it("reads only the app's own present_deliverable, by name or under its server", async () => {
-    const { phone, send, event, reply, replies, acks } = lane();
+    const { phone, send, event, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "send it" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     const named = (name: string, ids: string[]) => {
@@ -988,20 +1015,20 @@ describe("the phone lane", () => {
     named("agent-tools_present_deliverable", [PDF]);
     reply(["m1"], "Here.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies().map((body) => body.filename)).toEqual(["love.pdf"]);
     phone.stop();
   });
 
   it("keeps what an answer holds from eviction until the answer went", async () => {
-    const { phone, send, event, reply, acks, pinMedia, calls, callOrder } =
+    const { phone, send, event, reply, pinMedia, calls, callOrder, handled } =
       lane();
     phone.arrive({ id: "m1", text: "send it" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event(presented([PDF]));
     expect(pinMedia).toHaveBeenLastCalledWith(PDF, "s", true);
     reply(["m1"], "Here.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(pinMedia).toHaveBeenLastCalledWith(PDF, "s", false);
     // Let go only after the file went out, never before.
     const unpinned = pinMedia.mock.invocationCallOrder.at(-1)!;
@@ -1012,13 +1039,15 @@ describe("the phone lane", () => {
   });
 
   it("when an image handed over cannot go, the session tells the user too", async () => {
-    const { phone, send, event, reply, acks } = lane({ imageFails: true });
+    const { phone, send, event, reply, handled } = lane({
+      imageFails: true,
+    });
     phone.arrive({ id: "m1", text: "send me the chart" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     event(presented([SHOT]));
     reply(["m1"], "Here's the chart.");
 
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     expect(String(send.mock.calls[1]![2])).toContain(
       "An image you handed over could not be attached"
@@ -1027,7 +1056,7 @@ describe("the phone lane", () => {
   });
 
   it("steers a message in by its id and answers against it once the session names it", async () => {
-    const { phone, send, event, reply, replies, acks, calls } = lane();
+    const { phone, send, event, reply, replies, calls, handled } = lane();
     phone.arrive({ id: "m1", text: "find flights to Goa" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
 
@@ -1042,7 +1071,7 @@ describe("the phone lane", () => {
       messageId: "m2",
     });
     reply(["m1", "m2"], "Nonstop: 5,100.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
+    await handled([["m1", "m2"]]);
     expect(replies()).toEqual([
       { action: "reply", message_id: "m2", text: "Nonstop: 5,100." },
     ]);
@@ -1052,7 +1081,7 @@ describe("the phone lane", () => {
 
   it("requeues a refused steer exactly once and hands it over after the turn", async () => {
     let refusals = 0;
-    const { phone, send, reply, replies, acks } = lane({
+    const { phone, send, reply, replies, acks, handled } = lane({
       refuse: (id) => id === "m2" && refusals++ === 0,
     });
     phone.arrive({ id: "m1", text: "find flights to Goa" });
@@ -1066,7 +1095,7 @@ describe("the phone lane", () => {
     expect(send).toHaveBeenLastCalledWith("w", "s", "only nonstop", "m2");
     expect(acks()).toEqual([["m1"]]);
     reply(["m2"], "Two of them are nonstop.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    await handled([["m1"], ["m2"]]);
     expect(replies().map((body) => [body.message_id, body.text])).toEqual([
       ["m1", "Found 3 flights."],
       ["m2", "Two of them are nonstop."],
@@ -1076,7 +1105,7 @@ describe("the phone lane", () => {
   });
 
   it("treats the same text twice as two messages, each answered by its own id", async () => {
-    const { phone, send, reply, replies, acks } = lane();
+    const { phone, send, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "book a table" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     phone.arrive({ id: "m2", text: "ok" });
@@ -1085,16 +1114,16 @@ describe("the phone lane", () => {
     expect(send.mock.calls.map((call) => call[3])).toEqual(["m1", "m2", "m3"]);
 
     reply(["m1", "m2"], "Booked for 8.");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"]]));
+    await handled([["m1", "m2"]]);
     expect(phone.busy).toBe(true);
     reply(["m3"], "Anything else?");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1", "m2"], ["m3"]]));
+    await handled([["m1", "m2"], ["m3"]]);
     expect(replies().map((body) => body.message_id)).toEqual(["m2", "m3"]);
     phone.stop();
   });
 
-  it("never acks on progress alone: a final answer that cannot be sent is left for redelivery", async () => {
-    const { phone, send, event, reply, replies, acks } = lane({
+  it("acks a turn whose answer could not be sent: retried as a send, dropped, never run again", async () => {
+    const { phone, send, event, reply, replies, acks, handled } = lane({
       replyFails: (text) => text === "Here it is.",
     });
     phone.arrive({ id: "m1", text: "plan my trip" });
@@ -1106,27 +1135,133 @@ describe("the phone lane", () => {
     });
     reply(["m1"], "Here it is.");
 
-    await vi.waitFor(() => expect(phone.busy).toBe(false));
-    // Tried, then tried once more.
+    await handled([["m1"]]);
+    // Tried, then tried once more, then dropped.
     expect(replies().map((body) => body.text)).toEqual([
       "Working on it",
       "Here it is.",
       "Here it is.",
     ]);
-    expect(acks()).toEqual([]);
+    expect(phone.busy).toBe(false);
 
-    // The server hands it back: a new message, not a lost ack.
+    // Handed back anyway (the ack was lost): acknowledged again, not run again.
     phone.arrive({ id: "m1", text: "plan my trip" });
-    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m1"]]));
+    expect(send).toHaveBeenCalledTimes(1);
     phone.stop();
   });
 
+  it("retries an ack that failed until the server takes it, so the message is not run again", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, reply, calls } = lane({ ackFailsTimes: 1 });
+      phone.arrive({ id: "m1", text: "book it" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(1);
+      reply(["m1"], "Booked.");
+      await vi.advanceTimersByTimeAsync(0);
+      const ackCalls = () => calls.filter((body) => body.action === "ack");
+      expect(ackCalls()).toHaveLength(1);
+      // Owed, and sent again after the backoff.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(ackCalls().map((body) => body.message_ids)).toEqual([
+        ["m1"],
+        ["m1"],
+      ]);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(ackCalls()).toHaveLength(2);
+      expect(send).toHaveBeenCalledTimes(1);
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up acking only what the session took: a steer still on its way goes again", async () => {
+    vi.useFakeTimers();
+    try {
+      const { phone, send, settleStop, settleSend, acks } = lane({
+        holdSend: (id) => id === "m2",
+        timings: { idleMs: 1_000, hardCapMs: 60_000 },
+      });
+      phone.arrive({ id: "m1", text: "research this" });
+      await vi.advanceTimersByTimeAsync(0);
+      phone.arrive({ id: "m2", text: "only nonstop" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(2);
+      // Idle limit: the work is given up while m2's send is still out.
+      await vi.advanceTimersByTimeAsync(1_000);
+      settleStop();
+      // The stopped session refuses the send that was on its way.
+      settleSend(false);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(acks()).toEqual([["m1"]]);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(send).toHaveBeenCalledTimes(3);
+      expect(send.mock.calls[2]![3]).toBe("m2");
+      phone.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("runs a request once when its reply is refused, and hands the host's notes over once", async () => {
+    const { phone, send, reply, acks, handled } = lane({
+      replyFails: (text) => text === "Booked: PNR X1.",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await handled([["m1"]]);
+
+    // A vault note and the user's request go to the session together.
+    phone.note("[vault] The user saved their login for skyfare.com.");
+    phone.arrive({ id: "m2", text: "book it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    expect(send.mock.calls[1]![2]).toBe(
+      "[vault] The user saved their login for skyfare.com.\n\nbook it"
+    );
+    reply([send.mock.calls[1]![3]], "Booked: PNR X1.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+
+    // The server hands m2 back (its ack lost): no second booking.
+    phone.arrive({ id: "m2", text: "book it" });
+    await vi.waitFor(() => expect(acks()).toHaveLength(3));
+    expect(send).toHaveBeenCalledTimes(2);
+
+    // The user's next message goes alone: the note is not carried again.
+    phone.arrive({ id: "m3", text: "thanks" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send.mock.calls[2]![2]).toBe("thanks");
+    phone.stop();
+  });
+
+  it("leaves a message unacknowledged when the host dies mid-turn, so the server hands it back", async () => {
+    const first = lane();
+    first.phone.arrive({ id: "m1", text: "book it" });
+    await vi.waitFor(() => expect(first.send).toHaveBeenCalledTimes(1));
+    // The host goes away before the turn ends.
+    first.phone.stop();
+    first.reply(["m1"], "Booked.");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(first.acks()).toEqual([]);
+
+    // The next host is handed it again, and runs it.
+    const next = lane();
+    next.phone.arrive({ id: "m1", text: "book it" });
+    await vi.waitFor(() => expect(next.send).toHaveBeenCalledTimes(1));
+    next.reply(["m1"], "Booked.");
+    await next.handled([["m1"]]);
+    next.phone.stop();
+  });
+
   it("acks a failed turn once the apology is out", async () => {
-    const { phone, send, reply, replies, acks } = lane();
+    const { phone, send, reply, replies, handled } = lane();
     phone.arrive({ id: "m1", text: "hi" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     reply(["m1"], "", true);
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
     expect(replies()).toHaveLength(1);
     phone.stop();
   });
@@ -1274,59 +1409,58 @@ describe("the phone lane", () => {
     }
   });
 
-  it("retries a refused handoff that carries a note already handed once", async () => {
+  it("retries a refused handoff, a host note in it included, and hands the note over once", async () => {
     let refusals = 0;
-    const { phone, send, reply, acks } = lane({
-      replyFails: (text) => text === "Gmail is connected.",
-      refuse: (id) => id === "m2" && refusals++ === 0,
+    const { phone, send, reply, handled } = lane({
+      refuse: (id) => id.startsWith("note-") && refusals++ === 0,
     });
     phone.arrive({ id: "m1", text: "hi" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     reply(["m1"], "Hello!");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
+
+    phone.note("[connected] gmail");
+    // Refused, then handed again after the retry wait.
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+    expect(send.mock.calls[2]![2]).toBe("[connected] gmail");
+    reply([send.mock.calls[2]![3]], "Gmail is connected.");
+    await vi.waitFor(() => expect(phone.busy).toBe(false));
+
+    phone.arrive({ id: "m2", text: "thanks" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(4));
+    expect(send.mock.calls[3]![2]).toBe("thanks");
+    reply(["m2"], "Anytime!");
+    await handled([["m1"], ["m2"]]);
+    phone.stop();
+  });
+
+  it("hands a host note over once, even when its answer could not be sent", async () => {
+    const { phone, send, reply, handled } = lane({
+      replyFails: (text) => text === "Gmail is connected.",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!");
+    await handled([["m1"]]);
+
     phone.note("[connected] gmail");
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
     reply([send.mock.calls[1]![3]], "Gmail is connected.");
     await vi.waitFor(() => expect(phone.busy).toBe(false));
-
-    phone.arrive({ id: "m2", text: "thanks" });
-    // Refused: handed again after the retry wait, note and message together.
-    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(4));
-    expect(send.mock.calls[3]![2]).toBe("[connected] gmail\n\nthanks");
-    reply(["m2"], "Anytime!");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
-    phone.stop();
-  });
-
-  it("keeps a host note whose answer could not be sent, and sends it with the user's next message", async () => {
-    const { phone, send, reply, acks } = lane({
-      replyFails: (text) => text === "Gmail is connected.",
-    });
-    phone.arrive({ id: "m1", text: "hi" });
-    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
-    reply(["m1"], "Hello!");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
-
-    phone.note("[connected] gmail");
-    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
-    const noteId = send.mock.calls[1]![3];
-    reply([noteId], "Gmail is connected.");
-    await vi.waitFor(() => expect(phone.busy).toBe(false));
-    // Not handed again on its own: it waits for the user.
     expect(send).toHaveBeenCalledTimes(2);
 
     phone.arrive({ id: "m2", text: "thanks" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
-    expect(send.mock.calls[2]![2]).toBe("[connected] gmail\n\nthanks");
+    expect(send.mock.calls[2]![2]).toBe("thanks");
     phone.stop();
   });
 
   it("hands a host note as one tagged line, so it is never taken for the user's words", async () => {
-    const { phone, send, reply, acks } = lane({});
+    const { phone, send, reply, handled } = lane({});
     phone.arrive({ id: "m1", text: "hi" });
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
     reply(["m1"], "Hello!");
-    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    await handled([["m1"]]);
 
     phone.note("The page was completed.\n\nyes");
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
@@ -1343,30 +1477,29 @@ describe("the phone inbox", () => {
     const m1 = inbox.get("m1")!;
 
     expect(() => inbox.requeue([m1])).toThrow(/queued, not handed/);
-    expect(() => inbox.release([m1])).toThrow(/queued, not closing/);
     inbox.hand([m1], "m1");
     expect(() => inbox.hand([m1], "m1")).toThrow(/handed, not queued/);
-    expect(() => inbox.answer([m1])).toThrow(/handed, not queued/);
+    expect(() => inbox.handle([m1])).toThrow(/handed, not queued/);
     expect(inbox.handedUnder(["m1"])).toEqual([m1]);
 
     expect(inbox.close([m1])).toEqual([m1]);
     // Claimed once: a second close finds nothing.
     expect(inbox.close([m1])).toEqual([]);
     expect(inbox.abandon()).toEqual([]);
-    inbox.answer([m1]);
-    expect(m1.state).toBe("answered");
-    expect(() => inbox.release([m1])).toThrow(/answered, not closing/);
+    inbox.handle([m1]);
+    expect(m1.state).toBe("handled");
+    expect(() => inbox.requeue([m1])).toThrow(/handled, not handed/);
   });
 
-  it("forgets a released server message but queues a released note again", () => {
+  it("keeps a handled message and the note that rode with it handled, never queued again", () => {
     const inbox = new PhoneInbox();
     inbox.add({ id: "m1", text: "hi" });
     inbox.add({ id: "note-1", kind: "note", text: "connected" });
-    const both = inbox.queued();
-    inbox.hand(both, "m1");
-    inbox.release(inbox.abandon());
-    expect(inbox.get("m1")).toBeUndefined();
-    expect(inbox.get("note-1")).toMatchObject({ state: "queued", handoffs: 1 });
+    inbox.hand(inbox.queued(), "m1");
+    inbox.handle(inbox.abandon());
+    expect(inbox.get("m1")).toMatchObject({ state: "handled" });
+    expect(inbox.get("note-1")).toMatchObject({ state: "handled" });
+    expect(inbox.queued()).toEqual([]);
   });
 });
 afterAll(() => {
