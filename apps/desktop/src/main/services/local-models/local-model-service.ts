@@ -182,10 +182,8 @@ export class LocalModelService {
         id: LOCAL_PROVIDER_ID,
         name: "On this machine",
         baseUrl: this.proxy.baseUrl,
-        // The server on this machine authenticates nobody, but a provider
-        // carrying no key reads as unconfigured, and an unconfigured model is
-        // passed over for a fallback. The picked model would never answer.
-        apiKey: "local",
+        // The proxy's per-boot token: it refuses requests without it.
+        apiKey: this.proxy.apiKey,
         models: installed.map((spec) => ({
           id: spec.id,
           name: spec.label,

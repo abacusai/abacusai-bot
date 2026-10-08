@@ -125,9 +125,8 @@ describe("LocalModelService", () => {
       (entry) => entry.id === "local"
     );
     expect(provider?.baseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1$/);
-    // Without a key the agent reads the model as unconfigured and answers on
-    // a different one; the endpoint itself checks nothing.
-    expect(provider?.apiKey).toBeTruthy();
+    // The key is the proxy's per-boot token, which it requires on every request.
+    expect(provider?.apiKey).toMatch(/^[0-9a-f]{64}$/);
     expect(provider?.models.map((model) => model.id)).toEqual([spec.id]);
     expect(providerChanges).toBeGreaterThan(0);
     local.dispose();
