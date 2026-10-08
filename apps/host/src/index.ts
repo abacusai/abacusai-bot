@@ -50,6 +50,7 @@ const main = async () => {
     },
   });
   console.log(`[host] listening on ${transport.port}`);
+  composition.nudgeAgenda.start();
   composition.phoneLane.start();
   const { sweepTrash } = await import("./filesystem");
   void sweepTrash();

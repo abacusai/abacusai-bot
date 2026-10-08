@@ -24,6 +24,7 @@ import {
 import { createNodeAppOperations } from "./app-operations";
 import { createWebAuth, followProvisionedKey } from "./auth-web";
 import { HostLease } from "./lease";
+import { NudgeAgenda } from "./nudge-agenda";
 import { channelsTransport, PhoneLane } from "./phone-lane";
 import { shutdown } from "./shutdown";
 
@@ -146,25 +147,36 @@ export const composeNodeHost = async () => {
   };
   // The user's WhatsApp number runs here, never in the desktop app.
   const phoneDir = join(abacusBotHome(), "phone");
-  const openPhoneSession = (): Promise<{
+  /** The phone loop's session, once minted: its waits and turns feed the agenda. */
+  let phoneSessionId: string | null = null;
+  const openPhoneSession = async (): Promise<{
     workspaceId: string;
     sessionId: string;
   }> => {
     mkdirSync(phoneDir, { recursive: true });
     // Nobody can approve a tool call over WhatsApp.
-    return serviceHost.openLaneSession(
+    const session = await serviceHost.openLaneSession(
       "phone",
       { ABACUSAI_BOT_PHONE_DIR: phoneDir },
       AgentMode.Auto,
       WHATSAPP_CHANNEL
     );
+    phoneSessionId = session.sessionId;
+    return session;
   };
+  const channels = channelsTransport({
+    baseUrl: abacusRoutellmV1,
+    key: resolveAbacusApiKey,
+    userAgent: abacusUserAgent,
+  });
+  const nudgeAgenda = new NudgeAgenda({
+    call: channels,
+    phoneDir,
+    waits: async () =>
+      phoneSessionId == null ? [] : serviceHost.waitsFor(phoneSessionId),
+  });
   const phoneLane = new PhoneLane({
-    call: channelsTransport({
-      baseUrl: abacusRoutellmV1,
-      key: resolveAbacusApiKey,
-      userAgent: abacusUserAgent,
-    }),
+    call: channels,
     hasKey: () => resolveAbacusApiKey() != null,
     openSession: openPhoneSession,
     stop: (workspaceId, sessionId) =>
@@ -184,6 +196,16 @@ export const composeNodeHost = async () => {
       pinned
         ? serviceHost.mediaStore.pin(ref, sessionId)
         : serviceHost.mediaStore.unpin(ref, sessionId),
+    onPolled: (result) => nudgeAgenda.polled(result),
+    turnNotes: (entry) => nudgeAgenda.notes(entry),
+  });
+  const stopTurns = serviceHost.onAgentEvent((sessionId, payload) => {
+    if (
+      sessionId === phoneSessionId &&
+      payload.type === "event" &&
+      payload.event.type === "turn_reply"
+    )
+      nudgeAgenda.turnEnded();
   });
   // A connector the phone loop offered connected: nobody is at a card on a
   // phone, so the loop hears it as a turn and tells the user.
@@ -200,9 +222,12 @@ export const composeNodeHost = async () => {
     lease,
     appOps,
     phoneLane,
+    nudgeAgenda,
     dispose: async () => {
       stopProvisionedKey();
       phoneLane.stop();
+      nudgeAgenda.stop();
+      stopTurns();
       stopConnected();
       stopOutput();
       trackers.dispose();

@@ -18,6 +18,10 @@ import { PHONE_MCP_TOOLS } from "../tool-policy.js";
 import { RecentUserText } from "../traveler/traveler-tool.js";
 import { PHONE_PROGRESS_TOOL_NAME } from "./phone-bubbles.js";
 import {
+  buildPhoneCheckinsTool,
+  PHONE_CHECKINS_TOOL_NAME,
+} from "./phone-checkins-tool.js";
+import {
   localDay,
   phoneDir,
   readPhoneState,
@@ -33,6 +37,7 @@ import {
   phoneMemoryFingerprint,
   phoneStandingPrompt,
 } from "./phone-memory.js";
+import { phoneZone } from "./phone-nudges.js";
 import {
   buildPhonePageTool,
   type PagePublisher,
@@ -76,6 +81,7 @@ const PHONE_TOOL_NAMES = [
   BOT_REACTION_TOOL_NAME,
   PHONE_PROGRESS_TOOL_NAME,
   SEND_MEDIA_TOOL_NAME,
+  PHONE_CHECKINS_TOOL_NAME,
   ...OWNER_TOOL_NAMES,
 ];
 
@@ -107,14 +113,16 @@ export function createPhoneProfile(
   const recentUserText = new RecentUserText();
 
   return {
-    systemPrompt: () => [phoneOperatingPrompt(options.model)],
+    // Read at session start; `current_time` reads the zone on every call.
+    systemPrompt: () => [phoneOperatingPrompt(options.model, phoneZone(home))],
     tools: () => [
       buildPhoneMemoryTool(home),
       buildPhonePageTool(home, options.pagePublisher),
-      buildBotTimeTool(),
+      buildBotTimeTool(() => phoneZone(home)),
       buildBotReactionTool(),
       buildPhoneProgressTool(),
       buildSendMediaTool(),
+      buildPhoneCheckinsTool(home),
       ...buildOwnerTools({ recentUserText }),
     ],
     // A browser run keeps the user posted, and hears them, from inside.

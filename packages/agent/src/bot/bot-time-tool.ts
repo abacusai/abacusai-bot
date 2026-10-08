@@ -73,10 +73,11 @@ export const describeTimezone = (timezone?: string): string => {
  * UTC or the event's own zone, so the user's zone is stated up front. The
  * zone only, never the clock: a prompt that changes every minute is a prompt
  * cache that never hits, so the time stays behind the `current_time` tool.
+ * `zone` is the user's when it differs from this machine's (a hosted phone).
  */
-export const timezonePrompt = (): string =>
+export const timezonePrompt = (zone?: string | null): string =>
   [
-    `The user's local timezone is ${describeTimezone()}. For the current`,
+    `The user's local timezone is ${describeTimezone(zone ?? undefined)}. For the current`,
     "date and time, call `current_time`.",
     "Present every time you show (calendar events, deadlines, message",
     'timestamps, "how long until") in the user\'s local timezone, converting',
@@ -85,7 +86,10 @@ export const timezonePrompt = (): string =>
     "were local, and never promise to convert later: convert now.",
   ].join(" ");
 
-export function buildBotTimeTool(): PiToolDefinitionLike {
+/** `localZone` is the user's zone when it is not this machine's; null for this machine's. */
+export function buildBotTimeTool(
+  localZone: () => string | null = () => null
+): PiToolDefinitionLike {
   return {
     name: BOT_TIME_TOOL_NAME,
     label: BOT_TIME_TOOL_NAME,
@@ -110,7 +114,11 @@ export function buildBotTimeTool(): PiToolDefinitionLike {
       const timezone =
         typeof params.timezone === "string" ? params.timezone.trim() : "";
       try {
-        return text(describeNow(timezone.length > 0 ? timezone : undefined));
+        return text(
+          describeNow(
+            timezone.length > 0 ? timezone : (localZone() ?? undefined)
+          )
+        );
       } catch {
         return text(
           `Unknown timezone "${timezone}". Use an IANA name like "Asia/Kolkata", or omit it for local time.`,

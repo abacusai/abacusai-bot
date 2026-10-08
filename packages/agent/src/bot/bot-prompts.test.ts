@@ -50,6 +50,25 @@ describe("what the prompts say about the browser, per channel", () => {
   });
 });
 
+describe("the phone loop's clock and check-ins", () => {
+  const flat = (text: string) => text.replace(/\s+/g, " ");
+
+  it("states the user's zone, not this machine's, and that a due is on their clock", () => {
+    const prompt = flat(phoneOperatingPrompt(null, "Asia/Kolkata"));
+    expect(prompt).toMatch(
+      /local timezone is Asia\/Kolkata \(GMT\+5:30, UTC\+05:30\)/
+    );
+    expect(prompt).toMatch(/`due` is the user's own local date and time/);
+    expect(prompt).not.toMatch(/UTC offset|not set/);
+  });
+
+  it("asks which stop is meant before turning check-ins off", () => {
+    expect(flat(phoneOperatingPrompt(null))).toMatch(
+      /could mean the task you are on, ask which they mean/
+    );
+  });
+});
+
 describe("the payment rule", () => {
   const prompts = {
     phone: phoneOperatingPrompt(null),
