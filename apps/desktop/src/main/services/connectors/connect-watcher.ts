@@ -6,12 +6,14 @@
  * several together, and the user can untick some), and is given up when its
  * link expires.
  *
- * An offer made with a link is judged by that link alone while the server
- * reports on it: not completed means keep waiting, completed is the outcome.
- * Only when the server cannot say does the offer fall back to the statuses,
- * where a consent that landed some of its connectors is given a moment for the
- * rest before they count as not granted. A reconnect (every connector already
- * connected) is judged by its link only: the statuses would read as landed.
+ * An offer made with a link is judged by that link while the server reports
+ * on it: completed is the outcome. While it is not completed, the offer still
+ * lands once every one of its connectors reads connected, since the user may
+ * connect another way (the in-app Connect button, Settings, a new link). When
+ * the server cannot say, the offer falls back to the statuses, where a consent
+ * that landed some of its connectors is given a moment for the rest before
+ * they count as not granted. A reconnect (every connector already connected)
+ * is judged by its link only: the statuses would read as landed.
  */
 import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 
@@ -156,7 +158,9 @@ export class ConnectWatcher {
           ? link.landed
           : link.kind === "unavailable"
             ? this.fromStatuses(offer, statuses)
-            : null;
+            : offer.byLinkOnly
+              ? null
+              : this.allConnected(offer, statuses);
       if (landed == null) {
         if (this.now() >= offer.until) {
           this.offers.delete(key);
@@ -202,6 +206,18 @@ export class ConnectWatcher {
         return null;
     }
     return { connected, notGranted };
+  }
+
+  /** Every connector of the offer reads connected, by whatever route; else null. */
+  private allConnected(
+    offer: Offer,
+    statuses: ConnectorStatuses | null
+  ): Landed | null {
+    return offer.connectorIds.every(
+      (id) => statuses?.[id]?.state === "connected"
+    )
+      ? { connected: [...offer.connectorIds], notGranted: [] }
+      : null;
   }
 
   /**
