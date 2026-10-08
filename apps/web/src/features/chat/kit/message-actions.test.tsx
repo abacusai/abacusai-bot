@@ -748,6 +748,18 @@ it("sessions show feedback and Copy on text hover or focus without reserving spa
   expect(
     host().querySelector('[data-slot="session-message-actions"]')?.className
   ).toContain("group-focus-within/message:opacity-100");
+  const text = host().querySelector<HTMLElement>("[data-message-text]")!;
+  text.focus();
+  fireEvent.keyDown(text, { key: "a", metaKey: true });
+  const selection = document.getSelection()!;
+  const selected = selection.toString();
+  expect(selected.length).toBeGreaterThan(0);
+  expect(
+    fireEvent.mouseDown(
+      within(host()).getByRole("button", { name: "Copy message" })
+    )
+  ).toBe(false);
+  expect(selection.toString()).toBe(selected);
 });
 
 it("sessions never render Copy or feedback for tool-only messages with blank text", async () => {
