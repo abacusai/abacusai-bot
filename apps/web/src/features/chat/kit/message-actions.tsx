@@ -1009,7 +1009,7 @@ const ChatMessageActions = ({
     <ContextMenu>
       <ContextMenuTrigger
         render={<div />}
-        className={cn("flex min-w-0", role === "user" && "justify-end")}
+        className={cn("flex min-w-0 select-text", role === "user" && "justify-end")}
       >
         <div
           ref={hostRef}
