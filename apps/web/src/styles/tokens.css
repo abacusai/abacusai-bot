@@ -53,6 +53,12 @@
   --content-max-w: clamp(1040px, 65vw, var(--content-max-w-cap));
   --content-max-w-wide: 1280px;
   --composer-max-w: 800px;
+  --name-input-max-w: 480px;
+  --composer-pill-h: 48px;
+  --composer-button-size: 36px;
+  --composer-inset: 6px;
+  --composer-border: 0px;
+  --composer-radius: calc(var(--composer-pill-h) / 2);
   /* density */
   --row-h: 32px;
   --page-gutter: 24px;
@@ -733,4 +739,10 @@ html[data-window-focused="false"][data-platform][data-titlebar], html[data-windo
   --row-selected: var(--sidebar-accent);
   --row-pressed: color-mix(in oklab, var(--foreground) 14%, transparent);
   --row-focus: color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+@utility concentric {
+  &:is(button) {
+    border-radius: max(0px, calc(var(--composer-radius) - var(--composer-inset) - var(--composer-border)));
+  }
 }

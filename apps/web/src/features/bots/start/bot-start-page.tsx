@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "cn";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { useState, type CSSProperties } from "react";
@@ -139,24 +140,31 @@ export const BotStartPage = ({
             ))}
           </ToggleGroup>
           <form
-            className="w-full max-w-[480px]"
+            className="w-full max-w-(--name-input-max-w)"
             onSubmit={(event) => {
               event.preventDefault();
               setup();
             }}
           >
             <InputGroup
-              className="bg-muted h-[52px] rounded-full border-0 pl-3"
+              className="bg-muted h-(--composer-pill-h) rounded-(--composer-radius) border-0 p-(--composer-inset)"
               style={composerStyle}
             >
               <InputGroupInput
-                autoFocus={empty}
+                autoFocus
                 aria-label={t("bots.form.name")}
 
                 placeholder={t("bots.start.namePlaceholder")}
                 value={values.name}
                 maxLength={30}
-                className="h-9 text-center text-[15px] md:text-[15px]"
+                className="h-9 text-[15px] md:text-[15px]"
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    (event.nativeEvent.isComposing || event.keyCode === 229)
+                  )
+                    event.preventDefault();
+                }}
                 onChange={(event) => {
                   const name = event.target.value;
                   updateDraft({
@@ -168,15 +176,21 @@ export const BotStartPage = ({
                   });
                 }}
               />
-              <InputGroupAddon align="inline-end">
+              <InputGroupAddon
+                align="inline-end"
+                className="p-0 has-[>button]:mr-0"
+              >
                 <Button
                   type="submit"
                   size="icon"
-                  className="bot-accent-control rounded-full"
+                  className={cn(
+                    "concentric size-(--composer-button-size)",
+                    values.name.trim() && "bot-accent-control"
+                  )}
                   aria-label={t("bots.start.setup", { name: values.name })}
                   disabled={!values.name.trim()}
                 >
-                  <ArrowRight />
+                  <ArrowRight className="size-4" />
                 </Button>
               </InputGroupAddon>
             </InputGroup>
