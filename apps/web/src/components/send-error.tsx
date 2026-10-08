@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "#renderer/ui/alert";
 export const SendError = ({ error }: { error: string | null }) => {
   const reduced = useMotionPreference() === "reduced";
   return (
-    <div className="relative h-12 shrink-0" data-slot="send-error">
+    <div className="relative h-12 w-full shrink-0" data-slot="send-error">
       <AnimatePresence initial={false}>
         {error && (
           <motion.div
