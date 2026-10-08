@@ -507,6 +507,26 @@ const migratedHistory = (): UIMessage[] => {
 
 export const SCENARIOS: Scenario[] = [
   {
+    id: "bot-message-inline-links",
+    canvas: ["Inline reply links"],
+    skin: "bot",
+    events: () =>
+      seqd([
+        ...b.sessionReady("inc-inline-links", "YOLO"),
+        ...userTurn(
+          "r-inline-links",
+          "u-inline-links",
+          "Compare these references. Keep www.example.com/docs plain in my message."
+        ),
+        ...b.text(
+          "a-inline-links",
+          "assistant",
+          "Start with https://developer.mozilla.org/en-US/docs/Web/JavaScript, read https://www.typescriptlang.org/docs/, and compare https://example.com/. The [reference guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript) keeps its label.\n\nCode stays literal: `https://example.com/code`."
+        ),
+        b.runFinished("r-inline-links", "success"),
+      ]),
+  },
+  {
     id: "bot-message-links-loading",
     canvas: ["Reply preview loading"],
     skin: "bot",

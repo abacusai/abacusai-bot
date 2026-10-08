@@ -49,7 +49,6 @@ import {
   useSubagentScope,
   type MessageDecoration,
 } from "./context";
-import { LinkPreviews } from "./link-previews";
 import {
   MessageActions,
   MessageMenu,
@@ -415,7 +414,6 @@ export const BotMessage = ({ message, Parts }: MessageProps<unknown>) => {
           {message.parts.some((part) => part.type === "subagent") ? (
             <StepControls side="more" />
           ) : null}
-          <LinkPreviews message={message} streaming={streaming} />
           <Credits message={message} />
           {decoration?.after}
         </div>
@@ -576,7 +574,6 @@ export const SessionMessage = ({ message }: MessageProps<unknown>) => {
           <StepControls side="earlier" />
           <GroupedParts message={message} />
           <StepControls side="more" />
-          <LinkPreviews message={message} streaming={streaming} />
           <Credits message={message} />
         </div>
       </MessageActions>

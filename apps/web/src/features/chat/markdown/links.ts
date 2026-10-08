@@ -8,6 +8,8 @@ import LinkifyIt from "linkify-it";
 
 import { prepass } from "./prepass";
 
+export const AUTOLINK_TITLE = "reply-autolink";
+
 const detector = new LinkifyIt().set({ fuzzyEmail: false });
 
 const inlineLinks = (nodes: InlineNode[]): InlineNode[] =>
@@ -33,7 +35,7 @@ const inlineLinks = (nodes: InlineNode[]): InlineNode[] =>
       result.push({
         type: "link",
         href: match.url,
-        title: match.url,
+        title: AUTOLINK_TITLE,
         children: [{ type: "text", value: match.raw }],
       });
       at = match.lastIndex;

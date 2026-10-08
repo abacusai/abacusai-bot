@@ -3112,9 +3112,6 @@
       "cancelReply": "Cancelar respuesta",
       "jumpToOriginal": "Ir al mensaje original",
       "failed": "No se pudo completar la acción"
-    },
-    "links": {
-      "dismiss": "Descartar vista previa de {{hostname}}"
     }
   },
   "notch": {
@@ -3494,7 +3491,7 @@
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Mostrar vistas previas de enlaces en las respuestas",
-      "linkPreviewsDetail": "Las vistas previas contactan los sitios enlazados y revelan tu dirección IP en escritorio. En la web, las obtiene el servidor."
+      "linkPreviewsDetail": "Los títulos, íconos y vistas previas al pasar el cursor contactan los sitios enlazados y revelan tu IP en el escritorio. En la web los obtiene el servidor."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

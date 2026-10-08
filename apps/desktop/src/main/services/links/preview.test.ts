@@ -81,7 +81,7 @@ describe("head metadata", () => {
       `<title>${"x".repeat(1000)}</title><meta name="description" content="hi&#x202e;there">`,
       "https://example.com"
     );
-    expect(metadata.title).toHaveLength(300);
+    expect(metadata.title).toHaveLength(90);
     expect(metadata.description).toBe("hi there");
     expect(metadata.image).toBeUndefined();
   });
@@ -182,8 +182,35 @@ it("fetches relative images through the guarded client and re-encodes small data
   const { imageSize } = await import("image-size");
   expect(
     imageSize(Buffer.from(result!.imageDataUri!.split(",")[1]!, "base64"))
-  ).toMatchObject({ width: 64, height: 64 });
+  ).toMatchObject({ width: 100, height: 56 });
   expect(
     imageSize(Buffer.from(result!.faviconDataUri!.split(",")[1]!, "base64"))
   ).toMatchObject({ width: 20, height: 20 });
+});
+
+it("skips login walls, direct files and generic error titles", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    body: Buffer.from("<title>404 Not Found</title>"),
+    url,
+    type: "text/html",
+  }));
+  const cache = new LinkPreviews(fetch);
+  for (const url of [
+    "https://example.com/login",
+    "https://example.com/file.pdf",
+    "https://example.com/photo.png",
+    "https://example.com/archive.zip",
+  ])
+    expect(await cache.get(url)).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(await cache.get("https://example.com/missing")).toBeNull();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+it("caps the title and description before returning metadata", () => {
+  const result = previewMetadata(
+    `<title>${"t".repeat(100)}</title><meta name="description" content="${"d".repeat(200)}">`,
+    "https://example.com/"
+  );
+  expect(result.title).toHaveLength(90);
+  expect(result.description).toHaveLength(160);
 });

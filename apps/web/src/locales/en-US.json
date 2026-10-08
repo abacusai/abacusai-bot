@@ -3112,9 +3112,6 @@
       "cancelReply": "Cancel reply",
       "jumpToOriginal": "Go to original message",
       "failed": "Could not complete the action"
-    },
-    "links": {
-      "dismiss": "Dismiss preview for {{hostname}}"
     }
   },
   "notch": {
@@ -3494,7 +3491,7 @@
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Show link previews in replies",
-      "linkPreviewsDetail": "Previews contact linked sites and reveal your IP address on desktop. On the web, the host fetches them."
+      "linkPreviewsDetail": "Page titles, site icons and hover cards contact linked sites and reveal your IP address on desktop. On the web, the host fetches them."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

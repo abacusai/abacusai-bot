@@ -3112,9 +3112,6 @@
       "cancelReply": "返信をキャンセル",
       "jumpToOriginal": "元のメッセージへ移動",
       "failed": "操作を完了できませんでした"
-    },
-    "links": {
-      "dismiss": "{{hostname}} のプレビューを閉じる"
     }
   },
   "notch": {
@@ -3494,7 +3491,7 @@
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "返信にリンクのプレビューを表示",
-      "linkPreviewsDetail": "プレビューはリンク先に接続し、デスクトップではIPアドレスを公開します。Webではホストが取得します。"
+      "linkPreviewsDetail": "ページタイトル、サイトアイコン、ホバー時のプレビューはリンク先にアクセスし、デスクトップではIPアドレスが公開されます。Webではホストが取得します。"
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

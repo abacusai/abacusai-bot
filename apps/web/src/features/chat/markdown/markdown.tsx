@@ -4,6 +4,7 @@
  * overrides: links routed by target, code blocks with a header and Copy,
  * inline math, scrolling tables, lazy images. Raw HTML stays escaped.
  */
+import { previewTarget } from "@abacus-ai/contract/contract/links";
 import { TextPart } from "@tanstack/ai-react/ui";
 import { Check, Copy } from "lucide-react";
 import {
@@ -25,10 +26,12 @@ import { IS_ELECTRON } from "#renderer/lib/platform";
 import { Button } from "#renderer/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { useMessageScope } from "../kit/message-scope";
 import { useCodeHighlighter } from "./highlighter";
-import { replyLinks } from "./links";
+import { AUTOLINK_TITLE, replyLinks } from "./links";
 import { renderMath, useMathVersion } from "./math";
 import { MATH_SENTINEL, pathFromHref, prepass } from "./prepass";
+import { ReplyLink } from "./reply-link";
 import { SelectableText } from "./selection";
 
 interface MarkdownLinks {
@@ -43,6 +46,7 @@ export const MarkdownLinksProvider = LinksContext.Provider;
 
 /** Whether the message this block belongs to is still streaming. */
 const StreamingContext = createContext(false);
+const ReplyContext = createContext(false);
 
 const COLLAPSE_LINES = 30;
 
@@ -53,6 +57,8 @@ const COLLAPSE_LINES = 30;
  */
 export const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
   const links = use(LinksContext);
+  const reply = use(ReplyContext);
+  const { message } = useMessageScope();
   const file = pathFromHref(href);
   const external = href != null && /^(https?:|mailto:)/i.test(href);
   const anchor = (
@@ -86,6 +92,14 @@ export const ChatLink = ({ href, children, ...rest }: ComponentProps<"a">) => {
       {children}
     </a>
   );
+  if (reply && message && href && previewTarget(href))
+    return (
+      <ReplyLink
+        anchor={anchor}
+        message={message}
+        bare={rest.title === AUTOLINK_TITLE}
+      />
+    );
   return external ? (
     <Tooltip>
       <TooltipTrigger render={anchor} />
@@ -269,21 +283,23 @@ export const Markdown = ({
     workspaceRoot,
   });
   const rendered = (
-    <StreamingContext value={streaming}>
-      <TextPart
-        key={mathVersion}
-        content={source}
-        role={role}
-        extensions={reply && role === "assistant" ? replyLinks : undefined}
-        highlighter={highlight}
-        components={COMPONENTS}
-        className={cn(
-          "chat-prose",
-          streaming && "chat-prose-streaming",
-          className
-        )}
-      />
-    </StreamingContext>
+    <ReplyContext value={reply && role === "assistant"}>
+      <StreamingContext value={streaming}>
+        <TextPart
+          key={mathVersion}
+          content={source}
+          role={role}
+          extensions={reply && role === "assistant" ? replyLinks : undefined}
+          highlighter={highlight}
+          components={COMPONENTS}
+          className={cn(
+            "chat-prose",
+            streaming && "chat-prose-streaming",
+            className
+          )}
+        />
+      </StreamingContext>
+    </ReplyContext>
   );
   return selectable ? (
     <SelectableText onSelectionChange={setSelecting}>{rendered}</SelectableText>

@@ -426,3 +426,40 @@ html[data-reduce-motion="on"] [data-message-target][data-highlighted] { animatio
   html:not([data-reduce-motion="off"]) [data-transcript-fade] { animation: none; }
 }
 html[data-reduce-motion="on"] [data-transcript-fade] { animation: none; }
+.chat-prose a.reply-inline-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25em;
+  max-width: min(36ch, 100%);
+  vertical-align: baseline;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted-foreground);
+  text-underline-offset: 3px;
+}
+.chat-prose a.reply-inline-link:hover,
+.chat-prose a.reply-inline-link:focus-visible {
+  color: var(--primary);
+  text-decoration-style: solid;
+  text-decoration-color: currentColor;
+}
+.reply-link-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex: none;
+  align-self: center;
+}
+.reply-link-caption {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reply-link-popup {
+  background: var(--floating-surface-background);
+  box-shadow: var(--floating-surface-shadow);
+  animation-name: reply-link-fade-in;
+}
+.reply-link-popup[data-closed] { animation-name: reply-link-fade-out; }
+@keyframes reply-link-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes reply-link-fade-out { from { opacity: 1; } to { opacity: 0; } }

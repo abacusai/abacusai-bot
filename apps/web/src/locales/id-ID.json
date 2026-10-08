@@ -3112,9 +3112,6 @@
       "cancelReply": "Batalkan balasan",
       "jumpToOriginal": "Ke pesan asli",
       "failed": "Tindakan tidak dapat diselesaikan"
-    },
-    "links": {
-      "dismiss": "Tutup pratinjau {{hostname}}"
     }
   },
   "notch": {
@@ -3494,7 +3491,7 @@
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Tampilkan pratinjau tautan dalam balasan",
-      "linkPreviewsDetail": "Pratinjau menghubungi situs tertaut dan mengungkap alamat IP Anda di desktop. Di web, host mengambilnya."
+      "linkPreviewsDetail": "Judul halaman, ikon situs, dan pratinjau saat diarahkan menghubungi situs tertaut dan mengungkap alamat IP Anda di desktop. Di web, host mengambilnya."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

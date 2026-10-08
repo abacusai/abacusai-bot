@@ -1,4 +1,7 @@
-import type { LinkPreview } from "@abacus-ai/contract/contract/links";
+import {
+  previewTarget,
+  type LinkPreview,
+} from "@abacus-ai/contract/contract/links";
 import {
   PhotonImage,
   crop,
@@ -29,6 +32,7 @@ export class LinkPreviews {
   ) {}
 
   get(input: string): Promise<LinkPreview | null> {
+    if (!previewTarget(input)) return Promise.resolve(null);
     let url: URL;
     try {
       url = previewUrl(input);
@@ -106,8 +110,19 @@ export class LinkPreviews {
       resource.body.toString("utf8"),
       resource.url
     );
-    if (!metadata.title) return null;
-    const imageData = async (source: string | undefined, size: number) => {
+    if (
+      !previewTarget(resource.url) ||
+      !metadata.title ||
+      /^(?:404|403|not found|page not found|access denied|forbidden|sign[ -]?in|log[ -]?in)(?:\b|$)/i.test(
+        metadata.title
+      )
+    )
+      return null;
+    const imageData = async (
+      source: string | undefined,
+      size: number,
+      aspect = 1
+    ) => {
       if (!source) return undefined;
       try {
         const response = await this.fetch(source, "image", signal);
@@ -126,12 +141,18 @@ export class LinkPreviews {
         let scaled: PhotonImage | undefined;
         let bytes: Buffer;
         try {
-          const side = Math.min(info.width, info.height);
-          const x = Math.floor((info.width - side) / 2);
-          const y = Math.floor((info.height - side) / 2);
-          cropped = crop(original, x, y, x + side, y + side);
-          const target = Math.min(size, side);
-          scaled = resize(cropped, target, target, SamplingFilter.Lanczos3);
+          const width = Math.min(info.width, Math.floor(info.height * aspect));
+          const height = Math.min(info.height, Math.floor(info.width / aspect));
+          const x = Math.floor((info.width - width) / 2);
+          const y = Math.floor((info.height - height) / 2);
+          cropped = crop(original, x, y, x + width, y + height);
+          const target = Math.min(size, width);
+          scaled = resize(
+            cropped,
+            target,
+            Math.max(1, Math.floor(target / aspect)),
+            SamplingFilter.Lanczos3
+          );
           bytes = Buffer.from(scaled.get_bytes());
         } finally {
           scaled?.free();
@@ -147,7 +168,7 @@ export class LinkPreviews {
       }
     };
     const [imageDataUri, faviconDataUri] = await Promise.all([
-      imageData(image, 64),
+      imageData(image, 320, 16 / 9),
       imageData(favicon, 20),
     ]);
     return {

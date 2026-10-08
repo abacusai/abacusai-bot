@@ -7,6 +7,9 @@ export const selectedText = (fragment: DocumentFragment): string => {
       'button,[aria-hidden="true"],.chat-code-header,.chat-code-more,[data-selection-chrome]'
     )
     .forEach((el) => el.remove());
+  fragment
+    .querySelectorAll<HTMLAnchorElement>("a[data-copy-url]")
+    .forEach((el) => el.replaceWith(el.dataset.copyUrl!));
   const text = (node: Node): string => {
     if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
     if (!(node instanceof Element) && !(node instanceof DocumentFragment))
@@ -112,9 +115,14 @@ export const SelectableText = ({
           return;
         event.preventDefault();
         event.stopPropagation();
+        const range = selection.getRangeAt(0);
+        const ancestor = range.commonAncestorContainer;
+        const link = (
+          ancestor instanceof Element ? ancestor : ancestor.parentElement
+        )?.closest<HTMLAnchorElement>("a[data-copy-url]");
         event.clipboardData.setData(
           "text/plain",
-          selectedText(selection.getRangeAt(0).cloneContents())
+          link?.dataset.copyUrl ?? selectedText(range.cloneContents())
         );
       }}
     >

@@ -3112,9 +3112,6 @@
       "cancelReply": "Annulla risposta",
       "jumpToOriginal": "Vai al messaggio originale",
       "failed": "Impossibile completare l’azione"
-    },
-    "links": {
-      "dismiss": "Chiudi l’anteprima di {{hostname}}"
     }
   },
   "notch": {
@@ -3494,7 +3491,7 @@
       "changelog": "What's new",
       "mode-ACCEPTEDITS": "Edits go through, commands ask",
       "showLinkPreviews": "Mostra le anteprime dei link nelle risposte",
-      "linkPreviewsDetail": "Le anteprime contattano i siti collegati e rivelano il tuo indirizzo IP sul desktop. Sul Web le recupera il server."
+      "linkPreviewsDetail": "Titoli, icone e anteprime al passaggio del cursore contattano i siti collegati e rivelano il tuo IP sul desktop. Sul web li recupera il server."
     },
     "modeDescriptions": {
       "AUTO": "Sandboxed, no prompts",

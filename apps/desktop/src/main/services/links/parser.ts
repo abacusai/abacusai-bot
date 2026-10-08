@@ -60,12 +60,13 @@ export const previewMetadata = (html: string, finalUrl: string) => {
       clean(metas.get("og:site_name"), 100) || new URL(finalUrl).hostname,
     title: clean(
       metas.get("og:title") || metas.get("twitter:title") || title,
-      300
+      90
     ),
     description: clean(
       metas.get("og:description") ||
         metas.get("twitter:description") ||
-        metas.get("description")
+        metas.get("description"),
+      160
     ),
     image: relative(metas.get("og:image") || metas.get("twitter:image")),
     favicon: relative(icon),
