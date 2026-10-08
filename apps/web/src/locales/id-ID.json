@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Kirim pesan di Discord.",
       "send_telegram_message": "Kirim pesan di Telegram.",
+      "send_to_whatsapp": "Kirim pesan ke WhatsApp Anda dari nomor AbacusAI Bot.",
       "send_whatsapp_message": "Kirim pesan di WhatsApp.",
       "serve": "Menyajikan folder melalui http agar halaman web yang Anda buat dapat dibuka.",
       "session_search": "Search past conversations.",

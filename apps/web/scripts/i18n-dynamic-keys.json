@@ -383,6 +383,7 @@
       "run_tests",
       "send_discord_message",
       "send_telegram_message",
+      "send_to_whatsapp",
       "send_whatsapp_message",
       "serve",
       "session_search",

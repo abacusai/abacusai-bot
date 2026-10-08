@@ -49,6 +49,40 @@ export const MESSAGING_TOOLS: ToolDefinition[] = [
     run: (host, args) => host.sendChatMessage(args),
   },
   {
+    name: "send_to_whatsapp",
+    toolsets: ["messaging"],
+    botNumber: true,
+    description: [
+      "Message the user on their own WhatsApp, from AbacusAI Bot's number they linked: text, and",
+      "optionally one screenshot or file by its media id. It reaches only the user, never anyone else.",
+      "",
+      'Use it whenever the user, or your mission, asks for something to be sent to their WhatsApp or "my phone".',
+      'media: a media id a tool gave you (browser_snapshot action:"screenshot" gives one); the message is',
+      "then its caption.",
+      "",
+      "The result says whether it went. Say it is on their WhatsApp only when the result says sent. When",
+      "it was not sent, tell the user why in one short line, in their language, and give them the content",
+      "here instead.",
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: {
+          type: "string",
+          description:
+            "The text, in the user's language. With media, a short caption.",
+        },
+        media: {
+          type: "string",
+          description: "Optional: a media id to send with it.",
+        },
+      },
+      required: ["message"],
+    },
+    run: (host, args, callerSession) =>
+      host.sendToWhatsApp(args, callerSession),
+  },
+  {
     name: "list_chats",
     toolsets: ["messaging"],
     hidden: true,

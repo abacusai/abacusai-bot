@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Discord पर संदेश भेजें।",
       "send_telegram_message": "Telegram पर संदेश भेजें।",
+      "send_to_whatsapp": "AbacusAI Bot के नंबर से आपके WhatsApp पर संदेश भेजें।",
       "send_whatsapp_message": "WhatsApp पर संदेश भेजें।",
       "serve": "लिखे गए वेब पेज को खोलने के लिए एक फ़ोल्डर को http पर सर्व करें।",
       "session_search": "Search past conversations.",

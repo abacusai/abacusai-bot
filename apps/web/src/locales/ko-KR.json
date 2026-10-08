@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Discord으로 메시지를 보냅니다.",
       "send_telegram_message": "Telegram으로 메시지를 보냅니다.",
+      "send_to_whatsapp": "AbacusAI Bot 번호에서 내 WhatsApp으로 메시지를 보냅니다.",
       "send_whatsapp_message": "WhatsApp으로 메시지를 보냅니다.",
       "serve": "작성한 웹 페이지를 열 수 있도록 폴더를 http로 제공합니다.",
       "session_search": "Search past conversations.",

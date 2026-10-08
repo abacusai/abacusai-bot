@@ -390,6 +390,11 @@ import {
 } from "./services/mcp/mcp-oauth-service";
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
 import { watchPort } from "./services/mcp/unattended-browser";
+import {
+  BOT_NUMBER_FOR_AGENT,
+  BotNumber,
+  type BotNumberCall,
+} from "./services/messaging/bot-number";
 import { MediaStore } from "./services/messaging/media-store";
 import {
   listPairing,
@@ -883,6 +888,22 @@ export class ServiceHost {
     this.browserRuntime = runtime;
   }
 
+  /** The user's WhatsApp link to AbacusAI Bot's own number: the hosted computer attaches it, the desktop never. */
+  private botNumber: BotNumber | null = null;
+
+  attachBotNumber(call: BotNumberCall): void {
+    this.botNumber = new BotNumber({
+      call,
+      // Sessions hear of it in their next message's note and re-list their tools.
+      onChange: () => {
+        environmentNoticeService.markChanged();
+        this.toolAvailabilityChanged();
+        this.connectorStatusChangedSoon();
+      },
+    });
+    void this.botNumber.read();
+  }
+
   /** A session with no browser open gets a hidden one; the renderer is told. */
   private browserTargetSource(): BrowserTargetSource | null {
     if (this.platform === "web-host")
@@ -1105,6 +1126,17 @@ export class ServiceHost {
     knownSession: (sessionId) =>
       this.agentSessionManagerService.get(sessionId) != null ||
       this.botService.botIdForSession(sessionId) != null,
+    botNumber: () => {
+      const botNumber = this.botNumber;
+      return botNumber == null
+        ? null
+        : {
+            linked: () => botNumber.linked(),
+            notify: (text, media) => botNumber.notify(text, media),
+            resolveMedia: (ref, sessionId) =>
+              this.mediaStore.resolve(ref, sessionId),
+          };
+    },
     // Only the hosted computer carries a chat that takes media (WhatsApp).
     chatMedia: () =>
       this.platform === "web-host"
@@ -1436,6 +1468,8 @@ export class ServiceHost {
     messaging: () => this.messagingGatewayService.getSnapshot(),
     mcpServers: () => this.mcpConfigService.listUserServers("code"),
     mcpTokens: () => this.mcpTokenStates(),
+    botNumber: (options) =>
+      this.botNumber?.read(options) ?? Promise.resolve(false),
   });
 
   /**
@@ -1562,6 +1596,20 @@ export class ServiceHost {
       connected,
       this.vault.sessions.get(sessionId)
     );
+  }
+
+  /** So a platform linked mid-chat surfaces its tools without a new chat. */
+  private toolAvailabilityChanged(): void {
+    this.mcpAgentToolsServer.notifyToolListChanged();
+    // Not awaited: this must not hold up the platform starting.
+    void this.mcpAdminService
+      .notifyToolAvailabilityChanged("code")
+      .catch((error: unknown) => {
+        console.error(
+          "[messaging] could not refresh the agent's tools:",
+          error
+        );
+      });
   }
 
   /** Something moved a connector's status; the renderer re-reads once. */
@@ -1905,19 +1953,7 @@ export class ServiceHost {
         emittedAt: new Date().toISOString(),
       });
     },
-    onToolAvailabilityChanged: () => {
-      // So a platform linked mid-chat surfaces its tools without a new chat.
-      this.mcpAgentToolsServer.notifyToolListChanged();
-      // Not awaited: this must not hold up the platform starting.
-      void this.mcpAdminService
-        .notifyToolAvailabilityChanged("code")
-        .catch((error: unknown) => {
-          console.error(
-            "[messaging] could not refresh the agent's tools:",
-            error
-          );
-        });
-    },
+    onToolAvailabilityChanged: () => this.toolAvailabilityChanged(),
     // Deferred through the arrow: botService initializes after this field.
     openBotChat: (botId) => this.botService.openChat(botId),
     openBotSenderChat: (botId, platform, chatId, senderName) =>
@@ -3578,13 +3614,15 @@ export class ServiceHost {
   private async withEnvironmentNotice(
     request: SendAgentMessageRequest
   ): Promise<SendAgentMessageRequest> {
+    // Not awaited: a link that moved marks every session's note pending, for this message or the next.
+    void this.botNumber?.read();
     if (!environmentNoticeService.isPending(request.sessionId)) return request;
     try {
       const message = messageWithEnvironmentNotice(
         environmentNoticeService,
         request.sessionId,
         request.message,
-        await this.describeEnvironment(request.workspaceId)
+        await this.describeEnvironment(request.workspaceId, request.sessionId)
       );
       return tagEnvironmentNotice(request, message);
     } catch (err) {
@@ -3598,7 +3636,10 @@ export class ServiceHost {
   }
 
   /** What this workspace currently has connected, for the note above. */
-  private async describeEnvironment(workspaceId: string): Promise<{
+  private async describeEnvironment(
+    workspaceId: string,
+    sessionId: string
+  ): Promise<{
     connectors: string[];
     accountConnectors: string[];
     mcpServers: string[];
@@ -3616,9 +3657,16 @@ export class ServiceHost {
       // Probed now, not read off the last poll or the configured set: an
       // unlinked WhatsApp is still "enabled", and the conversation will act on
       // this note for its whole turn.
-      connectors: reportableLivePlatforms(
-        await this.messagingGatewayService.probeLivePlatforms()
-      ).map(describePlatformForAgent),
+      connectors: [
+        ...reportableLivePlatforms(
+          await this.messagingGatewayService.probeLivePlatforms()
+        ).map(describePlatformForAgent),
+        // A lane's own chat (the hosted phone) is that WhatsApp already.
+        ...((await this.botNumber?.read()) === true &&
+        this.agentSessionManagerService.laneOf(sessionId) == null
+          ? [BOT_NUMBER_FOR_AGENT]
+          : []),
+      ],
       accountConnectors: await this.describeAccountConnectors(),
       // Disabled servers are left out: the note is what the model can reach.
       mcpServers: this.mcpConfigService

@@ -7,6 +7,7 @@ import {
 } from "@abacus-ai/agent/phone-bubbles";
 import {
   declaredMedia,
+  mediaFields,
   parseSendMedia,
   type ResolvedMedia,
   SEND_MEDIA_TOOL_NAME,
@@ -642,12 +643,7 @@ export class PhoneLane {
         outcome = await this.replyWithMedia(
           {
             message_id: replyTo,
-            ...(resolved.kind === "image"
-              ? { image_b64: resolved.data.toString("base64") }
-              : {
-                  document_b64: resolved.data.toString("base64"),
-                  filename: resolved.filename,
-                }),
+            ...mediaFields(resolved),
             ...(media.caption.length > 0 ? { text: media.caption } : {}),
           },
           resolved.kind === "document"

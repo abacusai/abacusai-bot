@@ -702,6 +702,7 @@
       "run_tests": "Run the project's tests and report what passed and failed.",
       "send_discord_message": "Discord でメッセージを送信します。",
       "send_telegram_message": "Telegram でメッセージを送信します。",
+      "send_to_whatsapp": "AbacusAI Bot の番号からあなたの WhatsApp にメッセージを送ります。",
       "send_whatsapp_message": "WhatsApp でメッセージを送信します。",
       "serve": "作成した Web ページを開けるように、フォルダーを http で配信します。",
       "session_search": "Search past conversations.",
