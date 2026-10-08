@@ -3321,14 +3321,19 @@ export class AbacusBotSession {
   }
 
   private emitSkills(resourceLoader: DefaultResourceLoader): void {
-    const skills: SkillMetadata[] = resourceLoader
-      .getSkills()
-      .skills.map((skill) => ({
-        id: skill.name,
-        name: skill.name,
-        description: skill.description,
-        location: skill.filePath,
-      }));
+    const loaded = resourceLoader.getSkills();
+    // Global loads first, so the skill dropped here is a project's own.
+    for (const diagnostic of loaded.diagnostics)
+      if (diagnostic.type === "collision" && diagnostic.collision != null)
+        process.stderr.write(
+          `[abacusai-bot-agent] skill "${diagnostic.collision.name}" at ${diagnostic.collision.loserPath} ignored: ${diagnostic.collision.winnerPath} has the same name\n`
+        );
+    const skills: SkillMetadata[] = loaded.skills.map((skill) => ({
+      id: skill.name,
+      name: skill.name,
+      description: skill.description,
+      location: skill.filePath,
+    }));
 
     this.options.emit({ type: "skills_loaded", skills });
   }
