@@ -384,6 +384,32 @@ describe("a fill of the card's expiry or name", () => {
     expect(takes("cardholder_name", "#ticket")).toBe(false);
   });
 
+  it("refuses the review's probes and takes the real card form", () => {
+    const card = (after: string, extra = "") => `<form>
+      <fieldset><legend>Card</legend><input name="cardNumber">${extra}<input name="cvc"></fieldset>
+      ${after}</form>`;
+    document.body.innerHTML = card(
+      '<fieldset><legend>Passport</legend><input id="t" name="pp_exp" placeholder="MM/YY"></fieldset>'
+    );
+    expect(takes("card_exp", "#t")).toBe(false);
+    document.body.innerHTML = card(
+      '<input id="t" aria-label="Passenger name">'
+    );
+    expect(takes("cardholder_name", "#t")).toBe(false);
+    document.body.innerHTML = card(
+      "",
+      '<input id="g" aria-label="Guest name"><input id="c" aria-label="Contact name">'
+    );
+    expect(takes("cardholder_name", "#g")).toBe(false);
+    expect(takes("cardholder_name", "#c")).toBe(false);
+    document.body.innerHTML = card(
+      "",
+      '<input id="t" aria-label="Expiry (Visa/Mastercard)"><input id="h" aria-label="Name on card">'
+    );
+    expect(takes("card_exp", "#t")).toBe(true);
+    expect(takes("cardholder_name", "#h")).toBe(true);
+  });
+
   it("takes nothing named an expiry or holder with no card number beside it", () => {
     for (const [kind, field] of [
       ["card_exp", '<input id="t" placeholder="Travel date MM/YY">'],

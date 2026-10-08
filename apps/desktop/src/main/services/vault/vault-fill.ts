@@ -303,7 +303,7 @@ export function planFill(context: FillContext): FillPlan {
       return awaitSignin(
         `the sign-in the user allowed is for ${signin.site}, and this page is ${host}, so ${pause}`
       );
-    if (signin.used.has(context.field))
+    if (signin.used.has(context.field as VaultField))
       return awaitSignin(
         `the ${context.field} was already filled once under the sign-in the user allowed, so ${pause}`
       );

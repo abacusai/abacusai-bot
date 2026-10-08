@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { VaultField } from "./vault-client";
 import {
   codeFieldAllowed,
   selectCandidates,
@@ -327,7 +326,7 @@ const facts = (overrides: Partial<FieldFacts> = {}): FieldFacts => ({
 });
 
 const accepts = (
-  field: VaultField,
+  field: FillKind,
   overrides: Partial<FieldFacts>,
   inPaymentFrame = false
 ): boolean => fieldKindAllowed(field, facts(overrides), inPaymentFrame);
