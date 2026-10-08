@@ -103,7 +103,9 @@ describe("ShellLayout", () => {
     expect(sidePanel.maxSize).toBe(960);
     expect(pane.minSize).toBe(360);
     expect(sidePanel.defaultSize).toBe(420);
-    vi.useFakeTimers();
+    // Only the debounce's timers: a faked animation frame would strand
+    // Motion's frame loop (the avatars animate) for every later test.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       act(() => {
         (
@@ -140,7 +142,8 @@ describe("ShellLayout", () => {
       };
     const sidePanel = __panels.filter((p) => p.id === "side-panel").at(-1)!;
     expect(sidePanel.defaultSize).toBe(960);
-    vi.useFakeTimers();
+    // As above: the debounce's timers only.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       act(() => {
         (
