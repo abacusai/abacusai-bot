@@ -1,0 +1,26 @@
+pre-commit:
+  parallel: true
+  commands:
+    secrets:
+      run: pnpm run gitleaks git --staged --redact --no-banner
+    format:
+      glob: "*.{js,jsx,mjs,cjs,ts,tsx,json,yml,yaml,md,css}"
+      run: pnpm exec oxfmt --check {staged_files}
+    lint:
+      glob: "*.{js,jsx,mjs,cjs,ts,tsx}"
+      run: pnpm exec oxlint {staged_files}
+
+commit-msg:
+  commands:
+    secrets:
+      run: pnpm run gitleaks dir {1} --redact --no-banner
+
+pre-push:
+  parallel: true
+  commands:
+    root:
+      run: 'test "$(git rev-list --max-parents=0 HEAD)" = "$(git rev-parse 12831a743d^{commit})" || { echo "Push blocked: branch has pre-rewrite or foreign history." >&2; exit 1; }'
+    secrets:
+      run: pnpm run gitleaks git --log-opts="origin/main..HEAD" --redact --no-banner
+    typecheck:
+      run: pnpm exec turbo run typecheck --filter="...[origin/main]"

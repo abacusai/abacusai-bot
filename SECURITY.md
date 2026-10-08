@@ -70,3 +70,18 @@ The following are not vulnerabilities on their own:
 - issues that affect only an unsupported release and are fixed in the latest release.
 
 If an issue falls outside this policy but causes a reproducible product defect, use the [bug report form](https://github.com/abacusai/abacusai-bot/issues/new?template=bug_report.yml).
+
+## Preventing secret leaks
+
+`pnpm install` installs Gitleaks and lefthook.
+Pre-commit checks staged secrets, formatting and lint; commit-msg scans the message.
+Pre-push checks the root, scans `origin/main..HEAD` and typechecks affected packages; fetch origin first.
+Run `pnpm run gitleaks git --redact --no-banner` for history or replace `git` with `dir` for files.
+Rotate exposed credentials first, remove them, then amend/rebase local commits before pushing.
+For pushed secrets, contact maintainers to purge history, PR refs and caches with GitHub Support.
+Use `+1 415 555 0123` in fixtures; numbers outside the exact phone allowlist are blocked.
+Phone exceptions must list exact values with a reason; `# gitleaks:allow` needs reviewer justification.
+Hooks can be bypassed with `--no-verify`; CI scanning awaits clean scan clearance.
+Maintainers: Settings → Security → Secret protection: verify secret scanning, push protection and validity checks.
+Add Abacus/phone custom patterns where supported. Settings → Rules → Rulesets: require the future Gitleaks check,
+block force pushes to main and leave the bypass list empty.

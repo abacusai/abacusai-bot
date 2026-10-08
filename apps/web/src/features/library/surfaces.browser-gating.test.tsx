@@ -422,7 +422,7 @@ it("opens the WhatsApp intro once: offered and unlinked, closed and marked seen 
     available: true,
     status: "unlinked",
     phone: null,
-    number: "+15550001234",
+    number: "+1 415 555 0123",
   }));
   const markSeen = vi.fn(async () => undefined);
   render(
@@ -458,7 +458,7 @@ it("never shows the WhatsApp intro to an account that has seen it", async () => 
 
 it("hands the pre-typed message to WhatsApp by a tap, stays on the page, and offers a new code once it expires", async () => {
   const href = location.href;
-  const deepLink = `https://wa.me/15550001234?text=${encodeURIComponent("Hi AbacusAI Bot! (code c_abc)")}`;
+  const deepLink = `https://wa.me/14155550123?text=${encodeURIComponent("Hi AbacusAI Bot! (code c_abc)")}`;
   const callApps = vi.fn(async (service: string) =>
     service === "getAbacusBotWhatsAppChat"
       ? { available: true, status: "unlinked", phone: null, number: null }
@@ -474,7 +474,7 @@ it("hands the pre-typed message to WhatsApp by a tap, stays on the page, and off
   );
   const input = screen.getByLabelText(enUS.web.whatsappBot.numberLabel);
   await act(async () => {
-    fireEvent.change(input, { target: { value: "+1 555 000 9999" } });
+    fireEvent.change(input, { target: { value: "+1 415 555 0123" } });
   });
   await act(async () => {
     screen.getByRole("button", { name: enUS.web.whatsappBot.connect }).click();
@@ -500,9 +500,9 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
     if (service === "startAbacusBotWhatsAppChat") status = "linked";
     if (service === "unlinkAbacusBotWhatsAppChat") status = "unlinked";
     return service === "getAbacusBotWhatsAppChat"
-      ? { available: true, status, phone: null, number: "+1 555-000-1234" }
+      ? { available: true, status, phone: null, number: "+1 415 555 0123" }
       : service === "startAbacusBotWhatsAppChat"
-        ? { status: "linked", deepLink: null, phone: "+15550009999" }
+        ? { status: "linked", deepLink: null, phone: "+1 415 555 0123" }
         : {};
   });
   render(withQueries(<PhoneWhatsAppApp callApps={callApps} />));
@@ -514,7 +514,7 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
   ).toBeNull();
   await act(async () => {
     fireEvent.change(screen.getByLabelText(enUS.web.whatsappBot.numberLabel), {
-      target: { value: "+1 555 000 9999" },
+      target: { value: "+1 415 555 0123" },
     });
   });
   await act(async () => {
@@ -530,7 +530,7 @@ it("is only WhatsApp on a phone: connect with no Skip, then all set with the bot
       .getByText(enUS.web.whatsapp.openWhatsApp)
       .closest("a")!
       .getAttribute("href")
-  ).toBe("https://wa.me/15550001234");
+  ).toBe("https://wa.me/14155550123");
   await act(async () => {
     screen
       .getByRole("button", { name: enUS.web.whatsappBot.useDifferentNumber })
