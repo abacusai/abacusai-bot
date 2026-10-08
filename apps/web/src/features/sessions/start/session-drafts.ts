@@ -137,7 +137,7 @@ export const saveSessionDraft = (draft: StartDraft, active = false): void => {
 export const restoreSessionDraft = (id: string): SessionDraft | undefined => {
   const draft = sessionDraftsStore.state.drafts[id];
   if (!draft) return;
-  if (!draft.envelope && Date.now() - draft.updatedAt >= DRAFT_TTL) {
+  if (Date.now() - draft.updatedAt >= DRAFT_TTL) {
     removeSessionDraft(id);
     return;
   }

@@ -95,3 +95,27 @@ it("finishes a retried upload only in its original composer after another draft 
     attachments: [],
   });
 });
+
+it("shows upload progress without allowing retry until it fails", async () => {
+  current = await renderWithDb(
+    <AttachmentChip
+      attachment={{
+        id: "loading",
+        name: "photo.png",
+        state: "uploading",
+        path: null,
+      }}
+      host={inertHostActions}
+      root={null}
+      onRemove={() => {}}
+      onRetry={() => {}}
+    />
+  );
+  expect(
+    screen.getByLabelText("Wait for the attachments to finish saving")
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Retry attachment" })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Remove attachment" })
+  ).toBeTruthy();
+});
