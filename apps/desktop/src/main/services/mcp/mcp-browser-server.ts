@@ -4085,7 +4085,7 @@ export class McpBrowserServer extends McpHttpServer {
       // Hidden and locked before any value exists here: from now on the
       // field reads as hidden and the tab runs no scripts until it navigates.
       // A card fill also makes the field a card field for the Pay guard.
-      if (plan.once && backendNodeId != null)
+      if (card && backendNodeId != null)
         secrets.noteCardFill(page, backendNodeId);
       if (!(await secrets.markFilledNode(page, node).catch(() => false)))
         return this.err(

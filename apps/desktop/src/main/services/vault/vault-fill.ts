@@ -263,7 +263,7 @@ export function planFill(context: FillContext): FillPlan {
       return awaitSignin(
         `the sign-in the user allowed is for another saved login, so ${pause}`
       );
-    if (!withinDomain(host, signin.site))
+    if (!onSite(host, signin.site))
       return awaitSignin(
         `the sign-in the user allowed is for ${signin.site}, and this page is ${host}, so ${pause}`
       );
@@ -464,6 +464,8 @@ export const fieldKindAllowed = (
 export interface DomNode {
   backendNodeId?: number;
   nodeName?: string;
+  /** A text node's text. */
+  nodeValue?: string;
   attributes?: string[];
   children?: DomNode[];
 }
@@ -564,6 +566,21 @@ export const factsFromDocument = (
     for (const child of node.children ?? []) walk(child, childForm, childGroup);
   };
   walk(root, null, null);
+  /** A group's own label: its aria-label, and a fieldset's legend text. */
+  const textOf = (node: DomNode): string =>
+    String(node.nodeName ?? "") === "#text"
+      ? (node.nodeValue ?? "")
+      : (node.children ?? []).map(textOf).join(" ");
+  const groupLabel = (group: DomNode | null): string[] => {
+    if (group == null) return [];
+    const legend = (group.children ?? []).find(
+      (child) => String(child.nodeName ?? "").toUpperCase() === "LEGEND"
+    );
+    return [
+      attributesOf(group).get("aria-label") ?? "",
+      legend != null ? textOf(legend) : "",
+    ];
+  };
   const keys = new Map<DomNode, number>();
   const keyOf = (node: DomNode | null): number => {
     if (node == null) return 0;
@@ -594,6 +611,7 @@ export const factsFromDocument = (
       fillable: control.tag === "select" || TEXT_ENTRY.has(type),
       form: keyOf(form),
       group: keyOf(control.group),
+      groupPhrases: cardPhrases(groupLabel(control.group)),
     };
   });
   const classes = classifyCardControls(cardControls);
@@ -657,6 +675,12 @@ export const FIELD_FACTS_JS = `
       if (!keys.has(node)) keys.set(node, keys.size + 1);
       return keys.get(node);
     };
+    const groupOf = (el) => (el.closest && el.closest('fieldset, [role=group]')) || null;
+    const groupLabel = (group) => {
+      if (!group) return [];
+      const legend = Array.from(group.children).find((child) => child.tagName === 'LEGEND');
+      return [String(group.getAttribute('aria-label') || ''), legend ? String(legend.textContent || '') : ''];
+    };
     const texts = (el) => [el.getAttribute('name'), el.getAttribute('id'), el.getAttribute('aria-label'),
       el.getAttribute('placeholder'), ...Array.from(el.labels || []).map((label) => label.textContent)]
       .map((text) => String(text || ''));
@@ -665,7 +689,8 @@ export const FIELD_FACTS_JS = `
       autocomplete: String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/).filter(Boolean),
       fillable: el.tagName === 'SELECT' || __TEXT_ENTRY.includes(__typeOf(el)),
       form: keyOf(el.form),
-      group: keyOf(el.closest && el.closest('fieldset, [role=group]')),
+      group: keyOf(groupOf(el)),
+      groupPhrases: __cardPhrases(groupLabel(groupOf(el))),
     })));
     const facts = new Map();
     controls.forEach((el, at) => {

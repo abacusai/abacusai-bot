@@ -23,7 +23,11 @@ import {
 const dump = (): { root: DomNode; elements: Map<number, Element> } => {
   let next = 1;
   const elements = new Map<number, Element>();
-  const node = (el: Element): DomNode => {
+  const node = (child: Node): DomNode | null => {
+    if (child.nodeType === 3)
+      return { nodeName: "#text", nodeValue: child.nodeValue ?? "" };
+    if (child.nodeType !== 1) return null;
+    const el = child as Element;
     const id = next++;
     elements.set(id, el);
     const attributes: string[] = [];
@@ -33,10 +37,12 @@ const dump = (): { root: DomNode; elements: Map<number, Element> } => {
       backendNodeId: id,
       nodeName: el.nodeName,
       attributes,
-      children: Array.from(el.children).map(node),
+      children: Array.from(el.childNodes)
+        .map(node)
+        .filter((each): each is DomNode => each != null),
     };
   };
-  return { root: node(document.documentElement), elements };
+  return { root: node(document.documentElement)!, elements };
 };
 
 /** The live facts of every input, as the page script reads them. */
@@ -79,6 +85,7 @@ describe("a card number or CVV", () => {
       '<input name="creditcardnumber">',
       '<input name="paymentCardNumber">',
       '<input name="cardCvv">',
+      '<input aria-label="Prepaid card number">',
       '<input id="input-id-12" name="cardNumber">',
       '<input autocomplete="cc-number" name="x">',
     ]) {
@@ -218,5 +225,115 @@ describe("reading a large page", () => {
     factsFromDocument(dump().root);
     live();
     expect(performance.now() - started).toBeLessThan(200);
+  });
+});
+
+describe("the review's probes", () => {
+  /** A checkout form: the card's group, then whatever follows it. */
+  const checkout = (after: string, cardExtra = "") => `
+    <form>
+      <fieldset><legend>Card</legend>
+        <input name="cardNumber">
+        <input id="exp" placeholder="MM/YY">
+        <input name="cvc">${cardExtra}
+      </fieldset>
+      ${after}
+    </form>`;
+
+  it("refuses a passport expiry in its own fieldset right after the CVV", () => {
+    document.body.innerHTML = checkout(
+      '<fieldset><legend>Passport</legend><input id="t" name="pp_exp"></fieldset>'
+    );
+    expect(classOf("#t").detail).toBeNull();
+    // An unlabelled group after the card is still another group.
+    document.body.innerHTML = checkout(
+      '<fieldset><input id="t" name="pp_exp"></fieldset>'
+    );
+    expect(classOf("#t").detail).toBeNull();
+    // A Passport legend vetoes even a field with no document words.
+    document.body.innerHTML = `<form><fieldset><legend>Passport details</legend>
+      <input name="cardNumber"><input id="t" name="exp"></fieldset></form>`;
+    expect(classOf("#t").detail).toBeNull();
+  });
+
+  it("refuses a passenger's, guest's or contact's name after the CVV", () => {
+    for (const field of [
+      '<input id="t" aria-label="Passenger name">',
+      '<input id="t" aria-label="Guest name">',
+      '<input id="t" aria-label="Contact name">',
+      '<input id="t" name="name">',
+    ]) {
+      document.body.innerHTML = checkout(field);
+      expect(classOf("#t").detail, field).toBeNull();
+    }
+    // A bare "name" inside the card's own group is the holder's.
+    document.body.innerHTML = checkout("", '<input id="t" name="name">');
+    expect(classOf("#t").detail).toBe("name");
+    // Guest or contact names in the card's group are not.
+    document.body.innerHTML = checkout(
+      "",
+      '<input id="t" aria-label="Guest name">'
+    );
+    expect(classOf("#t").detail).toBeNull();
+  });
+
+  it("accepts a real card form whose expiry names the card brands", () => {
+    document.body.innerHTML = checkout(
+      "",
+      '<input id="t" aria-label="Expiry (Visa/Mastercard)">'
+    );
+    expect(classOf("#t").detail).toBe("exp");
+    document.body.innerHTML = `<form><input name="cardNumber">
+      <input id="t" placeholder="Visa card expiry"></form>`;
+    expect(classOf("#t").detail).toBe("exp");
+    // The visa document is still refused.
+    for (const field of [
+      '<input id="t" aria-label="Visa expiry">',
+      '<input id="t" aria-label="Visa number">',
+      '<input id="t" name="visaType">',
+    ]) {
+      document.body.innerHTML = `<form><input name="cardNumber">${field}</form>`;
+      expect(classOf("#t").detail, field).toBeNull();
+    }
+  });
+
+  it("does not take a customer id for a card code", () => {
+    window.history.replaceState({}, "", "/login");
+    document.body.innerHTML = `<form><input id="t" name="cid" aria-label="Customer ID">
+      <input type="password"><button type="submit" id="go">Sign in</button></form>`;
+    expect(classOf("#t").number).toBe(false);
+    const facts = Function(
+      `return ${controlFactsScript("#go")}`
+    )() as ControlFacts;
+    expect(looksLikePaymentStep(facts)).toBe(false);
+    document.body.innerHTML =
+      '<form><input id="t" aria-label="Card CID"></form>';
+    expect(classOf("#t").number).toBe(true);
+  });
+
+  it("vetoes PAN only as a card: a field named pan for a card number counts", () => {
+    document.body.innerHTML =
+      '<form><input id="t" name="pan" aria-label="Card number"></form>';
+    expect(classOf("#t").number).toBe(true);
+    document.body.innerHTML =
+      '<form><input id="t" aria-label="PAN card number"></form>';
+    expect(classOf("#t").number).toBe(false);
+  });
+
+  it("does not count the other cards a wallet may hold", () => {
+    for (const label of [
+      "Frequent flyer card number",
+      "Residence card number",
+      "Green card number",
+      "Driver card number",
+      "Senior citizen card number",
+      "Ration card number",
+      "Voter card number",
+      "Health card number",
+      "Insurance card number",
+    ]) {
+      document.body.innerHTML = `<form><input id="t" aria-label="${label}"></form>`;
+      expect(classOf("#t").number, label).toBe(false);
+    }
   });
 });

@@ -5,16 +5,25 @@
  * page script embeds these functions' own source, so there is no second copy.
  *
  * - A card number or CVV: a `cc-number` / `cc-csc` token, or the field's own
- *   words naming one ("Card number", "cardNumber", "CVV", "Credit card or
- *   bank account number"). A "card" a word qualifies as another kind (gift,
- *   loyalty, rail, membership, ID, club, library, student, transit…) does
- *   not count, and neither does a PAN or Aadhaar field. A travel card is a
- *   prepaid payment card, so "Travel card number" counts.
+ *   words naming one ("Card number", "cardNumber", "CVV", "Card CID",
+ *   "Credit card or bank account number"). A "card" a word qualifies as
+ *   another kind (gift, loyalty, rail, membership, ID, PAN, frequent flyer,
+ *   residence, green, driver, senior citizen, ration, voter, health,
+ *   insurance…) does not count, nor does an Aadhaar field, nor a bare "cid"
+ *   (a customer id). A travel card is a prepaid payment card, so "Travel
+ *   card number" counts.
  * - An expiry or cardholder name: a `cc-exp*` / `cc-name` token, or its
  *   words naming one AND a qualifying number or CVV field beside it: in the
- *   same fieldset or group, or within three fields of it in document order,
- *   in the same form. Card words in its own name are not enough, and
- *   passport, visa, ticket or document wording never counts as beside.
+ *   same fieldset or group, or within three fields of it in the same form
+ *   and the same group. Card words in its own name are not enough. Passport,
+ *   visa (the document, not the card brand), ticket or document wording in
+ *   its words or its group's label never counts as beside. A bare "name"
+ *   is the holder's only inside the card number's own group, and a
+ *   passenger's, guest's, contact's or customer's name never is.
+ *
+ * The host reads naming attributes and a fieldset's legend from a DOM dump;
+ * the page also reads `<label>` text, which the dump does not carry. The
+ * cases here do not depend on label text alone.
  *
  * Callers add what only they know: a payment provider's frame, and a field
  * the vault typed card data into.
@@ -36,6 +45,8 @@ export interface CardControl {
   form: number;
   /** Its nearest fieldset or `role=group`, as a key; 0 for none. */
   group: number;
+  /** That group's own label (a fieldset's legend, a group's aria-label), as phrases. */
+  groupPhrases: string[][];
 }
 
 export interface CardClass {
@@ -98,18 +109,40 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
     "voter",
     "health",
     "insurance",
-    "pan",
     "aadhaar",
     "aadhar",
     "sim",
     "business",
     "visiting",
     "report",
+    "flyer",
+    "flier",
+    "residence",
+    "green",
+    "driver",
+    "drivers",
+    "driving",
+    "senior",
+    "citizen",
+    "pan",
   ];
-  const NOT_CARD_NUMBER = ["pan", "aadhaar", "aadhar"];
   const NUMBER_WORDS = ["number", "num", "no", "nr", "nbr"];
-  const CVV_WORDS = ["cvv", "cvv2", "cvc", "cvc2", "csc", "cvn", "cid"];
-  const NOT_BESIDE = ["passport", "visa", "ticket", "document", "documents"];
+  const CVV_WORDS = ["cvv", "cvv2", "cvc", "cvc2", "csc", "cvn"];
+  const BRANDS = [
+    "card",
+    "credit",
+    "debit",
+    "mastercard",
+    "amex",
+    "rupay",
+    "maestro",
+    "discover",
+    "diners",
+    "jcb",
+    "unionpay",
+  ];
+  const DOCUMENTS = ["passport", "ticket", "document", "documents"];
+  const VISA_DOCUMENT = ["number", "no", "type", "expiry", "exp", "expiration"];
   const NOT_EXPIRY = [
     "dd",
     "day",
@@ -134,32 +167,64 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
     "file",
     "account",
     "policy",
+    "passenger",
+    "guest",
+    "contact",
+    "traveller",
+    "traveler",
+    "lead",
+    "customer",
+    "emergency",
+    "nominee",
   ];
+  const has = (list: string[], word: string): boolean =>
+    list.indexOf(word) >= 0;
+  /** A word, or a joined prefix ("frequentflyer"), that makes "card" another kind. */
   const otherCard = (word: string): boolean => {
-    if (OTHER_CARD.indexOf(word) >= 0) return true;
-    for (const other of OTHER_CARD)
-      if (word === other + "card" || word.indexOf(other + "card") === 0)
+    if (has(OTHER_CARD, word)) return true;
+    for (const other of OTHER_CARD) {
+      if (word.indexOf(other + "card") === 0) return true;
+      // Long qualifiers only, so "prepaid" does not end in "id".
+      if (
+        other.length >= 4 &&
+        word.length > other.length &&
+        word.slice(-other.length) === other
+      )
         return true;
+    }
+    return false;
+  };
+  const aadhaar = (control: CardControl): boolean => {
+    for (const phrase of control.phrases)
+      for (const word of phrase)
+        if (word === "aadhaar" || word === "aadhar") return true;
     return false;
   };
   const numberish = (control: CardControl): boolean => {
     const tokens = control.autocomplete;
-    if (tokens.indexOf("cc-number") >= 0 || tokens.indexOf("cc-csc") >= 0)
-      return true;
-    for (const phrase of control.phrases)
-      for (const word of phrase)
-        if (NOT_CARD_NUMBER.indexOf(word) >= 0) return false;
+    if (has(tokens, "cc-number") || has(tokens, "cc-csc")) return true;
+    if (aadhaar(control)) return false;
     for (const phrase of control.phrases) {
       for (let i = 0; i < phrase.length; i++) {
         const word = phrase[i]!;
         const before = i > 0 ? phrase[i - 1]! : "";
         const after = i + 1 < phrase.length ? phrase[i + 1]! : "";
-        if (CVV_WORDS.indexOf(word) >= 0) return true;
+        if (has(CVV_WORDS, word)) return true;
         if (/^(?:cvv|cvc)[a-z0-9]*$/.test(word)) return true;
-        // "card number", "cc no"; not "gift card number".
+        // "cid" is a card's code only beside card or security words ("Card CID"), else a customer id.
+        if (
+          word === "cid" &&
+          (before === "card" ||
+            before === "security" ||
+            after === "card" ||
+            after === "security" ||
+            after === "code")
+        )
+          return true;
+        // "card number", "cc no"; not "gift card number" or "PAN card number".
         if (
           (word === "card" || word === "cc") &&
-          NUMBER_WORDS.indexOf(after) >= 0 &&
+          has(NUMBER_WORDS, after) &&
           !otherCard(before)
         )
           return true;
@@ -187,7 +252,7 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
         if (
           word.length > 4 &&
           word.slice(-4) === "card" &&
-          NUMBER_WORDS.indexOf(after) >= 0 &&
+          has(NUMBER_WORDS, after) &&
           !otherCard(word) &&
           !otherCard(before)
         )
@@ -196,23 +261,30 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
     }
     return false;
   };
-  const detailOf = (control: CardControl): CardDetail | null => {
+  /** What the words name, and whether a bare "name" is all that names a holder. */
+  const detailOf = (
+    control: CardControl
+  ): { detail: CardDetail | null; bareName: boolean } => {
     const tokens = control.autocomplete;
-    if (tokens.indexOf("cc-exp") >= 0) return "exp";
-    if (tokens.indexOf("cc-exp-month") >= 0) return "exp_month";
-    if (tokens.indexOf("cc-exp-year") >= 0) return "exp_year";
-    if (tokens.indexOf("cc-name") >= 0) return "name";
+    if (has(tokens, "cc-exp")) return { detail: "exp", bareName: false };
+    if (has(tokens, "cc-exp-month"))
+      return { detail: "exp_month", bareName: false };
+    if (has(tokens, "cc-exp-year"))
+      return { detail: "exp_year", bareName: false };
+    if (has(tokens, "cc-name")) return { detail: "name", bareName: false };
     let expiry = false;
     let month = false;
     let year = false;
     let name = false;
     let holder = false;
+    let cardWord = false;
     let notExpiry = false;
     let notHolder = false;
     for (const phrase of control.phrases)
       for (const word of phrase) {
-        if (NOT_EXPIRY.indexOf(word) >= 0) notExpiry = true;
-        if (NOT_HOLDER.indexOf(word) >= 0) notHolder = true;
+        if (has(NOT_EXPIRY, word)) notExpiry = true;
+        if (has(NOT_HOLDER, word)) notHolder = true;
+        if (has(BRANDS, word) || word === "visa") cardWord = true;
         const exp =
           /exp(?:iry|iration|ires?|ire)?(month|mm|mon|year|yy|yyyy|yr|date|dt)?$/.exec(
             word
@@ -245,21 +317,35 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
         if (word === "name") name = true;
       }
     if (!notExpiry && (expiry || month || year)) {
-      if (month && year) return "exp";
-      if (month) return "exp_month";
-      if (year) return "exp_year";
-      return "exp";
+      const detail: CardDetail =
+        month && year ? "exp" : month ? "exp_month" : year ? "exp_year" : "exp";
+      return { detail, bareName: false };
     }
-    if (holder || (name && !notHolder)) return "name";
-    return null;
+    if (notHolder) return { detail: null, bareName: false };
+    if (holder || (name && cardWord))
+      return { detail: "name", bareName: false };
+    if (name) return { detail: "name", bareName: true };
+    return { detail: null, bareName: false };
   };
-  const notBeside = (control: CardControl): boolean => {
-    for (const phrase of control.phrases)
-      for (const word of phrase) {
-        if (NOT_BESIDE.indexOf(word) >= 0) return true;
-        for (const other of NOT_BESIDE)
+  /** Phrases that name a passport, visa, ticket or document. */
+  const documentWording = (phrases: string[][]): boolean => {
+    for (const phrase of phrases) {
+      let brand = false;
+      for (const word of phrase) if (has(BRANDS, word)) brand = true;
+      for (let i = 0; i < phrase.length; i++) {
+        const word = phrase[i]!;
+        if (has(DOCUMENTS, word)) return true;
+        for (const other of DOCUMENTS)
           if (word.indexOf(other) === 0) return true;
+        // Visa the document: beside passport, or "visa number/type/expiry"
+        // with no card brand in the same words ("Expiry (Visa/Mastercard)").
+        const visa = word === "visa" || word.indexOf("visa") === 0;
+        if (!visa || brand) continue;
+        const rest = word === "visa" ? (phrase[i + 1] ?? "") : word.slice(4);
+        if (word === "visa" && phrase.length === 1) continue;
+        if (has(VISA_DOCUMENT, rest) || rest.indexOf("exp") === 0) return true;
       }
+    }
     return false;
   };
   const tokenDetail = (control: CardControl): boolean =>
@@ -284,39 +370,57 @@ export function classifyCardControls(controls: CardControl[]): CardClass[] {
       placesInForm.set(control.form, at + 1);
     } else place.push(-1);
   }
-  // The nearest number field's place before and after each control, per form.
-  const before: number[] = Array.from({ length: count }, () => -Infinity);
-  const after: number[] = Array.from({ length: count }, () => Infinity);
-  const lastSeen = new Map<number, number>();
+  // The nearest number field before and after each control, per form: its
+  // place and its group.
+  const nearBefore: Array<{ place: number; group: number } | null> = [];
+  const nearAfter: Array<{ place: number; group: number } | null> = [];
+  const lastSeen = new Map<number, { place: number; group: number }>();
   for (let i = 0; i < count; i++) {
     const control = controls[i]!;
-    if (!control.fillable) continue;
-    before[i] = lastSeen.get(control.form) ?? -Infinity;
-    if (number[i]) lastSeen.set(control.form, place[i]!);
+    nearBefore.push(
+      control.fillable ? (lastSeen.get(control.form) ?? null) : null
+    );
+    if (number[i])
+      lastSeen.set(control.form, { place: place[i]!, group: control.group });
   }
-  const nextSeen = new Map<number, number>();
+  const nextSeen = new Map<number, { place: number; group: number }>();
   for (let i = count - 1; i >= 0; i--) {
     const control = controls[i]!;
-    if (!control.fillable) continue;
-    after[i] = nextSeen.get(control.form) ?? Infinity;
-    if (number[i]) nextSeen.set(control.form, place[i]!);
+    nearAfter[i] = control.fillable
+      ? (nextSeen.get(control.form) ?? null)
+      : null;
+    if (number[i])
+      nextSeen.set(control.form, { place: place[i]!, group: control.group });
   }
   const classes: CardClass[] = [];
   for (let i = 0; i < count; i++) {
     const control = controls[i]!;
-    const words = control.fillable ? detailOf(control) : null;
+    const found = control.fillable
+      ? detailOf(control)
+      : { detail: null, bareName: false };
     let detail: CardDetail | null = null;
-    if (words != null && !number[i]) {
-      if (tokenDetail(control)) detail = words;
-      else if (!notBeside(control)) {
-        const near =
-          place[i]! - before[i]! <= 3 ||
-          after[i]! - place[i]! <= 3 ||
-          (control.group !== 0 && groupsWithNumber.has(control.group));
-        if (near) detail = words;
+    if (found.detail != null && !number[i]) {
+      if (tokenDetail(control)) detail = found.detail;
+      else if (
+        !documentWording(control.phrases) &&
+        !documentWording(control.groupPhrases)
+      ) {
+        const inCardGroup =
+          control.group !== 0 && groupsWithNumber.has(control.group);
+        // Within three fields, and never across groups.
+        const close = (
+          near: { place: number; group: number } | null
+        ): boolean =>
+          near != null &&
+          Math.abs(place[i]! - near.place) <= 3 &&
+          near.group === control.group;
+        const beside =
+          inCardGroup || close(nearBefore[i]!) || close(nearAfter[i]!);
+        // A bare "name" is the holder's only inside the card's own group.
+        if (found.bareName ? inCardGroup : beside) detail = found.detail;
       }
     }
-    classes.push({ number: number[i]!, detailWords: words, detail });
+    classes.push({ number: number[i]!, detailWords: found.detail, detail });
   }
   return classes;
 }
