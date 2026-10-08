@@ -72,8 +72,13 @@ interface PhoneLaneDeps {
   resolveMedia: (ref: string, sessionId: string) => ResolvedMedia;
   /** Keeps media held for an answer from eviction, or lets it go. */
   pinMedia?: (ref: string, sessionId: string, pinned: boolean) => void;
-  /** Each answered inbox poll, for what it says besides messages (the user's zone). */
-  onPolled?: (result: { tz?: unknown }) => void;
+  /** Each answered inbox poll, for what it says besides messages (the user's zone, chats' step events). */
+  onPolled?: (result: { tz?: unknown; events?: unknown }) => void;
+  /**
+   * A step-done event's note for the loop, once: null for one already told
+   * (the host's own watcher got there first), which is acknowledged and dropped.
+   */
+  eventNote?: (entry: PhoneInboxEntry) => string | null;
   /** Hidden tagged lines that go to the session ahead of an entry. */
   turnNotes?: (entry: PhoneInboxEntry) => string[];
   log?: (line: string) => void;
@@ -136,6 +141,8 @@ function phoneTurnText(entry: PhoneInboxEntry, notes: string[] = []): string {
     const line = (entry.text ?? "").replace(/\s+/g, " ").trim();
     return /^\[[a-z][a-z -]*\]/i.test(line) ? line : `[note] ${line}`;
   }
+  // The note the host made of the server's event, never the user's words.
+  if (entry.kind === "event") return [entry.text ?? "", ...notes].join("\n\n");
   if (entry.kind !== "linked") return [...notes, entry.text ?? ""].join("\n\n");
   const name = entry.sender?.trim();
   return [
@@ -254,12 +261,15 @@ export class PhoneLane {
         const result = await this.deps.call<{
           messages?: PhoneInboxEntry[];
           tz?: unknown;
+          events?: unknown;
         }>(
           {
             action: "inbox",
             wait: INBOX_WAIT_SECS,
             lane: "phone",
             poller: this.poller,
+            // Step-done events: as phone entries, and chats' in `events`.
+            ...(this.deps.eventNote != null ? { supports: ["events"] } : {}),
             ...(this.redeliver ? { redeliver: true } : {}),
           },
           (INBOX_WAIT_SECS + 15) * 1000,
@@ -294,7 +304,17 @@ export class PhoneLane {
       if (known.state === "handled") void this.ack([known]);
       return;
     }
-    const entry = this.withAttachments(arrived);
+    // A step-done event is the host's note of it, never the user's words.
+    const note =
+      arrived.kind === "event"
+        ? (this.deps.eventNote?.(arrived) ?? null)
+        : null;
+    if (arrived.kind === "event" && note == null) {
+      void this.acknowledge([arrived.id]);
+      return;
+    }
+    const entry =
+      note != null ? { ...arrived, text: note } : this.withAttachments(arrived);
     if (entry.kind !== "linked" && !entry.text?.trim()) {
       void this.acknowledge([entry.id]);
       return;

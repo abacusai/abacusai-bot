@@ -164,6 +164,8 @@ export class VaultClient {
     itemId?: string;
     paymentApprovalId?: string;
     origin?: string;
+    /** Where the page's outcome reports back (see StepEvents). */
+    chatOrigin?: string;
   }): Promise<
     VaultResult<{ requestId: string; url: string; expiresAt: number | null }>
   > {
@@ -175,6 +177,7 @@ export class VaultClient {
         ? { paymentApprovalId: input.paymentApprovalId }
         : {}),
       ...(input.origin != null ? { origin: input.origin } : {}),
+      ...(input.chatOrigin != null ? { chatOrigin: input.chatOrigin } : {}),
     });
     if (result.ok === false) return result;
     const record = (result.value ?? {}) as Record<string, unknown>;
@@ -226,6 +229,7 @@ export class VaultClient {
     currency: string;
     origin: string;
     cvvRequired: boolean;
+    chatOrigin?: string | undefined;
   }): Promise<
     VaultResult<{
       paymentApprovalId: string;
@@ -243,6 +247,7 @@ export class VaultClient {
       currency: input.currency,
       origin: input.origin,
       cvvRequired: input.cvvRequired,
+      ...(input.chatOrigin != null ? { chatOrigin: input.chatOrigin } : {}),
     });
     if (result.ok === false) return result;
     const record = (result.value ?? {}) as Record<string, unknown>;
@@ -297,7 +302,10 @@ export class VaultClient {
   }
 
   /** A pending sign-in approval for a saved login, and the page the user allows it on. */
-  async createSigninApproval(input: { itemId: string }): Promise<
+  async createSigninApproval(input: {
+    itemId: string;
+    chatOrigin?: string | undefined;
+  }): Promise<
     VaultResult<{
       signinApprovalId: string;
       url: string;
@@ -308,7 +316,10 @@ export class VaultClient {
     const result = await this.call(
       "_createAbacusbotSigninApproval",
       "POST",
-      { itemId: input.itemId },
+      {
+        itemId: input.itemId,
+        ...(input.chatOrigin != null ? { chatOrigin: input.chatOrigin } : {}),
+      },
       SIGNIN_UNSUPPORTED
     );
     if (result.ok === false) return result;

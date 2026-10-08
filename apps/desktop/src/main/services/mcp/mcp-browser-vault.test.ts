@@ -31,6 +31,7 @@ import {
   FIND_SECRET_FIELDS_SCRIPT,
   SecretFields,
 } from "../browser/secret-fields";
+import { stepNote } from "../session/step-events";
 import { CHECKOUT_STATE_PREFIX } from "../vault/checkout-tools";
 import { PAY_GUARD_MARKER } from "../vault/pay-guard";
 import {
@@ -777,6 +778,7 @@ beforeAll(async () => {
   const { localMcpServerToken } = await import("./mcp-config-service");
   const { VaultClient } = await import("../vault/vault-client");
   const { Vault } = await import("../vault/vault-tools");
+  const { StepEvents } = await import("../session/step-events");
   vault = new Vault({
     client: new VaultClient({
       fetch: platformFetch,
@@ -784,7 +786,12 @@ beforeAll(async () => {
       host: () => "https://example.test",
       userAgent: () => "test",
     }),
-    deliver: () => {},
+    steps: new StepEvents({
+      originKind: () => null,
+      deliver: () => {},
+      alive: () => true,
+      refs: { read: () => ({}), write: () => {} },
+    }),
   });
   token = localMcpServerToken("browser");
   server = new McpBrowserServer({
@@ -2828,12 +2835,12 @@ describe("sign-in approval", () => {
     // Pending: the browser still waits.
     signInForm();
     expect((await fillLogin()).text).toMatch(/^Waiting for sign-in approval:/);
-    notes.push(...(await vault.waiter.checkNow("s1")));
+    notes.push(...(await vault.waiter.checkNow("s1")).map((e) => stepNote(e)));
     expect(notes).toEqual([]);
 
     // The user taps Allow.
     signinStatus = "approved";
-    notes.push(...(await vault.waiter.checkNow("s1")));
+    notes.push(...(await vault.waiter.checkNow("s1")).map((e) => stepNote(e)));
     expect(notes).toHaveLength(1);
     expect(notes[0]).toContain("allowed one sign-in to shop.example");
     expect(notes[0]).not.toMatch(APP_WORDS);
@@ -2948,7 +2955,7 @@ describe("sign-in approval", () => {
     await call("signin_approval", { item_id: "login-1" });
     signinStatus = "denied";
 
-    const notes = await vault.waiter.checkNow("s1");
+    const notes = (await vault.waiter.checkNow("s1")).map((e) => stepNote(e));
 
     expect(notes).toHaveLength(1);
     expect(notes[0]).toContain("denied signing in to shop.example");
@@ -2966,7 +2973,7 @@ describe("sign-in approval", () => {
     };
     signinStatus = "approved";
 
-    const notes = await vault.waiter.checkNow("s1");
+    const notes = (await vault.waiter.checkNow("s1")).map((e) => stepNote(e));
 
     expect(notes).toHaveLength(1);
     expect(notes[0]).not.toContain(APPROVAL_ID);

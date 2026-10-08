@@ -369,9 +369,13 @@ export interface McpAgentToolsServerOptions {
      * (one Google consent covers Gmail, Drive and Calendar, less the members
      * already connected, which `connectedIds` names), or the web host's
      * connect route for an MCP server. `requestId` lets the watch read the
-     * link's own outcome. Null signed out, or with no link to give.
+     * link's own outcome. `sessionId` is the asking chat, which the link's
+     * completion reports back to. Null signed out, or with no link to give.
      */
-    link: (connectorId: string) => Promise<{
+    link: (
+      connectorId: string,
+      sessionId: string | null
+    ) => Promise<{
       url: string;
       connectorIds: string[];
       connectedIds?: string[];
@@ -1998,7 +2002,9 @@ export class McpAgentToolsServer extends McpHttpServer {
     // the app) and a link (anywhere) do the connecting, and the chat that
     // asked is told when it lands.
     const link =
-      match.kind !== "messaging" ? await connectors.link(match.id) : null;
+      match.kind !== "messaging"
+        ? await connectors.link(match.id, callerSession ?? null)
+        : null;
     // A bundle's members already connected are no part of this link, and are
     // never watched: one already connected would read as this link landing.
     const already = new Set(

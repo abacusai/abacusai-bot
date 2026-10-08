@@ -3,9 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("electron", () => ({ app: {} }));
 
 const { Vault } = await import("./vault-tools");
+const { StepEvents, stepNote } = await import("../session/step-events");
 type VaultClient = import("./vault-client").VaultClient;
 
 const ORIGIN = "https://checkout.example";
+
+/** Step-done events delivered as their notes. */
+const steps = (deliver: (sessionId: string, note: string) => void) =>
+  new StepEvents({
+    originKind: () => null,
+    deliver,
+    alive: () => true,
+    refs: { read: () => ({}), write: () => {} },
+  });
 
 /** A platform whose request and approval statuses the test sets. */
 const fakeClient = () => {
@@ -77,9 +87,9 @@ const setup = () => {
   const delivered: Array<[string, string]> = [];
   const vault = new Vault({
     client,
-    deliver: (sessionId, note) => {
+    steps: steps((sessionId, note) => {
       delivered.push([sessionId, note]);
-    },
+    }),
   });
   return { vault, state, delivered };
 };
@@ -87,7 +97,7 @@ const setup = () => {
 /** `setup`, with the fake client's mocks at hand. */
 const setupWithClient = () => {
   const { client, raw } = fakeClient();
-  const vault = new Vault({ client, deliver: () => {} });
+  const vault = new Vault({ client, steps: steps(() => {}) });
   return { vault, client: raw };
 };
 
@@ -412,7 +422,7 @@ describe("sign-in approvals in the waiter", () => {
     };
     const vault = new Vault({
       client: client as unknown as VaultClient,
-      deliver: () => {},
+      steps: steps(() => {}),
     });
     return { vault, state, client };
   };
@@ -477,7 +487,9 @@ describe("sign-in approvals in the waiter", () => {
       signinApprovalId: "sa-saved",
     };
     held.state.signin = "approved";
-    const [heldNote] = await held.vault.waiter.checkNow("s1");
+    const [heldNote] = (await held.vault.waiter.checkNow("s1")).map((e) =>
+      stepNote(e)
+    );
     expect(heldNote).toContain("Saving it allowed this first sign-in");
     expect(held.vault.signin("s1")?.item).toBe("login-1");
 
@@ -494,7 +506,9 @@ describe("sign-in approvals in the waiter", () => {
       signinApprovalId: "sa-saved",
     };
     lost.state.signin = "expired";
-    const [lostNote] = await lost.vault.waiter.checkNow("s1");
+    const [lostNote] = (await lost.vault.waiter.checkNow("s1")).map((e) =>
+      stepNote(e)
+    );
     expect(lostNote).not.toContain("Saving it allowed");
     expect(lostNote).toContain("needs signin_approval");
     expect(lost.vault.signin("s1")).toBeNull();

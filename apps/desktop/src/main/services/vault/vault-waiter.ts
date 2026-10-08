@@ -4,14 +4,14 @@
  * nothing waits inside a tool call. While anything is outstanding it reads
  * each one's status every few seconds; a page that completed or failed, a
  * payment the user approved and a sign-in they allowed or denied raises one
- * note for the session that asked, and an expired one is dropped. The user saying they are done checks at once (`checkNow`).
+ * step-done event for the session that asked, and an expired one is dropped. The user saying they are done checks at once (`checkNow`).
  */
+import type { StepEvent } from "../session/step-events";
 import type { VaultClient } from "./vault-client";
 import {
   APPROVAL_LIFETIME_MS,
   SIGNIN_LIFETIME_MS,
   SIGNIN_ON_SAVE_LIFETIME_MS,
-  type PendingVaultRequest,
   type VaultSession,
   type VaultSessions,
 } from "./vault-session";
@@ -22,48 +22,18 @@ export interface VaultWaiterDeps {
     "requestStatus" | "paymentApprovalStatus" | "signinApprovalStatus"
   >;
   sessions: VaultSessions;
-  /** A note for the session's model, raised once per outcome. */
-  raise: (sessionId: string, note: string) => void;
+  /** A step-done event for the session, raised once per outcome. */
+  raise: (sessionId: string, event: StepEvent) => void;
   everyMs?: number;
   now?: () => number;
 }
 
 const WATCH_EVERY_MS = 3_000;
 
-const savedNote = (
-  request: PendingVaultRequest,
-  itemId: string | null,
-  signinAllowed: boolean
-): string => {
-  const item = itemId != null ? ` (vault item ${itemId})` : "";
-  if (request.kind === "login")
-    return (
-      `[vault] The user saved their login${request.site != null ? ` for ${request.site}` : ""}${item}. ` +
-      `To sign in, pass login_item_id ${itemId ?? "(its id from vault_items)"} to browser_task, with continue_from_last when a ` +
-      "browser run is paused for this sign-in; its browser fills the username and password itself, and the values never pass through you. " +
-      (signinAllowed
-        ? "Saving it allowed this first sign-in for the next 10 minutes; a later one needs signin_approval."
-        : "Each sign-in with it needs signin_approval first.")
-    );
-  if (request.kind === "card")
-    return (
-      `[vault] The user saved a card${item}. ` +
-      "It is filled only under a payment they approve: payment_approval at the checkout's review step, with the exact amount."
-    );
-  return request.forPayment
-    ? `[vault] The user entered their bank's code for the approved payment. Have the browser fill it with browser_vault_fill, field "code" and the card's item_id${itemId != null ? ` (${itemId})` : ""}, within a few minutes.`
-    : `[vault] The user entered their sign-in code${request.site != null ? ` for ${request.site}` : ""}. Have the browser fill it with browser_vault_fill, field "code"${itemId != null ? ` and item_id ${itemId}` : ""}, within a few minutes.`;
-};
-
-const FAILED_NOTE =
-  "[vault] Saving on the vault page failed. If it is still needed, send a new link with vault_request.";
-
-const TELL_USER = " Tell the user in one short line, then carry on.";
-
 export class VaultWaiter {
   private timer: NodeJS.Timeout | null = null;
   /** Each session's check in flight; one at a time, so an outcome is reported once. */
-  private readonly inflight = new Map<string, Promise<string[]>>();
+  private readonly inflight = new Map<string, Promise<StepEvent[]>>();
   private readonly now: () => number;
 
   constructor(private readonly deps: VaultWaiterDeps) {
@@ -77,10 +47,10 @@ export class VaultWaiter {
 
   /**
    * Checks the session now (the user said they are done) and returns its
-   * new notes instead of raising them. A check already running reports its
+   * new events instead of raising them. A check already running reports its
    * own outcomes, and this one returns none.
    */
-  async checkNow(sessionId: string): Promise<string[]> {
+  async checkNow(sessionId: string): Promise<StepEvent[]> {
     const session = this.deps.sessions.get(sessionId);
     if (session == null || !session.outstanding()) return [];
     return this.checkOnce(sessionId, session);
@@ -103,8 +73,8 @@ export class VaultWaiter {
   private async tick(): Promise<void> {
     try {
       for (const [sessionId, session] of this.deps.sessions.waiting()) {
-        const notes = await this.checkOnce(sessionId, session);
-        for (const note of notes) this.deps.raise(sessionId, note);
+        const events = await this.checkOnce(sessionId, session);
+        for (const event of events) this.deps.raise(sessionId, event);
       }
     } finally {
       // A check that failed or hung never stops the polling.
@@ -116,7 +86,7 @@ export class VaultWaiter {
   private checkOnce(
     sessionId: string,
     session: VaultSession
-  ): Promise<string[]> {
+  ): Promise<StepEvent[]> {
     const running = this.inflight.get(sessionId);
     if (running != null) return running.then(() => []);
     const check = this.check(session)
@@ -135,8 +105,8 @@ export class VaultWaiter {
     return check;
   }
 
-  private async check(session: VaultSession): Promise<string[]> {
-    const notes: string[] = [];
+  private async check(session: VaultSession): Promise<StepEvent[]> {
+    const events: StepEvent[] = [];
     for (const [requestId, request] of session.requests) {
       if (this.now() >= request.expiresAt) {
         session.requests.delete(requestId);
@@ -156,12 +126,22 @@ export class VaultWaiter {
           saved.signinApprovalId,
           saved.itemId
         ));
-      if (status.value.status === "completed")
-        notes.push(
-          savedNote(request, status.value.itemId, signinAllowed) + TELL_USER
-        );
-      else if (status.value.status === "failed")
-        notes.push(FAILED_NOTE + TELL_USER);
+      if (saved.status === "completed" || saved.status === "failed")
+        events.push({
+          event: "vault_saved",
+          step: requestId,
+          facts:
+            saved.status === "failed"
+              ? { item_kind: request.kind, outcome: "failed" }
+              : {
+                  item_kind: request.kind,
+                  outcome: "saved",
+                  ...(request.site != null ? { site: request.site } : {}),
+                  ...(saved.itemId != null ? { item_id: saved.itemId } : {}),
+                  for_payment: request.forPayment,
+                  signin_allowed: signinAllowed,
+                },
+        });
     }
     const approval = session.approval;
     if (approval?.status === "pending") {
@@ -176,12 +156,19 @@ export class VaultWaiter {
           else if (status.value.status === "approved") {
             approval.status = "approved";
             approval.expiresAt = this.now() + APPROVAL_LIFETIME_MS;
-            notes.push(
-              `[vault] The user approved paying ${approval.amount} ${approval.currency} to ${approval.merchant} on ${approval.site} ` +
-                `with card ${approval.item}. For the next 10 minutes browser_vault_fill can fill card_number` +
-                `${approval.cvvRequired ? " and cvv" : ""} on that checkout, once each.` +
-                TELL_USER
-            );
+            events.push({
+              event: "payment_decided",
+              step: approval.id,
+              facts: {
+                decision: "approved",
+                amount: approval.amount,
+                currency: approval.currency,
+                merchant: approval.merchant,
+                site: approval.site,
+                item_id: approval.item,
+                cvv_required: approval.cvvRequired,
+              },
+            });
           }
         }
       }
@@ -196,27 +183,35 @@ export class VaultWaiter {
           if (status.value.status === "expired") session.signin = null;
           else if (status.value.status === "denied") {
             session.signin = null;
-            notes.push(
-              `[vault] The user denied signing in to ${signin.site}. Do not sign in there; ask them how to go on.` +
-                TELL_USER
-            );
+            events.push({
+              event: "signin_decided",
+              step: signin.id,
+              facts: {
+                decision: "denied",
+                site: signin.site,
+                item_id: signin.item,
+              },
+            });
           } else if (status.value.status === "approved") {
             signin.status = "approved";
             signin.expiresAt =
               status.value.expiresAt != null
                 ? status.value.expiresAt * 1000
                 : this.now() + SIGNIN_LIFETIME_MS;
-            notes.push(
-              `[vault] The user allowed one sign-in to ${signin.site}. For the next 5 minutes the browser can fill that ` +
-                "login's username and password there, once each: call browser_task with login_item_id " +
-                `${signin.item} (and continue_from_last when a run is paused for this sign-in).` +
-                TELL_USER
-            );
+            events.push({
+              event: "signin_decided",
+              step: signin.id,
+              facts: {
+                decision: "allowed",
+                site: signin.site,
+                item_id: signin.item,
+              },
+            });
           }
         }
       }
     }
-    return notes;
+    return events;
   }
 
   /**

@@ -258,7 +258,7 @@ export class NudgeAgenda {
    * due loops a check-in already covered.
    */
   notes(entry: PhoneInboxEntry): string[] {
-    if (entry.kind === "note") return [];
+    if (entry.kind === "note" || entry.kind === "event") return [];
     const dir = this.deps.phoneDir;
     if (entry.kind === "linked")
       return this.enabled === true ? [CHECKINS_ON_GREETING] : [];

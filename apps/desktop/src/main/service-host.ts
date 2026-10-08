@@ -441,6 +441,7 @@ import {
   INACTIVITY_TIMEOUT_MINUTES,
   SessionTurnStateService,
 } from "./services/session/session-turn-state-service";
+import { type StepEvent, StepEvents } from "./services/session/step-events";
 import { ThreadStore } from "./services/session/thread-store";
 import { TranscriptService } from "./services/session/transcript-service";
 import { TurnAbandoner } from "./services/session/turn-abandoner";
@@ -562,6 +563,9 @@ const HOSTED_RUNS_FOLDER = "hosted-runs";
 
 /** Where the hosted results feed keeps the last read's `since`. */
 const FEED_FILE = "routines-feed.json";
+
+/** Where the chat refs of step-done events are kept (see StepEvents). */
+const STEP_REFS_FILE = "step-chat-refs.json";
 
 /** Registry connector ids for platform service keys, dropping unknown ones. */
 const connectorIdsFor = (services: string[]): string[] =>
@@ -742,12 +746,53 @@ export class ServiceHost {
   /** Screenshots (and other media) held for `send_media`, in memory only. */
   readonly mediaStore = new MediaStore();
   /**
+   * What the user finished on a page a chat sent them to (a connect link, a
+   * vault page, an upgrade): told to that chat once, from this app's
+   * watchers or the server's copy, whichever comes first.
+   */
+  readonly stepEvents = new StepEvents({
+    originKind: (sessionId) => {
+      // Only the hosted bot sleeps, so only its chats need the server's copy.
+      if (this.platform !== "web-host") return null;
+      const sessions = this.agentSessionManagerService;
+      const lane = sessions.laneOf(sessionId);
+      if (lane != null) return lane === "phone" ? "phone" : null;
+      if (
+        sessions.get(sessionId) == null ||
+        sessions.isRoutineSession(sessionId) ||
+        sessions.unattendedPolicy(sessionId) != null
+      )
+        return null;
+      return "chat";
+    },
+    deliver: (sessionId, note) => this.deliverSessionNote(sessionId, note),
+    landed: (event) => this.stepLanded(event),
+    alive: (sessionId) =>
+      this.agentSessionManagerService.get(sessionId) != null,
+    refs: {
+      read: () => {
+        const file = path.join(abacusBotHome(), STEP_REFS_FILE);
+        if (!fs.existsSync(file)) return {};
+        return JSON.parse(fs.readFileSync(file, "utf8")) as Record<
+          string,
+          string
+        >;
+      },
+      write: (refs) =>
+        fs.writeFileSync(
+          path.join(abacusBotHome(), STEP_REFS_FILE),
+          JSON.stringify(refs)
+        ),
+    },
+  });
+
+  /**
    * The user's vault: the browser serves its tools, and what the user does
-   * on its pages comes back as a note, delivered as a turn of its own.
+   * on its pages comes back as a step-done event, a turn of its own.
    */
   private readonly vault = new Vault({
     client: new VaultClient(),
-    deliver: (sessionId, note) => this.deliverSessionNote(sessionId, note),
+    steps: this.stepEvents,
   });
 
   /** The agent runtime's capability for `browser_checkout`, handed over at spawn. */
@@ -993,7 +1038,7 @@ export class ServiceHost {
     },
     connectors: {
       list: () => this.listConnectorStatuses(),
-      link: async (connectorId) => {
+      link: async (connectorId, sessionId) => {
         const service = connectorById(connectorId);
         // The desktop puts up a card instead: its sign-in runs in the app.
         if (service?.kind === "mcp") {
@@ -1001,8 +1046,12 @@ export class ServiceHost {
           return url != null ? { url, connectorIds: [connectorId] } : null;
         }
         if (service?.kind !== "platform") return null;
-        const link = await createConnectLink(service.service);
+        const link = await createConnectLink(
+          service.service,
+          this.stepEvents.origin(sessionId)
+        );
         if (link == null) return null;
+        if (link.requestId != null) this.stepEvents.noteAsked(link.requestId);
         return {
           url: link.url,
           connectorIds: connectorIdsFor(link.services),
@@ -1293,58 +1342,51 @@ export class ServiceHost {
   }
 
   /**
-   * An offer landed: its cards go and the asking session is told. Sessions
-   * pick up the new tools at their next turn start (connectorSync).
+   * An offer landed: the asking session hears a connector_connected event,
+   * keyed by its link so the server's copy of the same link is dropped.
    */
   private connectorsConnected(offer: ConnectedOffer): void {
-    const connectors = offer.connectorIds.flatMap(
-      (id) => connectorById(id) ?? []
-    );
-    // No session is refreshed here: each one is brought to the new set at its
-    // next turn start (connectorSync), the asking chat's note included.
+    // A platform connector goes by its service key, as the server names it.
+    const key = (id: string): string => {
+      const connector = connectorById(id);
+      return connector?.kind === "platform" ? connector.service : id;
+    };
+    this.stepEvents.deliver(offer.sessionId, {
+      event: "connector_connected",
+      step: offer.requestId ?? `offer-${randomUUID()}`,
+      facts: {
+        connected: offer.connectorIds.map(key),
+        not_granted: offer.notGranted.map(key),
+        accounts: [...new Set(Object.values(offer.accounts))],
+      },
+    });
+  }
+
+  /**
+   * What a step landing changes here, whichever path brought it. Connectors:
+   * their cards go and sessions pick up the new tools at their next turn
+   * start (connectorSync).
+   */
+  private stepLanded(event: StepEvent): void {
+    if (event.event !== "connector_connected") return;
+    const ids = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : []).flatMap((key: unknown) =>
+        typeof key === "string"
+          ? (connectorById(key)?.id ?? connectorForService(key)?.id ?? [])
+          : []
+      );
+    const connectorIds = ids(event.facts.connected);
     // A token-backed one (GitHub) reaches the agent as an environment key:
     // running sessions re-read theirs now rather than on their next timer.
     if (
-      connectors.some(
-        (connector) => connector.kind === "platform" && connector.via != null
-      )
+      connectorIds.some((id) => {
+        const connector = connectorById(id);
+        return connector?.kind === "platform" && connector.via != null;
+      })
     )
       this.refreshAgentProviders();
-    this.connectorGate.clearFor(offer.connectorIds);
-    this.pendingWaits.connectLanded(offer.connectorIds);
-    const accounts = [...new Set(Object.values(offer.accounts))];
-    const names = connectors.map((connector) => connector.name).join(", ");
-    const missing = offer.notGranted
-      .map((id) => connectorById(id)?.name ?? id)
-      .join(", ");
-    const several = offer.notGranted.length > 1;
-    const note =
-      "[connected] " +
-      (connectors.length > 0
-        ? `${names} ${connectors.length > 1 ? "are" : "is"} connected now` +
-          `${accounts.length > 0 ? ` (${accounts.join(", ")}): that account is who the user means by "me"` : ""}. ` +
-          connectors
-            .map((connector) =>
-              connector.kind === "platform" && connector.via != null
-                ? `Use ${connector.via}: they are authenticated now. `
-                : ""
-            )
-            .join("") +
-          (connectors.some(
-            (connector) =>
-              !(connector.kind === "platform" && connector.via != null)
-          )
-            ? "Its tools are in your tool list. "
-            : "")
-        : "") +
-      (missing.length > 0
-        ? `${missing} ${several ? "were" : "was"} not allowed on the provider's sign-in screen (left unticked), so ` +
-          `${several ? "they are" : "it is"} not connected. Tell the user plainly, in one short line, what connected and ` +
-          `what was not allowed. If what they asked for needs ${missing}, call connect_connector for it: the new link ` +
-          "asks only for what is missing. Otherwise carry on with what they asked for. There is nothing to flag, report " +
-          "or escalate, so never offer to."
-        : "Tell the user in one short line, then carry on with what they asked for.");
-    this.deliverSessionNote(offer.sessionId, note);
+    this.connectorGate.clearFor(connectorIds);
+    this.pendingWaits.connectLanded(connectorIds);
   }
 
   /**
