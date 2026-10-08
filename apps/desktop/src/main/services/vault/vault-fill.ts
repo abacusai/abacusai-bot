@@ -434,27 +434,26 @@ const TEXT_ENTRY = new Set([
 ]);
 
 /**
- * Which expiry field the facts name, if any: the whole date, its month or
- * its year. A cc-exp token says so; otherwise the card vocabulary must, with
- * card context (or inside a payment provider's frame), and never wording
- * that names another document or a day.
+ * Which card detail a field is, by the card rule: what `classifyCardControls`
+ * found it to be in its document (a cc-exp or cc-name token, or its words
+ * beside a card number or CVV), or, in a payment provider's frame, what its
+ * tokens or words name.
  */
-const expiryKind = (
+const cardDetail = (
   facts: FieldFacts,
   inPaymentFrame: boolean
-): "card_exp" | "card_exp_month" | "card_exp_year" | null => {
-  const marked = (token: string): boolean => facts.autocomplete.includes(token);
-  if (marked("cc-exp")) return "card_exp";
-  if (marked("cc-exp-month")) return "card_exp_month";
-  if (marked("cc-exp-year")) return "card_exp_year";
-  const wording = cardWording(facts);
-  if (wording.excluded || !(wording.context || inPaymentFrame)) return null;
-  // "MM/YY" alone, on a card form, names the expiry.
-  if (wording.month && wording.year) return "card_exp";
-  if (!wording.expiry) return null;
-  if (wording.month) return "card_exp_month";
-  if (wording.year) return "card_exp_year";
-  return "card_exp";
+): FillKind | null => {
+  const detail =
+    facts.card.detail ?? (inPaymentFrame ? facts.card.detailWords : null);
+  return detail == null
+    ? null
+    : detail === "name"
+      ? "cardholder_name"
+      : detail === "exp"
+        ? "card_exp"
+        : detail === "exp_month"
+          ? "card_exp_month"
+          : "card_exp_year";
 };
 
 /**
@@ -464,11 +463,10 @@ const expiryKind = (
  *   next to the password field;
  * - card_number / cvv: an input marked cc-number / cc-csc, or a plain input
  *   in a payment provider's frame;
- * - card_exp: a text input marked cc-exp, or named as the whole expiry
- *   ("MM/YY", "Expiry"); card_exp_month / card_exp_year: an input or select
- *   marked cc-exp-month / cc-exp-year, or named as the expiry's month or year;
- * - cardholder_name: a text input marked cc-name, or named as the name on
- *   the card;
+ * - card_exp (one text input), card_exp_month / card_exp_year (an input or
+ *   select), cardholder_name (a text input): the field the card rule makes
+ *   that detail (`card-fields.ts`: a cc-exp or cc-name token, or its words
+ *   beside a card number or CVV), or in a provider's frame, what it names;
  * - code: an input marked one-time-code, or a short numeric input.
  * Never a search input, and never anything but an input (or, for an
  * expiry's month or year, a select).
@@ -509,22 +507,19 @@ export const fieldKindAllowed = (
       return (
         facts.tag === "input" &&
         typed &&
-        expiryKind(facts, inPaymentFrame) === field
+        cardDetail(facts, inPaymentFrame) === field
       );
     case "card_exp_month":
     case "card_exp_year":
       return (
         (facts.tag === "select" || typed) &&
-        expiryKind(facts, inPaymentFrame) === field
+        cardDetail(facts, inPaymentFrame) === field
       );
-    case "cardholder_name": {
-      if (facts.type !== "text") return false;
-      if (marked("cc-name")) return true;
-      const wording = cardWording(facts);
+    case "cardholder_name":
       return (
-        wording.name && !wording.excluded && (wording.context || inPaymentFrame)
+        facts.type === "text" &&
+        cardDetail(facts, inPaymentFrame) === "cardholder_name"
       );
-    }
     case "code": {
       const numeric =
         facts.type === "number" ||
@@ -814,7 +809,7 @@ export const factsFromDocument = (
     if (input.id == null) continue;
     const index = entryIndex.get(input) ?? -1;
     facts.set(
-      field.id,
+      input.id,
       factsOf(
         input.tag,
         input.attributes,

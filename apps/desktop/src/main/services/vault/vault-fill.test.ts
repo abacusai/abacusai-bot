@@ -635,116 +635,69 @@ describe("a login fill", () => {
 });
 
 describe("a card's expiry and cardholder name", () => {
-  /** Hint words as the page names a field ("MM/YY" → mm, yy; "ccExpMonth" → ccexpmonth). */
+  /** Hint words as the page names a field ("MM/YY" → mm, yy). */
   const named = (text: string): string[] =>
     text
       .toLowerCase()
       .split(/[^a-z0-9]+/)
-      .filter(Boolean); /** On a card form: a card-number field beside it. */
-  const onCardForm = (overrides: Partial<FieldFacts>) => ({
-    cardPeer: true,
-    ...overrides,
-  });
+      .filter(Boolean);
+  /** A field the card rule found to be this detail, by token or beside a card number. */
+  const detail = (
+    kind: "exp" | "exp_month" | "exp_year" | "name",
+    overrides: Partial<FieldFacts> = {}
+  ) =>
+    facts({
+      card: { number: false, detailWords: kind, detail: kind },
+      ...overrides,
+    });
+  /** Words naming the detail, but nowhere near a card number. */
+  const wordsOnly = (
+    kind: "exp" | "exp_month" | "exp_year" | "name",
+    overrides: Partial<FieldFacts> = {}
+  ) =>
+    facts({
+      card: { number: false, detailWords: kind, detail: null },
+      ...overrides,
+    });
 
-  it("goes only into the field that names it, by autocomplete or by card wording", () => {
-    expect(accepts("card_exp", { autocomplete: ["cc-exp"] })).toBe(true);
-    expect(accepts("card_exp", onCardForm({ hints: named("MM/YY") }))).toBe(
-      true
-    );
-    expect(accepts("card_exp", { hints: named("Card expiry date") })).toBe(
-      true
-    );
+  it("goes only into the detail the card rule found the field to be", () => {
+    expect(accepts("card_exp", detail("exp"))).toBe(true);
+    expect(accepts("card_exp", detail("exp", { type: "tel" }))).toBe(true);
     expect(
       accepts(
-        "card_exp",
-        onCardForm({ type: "tel", hints: named("exp MM / YYYY") })
+        "card_exp_month",
+        detail("exp_month", { tag: "select", type: "select" })
       )
     ).toBe(true);
-    expect(
-      accepts("card_exp_month", {
-        tag: "select",
-        type: "select",
-        autocomplete: ["cc-exp-month"],
-      })
-    ).toBe(true);
-    expect(accepts("card_exp_month", { hints: ["ccexpmonth"] })).toBe(true);
-    expect(
-      accepts("card_exp_year", onCardForm({ hints: named("expiry-year") }))
-    ).toBe(true);
-    expect(
-      accepts(
-        "card_exp_year",
-        onCardForm({ tag: "select", type: "select", hints: named("exp_yy") })
-      )
-    ).toBe(true);
-    expect(accepts("cardholder_name", { autocomplete: ["cc-name"] })).toBe(
+    expect(accepts("card_exp_year", detail("exp_year"))).toBe(true);
+    expect(accepts("cardholder_name", detail("name"))).toBe(true);
+    // The other half of a split expiry, or another detail.
+    expect(accepts("card_exp", detail("exp_month"))).toBe(false);
+    expect(accepts("card_exp_month", detail("exp_year"))).toBe(false);
+    expect(accepts("cardholder_name", detail("exp"))).toBe(false);
+  });
+
+  it("does not go where only words name it, except in a payment provider's frame", () => {
+    expect(accepts("card_exp", wordsOnly("exp"))).toBe(false);
+    expect(accepts("cardholder_name", wordsOnly("name"))).toBe(false);
+    expect(accepts("card_exp", wordsOnly("exp", { type: "tel" }), true)).toBe(
       true
     );
-    expect(accepts("cardholder_name", { hints: named("Name on card") })).toBe(
-      true
-    );
-    expect(accepts("cardholder_name", { hints: ["nameoncard"] })).toBe(true);
-    // In a payment provider's frame, the frame is the card context.
-    expect(
-      accepts("card_exp", { type: "tel", hints: named("MM / YY") }, true)
-    ).toBe(true);
+    expect(accepts("cardholder_name", wordsOnly("name"), true)).toBe(true);
+    expect(accepts("card_exp", facts({ type: "tel" }), true)).toBe(false);
   });
 
-  it("needs card context: expiry or name wording alone, off a card form, is not a card's", () => {
-    expect(accepts("card_exp", { hints: named("MM/YY") })).toBe(false);
-    expect(accepts("card_exp", { hints: named("Expiry date") })).toBe(false);
-    expect(accepts("card_exp_month", { hints: named("expMonth") })).toBe(false);
-    expect(accepts("cardholder_name", { hints: named("Holder name") })).toBe(
+  it("never goes into a single expiry list, a search box, or a name that is not text", () => {
+    expect(
+      accepts("card_exp", detail("exp", { tag: "select", type: "select" }))
+    ).toBe(false);
+    expect(accepts("cardholder_name", detail("name", { type: "search" }))).toBe(
       false
     );
-  });
-
-  it("never goes into another document's dates or holder, even on a card form", () => {
-    for (const [kind, words] of [
-      ["card_exp", "Passport expiry"],
-      ["card_exp_month", "passport expiry month"],
-      ["card_exp", "Travel date MM/YY"],
-      ["card_exp_year", "Years of experience exp_years"],
-      ["card_exp", "Document expiry date"],
-      ["card_exp_month", "id_expiry_month"],
-      ["card_exp", "DD/MM/YYYY"],
-      ["card_exp", "birth month year"],
-      ["cardholder_name", "Policy holder name"],
-      ["cardholder_name", "Account holder name"],
-      ["cardholder_name", "Passport holder name"],
-    ] as const) {
-      expect(accepts(kind, onCardForm({ hints: named(words) })), words).toBe(
-        false
-      );
-      expect(
-        accepts(
-          kind,
-          onCardForm({ tag: "select", type: "select", hints: named(words) })
-        ),
-        words
-      ).toBe(false);
-    }
-  });
-
-  it("never goes into a split field's other half, a generic name or a search box", () => {
-    expect(accepts("card_exp", { autocomplete: ["cc-exp-month"] })).toBe(false);
-    expect(accepts("card_exp_month", { autocomplete: ["cc-exp-year"] })).toBe(
+    expect(accepts("cardholder_name", detail("name", { type: "tel" }))).toBe(
       false
     );
-    expect(accepts("card_exp", { autocomplete: ["cc-number"] })).toBe(false);
-    expect(
-      accepts("card_exp", {
-        tag: "select",
-        type: "select",
-        autocomplete: ["cc-exp"],
-      })
-    ).toBe(false);
-    expect(
-      accepts("cardholder_name", onCardForm({ hints: named("Full name") }))
-    ).toBe(false);
-    expect(
-      accepts("cardholder_name", { type: "search", autocomplete: ["cc-name"] })
-    ).toBe(false);
+    expect(accepts("card_exp", detail("exp", { tag: "textarea" }))).toBe(false);
   });
 
   it("is typed in the form that fits the field, or refused when none does", () => {
