@@ -7,7 +7,7 @@ import type {
   ConnectorStatuses,
 } from "../contracts";
 import { mutation, query, subscription } from "./base";
-import { ConversationKeySchema } from "./ids";
+import { ConversationKeySchema, NoInput } from "./ids";
 
 export const RespondConnectorRequestSchema = v.object({
   requestId: v.pipe(v.string(), v.nonEmpty()),
@@ -32,9 +32,7 @@ export type ConnectorsEvent =
 
 export const connectors = {
   /** Every registry connector's state on this machine, keyed by connector id. */
-  statuses: query
-    .input(v.optional(v.object({ fresh: v.optional(v.boolean()) })))
-    .output(type<ConnectorStatuses>()),
+  statuses: query.input(NoInput).output(type<ConnectorStatuses>()),
   /**
    * A flow with no fields: a platform connector answers with its connect
    * page's `url` for the caller to open; an MCP server installs.

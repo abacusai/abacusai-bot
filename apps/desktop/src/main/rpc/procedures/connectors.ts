@@ -3,8 +3,8 @@ import type { ConnectorsEvent } from "@abacus-ai/contract/contract";
 import { impl, isType, onIpcEvents, stream } from "./impl";
 
 export const connectorsRouter = impl.connectors.router({
-  statuses: impl.connectors.statuses.handler(({ input, context }) =>
-    context.deps.serviceHost.listConnectorStatuses({ fresh: input?.fresh })
+  statuses: impl.connectors.statuses.handler(({ context }) =>
+    context.deps.serviceHost.listConnectorStatuses()
   ),
   connect: impl.connectors.connect.handler(({ input, context }) =>
     context.deps.serviceHost.connectConnector(input.connectorId, input.options)
