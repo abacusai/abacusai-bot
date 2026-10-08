@@ -23,6 +23,9 @@ export interface DraftAttachment {
 import type { SubmissionEnvelope } from "../runtime/admission";
 
 export interface Draft {
+  selectionStart?: number;
+  selectionEnd?: number;
+  scrollTop?: number;
   pendingSubmit?: SubmissionEnvelope;
   replyTo?: import("@abacus-ai/contract/agent-types").UserTextTags["replyTo"];
   text: string;

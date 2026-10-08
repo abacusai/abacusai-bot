@@ -17,6 +17,13 @@ import { persistedStore } from "#renderer/lib/continuity/registry";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 
 import { promoteTabs } from "../dock/panel-tabs-store";
+import {
+  hasDraftContent,
+  saveSessionDraft,
+  restoreSessionDraft,
+  removeSessionDraft,
+  sessionDraftsStore,
+} from "./session-drafts";
 export type { SubmissionEnvelope } from "#renderer/features/chat/runtime/admission";
 export interface StartDraft {
   id: string;
@@ -42,6 +49,39 @@ export const startDraftStore = persistedStore<StartDraft>(
   "abacusai-bot:abacus.sessions.start",
   newStartDraft
 );
+const restored = sessionDraftsStore.state.activeId
+  ? restoreSessionDraft(sessionDraftsStore.state.activeId)
+  : undefined;
+if (restored) startDraftStore.setState(() => restored);
+saveSessionDraft(startDraftStore.state, true);
+const subscription = startDraftStore.subscribe((draft) =>
+  saveSessionDraft(draft, true)
+);
+import.meta.hot?.dispose(() => subscription.unsubscribe());
+
+export const openStartDraft = (id?: string, workspaceId?: string): string => {
+  const current = startDraftStore.state;
+  const saved = id ? restoreSessionDraft(id) : undefined;
+  if (saved) startDraftStore.setState(() => saved);
+  else if (
+    id ||
+    current.envelope ||
+    hasDraftContent(
+      sessionDraftsStore.state.drafts[current.id]?.composer ?? {
+        text: "",
+        attachments: [],
+      }
+    )
+  )
+    startDraftStore.setState(() => ({
+      ...newStartDraft(),
+      workspaceId: workspaceId ?? null,
+    }));
+  else if (workspaceId)
+    startDraftStore.setState((d) => ({ ...d, workspaceId }));
+  return startDraftStore.state.id;
+};
+
 export const optimisticSession = (draft: StartDraft): SessionRow => {
   const now = new Date().toISOString();
   const picks = draft.envelope?.forwardedProps;
@@ -115,8 +155,10 @@ export const startSession = async (
   try {
     await task;
     await deps.navigate(sessionId);
-    if (navigating.get(store) === 1 && store.state.id === sessionId)
+    if (navigating.get(store) === 1 && store.state.id === sessionId) {
+      if (store === startDraftStore) removeSessionDraft(sessionId);
       store.setState(() => newStartDraft());
+    }
   } finally {
     const remaining = (navigating.get(store) ?? 1) - 1;
     if (remaining) navigating.set(store, remaining);
