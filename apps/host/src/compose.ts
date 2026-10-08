@@ -74,7 +74,7 @@ export const composeNodeHost = async () => {
   const lease = new HostLease(
     () =>
       serviceHost.aguiRelay.busy ||
-      phoneLane.busy ||
+      phoneLane.holdsHost ||
       serviceHost
         .listRoutineHistories()
         .some(({ id }) =>
