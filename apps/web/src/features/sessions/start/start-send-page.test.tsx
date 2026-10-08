@@ -94,6 +94,13 @@ it("keeps the focused composer and text through admission and navigation without
         screen.getByRole("button", { name: "Send" }).hasAttribute("disabled")
       ).toBe(false)
     );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Send" })
+          .getAttribute("aria-disabled")
+      ).not.toBe("true")
+    );
     observer.observe(h.view.container, { childList: true, subtree: true });
     fireEvent.keyDown(field, { key: "Enter" });
     fireEvent.keyDown(field, { key: "Enter" });
