@@ -22,7 +22,6 @@ import { ConfirmAction } from "#renderer/components/form-kit/confirm";
 import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { ReferralLink } from "#renderer/features/settings/referral-link";
 import { accountIdentity } from "#renderer/lib/account-identity";
-import { cn } from "#renderer/lib/cn";
 import {
   springs,
   reducedTransition,
@@ -49,11 +48,10 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "#renderer/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
 export const ProfileMenu = () => {
@@ -119,6 +117,34 @@ export const ProfileMenu = () => {
           align="end"
           className="floating-surface scroll-fade-y w-60 rounded-(--pane-radius)"
           data-sidebar-overlay=""
+          onKeyDownCapture={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              setOpen(false);
+              return;
+            }
+            if (event.key !== "Tab") return;
+            event.preventDefault();
+            event.stopPropagation();
+            const stops = Array.from(
+              event.currentTarget.querySelectorAll<HTMLElement>(
+                '[role="menuitem"], [role="radiogroup"]'
+              )
+            ).map(
+              (item) =>
+                item.querySelector<HTMLElement>(
+                  '[role="radio"][tabindex="0"]'
+                ) ??
+                item.querySelector<HTMLElement>(
+                  '[role="radio"][aria-checked="true"]'
+                ) ??
+                item
+            );
+            const index = stops.indexOf(document.activeElement as HTMLElement);
+            stops[
+              (index + (event.shiftKey ? -1 : 1) + stops.length) % stops.length
+            ]?.focus();
+          }}
         >
           {account.data?.email && (
             <DropdownMenuGroup>
@@ -166,14 +192,19 @@ export const ProfileMenu = () => {
             <Palette aria-hidden />
             <span className="truncate">{t("settings.pages.appearance")}</span>
           </DropdownMenuItem>
-          <DropdownMenuRadioGroup
-            value={prefs.theme}
-            onValueChange={(theme) => {
+          <ToggleGroup
+            role="radiogroup"
+            value={[prefs.theme]}
+            onValueChange={([theme]) => {
               if (theme === "light" || theme === "dark" || theme === "system")
                 void updatePrefs({ theme }).catch(() => undefined);
             }}
             aria-label={t("settings.theme.label")}
-            className="bg-sidebar-accent/40 mx-1 my-1 flex gap-1 rounded-lg p-1"
+            spacing={1}
+            className="mx-1 my-1 h-8 w-auto"
+            onKeyDown={(event) => {
+              if (event.key.startsWith("Arrow")) event.stopPropagation();
+            }}
           >
             {(
               [
@@ -182,21 +213,22 @@ export const ProfileMenu = () => {
                 ["system", Monitor],
               ] as const
             ).map(([theme, Icon]) => (
-              <DropdownMenuRadioItem
+              <ToggleGroupItem
                 key={theme}
                 value={theme}
-                closeOnClick={false}
+                data-slot="profile-theme-option"
+                role="radio"
+                aria-checked={prefs.theme === theme}
+                aria-pressed={undefined}
+                data-selected={prefs.theme === theme}
                 aria-label={t(`theme.${theme}`)}
                 title={t(`theme.${theme}`)}
-                className={cn(
-                  "flex h-8 flex-1 justify-center px-2 [&>span]:hidden",
-                  prefs.theme === theme && "bg-background"
-                )}
+                className="ui-row h-8 min-w-0 flex-1 transition-none"
               >
-                <Icon className="size-4" aria-hidden />
-              </DropdownMenuRadioItem>
+                <Icon aria-hidden />
+              </ToggleGroupItem>
             ))}
-          </DropdownMenuRadioGroup>
+          </ToggleGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className={row}

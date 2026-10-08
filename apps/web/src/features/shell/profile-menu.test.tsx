@@ -61,9 +61,7 @@ it("keeps Settings in the rail, changes the shared theme and deep-links Usage", 
     expect(
       within(menu).getByRole("menuitem", { name: en.settings.pages.account })
     ).toBeTruthy();
-    fireEvent.click(
-      within(menu).getByRole("menuitemradio", { name: en.theme.dark })
-    );
+    fireEvent.click(within(menu).getByRole("radio", { name: en.theme.dark }));
     await waitFor(() =>
       expect(app.collections.prefs.get("app")?.theme).toBe("dark")
     );
@@ -73,6 +71,68 @@ it("keeps Settings in the rail, changes the shared theme and deep-links Usage", 
     await waitFor(() =>
       expect(app.router.state.location.pathname).toBe("/settings/usage")
     );
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("exposes one Theme radio group, keeps selection open, and supports roving focus", async () => {
+  const app = await renderApp("/sessions/new", {
+    procedures: {
+      account: { abacus: os.account.abacus.handler(() => account) },
+    },
+  });
+  try {
+    const trigger = await screen.findByRole("button", { name: account.name });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu");
+    const group = within(menu).getByRole("radiogroup", {
+      name: en.settings.theme.label,
+    });
+    expect(within(menu).getAllByRole("radiogroup")).toHaveLength(1);
+    const options = within(group).getAllByRole("radio");
+    expect(options.map((option) => option.getAttribute("aria-label"))).toEqual([
+      en.theme.light,
+      en.theme.dark,
+      en.theme.system,
+    ]);
+    for (const [index, theme] of ["light", "dark", "system"].entries()) {
+      fireEvent.click(options[index]!);
+      await waitFor(() =>
+        expect(app.collections.prefs.get("app")?.theme).toBe(theme)
+      );
+      expect(options[index]!.getAttribute("aria-checked")).toBe("true");
+      expect(options[index]!.getAttribute("data-selected")).toBe("true");
+      expect(screen.getByRole("menu")).toBe(menu);
+    }
+    const appearance = within(menu).getByRole("menuitem", {
+      name: en.settings.pages.appearance,
+    });
+    act(() => appearance.focus());
+    fireEvent.keyDown(appearance, { key: "Tab" });
+    await waitFor(() =>
+      expect(group.contains(document.activeElement)).toBe(true)
+    );
+    const first = document.activeElement!;
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    await waitFor(() => expect(document.activeElement).not.toBe(first));
+    expect(group.contains(document.activeElement)).toBe(true);
+    expect(options.filter((option) => option.tabIndex === 0)).toHaveLength(1);
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowLeft" });
+    await waitFor(() => expect(document.activeElement).toBe(first));
+    fireEvent.keyDown(first, { key: "Tab" });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(menu).getByRole("menuitem", { name: en.profile.help })
+      )
+    );
+    fireEvent.keyDown(document.activeElement!, { key: "Tab", shiftKey: true });
+    await waitFor(() =>
+      expect(group.contains(document.activeElement)).toBe(true)
+    );
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   } finally {
     app.view.unmount();
     await app.cleanup();
@@ -196,6 +256,14 @@ it.each(["pinned", "collapsed", "strip", "floating", "phone"] as const)(
     try {
       if (mode === "floating" || mode === "phone")
         act(() => openFloating("peek"));
+      if (mode === "floating" || mode === "phone")
+        await waitFor(() =>
+          expect(
+            document
+              .querySelector('[data-slot="sidebar-floating"]')
+              ?.contains(document.activeElement)
+          ).toBe(true)
+        );
       await screen.findByRole("link", { name: en.profile.agent });
       expect(
         screen.getAllByRole("link", { name: en.profile.agent })
