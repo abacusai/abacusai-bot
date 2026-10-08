@@ -328,7 +328,8 @@ export class PhoneLane {
         return [`[attachment: ${name} saved to ${saved}]`];
       } catch (error) {
         this.log(`[phone] could not save an attachment: ${describe(error)}`);
-        return [];
+        // Same marker the server uses, so the session tells the user rather than staying silent.
+        return [`[attachment not read: kind=file reason=unavailable]`];
       }
     });
     const { attachments: _bytes, ...rest } = entry;
