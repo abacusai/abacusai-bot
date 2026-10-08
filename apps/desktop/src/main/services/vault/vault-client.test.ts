@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ app: {} }));
 
-const { VaultClient, VAULT_UNAVAILABLE } = await import("./vault-client");
+const { VaultClient, VAULT_UNAVAILABLE, SIGNIN_UNSUPPORTED } =
+  await import("./vault-client");
 
 const SECRET = "hunter2-correct-horse";
 
@@ -338,6 +339,48 @@ describe("VaultClient", () => {
         },
       });
     }
+  });
+
+  it("reports sign-in approvals unsupported on an older server, and keeps the rest of the vault on", async () => {
+    for (const body of [
+      { success: false },
+      {
+        success: false,
+        error: "Action _createAbacusbotSigninApproval not found",
+        errorType: "Generic404Error",
+      },
+    ]) {
+      const console_ = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { vault } = client({
+        _createAbacusbotSigninApproval: { status: 404, body },
+      });
+      expect(await vault.createSigninApproval({ itemId: "login-1" })).toEqual({
+        ok: false,
+        unavailable: false,
+        error: SIGNIN_UNSUPPORTED,
+      });
+      expect(vault.maybeAvailable()).toBe(true);
+      console_.mockRestore();
+    }
+  });
+
+  it("still says a missing login is missing, not unsupported", async () => {
+    const console_ = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { vault } = client({
+      _createAbacusbotSigninApproval: {
+        status: 404,
+        body: {
+          success: false,
+          error: "Could not find vault item",
+          errorType: "DataNotFoundError",
+        },
+      },
+    });
+    const result = await vault.createSigninApproval({ itemId: "login-1" });
+    expect(result.ok === false && result.error).toBe(
+      "Could not find vault item"
+    );
+    console_.mockRestore();
   });
 
   it("sends a login fill's sign-in approval with it", async () => {

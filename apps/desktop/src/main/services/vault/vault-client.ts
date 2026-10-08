@@ -53,6 +53,9 @@ export const VAULT_UNAVAILABLE =
   "The vault is not available for this account, so saved logins and cards cannot be used here.";
 
 const GENERIC_FAILURE = "The vault did not answer. Try again in a moment.";
+/** What a server without sign-in approvals says to asking for one: the rest of the vault still works. */
+export const SIGNIN_UNSUPPORTED =
+  "Sign-in approvals are not supported by this server yet, so a saved login cannot be filled here. Cards and vault pages still work.";
 /** The platform's words for "this account has no vault". */
 const UNAVAILABLE_RE =
   /not available for this account|only available to AbacusAI Bot/i;
@@ -264,9 +267,12 @@ export class VaultClient {
       expiresAt: number | null;
     }>
   > {
-    const result = await this.call("_createAbacusbotSigninApproval", "POST", {
-      itemId: input.itemId,
-    });
+    const result = await this.call(
+      "_createAbacusbotSigninApproval",
+      "POST",
+      { itemId: input.itemId },
+      SIGNIN_UNSUPPORTED
+    );
     if (result.ok === false) return result;
     const record = (result.value ?? {}) as Record<string, unknown>;
     const signinApprovalId = text(field(record, "signinApprovalId"));
@@ -303,9 +309,12 @@ export class VaultClient {
       expiresAt: number | null;
     }>
   > {
-    const result = await this.call("_getAbacusbotSigninApproval", "GET", {
-      signinApprovalId,
-    });
+    const result = await this.call(
+      "_getAbacusbotSigninApproval",
+      "GET",
+      { signinApprovalId },
+      SIGNIN_UNSUPPORTED
+    );
     if (result.ok === false) return result;
     const record = (result.value ?? {}) as Record<string, unknown>;
     const status = record.status;
@@ -370,11 +379,16 @@ export class VaultClient {
     return { ok: false, unavailable: false, error: GENERIC_FAILURE };
   }
 
-  /** One call. The bodies stay in this function: only the method and status are logged. */
+  /**
+   * One call. The bodies stay in this function: only the method and status
+   * are logged. `missingRoute` is what a newer endpoint's absence on an older
+   * server means, said instead of switching the whole vault off.
+   */
   private async call(
     method: string,
     httpMethod: "GET" | "POST",
-    body: Record<string, unknown> = {}
+    body: Record<string, unknown> = {},
+    missingRoute?: string
   ): Promise<
     | { ok: true; value: unknown }
     | { ok: false; unavailable: boolean; error: string; notFound?: boolean }
@@ -421,6 +435,14 @@ export class VaultClient {
     }
     this.log(`[vault] ${method}: refused (HTTP ${status})`);
     const reason = text(payload?.error);
+    // An older server answers an endpoint it lacks with a bare 404 or a
+    // Generic404Error ("Action ... not found"); a missing item is a DataNotFoundError.
+    if (
+      missingRoute != null &&
+      status === 404 &&
+      (reason == null || text(payload?.errorType) === "Generic404Error")
+    )
+      return { ok: false, unavailable: false, error: missingRoute };
     // A missing route (an older server) is a vault that is not there.
     if (
       (status === 404 && reason == null) ||

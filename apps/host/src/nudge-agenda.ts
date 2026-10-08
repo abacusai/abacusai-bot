@@ -19,7 +19,7 @@ import type { PhoneInboxEntry } from "./phone-inbox";
  * The phone loop's check-in agenda: what the user's unfinished work is
  * waiting on, as value-free summaries the server may check in about inside
  * the WhatsApp window (`nudge_agenda` on `/v1/abacusaibot_channels`). What
- * waits on the user (a vault page, a payment approval, a paused checkout),
+ * waits on the user (a vault page, a payment or sign-in approval, a paused checkout),
  * loops due soon, connector links not finished, and the language check-ins
  * go out in. Posted on every start (an empty agenda clears what a previous host
  * left), after every turn, and when it changes. The server sends the
@@ -129,6 +129,8 @@ function waitSummary(wait: PendingWait): string {
       return "A secure page for a one-time code was sent and is not finished yet.";
     case "payment":
       return `A payment${total != null ? ` of ${total}` : ""}${payee != null ? ` to ${payee}` : ""} is waiting for the user's approval on the page sent.`;
+    case "signin":
+      return `A sign-in${name != null ? ` to ${name}` : ""} is waiting for the user's tap on the page sent.`;
     case "checkout":
       return `A booking or purchase${payee != null ? ` with ${payee}` : ""}${total != null ? ` (${total})` : ""} is paused, waiting for ${PAUSE_NEEDS[wait.stage] ?? "the user"}.`;
   }

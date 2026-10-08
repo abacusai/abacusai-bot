@@ -474,6 +474,8 @@ let holdScript: Promise<void> = Promise.resolve();
 let holdFill: Promise<void> = Promise.resolve();
 /** What the platform says of a sign-in approval, and of a vault page the bot sent. */
 let signinStatus = "pending";
+/** A login field the vault refuses once, before handing anything over. */
+let refuseFieldOnce: string | null = null;
 let requestStatusResult: Record<string, unknown> = { status: "pending" };
 const platformFetch = (async (input: URL | string, init?: RequestInit) => {
   const url = new URL(String(input));
@@ -486,6 +488,13 @@ const platformFetch = (async (input: URL | string, init?: RequestInit) => {
   if (method === "_fillAbacusbotVaultField") {
     timeline.push("fetched");
     await holdFill;
+    if (refuseFieldOnce != null && body.field === refuseFieldOnce) {
+      refuseFieldOnce = null;
+      return new Response(
+        JSON.stringify({ success: false, error: "Too many vault fills." }),
+        { status: 429 }
+      );
+    }
   }
   if (method === "_fillAbacusbotVaultField" && body.paymentApprovalId != null) {
     const key = `${String(body.paymentApprovalId)}:${String(body.field)}`;
@@ -735,6 +744,7 @@ beforeEach(() => {
   holdFill = Promise.resolve();
   holdScript = Promise.resolve();
   signinStatus = "pending";
+  refuseFieldOnce = null;
   requestStatusResult = { status: "pending" };
   vault.sessions.for("s1").requests.clear();
   frames = [];
@@ -2574,6 +2584,55 @@ describe("sign-in approval", () => {
       "username",
       "password",
     ]);
+  });
+
+  it("retries a sign-in whose password failed before delivery: the username stays, the password fills", async () => {
+    signInForm();
+    refuseFieldOnce = "password";
+
+    const first = await fillLogin();
+    expect(first.isError).toBe(true);
+    expect(first.text).toContain("The username was filled into");
+    expect([...vault.sessions.for("s1").signin!.used]).toEqual(["username"]);
+
+    const retry = await fillLogin();
+    expect(retry.isError).toBe(false);
+    expect(retry.text).toContain("username already filled; password filled");
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+      "password",
+    ]);
+  });
+
+  it("leaves the email the password step shows again as it is, and fills the password", async () => {
+    signInForm(["#user"]);
+    expect((await fillLogin()).isError).toBe(false);
+
+    // The password step shows the email again beside the password field.
+    tab = makeTab();
+    secrets = new SecretFields();
+    signInForm(["#user", "#pass"]);
+    const password = await fillLogin();
+
+    expect(password.isError).toBe(false);
+    expect(password.text).toContain("username already filled");
+    expect(fills().map((entry) => entry.body.field)).toEqual([
+      "username",
+      "password",
+    ]);
+  });
+
+  it("says it waits for approval first, before saying the login is for another site", async () => {
+    vault.sessions.for("s1").signin = null;
+    await checkout("start", { login_item_id: "login-1" });
+    signInForm();
+    page.top = "https://www.elsewhere.example";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/^Waiting for sign-in approval:/);
+    expect(fills()).toEqual([]);
   });
 
   it("refuses on another site than the one the user allowed", async () => {

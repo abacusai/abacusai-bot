@@ -125,6 +125,7 @@ import {
   type DomNode,
   type FieldFacts,
   isPaymentFrameOrigin,
+  NO_SIGNIN_REASON,
   planFill,
   readPageTotal,
   type PageTotal,
@@ -4143,7 +4144,8 @@ export class McpBrowserServer extends McpHttpServer {
    * Why it did not fill is kept for a login stop on the same page.
    */
   private async executeLoginFill(
-    itemId: string,
+    // The model's item_id is not used: the login is the allowed sign-in's.
+    _itemId: string,
     sessionId?: string
   ): Promise<ToolResult> {
     const session = this.vaultSession(sessionId);
@@ -4166,12 +4168,12 @@ export class McpBrowserServer extends McpHttpServer {
           "Reload the page, snapshot, and fill again without running scripts."
       );
     const topOrigin = await this.liveOrigin(wc);
-    // The login the user allowed a sign-in with wins, then the one the run
-    // was handed, over an id the model typed; an item whose sites the vault
-    // names must be for this page. With no sign-in allowed, planFill says the
-    // run waits for the user.
-    const loginItemId =
-      session.allowedSignin()?.item ?? session.loginItem?.itemId ?? itemId;
+    // The login is the one the user allowed a sign-in with, never an id the
+    // model typed; an item whose sites the vault names must be for this page.
+    const signin = session.allowedSignin();
+    // No sign-in allowed: that is the reason, before any item or site one.
+    if (signin == null) return refuse(NO_SIGNIN_REASON, true);
+    const loginItemId = signin.item;
     const sites = await this.loginSites(loginItemId, sessionId);
     const host = httpsHost(topOrigin);
     if (
@@ -4303,9 +4305,17 @@ export class McpBrowserServer extends McpHttpServer {
         username: null,
         password: null,
       };
+      // A username filled under this sign-in whose password was not (it
+      // failed before the vault handed it over, or the site asks again on
+      // its password step) is left as it is: the retry fills the password.
+      const usernameKept =
+        choice.password != null &&
+        signin.used.has("username") &&
+        !signin.used.has("password");
       for (const field of ["username", "password"] as const) {
         const node = choice[field];
         if (node == null) continue;
+        if (field === "username" && usernameKept) continue;
         const name = fieldName(await refOf(node), field);
         const failure = await this.fillLoginField({
           wc,
@@ -4333,6 +4343,7 @@ export class McpBrowserServer extends McpHttpServer {
       return this.ok(
         loginFilledText({
           ...filled,
+          usernameKept,
           // A button that does not read as signing in is never named as the next click.
           submit: submitName(purpose.nameButton ? submit : null),
         })

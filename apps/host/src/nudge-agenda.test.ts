@@ -285,6 +285,21 @@ describe("the check-in agenda", () => {
     );
   });
 
+  it("says a pending sign-in waits for the user's tap, naming the site but no domain", () => {
+    const summary = waitItem({
+      itemId: "wait:2",
+      kind: "signin",
+      stage: "approval",
+      site: "linkedin.com",
+      since: NOW,
+      expiresAt: NOW + 30 * 60_000,
+    }).summary;
+    expect(summary).toBe(
+      "A sign-in to linkedin is waiting for the user's tap on the page sent."
+    );
+    expect(refusedTextRule(summary)).toBeNull();
+  });
+
   it("names a payee that reads as a domain by its name alone", () => {
     const summary = waitItem({
       itemId: "wait:1",

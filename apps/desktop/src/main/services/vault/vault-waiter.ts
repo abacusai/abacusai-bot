@@ -32,7 +32,8 @@ const WATCH_EVERY_MS = 3_000;
 
 const savedNote = (
   request: PendingVaultRequest,
-  itemId: string | null
+  itemId: string | null,
+  signinAllowed: boolean
 ): string => {
   const item = itemId != null ? ` (vault item ${itemId})` : "";
   if (request.kind === "login")
@@ -40,7 +41,9 @@ const savedNote = (
       `[vault] The user saved their login${request.site != null ? ` for ${request.site}` : ""}${item}. ` +
       `To sign in, pass login_item_id ${itemId ?? "(its id from vault_items)"} to browser_task, with continue_from_last when a ` +
       "browser run is paused for this sign-in; its browser fills the username and password itself, and the values never pass through you. " +
-      "Saving it allowed this first sign-in for the next 10 minutes; a later one needs signin_approval."
+      (signinAllowed
+        ? "Saving it allowed this first sign-in for the next 10 minutes; a later one needs signin_approval."
+        : "Each sign-in with it needs signin_approval first.")
     );
   if (request.kind === "card")
     return (
@@ -145,14 +148,18 @@ export class VaultWaiter {
       session.requests.delete(requestId);
       const saved = status.value;
       // Saving a login on its page allowed the one sign-in that follows.
-      if (saved.status === "completed" && saved.signinApprovalId != null)
-        await this.adoptSavedSignin(
+      const signinAllowed =
+        saved.status === "completed" &&
+        saved.signinApprovalId != null &&
+        (await this.adoptSavedSignin(
           session,
           saved.signinApprovalId,
           saved.itemId
-        );
+        ));
       if (status.value.status === "completed")
-        notes.push(savedNote(request, status.value.itemId) + TELL_USER);
+        notes.push(
+          savedNote(request, status.value.itemId, signinAllowed) + TELL_USER
+        );
       else if (status.value.status === "failed")
         notes.push(FAILED_NOTE + TELL_USER);
     }
@@ -214,14 +221,15 @@ export class VaultWaiter {
 
   /**
    * The sign-in a login's save allowed, held as the session's: bound to the
-   * site the server says, not the one the model asked to save for.
+   * site the server says, not the one the model asked to save for. Whether
+   * it was held.
    */
   private async adoptSavedSignin(
     session: VaultSession,
     signinApprovalId: string,
     itemId: string | null
-  ): Promise<void> {
-    if (itemId == null) return;
+  ): Promise<boolean> {
+    if (itemId == null) return false;
     const status =
       await this.deps.client.signinApprovalStatus(signinApprovalId);
     if (
@@ -229,7 +237,7 @@ export class VaultWaiter {
       status.value.status !== "approved" ||
       status.value.site == null
     )
-      return;
+      return false;
     session.signin = {
       id: signinApprovalId,
       item: itemId,
@@ -241,5 +249,6 @@ export class VaultWaiter {
           ? status.value.expiresAt * 1000
           : this.now() + SIGNIN_ON_SAVE_LIFETIME_MS,
     };
+    return true;
   }
 }

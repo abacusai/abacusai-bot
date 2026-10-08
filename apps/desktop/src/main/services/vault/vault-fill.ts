@@ -172,6 +172,10 @@ export interface FillContext {
 }
 
 const refuse = (error: string): FillPlan => ({ ok: false, error });
+/** Why a login fill waits when the user has allowed no sign-in: the first thing a login fill says. */
+export const NO_SIGNIN_REASON =
+  'Waiting for sign-in approval: no sign-in is allowed for this login now, so nothing was filled. Stop with browser_pause need:"login"; the user allows the sign-in first.';
+
 const awaitSignin = (error: string): FillPlan => ({
   ok: false,
   error: `Waiting for sign-in approval: ${error}`,
@@ -247,9 +251,7 @@ export function planFill(context: FillContext): FillPlan {
     const pause =
       'nothing was filled. Stop with browser_pause need:"login"; the user allows the sign-in first.';
     if (signin == null)
-      return awaitSignin(
-        `no sign-in is allowed for this login now, so ${pause}`
-      );
+      return { ok: false, error: NO_SIGNIN_REASON, awaitingApproval: true };
     if (signin.item !== context.itemId)
       return awaitSignin(
         `the sign-in the user allowed is for another saved login, so ${pause}`

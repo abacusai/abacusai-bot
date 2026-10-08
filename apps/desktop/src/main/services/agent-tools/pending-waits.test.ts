@@ -115,6 +115,33 @@ describe("PendingWaits: the vault and the checkout", () => {
     };
   };
 
+  it("lists a pending sign-in by its site, with no approval or item id, until it is answered or expires", () => {
+    const { vault, list, tick, now } = setup();
+    vault.signin = {
+      id: "signin-secret",
+      item: "login-item-secret",
+      site: "linkedin.com",
+      status: "pending",
+      used: new Set(),
+      expiresAt: now() + 60_000,
+    };
+    const listed = list();
+    expect(listed).toEqual([
+      expect.objectContaining({
+        kind: "signin",
+        stage: "approval",
+        site: "linkedin.com",
+        expiresAt: now() + 60_000,
+      }),
+    ]);
+    expect(JSON.stringify(listed)).not.toMatch(/secret/);
+    vault.signin.status = "approved";
+    expect(list()).toEqual([]);
+    vault.signin.status = "pending";
+    tick(60_000);
+    expect(list()).toEqual([]);
+  });
+
   it("lists pages sent and not completed, by kind and site, with no request or item id", () => {
     const { vault, list, now } = setup();
     vault.requests.set("req-secret-1", {

@@ -1,7 +1,7 @@
 /**
  * What a session is waiting on the user for, as plain structured state: a
  * connector link not yet connected, a vault page not yet completed, a
- * payment approval not yet given, a checkout paused for the user. The hosted
+ * payment approval or sign-in not yet given, a checkout paused for the user. The hosted
  * phone lane turns these into its check-in agenda. A wait never carries a
  * link, a vault, request or approval id, or anything anyone typed.
  */
@@ -23,6 +23,7 @@ export interface PendingWait {
     | "vault_card"
     | "vault_code"
     | "payment"
+    | "signin"
     | "checkout";
   /** Where it stands: "link_sent", "page_sent", "approval", or what a checkout paused for. */
   stage: string;
@@ -143,7 +144,7 @@ export class PendingWaits {
   }
 
   /**
-   * Pages sent and not completed, a payment approval asked for, and a
+   * Pages sent and not completed, a payment or sign-in approval asked for, and a
    * checkout paused for the user. A pause that one of those already covers
    * is the same wait, so it is not listed twice.
    */
@@ -181,6 +182,18 @@ export class PendingWaits {
           amount: approval.amount,
           currency: approval.currency,
           expiresAt: approval.expiresAt,
+        });
+      }
+      const signin = vault.signin;
+      if (signin?.status === "pending" && signin.expiresAt > now) {
+        const key = `${sessionId}|signin|${signin.id}`;
+        live.add(key);
+        waits.push({
+          ...this.identity(key),
+          kind: "signin",
+          stage: "approval",
+          site: signin.site,
+          expiresAt: signin.expiresAt,
         });
       }
       const pause = vault.checkout.paused;

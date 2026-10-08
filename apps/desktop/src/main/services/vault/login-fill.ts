@@ -333,7 +333,11 @@ export function loginFilledText(input: {
   username: string | null;
   password: string | null;
   submit: string;
+  /** The username was filled earlier under this sign-in, so it was left as it is. */
+  usernameKept?: boolean;
 }): string {
+  if (input.usernameKept === true && input.password != null)
+    return `Saved login: username already filled; password filled into ${input.password}. Now click ${input.submit}.`;
   if (input.username != null && input.password != null)
     return `Saved login filled (username into ${input.username}, password into ${input.password}); now click ${input.submit}.`;
   if (input.username != null)
