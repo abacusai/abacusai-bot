@@ -14,7 +14,7 @@ import { HostedMcpConnect } from "#main/services/mcp/hosted-mcp-connect";
 import { WhisperModelService } from "#main/services/voice/whisper-model-service";
 
 import { createNodeAppOperations } from "./app-operations";
-import { createHostHttpServer } from "./http";
+import { createHostHttpServer, hostOwnerDigest } from "./http";
 import { HostLease } from "./lease";
 it("health reveals only readiness; uploads authenticate and save raw and multipart files without CORS", async () => {
   const home = await mkdtemp(join(tmpdir(), "host-http-"));
@@ -57,12 +57,20 @@ it("health reveals only readiness; uploads authenticate and save raw and multipa
   };
   try {
     const health = await fetch(`${base}/healthz`);
-    expect(Object.keys(await health.json()).sort()).toEqual(
+    // The owner only as a digest: the SPA checks it, nobody reads it off.
+    const healthBody = (await health.json()) as Record<string, unknown>;
+    expect(healthBody.ownerDigest).toBe(hostOwnerDigest("o"));
+    expect(JSON.stringify(healthBody)).not.toContain('"o"');
+    // Pinned: the SPA computes the same digest (connect/services.ts).
+    expect(hostOwnerDigest("owner")).toBe(
+      "315f782a654bc80236200d6defb7f21169bfb004d4e495452ef3a01959f1262b"
+    );
+    expect(Object.keys(healthBody).sort()).toEqual(
       [
         "ok",
         "version",
         "contractVersion",
-        "owner",
+        "ownerDigest",
         "uptime",
         "busy",
         "lastActivityAt",

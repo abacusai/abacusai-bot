@@ -12,6 +12,7 @@ import {
   compareHostVersions,
   hostConnection,
   hostHttpBase,
+  hostOwnerDigest,
   identifyHost,
   pollDelayMs,
   reconnectDelayMs,
@@ -132,11 +133,34 @@ it("rejects malformed envelopes, bootstrap data and tokens immediately", async (
     });
   }
 });
+it("pins the owner digest the host publishes", async () => {
+  expect(await hostOwnerDigest("owner")).toBe(
+    "315f782a654bc80236200d6defb7f21169bfb004d4e495452ef3a01959f1262b"
+  );
+});
 it("offers a restart for an older host, a reload for an older page, and refuses the wrong owner", async () => {
+  const { owner: _owner, ...anonymous } = health;
   for (const [body, kind] of [
     [{ ...health, contractVersion: CONTRACT_VERSION - 1 }, "version"],
     [{ ...health, contractVersion: CONTRACT_VERSION + 1 }, "reload"],
     [{ ...health, owner: "other" }, "connection"],
+    [
+      {
+        ...anonymous,
+        ownerDigest: await hostOwnerDigest("other"),
+        contractVersion: CONTRACT_VERSION + 1,
+      },
+      "connection",
+    ],
+    [
+      {
+        ...anonymous,
+        ownerDigest: await hostOwnerDigest("owner"),
+        contractVersion: CONTRACT_VERSION + 1,
+      },
+      "reload",
+    ],
+    [{ ...anonymous, contractVersion: CONTRACT_VERSION + 1 }, "connection"],
   ] as const) {
     vi.stubGlobal(
       "fetch",

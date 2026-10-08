@@ -72,7 +72,9 @@ const Bootstrap = v.variant("status", [
 ]);
 const Health = v.object({
   ok: v.boolean(),
-  owner: v.string(),
+  /** Older hosts publish the owner itself; newer ones only its digest. */
+  owner: v.optional(v.string()),
+  ownerDigest: v.optional(v.string()),
   contractVersion: v.number(),
   version: v.nullish(v.string()),
   busy: v.nullish(v.boolean()),
@@ -342,6 +344,25 @@ export const setPageTransport = (transport: HostTransport): void => {
 
 const IDENTITY_MISMATCH = "Host identity mismatch";
 
+/** SHA-256 hex of the owner, as the host's `/healthz` publishes it (apps/host/src/http.ts). */
+export const hostOwnerDigest = async (owner: string): Promise<string> => {
+  const bytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`abacusai-bot-host-owner\n${owner}`)
+  );
+  return Array.from(new Uint8Array(bytes), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+};
+
+const healthOwnerIs = async (
+  health: { owner?: string | undefined; ownerDigest?: string | undefined },
+  owner: string
+): Promise<boolean> =>
+  health.ownerDigest != null
+    ? health.ownerDigest === (await hostOwnerDigest(owner))
+    : health.owner === owner;
+
 /** How long an idle older host gets to come up on the bootstrap's version. */
 const UPDATE_WAIT_MS = 90_000;
 
@@ -424,7 +445,7 @@ export const readyHost = async (
     }
     if (response?.ok) {
       const health = parse(Health, body);
-      if (!health.ok || health.owner !== owner)
+      if (!health.ok || !(await healthOwnerIs(health, owner)))
         throw new ConnectError("connection", IDENTITY_MISMATCH);
       // The older side updates: the host by a restart, this page by a reload.
       if (health.contractVersion < CONTRACT_VERSION)

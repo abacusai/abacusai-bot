@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { mkdtemp, writeFile, rm, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -45,7 +45,12 @@ try {
   const health = await fetch(`http://127.0.0.1:${port}/healthz`);
   assert.equal(health.status, 200);
   assert.equal(health.headers.get("access-control-allow-origin"), null);
-  assert.equal((await health.json()).owner, "owner");
+  const healthBody = await health.json();
+  assert.equal(healthBody.owner, undefined);
+  assert.equal(
+    healthBody.ownerDigest,
+    createHash("sha256").update("abacusai-bot-host-owner\nowner").digest("hex")
+  );
   const payload = Buffer.from(
     JSON.stringify({
       o: "owner",

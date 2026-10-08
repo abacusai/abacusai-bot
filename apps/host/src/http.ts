@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
 import { createServer, type ServerResponse } from "node:http";
 import { basename } from "node:path";
@@ -21,6 +21,11 @@ const json = (response: ServerResponse, status: number, value: unknown) =>
       "cache-control": "no-store",
     })
     .end(JSON.stringify(value));
+/** What `/healthz` publishes instead of the owner; the SPA computes the same digest. */
+export const hostOwnerDigest = (owner: string): string =>
+  createHash("sha256")
+    .update(`abacusai-bot-host-owner\n${owner}`)
+    .digest("hex");
 export const createHostHttpServer = (
   identity: HostIdentity,
   app: AppOperations,
@@ -37,7 +42,7 @@ export const createHostHttpServer = (
         ok: true,
         version: app.appVersion(),
         contractVersion: CONTRACT_VERSION,
-        owner: identity.owner,
+        ownerDigest: hostOwnerDigest(identity.owner),
         uptime: process.uptime(),
         busy: lease.busy,
         lastActivityAt: lease.lastActivityAt,
