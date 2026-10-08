@@ -69,7 +69,7 @@ export const ProfileMenu = () => {
   const [open, setOpen] = useState(false);
   const [invite, setInvite] = useState(false);
   const [signOut, setSignOut] = useState(false);
-  const inviteOpens = useRef(0);
+  const [inviteOpens, setInviteOpens] = useState(0);
   const reduced = useMotionPreference() === "reduced";
   const trigger = useRef<HTMLButtonElement>(null);
   const summary = useQuery({
@@ -209,7 +209,7 @@ export const ProfileMenu = () => {
             <DropdownMenuItem
               className={row}
               onClick={() => {
-                inviteOpens.current += 1;
+                setInviteOpens((count) => count + 1);
                 setInvite(true);
               }}
             >
@@ -256,7 +256,7 @@ export const ProfileMenu = () => {
           {summary.data ? (
             <ReferralLink
               summary={summary.data}
-              firstOpen={inviteOpens.current === 1}
+              firstOpen={inviteOpens === 1}
             />
           ) : (
             <div
