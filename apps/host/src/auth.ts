@@ -23,7 +23,7 @@ export const readHostIdentity = (): HostIdentity => {
     );
   return { owner, org, secret, origins };
 };
-export const authenticate = (
+export const authenticateProxyRequest = (
   request: IncomingMessage,
   identity: HostIdentity
 ): string | null => {
@@ -35,6 +35,14 @@ export const authenticate = (
     request.headers["x-abacus-org-id"] !== identity.org
   )
     return "org";
+  return null;
+};
+export const authenticate = (
+  request: IncomingMessage,
+  identity: HostIdentity
+): string | null => {
+  const failure = authenticateProxyRequest(request, identity);
+  if (failure) return failure;
   const protocols = (request.headers["sec-websocket-protocol"] ?? "")
     .split(",")
     .map((x) => x.trim());

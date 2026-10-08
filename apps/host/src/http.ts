@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
 import { createServer, type ServerResponse } from "node:http";
-import { basename } from "node:path";
+import { basename, extname } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
@@ -13,7 +13,9 @@ import type { WhisperModelService } from "#main/services/voice/whisper-model-ser
 import { openHostFile } from "#main/services/workspace/host-path";
 
 import { authenticate, mcpProofFailure, type HostIdentity } from "./auth";
+import { downloadTicket, downloadFailure } from "./downloads";
 import type { HostLease } from "./lease";
+import { streamUpload } from "./uploads";
 const json = (response: ServerResponse, status: number, value: unknown) =>
   response
     .writeHead(status, {
@@ -95,11 +97,35 @@ export const createHostHttpServer = (
           return;
       }
     }
-    const failure = authenticate(request, identity);
+    const failure =
+      url.pathname === "/files" &&
+      (request.method === "GET" || request.method === "HEAD") &&
+      url.searchParams.has("ticket")
+        ? downloadFailure(request, identity, url, now())
+        : authenticate(request, identity);
     if (failure) {
       console.warn(`[host-auth] ${failure}`);
       json(response, 403, { error: "forbidden" });
       request.resume();
+      return;
+    }
+    if (request.method === "POST" && url.pathname === "/files") {
+      const path = url.searchParams.get("path") ?? "";
+      const root = url.searchParams.get("hostRoot") ?? "";
+      const file = await openHostFile(path, root);
+      if (file.ok === false || !file.stat.isFile()) {
+        json(
+          response,
+          file.ok === false ? (file.error === "not-found" ? 404 : 403) : 409,
+          {
+            error: "download-failed",
+          }
+        );
+        return;
+      }
+      json(response, 200, {
+        ticket: downloadTicket(identity, path, root, now()),
+      });
       return;
     }
     if (
@@ -169,10 +195,23 @@ export const createHostHttpServer = (
             json(response, 400, { error: "invalid-max-bytes" });
             return;
           }
-          // HEAD reports the same bounded representation without opening a stream.
-          const range =
-            request.method === "GET" && request.headers.range === "bytes=0-0";
-          if (range && (info.size === 0 || maxBytes === 0)) {
+          const rangeHeader =
+            request.method === "GET" ? request.headers.range : undefined;
+          const rangeMatch = rangeHeader?.match(/^bytes=(\d+)-(\d*)$/);
+          const start = rangeMatch ? Number(rangeMatch[1]) : 0;
+          const end = rangeMatch?.[2]
+            ? Math.min(Number(rangeMatch[2]), info.size - 1)
+            : info.size - 1;
+          const range = request.method === "GET" && !!rangeHeader;
+          if (
+            range &&
+            (!rangeMatch ||
+              !Number.isSafeInteger(start) ||
+              !Number.isSafeInteger(end) ||
+              start > end ||
+              start >= info.size ||
+              maxBytes === 0)
+          ) {
             response
               .writeHead(416, {
                 "content-range": `bytes */${info.size}`,
@@ -183,12 +222,36 @@ export const createHostHttpServer = (
               .end();
             return;
           }
-          const length = Math.min(info.size, maxBytes, range ? 1 : info.size);
+          const length = Math.min(info.size - start, maxBytes, end - start + 1);
+          const types: Record<string, string> = {
+            ".txt": "text/plain",
+            ".md": "text/plain",
+            ".html": "text/html",
+            ".csv": "text/csv",
+            ".json": "application/json",
+            ".pdf": "application/pdf",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".svg": "image/svg+xml",
+          };
           response.writeHead(range ? 206 : 200, {
-            "content-type": "application/octet-stream",
+            "content-type":
+              types[extname(file.realFile).toLowerCase()] ??
+              "application/octet-stream",
+            "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(basename(file.realFile)).replace(/'/g, "%27")}`,
+            "x-content-type-options": "nosniff",
+            "content-security-policy": "default-src 'none'; sandbox",
+            "accept-ranges": "bytes",
             "content-length": length,
             "x-file-size": info.size,
-            ...(range ? { "content-range": `bytes 0-0/${info.size}` } : {}),
+            ...(range
+              ? {
+                  "content-range": `bytes ${start}-${start + length - 1}/${info.size}`,
+                }
+              : {}),
             "cache-control": "no-store",
           });
           lease.activity();
@@ -209,7 +272,11 @@ export const createHostHttpServer = (
             // A short EOF errors the pipeline and destroys the response before
             // it can end cleanly with fewer bytes than Content-Length.
             await pipeline(
-              handle.createReadStream({ end: length - 1, autoClose: false }),
+              handle.createReadStream({
+                start,
+                end: start + length - 1,
+                autoClose: false,
+              }),
               completeBody,
               response
             );
@@ -251,6 +318,17 @@ export const createHostHttpServer = (
       return;
     }
     try {
+      if (url.searchParams.has("relativePath")) {
+        const path = await streamUpload(
+          request,
+          folder,
+          url.searchParams.get("batch") ?? "",
+          url.searchParams.get("relativePath") ?? ""
+        );
+        lease.activity();
+        json(response, 200, { success: true, paths: [path] });
+        return;
+      }
       const chunks: Buffer[] = [];
       let size = 0;
       for await (const chunk of request) {
@@ -292,8 +370,10 @@ export const createHostHttpServer = (
       );
       lease.activity();
       json(response, result.success ? 200 : 400, result);
-    } catch {
+    } catch (error) {
       if (!response.headersSent)
-        json(response, 400, { error: "upload-failed" });
+        json(response, 400, {
+          error: error instanceof Error ? error.message : "upload-failed",
+        });
     }
   });

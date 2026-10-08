@@ -38,6 +38,7 @@ export interface FilePreviewProps {
   onOpenExternally?(path: string): void;
   onReveal?(path: string): void;
   showActions?: boolean;
+  initialView?: "source" | "preview";
 }
 
 type Loaded =
@@ -58,17 +59,27 @@ export const FilePreview = ({
   onOpenExternally,
   onReveal,
   showActions = true,
+  initialView = "source",
 }: FilePreviewProps) => {
   const { t } = useTranslation();
-  const [htmlPreview, setHtmlPreview] = useState(false);
+  const htmlKey = `${path}\u0000${initialView}`;
+  const [htmlChoice, setHtmlChoice] = useState<{
+    key: string;
+    preview: boolean;
+  }>();
+  const htmlPreview =
+    htmlChoice?.key === htmlKey
+      ? htmlChoice.preview
+      : initialView === "preview";
   const [attempt, setAttempt] = useState(0);
-  const [downloadError, setDownloadError] = useState(false);
+  const [downloadFailure, setDownloadFailure] = useState<string | null>(null);
   const kind =
     previewKind(path) === "pptx" && read.pptx == null
       ? "external"
       : previewKind(path);
   // Keyed by what was read, so a new path shows loading without a reset.
   const key = `${kind}\u0000${hostRoot}\u0000${path}\u0000${attempt}\u0000${htmlPreview}`;
+  const downloadError = downloadFailure === key;
   const [result, setResult] = useState<{ key: string; loaded: Loaded }>({
     key: "",
     loaded: { state: "loading" },
@@ -151,14 +162,16 @@ export const FilePreview = ({
   }, [key, kind]);
 
   const actions = (
-    <div className="flex shrink-0 items-center gap-1">
+    <div className="flex shrink-0 flex-wrap items-center gap-1">
       {browserPreview && (
         <>
           {previewKind(path) === "html" && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setHtmlPreview(!htmlPreview)}
+              onClick={() =>
+                setHtmlChoice({ key: htmlKey, preview: !htmlPreview })
+              }
             >
               {t(htmlPreview ? "web.files.source" : "web.files.preview")}
             </Button>
@@ -167,9 +180,9 @@ export const FilePreview = ({
             variant="ghost"
             size="sm"
             onClick={() => {
-              setDownloadError(false);
+              setDownloadFailure(null);
               void downloadFile({ filePath: path, hostRoot }).catch(() =>
-                setDownloadError(true)
+                setDownloadFailure(key)
               );
             }}
           >
@@ -206,11 +219,8 @@ export const FilePreview = ({
       data-slot="file-preview"
       data-kind={kind}
     >
-      <div className="flex items-center gap-2 border-b px-3 py-2">
-        <span
-          className="min-w-0 flex-1 truncate text-sm font-medium"
-          title={path}
-        >
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <span className="w-full truncate text-sm font-medium" title={path}>
           {baseName(path)}
         </span>
         {(showActions || browserPreview) && actions}
@@ -292,6 +302,11 @@ export const FilePreview = ({
           )
         ) : (
           <>
+            {browserPreview && loaded.content === "" && (
+              <p role="status" className="text-muted-foreground">
+                {t("web.files.emptyFile")}
+              </p>
+            )}
             {loaded.truncated && (
               <p className="text-muted-foreground pb-2 text-xs" role="note">
                 {t("bots.chat.preview.truncated")}

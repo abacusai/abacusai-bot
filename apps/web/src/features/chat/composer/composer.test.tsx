@@ -578,7 +578,7 @@ describe("R2-T25 composer", () => {
       document.querySelectorAll(
         '[data-state="uploading"], [data-state="error"]'
       )
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
   it.each([true, false])(
     "Mod+. stops only the focused view (%s)",

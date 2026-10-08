@@ -11,6 +11,7 @@ export const BrowserTab: typeof Native = ({ file, root, url }) => {
   if (file)
     return (
       <FilePreview
+        initialView="preview"
         path={file}
         hostRoot={root}
         read={{

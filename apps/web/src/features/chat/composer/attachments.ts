@@ -1,15 +1,19 @@
-import {
-  draftStore,
-  updateDraft,
-  type DraftAttachment,
-} from "#renderer/lib/continuity/composer-drafts";
-
 /**
  * Attachments (spec 02 §8.6): a picked or dropped file with a real path is
  * used directly; pasted data is saved under the attachments base first.
  * The extension rule is today's (`chat-panel.tsx:1403-1410`).
  */
+import { UPLOAD_LIMITS } from "@abacus-ai/contract/contract/files";
+
+import {
+  draftStore,
+  updateDraft,
+  type DraftAttachment,
+} from "#renderer/lib/continuity/composer-drafts";
+import { i18n } from "#renderer/lib/i18n";
+
 import type { ChatHostActions } from "../runtime/host-actions";
+import { relativeFilePath, isUploadJunk, droppedFiles } from "./dropped-files";
 
 const MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -61,6 +65,7 @@ export const addPaths = (
     mimeType?: string;
     kind?: "file" | "folder";
     count?: number;
+    source?: "computer" | "vm";
   }>
 ): void =>
   updateDraft(threadId, (draft) => ({
@@ -72,6 +77,7 @@ export const addPaths = (
         name: file.name ?? file.path.split(/[\\/]/).at(-1) ?? file.path,
         path: file.path,
         state: "done",
+        ...(file.source ? { source: file.source } : {}),
         ...(file.size != null ? { size: file.size } : {}),
         ...(file.mimeType ? { mimeType: file.mimeType } : {}),
         ...(file.kind ? { kind: file.kind, count: file.count } : {}),
@@ -87,6 +93,16 @@ export const addFiles = async (
   attachmentsBase: string | null,
   context?: import("../runtime/host-actions").ResolveAttachmentContext
 ): Promise<void> => {
+  if (host.uploadFile && files.length) {
+    await prepareAttachments(
+      threadId,
+      async () => [...files],
+      host,
+      attachmentsBase,
+      context
+    );
+    return;
+  }
   for (const file of files) {
     const path = host.pathForFile(file);
     if (path != null) {
@@ -95,7 +111,22 @@ export const addFiles = async (
       ]);
       continue;
     }
-    if (attachmentsBase == null) continue;
+    if (attachmentsBase == null) {
+      updateDraft(threadId, (draft) => ({
+        ...draft,
+        attachments: [
+          ...draft.attachments,
+          {
+            id: nextId(),
+            name: file.name,
+            path: null,
+            state: "error",
+            error: i18n.t("chat.composer.pasteUnavailable"),
+          },
+        ],
+      }));
+      continue;
+    }
     const id = nextId();
     const preview =
       file.type.startsWith("image/") &&
@@ -120,6 +151,7 @@ export const addFiles = async (
     const upload = async () => {
       patch(threadId, id, { state: "uploading", error: undefined });
       try {
+        host.validateUpload?.(file);
         const data = new Uint8Array(await file.arrayBuffer());
         const [saved] = await host.savePasted(
           attachmentsBase,
@@ -141,7 +173,75 @@ export const addFiles = async (
   }
 };
 
-export const removeAttachment = (threadId: string, id: string): void =>
+export const addDroppedFiles = (
+  threadId: string,
+  transfer: DataTransfer,
+  host: ChatHostActions,
+  attachmentsBase: string | null,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
+): Promise<void> =>
+  prepareAttachments(
+    threadId,
+    () => droppedFiles(transfer),
+    host,
+    attachmentsBase,
+    context
+  );
+
+const preparing = new Map<string, AbortController>();
+const prepareAttachments = async (
+  threadId: string,
+  read: () => Promise<File[]>,
+  host: ChatHostActions,
+  attachmentsBase: string | null,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext
+): Promise<void> => {
+  const id = nextId();
+  const controller = new AbortController();
+  preparing.set(id, controller);
+  updateDraft(threadId, (draft) => ({
+    ...draft,
+    attachments: [
+      ...draft.attachments,
+      {
+        id,
+        name: i18n.t("web.files.upload"),
+        path: null,
+        state: "uploading",
+        source: "computer",
+      },
+    ],
+  }));
+  try {
+    const files = await read();
+    if (controller.signal.aborted) return;
+    if (host.uploadFile)
+      await addUploads(threadId, files, host, context, controller.signal, () =>
+        removeAttachment(threadId, id)
+      );
+    else await addFiles(threadId, files, host, attachmentsBase, context);
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      patch(threadId, id, {
+        state: "error",
+        error:
+          error instanceof Error
+            ? error.message
+            : i18n.t("web.files.uploadFailed"),
+      });
+      preparing.delete(id);
+      return;
+    }
+  } finally {
+    if (preparing.has(id)) removeAttachment(threadId, id);
+  }
+};
+
+export const removeAttachment = (threadId: string, id: string): void => {
+  preparing.get(id)?.abort();
+  preparing.delete(id);
+  uploads.get(id)?.controller.abort();
+  uploads.delete(id);
   updateDraft(threadId, (draft) => {
     retries.delete(`${threadId}:${id}`);
     const gone = draft.attachments.find((a) => a.id === id);
@@ -151,6 +251,7 @@ export const removeAttachment = (threadId: string, id: string): void =>
       attachments: draft.attachments.filter((a) => a.id !== id),
     };
   });
+};
 
 export const formatSize = (bytes: number | undefined): string => {
   if (bytes == null) return "";
@@ -174,4 +275,169 @@ export const retryAttachment = async (
   } catch (error) {
     patch(threadId, id, { state: "error", error: String(error) });
   }
+};
+
+const uploads = new Map<
+  string,
+  { controller: AbortController; run: () => Promise<void> }
+>();
+const addUploads = async (
+  threadId: string,
+  originals: readonly File[],
+  host: ChatHostActions,
+  context?: import("../runtime/host-actions").ResolveAttachmentContext,
+  signal?: AbortSignal,
+  prepared?: () => void
+): Promise<void> => {
+  const selected = originals.filter((file) => !isUploadJunk(file));
+  const skipped = originals.length - selected.length;
+  let files = selected;
+  if (
+    selected.length > 200 ||
+    selected.reduce((size, file) => size + file.size, 0) > 100 * 1024 * 1024 ||
+    skipped > 0
+  ) {
+    const { confirmUpload } = await import("#renderer/lib/browser/host-dialog");
+    const include = await confirmUpload(
+      selected.length,
+      formatSize(selected.reduce((size, file) => size + file.size, 0)),
+      skipped
+    );
+    if (include === null || signal?.aborted) return;
+    if (include) files = [...originals];
+  }
+  const total = files.reduce((size, file) => size + file.size, 0);
+  const limitError =
+    files.length > UPLOAD_LIMITS.fileCount ||
+    total > UPLOAD_LIMITS.totalBytes ||
+    files.some((file) => file.size > UPLOAD_LIMITS.fileBytes);
+  if (limitError) {
+    updateDraft(threadId, (draft) => ({
+      ...draft,
+      attachments: [
+        ...draft.attachments,
+        {
+          id: nextId(),
+          name: i18n.t("web.files.upload"),
+          path: null,
+          state: "error",
+          source: "computer",
+          error: i18n.t("web.files.uploadLimits"),
+        },
+      ],
+    }));
+    return;
+  }
+  const groups = new Map<string, File[]>();
+  for (const file of files) {
+    const relative = relativeFilePath(file);
+    const key = relative.includes("/") ? relative.split("/")[0]! : nextId();
+    groups.set(key, [...(groups.get(key) ?? []), file]);
+  }
+  if (signal?.aborted) return;
+  let resolvedContext: ReturnType<NonNullable<typeof context>> | undefined;
+  const batch = crypto.randomUUID();
+  const jobs: Array<() => Promise<void>> = [];
+  for (const [name, group] of groups) {
+    const folder = relativeFilePath(group[0]!).includes("/");
+    const id = nextId();
+    const preview =
+      !folder && group[0]!.type.startsWith("image/")
+        ? URL.createObjectURL(group[0]!)
+        : undefined;
+    updateDraft(threadId, (draft) => ({
+      ...draft,
+      attachments: [
+        ...draft.attachments,
+        {
+          id,
+          name: folder ? name : group[0]!.name,
+          path: null,
+          state: "uploading",
+          source: "computer",
+          kind: folder ? "folder" : "file",
+          progress: 0,
+          size: group.reduce((sum, file) => sum + file.size, 0),
+          ...(folder
+            ? {
+                files: group.map((file) => ({
+                  name: relativeFilePath(file),
+                  size: file.size,
+                })),
+              }
+            : {}),
+          ...(preview ? { preview } : {}),
+        },
+      ],
+    }));
+    const uploadBatch = folder ? batch : `${batch}-${id}`;
+    const job = {
+      controller: new AbortController(),
+      running: false,
+      run: async (): Promise<void> => {
+        if (!uploads.has(id) || job.running) return;
+        job.running = true;
+        job.controller = new AbortController();
+        patch(threadId, id, {
+          state: "uploading",
+          error: undefined,
+          progress: 0,
+        });
+        try {
+          if (!context) throw new Error(i18n.t("web.files.selectSession"));
+          const resolved = await (resolvedContext ??= context());
+          if (job.controller.signal.aborted) return;
+          let path: string | undefined;
+          for (const [index, file] of group.entries()) {
+            const relativePath = relativeFilePath(file);
+            const saved = await host.uploadFile!(file, resolved, {
+              signal: job.controller.signal,
+              batch: uploadBatch,
+              relativePath,
+              progress: (percent) =>
+                patch(threadId, id, {
+                  progress: Math.floor(
+                    ((index + percent / 100) / group.length) * 100
+                  ),
+                }),
+            });
+            path ??= folder
+              ? saved.slice(0, saved.length - relativePath.length) + name
+              : saved;
+          }
+          patch(threadId, id, {
+            path: path ?? null,
+            state: "done",
+            progress: 100,
+          });
+          uploads.delete(id);
+          retries.delete(`${threadId}:${id}`);
+        } catch (error) {
+          if (job.controller.signal.aborted) return;
+          patch(threadId, id, {
+            state: "error",
+            error:
+              error instanceof Error
+                ? error.message
+                : i18n.t("web.files.uploadFailed"),
+          });
+        } finally {
+          job.running = false;
+        }
+      },
+    };
+    uploads.set(id, job);
+    retries.set(`${threadId}:${id}`, job.run);
+    jobs.push(job.run);
+  }
+  prepared?.();
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(3, jobs.length) }, async () => {
+      while (next < jobs.length) {
+        const job = jobs[next++];
+        if (job) await job();
+      }
+    })
+  );
 };

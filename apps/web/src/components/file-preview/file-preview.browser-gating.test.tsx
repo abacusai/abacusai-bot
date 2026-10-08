@@ -6,11 +6,16 @@ import { initI18n } from "#renderer/lib/i18n";
 
 import { FilePreview } from "./file-preview";
 
-const files = vi.hoisted(() => ({ size: vi.fn(), blob: vi.fn() }));
+const files = vi.hoisted(() => ({
+  size: vi.fn(),
+  blob: vi.fn(),
+  downloadUrl: vi.fn(),
+}));
 vi.mock("#renderer/lib/browser/host-files", () => ({ hostFiles: files }));
 beforeAll(initI18n);
 beforeEach(() => {
   files.size.mockResolvedValue(1024);
+  files.downloadUrl.mockResolvedValue("https://host.test/files?ticket=scoped");
   files.blob.mockResolvedValue(new Blob(["preview"]));
   URL.createObjectURL = vi.fn(() => "blob:http://localhost/file");
   URL.revokeObjectURL = vi.fn();
@@ -63,7 +68,7 @@ it("renders binary size and offers an authenticated download", async () => {
     .mockImplementation(() => {});
   fireEvent.click(screen.getByRole("button", { name: "Download" }));
   await waitFor(() => expect(click).toHaveBeenCalled());
-  expect(files.blob).toHaveBeenCalledWith({
+  expect(files.downloadUrl).toHaveBeenCalledWith({
     filePath: "/w/a.bin",
     hostRoot: "/w",
   });
@@ -114,4 +119,31 @@ it("ignores an old read after selection changes and avoids refetching for inline
     <FilePreview path="/w/new.txt" hostRoot="/w" read={{ ...read }} />
   );
   expect(read.text).toHaveBeenCalledTimes(2);
+});
+it("changes from source to a rendered preview for the same file when opening a preview tab", async () => {
+  const read = readers();
+  const view = render(
+    <FilePreview path="/w/index.html" hostRoot="/w" read={read} />
+  );
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="file-preview-text"]')?.textContent
+    ).toBe("<h1>Todo</h1>")
+  );
+  view.rerender(
+    <FilePreview
+      path="/w/index.html"
+      hostRoot="/w"
+      read={read}
+      initialView="preview"
+    />
+  );
+  expect((await screen.findByTitle("index.html")).tagName).toBe("IFRAME");
+  view.rerender(<FilePreview path="/w/other.html" hostRoot="/w" read={read} />);
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-slot="file-preview-text"]')?.textContent
+    ).toBe("<h1>Todo</h1>")
+  );
+  expect(screen.queryByTitle("other.html")).toBeNull();
 });

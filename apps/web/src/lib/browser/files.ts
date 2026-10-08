@@ -1,4 +1,5 @@
 import type { AppClient } from "#renderer/data/transport/types";
+import { i18n } from "#renderer/lib/i18n";
 export interface UploadContext {
   workspaceId: string;
   sessionId: string;
@@ -8,7 +9,9 @@ export const uploadFiles = async (
   context?: UploadContext
 ): Promise<string[]> => {
   if (!context?.workspaceId || !context.sessionId)
-    throw new Error("Select a session before uploading files");
+    throw new Error(i18n.t("web.files.selectSession"));
+  if (files.reduce((size, file) => size + file.size, 0) > 255 * 1024 * 1024)
+    throw new Error(i18n.t("web.files.tooLarge"));
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
   let host = await refreshUploadToken();
@@ -27,7 +30,14 @@ export const uploadFiles = async (
     host = await refreshUploadToken(true, token);
     response = await upload();
   }
-  if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+  if (!response.ok)
+    throw new Error(
+      i18n.t(
+        response.status === 413
+          ? "web.files.tooLarge"
+          : "web.files.uploadFailed"
+      )
+    );
   const value = (await response.json()) as {
     success?: boolean;
     paths?: unknown;
@@ -41,6 +51,26 @@ export const uploadFiles = async (
     throw new Error("Invalid upload response");
   return value.paths;
 };
+export const pickUploadFiles = (folder = false): Promise<File[] | null> =>
+  new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.webkitdirectory = folder;
+    input.hidden = true;
+    const done = (files: File[] | null) => {
+      input.remove();
+      resolve(files);
+    };
+    input.addEventListener("cancel", () => done(null), { once: true });
+    input.addEventListener(
+      "change",
+      () => done(Array.from(input.files ?? [])),
+      { once: true }
+    );
+    document.body.append(input);
+    input.click();
+  });
 export const pickHostPaths = async (
   client: AppClient,
   mode: "folder" | "file",

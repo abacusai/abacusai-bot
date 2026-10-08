@@ -327,6 +327,43 @@ it("serves typed file failures, HEAD, one-byte ranges and bounded previews", asy
       expect(result.headers.get("x-file-size")).toBe("10");
       expect(await result.text()).toBe("a");
     }
+    const ticketResponse = await fetch(url("file.txt"), {
+      method: "POST",
+      headers,
+    });
+    expect(ticketResponse.status).toBe(200);
+    const { ticket } = (await ticketResponse.json()) as { ticket: string };
+    const ticketUrl = `${url("file.txt")}&ticket=${encodeURIComponent(ticket)}`;
+    const { Authorization: _authorization, ...navigationHeaders } = headers;
+    const signedDownload = await fetch(ticketUrl, {
+      headers: navigationHeaders,
+    });
+    expect(signedDownload.status).toBe(200);
+    expect(signedDownload.headers.get("content-disposition")).toContain(
+      "attachment;"
+    );
+    expect(signedDownload.headers.get("content-type")).toBe("text/plain");
+    expect(await signedDownload.text()).toBe("attachment");
+    expect(
+      (
+        await fetch(ticketUrl, {
+          headers: { ...navigationHeaders, Range: "bytes=3-5" },
+        })
+      ).status
+    ).toBe(206);
+    expect(
+      (
+        await fetch(`${url("empty")}&ticket=${ticket}`, {
+          headers: navigationHeaders,
+        })
+      ).status
+    ).toBe(403);
+    expect(
+      (await fetch(url("escape"), { method: "POST", headers })).status
+    ).toBe(403);
+    expect(
+      (await fetch(url("missing"), { method: "POST", headers })).status
+    ).toBe(404);
     const emptyRange = await fetch(url("empty"), {
       headers: { ...headers, Range: "bytes=0-0" },
     });

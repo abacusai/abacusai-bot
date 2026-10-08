@@ -9,7 +9,8 @@ const response = async (
   input: Download,
   signal?: AbortSignal,
   maxBytes?: number,
-  probe = false
+  probe = false,
+  method: "GET" | "POST" = "GET"
 ): Promise<Response> => {
   const { refreshUploadToken } =
     await import("#renderer/features/shell/connect/services");
@@ -27,11 +28,15 @@ const response = async (
   const fetchFile = () =>
     fetch(`${host.base}/files?${query}`, {
       credentials: "include",
+      method,
       headers: {
         Authorization: `Bearer ${host.token}`,
         ...(probe ? { Range: "bytes=0-0" } : {}),
       },
-      signal,
+      signal: AbortSignal.any([
+        ...(signal ? [signal] : []),
+        AbortSignal.timeout(30_000),
+      ]),
     });
   let result = await fetchFile();
   const failure =
@@ -74,9 +79,10 @@ const checked = async (
   input: Download,
   signal?: AbortSignal,
   maxBytes?: number,
-  probe = false
+  probe = false,
+  method: "GET" | "POST" = "GET"
 ): Promise<Response> => {
-  const result = await response(input, signal, maxBytes, probe);
+  const result = await response(input, signal, maxBytes, probe, method);
   if (
     !result.ok &&
     !(
@@ -166,6 +172,16 @@ const imageMime: Record<string, string> = {
 };
 export const hostFiles = {
   response,
+  downloadUrl: async (input: HostFile) => {
+    const result = await checked(input, undefined, undefined, false, "POST");
+    const value = (await result.json()) as { ticket?: unknown };
+    if (typeof value.ticket !== "string")
+      throw fileError(input, "download-failed");
+    const { refreshUploadToken } =
+      await import("#renderer/features/shell/connect/services");
+    const host = await refreshUploadToken();
+    return `${host.base}/files?${new URLSearchParams({ path: input.filePath, hostRoot: input.hostRoot, ticket: value.ticket })}`;
+  },
   size: async (input: HostFile, signal?: AbortSignal) => {
     const result = await checked(input, signal, undefined, true);
     await result.body?.cancel();
@@ -209,11 +225,17 @@ export const readHostText: AppClient["files"]["readText"] = async (
     probe
   );
   const { bytes, truncated } = await boundedBytes(result, limit, input);
-  if (bytes.subarray(0, 8192).includes(0))
+  const encoding =
+    bytes[0] === 255 && bytes[1] === 254
+      ? "utf-16le"
+      : bytes[0] === 254 && bytes[1] === 255
+        ? "utf-16be"
+        : "utf-8";
+  if (encoding === "utf-8" && bytes.subarray(0, 8192).includes(0))
     throw fileError(input, "binary-file");
   const sizeBytes = sizeOf(result) ?? bytes.length + Number(truncated);
   return {
-    content: new TextDecoder().decode(bytes),
+    content: new TextDecoder(encoding).decode(bytes),
     sizeBytes,
     truncated: truncated || (probe && sizeBytes > limit),
   };

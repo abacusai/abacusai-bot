@@ -130,9 +130,14 @@ export const SessionDock = ({
   );
   const active =
     search.tab ?? (entries.open ? (entries.last ?? undefined) : undefined);
-  const expanded = search.view === "full" && entries.open === true;
   const prefs = usePrefs();
   const width = useShellWidth();
+  const expanded =
+    entries.open === true &&
+    (search.view === "full" ||
+      (!IS_ELECTRON &&
+        width < 600 &&
+        (active === "files" || !!active?.startsWith("preview:"))));
   const layout = shellLayout({
     width,
     area: "sessions",

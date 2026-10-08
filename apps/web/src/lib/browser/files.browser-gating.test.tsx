@@ -7,7 +7,7 @@ import serverFixtures from "#renderer/features/shell/connect/fixtures/bootstrap-
 import { resolveBrowserHost } from "#renderer/features/shell/connect/services";
 import { initI18n } from "#renderer/lib/i18n";
 
-import { pickHostFolder, uploadFiles } from "./files";
+import { pickHostFolder, pickHostPaths, uploadFiles } from "./files";
 beforeEach(async () => {
   HTMLDialogElement.prototype.showModal = vi.fn();
   await initI18n();
@@ -182,4 +182,28 @@ it("refreshes old upload credentials while leaving the RPC URL intact and retrie
       headers: { Authorization: "Bearer retry.token" },
     }),
   ]);
+});
+
+it("selects VM files and folders in place through the same dialog", async () => {
+  const client = clientFor();
+  client.files.listDirectory.mockResolvedValue({
+    root: "/root",
+    path: "/root",
+    entries: [
+      directory("empty"),
+      {
+        kind: "file",
+        name: "notes.txt",
+        path: "/root/notes.txt",
+        sizeBytes: 20,
+      },
+    ],
+  });
+  const picked = pickHostPaths(client as unknown as AppClient, "file", true);
+  await screen.findByRole("button", { name: "empty" });
+  fireEvent.click(screen.getByRole("checkbox", { name: "empty" }));
+  fireEvent.click(screen.getByRole("button", { name: "notes.txt" }));
+  fireEvent.click(screen.getByRole("button", { name: "Use selected items" }));
+  expect(await picked).toEqual(["/root/empty", "/root/notes.txt"]);
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

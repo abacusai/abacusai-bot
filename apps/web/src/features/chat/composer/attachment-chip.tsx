@@ -110,7 +110,7 @@ export const AttachmentChip = ({
               <Spinner aria-label={t("chat.composer.uploading")} />
             ) : image ? (
               <img src={image} alt="" className="size-full object-cover" />
-            ) : attachment.kind === "folder" ? (
+            ) : attachment.kind === "folder" || attachment.files ? (
               <Folder aria-hidden />
             ) : (
               <FileText aria-hidden />
@@ -140,6 +140,35 @@ export const AttachmentChip = ({
             </pre>
           ) : null}
           <p className="text-muted-foreground">{details}</p>
+          {attachment.source ? (
+            <p className="text-muted-foreground text-xs">
+              {t(
+                attachment.source === "computer"
+                  ? "web.files.computer"
+                  : "web.files.vm"
+              )}
+            </p>
+          ) : null}
+          {attachment.state === "uploading" ? (
+            <progress
+              className="h-1 w-full"
+              value={attachment.progress ?? 0}
+              max={100}
+              aria-label={t("web.files.uploading")}
+            />
+          ) : null}
+          {attachment.files ? (
+            <details className="max-h-32 overflow-auto text-xs">
+              <summary>
+                {t("web.files.fileCount", { count: attachment.files.length })}
+              </summary>
+              {attachment.files.map((file) => (
+                <div key={file.name} className="truncate" title={file.name}>
+                  {file.name} · {formatSize(file.size)}
+                </div>
+              ))}
+            </details>
+          ) : null}
           {attachment.state === "error" ? (
             <p role="alert" className="text-destructive max-w-60">
               {attachment.error || t("chat.composer.attachFailed")}
