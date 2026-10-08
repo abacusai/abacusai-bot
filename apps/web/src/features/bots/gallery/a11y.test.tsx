@@ -38,6 +38,7 @@ describe("bots accessibility", () => {
     "/bots/chief-of-staff?tab=files",
     "/bots/chief-of-staff/check-in",
     ...[
+      "bots-avatar-shapes",
       "bots-connector-marks",
       "bots-sidebar",
       "bots-start",
@@ -48,13 +49,6 @@ describe("bots accessibility", () => {
       "bots-check-in",
     ].map((id) => `/__ui?fixture=${id}`),
   ])("%s passes axe", passesAxe, 20000);
-  // The avatar gallery renders every shape, mood and size, some 22,000
-  // nodes: axe alone takes about 15 s over them, on a fast machine.
-  it(
-    "/__ui?fixture=bots-avatar passes axe",
-    () => passesAxe("/__ui?fixture=bots-avatar"),
-    60_000
-  );
   it("only the transcript identity is accessible while undocked", async () => {
     app = await renderApp("/bots/chief-of-staff");
     await screen.findByTestId("bot-chat");

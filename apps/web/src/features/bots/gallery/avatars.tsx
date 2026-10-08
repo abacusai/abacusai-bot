@@ -221,3 +221,22 @@ export const AvatarGallery = () => {
     </div>
   );
 };
+
+/** One avatar per shape, each with its own label: the gallery's a11y sample. */
+export const AvatarShapes = () => (
+  <div data-avatar-shapes className="flex flex-wrap items-end gap-5 p-5">
+    {AVATAR_SHAPES.map((shape, i) => (
+      <BotAvatar
+        key={shape}
+        look={{
+          shape,
+          color: AVATAR_PALETTE[i % AVATAR_PALETTE.length]!.hex,
+          accessory: AVATAR_ACCESSORIES[i % AVATAR_ACCESSORIES.length]!,
+        }}
+        mood="idle"
+        size={44}
+        label={shape}
+      />
+    ))}
+  </div>
+);
