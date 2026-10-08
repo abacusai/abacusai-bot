@@ -32,7 +32,7 @@ export const AgentLink = () => {
           url: ABACUS_AGENT_URL,
         });
       }}
-      className="titlebar-nodrag text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:ring-ring/50 flex size-9 shrink-0 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2"
+      className="titlebar-nodrag text-muted-foreground hover:text-sidebar-foreground focus-visible:ring-ring/50 flex size-9 shrink-0 items-center justify-center rounded-[10px] outline-none focus-visible:ring-2"
     >
       <AppBrandMark size={18} />
     </a>

@@ -183,7 +183,6 @@ export const Rail = ({
   area,
   floatingEnabled,
   iconsOnly = false,
-  initials: _initials,
   label,
 }: {
   area: ShellArea | undefined;
@@ -193,7 +192,6 @@ export const Rail = ({
   floatingEnabled: boolean;
   /** Settings › Appearance "Rail: icons only". */
   iconsOnly?: boolean;
-  initials: string;
 }) => {
   const { t } = useTranslation();
   const system = useSystem();

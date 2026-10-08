@@ -13,6 +13,7 @@ import {
   ChartNoAxesColumn,
   X,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +23,11 @@ import { usePrefs, useUpdatePrefs } from "#renderer/data/db/prefs";
 import { ReferralLink } from "#renderer/features/settings/referral-link";
 import { accountIdentity } from "#renderer/lib/account-identity";
 import { cn } from "#renderer/lib/cn";
+import {
+  springs,
+  reducedTransition,
+  useMotionPreference,
+} from "#renderer/lib/motion";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { sidebarAccount } from "#renderer/lib/sidebar-account";
@@ -63,6 +69,8 @@ export const ProfileMenu = () => {
   const [open, setOpen] = useState(false);
   const [invite, setInvite] = useState(false);
   const [signOut, setSignOut] = useState(false);
+  const inviteOpens = useRef(0);
+  const reduced = useMotionPreference() === "reduced";
   const trigger = useRef<HTMLButtonElement>(null);
   const summary = useQuery({
     ...transport.orpc.referrals.summary.queryOptions({ input: {} }),
@@ -120,7 +128,6 @@ export const ProfileMenu = () => {
               >
                 {account.data.email}
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
             </DropdownMenuGroup>
           )}
           <DropdownMenuItem
@@ -199,7 +206,13 @@ export const ProfileMenu = () => {
             <span className="truncate">{t("profile.help")}</span>
           </DropdownMenuItem>
           {account.data && (
-            <DropdownMenuItem className={row} onClick={() => setInvite(true)}>
+            <DropdownMenuItem
+              className={row}
+              onClick={() => {
+                inviteOpens.current += 1;
+                setInvite(true);
+              }}
+            >
               <Gift aria-hidden />
               <span className="truncate">{t("referrals.title")}</span>
             </DropdownMenuItem>
@@ -220,10 +233,19 @@ export const ProfileMenu = () => {
       </DropdownMenu>
       <Dialog open={invite} onOpenChange={setInvite}>
         <DialogContent
+          render={
+            <motion.div
+              initial={
+                reduced ? false : { opacity: 0, transform: "scale(0.98)" }
+              }
+              animate={{ opacity: 1, transform: "scale(1)" }}
+              transition={reduced ? reducedTransition : springs.surface}
+            />
+          }
           finalFocus={trigger}
           showCloseButton={false}
           data-sidebar-overlay=""
-          className="floating-surface scroll-fade-y max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-(--pane-radius) sm:max-w-sm"
+          className="floating-surface scroll-fade-y max-h-[calc(100dvh-2rem)] animate-none! overflow-y-auto rounded-(--pane-radius) sm:max-w-sm"
         >
           <DialogHeader className="pe-6">
             <DialogTitle>{t("referrals.title")}</DialogTitle>
@@ -232,7 +254,10 @@ export const ProfileMenu = () => {
             </DialogDescription>
           </DialogHeader>
           {summary.data ? (
-            <ReferralLink summary={summary.data} />
+            <ReferralLink
+              summary={summary.data}
+              firstOpen={inviteOpens.current === 1}
+            />
           ) : (
             <div
               className="bg-muted h-40 rounded-(--pane-radius)"

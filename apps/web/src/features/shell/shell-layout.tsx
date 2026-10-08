@@ -154,13 +154,11 @@ const focusInsideFloating = (): boolean =>
 export interface ShellLayoutProps {
   /** Dev only: the chrome reported overlay-unavailable. */
   geometryMissing?: boolean;
-  initials?: string;
   children?: ReactNode;
 }
 
 export const ShellLayout = ({
   geometryMissing = false,
-  initials = "",
   children,
 }: ShellLayoutProps) => {
   const { t } = useTranslation();
@@ -356,7 +354,6 @@ export const ShellLayout = ({
                   area={area}
                   floatingEnabled={floatingEnabled}
                   iconsOnly={prefs.appearance?.railIconsOnly === true}
-                  initials={initials}
                 />
               )}
               <PaneBoundary resetKey={area}>
@@ -366,11 +363,7 @@ export const ShellLayout = ({
                   onEscape={() => closeFloating()}
                   rail={
                     phone ? (
-                      <Rail
-                        area={area}
-                        floatingEnabled={false}
-                        initials={initials}
-                      />
+                      <Rail area={area} floatingEnabled={false} />
                     ) : undefined
                   }
                 />

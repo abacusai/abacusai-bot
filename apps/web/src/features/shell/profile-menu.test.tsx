@@ -109,9 +109,10 @@ it("opens a referral dialog, copies the real link, selects it on clipboard failu
       within(dialog).getByRole("button", { name: en.phase5.copyInvite })
     );
     await waitFor(() => expect(copy).toHaveBeenCalledWith(summary.inviteLink));
+    await screen.findByRole("button", { name: en.phase5.copied });
     copy.mockRejectedValueOnce(new Error("Clipboard denied"));
     fireEvent.click(
-      within(dialog).getByRole("button", { name: en.phase5.copyInvite })
+      within(dialog).getByRole("button", { name: en.phase5.copied })
     );
     const field = within(dialog).getByRole("textbox", {
       name: en.phase5.inviteLink,
@@ -227,3 +228,140 @@ it.each(["pinned", "collapsed", "strip", "floating", "phone"] as const)(
     }
   }
 );
+
+it.each([
+  ["settings.pages.account", "/settings/account"],
+  ["settings.pages.usage", "/settings/usage"],
+  ["phase5.managePlan", "/settings/account"],
+  ["settings.pages.appearance", "/settings/appearance"],
+  ["profile.help", "/settings/about"],
+] as const)("routes %s into Settings", async (key, path) => {
+  const app = await renderApp("/sessions/new", {
+    procedures: {
+      account: { abacus: os.account.abacus.handler(() => account) },
+    },
+  });
+  try {
+    fireEvent.click(await screen.findByRole("button", { name: account.name }));
+    const labels = {
+      "settings.pages.account": en.settings.pages.account,
+      "settings.pages.usage": en.settings.pages.usage,
+      "phase5.managePlan": en.phase5.managePlan,
+      "settings.pages.appearance": en.settings.pages.appearance,
+      "profile.help": en.profile.help,
+    };
+    fireEvent.click(await screen.findByRole("menuitem", { name: labels[key] }));
+    await waitFor(() => expect(app.router.state.location.pathname).toBe(path));
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it.each(["free", "enterprise", "trial", "unknown"] as const)(
+  "keeps the %s menu honest",
+  async (tier) => {
+    const app = await renderApp("/sessions/new", {
+      procedures: {
+        account: {
+          abacus: os.account.abacus.handler(() => ({
+            ...account,
+            subscription_tier: tier,
+            org_user_count: tier === "enterprise" ? 20 : 1,
+          })),
+        },
+      },
+    });
+    try {
+      fireEvent.click(
+        await screen.findByRole("button", { name: account.name })
+      );
+      const menu = await screen.findByRole("menu");
+      expect(
+        within(menu).queryByRole("menuitem", { name: en.phase5.managePlan })
+      ).toBeNull();
+      expect(
+        Boolean(
+          within(menu).queryByRole("menuitem", { name: en.creditsCard.cta })
+        )
+      ).toBe(tier === "free");
+      expect(
+        screen.queryByRole("link", { name: en.profile.agent }) !== null
+      ).toBe(tier === "enterprise");
+    } finally {
+      app.view.unmount();
+      await app.cleanup();
+    }
+  }
+);
+
+it.each([
+  [0, 0],
+  [-2, 5],
+  [1_240_000, 5],
+])("shows actual referral progress for %s / %s", async (sent, total) => {
+  const app = await renderApp("/sessions/new", {
+    procedures: {
+      account: { abacus: os.account.abacus.handler(() => account) },
+      referrals: {
+        summary: os.referrals.summary.handler(() => ({
+          ...summary,
+          invitesSent: sent,
+          milestoneInvites: total,
+        })),
+      },
+    },
+  });
+  try {
+    fireEvent.click(await screen.findByRole("button", { name: account.name }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: en.referrals.title })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: en.referrals.title,
+    });
+    if (total > 0) {
+      const text = en.referrals.progressTitle
+        .replace(
+          "{{sent}}",
+          new Intl.NumberFormat("en-US").format(Math.max(0, sent))
+        )
+        .replace("{{total}}", String(total));
+      expect(await within(dialog).findByText(text)).toBeTruthy();
+    } else {
+      await within(dialog).findByRole("textbox", {
+        name: en.phase5.inviteLink,
+      });
+      expect(within(dialog).queryByText(/invites sent/)).toBeNull();
+    }
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("supports menu typeahead, arrows and Escape with focus return", async () => {
+  const app = await renderApp("/sessions/new", {
+    procedures: {
+      account: { abacus: os.account.abacus.handler(() => account) },
+    },
+  });
+  try {
+    const trigger = await screen.findByRole("button", { name: account.name });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu");
+    fireEvent.keyDown(menu, { key: "u" });
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(en.settings.pages.usage)
+    );
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(en.phase5.managePlan)
+    );
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});

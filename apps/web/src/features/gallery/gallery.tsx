@@ -236,7 +236,6 @@ const ShellSection = () => {
             <Rail
               area={area}
               floatingEnabled={false}
-              initials="RR"
               label={`Rail, ${area} active`}
             />
           </div>
