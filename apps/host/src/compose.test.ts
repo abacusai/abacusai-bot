@@ -485,6 +485,10 @@ describe("the phone lane", () => {
       ackFailsTimes?: number;
       /** Holds the session's answer to these sends until `settleSend`. */
       holdSend?: (messageId: string) => boolean;
+      /** How the server answers a reply carrying a notice. */
+      notice?: "unknown" | "timeout";
+      /** The server says another host holds these messages now. */
+      superseded?: (messageId: string) => boolean;
       /** These sends throw on their way (outcome unknown). */
       throwSend?: (messageId: string) => boolean;
     } = {}
@@ -524,6 +528,19 @@ describe("the phone lane", () => {
           }
           if (body.action === "reply" && options.holdReplies === true)
             await new Promise<void>((resolve) => held.push(resolve));
+          if (body.action === "reply" && body.notice != null) {
+            if (options.notice === "unknown")
+              throw new Error("text is required");
+            if (options.notice === "timeout")
+              throw Object.assign(new Error("timed out"), {
+                name: "TimeoutError",
+              });
+          }
+          if (
+            body.action === "reply" &&
+            options.superseded?.(String(body.message_id)) === true
+          )
+            return { ok: false, error: "superseded" };
           if (
             body.action === "reply" &&
             options.replyFails?.(String(body.text)) === true
@@ -1375,7 +1392,7 @@ describe("the phone lane", () => {
     known.phone.stop();
 
     // An older server reads a notice as a reply with no text, and refuses it.
-    const older = lane({ replyFails: (text) => text === "undefined" });
+    const older = lane({ notice: "unknown" });
     older.phone.arrive({ id: "m1", text: "hi" });
     await vi.waitFor(() => expect(older.send).toHaveBeenCalledTimes(1));
     older.reply(["m1"], "", true);
@@ -1389,6 +1406,53 @@ describe("the phone lane", () => {
       },
     ]);
     older.phone.stop();
+  });
+
+  it("never apologizes twice: a notice that may have gone, or one the server refused, gets no English one after it", async () => {
+    for (const options of [
+      { notice: "timeout" as const },
+      { replyFails: (text: string) => text === "undefined" },
+    ]) {
+      const { phone, send, reply, replies, handled } = lane(options);
+      phone.arrive({ id: "m1", text: "hi" });
+      await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+      reply(["m1"], "", true);
+      await handled([["m1"]]);
+      expect(replies()).toEqual([
+        { action: "reply", message_id: "m1", notice: "turn_failed" },
+      ]);
+      phone.stop();
+    }
+  });
+
+  it("answers, then acks with its poller; a reply the server refuses as superseded goes no further", async () => {
+    const { phone, send, reply, replies, acks, calls } = lane({
+      superseded: (id) => id === "m2",
+    });
+    phone.arrive({ id: "m1", text: "hi" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    reply(["m1"], "Hello!\n---\nHow can I help?");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"]]));
+    const order = calls
+      .filter((body) => body.action === "reply" || body.action === "ack")
+      .map((body) => body.action);
+    expect(order).toEqual(["reply", "reply", "ack"]);
+    const ack = calls.find((body) => body.action === "ack")!;
+    expect(ack.poller).toEqual(expect.any(String));
+    expect(ack.poller).toBe(
+      calls.find((body) => body.action === "reply")!.poller
+    );
+
+    // A newer host took m2 over: the first bubble is refused, the rest never go.
+    phone.arrive({ id: "m2", text: "book it" });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2));
+    reply(["m2"], "Booked.\n---\nPNR X1.");
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
+    expect(replies().filter((body) => body.message_id === "m2")).toEqual([
+      { action: "reply", message_id: "m2", text: "Booked." },
+      { action: "reply", message_id: "m2", text: "Booked." },
+    ]);
+    phone.stop();
   });
 
   it("gives a browser run its own idle limit, and the usual one once it is done", async () => {
@@ -1569,7 +1633,7 @@ describe("the phone lane", () => {
 
   it("retries a refused handoff, a host note in it included, and hands the note over once", async () => {
     let refusals = 0;
-    const { phone, send, reply, handled } = lane({
+    const { phone, send, reply, handled, acks } = lane({
       refuse: (id) => id.startsWith("note-") && refusals++ === 0,
     });
     phone.arrive({ id: "m1", text: "hi" });
@@ -1588,7 +1652,8 @@ describe("the phone lane", () => {
     await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(4));
     expect(send.mock.calls[3]![2]).toBe("thanks");
     reply(["m2"], "Anytime!");
-    await handled([["m1"], ["m2"]]);
+    // The note's turn answers nobody's message, so it acks nothing.
+    await vi.waitFor(() => expect(acks()).toEqual([["m1"], ["m2"]]));
     phone.stop();
   });
 

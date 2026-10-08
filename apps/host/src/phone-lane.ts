@@ -885,7 +885,6 @@ export class PhoneLane {
         : "refused";
     }
   }
-  }
 
   /** The session took work: the clock runs and the user sees "typing…". */
   private working(): void {

@@ -18,10 +18,6 @@ import {
   browserStopNote,
 } from "./channel.js";
 import { pauseReport, resumeNote } from "./checkout-report.js";
-import {
-  ID_NUMBER_WITHHELD,
-  redactIdNumbers,
-} from "./traveler/id-numbers.js";
 import { CheckoutRun } from "./checkout-run.js";
 import { currentMode, unattendedPolicy } from "./current-mode.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
@@ -31,6 +27,7 @@ import {
   UNATTENDED_BROWSER_TOOLS,
   type UnattendedPolicy,
 } from "./tool-policy.js";
+import { ID_NUMBER_WITHHELD, redactIdNumbers } from "./traveler/id-numbers.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
 export function browserTaskEnabled(): boolean {
@@ -141,7 +138,7 @@ const QUOTED_USER_CHARS = 300;
  * times and flight numbers.
  */
 const CODE_SHAPES: readonly RegExp[] = [
-  /\b(otp|code|pin|passcode|password|pwd)(\s*(?:is|:|=|-)?\s*)\S+/gi,
+  /\b(otp|code|pin|passcode|password|pwd)(\s*(?:is|:|=|-)?\s*)[^\s,.;!?]+/gi,
   /(?<![\d+$₹£€.,])\b\d{6,8}\b(?![\d.,])/g,
 ];
 
@@ -152,8 +149,10 @@ const CODE_SHAPES: readonly RegExp[] = [
  */
 export const quotedUserWords = (text: string): string => {
   let out = redactIdNumbers(text);
-  out = out.replace(CODE_SHAPES[0]!, (_match, label: string, gap: string) =>
-    `${label}${gap}${ID_NUMBER_WITHHELD}`
+  out = out.replace(
+    CODE_SHAPES[0]!,
+    (_match, label: string, gap: string) =>
+      `${label}${gap}${ID_NUMBER_WITHHELD}`
   );
   out = out.replace(CODE_SHAPES[1]!, ID_NUMBER_WITHHELD);
   return out.length > QUOTED_USER_CHARS
