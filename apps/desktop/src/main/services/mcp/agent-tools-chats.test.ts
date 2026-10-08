@@ -43,7 +43,7 @@ const server = (options: {
       selfChats: () =>
         options.self === false
           ? []
-          : [{ platform: "whatsapp", chatId: "919804585173@s.whatsapp.net" }],
+          : [{ platform: "whatsapp", chatId: "919000000001@s.whatsapp.net" }],
       startingPlatforms: () => (options.starting === true ? ["whatsapp"] : []),
       awaitReady: async () => {},
       listChats: (query?: string, platform?: string) =>
@@ -87,7 +87,7 @@ describe("who the user is", () => {
   it("names the user's own account, so it is never asked for", async () => {
     const text = await call(server({ chats: [CONTACT] }), {});
 
-    expect(text).toContain("919804585173@s.whatsapp.net");
+    expect(text).toContain("919000000001@s.whatsapp.net");
     expect(text).toContain('(the user, "me")');
   });
 

@@ -76,7 +76,7 @@ const harness = () => {
       start: async () => {},
       stop: async () => {},
       sendText: async () => {},
-      selfChatId: () => "+919804585173",
+      selfChatId: () => "+919000000001",
     }
   );
   const internals = gateway as unknown as {

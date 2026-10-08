@@ -399,14 +399,14 @@ describe("sending to yourself", () => {
   };
 
   it("resolves to the account the platform is connected as", async () => {
-    const { service, sent } = withSelf("919804585173@s.whatsapp.net");
+    const { service, sent } = withSelf("919000000001@s.whatsapp.net");
 
     await service.sendToChat("whatsapp", "me", "hi");
     await service.sendToChat("whatsapp", "myself", "again");
 
     expect(sent.map((row) => row.to)).toEqual([
-      "919804585173@s.whatsapp.net",
-      "919804585173@s.whatsapp.net",
+      "919000000001@s.whatsapp.net",
+      "919000000001@s.whatsapp.net",
     ]);
   });
 

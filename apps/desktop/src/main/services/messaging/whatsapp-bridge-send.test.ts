@@ -159,7 +159,7 @@ describe('who "me" is', () => {
       ensure: async () => true,
       listChats: async () => [
         {
-          jid: "919804585173@c.us",
+          jid: "919000000001@c.us",
           name: "Alex 2",
           isGroup: false,
           isMe: true,
@@ -181,17 +181,17 @@ describe('who "me" is', () => {
       refreshBridgeChats: () => Promise<void>;
       listContacts: () => Array<{ chatId: string; name: string }>;
     };
-    me.self = "+919804585173";
-    me.selfJid = "919804585173@c.us";
+    me.self = "+919000000001";
+    me.selfJid = "919000000001@c.us";
     await me.refreshBridgeChats();
 
     const rows = me.listContacts();
-    expect(rows[0]?.chatId).toBe("+919804585173");
+    expect(rows[0]?.chatId).toBe("+919000000001");
     expect(rows[0]?.name).toMatch(/You .*own account/);
     expect(rows[0]?.name).toMatch(/"Alex 2"/);
     // The WhatsApp title of the own chat is not a second person.
     expect(rows.filter((row) => row.name === "Alex 2")).toEqual([]);
-    expect(rows.map((row) => row.chatId)).toEqual(["+919804585173", "Meghna"]);
+    expect(rows.map((row) => row.chatId)).toEqual(["+919000000001", "Meghna"]);
     expect(me.selfDisplayName).toBe("Alex 2");
   });
 });
@@ -239,8 +239,8 @@ describe("who an inbound message is from", () => {
     internals.loggedIn = true;
     internals.selfLookupDone = true;
     internals.firstInboundSweep = false;
-    internals.self = "+919804585173";
-    internals.selfJid = "919804585173@c.us";
+    internals.self = "+919000000001";
+    internals.selfJid = "919000000001@c.us";
     internals.bridgeReady = true;
     internals.bridgeChats = chats;
     internals.bridge = {
@@ -283,7 +283,7 @@ describe("who an inbound message is from", () => {
         t: 3,
       }
     );
-    expect(seen).toEqual([{ userName: "You", chatId: "+919804585173" }]);
+    expect(seen).toEqual([{ userName: "You", chatId: "+919000000001" }]);
   });
 
   it("keeps a self message on the lid id before the chat list has answered", async () => {
@@ -307,7 +307,7 @@ describe("who an inbound message is from", () => {
       }
     );
     expect(seen).toEqual([
-      { userName: "+919804585173", chatId: "+919804585173" },
+      { userName: "+919000000001", chatId: "+919000000001" },
     ]);
     expect(asked).toEqual(["123456789012345@lid"]);
   });

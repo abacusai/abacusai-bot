@@ -21,7 +21,7 @@ vi.mock("./messaging-config-service", async (importOriginal) => {
     }),
     isPlatformEnabled: (id: MessagingPlatformId) => id === "whatsapp",
     isPlatformConfigured: (id: MessagingPlatformId) => id === "whatsapp",
-    approvedUserIds: () => new Set(["U1", "+919804585173"]),
+    approvedUserIds: () => new Set(["U1", "+919000000001"]),
     findPairing: () => null,
     recordPairingRequest: () => {},
     listPairing: () => [],
@@ -89,9 +89,9 @@ const harness = () => {
       }),
     inboundAs: (userName: string | null, text: string) =>
       internals.handleInbound("whatsapp", {
-        userId: "+919804585173",
+        userId: "+919000000001",
         userName,
-        chatId: "+919804585173",
+        chatId: "+919000000001",
         text,
       }),
     delta: (content: string) =>
@@ -178,7 +178,7 @@ describe("the bot chat's transcript", () => {
     // sweep can only name the sender by their number.
     await h.inboundAs(null, "Hey");
     expect(h.shown[0]?.content).toBe(
-      "[WhatsApp message from +919804585173] Hey"
+      "[WhatsApp message from +919000000001] Hey"
     );
 
     h.delta("<reply>hey!</reply>");

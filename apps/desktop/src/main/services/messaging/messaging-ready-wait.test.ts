@@ -71,7 +71,7 @@ describe("a platform that is linked but has not yet learned who the user is", ()
       sendText: async () => {},
     });
     expect(gateway.startingPlatforms()).toEqual(["whatsapp"]);
-    self = "+919804585173";
+    self = "+919000000001";
     expect(gateway.startingPlatforms()).toEqual([]);
   });
 
@@ -86,12 +86,12 @@ describe("a platform that is linked but has not yet learned who the user is", ()
     });
     // The account becomes known a moment later: the bridge attached.
     setTimeout(() => {
-      self = "+919804585173";
+      self = "+919000000001";
     }, 700);
 
     await gateway.sendToChat("whatsapp", "me", "hi");
 
-    expect(sent).toEqual(["+919804585173"]);
+    expect(sent).toEqual(["+919000000001"]);
   });
 
   it("gives up waiting after the bound, with the honest error", async () => {
@@ -124,7 +124,7 @@ describe("what the card says while it syncs", () => {
       sendText: async () => {},
     });
     expect(whatsapp(gateway)).toBe("syncing");
-    self = "+919804585173";
+    self = "+919000000001";
     expect(whatsapp(gateway)).toBe("connected");
   });
 
@@ -152,7 +152,7 @@ describe("what the card says while it syncs", () => {
       await vi.advanceTimersByTimeAsync(6_000);
       // Nothing to announce while still syncing.
       expect(changes.length).toBe(afterConnect);
-      self = "+919804585173";
+      self = "+919000000001";
       await vi.advanceTimersByTimeAsync(2_500);
       expect(changes.length).toBe(afterConnect + 1);
       expect(changes.length).toBeGreaterThan(before);
@@ -166,7 +166,7 @@ describe("a platform whose chat list has not been read yet", () => {
   it("counts as starting until the connector says the list is in", () => {
     let ready = false;
     const gateway = gatewayWith({
-      selfChatId: () => "+919804585173",
+      selfChatId: () => "+919000000001",
       sendText: async () => {},
     });
     (
@@ -176,7 +176,7 @@ describe("a platform whose chat list has not been read yet", () => {
       start: async () => {},
       stop: async () => {},
       sendText: async () => {},
-      selfChatId: () => "+919804585173",
+      selfChatId: () => "+919000000001",
       contactsReady: () => ready,
     });
     expect(gateway.startingPlatforms()).toEqual(["whatsapp"]);
