@@ -25,6 +25,7 @@ import {
   abacusRoutellmV1,
   abacusUserAgent,
 } from "#main/services/providers/abacus-host";
+import { parseStepEvent } from "#main/services/session/step-events";
 
 import { createNodeAppOperations } from "./app-operations";
 import { createWebAuth, followProvisionedKey } from "./auth-web";
@@ -209,7 +210,14 @@ export const composeNodeHost = async () => {
       pinned
         ? serviceHost.mediaStore.pin(ref, sessionId)
         : serviceHost.mediaStore.unpin(ref, sessionId),
-    onPolled: (result) => nudgeAgenda.polled(result),
+    onPolled: (result) => {
+      nudgeAgenda.polled(result);
+      serviceHost.stepEvents.fromServer(result.events);
+    },
+    eventNote: (entry) => {
+      const event = parseStepEvent(entry);
+      return event == null ? null : serviceHost.stepEvents.claim(event);
+    },
     turnNotes: (entry) => nudgeAgenda.notes(entry),
   });
   const stopTurns = serviceHost.onAgentEvent((sessionId, payload) => {

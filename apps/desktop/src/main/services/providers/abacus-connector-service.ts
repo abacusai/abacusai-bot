@@ -245,7 +245,8 @@ const serviceKeys = (value: unknown): string[] =>
  * gets the plain page for the one service. Null when signed out.
  */
 export const createConnectLink = async (
-  service: string
+  service: string,
+  chatOrigin?: string
 ): Promise<{
   url: string;
   services: string[];
@@ -259,6 +260,8 @@ export const createConnectLink = async (
   );
   const minted = await abacusApiCall("_createAbacusbotConnectLink", "POST", {
     service: bundled ? "google" : serviceKey,
+    // Where the link's completion reports back (see StepEvents).
+    ...(chatOrigin != null ? { chatOrigin } : {}),
   });
   const request = minted.ok
     ? (minted.result as {

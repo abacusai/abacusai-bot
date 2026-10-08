@@ -20,6 +20,8 @@ import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 export interface ConnectedOffer {
   /** The session that asked, told once it lands; null for none. */
   sessionId: string | null;
+  /** The link it was offered with, when it had one. */
+  requestId?: string;
   connectorIds: string[];
   /** Offered, but not granted by the consent that connected the rest. */
   notGranted: string[];
@@ -176,6 +178,7 @@ export class ConnectWatcher {
       }
       this.deps.connected({
         sessionId: offer.sessionId,
+        ...(offer.requestId != null ? { requestId: offer.requestId } : {}),
         connectorIds: landed.connected,
         notGranted: landed.notGranted,
         accounts,

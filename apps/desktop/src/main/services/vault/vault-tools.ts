@@ -5,6 +5,7 @@
  * Request and approval ids stay in `VaultSessions`; no tool takes one.
  */
 import type { McpToolListing, McpToolResult } from "../mcp/mcp-http-server";
+import type { StepEvents } from "../session/step-events";
 import { onSite, siteArgument } from "./site";
 import {
   VAULT_UNAVAILABLE,
@@ -219,8 +220,11 @@ export interface VaultBrowser {
 
 export interface VaultDeps {
   client: VaultClient;
-  /** Delivers a note to the session's conversation as a turn of its own. */
-  deliver: (sessionId: string, note: string) => void;
+  /**
+   * Where each page reports back (its origin, sent with the request), and
+   * how its outcome reaches the session: once, as a turn of its own.
+   */
+  steps: Pick<StepEvents, "origin" | "noteAsked" | "deliver" | "claim">;
   now?: () => number;
   everyMs?: number;
 }
@@ -266,7 +270,7 @@ export class Vault {
     this.waiter = new VaultWaiter({
       client: deps.client,
       sessions: this.sessions,
-      raise: (sessionId, note) => this.deps.deliver(sessionId, note),
+      raise: (sessionId, event) => this.deps.steps.deliver(sessionId, event),
       now: this.now,
       ...(deps.everyMs != null ? { everyMs: deps.everyMs } : {}),
     });
@@ -331,24 +335,25 @@ export class Vault {
 
   /**
    * Before the user's message reaches the session: anything outstanding is
-   * checked at once (they may be saying they are done on the page), and what
-   * it finds is delivered like any other note. Bounded, so a slow platform
-   * never holds the message up for long.
+   * checked at once (they may be saying they are done on the page), and the
+   * notes of what it finds ride with the message. Bounded, so a slow
+   * platform never holds the message up for long.
    */
   async checkBeforeMessage(sessionId: string): Promise<string[]> {
     const session = this.sessions.get(sessionId);
     if (session == null || !session.outstanding()) return [];
     const check = this.waiter.checkNow(sessionId).catch(() => []);
-    const notes = await Promise.race([
+    const events = await Promise.race([
       check,
       new Promise<null>((resolve) =>
         setTimeout(() => resolve(null), CHECK_BEFORE_MESSAGE_MS).unref?.()
       ),
     ]);
-    if (notes != null) return notes;
-    // Too slow for this message: what it finds is delivered as any other note.
+    if (events != null)
+      return events.flatMap((event) => this.deps.steps.claim(event) ?? []);
+    // Too slow for this message: what it finds is delivered as any other event.
     void check.then((found) => {
-      for (const note of found) this.deps.deliver(sessionId, note);
+      for (const event of found) this.deps.steps.deliver(sessionId, event);
     });
     return [];
   }
@@ -430,6 +435,7 @@ export class Vault {
       return err('A login request names the site, e.g. site: "linkedin.com".');
 
     const session = this.sessions.for(sessionId);
+    const chatOrigin = this.deps.steps.origin(sessionId);
     let input: Parameters<VaultClient["createRequest"]>[0] = {
       kind: kind as VaultRequestKind,
     };
@@ -454,8 +460,12 @@ export class Vault {
       codeApproval = approval;
     }
 
-    const result = await this.deps.client.createRequest(input);
+    const result = await this.deps.client.createRequest({
+      ...input,
+      ...(chatOrigin != null ? { chatOrigin } : {}),
+    });
     if (result.ok === false) return this.unavailable(result);
+    this.deps.steps.noteAsked(result.value.requestId);
     // Bound only once the server bound it, and only to the approval it was
     // asked for: the code is typed only on this origin.
     if (codeApproval != null && input.origin != null) {
@@ -527,8 +537,10 @@ export class Vault {
       currency,
       origin,
       cvvRequired,
+      chatOrigin: this.deps.steps.origin(sessionId),
     });
     if (result.ok === false) return this.unavailable(result);
+    this.deps.steps.noteAsked(result.value.paymentApprovalId);
     const now = this.now();
     this.sessions.for(sessionId).approval = {
       id: result.value.paymentApprovalId,
@@ -558,8 +570,12 @@ export class Vault {
     const itemId = typeof args.item_id === "string" ? args.item_id.trim() : "";
     if (!ITEM_ID_RE.test(itemId))
       return err("item_id is the saved login's id, from vault_items.");
-    const result = await this.deps.client.createSigninApproval({ itemId });
+    const result = await this.deps.client.createSigninApproval({
+      itemId,
+      chatOrigin: this.deps.steps.origin(sessionId),
+    });
     if (result.ok === false) return this.unavailable(result);
+    this.deps.steps.noteAsked(result.value.signinApprovalId);
     const now = this.now();
     // Held here only: no tool takes or shows the approval's id.
     this.sessions.for(sessionId).signin = {

@@ -26,10 +26,16 @@ export interface PhoneInboxEntry {
    * "linked": the user just linked WhatsApp; `sender` is their name there.
    * "note": the host's own news for the loop (a connector connected), never
    * from the server, so never acknowledged.
+   * "event": a step the user finished on a page this chat sent them to
+   * (`event`, `step`, `facts`); told to the loop as a hidden note, never as
+   * the user's words, and answered like a message.
    */
   kind?: string;
   /** A photo or document, its bytes inline; saved to disk on arrival. */
   attachments?: Array<{ name?: string; mime?: string; data_b64?: string }>;
+  event?: string;
+  step?: string;
+  facts?: Record<string, unknown>;
   /** Check-ins the server sent since the user's last message. */
   nudges_sent?: Array<{ at?: number; text?: string }>;
   /** The message is exactly STOP or UNSUBSCRIBE, and nothing was turned off. */

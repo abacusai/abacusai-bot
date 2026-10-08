@@ -180,7 +180,7 @@ describe("asking for one", () => {
 
       const text = await call({ service });
 
-      expect(link).toHaveBeenCalledWith("huggingface");
+      expect(link).toHaveBeenCalledWith("huggingface", "session-1");
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({
           conversationKey: sessionConversationKey("ws-1", "session-1"),
@@ -198,7 +198,7 @@ describe("asking for one", () => {
 
     const text = await call({ service: "Notion" });
 
-    expect(link).toHaveBeenCalledWith("notion");
+    expect(link).toHaveBeenCalledWith("notion", "session-1");
     expect(text).toContain(
       "https://apps.example/api/botHost/h1/mcp/connect/notion"
     );
@@ -223,7 +223,7 @@ describe("asking for one", () => {
   it("asks for GitHub with a one-tap link, like any account connector", async () => {
     const text = await call({ service: "GitHub" });
 
-    expect(link).toHaveBeenCalledWith("abacus-githubbot");
+    expect(link).toHaveBeenCalledWith("abacus-githubbot", "session-1");
     expect(text).toContain("service=abacus-githubbot&r=req");
   });
 
