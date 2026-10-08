@@ -607,6 +607,8 @@ export const ThreadComposer = () => {
         ? composeReply(route.text, draft.replyTo, view.authorName)
         : null;
     setError(null);
+    const playSent = () =>
+      documentSoundPlayer().play("sent", { threadId, botId: config.botId });
     switch (route.kind) {
       case "noop":
         return;
@@ -620,12 +622,7 @@ export const ThreadComposer = () => {
         const clearedRevision = draftRevision(threadId);
         runtime.queue
           .enqueue(threadId, composed!.text, composed!.userText)
-          .then(() =>
-            documentSoundPlayer().play("sent", {
-              threadId,
-              botId: config.botId,
-            })
-          )
+          .then(playSent)
           .catch(() => {
             restoreDraft(threadId, clearedRevision, saved);
             setError(t("chat.composer.queueFailed"));
@@ -667,10 +664,7 @@ export const ThreadComposer = () => {
             else if (result.kind === "stale")
               restoreDraft(threadId, clearedRevision, saved);
             else if (result.kind === "started" || result.kind === "queued") {
-              documentSoundPlayer().play("sent", {
-                threadId,
-                botId: config.botId,
-              });
+              playSent();
               if (
                 config.onSubmitEnvelope &&
                 draftRevision(threadId) === clearedRevision
@@ -684,6 +678,7 @@ export const ThreadComposer = () => {
             if (isRpcError(thrown) && thrown.code === "CONFLICT") {
               void runtime.queue
                 .enqueue(threadId, composed!.text, composed!.userText)
+                .then(playSent)
                 .catch(() => restore(t("chat.composer.queueFailed")));
               return;
             }

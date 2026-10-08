@@ -786,3 +786,18 @@ it("stays silent when the host cannot accept the send", async () => {
   );
   expect(sent).not.toHaveBeenCalled();
 });
+
+it("plays once when an admission race queues the accepted message", async () => {
+  const relay = new FakeRelay({
+    onSend: () => {
+      throw new ORPCError("CONFLICT");
+    },
+  });
+  relay.emitAll(b.sessionReady());
+  current = await renderRelay(relay, "session");
+  fireEvent.change(field(), { target: { value: "hello" } });
+  fireEvent.keyDown(field(), { key: "Enter" });
+  await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+  expect(relay.stats.send).toHaveLength(1);
+  expect(relay.stats.queue.at(-1)).toMatchObject({ command: "enqueue" });
+});
