@@ -12,6 +12,7 @@ import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
+import { currentMode } from "../current-mode.js";
 import {
   astGrepAvailable,
   findSyntaxErrors,
@@ -21,6 +22,7 @@ import {
   supportedExtensions,
   type AstGrepNode,
 } from "../lang.js";
+import { AgentMode } from "../protocol.js";
 import {
   familyFor,
   matchesQuery,
@@ -398,6 +400,10 @@ export default function (pi: ExtensionAPI) {
             maxDepth: MAX_DEPTH,
             timeBudgetMs: Math.min(SCAN_BUDGET_MS, deadline - Date.now()),
             ...(signal ? { signal } : {}),
+            // A routine nobody watches reads its folder only, links included.
+            ...(currentMode() === AgentMode.Unattended
+              ? { within: ctx.cwd }
+              : {}),
           }
         );
       } else {

@@ -13,7 +13,11 @@ import * as net from "node:net";
 
 import { Agent } from "undici";
 
-import { hostAllowed } from "../tool-policy.js";
+import {
+  isBlockedAddress,
+  isNonPublicAddress,
+  sourceAllows,
+} from "../tool-policy.js";
 
 /** Wire-level cap. Read stops here even if the server keeps sending. */
 const MAX_RESPONSE_BYTES = 5_000_000;
@@ -28,69 +32,7 @@ const MAX_REDIRECTS = 5;
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-/**
- * Whether a RESOLVED address is one we refuse to talk to. 169.254.169.254 is
- * where cloud providers serve instance credentials to any HTTP client on the
- * host. It takes an IP, never a hostname: `[::ffff:169.254.169.254]` normalizes
- * to hex with no dotted quad to match, and any DNS name can point at the
- * metadata IP (`metadata.google.internal` does).
- */
-export function isBlockedAddress(address: string): boolean {
-  const ip = unmapIpv4(address.replace(/^\[|\]$/g, "").toLowerCase());
-
-  // IPv4 link-local, including the metadata address.
-  if (ip.startsWith("169.254.")) return true;
-  // IPv6 link-local: fe80::/10 (fe80–febf).
-  if (/^fe[89ab][0-9a-f]:/.test(ip)) return true;
-  // IPv6 unique-local: fc00::/7 (fc00–fdff), which covers the fd00:ec2::254
-  // form of the metadata address.
-  if (/^f[cd][0-9a-f]{2}:/.test(ip)) return true;
-
-  return false;
-}
-
-/**
- * Whether a RESOLVED address is anything but the public internet: loopback,
- * private, carrier-grade NAT, link-local, unspecified or unique-local. Only a
- * fetch held to declared hosts refuses these; the rest of the time a dev
- * server on localhost is the normal case.
- */
-export function isNonPublicAddress(address: string): boolean {
-  const ip = unmapIpv4(address.replace(/^\[|\]$/g, "").toLowerCase());
-  if (isBlockedAddress(ip)) return true;
-  if (net.isIPv4(ip)) {
-    const [a = 0, b = 0] = ip.split(".").map(Number);
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      a >= 224
-    );
-  }
-  return ip === "::" || ip === "::1" || /^ff[0-9a-f]{2}:/.test(ip);
-}
-
-/**
- * Unwrap an IPv4-mapped IPv6 address: `::ffff:a9fe:a9fe` and
- * `::ffff:169.254.169.254` both route to 169.254.169.254, so the range checks
- * have to see the dotted quad.
- */
-function unmapIpv4(ip: string): string {
-  const hexPair = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip);
-  if (hexPair != null) {
-    const high = Number.parseInt(hexPair[1]!, 16);
-    const low = Number.parseInt(hexPair[2]!, 16);
-
-    return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
-  }
-
-  const dotted = /^::ffff:((?:\d{1,3}\.){3}\d{1,3})$/.exec(ip);
-
-  return dotted != null ? dotted[1]! : ip;
-}
+export { isBlockedAddress, isNonPublicAddress } from "../tool-policy.js";
 
 /**
  * Resolve a hostname and refuse it if ANY address it answers with is blocked.
@@ -319,14 +261,20 @@ export function pinnedLookup(addresses: string[]): LookupFunction {
 const HELD_MAX_RESPONSE_BYTES = 2_000_000;
 
 /**
- * A fetch held to declared hosts: the literal hostname must be exactly one of
- * them, checked before any lookup, at every hop.
+ * A fetch held to declared sources: the URL itself (its literal host, port
+ * and path; when held, as every unattended run is, no query and exactly a
+ * declared path) must pass, checked before any lookup, at every hop.
  */
-function checkHeldHost(url: URL, allowedHosts: readonly string[]): void {
-  if (!hostAllowed(url.hostname, allowedHosts)) {
+function checkHeld(
+  url: URL,
+  hold: { sources: readonly string[]; held: boolean }
+): void {
+  if (!sourceAllows(url.href, hold.sources, hold.held)) {
     throw new WebFetchError(
       "BLOCKED_URL",
-      `${url.hostname} is not one of the sites this routine was set up to read.`
+      hold.held
+        ? `${url.href} is not exactly one of the pages this routine was set up to read (no query, no other path).`
+        : `${url.href} is not under the pages this routine was set up to read.`
     );
   }
 }
@@ -337,13 +285,13 @@ export async function fetchUrl(
     timeoutMs?: number;
     signal?: AbortSignal;
     /**
-     * Held to these hosts (an unattended run): exact hostname before any
-     * lookup on every hop, public addresses only, and a smaller cap.
+     * Held to declared sources (an unattended run): checked before any lookup
+     * on every hop, public addresses only, and a smaller cap.
      */
-    allowedHosts?: readonly string[];
+    hold?: { sources: readonly string[]; held: boolean };
   } = {}
 ): Promise<FetchResult> {
-  const held = options.allowedHosts ?? null;
+  const held = options.hold ?? null;
   const maxBytes = held != null ? HELD_MAX_RESPONSE_BYTES : MAX_RESPONSE_BYTES;
   let url = parseAndValidate(rawUrl);
   const redirects: string[] = [];
@@ -368,7 +316,7 @@ export async function fetchUrl(
       // Vet before dialing, at every hop: a redirect target gets the same
       // treatment as a URL the model typed. A held fetch checks the name
       // before it is ever looked up.
-      if (held != null) checkHeldHost(url, held);
+      if (held != null) checkHeld(url, held);
       const addresses = await resolveAndVet(url, held != null);
       // A redirect chain must not accumulate live pools either.
       if (pinned != null) await pinned.close();
@@ -428,7 +376,7 @@ export async function fetchUrl(
         }
 
         const next = parseAndValidate(new URL(location, url).href);
-        if (held != null) checkHeldHost(next, held);
+        if (held != null) checkHeld(next, held);
 
         // Check the destination before the origin rule: the cross-origin
         // message invites the model to call again with the destination, which

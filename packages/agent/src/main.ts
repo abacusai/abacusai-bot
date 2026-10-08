@@ -80,11 +80,12 @@ async function main(): Promise<void> {
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
-  // An unattended run's declared reach, as JSON; meaningful only with
-  // `--permission-mode UNATTENDED`, which refuses everything without it.
-  const unattendedFlag = readFlag(argv, "--unattended");
+  // An unattended run's declared reach, as JSON read to its end from its own
+  // pipe (never argv); meaningful only with `--permission-mode UNATTENDED`,
+  // which refuses everything without it.
+  const unattendedFd = readFlag(argv, "--unattended-fd");
   const unattended =
-    unattendedFlag != null ? parseUnattendedPolicy(unattendedFlag) : null;
+    unattendedFd != null ? readUnattendedPolicy(Number(unattendedFd)) : null;
   const wire = readFlag(argv, "--wire") ?? "agui";
 
   const refusal = wireRefusal(wire);
@@ -141,6 +142,22 @@ async function main(): Promise<void> {
   });
 
   await aguiHost.run();
+}
+
+/** The policy written to `fd`, or null when it cannot be read: then nothing is allowed. */
+function readUnattendedPolicy(fd: number) {
+  if (!Number.isInteger(fd) || fd < 3) return null;
+  try {
+    return parseUnattendedPolicy(fs.readFileSync(fd, "utf8"));
+  } catch {
+    return null;
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      // Already closed.
+    }
+  }
 }
 
 main().catch((error: unknown) => {

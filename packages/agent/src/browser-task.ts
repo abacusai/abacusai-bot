@@ -672,7 +672,11 @@ export async function runBrowserTask(
         customTools: (acceptsImages(context.model)
           ? tools
           : withoutImages(tools)) as never,
-        // The user's Capabilities choices apply here too.
+        // Exactly the tools handed to it, by name: nothing pi or a setting
+        // would enable besides. The user's Capabilities choices apply too.
+        tools: (tools as Array<{ name?: unknown }>)
+          .map((tool) => String(tool.name ?? ""))
+          .filter((name) => name.length > 0),
         excludeTools: [...EXCLUDED_TOOLS, ...excludedTools()],
         ...(context.model != null ? { model: context.model as never } : {}),
       });

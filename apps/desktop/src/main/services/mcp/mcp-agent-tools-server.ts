@@ -372,7 +372,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     const held = this.isHeld(callerSession);
 
     return AGENT_TOOLS.filter((definition) =>
-      held && UNATTENDED_TOOLS[definition.name] == null
+      held && !Object.hasOwn(UNATTENDED_TOOLS, definition.name)
         ? false
         : forEditor
           ? definition.name === "cronjob"
@@ -438,7 +438,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     if (definition == null) return this.err(`Unknown tool: ${name}`);
 
     // The agent's gate refuses these first; this holds even if it did not.
-    if (this.isHeld(callerSession) && UNATTENDED_TOOLS[name] == null)
+    if (this.isHeld(callerSession) && !Object.hasOwn(UNATTENDED_TOOLS, name))
       return this.err(
         `${name} is not available in a routine that runs on its own.`
       );

@@ -27,6 +27,8 @@ export interface ChromeTabInfo {
    * `openerTabId` alone cannot say so. Such a tab is never taken by a click.
    */
   hasOpener?: boolean;
+  /** The browser context the page lives in; absent for the default one. */
+  browserContextId?: string;
   /**
    * The tab was handed over while the connection was being made (the tab
    * the user picked): it is the user's, and is never let go.
@@ -64,12 +66,18 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
   isAttached(tabId: number): boolean;
   createTab(url: string): Promise<ChromeTabInfo>;
   /**
-   * A new page in a fresh browser context of its own, gone once disposed.
-   * Only the app's own browser can; the user's Chrome never offers it.
+   * A new page in a fresh browser context of its own, gone once disposed,
+   * reaching public addresses on `port` only (443 when absent). Only the
+   * app's own browser can; the user's Chrome never offers it.
    */
   createIsolatedTab?(
-    url: string
-  ): Promise<{ tab: ChromeTabInfo; dispose: () => Promise<void> }>;
+    url: string,
+    options?: { port?: number }
+  ): Promise<{
+    tab: ChromeTabInfo;
+    browserContextId: string;
+    dispose: () => Promise<void>;
+  }>;
   closeTab(tabId: number): Promise<void>;
   /** Stops driving the tab and leaves it open, where the driver can. */
   detachTab?(tabId: number): Promise<void>;

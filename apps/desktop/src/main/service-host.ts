@@ -356,7 +356,10 @@ import { HostedMcpConnect } from "./services/mcp/hosted-mcp-connect";
 import { McpAdminService } from "./services/mcp/mcp-admin-service";
 import { McpAgentToolsServer } from "./services/mcp/mcp-agent-tools-server";
 import { McpBrowserServer } from "./services/mcp/mcp-browser-server";
-import { McpConfigService } from "./services/mcp/mcp-config-service";
+import {
+  McpConfigService,
+  RESERVED_USER_SERVER_NAMES,
+} from "./services/mcp/mcp-config-service";
 import { McpDeviceServer } from "./services/mcp/mcp-device-server";
 import {
   cancelAllMcpSignIns,
@@ -366,6 +369,7 @@ import {
   signInToMcpServer,
 } from "./services/mcp/mcp-oauth-service";
 import { retirePlaywrightEntries } from "./services/mcp/playwright-migration";
+import { watchPort } from "./services/mcp/unattended-browser";
 import { MediaStore } from "./services/messaging/media-store";
 import {
   listPairing,
@@ -781,8 +785,13 @@ export class ServiceHost {
   private browserTargetSource(): BrowserTargetSource | null {
     if (this.platform === "web-host")
       return this.hostedChromium.available()
-        ? this.hostedChromium.targetSource((sessionId) =>
-            this.isUnattendedSession(sessionId)
+        ? this.hostedChromium.targetSource(
+            (sessionId) => this.isUnattendedSession(sessionId),
+            (sessionId) =>
+              watchPort(
+                this.agentSessionManagerService.unattendedPolicy(sessionId)
+                  ?.watchUrl ?? null
+              )
           )
         : null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
@@ -3780,10 +3789,16 @@ export class ServiceHost {
     return this.mcpAdminService.listMcpServers(request);
   }
 
+  /** A server the user adds: never under one of the app's own names. */
   addMcpServer(request: AddMcpServerRequest): {
     success: boolean;
     error?: string;
   } {
+    if (RESERVED_USER_SERVER_NAMES.includes(request.name))
+      return {
+        success: false,
+        error: "That name is reserved for the app's own servers.",
+      };
     return this.mcpAdminService.addMcpServer(request);
   }
 

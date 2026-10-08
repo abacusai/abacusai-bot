@@ -18,7 +18,12 @@ import { McpBrowserServer } from "./mcp-browser-server";
 import { McpDeviceServer } from "./mcp-device-server";
 import type { McpToolListing } from "./mcp-http-server";
 import { AGENT_TOOL_NAMES } from "./tools";
-import { heldBrowserRefusal, onWatchHost } from "./unattended-browser";
+import {
+  heldBrowserRefusal,
+  onWatchHost,
+  watchHostIsPublic,
+  watchPort,
+} from "./unattended-browser";
 
 vi.mock("#main/rpc/emit", () => ({ emitHostEvent: () => {} }));
 
@@ -218,5 +223,45 @@ describe("the built-in prompts, for a held session", () => {
     expect(
       await permissions().request("device", "device_interact", "", HELD)
     ).toBe("deny");
+  });
+});
+
+describe("the watch page's address", () => {
+  it("is https only, on its own port", () => {
+    expect(
+      heldBrowserRefusal(
+        "browser_navigate",
+        { url: "http://shop.example/" },
+        { watchUrl: "http://shop.example/", isolated: true }
+      )
+    ).toMatch(/https/);
+    expect(onWatchHost("https://shop.example:8443/x", WATCH)).toBe(false);
+  });
+
+  it("names the one port its browser context may reach", () => {
+    expect(watchPort(WATCH)).toBe(443);
+    expect(watchPort("https://shop.example:8443/x")).toBe(8443);
+    expect(watchPort(null)).toBeUndefined();
+    expect(watchPort("not a url")).toBeUndefined();
+  });
+
+  it("is never one that resolves inside", async () => {
+    const resolve = (address: string) => async () => [{ address }];
+    expect(await watchHostIsPublic(WATCH, resolve("93.184.216.34"))).toBe(true);
+    for (const address of [
+      "169.254.169.254",
+      "10.0.0.2",
+      "::1",
+      "64:ff9b::a9fe:a9fe",
+    ])
+      expect(await watchHostIsPublic(WATCH, resolve(address)), address).toBe(
+        false
+      );
+    expect(await watchHostIsPublic("https://127.0.0.1/")).toBe(false);
+    expect(
+      await watchHostIsPublic(WATCH, async () => {
+        throw new Error("no such host");
+      })
+    ).toBe(false);
   });
 });

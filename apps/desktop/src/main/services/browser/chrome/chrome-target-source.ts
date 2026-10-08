@@ -80,7 +80,7 @@ export class ChromeTargetSource implements BrowserTargetSource {
   async materialize(
     sessionId: string,
     url: string,
-    options: { isolated?: boolean } = {}
+    options: { isolated?: boolean; port?: number } = {}
   ): Promise<number | null> {
     if (!this.relay.connected) return null;
     const tab = await this.tabs.create(sessionId, url, options);

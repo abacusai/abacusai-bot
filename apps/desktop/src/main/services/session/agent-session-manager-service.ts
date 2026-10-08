@@ -1,4 +1,7 @@
-import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
+import {
+  parseUnattendedPolicy,
+  type UnattendedPolicy,
+} from "@abacus-ai/agent/tool-policy";
 import { AgentStatus, type AgentMode } from "@abacus-ai/contract/agent-types";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
@@ -338,13 +341,10 @@ export class AgentSessionManagerService {
   holdUnattended(sessionId: string, policy: UnattendedPolicy): boolean {
     const record = this.sessions.get(sessionId);
     if (record == null || record.unattended != null) return false;
-    record.unattended = {
-      sourceHosts: [...policy.sourceHosts],
-      watchUrl: policy.watchUrl,
-      ...(policy.watchPrompt != null
-        ? { watchPrompt: policy.watchPrompt }
-        : {}),
-    };
+    // Stored as it will be spawned with: read back through the one parser.
+    const held = parseUnattendedPolicy(policy);
+    if (held == null) return false;
+    record.unattended = held;
     this.persist();
     return true;
   }

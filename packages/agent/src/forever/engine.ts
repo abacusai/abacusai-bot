@@ -38,7 +38,11 @@ import {
   loadConfig,
   PROVIDER_API_KEY_ENV,
 } from "../config.js";
-import { setCurrentMode } from "../current-mode.js";
+import {
+  fetchHold,
+  setCurrentMode,
+  setUnattendedPolicy,
+} from "../current-mode.js";
 import { tagEvent, type EventMeta } from "../event-meta.js";
 import { TOOL_NAME_ALIASES } from "../excluded-tools.js";
 import background from "../extensions/background.js";
@@ -51,7 +55,11 @@ import toolTimeouts from "../extensions/tool-timeouts.js";
 import { githubPrompt } from "../github-prompt.js";
 import { refreshGithubToken } from "../github-token.js";
 import type { InternalAgentEvent } from "../internal-events.js";
-import { connectMcpServers, type ConnectedMcp } from "../mcp/index.js";
+import {
+  connectMcpServers,
+  toolOriginOf,
+  type ConnectedMcp,
+} from "../mcp/index.js";
 import { McpToolSync } from "../mcp/tool-sync.js";
 import { buildMcpToolDefinitions, mcpToolCaller } from "../mcp/tools.js";
 import { MidTaskInbox, type MidTaskMessage } from "../mid-task-inbox.js";
@@ -119,7 +127,7 @@ import {
 } from "../stall-watch.js";
 import { ToolCallStream } from "../tool-call-stream.js";
 import { ToolHeartbeat } from "../tool-heartbeat.js";
-import { mcpToolAllowed } from "../tool-policy.js";
+import { mcpToolAllowed, type UnattendedPolicy } from "../tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "../tools-arrived.js";
 import { turnUsage, type TurnUsage } from "../turn-usage.js";
 import webTools from "../web/tools.js";
@@ -130,6 +138,8 @@ export interface ForeverEngineOptions {
   cwd: string;
   model?: string;
   mode?: string;
+  /** A held chat's reach (`--unattended-fd` at spawn); read only in the unattended mode. */
+  unattended?: UnattendedPolicy;
   emit: (event: DesktopEvent) => void;
   /** Facts for the AG-UI emitter only; see SessionOptions.emitInternal. */
   emitInternal?: (event: InternalAgentEvent) => void;
@@ -299,6 +309,9 @@ export class ForeverEngine {
     // The sandbox reads the mode from here: a bot in YOLO runs unconfined,
     // as a chat in YOLO does.
     setCurrentMode(this.mode);
+    setUnattendedPolicy(
+      this.mode === AgentMode.Unattended ? (options.unattended ?? null) : null
+    );
   }
 
   async start(): Promise<void> {
@@ -1308,6 +1321,19 @@ export class ForeverEngine {
       return;
     }
 
+    // A held chat (a stranger's) stays held; nothing moves a chat into it either.
+    if (
+      (this.mode === AgentMode.Unattended || next === AgentMode.Unattended) &&
+      next !== this.mode
+    ) {
+      this.emitAgentEvent({
+        type: "mode_changed",
+        mode: this.mode,
+        source: "bot",
+      });
+      return;
+    }
+
     this.mode = next;
     // The sandbox reads the mode from here; without it a bot moved off YOLO
     // kept running commands unconfined.
@@ -1902,6 +1928,15 @@ export class ForeverEngine {
           tools: [...this.profile.alwaysAllowedTools],
           readPaths: this.config.allowedReadPaths,
         }),
+        ...(this.options.unattended != null
+          ? {
+              unattended: {
+                policy: this.options.unattended,
+                origin: (name: string) => toolOriginOf(this.mcp, name),
+                held: fetchHold()?.held === true,
+              },
+            }
+          : {}),
       });
 
       if (gate.kind === "allow") return;

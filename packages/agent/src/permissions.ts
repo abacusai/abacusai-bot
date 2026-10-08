@@ -6,7 +6,9 @@
  * reads outside it do, since that is the one read that can leak.
  */
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 
@@ -18,10 +20,15 @@ import {
   type PermissionRequest,
   type ToolRequest,
 } from "./protocol.js";
-import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
+import {
+  isWithin,
+  namedSecretPaths,
+  secretEntries,
+} from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
 import {
-  hostAllowed,
+  ownEntry,
+  sourceAllows,
   UNATTENDED_CONNECTOR_READS,
   UNATTENDED_EXCLUDED_TOOLS,
   UNATTENDED_TOOLS,
@@ -29,6 +36,60 @@ import {
   type UnattendedPolicy,
 } from "./tool-policy.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
+
+const UNICODE_SPACES = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
+
+/**
+ * Where a file tool's path argument really lands, read the way pi's file
+ * tools read it (resolveToCwd): unicode spaces made plain, a leading `@`
+ * dropped, a Windows shell spelling made native, `~` expanded to home, a
+ * `file://` URL made a path, then resolved against the workspace. Checking
+ * `path.resolve` alone would let `~/.ssh/id_rsa`, `@/etc/passwd` or
+ * `file:///etc/passwd` look like files in the workspace while the tool reads
+ * them from elsewhere. A `file:` URL that is not one resolves to null, which
+ * callers treat as outside.
+ */
+export function toolPath(
+  raw: string,
+  cwd: string,
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  const windows = platform === "win32";
+  const paths = windows ? path.win32 : path.posix;
+  let value = raw.replace(UNICODE_SPACES, " ");
+  if (value.startsWith("@")) value = value.slice(1);
+  if (windows) value = windowsNativePath(value);
+  if (value === "~") value = os.homedir();
+  else if (value.startsWith("~/") || (windows && value.startsWith("~\\")))
+    value = paths.join(os.homedir(), value.slice(2));
+  else if (/^file:/i.test(value)) {
+    try {
+      value = fileURLToPath(value, { windows });
+    } catch {
+      return null;
+    }
+  }
+  return paths.resolve(cwd, value);
+}
+
+/**
+ * A Windows path in the spellings a shell or the model uses, as the native
+ * one: `/c/x`, `/mnt/c/x` and `/cygdrive/c/x` as `C:\x` (pi's
+ * normalizeWindowsShellPath), and the long forms `\\?\C:\x` and
+ * `\\?\UNC\host\share` as `C:\x` and `\\host\share`.
+ */
+function windowsNativePath(raw: string): string {
+  const long = /^[\\/]{2}[?.][\\/](?:([a-z]:)|unc[\\/])/i.exec(raw);
+  if (long != null)
+    return long[1] != null
+      ? raw.slice(long[0].length - long[1].length)
+      : `\\\\${raw.slice(long[0].length)}`;
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\"))
+    return raw;
+  const drive = /^\/(?:mnt\/|cygdrive\/)?([a-z])(?:\/(.*))?$/i.exec(raw);
+  if (drive == null) return raw;
+  return `${drive[1]!.toUpperCase()}:\\${(drive[2] ?? "").replaceAll("/", "\\")}`;
+}
 
 /** Tools that change something on disk or run code. */
 const MUTATING_TOOLS = new Set([
@@ -137,6 +198,8 @@ export interface GateOptions {
   unattended?: {
     policy: UnattendedPolicy;
     origin: (toolName: string) => ToolOrigin;
+    /** Kept for callers: every unattended run is held (see fetchHold). */
+    held?: boolean;
   };
 }
 
@@ -153,6 +216,23 @@ export function isMutatingCall(tool: ToolRequest): boolean {
   // stop the agent seeing what it already put on a port.
   if (tool.name === "serve")
     return String(tool.input.action ?? "start") === "start";
+
+  // A routine that runs on the server, or one that may read the web, is
+  // reach that outlives the session: asked about. A local one is as before.
+  if (tool.name === "cronjob" || tool.name === "agent-tools_cronjob") {
+    const action = String(tool.input.action ?? "");
+    const listed = (value: unknown): boolean =>
+      Array.isArray(value) && value.length > 0;
+    return (
+      (action === "create" || action === "update") &&
+      (tool.input.runner === "hosted" ||
+        listed(tool.input.sources) ||
+        listed(tool.input.source_hosts) ||
+        listed(tool.input.reads) ||
+        (typeof tool.input.watch_url === "string" &&
+          tool.input.watch_url.length > 0))
+    );
+  }
 
   return isMutatingTool(tool.name);
 }
@@ -291,41 +371,100 @@ function gateUnattended(tool: ToolRequest, options: GateOptions): Gate {
       ? tool.name.slice(CONNECTOR_PREFIX.length)
       : tool.name;
     const action = String(tool.input.action ?? "");
-    return (UNATTENDED_CONNECTOR_READS[bare] ?? []).includes(action)
+    // A read this routine was given, and one reviewed as a read at all.
+    return (ownEntry(UNATTENDED_CONNECTOR_READS, bare) ?? []).includes(
+      action
+    ) &&
+      (ownEntry(unattended.policy.connectorReads ?? {}, bare) ?? []).includes(
+        action
+      )
       ? { kind: "allow" }
-      : refuseUnattended("only reading from a connector is allowed");
+      : refuseUnattended(
+          "this routine was not set up to read that from the account"
+        );
   }
 
-  const rule = UNATTENDED_TOOLS[tool.name];
+  const rule = ownEntry(UNATTENDED_TOOLS, tool.name);
   switch (rule) {
     case "allow":
       return { kind: "allow" };
     case "workspace-read":
-      return gateRead(tool, options).kind === "allow"
+      if (unattended.policy.files === false)
+        return { kind: "refuse", reason: "This chat cannot read files." };
+      if (readsSecretFile(tool, options.cwd))
+        return refuseUnattended("it never reads keys, tokens or .env files");
+      // The workspace only: nothing the session (or the host) allowed widens it.
+      return gateRead(tool, { ...options, allowedReadPaths: [] }).kind ===
+        "allow"
         ? { kind: "allow" }
         : refuseUnattended("reads stay inside the routine's folder");
-    case "source-hosts": {
-      let host: string;
-      try {
-        host = new URL(String(tool.input.url ?? "")).hostname;
-      } catch {
-        return refuseUnattended("that is not a URL");
-      }
-      return hostAllowed(host, unattended.policy.sourceHosts)
+    case "sources":
+      // Always held: the run's prompt alone can carry private data.
+      return sourceAllows(
+        String(tool.input.url ?? ""),
+        unattended.policy.sources,
+        true
+      )
         ? { kind: "allow" }
         : refuseUnattended(
-            `${host} is not one of the sites this routine was set up to read`
+            "it reads only the exact pages this routine was set up to read, with no query"
           );
-    }
     case "watch-url":
       return unattended.policy.watchUrl != null
         ? { kind: "allow" }
         : refuseUnattended("this routine watches no page");
     default:
       return refuseUnattended(
-        UNATTENDED_EXCLUDED_TOOLS[tool.name] ?? "it is not on the allowed list"
+        ownEntry(UNATTENDED_EXCLUDED_TOOLS, tool.name) ??
+          "it is not on the allowed list"
       );
   }
+}
+
+/**
+ * Files that hold keys or tokens wherever they sit, matched on any segment
+ * of the path. Templates (`.env.example`) are not secrets.
+ */
+const SECRET_FILE_NAMES: readonly RegExp[] = [
+  /^\.env(?!\.(?:example|sample|template|dist)$)(?:\..+)?$/i,
+  /^\.envrc$/i,
+  /\.(?:pem|key|p12|pfx|jks|keystore|kdbx|ppk|gpg|asc|der)$/i,
+  /^id_(?:rsa|dsa|ecdsa|ed25519)(?:_sk)?$/i,
+  /^\.(?:netrc|npmrc|pypirc|pgpass|git-credentials|htpasswd)$/i,
+  /^\.(?:ssh|gnupg|aws|azure|kube|docker|password-store)$/i,
+  /^(?:credentials|secrets?)(?:\.(?:json|ya?ml|toml|ini|txt))?$/i,
+  /^(?:service[-_]?account|client[-_]?secret)[^/\\]*\.json$/i,
+];
+
+/**
+ * Whether a read names a secret: by file name anywhere in the path, or a
+ * credential store the sandbox hides (secretEntries). Both the spelled and
+ * the real path are checked, so a link cannot rename one.
+ */
+function readsSecretFile(tool: ToolRequest, cwd: string): boolean {
+  const requested = Array.isArray(tool.input.paths)
+    ? (tool.input.paths as unknown[]).map(String)
+    : [String(tool.input.path ?? "")];
+  const stores = secretEntries(os.homedir()).map((entry) => entry.path);
+  const root = path.resolve(cwd);
+  const realRoot = realPathOf(root) ?? root;
+  // Names below the workspace only: the folder's own path is not the file's.
+  const namesSecret = (relative: string): boolean =>
+    relative
+      .split(/[\\/]/)
+      .some((segment) => SECRET_FILE_NAMES.some((re) => re.test(segment)));
+  return requested.some((raw) => {
+    const lexical = toolPath(raw, cwd);
+    if (lexical == null) return true;
+    const real = realPathOf(lexical) ?? lexical;
+    return (
+      [lexical, real].some((candidate) =>
+        stores.some((store) => isWithin(candidate, store))
+      ) ||
+      namesSecret(path.relative(root, lexical)) ||
+      namesSecret(path.relative(realRoot, real))
+    );
+  });
 }
 
 /**
@@ -387,13 +526,14 @@ function writeTarget(
   options: GateOptions
 ): { requested: string; resolved: string; inside: boolean } {
   const requested = String(tool.input.path ?? tool.input.notebookPath ?? "");
-  const resolved = pathToShow(
-    path.resolve(options.cwd, requested),
-    options.cwd
-  );
+  // Read the way the write tools read it (see toolPath); an unreadable
+  // `file:` URL is never inside.
+  const landing = toolPath(requested, options.cwd);
+  const resolved = pathToShow(landing ?? requested, options.cwd);
   const inside =
-    isInside(resolved, options.cwd) ||
-    options.allowedWritePaths.some((dir) => isInside(resolved, dir));
+    landing != null &&
+    (isInside(resolved, options.cwd) ||
+      options.allowedWritePaths.some((dir) => isInside(resolved, dir)));
 
   return { requested, resolved, inside };
 }
@@ -510,10 +650,11 @@ function gateRead(tool: ToolRequest, options: GateOptions): Gate {
     : [String(tool.input.path ?? "")];
 
   const outside = paths.find((candidate) => {
-    const resolved = path.resolve(options.cwd, candidate);
+    const resolved = toolPath(candidate, options.cwd);
     return (
-      !isInside(resolved, options.cwd) &&
-      !options.allowedReadPaths.some((dir) => isInside(resolved, dir))
+      resolved == null ||
+      (!isInside(resolved, options.cwd) &&
+        !options.allowedReadPaths.some((dir) => isInside(resolved, dir)))
     );
   });
 
@@ -525,7 +666,7 @@ function gateRead(tool: ToolRequest, options: GateOptions): Gate {
   // Approving "link.ts" tells the user nothing, and the directory offered must
   // be where the bytes really live or the approval misses the next read.
   const resolved = pathToShow(
-    path.resolve(options.cwd, requested),
+    toolPath(requested, options.cwd) ?? requested,
     options.cwd
   );
 

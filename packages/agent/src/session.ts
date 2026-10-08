@@ -150,7 +150,7 @@ import {
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
-import type { ToolOrigin, UnattendedPolicy } from "./tool-policy.js";
+import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
@@ -585,6 +585,13 @@ export function reserveContextHeadroom(
   };
 }
 
+/** The servers the app itself hosts; see DESKTOP_ONLY_SERVERS in mcp/index.ts. */
+const APP_SERVERS: ReadonlySet<string> = new Set([
+  "browser",
+  "device",
+  "agent-tools",
+]);
+
 export class AbacusBotSession {
   private readonly pendingSteers = new PendingSteers();
   private session: AgentSession | undefined;
@@ -791,8 +798,13 @@ export class AbacusBotSession {
       ...componentToolNames(hostServices),
       ...this.mcp.tools.map((tool) => tool.name),
     ]);
-    const userProfile = userProfilePrompt();
-    const memory = memoryPrompt(qualifiedName(toolNames, "memory") != null);
+    // A run nobody watches gets none of the user's private context: a page it
+    // reads could ask for it back. Its routine's own prompt still arrives.
+    const unattended = this.mode === AgentMode.Unattended;
+    const userProfile = unattended ? undefined : userProfilePrompt();
+    const memory = unattended
+      ? null
+      : memoryPrompt(qualifiedName(toolNames, "memory") != null);
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
     // Sub-agents get their own manager, left at the configured retry budget.
     const subAgentSettingsManager = SettingsManager.create(
@@ -810,7 +822,9 @@ export class AbacusBotSession {
       cwd: this.options.cwd,
       agentDir: dir,
       settingsManager,
-      additionalSkillPaths: skillDirs(this.options.cwd),
+      // Nor the folder's AGENTS.md and skills, which are the user's own text.
+      additionalSkillPaths: unattended ? [] : skillDirs(this.options.cwd),
+      ...(unattended ? { noSkills: true, noContextFiles: true } : {}),
       // What the model cannot work out for itself about this app, appended to
       // pi's own prompt rather than replacing it.
       appendSystemPrompt: [
@@ -836,8 +850,8 @@ export class AbacusBotSession {
       appendSystemPromptOverride: (base: string[]): string[] => {
         // Who the agent is comes first, then a bot's own persona, then what it knows.
         const persona = personaPrompt();
-        const instructions = customInstructionsPrompt();
-        const remember = rememberPrompt();
+        const instructions = unattended ? null : customInstructionsPrompt();
+        const remember = unattended ? null : rememberPrompt();
 
         // Live statuses, so a connector added mid-chat updates the line.
         const mcp = mcpPrompt(this.mcp.statuses);
@@ -2712,9 +2726,7 @@ export class AbacusBotSession {
           : {}),
       });
 
-      if (gate.kind === "allow") {
-        return;
-      }
+      if (gate.kind === "allow") return;
 
       // Asked and answered; the same card again talks over the user.
       if (tool.name === EXIT_PLAN_TOOL_NAME && this.planDeclinedThisTurn) {
@@ -3198,9 +3210,11 @@ export class AbacusBotSession {
     if (route == null) return "builtin";
     const server = route.client.name;
     if (server === GATEWAY_SERVER_NAME) return "connector";
-    return this.mcp.statuses.some(
-      (status) => status.id === server && status.isBuiltin === true
-    )
+    // By the app's reserved names, not by what a config entry claims.
+    return APP_SERVERS.has(server) &&
+      this.mcp.statuses.some(
+        (status) => status.id === server && status.isBuiltin === true
+      )
       ? "builtin"
       : "user";
   }

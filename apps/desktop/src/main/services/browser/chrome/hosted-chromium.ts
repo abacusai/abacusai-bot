@@ -28,6 +28,7 @@ import type { Readable, Writable } from "node:stream";
 import type { BrowserTargetSource } from "../browser-target";
 import type { ChromeRelayEvents, ChromeTabInfo } from "./chrome-relay";
 import { ChromeTargetSource, tabMethodsOf } from "./chrome-target-source";
+import { startWatchProxy } from "./watch-proxy";
 
 /** Names the Chromium to use, read at once; without it the Playwright lookup below runs. */
 const HOSTED_CHROMIUM_ENV = "ABACUSAI_BOT_CHROMIUM";
@@ -186,8 +187,15 @@ type Frame = {
   url: string;
 };
 
-/** What the browser says opened a page: the opener page, or the frame (a `noopener` link names only that). */
-type Opener = { openerId?: string; openerFrameId?: string };
+/**
+ * What the browser says opened a page: the opener page, or the frame (a
+ * `noopener` link names only that); and the browser context it opened in.
+ */
+type Opener = {
+  openerId?: string;
+  openerFrameId?: string;
+  browserContextId?: string;
+};
 
 interface FrameTree {
   frame: { id: string };
@@ -237,6 +245,8 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
       executable: string;
       args: string[];
       spawn?: typeof spawn;
+      /** The isolated context's proxy; tests pass a fake. */
+      watchProxy?: typeof startWatchProxy;
     }
   ) {
     super();
@@ -294,19 +304,35 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
   /**
    * A new page in a browser context of its own: no cookies, no storage, no
    * saved logins from the profile, and nothing kept once `dispose` runs.
-   * Downloads are refused in it. For a run nobody is watching.
+   * Downloads are refused in it, and every request it makes goes through a
+   * proxy that reaches public addresses on `port` only (watch-proxy.ts),
+   * loopback included. For a run nobody is watching.
    */
   async createIsolatedTab(
-    url: string
-  ): Promise<{ tab: ChromeTabInfo; dispose: () => Promise<void> }> {
-    const { browserContextId } = (await this.send(
-      "Target.createBrowserContext",
-      {}
-    )) as { browserContextId: string };
+    url: string,
+    { port = 443 }: { port?: number } = {}
+  ): Promise<{
+    tab: ChromeTabInfo;
+    browserContextId: string;
+    dispose: () => Promise<void>;
+  }> {
+    const proxy = await (this.options.watchProxy ?? startWatchProxy)({ port });
+    let browserContextId: string;
+    try {
+      ({ browserContextId } = (await this.send("Target.createBrowserContext", {
+        proxyServer: proxy.server,
+        // Chromium sends loopback direct unless told otherwise.
+        proxyBypassList: "<-loopback>",
+      })) as { browserContextId: string });
+    } catch (error) {
+      await proxy.close();
+      throw error;
+    }
     const dispose = async (): Promise<void> => {
       await this.send("Target.disposeBrowserContext", {
         browserContextId,
       }).catch(() => undefined);
+      await proxy.close();
     };
     try {
       await this.send("Browser.setDownloadBehavior", {
@@ -317,9 +343,10 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
         url,
         browserContextId,
       })) as { targetId: string };
-      const tab = await this.attach(targetId, url);
+      const tab = await this.attach(targetId, url, { browserContextId });
       if (!tab.url) tab.url = url;
-      return { tab, dispose };
+      tab.browserContextId = browserContextId;
+      return { tab, browserContextId, dispose };
     } catch (error) {
       await dispose();
       throw error;
@@ -445,6 +472,9 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
       sessionId,
       ...(openerTab != null ? { openerTabId: openerTab.id } : {}),
       ...(hasOpener ? { hasOpener } : {}),
+      ...(opener.browserContextId != null
+        ? { browserContextId: opener.browserContextId }
+        : {}),
     };
     this.tabs.set(tab.id, tab);
     void this.send("Target.setAutoAttach", AUTO_ATTACH, sessionId).catch(
@@ -570,6 +600,7 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
           title?: string;
           openerId?: string;
           openerFrameId?: string;
+          browserContextId?: string;
         }
       | undefined;
     switch (message.method) {
@@ -581,6 +612,9 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
         if (!this.launched) this.preexisting.add(info.targetId);
         if (this.preexisting.has(info.targetId)) return;
         void this.attach(info.targetId, info.url ?? "", {
+          ...(info.browserContextId != null
+            ? { browserContextId: info.browserContextId }
+            : {}),
           ...(info.openerId != null ? { openerId: info.openerId } : {}),
           ...(info.openerFrameId != null
             ? { openerFrameId: info.openerFrameId }
@@ -930,17 +964,22 @@ export class HostedChromiumService {
    * their own (an unattended run), never the persistent profile's.
    */
   targetSource(
-    isolated: (sessionId: string) => boolean = () => false
+    isolated: (sessionId: string) => boolean = () => false,
+    /** The one port an isolated session's pages may reach; 443 when absent. */
+    portFor: (sessionId: string) => number | undefined = () => undefined
   ): BrowserTargetSource {
     return {
       presentsInApp: false,
       candidates: () => this.source?.candidates() ?? [],
       webContents: (id) => this.source?.webContents(id) ?? null,
       ...tabMethodsOf(() => this.source),
-      materialize: async (sessionId, url) =>
-        (await this.start()).materialize(sessionId, url, {
+      materialize: async (sessionId, url) => {
+        const port = portFor(sessionId);
+        return (await this.start()).materialize(sessionId, url, {
           isolated: isolated(sessionId),
-        }),
+          ...(port != null ? { port } : {}),
+        });
+      },
     };
   }
 

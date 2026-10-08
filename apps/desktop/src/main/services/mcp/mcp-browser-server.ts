@@ -155,6 +155,7 @@ import {
 import {
   heldBrowserRefusal,
   onWatchHost,
+  watchHostIsPublic,
   type HeldBrowserSession,
 } from "./unattended-browser";
 
@@ -1936,6 +1937,13 @@ export class McpBrowserServer extends McpHttpServer {
       if (held != null) {
         const refusal = heldBrowserRefusal(name, args, held);
         if (refusal != null) return this.err(refusal);
+        // A name that points inside is never opened, nor reloaded.
+        if (
+          name === "browser_navigate" &&
+          held.watchUrl != null &&
+          !(await watchHostIsPublic(held.watchUrl))
+        )
+          return this.err("The routine's page is not on a public address.");
       }
       // Pure-read tools skip the prompt; navigate/interact/execute stay gated.
       if (

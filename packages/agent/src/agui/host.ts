@@ -236,13 +236,15 @@ export class AguiHost {
       emit: (event) => this.core.onSessionEvent(event),
       emitInternal: (event) => this.sink.internal(event),
     };
-    // An unattended run is always the plain session, whose gate holds it to
-    // its policy, whatever lane or bot the environment names.
+    // An unattended run is the plain session, or a bot's held chat (a
+    // stranger's) its bot loop; both gates hold it to its policy. Never the phone.
     const unattended = parseModeStrict(options.mode) === AgentMode.Unattended;
     const session =
       options.session?.(init) ??
       (unattended
-        ? new AbacusBotSession(init)
+        ? isBotSession()
+          ? new BotSession(init)
+          : new AbacusBotSession(init)
         : isPhoneSession()
           ? new PhoneSession({
               ...init,

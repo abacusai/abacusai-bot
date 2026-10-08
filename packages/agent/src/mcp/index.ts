@@ -16,6 +16,11 @@ import {
 
 import { DEFAULT_ABACUS_V1, sponsoredRunHeaders } from "../abacus-endpoint.js";
 import { abacusBotDir, desktopMcpConfigPath } from "../config.js";
+import {
+  UNATTENDED_EXCLUDED_TOOLS,
+  UNATTENDED_TOOLS,
+  type ToolOrigin,
+} from "../tool-policy.js";
 import { authHeadersForServer } from "./auth.js";
 import {
   McpClient,
@@ -198,6 +203,24 @@ const DESKTOP_ONLY_SERVERS = ["browser", "device", "agent-tools"];
 export const HOST_INTERNAL_TOOLS: ReadonlySet<string> = new Set([
   "browser_checkout",
 ]);
+
+/** A server the app itself hosts: marked so, and under one of its reserved names. */
+const isAppServer = (name: string, config: McpServerConfig): boolean =>
+  config.isBuiltin === true && DESKTOP_ONLY_SERVERS.includes(name);
+
+/** Where a routed tool comes from, by the app's reserved names, not what a config entry claims. */
+export const toolOriginOf = (mcp: ConnectedMcp, name: string): ToolOrigin => {
+  const route = mcp.routes.get(name);
+  if (route == null) return "builtin";
+  const server = route.client.name;
+  if (server === GATEWAY_SERVER_NAME) return "connector";
+  return DESKTOP_ONLY_SERVERS.includes(server) &&
+    mcp.statuses.some(
+      (status) => status.id === server && status.isBuiltin === true
+    )
+    ? "builtin"
+    : "user";
+};
 
 const withoutDesktopOnlyServers = (
   servers: Record<string, McpServerConfig>
@@ -462,12 +485,18 @@ export async function connectMcpServers(
           ? gatewayToolMeta(tool.name, tool._meta)
           : null;
       if (name === GATEWAY_SERVER_NAME && meta == null) continue;
-      const qualified = qualify(name, tool, config.isBuiltin === true);
+      const qualified = qualify(name, tool, isAppServer(name, config));
 
       result.routes.set(qualified, { client, toolName: tool.name });
       const alternate =
         qualified === tool.name ? `${name}_${tool.name}` : tool.name;
-      if (!result.routes.has(alternate))
+      // A server the user added never answers to a built-in tool's bare name
+      // (`read`, `todo`): that call is the app's own tool's.
+      const shadows =
+        alternate === tool.name &&
+        (Object.hasOwn(UNATTENDED_TOOLS, alternate) ||
+          Object.hasOwn(UNATTENDED_EXCLUDED_TOOLS, alternate));
+      if (!shadows && !result.routes.has(alternate))
         result.routes.set(alternate, { client, toolName: tool.name });
       if (meta != null) {
         registeredToolMeta.set(qualified, meta);

@@ -155,4 +155,33 @@ describe("MCP tool naming", () => {
     for (const client of mcp.clients) client.close?.();
     await served.close();
   });
+
+  it("never lets a server the user added answer to a built-in tool's bare name", async () => {
+    const served = await serve(["read", "todo", "lookup"]);
+    const mcp = await connectMcpServers(
+      configFor({ mine: { url: served.url } })
+    );
+
+    expect(mcp.routes.has("mine_read")).toBe(true);
+    expect(mcp.routes.has("read")).toBe(false);
+    expect(mcp.routes.has("todo")).toBe(false);
+    // A name no built-in has still routes bare, as before.
+    expect(mcp.routes.has("lookup")).toBe(true);
+
+    for (const client of mcp.clients) client.close?.();
+    await served.close();
+  });
+
+  it("does not take a user's server for the app's own by its say-so", async () => {
+    const served = await serve(["read"]);
+    const mcp = await connectMcpServers(
+      configFor({ mine: { url: served.url, isBuiltin: true } })
+    );
+
+    expect(mcp.tools.map((t) => t.name)).toEqual(["mine_read"]);
+    expect(mcp.routes.has("read")).toBe(false);
+
+    for (const client of mcp.clients) client.close?.();
+    await served.close();
+  });
 });

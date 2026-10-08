@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 
 import { writeFileAtomicSync } from "@abacus-ai/agent/atomic-file";
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 import type {
   McpMode,
   McpServerEntry,
@@ -63,6 +64,15 @@ const withoutPlaceholderHeaders = (entry: McpServerEntry): McpServerEntry => {
     : { ...entry, headers: kept };
 };
 
+/** An entry with any `isBuiltin` it carried dropped: only the app sets it. */
+const withoutBuiltinMark = (entry: McpServerEntry): McpServerEntry => {
+  if (!("isBuiltin" in entry)) return entry;
+  const { isBuiltin: _ignored, ...rest } = entry as McpServerEntry & {
+    isBuiltin?: unknown;
+  };
+  return rest as McpServerEntry;
+};
+
 export const BUILTIN_BROWSER_NAME = "browser";
 export const BUILTIN_DEVICE_NAME = "device";
 export const BUILTIN_AGENT_TOOLS_NAME = "agent-tools";
@@ -70,6 +80,15 @@ const RESERVED_BUILTIN_NAMES = [
   BUILTIN_BROWSER_NAME,
   BUILTIN_DEVICE_NAME,
   BUILTIN_AGENT_TOOLS_NAME,
+];
+
+/**
+ * Names a server the user adds or imports may not take: the built-ins', and
+ * the connector gateway's, which the app writes and heals itself.
+ */
+export const RESERVED_USER_SERVER_NAMES: readonly string[] = [
+  ...RESERVED_BUILTIN_NAMES,
+  GATEWAY_SERVER_NAME,
 ];
 
 /**
@@ -205,7 +224,7 @@ export class McpConfigService {
       );
     }
     const config = this.readUserMcp(mode);
-    config.mcpServers[name] = entry;
+    config.mcpServers[name] = withoutBuiltinMark(entry);
     this.writeUserMcp(mode, config);
   }
 
@@ -256,13 +275,14 @@ export class McpConfigService {
     for (const [name, entry] of Object.entries(incoming)) {
       if (name === "" || entry == null) continue;
       if (
-        RESERVED_BUILTIN_NAMES.includes(name) ||
+        RESERVED_USER_SERVER_NAMES.includes(name) ||
         current.mcpServers[name] != null
       ) {
         skipped.push(name);
         continue;
       }
-      current.mcpServers[name] = entry;
+      // Only the app marks a server built-in; an imported one never is.
+      current.mcpServers[name] = withoutBuiltinMark(entry);
       imported.push(name);
     }
     if (imported.length > 0) this.writeUserMcp(mode, current);
@@ -377,7 +397,9 @@ export class McpConfigService {
     const userServers: Record<string, McpServerEntry> = {};
     for (const [name, entry] of Object.entries(user.mcpServers)) {
       if (RESERVED_BUILTIN_NAMES.includes(name)) continue;
-      userServers[name] = entry;
+      // A user entry claiming to be built-in would pass for the app's own
+      // server wherever that matters (an unattended run's tool origin).
+      userServers[name] = withoutBuiltinMark(entry);
     }
     return { mcpServers: { ...userServers, ...markedBuiltins } };
   }

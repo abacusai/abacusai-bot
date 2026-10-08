@@ -4,7 +4,11 @@
  * typed, clicked or run, no other address is opened, and a page that ends up
  * on another host is left before anything on it is read.
  */
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+
 import {
+  isNonPublicAddress,
   normalizeHost,
   UNATTENDED_BROWSER_TOOLS,
 } from "@abacus-ai/agent/tool-policy";
@@ -39,6 +43,8 @@ export function heldBrowserRefusal(
     return `${name} is not available in a routine that runs on its own: it only reads its page.`;
   if (!held.isolated || held.watchUrl == null)
     return "This routine has no browser here.";
+  if (canonical(held.watchUrl)?.startsWith("https://") !== true)
+    return "A routine only opens an https page.";
   if (name !== "browser_navigate") return null;
   const action =
     typeof args.action === "string"
@@ -56,6 +62,18 @@ export function heldBrowserRefusal(
     : "A routine opens exactly the page it was set up to watch, and nothing else.";
 }
 
+/** The port a watch page is served on, or undefined when it is not a URL. */
+export function watchPort(watchUrl: string | null): number | undefined {
+  if (watchUrl == null) return undefined;
+  try {
+    const url = new URL(watchUrl);
+    if (url.port !== "") return Number(url.port);
+    return url.protocol === "http:" ? 80 : 443;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Whether a held session's page is still on its watch page's host: a
  * redirect or a script that took it anywhere else means nothing is read.
@@ -66,7 +84,36 @@ export function onWatchHost(currentUrl: string, watchUrl: string): boolean {
     const watched = new URL(watchUrl);
     return (
       current.protocol === watched.protocol &&
-      normalizeHost(current.hostname) === normalizeHost(watched.hostname)
+      normalizeHost(current.hostname) === normalizeHost(watched.hostname) &&
+      current.port === watched.port
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether the watch page's host answers only with public addresses, asked
+ * right before the page is opened: a name that points inside (a cloud
+ * metadata address, the local network) is never opened.
+ */
+export async function watchHostIsPublic(
+  watchUrl: string,
+  resolve: (host: string) => Promise<Array<{ address: string }>> = (host) =>
+    lookup(host, { all: true })
+): Promise<boolean> {
+  let host: string;
+  try {
+    host = new URL(watchUrl).hostname.replace(/^\[|\]$/g, "");
+  } catch {
+    return false;
+  }
+  if (isIP(host) !== 0) return !isNonPublicAddress(host);
+  try {
+    const addresses = await resolve(host);
+    return (
+      addresses.length > 0 &&
+      addresses.every(({ address }) => !isNonPublicAddress(address))
     );
   } catch {
     return false;

@@ -27,12 +27,24 @@ export function setUnattendedPolicy(next: UnattendedPolicy | null): void {
 }
 
 /**
- * The hosts `web_fetch` is held to, or null when it is not held: only an
- * unattended session is, and one that lost its policy reaches nothing.
+ * Kept for callers: an unattended run is held from its first call (see
+ * fetchHold), so a private read changes nothing.
  */
-export function fetchHostAllowlist(): readonly string[] | null {
-  if (mode !== AgentMode.Unattended) return null;
-  return unattended?.sourceHosts ?? [];
+export function markPrivateRead(): void {
+  return;
+}
+
+/**
+ * What `web_fetch` is held to, or null when it is not held. An unattended run
+ * is always held: its prompt alone can carry private data. Derived from the
+ * mode and policy only, so a respawned run is held as tightly.
+ */
+export function fetchHold(): {
+  sources: readonly string[];
+  held: boolean;
+} | null {
+  if (mode !== AgentMode.Unattended && unattended == null) return null;
+  return { sources: unattended?.sources ?? [], held: true };
 }
 
 export function unattendedPolicy(): UnattendedPolicy | null {

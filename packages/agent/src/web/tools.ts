@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { fetchHostAllowlist } from "../current-mode.js";
+import { fetchHold } from "../current-mode.js";
 import { fetchUrl, WebFetchError } from "./fetch.js";
 import {
   search,
@@ -98,6 +98,8 @@ export default function (pi: ExtensionAPI): void {
 
       try {
         const result = await search(params.query, {
+          // A model's own search tool can open pages; a routine's cannot.
+          restOnly: fetchHold() != null,
           ...(params.max_results != null
             ? { maxResults: params.max_results }
             : {}),
@@ -169,6 +171,7 @@ export default function (pi: ExtensionAPI): void {
         try {
           const result = await search(params.query, {
             sites: X_SITES,
+            restOnly: fetchHold() != null,
             ...(params.max_results != null
               ? { maxResults: params.max_results }
               : {}),
@@ -229,10 +232,10 @@ export default function (pi: ExtensionAPI): void {
       try {
         // An unattended run is held to its declared hosts here too, not only
         // at the gate, so every redirect hop is checked the same way.
-        const held = fetchHostAllowlist();
+        const hold = fetchHold();
         const result = await fetchUrl(params.url, {
           ...(signal != null ? { signal } : {}),
-          ...(held != null ? { allowedHosts: held } : {}),
+          ...(hold != null ? { hold } : {}),
         });
 
         const header = [
