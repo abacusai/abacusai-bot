@@ -8,7 +8,7 @@
  * half, not run here.)
  */
 import type { UIMessage } from "@tanstack/ai-client";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, screen, waitFor, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageScrollerProvider } from "#renderer/ui/message-scroller";
@@ -262,6 +262,67 @@ describe("R2-T16 transcript", () => {
     }
     expect(window.ranges.huge!.end).toBe(300);
     expect(window.ranges.huge!.start).toBeGreaterThan(0);
+  });
+
+  it("preloads an older page near the viewport without replacing the mounted messages", async () => {
+    const observers: {
+      callback: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      target?: Element;
+    }[] = [];
+    const original = globalThis.IntersectionObserver;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        entry: (typeof observers)[number];
+        constructor(
+          callback: IntersectionObserverCallback,
+          options?: IntersectionObserverInit
+        ) {
+          this.entry = { callback, options };
+          observers.push(this.entry);
+        }
+        observe(target: Element) {
+          this.entry.target = target;
+        }
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    try {
+      const relay = new FakeRelay();
+      relay.emitAll([...b.sessionReady(), ...turns(40)]);
+      current = await renderRelay(relay, "session");
+      const session = current.runtime.session(relay.threadId);
+      const older = vi.spyOn(session, "loadOlder");
+      const sentinel = observers.find(
+        (observer) => observer.options?.rootMargin === "640px 0px 0px"
+      );
+      expect(sentinel?.options?.root).toBe(
+        document.querySelector('[data-slot="message-scroller-viewport"]')
+      );
+      const before = document.querySelector("[data-message-id]");
+      await act(async () =>
+        sentinel!.callback(
+          [
+            {
+              isIntersecting: true,
+              target: sentinel!.target!,
+            } as IntersectionObserverEntry,
+          ],
+          {} as IntersectionObserver
+        )
+      );
+      expect(older).toHaveBeenCalledOnce();
+      expect(before?.isConnected).toBe(true);
+      expect(
+        document.querySelector(
+          '[data-slot="message-scroller-viewport"] [data-slot="skeleton"]'
+        )
+      ).toBeNull();
+    } finally {
+      vi.stubGlobal("IntersectionObserver", original);
+    }
   });
 
   it("a page returned after a reset is discarded; pages merge outcomes and dedupe ids", async () => {

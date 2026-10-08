@@ -80,6 +80,8 @@ export const useSessionComposerModel = (row?: SessionRow) => {
           ? ("no-model" as const)
           : undefined,
     model: {
+      onConfigureProviders: () =>
+        void navigate({ to: "/settings/models", transition: "settings-in" }),
       value,
       label:
         effectiveModelLabel(value, settings.data?.defaultModel, models) ??

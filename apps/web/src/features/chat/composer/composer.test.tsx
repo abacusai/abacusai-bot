@@ -271,11 +271,13 @@ describe("R2-T25 composer", () => {
     const onChange = vi.fn();
     const connect = vi.fn();
     const useLocal = vi.fn();
+    const configure = vi.fn();
     current = await renderWithDb(
       <ModelChip
         onUseLocalModel={useLocal}
         binding={{
           value: "route-llm",
+          onConfigureProviders: configure,
           label: "RouteLLM",
           onChange,
           groups: [
@@ -365,6 +367,12 @@ describe("R2-T25 composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect OpenRouter" }));
     expect(connect).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    fireEvent.click(chip);
+    await screen.findByRole("listbox");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Configure providers" })
+    );
+    expect(configure).toHaveBeenCalledOnce();
   });
 
   it("the mode menu: five modes with descriptions; choosing sets the mode, a silent agent reverts", async () => {
@@ -392,6 +400,11 @@ describe("R2-T25 composer", () => {
       expect(await screen.findByText(label!)).toBeTruthy();
       expect(screen.getByText(description!)).toBeTruthy();
     }
+    for (const option of screen.getAllByRole("option"))
+      expect(option.querySelector("svg")).not.toBeNull();
+    expect(
+      document.querySelector('[data-slot="chat-mode-picker"] svg')
+    ).not.toBeNull();
     fireEvent.click(screen.getByText("Full access"));
     expect(setMode).toHaveBeenCalledWith("YOLO");
     await act(async () => {

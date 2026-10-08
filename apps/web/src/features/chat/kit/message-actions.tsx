@@ -487,6 +487,7 @@ export const MessageActionBar = ({ children }: { children: ReactNode }) => {
   const popupRef = useRef<HTMLDivElement>(null);
   useEffect(() => controller.attach(popupRef), [controller]);
   const { active, moved, scrolling } = state;
+  const { skin } = useChatView();
 
   // Hidden while the transcript scrolls, until the pointer moves again; a
   // popup open from it stays (it closes on scroll by itself if it must).
@@ -503,6 +504,7 @@ export const MessageActionBar = ({ children }: { children: ReactNode }) => {
     return () => viewport.removeEventListener("scroll", onScroll);
   }, [viewport, controller]);
 
+  if (skin === "session") return <>{children}</>;
   return (
     <ControllerContext value={controller}>
       <Popover
@@ -872,7 +874,74 @@ const MotionBubbleReactions = motion.create(BubbleReactions);
  * the host reaches the smiley and the menu. Hosts without a bubble (the
  * session skin's assistant prose) carry the menu chevron themselves.
  */
-export const MessageActions = ({
+const SessionActions = ({
+  message,
+  text,
+  feedback,
+  children,
+}: {
+  message: UIMessage;
+  text: string;
+  feedback?: ReactNode;
+  children: ReactNode;
+}) => {
+  const { t } = useTranslation();
+  const { composer } = useChatView();
+  const [failed, setFailed] = useState(false);
+  return (
+    <div
+      data-slot="message-actions-host"
+      data-message-target={message.id}
+      className="group/message max-w-full min-w-0"
+    >
+      {children}
+      <div
+        data-slot="session-message-actions"
+        className="flex h-7 items-center gap-0.5 opacity-0 group-focus-within/message:opacity-100 group-hover/message:opacity-100"
+      >
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("chat.actions.copy")}
+          onClick={() =>
+            void navigator.clipboard
+              .writeText(text)
+              .catch(() => setFailed(true))
+          }
+        >
+          <Copy aria-hidden />
+        </Button>
+        {message.role === "assistant" &&
+        !composer.readOnly &&
+        !composer.turnBusy
+          ? feedback
+          : null}
+      </div>
+      {failed ? (
+        <p role="alert" className="text-destructive text-xs">
+          {t("chat.actions.failed")}
+        </p>
+      ) : null}
+    </div>
+  );
+};
+export const MessageActions = (props: {
+  message: UIMessage;
+  text?: string;
+  feedback?: ReactNode;
+  children: ReactNode;
+}) => {
+  const { skin } = useChatView();
+  return skin === "session" ? (
+    <SessionActions
+      {...props}
+      text={props.text ?? messageMarkdown(props.message)}
+    />
+  ) : (
+    <ChatMessageActions {...props} />
+  );
+};
+const ChatMessageActions = ({
   message,
   text = messageMarkdown(message),
   feedback,
@@ -884,13 +953,12 @@ export const MessageActions = ({
   children: ReactNode;
 }) => {
   const { t } = useTranslation();
-  const { threadId, composer, skin } = useChatView();
+  const { threadId, composer } = useChatView();
   const controller = use(ControllerContext);
   const active = use(ActiveContext) === message.id;
   const role: Role = message.role === "user" ? "user" : "assistant";
   const [error, setError] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
-  const reactions: Emoji[] = message.metadata?.abacus?.reactions ?? [];
   const readOnly = composer.readOnly != null;
   const fail = () => setError(true);
 
@@ -930,7 +998,7 @@ export const MessageActions = ({
     )
       event.preventDefault();
   };
-  const bare = skin === "session" && role === "assistant";
+  const bare = false;
 
   return (
     <ContextMenu>
@@ -946,9 +1014,7 @@ export const MessageActions = ({
           tabIndex={0}
           className={cn(
             "focus-visible:ring-ring relative min-w-[min(100%,320px)] rounded-[20px] outline-none focus-visible:ring-2",
-            role === "user" ? "w-fit max-w-full self-end" : "w-fit max-w-full",
-            // Room for the tapback pill hanging off the bubble's bottom edge.
-            bare && reactions.length > 0 && "mb-2"
+            role === "user" ? "w-fit max-w-full self-end" : "w-fit max-w-full"
           )}
           onMouseEnter={() => {
             const next = target();
@@ -978,7 +1044,7 @@ export const MessageActions = ({
           {bare ? (
             <MessageMenu message={message} text={text} feedback={feedback} />
           ) : null}
-          {bare ? <MessageReactionPills message={message} /> : null}
+
           {error ? (
             <p role="alert" className="text-destructive text-xs">
               {t("chat.actions.failed")}
@@ -1033,7 +1099,7 @@ export const MessageReactionPills = ({
   inline?: boolean;
 }) => {
   const { t } = useTranslation();
-  const { session, composer } = useChatView();
+  const { session, composer, skin } = useChatView();
   const preference = useMotionPreference();
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -1079,7 +1145,7 @@ export const MessageReactionPills = ({
       ))}
     </AnimatePresence>
   );
-  if (!reactions.length && !failed) return null;
+  if (skin === "session" || (!reactions.length && !failed)) return null;
   return (
     <>
       <AnimatePresence initial={false}>

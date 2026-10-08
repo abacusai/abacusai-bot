@@ -708,3 +708,41 @@ it("right-click offers the bot's feedback, sharing its state with the hover menu
       .getAttribute("aria-pressed")
   ).toBe("true");
 });
+
+it("sessions show stable feedback and Copy controls without reaction UI", async () => {
+  const relay = new FakeRelay({
+    history: [{ ...original, metadata: { abacus: { reactions: ["👍"] } } }],
+  });
+  relay.emitAll(b.sessionReady());
+  current = await renderRelay(
+    relay,
+    "session",
+    {},
+    {
+      slots: {
+        decorateMessage: () => ({
+          actions: (
+            <MessageFeedback id="t-1:a" send={async () => ({ ok: true })} />
+          ),
+        }),
+      },
+    }
+  );
+  await screen.findByText("there", { exact: false });
+  fireEvent.mouseEnter(host());
+  expect(screen.queryByRole("button", { name: "Add reaction" })).toBeNull();
+  expect(popup()).toBeNull();
+  expect(screen.queryByRole("button", { name: /Remove reaction/ })).toBeNull();
+  expect(
+    within(host()).getByRole("button", { name: "Copy message" })
+  ).toBeTruthy();
+  expect(
+    within(host()).getByRole("button", { name: "Good response" })
+  ).toBeTruthy();
+  expect(
+    within(host()).getByRole("button", { name: "Bad response" })
+  ).toBeTruthy();
+  expect(
+    host().querySelector('[data-slot="session-message-actions"]')?.className
+  ).toContain("h-7");
+});

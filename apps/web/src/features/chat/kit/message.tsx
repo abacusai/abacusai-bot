@@ -523,6 +523,7 @@ const GroupedParts = ({ message }: { message: UIMessage }) => {
 };
 
 export const SessionMessage = ({ message }: MessageProps<unknown>) => {
+  const decoration = useDecoration(message);
   const streaming = useStreaming(message);
   if (isEmptyAssistant(message)) return null;
   if (message.role === "user")
@@ -534,7 +535,7 @@ export const SessionMessage = ({ message }: MessageProps<unknown>) => {
     <MessageScope
       value={{ id: message.id, role: "assistant", streaming, message }}
     >
-      <MessageActions message={message}>
+      <MessageActions message={message} feedback={decoration?.actions}>
         <div
           className="flex flex-col gap-2"
           data-role="assistant"

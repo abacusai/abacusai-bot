@@ -32,7 +32,6 @@ import {
   useMessageScrollerScrollable,
   useMessageScrollerVisibility,
 } from "#renderer/ui/message-scroller";
-import { Skeleton } from "#renderer/ui/skeleton";
 
 import { useChatView } from "../kit/context";
 import { userView } from "../kit/message";
@@ -181,10 +180,16 @@ const OlderRow = () => {
     const element = sentinel.current;
     if (element == null || !has || typeof IntersectionObserver === "undefined")
       return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting))
-        void session.loadOlder();
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting))
+          void session.loadOlder();
+      },
+      {
+        root: element.closest('[data-slot="message-scroller-viewport"]'),
+        rootMargin: "640px 0px 0px",
+      }
+    );
     observer.observe(element);
     return () => observer.disconnect();
   }, [has, session]);
@@ -211,11 +216,7 @@ const OlderRow = () => {
       className="relative flex h-[17px] flex-col gap-2 py-2"
       aria-hidden
     >
-      {older === "loading" ? (
-        <Skeleton className="absolute h-10 w-2/3" />
-      ) : (
-        <div className="h-px" />
-      )}
+      <div className="h-px" />
     </div>
   );
 };
@@ -239,18 +240,15 @@ const Placeholder = ({
       return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          entries.some(
-            (entry) => entry.isIntersecting && entry.intersectionRatio === 1
-          )
-        ) {
+        if (entries.some((entry) => entry.isIntersecting)) {
           observer.disconnect();
           onActivate();
         }
       },
       {
         root: el.closest('[data-slot="message-scroller-viewport"]'),
-        threshold: 1,
+        rootMargin: "400px 0px",
+        threshold: 0,
       }
     );
     observer.observe(el);
@@ -727,12 +725,10 @@ export const Transcript = ({ messages, Message }: TranscriptProps) => {
 
   return (
     <MessageScroller>
-      {/* No `scroll-fade-t` yet, and in the visual (fixture) build no
-          scroll fade at all: the scroll-driven fade animations never finish,
-          and the screenshot run's settle step waits for every finite
-          animation (change request on `lib/dev/settle.ts`). */}
+      {/* Visual fixtures disable scroll-linked fades for screenshot settling. */}
       <MessageScrollerViewport
         ref={viewportRef}
+        className="scroll-fade-y"
         data-continuity-scroll="chat-transcript"
         // The header's scroll-linked morph into the title bar reads this
         // viewport's named timeline (bots.css).

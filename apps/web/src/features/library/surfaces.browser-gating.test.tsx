@@ -154,7 +154,7 @@ it("uses host account/environment copy and deliberately hides tour and window de
     await act(async () => {
       await app.router.navigate({ to: "/sessions/new" });
     });
-    expect(await screen.findByRole("button", { name: "Host" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Host" })).toBeNull();
   } finally {
     app.view.unmount();
     await app.cleanup();

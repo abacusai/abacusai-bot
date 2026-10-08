@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Settings2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -64,6 +65,8 @@ export const useBotModelBinding = (
   });
   return {
     value,
+    onConfigureProviders: () =>
+      void navigate({ to: "/settings/models", transition: "settings-in" }),
     label:
       effectiveModelLabel(value, settings.data?.defaultModel, catalog) ??
       t("bots.form.modelDefault"),
@@ -81,6 +84,7 @@ export const ModelPicker = ({
 }) => {
   const { t } = useTranslation();
   const db = useDb();
+  const navigate = useAppNavigate();
   const prefs = usePrefs();
   const pref = useMotionPreference();
   const [search, setSearch] = useState("");
@@ -110,7 +114,7 @@ export const ModelPicker = ({
           {binding.value === null ? t("bots.form.modelDefault") : binding.label}
         </motion.span>
       </PopoverTrigger>
-      <PopoverContent className="max-h-[min(384px,var(--available-height))] w-[min(360px,var(--available-width))] overflow-auto">
+      <PopoverContent className="scroll-fade-y max-h-[min(384px,var(--available-height))] w-[min(360px,var(--available-width))] overflow-auto rounded-[14px] p-1.5 [&_button]:h-8">
         <Input
           aria-label={t("bots.model.search")}
           placeholder={t("bots.model.search")}
@@ -181,6 +185,20 @@ export const ModelPicker = ({
             )}
           </div>
         ))}
+        <Button
+          variant="ghost"
+          className="bg-popover sticky bottom-0 h-8 w-full justify-start rounded-lg border-t text-xs"
+          onClick={() => {
+            setOpen(false);
+            void navigate({
+              to: "/settings/models",
+              transition: "settings-in",
+            });
+          }}
+        >
+          <Settings2 aria-hidden />
+          {t("bots.model.configureProviders")}
+        </Button>
       </PopoverContent>
     </Popover>
   );

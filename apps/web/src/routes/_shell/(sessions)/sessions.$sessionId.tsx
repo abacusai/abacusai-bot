@@ -30,6 +30,7 @@ import { SessionId } from "@abacus-ai/contract/contract/ids";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 
 import { EmptyState } from "#renderer/components/empty-state";
+import { MessageFeedback } from "#renderer/components/message-feedback";
 import { chatLoading } from "#renderer/features/chat/runtime/lazy-runtime";
 import { type ChatRuntime } from "#renderer/features/chat/runtime/runtime";
 import { deriveSessionTitle } from "#renderer/features/chat/runtime/send";
@@ -342,6 +343,32 @@ const SessionRoute = () => {
               })
             }
             slots={{
+              decorateMessage: (message, context) => {
+                if (
+                  message.role !== "assistant" ||
+                  (context.runActive &&
+                    context.index === context.messages.length - 1)
+                )
+                  return null;
+                const source = message.metadata?.abacus?.segmentId;
+                const segmentId =
+                  typeof source === "string" ? source : message.id;
+                return {
+                  actions: (
+                    <MessageFeedback
+                      id={`${sessionId}:${segmentId}`}
+                      send={(rating, comment) =>
+                        transport.client.agent.feedback({
+                          sessionId,
+                          segmentId,
+                          rating,
+                          ...(comment ? { comment } : {}),
+                        })
+                      }
+                    />
+                  ),
+                };
+              },
               permissionActions: (descriptor) => (
                 <SessionPermissionAction
                   request={
