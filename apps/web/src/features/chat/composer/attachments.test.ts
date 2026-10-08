@@ -116,7 +116,14 @@ it("rejects oversize files visibly before transport", async () => {
   vi.restoreAllMocks();
 });
 it("VM and native paths use the same completed descriptor and native paste keeps its RPC", async () => {
-  addPaths("thread", [{ path: "/vm/existing.txt", source: "vm" }]);
+  addPaths("thread", [
+    { path: "/vm/existing.txt", source: "vm", kind: "file", size: 20 },
+  ]);
+  expect(draftStore.state.thread!.attachments[0]).toMatchObject({
+    kind: "file",
+    size: 20,
+    source: "vm",
+  });
   const savePasted = vi.fn(async () => ["/native/image.png"]);
   await addFiles(
     "thread",

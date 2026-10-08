@@ -28,6 +28,7 @@ interface PickedPath {
   path: string;
   name: string;
   size?: number;
+  kind?: "file" | "folder";
 }
 
 export interface ChatHostActions extends CreditActions {
@@ -81,11 +82,39 @@ export const hostActionsFor = (
       : {
           pickLocalFiles: pickUploadFiles,
           uploadFile,
-          pickVmFiles: async () =>
-            (await pickHostPaths(client, "file", true))?.map((path) => ({
-              path,
-              name: path.split("/").at(-1) ?? path,
-            })) ?? null,
+          pickVmFiles: async () => {
+            const paths = await pickHostPaths(client, "file", true);
+            if (!paths) return null;
+            const directories = new Map<
+              string,
+              ReturnType<typeof client.files.listDirectory>
+            >();
+            return Promise.all(
+              paths.map(async (path) => {
+                const parent = path.slice(0, path.lastIndexOf("/")) || "/";
+                let listing = directories.get(parent);
+                if (!listing) {
+                  listing = client.files.listDirectory({ path: parent });
+                  directories.set(parent, listing);
+                }
+                const entry = (await listing).entries.find(
+                  (entry) => entry.path === path
+                );
+                return {
+                  path,
+                  name: entry?.name ?? path.split("/").at(-1) ?? path,
+                  ...(entry
+                    ? {
+                        kind: entry.kind === "file" ? "file" : "folder",
+                        ...(entry.kind === "file"
+                          ? { size: entry.sizeBytes }
+                          : {}),
+                      }
+                    : {}),
+                };
+              })
+            );
+          },
           validateUpload: (file: File) => {
             if (file.size > 256 * 1024 * 1024)
               throw new Error(i18n.t("web.files.tooLarge"));

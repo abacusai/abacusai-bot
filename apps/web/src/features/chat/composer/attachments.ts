@@ -356,6 +356,7 @@ const addUploads = async (
           path: null,
           state: "uploading",
           source: "computer",
+          kind: folder ? "folder" : "file",
           progress: 0,
           size: group.reduce((sum, file) => sum + file.size, 0),
           ...(folder
