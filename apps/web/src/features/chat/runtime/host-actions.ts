@@ -3,11 +3,17 @@
  * external links, revealing files, the attach pickers, pasted files and
  * thumbnails. Built from the transport in production; faked in fixtures.
  */
-import { uploadFiles, viewHostFile } from "#platform/files";
+import {
+  uploadFiles,
+  viewHostFile,
+  pickUploadFiles,
+  pickHostPaths,
+} from "#platform/files";
 import type { CreditActions } from "#renderer/components/credits-card";
 import { creditActionsFor } from "#renderer/components/credits-card/actions";
 import type { Transport } from "#renderer/data/transport";
 import { creditsTier } from "#renderer/lib/credits";
+import { i18n } from "#renderer/lib/i18n";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 
@@ -29,6 +35,9 @@ export interface ChatHostActions extends CreditActions {
   showItemInFolder(path: string): Promise<void>;
   pickFiles(context?: ResolveAttachmentContext): Promise<PickedPath[] | null>;
   pickFolder(): Promise<string | null>;
+  pickLocalFiles?(): Promise<File[] | null>;
+  pickVmFiles?(): Promise<PickedPath[] | null>;
+  validateUpload?(file: File): void;
   /** Writes pasted blobs under `baseFolder`; returns their absolute paths. */
   savePasted(
     baseFolder: string,
@@ -61,6 +70,20 @@ export const hostActionsFor = (
       IS_ELECTRON
         ? client.system.showItemInFolder({ path })
         : viewHostFile(client, path),
+    ...(IS_ELECTRON
+      ? {}
+      : {
+          pickLocalFiles: pickUploadFiles,
+          pickVmFiles: async () =>
+            (await pickHostPaths(client, "file", true))?.map((path) => ({
+              path,
+              name: path.split("/").at(-1) ?? path,
+            })) ?? null,
+          validateUpload: (file: File) => {
+            if (file.size > 255 * 1024 * 1024)
+              throw new Error(i18n.t("web.files.tooLarge"));
+          },
+        }),
     // Native File objects expose metadata without reading file contents. The
     // preload bridge resolves their paths without the byte-returning picker RPC.
     pickFiles: (context) =>

@@ -4044,7 +4044,7 @@
       "loading": "Loading files…",
       "newFolder": "New folder",
       "folderName": "Folder name",
-      "vmFiles": "Files on your VM",
+      "vmFiles": "Choose from the VM…",
       "uploading": "Uploading files…",
       "vmHint": "Browse folders and files on your VM.",
       "path": "Current folder",
@@ -4055,7 +4055,9 @@
       "refresh": "Refresh files",
       "trashTitle": "Move to Trash?",
       "trashBody": "Move {{path}} to the VM trash? Files stay there for 30 days.",
-      "browserUnavailable": "The embedded browser is available in the desktop app. You can open web links in a new tab."
+      "browserUnavailable": "The embedded browser is available in the desktop app. You can open web links in a new tab.",
+      "skillImportUnavailable": "Install skills on your VM. Local skill imports are available in the desktop app.",
+      "viewSkill": "View SKILL.md"
     },
     "hostLabel": "Host",
     "forgetAccount": "Forget this host’s account",

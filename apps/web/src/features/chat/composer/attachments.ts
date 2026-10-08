@@ -120,6 +120,7 @@ export const addFiles = async (
     const upload = async () => {
       patch(threadId, id, { state: "uploading", error: undefined });
       try {
+        host.validateUpload?.(file);
         const data = new Uint8Array(await file.arrayBuffer());
         const [saved] = await host.savePasted(
           attachmentsBase,

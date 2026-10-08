@@ -25,6 +25,7 @@ import { AppLink } from "#renderer/lib/navigation/app-link";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
+import { showError } from "#renderer/lib/toast";
 import { useAppContext, foldSearch } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import {
@@ -135,19 +136,25 @@ export const SkillsPage = () => {
             }
           />
         </SettingRow>
-        <div className="flex gap-2">
-          {(["folder", "file"] as const).map((kind) => (
-            <Button
-              key={kind}
-              size="sm"
-              variant="secondary"
-              disabled={importLocal.isPending}
-              onClick={() => IS_ELECTRON && importLocal.mutate({ kind })}
-            >
-              {t(`phase5.skillImport.${kind}`)}
-            </Button>
-          ))}
-        </div>
+        {IS_ELECTRON ? (
+          <div className="flex gap-2">
+            {(["folder", "file"] as const).map((kind) => (
+              <Button
+                key={kind}
+                size="sm"
+                variant="secondary"
+                disabled={importLocal.isPending}
+                onClick={() => IS_ELECTRON && importLocal.mutate({ kind })}
+              >
+                {t(`phase5.skillImport.${kind}`)}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-xs">
+            {t("web.files.skillImportUnavailable")}
+          </p>
+        )}
         {(workspacePath ? ["project", "global"] : ["global"]).map((source) => (
           <section key={source}>
             <h2 className="mb-2 text-sm font-semibold">
@@ -171,7 +178,7 @@ export const SkillsPage = () => {
                     title={`/${s.id}`}
                     detail={s.description}
                   >
-                    {IS_ELECTRON && (
+                    {IS_ELECTRON ? (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -180,6 +187,18 @@ export const SkillsPage = () => {
                         }
                       >
                         {t("phase5.editSkill")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          void platformSystem(transport.client)
+                            .openPath({ path: s.path })
+                            .catch(() => showError(t("phase5.failed")))
+                        }
+                      >
+                        {t("web.files.viewSkill")}
                       </Button>
                     )}
                     <ConfirmAction

@@ -258,6 +258,21 @@ const Attach = () => {
             onClick={async () => {
               setError(null);
               try {
+                if (runtime.host.pickLocalFiles) {
+                  const files = await runtime.host.pickLocalFiles();
+                  if (files?.length) {
+                    if (!config.attachmentsBase)
+                      throw new Error(t("chat.composer.pasteUnavailable"));
+                    await addFiles(
+                      threadId,
+                      files,
+                      runtime.host,
+                      config.attachmentsBase,
+                      config.attachmentContext
+                    );
+                  }
+                  return;
+                }
                 const files = await runtime.host.pickFiles(
                   config.attachmentContext
                 );
@@ -272,18 +287,39 @@ const Attach = () => {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async () => {
-              const folder = await runtime.host.pickFolder();
-              if (folder != null) {
-                const count = await runtime.host
-                  .folderCount?.(folder, config.attachmentContext)
-                  .catch(() => undefined);
-                addPaths(threadId, [{ path: folder, kind: "folder", count }]);
+              setError(null);
+              try {
+                const folder = await runtime.host.pickFolder();
+                if (folder != null) {
+                  const count = await runtime.host
+                    .folderCount?.(folder, config.attachmentContext)
+                    .catch(() => undefined);
+                  addPaths(threadId, [{ path: folder, kind: "folder", count }]);
+                }
+              } catch {
+                setError(t("web.files.failed"));
               }
             }}
           >
             <Folder aria-hidden />
             {t("chat.composer.attachFolder")}
           </DropdownMenuItem>
+          {runtime.host.pickVmFiles && (
+            <DropdownMenuItem
+              onClick={async () => {
+                setError(null);
+                try {
+                  const files = await runtime.host.pickVmFiles!();
+                  if (files) addPaths(threadId, files);
+                } catch {
+                  setError(t("web.files.failed"));
+                }
+              }}
+            >
+              <FileText aria-hidden />
+              {t("web.files.vmFiles")}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>
