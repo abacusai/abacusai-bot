@@ -13,6 +13,7 @@ import {
   containmentRootFor,
 } from "#renderer/components/file-preview";
 import { FileTreeView } from "#renderer/components/file-tree";
+import { GroupCard } from "#renderer/components/form-kit/page";
 import { useDb } from "#renderer/data/db";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { checkInFromRoutine } from "#renderer/lib/bots/check-in";
@@ -112,9 +113,9 @@ export const DetailsTab = ({
           </AppLink>
         )}
       </div>
-      <div className="bg-card flex flex-col rounded-xl border">
+      <GroupCard className="px-0">
         <div
-          className="flex min-h-11 items-center justify-between gap-2 border-b px-3"
+          className="flex min-h-(--setting-row-min) items-center justify-between gap-2 px-3"
           aria-label={t("bots.panel.modelValue", { model: binding.label })}
         >
           <span className="shrink-0 text-xs">{t("bots.form.model")}</span>
@@ -135,7 +136,7 @@ export const DetailsTab = ({
           to="/bots/$botId/check-in"
           params={{ botId: bot.id }}
           transition="none"
-          className="flex h-11 items-center justify-between gap-2 border-b px-3 text-xs"
+          className="flex h-(--setting-row-min) items-center justify-between gap-2 px-3 text-xs"
         >
           <span className="shrink-0">{t("bots.checkIn.label")}</span>
           <span className="text-muted-foreground min-w-0 truncate text-end">
@@ -154,7 +155,7 @@ export const DetailsTab = ({
         </AppLink>
         <Button
           variant="ghost"
-          className="h-11 justify-between rounded-none border-b px-3 text-xs font-normal"
+          className="h-(--setting-row-min) justify-between rounded-none px-3 text-xs font-normal"
           onClick={() => setTab("memory")}
         >
           <span>{t("bots.panel.memoryTitle")}</span>
@@ -164,13 +165,13 @@ export const DetailsTab = ({
         </Button>
         <Button
           variant="ghost"
-          className="h-11 justify-between rounded-none px-3 text-xs font-normal"
+          className="h-(--setting-row-min) justify-between rounded-none px-3 text-xs font-normal"
           onClick={() => setTab("files")}
         >
           <span>{t("bots.panel.filesTitle")}</span>
           <span className="text-muted-foreground text-xs">{files.length}</span>
         </Button>
-      </div>
+      </GroupCard>
       <WallpaperPicker
         value={bot.wallpaper}
         onChange={(wallpaper) =>

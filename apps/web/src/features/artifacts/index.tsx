@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "#renderer/components/empty-state";
 import { FilePreview } from "#renderer/components/file-preview";
 import { Segments } from "#renderer/components/form-kit/controls";
+import { PageToolbar } from "#renderer/components/form-kit/page";
 import { NavList } from "#renderer/components/nav-list";
 import { useCollections } from "#renderer/data/db";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -270,35 +271,39 @@ export const ArtifactsPage = ({
   );
   return (
     <div className="flex size-full flex-col">
-      <header className="content-col-wide phone:h-auto phone:w-[calc(100%-32px)] phone:flex-wrap phone:py-3 flex h-14 items-center gap-3">
-        <h1 className="text-base font-semibold">{t("shell.rail.artifacts")}</h1>
-        <span className="text-muted-foreground text-xs whitespace-nowrap">
-          {t("phase5.items", { count: filtered.length })}
-        </span>
-        <div className="ml-auto">
-          <Segments
-            label={t("phase5.artifactView")}
-            value={list ? "list" : "grid"}
-            values={[
-              { value: "grid", label: t("phase5.grid") },
-              { value: "list", label: t("phase5.list") },
-            ]}
-            onChange={(view) => set({ view: view as "grid" | "list" })}
-          />
-        </div>
-        <NativeSelect
-          aria-label={t("phase5.sort")}
-          value={search.sort ?? "newest"}
-          onChange={(e) =>
-            set({ sort: e.target.value as "newest" | "oldest" | "name" })
-          }
-        >
-          {["newest", "oldest", "name"].map((x) => (
-            <NativeSelectOption key={x} value={x}>
-              {t(`phase5.sorts.${x}`)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+      <header className="content-col-wide shrink-0 py-4">
+        <PageToolbar>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+            <h1 className="page-title">{t("shell.rail.artifacts")}</h1>
+            <span className="text-muted-foreground text-xs whitespace-nowrap">
+              {t("phase5.items", { count: filtered.length })}
+            </span>
+          </div>
+          <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+            <Segments
+              label={t("phase5.artifactView")}
+              value={list ? "list" : "grid"}
+              values={[
+                { value: "grid", label: t("phase5.grid") },
+                { value: "list", label: t("phase5.list") },
+              ]}
+              onChange={(view) => set({ view: view as "grid" | "list" })}
+            />
+            <NativeSelect
+              aria-label={t("phase5.sort")}
+              value={search.sort ?? "newest"}
+              onChange={(e) =>
+                set({ sort: e.target.value as "newest" | "oldest" | "name" })
+              }
+            >
+              {["newest", "oldest", "name"].map((x) => (
+                <NativeSelectOption key={x} value={x}>
+                  {t(`phase5.sorts.${x}`)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+        </PageToolbar>
       </header>
       <div className="flex min-h-0 flex-1">
         {filtered.length === 0 ? (
@@ -334,11 +339,7 @@ export const ArtifactsPage = ({
           >
             <div
               ref={column}
-              className={
-                search.item
-                  ? undefined
-                  : "content-col-wide phone:w-[calc(100%-32px)]"
-              }
+              className={search.item ? undefined : "content-col-wide"}
             >
               <div style={{ height: window.before }} />
               <div

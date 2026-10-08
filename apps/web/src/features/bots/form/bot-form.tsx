@@ -237,10 +237,12 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
       }}
     >
       <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10">
+        <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10 text-center">
           <BotFace morph look={look} size={wide ? 96 : 56} mood="happy" />
-          <h2 className="text-base font-semibold">{name}</h2>
-          <p className="text-muted-foreground text-center text-xs">
+          <h2 className="max-w-full text-base font-semibold [overflow-wrap:anywhere]">
+            {name}
+          </h2>
+          <p className="text-muted-foreground max-w-full text-center text-xs [overflow-wrap:anywhere]">
             {description}
           </p>
           <form.AppField name="look">

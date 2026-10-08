@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { cn } from "#renderer/lib/cn";
 import { Badge } from "#renderer/ui/badge";
 export const AreaPage = ({
   title,
@@ -14,16 +15,17 @@ export const AreaPage = ({
   actions?: ReactNode;
   testId?: string;
 }) => (
-  <div className="size-full min-w-0 overflow-auto" data-testid={testId}>
-    <main className="content-col phone:w-[calc(100%-32px)] phone:pt-6 flex flex-col gap-4 pt-10 pb-16">
+  <div
+    className="size-full min-w-0 overflow-auto overscroll-contain"
+    data-testid={testId}
+  >
+    <main className="content-col page-column">
       <PageToolbar>
-        <h1 className="phone:text-[30px] phone:leading-9 phone:font-bold phone:tracking-tight min-w-0 text-[22px] font-semibold break-words">
-          {title}
-        </h1>
+        <h1 className="page-title">{title}</h1>
         {actions}
       </PageToolbar>
       {description && (
-        <p className="text-muted-foreground phone:text-[15px] mb-2 text-[13px]">
+        <p className="text-muted-foreground phone:text-[15px] text-[13px]">
           {description}
         </p>
       )}
@@ -34,11 +36,18 @@ export const AreaPage = ({
 export const GroupCard = ({
   children,
   title,
+  className,
 }: {
   children: ReactNode;
   title?: string;
+  className?: string;
 }) => (
-  <div className="bg-card border-border/60 phone:rounded-[20px] phone:border-0 phone:px-0 flex min-w-0 flex-col divide-y rounded-xl border px-1">
+  <div
+    className={cn(
+      "bg-card border-border/60 phone:border-0 phone:px-0 flex min-w-0 flex-col divide-y rounded-(--pane-radius) border px-1",
+      className
+    )}
+  >
     {title && (
       <h2 className="phone:px-4 phone:text-[15px] px-3 py-3 text-[13px] font-semibold">
         {title}
@@ -61,10 +70,7 @@ export const SettingRow = ({
   media?: ReactNode;
   children?: ReactNode;
 }) => (
-  <div
-    data-setting-id={id}
-    className="phone:px-4 phone:flex-nowrap @container/setting flex min-h-[52px] min-w-0 flex-wrap items-center justify-between gap-3 px-3 py-3"
-  >
+  <div data-setting-id={id} className="setting-row @container/setting">
     {media != null && <div className="shrink-0">{media}</div>}
     <div className="min-w-0 flex-[1_1_140px]">
       <div
@@ -82,7 +88,7 @@ export const SettingRow = ({
         </p>
       )}
     </div>
-    <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 [&>[data-slot=native-select-wrapper]]:max-w-full [&>[data-slot=native-select-wrapper]]:min-w-0">
+    <div className="setting-controls flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 [&>[data-slot=native-select-wrapper]]:max-w-full [&>[data-slot=native-select-wrapper]]:min-w-0">
       {children}
     </div>
   </div>
@@ -109,10 +115,7 @@ export const StatePill = ({
 );
 
 export const PageToolbar = ({ children }: { children: ReactNode }) => (
-  <div
-    data-slot="page-toolbar"
-    className="flex min-w-0 flex-wrap items-center justify-between gap-3 [&>button]:shrink-0"
-  >
+  <div data-slot="page-toolbar" className="page-toolbar">
     {children}
   </div>
 );

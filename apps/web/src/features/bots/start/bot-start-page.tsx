@@ -83,7 +83,7 @@ export const BotStartPage = ({
       className="size-full overflow-auto"
       style={accentVars(look)}
     >
-      <div className="content-col phone:w-[calc(100%-32px)] phone:pt-6 flex flex-col items-center gap-5 pt-8 pb-8">
+      <div className="content-col page-column items-center">
         {/* The hero (canvas BotNew): avatar, shapes and the name pill sit
             centred in a fixed band above the templates, so the page reads
             as a composed whole rather than content pushed to the top. */}
@@ -93,7 +93,7 @@ export const BotStartPage = ({
         >
           {empty && (
             <>
-              <h1 className="text-[22px] font-semibold">
+              <h1 className="page-title text-center">
                 {t("bots.start.emptyTitle")}
               </h1>
               <p className="text-muted-foreground max-w-[420px] text-center text-[13px]">
