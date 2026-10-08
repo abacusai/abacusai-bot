@@ -6,6 +6,7 @@ import { usePanelRef } from "react-resizable-panels";
 
 import { EmptyState } from "#renderer/components/empty-state";
 import { ConfirmAction } from "#renderer/components/form-kit/confirm";
+import { PageToolbar } from "#renderer/components/form-kit/page";
 import { createPaneWidthWriter, usePrefs } from "#renderer/data/db/prefs";
 import { isRpcError } from "#renderer/data/query-client";
 import { persistedStore } from "#renderer/lib/continuity/registry";
@@ -213,80 +214,84 @@ export const RoutinePage = ({
             : "min-w-0 flex-1 overflow-auto"
         }
       >
-        <div className="content-col flex flex-col gap-5 py-6">
-          <header className="flex flex-wrap items-center gap-3">
-            <RoutineIdentity
-              bot={bots.find((b) => b.id === row.botId)}
-              state={routineState(row, runs, sessions)}
-              size={40}
-            />
-            <div className="mr-auto">
-              <h1 className="text-lg font-semibold">{row.name}</h1>
-              <p className="text-muted-foreground text-xs">
-                {scheduleLabel(row, t, i18n.language)} ·{" "}
-                {workspaces.find(
-                  (w) =>
-                    w.id === row.workspaceId &&
-                    w.kind !== "routine" &&
-                    w.kind !== "bot"
-                )?.label ?? t("phase5.ownFolder")}
-                {row.botName &&
-                  ` · ${t("phase5.madeBy", { name: row.botName })}`}
-              </p>
-            </div>
-            <Button size="sm" variant="secondary" onClick={runNow}>
-              {t("phase5.runNow")}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              nativeButton={false}
-              render={
-                <AppLink
-                  to="/routines/$routineId/edit"
-                  params={{ routineId: row.id }}
-                  search={{ run }}
-                  transition="none"
-                />
-              }
-            >
-              {t("phase5.edit")}
-            </Button>
-            <label className="flex items-center gap-2 text-xs">
-              <span>{t("routines.enabled")}</span>
-              <Switch
-                aria-label={t("phase5.routineOn")}
-                checked={row.enabled}
-                onCheckedChange={(enabled) =>
-                  void db.collections.routines
-                    .update(row.id, (d) => {
-                      d.enabled = enabled;
-                    })
-                    .isPersisted.promise.catch(() =>
-                      showError(t("phase5.failed"))
-                    )
-                }
+        <div className="content-col page-column @container/routine">
+          <PageToolbar>
+            <div className="phone:basis-full flex min-w-0 flex-1 basis-72 items-center gap-3">
+              <RoutineIdentity
+                bot={bots.find((b) => b.id === row.botId)}
+                state={routineState(row, runs, sessions)}
+                size={40}
               />
-            </label>
-            <ConfirmAction
-              title={t("phase5.deleteRoutine")}
-              description={t("phase5.deleteRoutineDescription", {
-                name: row.name,
-              })}
-              label={t("phase5.delete")}
-              onConfirm={async () => {
-                await navigate({ to: "/routines", replace: true });
-                try {
-                  await db.collections.routines.delete(row.id).isPersisted
-                    .promise;
-                } catch (error) {
-                  showError(t("phase5.failed"));
-                  throw error;
+              <div className="mr-auto min-w-0 flex-1 basis-48">
+                <h1 className="page-title">{row.name}</h1>
+                <p className="text-muted-foreground text-xs [overflow-wrap:anywhere]">
+                  {scheduleLabel(row, t, i18n.language)} ·{" "}
+                  {workspaces.find(
+                    (w) =>
+                      w.id === row.workspaceId &&
+                      w.kind !== "routine" &&
+                      w.kind !== "bot"
+                  )?.label ?? t("phase5.ownFolder")}
+                  {row.botName &&
+                    ` · ${t("phase5.madeBy", { name: row.botName })}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex max-w-full flex-wrap items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={runNow}>
+                {t("phase5.runNow")}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                nativeButton={false}
+                render={
+                  <AppLink
+                    to="/routines/$routineId/edit"
+                    params={{ routineId: row.id }}
+                    search={{ run }}
+                    transition="none"
+                  />
                 }
-              }}
-            />
-          </header>
-          <div className="grid grid-cols-3 gap-2">
+              >
+                {t("phase5.edit")}
+              </Button>
+              <label className="flex items-center gap-2 text-xs">
+                <span>{t("routines.enabled")}</span>
+                <Switch
+                  aria-label={t("phase5.routineOn")}
+                  checked={row.enabled}
+                  onCheckedChange={(enabled) =>
+                    void db.collections.routines
+                      .update(row.id, (d) => {
+                        d.enabled = enabled;
+                      })
+                      .isPersisted.promise.catch(() =>
+                        showError(t("phase5.failed"))
+                      )
+                  }
+                />
+              </label>
+              <ConfirmAction
+                title={t("phase5.deleteRoutine")}
+                description={t("phase5.deleteRoutineDescription", {
+                  name: row.name,
+                })}
+                label={t("phase5.delete")}
+                onConfirm={async () => {
+                  await navigate({ to: "/routines", replace: true });
+                  try {
+                    await db.collections.routines.delete(row.id).isPersisted
+                      .promise;
+                  } catch (error) {
+                    showError(t("phase5.failed"));
+                    throw error;
+                  }
+                }}
+              />
+            </div>
+          </PageToolbar>
+          <div className="grid grid-cols-1 gap-2 @min-[440px]:grid-cols-3">
             {[
               [
                 t("phase5.nextLabel"),
@@ -309,7 +314,9 @@ export const RoutinePage = ({
             ].map(([label, value]) => (
               <div key={label} className="bg-card rounded-xl p-3">
                 <div className="text-muted-foreground text-xs">{label}</div>
-                <div className="mt-1 text-sm">{value}</div>
+                <div className="mt-1 text-sm [overflow-wrap:anywhere]">
+                  {value}
+                </div>
               </div>
             ))}
           </div>
@@ -341,11 +348,11 @@ export const RoutinePage = ({
             </h2>
             <Collapsible className="bg-card group/instruction rounded-xl p-4 text-[13px]">
               <div
-                className={`${row.prompt.length > 240 || row.prompt.split("\n").length > 4 ? "line-clamp-4" : ""} whitespace-pre-wrap group-data-[open]/instruction:hidden`}
+                className={`${row.prompt.length > 240 || row.prompt.split("\n").length > 4 ? "line-clamp-4" : ""} [overflow-wrap:anywhere] whitespace-pre-wrap group-data-[open]/instruction:hidden`}
               >
                 {row.prompt}
               </div>
-              <CollapsibleContent className="whitespace-pre-wrap">
+              <CollapsibleContent className="[overflow-wrap:anywhere] whitespace-pre-wrap">
                 {row.prompt}
               </CollapsibleContent>
               {(row.prompt.length > 240 ||

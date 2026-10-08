@@ -61,7 +61,7 @@
   width: 100%;
   max-width: 840px;
   margin: auto;
-  padding: 16px 40px 40px;
+  padding: 16px var(--page-gutter) 40px;
   text-align: center;
 }
 
@@ -391,7 +391,7 @@ html:active-view-transition-type(onboarding-step)::view-transition-new(
 /* The 800 × 600 minimum window: tighter rhythm, the stage scaled down. */
 @media (max-height: 720px) {
   .onboarding-column {
-    padding: 8px 32px 24px;
+    padding: 8px var(--page-gutter) 24px;
   }
   .onboarding-stage {
     margin-bottom: 16px;

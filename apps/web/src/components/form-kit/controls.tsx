@@ -49,13 +49,13 @@ export const Segments = ({
       if (v[0] != null) onChange(String(v[0]));
     }}
     variant="outline"
-    className="phone:flex-nowrap phone:overflow-x-auto phone:[scrollbar-width:none] max-w-full flex-wrap gap-1"
+    className="max-w-full flex-wrap gap-1"
   >
     {values.map((v) => (
       <ToggleGroupItem
         key={v.value}
         value={v.value}
-        className="phone:shrink-0 min-w-0 shrink truncate"
+        className="min-w-0 shrink truncate"
       >
         {v.label}
       </ToggleGroupItem>

@@ -8,7 +8,7 @@ import {
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -17,6 +17,7 @@ import { useDb } from "#renderer/data/db";
 import { accentVars } from "#renderer/lib/bots/avatar";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError } from "#renderer/lib/toast";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -58,13 +59,6 @@ import {
   type BotFormValues,
 } from "./schema";
 import { submitCreate, submitEdit } from "./submit";
-const wideQuery = "(min-width: 1000px)";
-const subscribeWidth = (notify: () => void) => {
-  const query = window.matchMedia(wideQuery);
-  query.addEventListener("change", notify);
-  return () => query.removeEventListener("change", notify);
-};
-const setupWide = () => window.matchMedia(wideQuery).matches;
 interface BotFormProps {
   bot?: BotRow;
   initial: BotFormValues;
@@ -72,7 +66,7 @@ interface BotFormProps {
 }
 const BotForm = ({ bot, initial, load }: BotFormProps) => {
   const { t } = useTranslation();
-  const wide = useSyncExternalStore(subscribeWidth, setupWide, () => true);
+  const wide = useMediaQuery("(min-width: 1000px)");
   const db = useDb();
   const transport = useBotsTransport();
   const navigate = useAppNavigate();
@@ -237,10 +231,12 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
       }}
     >
       <div className="bot-form-columns flex min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10">
+        <aside className="bg-muted/40 flex w-[300px] min-w-0 shrink-0 flex-col items-center gap-3 px-6 pt-10 text-center">
           <BotFace morph look={look} size={wide ? 96 : 56} mood="happy" />
-          <h2 className="text-base font-semibold">{name}</h2>
-          <p className="text-muted-foreground text-center text-xs">
+          <h2 className="max-w-full text-base font-semibold [overflow-wrap:anywhere]">
+            {name}
+          </h2>
+          <p className="text-muted-foreground max-w-full text-center text-xs [overflow-wrap:anywhere]">
             {description}
           </p>
           <form.AppField name="look">

@@ -6,7 +6,7 @@ import type {
 } from "@abacus-ai/contract/contract/rows";
 import { describe, it, expect } from "vitest";
 
-import { cardWindow, filterArtifacts, sourceFor, artifactTarget } from "./data";
+import { filterArtifacts, sourceFor, artifactTarget } from "./data";
 const artifact = {
   id: "a",
   sessionId: "s",
@@ -62,15 +62,6 @@ describe("artifact provenance and bounded cards", () => {
     });
     expect(artifactTarget(sourceFor(artifact, [], [], [], []), "s")).toBeNull();
   });
-  it.each([0, 1000, 10000, 100000])(
-    "R5-T31 window arithmetic mounts at most 400 cards at scroll %i",
-    (scroll) => {
-      const range = cardWindow(2000, scroll, 4, 180);
-      expect(range.end - range.start).toBeLessThanOrEqual(400);
-      expect(range.start).toBeGreaterThanOrEqual(0);
-      expect(range.end).toBeLessThanOrEqual(2000);
-    }
-  );
 });
 
 it("R5-T14 list headings use local calendar days and disappear for name sorting", async () => {

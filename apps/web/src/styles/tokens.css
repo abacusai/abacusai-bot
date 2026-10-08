@@ -45,6 +45,11 @@
   --composer-max-w: 800px;
   /* density */
   --row-h: 32px;
+  --page-gutter: 24px;
+  --page-top: 40px;
+  --page-bottom: 64px;
+  --section-gap: 16px;
+  --setting-row-min: 52px;
   --bot-accent: var(--primary);
   --bot-accent-foreground: var(--primary-foreground);
 }
@@ -590,11 +595,53 @@ html[data-reduce-motion="on"] .phone-rise {
     min-width: 0;
   }
   .content-col {
-    width: min(var(--content-max-w), 100% - 48px);
+    width: min(var(--content-max-w), 100% - 2 * var(--page-gutter));
   }
   .content-col-wide {
-    width: min(var(--content-max-w-wide), 100% - 48px);
+    width: min(var(--content-max-w-wide), 100% - 2 * var(--page-gutter));
   }
+}
+
+@layer components {
+  .page-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-gap);
+    padding-block: var(--page-top) var(--page-bottom);
+  }
+  .page-toolbar {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .page-toolbar > button { flex-shrink: 0; }
+  .page-title {
+    min-width: 0;
+    font-size: 22px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .setting-row {
+    display: flex;
+    min-height: var(--setting-row-min);
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+  }
+  @container setting (max-width: 360px) {
+    .setting-controls { flex-basis: 100%; justify-content: flex-start; }
+  }
+}
+@media (width < 800px) {
+  :root { --page-gutter: 16px; --page-top: 24px; }
+  .page-title { font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -.025em; }
+  .setting-row { padding-inline: 16px; }
 }
 
 /* The new-bot template grid: `--cols` equal columns (template-columns.ts),
