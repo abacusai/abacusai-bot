@@ -476,7 +476,7 @@ describe("ShellLayout", () => {
     await at(1280, "/bots/new");
     const brand = () =>
       document.querySelector(
-        '[data-slot="topbar-brand"] [data-slot="app-brand-mark"]'
+        '[data-slot="topbar-brand"] [data-slot="bot-app-mark"]'
       );
     expect(brand()).not.toBeNull();
     expect(

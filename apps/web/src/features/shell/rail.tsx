@@ -17,13 +17,15 @@ import type { FocusEvent, PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
+import { accountIdentity } from "#renderer/lib/account-identity";
 import { cn } from "#renderer/lib/cn";
 import type { NavType } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";
 import { uiPlatform } from "#renderer/lib/platform";
+import { useAccount } from "#renderer/lib/use-account";
 import { useSystem } from "#renderer/lib/use-app-context";
-import { Avatar, AvatarFallback } from "#renderer/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "#renderer/ui/avatar";
 import { Kbd } from "#renderer/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
@@ -195,6 +197,8 @@ export const Rail = ({
   initials: string;
 }) => {
   const { t } = useTranslation();
+  const identity = accountIdentity(useAccount().data);
+  const accountLabel = identity.name || t("shell.rail.account");
   const system = useSystem();
   const last = useStore(shellStore, (state) => state.lastLocationByArea);
   const intent = useFloatingIntent();
@@ -260,17 +264,22 @@ export const Rail = ({
           <AppIcon name="settings" size={18} />
         </RailLink>
       </RailTip>
-      <RailTip label={t("shell.rail.account")} enabled={tooltip}>
+      <RailTip label={accountLabel} enabled={tooltip}>
         <AppLink
           to="/settings/account"
           transition="settings-in"
-          aria-label={t("shell.rail.account")}
-          title={tooltip ? undefined : t("shell.rail.account")}
+          aria-label={accountLabel}
+          title={tooltip ? undefined : accountLabel}
           className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
         >
           <Avatar size="sm">
+            {identity.picture && (
+              <AvatarImage src={identity.picture} alt={identity.name} />
+            )}
             <AvatarFallback className="text-foreground text-[11px] font-semibold">
-              {initials}
+              {identity.name
+                ? identity.initials
+                : initials || identity.initials}
             </AvatarFallback>
           </Avatar>
         </AppLink>

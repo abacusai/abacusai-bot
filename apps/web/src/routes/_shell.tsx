@@ -39,15 +39,9 @@ import { useChromeState } from "#renderer/lib/chrome-state";
 import { useDocumentSoundOwner } from "#renderer/lib/document-sound";
 import { ignoreLoadError } from "#renderer/lib/navigation/loaders";
 import { SHELL_DEFAULTS, ShellSearch } from "#renderer/lib/navigation/search";
-import { useSystem } from "#renderer/lib/use-app-context";
-
-/** "/Users/ada" → "AD": the account avatar until the account row exists. */
-const initialsOf = (home: string): string =>
-  (home.split(/[\\/]/).filter(Boolean).at(-1) ?? "").slice(0, 2).toUpperCase();
 
 const ShellRoute = () => {
   const { transport, db, queryClient } = Route.useRouteContext();
-  const system = useSystem();
   useDocumentSoundOwner(transport);
   const router = useRouter();
   const tour = useTourState();
@@ -85,7 +79,6 @@ const ShellRoute = () => {
         geometryMissing={
           import.meta.env.DEV && chrome.mode === "overlay-unavailable"
         }
-        initials={initialsOf(system.homeDir)}
       />
       <BotsGlobals />
       {tour && (

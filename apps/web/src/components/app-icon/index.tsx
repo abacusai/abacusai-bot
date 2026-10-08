@@ -7,6 +7,7 @@
 import type { ComponentProps } from "react";
 
 import brandMark from "#renderer/assets/abacusai.svg";
+import botMark from "#renderer/assets/bot-icon.png";
 
 export type AppIconName =
   | "bots"
@@ -143,5 +144,22 @@ export const AppBrandMark = ({
     {...props}
   >
     <image href={brandMark} width="400" height="400" />
+  </svg>
+);
+
+/** Packaged bot icon, also used by the favicon. Neutral artwork for both themes. */
+export const BotAppMark = ({
+  size = 20,
+  ...props
+}: { size?: number } & ComponentProps<"svg">) => (
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+    viewBox="0 0 128 128"
+    data-slot="bot-app-mark"
+    {...props}
+  >
+    <image href={botMark} width="128" height="128" />
   </svg>
 );

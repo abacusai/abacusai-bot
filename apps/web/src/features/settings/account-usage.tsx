@@ -12,11 +12,13 @@ import {
   SettingRow,
 } from "#renderer/components/form-kit/page";
 import { ABACUS_BUY_CREDITS_URL } from "#renderer/lib/abacus-links";
+import { accountIdentity } from "#renderer/lib/account-identity";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { IS_ELECTRON } from "#renderer/lib/platform";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { showInfo } from "#renderer/lib/toast";
 import { openUpgrade } from "#renderer/lib/upgrade";
+import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext, errorText } from "#renderer/lib/use-app-context";
 import { Button } from "#renderer/ui/button";
 import { Checkbox } from "#renderer/ui/checkbox";
@@ -29,11 +31,7 @@ export const AccountPage = () => {
   const context = useAppContext();
   const { transport, credentialsChanged } = context;
   const navigate = useAppNavigate();
-  const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: {} }),
-    staleTime: 60000,
-    refetchInterval: 300000,
-  });
+  const account = useAccount();
   const local = useQuery(
     transport.orpc.account.state.queryOptions({ input: {} })
   );
@@ -135,7 +133,7 @@ export const AccountPage = () => {
       <GroupCard>
         <SettingRow
           id="identity"
-          title={account.data.name ?? account.data.email ?? "Abacus.AI"}
+          title={accountIdentity(account.data).name || "Abacus.AI"}
           detail={account.data.email ?? undefined}
         >
           {canSignOut && (
@@ -245,7 +243,14 @@ export const AccountPage = () => {
         </SettingRow>
       </GroupCard>
       <GroupCard>
-        {(["link", "gmail", "whatsapp"] as const)
+        {(
+          [
+            ...(referrals.data?.gmailConnected
+              ? (["gmail", "link"] as const)
+              : (["link", "gmail"] as const)),
+            "whatsapp",
+          ] as const
+        )
           .filter((invite) => IS_ELECTRON || invite !== "whatsapp")
           .map((invite) => (
             <SettingRow
@@ -306,11 +311,7 @@ export const UsagePage = () => {
     staleTime: 0,
     refetchOnMount: "always",
   });
-  const account = useQuery({
-    ...transport.orpc.account.abacus.queryOptions({ input: {} }),
-    staleTime: 60000,
-    refetchInterval: 300000,
-  });
+  const account = useAccount();
   const snapshot = query.data;
   const days = Array.from({ length: 14 }, (_, i) => {
     const date = new Date();
