@@ -193,6 +193,8 @@ const ROUTINE_UPDATE_FIELDS = [
   "name",
   "botId",
   "workspaceId",
+  "access",
+  "reach",
 ] as const;
 
 export const routinesCollectionOptions = (
@@ -215,6 +217,18 @@ export const routinesCollectionOptions = (
       prompt: row.prompt,
       workspaceId: row.workspaceId,
       botId: row.botId,
+      // Only a row that chose a runner says so; the rest take main's default.
+      ...(row.runner != null ? { runner: row.runner } : {}),
+      ...(row.hosted?.timezone != null
+        ? { timezone: row.hosted.timezone }
+        : {}),
+      // What its runs may read, as the user set it in the form.
+      ...((row.hosted ?? row.reach) != null
+        ? {
+            sources: (row.hosted ?? row.reach)!.sources,
+            reads: (row.hosted ?? row.reach)!.reads,
+          }
+        : {}),
     }),
     toUpdateInput: (id, changes) => ({
       id,

@@ -41,6 +41,24 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
       "from it reaches this conversation: write the prompt to stand alone, and never",
       "promise to report back here. In a bot's own chat the routine belongs to the bot",
       "and runs in its voice, with what the bot remembers.",
+      "",
+      'runner: "hosted" keeps the routine on the server: it runs on its own even while this',
+      "computer is off, and results reach the user on WhatsApp or by email.",
+      '"local" runs it in this app, only while it is open. Leave it out and the app picks.',
+      'A hosted routine never fires on create: offer one test run ("run") instead. For a',
+      "hosted one also give timezone (the user's IANA zone; ask if you do not know it) and,",
+      "where they apply: kind (reminder: reminder_text sent as written at the time, nothing",
+      "runs; task; watch: watch_url, the one page it reads; event: webhook), run_at for a",
+      "one-time moment (ISO 8601; without an offset it is the user's wall time), notify:",
+      '"relevant" to deliver only when its condition holds.',
+      "",
+      "Every routine's runs are unattended: they search the web and read, and cannot send",
+      "messages, change files, pay, or make routines. Give what a run may read: sources,",
+      "the page addresses it may read under (https://news.example.com/tech/), and reads,",
+      'the account data it may read ("gmail.search", "gmail.read", "calendar.read"), only',
+      "what the routine needs; nothing else is reachable. A routine that runs on its own",
+      "starts only once the user allows it at a link: give them the link, and say it",
+      'starts once allowed ("approval_link" with its id gets a fresh one).',
     ].join("\n"),
     inputSchema: {
       type: "object",
@@ -55,6 +73,7 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
             "resume",
             "remove",
             "run",
+            "approval_link",
           ],
         },
         id: { type: "string" },
@@ -84,6 +103,61 @@ export const CRONJOB_TOOLS: ToolDefinition[] = [
           type: "boolean",
           description:
             "create: false skips the fire on creation, for a routine whose first pass this conversation has just done.",
+        },
+        runner: {
+          type: "string",
+          enum: ["hosted", "local"],
+          description:
+            "create: where it runs; leave it out for the app's default.",
+        },
+        kind: {
+          type: "string",
+          enum: ["reminder", "task", "watch", "event"],
+          description: "create, hosted: what it is.",
+        },
+        timezone: {
+          type: "string",
+          description:
+            "hosted: the IANA zone its schedule is read in, e.g. Asia/Kolkata.",
+        },
+        run_at: {
+          type: "string",
+          description:
+            "hosted: a one-time moment, ISO 8601, instead of a schedule.",
+        },
+        reminder_text: {
+          type: "string",
+          description: "hosted reminder: the message sent as written.",
+        },
+        notify: {
+          type: "string",
+          enum: ["always", "relevant"],
+          description:
+            "hosted: relevant delivers only when the routine's condition holds.",
+        },
+        delivery: {
+          type: "string",
+          enum: ["whatsapp", "email", "panel"],
+          description:
+            "hosted: where results go; leave it out for WhatsApp, else email.",
+        },
+        sources: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "The page addresses a run may read under, e.g. https://news.example.com/tech/.",
+        },
+        reads: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: ["gmail.search", "gmail.read", "calendar.read"],
+          },
+          description: "The account data a run may read; none unless given.",
+        },
+        watch_url: {
+          type: "string",
+          description: "hosted watch: the one page a run opens and reads.",
         },
       },
       required: ["action"],

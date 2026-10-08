@@ -7,6 +7,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { isInsideDirectory } from "./workspace-path.js";
+
 /** Never worth indexing, and present in enough repositories to hardcode. */
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -47,6 +49,8 @@ export interface ScanLimits {
   /** Wall clock for the walk itself, so a huge tree cannot hang a tool call. */
   timeBudgetMs: number;
   signal?: AbortSignal;
+  /** Links that lead outside this directory are skipped, not followed. */
+  within?: string;
 }
 
 export interface ScanResult {
@@ -345,6 +349,8 @@ export function collectFiles(
       let isFile = entry.isFile();
 
       if (entry.isSymbolicLink()) {
+        if (limits.within != null && !isInsideDirectory(full, limits.within))
+          continue;
         try {
           const stats = fs.statSync(full);
           isDirectory = stats.isDirectory();

@@ -47,6 +47,8 @@ interface Provider {
   envVar: string;
   /** Backend model, for the providers that answer by spending a model turn. */
   model?: string;
+  /** Answers over plain REST: no model turn that could open pages itself. */
+  rest?: true;
   run: (
     query: string,
     key: string,
@@ -445,6 +447,7 @@ const PROVIDERS: Provider[] = [
   {
     id: "abacus",
     envVar: "ABACUS_API_KEY",
+    rest: true,
     async run(query, apiKey, options) {
       const body = await getJson(
         `${abacusOrigin()}/res/v1/web/search?q=${encodeURIComponent(query)}&count=${options.maxResults}`,
@@ -647,9 +650,22 @@ export async function search(
     maxResults?: number;
     signal?: AbortSignal;
     sites?: readonly string[];
+    /** Only providers that answer over REST (an unattended run's search). */
+    restOnly?: boolean;
   } = {}
 ): Promise<SearchResult> {
-  const usable = usableProviders();
+  const usable = usableProviders().filter(
+    (provider) => options.restOnly !== true || provider.rest === true
+  );
+
+  if (usable.length === 0 && options.restOnly === true) {
+    throw new WebSearchError(
+      "NO_PROVIDER",
+      "In a routine that runs on its own, search only runs through an Abacus.AI " +
+        "account, never a model's own search tool. Say in your answer that you " +
+        "could not search."
+    );
+  }
 
   if (usable.length === 0) {
     throw new WebSearchError(

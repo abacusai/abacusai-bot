@@ -10,7 +10,11 @@ import path from "path";
 
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import { EntityNotFoundError } from "@abacus-ai/contract/not-found";
-import type { RoutineRun, RoutineRunKind } from "@abacus-ai/contract/routines";
+import type {
+  RoutineReach,
+  RoutineRun,
+  RoutineRunKind,
+} from "@abacus-ai/contract/routines";
 import { matches, nextRun, parseCron } from "@abacus-ai/contract/routines/cron";
 
 import {
@@ -73,6 +77,18 @@ export interface CronJob {
   lastResult: string | null;
   /** Newest first, unbounded; the run's session is the real record. */
   runs: CronRun[];
+  /** Absent before runners existed: every job here is local. */
+  runner?: "local" | "hosted";
+  /** Moved to the server (see routine-migration.ts): its id there. */
+  serverId?: string | null;
+  /** Unattended unless the user turned full access on, confirming it. */
+  access?: "unattended" | "full";
+  /** What its unattended runs may reach, as the user confirmed it. */
+  reach?: RoutineReach | null;
+  /** Reach the agent asked for, unused until the user confirms it. */
+  pendingReach?: RoutineReach | null;
+  /** The server would not take it: it stays here, paused, with this reason. */
+  notMoved?: string | null;
 }
 
 const FILE = (): string => path.join(abacusBotHome(), "cronjobs.json");
@@ -243,6 +259,10 @@ export const createJob = (
     name?: string;
     workspaceId?: string | null;
     botId?: string | null;
+    /** Asked for by the agent: held until the user confirms it. */
+    pendingReach?: RoutineReach | null;
+    /** Set by the user's own form: theirs, so in force at once. */
+    reach?: RoutineReach | null;
   },
   id?: string
 ): CronJob => {
@@ -286,6 +306,8 @@ export const createJob = (
     lastRunAt: null,
     lastResult: null,
     runs: [],
+    ...(input.reach != null ? { reach: input.reach } : {}),
+    ...(input.pendingReach != null ? { pendingReach: input.pendingReach } : {}),
   };
 
   write([...existing, job]);
@@ -305,8 +327,11 @@ export const updateJob = (
       | "name"
       | "botId"
       | "workspaceId"
+      | "access"
+      | "reach"
+      | "pendingReach"
     >
-  > & { webhook?: boolean }
+  > & { webhook?: boolean; confirmPendingReach?: boolean }
 ): CronJob => {
   const jobs = readForWrite();
   const index = jobs.findIndex((job) => job.id === id);
@@ -317,8 +342,23 @@ export const updateJob = (
   if (changes.schedule != null && changes.schedule.trim().length > 0)
     parseCron(changes.schedule);
 
-  const { webhook, ...rest } = changes;
+  const { webhook, confirmPendingReach, ...rest } = changes;
   const updated: CronJob = { ...jobs[index], ...rest };
+  // The user allows what the agent asked for: it is the routine's reach now.
+  if (confirmPendingReach === true && updated.pendingReach != null) {
+    updated.reach = updated.pendingReach;
+    updated.pendingReach = null;
+  }
+  // Declined: what the agent asked for is dropped, the routine's reach kept.
+  if (confirmPendingReach === false) updated.pendingReach = null;
+  // Full access was given to what the routine did: a new instruction or reach
+  // runs held again until the user gives it again (unless this change does).
+  const rewritten =
+    (rest.prompt != null && rest.prompt !== jobs[index].prompt) ||
+    rest.reach !== undefined ||
+    rest.pendingReach !== undefined;
+  if (rewritten && rest.access == null && updated.access === "full")
+    updated.access = "unattended";
   // A one-time routine that already fired stays done: resumed as it stands
   // it would fire again on the next tick. A new time re-arms it.
   if (
@@ -355,6 +395,41 @@ export const updateJob = (
   jobs[index] = updated;
   write(jobs);
 
+  return updated;
+};
+
+/**
+ * The job now runs on the server, as `serverId`: kept as a record, switched
+ * off for good here, so an older app on this disk never fires it again.
+ */
+export const markMovedToServer = (id: string, serverId: string): CronJob => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0)
+    throw new EntityNotFoundError("routine", id, `No job with id "${id}".`);
+  const updated: CronJob = {
+    ...jobs[index],
+    enabled: false,
+    runner: "hosted",
+    serverId,
+  };
+  jobs[index] = updated;
+  write(jobs);
+  return updated;
+};
+
+/**
+ * The server would not take the job for good (a plan limit, a schedule it
+ * refuses): it stays here, paused with the reason, so one scheduler is left.
+ */
+export const markNotMoved = (id: string, reason: string): CronJob => {
+  const jobs = readForWrite();
+  const index = jobs.findIndex((job) => job.id === id);
+  if (index < 0)
+    throw new EntityNotFoundError("routine", id, `No job with id "${id}".`);
+  const updated: CronJob = { ...jobs[index], enabled: false, notMoved: reason };
+  jobs[index] = updated;
+  write(jobs);
   return updated;
 };
 

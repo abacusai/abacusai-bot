@@ -1348,4 +1348,119 @@ describe("the hosted computer's own Chromium", () => {
       expect(lines.some((line) => line.includes("secret-detail"))).toBe(true);
     });
   });
+
+  it("sends an isolated context through the watch proxy, loopback too, and closes it with the context", async () => {
+    const { CdpBrowser } = await import("./hosted-chromium");
+    const chromium = fakeChromium();
+    const closed = vi.fn(async () => {});
+    const watchProxy = vi.fn(async (_options: { port: number }) => ({
+      server: "http://127.0.0.1:4100",
+      close: closed,
+    }));
+    const browser = new CdpBrowser({
+      executable: "/opt/chromium/chrome",
+      args: [],
+      spawn: chromium.spawn as never,
+      watchProxy: watchProxy as never,
+    });
+    await browser.launch();
+    const { dispose } = await browser.createIsolatedTab("about:blank", {
+      port: 8443,
+    });
+    expect(watchProxy).toHaveBeenCalledWith({ port: 8443 });
+    const created = chromium.sent.find(
+      (message) => message.method === "Target.createBrowserContext"
+    ) as { params?: Record<string, unknown> } | undefined;
+    expect(created?.params).toEqual({
+      proxyServer: "http://127.0.0.1:4100",
+      proxyBypassList: "<-loopback>",
+    });
+    expect(closed).not.toHaveBeenCalled();
+    await dispose();
+    expect(closed).toHaveBeenCalledTimes(1);
+    // No port named: the https default.
+    await browser.createIsolatedTab("about:blank");
+    expect(watchProxy).toHaveBeenLastCalledWith({ port: 443 });
+  });
+});
+
+describe("an isolated session's pages", () => {
+  const isolatedSetup = () => {
+    const { relay, source, clock } = setup();
+    const disposed = vi.fn(async () => {});
+    (relay as unknown as Record<string, unknown>).createIsolatedTab = async (
+      url: string
+    ) => {
+      const tab = { id: relay.next++, url, browserContextId: "ctx-1" };
+      relay.tabs.set(tab.id, tab);
+      relay.attached.add(tab.id);
+      relay.emit("tabAttached", tab);
+      return { tab, browserContextId: "ctx-1", dispose: disposed };
+    };
+    return { relay, source, clock, disposed };
+  };
+
+  it("opens in a context of its own, and takes its own popups", async () => {
+    const { relay, source } = isolatedSetup();
+    const id = await source.materialize("watch", "https://shop.example/", {
+      isolated: true,
+    });
+    expect(relay.tab(id!)?.browserContextId).toBe("ctx-1");
+    const popup = { id: 900, url: "about:blank", browserContextId: "ctx-1" };
+    relay.tabs.set(popup.id, popup);
+    relay.attached.add(popup.id);
+    relay.emit("tabAttached", popup);
+    expect(
+      source.candidates().find((candidate) => candidate.id === 900)?.sessionId
+    ).toBe("watch");
+  });
+
+  it("never lends one of its pages to another session, nor takes a profile page", async () => {
+    const { relay, source } = isolatedSetup();
+    await source.materialize("watch", "https://shop.example/", {
+      isolated: true,
+    });
+    await source.materialize("user", "https://mail.example/");
+    // Both acted; an opener-less page in the isolated context is the isolated one's.
+    source.noteAction("user");
+    source.noteAction("watch");
+    const fromIsolated = {
+      id: 901,
+      url: "https://x.example/",
+      browserContextId: "ctx-1",
+    };
+    relay.tabs.set(fromIsolated.id, fromIsolated);
+    relay.attached.add(fromIsolated.id);
+    relay.emit("tabAttached", fromIsolated);
+    expect(
+      source.candidates().find((candidate) => candidate.id === 901)?.sessionId
+    ).toBe("watch");
+    // A profile page is never the isolated session's, however recently it acted.
+    source.noteAction("watch");
+    const fromProfile = { id: 902, url: "https://y.example/" };
+    relay.tabs.set(fromProfile.id, fromProfile);
+    relay.attached.add(fromProfile.id);
+    relay.emit("tabAttached", fromProfile);
+    expect(
+      source.candidates().find((candidate) => candidate.id === 902)?.sessionId
+    ).not.toBe("watch");
+  });
+
+  it("goes, context and pages, when the session ends", async () => {
+    const { relay, source, disposed } = isolatedSetup();
+    const id = await source.materialize("watch", "https://shop.example/", {
+      isolated: true,
+    });
+    source.releaseSession("watch");
+    await Promise.resolve();
+    expect(relay.closeTab).toHaveBeenCalledWith(id);
+    expect(disposed).toHaveBeenCalled();
+  });
+
+  it("is refused outright where the browser cannot isolate it", async () => {
+    const { source } = setup();
+    await expect(
+      source.materialize("watch", "https://shop.example/", { isolated: true })
+    ).rejects.toThrow(/apart from its profile/);
+  });
 });

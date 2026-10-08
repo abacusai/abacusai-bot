@@ -573,3 +573,42 @@ describe("scoping a search to a set of sites", () => {
     expect(result.sources).toHaveLength(2);
   });
 });
+
+describe("an unattended run's search (restOnly)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("refuses a model's own search tool, which can open pages", async () => {
+    await expect(search("q", { restOnly: true })).rejects.toMatchObject({
+      code: "NO_PROVIDER",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the provider is pinned to a model's tool", async () => {
+    process.env.ABACUS_API_KEY = "abacus-test-key";
+    process.env.ABACUSAI_BOT_SEARCH_PROVIDER = "anthropic";
+    await expect(search("q", { restOnly: true })).rejects.toMatchObject({
+      code: "NO_PROVIDER",
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("answers over the REST provider only", async () => {
+    process.env.ABACUS_API_KEY = "abacus-test-key";
+    const fetched = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            web: { results: [{ url: "https://a.test/1", title: "First" }] },
+          })
+        )
+    );
+    vi.stubGlobal("fetch", fetched);
+    const result = await search("q", { restOnly: true });
+    expect(result.sources).toEqual([
+      { url: "https://a.test/1", title: "First" },
+    ]);
+    expect(fetched).toHaveBeenCalledTimes(1);
+    expect(create).not.toHaveBeenCalled();
+  });
+});

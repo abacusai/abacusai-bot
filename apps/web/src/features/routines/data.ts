@@ -12,6 +12,8 @@ import {
   formatTime,
   weekdayName,
 } from "#renderer/lib/bots/schedule";
+
+import { hostedRunFailed } from "./hosted";
 export const useRoutinesData = () => {
   const c = useCollections();
   const routines = useLiveQuery(c.routines).data ?? [];
@@ -47,8 +49,21 @@ export const routineState = (
   r: RoutineRow,
   runs: readonly RoutineRunRow[],
   sessions: readonly SessionRow[],
-  asks: ReadonlySet<string> = new Set()
+  asks: ReadonlySet<string> = new Set(),
+  /** The server has hosted routines switched off: none runs. */
+  hostedOff = false
 ) => {
+  // A hosted routine runs on the server: its last run says how it went.
+  if (r.runner === "hosted") {
+    if (hostedOff) return "paused";
+    // Waiting for the owner to allow it: theirs to act on.
+    if (r.hosted?.pendingConfirmation === true) return "needs-you";
+    if (!r.enabled) return "paused";
+    const last = r.hosted?.lastRun;
+    if (last != null && hostedRunFailed(last)) return "failed";
+    if (r.runAt != null && r.schedule == null) return "once";
+    return r.schedule == null ? "webhook" : "scheduled";
+  }
   if (
     sessions.some(
       (s) =>

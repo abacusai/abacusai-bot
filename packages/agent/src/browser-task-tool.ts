@@ -19,9 +19,14 @@ import {
 } from "./channel.js";
 import { pauseReport, resumeNote } from "./checkout-report.js";
 import { CheckoutRun } from "./checkout-run.js";
+import { currentMode, unattendedPolicy } from "./current-mode.js";
 import { scopeEmit, tagEvent } from "./event-meta.js";
-import type { AgentEvent } from "./protocol.js";
+import { AgentMode, type AgentEvent } from "./protocol.js";
 import { DeliveredMedia } from "./send-media-tool.js";
+import {
+  UNATTENDED_BROWSER_TOOLS,
+  type UnattendedPolicy,
+} from "./tool-policy.js";
 
 /** Whether the desktop switched this on: absent from the exclusion list. */
 export function browserTaskEnabled(): boolean {
@@ -94,6 +99,25 @@ export class DispatchBudget {
     return true;
   }
 }
+
+/**
+ * The one task an unattended watch run may give the browser, built from what
+ * the routine declared at creation and never from the model's words: open the
+ * page, read it, report.
+ */
+function watchTask(policy: UnattendedPolicy & { watchUrl: string }): string {
+  return [
+    `Open ${policy.watchUrl} and read the page. Report what it says that bears on this:`,
+    (policy.watchPrompt ?? "").trim() || "what the page shows now.",
+    "",
+    "Only read. Do not type, click, submit a form, follow a link, open another page,",
+    "or change the address. If the page needs any of that, report what it shows as it is.",
+  ].join("\n");
+}
+
+/** The tool's name, as a pi tool's `name` field. */
+const toolName = (tool: unknown): string =>
+  String((tool as { name?: unknown }).name ?? "");
 
 /** The card's one-word verdict for a run that did not simply finish. */
 export type BrowserRunOutcome = "needs-user" | "limit" | "budget";
@@ -237,6 +261,11 @@ export function buildBrowserTaskTool(
         };
       }
 
+      // Unattended: the model's words never reach the browser. The run reads
+      // the routine's declared page, with the read-only tools only.
+      if (currentMode() === AgentMode.Unattended)
+        return runWatch(toolCallId, signal);
+
       const task = typeof params.task === "string" ? params.task.trim() : "";
       const startUrl =
         typeof params.start_url === "string"
@@ -324,6 +353,73 @@ export function buildBrowserTaskTool(
       }
     },
   };
+
+  async function runWatch(toolCallId: string, signal: AbortSignal | undefined) {
+    const policy = unattendedPolicy();
+    const watchUrl = policy?.watchUrl ?? null;
+    if (policy == null || watchUrl == null)
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "This routine watches no page, so there is no browser run.",
+          },
+        ],
+        details: { stoppedBy: "refused" },
+        isError: true,
+      };
+    if (browserBusy.running)
+      return {
+        content: [{ type: "text" as const, text: BUSY_MESSAGE }],
+        details: { stoppedBy: "busy", outcome: "busy" },
+        isError: false,
+      };
+    const task = watchTask({ ...policy, watchUrl });
+    const subtaskId = `browser-${Date.now()}-${++counter}`;
+    emit(
+      tagEvent(
+        {
+          type: "subtask_start",
+          id: subtaskId,
+          description: `Read ${watchUrl}`,
+          kind: "browser",
+        },
+        { parentToolCallId: toolCallId }
+      )
+    );
+    let status: "completed" | "failed" = "failed";
+    browserBusy.running = true;
+    try {
+      const result = await runBrowserTask(
+        {
+          cwd: context.cwd,
+          agentDir: context.agentDir,
+          modelRuntime: context.modelRuntime,
+          settingsManager: context.settingsManager,
+          ...(context.model != null ? { model: context.model } : {}),
+          browserTools: () =>
+            context
+              .browserTools()
+              .filter((tool) =>
+                UNATTENDED_BROWSER_TOOLS.includes(toolName(tool))
+              ),
+        },
+        task,
+        scopeEmit(emit, subtaskId),
+        { startUrl: watchUrl, ...(signal != null ? { signal } : {}) }
+      );
+      const failed = failedStop(result.stoppedBy);
+      status = failed ? "failed" : "completed";
+      return {
+        content: [{ type: "text" as const, text: result.text }],
+        details: { stoppedBy: result.stoppedBy, turns: result.turns },
+        isError: failed,
+      };
+    } finally {
+      browserBusy.running = false;
+      emit({ type: "subtask_end", id: subtaskId, status });
+    }
+  }
 
   async function runHeld(
     toolCallId: string,

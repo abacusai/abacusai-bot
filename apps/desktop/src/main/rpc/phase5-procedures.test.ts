@@ -16,6 +16,7 @@ import {
   onRoutineRunStarted,
   recordRun,
 } from "../services/agent-tools/cron-store";
+import { HostedRoutineRefusal } from "../services/agent-tools/hosted-routines";
 import { createLoginItem } from "../services/config/login-item";
 import { connectInProcess, fakeDeps, type FakeDepsOverrides } from "./testing";
 
@@ -101,6 +102,151 @@ describe("system.loginItem (spec 05 §31.5 c)", () => {
 });
 
 describe("typed routine errors (spec 05 §31.5 e)", () => {
+  it("the free plan's second hosted routine is PRECONDITION_FAILED plan-required", async () => {
+    const client = connect({
+      serviceHost: {
+        createRoutine: async () => {
+          throw new HostedRoutineRefusal("plan_limit", {
+            upgrade: { url: "https://x.example" },
+          });
+        },
+      },
+    });
+    await expect(
+      client.db.routines.insert({
+        prompt: "p",
+        schedule: "0 9 * * *",
+        runner: "hosted",
+      })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      defined: true,
+      data: { reason: "plan-required" },
+    });
+  });
+
+  it("a paid plan's cap is PRECONDITION_FAILED routine-limit", async () => {
+    const client = connect({
+      serviceHost: {
+        createRoutine: async () => {
+          throw new HostedRoutineRefusal("limit", { limit: 5, plan: "paid" });
+        },
+      },
+    });
+    await expect(
+      client.db.routines.insert({
+        prompt: "p",
+        schedule: "0 9 * * *",
+        runner: "hosted",
+      })
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      data: { reason: "routine-limit" },
+    });
+  });
+
+  it.each([
+    [{ kind: "watch" }, "plan-kind"],
+    [{ min_interval_secs: 86_400 }, "plan-interval"],
+    [{ limit: 1 }, "plan-required"],
+  ])(
+    "the free plan's limit by its cause (%j) is PRECONDITION_FAILED %s",
+    async (facts, reason) => {
+      const client = connect({
+        serviceHost: {
+          createRoutine: async () => {
+            throw new HostedRoutineRefusal("plan_limit", {
+              ...facts,
+              upgrade: { url: "https://x.example/up" },
+            });
+          },
+        },
+      });
+      await expect(
+        client.db.routines.insert({
+          prompt: "p",
+          schedule: "*/5 * * * *",
+          runner: "hosted",
+        })
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        data: { reason, detail: "https://x.example/up" },
+      });
+    }
+  );
+
+  it.each([
+    ["no_host", "no-host"],
+    ["routine_not_active", "routine-not-active"],
+    ["busy", "routine-busy"],
+    ["queue_full", "queue-full"],
+    ["wrong_bot", "wrong-bot"],
+    ["not_available", "routines-off"],
+  ])(
+    "a hosted %s on a change or resume is PRECONDITION_FAILED %s",
+    async (code, reason) => {
+      const client = connect({
+        serviceHost: {
+          updateRoutine: async () => {
+            throw new HostedRoutineRefusal(code, {});
+          },
+        },
+      });
+      await expect(
+        client.db.routines.update({
+          id: "hosted-r1",
+          patch: { enabled: true },
+        })
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        data: { reason },
+      });
+    }
+  );
+
+  it.each([
+    ["invalid_source_url", "sources", "sources"],
+    ["invalid_connector_reads", "reads", "reads"],
+    ["interval_too_short", "interval", "schedule"],
+    ["invalid_timezone", "timezone", "schedule"],
+    ["invalid_schedule", "schedule", "schedule"],
+  ])(
+    "a hosted %s is BAD_REQUEST with the refused value",
+    async (code, refusal, field) => {
+      const client = connect({
+        serviceHost: {
+          createRoutine: async () => {
+            throw new HostedRoutineRefusal(code, { secret: "x" });
+          },
+        },
+      });
+      const refused = await client.db.routines
+        .insert({ prompt: "p", schedule: "0 9 * * *", runner: "hosted" })
+        .catch((error: unknown) => error);
+      expect(refused).toMatchObject({
+        code: "BAD_REQUEST",
+        defined: true,
+        data: { refusal, field },
+      });
+      expect(JSON.stringify(refused)).not.toContain("secret");
+    }
+  );
+
+  it("an unknown hosted refusal is UNAVAILABLE, with nothing of the server's", async () => {
+    const client = connect({
+      serviceHost: {
+        createRoutine: async () => {
+          throw new HostedRoutineRefusal("internal_error", { secret: "x" });
+        },
+      },
+    });
+    const refused = await client.db.routines
+      .insert({ prompt: "p", schedule: "0 9 * * *", runner: "hosted" })
+      .catch((error: unknown) => error);
+    expect(refused).toMatchObject({ code: "UNAVAILABLE", defined: true });
+    expect(JSON.stringify(refused)).not.toContain("secret");
+  });
+
   it("a schedule that does not parse is BAD_REQUEST { field, detail }", async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "cron-parse-rpc-"));
     const previousHome = process.env.ABACUSAI_BOT_HOME;
@@ -182,6 +328,9 @@ describe("routines.events (spec 05 §31.5 j)", () => {
             attached();
             return off;
           },
+          // No hosted results in this test; the stream only attaches to them.
+          onHostedRun: () => () => {},
+          onRoutineCreatedByAgent: () => () => {},
         },
       });
       const events = await client.routines.events();

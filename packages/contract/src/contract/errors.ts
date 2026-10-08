@@ -25,7 +25,37 @@ export type PreconditionReason =
   | "git-unavailable"
   /** The 50-bot limit (spec 03 §24.4). */
   | "bot-limit"
-  | "unsupported-platform";
+  | "unsupported-platform"
+  /** The free plan's hosted routine is taken; upgrading allows more. */
+  | "plan-required"
+  /** The free plan runs a hosted routine at most once a day. */
+  | "plan-interval"
+  /** The free plan's hosted routines are tasks only. */
+  | "plan-kind"
+  /** A paid plan's hosted routines of that kind are all in use. */
+  | "routine-limit"
+  /** No hosted bot to run it on yet. */
+  | "no-host"
+  /** The hosted routine is done or not active, so it cannot change that way. */
+  | "routine-not-active"
+  /** The hosted routine is mid-change on the server; try again shortly. */
+  | "routine-busy"
+  /** Too many runs of the hosted routine are already waiting. */
+  | "queue-full"
+  /** Another of the user's bots made the hosted routine. */
+  | "wrong-bot"
+  /** Hosted routines are switched off for the account for now. */
+  | "routines-off";
+
+/** Why the server would not take a hosted routine's values. */
+export type RoutineRefusal =
+  | "schedule"
+  | "interval"
+  | "timezone"
+  | "sources"
+  | "reads"
+  | "text"
+  | "other";
 
 export interface RpcErrorData {
   /**
@@ -33,7 +63,13 @@ export interface RpcErrorData {
    * schema accepts but the service refused (a cron schedule that does not
    * parse, spec 05 §31.5 e); `detail` is the user-facing reason.
    */
-  BAD_REQUEST: { issues?: readonly unknown[]; field?: string; detail?: string };
+  BAD_REQUEST: {
+    issues?: readonly unknown[];
+    field?: string;
+    detail?: string;
+    /** A hosted routine the server would not take: why, for the app to word. */
+    refusal?: RoutineRefusal;
+  };
   NOT_FOUND: { entity: NotFoundEntity; id: string };
   CONFLICT: { reason: string };
   PRECONDITION_FAILED: { reason: PreconditionReason; detail?: string };

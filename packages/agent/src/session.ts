@@ -1,5 +1,6 @@
 import * as path from "node:path";
 
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 import {
   createAgentSession,
   createLocalBashOperations,
@@ -36,7 +37,7 @@ import {
   userProfilePrompt,
   type AbacusBotConfig,
 } from "./config.js";
-import { setCurrentMode } from "./current-mode.js";
+import { setCurrentMode, setUnattendedPolicy } from "./current-mode.js";
 import {
   customInstructionsPrompt,
   readCustomInstructions,
@@ -149,6 +150,7 @@ import {
 import { readTodos } from "./todo-store.js";
 import { ToolCallStream } from "./tool-call-stream.js";
 import { ToolHeartbeat } from "./tool-heartbeat.js";
+import { type ToolOrigin, type UnattendedPolicy } from "./tool-policy.js";
 import { TOOLS_ARRIVED_TYPE, toolsArrivedPrompt } from "./tools-arrived.js";
 import { turnUsage, type TurnUsage } from "./turn-usage.js";
 import { desktopXSearchAvailable, searchAvailable } from "./web/search.js";
@@ -170,6 +172,11 @@ export interface SessionOptions {
   cwd: string;
   model?: string;
   mode?: string;
+  /**
+   * An unattended run's declared reach (`--unattended` at spawn). Read only
+   * when the mode is Unattended; without it that mode refuses every tool.
+   */
+  unattended?: UnattendedPolicy;
   /**
    * Whether a host is attached to answer `host_service_request`. Without one,
    * the tools that need it are never registered: an unanswered
@@ -578,6 +585,13 @@ export function reserveContextHeadroom(
   };
 }
 
+/** The servers the app itself hosts; see DESKTOP_ONLY_SERVERS in mcp/index.ts. */
+const APP_SERVERS: ReadonlySet<string> = new Set([
+  "browser",
+  "device",
+  "agent-tools",
+]);
+
 export class AbacusBotSession {
   private readonly pendingSteers = new PendingSteers();
   private session: AgentSession | undefined;
@@ -757,6 +771,9 @@ export class AbacusBotSession {
   constructor(private readonly options: SessionOptions) {
     this.mode = parseMode(options.mode);
     setCurrentMode(this.mode);
+    setUnattendedPolicy(
+      this.mode === AgentMode.Unattended ? (options.unattended ?? null) : null
+    );
   }
 
   async start(): Promise<void> {
@@ -781,8 +798,13 @@ export class AbacusBotSession {
       ...componentToolNames(hostServices),
       ...this.mcp.tools.map((tool) => tool.name),
     ]);
-    const userProfile = userProfilePrompt();
-    const memory = memoryPrompt(qualifiedName(toolNames, "memory") != null);
+    // A run nobody watches gets none of the user's private context: a page it
+    // reads could ask for it back. Its routine's own prompt still arrives.
+    const unattended = this.mode === AgentMode.Unattended;
+    const userProfile = unattended ? undefined : userProfilePrompt();
+    const memory = unattended
+      ? null
+      : memoryPrompt(qualifiedName(toolNames, "memory") != null);
     const settingsManager = SettingsManager.create(this.options.cwd, dir);
     // Sub-agents get their own manager, left at the configured retry budget.
     const subAgentSettingsManager = SettingsManager.create(
@@ -800,7 +822,9 @@ export class AbacusBotSession {
       cwd: this.options.cwd,
       agentDir: dir,
       settingsManager,
-      additionalSkillPaths: skillDirs(this.options.cwd),
+      // Nor the folder's AGENTS.md and skills, which are the user's own text.
+      additionalSkillPaths: unattended ? [] : skillDirs(this.options.cwd),
+      ...(unattended ? { noSkills: true, noContextFiles: true } : {}),
       // What the model cannot work out for itself about this app, appended to
       // pi's own prompt rather than replacing it.
       appendSystemPrompt: [
@@ -826,8 +850,8 @@ export class AbacusBotSession {
       appendSystemPromptOverride: (base: string[]): string[] => {
         // Who the agent is comes first, then a bot's own persona, then what it knows.
         const persona = personaPrompt();
-        const instructions = customInstructionsPrompt();
-        const remember = rememberPrompt();
+        const instructions = unattended ? null : customInstructionsPrompt();
+        const remember = unattended ? null : rememberPrompt();
 
         // Live statuses, so a connector added mid-chat updates the line.
         const mcp = mcpPrompt(this.mcp.statuses);
@@ -2010,6 +2034,16 @@ export class AbacusBotSession {
     next: AgentMode,
     source: "startup" | "user" | "approval"
   ): void {
+    // Unattended is a spawn-time mode: a run never leaves it, and nothing
+    // switches a session into it without the policy it was spawned with.
+    if (
+      source !== "startup" &&
+      (this.mode === AgentMode.Unattended || next === AgentMode.Unattended) &&
+      next !== this.mode
+    ) {
+      this.emitAgentEvent({ type: "mode_changed", mode: this.mode, source });
+      return;
+    }
     const previous = this.mode;
     this.mode = next;
     setCurrentMode(next);
@@ -2682,11 +2716,17 @@ export class AbacusBotSession {
         }),
         promptableCredentialPaths: this.promptableCredentialPaths(ctx.cwd),
         allowedCredentialPaths: this.sandboxApprovals.reads.sessionPaths,
+        ...(this.options.unattended != null
+          ? {
+              unattended: {
+                policy: this.options.unattended,
+                origin: (name: string) => this.toolOrigin(name),
+              },
+            }
+          : {}),
       });
 
-      if (gate.kind === "allow") {
-        return;
-      }
+      if (gate.kind === "allow") return;
 
       // Asked and answered; the same card again talks over the user.
       if (tool.name === EXIT_PLAN_TOOL_NAME && this.planDeclinedThisTurn) {
@@ -3159,6 +3199,25 @@ export class AbacusBotSession {
   }
 
   // ------------------------------------------------------------------ helpers
+
+  /**
+   * Where a tool the model called comes from: a server the user added, the
+   * account's connectors, or the agent and the app's own servers. A name an
+   * MCP server routes is that server's, whatever else shares the name.
+   */
+  private toolOrigin(name: string): ToolOrigin {
+    const route = this.mcp.routes.get(name);
+    if (route == null) return "builtin";
+    const server = route.client.name;
+    if (server === GATEWAY_SERVER_NAME) return "connector";
+    // By the app's reserved names, not by what a config entry claims.
+    return APP_SERVERS.has(server) &&
+      this.mcp.statuses.some(
+        (status) => status.id === server && status.isBuiltin === true
+      )
+      ? "builtin"
+      : "user";
+  }
 
   private toToolRequest(id: string, name: string, input: unknown): ToolRequest {
     const displayName = TOOL_NAME_ALIASES[name] ?? name;

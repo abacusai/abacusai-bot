@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { TOOL_NAME_ALIASES } from "./excluded-tools.js";
 import { NOT_SWITCHABLE } from "./roster.js";
+import { UNATTENDED_EXCLUDED_TOOLS, UNATTENDED_TOOLS } from "./tool-policy.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..", "..", "..");
@@ -169,6 +170,18 @@ describe("the tools the agent registers", () => {
     );
 
     expect(unpinned).toEqual([]);
+  }, 120_000);
+
+  it("are all classified for a routine nobody is watching", async () => {
+    // Unattended is an allowlist: a tool missing from both tables is refused,
+    // and this makes that a decision someone wrote down.
+    const unclassified = (await hostTools()).filter(
+      (tool) =>
+        UNATTENDED_TOOLS[tool] == null &&
+        UNATTENDED_EXCLUDED_TOOLS[tool] == null
+    );
+
+    expect(unclassified).toEqual([]);
   }, 120_000);
 
   it("include the ones that need nothing but this process", async () => {

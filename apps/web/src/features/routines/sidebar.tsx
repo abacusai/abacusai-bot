@@ -16,6 +16,7 @@ import { Input } from "#renderer/ui/input";
 
 import { useConnectorThreads } from "./attention";
 import { stats, routineState, scheduleLabel, useRoutinesData } from "./data";
+import { useHostedOff, useHostedRefresh } from "./hosted-sync";
 import { routineOwns } from "./notify";
 import { RoutineSidebarRow } from "./row";
 export const RoutinesSidebar = () => {
@@ -27,6 +28,9 @@ export const RoutinesSidebar = () => {
   const { routineId } = useParams({ strict: false }) as { routineId?: string };
   const [q, setQ] = useState("");
   const now = useNow();
+  const hostedOff = useHostedOff();
+  // The Routines panel is open while its sidebar is: keep hosted rows fresh.
+  useHostedRefresh();
   const counts = stats(routines, new Date(now));
   const snapshot = useQuery(
     transport.orpc.messaging.snapshot.queryOptions({ input: {} })
@@ -61,9 +65,10 @@ export const RoutinesSidebar = () => {
     .filter((r) => foldSearch(r.name + " " + r.prompt).includes(foldSearch(q)))
     .toSorted(
       (a, b) =>
-        Number(routineState(b, runs, sessions, asks) === "running") -
-          Number(routineState(a, runs, sessions, asks) === "running") ||
-        a.name.localeCompare(b.name)
+        Number(routineState(b, runs, sessions, asks, hostedOff) === "running") -
+          Number(
+            routineState(a, runs, sessions, asks, hostedOff) === "running"
+          ) || a.name.localeCompare(b.name)
     );
   return (
     <NavList.Root label={t("routines.sidebar.label")}>
@@ -93,7 +98,7 @@ export const RoutinesSidebar = () => {
       ) : (
         <NavList.Rows>
           {ordered.map((r) => {
-            const state = routineState(r, runs, sessions, asks);
+            const state = routineState(r, runs, sessions, asks, hostedOff);
             return (
               <RoutineSidebarRow
                 key={r.id}

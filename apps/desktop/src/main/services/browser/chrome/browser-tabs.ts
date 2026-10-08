@@ -93,9 +93,16 @@ export class BrowserTabs {
    * returns is skipped by the attach logic; any other that attaches meanwhile
    * is decided once the creates in flight are done.
    */
-  async create(sessionId: string, url: string): Promise<ChromeTabInfo> {
+  async create(
+    sessionId: string,
+    url: string,
+    options: { isolated?: boolean; port?: number } = {}
+  ): Promise<ChromeTabInfo> {
     this.noteUse(sessionId);
-    const making = this.driver.createTab(url);
+    const making =
+      options.isolated === true
+        ? this.createIsolated(sessionId, url, options.port)
+        : this.driver.createTab(url);
     this.creating.add(making);
     try {
       const tab = await making;
@@ -106,6 +113,46 @@ export class BrowserTabs {
       if (this.creating.size === 0)
         for (const { tabId, at } of this.held.splice(0)) this.adopt(tabId, at);
     }
+  }
+
+  /**
+   * A tab in a browser context of the session's own: never the profile's
+   * cookies or logins, and the context goes when the session does. Refused
+   * where the browser cannot make one, rather than falling back to a profile.
+   */
+  private async createIsolated(
+    sessionId: string,
+    url: string,
+    port: number | undefined
+  ): Promise<ChromeTabInfo> {
+    if (this.driver.createIsolatedTab == null)
+      throw new Error(
+        "This browser cannot open a page apart from its profile."
+      );
+    const { tab, browserContextId, dispose } =
+      await this.driver.createIsolatedTab(url, port != null ? { port } : {});
+    const held = this.isolated.get(sessionId) ?? {
+      contexts: new Set<string>(),
+      disposers: [],
+    };
+    held.contexts.add(browserContextId);
+    held.disposers.push(dispose);
+    this.isolated.set(sessionId, held);
+    return tab;
+  }
+
+  /** Each isolated session's browser contexts, and how to dispose them when it ends. */
+  private readonly isolated = new Map<
+    string,
+    { contexts: Set<string>; disposers: Array<() => Promise<void>> }
+  >();
+
+  /** The isolated session whose context a page opened in, if any. */
+  private isolatedOwnerOf(tab: ChromeTabInfo): string | null {
+    if (tab.browserContextId == null) return null;
+    for (const [sessionId, held] of this.isolated)
+      if (held.contexts.has(tab.browserContextId)) return sessionId;
+    return null;
   }
 
   /** The session acted on its page in a way that may open a tab. */
@@ -177,6 +224,15 @@ export class BrowserTabs {
    */
   releaseSession(sessionId: string): void {
     this.actions.delete(sessionId);
+    // An isolated run is not come back to: its pages and context go now.
+    const held = this.isolated.get(sessionId);
+    if (held != null) {
+      this.isolated.delete(sessionId);
+      for (const tabId of this.ownedBy(sessionId))
+        void this.letGo(tabId).catch(() => undefined);
+      for (const dispose of held.disposers) void dispose();
+      return;
+    }
     if (this.ended.has(sessionId) || this.ownedBy(sessionId).length === 0)
       return;
     const timer = setTimeout(() => {
@@ -333,6 +389,13 @@ export class BrowserTabs {
 
   private onAttached(tab: ChromeTabInfo): void {
     if (this.records.has(tab.id)) return;
+    // A page opened in an isolated session's own context is that session's,
+    // and a page anywhere else never is (see adopt).
+    const isolatedOwner = this.isolatedOwnerOf(tab);
+    if (isolatedOwner != null) {
+      this.join(tab.id, isolatedOwner, tab.openerTabId ?? null);
+      return;
+    }
     if (tab.openerTabId != null || tab.hasOpener === true) {
       // The browser named an opener: its owner's, or nobody's.
       const opener =
@@ -350,9 +413,12 @@ export class BrowserTabs {
   /** An opener-less tab that attached `at`: the one session that just acted takes it. */
   private adopt(tabId: number, at: number): void {
     if (this.records.has(tabId) || !this.driver.isAttached(tabId)) return;
+    // An isolated session's pages are told apart by their context; it never
+    // takes a page of the profile's.
     const acted = [...this.actions]
       .filter(([, when]) => when <= at && at - when <= ADOPT_WINDOW_MS)
-      .map(([sessionId]) => sessionId);
+      .map(([sessionId]) => sessionId)
+      .filter((sessionId) => !this.isolated.has(sessionId));
     if (acted.length !== 1) {
       this.leaveUnclaimed(tabId);
       return;

@@ -19,6 +19,8 @@ type BuiltinToolPermissionsDeps = {
   mcpConfigService: McpConfigService;
   emitEvent: (event: IpcEvent) => void;
   getSessionMode: (sessionId: string) => AgentMode | null;
+  /** A run nobody is watching: nothing is asked, and the servers hold it themselves. */
+  isUnattended?: (sessionId: string) => boolean;
   setBrowserApprovalAlways: () => Promise<unknown>;
   /** Null for an unknown session; a prompt that cannot be placed is refused. */
   conversationKeyForSession: (sessionId: string) => ConversationKey | null;
@@ -91,6 +93,10 @@ export class BuiltinToolPermissions {
     // Bypass means bypass: these servers prompt from the desktop process,
     // which must honour the mode the agent's own permission layer honours.
     if (sessionId != null) {
+      // Nobody to ask. The browser server holds such a run to its one page;
+      // a device is never driven by one.
+      if (this.deps.isUnattended?.(sessionId) === true)
+        return server === "browser" ? "allow" : "deny";
       const mode = this.deps.getSessionMode(sessionId);
       if (mode === AgentMode.Yolo || mode === AgentMode.Auto) return "allow";
     }

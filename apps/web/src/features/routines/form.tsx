@@ -1,5 +1,7 @@
 import type { RoutineRow } from "@abacus-ai/contract/contract/rows";
+import type { RoutineRunner } from "@abacus-ai/contract/routines";
 import { revalidateLogic } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter, useBlocker } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +11,7 @@ import { useAppForm } from "#renderer/components/form-kit";
 import { Segments } from "#renderer/components/form-kit/controls";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { isRpcError } from "#renderer/data/query-client";
+import { ABACUS_PLAN_URL } from "#renderer/lib/abacus-links";
 import {
   composeSchedule,
   WEEKDAYS,
@@ -17,7 +20,7 @@ import {
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { platformSystem } from "#renderer/lib/platform-system";
 import { ROUTINE_TEMPLATES } from "#renderer/lib/routines/templates";
-import { showError } from "#renderer/lib/toast";
+import { showError, showInfo } from "#renderer/lib/toast";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import {
   AlertDialog,
@@ -44,11 +47,16 @@ import { NativeSelect, NativeSelectOption } from "#renderer/ui/native-select";
 import { Switch } from "#renderer/ui/switch";
 
 import { useRoutinesData } from "./data";
+import { browserTimeZone, isHosted } from "./hosted";
+import { readKey } from "./reach-panel";
+import { routineRefusal, type RoutineRefusalText } from "./refusal";
 import {
   RoutineFormSchema,
   valuesForRoutine,
   dirtyPatch,
+  droppedSources,
   nextPreview,
+  reachOf,
 } from "./schema";
 export const RoutineDialog = ({
   routineId,
@@ -88,6 +96,32 @@ export const RoutineDialog = ({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [id, setId] = useState(() => `routine-${crypto.randomUUID()}`);
+  // Where a new routine runs: offered only where both are possible (the
+  // desktop app, when the server keeps routines); elsewhere main decides.
+  const runners = useQuery(
+    transport.orpc.routines.runners.queryOptions({ input: {} })
+  );
+  const [runner, setRunner] = useState<RoutineRunner | null>(null);
+  const offerRunner =
+    !routineId &&
+    runners.data?.hosted === true &&
+    runners.data.default === "local";
+  const chosenRunner: RoutineRunner =
+    runner ?? (runners.data?.hosted === true ? runners.data.default : "local");
+  /** Why the server would not take it, in words. */
+  const [refusal, setRefusal] = useState<RoutineRefusalText | null>(null);
+  // Where this routine runs: an edited row's own runner, or the one chosen.
+  const runsHosted = routineId
+    ? row != null && isHosted(row)
+    : chosenRunner === "hosted";
+  // An edited hosted routine's times are in its own zone.
+  const zone = routineId ? (row?.hosted?.timezone ?? null) : null;
+  const otherZone = zone != null && zone !== browserTimeZone() ? zone : null;
+  const timeZoneShown = zone ?? browserTimeZone();
+  const hostedByDefault =
+    !routineId &&
+    runners.data?.hosted === true &&
+    runners.data.default === "hosted";
   const close = () => {
     if (router.history.canGoBack()) router.history.back();
     else
@@ -109,6 +143,7 @@ export const RoutineDialog = ({
       const parsed = v.parse(RoutineFormSchema, value);
       setError(null);
       setScheduleError(null);
+      setRefusal(null);
       try {
         if (routineId) {
           await db.collections.routines.update(routineId, (d) =>
@@ -116,6 +151,7 @@ export const RoutineDialog = ({
           ).isPersisted.promise;
           baseline.current = parsed;
           form.reset(parsed);
+          reportDropped(routineId, parsed);
           close();
           return;
         }
@@ -138,14 +174,45 @@ export const RoutineDialog = ({
             webhookUrl: null,
             webhookPublicPending: parsed.webhook,
             botName: null,
+            ...(chosenRunner === "hosted"
+              ? {
+                  runner: "hosted" as const,
+                  hosted: {
+                    kind: "task" as const,
+                    timezone: browserTimeZone(),
+                    notify: "always" as const,
+                    delivery: "default" as const,
+                    ...reachOf(parsed),
+                    watchUrl: null,
+                    pendingConfirmation: false,
+                    approvalSent: false,
+                    pausedReason: null,
+                    lastRun: null,
+                  },
+                }
+              : {
+                  ...(offerRunner ? { runner: "local" as const } : {}),
+                  // The user's own form: in force at once.
+                  reach: reachOf(parsed),
+                }),
           };
           await db.collections.routines.insert(optimistic).isPersisted.promise;
         };
-        const savedId = await insertWithConflictRetry(insert, id);
-        if (savedId !== id) setId(savedId);
+        const insertedId = await insertWithConflictRetry(insert, id);
+        if (insertedId !== id) setId(insertedId);
+        // A hosted routine is listed under the server's id.
+        const saved =
+          db.collections.routines.toArray.find(
+            (r) => r.hosted?.createdAs === insertedId
+          ) ?? db.collections.routines.get(insertedId);
+        const savedId = saved?.id ?? insertedId;
         baseline.current = parsed;
         form.reset(parsed);
-        if (parsed.testRun)
+        reportDropped(savedId, parsed);
+        // One waiting for approval cannot run yet.
+        if (parsed.testRun && saved?.hosted?.pendingConfirmation === true)
+          showInfo(t("routines.hosted.approveFirst"));
+        else if (parsed.testRun)
           void transport.client.routines
             .run({ id: savedId, trigger: "create" })
             .catch(() => showError(t("phase5.firstRunFailed")));
@@ -156,6 +223,11 @@ export const RoutineDialog = ({
           transition: "nav-forward",
         });
       } catch (e) {
+        const hosted = routineRefusal(e);
+        if (hosted != null) {
+          setRefusal(hosted);
+          return;
+        }
         const refused = isRpcError(e) && e.code === "BAD_REQUEST" ? e : null;
         if (refused?.data?.field === "schedule") {
           setScheduleError(
@@ -173,6 +245,23 @@ export const RoutineDialog = ({
       }
     },
   });
+  // A local routine keeps only the pages it can read: say what was left out.
+  const reportDropped = (savedId: string, value: typeof initial) => {
+    const saved = db.collections.routines.get(savedId);
+    if (saved == null || isHosted(saved)) return;
+    const dropped = droppedSources(
+      reachOf(value).sources,
+      saved.reach?.sources ?? []
+    );
+    if (dropped.length > 0)
+      showInfo(t("routines.reach.dropped", { items: dropped.join(", ") }));
+  };
+  // A hosted routine's first run is asked for, not assumed.
+  useEffect(() => {
+    if (!hostedByDefault) return;
+    form.setFieldValue("testRun", false);
+    baseline.current = { ...baseline.current, testRun: false };
+  }, [hostedByDefault, form]);
   const changed = () =>
     JSON.stringify(form.state.values) !== JSON.stringify(baseline.current);
   const applyTemplate = (x: (typeof ROUTINE_TEMPLATES)[number]) => {
@@ -202,6 +291,8 @@ export const RoutineDialog = ({
       "schedule",
       "workspaceId",
       "webhook",
+      "sources",
+      "reads",
     ] as const) {
       if (
         JSON.stringify(incoming[key]) === JSON.stringify(baseline.current[key])
@@ -277,6 +368,32 @@ export const RoutineDialog = ({
                 </div>
               )}
 
+              {offerRunner && (
+                <Field>
+                  <FieldLabel htmlFor="routine-runner">
+                    {t("routines.hosted.runnerLabel")}
+                  </FieldLabel>
+                  <NativeSelect
+                    id="routine-runner"
+                    value={chosenRunner}
+                    onChange={(e) => {
+                      const next = e.target.value as RoutineRunner;
+                      setRunner(next);
+                      setRefusal(null);
+                      // A hosted routine's first run is asked for, not assumed.
+                      form.setFieldValue("testRun", next !== "hosted");
+                    }}
+                  >
+                    <NativeSelectOption value="local">
+                      {t("routines.hosted.runnerLocal")}
+                    </NativeSelectOption>
+                    <NativeSelectOption value="hosted">
+                      {t("routines.hosted.runnerHosted")}
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </Field>
+              )}
+
               <form.AppField name="name">
                 {(f) => (
                   <f.TextField
@@ -297,10 +414,54 @@ export const RoutineDialog = ({
                   />
                 )}
               </form.AppField>
+              <form.AppField name="sources">
+                {(f) => (
+                  <f.TextField
+                    label={t("routines.reach.sourcesLabel")}
+                    placeholder={t("routines.reach.sourcesPlaceholder")}
+                    max={4000}
+                    multiline
+                  />
+                )}
+              </form.AppField>
+              <form.Subscribe selector={(s) => s.values.reads}>
+                {(reads) => (
+                  <Field>
+                    <FieldLabel>{t("routines.reach.readsLabel")}</FieldLabel>
+                    {(
+                      ["gmail.search", "gmail.read", "calendar.read"] as const
+                    ).map((read) => (
+                      <label
+                        key={read}
+                        className="flex items-center gap-2 text-[13px]"
+                      >
+                        <Switch
+                          checked={reads.includes(read)}
+                          onCheckedChange={(on) =>
+                            form.setFieldValue(
+                              "reads",
+                              on
+                                ? [...reads, read]
+                                : reads.filter((entry) => entry !== read)
+                            )
+                          }
+                        />
+                        {t(readKey(read))}
+                      </label>
+                    ))}
+                    {/* Only an unattended routine's runs are held to this. */}
+                    {(runsHosted || row?.access !== "full") && (
+                      <p className="text-muted-foreground text-xs">
+                        {t("routines.reach.lead")}
+                      </p>
+                    )}
+                  </Field>
+                )}
+              </form.Subscribe>
               <form.Subscribe selector={(s) => s.values}>
                 {(value) => {
                   const d = value.schedule;
-                  const preview = nextPreview(d, new Date());
+                  const preview = nextPreview(d, new Date(), otherZone);
                   return (
                     <>
                       <Field
@@ -418,9 +579,20 @@ export const RoutineDialog = ({
                             </>
                           )}
                         </form.Field>
-                        <p className="text-muted-foreground text-xs">
-                          {t("phase5.localTime")}
-                        </p>
+                        {runsHosted ? (
+                          timeZoneShown != null &&
+                          d.preset !== "once" && (
+                            <p className="text-muted-foreground text-xs">
+                              {t("routines.hosted.zoneTime", {
+                                zone: timeZoneShown,
+                              })}
+                            </p>
+                          )
+                        ) : (
+                          <p className="text-muted-foreground text-xs">
+                            {t("phase5.localTime")}
+                          </p>
+                        )}
                         {preview && (
                           <p aria-live="polite">
                             {t("phase5.next", {
@@ -432,53 +604,57 @@ export const RoutineDialog = ({
                           </p>
                         )}
                       </Field>
-                      <Field>
-                        <FieldLabel htmlFor="routine-folder">
-                          {t("phase5.folder")}
-                        </FieldLabel>
-                        <NativeSelect
-                          id="routine-folder"
-                          value={value.workspaceId ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "choose") {
-                              void platformSystem(transport.client)
-                                .dialog.openFolder({})
-                                .then(async (path) => {
-                                  if (!path) return;
-                                  const added =
-                                    await transport.client.workspaces.add({
-                                      path,
-                                    });
-                                  form.setFieldValue(
-                                    "workspaceId",
-                                    added.workspaceId
+                      {!runsHosted && (
+                        <Field>
+                          <FieldLabel htmlFor="routine-folder">
+                            {t("phase5.folder")}
+                          </FieldLabel>
+                          <NativeSelect
+                            id="routine-folder"
+                            value={value.workspaceId ?? ""}
+                            onChange={(e) => {
+                              if (e.target.value === "choose") {
+                                void platformSystem(transport.client)
+                                  .dialog.openFolder({})
+                                  .then(async (path) => {
+                                    if (!path) return;
+                                    const added =
+                                      await transport.client.workspaces.add({
+                                        path,
+                                      });
+                                    form.setFieldValue(
+                                      "workspaceId",
+                                      added.workspaceId
+                                    );
+                                  })
+                                  .catch(() =>
+                                    showError(t("phase5.folderFailed"))
                                   );
-                                })
-                                .catch(() =>
-                                  showError(t("phase5.folderFailed"))
+                              } else
+                                form.setFieldValue(
+                                  "workspaceId",
+                                  e.target.value || null
                                 );
-                            } else
-                              form.setFieldValue(
-                                "workspaceId",
-                                e.target.value || null
-                              );
-                          }}
-                        >
-                          <NativeSelectOption value="">
-                            {t("phase5.ownFolder")}
-                          </NativeSelectOption>
-                          {workspaces
-                            .filter((w) => w.kind == null || w.kind === "auto")
-                            .map((w) => (
-                              <NativeSelectOption key={w.id} value={w.id}>
-                                {w.label ?? w.path}
-                              </NativeSelectOption>
-                            ))}
-                          <NativeSelectOption value="choose">
-                            {t("phase5.chooseFolder")}
-                          </NativeSelectOption>
-                        </NativeSelect>
-                      </Field>
+                            }}
+                          >
+                            <NativeSelectOption value="">
+                              {t("phase5.ownFolder")}
+                            </NativeSelectOption>
+                            {workspaces
+                              .filter(
+                                (w) => w.kind == null || w.kind === "auto"
+                              )
+                              .map((w) => (
+                                <NativeSelectOption key={w.id} value={w.id}>
+                                  {w.label ?? w.path}
+                                </NativeSelectOption>
+                              ))}
+                            <NativeSelectOption value="choose">
+                              {t("phase5.chooseFolder")}
+                            </NativeSelectOption>
+                          </NativeSelect>
+                        </Field>
+                      )}
                       <Field orientation="horizontal">
                         <FieldLabel htmlFor="routine-webhook">
                           {t("phase5.webhook")}
@@ -511,6 +687,20 @@ export const RoutineDialog = ({
               </form.Subscribe>
               {remote && <p role="status">{t("phase5.remoteChanged")}</p>}
               {error && <p role="alert">{error}</p>}
+              {refusal && (
+                <div role="alert" className="flex flex-col gap-1 text-[13px]">
+                  <p>{t(refusal.key)}</p>
+                  {refusal.upgrade && (
+                    <a
+                      href={refusal.upgradeUrl ?? ABACUS_PLAN_URL}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      {t("routines.hosted.upgrade")}
+                    </a>
+                  )}
+                </div>
+              )}
               <form.Subscribe selector={(s) => s.errors}>
                 {(errors) =>
                   errors.length > 0 ? (

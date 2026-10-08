@@ -11,6 +11,7 @@ import { AgentMode } from "@abacus-ai/contract/agent-types";
  * app default (03-bots §24.2).
  */
 import {
+  CalendarClock,
   Cpu,
   KeyRound,
   Shield,
@@ -20,6 +21,7 @@ import {
   LockOpen,
   Sparkles,
   Settings2,
+  type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -56,12 +58,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 import type { ModelChipBinding, ModelGroup } from "../kit/context";
 import { MODE_DESCRIPTION_KEYS, MODE_LABEL_KEYS, MODE_ORDER } from "./modes";
 
-const MODE_ICONS = {
+const MODE_ICONS: Record<AgentMode, LucideIcon> = {
   [AgentMode.Auto]: Sparkles,
   [AgentMode.Normal]: Shield,
   [AgentMode.AcceptEdits]: FilePenLine,
   [AgentMode.PlanMode]: ListTodo,
   [AgentMode.Yolo]: LockOpen,
+  [AgentMode.Unattended]: CalendarClock,
 };
 const MODE_CONFIRM_MS = 5000;
 

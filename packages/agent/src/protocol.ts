@@ -37,6 +37,11 @@ export enum AgentMode {
   Auto = "AUTO",
   /** Bypass with nothing: no prompts and no sandbox. */
   Yolo = "YOLO",
+  /**
+   * A routine nobody is watching: never asks, and refuses every tool outside
+   * a fixed allowlist. Set at spawn only, and never left.
+   */
+  Unattended = "UNATTENDED",
 }
 
 export enum AgentStatus {

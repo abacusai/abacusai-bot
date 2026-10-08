@@ -5,7 +5,9 @@ import {
 } from "child_process";
 import { existsSync } from "fs";
 import { delimiter } from "path";
+import type { Writable } from "stream";
 
+import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
   AgentMode,
   AgentStatus,
@@ -106,6 +108,9 @@ type ExitedRuntimeRecord = {
   mcpLogs: Array<{ serverId: string; entries: AgentMcpLogEntry[] }>;
 };
 
+/** The pipe an unattended run's policy is written to (see --unattended-fd). */
+const UNATTENDED_POLICY_FD = 4;
+
 /** Exited sessions kept for the dump. Enough for a bad startup loop. */
 const MAX_EXITED_RECORDS = 20;
 
@@ -119,6 +124,11 @@ type AgentManagerServiceOptions = {
   resolveAdditionalConfigEnv: (
     sessionId: string
   ) => Promise<Record<string, string>>;
+  /**
+   * The declared reach of a session that runs unattended, or null. A session
+   * with one is spawned in that mode whatever the request asked for.
+   */
+  resolveUnattended?: (sessionId: string) => UnattendedPolicy | null;
   emitStateUpdated: (
     workspaceId: string,
     sessionId: string,
@@ -378,7 +388,8 @@ const parseMode = (value: unknown): AgentMode | null => {
     value === AgentMode.AcceptEdits ||
     value === AgentMode.PlanMode ||
     value === AgentMode.Auto ||
-    value === AgentMode.Yolo
+    value === AgentMode.Yolo ||
+    value === AgentMode.Unattended
   ) {
     return value;
   }
@@ -655,7 +666,20 @@ export class AgentManagerService {
     const spawnArgs: string[] = [...artifact.execArgs];
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
-    if (request.mode != null) spawnArgs.push("--permission-mode", request.mode);
+    // An unattended run's mode and reach come from its own record, never
+    // from the request: a start from anywhere spawns it held. The policy
+    // itself goes over its own pipe (fd 4), never argv, which anyone on the
+    // machine can read.
+    const unattended = this.options.resolveUnattended?.(request.sessionId);
+    if (unattended != null)
+      spawnArgs.push(
+        "--permission-mode",
+        AgentMode.Unattended,
+        "--unattended-fd",
+        String(UNATTENDED_POLICY_FD)
+      );
+    else if (request.mode != null)
+      spawnArgs.push("--permission-mode", request.mode);
     const wire: AgentWire = "agui";
     {
       spawnArgs.push(
@@ -676,9 +700,20 @@ export class AgentManagerService {
       child = spawn(artifact.execPath, spawnArgs, {
         cwd: workspacePath,
         env,
-        // agui: fd 3 is the compatibility channel the agent negotiates.
-        stdio: ["pipe", "pipe", "pipe", "pipe"],
+        // agui: fd 3 is the compatibility channel the agent negotiates; fd 4
+        // carries an unattended run's policy.
+        stdio:
+          unattended != null
+            ? ["pipe", "pipe", "pipe", "pipe", "pipe"]
+            : ["pipe", "pipe", "pipe", "pipe"],
       }) as ChildProcessWithoutNullStreams;
+      if (unattended != null) {
+        const policyPipe = (child.stdio as unknown as Array<Writable | null>)[
+          UNATTENDED_POLICY_FD
+        ];
+        policyPipe?.on("error", () => {});
+        policyPipe?.end(JSON.stringify(unattended));
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // A synchronous spawn() throw must reach the dump with the interpreter

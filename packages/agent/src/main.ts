@@ -22,6 +22,7 @@ import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
 import { followGithubToken } from "./github-token.js";
 import { sandboxAvailability } from "./sandbox/index.js";
+import { parseUnattendedPolicy } from "./tool-policy.js";
 
 /** The AG-UI host, once there is one: its open run gets last words at exit. */
 let aguiHost: AguiHost | undefined;
@@ -79,6 +80,12 @@ async function main(): Promise<void> {
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
+  // An unattended run's declared reach, as JSON read to its end from its own
+  // pipe (never argv); meaningful only with `--permission-mode UNATTENDED`,
+  // which refuses everything without it.
+  const unattendedFd = readFlag(argv, "--unattended-fd");
+  const unattended =
+    unattendedFd != null ? readUnattendedPolicy(Number(unattendedFd)) : null;
   const wire = readFlag(argv, "--wire") ?? "agui";
 
   const refusal = wireRefusal(wire);
@@ -127,6 +134,7 @@ async function main(): Promise<void> {
     cwd: process.cwd(),
     ...(model != null ? { model } : {}),
     ...(mode != null ? { mode } : {}),
+    ...(unattended != null ? { unattended } : {}),
     threadId,
     incarnation,
     compat,
@@ -134,6 +142,22 @@ async function main(): Promise<void> {
   });
 
   await aguiHost.run();
+}
+
+/** The policy written to `fd`, or null when it cannot be read: then nothing is allowed. */
+function readUnattendedPolicy(fd: number) {
+  if (!Number.isInteger(fd) || fd < 3) return null;
+  try {
+    return parseUnattendedPolicy(fs.readFileSync(fd, "utf8"));
+  } catch {
+    return null;
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      // Already closed.
+    }
+  }
 }
 
 main().catch((error: unknown) => {

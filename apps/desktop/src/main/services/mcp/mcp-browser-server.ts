@@ -152,6 +152,12 @@ import {
   type McpToolListing,
   type McpToolResult as ToolResult,
 } from "./mcp-http-server";
+import {
+  heldBrowserRefusal,
+  onWatchHost,
+  watchHostIsPublic,
+  type HeldBrowserSession,
+} from "./unattended-browser";
 
 const NAVIGATE_TIMEOUT_MS = 20_000;
 const WEBVIEW_ATTACH_TIMEOUT_MS = 15_000;
@@ -667,6 +673,8 @@ export interface McpBrowserServerOptions {
    * `browser_checkout`, handed to it at spawn. Absent, the tool refuses.
    */
   checkoutToken?: string;
+  /** A session that runs unattended, held to its one page; null for any other. */
+  heldSession?: (sessionId: string) => HeldBrowserSession | null;
 }
 
 /** A read refused because the page's secret fields could not be checked first. */
@@ -1921,8 +1929,25 @@ export class McpBrowserServer extends McpHttpServer {
     sessionId?: string
   ): Promise<ToolResult> {
     try {
+      // A run nobody is watching reads its one page and does nothing else.
+      const held =
+        sessionId != null
+          ? (this.options.heldSession?.(sessionId) ?? null)
+          : null;
+      if (held != null) {
+        const refusal = heldBrowserRefusal(name, args, held);
+        if (refusal != null) return this.err(refusal);
+        // A name that points inside is never opened, nor reloaded.
+        if (
+          name === "browser_navigate" &&
+          held.watchUrl != null &&
+          !(await watchHostIsPublic(held.watchUrl))
+        )
+          return this.err("The routine's page is not on a public address.");
+      }
       // Pure-read tools skip the prompt; navigate/interact/execute stay gated.
       if (
+        held == null &&
         this.options.requestPermission != null &&
         !isReadOnlyBrowserTool(name, args)
       ) {
@@ -1991,7 +2016,22 @@ export class McpBrowserServer extends McpHttpServer {
             return this.err(`${name} was not run: it timed out while waiting.`);
           const refused = await this.abacusFence(name, args, sessionId);
           if (refused != null) return refused;
+          if (held?.watchUrl != null && name === "browser_snapshot") {
+            const page = this.findView(sessionId);
+            if (page == null || !onWatchHost(page.getURL(), held.watchUrl))
+              return this.err("The routine's page is not open.");
+          }
           const result = await act();
+          // Landed somewhere else (a redirect): leave before it is read.
+          if (held?.watchUrl != null) {
+            const page = this.findView(sessionId);
+            if (page != null && !onWatchHost(page.getURL(), held.watchUrl)) {
+              await page.loadURL("about:blank").catch(() => undefined);
+              return this.err(
+                "The page went to another site, so it was not read."
+              );
+            }
+          }
           return (await this.leaveAbacusPage(sessionId)) ?? result;
         };
         try {

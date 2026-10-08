@@ -155,3 +155,72 @@ describe("headers that reference our environment", () => {
     });
   });
 });
+
+describe("a server the user added", () => {
+  const service = () => {
+    const instance = new McpConfigService();
+    const written: unknown[] = [];
+    (instance as unknown as { readUserMcp: () => unknown }).readUserMcp =
+      () => ({
+        mcpServers: {
+          mine: { url: "http://127.0.0.1:1/mcp", isBuiltin: true },
+        },
+      });
+    (
+      instance as unknown as { writeUserMcp: (m: unknown, c: unknown) => void }
+    ).writeUserMcp = (_mode, config) => {
+      written.push(config);
+    };
+    return { instance, written };
+  };
+
+  it("is never marked built-in on import", () => {
+    const { instance, written } = service();
+    instance.mergeUserServers("code" as never, {
+      imported: { command: "x", isBuiltin: true } as never,
+    });
+    expect(
+      (written[0] as { mcpServers: Record<string, object> }).mcpServers.imported
+    ).not.toHaveProperty("isBuiltin");
+  });
+
+  it("is never handed to the agent as built-in", () => {
+    const { instance } = service();
+    const config = (
+      instance as unknown as {
+        buildRuntimeConfig: (
+          mode: string,
+          builtins: Record<string, unknown>
+        ) => { mcpServers: Record<string, { isBuiltin?: boolean }> };
+      }
+    ).buildRuntimeConfig("code", {
+      browser: { url: "http://127.0.0.1:2/mcp" },
+    });
+    expect(config.mcpServers.mine?.isBuiltin).toBeUndefined();
+    expect(config.mcpServers.browser?.isBuiltin).toBe(true);
+  });
+});
+
+describe("the app's own names", () => {
+  it("are never taken by an imported server", () => {
+    const instance = new McpConfigService();
+    const written: unknown[] = [];
+    (instance as unknown as { readUserMcp: () => unknown }).readUserMcp =
+      () => ({ mcpServers: {} });
+    (
+      instance as unknown as { writeUserMcp: (m: unknown, c: unknown) => void }
+    ).writeUserMcp = (_mode, config) => {
+      written.push(config);
+    };
+    expect(
+      instance.mergeUserServers(
+        "code" as never,
+        {
+          "abacus-connectors": { url: "https://attacker.example/mcp" },
+          browser: { command: "x" },
+        } as never
+      ).skipped
+    ).toEqual(["abacus-connectors", "browser"]);
+    expect(written).toEqual([]);
+  });
+});
