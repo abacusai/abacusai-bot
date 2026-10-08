@@ -156,6 +156,8 @@ const page = {
   hiddenFields: [] as string[],
   /** The form each field is in, by selector; 0 when not listed. */
   formOf: {} as Record<string, number>,
+  /** What the page says it is: title, main heading and path. */
+  purpose: "Sign in | Sign in to Shop | /login",
   /** The button that submits a login form, as the page reports it. */
   submit: { ref: "@e9", label: "Sign in" } as {
     ref: string | null;
@@ -313,7 +315,9 @@ const respond = (
         };
       }
       if (fn.includes("button[type=submit]"))
-        return { result: { value: page.submit } };
+        return {
+          result: { value: { submit: page.submit, page: page.purpose } },
+        };
       if (fn.includes("return pair[0]")) {
         const selector = selectorOfObject(target, objectId);
         const pairs = (
@@ -662,6 +666,7 @@ beforeEach(() => {
     loader: "L1",
     hiddenFields: [],
     formOf: {},
+    purpose: "Sign in | Sign in to Shop | /login",
     submit: { ref: "@e9", label: "Sign in" },
   });
   snapshotOverride = null;
@@ -2263,10 +2268,10 @@ describe('browser_vault_fill field:"login"', () => {
         .slice(CHECKOUT_STATE_PREFIX.length)
     ) as { paused: { summary: string } };
 
+    // The browser's reason leads; the model's words stay beside it.
     expect(state.paused.summary).toMatch(
-      /^The saved login could not be filled: No sign-in form here/
+      /^The browser could not fill the saved login: No sign-in form here.* Agent: The site has blocked automated sign-ins/
     );
-    expect(state.paused.summary).not.toContain("blocked");
   });
 
   it("offers the saved login on its own site's sign-in page once the run was handed it", async () => {
@@ -2287,5 +2292,88 @@ describe('browser_vault_fill field:"login"', () => {
     await checkout("start", { login_item_id: "login-1" });
     page.top = "https://www.elsewhere.example";
     expect(await snapshot()).not.toContain("A saved login");
+  });
+
+  it("refuses a form whose password field is for a new password", async () => {
+    signInPage();
+    page.fields.tab!["#pass"]!.attributes = [
+      "type",
+      "password",
+      "autocomplete",
+      "new-password",
+    ];
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toMatch(/for a new password/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("refuses a form whose button joins, resets or deletes, and types nothing", async () => {
+    for (const label of ["Join now", "Delete account", "Send reset link"]) {
+      signInPage();
+      page.submit = { ref: "@e7", label };
+      platformCalls.length = 0;
+
+      const result = await fillLogin();
+
+      expect(result.isError, label).toBe(true);
+      expect(result.text).toMatch(/not a sign-in/);
+      expect(fills()).toEqual([]);
+    }
+    expect(typed()).toEqual([]);
+  });
+
+  it("does not fill a lone email field on a page that says it is a password reset", async () => {
+    signInPage(["#user"]);
+    page.submit = { ref: "@e7", label: "Continue" };
+    page.purpose = "Forgot password | Reset your password | /checkpoint/rp";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(/sign-up or password reset/);
+    expect(fills()).toEqual([]);
+  });
+
+  it("fills, but names no button, when the button does not read as signing in", async () => {
+    signInPage();
+    page.submit = { ref: "@e7", label: "Go" };
+
+    const result = await fillLogin();
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain(
+      "now click the form's sign-in button (snapshot to find it)"
+    );
+    expect(result.text).not.toContain("@e7");
+  });
+
+  it("refuses a login whose saved site is not this page's", async () => {
+    signInPage();
+    page.top = "https://www.elsewhere.example";
+
+    const result = await fillLogin();
+
+    expect(result.text).toMatch(
+      /saved login login-1 is for shop\.example, and this page is www\.elsewhere\.example/
+    );
+    expect(fills()).toEqual([]);
+  });
+
+  it("forgets a refusal once a fill succeeds or the run resumes, so a later stop is not blamed on it", async () => {
+    page.fields = { tab: {} };
+    await fillLogin();
+    expect(vault.sessions.for("s1").loginRefusal).not.toBeNull();
+
+    signInPage();
+    await fillLogin();
+    expect(vault.sessions.for("s1").loginRefusal).toBeNull();
+
+    page.fields = { tab: {} };
+    await fillLogin();
+    await call("browser_pause", { need: "login", summary: "Needs a login." });
+    await checkout("resume");
+    expect(vault.sessions.for("s1").loginRefusal).toBeNull();
   });
 });

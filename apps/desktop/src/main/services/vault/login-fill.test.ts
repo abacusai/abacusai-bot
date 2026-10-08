@@ -5,6 +5,9 @@ import {
   fieldName,
   type LoginCandidate,
   loginFilledText,
+  loginPurpose,
+  onLoginSite,
+  signInLabel,
   submitName,
 } from "./login-fill";
 import { factsFromDocument, type FieldFacts } from "./vault-fill";
@@ -196,5 +199,108 @@ describe("what a login fill says", () => {
       "Sign in (snapshot for its ref)"
     );
     expect(submitName(null)).toMatch(/sign-in button/);
+  });
+});
+
+describe("a new password field", () => {
+  const NEW = ["type", "password", "autocomplete", "new-password"];
+  const CURRENT = ["type", "password", "autocomplete", "current-password"];
+
+  it("is never taken as the sign-in's password", () => {
+    const choice = chooseLoginFields(
+      [field("u", "username", EMAIL), field("p", "password", NEW)],
+      COUNTS
+    );
+
+    expect(choice.ok === false && choice.error).toMatch(/new password/);
+  });
+
+  it("leaves the form marked for the current password as the sign-in", () => {
+    expect(
+      chooseLoginFields(
+        [
+          field("join", "password", NEW, { form: 1 }),
+          field("other", "password", PASS, { form: 2 }),
+          field("login", "password", CURRENT, { form: 0 }),
+        ],
+        COUNTS
+      )
+    ).toMatchObject({ ok: true, password: "login" });
+  });
+});
+
+describe("whether a form signs in", () => {
+  const page = "Sign in | Welcome back | /login";
+
+  it("names a button that reads as signing in, in the app's languages", () => {
+    for (const label of [
+      "Sign in",
+      "Log in",
+      "Continue",
+      "Next",
+      "Iniciar sesión",
+      "Se connecter",
+      "Anmelden",
+      "ログイン",
+      "Войти",
+    ])
+      expect(signInLabel(label), label).toBe(true);
+    expect(signInLabel("Sign in with Google")).toBe(false);
+  });
+
+  it("refuses a button that joins, creates, resets, sends or deletes", () => {
+    for (const label of [
+      "Join now",
+      "Create account",
+      "Sign up",
+      "Delete account",
+      "Send reset link",
+      "Reset password",
+      "Registrieren",
+      "Supprimer le compte",
+    ])
+      expect(loginPurpose({ label, page, usernameOnly: false }).ok, label).toBe(
+        false
+      );
+  });
+
+  it("fills without naming a button it cannot read as a sign-in", () => {
+    expect(loginPurpose({ label: "Go", page, usernameOnly: false })).toEqual({
+      ok: true,
+      nameButton: false,
+    });
+    expect(loginPurpose({ label: null, page, usernameOnly: false })).toEqual({
+      ok: true,
+      nameButton: false,
+    });
+  });
+
+  it("refuses a lone email field on a page that says it is a sign-up or reset", () => {
+    for (const reset of [
+      "Forgot password? | Reset your password | /checkpoint/rp",
+      "Join LinkedIn | Make the most of your life | /signup",
+    ])
+      expect(
+        loginPurpose({ label: "Continue", page: reset, usernameOnly: true }).ok
+      ).toBe(false);
+    expect(
+      loginPurpose({ label: "Continue", page, usernameOnly: true })
+    ).toEqual({ ok: true, nameButton: true });
+  });
+});
+
+describe("a long button label", () => {
+  it("is left out: the ref alone names the button", () => {
+    expect(submitName({ ref: "@e7", label: "x".repeat(41) })).toBe("@e7");
+  });
+});
+
+describe("whether a page is on a saved login's site", () => {
+  it("takes subdomains of the site, and nothing that only ends like it", () => {
+    expect(onLoginSite("www.linkedin.com", "linkedin.com")).toBe(true);
+    expect(onLoginSite("evil-linkedin.com", "linkedin.com")).toBe(false);
+    expect(onLoginSite("linkedin.com.evil.example", "linkedin.com")).toBe(
+      false
+    );
   });
 });

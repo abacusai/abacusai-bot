@@ -82,12 +82,14 @@ import {
 import {
   chooseLoginFields,
   fieldName,
+  LOGIN_CONTEXT_FUNCTION,
   LOGIN_FIELD_FUNCTION,
   LOGIN_FORM_PRESENT_SCRIPT,
   type LoginCandidate,
   loginFilledText,
+  loginPurpose,
+  onLoginSite,
   REF_OF_FUNCTION,
-  SUBMIT_OF_FUNCTION,
   submitName,
 } from "../vault/login-fill";
 import {
@@ -593,13 +595,16 @@ const LOGIN_TEXT_ENTRY: ReadonlySet<string> = new Set([
   "url",
 ]);
 
+/** How long a failed read of a saved login's sites is believed. */
+const LOGIN_SITES_RETRY_MS = 60_000;
+
 /** The saved login a browser run was handed, from browser_checkout's login_item_id. */
 const loginItemOf = (
   args: Record<string, unknown>
-): { itemId: string; sites: string[] | null } | null =>
+): { itemId: string; sites: string[] | null; retryAt: number } | null =>
   typeof args.login_item_id === "string" &&
   /^[A-Za-z0-9_-]{1,128}$/.test(args.login_item_id)
-    ? { itemId: args.login_item_id, sites: null }
+    ? { itemId: args.login_item_id, sites: null, retryAt: 0 }
     : null;
 
 const VAULT_FIELDS: ReadonlySet<string> = new Set([
@@ -3385,8 +3390,9 @@ export class McpBrowserServer extends McpHttpServer {
 
   /**
    * What a stop tells the user. A login stop on the page where the saved
-   * login would not fill says the browser's own reason: a model that guesses
-   * one sends the user after a problem that is not there.
+   * login would not fill leads with the browser's own reason, beside the
+   * model's: a guessed cause alone sends the user after a problem that is
+   * not there.
    */
   private async pauseSummary(
     input: { need: string; summary: string },
@@ -3398,8 +3404,9 @@ export class McpBrowserServer extends McpHttpServer {
       return input.summary;
     const { key } = await this.documentInfo(wc);
     if (key == null || key !== refusal.documentKey) return input.summary;
+    // The browser's reason first, so the bound keeps it; the model's words after.
     return pageText(
-      `The saved login could not be filled: ${refusal.reason}`,
+      `The browser could not fill the saved login: ${refusal.reason} Agent: ${input.summary}`,
       400
     );
   }
@@ -3446,8 +3453,10 @@ export class McpBrowserServer extends McpHttpServer {
         );
         if (resumed.ok === false)
           return this.err(`${resumed.reason}\n${line()}`);
-        // A login saved while the run waited comes with the resume.
+        // A login saved while the run waited comes with the resume, and a
+        // refusal from before the user stepped in is not this run's reason.
         session.loginItem = loginItemOf(args) ?? session.loginItem;
+        session.loginRefusal = null;
         // The user answered a details stop that named its site: saved
         // travelers fill on that site, and on no other, from here.
         if (
@@ -4093,6 +4102,7 @@ export class McpBrowserServer extends McpHttpServer {
         node,
         "function() { return String(this.value || '').length > 0; }"
       );
+      if (took === true) this.vaultSession(sessionId).loginRefusal = null;
       return took === true
         ? this.ok(`Filled ${field} into ${ref} (hidden).`)
         : this.err(
@@ -4141,6 +4151,21 @@ export class McpBrowserServer extends McpHttpServer {
           "Reload the page, snapshot, and fill again without running scripts."
       );
     const topOrigin = await this.liveOrigin(wc);
+    // The login the run was handed wins over an id the model typed, and an
+    // item whose sites the vault names must be for this page.
+    const loginItemId = session.loginItem?.itemId ?? itemId;
+    const sites = await this.loginSites(loginItemId, sessionId);
+    const host = httpsHost(topOrigin);
+    if (
+      sites != null &&
+      sites.length > 0 &&
+      host != null &&
+      !sites.some((site) => onLoginSite(host, site))
+    )
+      return refuse(
+        `Refused: the saved login ${loginItemId} is for ${sites.join(", ")}, and this page is ${host}. ` +
+          "Nothing was filled. Go to that site's sign-in page."
+      );
 
     // The tab's own document first, then the cross-origin frames it can reach.
     const documents: Array<{
@@ -4219,9 +4244,8 @@ export class McpBrowserServer extends McpHttpServer {
 
       const choice = chooseLoginFields(candidates, counts);
       if (choice.ok === false) return refuse(choice.error);
+      // Abacus.AI's own frames were left out of `documents` above.
       const { page, frameId, frameOrigin } = documents[choice.document]!;
-      if (frameOrigin != null && this.isAbacus(frameOrigin))
-        return refuse(ABACUS_REFUSAL);
       // This document's refs, to name the fields and the button in the result.
       const snapshot = this.snapshots.for(sessionId);
       const pairs = [...snapshot.refMap].filter(
@@ -4231,6 +4255,31 @@ export class McpBrowserServer extends McpHttpServer {
         const ref = await this.callOn(page, objectId, REF_OF_FUNCTION, [pairs]);
         return typeof ref === "string" ? ref : null;
       };
+
+      // What the form's button and the page say it is, before anything is typed.
+      const anchor = choice.password ?? choice.username!;
+      const context = (await this.callOn(page, anchor, LOGIN_CONTEXT_FUNCTION, [
+        pairs,
+      ])) as {
+        submit?: { ref?: unknown; label?: unknown } | null;
+        page?: unknown;
+      } | null;
+      const submit =
+        context?.submit != null
+          ? {
+              ref:
+                typeof context.submit.ref === "string"
+                  ? context.submit.ref
+                  : null,
+              label: pageText(context.submit.label, 200),
+            }
+          : null;
+      const purpose = loginPurpose({
+        label: submit?.label ?? null,
+        page: typeof context?.page === "string" ? context.page : "",
+        usernameOnly: choice.password == null,
+      });
+      if (purpose.ok === false) return refuse(purpose.error);
 
       const filled: { username: string | null; password: string | null } = {
         username: null,
@@ -4244,7 +4293,7 @@ export class McpBrowserServer extends McpHttpServer {
           wc,
           page,
           node,
-          itemId,
+          itemId: loginItemId,
           field,
           sessionId,
           topOrigin,
@@ -4261,22 +4310,12 @@ export class McpBrowserServer extends McpHttpServer {
         filled[field] = name;
       }
 
-      const anchor = choice.password ?? choice.username!;
-      const submit = (await this.callOn(page, anchor, SUBMIT_OF_FUNCTION, [
-        pairs,
-      ])) as { ref?: unknown; label?: unknown } | null;
       session.loginRefusal = null;
       return this.ok(
         loginFilledText({
           ...filled,
-          submit: submitName(
-            submit != null
-              ? {
-                  ref: typeof submit.ref === "string" ? submit.ref : null,
-                  label: pageText(submit.label, 40),
-                }
-              : null
-          ),
+          // A button that does not read as signing in is never named as the next click.
+          submit: submitName(purpose.nameButton ? submit : null),
         })
       );
     } finally {
@@ -4304,7 +4343,7 @@ export class McpBrowserServer extends McpHttpServer {
     frameOrigin: string | null;
     documentKey: string;
   }): Promise<string | null> {
-    const { wc, page, node, field } = input;
+    const { field } = input;
     const vault = this.options.vault!;
     const plan = planFill({
       itemId: input.itemId,
@@ -4316,6 +4355,37 @@ export class McpBrowserServer extends McpHttpServer {
       pageTotal: null,
     });
     if (plan.ok === false) return plan.error;
+    // Taken now, as a fill by ref takes it: a value filled once under an
+    // approval is not filled again, and is given back if the vault never
+    // handed it over.
+    const approval = vault.approval(input.sessionId);
+    if (plan.once) approval!.used.add(field);
+    let delivered = false;
+    try {
+      return await this.typeLoginValue(input, plan, () => {
+        delivered = true;
+      });
+    } finally {
+      if (plan.once && !delivered) approval!.used.delete(field);
+    }
+  }
+
+  /** The marking, fetching and typing of one login field under its plan. */
+  private async typeLoginValue(
+    input: {
+      wc: BrowserPage;
+      page: BrowserPage;
+      node: string;
+      itemId: string;
+      field: "username" | "password";
+      topOrigin: string | null;
+      documentKey: string;
+    },
+    plan: Extract<ReturnType<typeof planFill>, { ok: true }>,
+    handedOver: () => void
+  ): Promise<string | null> {
+    const { wc, page, node, field } = input;
+    const vault = this.options.vault!;
     const secrets = this.secretsOf(wc);
     if (!(await secrets.markFilledNode(page, node).catch(() => false)))
       return `the ${field} field could not be marked as a secret field, so nothing was typed into it. Snapshot and try again.`;
@@ -4328,6 +4398,7 @@ export class McpBrowserServer extends McpHttpServer {
       return fetched.unavailable
         ? VAULT_UNAVAILABLE
         : `The vault did not fill it: ${fetched.error}`;
+    handedOver();
     const outcome = await this.typeVaultValue(
       wc,
       page,
@@ -4354,6 +4425,33 @@ export class McpBrowserServer extends McpHttpServer {
   }
 
   /**
+   * The sites a saved login is for, as the vault lists them; null when the
+   * vault cannot say. Kept on the session for the run's login; a failed read
+   * is not asked again for a minute, so a snapshot never waits on it.
+   */
+  private async loginSites(
+    itemId: string,
+    sessionId?: string
+  ): Promise<string[] | null> {
+    const vault = this.options.vault;
+    if (vault == null) return null;
+    const login = this.vaultSession(sessionId).loginItem;
+    const kept = login?.itemId === itemId ? login : null;
+    if (kept?.sites != null) return kept.sites;
+    if (kept != null && Date.now() < kept.retryAt) return null;
+    const items = await vault.client.listItems();
+    if (items.ok === false) {
+      if (kept != null) kept.retryAt = Date.now() + LOGIN_SITES_RETRY_MS;
+      return null;
+    }
+    const sites = (
+      items.value.find((item) => item.itemId === itemId)?.sites ?? []
+    ).filter((site) => /^[a-z0-9.-]{1,253}$/i.test(site));
+    if (kept != null) kept.sites = sites;
+    return sites;
+  }
+
+  /**
    * A line for a page on the site of the saved login the run was handed, when
    * the page shows a sign-in field: so the run uses the vault rather than
    * stopping. Null otherwise, or when the vault cannot say the login's sites.
@@ -4362,22 +4460,13 @@ export class McpBrowserServer extends McpHttpServer {
     wc: BrowserPage,
     sessionId?: string
   ): Promise<string | null> {
-    const vault = this.options.vault;
-    if (vault == null || sessionId == null) return null;
+    if (this.options.vault == null || sessionId == null) return null;
     const login = this.vaultSession(sessionId).loginItem;
     if (login == null) return null;
     const host = httpsHost(await this.liveOrigin(wc));
     if (host == null) return null;
-    if (login.sites == null) {
-      const items = await vault.client.listItems();
-      if (items.ok === false) return null;
-      login.sites = (
-        items.value.find((item) => item.itemId === login.itemId)?.sites ?? []
-      ).filter((site) => /^[a-z0-9.-]{1,253}$/i.test(site));
-    }
-    const site = login.sites.find(
-      (each) => host === each || host.endsWith(`.${each}`)
-    );
+    const sites = await this.loginSites(login.itemId, sessionId);
+    const site = sites?.find((each) => onLoginSite(host, each));
     if (site == null) return null;
     if ((await this.readPage(wc, LOGIN_FORM_PRESENT_SCRIPT)) !== true)
       return null;

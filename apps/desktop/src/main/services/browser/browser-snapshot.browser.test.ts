@@ -25,6 +25,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { LOGIN_FIELD_FUNCTION } from "../vault/login-fill";
 import { extractScript, valueScript } from "./browser-page-scripts";
 import {
   frameSnapshotScript,
@@ -118,6 +119,14 @@ const FIXTURES: Record<string, string> = {
       <button>Hidden inside a wrapper</button>
     </div>
     <svg width="24" height="24" role="button" aria-label="Drawn in SVG"><rect width="24" height="24"></rect></svg>
+  `),
+  // How a page hides a honeypot field from people and leaves it for bots.
+  honeypots: wrap(`
+    <div style="position:absolute;left:-9999px;top:0"><input name="website" aria-label="Moved off to the left"></div>
+    <div style="position:fixed;width:0;height:0"><button>In a collapsed fixed box</button></div>
+    <div style="width:0;height:0"><input name="url" aria-label="Pushed off the top" style="position:absolute;top:-500px"></div>
+    <div style="position:absolute;width:0;height:0"><span><button style="position:absolute;left:-2000px">Left of a collapsed box</button></span></div>
+    <button>A real button</button>
   `),
   // ── How deep it looks ─────────────────────────────────────────────────────
   shallow: wrap(nest(5, "<button>Five deep</button>")),
@@ -349,6 +358,10 @@ describeInBrowser("the snapshot walker, against real layout", () => {
 
     it("still hides what a box-less wrapper makes invisible", () => {
       expect(refs("boxless")).not.toContain("Hidden inside a wrapper");
+    });
+
+    it("drops a honeypot: off the page where no scroll reaches, or in a collapsed box out of the flow", () => {
+      expect(refs("honeypots")).toEqual(["A real button"]);
     });
 
     it("judges an SVG control by its box, since offsetParent is HTML-only", () => {
@@ -764,8 +777,26 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
   };
   let summary: Loose;
   let framed: Loose;
+  let typeable: Loose;
 
   beforeAll(() => {
+    // The login scan's own check, on fields a person can and cannot type into.
+    typeable = runSnapshotFixtures(
+      `Object.fromEntries(Array.from(document.querySelectorAll('input')).map((el) =>
+        [el.name, (${LOGIN_FIELD_FUNCTION}).call(el).shown]))`,
+      {
+        page: wrap(`
+          <input name="plain">
+          <div style="display:contents"><input name="wrapped"></div>
+          <div style="opacity:0"><input name="transparent"></div>
+          <input name="clipped" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">
+          <input name="above" style="position:absolute;top:-400px">
+          <div style="position:absolute;left:-9999px"><input name="honeypot"></div>
+          <input name="hidden" style="visibility:hidden">
+        `),
+      }
+    ) as unknown as Loose;
+
     // The frame snapshot is the same walker with its refs renamed.
     framed = runSnapshotFixtures(frameSnapshotScript(2), {
       login: CONTENTS_LOGIN,
@@ -940,6 +971,18 @@ describeInBrowser("the tools' page scripts, against real layout", () => {
       { kind: "dialog", buttons: [{ name: "Close" }] },
     ]);
     expect(overlays.plain.overlays).toEqual([]);
+  });
+
+  it("lets the login scan type only where a person could, by the walker's own rule", () => {
+    expect(typeable.page).toEqual({
+      plain: true,
+      wrapped: true,
+      transparent: false,
+      clipped: false,
+      above: false,
+      honeypot: false,
+      hidden: false,
+    });
   });
 
   it("reports a dialog whose wrapper is display:contents", () => {

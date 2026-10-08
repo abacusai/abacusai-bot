@@ -5,11 +5,13 @@
  */
 
 import { SECRET_FIELD_JS } from "./secret-fields";
+import { VISIBILITY_JS } from "./visibility";
 
 // Runs in page context via Runtime.evaluate: @eN refs for interactive and
 // cursor-interactive elements, content roles, landmarks, and CSS selectors.
 export const SNAPSHOT_BUILD_JS = `(function() {
   ${SECRET_FIELD_JS}
+  ${VISIBILITY_JS}
   const INTERACTIVE_TAGS = new Set([
     'A','BUTTON','INPUT','TEXTAREA','SELECT','DETAILS','SUMMARY',
   ]);
@@ -51,39 +53,8 @@ export const SNAPSHOT_BUILD_JS = `(function() {
   const vpW = window.innerWidth;
   const vpH = window.innerHeight;
 
-  // Four states. 'gone' takes the subtree with it. 'invisible' is an element a
-  // user cannot see or click but whose children may still be both: visibility,
-  // unlike display, is inherited and can be turned back on. 'transparent' is
-  // an element with no box of its own whose children are laid out as if it
-  // were not there: nothing to aim at, everything inside it still on the page.
-  //
-  // visibility:hidden used to slip through entirely: such an element keeps its
-  // layout box, so it has an offsetParent and a non-zero rect, and the old
-  // check only looked at the computed style when offsetParent was null. Hidden
-  // menus and closed dropdowns therefore came back as refs the agent could not
-  // click.
-  //
-  // Having no box used to mean 'gone', which held only for display:none. A
-  // display:contents wrapper (a <slot>, a framework's layout element) never
-  // has a box, so a sign-in form nested under two of them vanished whole and
-  // the page read as its footer links. No box is now judged by what it does
-  // to the children: display:contents, or a collapsed box that does not clip
-  // its overflow, is transparent; a collapsed box that clips is gone.
-  function visibilityOf(el) {
-    const s = getComputedStyle(el);
-    if (s.display === 'none') return 'gone';
-    if (s.display === 'contents') return 'transparent';
-    // offsetParent is HTML-only: an SVG element has none and is judged by its box.
-    if ('offsetParent' in el && !el.offsetParent && el.tagName !== 'BODY' && el.tagName !== 'HTML'
-        && s.position !== 'fixed' && s.position !== 'sticky') return 'gone';
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) {
-      const clips = (v) => v !== 'visible';
-      return clips(s.overflowX) || clips(s.overflowY) ? 'gone' : 'transparent';
-    }
-    if (s.visibility === 'hidden' || s.visibility === 'collapse') return 'invisible';
-    return 'visible';
-  }
+  // What counts as on the page: see visibility.ts, shared with the vault's login scan.
+  const visibilityOf = __visibilityOf;
 
   function isInViewport(el) {
     const r = el.getBoundingClientRect();

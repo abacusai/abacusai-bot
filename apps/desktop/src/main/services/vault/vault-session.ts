@@ -83,7 +83,12 @@ export class VaultSession {
    * The saved login the browser run was handed (browser_task's
    * login_item_id), and the sites it is for once the vault has said.
    */
-  loginItem: { itemId: string; sites: string[] | null } | null = null;
+  loginItem: {
+    itemId: string;
+    sites: string[] | null;
+    /** Epoch ms before which a failed read of the sites is not tried again. */
+    retryAt: number;
+  } | null = null;
   /**
    * Why the last `browser_vault_fill field:"login"` did not fill, on which
    * document: a login stop on that page reports this, not the model's guess.
