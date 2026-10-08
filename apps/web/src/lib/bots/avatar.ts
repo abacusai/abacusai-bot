@@ -35,11 +35,11 @@ export const AVATAR_SHAPES = [
 ] as const;
 export type AvatarShape = (typeof AVATAR_SHAPES)[number];
 
-/** The name hash picks among the first 16 (canvas BotNew). */
+/** Keep the old hash slots: replace only the heart slot with a calm pebble. */
 export const DEFAULT_SHAPES: readonly AvatarShape[] = AVATAR_SHAPES.slice(
   0,
   16
-);
+).map((shape) => (shape === "heart" ? "pebble" : shape));
 
 /** The setup column's first row (canvas BotCreate). */
 export const SETUP_SHAPES = [
@@ -151,6 +151,8 @@ export const LEGACY_COLORS = {
 const NEUTRAL_COLOR = "var(--muted-foreground)";
 
 export interface Look {
+  /** Stable identity for the rig. Absent on hand-picked preview looks. */
+  identity?: string;
   shape: AvatarShape;
   /** A `#rrggbb` swatch, or NEUTRAL_COLOR. */
   color: string;
@@ -187,6 +189,7 @@ export const defaultLook = (name: string): Look => {
   if (name.trim() === "") return NEUTRAL_LOOK;
   const h = nameHash(name);
   return {
+    identity: name,
     shape: DEFAULT_SHAPES[(h >>> 4) % DEFAULT_SHAPES.length]!,
     color: PALETTE_HEXES[h % PALETTE_HEXES.length]!,
     accessory: "none",
@@ -206,6 +209,7 @@ export const isSupportedAvatarColor = (color: string): boolean => {
 };
 
 export interface LookSource {
+  id?: string;
   name: string;
   avatarShape: string;
   avatarColor: string;
@@ -234,7 +238,7 @@ export const resolveLook = (bot: LookSource): Look => {
     bot.avatarAccessory != null && isAccessory(bot.avatarAccessory)
       ? bot.avatarAccessory
       : "none";
-  return { shape, color, accessory };
+  return { shape, color, accessory, identity: bot.id ?? bot.name };
 };
 
 export const accentVars = (look: Look): import("react").CSSProperties =>

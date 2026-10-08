@@ -39,6 +39,7 @@ describe("bots accessibility", () => {
     "/bots/chief-of-staff/check-in",
     ...[
       "bots-avatar-shapes",
+      "bots-avatar-experiments",
       "bots-connector-marks",
       "bots-sidebar",
       "bots-start",

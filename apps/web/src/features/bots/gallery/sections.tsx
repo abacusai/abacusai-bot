@@ -15,9 +15,11 @@ import { useBotModelBinding } from "../model/picker";
 import { DetailsTab, MemoryTab, FilesTab } from "../panel/bot-side-panel";
 import { BotsSidebar, BotsStrip } from "../sidebar/bots-sidebar";
 import { BotStartPage } from "../start/bot-start-page";
+import { AvatarExperiments } from "./avatar-experiments";
 import { AvatarGallery, AvatarShapes } from "./avatars";
 const ids = [
   "bots-avatar",
+  "bots-avatar-experiments",
   "bots-avatar-shapes",
   "bots-connector-marks",
   "bots-sidebar",
@@ -96,6 +98,7 @@ const View = ({
   step: number | undefined;
   play: boolean;
 }) => {
+  if (fixture === "bots-avatar-experiments") return <AvatarExperiments />;
   if (fixture === "bots-avatar") return <AvatarGallery />;
   if (fixture === "bots-avatar-shapes") return <AvatarShapes />;
   if (fixture === "bots-connector-marks")
