@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   type BatchGate,
+  BROWSER_SYSTEM_PROMPT,
   budgetNote,
   EXECUTE_STREAK_LIMIT,
   ExecuteStreakTracker,
   FINAL_WARNING_TURN,
   finalWarningMessage,
   gateTools,
+  loginNote,
   MAX_TURNS,
   missingReportFields,
   needsUser,
@@ -343,5 +345,19 @@ describe("browser_pause in a batch", () => {
     });
     expect((await exec(click, "c1")).isError).toBeUndefined();
     expect(ran).toEqual(["browser_interact"]);
+  });
+});
+
+describe("signing in with a saved login", () => {
+  it("tells the run to have the browser fill the login, and to stop with the browser's reason when it cannot", () => {
+    expect(BROWSER_SYSTEM_PROMPT).toContain('browser_vault_fill field:"login"');
+    expect(BROWSER_SYSTEM_PROMPT).toContain('browser_pause need:"login"');
+    expect(BROWSER_SYSTEM_PROMPT).toContain("never guess one");
+  });
+
+  it("names the item and the call in the note the run reads", () => {
+    expect(loginNote("li-7")).toContain(
+      'browser_vault_fill with item_id "li-7" and field "login"'
+    );
   });
 });

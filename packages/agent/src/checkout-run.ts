@@ -169,9 +169,14 @@ export class CheckoutRun {
     };
   }
 
-  /** A fresh run: whatever was under way is let go. */
-  async start(): Promise<void> {
-    if ((await this.ask({ action: "start" })).reason === "no-host")
+  /**
+   * A fresh run: whatever was under way is let go. `loginItemId` is the saved
+   * login the run may sign in with; the browser offers it on that site.
+   */
+  async start(options: { loginItemId?: string } = {}): Promise<void> {
+    const login =
+      options.loginItemId != null ? { login_item_id: options.loginItemId } : {};
+    if ((await this.ask({ action: "start", ...login })).reason === "no-host")
       this.last = { stage: "search", paused: null };
   }
 
@@ -180,11 +185,14 @@ export class CheckoutRun {
    * answer: true only when the paused payment's approval is live.
    */
   async resume(
-    options: { answered?: boolean } = {}
+    options: { answered?: boolean; loginItemId?: string } = {}
   ): Promise<{ ok: true; approved: boolean } | { ok: false; reason: string }> {
     const answer = await this.ask({
       action: "resume",
       ...(options.answered === true ? { answered: true } : {}),
+      ...(options.loginItemId != null
+        ? { login_item_id: options.loginItemId }
+        : {}),
     });
     if (answer.reason === "no-host") {
       // No browser checkout to ask: only an unstructured stop continues.
