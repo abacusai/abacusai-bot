@@ -31,16 +31,17 @@ export const pruneSessionDrafts = (
 ): SessionDrafts => {
   const kept = Object.values(state.drafts).filter(
     (d) =>
-      d.envelope ||
-      (now - d.updatedAt < DRAFT_TTL &&
-        (d.id === state.activeId || hasDraftContent(d.composer)))
+      now - d.updatedAt < DRAFT_TTL &&
+      (d.id === state.activeId || !!d.envelope || hasDraftContent(d.composer))
   );
   const oldest = kept
-    .filter((d) => d.id !== state.activeId && !d.envelope)
+    .filter((d) => d.id !== state.activeId)
     .sort(
       (a, b) =>
+        Number(!!a.envelope) - Number(!!b.envelope) ||
         Number(hasDraftContent(a.composer)) -
-          Number(hasDraftContent(b.composer)) || a.updatedAt - b.updatedAt
+          Number(hasDraftContent(b.composer)) ||
+        a.updatedAt - b.updatedAt
     );
   const removed = new Set(
     oldest.slice(0, Math.max(0, kept.length - DRAFT_LIMIT)).map((d) => d.id)

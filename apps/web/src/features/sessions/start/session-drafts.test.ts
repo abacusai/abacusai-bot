@@ -181,3 +181,24 @@ it("does not resurrect an expired deep link or leave its composer behind", () =>
   expect(sessionDraftsStore.state.drafts[id]).toBeUndefined();
   expect(draftStore.state[`draft:${id}`]).toBeUndefined();
 });
+
+it("keeps the cap hard even when every older draft has a pending receipt", () => {
+  const now = Date.now();
+  const drafts = Object.fromEntries(
+    Array.from({ length: DRAFT_LIMIT + 2 }, (_, i) => {
+      const d: SessionDraft = {
+        ...newStartDraft(),
+        id: `pending-${i}`,
+        createdAt: now - i,
+        updatedAt: now - i,
+        composer: { text: "Pending", attachments: [] },
+        envelope: { runId: `run-${i}`, messageId: `message-${i}`, parts: [] },
+      };
+      return [d.id, d];
+    })
+  );
+  const state = pruneSessionDrafts({ activeId: "pending-21", drafts }, now);
+  expect(Object.keys(state.drafts)).toHaveLength(DRAFT_LIMIT);
+  expect(state.drafts["pending-21"]?.envelope?.runId).toBe("run-21");
+  expect(state.drafts["pending-20"]).toBeUndefined();
+});
