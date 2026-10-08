@@ -8,6 +8,7 @@ import {
 import { afterEach, expect, it } from "vitest";
 
 import { draftStore } from "#renderer/features/chat/composer/draft-store";
+import { openFloating, shellStore } from "#renderer/features/shell/shell-store";
 import { renderApp } from "#renderer/test-support/app-harness";
 
 import { sessionDraftsStore } from "./session-drafts";
@@ -61,6 +62,7 @@ it("keeps, orders, deep-links and discards drafts with keyboard-accessible undo"
       ?.textContent
   ).toContain("Second draft");
   await act(async () => {
+    openFloating("peek");
     await app!.router.navigate({
       to: "/sessions/new",
       search: { draft: first },
@@ -75,6 +77,7 @@ it("keeps, orders, deep-links and discards drafts with keyboard-accessible undo"
       ).value
     ).toBe("First draft\nMore detail")
   );
+  expect(shellStore.state.floating.open).toBe(false);
   expect(
     sidebar
       .getByRole("link", { name: /First draft/ })

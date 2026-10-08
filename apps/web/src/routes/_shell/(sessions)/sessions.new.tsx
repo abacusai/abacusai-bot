@@ -18,7 +18,10 @@ import {
 } from "#renderer/features/sessions/start/start-session";
 import { nativePresenterFor } from "#renderer/features/shell/platform-presenter";
 import { registerPreviewConsumer } from "#renderer/features/shell/preview-consumers";
-import { shellStore } from "#renderer/features/shell/shell-store";
+import {
+  closeFloating,
+  shellStore,
+} from "#renderer/features/shell/shell-store";
 import { TopBarSlot } from "#renderer/features/shell/top-bar-slots";
 import { NewSessionSearch } from "#renderer/lib/navigation/search";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
@@ -39,6 +42,7 @@ const SessionsNewRoute = () => {
         transition: "none",
       });
   }, [draftId, search, navigate]);
+  useEffect(() => closeFloating(), [draft.id]);
   const prefs = usePrefs();
   return (
     <>

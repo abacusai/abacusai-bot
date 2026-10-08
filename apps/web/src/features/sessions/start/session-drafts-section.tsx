@@ -24,6 +24,18 @@ import {
 } from "./session-drafts";
 import { newStartDraft, startDraftStore } from "./start-session";
 
+const relativeTime = (updatedAt: number, now: number, language: string) => {
+  const minutes = Math.max(0, Math.floor((now - updatedAt) / 60000));
+  const format = new Intl.RelativeTimeFormat(language, {
+    numeric: "auto",
+    style: "narrow",
+  });
+  if (!minutes) return format.format(0, "second");
+  if (minutes < 60) return format.format(-minutes, "minute");
+  if (minutes < 1440) return format.format(-Math.floor(minutes / 60), "hour");
+  return format.format(-Math.floor(minutes / 1440), "day");
+};
+
 export const SessionDraftsSection = ({
   workspaces,
 }: {
@@ -121,27 +133,7 @@ export const SessionDraftsSection = ({
                         </>
                       ) : null}
                       <time dateTime={new Date(draft.updatedAt).toISOString()}>
-                        {new Intl.RelativeTimeFormat(i18n.language, {
-                          numeric: "auto",
-                          style: "narrow",
-                        }).format(
-                          -Math.max(
-                            0,
-                            Math.floor(
-                              (now - draft.updatedAt) /
-                                (now - draft.updatedAt < 3600000
-                                  ? 60000
-                                  : now - draft.updatedAt < 86400000
-                                    ? 3600000
-                                    : 86400000)
-                            )
-                          ),
-                          now - draft.updatedAt < 3600000
-                            ? "minute"
-                            : now - draft.updatedAt < 86400000
-                              ? "hour"
-                              : "day"
-                        )}
+                        {relativeTime(draft.updatedAt, now, i18n.language)}
                       </time>
                     </span>
                   }
