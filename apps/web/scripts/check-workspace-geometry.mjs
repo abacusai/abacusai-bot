@@ -68,6 +68,27 @@ export function inspectWorkspaceGeometry() {
       });
     }
 
+  const lineNodes = [
+    ...root.querySelectorAll(
+      ".workspace-island, [data-slot=pane], [data-slot=side-panel], [data-pane-gutter], .dv-sash, .dv-groupview"
+    ),
+  ].filter((e) => bounds(e).width > 1 && bounds(e).height > 1);
+  const lines = lineNodes.map((e) => {
+    const style = getComputedStyle(e);
+    const grip = getComputedStyle(e, "::after");
+    const gutter = e.matches("[data-pane-gutter], .dv-sash");
+    return {
+      element: e.dataset.slot ?? e.className,
+      border: style.borderWidth,
+      outline: style.outlineStyle,
+      shadow: style.boxShadow,
+      gutter,
+      idle: !e.matches(
+        ":hover, :focus-visible, :active, .dv-active, [data-separator=active]"
+      ),
+      gripOpacity: grip.opacity,
+    };
+  });
   const layers = [...root.querySelectorAll(".dv-render-overlay")]
     .filter((e) => bounds(e).width > 1)
     .map((e) => ({
@@ -124,13 +145,19 @@ export function inspectWorkspaceGeometry() {
         "padding-block",
         "margin",
         "border-width",
+        "border",
+        "outline",
+        "box-shadow",
+        "opacity",
         "background",
         "background-color",
       ].filter((p) => rule.style.getPropertyValue(p));
       if (!relevant.length) continue;
       try {
         if (
-          sourceNodes.some((e) => e.matches(rule.selectorText)) ||
+          [...sourceNodes, ...lineNodes].some((e) =>
+            e.matches(rule.selectorText.replace(/::(?:before|after)/g, ""))
+          ) ||
           [...root.querySelectorAll(".dv-render-overlay")].some((e) =>
             e.matches(rule.selectorText)
           )
@@ -169,6 +196,7 @@ export function inspectWorkspaceGeometry() {
     edges,
     ancestor,
     layers,
+    lines,
     sources,
     primary: document.querySelector('[data-slot="sidebar-slot"]')?.dataset.mode,
     peek: !!document.querySelector('[data-slot="sidebar-floating"]'),
@@ -204,6 +232,16 @@ export function geometryFailures(record) {
         failures.push(
           `${ancestor.element} paints ${ancestor.background} over native material`
         );
+  for (const line of record.lines ?? []) {
+    if (
+      line.border.split(" ").some((v) => parseFloat(v) !== 0) ||
+      !["none", "hidden"].includes(line.outline) ||
+      line.shadow !== "none"
+    )
+      failures.push(`${line.element} draws a permanent island/gutter line`);
+    if (line.gutter && line.idle && Number(line.gripOpacity) !== 0)
+      failures.push(`${line.element} shows its grip while idle`);
+  }
   return failures;
 }
 async function main() {

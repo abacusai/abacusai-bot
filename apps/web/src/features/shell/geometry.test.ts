@@ -134,10 +134,16 @@ describe("shell surfaces", () => {
     );
   });
 
-  it("gives the pane and the in-layout panel a visible edge in light (V2)", () => {
+  it("keeps permanent island and gutter lines out of the surface policy", () => {
     expect(tokensCss).toMatch(
-      /\[data-slot="pane"\],\s*\[data-slot="side-panel"\]\[data-mode="layout"\],\s*\.workspace-island \{\s*\/\*[^*]*\*\/\s*outline: 1px solid var\(--border\);\s*outline-offset: -1px;/
+      /\.workspace-island \{\s*border: 0;\s*outline: none;\s*box-shadow: none;/
     );
+    expect(tokensCss).toMatch(
+      /\[data-pane-gutter\]::after, \.panel-dock \.dv-sash::after \{[^}]*opacity: 0;/
+    );
+    expect(tokensCss).not.toContain(".dv-sash:hover::before");
+    expect(tokensCss).toContain("height: 28px");
+    expect(tokensCss).toContain("transition: opacity 150ms ease");
   });
 
   it("separates pane and panel with an 8 px gutter (V3)", () => {

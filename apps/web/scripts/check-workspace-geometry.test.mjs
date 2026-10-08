@@ -61,3 +61,44 @@ test("guards material ancestors while preserving opaque fallback modes", () => {
   assert.match(geometryFailures(record)[0], /session-dock paints/);
   assert.deepEqual(geometryFailures({ ...record, material: false }), []);
 });
+
+test("rejects permanent lines while allowing the interaction-only grip", () => {
+  const record = {
+    token: 8,
+    edges: {},
+    gaps: [],
+    lines: [
+      {
+        element: "gutter",
+        border: "0px",
+        outline: "none",
+        shadow: "none",
+        gutter: true,
+        idle: true,
+        gripOpacity: "0",
+      },
+    ],
+  };
+  assert.deepEqual(geometryFailures(record), []);
+  assert.match(
+    geometryFailures({
+      ...record,
+      lines: [{ ...record.lines[0], gripOpacity: "1" }],
+    })[0],
+    /grip while idle/
+  );
+  assert.match(
+    geometryFailures({
+      ...record,
+      lines: [{ ...record.lines[0], border: "1px" }],
+    })[0],
+    /permanent/
+  );
+  assert.deepEqual(
+    geometryFailures({
+      ...record,
+      lines: [{ ...record.lines[0], idle: false, gripOpacity: "0.55" }],
+    }),
+    []
+  );
+});

@@ -237,7 +237,7 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   --dv-activegroup-hiddenpanel-tab-color: var(--muted-foreground);
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
   --dv-inactivegroup-hiddenpanel-tab-color: var(--muted-foreground);
-  --dv-separator-border: var(--border);
+  --dv-separator-border: transparent;
   --dv-tabs-and-actions-container-height: 32px;
   --dv-tab-font-size: 12px;
   --dv-sash-size: 8px;
