@@ -847,7 +847,9 @@ describe("the title bar", () => {
     await at(800, "/bots/chief-of-staff?tab=details");
     const key = panelScopeKey("bots", "chief-of-staff")!;
     act(() => setPanelExpanded(key, true));
-    fireEvent.click(await screen.findByRole("tab", { name: "Chat" }));
+    const chat = await screen.findByRole("tab", { name: "Chat" });
+    expect(screen.getAllByRole("tab", { name: "Chat" })).toHaveLength(1);
+    fireEvent.click(chat);
     await waitFor(() =>
       expect(document.querySelector("[data-side-panel]")).toBeNull()
     );

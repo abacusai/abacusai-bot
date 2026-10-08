@@ -67,6 +67,7 @@ import {
   setPanelOpen,
   setPanelExpanded,
   type PanelTabKind,
+  type PanelTab,
 } from "./panel-store";
 import { Rail } from "./rail";
 import {
@@ -203,23 +204,18 @@ export const ShellLayout = ({
     phone: band === "xs",
     titleWidth,
   });
+  const railTabs: readonly PanelTab[] = expanded
+    ? [
+        { id: "chat", kind: "thread", title: t("sessions.dock.chat") },
+        ...panel.scope.tabs,
+      ]
+    : panel.scope.tabs;
   const strip =
     panelShown && scopeKey != null && railPlacement === "titlebar" ? (
       <>
         {
           <TopBar.PanelTabs
-            tabs={
-              expanded
-                ? [
-                    {
-                      id: "chat",
-                      kind: "thread",
-                      title: t("sessions.dock.chat"),
-                    },
-                    ...panel.scope.tabs,
-                  ]
-                : panel.scope.tabs
-            }
+            tabs={railTabs}
             active={panel.scope.active}
             renderIcon={(tab) =>
               tab.id === "chat" ? <BotTabAvatar botId={botId} /> : undefined
@@ -430,7 +426,7 @@ export const ShellLayout = ({
                 layout.sidePanel === "drawer" &&
                 panel.scope.active !== "chat"
               }
-              tabs={panel.scope.tabs}
+              tabs={railTabs}
               kinds={panelKinds}
               onAdd={(kind) => {
                 if (scopeKey) openPanelTab(scopeKey, { kind }, { fresh: true });
