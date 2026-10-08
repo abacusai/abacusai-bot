@@ -337,6 +337,7 @@ export const useConnectFlow = () => {
       navigate({
         to: "/library/messaging",
         search: { platform },
+        state: { messagingDialog: true },
         transition: "none",
       }),
   });

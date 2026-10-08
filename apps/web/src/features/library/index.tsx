@@ -71,7 +71,7 @@ export const LibrarySidebar = () => {
 
 export {
   ConnectorsPage,
-  ConnectorSheet,
+  ConnectorDialog,
   ConnectorFieldsDialog,
 } from "./connectors";
 export { MessagingPage } from "./messaging";

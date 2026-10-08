@@ -48,6 +48,7 @@ const setup = (
   } as MessagingSnapshot;
   return {
     calls,
+    snapshot: () => snapshot,
     procedures: {
       messaging: {
         snapshot: os.messaging.snapshot.handler(() => snapshot),
@@ -229,6 +230,146 @@ it("changing the Messaging route settles delayed WhatsApp setup and preserves th
   } finally {
     release();
     vi.useRealTimers();
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("Messaging dialog pushes a shareable URL, closes to its origin and restores focus", async () => {
+  const d = setup();
+  const app = await renderApp("/library/messaging", {
+    procedures: d.procedures,
+  });
+  try {
+    const connect = await screen.findByRole("button", { name: "Connect" });
+    connect.focus();
+    const index = app.router.history.location.state.__TSR_index;
+    fireEvent.click(connect);
+    await screen.findByRole("dialog", { name: "WhatsApp" });
+    expect(app.router.state.location.href).toBe(
+      "/library/messaging?platform=whatsapp"
+    );
+    expect(app.router.state.location.maskedLocation).toBeUndefined();
+    expect(app.router.history.location.state.__TSR_index).toBe(index + 1);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(app.router.history.location.state.__TSR_index).toBe(index);
+    await waitFor(() => expect(document.activeElement).toBe(connect));
+    await act(() => {
+      app.router.history.forward();
+    });
+    await screen.findByRole("dialog", { name: "WhatsApp" });
+    await act(() => {
+      app.router.history.back();
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("a cold Messaging dialog link closes by replacement without reopening on Back", async () => {
+  const d = setup();
+  const app = await renderApp("/library/messaging?platform=whatsapp", {
+    procedures: d.procedures,
+  });
+  try {
+    await screen.findByRole("dialog", { name: "WhatsApp" });
+    const length = app.router.history.length;
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(app.router.state.location.href).toBe("/library/messaging");
+    expect(app.router.history.length).toBe(length);
+  } finally {
+    app.view.unmount();
+    await app.cleanup();
+  }
+});
+
+it("channel details retain pairing decisions and independent bot auto-reply controls", async () => {
+  const d = setup();
+  const sender = (
+    userId: string,
+    status: "pending" | "approved" | "paused",
+    botId?: string
+  ) => ({
+    platform: "whatsapp" as const,
+    userId,
+    userName: userId,
+    chatId: userId,
+    status,
+    botId,
+    managedBy: botId ? ("bot" as const) : undefined,
+    firstSeenAt: "2026-10-01T00:00:00Z",
+    firstMessage: "Hello",
+  });
+  let snapshot: MessagingSnapshot = {
+    ...d.snapshot(),
+    pending: [sender("Pending sender", "pending")],
+    autoReplies: [
+      sender("First bot sender", "approved", "chief-of-staff"),
+      sender("Second bot sender", "paused", "research"),
+    ],
+  };
+  const decisions = vi.fn();
+  const app = await renderApp("/library/messaging?platform=whatsapp", {
+    procedures: {
+      messaging: {
+        ...d.procedures.messaging,
+        snapshot: os.messaging.snapshot.handler(() => snapshot),
+        updatePlatform: os.messaging.updatePlatform.handler(() => snapshot),
+        decidePairing: os.messaging.decidePairing.handler(({ input }) => {
+          decisions(input);
+          snapshot = {
+            ...snapshot,
+            pending: snapshot.pending.filter(
+              (user) => user.userId !== input.userId
+            ),
+            autoReplies: snapshot.autoReplies.map((user) =>
+              user.userId === input.userId
+                ? {
+                    ...user,
+                    status: input.decision === "pause" ? "paused" : "approved",
+                  }
+                : user
+            ),
+          };
+          return snapshot;
+        }),
+      },
+    },
+  });
+  try {
+    await screen.findByRole("dialog");
+    const row = (name: string) =>
+      screen.getByText(name).closest("[data-setting-id]") as HTMLElement;
+    fireEvent.click(
+      within(row("First bot sender")).getByRole("button", { name: "Pause" })
+    );
+    await waitFor(() =>
+      expect(decisions).toHaveBeenCalledWith({
+        platformId: "whatsapp",
+        userId: "First bot sender",
+        decision: "pause",
+      })
+    );
+    expect(
+      within(row("Second bot sender")).getByRole("button", { name: "Resume" })
+    ).not.toBeNull();
+    fireEvent.click(
+      within(row("Pending sender")).getByRole("button", { name: "Approve" })
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Pending sender")).toBeNull()
+    );
+    expect(decisions).toHaveBeenCalledWith({
+      platformId: "whatsapp",
+      userId: "Pending sender",
+      decision: "approve",
+    });
+    expect(screen.getByText("Second bot sender")).not.toBeNull();
+  } finally {
     app.view.unmount();
     await app.cleanup();
   }

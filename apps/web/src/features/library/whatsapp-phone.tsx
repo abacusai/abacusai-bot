@@ -18,18 +18,18 @@ import {
   SettingRow,
   StatePill,
 } from "#renderer/components/form-kit/page";
-import { cn } from "#renderer/lib/cn";
 import { maskedPhone } from "#renderer/lib/format/phone";
-import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
-import { Input } from "#renderer/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "#renderer/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "#renderer/ui/dialog";
+import { Input } from "#renderer/ui/input";
+
+import { useMessagingDialog } from "./messaging-dialog";
 
 const Link = v.object({
   status: v.picklist(["linked", "pending", "unlinked"]),
@@ -70,7 +70,7 @@ const spaced = (code: string) =>
 
 type Step = "number" | "code" | "done";
 
-const LinkSheet = ({
+const LinkDialog = ({
   callApps,
   open,
   onOpenChange,
@@ -85,7 +85,7 @@ const LinkSheet = ({
 }) => {
   const { t } = useTranslation();
   const cache = useQueryClient();
-  const phoneLayout = useMediaQuery("(max-width: 799px)");
+  const dialog = useMessagingDialog();
   const [step, setStep] = useState<Step>("number");
   const [number, setNumber] = useState("");
   const [code, setCode] = useState<string | null>(null);
@@ -161,24 +161,14 @@ const LinkSheet = ({
   ).replace(/\D/g, "");
 
   return (
-    <Sheet open={open} onOpenChange={reset}>
-      <SheetContent
-        side={phoneLayout ? "bottom" : "right"}
-        className={cn(
-          "sm:max-w-[440px]",
-          phoneLayout &&
-            "max-h-[92dvh] overflow-y-auto rounded-t-[28px] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-        )}
+    <Dialog open={open} onOpenChange={reset}>
+      <DialogContent
+        className="sm:max-w-[440px]"
+        finalFocus={dialog.finalFocus}
       >
-        {phoneLayout && (
-          <div
-            aria-hidden
-            className="bg-foreground/25 mx-auto mt-2.5 h-[5px] w-9 rounded-full"
-          />
-        )}
-        <SheetHeader className="flex-row items-center gap-3">
+        <DialogHeader className="flex-row items-center gap-3">
           <ConnectorMark id="whatsapp" size={32} />
-          <SheetTitle className="text-xl font-bold tracking-tight">
+          <DialogTitle className="text-xl font-bold tracking-tight">
             {t(
               step === "code"
                 ? "web.whatsapp.codeTitle"
@@ -186,14 +176,14 @@ const LinkSheet = ({
                   ? "web.whatsapp.doneTitle"
                   : manage || bot
                     ? "web.whatsapp.title"
-                    : "web.whatsapp.sheetTitle"
+                    : "web.whatsapp.dialogTitle"
             )}
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            {t(bot ? "web.whatsappBot.body" : "web.whatsapp.sheetBody")}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 px-4 pb-2 text-[15px] leading-[21px]">
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t(bot ? "web.whatsappBot.body" : "web.whatsapp.dialogBody")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex min-w-0 flex-col gap-4 text-[15px] leading-[21px]">
           {manage ? (
             <>
               <p className="text-muted-foreground">
@@ -253,7 +243,7 @@ const LinkSheet = ({
                 void start();
               }}
             >
-              <p>{t("web.whatsapp.sheetBody")}</p>
+              <p>{t("web.whatsapp.dialogBody")}</p>
               <label className="flex flex-col gap-2">
                 <span className="text-muted-foreground text-[13px] font-medium">
                   {t("web.whatsapp.numberLabel")}
@@ -383,8 +373,8 @@ const LinkSheet = ({
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -397,7 +387,12 @@ export const WebMessagingPage = ({
   bot?: BotNumber;
 }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const dialog = useMessagingDialog();
+  const open = dialog.platform === "whatsapp";
+  const setOpen = (open: boolean) => {
+    if (open) void dialog.open("whatsapp");
+    else void dialog.close();
+  };
   const status = useQuery({
     queryKey: STATUS_KEY,
     queryFn: () => linkStatus(callApps, false),
@@ -431,6 +426,7 @@ export const WebMessagingPage = ({
             variant={linked ? "secondary" : "default"}
             className="rounded-full"
             disabled={!bot && (status.isPending || status.isError)}
+            data-messaging-channel="whatsapp"
             onClick={() => setOpen(true)}
           >
             {t(linked ? "phase5.manage" : "phase5.connect")}
@@ -445,7 +441,7 @@ export const WebMessagingPage = ({
       <p className="text-muted-foreground px-1 text-[13px]">
         {t("web.whatsapp.note")}
       </p>
-      <LinkSheet
+      <LinkDialog
         callApps={callApps}
         open={open}
         onOpenChange={setOpen}

@@ -26,7 +26,9 @@ it.each([
       await act(() =>
         app.router.navigate({ to: path as never, search: search as never })
       );
-      expect(app.router.state.location.maskedLocation?.pathname).toBe(base);
+      expect(app.router.state.location.maskedLocation?.pathname).toBe(
+        base === "/library/messaging" ? undefined : base
+      );
       expect(app.view.container.querySelector('[data-slot="pane"]')).toBe(pane);
       expect((pane as HTMLElement).dataset.localCounter).toBe("7");
       app.view.unmount();
@@ -34,7 +36,9 @@ it.each([
       app = await renderApp(base, { history });
       expect(app.router.state.location.pathname).toBe(path);
       expect(app.router.state.location.search).toMatchObject(search);
-      expect(app.router.state.location.maskedLocation?.pathname).toBe(base);
+      expect(app.router.state.location.maskedLocation?.pathname).toBe(
+        base === "/library/messaging" ? undefined : base
+      );
       await act(() => {
         history.back();
       });
