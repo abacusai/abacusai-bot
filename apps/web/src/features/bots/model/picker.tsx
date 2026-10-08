@@ -114,7 +114,7 @@ export const ModelPicker = ({
           {binding.value === null ? t("bots.form.modelDefault") : binding.label}
         </motion.span>
       </PopoverTrigger>
-      <PopoverContent className="scroll-fade-y max-h-[min(384px,var(--available-height))] w-[min(360px,var(--available-width))] overflow-auto rounded-[14px] p-1.5 [&_button]:h-8">
+      <PopoverContent className="w-[min(360px,var(--available-width))] rounded-[14px] p-1.5 [&_button]:h-8">
         <Input
           aria-label={t("bots.model.search")}
           placeholder={t("bots.model.search")}

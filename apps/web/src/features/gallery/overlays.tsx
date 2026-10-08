@@ -304,8 +304,14 @@ const ContextMenuExample = () => {
     trigger.dispatchEvent(
       new MouseEvent("contextmenu", {
         bubbles: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
+        clientX: Math.min(
+          innerWidth - 8,
+          Math.max(8, rect.left + rect.width / 2)
+        ),
+        clientY: Math.min(
+          innerHeight - 8,
+          Math.max(8, rect.top + rect.height / 2)
+        ),
       })
     );
   }, [state.open]);

@@ -253,7 +253,7 @@ const BotForm = ({ bot, initial, load }: BotFormProps) => {
                   >
                     {t("bots.form.shape")} / {t("bots.form.colour")}
                   </PopoverTrigger>
-                  <PopoverContent className="max-h-80 overflow-y-auto">
+                  <PopoverContent>
                     <PopoverTitle>
                       {t("bots.form.shape")} / {t("bots.form.colour")}
                     </PopoverTitle>

@@ -207,14 +207,6 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
     color: var(--destructive) !important;
   }
 }
-/* A menu item is one line: a long label (de-DE, fr-FR) widens the menu
-   rather than wrapping under its icon; the menu's own max width clips. */
-@layer components {
-  [data-slot="context-menu-item"],
-  [data-slot="dropdown-menu-item"] {
-    white-space: nowrap;
-  }
-}
 .session-dock-mini [data-slot="composer-dock"] { position: static; }
 
 /* Scroll fades come from shadcn/tailwind.css (rewrite PLAN: foundation).
@@ -309,3 +301,40 @@ html:not([data-palette="default"]):is([data-palette]) :is([data-slot="button"], 
   -webkit-user-select: none;
   user-select: none;
 }
+.ui-popup {
+  max-width: min(22rem, calc(100vw - 16px));
+  min-width: min(8rem, calc(100vw - 16px));
+  max-height: min(var(--available-height, calc(100dvh - 16px)), 24rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+:is([data-slot="select-content"], [data-slot="combobox-content"]) {
+  min-width: min(var(--anchor-width), 22rem, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.popup-list {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 4px;
+}
+.popup-row {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  scroll-margin-block: 4px;
+  & > :not(svg):not([data-slot$="indicator"]):not([data-slot$="shortcut"]) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  & svg, & [data-slot$="shortcut"] { flex-shrink: 0; }
+}
+.popup-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+[data-slot="tooltip-content"] { overflow: visible; white-space: normal; }
+[data-slot="dialog-content"] { max-height: calc(100dvh - 16px); overflow-y: auto; }
