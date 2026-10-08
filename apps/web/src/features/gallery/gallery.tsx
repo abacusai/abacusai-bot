@@ -49,7 +49,7 @@ const GALLERY_PANEL_TABS: PanelTab[] = [
   { id: "browser:1", kind: "browser", title: "news.example.com" },
   { id: "details:1", kind: "details" },
 ];
-import { OverlayContext, OVERLAY_EXAMPLES } from "./overlays";
+import { OverlayContext, OverlayExample, OVERLAY_EXAMPLES } from "./overlays";
 import {
   GALLERY_OVERLAY_IDS,
   GALLERY_SECTIONS,
@@ -474,8 +474,7 @@ const renderSection = (section: GallerySection): ReactNode => {
       {overlays.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {overlays.map((id) => {
-            const Example = OVERLAY_EXAMPLES[id];
-            return <Example key={id} />;
+            return <OverlayExample key={id} id={id} />;
           })}
         </div>
       )}
@@ -525,6 +524,7 @@ export const Gallery = ({
     <OverlayContext
       value={{
         open: search.open,
+        stress: search.stress,
         setOpen: (id: GalleryOverlayId | undefined) => setSearch({ open: id }),
       }}
     >

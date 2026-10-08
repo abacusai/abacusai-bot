@@ -70,8 +70,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#renderer/ui/dropdown-menu";
 import {
@@ -110,6 +108,7 @@ import type { GalleryOverlayId } from "./search";
 
 export interface OverlayControl {
   open: GalleryOverlayId | undefined;
+  stress?: string;
   setOpen(id: GalleryOverlayId | undefined): void;
 }
 
@@ -127,6 +126,47 @@ const useOverlay = (id: GalleryOverlayId) => {
 };
 
 const FRUITS = ["Apple", "Banana", "Cherry", "Grape", "Mango"];
+export const SESSION_MENU_LABELS = [
+  "Rename session",
+  "Pin",
+  "Mark as unread",
+  "Open beside this chat",
+  "New worktree from here",
+  "Copy session ID",
+  "Delete session",
+];
+export const POPUP_STRESS_LABELS = Array.from(
+  { length: 50 },
+  (_, index) =>
+    `Connection ${index + 1}: a very long workspace and branch label that needs to fit inside a narrow window`
+);
+const useLabels = () =>
+  use(OverlayContext).stress ? POPUP_STRESS_LABELS : FRUITS;
+export const OverlayExample = ({ id }: { id: GalleryOverlayId }) => {
+  const { stress } = use(OverlayContext);
+  const Example = OVERLAY_EXAMPLES[id];
+  return (
+    <div
+      data-popup-fixture={id}
+      style={
+        stress
+          ? {
+              position: "fixed",
+              zIndex: 1,
+              ...(stress === "sidebar"
+                ? { left: "min(240px, calc(100vw - 48px))", top: "45vh" }
+                : {
+                    [stress.startsWith("top") ? "top" : "bottom"]: 8,
+                    [stress.endsWith("left") ? "left" : "right"]: 8,
+                  }),
+            }
+          : undefined
+      }
+    >
+      <Example />
+    </div>
+  );
+};
 
 const DialogExample = () => {
   const state = useOverlay("dialog");
@@ -229,6 +269,7 @@ const DrawerExample = () => {
 
 const DropdownMenuExample = () => {
   const state = useOverlay("dropdown-menu");
+  const { stress } = use(OverlayContext);
   return (
     <DropdownMenu {...state}>
       <DropdownMenuTrigger render={<Button variant="outline" />}>
@@ -236,12 +277,15 @@ const DropdownMenuExample = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Session</DropdownMenuLabel>
-          <DropdownMenuItem>Rename</DropdownMenuItem>
-          <DropdownMenuItem>Pin</DropdownMenuItem>
+          {(stress === "sidebar"
+            ? SESSION_MENU_LABELS
+            : stress
+              ? POPUP_STRESS_LABELS
+              : ["Rename", "Pin", "Delete"]
+          ).map((label) => (
+            <DropdownMenuItem key={label}>{label}</DropdownMenuItem>
+          ))}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -249,6 +293,7 @@ const DropdownMenuExample = () => {
 
 const ContextMenuExample = () => {
   const state = useOverlay("context-menu");
+  const labels = useLabels();
   useEffect(() => {
     if (!state.open) return;
     const trigger = document.querySelector(
@@ -270,8 +315,9 @@ const ContextMenuExample = () => {
         Right-click here
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem>Open</ContextMenuItem>
-        <ContextMenuItem>Reveal in folder</ContextMenuItem>
+        {labels.map((label) => (
+          <ContextMenuItem key={label}>{label}</ContextMenuItem>
+        ))}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -279,6 +325,7 @@ const ContextMenuExample = () => {
 
 const PopoverExample = () => {
   const state = useOverlay("popover");
+  const labels = useLabels();
   return (
     <Popover {...state}>
       <PopoverTrigger render={<Button variant="outline" />}>
@@ -289,6 +336,9 @@ const PopoverExample = () => {
           <PopoverTitle>Model</PopoverTitle>
           <PopoverDescription>Pick the model this bot uses.</PopoverDescription>
         </PopoverHeader>
+        {labels.map((label) => (
+          <p key={label}>{label}</p>
+        ))}
       </PopoverContent>
     </Popover>
   );
@@ -308,13 +358,16 @@ const TooltipExample = () => {
 
 const HoverCardExample = () => {
   const state = useOverlay("hover-card");
+  const labels = useLabels();
   return (
     <HoverCard {...state}>
       <HoverCardTrigger render={<Button variant="link" />}>
         @morning-brief
       </HoverCardTrigger>
       <HoverCardContent>
-        Three meetings and one deadline today.
+        {labels.map((label) => (
+          <p key={label}>{label}</p>
+        ))}
       </HoverCardContent>
     </HoverCard>
   );
@@ -322,8 +375,9 @@ const HoverCardExample = () => {
 
 const ComboboxExample = () => {
   const state = useOverlay("combobox");
+  const labels = useLabels();
   return (
-    <Combobox items={FRUITS} {...state}>
+    <Combobox items={labels} {...state}>
       {/* The registry trigger has no accessible name; ours does. */}
       <ComboboxInput
         placeholder="Pick a fruit"
@@ -350,6 +404,7 @@ const ComboboxExample = () => {
 
 const CommandExample = () => {
   const state = useOverlay("command");
+  const labels = useLabels();
   return (
     <>
       <Button variant="outline" onClick={() => state.onOpenChange(true)}>
@@ -361,10 +416,12 @@ const CommandExample = () => {
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup heading="Areas">
-              <CommandItem>
-                Bots <CommandShortcut>⌘1</CommandShortcut>
-              </CommandItem>
-              <CommandItem>Sessions</CommandItem>
+              {labels.map((label) => (
+                <CommandItem key={label}>
+                  {label}
+                  <CommandShortcut>⌘1</CommandShortcut>
+                </CommandItem>
+              ))}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -375,9 +432,10 @@ const CommandExample = () => {
 
 const SelectExample = () => {
   const state = useOverlay("select");
+  const labels = useLabels();
   return (
     <Select
-      items={FRUITS.map((value) => ({ value, label: value }))}
+      items={labels.map((value) => ({ value, label: value }))}
       defaultValue="Apple"
       {...state}
     >
@@ -385,7 +443,7 @@ const SelectExample = () => {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {FRUITS.map((fruit) => (
+        {labels.map((fruit) => (
           <SelectItem key={fruit} value={fruit}>
             {fruit}
           </SelectItem>
