@@ -126,25 +126,6 @@ describe("model setup in the composer", () => {
     const model = binding(state);
     const rendered = await renderWithDb(<ModelChip binding={model} />);
     cleanup = rendered.cleanup;
-    state.save = vi.fn(async () => {
-      await rendered.rerender(
-        <ModelChip
-          binding={{
-            ...model,
-            label: "GPT",
-            value: "openai/gpt",
-            setup: { ...state, status: "ready" },
-            groups: [
-              {
-                id: "openai",
-                label: "OpenAI",
-                items: [{ id: "openai/gpt", label: "GPT" }],
-              },
-            ],
-          }}
-        />
-      );
-    });
     await open();
     fireEvent.click(screen.getByRole("option", { name: /OpenAI/ }));
     fireEvent.change(await screen.findByLabelText("API key"), {
@@ -157,7 +138,62 @@ describe("model setup in the composer", () => {
         "sk-test-model-setup-key-000000000"
       )
     );
+    await rendered.rerender(
+      <ModelChip
+        binding={{
+          ...model,
+          label: "GPT",
+          value: "openai/gpt",
+          setup: { ...state, status: "ready" },
+          groups: [
+            {
+              id: "openai",
+              label: "OpenAI",
+              items: [{ id: "openai/gpt", label: "GPT" }],
+            },
+          ],
+        }}
+      />
+    );
     expect(await screen.findByRole("option", { name: "GPT" })).toBeTruthy();
     expect(await screen.findByText("Connected. Pick a model")).toBeTruthy();
+  });
+  it("focuses the setup list and returns focus to the chip on Escape", async () => {
+    const rendered = await renderWithDb(
+      <ModelChip binding={binding(setup())} />
+    );
+    cleanup = rendered.cleanup;
+    const chip = screen.getByRole("button", {
+      name: "No model set. Choose a model",
+    });
+    fireEvent.click(chip);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(document.querySelector("[cmdk-root]"))
+    );
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(chip));
+  });
+
+  it("explains a connected provider with no models when key rows are withheld", async () => {
+    const state = setup({
+      providers: [
+        { id: "abacus", label: "Abacus.AI", connected: true, connect: true },
+      ],
+    });
+    const rendered = await renderWithDb(<ModelChip binding={binding(state)} />);
+    cleanup = rendered.cleanup;
+    await open();
+    expect(screen.queryByRole("option", { name: /OpenAI/ })).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: /On this machine/ })
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        "Connected, but no models are available. Open the provider settings to check access."
+      )
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("option", { name: /Abacus.AI/ }));
+    expect(state.settings).toHaveBeenCalledWith("abacus");
+    expect(state.connect).not.toHaveBeenCalled();
   });
 });
