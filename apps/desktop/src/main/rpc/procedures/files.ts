@@ -5,6 +5,7 @@ import {
   forbidden,
   notFound,
   unwrapResult,
+  unsupported,
   type RpcError,
 } from "../errors";
 import { impl, isType, onIpcEvents, stream } from "./impl";
@@ -24,6 +25,16 @@ export const hostFileError =
  * the legacy active-workspace method the old renderer's IPC handler calls.
  */
 export const filesRouter = impl.files.router({
+  listDirectory: impl.files.listDirectory.handler(({ input, context }) => {
+    const list = context.deps.app.listDirectory;
+    if (!list) throw unsupported("files.listDirectory");
+    return list(input.path);
+  }),
+  mkdir: impl.files.mkdir.handler(({ input, context }) => {
+    const mkdir = context.deps.app.mkdir;
+    if (!mkdir) throw unsupported("files.mkdir");
+    return mkdir(input.path, input.name);
+  }),
   treeRoot: impl.files.treeRoot.handler(({ input, context }) =>
     input?.checkout == null
       ? context.deps.serviceHost.getFileTreeRoot()

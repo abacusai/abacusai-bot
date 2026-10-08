@@ -48,6 +48,10 @@ type HostFileArgs = { filePath?: string; hostRoot?: string };
 
 /** The top-level `window.api` handlers' bodies (main/index.ts). */
 export interface AppOperations {
+  listDirectory?(
+    path?: string
+  ): Promise<import("@abacus-ai/contract/contract/files").DirectoryListing>;
+  mkdir?(path: string, name: string): Promise<{ path: string }>;
   openFolderDialog(): Promise<string | null>;
   openFilesDialog(
     kind?: "all" | "image" | "theme"

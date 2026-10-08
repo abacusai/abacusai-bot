@@ -30,7 +30,9 @@ export const platformSystem = (client: AppClient): BrowserSystem => ({
     await viewHostFile(client, path);
     return { outcome: "opened" as const };
   },
-  showItemInFolder: async () => {},
+  showItemInFolder: async ({ path }) => {
+    await navigator.clipboard.writeText(path);
+  },
   dialog: { openFolder: () => pickHostFolder(client) },
 });
 

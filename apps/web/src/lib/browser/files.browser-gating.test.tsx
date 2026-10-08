@@ -11,6 +11,7 @@ import { pickHostFolder, uploadFiles } from "./files";
 beforeEach(async () => {
   HTMLDialogElement.prototype.showModal = vi.fn();
   await initI18n();
+  await import("./host-dialog");
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -20,58 +21,72 @@ afterEach(() => {
 const directory = (name: string) => ({
   kind: "directory",
   name,
-  absolutePath: `/root/${name}`,
+  path: `/root/${name}`,
+  sizeBytes: 0,
 });
 const clientFor = () => ({
-  db: {
-    workspaces: {
-      snapshot: async () => ({ rows: [{ isActive: true, path: "/root" }] }),
-    },
-  },
   files: {
-    treeRoot: async () => ({ fileTree: [directory("empty")] }),
-    treeChildren: vi.fn().mockResolvedValue([]),
+    listDirectory: vi.fn(async ({ path }: { path?: string }) => ({
+      root: "/root",
+      path: path ?? "/root",
+      entries: path && path !== "/root" ? [] : [directory("empty")],
+    })),
+    mkdir: vi.fn(),
   },
 });
-it("selects the initial root, browses an empty directory, and returns up/root", async () => {
+it("renders an app dialog, clamps the root, opens an empty folder and goes up", async () => {
   const client = clientFor();
   const picked = pickHostFolder(client as unknown as AppClient);
+  const dialog = await screen.findByRole("dialog", { name: "Choose a folder" });
+  expect(dialog.getAttribute("data-slot")).toBe("dialog-content");
   await screen.findByText("empty");
-  fireEvent.click(screen.getByText("empty"));
-  await waitFor(() => expect(screen.getByText("/root/empty")).toBeDefined());
-  fireEvent.click(screen.getByText("Up"));
-  await waitFor(() => expect(screen.getByText("/root")).toBeDefined());
-  fireEvent.click(screen.getByText("Open folder"));
-  expect(await picked).toBe("/root");
-  const another = pickHostFolder(client as unknown as AppClient);
-  await screen.findByText("empty");
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Use this folder",
+      }) as HTMLButtonElement
+    ).disabled
+  ).toBe(true);
+  expect(
+    (screen.getByRole("button", { name: "Up" }) as HTMLButtonElement).disabled
+  ).toBe(true);
   fireEvent.click(screen.getByText("empty"));
   await screen.findByText("/root/empty");
-  fireEvent.click(screen.getByText("Open folder"));
-  expect(await another).toBe("/root/empty");
+  await screen.findByText("This folder is empty.");
+  fireEvent.click(screen.getByRole("button", { name: "Use this folder" }));
+  expect(await picked).toBe("/root/empty");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
-it("ignores an old directory response after root navigation", async () => {
+it("shows listing errors and retries without dismissing the picker", async () => {
   const client = clientFor();
-  let stale!: (nodes: unknown[]) => void;
-  client.files.treeChildren
-    .mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          stale = resolve;
-        })
-    )
-    .mockResolvedValue([]);
+  client.files.listDirectory.mockRejectedValueOnce(new Error("offline"));
+  const picked = pickHostFolder(client as unknown as AppClient);
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await screen.findByText("empty");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(await picked).toBeNull();
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+it("navigates rows with arrows, Enter and Backspace and filters names", async () => {
+  const client = clientFor();
   const picked = pickHostFolder(client as unknown as AppClient);
   await screen.findByText("empty");
-  fireEvent.click(screen.getByText("empty"));
-  fireEvent.click(screen.getByText("Root"));
+  const filter = screen.getByRole("textbox", { name: "Filter names…" });
+  fireEvent.change(filter, { target: { value: "missing" } });
+  expect(screen.queryByRole("button", { name: "empty" })).toBeNull();
+  fireEvent.change(filter, { target: { value: "" } });
+  fireEvent.keyDown(filter, { key: "ArrowDown" });
+  expect(document.activeElement?.textContent).toBe("empty");
+  fireEvent.click(document.activeElement!);
+  await screen.findByText("/root/empty");
+  fireEvent.keyDown(screen.getByRole("group", { name: "Folders and files" }), {
+    key: "Backspace",
+  });
   await screen.findByText("/root");
-  stale([directory("stale")]);
-  await Promise.resolve();
-  await Promise.resolve();
-  expect(screen.queryByText("stale")).toBeNull();
-  fireEvent.click(screen.getByText("Open folder"));
-  expect(await picked).toBe("/root");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(await picked).toBeNull();
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 it("refreshes old upload credentials while leaving the RPC URL intact and retries auth once", async () => {
   vi.useFakeTimers();

@@ -166,6 +166,11 @@ const imageMime: Record<string, string> = {
 };
 export const hostFiles = {
   response,
+  size: async (input: HostFile, signal?: AbortSignal) => {
+    const result = await checked(input, signal, undefined, true);
+    await result.body?.cancel();
+    return sizeOf(result) ?? 0;
+  },
   blob: async (input: Download, signal?: AbortSignal) =>
     (await checked(input, signal)).blob(),
   arrayBuffer: async (input: Download, signal?: AbortSignal) =>

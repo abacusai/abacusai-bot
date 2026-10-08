@@ -19,6 +19,7 @@ import {
 } from "#main/services/providers/account-service";
 import { setTitlebarDensity } from "#main/window-chrome-settings";
 
+import { listDirectory, makeDirectory } from "./directories";
 import { app } from "./electron-shim";
 import type { HostLease } from "./lease";
 import { shutdown } from "./shutdown";
@@ -28,6 +29,8 @@ const refuse = (procedure: string) => async () => {
 
 export const createNodeAppOperations = (lease: HostLease): AppOperations => ({
   ...nodeFileOperations,
+  listDirectory,
+  mkdir: makeDirectory,
   openFolderDialog: async () => null,
   openFilesDialog: async () => null,
   openExternal: refuse("system.openExternal"),
