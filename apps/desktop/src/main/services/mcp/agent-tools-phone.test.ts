@@ -25,6 +25,7 @@ import { McpBrowserServer } from "./mcp-browser-server";
 import { McpDeviceServer } from "./mcp-device-server";
 import type { McpToolListing } from "./mcp-http-server";
 import { AGENT_TOOL_NAMES } from "./tools";
+import { PHONE_AGENT_TOOLS } from "./tools/phone";
 
 const sent = vi.fn();
 
@@ -151,6 +152,10 @@ describe("the phone's tools", () => {
     } as never);
     const builtins = [
       ...AGENT_TOOL_NAMES,
+      // Phone-only tools (no app definition), billing_plan among them.
+      ...PHONE_AGENT_TOOLS.map((tool) => tool.name).filter(
+        (name) => !AGENT_TOOL_NAMES.includes(name)
+      ),
       // The browser server's own tools reach the sub-agent (`browser_*`);
       // the rest, the vault's among them, reach the loop.
       ...listed(new McpBrowserServer({ target: () => null, vault })).filter(

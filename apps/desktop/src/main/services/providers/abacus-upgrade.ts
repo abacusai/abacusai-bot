@@ -36,3 +36,37 @@ export const fetchUpgradeUrl = async (): Promise<string | null> => {
   cached = { key, url: link, at: Date.now() };
   return link;
 };
+
+/** A plan the account could be on: its price, monthly credits and what it gives. */
+export interface BillingPlanTier {
+  plan: string;
+  planName: string;
+  priceText: string;
+  features: string[];
+}
+
+/** The account's plan, credits and ways up, as the platform reads them live. */
+export interface BillingPlan {
+  current: {
+    planName: string;
+    creditsRemaining: number | null;
+    creditsGranted: number | null;
+    freeTierExpiresAt: string | null;
+  };
+  plans: (BillingPlanTier & { creditsPerMonth: number; current: boolean })[];
+  /** Each with the link to it, or null when it is bought in the mobile app. */
+  upgrades: (BillingPlanTier & { url: string | null })[];
+  topUpUrl: string | null;
+  upgradeInMobileApp: boolean;
+}
+
+/**
+ * The signed-in account's plan, credits and upgrade paths: a free account's
+ * upgrades are its own one-time Basic and Pro links. Null when signed out,
+ * when the platform offers none, or when the call fails.
+ */
+export const fetchBillingPlan = async (): Promise<BillingPlan | null> => {
+  const { ok, result } = await abacusApiCall("_getAbacusbotBillingPlan", "GET");
+  if (!ok || result == null || typeof result !== "object") return null;
+  return result as BillingPlan;
+};
