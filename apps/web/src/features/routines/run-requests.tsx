@@ -105,6 +105,11 @@ export const RunRequests = ({
           busy={busy === request.requestId}
           error={error}
           onConnect={(values) => void accept(request, values)}
+          onConnected={() =>
+            void respond(request, "connected").catch((e) =>
+              setError(errorText(e))
+            )
+          }
           onDecline={() =>
             void respond(request, "declined").catch((e) =>
               setError(errorText(e))

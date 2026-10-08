@@ -14,6 +14,7 @@ import type { TFunction } from "i18next";
 import { followNotice } from "#renderer/data/queries/notices";
 import type { Transport } from "#renderer/data/transport";
 import { openTab, type ConnectTarget } from "#renderer/lib/connect-target";
+import { IS_ELECTRON } from "#renderer/lib/platform";
 import { connectTarget } from "#renderer/lib/platform-system";
 
 export const CONNECT_WAIT_MS = 180_000;
@@ -23,6 +24,8 @@ const CONNECT_ERRORS: Readonly<Record<string, string>> = {
   "popup-blocked": "phase5.popupBlocked",
   timeout: "phase5.connectTimedOut",
   failed: "phase5.connectFailed",
+  // A browser has no chat-app pairing; the desktop keeps its own wording.
+  ...(IS_ELECTRON ? {} : { "needs-pairing": "phase5.connectChatAppOnDesktop" }),
 };
 
 /** An attempt's error for the page: the app's words for its own codes. */

@@ -137,6 +137,8 @@ export interface ConnectorRequestsState {
   busy: boolean;
   error: string | null;
   connect(values?: Record<string, string>): void;
+  /** Connected outside the attempt (the web's WhatsApp link): answer the ask. */
+  connected(): void;
   decline(): void;
   stop(): void;
 }
@@ -251,6 +253,12 @@ export const useConnectorRequests = (
           else drop(current);
         }
       );
+    },
+    connected: () => {
+      if (current == null) return;
+      setError(null);
+      drop(current);
+      void answerConnected(transport.client, current);
     },
     decline: () => {
       if (current == null) return;

@@ -207,6 +207,7 @@ export const useBotChatSlots = (
               busy={asks.busy}
               error={asks.error}
               onConnect={asks.connect}
+              onConnected={asks.connected}
               onDecline={asks.decline}
               onStop={asks.stop}
             />

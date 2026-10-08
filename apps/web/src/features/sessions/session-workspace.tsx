@@ -209,6 +209,7 @@ export const SessionWorkspace = ({
           busy={requests.busy}
           error={requests.error}
           onConnect={requests.connect}
+          onConnected={requests.connected}
           onDecline={requests.decline}
           onStop={requests.stop}
         />
