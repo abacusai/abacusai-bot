@@ -6,6 +6,7 @@
  * every refusal is testable.
  */
 import { WAS_PASSWORD_ATTRIBUTE } from "../browser/secret-fields";
+import { onSite } from "./site";
 import type { VaultField } from "./vault-client";
 import type { PaymentApproval, SigninApproval } from "./vault-session";
 
@@ -24,6 +25,10 @@ export const PAYMENT_FRAME_HOSTS: readonly string[] = [
 ];
 
 const CARD_FIELDS: ReadonlySet<VaultField> = new Set(["card_number", "cvv"]);
+
+/** Whether a vault field is card data: what makes the field it goes into a card field. */
+export const isCardField = (field: VaultField): boolean =>
+  CARD_FIELDS.has(field);
 
 export const httpsHost = (origin: string | null): string | null => {
   if (origin == null) return null;
@@ -235,7 +240,7 @@ export function planFill(context: FillContext): FillPlan {
     };
   }
 
-  const card = CARD_FIELDS.has(context.field);
+  const card = isCardField(context.field);
   if (
     context.inFrame &&
     (card || context.field === "code") &&
@@ -286,7 +291,7 @@ export function planFill(context: FillContext): FillPlan {
       `Refused: the approved payment is for card ${approval.item}, not ${context.itemId}.`
     );
   const host = httpsHost(context.topOrigin)!;
-  if (approval.site.length === 0 || !withinDomain(host, approval.site))
+  if (!onSite(host, approval.site))
     return refuse(
       `Refused: the payment was approved for ${approval.site || "another site"}, and this page is ${host}. Report where the checkout went.`
     );

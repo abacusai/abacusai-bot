@@ -5,6 +5,7 @@
  * Request and approval ids stay in `VaultSessions`; no tool takes one.
  */
 import type { McpToolListing, McpToolResult } from "../mcp/mcp-http-server";
+import { onSite, siteArgument } from "./site";
 import {
   VAULT_UNAVAILABLE,
   type VaultClient,
@@ -19,9 +20,6 @@ import {
   type SigninApproval,
 } from "./vault-session";
 import { VaultWaiter } from "./vault-waiter";
-
-const withinSite = (host: string, site: string): boolean =>
-  site.length > 0 && (host === site || host.endsWith(`.${site}`));
 
 export const VAULT_FILL_TOOL = "browser_vault_fill";
 
@@ -72,7 +70,7 @@ const TOOLS: Record<
         site: {
           type: "string",
           description:
-            'For a login: the site it is for, e.g. "linkedin.com". For a sign-in code, optional.',
+            'For a login: the registrable domain only, e.g. "linkedin.com" (no name, scheme or path). For a sign-in code, optional.',
         },
         item_id: {
           type: "string",
@@ -232,7 +230,6 @@ const err = (text: string): McpToolResult => ({
 });
 
 const ITEM_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
-const SITE_RE = /^[a-z0-9.-]{1,253}$/i;
 
 const describeItem = (item: VaultItem): string => {
   const parts = [`${item.itemId}: ${item.kind}`];
@@ -354,7 +351,7 @@ export class Vault {
     const pages = await browser.codePages(sessionId);
     const outside = pages.filter((page) => {
       const host = httpsHost(page.origin);
-      return host != null && !withinSite(host, approval.site);
+      return host != null && !onSite(host, approval.site);
     });
     const top = outside.find((page) => page.top);
     if (top != null) return top.origin;
@@ -396,16 +393,14 @@ export class Vault {
     const kind = args.kind;
     if (kind !== "login" && kind !== "card" && kind !== "code")
       return err('kind must be "login", "card" or "code".');
-    const site =
-      typeof args.site === "string" && args.site.trim().length > 0
-        ? args.site.trim().toLowerCase()
-        : null;
+    const named = typeof args.site === "string" && args.site.trim().length > 0;
+    const site = named ? siteArgument(args.site as string) : null;
     const itemId =
       typeof args.item_id === "string" && args.item_id.trim().length > 0
         ? args.item_id.trim()
         : null;
-    if (site != null && !SITE_RE.test(site))
-      return err('site is a domain, e.g. "linkedin.com".');
+    if (named && site == null)
+      return err('site is a registrable domain only, e.g. "linkedin.com".');
     if (itemId != null && !ITEM_ID_RE.test(itemId))
       return err("That is not a vault item id; vault_items lists them.");
     if (kind === "login" && site == null)

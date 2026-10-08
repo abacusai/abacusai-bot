@@ -109,10 +109,10 @@ import {
   navigationVerdict,
   originOf,
   pageFactsScript,
-  siteOf,
   TOTAL_NOT_ANCHORED,
   USED_REFUSAL,
 } from "../vault/pay-guard";
+import { onSite, registrableDomain } from "../vault/site";
 import { VAULT_UNAVAILABLE, type VaultField } from "../vault/vault-client";
 import {
   codeFieldAllowed,
@@ -124,6 +124,7 @@ import {
   LIVE_FIELD_FUNCTION,
   type DomNode,
   type FieldFacts,
+  isCardField,
   isPaymentFrameOrigin,
   NO_SIGNIN_REASON,
   planFill,
@@ -3377,7 +3378,10 @@ export class McpBrowserServer extends McpHttpServer {
       need: input.need,
       fields: input.fields,
       // The bare registrable domain ("akasaair.com"): what the user is told.
-      site: topOrigin != null ? siteOf(new URL(topOrigin).hostname) : null,
+      site:
+        topOrigin != null
+          ? registrableDomain(new URL(topOrigin).hostname)
+          : null,
       amount,
       currency,
       merchant: input.merchant,
@@ -3567,7 +3571,7 @@ export class McpBrowserServer extends McpHttpServer {
     if (
       !TRAVELER_FILL_STAGES.has(session.checkout.stage) ||
       session.checkoutSite == null ||
-      siteOf(new URL(topOrigin).hostname) !== session.checkoutSite
+      !onSite(new URL(topOrigin).hostname, session.checkoutSite)
     )
       return this.err(
         "Refused: a passport number is typed only into the booking under way, on its own site, from its traveler " +
@@ -3958,7 +3962,7 @@ export class McpBrowserServer extends McpHttpServer {
         "Refused: a script ran on this page since it loaded, so nothing is filled into it. " +
           "Reload the page, snapshot, and fill again without running scripts."
       );
-    const card = field === "card_number" || field === "cvv";
+    const card = isCardField(field as VaultField);
     const total = card
       ? await this.readTotal(wc, args.total_ref, sessionId)
       : null;
@@ -4074,7 +4078,7 @@ export class McpBrowserServer extends McpHttpServer {
       }
       // Hidden and locked before any value exists here: from now on the
       // field reads as hidden and the tab runs no scripts until it navigates.
-      if (!(await secrets.markFilledNode(page, node).catch(() => false)))
+      if (!(await secrets.markFilledNode(page, node, card).catch(() => false)))
         return this.err(
           `${ref} could not be marked as a secret field, so nothing was filled. Snapshot and try again.`
         );

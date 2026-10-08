@@ -11,6 +11,10 @@
  *   select or textarea alike;
  * - was filled on the user's behalf (`SECRET_ATTRIBUTE`).
  *
+ * The secret mark means "mask this", never "payment": a field first seen
+ * with a `cc-*` token, or that the vault typed card data into, carries
+ * `CARD_ATTRIBUTE` as well, and that is the mark the Pay guard reads.
+ *
  * `SecretFields` is one tab's state and the one owner of "this page holds
  * secrets". It keeps every node ever classified secret by its backend node
  * id, outside the page's reach: a page (or a script run on it) that strips
@@ -24,6 +28,8 @@ import type { BrowserPage } from "./browser-target";
 
 /** Marks a field known secret: filled on the user's behalf, or classified so before. */
 export const SECRET_ATTRIBUTE = "data-abacusai-secret";
+/** Marks a card field (first seen as one, or given card data); kept like the secret mark. */
+export const CARD_ATTRIBUTE = "data-abacusai-card";
 /** Marks a field that was a password field when first seen. */
 export const WAS_PASSWORD_ATTRIBUTE = "data-abacusai-password";
 
@@ -41,6 +47,7 @@ export const SECRET_FIELD_JS = `
   const __SECRET = ${JSON.stringify(SECRET_ATTRIBUTE)};
   const __WAS_PASSWORD = ${JSON.stringify(WAS_PASSWORD_ATTRIBUTE)};
   const __FIELDS = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
+  const __tokens = (el) => String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/);
   const __isSecret = (el) => {
     try {
       if (!el || el.nodeType !== 1) return false;
@@ -50,8 +57,7 @@ export const SECRET_FIELD_JS = `
         el.setAttribute(__WAS_PASSWORD, '');
         return true;
       }
-      return String(el.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/)
-        .some((token) => token.startsWith('cc-') || token === 'one-time-code');
+      return __tokens(el).some((token) => token.startsWith('cc-') || token === 'one-time-code');
     } catch { return false; }
   };
   const __shown = (el, value) => (value && __isSecret(el) ? ${JSON.stringify(HIDDEN_VALUE)} : value);
@@ -85,7 +91,12 @@ export const FIND_SECRET_FIELDS_SCRIPT = `(function() {
   const found = [];
   const walk = (root) => {
     for (const el of root.querySelectorAll('*')) {
-      if (__isSecret(el)) found.push(el);
+      if (__isSecret(el)) {
+        // A card field as first seen stays one, whatever the page later does to its autocomplete.
+        if (__FIELDS.has(el.tagName) && __tokens(el).some((token) => token.startsWith('cc-')))
+          el.setAttribute(${JSON.stringify(CARD_ATTRIBUTE)}, '');
+        found.push(el);
+      }
       if (el.shadowRoot) walk(el.shadowRoot);
       const inner = __frameDocument(el);
       if (inner) {
@@ -98,9 +109,10 @@ export const FIND_SECRET_FIELDS_SCRIPT = `(function() {
   return found;
 })()`;
 
-/** Puts the secret mark back on a node known secret; whether it is in the page now. */
-const REASSERT_FUNCTION = `function() {
+/** Puts the secret mark (and a card field's card mark) back on a node known secret; whether it is in the page now. */
+const REASSERT_FUNCTION = `function(card) {
   this.setAttribute(${JSON.stringify(SECRET_ATTRIBUTE)}, '');
+  if (card === true) this.setAttribute(${JSON.stringify(CARD_ATTRIBUTE)}, '');
   return this.isConnected;
 }`;
 
@@ -319,15 +331,16 @@ export class SecretFields {
   private filledFields = 0;
   /**
    * Every node ever classified secret on the current page, by backend node
-   * id, per document: "" for the tab's own, else the frame's id.
+   * id, per document ("" for the tab's own, else the frame's id), and
+   * whether the vault typed card data into it.
    */
-  private readonly knownBy = new Map<string, Set<number>>();
+  private readonly knownBy = new Map<string, Map<number, boolean>>();
 
-  private known(page: BrowserPage): Set<number> {
+  private known(page: BrowserPage): Map<number, boolean> {
     const scope = page.frameId ?? "";
     let known = this.knownBy.get(scope);
     if (known == null) {
-      known = new Set();
+      known = new Map();
       this.knownBy.set(scope, known);
     }
     return known;
@@ -365,17 +378,23 @@ export class SecretFields {
   /**
    * `markFilled` for a node the caller holds as a remote object of `page`
    * (`objectId`), such as the element a value was typed into by mistake.
+   * `card`: the value is card data, so the field is marked a card field too.
    */
-  async markFilledNode(page: BrowserPage, objectId: string): Promise<boolean> {
+  async markFilledNode(
+    page: BrowserPage,
+    objectId: string,
+    card = false
+  ): Promise<boolean> {
     this.filledFields += 1;
     try {
       const { result } = (await command(page, "Runtime.callFunctionOn", {
         objectId,
         functionDeclaration: REASSERT_FUNCTION,
+        arguments: [{ value: card }],
         returnByValue: true,
       })) as { result?: { value?: unknown } };
       if (result?.value == null) return false;
-      return await this.remember(page, objectId);
+      return await this.remember(page, objectId, card);
     } catch {
       return false;
     }
@@ -384,14 +403,21 @@ export class SecretFields {
   /** Adds the node behind `objectId` to the document's known secret fields. */
   private async remember(
     page: BrowserPage,
-    objectId: string
+    objectId: string,
+    card = false
   ): Promise<boolean> {
     const { node } = (await command(page, "DOM.describeNode", {
       objectId,
     })) as { node?: { backendNodeId?: number } };
     if (node?.backendNodeId == null) return false;
-    this.known(page).add(node.backendNodeId);
+    this.note(page, node.backendNodeId, card);
     return true;
+  }
+
+  /** Adds a node to the known secret fields; a card mark, once given, is kept. */
+  private note(page: BrowserPage, backendNodeId: number, card: boolean): void {
+    const known = this.known(page);
+    known.set(backendNodeId, card || known.get(backendNodeId) === true);
   }
 
   /** Each document's inputs as first seen, by backend node id: what a script did after cannot change them. */
@@ -475,7 +501,7 @@ export class SecretFields {
       await this.discover(page);
       let present = 0;
       const known = this.known(page);
-      for (const backendNodeId of known) {
+      for (const [backendNodeId, card] of known) {
         const resolved = (await command(page, "DOM.resolveNode", {
           backendNodeId,
           objectGroup: OBJECT_GROUP,
@@ -489,6 +515,7 @@ export class SecretFields {
         const { result } = (await command(page, "Runtime.callFunctionOn", {
           objectId,
           functionDeclaration: REASSERT_FUNCTION,
+          arguments: [{ value: card }],
           returnByValue: true,
         })) as { result?: { value?: unknown } };
         if (result?.value !== false) present += 1;
@@ -527,10 +554,14 @@ export class SecretFields {
       if (objectId == null) throw new Error("a secret field has no handle");
       const { node } = (await command(page, "DOM.describeNode", {
         objectId,
-      })) as { node?: { backendNodeId?: number } };
+      })) as { node?: { backendNodeId?: number; attributes?: string[] } };
       if (node?.backendNodeId == null)
         throw new Error("a secret field has no node id");
-      this.known(page).add(node.backendNodeId);
+      this.note(
+        page,
+        node.backendNodeId,
+        (node.attributes ?? []).includes(CARD_ATTRIBUTE)
+      );
     }
   }
 

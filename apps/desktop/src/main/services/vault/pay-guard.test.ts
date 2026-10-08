@@ -13,7 +13,6 @@ import {
   PAY_REFUSAL,
   SAVE_CARD_REFUSAL,
   SAVED_CARD_REFUSAL,
-  siteOf,
   OTHER_REFUSAL,
   REVIEW_COMMIT_REFUSAL,
   STEP_REFUSAL,
@@ -471,10 +470,32 @@ describe("navigation", () => {
     ).toBeNull();
   });
 
-  it("knows a site by its registrable part", () => {
-    expect(siteOf("www.akasaair.com")).toBe("akasaair.com");
-    expect(siteOf("secure.shop.co.uk")).toBe("shop.co.uk");
-    expect(siteOf("book.goindigo.in")).toBe("goindigo.in");
+  it("takes another bucket or github.io page for another site", () => {
+    for (const [from, to] of [
+      [
+        "https://bucket-a.s3.us-west-2.amazonaws.com/pay",
+        "https://bucket-b.s3.us-west-2.amazonaws.com/x",
+      ],
+      ["https://a.github.io/checkout", "https://b.github.io/x"],
+    ] as const)
+      expect(
+        navigationVerdict({
+          action: "goto",
+          from,
+          to,
+          strict: true,
+          approvalLive: false,
+        })
+      ).toBeNull();
+    expect(
+      navigationVerdict({
+        action: "goto",
+        from: "https://a.github.io/checkout",
+        to: "https://a.github.io/x",
+        strict: true,
+        approvalLive: false,
+      })
+    ).toMatch(/Refused/);
   });
 });
 
@@ -487,5 +508,11 @@ describe("an approval's site", () => {
       false
     );
     expect(approvalCovers("akasaair.com", null)).toBe(false);
+    expect(
+      approvalCovers(
+        "bucket-a.s3.us-west-2.amazonaws.com",
+        "https://bucket-b.s3.us-west-2.amazonaws.com"
+      )
+    ).toBe(false);
   });
 });

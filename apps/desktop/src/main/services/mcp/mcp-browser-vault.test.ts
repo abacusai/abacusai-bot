@@ -929,6 +929,37 @@ describe("browser_vault_fill", () => {
     });
   });
 
+  it("marks a field given card data as a card field, and a login's as masked only", async () => {
+    frames = [{ frameId: "F1", origin: "https://js.stripe.com" }];
+    approve();
+    await snapshot();
+    await call("browser_vault_fill", {
+      item_id: "card-1",
+      field: "card_number",
+      ref: "@f1e1",
+      total_ref: "@e3",
+    });
+    await call("browser_vault_fill", {
+      item_id: "login-1",
+      field: "password",
+      ref: "@e1",
+    });
+    const marks = commands.filter(
+      (entry) =>
+        entry.method === "Runtime.callFunctionOn" &&
+        String(entry.params.functionDeclaration).includes(
+          "data-abacusai-card"
+        ) &&
+        String(entry.params.objectId).includes("-field:")
+    );
+    expect(
+      marks.map((entry) => [entry.target, entry.params.arguments])
+    ).toEqual([
+      ["F1", [{ value: true }]],
+      ["tab", [{ value: false }]],
+    ]);
+  });
+
   it("refuses a card for a cross-origin frame that is not a payment provider's, asking the vault nothing", async () => {
     frames = [{ frameId: "F1", origin: "https://ads.example" }];
     page.frame = "https://ads.example";
@@ -1864,6 +1895,21 @@ describe("the Pay guard, over the browser server", () => {
       expect((await click()).isError, JSON.stringify(over)).toBe(true);
       vault.sessions.for("s1").forgetPaymentSteps(null);
     }
+  });
+
+  it("lets Sign in through on a login page, and does not remember it as a payment step", async () => {
+    page.url = "https://www.shop.example/login";
+    guardFacts = {
+      ...ORDINARY,
+      url: "https://www.shop.example/login",
+      kind: "submit",
+      label: "Sign in",
+    };
+    expect((await click()).isError).toBe(false);
+    expect(payClicks()).toHaveLength(1);
+    expect(
+      vault.sessions.for("s1").isPaymentStep("https://www.shop.example")
+    ).toBe(false);
   });
 
   it("keeps a payment step guarded across a new run while the tab is still on it", async () => {
