@@ -22,6 +22,11 @@ import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderWithDb } from "../testing";
 import { ModelChip } from "./chips";
 
+const sent = vi.hoisted(() => vi.fn());
+vi.mock("#renderer/lib/document-sound", () => ({
+  documentSoundPlayer: () => ({ play: sent }),
+}));
+
 const animate = vi.fn(
   (_frames: Keyframe[], _options: KeyframeAnimationOptions) => ({
     cancel: vi.fn(),
@@ -174,6 +179,7 @@ describe("model setup in the composer", () => {
       expect(field.scrollTop).toBe(12);
       expect(within(composer).getByRole("textbox")).toBe(field);
       expect(relay.stats.send).toHaveLength(0);
+      expect(sent).not.toHaveBeenCalled();
       fireEvent.click(chip);
       expect(await screen.findByRole("listbox")).toBeTruthy();
     }

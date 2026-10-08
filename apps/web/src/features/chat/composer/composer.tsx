@@ -37,6 +37,7 @@ import {
   updateDraft,
   type Draft,
 } from "#renderer/lib/continuity/composer-drafts";
+import { documentSoundPlayer } from "#renderer/lib/document-sound";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
@@ -619,6 +620,12 @@ export const ThreadComposer = () => {
         const clearedRevision = draftRevision(threadId);
         runtime.queue
           .enqueue(threadId, composed!.text, composed!.userText)
+          .then(() =>
+            documentSoundPlayer().play("sent", {
+              threadId,
+              botId: config.botId,
+            })
+          )
           .catch(() => {
             restoreDraft(threadId, clearedRevision, saved);
             setError(t("chat.composer.queueFailed"));
@@ -659,7 +666,11 @@ export const ThreadComposer = () => {
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
               restoreDraft(threadId, clearedRevision, saved);
-            else {
+            else if (result.kind === "started" || result.kind === "queued") {
+              documentSoundPlayer().play("sent", {
+                threadId,
+                botId: config.botId,
+              });
               if (
                 config.onSubmitEnvelope &&
                 draftRevision(threadId) === clearedRevision

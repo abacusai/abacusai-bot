@@ -18,7 +18,7 @@ export const setDocumentSoundPrefs = (prefs: PrefsRow["sounds"]) => {
 export const documentSoundPlayer = () =>
   (player ??= createSoundPlayer({
     isThreadVisible: (id) => isThreadSeen(id, () => true),
-    isWindowFocused: () => document.hasFocus(),
+    isWindowFocused: () => document.hasFocus() && !document.hidden,
     prefs: () => sounds,
     now: () => Date.now(),
     claim: (cueId, threadId) => claim(cueId, threadId),

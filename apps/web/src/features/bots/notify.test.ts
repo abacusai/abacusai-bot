@@ -171,6 +171,7 @@ describe("gates and face reactions", () => {
           gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: gain },
           connect: vi.fn(),
         }),
+        createWaveShaper: () => ({ connect: vi.fn() }),
         createOscillator: () => ({
           type: "sine",
           frequency: {

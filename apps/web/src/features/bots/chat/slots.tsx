@@ -26,7 +26,6 @@ import { useCheckIn } from "../data/queries";
 import { useBotsTransport } from "../data/transport";
 import { botsUnreadStore } from "../data/unread-store";
 import { useBotModelBinding } from "../model/picker";
-import { playBotCue } from "../watcher";
 import { useConnectorRequests } from "./connector-requests";
 import { botMessageDecorations, feedbackSender } from "./decorations";
 import {
@@ -233,6 +232,7 @@ export const useBotChatSlots = (
       ),
     },
     composer: {
+      botId: bot.id,
       mode: "full" as const,
       sharedElement: true,
       placeholder: t("bots.chat.placeholder", {
@@ -275,7 +275,6 @@ export const useBotChatSlots = (
         if (detectRememberRequest(text) != null)
           showInfo(t("memory.rememberedToast"));
         react(bot.id, "wink");
-        playBotCue("sent", sessionId, bot.id);
       },
       ...(readOnly
         ? { readOnly }

@@ -58,6 +58,7 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
   let audio: unknown = null;
   let disposed = false;
   const playing = new Set<() => void>();
+  const delivered = new Set<string>();
   const shared =
     ctx.createAudioContext === undefined && ctx.synth === undefined;
 
@@ -116,6 +117,13 @@ export const createSoundPlayer = (ctx: SoundContext): SoundPlayer => {
         ctx.isThreadVisible(options.threadId)
       )
         return;
+      if (options.dedupeKey) {
+        const key = `${cue}:${options.threadId ?? ""}:${options.dedupeKey}`;
+        if (delivered.has(key)) return;
+        delivered.add(key);
+        if (delivered.size > 500)
+          delivered.delete(delivered.values().next().value!);
+      }
       const now = ctx.now();
       if (now - (shared ? documentLastPlayed : lastPlayedAt) < COALESCE_MS)
         return;
@@ -216,10 +224,13 @@ interface Tone {
 
 /** 03 §17 (and 05 §23.1 for `routine-fired`); `done` is provisional (06 §14.1). */
 export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
-  sent: [{ at: 0, duration: 0.09, from: 660, to: 880, gain: 0.08 }],
+  sent: [
+    { at: 0, duration: 0.075, from: 660, to: 740, gain: 0.105 },
+    { at: 0.065, duration: 0.105, from: 880, to: 988, gain: 0.095 },
+  ],
   received: [
-    { at: 0, duration: 0.07, from: 880, gain: 0.07 },
-    { at: 0.11, duration: 0.07, from: 1175, gain: 0.07 },
+    { at: 0, duration: 0.09, from: 880, gain: 0.13 },
+    { at: 0.12, duration: 0.11, from: 1175, gain: 0.13 },
   ],
   "needs-you": [0, 0.08, 0.16].map((at) => ({
     at,
@@ -229,8 +240,8 @@ export const CUE_TONES: Readonly<Record<Cue, readonly Tone[]>> = {
     type: "triangle" as const,
   })),
   done: [
-    { at: 0, duration: 0.09, from: 523, gain: 0.08 },
-    { at: 0.12, duration: 0.09, from: 784, gain: 0.08 },
+    { at: 0, duration: 0.12, from: 523, to: 554, gain: 0.15 },
+    { at: 0.14, duration: 0.14, from: 784, to: 831, gain: 0.15 },
   ],
   failed: [{ at: 0, duration: 0.18, from: 440, to: 294, gain: 0.08 }],
   "routine-fired": [
