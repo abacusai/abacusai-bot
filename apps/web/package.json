@@ -24,6 +24,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "dev": "node ../desktop/scripts/generate-notices.js --graph && vite",
+    "check:layout": "node scripts/check-page-layout.mjs",
     "check:i18n": "node scripts/check-jsx-i18n.js",
     "check:locales": "node scripts/sync-locales.js --check && node --test scripts/i18n-dynamic-keys.test.mjs && node scripts/check-ui-copy.mjs && node --test scripts/check-ui-copy.test.mjs",
     "sync:locales": "node scripts/sync-locales.js",

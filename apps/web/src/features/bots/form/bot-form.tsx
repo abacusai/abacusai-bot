@@ -8,7 +8,7 @@ import {
 import type { BotRow } from "@abacus-ai/contract/contract/rows";
 import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
@@ -17,6 +17,7 @@ import { useDb } from "#renderer/data/db";
 import { accentVars } from "#renderer/lib/bots/avatar";
 import { useAppNavigate } from "#renderer/lib/navigation/use-app-navigate";
 import { showError } from "#renderer/lib/toast";
+import { useMediaQuery } from "#renderer/lib/use-media-query";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -58,13 +59,6 @@ import {
   type BotFormValues,
 } from "./schema";
 import { submitCreate, submitEdit } from "./submit";
-const wideQuery = "(min-width: 1000px)";
-const subscribeWidth = (notify: () => void) => {
-  const query = window.matchMedia(wideQuery);
-  query.addEventListener("change", notify);
-  return () => query.removeEventListener("change", notify);
-};
-const setupWide = () => window.matchMedia(wideQuery).matches;
 interface BotFormProps {
   bot?: BotRow;
   initial: BotFormValues;
@@ -72,7 +66,7 @@ interface BotFormProps {
 }
 const BotForm = ({ bot, initial, load }: BotFormProps) => {
   const { t } = useTranslation();
-  const wide = useSyncExternalStore(subscribeWidth, setupWide, () => true);
+  const wide = useMediaQuery("(min-width: 1000px)");
   const db = useDb();
   const transport = useBotsTransport();
   const navigate = useAppNavigate();

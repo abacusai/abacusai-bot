@@ -47,11 +47,15 @@ describe("shell geometry", () => {
   });
 
   it("declares the content column classes on the tokens", () => {
+    expect(tokensCss).toContain("--page-gutter: 24px;");
     expect(tokensCss).toMatch(
-      /\.content-col \{\s*width: min\(var\(--content-max-w\), 100% - 48px\);/
+      /@media \(width < 800px\)[\s\S]*?--page-gutter: 16px;/
     );
     expect(tokensCss).toMatch(
-      /\.content-col-wide \{\s*width: min\(var\(--content-max-w-wide\), 100% - 48px\);/
+      /\.content-col \{\s*width: min\(var\(--content-max-w\), 100% - 2 \* var\(--page-gutter\)\);/
+    );
+    expect(tokensCss).toMatch(
+      /\.content-col-wide \{\s*width: min\(var\(--content-max-w-wide\), 100% - 2 \* var\(--page-gutter\)\);/
     );
   });
 
