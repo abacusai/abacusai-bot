@@ -6,6 +6,7 @@ import {
 import { existsSync } from "fs";
 import { delimiter } from "path";
 
+import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import {
   AgentMode,
   AgentStatus,
@@ -119,6 +120,11 @@ type AgentManagerServiceOptions = {
   resolveAdditionalConfigEnv: (
     sessionId: string
   ) => Promise<Record<string, string>>;
+  /**
+   * The declared reach of a session that runs unattended, or null. A session
+   * with one is spawned in that mode whatever the request asked for.
+   */
+  resolveUnattended?: (sessionId: string) => UnattendedPolicy | null;
   emitStateUpdated: (
     workspaceId: string,
     sessionId: string,
@@ -378,7 +384,8 @@ const parseMode = (value: unknown): AgentMode | null => {
     value === AgentMode.AcceptEdits ||
     value === AgentMode.PlanMode ||
     value === AgentMode.Auto ||
-    value === AgentMode.Yolo
+    value === AgentMode.Yolo ||
+    value === AgentMode.Unattended
   ) {
     return value;
   }
@@ -655,7 +662,18 @@ export class AgentManagerService {
     const spawnArgs: string[] = [...artifact.execArgs];
     if (request.model != null && request.model.length > 0)
       spawnArgs.push("--model", request.model);
-    if (request.mode != null) spawnArgs.push("--permission-mode", request.mode);
+    // An unattended run's mode and reach come from its own record, never
+    // from the request: a start from anywhere spawns it held.
+    const unattended = this.options.resolveUnattended?.(request.sessionId);
+    if (unattended != null)
+      spawnArgs.push(
+        "--permission-mode",
+        AgentMode.Unattended,
+        "--unattended",
+        JSON.stringify(unattended)
+      );
+    else if (request.mode != null)
+      spawnArgs.push("--permission-mode", request.mode);
     const wire: AgentWire = "agui";
     {
       spawnArgs.push(

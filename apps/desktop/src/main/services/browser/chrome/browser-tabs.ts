@@ -93,9 +93,16 @@ export class BrowserTabs {
    * returns is skipped by the attach logic; any other that attaches meanwhile
    * is decided once the creates in flight are done.
    */
-  async create(sessionId: string, url: string): Promise<ChromeTabInfo> {
+  async create(
+    sessionId: string,
+    url: string,
+    options: { isolated?: boolean } = {}
+  ): Promise<ChromeTabInfo> {
     this.noteUse(sessionId);
-    const making = this.driver.createTab(url);
+    const making =
+      options.isolated === true
+        ? this.createIsolated(sessionId, url)
+        : this.driver.createTab(url);
     this.creating.add(making);
     try {
       const tab = await making;
@@ -107,6 +114,29 @@ export class BrowserTabs {
         for (const { tabId, at } of this.held.splice(0)) this.adopt(tabId, at);
     }
   }
+
+  /**
+   * A tab in a browser context of the session's own: never the profile's
+   * cookies or logins, and the context goes when the session does. Refused
+   * where the browser cannot make one, rather than falling back to a profile.
+   */
+  private async createIsolated(
+    sessionId: string,
+    url: string
+  ): Promise<ChromeTabInfo> {
+    if (this.driver.createIsolatedTab == null)
+      throw new Error(
+        "This browser cannot open a page apart from its profile."
+      );
+    const { tab, dispose } = await this.driver.createIsolatedTab(url);
+    const disposers = this.isolated.get(sessionId) ?? [];
+    disposers.push(dispose);
+    this.isolated.set(sessionId, disposers);
+    return tab;
+  }
+
+  /** Each isolated session's browser contexts, to dispose when it ends. */
+  private readonly isolated = new Map<string, Array<() => Promise<void>>>();
 
   /** The session acted on its page in a way that may open a tab. */
   noteAction(sessionId: string): void {
@@ -177,6 +207,15 @@ export class BrowserTabs {
    */
   releaseSession(sessionId: string): void {
     this.actions.delete(sessionId);
+    // An isolated run is not come back to: its pages and context go now.
+    const contexts = this.isolated.get(sessionId);
+    if (contexts != null) {
+      this.isolated.delete(sessionId);
+      for (const tabId of this.ownedBy(sessionId))
+        void this.letGo(tabId).catch(() => undefined);
+      for (const dispose of contexts) void dispose();
+      return;
+    }
     if (this.ended.has(sessionId) || this.ownedBy(sessionId).length === 0)
       return;
     const timer = setTimeout(() => {

@@ -18,6 +18,7 @@ import {
   MEDIA_MAX_BYTES,
   mediaLine,
 } from "@abacus-ai/agent/send-media";
+import { UNATTENDED_TOOLS } from "@abacus-ai/agent/tool-policy";
 import { describeForListing } from "@abacus-ai/connectors/describe";
 import {
   CONNECTORS,
@@ -202,6 +203,8 @@ export interface McpAgentToolsServerOptions {
   } | null;
   /** Set for the turn behind a routine page's composer; it sees only cron. */
   routineEditorFor?: (sessionId: string) => string | null;
+  /** A run nobody is watching: it gets only the unattended allowlist. */
+  isUnattended?: (sessionId: string) => boolean;
   /** Every conversation a bot owns, with its agent log; for my_activity. */
   ownActivity?: (botId: string) => Array<{
     sessionId: string;
@@ -365,11 +368,15 @@ export class McpAgentToolsServer extends McpHttpServer {
     const forBot = this.isBotCaller(callerSession);
     const forEditor = this.isRoutineEditor(callerSession);
     const channel = this.channelFor(callerSession);
+    // A run nobody is watching is offered only what it may call.
+    const held = this.isHeld(callerSession);
 
     return AGENT_TOOLS.filter((definition) =>
-      forEditor
-        ? definition.name === "cronjob"
-        : this.isListed(definition.name, enabled, forBot)
+      held && UNATTENDED_TOOLS[definition.name] == null
+        ? false
+        : forEditor
+          ? definition.name === "cronjob"
+          : this.isListed(definition.name, enabled, forBot)
     ).map((definition) => ({
       name: definition.name,
       description:
@@ -390,6 +397,14 @@ export class McpAgentToolsServer extends McpHttpServer {
   channelFor(callerSession?: string): ChannelCapabilities {
     if (callerSession == null) return APP_CHANNEL;
     return this.options.channelForSession?.(callerSession) ?? APP_CHANNEL;
+  }
+
+  /** A run nobody is watching, held to the unattended allowlist. */
+  private isHeld(callerSession?: string): boolean {
+    return (
+      callerSession != null &&
+      this.options.isUnattended?.(callerSession) === true
+    );
   }
 
   /** The editor turn behind a routine page's composer. */
@@ -421,6 +436,12 @@ export class McpAgentToolsServer extends McpHttpServer {
     const definition = agentTool(name);
 
     if (definition == null) return this.err(`Unknown tool: ${name}`);
+
+    // The agent's gate refuses these first; this holds even if it did not.
+    if (this.isHeld(callerSession) && UNATTENDED_TOOLS[name] == null)
+      return this.err(
+        `${name} is not available in a routine that runs on its own.`
+      );
 
     const forEditor = this.isRoutineEditor(callerSession);
     if (forEditor && name !== "cronjob")

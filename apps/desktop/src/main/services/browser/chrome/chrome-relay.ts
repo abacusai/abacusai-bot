@@ -63,6 +63,13 @@ export type ChromeTabDriver = EventEmitter<ChromeRelayEvents> & {
   tab(tabId: number): ChromeTabInfo | undefined;
   isAttached(tabId: number): boolean;
   createTab(url: string): Promise<ChromeTabInfo>;
+  /**
+   * A new page in a fresh browser context of its own, gone once disposed.
+   * Only the app's own browser can; the user's Chrome never offers it.
+   */
+  createIsolatedTab?(
+    url: string
+  ): Promise<{ tab: ChromeTabInfo; dispose: () => Promise<void> }>;
   closeTab(tabId: number): Promise<void>;
   /** Stops driving the tab and leaves it open, where the driver can. */
   detachTab?(tabId: number): Promise<void>;

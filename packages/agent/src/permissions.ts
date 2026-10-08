@@ -8,6 +8,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
+
 import { prepareEditContent } from "./edit-content.js";
 import { resolveEdit, spliceRanges } from "./edit-resolve.js";
 import { EXIT_PLAN_TOOL_NAME } from "./exit-plan-tool.js";
@@ -18,6 +20,14 @@ import {
 } from "./protocol.js";
 import { isWithin, namedSecretPaths } from "./sandbox/secrets.js";
 import { zoneContext, zoneOf } from "./sandbox/zones.js";
+import {
+  hostAllowed,
+  UNATTENDED_CONNECTOR_READS,
+  UNATTENDED_EXCLUDED_TOOLS,
+  UNATTENDED_TOOLS,
+  type ToolOrigin,
+  type UnattendedPolicy,
+} from "./tool-policy.js";
 import { isInsideDirectory, realPathOf } from "./workspace-path.js";
 
 /** Tools that change something on disk or run code. */
@@ -120,6 +130,14 @@ export interface GateOptions {
   promptableCredentialPaths?: readonly string[];
   /** Hidden stores the user chose to always allow reading, this session. */
   allowedCredentialPaths?: readonly string[];
+  /**
+   * An unattended run's declared reach, and where each tool comes from.
+   * Without it an unattended session is refused everything.
+   */
+  unattended?: {
+    policy: UnattendedPolicy;
+    origin: (toolName: string) => ToolOrigin;
+  };
 }
 
 export function isMutatingTool(toolName: string): boolean {
@@ -141,6 +159,10 @@ export function isMutatingCall(tool: ToolRequest): boolean {
 
 export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
   const { mode } = options;
+
+  // First, before any allowance: nobody is there to ask, and nothing a
+  // session allowed earlier widens a routine's fixed reach.
+  if (mode === AgentMode.Unattended) return gateUnattended(tool, options);
 
   // Full access means exactly that: no prompts and no sandbox.
   if (mode === AgentMode.Yolo) return { kind: "allow" };
@@ -238,6 +260,71 @@ export function gateToolCall(tool: ToolRequest, options: GateOptions): Gate {
       return isMutatingCall(tool)
         ? { kind: "ask", request: buildGenericRequest(tool) }
         : { kind: "allow" };
+  }
+}
+
+/** The connector gateway's prefix on a tool's pi name. */
+const CONNECTOR_PREFIX = `${GATEWAY_SERVER_NAME}_`;
+
+const refuseUnattended = (reason: string): Gate => ({
+  kind: "refuse",
+  reason:
+    `Not available in a routine that runs on its own: ${reason}. ` +
+    "Do what you can with the tools you have, and say in your answer what was left out.",
+});
+
+/**
+ * A routine nobody is watching: never asks, and allows only what
+ * `UNATTENDED_TOOLS` names under its rule, plus the reviewed first-party
+ * connector reads. A tool from a server the user added is refused whatever
+ * its name, so it cannot pass as a built-in one.
+ */
+function gateUnattended(tool: ToolRequest, options: GateOptions): Gate {
+  const unattended = options.unattended;
+  if (unattended == null)
+    return refuseUnattended("this run was started without its routine");
+  const origin = unattended.origin(tool.name);
+  if (origin === "user")
+    return refuseUnattended("tools from servers you added are not used here");
+  if (origin === "connector") {
+    const bare = tool.name.startsWith(CONNECTOR_PREFIX)
+      ? tool.name.slice(CONNECTOR_PREFIX.length)
+      : tool.name;
+    const action = String(tool.input.action ?? "");
+    return (UNATTENDED_CONNECTOR_READS[bare] ?? []).includes(action)
+      ? { kind: "allow" }
+      : refuseUnattended("only reading from a connector is allowed");
+  }
+
+  const rule = UNATTENDED_TOOLS[tool.name];
+  switch (rule) {
+    case "allow":
+      return { kind: "allow" };
+    case "workspace-read":
+      return gateRead(tool, options).kind === "allow"
+        ? { kind: "allow" }
+        : refuseUnattended("reads stay inside the routine's folder");
+    case "source-hosts": {
+      let host: string;
+      try {
+        host = new URL(String(tool.input.url ?? "")).hostname;
+      } catch {
+        return refuseUnattended("that is not a URL");
+      }
+      return hostAllowed(host, unattended.policy.sourceHosts)
+        ? { kind: "allow" }
+        : refuseUnattended(
+            `${host} is not one of the sites this routine was set up to read`
+          );
+    }
+    case "watch-url":
+      return unattended.policy.watchUrl != null
+        ? { kind: "allow" }
+        : refuseUnattended("this routine watches no page");
+    default:
+      return refuseUnattended(
+        UNATTENDED_EXCLUDED_TOOLS[tool.name] ?? "it is not on the allowed list"
+      );
   }
 }
 
@@ -724,6 +811,9 @@ export function parseModeStrict(raw: string | undefined): AgentMode | null {
       return AgentMode.Auto;
     case "YOLO":
       return AgentMode.Yolo;
+    // Spawn-only: the session refuses a switch into it (or out of it).
+    case "UNATTENDED":
+      return AgentMode.Unattended;
     default:
       return null;
   }

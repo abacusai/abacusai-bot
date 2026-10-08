@@ -22,6 +22,7 @@ import { useBundledTools } from "./bundled-tools.js";
 import { applyStoredApiKeys } from "./config.js";
 import { followGithubToken } from "./github-token.js";
 import { sandboxAvailability } from "./sandbox/index.js";
+import { parseUnattendedPolicy } from "./tool-policy.js";
 
 /** The AG-UI host, once there is one: its open run gets last words at exit. */
 let aguiHost: AguiHost | undefined;
@@ -79,6 +80,11 @@ async function main(): Promise<void> {
 
   const model = readFlag(argv, "--model");
   const mode = readFlag(argv, "--permission-mode");
+  // An unattended run's declared reach, as JSON; meaningful only with
+  // `--permission-mode UNATTENDED`, which refuses everything without it.
+  const unattendedFlag = readFlag(argv, "--unattended");
+  const unattended =
+    unattendedFlag != null ? parseUnattendedPolicy(unattendedFlag) : null;
   const wire = readFlag(argv, "--wire") ?? "agui";
 
   const refusal = wireRefusal(wire);
@@ -127,6 +133,7 @@ async function main(): Promise<void> {
     cwd: process.cwd(),
     ...(model != null ? { model } : {}),
     ...(mode != null ? { mode } : {}),
+    ...(unattended != null ? { unattended } : {}),
     threadId,
     incarnation,
     compat,

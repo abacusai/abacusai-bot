@@ -1,3 +1,4 @@
+import type { UnattendedPolicy } from "@abacus-ai/agent/tool-policy";
 import { AgentStatus, type AgentMode } from "@abacus-ai/contract/agent-types";
 import { ConflictError } from "@abacus-ai/contract/conflict";
 import type {
@@ -54,6 +55,11 @@ type SessionRecord = {
   agentSessionFile?: string | null;
   /** Every agent session this one has opened, newest last. See recordAgentSession. */
   agentSessionIds?: string[];
+  /**
+   * A run nobody is watching: always spawned in the unattended mode, held to
+   * this declared reach. Stamped once at mint and never cleared.
+   */
+  unattended?: UnattendedPolicy;
 };
 
 // Persisted, so the old name stays. See workspace-store.ts.
@@ -323,6 +329,29 @@ export class AgentSessionManagerService {
 
   ownerOf(sessionId: string): SessionOwner | null {
     return this.sessions.get(sessionId)?.owner ?? null;
+  }
+
+  /**
+   * Hold a session to the unattended mode with this reach, for good: every
+   * later spawn of it is unattended. Only a session with no agent yet.
+   */
+  holdUnattended(sessionId: string, policy: UnattendedPolicy): boolean {
+    const record = this.sessions.get(sessionId);
+    if (record == null || record.unattended != null) return false;
+    record.unattended = {
+      sourceHosts: [...policy.sourceHosts],
+      watchUrl: policy.watchUrl,
+      ...(policy.watchPrompt != null
+        ? { watchPrompt: policy.watchPrompt }
+        : {}),
+    };
+    this.persist();
+    return true;
+  }
+
+  /** The reach an unattended session is held to; null for any other. */
+  unattendedPolicy(sessionId: string): UnattendedPolicy | null {
+    return this.sessions.get(sessionId)?.unattended ?? null;
   }
 
   /** A session that exists to run a routine: minted by a fire, or a bot's routine chat. */

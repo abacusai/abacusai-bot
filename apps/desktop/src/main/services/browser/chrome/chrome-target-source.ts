@@ -77,9 +77,13 @@ export class ChromeTargetSource implements BrowserTargetSource {
     return this.pageFor(id);
   }
 
-  async materialize(sessionId: string, url: string): Promise<number | null> {
+  async materialize(
+    sessionId: string,
+    url: string,
+    options: { isolated?: boolean } = {}
+  ): Promise<number | null> {
     if (!this.relay.connected) return null;
-    const tab = await this.tabs.create(sessionId, url);
+    const tab = await this.tabs.create(sessionId, url, options);
     const page = this.pageFor(tab.id);
     await page?.prime();
     return tab.id;

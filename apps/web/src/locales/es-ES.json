@@ -2820,12 +2820,14 @@
       "AUTO": "Auto",
       "DEFAULT": "Supervised",
       "PLAN": "Plan",
+      "UNATTENDED": "Routine",
       "YOLO": "Full access",
       "description": {
         "ACCEPTEDITS": "Change files, ask before commands",
         "AUTO": "Sandboxed, no prompts",
         "DEFAULT": "Approve edits and commands one by one",
         "PLAN": "Read and propose, change nothing",
+        "UNATTENDED": "Runs on its own, on a fixed allowlist",
         "YOLO": "No approvals"
       }
     },

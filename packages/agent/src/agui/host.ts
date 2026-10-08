@@ -16,12 +16,14 @@ import { parseModeStrict } from "../permissions.js";
 import { isPhoneSession } from "../phone/phone-config.js";
 import { channelsPagePublisher } from "../phone/phone-page-publisher.js";
 import { PhoneSession } from "../phone/phone-session.js";
-import type {
-  DesktopCommand,
-  DesktopEvent,
-  UserTextTags,
+import {
+  AgentMode,
+  type DesktopCommand,
+  type DesktopEvent,
+  type UserTextTags,
 } from "../protocol.js";
 import { AbacusBotSession, approvalTimeoutMs } from "../session.js";
+import type { UnattendedPolicy } from "../tool-policy.js";
 import { BoundedSet, RUN_IDS_KEPT } from "./bounded.js";
 import type { CompatWriter } from "./channel.js";
 import { AguiEmitter } from "./emit.js";
@@ -47,6 +49,8 @@ export interface AguiHostOptions {
   cwd: string;
   model?: string;
   mode?: string;
+  /** An unattended run's declared reach; see SessionOptions.unattended. */
+  unattended?: UnattendedPolicy;
   threadId: string;
   incarnation: string;
   compat: CompatWriter;
@@ -79,6 +83,7 @@ export interface SessionInit {
   cwd: string;
   model?: string;
   mode?: string;
+  unattended?: UnattendedPolicy;
   emit: (event: DesktopEvent) => void;
   emitInternal: (
     event: import("../internal-events.js").InternalAgentEvent
@@ -227,16 +232,25 @@ export class AguiHost {
       cwd: options.cwd,
       ...(options.model ? { model: options.model } : {}),
       ...(options.mode ? { mode: options.mode } : {}),
+      ...(options.unattended != null ? { unattended: options.unattended } : {}),
       emit: (event) => this.core.onSessionEvent(event),
       emitInternal: (event) => this.sink.internal(event),
     };
+    // An unattended run is always the plain session, whose gate holds it to
+    // its policy, whatever lane or bot the environment names.
+    const unattended = parseModeStrict(options.mode) === AgentMode.Unattended;
     const session =
       options.session?.(init) ??
-      (isPhoneSession()
-        ? new PhoneSession({ ...init, pagePublisher: channelsPagePublisher() })
-        : isBotSession()
-          ? new BotSession(init)
-          : new AbacusBotSession(init));
+      (unattended
+        ? new AbacusBotSession(init)
+        : isPhoneSession()
+          ? new PhoneSession({
+              ...init,
+              pagePublisher: channelsPagePublisher(),
+            })
+          : isBotSession()
+            ? new BotSession(init)
+            : new AbacusBotSession(init));
 
     this.core = new HostCore(
       session,

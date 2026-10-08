@@ -13,6 +13,8 @@ import * as net from "node:net";
 
 import { Agent } from "undici";
 
+import { hostAllowed } from "../tool-policy.js";
+
 /** Wire-level cap. Read stops here even if the server keeps sending. */
 const MAX_RESPONSE_BYTES = 5_000_000;
 
@@ -48,6 +50,30 @@ export function isBlockedAddress(address: string): boolean {
 }
 
 /**
+ * Whether a RESOLVED address is anything but the public internet: loopback,
+ * private, carrier-grade NAT, link-local, unspecified or unique-local. Only a
+ * fetch held to declared hosts refuses these; the rest of the time a dev
+ * server on localhost is the normal case.
+ */
+export function isNonPublicAddress(address: string): boolean {
+  const ip = unmapIpv4(address.replace(/^\[|\]$/g, "").toLowerCase());
+  if (isBlockedAddress(ip)) return true;
+  if (net.isIPv4(ip)) {
+    const [a = 0, b = 0] = ip.split(".").map(Number);
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a >= 224
+    );
+  }
+  return ip === "::" || ip === "::1" || /^ff[0-9a-f]{2}:/.test(ip);
+}
+
+/**
  * Unwrap an IPv4-mapped IPv6 address: `::ffff:a9fe:a9fe` and
  * `::ffff:169.254.169.254` both route to 169.254.169.254, so the range checks
  * have to see the dotted quad.
@@ -72,11 +98,17 @@ function unmapIpv4(ip: string): string {
  * name could otherwise answer harmlessly for the check and with the metadata
  * address for the connection.
  */
-async function resolveAndVet(url: URL): Promise<string[]> {
+async function resolveAndVet(url: URL, publicOnly = false): Promise<string[]> {
   const host = url.hostname.replace(/^\[|\]$/g, "");
 
   // A literal needs no lookup: it is already the address that will be dialed.
   if (net.isIP(host) !== 0) {
+    if (publicOnly && isNonPublicAddress(host)) {
+      throw new WebFetchError(
+        "BLOCKED_URL",
+        `Refusing to fetch ${url.hostname}: it is not a public address.`
+      );
+    }
     if (isBlockedAddress(host)) {
       throw new WebFetchError(
         "BLOCKED_URL",
@@ -103,6 +135,12 @@ async function resolveAndVet(url: URL): Promise<string[]> {
   }
 
   for (const { address } of resolved) {
+    if (publicOnly && isNonPublicAddress(address)) {
+      throw new WebFetchError(
+        "BLOCKED_URL",
+        `Refusing to fetch ${host}: it resolves to a non-public address.`
+      );
+    }
     if (isBlockedAddress(address)) {
       throw new WebFetchError(
         "BLOCKED_URL",
@@ -277,10 +315,36 @@ export function pinnedLookup(addresses: string[]): LookupFunction {
   return lookup as LookupFunction;
 }
 
+/** The wire cap for a fetch held to declared hosts (an unattended run). */
+const HELD_MAX_RESPONSE_BYTES = 2_000_000;
+
+/**
+ * A fetch held to declared hosts: the literal hostname must be exactly one of
+ * them, checked before any lookup, at every hop.
+ */
+function checkHeldHost(url: URL, allowedHosts: readonly string[]): void {
+  if (!hostAllowed(url.hostname, allowedHosts)) {
+    throw new WebFetchError(
+      "BLOCKED_URL",
+      `${url.hostname} is not one of the sites this routine was set up to read.`
+    );
+  }
+}
+
 export async function fetchUrl(
   rawUrl: string,
-  options: { timeoutMs?: number; signal?: AbortSignal } = {}
+  options: {
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    /**
+     * Held to these hosts (an unattended run): exact hostname before any
+     * lookup on every hop, public addresses only, and a smaller cap.
+     */
+    allowedHosts?: readonly string[];
+  } = {}
 ): Promise<FetchResult> {
+  const held = options.allowedHosts ?? null;
+  const maxBytes = held != null ? HELD_MAX_RESPONSE_BYTES : MAX_RESPONSE_BYTES;
   let url = parseAndValidate(rawUrl);
   const redirects: string[] = [];
 
@@ -302,8 +366,10 @@ export async function fetchUrl(
   try {
     for (let hop = 0; ; hop++) {
       // Vet before dialing, at every hop: a redirect target gets the same
-      // treatment as a URL the model typed.
-      const addresses = await resolveAndVet(url);
+      // treatment as a URL the model typed. A held fetch checks the name
+      // before it is ever looked up.
+      if (held != null) checkHeldHost(url, held);
+      const addresses = await resolveAndVet(url, held != null);
       // A redirect chain must not accumulate live pools either.
       if (pinned != null) await pinned.close();
       pinned = new Agent({
@@ -362,6 +428,7 @@ export async function fetchUrl(
         }
 
         const next = parseAndValidate(new URL(location, url).href);
+        if (held != null) checkHeldHost(next, held);
 
         // Check the destination before the origin rule: the cross-origin
         // message invites the model to call again with the destination, which
@@ -410,11 +477,11 @@ export async function fetchUrl(
       }
 
       const declared = Number(response.headers.get("content-length") ?? "");
-      if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+      if (Number.isFinite(declared) && declared > maxBytes) {
         await response.body?.cancel().catch(() => {});
         throw new WebFetchError(
           "TOO_LARGE",
-          `${url.href} is ${declared} bytes, over the ${MAX_RESPONSE_BYTES} byte cap.`
+          `${url.href} is ${declared} bytes, over the ${maxBytes} byte cap.`
         );
       }
 
@@ -434,7 +501,7 @@ export async function fetchUrl(
             if (done) break;
             if (value != null) {
               bytes += value.byteLength;
-              if (bytes > MAX_RESPONSE_BYTES) {
+              if (bytes > maxBytes) {
                 truncated = true;
                 break;
               }

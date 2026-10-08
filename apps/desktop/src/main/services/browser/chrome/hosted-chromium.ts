@@ -291,6 +291,41 @@ export class CdpBrowser extends EventEmitter<ChromeRelayEvents> {
     return tab;
   }
 
+  /**
+   * A new page in a browser context of its own: no cookies, no storage, no
+   * saved logins from the profile, and nothing kept once `dispose` runs.
+   * Downloads are refused in it. For a run nobody is watching.
+   */
+  async createIsolatedTab(
+    url: string
+  ): Promise<{ tab: ChromeTabInfo; dispose: () => Promise<void> }> {
+    const { browserContextId } = (await this.send(
+      "Target.createBrowserContext",
+      {}
+    )) as { browserContextId: string };
+    const dispose = async (): Promise<void> => {
+      await this.send("Target.disposeBrowserContext", {
+        browserContextId,
+      }).catch(() => undefined);
+    };
+    try {
+      await this.send("Browser.setDownloadBehavior", {
+        behavior: "deny",
+        browserContextId,
+      });
+      const { targetId } = (await this.send("Target.createTarget", {
+        url,
+        browserContextId,
+      })) as { targetId: string };
+      const tab = await this.attach(targetId, url);
+      if (!tab.url) tab.url = url;
+      return { tab, dispose };
+    } catch (error) {
+      await dispose();
+      throw error;
+    }
+  }
+
   /** The page's one attach, begun now unless it already was. */
   private attach(targetId: string, url: string, opener?: Opener): Promise<Tab> {
     const existing = this.attachments.get(targetId);
@@ -890,14 +925,22 @@ export class HostedChromiumService {
     return this.launcher.found;
   }
 
-  targetSource(): BrowserTargetSource {
+  /**
+   * @param isolated  Whether a session's pages go in a browser context of
+   * their own (an unattended run), never the persistent profile's.
+   */
+  targetSource(
+    isolated: (sessionId: string) => boolean = () => false
+  ): BrowserTargetSource {
     return {
       presentsInApp: false,
       candidates: () => this.source?.candidates() ?? [],
       webContents: (id) => this.source?.webContents(id) ?? null,
       ...tabMethodsOf(() => this.source),
       materialize: async (sessionId, url) =>
-        (await this.start()).materialize(sessionId, url),
+        (await this.start()).materialize(sessionId, url, {
+          isolated: isolated(sessionId),
+        }),
     };
   }
 

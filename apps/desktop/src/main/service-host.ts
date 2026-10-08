@@ -717,7 +717,24 @@ export class ServiceHost {
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
     isOwnerSession: (sessionId) => this.isOwnerSession(sessionId),
     checkoutToken: this.checkoutToken,
+    heldSession: (sessionId) => {
+      const policy =
+        this.agentSessionManagerService.unattendedPolicy(sessionId);
+      if (policy == null) return null;
+      // Only the hosted computer's own browser can open a page apart from
+      // its profile; anywhere else an unattended run has no browser.
+      return {
+        watchUrl: policy.watchUrl,
+        isolated:
+          this.platform === "web-host" && this.hostedChromium.available(),
+      };
+    },
   });
+
+  /** A session held to the unattended mode (a run nobody is watching). */
+  private isUnattendedSession(sessionId: string): boolean {
+    return this.agentSessionManagerService.unattendedPolicy(sessionId) != null;
+  }
 
   /**
    * Whether the session is the user's own conversation: theirs directly, or a
@@ -764,7 +781,9 @@ export class ServiceHost {
   private browserTargetSource(): BrowserTargetSource | null {
     if (this.platform === "web-host")
       return this.hostedChromium.available()
-        ? this.hostedChromium.targetSource()
+        ? this.hostedChromium.targetSource((sessionId) =>
+            this.isUnattendedSession(sessionId)
+          )
         : null;
     // The user's Chrome, when chosen: its tabs stand in for the app's views,
     // and the first browser call opens the allow page if it is not connected.
@@ -903,6 +922,7 @@ export class ServiceHost {
         : null,
     routineEditorFor: (sessionId) =>
       this.agentSessionManagerService.get(sessionId)?.editorFor ?? null,
+    isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
     ownActivity: (botId) => {
       const owned = this.agentSessionManagerService.listOwnedBy(botId);
       // The forever chat may predate owner stamps; the record pointer names it.
@@ -1459,6 +1479,7 @@ export class ServiceHost {
     emitEvent: (event) => this.emitEvent(event),
     getSessionMode: (sessionId) =>
       this.agentManagerService.getSessionMode(sessionId),
+    isUnattended: (sessionId) => this.isUnattendedSession(sessionId),
     setBrowserApprovalAlways: () => this.setBrowserApproval("always"),
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
@@ -1848,6 +1869,8 @@ export class ServiceHost {
     resolveAuthEnv: () => buildAgentAuthEnv(),
     resolveAdditionalConfigEnv: async (sessionId: string) =>
       this.buildAdditionalConfigEnv("code", sessionId),
+    resolveUnattended: (sessionId: string) =>
+      this.agentSessionManagerService.unattendedPolicy(sessionId),
     emitStateUpdated: (workspaceId, sessionId, state) => {
       if (state.status === "starting" || state.pid == null)
         this.modelSwitches.invalidate(sessionId);

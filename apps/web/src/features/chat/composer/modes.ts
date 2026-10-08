@@ -18,6 +18,8 @@ export const MODE_LABEL_KEYS: Record<string, string> = {
   [AgentMode.AcceptEdits]: "chat.mode.ACCEPTEDITS",
   [AgentMode.PlanMode]: "chat.mode.PLAN",
   [AgentMode.Yolo]: "chat.mode.YOLO",
+  // Shown for a routine's session, never offered in the picker (MODE_ORDER).
+  [AgentMode.Unattended]: "chat.mode.UNATTENDED",
 };
 
 export const MODE_DESCRIPTION_KEYS: Record<string, string> = {
@@ -26,4 +28,5 @@ export const MODE_DESCRIPTION_KEYS: Record<string, string> = {
   [AgentMode.AcceptEdits]: "chat.mode.description.ACCEPTEDITS",
   [AgentMode.PlanMode]: "chat.mode.description.PLAN",
   [AgentMode.Yolo]: "chat.mode.description.YOLO",
+  [AgentMode.Unattended]: "chat.mode.description.UNATTENDED",
 };
