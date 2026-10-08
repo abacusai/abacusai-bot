@@ -17,6 +17,15 @@
  */
 export const SEND_MEDIA_TOOL_NAME = "send_media";
 
+/**
+ * The browser's tool that says whether its media store holds an id for the
+ * calling session: the agent runtime's own, never offered to a model.
+ */
+export const MEDIA_CHECK_TOOL_NAME = "browser_media";
+
+/** `browser_media`'s answer for an id the store holds. */
+export const MEDIA_HELD = "held";
+
 /** WhatsApp's limit for an image. */
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 

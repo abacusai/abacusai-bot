@@ -561,6 +561,7 @@ describe("the transport", () => {
       "browser_pause",
       "browser_checkout",
       "browser_traveler_fill",
+      "browser_media",
     ]);
   });
 

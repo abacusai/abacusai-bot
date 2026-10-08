@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 
 import type { ChannelCapabilities } from "@abacus-ai/agent/channel";
+import { MEDIA_CHECK_TOOL_NAME, MEDIA_HELD } from "@abacus-ai/agent/send-media";
 import { readTravelers } from "@abacus-ai/agent/traveler-store";
 import type { IpcEvent } from "@abacus-ai/contract/contracts";
 import type { ConversationKey } from "@abacus-ai/contract/conversation-scope";
@@ -475,6 +476,18 @@ const firstText = (result: ToolResult): string => {
   return block?.type === "text" ? block.text : "";
 };
 
+/** The agent runtime's own media check; never offered to a model. */
+const MEDIA_CHECK_LISTING: McpToolListing = {
+  name: MEDIA_CHECK_TOOL_NAME,
+  description:
+    "Whether a media id is held for this session. The agent runtime's own; not for models.",
+  inputSchema: {
+    type: "object",
+    properties: { media: { type: "string" } },
+    required: ["media"],
+  },
+};
+
 /** Pure-read tools; the permission gate skips these to avoid prompt fatigue. */
 function isReadOnlyBrowserTool(
   name: string,
@@ -487,7 +500,8 @@ function isReadOnlyBrowserTool(
     (VAULT_TOOL_NAMES.includes(name) && name !== VAULT_FILL_TOOL) ||
     // A pause only reads the page; the checkout handle is the runtime's own.
     name === BROWSER_PAUSE_TOOL ||
-    name === BROWSER_CHECKOUT_TOOL
+    name === BROWSER_CHECKOUT_TOOL ||
+    name === MEDIA_CHECK_TOOL_NAME
   );
 }
 
@@ -713,6 +727,7 @@ export class McpBrowserServer extends McpHttpServer {
       })),
       ...(this.options.vault?.listings() ?? []),
       ...CHECKOUT_TOOL_LISTINGS,
+      MEDIA_CHECK_LISTING,
     ];
   }
 
@@ -1979,6 +1994,8 @@ export class McpBrowserServer extends McpHttpServer {
             return this.executePause(args, sessionId);
           case BROWSER_CHECKOUT_TOOL:
             return Promise.resolve(this.executeCheckout(args, sessionId));
+          case MEDIA_CHECK_TOOL_NAME:
+            return Promise.resolve(this.executeMediaCheck(args, sessionId));
           case TRAVELER_FILL_TOOL:
             return this.executeTravelerFill(args, sessionId);
           case "vault_items":
@@ -3485,6 +3502,22 @@ export class McpBrowserServer extends McpHttpServer {
         : `The browser could not fill the saved login: ${refusal.reason} Agent: ${input.summary}`,
       400
     );
+  }
+
+  /**
+   * `browser_media`: whether the media store holds an id for this session, so
+   * `send_media` never tells the model an image went that cannot.
+   */
+  private executeMediaCheck(
+    args: Record<string, unknown>,
+    sessionId?: string
+  ): ToolResult {
+    const store = this.options.media?.() ?? null;
+    if (store == null || sessionId == null)
+      return this.err("No media is held here.");
+    const media = typeof args.media === "string" ? args.media : "";
+    const held = store.resolve(media, sessionId);
+    return this.ok(held.ok === false ? held.reason : MEDIA_HELD);
   }
 
   /** `browser_checkout`: the agent runtime's handle on the session's checkout. */

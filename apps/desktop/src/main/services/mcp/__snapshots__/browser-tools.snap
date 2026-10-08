@@ -302,5 +302,20 @@
         "ref"
       ]
     }
+  },
+  {
+    "name": "browser_media",
+    "description": "Whether a media id is held for this session. The agent runtime's own; not for models.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "media": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "media"
+      ]
+    }
   }
 ]

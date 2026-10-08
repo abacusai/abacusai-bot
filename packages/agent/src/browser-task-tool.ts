@@ -507,6 +507,7 @@ export function buildBrowserTaskTool(
     const childEmit = scopeEmit(emit, subtaskId);
 
     const sentMedia = new DeliveredMedia();
+    const takenMedia = new DeliveredMedia();
     let result;
     // Failed until proven otherwise: a throw skips straight to `finally`.
     let status: "completed" | "failed" = "failed";
@@ -518,6 +519,7 @@ export function buildBrowserTaskTool(
         reportFields,
         resume,
         sentMedia,
+        takenMedia,
         checkout,
         ...(note.length > 0 ? { resumeNote: note } : {}),
         ...(loginItemId != null ? { loginItemId } : {}),
@@ -581,12 +583,20 @@ export function buildBrowserTaskTool(
       sent.length > 0
         ? `\n\n(This run sent the user ${sent.join(", ")}. Do not send ${sent.length > 1 ? "them" : "it"} again.)`
         : "";
+    // Screenshots it took but did not send: the only ids the loop may send.
+    const unsent = channel.media
+      ? takenMedia.list().filter((id) => !sentMedia.has(id))
+      : [];
+    const takenNote =
+      unsent.length > 0
+        ? `\n\n(Screenshots this run took and did not send, newest last: ${unsent.join(", ")}. To show one, send_media that id; never another.)`
+        : "";
 
     return {
       content: [
         {
           type: "text" as const,
-          text: `${result.text}${tail}${heardNote}${sentNote}${budgetNote}`,
+          text: `${result.text}${tail}${heardNote}${sentNote}${takenNote}${budgetNote}`,
         },
       ],
       details: {

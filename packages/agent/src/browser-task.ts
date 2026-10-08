@@ -28,7 +28,8 @@ import { abacusBotDir } from "./config.js";
 import { excludedTools } from "./excluded-tools.js";
 import type { MidTaskInbox, MidTaskRun } from "./mid-task-inbox.js";
 import type { AgentEvent } from "./protocol.js";
-import { DeliveredMedia } from "./send-media-tool.js";
+import { DeliveredMedia, type MediaCheck } from "./send-media-tool.js";
+import { isMediaId } from "./send-media.js";
 import { whenAborted } from "./subagent-abort.js";
 import { forwardChildToolEvents, traceChildEvent } from "./subagent-events.js";
 
@@ -185,8 +186,13 @@ export interface BrowserTaskContext {
   model?: unknown;
   /** The browser MCP tools, read at run time so a reconnected server is seen. */
   browserTools: () => unknown[];
-  /** Tools that reach the user mid-run (the phone's `send_progress`); `sent` is the run's media ledger. */
-  progressTools?: (sent: DeliveredMedia) => unknown[];
+  /**
+   * Tools that reach the user mid-run (the phone's `send_progress`); `sent` is
+   * the run's media ledger, `held` asks the app whether it holds a media id.
+   */
+  progressTools?: (sent: DeliveredMedia, held?: MediaCheck) => unknown[];
+  /** Whether the app holds a media id for this session. */
+  mediaCheck?: MediaCheck;
   /** With it, the user's mid-task messages go to the run alone while it is live. */
   midTask?: MidTaskInbox;
   /** What the user's chat can do; an app chat with its Browser pane when absent. */
@@ -217,6 +223,8 @@ export interface BrowserTaskOptions {
   resume?: boolean;
   /** The media this run asks to send; its caller names them to the loop. */
   sentMedia?: DeliveredMedia;
+  /** The screenshots the run took; its caller names those it did not send. */
+  takenMedia?: DeliveredMedia;
   /** The checkout this run moves; with it the run can stop with `browser_pause`. */
   checkout?: CheckoutRun;
   /** Said to a resumed run about where its checkout stands. */
@@ -510,6 +518,16 @@ class RunTrace {
   }
 }
 
+/** Keep in step with the browser's screenshot result (`media id: …`). */
+const SCREENSHOT_MEDIA_ID = /\bmedia id: (media-[0-9a-f]+)/g;
+
+/** The media ids a browser tool result holds for a screenshot it took. */
+export function screenshotMediaIds(text: string): string[] {
+  return [...text.matchAll(SCREENSHOT_MEDIA_ID)]
+    .map((match) => match[1]!)
+    .filter(isMediaId);
+}
+
 function resultChars(result: unknown): string {
   if (typeof result === "string") return result;
   const content = (result as { content?: unknown } | null)?.content;
@@ -667,7 +685,8 @@ export async function runBrowserTask(
         [
           ...context.browserTools(),
           ...(context.progressTools?.(
-            options.sentMedia ?? new DeliveredMedia()
+            options.sentMedia ?? new DeliveredMedia(),
+            context.mediaCheck
           ) ?? []),
         ],
         gate
@@ -748,9 +767,12 @@ export async function runBrowserTask(
         }
 
         if (event.type === "tool_execution_end") {
-          readChars += resultChars(
+          const text = resultChars(
             (event as unknown as { result?: unknown }).result
-          ).length;
+          );
+          readChars += text.length;
+          for (const id of screenshotMediaIds(text))
+            options.takenMedia?.add(id);
         }
 
         if (event.type === "tool_execution_start") {

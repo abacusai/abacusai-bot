@@ -103,6 +103,8 @@ import {
   replyLanguageRepairPrompt,
   type ReplyLanguageMismatch,
 } from "../reply-language.js";
+import { mediaCheckFrom } from "../send-media-tool.js";
+import { MEDIA_CHECK_TOOL_NAME } from "../send-media.js";
 import { conversationSessionManager } from "../session-file.js";
 import type { TurnHandle } from "../session.js";
 import {
@@ -450,6 +452,10 @@ export class ForeverEngine {
     const hasBrowser = buildMcpToolDefinitions(() => this.mcp).some(
       isBrowserTool
     );
+    // Asked before `send_media` says an image went; no browser, no answer.
+    const mediaCheck = mediaCheckFrom(
+      mcpToolCaller(() => this.mcp, MEDIA_CHECK_TOOL_NAME)
+    );
     const browserContext: BrowserTaskContext | null =
       hasBrowser && browserTaskEnabled()
         ? {
@@ -464,6 +470,7 @@ export class ForeverEngine {
                 mcpToolCaller(() => this.mcp, BROWSER_CHECKOUT_TOOL_NAME)
               ) ?? undefined,
             ...(model.model ? { model: model.model } : {}),
+            mediaCheck,
             ...this.profile.browserTask,
             // A run that can answer the user owns their mid-task messages.
             ...(this.profile.browserTask?.progressTools != null
@@ -481,7 +488,7 @@ export class ForeverEngine {
         : [];
 
     const customTools = [
-      ...this.profile.tools(this.options.cwd),
+      ...this.profile.tools(this.options.cwd, { mediaCheck }),
       ...browserTaskTools,
       ...mcpTools,
     ];
