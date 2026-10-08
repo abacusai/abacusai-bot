@@ -11,6 +11,8 @@ import path from "node:path";
 
 import { GATEWAY_SERVER_NAME } from "@abacus-ai/connectors/registry";
 
+import { isWithin, resolveSecretPaths } from "../sandbox/secrets.js";
+
 /** Matches ATTACHMENT_SCHEMA_MARKER on the gateway. */
 const ATTACHMENT_MARKER = "x_abacus_attachment";
 
@@ -73,7 +75,38 @@ const containedPath = (workspace: string, raw: string): string => {
     );
   }
 
+  // A workspace can hold a credential store (a home-folder workspace holds
+  // ~/.ssh); an upload is egress, so those never leave.
+  const { denied } = resolveSecretPaths({ workspaceRoot: workspaceReal });
+  if (denied.some((secret) => isWithin(real, secret))) {
+    throw new AttachmentError(
+      `Attachment path ${raw} is in a credential store and is never sent.`
+    );
+  }
+
   return real;
+};
+
+/**
+ * The bytes of the file that was checked: opened without following a link,
+ * and the same inode, so nothing swapped in since the check is what is read.
+ */
+const readChecked = (resolved: string, checked: fs.Stats): Buffer => {
+  const fd = fs.openSync(
+    resolved,
+    fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0)
+  );
+  try {
+    const opened = fs.fstatSync(fd);
+    if (opened.dev !== checked.dev || opened.ino !== checked.ino) {
+      throw new AttachmentError(
+        `Attachment file ${path.basename(resolved)} changed while being read. Retry.`
+      );
+    }
+    return fs.readFileSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
 };
 
 /**
@@ -101,7 +134,7 @@ const toPayload = (
 
   return {
     filename: path.basename(resolved),
-    content_base64: fs.readFileSync(resolved).toString("base64"),
+    content_base64: readChecked(resolved, stat).toString("base64"),
   };
 };
 
@@ -156,21 +189,63 @@ const sanitizeFilename = (raw: string): string => {
   return `${cleaned.slice(0, 128 - extension.length)}${extension}`;
 };
 
-/** A name that cannot escape the attachments directory or collide silently. */
-const availableName = (directory: string, filename: string): string => {
+/**
+ * Write `data` under a name that cannot escape the attachments directory or
+ * collide silently. Created exclusively and never through a link, so a file
+ * or symlink planted under the name is never written through.
+ */
+const writeNew = (
+  directory: string,
+  filename: string,
+  data: Buffer
+): string => {
   const base = sanitizeFilename(filename);
+  const extension = path.extname(base);
 
-  let candidate = base;
-  for (
-    let attempt = 1;
-    fs.existsSync(path.join(directory, candidate));
-    attempt += 1
-  ) {
-    const extension = path.extname(base);
-    candidate = `${path.basename(base, extension)}-${attempt}${extension}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate =
+      attempt === 0
+        ? base
+        : `${path.basename(base, extension)}-${attempt}${extension}`;
+    let fd: number;
+    try {
+      fd = fs.openSync(
+        path.join(directory, candidate),
+        fs.constants.O_WRONLY |
+          fs.constants.O_CREAT |
+          fs.constants.O_EXCL |
+          (fs.constants.O_NOFOLLOW ?? 0),
+        0o644
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") continue;
+      throw error;
+    }
+    try {
+      fs.writeFileSync(fd, data);
+    } finally {
+      fs.closeSync(fd);
+    }
+    return candidate;
   }
+  throw new Error(`No free name for ${base}.`);
+};
 
-  return candidate;
+/**
+ * The attachments directory, made if missing. A symlink or a file in its place
+ * is refused: following one would land server-sent files anywhere on disk.
+ */
+const attachmentsDirectory = (workspace: string): string => {
+  const directory = path.join(workspace, ATTACHMENTS_DIR);
+  let stat = fs.lstatSync(directory, { throwIfNoEntry: false });
+  if (stat == null) {
+    fs.mkdirSync(directory);
+    stat = fs.lstatSync(directory);
+  }
+  if (stat.isSymbolicLink() || !stat.isDirectory())
+    throw new Error(`${ATTACHMENTS_DIR} in the workspace is not a directory.`);
+
+  return directory;
 };
 
 /**
@@ -197,11 +272,10 @@ export function saveAttachmentBlocks(
         : "attachment";
 
     try {
-      const directory = path.join(workspace, ATTACHMENTS_DIR);
-      fs.mkdirSync(directory, { recursive: true });
-      const finalName = availableName(directory, filename);
-      fs.writeFileSync(
-        path.join(directory, finalName),
+      const directory = attachmentsDirectory(workspace);
+      const finalName = writeNew(
+        directory,
+        filename,
         Buffer.from(resource.blob, "base64")
       );
       lines.push(
