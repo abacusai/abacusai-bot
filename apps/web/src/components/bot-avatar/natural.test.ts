@@ -7,12 +7,7 @@ import {
   expressionFor,
   NAMED_EXPRESSIONS,
 } from "./expression";
-import {
-  blinkSchedule,
-  gazeSchedule,
-  speechSchedule,
-  turnPose,
-} from "./natural";
+import { blinkSchedule, gazeSchedule, speechSchedule } from "./natural";
 import { personalityFromIdentity } from "./personality";
 
 const p = personalityFromIdentity("bot-17");
@@ -31,13 +26,14 @@ describe("natural motion schedules", () => {
       frames[i + 1]!.offset - frames[i]!.offset
     );
   });
-  it("uses ordered, closed timelines and gaze leads the head by 120ms", () => {
-    const { gaze, turn } = gazeSchedule("bot-17", p);
-    expect(turn[1]!.offset - gaze[1]!.offset).toBeCloseTo(0.12 / 83);
+  it("keeps gaze timelines closed without turning or flattening the body", () => {
+    const { gaze } = gazeSchedule("bot-17", p);
+    expect(gaze.every((f) => !String(f.transform).match(/rotate|scaleX/))).toBe(
+      true
+    );
     for (const frames of [
       blinkSchedule("bot-17", p),
       gaze,
-      turn,
       speechSchedule("bot-17", p),
     ]) {
       expect(frames[0]!.offset).toBe(0);
@@ -46,13 +42,6 @@ describe("natural motion schedules", () => {
       for (let i = 1; i < frames.length; i++)
         expect(frames[i]!.offset).toBeGreaterThan(frames[i - 1]!.offset!);
     }
-  });
-  it("compresses a side view and occludes the face on the back without mirroring it", () => {
-    expect(turnPose(0).opacity).toBe(1);
-    expect(turnPose(60).transform).toContain("scaleX(0.500");
-    expect(turnPose(135).opacity).toBe(0);
-    expect(turnPose(-135).opacity).toBe(0);
-    expect(turnPose(90).transform).toContain("scaleX(0.06)");
   });
   it("preserves every emotional and named expression with finite identity coupling", () => {
     for (let i = 0; i < 200; i++) {

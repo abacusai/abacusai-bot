@@ -7,10 +7,15 @@
  */
 import { useSelector } from "@tanstack/react-store";
 import { CheckIcon } from "lucide-react";
-import { useEffect, type ComponentProps } from "react";
+import { createContext, use, useEffect, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BootAvatar, bootMood } from "#renderer/components/boot-avatar";
+import {
+  BootAvatar,
+  bootMood,
+  type BootStage,
+} from "#renderer/components/boot-avatar";
+import { ConnectDialog } from "#renderer/components/form-kit/connect-dialog";
 import { FlowPage, FlowHeader } from "#renderer/components/form-kit/flow-page";
 import { DESKTOP_DOWNLOAD_URL } from "#renderer/lib/abacus-links";
 import type { AvatarMood } from "#renderer/lib/bots/avatar";
@@ -26,6 +31,38 @@ import {
   retryHostNow,
   type ConnectStage,
 } from "./services";
+
+const OverShell = createContext(false);
+const HostSurface = ({
+  media,
+  children,
+  stage,
+  mood,
+  ...props
+}: ComponentProps<typeof FlowPage> & {
+  stage?: BootStage;
+  mood?: AvatarMood;
+}) => {
+  const overShell = use(OverShell);
+  const { t } = useTranslation();
+  return overShell ? (
+    <ConnectDialog
+      open
+      label={t("shell.appName")}
+      dismissible={false}
+      stage={stage}
+      mood={mood}
+    >
+      <main {...props} className="flex flex-col gap-3">
+        {children}
+      </main>
+    </ConnectDialog>
+  ) : (
+    <FlowPage {...props} media={media}>
+      {children}
+    </FlowPage>
+  );
+};
 
 const kindOf = (error?: Error | null) =>
   error ? (error instanceof ConnectError ? error.kind : "connection") : null;
@@ -135,7 +172,8 @@ export const ConnectScreen = ({
   if (screen?.kind === "failed")
     return <FailedScreen error={error} retry={() => location.reload()} />;
   return (
-    <FlowPage
+    <HostSurface
+      stage={error ? "error" : stage}
       role="status"
       media={<BootAvatar stage={error ? "error" : stage} overlay />}
     >
@@ -145,7 +183,7 @@ export const ConnectScreen = ({
         )}
       />
       <ConnectAction error={error} restart={restart} />
-    </FlowPage>
+    </HostSurface>
   );
 };
 
@@ -160,10 +198,14 @@ const HostPage = ({
   description: string;
   mood?: AvatarMood;
 }) => (
-  <FlowPage {...props} media={<BootAvatar mood={mood} overlay />}>
+  <HostSurface
+    {...props}
+    mood={mood}
+    media={<BootAvatar mood={mood} overlay />}
+  >
     <FlowHeader title={title} description={description} />
     {children}
-  </FlowPage>
+  </HostSurface>
 );
 
 /**
@@ -191,7 +233,7 @@ export const LimitScreen = () => {
         </Button>
         <Button
           size="lg"
-          variant="secondary"
+          variant="ghost"
           className="w-full"
           onClick={() => location.reload()}
         >
@@ -356,7 +398,12 @@ export const StatusPill = ({ stage }: { stage: ConnectStage }) => {
 };
 
 /** The shell's view of `hostConnection`: nothing while a socket is open. */
-export const HostStatus = () => {
+export const HostStatus = () => (
+  <OverShell value={true}>
+    <HostState />
+  </OverShell>
+);
+const HostState = () => {
   const { t } = useTranslation();
   const { stage, error, attempting, firstVisit } = useSelector(
     hostConnection,

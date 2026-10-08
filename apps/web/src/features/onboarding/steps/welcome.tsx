@@ -90,10 +90,10 @@ export const WelcomeStep = ({
             <DropdownMenuTrigger
               render={
                 <Button
-                  size="lg"
-                  variant="secondary"
+                  size="default"
+                  variant="ghost"
                   data-variant="secondary"
-                  className="onboarding-button"
+                  className="text-muted-foreground text-[13px]"
                   disabled={busy}
                 />
               }

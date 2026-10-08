@@ -113,8 +113,7 @@ export const useFaceRig = (
         // Gaze reaches its target first. The heavier head follows on an arc.
         following += (pose.gazeX - following) * 0.12;
         pose.lean += following * 0.65;
-        pose.tiltX = following * 0.9;
-        pose.tiltY = pose.gazeY * 0.7;
+
         if (pressed.current || seconds < pressUntil.current) {
           pose.stretch *= 0.9;
           pose.lift += 2;
@@ -231,19 +230,16 @@ export const useFaceRig = (
       rig.gazeX.set(pointer.current.x);
       rig.gazeY.set(pointer.current.y);
       rig.lean.set(rig.lean.get() * 0.8 + pointer.current.x * 0.13);
-      rig.tiltX.set(rig.tiltX.get() * 0.8 + pointer.current.x * 0.18);
-      rig.tiltY.set(rig.tiltY.get() * 0.8 + pointer.current.y * 0.14);
     });
   }, [active, documentVisible, interactive, ref, rig]);
   const body = useTransform(() => {
     const stretch = rig.stretch.get();
     const lift = Math.max(-5, Math.min(3, rig.lift.get()));
     const margin = 0.98 - Math.max(0, -lift - 1) * 0.018;
-    return `translateY(${lift}%) rotate(${rig.lean.get()}deg) skewY(${rig.tiltX.get() * 0.35}deg) scale(${margin / stretch}, ${margin * stretch})`;
+    return `translateY(${lift}%) rotate(${rig.lean.get()}deg) scale(${margin / stretch}, ${margin * stretch})`;
   });
   const face = useTransform(
-    () =>
-      `translate(${rig.tiltX.get() * 0.8}px, ${rig.tiltY.get() * 0.6}px) scaleX(${1 - Math.min(0.09, Math.abs(rig.tiltX.get()) * 0.015)})`
+    () => `translate(${rig.tiltX.get() * 0.8}px, ${rig.tiltY.get() * 0.6}px)`
   );
   const secondary = rig.overlap;
   const mouth = useTransform(() => mouthPath(read(rig), size <= 24 ? 1.1 : 1));

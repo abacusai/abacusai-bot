@@ -14,7 +14,11 @@ export const StepButton = ({
     size="default"
     variant={variant === "primary" ? "default" : "ghost"}
     data-variant={variant}
-    className={cn("text-[13px]", className)}
+    className={cn(
+      "text-[13px]",
+      variant !== "primary" && "text-muted-foreground",
+      className
+    )}
     {...props}
   />
 );
@@ -26,7 +30,7 @@ export const StepLink = ({
   <Button
     size="default"
     variant="ghost"
-    className={cn("text-muted-foreground", className)}
+    className={cn("text-muted-foreground text-[13px]", className)}
     {...props}
   />
 );

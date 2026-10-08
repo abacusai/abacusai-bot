@@ -80,6 +80,7 @@ export const BootAvatarHost = ({ children }: { children: ReactNode }) => {
       const from = element.getBoundingClientRect();
       flight.current?.stop();
       element.style.transform = `translate(${to.x}px, ${to.y}px) scale(${to.width / 96})`;
+      element.style.opacity = "1";
       const dialogChange = home.overlay || wasOverlay.current;
       wasOverlay.current = home.overlay;
       if (dialogChange && !home.reduced) {

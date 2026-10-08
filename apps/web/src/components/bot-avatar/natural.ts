@@ -9,12 +9,10 @@ export const AvatarExperimentContext = createContext<
   | Partial<{
       individuality: boolean;
       gaze: boolean;
-      volume: boolean;
       coupling: boolean;
       speech: boolean;
       phase: boolean;
       shading: boolean;
-      lookAway: boolean;
     }>
   | undefined
 >(undefined);
@@ -49,81 +47,30 @@ export const blinkSchedule = (id: string, p: AvatarPersonality): Frame[] => {
   return frames;
 };
 
-/** Sine displacement and cosine compression put features on a rounded volume. */
-export const turnPose = (degrees: number) => {
-  const radians = (degrees * Math.PI) / 180;
-  const compression = Math.max(0.06, Math.abs(Math.cos(radians)));
-  const opacity = Math.max(0, Math.min(1, (92 - Math.abs(degrees)) / 12));
-  return {
-    transform: `translateX(${Math.sin(radians) * 19}px) scaleX(${compression})`,
-    opacity,
-  };
-};
-export const gazeSchedule = (
-  id: string,
-  p: AvatarPersonality,
-  lookAway = false
-) => {
+export const gazeSchedule = (id: string, p: AvatarPersonality) => {
   const gaze: Frame[] = [frame(0, "translate(0px, 0px)")];
-  const turn: Frame[] = [frame(0, turnPose(0).transform, 1)];
   let t = 0.8 + identityNoise(id, 601) * 2;
   let gx = 0,
-    gy = 0,
-    yaw = 0;
+    gy = 0;
   for (let i = 0; t < SCHEDULE_SECONDS - 2; i++) {
     const x =
       (identityNoise(id, 610 + i) - 0.5) * 2 * p.saccadeAmplitude + p.gazeX;
     const y = (identityNoise(id, 710 + i) - 0.5) * p.saccadeAmplitude + p.gazeY;
-    const nextYaw = lookAway && i % 3 === 1 ? p.handedness * 135 : x * 12;
     gaze.push(
       frame(t, `translate(${gx}px, ${gy}px)`),
       frame(t + 0.065, `translate(${x}px, ${y}px)`),
       frame(t + 0.7, `translate(${x}px, ${y}px)`),
       frame(t + 0.765, `translate(${x + 0.18 * p.handedness}px, ${y - 0.1}px)`)
     );
-    const old = turnPose(yaw);
-    turn.push({ ...frame(t + 0.12, old.transform, old.opacity), easing: ease });
-    for (let step = 1; step <= 6; step++) {
-      const next = turnPose(yaw + ((nextYaw - yaw) * step) / 6);
-      turn.push(
-        frame(t + 0.12 + (step * 0.4) / 6, next.transform, next.opacity)
-      );
-    }
     gx = x;
     gy = y;
-    yaw = nextYaw;
     t += p.saccadeGap * (0.75 + identityNoise(id, 810 + i) * 0.6);
   }
   gaze.push(
     frame(SCHEDULE_SECONDS - 0.5, `translate(${gx}px, ${gy}px)`),
     frame(SCHEDULE_SECONDS, "translate(0px, 0px)")
   );
-  const old = turnPose(yaw);
-  turn.push(
-    frame(SCHEDULE_SECONDS - 0.5, old.transform, old.opacity),
-    frame(SCHEDULE_SECONDS, turnPose(0).transform, 1)
-  );
-  const parts = turn.map((f) => {
-    // Headwear and ears lag on the far side of the body, with a smaller travel.
-    const x = Number(
-      /translateX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 0
-    );
-    const scale = Number(
-      /scaleX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 1
-    );
-    return {
-      ...f,
-      transform: `translateX(${-x * 0.18}px) scaleX(${Math.max(0.3, scale)})`,
-      opacity: 1,
-    };
-  });
-  const head = turn.map((f) => {
-    const x = Number(
-      /translateX\(([-\d.]+)/.exec(String(f.transform))?.[1] ?? 0
-    );
-    return { ...f, transform: `rotate(${x * 0.055}deg)`, opacity: 1 };
-  });
-  return { gaze, turn, parts, head };
+  return { gaze };
 };
 
 /** Synthetic speech energy for text streaming. No audio/phoneme input exists in BotAvatar. */
@@ -156,10 +103,8 @@ export const useNaturalMotion = (
   experiments: ReturnType<typeof useAvatarExperiments>
 ) => {
   const gaze = experiments?.gaze ?? true;
-  const volume = experiments?.volume ?? true;
   const speech = experiments?.speech ?? true;
   const phase = experiments?.phase ?? true;
-  const lookAway = experiments?.lookAway ?? false;
   useEffect(() => {
     if (!active || !ref.current) return;
     const animations: Animation[] = [];
@@ -181,18 +126,13 @@ export const useNaturalMotion = (
     if (gaze && eyes > 0.2 && mood !== "asleep")
       play(".bav-eye-open", blinkSchedule(id, p));
     if (gaze && mood !== "asleep") {
-      const schedule = gazeSchedule(id, p, lookAway);
+      const schedule = gazeSchedule(id, p);
       play(".bav-gaze", schedule.gaze);
-      if (volume) {
-        play(".bav-volume", schedule.turn);
-        play(".bav-turn-parts", schedule.parts);
-        play(".bav-attention", schedule.head);
-      }
     }
     if (speech && mood === "talking")
       play(".bav-speech", speechSchedule(id, p), p.speechPeriod);
     return () => {
       for (const animation of animations) animation.cancel();
     };
-  }, [active, id, p, mood, eyes, ref, gaze, volume, speech, phase, lookAway]);
+  }, [active, id, p, mood, eyes, ref, gaze, speech, phase]);
 };

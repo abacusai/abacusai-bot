@@ -14,14 +14,14 @@ import { useTranslation } from "react-i18next";
 import * as v from "valibot";
 
 import { ConnectorMark } from "#renderer/components/connector-mark";
-import { FlowPage, FlowContent } from "#renderer/components/form-kit/flow-page";
+import { ConnectDialog } from "#renderer/components/form-kit/connect-dialog";
+import { FlowPage } from "#renderer/components/form-kit/flow-page";
 import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
-import { Dialog, DialogContent } from "#renderer/ui/dialog";
 import { Field, FieldLabel } from "#renderer/ui/field";
 import { Input } from "#renderer/ui/input";
 
@@ -258,14 +258,23 @@ export const WhatsAppConnect = ({
   };
 
   const skip = onSkip && (
-    <Button variant="ghost" size="lg" className="w-full" onClick={onSkip}>
+    <Button
+      variant="ghost"
+      size="lg"
+      className="self-end max-[799px]:w-full"
+      onClick={onSkip}
+    >
       {t("web.whatsappBot.skip")}
     </Button>
   );
 
   return (
     <>
-      <Heading ref={heading} tabIndex={-1} className="page-title outline-none">
+      <Heading
+        ref={heading}
+        tabIndex={-1}
+        className="text-xl font-semibold outline-none"
+      >
         {t(
           expired
             ? "web.whatsappBot.expiredTitle"
@@ -274,7 +283,7 @@ export const WhatsAppConnect = ({
               : "web.whatsappBot.title"
         )}
       </Heading>
-      <p className="text-muted-foreground text-sm/relaxed text-pretty">
+      <p className="text-muted-foreground text-[13px]/relaxed text-pretty">
         {t(
           expired
             ? "web.whatsappBot.expiredBody"
@@ -294,7 +303,7 @@ export const WhatsAppConnect = ({
           )}
           <Button
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             disabled={busy}
             onClick={() => void start()}
           >
@@ -303,7 +312,7 @@ export const WhatsAppConnect = ({
           <Button
             variant="ghost"
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             onClick={() => {
               setDeepLink(null);
               setExpired(false);
@@ -325,7 +334,7 @@ export const WhatsAppConnect = ({
           <Button
             variant="secondary"
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             nativeButton={false}
             render={<a href={deepLink} target="_blank" rel="noreferrer" />}
           >
@@ -335,7 +344,7 @@ export const WhatsAppConnect = ({
           <Button
             variant="ghost"
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             onClick={() => setDeepLink(null)}
           >
             {t("web.whatsappBot.changeNumber")}
@@ -348,7 +357,7 @@ export const WhatsAppConnect = ({
           <WaitingLine phone={number} />
           <Button
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             nativeButton={false}
             render={<a href={deepLink} target="_blank" rel="noreferrer" />}
           >
@@ -357,7 +366,7 @@ export const WhatsAppConnect = ({
           <Button
             variant="ghost"
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             onClick={() => setDeepLink(null)}
           >
             {t("web.whatsappBot.changeNumber")}
@@ -396,11 +405,11 @@ export const WhatsAppConnect = ({
             type="submit"
             size="lg"
             disabled={busy || number.replace(/\D/g, "").length < MIN_DIGITS}
-            className="w-full"
+            className="self-end max-[799px]:w-full"
           >
             {t("web.whatsappBot.connect")}
           </Button>
-          <p className="text-muted-foreground text-center text-xs">
+          <p className="text-muted-foreground text-xs">
             {t("web.whatsappBot.note")}
           </p>
           {skip}
@@ -447,7 +456,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           )}
           <Button
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             nativeButton={false}
             render={
               <a
@@ -462,7 +471,7 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           <Button
             variant="ghost"
             size="lg"
-            className="w-full"
+            className="self-end max-[799px]:w-full"
             disabled={busy}
             onClick={() => void changeNumber()}
           >
@@ -470,7 +479,13 @@ export const PhoneWhatsAppApp = ({ callApps }: { callApps: CallApps }) => {
           </Button>
         </>
       ) : (
-        <WhatsAppConnect callApps={callApps} as="h1" />
+        <ConnectDialog
+          open
+          label={t("web.whatsappBot.title")}
+          dismissible={false}
+        >
+          <WhatsAppConnect callApps={callApps} />
+        </ConnectDialog>
       )}
     </FlowPage>
   );
@@ -486,45 +501,43 @@ export const WhatsAppIntro = ({
   callApps,
   seen,
   markSeen,
+  open = true,
+  onOpenChange,
 }: {
   callApps: CallApps;
   seen: boolean;
   markSeen(): Promise<void>;
+  open?: boolean;
+  onOpenChange?(open: boolean): void;
 }) => {
   const { t } = useTranslation();
   const chat = useQuery({ ...whatsappChatQuery(callApps), enabled: !seen });
   const [closed, setClosed] = useState(false);
-  if (seen || closed || !chat.data?.available) return null;
+  if (seen || (!onOpenChange && closed) || !chat.data?.available) return null;
   if (chat.data.status === "linked") return null;
   const close = (linked: boolean) => {
     setClosed(true);
+    onOpenChange?.(false);
     if (linked) showInfo(t("web.whatsappBot.connected"));
     void markSeen().catch((error: unknown) =>
       console.warn("[whatsapp] intro not marked seen", error)
     );
   };
   return (
-    <Dialog
-      open
-      disablePointerDismissal
-      onOpenChange={(_, details) => details.cancel()}
+    <ConnectDialog
+      open={open}
+      label={t("web.whatsappBot.title")}
+      dismissible={!isPhone()}
+      onOpenChange={(next) => {
+        if (!next) close(false);
+      }}
     >
-      <DialogContent
-        aria-label={t("web.whatsappBot.title")}
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-(--pane-radius)"
-      >
-        <FlowContent media={<ConnectorMark id="whatsapp" size={56} />}>
-          <WhatsAppConnect
-            callApps={callApps}
-            as="h1"
-            onLinked={() => close(true)}
-            // On a phone the bot is WhatsApp: there is no browser to skip to.
-            {...(isPhone() ? {} : { onSkip: () => close(false) })}
-          />
-        </FlowContent>
-      </DialogContent>
-    </Dialog>
+      <WhatsAppConnect
+        callApps={callApps}
+        onLinked={() => close(true)}
+        {...(isPhone() ? {} : { onSkip: () => close(false) })}
+      />
+    </ConnectDialog>
   );
 };
 
@@ -545,16 +558,13 @@ export const WhatsAppConnectDialog = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <Dialog open={open} onOpenChange={(next) => onOpenChange(next)}>
-      <DialogContent
-        aria-label={t("web.whatsappBot.title")}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-(--pane-radius)"
-      >
-        <FlowContent media={<ConnectorMark id="whatsapp" size={56} />}>
-          <WhatsAppConnect callApps={callApps} onLinked={onLinked} />
-        </FlowContent>
-      </DialogContent>
-    </Dialog>
+    <ConnectDialog
+      open={open}
+      label={t("web.whatsappBot.title")}
+      onOpenChange={(next) => onOpenChange(next)}
+    >
+      <WhatsAppConnect callApps={callApps} onLinked={onLinked} />
+    </ConnectDialog>
   );
 };
 
