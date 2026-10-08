@@ -4039,7 +4039,8 @@
     "referralValue": "दोस्तों को AbacusAI Bot पर आमंत्रित करें और क्रेडिट पाएँ।",
     "inviteContacts": "संपर्कों को आमंत्रित करें",
     "terms": "सेवा की शर्तें",
-    "close": "बंद करें"
+    "close": "बंद करें",
+    "logOut": "लॉग आउट"
   },
   "sidebarNav": {
     "app": "App",

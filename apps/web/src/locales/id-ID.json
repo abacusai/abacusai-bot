@@ -4039,7 +4039,8 @@
     "referralValue": "Undang teman ke AbacusAI Bot dan dapatkan kredit.",
     "inviteContacts": "Undang kontak",
     "terms": "Ketentuan layanan",
-    "close": "Tutup"
+    "close": "Tutup",
+    "logOut": "Keluar"
   },
   "sidebarNav": {
     "app": "App",

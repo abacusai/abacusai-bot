@@ -251,7 +251,7 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
                 onClick={() => setSignOut(true)}
               >
                 <LogOut aria-hidden />
-                <span className="truncate">{t("phase5.signOut")}</span>
+                <span className="truncate">{t("profile.logOut")}</span>
               </DropdownMenuItem>
             </>
           )}
@@ -315,7 +315,7 @@ export const ProfileMenu = ({ compact = false }: { compact?: boolean }) => {
         description={t(
           IS_ELECTRON ? "phase5.signOutDetail" : "web.signOutDetail"
         )}
-        label={t("phase5.signOut")}
+        label={t("profile.logOut")}
         onConfirm={() => signOutAbacus(context, true)}
       />
     </>

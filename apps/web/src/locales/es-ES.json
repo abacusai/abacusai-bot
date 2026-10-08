@@ -4039,7 +4039,8 @@
     "referralValue": "Invita a tus amigos a AbacusAI Bot y gana créditos.",
     "inviteContacts": "Invitar contactos",
     "terms": "Términos del servicio",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "logOut": "Cerrar sesión"
   },
   "sidebarNav": {
     "app": "App",

@@ -4039,7 +4039,8 @@
     "referralValue": "友達を AbacusAI Bot に招待してクレジットを獲得しましょう。",
     "inviteContacts": "連絡先を招待",
     "terms": "利用規約",
-    "close": "閉じる"
+    "close": "閉じる",
+    "logOut": "ログアウト"
   },
   "sidebarNav": {
     "app": "App",

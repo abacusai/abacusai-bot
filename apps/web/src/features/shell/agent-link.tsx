@@ -9,10 +9,13 @@ import { useAccount } from "#renderer/lib/use-account";
 import { useAppContext } from "#renderer/lib/use-app-context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { useFloatingIntent } from "./floating-intent";
+
 export const AgentLink = ({ compact = false }: { compact?: boolean }) => {
   const { t } = useTranslation();
   const { transport } = useAppContext();
   const account = useAccount();
+  const intent = useFloatingIntent();
   if (!sidebarAccount(account.data).paid) return null;
   const label = t("profile.agent");
   const link = (
@@ -22,6 +25,7 @@ export const AgentLink = ({ compact = false }: { compact?: boolean }) => {
       rel="noopener noreferrer"
       aria-label={label}
       data-slot="agent-link"
+      onPointerEnter={compact ? intent.cancel : undefined}
       onClick={(event) => {
         event.preventDefault();
         void platformSystem(transport.client).openExternal({

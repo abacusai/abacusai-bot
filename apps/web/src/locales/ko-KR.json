@@ -4039,7 +4039,8 @@
     "referralValue": "친구를 AbacusAI Bot에 초대하고 크레딧을 받으세요.",
     "inviteContacts": "연락처 초대",
     "terms": "서비스 약관",
-    "close": "닫기"
+    "close": "닫기",
+    "logOut": "로그아웃"
   },
   "sidebarNav": {
     "app": "App",
