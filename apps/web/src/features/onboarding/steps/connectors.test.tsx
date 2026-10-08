@@ -124,6 +124,11 @@ describe("ConnectorsStep", () => {
     expect(
       screen.getByRole("button", { name: "Continue without connectors" })
     ).toBeTruthy();
+    const skip = screen.getByRole("button", {
+      name: "Continue without connectors",
+    });
+    expect(skip.className).toContain("text-muted-foreground");
+    expect(skip.className).not.toContain("bg-primary");
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(context.advance).toHaveBeenCalledOnce();
     expect(context.props.complete).not.toHaveBeenCalled();

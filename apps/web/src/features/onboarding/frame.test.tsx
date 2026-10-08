@@ -5,12 +5,25 @@
  * the type scale from onboarding.css.
  */
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { initI18n } from "#renderer/lib/i18n";
 import { ONBOARDING_STEPS } from "#renderer/lib/navigation/areas";
 
-import { OnboardingProgress, PROGRESS_MARK, stepDirection } from "./frame";
+import {
+  OnboardingFrame,
+  OnboardingProgress,
+  PROGRESS_MARK,
+  stepDirection,
+} from "./frame";
+
+vi.mock("./sound", () => ({
+  useOnboardingSound: () => ({
+    enabled: false,
+    play: () => {},
+    toggle: () => {},
+  }),
+}));
 
 describe("OnboardingProgress", () => {
   it("maps the seven steps onto five marks; paired steps share one", () => {
@@ -49,4 +62,39 @@ describe("OnboardingProgress", () => {
 it("uses one direction for the content of a step", () => {
   expect(stepDirection("models", "connectors")).toBe("forward");
   expect(stepDirection("connectors", "models")).toBe("back");
+});
+
+it("moves the whole content in one direction while keeping the cast mounted", async () => {
+  await initI18n();
+  const view = render(
+    <OnboardingFrame step="models">
+      <p>Models</p>
+    </OnboardingFrame>
+  );
+  const avatars = [
+    ...view.container.querySelectorAll('[data-slot="bot-avatar"]'),
+  ];
+  view.rerender(
+    <OnboardingFrame step="connectors">
+      <p>Connectors</p>
+    </OnboardingFrame>
+  );
+  expect(
+    view.container
+      .querySelector('[data-slot="onboarding-content"]')
+      ?.getAttribute("data-direction")
+  ).toBe("forward");
+  expect([
+    ...view.container.querySelectorAll('[data-slot="bot-avatar"]'),
+  ]).toEqual(avatars);
+  view.rerender(
+    <OnboardingFrame step="models">
+      <p>Models</p>
+    </OnboardingFrame>
+  );
+  expect(
+    view.container
+      .querySelector('[data-slot="onboarding-content"]')
+      ?.getAttribute("data-direction")
+  ).toBe("back");
 });
