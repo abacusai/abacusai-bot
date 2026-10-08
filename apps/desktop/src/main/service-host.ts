@@ -1049,6 +1049,12 @@ export class ServiceHost {
     conversationKeyForSession: (sessionId) =>
       this.conversationKeyForSession(sessionId),
     channelForSession: (sessionId) => this.laneChannels.get(sessionId) ?? null,
+    // The hosted computer serves only its live sessions: a call that names
+    // none is never taken for an app chat (the phone's words are its own).
+    requireSession: () => this.platform === "web-host",
+    knownSession: (sessionId) =>
+      this.agentSessionManagerService.get(sessionId) != null ||
+      this.botService.botIdForSession(sessionId) != null,
     // Only the hosted computer carries a chat that takes media (WhatsApp).
     chatMedia: () =>
       this.platform === "web-host"

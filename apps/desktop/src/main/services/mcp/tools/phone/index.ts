@@ -1,3 +1,5 @@
+import { PHONE_AGENT_TOOL_NAMES } from "@abacus-ai/agent/tool-policy";
+
 import { PHONE_CONNECTORS_TOOLS } from "./connectors";
 import type { PhoneToolDefinition } from "./definition";
 
@@ -11,8 +13,11 @@ export const PHONE_AGENT_TOOLS: readonly PhoneToolDefinition[] = [
 
 /**
  * Phone tools that still read the app's definition while theirs is written,
- * one by one. It only shrinks: the phone tools test fails on a name added
- * here, and on any phone tool that is in neither list.
+ * one by one.
+ *
+ * SHRINK ONLY. Remove a name when its phone definition lands; never add one.
+ * agent-tools-phone-owned.test.ts holds a frozen copy of the largest this
+ * list may be and its length, and fails on any name or entry added here.
  */
 export const NOT_YET_PHONE_OWNED: readonly string[] = [
   "skills_list",
@@ -36,3 +41,17 @@ for (const definition of PHONE_AGENT_TOOLS) {
 
 export const phoneAgentTool = (name: string): PhoneToolDefinition | undefined =>
   byName.get(name);
+
+// The roster the agent's policy names is exactly the phone's definitions
+// plus the not-yet list: neither can drift from the other.
+const roster = new Set([
+  ...PHONE_AGENT_TOOLS.map((definition) => definition.name),
+  ...NOT_YET_PHONE_OWNED,
+]);
+if (
+  roster.size !== PHONE_AGENT_TOOL_NAMES.length ||
+  PHONE_AGENT_TOOL_NAMES.some((name) => !roster.has(name))
+)
+  throw new Error(
+    "agent-tools: the phone's definitions and PHONE_AGENT_TOOL_NAMES differ"
+  );

@@ -194,10 +194,8 @@ export function appConnectResult(
   }
 }
 
-/** The link result, shared by every surface: it already speaks only of the link. */
-export function linkText(
-  outcome: Extract<ConnectOutcome, { code: "link" }>
-): string {
+/** The app's words for a link to send the user. */
+function linkText(outcome: Extract<ConnectOutcome, { code: "link" }>): string {
   const { asking, already, url } = outcome;
   const covered = asking.join(", ");
   const connected = already.join(", ");
@@ -245,8 +243,11 @@ export function appDisconnectResult(
     case "no_messaging":
       return host.err("Messaging is not available in this session.");
     case "platform_off":
+      return host.ok(
+        `${outcome.name} was not switched off, and nothing was changed: this chat cannot switch a chat app off.`
+      );
     case "disconnected":
-      return outcome.code === "disconnected" && outcome.kind !== "messaging"
+      return outcome.kind !== "messaging"
         ? host.ok(
             `${outcome.name} is disconnected. Its tools are gone from your tool list; ` +
               "connect_connector brings it back when the user wants it again."

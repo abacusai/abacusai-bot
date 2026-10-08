@@ -13,6 +13,13 @@ const options = (items: ReadonlyArray<{ id: string; name: string }>): string =>
     .map((item) => `${item.name} (${item.id})`)
     .join(", ");
 
+/** A chat app or tool server: nothing the WhatsApp chat can connect or use. */
+const cannotUse = (host: Pick<ToolHost, "ok">, name: string): ToolResult =>
+  host.ok(
+    `${name} cannot be connected or used from WhatsApp. Say so plainly in one short line, and do whatever part ` +
+      "of the task does not need it."
+  );
+
 /** What the phone's model is told about an ask. */
 export function phoneConnectResult(
   host: Pick<ToolHost, "ok" | "err">,
@@ -55,6 +62,7 @@ export function phoneConnectResult(
         `There is no service called "${outcome.asked}" that can be connected from this chat. These can: ${options(outcome.options)}.`
       );
     case "connected":
+      if (outcome.kind !== "platform") return cannotUse(host, outcome.name);
       return host.ok(
         `${outcome.name} is already connected${outcome.account != null ? ` as ${outcome.account}` : ""}. ` +
           "Its tools are in your tool list: use them. There is nothing to ask the user for, and that account is who " +
@@ -69,10 +77,7 @@ export function phoneConnectResult(
         }. Say so plainly, and do whatever part of the task does not need it.`
       );
     case "no_link":
-      return host.ok(
-        `${outcome.name} cannot be connected from WhatsApp. Say so plainly in one short line, and do whatever part ` +
-          "of the task does not need it."
-      );
+      return cannotUse(host, outcome.name);
     case "reconnect":
       return host.ok(
         [

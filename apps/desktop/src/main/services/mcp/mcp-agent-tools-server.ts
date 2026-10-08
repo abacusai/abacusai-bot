@@ -11,6 +11,7 @@ import { pathToFileURL } from "url";
 import {
   APP_CHANNEL,
   type ChannelCapabilities,
+  WHATSAPP_CHANNEL,
 } from "@abacus-ai/agent/channel";
 import { isWithin, resolveSecretPaths } from "@abacus-ai/agent/secret-paths";
 import {
@@ -213,6 +214,13 @@ export interface McpAgentToolsServerOptions {
    * chats. Tool descriptions and results are rendered for it.
    */
   channelForSession?: (sessionId: string) => ChannelCapabilities | null;
+  /**
+   * True where a caller must name a live session (the hosted computer): one
+   * with none, or with one `knownSession` does not know, is listed nothing
+   * and refused, never served as an app chat.
+   */
+  requireSession?: () => boolean;
+  knownSession?: (sessionId: string) => boolean;
   /**
    * Where `present_deliverable` puts what goes to a chat that takes media,
    * under the session's id; null where no chat does.
@@ -443,7 +451,16 @@ export class McpAgentToolsServer extends McpHttpServer {
    * (tools/phone), never an app tool's words.
    */
   private isPhoneCaller(callerSession?: string): boolean {
-    return !this.channelFor(callerSession).pane;
+    return this.channelFor(callerSession) === WHATSAPP_CHANNEL;
+  }
+
+  /** On the hosted computer, a caller that names no live session gets nothing. */
+  private refusesCaller(callerSession?: string): boolean {
+    if (this.options.requireSession?.() !== true) return false;
+    return (
+      callerSession == null ||
+      this.options.knownSession?.(callerSession) !== true
+    );
   }
 
   /** The definition `name` has for this caller, or none: a phone caller never falls back to the app's. */
@@ -451,6 +468,7 @@ export class McpAgentToolsServer extends McpHttpServer {
     name: string,
     callerSession?: string
   ): ListedTool | undefined {
+    if (this.refusesCaller(callerSession)) return undefined;
     if (!this.isPhoneCaller(callerSession)) return agentTool(name);
     return (
       phoneAgentTool(name) ??
@@ -460,6 +478,7 @@ export class McpAgentToolsServer extends McpHttpServer {
 
   /** Every definition this caller may be listed, in the app's order. */
   private toolsFor(callerSession?: string): ListedTool[] {
+    if (this.refusesCaller(callerSession)) return [];
     if (!this.isPhoneCaller(callerSession)) return [...AGENT_TOOLS];
     const names = [
       ...AGENT_TOOL_NAMES,
@@ -515,6 +534,8 @@ export class McpAgentToolsServer extends McpHttpServer {
     args: Record<string, unknown>,
     callerSession?: string
   ): Promise<ToolResult> {
+    if (this.refusesCaller(callerSession))
+      return this.err("This call names no session here, so no tool runs.");
     const definition = this.toolFor(name, callerSession);
 
     if (definition == null) return this.err(`Unknown tool: ${name}`);

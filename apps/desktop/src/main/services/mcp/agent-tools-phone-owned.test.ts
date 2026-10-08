@@ -8,7 +8,10 @@ import fs from "fs";
 import path from "path";
 
 import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
-import { PHONE_MCP_TOOLS } from "@abacus-ai/agent/tool-policy";
+import {
+  PHONE_AGENT_TOOL_NAMES,
+  PHONE_MCP_TOOLS,
+} from "@abacus-ai/agent/tool-policy";
 import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +30,11 @@ const PHONE = "phone-session";
 const APP_ONLY =
   /\bpanes?\b|\bCapabilities\b|\bConnect (card|button)\b|\b(Routines|Plugins|Connectors) (panel|page)\b|\bfiles card\b|\bsidebar\b|\bin the app\b|localhost|127\.0\.0\.1|file:\/\/|(?<![\w/.:])(\/home\/|\/tmp\/|\/Users\/)/i;
 
-/** The not-yet list as it stands; a name added to it fails here. */
+/**
+ * FROZEN: the largest the not-yet list may be. Shrink this copy with the list
+ * when a phone definition lands; never grow either.
+ */
+const NOT_YET_MAX_LENGTH = 10;
 const NOT_YET_AT_MOST = [
   "skills_list",
   "skill_view",
@@ -104,6 +111,9 @@ beforeEach(() => {
 describe("the phone's tool words", () => {
   it("come from a phone definition for every tool on its roster, or the shrinking not-yet list", () => {
     const owned = new Set(PHONE_AGENT_TOOLS.map((tool) => tool.name));
+    expect(NOT_YET_AT_MOST).toHaveLength(NOT_YET_MAX_LENGTH);
+    expect(NOT_YET_PHONE_OWNED.length).toBeLessThanOrEqual(NOT_YET_MAX_LENGTH);
+    expect(new Set(NOT_YET_PHONE_OWNED).size).toBe(NOT_YET_PHONE_OWNED.length);
     for (const name of NOT_YET_PHONE_OWNED) {
       expect(NOT_YET_AT_MOST, `${name}: write its phone definition`).toContain(
         name
@@ -112,6 +122,9 @@ describe("the phone's tool words", () => {
     }
     for (const definition of PHONE_AGENT_TOOLS)
       expect(definition.surface).toBe("phone");
+    expect(new Set([...owned, ...NOT_YET_PHONE_OWNED])).toEqual(
+      new Set(PHONE_AGENT_TOOL_NAMES)
+    );
     for (const name of PHONE_MCP_TOOLS.builtin.filter((tool) =>
       AGENT_TOOL_NAMES.includes(tool)
     ))
@@ -173,9 +186,18 @@ describe("connect_connector on the phone", () => {
   it("says plainly what cannot be connected from WhatsApp, and claims no card", async () => {
     const { text } = await call("connect_connector", { service: "telegram" });
     expect(text).toBe(
-      "Telegram cannot be connected from WhatsApp. Say so plainly in one short line, and do whatever part of the task does not need it."
+      "Telegram cannot be connected or used from WhatsApp. Say so plainly in one short line, and do whatever part of the task does not need it."
     );
     expect(show).not.toHaveBeenCalled();
+  });
+
+  it("never offers a connected chat app's tools: the phone cannot use them", async () => {
+    statuses = { "messaging-telegram": { state: "connected" } } as never;
+    const { text } = await call("connect_connector", { service: "telegram" });
+    expect(text).toMatch(
+      /^Telegram cannot be connected or used from WhatsApp\./
+    );
+    expect(text).not.toMatch(/send_<platform>_message|tool list/);
   });
 
   it("lists only what the user can connect from the chat", async () => {
@@ -183,6 +205,43 @@ describe("connect_connector on the phone", () => {
     expect(text).toContain("Slack");
     expect(text).not.toMatch(/telegram|discord/i);
     expect(text).not.toMatch(APP_ONLY);
+  });
+});
+
+describe("a hosted computer that requires a session", () => {
+  const strict = (): McpAgentToolsServer =>
+    new McpAgentToolsServer({
+      skillsService: {} as never,
+      enabledToolsets: () => new Set(["connectors", "todo"]),
+      workspacePath: () => null,
+      requireSession: () => true,
+      knownSession: (session: string) => session === "live",
+    } as never);
+
+  it("lists nothing and runs nothing for a call with no session or an unknown one", async () => {
+    for (const session of [undefined, "stranger"]) {
+      expect(
+        (
+          strict() as unknown as {
+            listTools: (s?: string) => McpToolListing[];
+          }
+        ).listTools(session)
+      ).toEqual([]);
+      const result = (await strict().executeTool(
+        "todo",
+        { action: "list" },
+        session
+      )) as { isError?: boolean; content: Array<{ text?: string }> };
+      expect(result.isError).toBe(true);
+      expect(result.content[0]?.text).toBe(
+        "This call names no session here, so no tool runs."
+      );
+    }
+    expect(
+      (
+        strict() as unknown as { listTools: (s?: string) => McpToolListing[] }
+      ).listTools("live").length
+    ).toBeGreaterThan(0);
   });
 });
 

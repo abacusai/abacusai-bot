@@ -31,30 +31,40 @@ export function mcpToolAllowed(
 }
 
 /**
- * The WhatsApp number's chat: one tool per job, each worded for the phone
- * (the desktop serves the phone's own definitions: its tools/phone). Left
- * out, each with why, in `PHONE_EXCLUDED_MCP_TOOLS`.
+ * The agent-tools tools the WhatsApp chat gets: one per job. The desktop's
+ * phone definitions (its tools/phone) are exactly these, checked when that
+ * module loads, so a tool reaches the phone only by a definition written in
+ * its words.
+ */
+export const PHONE_AGENT_TOOL_NAMES: readonly string[] = [
+  "skills_list",
+  "skill_view",
+  "cronjob",
+  "vision_analyze",
+  "video_analyze",
+  "x_search",
+  "pdf",
+  "deck_export_pdf",
+  "serve",
+  "present_deliverable",
+  "connect_connector",
+  "disconnect_connector",
+];
+
+/** The vault's tools, from the browser server: saved logins, approved cards and sign-ins. */
+export const PHONE_VAULT_TOOL_NAMES: readonly string[] = [
+  "vault_items",
+  "vault_request",
+  "payment_approval",
+  "signin_approval",
+];
+
+/**
+ * The WhatsApp number's chat. Left out, each with why, in
+ * `PHONE_EXCLUDED_MCP_TOOLS`.
  */
 export const PHONE_MCP_TOOLS: McpToolPolicy = {
-  builtin: [
-    "skills_list",
-    "skill_view",
-    "cronjob",
-    "vision_analyze",
-    "video_analyze",
-    "x_search",
-    "pdf",
-    "deck_export_pdf",
-    "serve",
-    "present_deliverable",
-    "connect_connector",
-    "disconnect_connector",
-    // The vault, from the browser server: saved logins and approved cards.
-    "vault_items",
-    "vault_request",
-    "payment_approval",
-    "signin_approval",
-  ],
+  builtin: [...PHONE_AGENT_TOOL_NAMES, ...PHONE_VAULT_TOOL_NAMES],
   connectors: true,
 };
 
