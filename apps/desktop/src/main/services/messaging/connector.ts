@@ -136,22 +136,36 @@ export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
  * are sanitized rather than trusted; the stamp keeps a chat's fifth photo.jpg
  * from overwriting its first.
  */
+/** CON, PRN, AUX, NUL, COM1-9, LPT1-9: devices on Windows, with any extension. */
+const WINDOWS_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(\.|$)/i;
+
+/**
+ * One path segment from untrusted text: only letters, digits, `._ -` survive
+ * (no `:`, controls or bidi marks); no leading dots, no trailing dots or
+ * spaces (Windows drops them), and a device name gets a prefix.
+ */
+export const safeMediaSegment = (
+  raw: string,
+  max: number,
+  fallback: string
+): string => {
+  const tidy = (text: string): string =>
+    text.replace(/^[.\s]+/, "").replace(/[.\s]+$/, "");
+  const cleaned = tidy(
+    tidy(raw.replace(/[^\p{L}\p{N}._ -]+/gu, "_")).slice(0, max)
+  );
+  if (cleaned.length === 0) return fallback;
+  return WINDOWS_DEVICE_NAME.test(cleaned) ? `_${cleaned}` : cleaned;
+};
+
 export const saveInboundMedia = (
   platform: MessagingPlatformId,
   chatId: string,
   name: string,
   data: Buffer
 ): string => {
-  const safeChat =
-    chatId
-      .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
-      .trim()
-      .slice(0, 60) || "chat";
-  const safeName =
-    path
-      .basename(name)
-      .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
-      .slice(0, 80) || "file";
+  const safeChat = safeMediaSegment(chatId, 60, "chat");
+  const safeName = safeMediaSegment(path.basename(name), 80, "file");
   const dir = path.join(abacusBotHome(), "messaging-media", platform, safeChat);
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${Date.now()}-${safeName}`);
