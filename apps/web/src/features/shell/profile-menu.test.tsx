@@ -11,7 +11,10 @@ import { expect, it, vi } from "vitest";
 
 import en from "#locales/en-US.json";
 import { ABACUS_AGENT_URL } from "#renderer/lib/abacus-links";
-import { renderApp } from "#renderer/test-support/app-harness";
+import { defaultSeed, renderApp } from "#renderer/test-support/app-harness";
+
+import { setViewportWidth } from "#renderer/test-support/media";
+import { openFloating } from "./shell-store";
 
 const os = implement(contract);
 const account = {
@@ -169,4 +172,22 @@ it("swaps the paid link and free promo from the shared account cache without a p
     app.view.unmount();
     await app.cleanup();
   }
+});
+
+it.each(["pinned", "collapsed", "strip", "floating", "phone"] as const)("keeps one profile menu and one paid link in %s mode", async (mode) => {
+  setViewportWidth(mode === "strip" ? 800 : mode === "phone" ? 375 : 1280);
+  const seed = defaultSeed();
+  seed.prefs!.sidebar.pinned = mode === "pinned" || mode === "strip";
+  const app = await renderApp(mode === "strip" ? "/bots/new" : "/sessions/new", { seed, procedures: { account: { abacus: os.account.abacus.handler(() => account) } } });
+  try {
+    if (mode === "floating" || mode === "phone") act(() => openFloating("peek"));
+    await screen.findByRole("link", { name: en.profile.agent });
+    expect(screen.getAllByRole("link", { name: en.profile.agent })).toHaveLength(1);
+    const trigger = screen.getByRole("button", { name: account.name });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem", { name: /Settings/ })).toHaveLength(1);
+    fireEvent.keyDown(menu, { key: "Escape" });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  } finally { app.view.unmount(); await app.cleanup(); setViewportWidth(1280); }
 });
