@@ -247,3 +247,31 @@ it("respects quiet hours and background focus for interaction tones", () => {
     player.dispose();
   }
 });
+it("plays each finished run only once, beyond the coalescing window", () => {
+  const { ctx, synth, advance } = context();
+  const player = createSoundPlayer(ctx);
+  for (const cue of ["done", "received"] as const) {
+    advance(COALESCE_MS);
+    const options = { threadId: "t", botId: "b", dedupeKey: "finished-run" };
+    player.play(cue, options);
+    advance(COALESCE_MS);
+    player.play(cue, options);
+  }
+  expect(synth.mock.calls).toEqual([["done"], ["received"]]);
+  player.dispose();
+});
+it.each(["nothing", "needs-me", "all"] as const)(
+  "keeps send/reply gates at bot level %s",
+  (level) => {
+    const { ctx, synth, advance } = context({
+      prefs: () => ({ enabled: true, perEvent: {}, perBot: { b: level } }),
+    });
+    const player = createSoundPlayer(ctx);
+    for (const cue of ["sent", "received", "done"] as const) {
+      advance(COALESCE_MS);
+      player.play(cue, { threadId: "t", botId: "b" });
+    }
+    expect(synth).toHaveBeenCalledTimes(level === "all" ? 3 : 0);
+    player.dispose();
+  }
+);

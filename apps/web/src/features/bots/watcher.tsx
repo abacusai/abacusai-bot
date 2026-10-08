@@ -19,7 +19,6 @@ import { platformSystem } from "#renderer/lib/platform-system";
  * level for needs-you.
  */
 import { subscribeRunFinished } from "#renderer/lib/run-finished";
-import type { SoundPlayer } from "#renderer/lib/sound";
 
 import { followBotsSources } from "./data/live";
 import { useAllSessions } from "./data/queries";
@@ -32,12 +31,6 @@ import {
   newlyWaiting,
   type BotsWatcherDeps,
 } from "./notify";
-
-export const playBotCue = (
-  cue: Parameters<SoundPlayer["play"]>[0],
-  threadId: string,
-  botId: string
-): void => soundPlayer().play(cue, { threadId, botId });
 
 export const BotsGlobals = () => {
   const { t } = useTranslation();

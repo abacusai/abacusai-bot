@@ -15,6 +15,12 @@ import {
 
 const os = implement(contract);
 type SendContext = Parameters<Parameters<typeof os.ai.send.handler>[0]>[0];
+const sent = vi.hoisted(() => vi.fn());
+vi.mock("#renderer/lib/document-sound", async (original) => ({
+  ...(await original<typeof import("#renderer/lib/document-sound")>()),
+  documentSoundPlayer: () => ({ play: sent, unlock: () => {} }),
+}));
+
 const saved = (stage: StartDraft["stage"] = "created"): StartDraft => ({
   ...newStartDraft(),
   workspaceId: "default",
@@ -130,6 +136,8 @@ it("keeps the focused composer and text through admission and navigation without
     expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
     finishNavigation();
     await waitFor(() => expect(startDraftStore.state.stage).toBe("draft"));
+    await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+    expect(sent.mock.calls[0]![0]).toBe("sent");
   } finally {
     observer.disconnect();
     accept();
@@ -191,6 +199,7 @@ it.each(["created", "checkout-ready", "handed-off"] as const)(
         expect(h.history.location.pathname).toBe(`/sessions/${draft.id}`)
       );
       expect(h.db.sessions.rows.has(draft.id)).toBe(true);
+      expect(sent).not.toHaveBeenCalled();
     } finally {
       observer.disconnect();
       accept();

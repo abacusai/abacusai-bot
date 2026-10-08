@@ -81,6 +81,8 @@ export interface ComposerConfig {
   pending?: boolean;
   /** The `db.sessions` turn column says busy (§4.4). */
   turnBusy?: boolean;
+  /** The bot whose sound preferences apply to this composer. */
+  botId?: string;
   /** Called after the first send of an untitled session (§8.3). */
   onFirstSend?: (text: string) => void;
   /**

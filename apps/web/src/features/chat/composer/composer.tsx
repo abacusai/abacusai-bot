@@ -37,6 +37,7 @@ import {
   updateDraft,
   type Draft,
 } from "#renderer/lib/continuity/composer-drafts";
+import { documentSoundPlayer } from "#renderer/lib/document-sound";
 import { useMotionPreference } from "#renderer/lib/motion";
 import { useSharedElementName } from "#renderer/lib/navigation/shared-element";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
@@ -606,6 +607,8 @@ export const ThreadComposer = () => {
         ? composeReply(route.text, draft.replyTo, view.authorName)
         : null;
     setError(null);
+    const playSent = () =>
+      documentSoundPlayer().play("sent", { threadId, botId: config.botId });
     switch (route.kind) {
       case "noop":
         return;
@@ -619,6 +622,7 @@ export const ThreadComposer = () => {
         const clearedRevision = draftRevision(threadId);
         runtime.queue
           .enqueue(threadId, composed!.text, composed!.userText)
+          .then(playSent)
           .catch(() => {
             restoreDraft(threadId, clearedRevision, saved);
             setError(t("chat.composer.queueFailed"));
@@ -659,7 +663,8 @@ export const ThreadComposer = () => {
               restore(t("chat.composer.rejected"));
             else if (result.kind === "stale")
               restoreDraft(threadId, clearedRevision, saved);
-            else {
+            else if (result.kind === "started" || result.kind === "queued") {
+              playSent();
               if (
                 config.onSubmitEnvelope &&
                 draftRevision(threadId) === clearedRevision
@@ -673,6 +678,7 @@ export const ThreadComposer = () => {
             if (isRpcError(thrown) && thrown.code === "CONFLICT") {
               void runtime.queue
                 .enqueue(threadId, composed!.text, composed!.userText)
+                .then(playSent)
                 .catch(() => restore(t("chat.composer.queueFailed")));
               return;
             }

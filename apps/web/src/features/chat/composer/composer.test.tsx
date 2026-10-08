@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 /**
  * R2-T25 (spec 02 §8): geometry per skin (pill ↔ box), Stop replacing Send
  * while busy, the mode chip's labels, descriptions and values with the
@@ -27,6 +28,11 @@ import { FakeRelay } from "../fixtures/relay";
 import { renderRelay, renderScenario, renderWithDb } from "../testing";
 import { ModeChip, ModelChip } from "./chips";
 import { SURFACE_RADIUS, useComposerExpanded } from "./composer";
+
+const sent = vi.hoisted(() => vi.fn());
+vi.mock("#renderer/lib/document-sound", () => ({
+  documentSoundPlayer: () => ({ play: sent }),
+}));
 
 let current: { cleanup(): Promise<void> } | null = null;
 afterEach(async () => {
@@ -215,6 +221,12 @@ describe("R2-T25 composer", () => {
     fireEvent.keyDown(field(), { key: "Enter" });
     await waitFor(() => expect(relay.stats.send).toHaveLength(1));
     expect(relay.stats.send[0]!.forwardedProps).toBeUndefined();
+    await waitFor(() =>
+      expect(sent).toHaveBeenCalledExactlyOnceWith("sent", {
+        threadId: "t-1",
+        botId: undefined,
+      })
+    );
     act(() => started!());
     await screen.findByRole("button", { name: "Stop" });
     fireEvent.change(field(), { target: { value: "and this" } });
@@ -239,6 +251,7 @@ describe("R2-T25 composer", () => {
     fireEvent.keyDown(field(), { key: "Enter", isComposing: true });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(relay.stats.send).toHaveLength(0);
+    expect(sent).not.toHaveBeenCalled();
   });
 
   it("pre-start: the draft's mode goes out once as forwardedProps.mode", async () => {
@@ -485,6 +498,7 @@ describe("R2-T25 composer", () => {
       fireEvent.change(field(), { target: { value: "new typing" } });
       if (newText === "") fireEvent.change(field(), { target: { value: "" } });
       await act(async () => reject());
+      expect(sent).not.toHaveBeenCalled();
       expect((field() as HTMLTextAreaElement).value).toBe(newText);
       const alert = screen.getByRole("alert");
       expect(alert.getAttribute("aria-live")).toBe("assertive");
@@ -511,6 +525,7 @@ describe("R2-T25 composer", () => {
       })
     );
     expect(relay.stats.send).toHaveLength(0);
+    expect(sent).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Stop" })).toBeTruthy();
   });
 
@@ -525,6 +540,7 @@ describe("R2-T25 composer", () => {
     fireEvent.keyDown(textarea, { key: "Enter", isComposing: true });
     expect(textarea.value).toBe("@a");
     expect(relay.stats.send).toHaveLength(0);
+    expect(sent).not.toHaveBeenCalled();
     fireEvent.click(option);
     expect(textarea.value).toContain("/repo/src/a.ts");
   });
@@ -734,4 +750,54 @@ describe("r2 draft revisions", () => {
       expect(draftRevision("t-1")).toBe(before + 2);
     }
   );
+});
+
+it.each(["bot", "session"] as const)(
+  "%s sends once after acceptance and stays silent on retry",
+  async (skin) => {
+    const relay = new FakeRelay();
+    relay.emitAll(b.sessionReady());
+    const view = await renderRelay(relay, skin);
+    current = view;
+    fireEvent.change(field(), { target: { value: "hello" } });
+    fireEvent.keyDown(field(), { key: "Enter" });
+    await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+    sent.mockClear();
+    await view.runtime.session("t-1").retry(undefined, "hello");
+    expect(sent).not.toHaveBeenCalled();
+  }
+);
+it("stays silent when the host cannot accept the send", async () => {
+  const relay = new FakeRelay({
+    onSend: () => {
+      throw new ORPCError("HOST_UNAVAILABLE");
+    },
+  });
+  relay.emitAll(b.sessionReady());
+  const view = await renderRelay(relay, "session");
+  current = view;
+  fireEvent.change(field(), { target: { value: "hello" } });
+  fireEvent.keyDown(field(), { key: "Enter" });
+  await waitFor(() => expect(relay.stats.send).toHaveLength(1));
+  await waitFor(() =>
+    expect(view.runtime.session("t-1").hostStore.state.outbox[0]?.state).toBe(
+      "failed"
+    )
+  );
+  expect(sent).not.toHaveBeenCalled();
+});
+
+it("plays once when an admission race queues the accepted message", async () => {
+  const relay = new FakeRelay({
+    onSend: () => {
+      throw new ORPCError("CONFLICT");
+    },
+  });
+  relay.emitAll(b.sessionReady());
+  current = await renderRelay(relay, "session");
+  fireEvent.change(field(), { target: { value: "hello" } });
+  fireEvent.keyDown(field(), { key: "Enter" });
+  await waitFor(() => expect(sent).toHaveBeenCalledOnce());
+  expect(relay.stats.send).toHaveLength(1);
+  expect(relay.stats.queue.at(-1)).toMatchObject({ command: "enqueue" });
 });
