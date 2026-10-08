@@ -1571,8 +1571,11 @@ export class ServiceHost {
       );
   }
 
-  listConnectorStatuses(): Promise<ConnectorStatuses> {
-    return this.connectorStatuses.list();
+  /** `fresh`: a change the caller just made (a link) is read now, not after the cache's minute. */
+  listConnectorStatuses(
+    options: { fresh?: boolean } = {}
+  ): Promise<ConnectorStatuses> {
+    return this.connectorStatuses.list(options);
   }
 
   /** What the session waits on the user for, as structured state only. */
@@ -2332,6 +2335,11 @@ export class ServiceHost {
   /** Ship the debug logs now rather than on the next timed sweep. */
   syncLogsNow(): void {
     this.logSyncService.syncNow();
+  }
+
+  /** A new key can read the WhatsApp link a keyless start could not. */
+  refreshBotNumber(): void {
+    void this.botNumber?.read({ fresh: true });
   }
 
   /**

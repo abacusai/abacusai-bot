@@ -19,6 +19,7 @@ import { Spinner } from "#renderer/components/spinner";
 import { maskedPhone } from "#renderer/lib/format/phone";
 import { isPhone } from "#renderer/lib/phone";
 import { showInfo } from "#renderer/lib/toast";
+import { useAppContext } from "#renderer/lib/use-app-context";
 import { useMediaQuery } from "#renderer/lib/use-media-query";
 import { Button } from "#renderer/ui/button";
 import { Dialog, DialogContent } from "#renderer/ui/dialog";
@@ -204,7 +205,22 @@ export const WhatsAppConnect = ({
     refetchInterval: POLL_MS,
   });
   const linked = waiting && chat.data?.status === "linked";
-  const linkedOnce = useEffectEvent(() => onLinked?.());
+  const { transport } = useAppContext();
+  // The host reads the link on its own clock; just linked, it asks now so its connectors and sessions agree.
+  const recheckHost = () =>
+    void transport.client.connectors
+      .statuses({ fresh: true })
+      .then(() =>
+        cache.invalidateQueries({
+          queryKey: transport.orpc.connectors.statuses.queryKey({ input: {} }),
+        })
+      )
+      .catch(() => undefined);
+  const markLinked = () => {
+    recheckHost();
+    onLinked?.();
+  };
+  const linkedOnce = useEffectEvent(markLinked);
 
   useEffect(() => {
     if (Heading === "h1") heading.current?.focus();
@@ -244,7 +260,7 @@ export const WhatsAppConnect = ({
       if (token) dropClaim();
       if (started.status === "linked") {
         setLinked(cache, started.phone);
-        onLinked?.();
+        markLinked();
       } else if (started.deepLink) {
         setExpired(false);
         setExpiresAt(started.expiresAt ?? null);
