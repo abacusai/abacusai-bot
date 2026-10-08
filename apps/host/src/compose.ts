@@ -212,6 +212,8 @@ export const composeNodeHost = async () => {
       pinned
         ? serviceHost.mediaStore.pin(ref, sessionId)
         : serviceHost.mediaStore.unpin(ref, sessionId),
+    // The app chats' view of the link follows at once, not on the next read.
+    onLinked: () => serviceHost.refreshBotNumber(),
     onPolled: (result) => {
       nudgeAgenda.polled(result);
       serviceHost.stepEvents.fromServer(result.events);
