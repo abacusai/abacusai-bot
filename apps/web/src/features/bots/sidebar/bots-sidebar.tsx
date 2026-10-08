@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ACCENT_OUTLINE_CLASS } from "#renderer/components/bot-avatar";
+import { CommandPaletteAction } from "#renderer/components/command-palette-action";
 import { NavList } from "#renderer/components/nav-list";
 import { usePrefs } from "#renderer/data/db/prefs";
 import { NEUTRAL_LOOK } from "#renderer/lib/bots/avatar";
@@ -198,6 +199,7 @@ export const BotsSidebar = () => {
   return (
     <NavList.Root label={t("bots.sidebar.title")}>
       <NavList.Header title={t("bots.sidebar.title")}>
+        <CommandPaletteAction />
         <NavList.Action
           ref={searchButton}
           label={t("bots.sidebar.search")}
