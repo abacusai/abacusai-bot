@@ -1,4 +1,7 @@
-import { PHONE_AGENT_TOOL_NAMES } from "@abacus-ai/agent/tool-policy";
+import {
+  PHONE_AGENT_TOOL_NAMES,
+  PHONE_VAULT_TOOL_NAMES,
+} from "@abacus-ai/agent/tool-policy";
 
 import { PHONE_CONNECTORS_TOOLS } from "./connectors";
 import type { PhoneToolDefinition } from "./definition";
@@ -32,6 +35,19 @@ export const NOT_YET_PHONE_OWNED: readonly string[] = [
   "present_deliverable",
 ];
 
+/**
+ * The vault's tools reach the phone from the browser server, still in its
+ * one wording while their phone definitions are written (with the browser's
+ * phone texts). SHRINK ONLY, like the list above; the phone tools test holds
+ * a frozen copy.
+ */
+export const NOT_YET_PHONE_OWNED_VAULT: readonly string[] = [
+  "vault_items",
+  "vault_request",
+  "payment_approval",
+  "signin_approval",
+];
+
 const byName = new Map<string, PhoneToolDefinition>();
 for (const definition of PHONE_AGENT_TOOLS) {
   if (byName.has(definition.name))
@@ -54,4 +70,13 @@ if (
 )
   throw new Error(
     "agent-tools: the phone's definitions and PHONE_AGENT_TOOL_NAMES differ"
+  );
+if (
+  PHONE_VAULT_TOOL_NAMES.length !== NOT_YET_PHONE_OWNED_VAULT.length ||
+  PHONE_VAULT_TOOL_NAMES.some(
+    (name) => !NOT_YET_PHONE_OWNED_VAULT.includes(name)
+  )
+)
+  throw new Error(
+    "agent-tools: every phone vault tool needs a phone definition or a not-yet entry"
   );

@@ -11,6 +11,7 @@ import { WHATSAPP_CHANNEL } from "@abacus-ai/agent/channel";
 import {
   PHONE_AGENT_TOOL_NAMES,
   PHONE_MCP_TOOLS,
+  PHONE_VAULT_TOOL_NAMES,
 } from "@abacus-ai/agent/tool-policy";
 import type { ConnectorStatuses } from "@abacus-ai/contract/contracts";
 import { sessionConversationKey } from "@abacus-ai/contract/conversation-scope";
@@ -19,7 +20,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { McpAgentToolsServer } from "./mcp-agent-tools-server";
 import type { McpToolListing } from "./mcp-http-server";
 import { AGENT_TOOL_NAMES } from "./tools";
-import { NOT_YET_PHONE_OWNED, PHONE_AGENT_TOOLS } from "./tools/phone";
+import {
+  NOT_YET_PHONE_OWNED,
+  NOT_YET_PHONE_OWNED_VAULT,
+  PHONE_AGENT_TOOLS,
+} from "./tools/phone";
 
 const PHONE = "phone-session";
 
@@ -35,6 +40,13 @@ const APP_ONLY =
  * when a phone definition lands; never grow either.
  */
 const NOT_YET_MAX_LENGTH = 10;
+/** FROZEN: the vault tools still on the browser server's one wording. */
+const NOT_YET_VAULT_AT_MOST = [
+  "vault_items",
+  "vault_request",
+  "payment_approval",
+  "signin_approval",
+];
 const NOT_YET_AT_MOST = [
   "skills_list",
   "skill_view",
@@ -124,6 +136,13 @@ describe("the phone's tool words", () => {
       expect(definition.surface).toBe("phone");
     expect(new Set([...owned, ...NOT_YET_PHONE_OWNED])).toEqual(
       new Set(PHONE_AGENT_TOOL_NAMES)
+    );
+    // The vault's tools, signin_approval among them: each on the phone's
+    // roster is on the not-yet list until its phone definition lands.
+    for (const name of NOT_YET_PHONE_OWNED_VAULT)
+      expect(NOT_YET_VAULT_AT_MOST, name).toContain(name);
+    expect(new Set(NOT_YET_PHONE_OWNED_VAULT)).toEqual(
+      new Set(PHONE_VAULT_TOOL_NAMES)
     );
     for (const name of PHONE_MCP_TOOLS.builtin.filter((tool) =>
       AGENT_TOOL_NAMES.includes(tool)
