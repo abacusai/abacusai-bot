@@ -6,6 +6,7 @@
  * answered nothing, which a stub cannot reproduce.
  */
 import fs from "node:fs/promises";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
@@ -123,6 +124,62 @@ describe("serving a directory", () => {
     });
 
     expect([403, 404]).toContain(response.status);
+  });
+
+  it("refuses a symlink that leads out of the directory", async () => {
+    const outside = await workspace({ "secret.txt": "do not serve" });
+    const root = await workspace({ "index.html": "x" });
+    await fs.symlink(
+      path.join(outside, "secret.txt"),
+      path.join(root, "leak.txt")
+    );
+    await fs.symlink(outside, path.join(root, "away"));
+    const served = await serveDirectory(root);
+
+    const file = await fetch(`${served.url}/leak.txt`);
+    const nested = await fetch(`${served.url}/away/secret.txt`);
+
+    expect(file.status).toBe(403);
+    expect(nested.status).toBe(403);
+    expect(await file.text()).not.toContain("do not serve");
+  });
+
+  it("serves a symlink that stays inside the directory", async () => {
+    const root = await workspace({ "real.html": "<h1>Inside</h1>" });
+    await fs.symlink(
+      path.join(root, "real.html"),
+      path.join(root, "index.html")
+    );
+    const served = await serveDirectory(root);
+
+    expect(await (await fetch(served.url)).text()).toContain("Inside");
+  });
+
+  it("answers only requests addressed to loopback, against DNS rebinding", async () => {
+    const root = await workspace({ "index.html": "<h1>Home</h1>" });
+    const served = await serveDirectory(root);
+    const statusFor = (host: string): Promise<number> =>
+      new Promise((resolve, reject) => {
+        const request = http.request(
+          {
+            host: "127.0.0.1",
+            port: served.port,
+            path: "/",
+            headers: { host },
+          },
+          (response) => {
+            response.resume();
+            resolve(response.statusCode ?? 0);
+          }
+        );
+        request.on("error", reject);
+        request.end();
+      });
+
+    expect(await statusFor(`attacker.example:${served.port}`)).toBe(403);
+    expect(await statusFor("127.0.0.1")).toBe(403);
+    expect(await statusFor(`localhost:${served.port}`)).toBe(200);
+    expect(await statusFor(`127.0.0.1:${served.port}`)).toBe(200);
   });
 
   it("returns the same URL when asked to serve the same directory twice", async () => {

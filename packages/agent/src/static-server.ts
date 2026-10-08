@@ -126,26 +126,78 @@ const directoryEntry = async (
   };
 };
 
+/** The Host values a request may carry: loopback on this port, nothing else. */
+const loopbackHosts = (port: number): Set<string> =>
+  new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
+
+/**
+ * `target`'s real path if it stays inside the served directory, false if a
+ * symlink leads out of it, null if there is nothing there.
+ */
+const realInside = async (
+  rootReal: string,
+  target: string
+): Promise<string | false | null> => {
+  const real = await fs.realpath(target).catch(() => null);
+  if (real == null) return null;
+
+  return real === rootReal || real.startsWith(`${rootReal}${path.sep}`)
+    ? real
+    : false;
+};
+
+/** A regular file's bytes, refusing a symlink swapped in since the check. */
+const readRegularFile = async (file: string): Promise<Buffer | null> => {
+  const opened = await fs
+    .open(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0))
+    .catch(() => null);
+  if (opened == null) return null;
+  try {
+    const stat = await opened.stat();
+    return stat.isFile() ? await opened.readFile() : null;
+  } finally {
+    await opened.close().catch(() => undefined);
+  }
+};
+
 const handle = async (
   root: string,
+  rootReal: string,
+  port: number,
   request: http.IncomingMessage,
   response: http.ServerResponse
 ): Promise<void> => {
+  // DNS rebinding: a page on another name resolved to loopback is same-origin
+  // with this server, but its requests still carry that name as the Host.
+  if (!loopbackHosts(port).has((request.headers.host ?? "").toLowerCase()))
+    return send(response, 403, "Forbidden", "text/plain; charset=utf-8");
+
   const resolved = resolveRequest(root, request.url ?? "/");
 
   if (resolved == null)
     return send(response, 403, "Forbidden", "text/plain; charset=utf-8");
 
+  // The lexical check above cannot see a symlink in the directory.
+  const real = await realInside(rootReal, resolved);
+  if (real === false)
+    return send(response, 403, "Forbidden", "text/plain; charset=utf-8");
+  if (real == null)
+    return send(response, 404, "Not found", "text/plain; charset=utf-8");
+
   // A directory serves its index, else the one page it has: a folder the agent
   // wrote holds `love.html` far more often than `index.html`.
-  const stat = await fs.stat(resolved).catch(() => null);
-  const file =
+  const stat = await fs.stat(real).catch(() => null);
+  const entry =
     stat?.isDirectory() === true
-      ? await directoryEntry(resolved, request.url ?? "/")
-      : resolved;
-  if (typeof file !== "string")
-    return send(response, 200, file.listing, "text/html; charset=utf-8");
-  const contents = await fs.readFile(file).catch(() => null);
+      ? await directoryEntry(real, request.url ?? "/")
+      : real;
+  if (typeof entry !== "string")
+    return send(response, 200, entry.listing, "text/html; charset=utf-8");
+
+  const file = await realInside(rootReal, entry);
+  if (file === false)
+    return send(response, 403, "Forbidden", "text/plain; charset=utf-8");
+  const contents = file == null ? null : await readRegularFile(file);
 
   if (contents == null)
     return send(response, 404, "Not found", "text/plain; charset=utf-8");
@@ -154,7 +206,7 @@ const handle = async (
     response,
     200,
     contents,
-    MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream"
+    MIME[path.extname(entry).toLowerCase()] ?? "application/octet-stream"
   );
 };
 
@@ -192,9 +244,10 @@ const startDirectory = async (root: string): Promise<ServedDirectory> => {
   if (entries.length === 0)
     throw new Error(`${root} is empty. There is nothing to serve.`);
 
+  const rootReal = await fs.realpath(root);
   const port = await freePort();
   const server = http.createServer((request, response) => {
-    void handle(root, request, response).catch(() => {
+    void handle(root, rootReal, port, request, response).catch(() => {
       send(response, 500, "Server error", "text/plain; charset=utf-8");
     });
   });
