@@ -17,21 +17,20 @@ import type { FocusEvent, PointerEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type AppIconName } from "#renderer/components/app-icon";
-import { accountIdentity } from "#renderer/lib/account-identity";
 import { cn } from "#renderer/lib/cn";
 import type { NavType } from "#renderer/lib/motion";
 import { AppLink } from "#renderer/lib/navigation/app-link";
 import { AREA_HOME, RAIL_AREAS } from "#renderer/lib/navigation/areas";
 import { uiPlatform } from "#renderer/lib/platform";
-import { useAccount } from "#renderer/lib/use-account";
 import { useSystem } from "#renderer/lib/use-app-context";
-import { Avatar, AvatarFallback, AvatarImage } from "#renderer/ui/avatar";
 import { Kbd } from "#renderer/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#renderer/ui/tooltip";
 
+import { AgentLink } from "./agent-link";
 import { useFloatingIntent } from "./floating-intent";
 import { APP_HOTKEYS } from "./hotkeys";
 import type { ShellArea } from "./layout";
+import { ProfileMenu } from "./profile-menu";
 import {
   previewFloatingArea,
   shellStore,
@@ -184,7 +183,6 @@ export const Rail = ({
   area,
   floatingEnabled,
   iconsOnly = false,
-  initials,
   label,
 }: {
   area: ShellArea | undefined;
@@ -194,11 +192,8 @@ export const Rail = ({
   floatingEnabled: boolean;
   /** Settings › Appearance "Rail: icons only". */
   iconsOnly?: boolean;
-  initials: string;
 }) => {
   const { t } = useTranslation();
-  const identity = accountIdentity(useAccount().data);
-  const accountLabel = identity.name || t("shell.rail.account");
   const system = useSystem();
   const last = useStore(shellStore, (state) => state.lastLocationByArea);
   const intent = useFloatingIntent();
@@ -211,7 +206,7 @@ export const Rail = ({
       data-slot="rail"
       data-tour="rail-bots-sessions"
       data-icons-only={iconsOnly ? "" : undefined}
-      className="flex w-(--rail-w) shrink-0 flex-col items-center pt-1 pb-3"
+      className="scroll-fade-y flex min-h-0 w-(--rail-w) shrink-0 flex-col items-center overflow-y-auto pt-1 pb-3"
       // Hover intent is a mouse gesture: a tap navigates and never opens or
       // closes the floating sidebar (the title-bar toggle does on a phone).
       onPointerEnter={(event) => {
@@ -239,6 +234,9 @@ export const Rail = ({
         />
       ))}
       <div className="flex-1" />
+      <div className="flex h-9 shrink-0 items-center justify-center">
+        <AgentLink />
+      </div>
       <RailTip
         label={t("shell.rail.settings")}
         shortcut={formatForDisplay(APP_HOTKEYS.settings, {
@@ -264,26 +262,9 @@ export const Rail = ({
           <AppIcon name="settings" size={18} />
         </RailLink>
       </RailTip>
-      <RailTip label={accountLabel} enabled={tooltip}>
-        <AppLink
-          to="/settings/account"
-          transition="settings-in"
-          aria-label={accountLabel}
-          title={tooltip ? undefined : accountLabel}
-          className="titlebar-nodrag focus-visible:ring-ring/50 mt-2 rounded-full outline-none focus-visible:ring-2"
-        >
-          <Avatar size="sm">
-            {identity.picture && (
-              <AvatarImage src={identity.picture} alt={identity.name} />
-            )}
-            <AvatarFallback className="text-foreground text-[11px] font-semibold">
-              {identity.name
-                ? identity.initials
-                : initials || identity.initials}
-            </AvatarFallback>
-          </Avatar>
-        </AppLink>
-      </RailTip>
+      <div className="mt-2 shrink-0">
+        <ProfileMenu />
+      </div>
     </nav>
   );
 };

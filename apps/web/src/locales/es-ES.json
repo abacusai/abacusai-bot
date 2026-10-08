@@ -954,7 +954,6 @@
     "upsellTitle": "Unlock the full potential on desktop and web",
     "levelUpTitle": "Ready for your next level?",
     "restTitle": "A little rest, then more adventures",
-    "upgraded": "Level unlocked. Let’s build!",
     "progress": "{{remaining}} of {{total}} credits left",
     "used": "Credits used"
   },
@@ -4024,7 +4023,14 @@
     "permissionsFullAccess": "Full access",
     "permissionsAuto": "Auto",
     "permissionsAutoWarning": "You will get more permission prompts: the sandbox asks before a command reads a credential store, writes outside the workspace, or reaches a new host.",
-    "notSignedInShort": "Sin iniciar sesión"
+    "notSignedInShort": "Sin iniciar sesión",
+    "agent": "Ir a AbacusAI Agent",
+    "help": "Obtener ayuda",
+    "referralValue": "Invita a tus amigos a AbacusAI Bot y gana créditos.",
+    "inviteContacts": "Invitar contactos",
+    "terms": "Términos del servicio",
+    "close": "Cerrar",
+    "logOut": "Cerrar sesión"
   },
   "sidebarNav": {
     "app": "App",

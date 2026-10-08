@@ -539,6 +539,7 @@ describe("Rail: icons only (Settings › Appearance)", () => {
         .querySelector('a[aria-label="Settings"]')
         ?.getAttribute("data-slot")
     ).toBe("tooltip-trigger");
+    expect(document.querySelector('[data-slot="profile-button"]')).toBeTruthy();
     // Unpinned: hovering the rail opens the floating sidebar instead.
     fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
     await waitFor(() => expect(shell().dataset.sidebar).toBe("floating"));

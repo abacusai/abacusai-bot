@@ -3,6 +3,8 @@ import { implement } from "@orpc/server";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import en from "#locales/en-US.json";
+import { ABACUS_HELP_URL } from "#renderer/lib/abacus-links";
 import { renderApp } from "#renderer/test-support/app-harness";
 const originalClipboard = Object.getOwnPropertyDescriptor(
   navigator,
@@ -56,6 +58,14 @@ it("About loads licenses only on request, searches grouped packages and exposes 
     },
   });
   await screen.findByRole("heading", { name: "About" });
+  const help = screen.getByRole("link", { name: en.profile.help });
+  expect(help.getAttribute("href")).toBe(ABACUS_HELP_URL);
+  expect(help.getAttribute("rel")).toBe("noopener noreferrer");
+  fireEvent.click(help);
+  await waitFor(() =>
+    expect(open).toHaveBeenCalledWith({ url: ABACUS_HELP_URL })
+  );
+  open.mockClear();
   expect(screen.queryByText("Open the Library")).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
   const section = within(
